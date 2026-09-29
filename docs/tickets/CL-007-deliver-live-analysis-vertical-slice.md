@@ -104,7 +104,10 @@ UI foundation blocks this ticket rather than being reimplemented inside it.
 - [ ] Implement a port accepting only job-local audio, duration, `en`,
   diarization flag, request/deadline/signal context.
 - [ ] Make fake and live shapes pass the same strict normalization; generate
-  ordinal word/utterance IDs and enforce count/character/time/overlap bounds.
+  ordinal word/utterance IDs and enforce count/character/time bounds. Before
+  accepting live output, define and record the numeric source-controlled word
+  overlap tolerance, then test the exact tolerance and one millisecond beyond
+  it against both fake and live-normalized shapes.
 - [ ] Record only content-free minutes/model-config/call outcome; discard raw
   alternatives, tokens, provider IDs, and payload after normalization.
 - [ ] Disable provider/SDK retries and propagate timeout/abort through extraction

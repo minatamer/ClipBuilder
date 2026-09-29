@@ -1,6 +1,6 @@
 # ClipBuilder standalone ticket index
 
-Status: execution-packet index  
+Status: active execution-packet index<br>
 Last synchronized: 2026-09-29<br>
 Parent source of truth: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)
 
@@ -145,9 +145,9 @@ This plan deliberately consolidates the parent's earlier 22 draft slices into
 
 ## Ordered ticket index
 
-All tickets are currently **planned and unimplemented**. Status changes belong
-in the individual packet and should be summarized here when work begins or
-finishes.
+CL-001 is **completed** with its deterministic foundation evidence recorded in
+the packet. CL-002–CL-015 remain planned. Status changes belong in the
+individual packet and should be summarized here when work begins or finishes.
 
 | Order | Ticket | Milestone | Coherent outcome | Depends on |
 | ---: | --- | --- | --- | --- |

@@ -69,7 +69,48 @@ The model proposes bounded editorial data. Deterministic application code valida
 
 ## Repository status
 
-ClipBuilder is currently in the implementation-planning phase. The repository contains the implementation-ready source of truth, a dependency-ordered set of 15 standalone execution tickets, and the supporting research; application code has not been scaffolded yet. Technical choices marked as proposed remain subject to the validation gates documented in the specification.
+CL-001 is implemented and locally verified: the repository contains a strict
+pnpm/TypeScript workspace, browser-safe shared contracts, a minimal Next.js
+shell, and a private Express API with a content-free health route. Product
+sessions, upload, analysis, assembly, editing, rendering, and deployment remain
+owned by their dependency-ordered tickets. Technical choices marked as
+proposed remain subject to the validation gates documented in the specification.
+
+## Local foundation
+
+Use Node.js `^22.13.0` or `^24.0.0` and the pinned pnpm `11.19.0`:
+
+```powershell
+corepack pnpm install --frozen-lockfile
+corepack pnpm dev:frontend
+corepack pnpm dev:backend
+```
+
+The frontend is available at `http://127.0.0.1:3000`. The backend defaults to
+`http://127.0.0.1:4000`; `GET /v1/health` is content-free and cannot select a
+provider or paid operation. Committed configuration is documented in
+`.env.example` and defaults to fake, paid-disabled behavior with credentials
+blank.
+
+Run the deterministic quality baseline from the repository root:
+
+```powershell
+corepack pnpm format:check
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm test:unit
+corepack pnpm build
+```
+
+Repository map:
+
+```text
+apps/frontend       public Next.js application shell
+apps/backend        private Express API and configuration boundary
+packages/contracts  browser-safe Zod contracts and compiled limits
+docs                 product authority, research, and implementation tickets
+test                 shared deterministic test isolation
+```
 
 ## Project documentation
 

@@ -2452,8 +2452,10 @@ Word rules:
 - 1–80 characters for `text` and `punctuatedText` after Unicode NFC;
 - no control characters or bidi overrides;
 - `0 <= startMs < endMs <= media.durationMs + 250`;
-- start times are nondecreasing; overlaps are allowed only within a documented
-  speaker-overlap tolerance;
+- start times are nondecreasing; CL-001 accepts structural overlap because no
+  numeric provider-normalization tolerance is yet approved; CL-007 must define,
+  record, and test the source-controlled speaker-overlap tolerance before any
+  live transcript can pass normalization;
 - confidence is `null` or `[0,1]` and is not shown as editorial certainty;
 - speaker IDs are opaque turn labels, not inferred names;
 - provider raw alternatives, tokens, request IDs, and callbacks are discarded.
@@ -4817,7 +4819,9 @@ Cover:
 - strict rejection of unknown keys, oversized strings/arrays, NaN/infinity,
   invalid Unicode controls, bidi override, URLs where forbidden, and malformed
   IDs/dates;
-- transcript timestamp ordering, overlap tolerance, speaker IDs, and word caps;
+- transcript timestamp ordering, speaker IDs, and word caps in CL-001; CL-007
+  defines and tests the numeric provider word-overlap tolerance before live
+  normalization;
 - candidate evidence resolution, overlap, duration, distinctness, rank, and
   forbidden claims;
 - shot/face/focus track ordering, bounds, shot-local identity, and confidence;
