@@ -146,8 +146,10 @@ This plan deliberately consolidates the parent's earlier 22 draft slices into
 ## Ordered ticket index
 
 CL-001 is **completed** with its deterministic foundation evidence recorded in
-the packet. CL-002–CL-015 remain planned. Status changes belong in the
-individual packet and should be summarized here when work begins or finishes.
+the packet. CL-002 has a reviewable standalone reference and is **awaiting
+explicit owner visual approval**; its broad styling dependents remain blocked.
+CL-003–CL-015 remain planned. Status changes belong in the individual packet
+and should be summarized here when work begins or finishes.
 
 | Order | Ticket | Milestone | Coherent outcome | Depends on |
 | ---: | --- | --- | --- | --- |

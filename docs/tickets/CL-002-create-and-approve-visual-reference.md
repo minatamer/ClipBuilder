@@ -1,6 +1,6 @@
 # CL-002 — Create and approve the visual reference
 
-Status: Planned<br>
+Status: Awaiting owner visual approval<br>
 Milestone: M0 — foundation and visual gate<br>
 Last synchronized: 2026-09-29<br>
 Depends on: CL-001<br>
@@ -82,21 +82,21 @@ format/lint check; do not recreate or bypass the foundation if it differs.
 
 ## Implementation checklist
 
-- [ ] Implement the provisional source-of-truth token table in one editable,
+- [x] Implement the provisional source-of-truth token table in one editable,
   accessible HTML reference without remote fonts, scripts, or assets.
-- [ ] Use a licensed/source-controlled sans and mono plan with system fallbacks;
+- [x] Use a licensed/source-controlled sans and mono plan with system fallbacks;
   record any intended font files and licenses without adding unapproved binaries.
-- [ ] Demonstrate all core primitives and their keyboard/focus/error/disabled
+- [x] Demonstrate all core primitives and their keyboard/focus/error/disabled
   states with meaningful ClipBuilder copy.
-- [ ] Create a desktop editor concept with transcript/evidence, 9:16 preview,
+- [x] Create a desktop editor concept with transcript/evidence, 9:16 preview,
   assistant proposal/diff, and range/caption/speaker/visual tracks.
-- [ ] Create a phone concept that preserves playback, word-boundary trim,
+- [x] Create a phone concept that preserves playback, word-boundary trim,
   caption correction, visual summary, assistant proposal, render, and clear.
-- [ ] Show at least one assembly progress state, candidate review state,
+- [x] Show at least one assembly progress state, candidate review state,
   full-frame contextual image state, and deterministic equation-card state.
-- [ ] Demonstrate safe-zone layering: captions above footage/visuals, bounded
+- [x] Demonstrate safe-zone layering: captions above footage/visuals, bounded
   headline, no unintended face or caption obstruction.
-- [ ] Verify color contrast, visible focus, target sizes, text scaling, natural
+- [x] Verify color contrast, visible focus, target sizes, text scaling, natural
   short-height scrolling, no horizontal overflow, and reduced motion.
 - [ ] Record owner feedback as explicit accepted/rejected changes and update the
   parent/ticket if approval alters material tokens or composition.
@@ -116,31 +116,80 @@ format/lint check; do not recreate or bypass the foundation if it differs.
 
 ## Acceptance criteria
 
-- [ ] One self-contained HTML reference covers tokens, states, components, the
+- [x] One self-contained HTML reference covers tokens, states, components, the
   signature desktop editor, and the guided phone editor.
-- [ ] The direction is recognizably “Editorial Signal Room” and avoids every
+- [x] The direction is recognizably “Editorial Signal Room” and avoids every
   documented visual anti-goal.
-- [ ] All demonstrated controls have names, visible focus, sufficient target
+- [x] All demonstrated controls have names, visible focus, sufficient target
   size, contrast, and a reduced-motion/high-contrast strategy.
-- [ ] Desktop and phone concepts preserve identical product capabilities with
+- [x] Desktop and phone concepts preserve identical product capabilities with
   different composition rather than separate implementations.
-- [ ] The reference uses no remote runtime dependency, unlicensed asset, fake
+- [x] The reference uses no remote runtime dependency, unlicensed asset, fake
   provider output, secret, or real user content.
 - [ ] Owner approval or requested changes are recorded explicitly; no later
   ticket interprets silence as approval.
 
 ## Focused verification
 
-- [ ] Open the reference at phone, tablet, compact laptop, desktop, and
+- [x] Open the reference at phone, tablet, compact laptop, desktop, and
   large-monitor widths plus a 600–700 px short height.
-- [ ] Check keyboard order, focus visibility, native semantics, 200% zoom,
+- [x] Check keyboard order, focus visibility, native semantics, 200% zoom,
   text-spacing overrides, forced-colors behavior, and reduced motion.
-- [ ] Run automated HTML/accessibility checks available in the repository, then
+- [x] Run automated HTML/accessibility checks available in the repository, then
   perform visual review because automation cannot approve art direction.
-- [ ] Confirm no remote request, horizontal page scroll, clipped primary action,
+- [x] Confirm no remote request, horizontal page scroll, clipped primary action,
   or hidden Clear/privacy affordance.
-- [ ] Capture only content-safe evidence; do not add secret-bearing browser or
+- [x] Capture only content-safe evidence; do not add secret-bearing browser or
   provider screenshots.
+
+## Review evidence — 2026-09-29
+
+- Standalone reference: [`../AI_CLIPPING_DESIGN_SYSTEM.html`](../AI_CLIPPING_DESIGN_SYSTEM.html).
+- Research synthesis and official-source log:
+  [`../design-research/cl-002/README.md`](../design-research/cl-002/README.md).
+- Original local review captures:
+  `clipbuilder-reference-overview.png`, `clipbuilder-editor-desktop.png`, and
+  `clipbuilder-editor-phone.png` under `docs/design-research/cl-002/screenshots/`.
+- Retained research captures are public official product pages only. An Adobe
+  HelpX automated-access denial was discarded instead of being kept as false
+  visual evidence.
+- `corepack pnpm format:check` and `corepack pnpm lint` passed.
+- Browser DOM audit found 40 named interactive controls, no duplicate IDs, one
+  header/nav/main/footer landmark set, no console warnings or errors from the
+  local page, and no remote `link`, `script`, `img`, or `iframe` dependency.
+- Responsive checks passed at 320 × 700, 390 × 844, 768 × 1024, 1180 × 650,
+  1440 × 1000, and 1920 × 1080. Each reported page scroll width equal to
+  client width; Clear, privacy, and render remained reachable.
+- Keyboard inspection covered the first 14 focus stops: skip link, wordmark,
+  guide links, hero actions, then component controls. Every stop was visible
+  and carried a solid focus outline.
+- A 720 CSS-pixel viewport at device scale 2 exercised the 200%-zoom reflow
+  equivalent with no horizontal overflow. The same run applied enhanced line,
+  letter, and word spacing; primary render action remained visible.
+- Browser media emulation confirmed `prefers-reduced-motion: reduce` and
+  `forced-colors: active` both match. Animation and transition durations
+  collapse to `0.001ms` in reduced motion.
+- Calculated contrast ratios: primary text/canvas 18.05:1,
+  secondary text/surface 10.78:1, muted text/surface 6.30:1,
+  ink/signal 11.18:1, focus/surface 9.95:1, danger/surface 10.35:1, and
+  ink/paper 15.36:1.
+
+### Owner visual decision
+
+Status: **awaiting explicit owner review**. No approval is inferred from silence
+or from authorization to commit the review package.
+
+The owner still needs to accept or revise:
+
+1. the Night Edit / Signal Amber palette as the alternative to the parent's
+   provisional acid-lime signal;
+2. the editorial serif, practical sans, and mono pairing plus the proposed
+   source-controlled font bundle;
+3. the three-pane desktop composition and guided phone section order; and
+4. the separate production-UI and rendered-video motion contracts.
+
+The parent source of truth is intentionally unchanged until that decision is
+explicit. Broad CL-004 and CL-010 styling remains blocked by this gate.
 
 ## Documentation updates
 
