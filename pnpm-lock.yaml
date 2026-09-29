@@ -71,9 +71,6 @@ importers:
       "@clipbuilder/contracts":
         specifier: workspace:*
         version: link:../../packages/contracts
-      "@samasante/liquid-glass":
-        specifier: 0.1.1
-        version: 0.1.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       next:
         specifier: 16.3.7
         version: 16.3.7(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -1170,15 +1167,6 @@ packages:
       {
         integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==,
       }
-
-  "@samasante/liquid-glass@0.1.1":
-    resolution:
-      {
-        integrity: sha512-i4cQzlwmpYnVl9eBDuBFyPsOsuBMMYDp1ijxul5Z/H+ns5aQ1qiVV5pTEBbO4EQo8ct+eVlS9bVZW8YUfX6nXg==,
-      }
-    peerDependencies:
-      react: ">=18"
-      react-dom: ">=18"
 
   "@swc/helpers@0.5.23":
     resolution:
@@ -4853,11 +4841,6 @@ snapshots:
   "@rolldown/pluginutils@1.0.1": {}
 
   "@rtsao/scc@1.1.0": {}
-
-  "@samasante/liquid-glass@0.1.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)":
-    dependencies:
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
 
   "@swc/helpers@0.5.23":
     dependencies:

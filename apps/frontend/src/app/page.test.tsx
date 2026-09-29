@@ -5,36 +5,146 @@ import HomePage from "./page";
 import robots from "./robots";
 
 describe("visual approval prototype", () => {
-  it("renders one clear product promise and keeps prototype limits explicit", () => {
+  it("renders the revised rotating two-line promise without the removed prototype labels", () => {
     const markup = renderToStaticMarkup(<HomePage />);
 
     expect(markup.match(/<h1\b/g)).toHaveLength(1);
-    expect(markup).toContain("Find the moment. Keep the final word.");
-    expect(markup).toContain("Visual prototype · sample only");
-    expect(markup).toContain("No upload or processing runs on this page.");
-    expect(markup).toContain("Privacy &amp; limits");
-    expect(markup).not.toContain("<button");
+    expect(markup).toContain(
+      'aria-label="We find you the moment. You get the final cut."',
+    );
+    expect(markup).toContain("We find you the");
+    expect(markup).toContain("You get the final cut.");
+    expect(markup).not.toContain("Keep the final word.");
+    for (const word of [
+      "moment",
+      "hook",
+      "insight",
+      "punchline",
+      "takeaway",
+      "story",
+    ]) {
+      expect(markup).toContain(word);
+    }
+    expect(markup).toContain("You bring the conversation.");
+    expect(markup.match(/data-hero-brand="true"/g)).toHaveLength(1);
+    expect(markup).toContain(
+      "ClipBuilder finds the complete ideas worth clipping and turns your choice into a polished vertical cut, grounded in the source from first frame to final word.",
+    );
+    expect(markup).not.toContain("Pause rotating headline");
+    expect(markup).not.toContain("Play rotating headline");
+    expect(markup).not.toContain("aria-pressed");
+    expect(markup).not.toContain("Your conversation becomes one grounded cut.");
+    expect(markup).not.toContain("Visual prototype · sample only");
+    expect(markup).not.toContain("No upload or processing runs on this page.");
   });
 
-  it("uses honest in-page review actions instead of unfinished workflow links", () => {
+  it("uses one unified flow and presents privacy and limits in a dialog", () => {
     const markup = renderToStaticMarkup(<HomePage />);
 
-    expect(markup).toContain('href="#product-proof"');
-    expect(markup).toContain('href="#privacy"');
+    expect(markup).toContain('href="#how-it-works"');
+    expect(markup).not.toContain('href="#product-proof"');
+    expect(markup.match(/>Get Started</g)).toHaveLength(1);
+    expect(markup).toContain("<dialog");
+    expect(markup).toContain('aria-haspopup="dialog"');
+    expect(markup).toContain("Small scope. Plain limits.");
+    expect(markup).toContain("MP4 under 10 minutes and 250 MiB");
+  });
+
+  it("keeps the animated flow semantic and fully present in server markup", () => {
+    const markup = renderToStaticMarkup(<HomePage />);
+
+    expect(markup).toContain("Your words become a finished vertical cut.");
+    expect(markup.match(/data-process-step="true"/g)).toHaveLength(3);
+    expect(markup.match(/aria-current="step"/g)).toHaveLength(1);
+    expect(markup).toContain("Upload a conversation with potential");
     expect(markup).toContain(
-      "Static visual example · controls arrive with editor behavior.",
+      "Drop in a long-form video you own and believe holds a clip-worthy moment.",
+    );
+    expect(markup).toContain("Reading the conversation");
+    expect(markup).toContain("Bringing the cut to life");
+    expect(markup).toContain(
+      "Transcript bars resolve line by line while the vertical output stays muted.",
+    );
+    expect(markup).toContain(
+      "Color, framing, captions, light, and timeline motion turn the phone into a living preview.",
+    );
+    expect(markup.match(/data-upload-card="true"/g)).toHaveLength(1);
+    expect(markup.match(/data-conversation-speaker="true"/g)).toHaveLength(2);
+    expect(markup.match(/data-speaker-arm="true"/g)).toHaveLength(4);
+    expect(markup.match(/data-speaker-upper-arm="true"/g)).toHaveLength(4);
+    expect(markup.match(/data-speaker-forearm="true"/g)).toHaveLength(4);
+    expect(markup.match(/data-speaker-hand="true"/g)).toHaveLength(4);
+    expect(markup.match(/data-speaker-shoulder-mold="true"/g)).toHaveLength(2);
+    expect(markup.match(/data-boom-microphone="true"/g)).toHaveLength(2);
+    expect(markup).toContain("How many digits does pi have?");
+    expect(markup).toContain("Infinitely many—it never ends or repeats.");
+    expect(markup).toContain('data-pi-visual="true"');
+    expect(markup).toContain("π");
+    expect(markup).toContain("= 3.14159…");
+    expect(markup).toContain('data-video-timeline="true"');
+    expect(markup).not.toContain("That&#x27;s where the story turns.");
+    expect(markup).not.toContain("And that is the moment.");
+    expect(markup).not.toContain("Moving the grounded moment");
+    expect(markup).not.toContain(
+      "One energy cue carries the selected idea across into the vertical frame.",
+    );
+    expect(markup).toContain('aria-live="polite"');
+    expect(markup).toContain('data-active-step="0"');
+    expect(markup).toContain('data-handoff="false"');
+  });
+
+  it("omits the removed proposed-edit section", () => {
+    const markup = renderToStaticMarkup(<HomePage />);
+
+    expect(markup).not.toContain("A first cut you can question.");
+    expect(markup).not.toContain("Proposed edit");
+    expect(markup).not.toContain("Apply 3 changes");
+    expect(markup).not.toContain(
+      "Illustrative controls for the future editor.",
     );
   });
 
-  it("keeps the scroll narrative semantic and fully present in server markup", () => {
+  it("presents the clipping market without implying partnership or guaranteed earnings", () => {
     const markup = renderToStaticMarkup(<HomePage />);
 
-    expect(markup).toContain("Automation, with receipts.");
-    expect(markup.match(/data-process-step="true"/g)).toHaveLength(3);
-    expect(markup.match(/aria-current="step"/g)).toHaveLength(1);
-    expect(markup).toContain("Transcript + timing");
-    expect(markup).toContain("Ground the moment");
-    expect(markup).toContain("Keep control");
+    expect(markup).toContain("The clipping economy is live");
+    expect(markup).toContain("9+");
+    expect(markup).toContain("platforms publicly host paid clipping campaigns");
+    expect(markup.match(/data-platform-logo="true"/g)).toHaveLength(9);
+    for (const platform of [
+      "whop",
+      "CLIPPING",
+      "Picsart",
+      "insy",
+      "Clipped",
+      "AMPLIFY",
+      "Clipster",
+      "ClipReward",
+      "CLIPCO",
+    ]) {
+      expect(markup).toContain(platform);
+    }
+    expect(markup).toContain("No affiliation or earnings guarantee.");
+    expect(markup).not.toContain("From conversation to grounded cut.");
+  });
+
+  it("keeps smooth-scroll destinations available as real anchors", () => {
+    const markup = renderToStaticMarkup(<HomePage />);
+
+    expect(markup).toContain('id="top"');
+    expect(markup).toContain('id="how-it-works"');
+    expect(markup.match(/href="#top"/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("keeps the footer focused on one centered home link", () => {
+    const markup = renderToStaticMarkup(<HomePage />);
+    const footerMarkup = markup.match(/<footer[\s\S]*?<\/footer>/)?.[0];
+
+    expect(footerMarkup).toContain('aria-label="ClipBuilder home"');
+    expect(footerMarkup).not.toContain(
+      "AI-assisted clipping · one grounded vertical edit",
+    );
+    expect(footerMarkup).not.toContain("Back to top");
   });
 
   it("keeps the unfinished application out of search indexes", () => {
