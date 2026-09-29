@@ -1,6 +1,6 @@
 # CL-002 — Build and approve the React visual prototype
 
-Status: Revised implementation complete — awaiting owner visual approval<br>
+Status: Owner revisions requested — glass-material revision implemented, approval pending<br>
 Milestone: M0 — foundation and visual gate<br>
 Last synchronized: 2026-09-29<br>
 Depends on: CL-001<br>
@@ -55,6 +55,11 @@ requested these specific revisions on 2026-09-29:
    reduced-motion support; add only the smallest justified dependency set.
 6. Re-inventory relevant skills and record exact skill-to-output evidence. The
    current implementation and Git state do not count as approval.
+7. The second-pass navbar still reads as an opaque gray strip, not a perceptible
+   premium glass bubble. Research native CSS, SVG displacement, React liquid-
+   glass components, and mature motion/scroll options; then revise and visually
+   prove the navbar, pill CTAs, and selected materials at normal and reduced
+   motion. A valid blur declaration or prior commit is not acceptance.
 
 ## Standalone implementation context
 
@@ -146,7 +151,7 @@ foundation. Reuse it rather than creating a parallel prototype application.
   responsibility.
 - [x] Capture and inspect the revised running result at representative desktop and phone
   widths before requesting owner approval.
-- [ ] Record owner feedback as explicit accepted/rejected changes; never infer
+- [x] Record owner feedback as explicit accepted/rejected changes; never infer
   approval from implementation, silence, or Git authorization.
 
 ## Locked behavior the prototype must preserve
@@ -186,7 +191,7 @@ foundation. Reuse it rather than creating a parallel prototype application.
 - [x] Run frontend format, lint, typecheck, unit tests, and production build.
 - [x] Inspect 320 × 568, 390 × 844, 768 × 1024, 1024 × 768, 1280 × 800,
   1440 × 900, 1920 × 1080, 2560 × 1440, and a 600–700 px short height.
-- [x] Check keyboard order, focus visibility, semantics, target sizes, 200% zoom,
+- [ ] Check keyboard order, focus visibility, semantics, target sizes, 200% zoom,
   text-spacing overrides, forced colors, and reduced motion.
 - [x] Confirm no remote runtime request, console error, horizontal page scroll,
   clipped primary action, misleading active control, or hidden privacy/limits.
@@ -255,15 +260,18 @@ foundation. Reuse it rather than creating a parallel prototype application.
   active reduced-motion preference produced `0s` ambient animation,
   one iteration, `0.000001s` transitions, and `scroll-behavior: auto` while all
   content remained visible.
-- `process-narrative.tsx` is the only new client boundary. Its asynchronous
+- `process-narrative.tsx` and the narrow `glass-action.tsx` CTA adapter are the
+  only new client boundaries. The narrative's asynchronous
   `IntersectionObserver` changed the live readout through Source → Evidence →
   Control during real scrolling. The initial HTML retained all three ordered
   steps and one H1; absent JavaScript or CSS timeline support only removes the
   active presentation cue.
-- Official library review covered Motion 13.4.4, GSAP 3.15/ScrollTrigger,
-  Lenis 1.3.26, React Bits, Magic UI, Aceternity UI, and web-platform APIs. No
-  dependency was installed because the native implementation is smaller,
-  keeps native scrolling, and meets this page's bounded requirement.
+- Motion/scroll review covered Motion 13.4.4, GSAP 3.15/ScrollTrigger,
+  Lenis 1.3.26, React Bits, Magic UI, Aceternity UI, and web-platform APIs; native
+  scrolling remains selected. The later material review compared native CSS,
+  SVG displacement, `@samasante/liquid-glass`, `liquid-glass-react`, Liquefy UI,
+  static-map, and WebGL/capture approaches. One MIT, zero-runtime-dependency
+  package was added only for compact CTA refraction; the wide navbar remains CSS.
 - Browser QA covered 320 × 568, 390 × 844, 768 × 1024, 1024 × 768,
   1280 × 800, 1440 × 900, 1920 × 1080, 2560 × 1440, 1280 × 640, and
   720 × 450 as a 1440 × 900 / 200% equivalent. Every run had one H1, three
@@ -288,9 +296,28 @@ foundation. Reuse it rather than creating a parallel prototype application.
   Sites, image generation, and visualization skills were not applicable to an
   existing code-native React prototype without a Figma source or separate
   artifact request.
-- The implementation is complete, but explicit owner visual approval remains
-  open. This commit and its Git authorization do not approve the direction or
-  unblock CL-004/CL-010 broad styling.
+- The second pass was committed, but the owner rejected its navbar material as
+  visually insufficient. CL-002 is reopened; explicit owner visual approval
+  remains open, and neither the existing commit nor its Git authorization
+  unblocks CL-004/CL-010 broad styling.
+- The third material pass replaces the opaque strip with a fixed floating
+  capsule. The luminous hero and later sections now travel beneath a 50% navy
+  tint, 18 px blur, saturation/contrast lift, double rim, directional specular
+  pools, and depth shadows. Compact CTAs use live SDF displacement in Chromium;
+  phone-width pills and WebKit/Firefox retain frost/tint/rim fallbacks.
+- Production browser evidence covered top, dark-scroll, light-scroll, hover,
+  keyboard focus, final CTA, 390 × 844, and 320 × 568 views. The complete
+  320–2560 px matrix plus 1280 × 640 and 720 × 450 retained one H1, three process
+  steps, privacy content, 44 px minimum visible links, and zero overflow.
+- The browser computed active CTA filters as
+  `blur(7px) saturate(1.35) url(#lg-mat-…-v2)`. The package chunk measured
+  56,700 bytes minified / 18,019 bytes gzip / 15,906 bytes Brotli. Runtime logs
+  contained no warning, error, hydration mismatch, or remote runtime asset.
+- The Windows in-app browser directly exercised its active reduced-motion mode.
+  It could not supply Safari or normal-motion/forced-colors media emulation, so
+  those are recorded as source/fallback review rather than falsely marked as
+  native browser execution. The remaining focused-verification checkbox stays
+  open for that reason, and owner approval is still required.
 
 ## Privacy, provider, and cost constraints
 

@@ -93,22 +93,72 @@
 }
 
 .siteHeader {
-  position: sticky;
-  top: 0;
+  position: fixed;
+  inset: 0 0 auto;
   z-index: 50;
-  border-bottom: 1px solid rgb(255 255 255 / 0.12);
-  background: #0b1a3a;
+  padding: max(0.75rem, env(safe-area-inset-top)) 1.5rem 0;
   color: white;
-  box-shadow: 0 0.75rem 2rem rgb(3 11 29 / 0.12);
+  pointer-events: none;
 }
 
 .headerInner {
-  width: min(calc(100% - 3rem), var(--content));
-  min-height: 4.75rem;
+  position: relative;
+  width: min(100%, var(--content));
+  min-height: 4rem;
   display: flex;
   align-items: center;
   gap: 2rem;
   margin-inline: auto;
+  padding: 0.35rem 0.45rem 0.35rem 1rem;
+  overflow: hidden;
+  border: 1px solid rgb(206 226 255 / 0.32);
+  border-radius: 999px;
+  background-color: rgb(7 22 52 / 0.5);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    inset 0 -1px 0 rgb(76 129 224 / 0.16),
+    0 0.35rem 1.1rem rgb(0 8 26 / 0.2),
+    0 1.4rem 3.6rem rgb(0 8 26 / 0.3);
+  isolation: isolate;
+  pointer-events: auto;
+}
+
+.headerInner::before,
+.headerInner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.headerInner::before {
+  z-index: -1;
+  background:
+    radial-gradient(
+      circle at 13% -40%,
+      rgb(255 255 255 / 0.32),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 76% 160%,
+      rgb(66 137 255 / 0.24),
+      transparent 44%
+    ),
+    linear-gradient(
+      112deg,
+      rgb(255 255 255 / 0.1),
+      transparent 27% 68%,
+      rgb(103 167 255 / 0.1)
+    );
+}
+
+.headerInner::after {
+  inset: 1px;
+  border: 1px solid rgb(255 255 255 / 0.09);
+  box-shadow:
+    inset 0 0.8rem 1.4rem rgb(255 255 255 / 0.035),
+    inset 0 -0.8rem 1.4rem rgb(24 82 178 / 0.08);
 }
 
 .wordmark {
@@ -198,10 +248,14 @@
   align-items: center;
   justify-content: center;
   padding-inline: 1rem;
-  border: 1px solid rgb(255 255 255 / 0.3);
+  border: 1px solid rgb(255 255 255 / 0.32);
   border-radius: 999px;
-  background: #245bd6;
+  background-color: rgb(60 126 244 / 0.62);
   color: white;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.24),
+    inset 0 -1px 0 rgb(16 55 132 / 0.24),
+    0 0.35rem 1rem rgb(0 8 28 / 0.18);
   font-size: 0.875rem;
   font-weight: 650;
   text-decoration: none;
@@ -212,7 +266,11 @@
 
 .headerAction:hover {
   border-color: rgb(255 255 255 / 0.52);
-  background: #3470ee;
+  background-color: rgb(75 143 255 / 0.74);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.34),
+    inset 0 -1px 0 rgb(16 55 132 / 0.18),
+    0 0.5rem 1.25rem rgb(0 8 28 / 0.24);
 }
 
 .headerAction:active,
@@ -226,7 +284,7 @@
   min-height: 66rem;
   display: grid;
   place-items: start center;
-  padding: clamp(5.5rem, 9vw, 8rem) 1.5rem clamp(5rem, 9vw, 8rem);
+  padding: clamp(8rem, 11vw, 10rem) 1.5rem clamp(5rem, 9vw, 8rem);
   background:
     radial-gradient(circle at 18% 18%, rgb(52 112 238 / 0.5), transparent 30%),
     radial-gradient(circle at 79% 8%, rgb(70 153 255 / 0.3), transparent 27%),
@@ -234,6 +292,40 @@
   color: white;
   isolation: isolate;
   overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -9rem -8% auto;
+  height: 22rem;
+  background:
+    radial-gradient(
+      ellipse at 14% 48%,
+      rgb(109 179 255 / 0.55),
+      transparent 18%
+    ),
+    radial-gradient(
+      ellipse at 53% 18%,
+      rgb(60 125 255 / 0.58),
+      transparent 24%
+    ),
+    radial-gradient(
+      ellipse at 89% 60%,
+      rgb(84 172 255 / 0.46),
+      transparent 19%
+    ),
+    repeating-linear-gradient(
+      104deg,
+      transparent 0 3.7rem,
+      rgb(144 199 255 / 0.1) 3.8rem 3.9rem,
+      transparent 4rem 7.1rem
+    );
+  filter: blur(10px);
+  opacity: 0.95;
+  transform: rotate(-2deg);
+  pointer-events: none;
 }
 
 .hero::after {
@@ -372,41 +464,69 @@
   font-size: 0.95rem;
   font-weight: 680;
   text-decoration: none;
+  border-radius: inherit;
   transition:
-    background var(--motion-hover) var(--ease-direct),
-    border-color var(--motion-hover) var(--ease-direct),
     color var(--motion-hover) var(--ease-direct),
-    transform var(--motion-press) var(--ease-direct),
-    box-shadow var(--motion-hover) var(--ease-direct);
+    transform var(--motion-press) var(--ease-direct);
 }
 
 .primaryAction {
-  border: 1px solid rgb(255 255 255 / 0.34);
-  background: #2c67e5;
+  border: 0;
+  background: transparent;
   color: white;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.2),
-    0 0.65rem 2rem rgb(2 10 30 / 0.28);
 }
 
-.primaryAction:hover {
-  border-color: rgb(255 255 255 / 0.56);
-  background: #3f7bf4;
+.glassActionShell {
+  position: relative;
+  vertical-align: middle;
+  overflow: visible;
+  border: 1px solid rgb(255 255 255 / 0.34);
+  border-radius: 999px;
+  transition:
+    background-color var(--motion-hover) var(--ease-direct),
+    border-color var(--motion-hover) var(--ease-direct),
+    box-shadow var(--motion-hover) var(--ease-direct),
+    transform var(--motion-press) var(--ease-direct);
+}
+
+.glassActionPrimary {
+  background-color: rgb(45 106 224 / 0.56);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.28),
-    0 0.8rem 2.4rem rgb(2 10 30 / 0.34);
+    inset 0 -1px 0 rgb(8 46 123 / 0.25),
+    0 0.7rem 2.1rem rgb(2 10 30 / 0.29);
+}
+
+.glassActionPrimary:hover {
+  border-color: rgb(255 255 255 / 0.58);
+  background-color: rgb(64 127 242 / 0.66);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.38),
+    inset 0 -1px 0 rgb(8 46 123 / 0.18),
+    0 0.9rem 2.5rem rgb(2 10 30 / 0.36);
 }
 
 .secondaryAction {
-  border: 1px solid rgb(255 255 255 / 0.24);
-  background: #142b57;
+  border: 0;
+  background: transparent;
   color: white;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
 }
 
-.secondaryAction:hover {
-  border-color: rgb(255 255 255 / 0.42);
-  background: #1b376a;
+.glassActionSecondary {
+  background-color: rgb(9 31 72 / 0.36);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    inset 0 -1px 0 rgb(29 85 180 / 0.14),
+    0 0.65rem 1.8rem rgb(2 10 30 / 0.18);
+}
+
+.glassActionSecondary:hover {
+  border-color: rgb(255 255 255 / 0.5);
+  background-color: rgb(17 51 105 / 0.48);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    inset 0 -1px 0 rgb(29 85 180 / 0.12),
+    0 0.75rem 2rem rgb(2 10 30 / 0.24);
 }
 
 .prototypeNote {
@@ -1681,14 +1801,12 @@
 @supports (
   (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
 ) {
-  .siteHeader {
-    background: rgb(7 20 47 / 0.7);
-    -webkit-backdrop-filter: blur(20px) saturate(145%);
-    backdrop-filter: blur(20px) saturate(145%);
+  .headerInner {
+    -webkit-backdrop-filter: blur(18px) saturate(175%) contrast(108%);
+    backdrop-filter: blur(18px) saturate(175%) contrast(108%);
   }
 
   .prototypeBadge,
-  .secondaryAction,
   .heroStage,
   .processVisual {
     background: rgb(10 31 70 / 0.58);
@@ -1696,11 +1814,8 @@
     backdrop-filter: blur(18px) saturate(135%);
   }
 
-  .primaryAction,
   .headerAction {
-    background: rgb(54 119 246 / 0.74);
-    -webkit-backdrop-filter: blur(14px) saturate(150%);
-    backdrop-filter: blur(14px) saturate(150%);
+    background-color: rgb(54 119 246 / 0.62);
   }
 
   .controlProof {
@@ -1713,17 +1828,23 @@
 @supports not (
   (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
 ) {
-  .siteHeader,
+  .headerInner,
   .prototypeBadge,
-  .secondaryAction,
   .heroStage,
   .processVisual {
     background: #0b214d;
   }
 
-  .primaryAction,
   .headerAction {
     background: #2c67e5;
+  }
+
+  .glassActionPrimary {
+    background: #2c67e5;
+  }
+
+  .glassActionSecondary {
+    background: #142b57;
   }
 }
 
@@ -1820,7 +1941,6 @@
 }
 
 @media (max-width: 58rem) {
-  .headerInner,
   .controlSection,
   .privacySection,
   .finalSection,
@@ -1880,7 +2000,7 @@
 
 @media (max-width: 47.5rem) {
   .siteHeader {
-    position: relative;
+    padding: max(0.6rem, env(safe-area-inset-top)) 0.75rem 0;
   }
 
   .headerInner {
@@ -1896,7 +2016,7 @@
 
   .hero {
     min-height: 0;
-    padding: 5.25rem 1rem 4rem;
+    padding: 7.25rem 1rem 4rem;
   }
 
   .heroGlow {
@@ -1957,6 +2077,15 @@
   .secondaryAction {
     width: 100%;
     min-height: 3.4rem;
+  }
+
+  .glassActionShell {
+    width: 100%;
+  }
+
+  .glassActionShell[data-liquid-glass="material"] {
+    -webkit-backdrop-filter: blur(14px) saturate(145%) !important;
+    backdrop-filter: blur(14px) saturate(145%) !important;
   }
 
   .productSection {
@@ -2121,13 +2250,9 @@
 }
 
 @media (max-height: 43.75rem) and (min-width: 47.51rem) {
-  .siteHeader {
-    position: relative;
-  }
-
   .hero {
     min-height: 0;
-    padding-block: 4rem;
+    padding-block: 7rem 4rem;
   }
 
   .processSticky {
@@ -2136,9 +2261,8 @@
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .siteHeader,
+  .headerInner,
   .prototypeBadge,
-  .secondaryAction,
   .heroStage,
   .processVisual {
     background: #0b214d;
@@ -2146,11 +2270,30 @@
     backdrop-filter: none;
   }
 
-  .primaryAction,
   .headerAction {
     background: #255dce;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+
+  .glassActionPrimary,
+  .glassActionSecondary,
+  .glassActionShell[data-liquid-glass="material"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .glassActionPrimary {
+    background: #255dce;
+  }
+
+  .glassActionSecondary {
+    background: #102957;
+  }
+
+  .headerInner::before,
+  .headerInner::after {
+    display: none;
   }
 
   .controlProof {
@@ -2176,6 +2319,7 @@
   }
 
   .headerAction:active,
+  .glassActionShell:active,
   .primaryAction:active,
   .secondaryAction:active {
     transform: none;
@@ -2200,7 +2344,7 @@
 }
 
 @media (forced-colors: active) {
-  .siteHeader,
+  .headerInner,
   .productFrame,
   .controlSection,
   .controlProof,
@@ -2208,6 +2352,7 @@
   .finalSection,
   .primaryAction,
   .secondaryAction,
+  .glassActionShell,
   .headerAction {
     border: 1px solid CanvasText;
     box-shadow: none;
@@ -2218,7 +2363,7 @@
   .processSection,
   .controlSection,
   .finalSection,
-  .siteHeader,
+  .headerInner,
   .prototypeBadge,
   .heroStage,
   .processVisual,
@@ -2227,6 +2372,18 @@
     color: CanvasText;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+
+  .glassActionShell[data-liquid-glass="material"] {
+    background: Canvas;
+    color: CanvasText;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .headerInner::before,
+  .headerInner::after {
+    display: none;
   }
 
   .primaryNav a,

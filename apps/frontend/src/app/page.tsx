@@ -1,4 +1,5 @@
 import styles from "./page.module.css";
+import { GlassAction } from "./glass-action";
 import { ProcessNarrative } from "./process-narrative";
 
 const proofFacts = [
@@ -56,13 +57,20 @@ export default function HomePage() {
               in control.
             </p>
             <div className={styles.heroActions}>
-              <a className={styles.primaryAction} href="#product-proof">
+              <GlassAction
+                className={styles.primaryAction}
+                href="#product-proof"
+              >
                 Preview the sample experience
                 <span aria-hidden="true">→</span>
-              </a>
-              <a className={styles.secondaryAction} href="#privacy">
+              </GlassAction>
+              <GlassAction
+                className={styles.secondaryAction}
+                href="#privacy"
+                tone="secondary"
+              >
                 Review privacy &amp; limits
-              </a>
+              </GlassAction>
             </div>
             <p className={styles.prototypeNote}>
               No upload or processing runs on this page.
@@ -324,10 +332,10 @@ export default function HomePage() {
             This running page is for visual review only. The safe sample and
             real workflow arrive in dependency-ordered tickets after approval.
           </p>
-          <a className={styles.primaryAction} href="#top">
+          <GlassAction className={styles.primaryAction} href="#top">
             Return to the top
             <span aria-hidden="true">↑</span>
-          </a>
+          </GlassAction>
         </section>
       </main>
 

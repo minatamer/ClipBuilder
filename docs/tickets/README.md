@@ -148,11 +148,14 @@ This plan deliberately consolidates the parent's earlier 22 draft slices into
 CL-001 is **completed** with its deterministic foundation evidence recorded in
 the packet. The owner rejected CL-002's standalone HTML direction, then reviewed
 the first React replacement and requested stronger navy/cobalt atmosphere,
-glass materials, and scroll-driven motion. The revised CL-002 implementation
-and QA are **complete and awaiting explicit owner visual approval**; its broad
-styling dependents remain blocked. CL-003–CL-015 remain planned. Status changes
-belong in the individual packet and should be summarized here when work begins
-or finishes.
+glass materials, and scroll-driven motion. The owner then rejected the second
+pass navbar because it still read as an opaque gray bar instead of a glass
+bubble. A researched third material pass is now implemented with a floating
+native glass shell and scoped CTA refraction. CL-002 remains **in owner revision
+review** until explicit visual approval; its broad styling dependents remain
+blocked. CL-003–CL-015 remain planned.
+Status changes belong in the individual packet and should be summarized here
+when work begins or finishes.
 
 | Order | Ticket | Milestone | Coherent outcome | Depends on |
 | ---: | --- | --- | --- | --- |

@@ -249,7 +249,114 @@ particle noise, hidden unsupported-browser content, and a large client bundle
 remain out of bounds. Current library research and a dependency decision must
 be added here before the revised implementation is considered complete.
 
-## Local prototype review evidence
+### Glass-material rejection — 2026-09-29
+
+The owner rejected the second-pass navbar material even though the stylesheet
+contained `backdrop-filter`. In the reviewed pixels it remained a rectangular,
+nearly opaque gray/navy strip, with too little background detail crossing the
+material and no clear floating bubble silhouette, edge refraction, or specular
+depth. A CSS declaration is not evidence of the target. The next pass must
+compare current native, SVG-displacement, and React liquid-glass techniques,
+select the smallest responsible approach, and capture before/after desktop and
+phone evidence including content moving behind the floating navigation.
+
+### Liquid-glass implementation review — 2026-09-29
+
+The rejected pixels were caused by composition, not a missing declaration. The
+full-width sticky header occupied its own dark block, its supported background
+was still `rgba(7 20 47 / 0.7)`, and the hero began below it. Almost no detailed
+content crossed the filter, so blur and saturation had nothing visible to bend
+or diffuse. The bar also had no capsule silhouette, bright rim, inner edge,
+specular pool, or depth shadow. `backdrop-filter` was technically active but the
+result correctly read as an opaque strip.
+
+The runtime audit found no CSP or remote runtime asset, no ancestor transform
+around the header, and no z-index conflict. The header sat outside the hero's
+isolated stacking context. The material failure was therefore not Next.js,
+CSS Modules, SSR, or GPU support. The active Chromium review browser exposed
+`backdrop-filter`; the same environment also preferred reduced motion but not
+reduced transparency or forced colors.
+
+| Candidate | Maintenance, license, and adoption evidence | Browser / React / performance fit | Decision |
+| --- | --- | --- | --- |
+| Native layered CSS | Web platform; `backdrop-filter` is Baseline 2024 and needs a transparent surface plus visible backdrop detail | No client bundle or hydration risk; blur/saturation works across current engines, but cannot create true edge displacement alone | **Selected for the wide navbar shell** |
+| `@samasante/liquid-glass` 0.1.1 | MIT, published three months before review, about 20,360 weekly npm downloads, React/React DOM `>=18`, zero runtime dependencies, two open GitHub issues | Headless component generates an SDF displacement map; Chromium bends the live backdrop and Safari/Firefox retain frost/tint/rim light. Official docs warn against stretching one lens across a dock-sized bar | **Selected only for compact CTA pills** |
+| `liquid-glass-react` 1.1.1 (`rdev`) | MIT, roughly 6.2k stars and 35k weekly downloads, but only 16 commits and 22 open issues at review time | React 19 peer fits this repo, but unresolved reports cover missing Chrome optics and Next/flex layout failure; Safari/Firefox displacement is absent | Rejected despite popularity |
+| Liquefy UI | MIT, active multi-package project with a Next.js 16 CI example and accessible Base UI primitives | Real WebGL/SVG refraction, shared context, and spring physics; three packages, client-only components, default-on motion/transparency, and a broad component system are disproportionate for three links | Rejected as overlapping/heavy |
+| LeonardSEO static SVG map reference | MIT, one star and two commits at review time | About 5 kB plus a generated map and no per-frame JS; real Chromium `feDisplacementMap`, plain-blur WebKit/Firefox fallback. Useful architecture evidence, but too immature to adopt as a package/source | Rejected as a dependency |
+| `simple-liquid-glass` / WebGL snapshot approaches | MIT projects advertise Safari/iOS refraction through WebGL or captured background content | Higher renderer/capture complexity, more GPU/resource ownership, and possible stale DOM snapshots are not justified for landing-page navigation | Rejected |
+| React Bits `GlassSurface` and catalog kits | Effect-oriented catalogs with broader Motion/GSAP/Lenis/Three dependency and licensing surfaces | Attractive demos, but they overlap the existing CSS-module system and import far more behavior than the ticket needs | Rejected |
+
+Selected architecture and rationale:
+
+- The header is now a fixed transparent layer; its rounded `headerInner` capsule
+  is the material. Page content scrolls beneath it instead of beginning below an
+  opaque strip.
+- The wide capsule uses native blur, saturation, contrast, a 50% navy tint,
+  multi-stop specular pools, a double rim, and shallow/deep shadows. This follows
+  the selected library's own advice not to stretch one SDF lens over a dock.
+- The hero extends a blue detail field behind the header, so the top state has
+  light/color variation to diffuse. Light and dark later sections visibly pass
+  behind the fixed capsule during scroll.
+- Only compact hero/final CTA pills use `@samasante/liquid-glass`. The page stays
+  a Server Component; `glass-action.tsx` is the isolated client boundary. The
+  production client chunk containing the component is 56,700 bytes minified,
+  18,019 bytes gzip, and 15,906 bytes Brotli.
+- Desktop Chromium computed `blur(7px) saturate(1.35) url(#lg-mat-…-v2)` on the
+  pills, proving the displacement filter engaged. Narrow layouts deliberately
+  override it with `blur(14px) saturate(1.45)` to avoid the documented stretched
+  oval artifact while retaining a readable glass material.
+- `prefers-reduced-transparency` and forced colors disable the library's inline
+  filters with a narrow `!important` override and restore opaque colors. Reduced
+  motion already removes ambient/entrance/scroll transitions; the optics have no
+  continuous animation. Unsupported `backdrop-filter` receives opaque navy and
+  cobalt fallbacks.
+- Windows provides no Safari runtime. WebKit behavior is therefore documented
+  from the selected package's Playwright-tested browser matrix rather than
+  falsely claimed as locally exercised. Safari/Firefox keep the CSS frost,
+  tint, border, specular, and shadow; only live-backdrop displacement is absent.
+
+Primary sources:
+
+- Apple material guidance and functional-layer rationale:
+  <https://developer.apple.com/design/human-interface-guidelines/materials>,
+  <https://developer.apple.com/documentation/TechnologyOverviews/liquid-glass?changes=_3__6>,
+  and <https://developer.apple.com/videos/play/wwdc2025/219/>. The implementation
+  follows the principles of content beneath navigation, restraint, contrast,
+  and avoiding glass-on-glass; it does not copy Apple controls or trade dress.
+- Web platform behavior:
+  <https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/backdrop-filter>
+  and <https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/filter>.
+- Selected package, package metadata, and browser matrix:
+  <https://www.npmjs.com/package/@samasante/liquid-glass>,
+  <https://github.com/samasante/liquid-glass>, and
+  <https://github.com/samasante/liquid-glass/blob/main/BROWSERS.md>.
+- Rejected high-adoption package issues:
+  <https://github.com/rdev/liquid-glass-react/issues/13> and
+  <https://github.com/rdev/liquid-glass-react/issues/16>.
+- Rejected WebGL/component and static-map references:
+  <https://github.com/liquefy-ui/liquefy-ui>,
+  <https://github.com/lucaperullo/simple-liquid-glass>, and
+  <https://github.com/LeonardSEO/liquid-glass-react>.
+
+Visual verification used the production build in the in-app Chromium browser:
+
+- 1440 × 900 top, product-proof scroll, light privacy section, and final CTA
+  states showed the floating rim and backdrop changing with content.
+- 390 × 844 and 320 × 568 showed a compact single bubble, 44 px header links,
+  full-width CTA frost, and zero horizontal overflow.
+- Keyboard review showed the first-focus skip link and a 3 px cobalt outline on
+  the next wordmark target without removing the glass rim.
+- A 720 × 450 CSS-pixel run exercised the 1440 × 900 / 200% effective reflow
+  with zero horizontal overflow. The action remains reachable by vertical scroll.
+- Runtime inspection found the SVG filters in the hydrated DOM, no warning/error
+  console entries, one H1, no remote asset request, and no hydration mismatch.
+- The browser's active reduced-motion setting was tested directly. Normal-motion
+  and forced-colors media emulation, plus a native Safari binary, were not
+  available in this Windows in-app browser; their source branches and documented
+  fallback behavior were inspected without claiming native execution.
+
+## Second-pass local prototype review evidence (superseded)
 
 - Running review surface: `http://127.0.0.1:3000/` from the production build.
 - Revised desktop and phone hero/product compositions were captured and
