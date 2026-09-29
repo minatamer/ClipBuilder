@@ -9,13 +9,20 @@ server-only configuration to browser code.
 CL-001 supplies the accessible product shell, framework error/not-found
 boundaries, metadata, robots policy, and deterministic build/test foundation.
 CL-002 adds the responsive landing-page visual approval prototype at `/` using
-the real Next.js/React framework. Its links reveal local visual-review sections
-only; no upload, analysis, media, provider, session, or render behavior exists.
-The page remains server-rendered except for one narrow `IntersectionObserver`
-client island that changes the active presentation cue in the semantic
-“How it works” list. The complete list is present without JavaScript. No motion,
-scroll, glass, font, or component dependency was added; CSS provides the visual
-system, progressive enhancement, and reduced-motion/transparency fallbacks.
+the real Next.js/React framework. Its actions reveal the local How it works flow
+or the Privacy & limits dialog only; no upload, analysis, provider, session, or
+render behavior exists. The page remains server-rendered around narrow client
+islands for the IntersectionObserver flow, native dialog controls, deterministic
+anchor scrolling, and accessible hero-word rotation. The complete flow and
+privacy copy remain in server markup. CSS
+provides the responsive visual system, code-native synthetic media, and
+reduced-transparency fallbacks. Per the latest CL-002 owner direction, the hero
+and synchronized conversion story run at full timing in every local motion
+preference state; the rotating noun has no pause/play control, and that recorded
+prototype-only accessibility exception must be revisited before public release.
+Laptop and desktop widths use a split hero with the brand, two-line promise, and
+supporting copy beside the product-motion frame; tablet and phone widths stack
+the same content. The header retains the only first-viewport CTA.
 
 CL-003 adds the complete canonical session reducer, derived selectors,
 allow-listed `sessionStorage` projection, server-evidence reconciliation,
@@ -23,6 +30,12 @@ effect registry, and provider foundation under `src/features/session`. No CL-003
 module is mounted into the visual prototype, so production workflow screens
 remain owned by later tickets. Broad application styling remains gated on
 explicit owner approval of the CL-002 prototype.
+
+The locked production journey is sample/upload → analysis → zero to four
+grounded candidates → choose exactly one → automatic clip preparation →
+read-only preview and render confirmation → result/download. The frontend will
+not expose an editor, chatbot, manual trim, caption or visual controls, an
+editable timeline, proposals, or undo/redo.
 
 ## Commands
 

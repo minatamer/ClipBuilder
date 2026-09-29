@@ -35,10 +35,10 @@ motion implementation skill was present in the current global catalog.
 | Descript | <https://www.descript.com/> | `descript-desktop-2026-09-29.jpg` | `descript-mobile-2026-09-29.jpg` | Aggressive type scale, short measure, one-action hierarchy, product surface entering below the fold |
 | Captions | <https://captions.ai/> | `captions-desktop-2026-09-29.jpg` | `captions-mobile-2026-09-29.jpg` | Soft premium material field, compact framed navigation, centered product action, vertical-output proof |
 
-OpusClip's current editor page was also reviewed for the useful product idea of
-“AI first pass, human last word”: <https://www.opus.pro/ai-video-editor>. The
-ClipBuilder prototype carries the inspectable/reversible principle, not its
-chat, publishing, trend, growth, or virality claims.
+OpusClip's current editor page was reviewed only for product-proof framing:
+<https://www.opus.pro/ai-video-editor>. ClipBuilder does not adopt its editor,
+chat, publishing, trend, growth, or virality behavior. Its visitor interaction
+ends at choosing one candidate and confirming the automatic clip.
 
 ## Concrete visual findings
 
@@ -135,7 +135,7 @@ Selected architecture:
   adds only an active presentation cue; it never gates content, navigation, or
   reading order.
 - Use a sticky visual rail and transform/opacity transitions for continuity.
-  CSS view timelines add reversible scroll-linked polish only inside
+  CSS view timelines add scroll-linked polish only inside
   `@supports`; the static/observer baseline remains complete.
 - Use opaque dark-blue surfaces by default, then enable true translucent glass
   with `backdrop-filter` only when supported. `prefers-reduced-transparency`
@@ -143,6 +143,14 @@ Selected architecture:
   compositing.
 - Do not override native scrolling. Reduced motion removes ambient, entrance,
   scroll-linked, and active-step transitions while keeping every step visible.
+
+Owner overrides recorded on 2026-09-29 and 2026-09-30 supersede that selected
+reduced-motion implementation for this prototype. The hero rotation and
+synchronized conversion story now run at full timing in every local
+motion-preference state; the later split-hero review removes the hero's
+pause/play control completely. This is a documented accessibility exception to
+revisit before public release and during CL-013, not a general product
+recommendation.
 
 Official implementation sources:
 
@@ -177,7 +185,7 @@ Official implementation sources:
 - **Why selected:** the owner asked to promote the first pass's strongest navy
   proof field into the structural identity. The luminous field now carries the
   hero and major transitions while cloud product surfaces preserve Apple's
-  restraint and the eventual editor's legibility. Blue, rather than violet,
+  restraint and the eventual workflow's legibility. Blue, rather than violet,
   remains the singular chromatic idea.
 
 ### B — Porcelain / Carbon / Persimmon — not selected
@@ -232,6 +240,10 @@ Official implementation sources:
 - `prefers-reduced-motion: reduce` disables smooth scroll, all translation,
   sequencing, and repeated motion; content appears immediately in final state.
 
+The reduced-motion bullets above preserve the original research recommendation.
+They are superseded for the CL-002 visual-approval build by the owner override
+recorded in this file and the active ticket.
+
 ## Owner gate
 
 This synthesis and the resulting React prototype remain provisional until the
@@ -280,7 +292,7 @@ reduced transparency or forced colors.
 | Candidate | Maintenance, license, and adoption evidence | Browser / React / performance fit | Decision |
 | --- | --- | --- | --- |
 | Native layered CSS | Web platform; `backdrop-filter` is Baseline 2024 and needs a transparent surface plus visible backdrop detail | No client bundle or hydration risk; blur/saturation works across current engines, but cannot create true edge displacement alone | **Selected for the wide navbar shell** |
-| `@samasante/liquid-glass` 0.1.1 | MIT, published three months before review, about 20,360 weekly npm downloads, React/React DOM `>=18`, zero runtime dependencies, two open GitHub issues | Headless component generates an SDF displacement map; Chromium bends the live backdrop and Safari/Firefox retain frost/tint/rim light. Official docs warn against stretching one lens across a dock-sized bar | **Selected only for compact CTA pills** |
+| `@samasante/liquid-glass` 0.1.1 | MIT, published three months before review, about 20,360 weekly npm downloads, React/React DOM `>=18`, zero runtime dependencies, two open GitHub issues | Headless component generates an SDF displacement map; Chromium bends the live backdrop and Safari/Firefox retain frost/tint/rim light. Official docs warn against stretching one lens across a dock-sized bar | Previously selected only for compact CTA pills; removed when the owner removed the final in-page pill |
 | `liquid-glass-react` 1.1.1 (`rdev`) | MIT, roughly 6.2k stars and 35k weekly downloads, but only 16 commits and 22 open issues at review time | React 19 peer fits this repo, but unresolved reports cover missing Chrome optics and Next/flex layout failure; Safari/Firefox displacement is absent | Rejected despite popularity |
 | Liquefy UI | MIT, active multi-package project with a Next.js 16 CI example and accessible Base UI primitives | Real WebGL/SVG refraction, shared context, and spring physics; three packages, client-only components, default-on motion/transparency, and a broad component system are disproportionate for three links | Rejected as overlapping/heavy |
 | LeonardSEO static SVG map reference | MIT, one star and two commits at review time | About 5 kB plus a generated map and no per-frame JS; real Chromium `feDisplacementMap`, plain-blur WebKit/Firefox fallback. Useful architecture evidence, but too immature to adopt as a package/source | Rejected as a dependency |
@@ -298,10 +310,11 @@ Selected architecture and rationale:
 - The hero extends a blue detail field behind the header, so the top state has
   light/color variation to diffuse. Light and dark later sections visibly pass
   behind the fixed capsule during scroll.
-- Only compact hero/final CTA pills use `@samasante/liquid-glass`. The page stays
-  a Server Component; `glass-action.tsx` is the isolated client boundary. The
-  production client chunk containing the component is 56,700 bytes minified,
-  18,019 bytes gzip, and 15,906 bytes Brotli.
+- The earlier compact hero CTA used `@samasante/liquid-glass`; its measured
+  client chunk was 56,700 bytes minified / 18,019 bytes gzip / 15,906 bytes
+  Brotli. The owner later removed that CTA, so the adapter and dependency are
+  removed too. The floating header retains the native CSS glass recipe without
+  a client-side refraction package.
 - Desktop Chromium computed `blur(7px) saturate(1.35) url(#lg-mat-…-v2)` on the
   pills, proving the displacement filter engaged. Narrow layouts deliberately
   override it with `blur(14px) saturate(1.45)` to avoid the documented stretched
@@ -355,6 +368,84 @@ Visual verification used the production build in the in-app Chromium browser:
   and forced-colors media emulation, plus a native Safari binary, were not
   available in this Windows in-app browser; their source branches and documented
   fallback behavior were inspected without claiming native execution.
+
+## Rotating-word headline research and selection
+
+The owner requested the familiar modern hero treatment where one keyword cycles
+through several product outcomes with changing type. Current Motion and GSAP
+documentation converge on the same practical construction: keep a stable text
+scaffold, key or layer the changing words inside a clipped slot, and use
+transform/opacity for the entrance and exit. Character-level scramble/typewriter
+effects were rejected because they add noise and make the product promise slower
+to read. No new library is justified for one six-word sequence.
+
+Primary implementation and accessibility references:
+
+- Motion's `AnimatePresence` documents the keyed enter/exit model used for
+  slideshows and other changing content:
+  <https://motion.dev/docs/react-animate-presence>.
+- Motion's text-animation guidance identifies split text as an established
+  animation genre, while its reduced-motion hook recommends replacing or
+  disabling spatial movement for the user's preference:
+  <https://motion.dev/docs/text-animation> and
+  <https://motion.dev/docs/react-use-reduced-motion>.
+- GSAP SplitText documents word/line masks, responsive splitting, and the need
+  for one accessible parent label with visual fragments hidden from assistive
+  technology: <https://gsap.com/docs/v3/Plugins/SplitText/>.
+- W3C WAI recommends suppressing non-essential motion under
+  `prefers-reduced-motion` and providing pause/stop behavior for automatically
+  moving or updating content:
+  <https://www.w3.org/WAI/WCAG22/Techniques/css/C39> and
+  <https://www.w3.org/WAI/tutorials/carousels/animations/>.
+
+Selected ClipBuilder treatment:
+
+- `moment`, `hook`, `insight`, `punchline`, `takeaway`, and `story` are all
+  plausible one-conversation editorial outcomes. `trend` is excluded because
+  the bounded demo has no external-trend input and must not imply a virality
+  score or growth prediction.
+- The stable “We find you the” scaffold and “You get the final cut.” second line
+  remain in the local system display face. The rotating noun alone varies among
+  solid, italic, outline, source-local serif, condensed, and gradient
+  treatments.
+- The visual words are `aria-hidden`; the H1 retains the stable accessible name
+  “We find you the moment. You get the final cut.” JavaScript-free rendering
+  remains static on `moment`; the hydrated sequence rotates automatically with
+  no pause/play control under the recorded owner-directed exception.
+- The superseded first rotation pass used a 44 × 44 pause/play control. After
+  its removal, live Chromium review confirmed split composition at 2560 × 1440,
+  1440 × 900, 1280 × 800, and 1024 × 768, then stacked composition at
+  768 × 1024, 390 × 844, and 320 × 568. A 2.6-second sample changed the
+  active noun while the DOM and accessibility tree exposed zero rotating-
+  headline controls; every checked width retained two title lines and zero
+  horizontal overflow.
+
+## Paid clipping campaign market references
+
+Accessed 2026-09-30. These first-party pages support the narrow landing claim
+that **9+ platforms publicly host paid clipping campaigns**:
+
+| Platform | First-party evidence used for the claim |
+| --- | --- |
+| Whop / Content Rewards | [Creator page](https://contentrewards.com/creators) describes choosing campaigns, creating campaign content, and receiving rewards tied to qualifying views. |
+| CLIPPING | [Platform homepage](https://clipping.net/) describes brand-funded campaigns in which clippers publish clips and receive payment for verified views. |
+| Picsart Clipping | [Clipping page](https://picsart.com/earn/clipping/) describes joining approved campaigns, creating clips, and receiving rewards under campaign rules. |
+| Insy | [Clipper documentation](https://docs.insy.io/clipping/for-clippers/) describes clipping creator content, publishing it, and receiving view-based campaign payments. |
+| Clipped | [Platform homepage](https://clipped-app.com/) describes creating brand clips and earning per result. |
+| AmplifyClips | [Platform homepage](https://www.amplifyclips.com/) describes creator-led clipping campaigns and performance-based rewards. |
+| Clipster | [Campaign discovery](https://www.clipster.gg/discover) lists current clipping campaigns with campaign budgets, payout progress, and view-based rates. |
+| ClipReward | [Platform homepage](https://www.clipreward.com/) describes funded Clipping Rewards in which clippers submit published clips and qualifying work earns against campaign rules. |
+| ClipCo | [Platform homepage](https://clipco.app/) describes creator-funded clipping campaigns, verified submissions, view tracking, and payouts per 10,000 views. |
+
+The prototype uses the conservative wording “platforms host paid clipping
+campaigns.” It does not claim that ClipBuilder is affiliated with these
+platforms, that the platform itself funds every campaign, or that a visitor will
+earn money. Eligibility, geography, campaign availability, payout terms, and
+rules can change and must be checked on the platform before participation.
+
+The wordmark wall uses original text/CSS treatments rather than downloaded,
+hotlinked, or traced brand logo assets. The names provide nominative market
+context only; they are not integration, customer, or partner badges.
 
 ## Second-pass local prototype review evidence (superseded)
 
