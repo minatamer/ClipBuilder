@@ -96,7 +96,7 @@ the owning dependency rather than becoming a second implementation here.
 
 - ffprobe/process execution (CL-006), transcription/candidate analysis
   (CL-007), playback-delivery architecture beyond evidence needed by the spike,
-  assembly, editor, render, production provisioning, or public enablement.
+  assembly, automatic clip review, render, production provisioning, or public enablement.
 - Multipart media requests, public bucket/object ACLs, bucket listing, filenames
   in object keys, database-backed sessions, durable per-user quota, or a general
   storage repository abstraction.

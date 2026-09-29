@@ -25,7 +25,8 @@ measurement. It is a real go/no-go gate, not a production feature split.
 
 ## Portfolio value
 
-Prove the risky media/vision foundation before building live AI or editor work:
+Prove the risky media/vision foundation before building live AI or automatic
+clip-review work:
 safe subprocesses, authoritative media limits, bounded asynchronous execution,
 and evidence that the signature speaker-following claim is plausible on the
 actual demo source and intended CPU.

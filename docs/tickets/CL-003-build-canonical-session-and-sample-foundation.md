@@ -1,6 +1,6 @@
 # CL-003 — Build the canonical session and sample foundation
 
-Status: Planned<br>
+Status: Reopened — implementation committed; automatic-flow alignment pending<br>
 Milestone: M1 — deterministic sample story<br>
 Last synchronized: 2026-09-29<br>
 Depends on: CL-001<br>
@@ -33,7 +33,7 @@ grounded evidence, and honest sample provenance.
 - One `ClippingSessionState` reducer is the only browser workflow authority.
   Routes, components, request hooks, and storage never mirror `stage`.
 - Top-level stages run from `bootstrapping` and `intake` through upload,
-  analysis, candidates, assembly, editor, render, result, clear, expired, and
+  analysis, candidates, assembly, clip review, render, result, clear, expired, and
   fatal states. This ticket implements and tests the complete transition model
   even though later screens/actions arrive later.
 - Persistence is a frontend-owned `ClippingSessionProjectionV1` in
@@ -75,9 +75,11 @@ silently replace its schemas/configuration.
   unknown-version, and server-conflicting projections.
 - Explicit effect ownership for storage, object URLs, polling, and future
   cleanup; runtime effects remain outside reducer/persistence.
-- Normalized transcript and three distinct grounded candidate fixtures plus
+- Normalized transcript and a deterministic three-candidate sample fixture plus
   no-candidate, invalid-reference, duplicate, invented-claim, prompt-injection,
   timeout, and provider-error variants.
+- General candidate schemas accept zero to four reconciled candidates, target
+  three strong choices, and never require weak padding.
 - Purpose-recorded sample manifest fields for version, SHA/generation placeholders,
   provenance, analysis/assembly revisions, and every precomputed asset.
 - Fake provider/job/storage call counters and deterministic clock behavior
@@ -86,7 +88,8 @@ silently replace its schemas/configuration.
 ### Out of scope
 
 - Production landing/candidate UI (CL-004), live upload/storage (CL-005), real
-  job/process code (CL-006), live adapters (CL-007 onward), editor/render UI, or
+  job/process code (CL-006), live adapters (CL-007 onward), automatic
+  review/render UI, or
   cloud upload of the sample.
 - Committing a large or unapproved sample video, real transcript, contributor
   identity, signatures, private license copy, provider payload, or generated
@@ -104,14 +107,14 @@ silently replace its schemas/configuration.
   content-free development diagnostic code.
 - [ ] Derive stage title, available actions, blockers, current progress, and
   clearability through selectors rather than duplicate state.
-- [ ] Keep upload/proposal/playback/cleanup transient status in named nested
+- [ ] Keep upload/playback/cleanup transient status in named nested
   discriminated states.
 
 ### 2. Safe persistence and restore
 
 - [ ] Persist only the allow-listed projection: content-free IDs/revisions,
-  stage hint, selection, bounded manifest/history, proposal diff without free
-  transcript, playback time/panel, and bounded caption corrections.
+  stage hint, selected candidate ID, immutable automatic-manifest ID/hash, and
+  read-only preview playback time.
 - [ ] Exclude media/transcript/rationale copies, filenames, blobs, URLs,
   cookies/grants, provider/SDK objects, errors/stacks, Turnstile tokens,
   timers/listeners/controllers, and raw tracks/assets.
@@ -124,8 +127,9 @@ silently replace its schemas/configuration.
 
 - [ ] Define a valid normalized transcript with stable word IDs and immutable
   timing evidence.
-- [ ] Provide exactly three materially distinct candidate ranges with evidence,
-  caveats, and no numeric virality score or invented quote.
+- [ ] Provide exactly three materially distinct ranges for the curated sample;
+  enforce zero-to-four general bounds, grounded evidence/caveats, and no weak
+  padding, numeric virality score, or invented quote.
 - [ ] Include one purpose-recorded story that can later demonstrate one-face,
   wide two-person, camera-cut, Earth/Moon, and exact-equation behavior without
   hard-coding those subjects into generic logic.
@@ -148,10 +152,11 @@ silently replace its schemas/configuration.
 - `SAMPLE_SELECTED` enters a proven sample candidate/preparation state without
   paid work.
 - Manual/live file selection remains in memory and does not enter persistence.
-- Illegal examples—rendering without a manifest, applying a stale proposal,
-  analyzing before inspection, or restoring a missing output—remain rejected.
-- Future manifest history is capped at 20 committed revisions; a new edit after
-  undo clears redo.
+- Illegal examples—rendering without a server-proven manifest, browser manifest
+  substitution, analyzing before inspection, or restoring a missing output—
+  remain rejected.
+- No editor state, proposal status/history, caption correction, or undo/redo
+  state belongs in the reducer or persistence projection.
 - Sample fixture objects parse through the same public schemas later used by
   backend responses and provider reconciliation.
 
@@ -174,8 +179,8 @@ silently replace its schemas/configuration.
   unknown-version, expired, and server-conflicting projections.
 - [ ] No forbidden runtime/content/capability value can serialize into session
   storage.
-- [ ] Three valid candidates and a no-candidate fixture pass production schemas
-  and deterministic grounding/reconciliation checks.
+- [ ] The three-candidate sample, one/four-boundary fixtures, and no-candidate
+  fixture pass production schemas and deterministic grounding/reconciliation.
 - [ ] Invalid references, overlap/duplicates, invented claims, virality promise,
   and injection fixtures fail with safe rule evidence.
 - [ ] Fakes run with no network/credentials, honor abort/time, count calls, and

@@ -11,8 +11,9 @@ a content-free `GET /v1/health`, safe error mapping, and deterministic tests.
 CL-003 adds a contract-validated synthetic analysis/assembly story plus
 deterministic fake clock, provider, and operation foundations under `src/demo`.
 They run with no credentials or network and are not a live-provider fallback.
-Storage, grants, upload, media jobs, live providers, editor endpoints, render,
-and cleanup arrive only in their owning tickets.
+Storage, grants, upload, media jobs, live providers, automatic composition,
+render, and cleanup arrive only in their owning tickets. No editor or assistant
+endpoint belongs in the demo API.
 
 `src/app.ts` constructs Express without listening. `src/server.ts` is the only
 module that reads `process.env` and opens the local port.

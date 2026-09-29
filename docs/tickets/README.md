@@ -76,7 +76,7 @@ followed by a colon and a short imperative description:
 
 ```text
 CL-001: initialize the ClipBuilder workspace
-CL-010: build the reversible editor
+CL-010: deliver automatic clip review
 ```
 
 The ticket ID always comes first. Do not prepend `feat`, `fix`, `docs`, or
@@ -96,7 +96,7 @@ This plan deliberately consolidates the parent's earlier 22 draft slices into
   reviewable artifact. For example, visual approval, active-speaker feasibility,
   and final deployment are honest stop points.
 - Closely related packets are adjacent: storage/upload, media/spike,
-  active-speaker/visual assembly/editor, and render/result.
+  active-speaker/visual assembly/review, and render/result.
 - A later ticket must not quietly repair a missing dependency. Stop and report
   the dependency gap, or explicitly reopen the owning earlier ticket.
 - New A-suffixed packets are reserved for owner-requested corrections or a
@@ -109,8 +109,16 @@ This plan deliberately consolidates the parent's earlier 22 draft slices into
   project manager, social analytics tool, or nonlinear editor.
 - One owned/licensed conversation produces grounded candidate moments and one
   selected 10–60 second vertical clip.
-- The AI proposes bounded candidate, visual-plan, or edit data that references
-  real transcript word IDs. Deterministic code validates and compiles it.
+- Analysis returns zero to four grounded candidates, targeting three strong
+  choices without padding. The visitor selects exactly one.
+- The AI proposes bounded candidate and visual-plan data that references real
+  transcript word IDs. Deterministic code validates and compiles it.
+- After selection, composition is automatic: active-speaker framing, one fixed
+  `clean-emphasis` caption profile, and bounded contextual visuals. The visitor
+  only reviews, confirms one render, downloads, or clears.
+- Do not add an editor, chatbot/assistant, manual trim/range path, caption
+  correction/style controls, headline or visual controls, editable timeline,
+  proposal/diff/apply behavior, undo, or redo.
 - Do not claim virality, current trend knowledge, rights clearance, instant
   deletion, zero retention, or private platform-algorithm knowledge.
 - Do not add accounts, a database, durable projects/history, batch processing,
@@ -153,7 +161,11 @@ pass navbar because it still read as an opaque gray bar instead of a glass
 bubble. A researched third material pass is now implemented with a floating
 native glass shell and scoped CTA refraction. CL-002 remains **in owner revision
 review** until explicit visual approval; its broad styling dependents remain
-blocked. CL-003–CL-015 remain planned.
+blocked. CL-003 implementation was committed but is **reopened** to align its
+candidate cardinality, reducer, persistence, and obsolete proposal contracts
+with the later owner decision that removed all editing/customization. CL-004–
+CL-015 remain planned; CL-010 is now automatic read-only clip review and render
+confirmation, not an editor/assistant ticket.
 Status changes belong in the individual packet and should be summarized here
 when work begins or finishes.
 
@@ -168,7 +180,7 @@ when work begins or finishes.
 | 7 | [CL-007](CL-007-deliver-live-analysis-vertical-slice.md) | M3 | Upload-to-grounded-candidates analysis across adapters, job, API, recovery, and UI | CL-004, CL-006 |
 | 8 | [CL-008](CL-008-productionize-active-speaker-assembly.md) | M4 | Validated shot/face/active-speaker focus track for the selected clip | CL-006, CL-007 |
 | 9 | [CL-009](CL-009-build-contextual-visual-assembly.md) | M4 | Grounded visual plan, bounded assets/cards, complete assembly bundle, and progress UI | CL-007, CL-008 |
-| 10 | [CL-010](CL-010-build-reversible-editor-and-assistant.md) | M4 | Deterministic editor plus one bounded proposal/diff/apply/undo flow | CL-002, CL-004, CL-009 |
+| 10 | [CL-010](CL-010-deliver-automatic-clip-review.md) | M4 | Read-only automatic clip preview, facts, and one-render confirmation | CL-002, CL-004, CL-009 |
 | 11 | [CL-011](CL-011-render-and-deliver-final-clip.md) | M5 | Deterministic MP4 render, validation, result, download, retry, and clear | CL-005, CL-010 |
 | 12 | [CL-012](CL-012-harden-security-privacy-abuse-and-spend.md) | M6 | Public-demo security, privacy, abuse, capacity, retention, and spend controls | CL-007, CL-009, CL-010, CL-011 |
 | 13 | [CL-013](CL-013-complete-accessibility-responsive-and-performance-pass.md) | M6 | Whole-flow responsive, accessibility, motion, and performance evidence | CL-012 |
@@ -181,7 +193,7 @@ when work begins or finishes.
 - **M1 — deterministic sample story:** CL-003–CL-004.
 - **M2 — private media foundation:** CL-005–CL-006.
 - **M3 — live analysis:** CL-007.
-- **M4 — AI first cut and reversible editor:** CL-008–CL-010.
+- **M4 — automatic AI first cut and review:** CL-008–CL-010.
 - **M5 — final render and delivery:** CL-011.
 - **M6 — public-demo hardening and audit:** CL-012–CL-014.
 - **M7 — deployment and controlled live evidence:** CL-015.
@@ -198,7 +210,7 @@ Ticket numbers define the reading order; dependencies define safe execution:
 Foundation lane:  CL-001 -> CL-003 -> CL-005 -> CL-006 -> CL-007
 Visual lane:      CL-001 -> CL-002 (owner approval)
 Sample slice:     CL-002 + CL-003 -> CL-004
-Assembly/editor:  CL-006 + CL-007 -> CL-008 -> CL-009 -> CL-010
+Assembly/review:  CL-006 + CL-007 -> CL-008 -> CL-009 -> CL-010
 Delivery/release: CL-005 + CL-010 -> CL-011 -> CL-012 -> CL-013 -> CL-014 -> CL-015
 ```
 

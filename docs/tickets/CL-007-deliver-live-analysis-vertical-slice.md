@@ -33,9 +33,9 @@ boundaries, one-call budgets, refresh recovery, and honest failure behavior.
 ## Standalone implementation context
 
 - Analysis starts only after authoritative media inspection and explicit user
-  confirmation. It produces a normalized transcript and exactly three valid
-  candidates when possible; otherwise it returns an honest no-candidate/manual
-  range state.
+  confirmation. It produces zero to four grounded candidates, targeting three
+  strong alternatives without padding; otherwise it returns an honest
+  no-candidate state without a manual range path.
 - Deepgram receives bounded extracted audio, not a user URL or video.
   Transcription normalizes words, times, punctuation, and optional diarization
   into stable IDs, then discards the raw response.
@@ -82,7 +82,8 @@ UI foundation blocks this ticket rather than being reimplemented inside it.
 - English v1 transcription with diarization requested but provider-declared
   unavailability tolerated; stable word/utterance/speaker labels.
 - Candidate prompt boundary, strict provider-shape schema, deterministic
-  reconciliation, three-candidate and no-candidate outcomes.
+  reconciliation, one-to-four candidate bounds, the target-three outcome, and
+  the no-candidate outcome.
 - Bounded category/audience/target-platform context; trend signals remain
   disabled unless separately approved.
 - Refresh, hidden-page polling pause/resume, cancellation, timeout, provider
@@ -90,8 +91,8 @@ UI foundation blocks this ticket rather than being reimplemented inside it.
 
 ### Out of scope
 
-- Assembly/active-speaker work (CL-008), contextual visuals (CL-009), editor or
-  edit assistant (CL-010), render (CL-011), public hardening/deployment, trend
+- Assembly/active-speaker work (CL-008), contextual visuals (CL-009), automatic
+  clip review/confirmation (CL-010), render (CL-011), public hardening/deployment, trend
   research, numeric virality scoring, provider fallback, or multilingual claim.
 - Persisting raw provider responses/prompts, automatic repair calls, re-running
   transcription during candidate-only retry, or exposing provider names/errors
@@ -146,7 +147,7 @@ UI foundation blocks this ticket rather than being reimplemented inside it.
 - [ ] Poll at server interval with capped backoff; pause after hidden timeout;
   reconcile immediately on visibility/refresh without duplicate operations.
 - [ ] Preserve source/transcript evidence accurately across failure; provide
-  only allowed retry, clear, sample, or manual-range recovery.
+  only the evidence-allowed retry, clear, or sample recovery.
 - [ ] Feed the same CL-004 candidate/evidence UI with validated live results.
 
 ## Contracts and state transitions
@@ -175,8 +176,8 @@ UI foundation blocks this ticket rather than being reimplemented inside it.
 
 ## Acceptance criteria
 
-- [ ] Valid fixture analysis produces grounded distinct candidates through the
-  exact API/UI path; no-candidate produces manual-range recovery.
+- [ ] Valid fixture analysis produces one to four grounded distinct candidates
+  through the exact API/UI path; no-candidate offers no editing fallback.
 - [ ] Every reference resolves to existing words; range/evidence/overlap/rank
   and forbidden-claim rules pass deterministic evaluation.
 - [ ] Injection, invented quote/fact, virality promise, duplicate, malformed,
@@ -226,7 +227,7 @@ UI foundation blocks this ticket rather than being reimplemented inside it.
 
 Keep transcription, candidate selection, orchestration/recovery, and analysis UI
 together as `CL-007: deliver grounded live analysis`. Do not split the same
-feature into provider/UI follow-ups or absorb assembly/editor/render. No Git,
+feature into provider/UI follow-ups or absorb assembly/review/render. No Git,
 credential, provider, or cloud mutation is authorized by this packet.
 
 ## Precision references

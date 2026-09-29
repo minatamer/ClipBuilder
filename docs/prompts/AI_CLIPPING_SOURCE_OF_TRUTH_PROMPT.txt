@@ -1,73 +1,70 @@
+CLIPBUILDER SOURCE-OF-TRUTH MAINTENANCE PROMPT — REVISED 2026-09-29
+
 Read these documents completely:
 
-1. PORTFOLIO_DEMO_BUILD_PLAYBOOK.md
-2. AI_CLIPPING_DEMO_BRIEF.md
+1. ../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md
+2. ../research/AI_CLIPPING_DEMO_BRIEF.md
+3. ../reference/PORTFOLIO_DEMO_BUILD_PLAYBOOK.md
+4. ../tickets/README.md
 
-Use the Portfolio Demo Build Playbook as the methodology and quality standard.
-Use the AI Clipping Demo Brief as the product idea, research, and starting
-architecture.
+Maintain CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md as the single implementation
+authority. Use the research brief as supporting evidence, the playbook as a
+method and quality standard, and the ticket index only for the current
+dependency order. Do not create a competing product specification.
 
-Create a new document named:
+The locked demo journey is:
 
-AI_CLIPPING_DEMO_SOURCE_OF_TRUTH.md
+1. The visitor starts with the curated sample or uploads one supported,
+   owned/licensed conversation.
+2. ClipBuilder shows honest analysis stages.
+3. Analysis returns zero to four grounded candidates, targeting three strong
+   choices without padding. The curated sample always has exactly three.
+4. The visitor previews candidates and selects exactly one. Zero candidates
+   produces an honest no-candidate state, never a manual-range fallback.
+5. ClipBuilder automatically builds the chosen 10–60 second vertical clip with
+   active-speaker framing, the fixed `clean-emphasis` caption profile, and
+   sparse transcript-grounded contextual visuals.
+6. The visitor reviews the completed composition in a read-only preview and
+   confirms one render.
+7. ClipBuilder renders one MP4 for preview and download.
 
-Do not implement the application yet.
-
-Turn the clipping brief into a complete, implementation-ready product and
-architecture specification at the same level of depth as ScreenPilot's source
-of truth.
+Do not add or imply an editor, chat interface, prompt box, manual trim/range,
+transcript or caption correction, caption styling/density choice, headline
+control, crop/focus control, visual/layout/timing control, editable timeline,
+proposal/diff/apply workflow, edit history, undo, or redo.
 
 The document must define:
 
 - the locked product promise, audience, and portfolio story;
-- demo, MVP, and long-term scope boundaries;
-- the complete end-to-end user journey;
-- every workflow stage and canonical state transition;
+- demo scope and explicit exclusions;
+- the complete journey and canonical state transitions;
 - screen-by-screen desktop and responsive behavior;
-- loading, empty, error, retry, cancellation, and recovery states;
-- editor interactions and reversible AI-assisted editing behavior;
-- upload, transcription, candidate selection, preview, render, download, and
-  deletion flows;
+- loading, empty, no-candidate, error, retry, cancellation, and recovery states;
+- candidate preview, exactly-one selection, automatic composition, read-only
+  review, render confirmation, download, and deletion flows;
 - exact frontend, backend, contracts, job, fixture, and documentation ownership;
-- a filename-level proposed repository structure;
 - API routes with request, response, validation, and error contracts;
-- shared Zod schemas and bounded field limits;
-- transcription, clip-selection, and edit-manifest contracts;
-- provider adapter responsibilities and deterministic fake behavior;
-- FFmpeg render, crop, caption, and output requirements;
-- temporary Cloud Storage and Cloud Run Job lifecycle behavior;
-- privacy, content rights, logging, cleanup, and retention rules;
+- shared schemas and bounded limits;
+- provider responsibilities and deterministic fake behavior;
+- the immutable server-owned composition manifest and preview/render parity;
+- FFmpeg render, crop, fixed-caption, visual, audio, and output requirements;
+- temporary storage and bounded job lifecycle behavior;
+- privacy, rights, logging, cleanup, and retention rules;
 - environment-variable schema with credentials left blank;
 - paid-operation gates, retries, timeouts, concurrency, and spend controls;
 - design thesis, tokens, components, responsive rules, motion, and accessibility;
-- deterministic testing, AI evaluation, media fixtures, and manual acceptance
-  scenarios;
-- deployment architecture and release evidence;
-- an implementation sequence that can later be divided into ticket packets.
+- deterministic testing, AI evaluation, media fixtures, and manual acceptance;
+- deployment, release evidence, and the dependency-ready ticket sequence.
 
-Treat all candidate media, filenames, transcripts, captions, and AI output as
-untrusted data. Keep the demo database-free unless a concrete requirement makes
-that impossible. Temporary object storage and one bounded render job are
-allowed because video processing requires them.
+Treat media, filenames, transcripts, captions, prompts, provider payloads,
+generated assets, and AI output as untrusted and private. Keep the demo
+database-free. Keep committed/default/test execution fake and paid-disabled.
+Never let the browser submit arbitrary render instructions.
 
-Do not blindly copy ScreenPilot-specific behavior. Reuse its decision
-discipline, documentation structure, fake-first strategy, cost controls,
-verification quality, and separation of responsibilities.
+When a genuinely unresolved choice would change scope, architecture, privacy,
+spend, or the portfolio story, label it “Proposed — owner approval required”
+and explain the tradeoff. Do not reopen the locked interaction model through an
+implementation detail.
 
-Where the clipping brief contains an unresolved choice:
-
-1. Make a clearly labeled recommendation.
-2. Explain the tradeoff briefly.
-3. Mark it as "Proposed - owner approval required."
-4. Do not silently present it as an approved decision.
-
-Ask me only about decisions that would materially change product scope,
-architecture, privacy, cost, or the portfolio story. Make reasonable,
-reversible recommendations for smaller implementation details.
-
-The finished document should allow another implementation agent to build the
-demo without inventing major product or architectural behavior.
-
-If SCREENPILOT_DEMO_SOURCE_OF_TRUTH.md is available, inspect it as a benchmark
-for depth, specificity, acceptance criteria, and decision ownership. Do not
-copy its voice-interview functionality or product-specific contracts.
+The finished document must let an implementation agent build the demo without
+inventing product behavior or visitor controls.

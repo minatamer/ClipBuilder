@@ -8,6 +8,19 @@ This directory contains the product decisions, technical architecture, research 
 
 When documents disagree, follow the authority order inside the source of truth. The supporting documents below preserve research and decision history; they do not override the current specification.
 
+## Locked demo flow
+
+ClipBuilder exposes one narrow visitor journey: choose the sample or upload one
+owned/licensed conversation, watch analysis, preview zero to four grounded
+candidate moments, choose exactly one, watch the automatic vertical clip build,
+review the read-only result, confirm one render, and download it. The automatic
+clip uses active-speaker framing, one fixed caption profile, and bounded
+transcript-grounded visuals.
+
+The demo has no editor, chatbot, assistant prompt, manual trim/range path,
+caption correction or style choice, headline control, visual/focus controls,
+editable timeline, proposal/diff workflow, undo, or redo.
+
 ## Directory map
 
 ```text
@@ -27,7 +40,8 @@ docs/
 
 ### `research/`
 
-The original AI-clipping research brief: product framing, feasibility notes, tool research, and early recommendations that informed the canonical specification.
+The current AI-clipping research summary: product framing, feasibility notes,
+tool research, and the recorded decision to reject a visitor-facing editor.
 
 ### `reference/`
 
@@ -35,7 +49,8 @@ The reusable portfolio-demo build playbook used as an engineering-quality and de
 
 ### `prompts/`
 
-The source-of-truth authoring prompt retained for provenance. It is historical input, not an instruction to implementation agents when it conflicts with the canonical specification or a later explicit owner decision.
+The source-of-truth maintenance prompt. It restates the locked flow so future
+documentation revisions cannot silently reintroduce editing or customization.
 
 ### `tickets/`
 

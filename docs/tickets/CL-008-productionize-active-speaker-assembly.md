@@ -1,7 +1,7 @@
 # CL-008 — Productionize active-speaker assembly
 
 Status: Planned<br>
-Milestone: M4 — AI first cut and reversible editor<br>
+Milestone: M4 — automatic AI first cut and review<br>
 Last synchronized: 2026-09-29<br>
 Depends on: CL-006 explicit feasibility go decision and CL-007<br>
 Blocks: CL-009 and CL-010<br>
@@ -35,7 +35,7 @@ identity recognition or simplistic manual crop presets.
   velocity, cut resets, and low-confidence held focus.
 - Public output is geometry/time/focus only. No names, embeddings, identity,
   protected traits, emotion, personality, or cross-upload comparison exist.
-- The public editor will reference a validated focus/shot track; it will not
+- The public read-only preview will reference a validated focus/shot track; it will not
   expose raw confidence/boxes or public left/right/center controls.
 - If CL-006 did not record a go decision on the exact model/sample/runtime,
   stop—this ticket cannot silently choose another model or weaken the claim.
@@ -77,8 +77,8 @@ feasibility dependency.
 
 ### Out of scope
 
-- Visual planning/assets (CL-009), full editor (CL-010), FFmpeg final crop
-  compilation/render (CL-011), a generalized manual framing editor, identity or
+- Visual planning/assets (CL-009), automatic clip review (CL-010), FFmpeg final
+  crop compilation/render (CL-011), a generalized manual framing editor, identity or
   biometric analysis, alternate public model fallback, or whole-source
   inference.
 
@@ -176,7 +176,7 @@ feasibility dependency.
 
 Keep CL-008 focused on production active-speaker focus-track assembly in
 `CL-008: productionize active-speaker framing`. Contextual visuals remain the
-immediately following CL-009; editor and render remain CL-010/CL-011. Do not
+immediately following CL-009; automatic review and render remain CL-010/CL-011. Do not
 perform unauthorized Git/cloud actions.
 
 ## Precision references

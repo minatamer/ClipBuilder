@@ -4,7 +4,7 @@ Status: Planned<br>
 Milestone: M1 — deterministic sample story<br>
 Last synchronized: 2026-09-29<br>
 Depends on: CL-002 owner-approved visual direction and CL-003<br>
-Blocks: CL-007 and the production editor composition in CL-010<br>
+Blocks: CL-007 and the automatic clip-review composition in CL-010<br>
 Suggested commit: `CL-004: deliver the sample candidate experience`<br>
 Parent plan: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)<br>
 Ticket index: [`README.md`](README.md)
@@ -26,8 +26,9 @@ real export destination within seconds—without credentials or a paid call.
 
 ## Standalone implementation context
 
-- The landing promise is one conversation → three grounded moments → one
-  speaker-aware, captioned, visually supported vertical MP4.
+- The landing promise is one conversation → zero to four grounded moments
+  (target three strong choices) → exactly one visitor-selected,
+  speaker-aware, automatically captioned/visualized vertical MP4.
 - Sample is the first primary action and should reach candidate review in under
   15 seconds on a production-like connection.
 - Candidate rank is editorial ordering, never a virality score. Evidence links
@@ -44,8 +45,9 @@ real export destination within seconds—without credentials or a paid call.
 
 - CL-002 must record explicit owner approval or named approved revisions for
   the visual tokens and desktop/phone concepts.
-- CL-003 must expose passing reducer/persistence/fixture tests, three valid
-  candidates, a no-candidate fixture, and zero-network deterministic fakes.
+- CL-003 must expose passing reducer/persistence/fixture tests, a deterministic
+  three-candidate sample, zero-to-four general candidate bounds, a no-candidate
+  fixture, and zero-network deterministic fakes.
 
 If either proof is missing, stop at the boundary instead of recreating its work
 inside this UI ticket.
@@ -55,7 +57,7 @@ inside this UI ticket.
 - Frontend global shell and stable primitives first used here.
 - Landing/intake and sample-session action.
 - Candidate list/cards, source preview/range playback, evidence inspector,
-  transcript highlight, source-range rail, no-candidate/manual-range entry.
+  transcript highlight, source-range rail, and honest no-candidate state.
 - Shared API client/error/polling and media object-URL/playback/timecode modules
   only where the sample slice truly uses them.
 - Component/flow tests and lightweight fake-mode sample E2E.
@@ -72,16 +74,16 @@ inside this UI ticket.
 - Immediate sample session creation and runtime-validated fixture fetch/use.
 - Candidate review at desktop/laptop/tablet/phone compositions, including
   accessible selection, evidence seek/highlight, caveats, and source ranges.
-- Honest no-strong-candidate state and validated manual 10–60 second range path
-  leading to the same future assembly event.
+- Honest no-strong-candidate state without a manual-range fallback.
 - Loading/failure/expired/clear behavior reachable in this slice.
 
 ### Out of scope
 
 - Selecting/uploading a real file, resumable upload, media inspection, live
-  analysis, active-speaker inference, visual asset creation, editor, assistant,
+  analysis, active-speaker inference, visual asset creation, automatic clip
+  review, render confirmation,
   render, download, or cloud deployment.
-- Pre-rendering three candidate videos, numeric performance scores, trend data,
+- Pre-rendering candidate videos, numeric performance scores, trend data,
   arbitrary media URLs, fake processing percentages, or decorative autoplay.
 - A broad generic design-system abstraction not justified by components used
   in this ticket.
@@ -96,14 +98,15 @@ inside this UI ticket.
   20 minutes AND 500 MiB; final clip 10–60 seconds.
 - [ ] Start the sample deterministically, set/reconcile session evidence, and
   reach candidates without paid/provider work.
-- [ ] Render three distinct candidates with title, hook, rationale, signal
-  evidence, caveats, derived range/duration, and accessible rank semantics.
+- [ ] Render the deterministic sample's three distinct candidates while the
+  reusable UI safely supports one to four; include title, hook, rationale,
+  signal evidence, caveats, derived range/duration, and accessible rank.
 - [ ] Seek to the first referenced word and visibly highlight the exact excerpt
   when evidence is activated; hover is never required.
-- [ ] Keep candidate selection provider-free; dispatch assembly start only on
-  explicit “Build/Edit this clip”.
-- [ ] Provide the no-candidate/manual-range path using word-boundary and
-  10–60-second rules.
+- [ ] Keep candidate selection provider-free; allow exactly one selected
+  candidate and dispatch assembly start only on explicit `Build this clip`.
+- [ ] Provide the no-candidate state with rubric reasons, clear, and only the
+  bounded retry permitted by evidence; expose no manual-range control.
 - [ ] Clean up object URLs, media listeners/timers, and pending requests on
   source change, stage change, clear, and unmount.
 
@@ -129,16 +132,17 @@ inside this UI ticket.
 
 ## Acceptance criteria
 
-- [ ] A new visitor can explain the input, AI proposal role, human choice,
+- [ ] A new visitor can explain the input, AI analysis role, one human choice,
   speaker/visual behavior, and output from the landing/sample story.
 - [ ] Sample reaches candidate review in under 15 seconds without network
   provider work or credentials.
-- [ ] Three materially different candidate cards map every signal to existing
-  transcript word IDs and derived time ranges.
+- [ ] The sample's three materially different candidate cards map every signal
+  to existing transcript word IDs and derived time ranges; one-to-four layouts
+  preserve the same semantics.
 - [ ] Evidence activation seeks/highlights the correct words; selection itself
   makes no provider call.
-- [ ] No-candidate/manual-range behavior is honest and produces a legal future
-  assembly selection.
+- [ ] No-candidate behavior is honest, offers no manual editing fallback, and
+  cannot dispatch assembly without a valid candidate ID.
 - [ ] Phone, tablet, laptop, desktop, short-height, keyboard, 200% zoom, and
   reduced-motion checks preserve the same capability.
 - [ ] Clear/expiry and all local media/request effects clean up correctly.
@@ -175,7 +179,7 @@ claiming final media approval.
 Keep the complete landing-to-candidate-review slice in one commit represented
 by `CL-004: deliver the sample candidate experience`. Do not split cards,
 evidence, responsive behavior, or sample startup into separate tickets. Do not
-absorb live upload/analysis or editor work, and do not perform Git actions
+absorb live upload/analysis or automatic review/render work, and do not perform Git actions
 without explicit authorization.
 
 ## Precision references

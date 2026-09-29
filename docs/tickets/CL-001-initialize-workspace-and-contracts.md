@@ -1,5 +1,14 @@
 # CL-001 — Initialize the workspace and shared contracts
 
+> **Post-completion scope correction (2026-09-29):** The owner removed every
+> visitor-facing editor and assistant feature. CL-001 historically scaffolded
+> edit-proposal/operation contracts, but they are no longer product authority
+> and must not be consumed by later tickets. The automatic composition manifest
+> remains an internal read-only assembly/render artifact; CL-003 owns alignment
+> and removal of obsolete proposal state/contracts.
+> Historical file lists and commit subjects below describe what CL-001 actually
+> produced; they are evidence, not the target contract for future tickets.
+
 Status: Completed<br>
 Milestone: M0 — foundation and visual gate<br>
 Last synchronized: 2026-09-29<br>
@@ -107,8 +116,8 @@ assembly, editor, render, storage, provider, or media modules yet.
 - Parse the complete committed configuration schema with credential values
   blank and all live flags false. Production/live contradictions fail closed.
 - Define shared constants and exact schemas for content-free IDs, safe errors,
-  media/transcript/candidate, active-speaker/visual assembly, canonical edit
-  manifest and proposal, operation status, and public API envelopes.
+  media/transcript/candidate, active-speaker/visual assembly, the automatic
+  composition manifest, operation status, and public API envelopes.
 - Export a narrow public contract surface and add boundary tests.
 - Establish CI that performs only deterministic unpaid checks.
 
@@ -157,8 +166,9 @@ assembly, editor, render, storage, provider, or media modules yet.
   clip range.
 - [x] Define content-free IDs, safe error envelope, media descriptor,
   normalized transcript, candidate/evidence, shot/face/focus track, visual
-  plan/assets, assembly bundle, edit manifest/proposal/operations, operation
-  status, and HTTP request/response schemas.
+  plan/assets, assembly bundle, manifest, operation status, and HTTP envelopes.
+  Historical proposal/operation types produced by this completed ticket are
+  superseded and scheduled for removal during CL-003 scope alignment.
 - [x] Keep frontend-only persistence and backend-only job descriptors out of the
   shared package.
 - [x] Reject unknown keys, invalid unicode controls/bidi overrides, NaN,

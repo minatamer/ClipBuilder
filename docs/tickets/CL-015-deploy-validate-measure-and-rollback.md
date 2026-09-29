@@ -37,7 +37,7 @@ operations, and no gap between the code story and the deployed system.
 - Deployment begins fake and paid-disabled. Unpaid health/config/sample/clear
   probes and log inspection happen before any live flag is enabled.
 - Live validation is rare evidence: one previously unused rights-approved short
-  fixture, exactly the approved upload/analysis/assembly/proposal/render path,
+  fixture, exactly the approved upload/analysis/assembly/render path,
   followed by usage/cost/output/cleanup reconciliation. Stop on duplicate call,
   unexpected retention/log content, setting drift, or material cost variance.
 - A custom domain is not required for the first stable checkpoint; use managed
@@ -130,7 +130,7 @@ and launch. A commit subject or unchecked operations template is insufficient.
   hard rate/spend limits, cloud alerts, rights, and authorized call count.
 - [ ] Enable only the exact approved flags, use one previously unused short
   synthetic/purpose-recorded fixture, and run one upload → inspect → analysis →
-  assembly → one proposal → one render → download → clear flow.
+  assembly → read-only review/confirmation → one render → download → clear flow.
 - [ ] Verify active speaker, contextual visual grounding/rhythm, caption/sync/
   output, exact provider/image/job counts, no hidden retry, logs, usage/cost,
   object deletion/revocation, and lifecycle backstop.
@@ -178,7 +178,7 @@ and launch. A commit subject or unchecked operations template is insufficient.
 
 - [ ] Exactly authorized provider/image/job operations ran with expected usage,
   cost, latency, output validation, and zero hidden retry/duplication.
-- [ ] Speaker framing, visual beats/cards, captions, proposal, preview/export
+- [ ] Speaker framing, visual beats/cards, fixed captions, preview/export
   parity, result/download, and clear meet the source-of-truth release checklist.
 - [ ] Source/transcript/assets/output/control objects are deleted/revoked or
   truthfully recorded as pending lifecycle cleanup; no public access exists.

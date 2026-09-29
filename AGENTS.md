@@ -21,9 +21,13 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 - ClipBuilder is a disposable portfolio demo: one owned/licensed conversation,
   grounded candidate moments, one selected 10–60 second vertical edit, and one
-  final download. Do not add accounts, durable projects, a database, a general
-  queue, history, batch workflows, direct publishing, remote-platform downloads,
-  arbitrary renderer inputs, or sensitive inference.
+  final download. The visitor chooses exactly one candidate, then receives an
+  automatic clip with fixed captions and contextual visuals. Do not add an
+  editor, chatbot/assistant, manual trim/range path, caption or visual controls,
+  timeline, proposal flow, undo, or redo. Do not add accounts, durable projects,
+  a database, a general queue, history, batch workflows, direct publishing,
+  remote-platform downloads, arbitrary renderer inputs, or sensitive
+  inference.
 - Keep real media, filenames, transcripts, captions, prompts, provider payloads,
   generated assets, output videos, signed capabilities, account identifiers, and
   credentials out of Git, fixtures, logs, errors, URLs, screenshots, and

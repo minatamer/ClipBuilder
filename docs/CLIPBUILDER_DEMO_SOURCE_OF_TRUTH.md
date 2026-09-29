@@ -1,11 +1,11 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
-- Status: Implementation-ready specification; revised 2026-09-29 around AI-directed speaker framing and contextual visuals
+- Status: Implementation-ready specification; revised 2026-09-30 around the locked automatic one-choice demo flow
 - Document authority: Product, behavior, architecture, data, cost, design, verification, and release decisions for the portfolio demo
 - Created: 2026-09-29
 - Research baseline: 2026-09-29; provider names, prices, limits, and policies must be re-checked before live-provider work or launch
 - Inputs: `research/AI_CLIPPING_DEMO_BRIEF.md`, `reference/PORTFOLIO_DEMO_BUILD_PLAYBOOK.md`, and `prompts/AI_CLIPPING_SOURCE_OF_TRUTH_PROMPT.txt`
-- Supersedes: The brief as an implementation authority; the brief remains research and decision-history context
+- Supersedes: The brief as an implementation authority; the brief remains supporting research and decision-history context
 - Does not authorize: Implementation, paid provider calls, cloud changes, deployment, credential creation, media licensing, or public launch
 
 ## Contents
@@ -17,7 +17,7 @@
 5. [End-to-end signature journey](#4-end-to-end-signature-journey)
 6. [Canonical workflow and state transitions](#5-canonical-workflow-and-state-transitions)
 7. [Screen-by-screen experience](#6-screen-by-screen-experience)
-8. [Editor behavior and reversible AI](#7-editor-behavior-and-reversible-ai)
+8. [Automatic composition and preview parity](#7-automatic-composition-and-preview-parity)
 9. [System architecture](#8-system-architecture)
 10. [Repository and decision ownership](#9-repository-and-decision-ownership)
 11. [Shared contract vocabulary and exact limits](#10-shared-contract-vocabulary-and-exact-limits)
@@ -48,8 +48,9 @@ architecture behavior.
 
 This is a portfolio demo, not a disguised production SaaS. It is intentionally
 small, disposable, cheap to operate, and deep in the places that demonstrate
-engineering judgment: grounded AI output, reversible editing, deterministic
-media rendering, temporary-data handling, failure recovery, and spend control.
+engineering judgment: grounded AI output, automatic media composition,
+deterministic rendering, temporary-data handling, failure recovery, and spend
+control.
 
 ### 0.1 Authority order
 
@@ -74,7 +75,7 @@ Every material choice uses one of these labels:
 - **Locked** — implementation may rely on it.
 - **Proposed - owner approval required** — the recommended default is fully
   specified, but it must not be represented as an approved owner decision.
-  Reversible foundations and fake-mode work may proceed; the named approval
+  Deterministic foundations and fake-mode work may proceed; the named approval
   gate blocks the live, public, privacy-sensitive, or cost-bearing portion.
 - **Deferred** — roadmap context only. Do not build it.
 - **Rejected for demo** — deliberately excluded. Do not reintroduce it through
@@ -89,19 +90,20 @@ public claims, or the portfolio story must be promoted into this document.
 | Area | Decision | Status | Consequence / gate |
 | --- | --- | --- | --- |
 | Product type | Public portfolio demo with one disposable clipping session | **Locked** | Optimize one coherent journey; do not add accounts, CRUD, or durable projects. |
-| Product identity | **ClipBuilder** is the product name; `tryclipbuilder.com` is the preferred public domain. **ClipAssistant** is the backup name if the primary identity or domain becomes unusable. | **Locked** | Display the product as “ClipBuilder”; `try` belongs only to the domain and is not part of the product name or wordmark. This decision records the preferred domain but does not authorize registration or purchase. |
-| Product promise | One long owned/licensed conversation becomes three grounded moments and one AI-directed vertical clip with speaker-aware framing, captions, and contextual visuals | **Locked** | The finished edit—not a collection of fallback controls—is the center of the demo. |
+| Product identity | **ClipBuilder** is the product name; `tryclipbuilder.com` is the preferred public domain. **ClipAssistant** is the backup name if the primary identity or domain becomes unusable. | **Locked** | Display the product as “ClipBuilder”; `try` belongs only to the domain and is not part of the product name or wordmark. The backup name does not authorize a chat or assistant interface. This decision records the preferred domain but does not authorize registration or purchase. |
+| Product promise | One long owned/licensed conversation becomes up to four grounded candidate moments; the visitor chooses exactly one and receives one automatically composed vertical clip with speaker-aware framing, fixed captions, and contextual visuals | **Locked** | The finished clip—not editing controls—is the center of the demo. |
+| Interaction model | Selection and confirmation only; no editor, chatbot, assistant prompt, manual trim, caption styling, visual controls, undo, or redo | **Locked** | After choosing one candidate, the visitor watches automatic preparation, reviews the completed preview, confirms one render, and downloads it. |
 | AI claim | Editorial shareability judgment, never virality prediction or private algorithm knowledge | **Locked** | Copy, schemas, prompts, and evaluations must reject unsupported performance claims. |
 | State | No application database; use browser state plus narrow private temporary objects and content-free coordination markers | **Locked** | Object storage is not a general record system; all objects expire and are clearable. |
-| Public live upload | Enable one bounded anonymous live upload in addition to the sample | **Proposed - owner approval required** | Until approved, public deployment exposes sample mode only; owner-controlled live validation may be separately enabled. |
+| Public live upload | Include one bounded anonymous live upload in addition to the sample | **Locked** | Upload is part of the product flow. It remains disabled in committed/default/test configuration and cannot be enabled in a deployment until the security, privacy, spend, provider, and launch gates pass. |
 | Languages | English transcription and Latin-script caption QA for v1 | **Proposed - owner approval required** | Arabic/English code-switching is not claimed until bidi, font, punctuation, and provider tests pass. |
 | Speaker framing | Detect camera cuts, visible faces, and the active speaker, then keep the speaking person centered in the vertical frame | **Locked** | Active-speaker reframing is a core proof, not an optional feature or manual crop preset. |
 | Active-speaker tool | Spike Light-ASD first; compare TalkNet only if the spike fails the sample/CPU target | **Proposed - owner approval required** | The chosen model must run on the purpose-recorded sample inside the bounded media job before architecture is locked. |
-| Contextual visuals | AI plans and inserts 1–3 grounded visual beats using generated stills or deterministic graphic/equation cards | **Locked** | Visual storytelling is a core edit layer, not a vague decorative accent. |
+| Contextual visuals | AI plans and inserts 1–3 grounded visual beats using generated stills or deterministic graphic/equation cards | **Locked** | Visual storytelling is a core automatic-composition layer, not a vague decorative accent. |
 | Visual asset tool | OpenAI Image API with a fast current GPT Image model for generated stills/cutouts; MathJax SVG for exact equations/cards | **Proposed - owner approval required** | Re-check model access, cost, latency, data policy, and visual quality before live enablement. |
 | Public source bound | 20 minutes **and** 500 MiB; owner validation ceiling 60 minutes and 1.5 GiB | **Locked** | A public upload must satisfy both independent ceilings. Raising them requires a future spec/code revision plus measured latency and cost evidence; runtime configuration may only lower them. |
-| Render count | One final render per public session | **Proposed - owner approval required** | Browser previews three candidates; only the selected manifest renders. |
-| Trend context | Omit trend-signal input from the first public demo | **Proposed - owner approval required** | The first version avoids stale or user-injected platform claims. Contracts reserve an optional bounded field. |
+| Render count | One final render per public session | **Locked** | Browser previews zero to four candidates; only the one selected automatic manifest renders. |
+| Trend context | Omit trend-signal input from the first public demo | **Locked** | The demo avoids stale or user-injected platform claims. Candidate reasoning uses the source transcript and the source-controlled editorial rubric only. |
 | Sample rights | Use purpose-recorded media and signed contributor permission | **Proposed - owner approval required** | No sample media enters Git or deployment until provenance is recorded. |
 | Publishing | Download only; no direct social publishing | **Locked** | No platform OAuth, app review, scheduling, or posting liability. |
 | Upload mechanism | Server-created resumable Cloud Storage upload session | **Proposed - owner approval required** | A time-boxed browser spike must prove CORS, size enforcement, abort, and cleanup before live upload implementation. |
@@ -117,8 +119,9 @@ public claims, or the portfolio story must be promoted into this document.
 
 These gates are deliberate stop points, not missing implementation detail:
 
-1. **Product gate:** approve public upload, languages, limits, render count, and
-   absence of trend input.
+1. **Product gate:** approve the v1 language claim. The flow, public source
+   limits, public-upload inclusion, one-render limit, and absence of trend input
+   are already locked.
 2. **Rights gate:** approve the sample, proof of permission, attribution, and
    redistribution terms.
 3. **Visual gate:** approve the real responsive Next.js/React landing prototype
@@ -138,20 +141,18 @@ completeness. Therefore:
 - build the curated path that demonstrates excellent automatic framing and
   visual storytelling;
 - choose purpose-recorded fixtures that make those capabilities demonstrable;
-- do not spend demo time on manual speaker-left/right crop controls, visual
-  asset pickers, asset rejection workflows, alternate stock providers, or a
-  generalized fallback editor;
+- do not build manual trim, caption correction/style controls, speaker crop
+  controls, visual pickers, a timeline, an editor, or a chatbot/assistant;
 - when a core AI stage cannot produce a valid result, preserve a clear failure
   and restart/try-sample path, but do not build a second product around repairing
   it;
-- keep only safety-critical validation, cleanup, spend controls, and honest
-  errors. They protect the demo; they are not marketed as features;
-- manual trim, caption correction, and plain-language direction remain because
-  they strengthen the central human-guided editing story, not because every
-  automatic decision needs a bespoke override UI.
+- keep only safety-critical validation, cleanup, spend controls, honest errors,
+  candidate selection, final confirmation, and download. They protect or
+  complete the demo; they are not a hidden editing surface.
 
-This principle supersedes any later passage that could be read as requiring a
-full-featured manual crop or asset-management fallback.
+This principle supersedes any later passage or historical input that could be
+read as requiring an editor, assistant, manual repair surface, or configurable
+caption/visual treatment.
 
 ## 1. Locked product contract
 
@@ -160,8 +161,8 @@ full-featured manual crop or asset-management fallback.
 > ClipBuilder helps a solo podcaster, editor, or social-content manager
 > turn one owned or licensed long-form conversation into one polished vertical
 > clip: it finds the moment, follows whoever is speaking, adds well-timed
-> contextual visuals and captions, and keeps the resulting edit understandable
-> and steerable.
+> contextual visuals and captions, and produces one downloadable result after
+> the visitor chooses a single candidate.
 
 The primary product identity is **ClipBuilder**. Its preferred public domain is
 `tryclipbuilder.com`; the word `try` is a domain device and must not appear as
@@ -174,20 +175,18 @@ public launch remain separate actions and are not authorized by this decision.
 
 The strongest five-minute demonstration is:
 
-> Open a purpose-recorded conversation, inspect three distinct moments the
-> assistant found, choose one, and watch the app build a short: the vertical
+> Open a purpose-recorded conversation, inspect up to four distinct grounded
+> moments, choose exactly one, and watch the app build a short: the vertical
 > frame follows the active speaker, captions appear throughout, and a few
-> transcript-grounded visual beats illustrate what is being discussed. Tighten
-> the result with one plain-language request, render one 1080 × 1920 MP4, and
-> download it.
+> transcript-grounded visual beats illustrate what is being discussed. Review
+> the automatic result, confirm one 1080 × 1920 render, and download it.
 
 That flow must visibly demonstrate:
 
 - direct media handling without sending large files through the web app server;
 - word- and timestamp-grounded AI reasoning;
-- a real editor, not a chat wrapper or static mockup;
-- inspectable AI operations rather than opaque mutation;
-- transcript-based trimming and caption correction;
+- clear candidate evidence and an understandable automatic build, not a chat
+  wrapper, editor, or static mockup;
 - camera-cut-aware active-speaker reframing;
 - semantic visual-beat planning and generated/procedural visual inserts;
 - deterministic caption, overlay, transition, and export rendering;
@@ -213,40 +212,46 @@ them scrub the whole source, rebuild captions, or trust an unexplained score.
 
 ### 1.5 Ten-second comprehension requirements
 
-Without reading documentation, the landing page and sample path must make five
+Without reading documentation, the landing page and sample path must make seven
 facts clear:
 
-1. one long source produces three candidate moments;
+1. one long source produces up to four strong candidate moments without padding
+   weak results;
 2. each moment maps to exact source words and time;
-3. the AI proposes and explains; the visitor chooses and edits;
+3. the system proposes and explains; the visitor chooses exactly one;
 4. the vertical edit automatically follows the current speaker and illustrates
    selected concepts without drowning out the podcast footage;
-5. the result is a real vertical, captioned MP4;
-6. “high-potential” is editorial reasoning, not a promised view count.
+5. captions and visual treatment are automatic and not configurable;
+6. the result is a real vertical, captioned MP4;
+7. “high-potential” is editorial reasoning, not a promised view count.
 
 ### 1.6 Product personality
 
-The product feels like a compact editorial cut room with an intelligent junior
-editor. It is decisive but not magical, technical but not intimidating, and
-calm under failure. It does not resemble a generic purple AI dashboard, a
-social analytics suite, or a full nonlinear editor.
-
-The assistant uses language such as “I suggest,” “This starts on the claim,”
-and “This cut loses the setup,” not “I optimized virality.” It explains the
-visible consequence of a proposal and never applies a change without explicit
-user action.
+The product feels like a focused automatic clipping studio. It is decisive but
+not magical, technical but not intimidating, and calm under failure. It does
+not resemble a generic purple AI dashboard, social analytics suite, chatbot,
+or nonlinear editor. Candidate explanations use grounded language such as
+“This starts on the claim,” never “I optimized virality.”
 
 ### 1.7 Safe public claims
 
 Allowed:
 
-- “Find three self-contained moments in a long conversation.”
+- “Find up to four self-contained moments in a long conversation.”
 - “See the exact words and time range behind every suggestion.”
-- “Turn plain-language direction into a previewable edit proposal.”
+- “Choose one moment and receive an automatically composed vertical clip.”
 - “Automatically follow the active speaker in a vertical frame.”
 - “Add transcript-grounded visual cutaways and graphic explanations.”
-- “Correct captions, steer the edit, and export a vertical draft.”
+- “Add readable captions automatically and export a vertical clip.”
 - “Your media is temporary and can be cleared explicitly.”
+
+The CL-002 landing prototype may also state that at least six researched
+platforms publicly host paid clipping campaigns, provided that the claim is
+re-checked against current first-party sources before release. The presentation
+must say that brands or creators fund the campaigns, identify the platforms as
+unaffiliated market examples rather than partners or integrations, provide no
+earnings guarantee, and disclose that availability, eligibility, rates, and
+rules vary.
 
 Forbidden:
 
@@ -272,26 +277,27 @@ Forbidden:
 - local advisory validation and server-authoritative media inspection;
 - private direct resumable upload to temporary Cloud Storage;
 - speech transcription with word timestamps and speaker labels when available;
-- exactly three grounded candidate moments when three valid moments exist;
+- zero to four grounded candidate moments, targeting three strong options and
+  never padding weak output; zero enters the honest no-candidate state;
 - a transparent source-controlled shareability rubric with evidence and
   caveats, never a mysterious 0–100 score;
 - candidate preview from the original source without pre-rendering variants;
-- one transcript-based editor with word-boundary in/out adjustment;
-- immutable provider transcript plus separate caption corrections;
+- exactly one candidate selection per assembly attempt; no manual-range path;
+- immutable provider transcript and AI-selected word-boundary range;
 - shot-boundary detection for already-edited multicamera podcasts;
 - face detection/tracking and audio-visual active-speaker detection over the
   selected clip;
 - a smoothed vertical focus track that centers the visible speaking person and
   resets cleanly at source camera cuts;
-- three source-controlled caption themes;
+- one fixed source-controlled `clean-emphasis` caption profile with no visitor
+  style, density, wording, or emphasis controls;
 - a transcript-grounded visual-beat plan with 1–3 timed inserts per clip;
 - generated full-frame or transparent still images for concrete visual concepts;
 - deterministic equation/statistic/quote cards when exact text or math matters;
-- one bounded headline;
-- plain-language edit proposals compiled to allow-listed operations;
-- plain-language control over pacing and visual density without a general asset
-  editor;
-- proposal diff, explicit apply, undo, redo, and revision conflict handling;
+- one automatic, validated composition manifest produced from the selected
+  candidate, focus track, fixed captions, and contextual visuals;
+- a read-only final preview with only render confirmation, clear, and bounded
+  failure recovery actions;
 - one 1080 × 1920 H.264/AAC render from the selected manifest;
 - result review, download authorization, and explicit clear;
 - named loading/progress stages, bounded retry, cancellation, refresh recovery,
@@ -299,7 +305,8 @@ Forbidden:
 - deterministic fake providers and synthetic/adversarial fixtures;
 - paid-disabled committed defaults, abuse gates, cost controls, and
   content-safe telemetry;
-- responsive phone review/edit path and excellent laptop/desktop authoring;
+- responsive phone/tablet/laptop/desktop selection, progress, preview, result,
+  and download paths;
 - public deployment only after the full release gate.
 
 ### 2.2 Explicitly out of scope for the demo
@@ -312,6 +319,9 @@ Forbidden:
   scope;
 - multitrack/nonlinear editing, freeform layers, keyframes, transitions, color
   grading, LUTs, plugins, or audio mixing;
+- any editor, chatbot, assistant prompt, manual trim/range selection, caption
+  correction or style choice, headline control, visual retiming/layout control,
+  proposal/diff/apply workflow, undo, redo, or editable timeline;
 - arbitrary fonts, uploaded graphics, remote assets, shell fragments, filter
   graphs, or URLs supplied to the renderer;
 - generative video, scraped/stock B-roll, arbitrary web-image search, or a stock
@@ -363,7 +373,8 @@ The demo is complete only when all applicable statements are evidenced:
    seconds on the landing screen.
 2. The purpose-recorded sample reaches candidate review in under 15 seconds on
    a production-like connection without paid provider work.
-3. Three candidate cards map to materially different exact source ranges.
+3. The curated sample exposes three materially different candidate cards; the
+   general analyzer may return zero to four and never pads weak output.
 4. Every candidate signal links to valid transcript word IDs and displays the
    corresponding text and time range.
 5. The top recommendation is understandable without a numeric viral score.
@@ -375,24 +386,23 @@ The demo is complete only when all applicable statements are evidenced:
    smaller deterministic explanatory graphic or equation card.
 8. Captions stay present and legible over speaker footage and visual inserts;
    visual coverage supports the spoken story without replacing most of it.
-9. A plain-language request produces one typed proposal, a before/after diff,
-   and no change until Apply is selected.
-10. Apply, undo, and redo preserve manifest validity and preview/export parity.
-11. A manual caption correction changes the preview and export while the
-   provider transcript remains immutable.
-12. One final MP4 renders, plays, remains in sync, downloads, and has content-safe
+9. The assembled preview is read-only, uses the fixed caption profile, and
+   exposes no edit, assistant, trim, style, headline, or visual controls.
+10. The visitor explicitly confirms the automatic clip before the one permitted
+    render starts.
+11. One final MP4 renders, plays, remains in sync, downloads, and has content-safe
    metadata and filename.
-13. A failure after transcription preserves completed work and does not repeat
+12. A failure after transcription preserves completed work and does not repeat
     transcription unless the user explicitly starts a permitted retry.
-14. Refresh at each declared safe stage restores the session without creating
+13. Refresh at each declared safe stage restores the session without creating
     a duplicate paid operation.
-15. Clear removes browser state, revokes access, requests remote deletion, and
+14. Clear removes browser state, revokes access, requests remote deletion, and
     reports partial cleanup honestly.
-16. The core journey is usable with keyboard, visible focus, 200% zoom, reduced
+15. The core journey is usable with keyboard, visible focus, 200% zoom, reduced
     motion, and named phone/tablet/laptop/desktop viewport checks.
-17. Committed defaults, tests, and ordinary local development cannot make a
+16. Committed defaults, tests, and ordinary local development cannot make a
     paid provider call.
-18. Exactly bounded owner-authorized live flows have recorded usage, cost,
+17. Exactly bounded owner-authorized live flows have recorded usage, cost,
     cleanup, and provider-setting evidence before public live mode is enabled.
 
 ### 3.2 Engineering success
@@ -459,16 +469,18 @@ that is credible for similar inputs.
 
 After upload/selection, the media job inspects the file and extracts audio.
 Deepgram produces word timestamps and anonymous speaker turns. The text model
-reads the bounded transcript and shareability rubric and returns three exact
-candidate ranges. The visitor sees the three moments, why each works, and the
-words they came from. No candidate MP4 has been rendered yet.
+reads the bounded transcript and shareability rubric and returns zero to four
+exact candidate ranges, targeting three strong alternatives without padding.
+The curated sample deterministically exposes three. The visitor sees each
+moment, why it works, and the words it came from. No candidate MP4 has been
+rendered yet.
 
 At this point diarization answers **when speaker 0 or speaker 1 is talking**, but
 it does not know which on-screen face belongs to that voice. That association
 is deferred until the visitor chooses a candidate so we only perform expensive
 audio-visual analysis on 10–60 seconds, not the whole podcast.
 
-#### The visitor chooses a moment and the AI builds the edit
+#### The visitor chooses a moment and ClipBuilder builds the clip
 
 For this one purpose-recorded walkthrough, the visitor selects a candidate about
 Earth, the Moon, and the relationship between them. A new core stage appears:
@@ -588,24 +600,23 @@ The planner may legitimately return zero visuals when the clip has no concrete
 visual opportunity, but the curated sample and demo acceptance require at least
 two different visual types to prove the capability.
 
-#### The visitor sees an already intelligent first cut
+#### The visitor reviews the automatic clip
 
-When preparation finishes, the editor opens on a composed vertical preview—not
-on a blank crop configuration screen. Playback already includes:
+When preparation finishes, a read-only composed vertical preview opens.
+Playback already includes:
 
 - active-speaker framing;
 - always-on captions;
 - full-frame visual cutaways;
 - smaller overlay/equation cards;
 - the original podcast audio continuing through every visual;
-- transitions and durations from the typed edit manifest.
+- transitions and durations from the typed composition manifest.
 
-The visitor's job is to react to a real editorial proposal. They can tighten the
-range, fix caption text, or say “use fewer visuals,” “keep the Earth image on a
-little longer,” or “show the equation without covering the speaker.” The
-assistant responds with a typed manifest diff. The demo does not need a media
-library, drag-anything canvas, crop repair panel, image chooser, or rejection
-workflow.
+The preview is intentionally not an editor. The visitor cannot trim the range,
+change caption wording or style, add a headline, alter speaker framing, retime
+or remove visuals, enter an instruction, or undo/redo. The only forward action
+is `Render this clip`; `Clear media` and evidence-based retry/recovery remain
+available where their owning stage permits them.
 
 #### The app renders the same plan
 
@@ -659,13 +670,13 @@ rather than becoming many tiny jobs. See the current
 | --- | --- | --- | --- |
 | The source is inspected after upload | `ffprobe`/FFmpeg in the `analyze` job | Trusted duration, codecs, dimensions, rotation, and extracted speech audio | **Cloud Run compute only** for FFmpeg/ffprobe; temporary Cloud Storage is separately billed. |
 | The words and speaker turns appear | Deepgram pre-recorded transcription | Word timestamps, punctuation, and anonymous diarization labels | **Vendor API charge** based on transcription usage, plus analysis-job compute. This is separate from the five visual/media tools listed above. |
-| Three candidate moments appear | OpenAI Responses candidate planner | Typed candidate word ranges and evidence | **Vendor API charge** for text-model tokens, plus minor orchestration compute. |
+| Up to four candidate moments appear | OpenAI Responses candidate planner | Zero to four typed candidate word ranges and evidence, targeting three strong choices | **Vendor API charge** for text-model tokens, plus minor orchestration compute. |
 | The visitor chooses **Build this clip** | PySceneDetect inside the one `assemble` job | Existing camera-cut boundaries | **Cloud Run compute only.** PySceneDetect is BSD-licensed software with no hosted per-cut fee. |
 | The app finds visible faces and the speaking face | Face detector/tracker plus Light-ASD inside the same `assemble` job | Shot-local face tracks, speaking probabilities, and the smoothed speaker-focus track | **Cloud Run compute only.** Light-ASD is MIT-licensed; CPU/memory/runtime are the cost. A GPU would also be cloud compute if the benchmark required one. |
 | The app decides which concepts deserve visuals | OpenAI Responses visual planner | A 0–3 cue plan grounded to transcript word IDs | **Vendor API charge** for text-model tokens. It creates instructions, not pixels. |
 | A cue needs an illustrative still or transparent cutout | OpenAI Image API | One generated image asset for that validated cue | **Vendor API charge** for image/text tokens **plus** minor Cloud Run validation/storage work. This is the only one of the five named tools with its own hosted usage bill. Zero accepted image cues means zero image-generation calls; the demo permits at most three. |
 | A cue needs an exact equation, number, or concise information card | MathJax in the same `assemble` job, followed by local SVG sanitization/rasterization | Exact deterministic SVG/PNG/WebP card | **Cloud Run compute only.** MathJax is Apache-2.0 open source and makes no API call. |
-| The assembled first cut opens in the editor | Browser preview using the stored focus track, cue plan, and assets | Interactive approximation of the final edit | Mostly the visitor's device; private asset delivery/storage may incur small cloud network/storage cost. No new Light-ASD, image, or MathJax call occurs just because playback repeats. |
+| The automatic first cut opens in read-only review | Browser preview using the stored focus track, fixed caption profile, cue plan, and assets | Non-editable approximation of the final render | Mostly the visitor's device; private asset delivery/storage may incur small cloud network/storage cost. No new Light-ASD, image, MathJax, or text-model call occurs because playback repeats. |
 | The visitor exports | FFmpeg in the `render` job | Final 1080 × 1920 MP4 with speaker crops, visual timing, continuing podcast audio, overlays, and captions | **Cloud Run compute only** for FFmpeg, plus output storage/network. FFmpeg has no usage API fee, although its LGPL/GPL build and codec obligations must be reviewed. |
 
 TalkNet is **not** another tool executed for each visitor. It is an MIT-licensed
@@ -716,14 +727,14 @@ work.
 3. Call `GET /v1/session` through the same-origin proxy. The API validates the
    encrypted HttpOnly grant, expiry, and any referenced temporary objects.
 4. Reconcile browser projection with server evidence. Server evidence wins for
-   operation status and object existence; user-authored edit state wins only
-   when its source/result revision still matches.
-5. Route to intake, progress, candidates, editor, result, or expired recovery.
+   operation status, automatic-manifest identity, and object existence.
+5. Route to intake, progress, candidates, clip review, result, or expired
+   recovery.
 
 **Data:** No media or provider call. Invalid or expired local state is cleared.
 
 **Failure:** If the server is unavailable, show a retryable offline state. Do
-not discard a valid local edit projection until the grant is proven invalid or
+not discard a valid local projection until the grant is proven invalid or
 the user chooses Clear local session.
 
 **Refresh:** This is the refresh path.
@@ -877,7 +888,7 @@ resume polling. An idempotency marker prevents duplicate execution.
 
 **Entry:** A valid normalized transcript and reconciled candidate set exist.
 
-**Goal:** Understand three distinct possible clips and choose one.
+**Goal:** Understand the grounded candidate clips and choose exactly one.
 
 Each candidate card contains:
 
@@ -894,10 +905,13 @@ Selecting a card seeks the original source to its start and plays only the range
 from the source. This is a source-range preview, not the assembled vertical edit,
 and it does not render an MP4.
 
-**No strong candidates:** State that no range met the rubric. Provide transcript
-browsing and manual word-range selection if at least one legal 10–60 second
-range exists. Do not fabricate three weak candidates. If the transcript itself
-is unusable, allow clear or bounded transcription retry.
+The analyzer returns zero to four candidates, targets three strong alternatives,
+and never pads weak output to hit a count. The curated sample exposes exactly
+three deterministic candidates.
+
+**No strong candidates:** State that no range met the rubric. Do not provide a
+manual range editor and do not fabricate weak candidates. Allow clear or an
+evidence-based bounded analysis retry only when the recovery policy permits it.
 
 **Data:** No new provider call. Candidate selection and preview are local.
 
@@ -905,9 +919,9 @@ is unusable, allow clear or bounded transcription retry.
 
 ### 4.7 Stage 6 — build the AI first cut
 
-**Entry:** One candidate or valid manual range is selected.
+**Entry:** Exactly one candidate is selected.
 
-**Goal:** Turn the selected transcript range into a complete first edit before
+**Goal:** Turn the selected transcript range into a complete automatic clip before
 asking the visitor to configure anything.
 
 The action starts one bounded `assemble` job. Its named stages are:
@@ -928,7 +942,7 @@ The job produces:
 - always-on caption groups;
 - a word-ID-grounded visual plan;
 - 0–3 generated/procedural visual assets;
-- a canonical edit manifest referencing those assets and tracks;
+- an immutable automatic composition manifest referencing those assets and tracks;
 - a lightweight preview proxy or browser-readable composition bundle.
 
 The selected clip—not the whole source—is analyzed for active speaker and
@@ -936,7 +950,7 @@ visuals. One assembly action may make at most one visual-planning model call and
 the duration-based maximum number of image-generation calls. Equation/cards are
 deterministic and do not use image generation.
 
-**Success:** Open the editor directly on the playing, composed first cut.
+**Success:** Open the read-only final preview on the playing, composed first cut.
 
 **Failure:** Show which core stage failed and offer `Try building again` only
 within the bounded allowance or `Choose another moment`. Do not open a complex
@@ -946,51 +960,43 @@ release.
 **Refresh:** Poll the same assembly execution and never duplicate image calls or
 active-speaker analysis.
 
-### 4.8 Stage 7 — steer the assembled clip
+### 4.8 Stage 7 — review the automatic clip
 
 **Entry:** A valid assembled manifest, focus track, visual plan, and assets exist.
 
-**Goal:** React to and steer an intelligent first cut without exposing a full
-nonlinear editor.
+**Goal:** Inspect the complete automatic result and intentionally decide whether
+to spend the one render.
 
-**Core edits:**
+The screen leads with a playable 9:16 preview and a compact factual summary:
+selected candidate title/range, duration, fixed captions, active-speaker
+framing, visual count/layout summary, output format, temporary-data deadline,
+and one-render limit.
 
-- move in/out to legal transcript word boundaries;
-- choose one of three caption themes;
-- correct caption words without changing provider transcript evidence;
-- add/remove an 80-character headline;
-- inspect the speaker-focus and visual-beat timeline;
-- request changes such as fewer visuals, a longer/shorter visual, or a smaller
-  equation/graphic overlay;
-- request one plain-language edit proposal;
-- inspect diff, apply, dismiss, undo, or redo.
+There are no edit controls. The visitor cannot change the range, captions,
+caption style, headline, framing, visual timing/layout/assets, or audio; there
+is no instruction field, proposal, diff, apply/dismiss, history, undo, or redo.
+Owner/debug evaluation tooling may inspect tracks separately but is never part
+of the public visitor flow.
 
-Manual speaker-left/right framing and a drag-anywhere visual canvas are not core
-controls. The visitor sees what the AI decided and can steer it through the
-assistant; owner/debug builds may expose tracks for evaluation without making
-them public product features.
-
-The browser preview and renderer consume the same `EditManifest`. Preview may
+The browser preview and renderer consume the same `CompositionManifest`.
+Preview may
 be approximate for font rasterization and codec behavior, but layout rules,
 safe zones, word groups, speaker-focus track, visual cue plan, and timing are
 shared.
 
-**Assistant call:** One user action creates at most one OpenAI Responses call.
-The model receives only the selected bounded transcript window, current
-manifest, allow-listed operation schema, and the instruction. It returns a
-proposal, never a mutated project and never executable commands.
+**Forward action:** `Render this clip` moves to confirmation and makes no model
+call. Playback repetition also makes no model or media-analysis call.
 
-**Failure:** Preserve the current edit. Explain unsupported intent using a
-content-safe rule code. Invalid or refused output gets no automatic repair
-call.
+**Failure:** Preserve the validated automatic manifest and show a content-safe
+preview/playback failure with the bounded recovery allowed by server evidence.
 
-**Refresh:** Restore the allow-listed edit projection only when the analysis
-bundle revision still matches. Expired signed URLs are reauthorized; never
-persist them.
+**Refresh:** Restore the allow-listed manifest reference only when the analysis
+and assembly revisions still match. Expired signed URLs are reauthorized;
+never persist them.
 
 ### 4.9 Stage 8 — confirm and render
 
-**Entry:** The manifest is valid and no conflicting operation is active.
+**Entry:** The server-produced automatic manifest is valid.
 
 **Goal:** Understand the exact output and intentionally spend the one render.
 
@@ -998,22 +1004,20 @@ The confirmation shows:
 
 - final start/end and duration;
 - 1080 × 1920, H.264/AAC MP4 output;
-- active-speaker framing and caption style;
+- active-speaker framing and the fixed `clean-emphasis` caption profile;
 - visual count, visual coverage, and layout summary;
-- number of caption corrections;
-- headline state;
 - one-render session limit;
 - deletion/access deadline;
 - a final rights reminder.
 
 `Render clip` requires a fresh action-specific abuse token and consumes the
-session render allowance atomically. The API validates and canonicalizes the
+session render allowance atomically. The API validates the immutable automatic
 manifest again before starting the job.
 
 Visible stages:
 
 ```text
-Validating edit
+Validating composition
 Preparing captions
 Preparing visual layers
 Rendering video
@@ -1039,7 +1043,7 @@ Show:
 
 - the rendered video with native controls and no forced autoplay with sound;
 - duration, dimensions, codec summary, and bytes;
-- selected candidate/manual range and applied edit summary;
+- selected candidate and automatic composition summary;
 - `Download MP4`, `Clear media`, and `Start another`;
 - access expiry and asynchronous deletion language.
 
@@ -1057,7 +1061,7 @@ history, or output as a hidden project.
 
 **Clear:**
 
-1. Disable editing and abort browser requests/media playback.
+1. Disable new actions and abort browser requests/media playback.
 2. Revoke object URLs and stop polling/timers.
 3. Call `DELETE /v1/session`.
 4. API invalidates the grant, cancels active work where supported, and deletes
@@ -1106,11 +1110,11 @@ type ClippingSessionState =
   | { stage: "candidates"; analysis: AnalysisBundle; selectedId?: CandidateId }
   | { stage: "assembling"; operation: OperationRef; lastKnown: AssemblyStage }
   | { stage: "assembly-failed"; analysis: AnalysisSummary; failure: SafeFailure }
-  | { stage: "editor"; editor: EditorSession }
-  | { stage: "render-confirmation"; editor: EditorSession }
+  | { stage: "clip-review"; review: ClipReviewSession }
+  | { stage: "render-confirmation"; review: ClipReviewSession }
   | { stage: "rendering"; operation: OperationRef; lastKnown: RenderStage }
-  | { stage: "render-failed"; editor: EditorSession; failure: SafeFailure }
-  | { stage: "result"; result: RenderResult; editorSummary: EditorSummary }
+  | { stage: "render-failed"; review: ClipReviewSession; failure: SafeFailure }
+  | { stage: "result"; result: RenderResult; clipSummary: ClipSummary }
   | { stage: "clearing"; previousStage: ClearableStage }
   | { stage: "cleanup-partial"; failure: SafeFailure }
   | { stage: "expired"; localStatePresent: boolean }
@@ -1147,24 +1151,17 @@ payloads, and SDK objects never enter reducer state or persistence.
 | `analyzing` | `CANCEL_REQUESTED` | `analyzing` | Mark cancel requested until server confirms. |
 | `analysis-failed` | `RETRY_ANALYSIS` | `analyzing` | Retry allowance and reusable inputs determine operation plan. |
 | `analysis-failed` | `CLEAR` | `clearing` | Always available. |
-| `no-candidates` | `MANUAL_RANGE_VALID` | `assembling` | Range passes duration/boundary rules; build the same AI first cut. |
 | `candidates` | `CANDIDATE_SELECTED` | `candidates` | Preview selection; no mutation/provider call. |
 | `candidates` | `BUILD_SELECTED` | `assembling` | Consume assembly nonce and start one selected-range job. |
 | `assembling` | `STAGE_UPDATED` | `assembling` | Shot/face/speaker/visual/asset stage advances monotonically. |
-| `assembling` | `ASSEMBLY_SUCCEEDED` | `editor` | Active operation, analysis revision, and selected range match; open the composed manifest, tracks, and assets at revision 0. |
-| `assembling` | `ASSEMBLY_FAILED` | `assembly-failed` | Do not open a manual fallback editor. |
+| `assembling` | `ASSEMBLY_SUCCEEDED` | `clip-review` | Active operation, analysis revision, and selected range match; open the read-only composed preview. |
+| `assembling` | `ASSEMBLY_FAILED` | `assembly-failed` | Do not open a manual fallback or repair surface. |
 | `assembly-failed` | `RETRY_ASSEMBLY` | `assembling` | Bounded allowance and idempotency evidence permit it. |
 | `assembly-failed` | `CHOOSE_ANOTHER` | `candidates` | Keep analysis; discard partial selected-range assets. |
-| `editor` | `MANUAL_EDIT` | `editor` | Validate, increment revision, push undo history. |
-| `editor` | `AI_PROPOSAL_REQUESTED` | `editor` | Nested proposal status becomes `requesting`; manifest unchanged. |
-| `editor` | `AI_PROPOSAL_RECEIVED` | `editor` | Store one validated proposal bound to base revision. |
-| `editor` | `APPLY_PROPOSAL` | `editor` | Base revision must match; apply atomically. |
-| `editor` | `DISMISS_PROPOSAL` | `editor` | No manifest change. |
-| `editor` | `UNDO` / `REDO` | `editor` | Valid history transition only. |
-| `editor` | `RENDER_REVIEW` | `render-confirmation` | Manifest valid; no active proposal request. |
-| `render-confirmation` | `BACK_TO_EDIT` | `editor` | No allowance consumed. |
+| `clip-review` | `RENDER_REVIEW` | `render-confirmation` | Immutable automatic manifest is valid. |
+| `render-confirmation` | `BACK_TO_REVIEW` | `clip-review` | No allowance consumed. |
 | `render-confirmation` | `RENDER_CONFIRMED` | `rendering` | Atomically consume render nonce after validation. |
-| `rendering` | `RENDER_SUCCEEDED` | `result` | Active operation and manifest revision match; output passed validation. |
+| `rendering` | `RENDER_SUCCEEDED` | `result` | Active operation and immutable manifest hash match; output passed validation. |
 | `rendering` | `RENDER_FAILED` | `render-failed` | Preserve source and manifest. |
 | `render-failed` | `RETRY_RENDER` | `rendering` | Retry budget remains and no valid output exists. |
 | any clearable | `CLEAR` | `clearing` | Abort owned local work, then call API. |
@@ -1176,14 +1173,14 @@ payloads, and SDK objects never enter reducer state or persistence.
 
 An invalid event is ignored in production, recorded only as a content-free
 diagnostic code, and fails a reducer test. It must not coerce the session
-forward. Examples: render from candidates without an editor manifest, apply a
-proposal to a newer manifest revision, analyze before authoritative media
-inspection, or restore result when the output object is gone.
+forward. Examples: render from candidates without a validated automatic
+manifest, mutate a manifest from the browser, analyze before authoritative
+media inspection, or restore result when the output object is gone.
 
 ### 5.5 Nested operation states
 
-Editor proposal, playback, upload transfer, and cleanup retry are nested
-discriminated states rather than new top-level routes. A nested async state is
+Playback, upload transfer, and cleanup retry are nested discriminated states
+rather than new top-level routes. A nested async state is
 one of `idle`, `requesting`, `succeeded`, `failed`, or `cancel-requested` and
 contains only serializable IDs, timestamps, and safe failures.
 
@@ -1199,11 +1196,8 @@ Allowed:
 - top-level stage hint and current operation ID;
 - analysis/assembly/result revision IDs;
 - selected candidate ID;
-- canonical edit manifest, undo/redo history capped at 20 revisions, and
-  proposal diff if it contains no free-form transcript copy;
-- playback time and selected editor panel;
-- user caption corrections because they are necessary to restore the edit,
-  capped by the correction schema.
+- automatic manifest ID/hash plus analysis and assembly revisions;
+- playback time for the read-only preview.
 
 Forbidden:
 
@@ -1220,7 +1214,8 @@ against `GET /v1/session`.
 
 The application uses one semantic component tree per screen. Responsive modes
 change layout, density, and interaction affordances; they do not fork product
-logic or remove the user's ability to understand, correct, export, and clear.
+logic or remove the user's ability to understand, choose, confirm, download,
+and clear.
 
 ### 6.1 Global shell
 
@@ -1237,7 +1232,10 @@ logic or remove the user's ability to understand, correct, export, and clear.
 
 **Never present:** fake notifications, fake collaborators, account avatar,
 billing navigation, dashboard metrics, platform logos implying integration, or
-disabled roadmap navigation.
+disabled roadmap navigation. CL-002's final landing section may use
+source-verified, text-based platform wordmarks only as explicitly labeled
+market examples with no-affiliation and no-earnings-guarantee disclosure; this
+does not authorize integration logos in the product shell.
 
 On short-height screens, the shell scrolls with natural page flow rather than
 trapping essential actions below a fixed workspace.
@@ -1325,7 +1323,7 @@ opens as a persistent side panel or drawer; the range rail remains below.
 with proper tab semantics, then evidence. Avoid nested horizontal page scroll.
 
 **Phone 320–599 px:** One candidate at a time with previous/next buttons,
-vertical preview, signal summary, expandable evidence, and a sticky `Edit this
+vertical preview, signal summary, expandable evidence, and a sticky `Build this
 clip` action that respects safe-area insets.
 
 Candidate rank is editorial ordering only. Signal badges include accessible
@@ -1335,8 +1333,9 @@ word and visibly highlights the exact excerpt.
 **Loading:** Skeleton geometry may reserve layout for the deterministic sample;
 live analysis uses the progress screen instead of cards with fake text.
 
-**No candidate:** Show the honest no-strong-moment state and manual range path.
-The state includes rubric reasons, not an instruction to “try again” blindly.
+**No candidate:** Show the honest no-strong-moment state with rubric reasons,
+clear, and only an evidence-based bounded retry when allowed. Do not expose a
+manual range path.
 
 ### 6.6 AI first-cut preparation
 
@@ -1356,56 +1355,23 @@ If the build fails, the screen offers only the bounded retry or choose-another
 moment action defined by the operation evidence. It does not open a manual crop
 repair or asset browser.
 
-### 6.7 Editor workspace
+### 6.7 Automatic clip review
 
-#### Desktop ≥ 1440 px
+This is a read-only review screen, not an editor.
 
-```text
-┌ source / session bar ─────────────────────────────────────────────────┐
-│ transcript & evidence │ 9:16 preview │ assistant proposal / edit diff │
-│ 300–380 px            │ flexible     │ 320–400 px                     │
-├───────────────────────┴──────────────┴────────────────────────────────┤
-│ range · captions · speaker-focus track · visual beats                 │
-└───────────────────────────────────────────────────────────────────────┘
-```
+**Desktop/laptop:** Place the 9:16 preview as the visual hero beside a compact
+facts panel containing the chosen candidate, exact range/duration, automatic
+caption status, active-speaker framing status, visual count/layout summary,
+output format, one-render limit, and temporary-data deadline. `Render this
+clip` is the primary action.
 
-- Preview is the visual hero and never falls below 270 CSS px wide.
-- Transcript scroll position follows playback only when “Follow playback” is
-  on; manual scrolling temporarily suspends follow.
-- Assistant rail shows one proposal and diff, not a chat transcript.
-- Timeline/range rail is a semantic control with keyboard alternatives.
-- Speaker-focus segments and visual beats are inspectable, source-controlled
-  tracks. The public editor does not expose raw model confidence or face boxes.
+**Tablet/phone:** Video first, followed by the same facts, rights reminder, and
+full-width render action. Preserve natural page scroll and safe-area insets.
 
-#### Laptop 1024–1439 px
-
-Use transcript + preview as the main two-column workspace. Assistant and style
-controls open in a right drawer that does not unmount the preview or reset
-focus. Timeline remains full width below.
-
-#### Tablet 600–1023 px
-
-Preview is first. A tab list switches among `Transcript`, `Captions`, `Visuals`,
-and `Assistant`. The trim control becomes a large two-ended range plus exact
-word-boundary step buttons. The Visuals tab explains each cue, layout, and
-grounding words; it is not an asset library. Primary export action sits after
-the controls, not over the video.
-
-#### Phone 320–599 px
-
-The editor becomes a guided vertical sequence:
-
-1. preview and playback;
-2. current start/end with `Earlier word` / `Later word` controls;
-3. transcript selection and caption correction;
-4. visual-beat summary;
-5. caption style and headline;
-6. assistant direction/proposal;
-7. review render.
-
-The dense waveform is replaced by an accessible speech-range overview and
-large step controls. Precision editing remains possible through word selection;
-the phone does not show a squeezed desktop timeline.
+No viewport exposes trim handles, a transcript editor, caption choices,
+headline/style controls, focus or visual tracks, an instruction field, a
+timeline, proposal/diff actions, or undo/redo. The automatic preview is either
+confirmed for render or cleared; failure recovery remains bounded by evidence.
 
 #### Short-height behavior
 
@@ -1420,8 +1386,8 @@ Confirmation is a real review step, not a generic modal. It lists the output
 facts, one-render limit, temporary-data deadline, and rights reminder. The
 primary button says `Render 43-second clip` or equivalent, never merely `Go`.
 
-Render progress uses named stages and elapsed time. The editor manifest is
-read-only but inspectable. `Back` is disabled only while a confirmed job is
+Render progress uses named stages and elapsed time. The automatic composition
+summary remains read-only. `Back` is disabled only while a confirmed job is
 actively starting; leaving the page does not cancel the job.
 
 ### 6.9 Result
@@ -1446,15 +1412,16 @@ Errors have three layers:
 3. an expandable content-free reference containing request ID and rule code.
 
 Never expose provider names unless that helps an owner-validation environment;
-public copy uses `transcription service`, `editing assistant`, or `rendering`.
+public copy uses `transcription service`, `clip analysis`, or `rendering`.
 Never display a stack, raw provider message, object name, signed URL, prompt,
 transcript excerpt, or filename inside diagnostics.
 
-## 7. Editor behavior and reversible AI
+## 7. Automatic composition and preview parity
 
-### 7.1 Canonical edit manifest
+### 7.1 Immutable automatic manifest
 
-The editor owns one normalized manifest, not parallel component state.
+Assembly creates one server-validated manifest for the selected candidate. The
+browser may read it for preview and confirmation but cannot mutate it.
 
 ```ts
 type VisualCueV1 = {
@@ -1473,12 +1440,11 @@ type VisualCueV1 = {
   rationale: string;
 };
 
-type EditManifestV1 = {
+type CompositionManifestV1 = {
   version: 1;
-  baseCandidateId: string | "manual";
+  baseCandidateId: string;
   analysisRevision: string;
   assemblyRevision: string;
-  revision: number;
   range: {
     startWordId: string;
     endWordId: string;
@@ -1490,14 +1456,7 @@ type EditManifestV1 = {
     smoothingProfile: "editorial";
   };
   captions: {
-    theme: "clean-emphasis" | "editorial-block" | "minimal-subtitle";
-    density: "comfortable" | "compact";
-    corrections: Array<{ wordId: string; text: string }>;
-    emphasizedWordIds: string[];
-  };
-  headline: {
-    text: string | null;
-    placement: "top-safe";
+    profile: "clean-emphasis";
   };
   visuals: {
     planRevision: string;
@@ -1509,219 +1468,71 @@ type EditManifestV1 = {
 };
 ```
 
-The client derives duration, timestamps, caption groups, visual coverage, diff
-text, and render summary from the manifest plus normalized analysis/assembly.
-It does not persist those derived values as independent truth.
+`CompositionManifestV1` is the internal composition/render artifact. The
+browser derives duration, timestamps, caption groups, visual coverage, and the
+confirmation summary from the manifest plus normalized analysis/assembly. It
+does not persist derived values or author a replacement manifest.
 
-### 7.2 Manual trim
+### 7.2 Locked selected range
 
-- Start and end snap to existing word boundaries.
-- Start must precede end.
-- Final clip duration must remain 10–60 seconds for the demo. This bound is part
-  of the product promise and visual-density model, not merely a cost limit.
-- A trim cannot exclude every audible word.
-- The UI previews 250 ms of context before/after a boundary only for selection;
-  export begins/ends on resolved timestamps with the deterministic audio/video
-  padding policy.
-- Dragging is supported on pointer devices, but every action has keyboard and
-  step-button alternatives.
-- While dragging, update the visual preview at a throttled rate; commit one
-  manifest revision on release, not one per pointer event.
+- The selected candidate supplies the exact start and end word IDs.
+- The range is 10–60 seconds, starts before it ends, and contains audible words.
+- There is no manual-range fallback and no trim UI.
+- Rejected or unresolved candidate IDs cannot enter assembly or rendering.
 
-### 7.3 Transcript and caption correction
+### 7.3 AI speaker framing
 
-The normalized provider transcript is immutable evidence. Caption correction
-adds or replaces a `corrections` entry keyed to an existing word ID.
+Speaker framing is an automatic assembly result, never a user-selected crop.
+The focus track contains time-bounded segments tied to detected shots and face
+tracks. It resets at camera cuts, uses audio-visual speaking evidence in wide
+shots, applies hysteresis to prevent jitter, preserves headroom and safe zones,
+and never infers or displays identity. Owner evaluation tooling may visualize
+boxes and scores separately; the public flow cannot alter them.
 
-Rules:
+### 7.4 Fixed captions
 
-- correction text is 1–80 Unicode scalar values after normalization;
-- no markup, control characters, bidi override controls, URLs, or newlines;
-- at most 100 corrected words and 4,000 total correction characters;
-- a correction may fix spelling, casing, punctuation, or intended displayed
-  wording but does not alter timestamps or candidate evidence;
-- the evidence panel can always reveal the original provider word;
-- empty correction removes the correction after confirmation, rather than
-  deleting the timed word;
-- merging/splitting timings is out of scope; caption grouping may visually join
-  adjacent words without mutating word identity.
+Preview and render use one source-controlled `clean-emphasis` profile:
 
-### 7.4 AI speaker framing
+- warm-white semibold sans text with a subtle dark backing and at most one
+  signal-accent word from deterministic grouping;
+- 2–7 display words per group, normally 0.8–3.5 seconds;
+- no more than 32 characters per line and two lines where feasible;
+- breaks at strong punctuation, speaker changes, or meaningful pauses;
+- captions remain inside safe zones and above every visual layout;
+- provider words and timings remain immutable;
+- no caption text correction, theme, density, font, color, placement, or
+  emphasis control exists in the visitor experience.
 
-Speaker framing is an assembly result, not a user-selected left/center/right
-preset. The focus track contains time-bounded segments tied to detected shots
-and face tracks. Each segment specifies a normalized crop center and confidence
-metadata for evaluation; the public manifest references the validated track
-rather than copying raw model scores.
+### 7.5 Contextual visual beats
 
-Rules:
-
-- reset face identity and crop smoothing at every detected source camera cut;
-- when one clear face fills the shot, center that tracked face;
-- when multiple faces share a shot, choose the face with the strongest
-  audio-visual speaking evidence and apply turn hysteresis to avoid jitter;
-- do not switch for sub-second interjections unless the speaker remains active
-  beyond the source-controlled threshold;
-- ease a move inside a continuous wide shot; use a cut/reset across a source
-  camera change;
-- keep the face inside portrait headroom and caption/visual safe zones;
-- never infer or display a person's identity;
-- the public demo offers no manual speaker-left/right crop configuration. Owner
-  evaluation tooling may visualize boxes, scores, and crop centers separately.
-
-### 7.5 Captions
-
-Caption grouping is deterministic and shared by preview and render:
-
-- 2–7 display words per group;
-- target no more than 32 characters per line and two lines;
-- group duration normally 0.8–3.5 seconds;
-- break on strong punctuation, speaker change, or meaningful pause;
-- do not leave a one-word orphan when rebalancing can avoid it;
-- highlight only IDs present in the current group;
-- keep all text inside the defined title/action safe zone;
-- preserve spoken meaning; style never rewrites text.
-
-Themes are token sets, not arbitrary model-generated CSS:
-
-| Theme | Behavior |
-| --- | --- |
-| `clean-emphasis` | Warm-white sans text, subtle dark backing, one signal-accent word. Default. |
-| `editorial-block` | Compact dark block with off-white text and restrained signal edge. |
-| `minimal-subtitle` | Smaller two-line subtitle with no animated emphasis. |
-
-### 7.6 Contextual visual beats and headline
-
-- Headline is optional, maximum 80 characters and two visual lines.
-- It occupies `top-safe` only and may not overlap faces/captions in the preview
-  safe-zone calculation.
-- The assistant may propose only the user's existing wording or a title grounded
-  in the selected transcript; it cannot invent a factual claim.
-- Each visual cue references exact start/end word IDs and one validated asset.
-- `full-frame` temporarily replaces podcast footage but never podcast audio or
-  captions.
-- `picture-in-picture` and `lower-card` keep the podcast visible and occupy a
-  layout slot proven not to cover the active face or caption group.
-- Generated concept images may depict concrete nouns/places/objects; exact
-  equations, numbers, and quotes use deterministic cards.
-- Visual prompts and assets use one approved art direction so Earth and Moon do
-  not look like unrelated stock images.
-- Assets are generated only for the chosen clip. There is no search result list,
-  stock marketplace, asset picker, or user-uploaded overlay system.
+- Each cue references exact word IDs and one validated asset.
+- `full-frame` temporarily replaces footage but never podcast audio or captions.
+- `picture-in-picture` and `lower-card` keep footage visible and cannot cover the
+  active face or caption group.
+- Generated images depict grounded concrete concepts; exact equations, numbers,
+  and quotes use deterministic cards.
+- Assets share one approved art direction and are generated only for the chosen
+  clip. There is no asset browser, upload, selection, rejection, retiming, or
+  layout control.
 - Maximum cues and total coverage follow the core-story duration table.
 
-### 7.7 Assistant request
+### 7.6 No public mutation surface
 
-The assistant box is a single bounded instruction field, not an open-ended
-conversation. Placeholder examples are scoped to supported operations:
+The demo contains no editor, assistant/chatbot, instruction field, manual trim,
+caption correction or styling, headline control, focus/visual track control,
+timeline, proposal/diff/apply flow, undo, or redo. The browser can select one
+candidate, play the read-only automatic preview, confirm rendering, download,
+and clear. Any future editing product is deferred and requires a new owner
+decision, source-of-truth revision, schemas, tickets, and release evidence.
 
-- “Start on the surprising claim.”
-- “Keep this under 45 seconds.”
-- “Use calmer captions and remove the headline.”
-- “Use fewer visuals and keep the speaker on screen longer.”
-- “Keep the Earth visual on a little longer.”
-- “Show the equation as a small card without covering the speaker.”
+### 7.7 Preview/render parity
 
-The interface states that requests outside the supported editor may be declined.
-The field accepts 1–500 characters after normalization and no attachments,
-URLs, rich text, or persisted chat history.
-
-### 7.8 Allowed AI operations
-
-```ts
-type EditOperation =
-  | { type: "set-in"; wordId: string }
-  | { type: "set-out"; wordId: string }
-  | {
-      type: "set-caption-theme";
-      theme: "clean-emphasis" | "editorial-block" | "minimal-subtitle";
-    }
-  | { type: "set-caption-density"; density: "comfortable" | "compact" }
-  | { type: "set-headline"; text: string | null }
-  | { type: "remove-visual-cue"; cueId: string }
-  | {
-      type: "set-visual-cue-range";
-      cueId: string;
-      startWordId: string;
-      endWordId: string;
-    }
-  | {
-      type: "set-visual-cue-layout";
-      cueId: string;
-      layout: "full-frame" | "picture-in-picture" | "lower-card";
-    }
-  | { type: "set-emphasized-words"; wordIds: string[] };
-```
-
-There is no operation for caption correction because the assistant must not
-silently rewrite spoken words. There is no operation for a command, path, URL,
-font, arbitrary coordinate, arbitrary color, filter, audio gain, or asset.
-The edit assistant may remove, retime, or relayout an existing cue; generating a
-new subject/asset requires a separately bounded reassembly action and is not
-part of the first public demo.
-
-### 7.9 Proposal contract
-
-```ts
-type EditProposalV1 = {
-  version: 1;
-  proposalId: string;
-  baseRevision: number;
-  operations: EditOperation[];
-  explanation: string;
-  limitations: string[];
-};
-```
-
-Limits:
-
-- 1–6 operations;
-- explanation 1–320 characters;
-- 0–3 limitations, each 1–160 characters;
-- all word IDs must exist inside the bounded candidate context;
-- proposed result must pass the same manifest validator as a manual edit;
-- redundant/no-op operations are removed with a rule code;
-- conflicting operations fail the proposal;
-- the server assigns `proposalId`; the model does not control identifiers.
-
-### 7.10 Diff, apply, undo, and redo
-
-The server or shared deterministic domain logic derives a semantic diff, for
-example:
-
-```text
-Start        12:41.2 → 12:47.8
-Duration     58 s → 43 s
-Captions     Editorial block → Clean emphasis
-Headline     “Why teams stall” → Off
-Visuals      3 beats / 38% → 2 beats / 27%
-Earth cue    Full frame, 2.2–5.5 s → Full frame, 2.2–6.2 s
-```
-
-Apply is atomic and only succeeds when `baseRevision === manifest.revision`.
-Stale proposals show “Your edit changed since this suggestion” and may be
-discarded or explicitly regenerated; they are never rebased silently.
-
-Undo/redo stores normalized manifest snapshots or invertible domain patches,
-not provider payloads. History is capped at 20 committed revisions. A new edit
-after undo clears the redo branch. Rendering freezes a manifest hash; later
-edits require returning to the editor and, if permitted, a new render allowance.
-
-### 7.11 Preview parity
-
-Preview and export must share:
-
-- the same normalized manifest schema and validation;
-- the same word-to-time resolution;
-- the same caption group builder;
-- the same shot/focus track, safe-zone constants, and crop math;
-- the same visual cue timing, assets, layouts, motion, and transitions;
-- the same headline/card layout tokens;
-- the same fallback decision.
-
-Known acceptable differences are font antialiasing, decoded frame selection,
-browser video color, and exact FFmpeg text rasterization. Golden fixtures set
-tolerances. Any semantic difference is a bug.
+Preview and export share the normalized manifest, word-to-time resolution,
+caption grouping/profile, shot/focus track, safe-zone constants, crop math,
+visual cue timing/assets/layouts/motion/transitions, card tokens, and fallback
+decisions. Known acceptable differences are font antialiasing, decoded frame
+selection, browser video color, and exact FFmpeg text rasterization. Golden
+fixtures set tolerances; any semantic difference is a bug.
 
 ## 8. System architecture
 
@@ -1806,7 +1617,7 @@ sessions/<opaque-session-id>/assembly/shots.json
 sessions/<opaque-session-id>/assembly/speaker-focus.json
 sessions/<opaque-session-id>/assembly/visual-plan.json
 sessions/<opaque-session-id>/assembly/assets/<opaque-asset-id>.png
-sessions/<opaque-session-id>/edits/render-manifest.json
+sessions/<opaque-session-id>/composition/render-manifest.json
 sessions/<opaque-session-id>/output/clip.mp4
 operations/<opaque-operation-id>/descriptor.json
 operations/<opaque-operation-id>/progress.json
@@ -1904,7 +1715,7 @@ Create a directory only when its first real module arrives. The following is the
 proposed final shape, not permission to pre-create placeholders.
 
 ```text
-ai-assisted-video-editor/
+ClipBuilder/
 ├─ AGENTS.md
 ├─ README.md
 ├─ package.json
@@ -1969,19 +1780,10 @@ ai-assisted-video-editor/
 │  │     │  │  ├─ AssemblyProgress.tsx
 │  │     │  │  ├─ AssemblyStoryboard.tsx
 │  │     │  │  └─ __tests__/
-│  │     │  ├─ editor/
-│  │     │  │  ├─ EditorWorkspace.tsx
+│  │     │  ├─ review/
+│  │     │  │  ├─ AutomaticClipReview.tsx
 │  │     │  │  ├─ VerticalPreview.tsx
-│  │     │  │  ├─ TranscriptEditor.tsx
-│  │     │  │  ├─ WordRangeControl.tsx
-│  │     │  │  ├─ CaptionControls.tsx
-│  │     │  │  ├─ SpeakerFocusTrack.tsx
-│  │     │  │  ├─ VisualBeatTrack.tsx
-│  │     │  │  ├─ VisualCueSummary.tsx
-│  │     │  │  ├─ HeadlineControls.tsx
-│  │     │  │  ├─ AssistantProposal.tsx
-│  │     │  │  ├─ ProposalDiff.tsx
-│  │     │  │  ├─ manifestReducer.ts
+│  │     │  │  ├─ ClipFacts.tsx
 │  │     │  │  ├─ previewLayout.ts
 │  │     │  │  └─ __tests__/
 │  │     │  ├─ render/
@@ -2031,7 +1833,7 @@ ai-assisted-video-editor/
 │        │  ├─ analysis.ts
 │        │  ├─ candidates.ts
 │        │  ├─ captions.ts
-│        │  ├─ editor.ts
+│        │  ├─ composition.ts
 │        │  ├─ assembly.ts
 │        │  ├─ visualPlan.ts
 │        │  ├─ media.ts
@@ -2044,7 +1846,6 @@ ai-assisted-video-editor/
 │        │  │  ├─ upload.route.ts
 │        │  │  ├─ analysis.route.ts
 │        │  │  ├─ assembly.route.ts
-│        │  │  ├─ editor.route.ts
 │        │  │  ├─ render.route.ts
 │        │  │  └─ operation.route.ts
 │        │  ├─ middleware/
@@ -2066,7 +1867,6 @@ ai-assisted-video-editor/
 │        │  ├─ getAnalysisResult.ts
 │        │  ├─ startAssembly.ts
 │        │  ├─ getAssemblyResult.ts
-│        │  ├─ proposeEdit.ts
 │        │  ├─ startRender.ts
 │        │  ├─ authorizeDownload.ts
 │        │  ├─ cancelOperation.ts
@@ -2080,8 +1880,6 @@ ai-assisted-video-editor/
 │        │  ├─ openai/
 │        │  │  ├─ candidate.port.ts
 │        │  │  ├─ candidate.adapter.ts
-│        │  │  ├─ edit.port.ts
-│        │  │  ├─ edit.adapter.ts
 │        │  │  ├─ fake.adapter.ts
 │        │  │  ├─ prompts.ts
 │        │  │  └─ schemas.ts
@@ -2165,10 +1963,9 @@ ai-assisted-video-editor/
 │        ├─ media.schema.ts
 │        ├─ transcript.schema.ts
 │        ├─ candidate.schema.ts
-│        ├─ editor.schema.ts
+│        ├─ composition.schema.ts
 │        ├─ assembly.schema.ts
 │        ├─ visual-plan.schema.ts
-│        ├─ operation.schema.ts
 │        ├─ api.schema.ts
 │        └─ index.ts
 ├─ tests/
@@ -2179,7 +1976,6 @@ ai-assisted-video-editor/
 │  │  ├─ assemblies/
 │  │  ├─ visual-plans/
 │  │  ├─ active-speaker/
-│  │  ├─ edit-intents/
 │  │  ├─ provider-errors/
 │  │  └─ prompt-injection/
 │  ├─ golden/
@@ -2262,15 +2058,10 @@ validation.
 | `MAX_AUDIO_STREAMS` | 1 | 1 | One speech track only. |
 | `MAX_TRANSCRIPT_WORDS` | 12,000 | 30,000 | Hard stop before model input. |
 | `MAX_TRANSCRIPT_CHARS` | 200,000 | 500,000 | Normalized display text. |
-| `CANDIDATE_COUNT` | 3 | 5 | Public result aims for exactly 3 valid candidates. |
+| `CANDIDATE_TARGET` | 3 | 3 | Desired number of strong alternatives; never pad weak output. |
+| `MAX_CANDIDATE_COUNT` | 4 | 4 | Public and owner flows return zero to four. |
 | `MIN_CLIP_SECONDS` | 10 | 10 | Derived from word timestamps. |
 | `MAX_CLIP_SECONDS` | 60 | 60 | Locked demo range. |
-| `MAX_EDIT_INSTRUCTION_CHARS` | 500 | 500 | Plain text only. |
-| `MAX_ASSISTANT_PROPOSALS` | 3 | 5 | Per session; each is one model call. |
-| `MAX_EDIT_OPERATIONS` | 6 | 6 | Per proposal. |
-| `MAX_HISTORY_REVISIONS` | 20 | 20 | Browser projection. |
-| `MAX_CAPTION_CORRECTIONS` | 100 | 100 | Existing word IDs only. |
-| `MAX_HEADLINE_CHARS` | 80 | 80 | Two visual lines. |
 | `MAX_FACE_TRACKS_PER_SHOT` | 4 | 4 | Bounds active-speaker work. |
 | `MAX_VISUAL_CUES` | 3 | 3 | Duration table may lower this. |
 | `MIN_VISUAL_CUE_MS` | 1,500 | 1,500 | Full-frame/overlay readability. |
@@ -2308,7 +2099,7 @@ Both limits are required for different reasons:
   high-bitrate recording could otherwise be several gigabytes.
 
 This is deliberately a demo-sized envelope. Twenty minutes supplies enough
-real conversation to find three distinct candidate moments while keeping the
+real conversation to find several distinct candidate moments while keeping the
 maximum Nova-3 monolingual transcription charge near **$0.086 per accepted
 source at the 2026-09-29 price checked for this plan**. Five hundred MiB is
 large enough for sensibly compressed 1080p podcast footage without turning an
@@ -2664,7 +2455,7 @@ type AssemblyBundleV1 = {
   speakerFocus: SpeakerFocusTrackV1;
   visualPlan: VisualPlanV1;
   assets: VisualAssetV1[];
-  initialManifest: EditManifestV1;
+  compositionManifest: CompositionManifestV1;
 };
 ```
 
@@ -2757,7 +2548,6 @@ values never populate it. Development logs still obey the content ban.
 | `GET /v1/analyses/:analysisId` | Fetch normalized result | Private storage read |
 | `POST /v1/assemblies` | Build selected speaker/visual first cut | One ASD pass + one visual-plan call + 0–3 image calls |
 | `GET /v1/assemblies/:assemblyId` | Fetch tracks, plan, assets, and initial manifest | Private storage read/signing |
-| `POST /v1/editor/proposals` | Create one edit proposal | At most one OpenAI call |
 | `POST /v1/renders` | Start/reuse render | One media job, no AI provider |
 | `POST /v1/downloads/authorize` | Create one short-lived output URL | Storage signing only |
 
@@ -2794,8 +2584,8 @@ type PublicConfigResponse = {
     sourceSeconds: number;
     clipSecondsMin: number;
     clipSecondsMax: number;
-    candidateCount: number;
-    assistantProposals: number;
+    candidateTarget: 3;
+    candidateMax: 4;
     renders: number;
   };
   features: {
@@ -2859,7 +2649,7 @@ type SessionResponse = {
     | "analyzing"
     | "candidates"
     | "assembling"
-    | "editor"
+    | "clip-review"
     | "rendering"
     | "result";
   media: MediaDescriptor | null;
@@ -2872,16 +2662,15 @@ type SessionResponse = {
   outputAvailable: boolean;
   remaining: {
     analysisRetries: number;
-    assistantProposals: number;
     renderAttempts: number;
   };
 };
 ```
 
 `assemblyId` and `assemblyRevision` are both required once `provenStage` is
-`editor`, `rendering`, or `result`; they remain nullable while assembly is in
-progress. This lets restore accept user-authored editor state only when its
-source assembly revision still matches server evidence.
+`clip-review`, `rendering`, or `result`; they remain nullable while assembly is
+in progress. The browser cannot restore or author an alternate manifest; the
+server-proven assembly revision identifies the automatic composition.
 
 It does not return signed URLs or full content. Expired/invalid cookie returns
 `401 SESSION_EXPIRED` and clears it.
@@ -3069,7 +2858,7 @@ generation/hash before response. It never returns raw face crops, model
 probabilities beyond owner/debug environments, image prompts in public UI,
 private paths, or provider payloads.
 
-### 11.15 `POST /v1/editor/proposals`
+### 11.15 `POST /v1/renders`
 
 Request:
 
@@ -3077,55 +2866,22 @@ Request:
 {
   analysisId: string;
   assemblyId: string;
-  manifest: EditManifestV1;
-  instruction: string;
-  turnstileToken: string;
-}
-```
-
-Response `200`:
-
-```ts
-{
-  proposal: EditProposalV1;
-  proposedManifest: EditManifestV1;
-  diff: Array<{
-    field: "range" | "duration" | "captions" | "headline" | "visuals";
-    before: string;
-    after: string;
-  }>;
-}
-```
-
-Server verifies analysis/assembly revisions and manifest, consumes one proposal allowance
-atomically, makes at most one OpenAI request, validates/reconciles the result,
-and derives the proposed manifest/diff. It does not persist the instruction or
-proposal server-side. A refusal/invalid result returns a safe error and consumes
-the provider-call allowance because cost occurred.
-
-### 11.16 `POST /v1/renders`
-
-Request:
-
-```ts
-{
-  analysisId: string;
-  assemblyId: string;
-  manifest: EditManifestV1;
+  manifestHash: string;
   turnstileToken: string;
 }
 ```
 
 Response `202` returns a render operation and `renderId`.
 
-Server revalidates every word/cue/track/asset reference and feature, resolves a
+The server loads the immutable manifest from the proven assembly, rejects a
+hash mismatch, revalidates every word/cue/track/asset reference, resolves a
 canonical manifest, hashes it with analysis and assembly revisions plus renderer
 version, and atomically
 consumes the render attempt. Replays with the same idempotency key/hash return
-the same operation. A different manifest after a successful output returns
+the same operation. A different or stale hash after a successful output returns
 `409 RENDER_LIMIT_REACHED` in public mode.
 
-### 11.17 `POST /v1/downloads/authorize`
+### 11.16 `POST /v1/downloads/authorize`
 
 Request: `{ renderId: string }`.
 
@@ -3144,7 +2900,7 @@ The output must already pass validation. Capability lifetime target: 5 minutes.
 Content-Disposition uses the source-controlled filename; no source identity is
 included. This route does not mark the file downloaded or delete it.
 
-### 11.18 `DELETE /v1/session`
+### 11.17 `DELETE /v1/session`
 
 No request body. Requires trusted source and valid/expired-but-authentic grant.
 Returns:
@@ -3162,7 +2918,7 @@ It clears the cookie in all outcomes. The server must retain enough in the
 in-flight request to attempt all known deletes even if one fails. It does not
 return object names.
 
-### 11.19 HTTP status and error codes
+### 11.18 HTTP status and error codes
 
 | Status | Codes | Meaning |
 | ---: | --- | --- |
@@ -3176,7 +2932,7 @@ return object names.
 | 422 | `MISSING_AUDIO`, `DURATION_OUT_OF_RANGE`, `NO_VALID_CANDIDATES`, `MODEL_OUTPUT_REJECTED`, `ASSEMBLY_OUTPUT_REJECTED`, `RENDER_OUTPUT_INVALID` | Valid syntax, unusable domain result |
 | 429 | `RATE_LIMITED`, `CAPACITY_FULL`, `PROVIDER_BUDGET_EXHAUSTED` | Admission/spend controls |
 | 499/408 mapping | `CLIENT_ABORTED`, `REQUEST_TIMEOUT` | Abort/timeout; use platform-compatible external status |
-| 502 | `TRANSCRIPTION_FAILED`, `ACTIVE_SPEAKER_FAILED`, `VISUAL_GENERATION_FAILED`, `ASSISTANT_FAILED`, `STORAGE_FAILED`, `JOB_START_FAILED` | Safe upstream failure |
+| 502 | `TRANSCRIPTION_FAILED`, `ACTIVE_SPEAKER_FAILED`, `VISUAL_GENERATION_FAILED`, `STORAGE_FAILED`, `JOB_START_FAILED` | Safe upstream failure |
 | 504 | `OPERATION_TIMEOUT` | Deadline exceeded |
 | 500 | `INTERNAL_ERROR` | Unexpected content-safe failure |
 
@@ -3318,10 +3074,10 @@ deduplicating identical enum/list entries. It may not invent a word, move a
 boundary, rewrite a rationale, choose speaker framing, or make another model
 call.
 
-If fewer than three valid candidates remain, return the valid set only when the
-UI explicitly supports the reduced-set state; otherwise produce
-`no-strong-candidates` and offer manual range. Never pad with hallucinated or
-duplicated candidates.
+Return the strongest one to four valid candidates in rank order. Three is the
+target, not a minimum; one or two valid candidates remain an honest reduced
+set. When none survive reconciliation, produce `no-strong-candidates` without
+offering manual range. Never pad with hallucinated or duplicated candidates.
 
 ### 12.7 Candidate fake
 
@@ -3330,6 +3086,7 @@ source-controlled provider-shaped proposals that still pass through the same
 Zod and reconciliation path. Include variants for:
 
 - three valid distinct candidates;
+- one valid candidate and four valid candidates for public cardinality bounds;
 - two duplicates requiring deterministic rejection;
 - missing word ID;
 - reversed boundary;
@@ -3486,64 +3243,7 @@ converts a validated, length-bounded TeX subset to SVG. The renderer then:
 This path exists because equations and concise labels must be exact. The demo
 does not rely on an image model to spell mathematics correctly.
 
-### 12.12 Edit planner port
-
-```ts
-interface EditPlanner {
-  propose(
-    input: {
-      instruction: string;
-      currentManifest: EditManifestV1;
-      transcriptWindow: TranscriptBundleV1;
-      enabledOperations: EditOperation["type"][];
-    },
-    context: ProviderCallContext
-  ): Promise<EditProposalProviderOutputV1>;
-}
-```
-
-Only the selected range plus at most 15 seconds of bounded surrounding context
-is sent. The same untrusted-data delimiter policy applies. The request is
-stateless: no `previous_response_id`, conversation, stored response, or tool
-call. Use strict Structured Outputs and `store: false`.
-
-The adapter distinguishes:
-
-- valid proposal;
-- explicit refusal;
-- no supported change;
-- invalid structured output;
-- timeout/abort;
-- provider/rate/budget failure.
-
-No case triggers an automatic repair or second model call.
-
-### 12.13 Edit reconciliation
-
-Deterministic code:
-
-- validates 1–6 allow-listed operations;
-- resolves word IDs and enabled feature enums;
-- rejects caption rewrites, freeform style values, commands, paths, and URLs;
-- removes exact no-ops and duplicate identical operations;
-- rejects conflicting `set-in`, `set-out`, or style operations;
-- applies operations to a copy of the manifest in order;
-- validates final duration, headline, word emphasis, correction preservation,
-  and analysis revision;
-- derives diff and limitations;
-- assigns the proposal ID and base revision.
-
-The explanation is display text and remains untrusted; render behavior derives
-only from validated operations.
-
-### 12.14 Edit fake
-
-The edit fake maps normalized instruction categories to deterministic proposals
-without attempting general language understanding. It supports the documented
-example intents and explicit failure fixtures. Unrecognized input returns a
-source-controlled `NO_SUPPORTED_EDIT` result, not a fabricated success.
-
-### 12.15 Storage, job, and abuse ports
+### 12.12 Storage, job, and abuse ports
 
 `TemporaryStorage` owns object read/write/delete, generation preconditions,
 resumable authorization, signed download, metadata, and atomic marker create.
@@ -3640,12 +3340,12 @@ The core first-cut assembly is a separate bounded operation over the chosen
 11. `assembly.writing-result`;
 12. `assembly.complete`.
 
-The visual-planning call happens only after a candidate/manual range is chosen.
+The visual-planning call happens only after one candidate is chosen.
 Only reconciled cues reserve an image call, and equation/card cues stay local.
 Independent image assets may be generated concurrently within the per-session
 and global image-call caps. The job writes the assembly bundle only after every
 referenced track and asset passes validation; partial results are not exposed as
-a valid editor state.
+a valid clip-review state.
 
 ### 13.6 Browser preview
 
@@ -3660,9 +3360,7 @@ The preview composes:
 - full-frame visual cutaways or bounded visual overlays from assembly assets;
 - HTML/canvas caption layer from deterministic caption groups, always above
   podcast footage and visual assets;
-- the bounded headline layer;
 - playback-range controller that pauses at the manifest end;
-- safe-zone guides when requested.
 
 Preview authorization is memory-only, short-lived, referrer-protected, and
 renewed on explicit playback/restoration. If CORS/range behavior makes a direct
@@ -3724,8 +3422,8 @@ detection, infer identity, inspect diarization labels, or choose a speaker.
 
 ### 13.9 ASS caption compiler
 
-Generate the ASS file inside the job workspace from escaped normalized display
-text and source-controlled theme tokens.
+Generate the ASS file inside the job workspace from immutable normalized words
+and the single source-controlled `clean-emphasis` profile.
 
 - Escape ASS control characters and braces.
 - Strip/replace forbidden newlines and override sequences.
@@ -3739,10 +3437,6 @@ text and source-controlled theme tokens.
 
 ### 13.10 Contextual visual asset and timeline compiler
 
-Headline input is escaped plain text. Line breaking uses the same measured font
-metrics/token rules as preview where practical and caps at two lines. Overflow
-fails manifest validation before FFmpeg.
-
 Every visual cue references one validated assembly asset and one closed layout
 enum. The compiler creates a layer plan:
 
@@ -3755,9 +3449,9 @@ enum. The compiler creates a layer plan:
   the face according to the shot geometry, never on top of the captions.
 
 FFmpeg may use pinned `overlay`, timeline `enable`, `zoompan`, and transition
-filters compiled from numeric cue times. Captions and the bounded headline are
-composited last so they remain legible over podcast footage, Earth/Moon imagery,
-and equation cards. The compiler rejects missing assets, overlapping cues,
+filters compiled from numeric cue times. Captions are composited last so they
+remain legible over podcast footage, Earth/Moon imagery, and equation cards.
+The compiler rejects missing assets, overlapping cues,
 unsafe placement, cue times outside the clip, and coverage above the duration
 band's maximum.
 
@@ -3799,7 +3493,7 @@ Required output:
 - sanitized constant output filename.
 
 Proposed initial profile for measurement: `libx264`, preset `medium`, CRF 20,
-30 fps, AAC 160 kbps, `-movflags +faststart`. This is a reversible technical
+30 fps, AAC 160 kbps, `-movflags +faststart`. This is a provisional technical
 recommendation, not a quality claim; the render ticket must benchmark it before
 locking operations documentation.
 
@@ -3895,7 +3589,7 @@ Custom metadata is content-free and allow-listed:
 - content type and byte count;
 - renderer/fixture revision where applicable.
 
-Never store filename, title, transcript excerpt, headline, speaker, IP, user
+Never store filename, title, transcript excerpt, speaker, IP, user
 agent, provider request ID, or signed URL in metadata.
 
 ### 14.3 Versioned sample asset
@@ -3916,16 +3610,15 @@ represented as live AI work performed for that visitor.
 
 ### 14.4 Analysis result retention tradeoff
 
-Refresh-safe editing requires the normalized transcript and candidates after
-the analysis job finishes. The recommended demo stores:
+Refresh-safe selection, preview, and rendering require the normalized transcript
+and candidates after the analysis job finishes. The recommended demo stores:
 
 - normalized transcript only, not raw provider response;
 - reconciled candidates and content-safe warnings;
 - shot boundaries, short-lived face geometry, the derived speaker-focus track,
   and reconciled visual plan for the selected clip;
 - validated generated/local visual assets referenced by that assembly only;
-- immutable analysis and assembly revisions/hashes;
-- no assistant instruction/proposal history.
+- immutable analysis and assembly revisions/hashes.
 
 These private JSON objects share the source TTL and clear path. This is
 **Proposed - owner approval required** because it is a material privacy choice.
@@ -4020,8 +3713,7 @@ The API reconciles Cloud Run execution status with the terminal object:
 | Visual-plan prompt/output | Never raw | Adapter/use-case memory | OpenAI receives selected transcript window | Reconciled cue plan only | Token/cue counts/config ID/outcome only |
 | Generated visual prompt/asset | Active preview asset | Validated brief/metadata | OpenAI Image API receives server-compiled brief | Private asset until clear/lifecycle | Call count/bytes/config ID/outcome only |
 | Equation/card expression/asset | Active preview asset | Validated bounded expression | Local renderer/job only | Private asset until clear/lifecycle | Type/bytes/renderer revision only |
-| Edit instruction/proposal | Active editor | Request memory | OpenAI minimum selected context | Not persisted server-side | Length/outcome only |
-| Caption corrections/manifest | Session projection | Validation/request memory | Render job only | Private render descriptor until clear/expiry | Counts/hash only |
+| Automatic composition manifest | Read-only preview reference | Validation/confirmation memory | Render job only | Private assembly/render descriptor until clear/expiry | Counts/hash only |
 | Rendered clip | Playback/download capability | Metadata only | Job local then upload | Private output until clear/lifecycle | Bytes/duration only |
 | Grants/tokens/URLs | Cookie or memory as appropriate | Server memory/crypto | Minimum required capability | Secrets only in Secret Manager; no signed URLs | Redacted |
 | Operational evidence | Safe request/status values | Safe structured metrics | Safe usage result | Content-free release record | Allow-list only |
@@ -4031,8 +3723,8 @@ The API reconciles Cloud Run execution status with the terminal object:
 Approved style:
 
 > This demo uses temporary private storage to process your video. The app has no
-> user account or project database. Your video, normalized transcript, edit
-> manifest, assembly tracks, generated visual assets, and export remain
+> user account or project database. Your video, normalized transcript,
+> automatic composition manifest, assembly tracks, generated visual assets, and export remain
 > available only for the disclosed temporary window or until you clear them.
 > Transcription, text, and image providers process the minimum data needed under
 > their own configured data policies.
@@ -4148,7 +3840,7 @@ Forbidden:
 - authorization/cookie/Turnstile/provider tokens;
 - raw IP, user agent, fingerprint, or stable person identifier;
 - filename, object key, signed/resumable URL;
-- transcript, caption, title, headline, instruction, prompt, rationale;
+- transcript, caption, title, instruction, prompt, rationale;
 - provider raw response/error;
 - local/temp paths or full FFmpeg command;
 - video/audio/image frames;
@@ -4162,8 +3854,7 @@ objects. Tests scan serialized logs for sentinel secrets/content.
 Anonymous rate controls are best-effort. Without durable identity/database,
 the demo cannot enforce a reliable per-person monthly quota. Controls include:
 
-- Turnstile on upload authorization, analysis, first-cut assembly, assistant
-  proposal, and render;
+- Turnstile on upload authorization, analysis, first-cut assembly, and render;
 - action-bound tokens and short validity;
 - session action counters and atomic markers;
 - privacy-preserving short-window source/IP-derived keyed hash only if legally
@@ -4221,7 +3912,6 @@ service identity, preserves safe response headers, and never logs bodies.
 | `LIVE_ANALYSIS_ENABLED` | `false` | Requires paid master, providers, and spend gate |
 | `LIVE_ASSEMBLY_ENABLED` | `false` | Requires active-speaker benchmark, visual providers, and spend gate |
 | `LIVE_IMAGE_GENERATION_ENABLED` | `false` | Requires live assembly plus image policy/cost approval |
-| `LIVE_EDIT_ASSISTANT_ENABLED` | `false` | Requires paid master/OpenAI config |
 | `LIVE_RENDER_ENABLED` | `false` | Requires paid master/job/capacity config |
 | `ACTIVE_SPEAKER_ENABLED` | `true` | Core assembly behavior; live assembly still fails closed behind its own gate |
 | `TREND_SIGNALS_ENABLED` | `false` | Requires product approval |
@@ -4288,17 +3978,15 @@ service-account JSON key belongs in env or Git.
 
 | Variable | Committed example | Required | Secret | Rule |
 | --- | --- | --- | --- | --- |
-| `OPENAI_API_KEY` | blank | Live analysis/edit | Yes | Secret Manager; tests must reject presence/use |
+| `OPENAI_API_KEY` | blank | Live candidate/visual planning | Yes | Secret Manager; tests must reject presence/use |
 | `OPENAI_CLIP_MODEL` | `gpt-6-sol` | Live | No | Approved exact model ID |
 | `OPENAI_VISUAL_MODEL` | `gpt-6-sol` | Live assembly | No | Structured visual-plan output |
-| `OPENAI_EDIT_MODEL` | `gpt-6-sol` | Live | No | May match clip model |
 | `OPENAI_IMAGE_MODEL` | `gpt-image-2.5-flare` | Live image generation | No | Proposed; re-check exact ID/access |
 | `OPENAI_IMAGE_QUALITY` | `medium` | Live image generation | No | Closed tested enum |
 | `OPENAI_REASONING_EFFORT` | `low` | Live | No | Allowed model value; measure quality/cost |
 | `OPENAI_TIMEOUT_MS` | `60000` | Yes | No | 5,000–120,000 |
 | `OPENAI_MAX_OUTPUT_TOKENS_CLIP` | `3000` | Yes | No | Schema-sized bound |
 | `OPENAI_MAX_OUTPUT_TOKENS_VISUAL` | `1800` | Yes | No | Schema-sized bound |
-| `OPENAI_MAX_OUTPUT_TOKENS_EDIT` | `1500` | Yes | No | Schema-sized bound |
 | `OPENAI_IMAGE_TIMEOUT_MS` | `120000` | Yes | No | One generated still; no retry |
 | `OPENAI_IMAGE_MAX_CALLS` | `3` | Yes | No | Hard per-assembly ceiling |
 | `OPENAI_STORE` | `false` | Yes | No | Must parse only literal false in production |
@@ -4336,7 +4024,6 @@ variables alone. The owner records dashboard/project configuration evidence in
 | `MAX_VISUAL_CUES_PER_CLIP` | `3` | Includes generated and deterministic cues |
 | `MAX_IMAGE_CALLS_PER_ASSEMBLY` | `3` | Cannot exceed visual cue cap |
 | `MAX_VISUAL_COVERAGE_PERCENT` | `45` | Lower duration bands use stricter compiled rules |
-| `MAX_ASSISTANT_PROPOSALS_PER_SESSION` | `3` | 0–3 public |
 | `MAX_RENDER_ATTEMPTS_PER_SESSION` | `1` | 0–1 public |
 | `MAX_CONCURRENT_ANALYSES` | `1` | 0–1 public instance |
 | `MAX_CONCURRENT_ASSEMBLIES` | `1` | 0–1 public instance |
@@ -4347,7 +4034,6 @@ variables alone. The owner records dashboard/project configuration evidence in
 | `RATE_UPLOAD_AUTH_MAX` | `3` | Per approved source/session key |
 | `RATE_ANALYSIS_MAX` | `1` | Before manual retry allowance |
 | `RATE_ASSEMBLY_MAX` | `1` | One first-cut build per selected range |
-| `RATE_EDIT_MAX` | `3` | Mirrors allowance |
 | `RATE_RENDER_MAX` | `1` | Mirrors public allowance |
 
 Runtime config may lower limits without code change. It may not raise them above
@@ -4370,7 +4056,6 @@ LIVE_UPLOAD_ENABLED=false
 LIVE_ANALYSIS_ENABLED=false
 LIVE_ASSEMBLY_ENABLED=false
 LIVE_IMAGE_GENERATION_ENABLED=false
-LIVE_EDIT_ASSISTANT_ENABLED=false
 LIVE_RENDER_ENABLED=false
 ACTIVE_SPEAKER_ENABLED=true
 TREND_SIGNALS_ENABLED=false
@@ -4391,7 +4076,6 @@ MEDIA_JOB_NAME=
 OPENAI_API_KEY=
 OPENAI_CLIP_MODEL=gpt-6-sol
 OPENAI_VISUAL_MODEL=gpt-6-sol
-OPENAI_EDIT_MODEL=gpt-6-sol
 OPENAI_IMAGE_MODEL=gpt-image-2.5-flare
 OPENAI_IMAGE_QUALITY=medium
 OPENAI_STORE=false
@@ -4419,7 +4103,6 @@ Never paste working credential examples into documentation.
 | Find moments | One Turnstile + one transcription + one OpenAI candidate call | Zero provider/job retries |
 | Retry after candidate failure with valid transcript | One Turnstile + one OpenAI candidate call | Zero |
 | Build selected clip | One Turnstile + one local active-speaker pass + one OpenAI visual-plan call + zero to three OpenAI image calls + local equation/card renders | Zero provider/job retries |
-| Ask assistant | One Turnstile + one OpenAI edit call | Zero |
 | Render | One Turnstile + one render job | Cloud Run task retries zero |
 | Retry render | One new render job only when allowance/evidence permits | Zero |
 | Download | One signed capability | Safe metadata/signing retry only |
@@ -4445,7 +4128,6 @@ after uncertain acknowledgement, and any operation that could duplicate spend.
 | Active-speaker processing | 4 min | 10 min | One selected clip; local process |
 | Visual-plan model | 45 s | 90 s | One response |
 | Each generated still | 2 min | 4 min | Up to three, no retry |
-| Edit model | 30 s | 60 s | One response |
 | Analysis job total | 15 min | 30 min | Proposed ceiling |
 | Assembly job total | 15 min | 30 min | Proposed ceiling |
 | Render job total | 15 min | 45 min | Proposed ceiling |
@@ -4476,8 +4158,8 @@ No rejected earlier condition may cause a provider or compute-bearing job.
 
 1. fake and paid-disabled committed defaults;
 2. sample path that proves product without transcription/model cost;
-3. separate switches for upload, analysis, assembly, image generation, edit
-   assistant, and render;
+3. separate switches for upload, analysis, assembly, image generation, and
+   render;
 4. explicit confirmation before analysis, assembly, and render;
 5. Turnstile at every paid/compute boundary;
 6. action counters and atomic single-use markers;
@@ -4546,9 +4228,10 @@ signed URL, or secret in the cost ledger.
 
 The interface should feel exceptionally modern, minimal, premium, confident,
 spacious, precise, and restrained. The product itself is the visual proof:
-source evidence becomes an inspectable vertical edit in one clear sequence.
-AI is present through useful judgment, provenance, and reversible proposals,
-not glowing orbs, robot illustrations, trend scores, or chat bubbles.
+source evidence becomes an inspectable automatic vertical clip in one clear
+sequence. AI is present through useful judgment, provenance, and a transparent
+build process—not editing controls, glowing orbs, robot illustrations, trend
+scores, or chat bubbles.
 
 Tone:
 
@@ -4610,6 +4293,9 @@ license notices.
 
 - display: the same sans at 560–680 weight, slightly negative tracking, and
   responsive `clamp()` sizing;
+- the landing hero may give its single rotating noun restrained typographic
+  contrast—solid, italic, outline, local serif, or condensed—while the stable
+  sentence remains the primary voice and no remote font is introduced;
 - body: 400–500 weight, relaxed leading, and a 64–72 character measure;
 - UI: 560–650 weight with explicit labels and no all-caps paragraph copy;
 - mono: compact metadata only, never long-form explanation;
@@ -4625,7 +4311,7 @@ Browser zoom and user font settings must remain functional.
 - base spacing unit: 4 px;
 - scale: 4, 8, 12, 16, 24, 32, 48, 64, 96, 128 px;
 - content max width on the landing page: 1280 px with generous gutters;
-- editor max width: 1920 px with a flexible center;
+- workflow max width: 1920 px with a flexible preview center;
 - minimum interactive target: 44 × 44 CSS px;
 - radii: 10 px controls, 16 px compact cards, 24 px product surfaces, and
   32 px hero framing; pill only for compact status and segmented metadata;
@@ -4634,40 +4320,53 @@ Browser zoom and user font settings must remain functional.
 - `backdrop-filter` is progressive enhancement. Unsupported or
   reduced-transparency contexts receive an opaque, contrast-safe surface with
   the same hierarchy; forced colors receives explicit borders and system colors;
-- the navy-to-cobalt gradient is a recurring structural field for the hero and
-  selected transitions. It stays blue-led and product-specific, not purple,
-  rainbow, noisy, or decorative.
+- the landing page uses one continuous, full-width navy-to-cobalt-to-deep-navy
+  structural field across the hero, How it works, market context, side gutters,
+  and footer; section-specific light is transparent and feathered rather than
+  restarting an opaque gradient at each boundary. It stays blue-led and
+  product-specific, not purple, rainbow, noisy, or decorative.
 
 ### 18.5 Icon rules
 
 Use one source-controlled SVG icon family. Icons are 16/20/24 px with consistent
 stroke. Every standalone icon button has an accessible name and tooltip on
-hover/focus. Do not use emoji as controls. Destructive, download, play, trim,
-undo, redo, evidence, warning, and status icons have consistent semantics.
+hover/focus. Do not use emoji as controls. Destructive, download, play,
+evidence, warning, and status icons have consistent semantics.
 
 ### 18.6 Component inventory
 
 CL-002 builds only the primitives needed by the landing prototype: header,
 primary/secondary text actions, trust/status strip, evidence steps, and a
-synthetic product-media frame. Later tickets build the functional controls when
-their behavior exists. Do not build a generalized dashboard/card system or
-pretend that the prototype actions already upload, analyze, or render media.
+synthetic product-media frame. Its final market-context section may add one
+responsive wordmark wall of researched paid clipping campaign platforms. Those
+wordmarks are original text/CSS treatments with an explicit no-affiliation and
+no-earnings-guarantee disclosure; they are not customer, partner, or integration
+logos. Later tickets build the functional controls when their behavior exists.
+Do not build a generalized dashboard/card system or pretend that the prototype
+actions already upload, analyze, or render media.
 
 ### 18.7 Product-media art direction
 
 The landing hero uses original HTML/CSS and synthetic text to frame the future
-product. A vertical clip preview, transcript evidence, edit range, and named
-workflow cues make the product legible without copied screenshots, remote
-media, or fake provider output.
+product. A vertical clip preview, transcript evidence, candidate range, and
+named workflow cues make the product legible without copied screenshots,
+remote media, or fake provider output.
 
 Layout rules:
 
+- the visual-reference hero fills at least the current viewport without using
+  a fixed height that clips short screens; its headline is a deliberate
+  two-line lockup around one rotating noun;
+- laptop and desktop widths use a two-column composition with the headline and
+  a concise two-sentence functional promise left and the product-motion frame
+  right; tablet and phone widths stack the same semantic content with
+  mode-specific spacing;
 - the product frame is large enough to read and never treated as decoration;
 - synthetic preview content contains no generated faces, logos, UI, watermarks,
   or real user material;
 - captions are the top content layer and remain legible over the preview;
-- proof text names grounded ranges and reversible edits, not virality or trend
-  performance;
+- proof text names grounded ranges and automatic composition decisions, not
+  virality or trend performance;
 - contextual visuals and renderer-specific art remain later-ticket concerns.
 
 ### 18.8 Motion
@@ -4681,6 +4380,9 @@ Motion explains product sequence and interaction:
 - the hero uses a layered entrance plus restrained ambient light movement so
   the first viewport feels alive without reducing legibility or becoming a
   perpetual particle effect;
+- the hero noun uses a clipped rise/fall rotation with one stable accessible
+  heading and a static first word only when JavaScript is unavailable; the
+  owner-directed visual prototype does not expose a pause/play control;
 - transcript evidence, range, and preview cues sequence subtly inside the
   synthetic product frame to explain source → grounded moment → vertical cut;
 - “How it works” becomes a smooth scroll-driven narrative with sticky spatial
@@ -4693,9 +4395,34 @@ Motion explains product sequence and interaction:
   in the smallest isolated component boundary rather than converting the page
   into a large client bundle.
 
-Under `prefers-reduced-motion: reduce`, remove spatial translation, sequencing,
-smooth scrolling, and repeated activity. All content renders immediately in its
-final state; focus and selected-state differences remain visible.
+For the CL-002 visual-approval prototype, the latest explicit owner direction
+requires all hero and synchronized How it works motion to run at full timing in
+every local motion-preference state. Repository CSS and JavaScript must not
+suppress or shorten that motion based on `prefers-reduced-motion`. The latest
+owner revision removes the hero's manual pause/play control. The conversion story begins only when its
+graphic enters view and uses exactly three holds:
+
+1. **Upload:** for 5.6 seconds, a synthetic long-form video tile drops into a
+   left upload card and a progress track fills while the right transcript
+   console remains visibly disabled.
+2. **Read:** for 5.2 seconds, the completed upload remains left while transcript
+   bars resolve line by line on the active right console. A 1.2-second handoff
+   then fades the upload, slides the console from right to left, and reveals a
+   muted Cut preview on the right. There is no separate Transfer step, connector
+   rail, or energy pulse.
+3. **Cut:** the right preview wakes into color and continues playing as two
+   synthetic speakers with microphone cues alternate visual emphasis and
+   caption lines.
+
+All three steps and their copy remain in server-rendered semantic markup; the
+upload/progress treatment is explicitly illustrative and does not make file
+intake operational in CL-002. How it works and Back to top navigation also
+retain their brief deterministic smooth transition without writing section
+fragments into the visible URL or browser history. Real fragment destinations
+remain in server-rendered markup as the semantic and JavaScript-free fallback.
+This owner-directed always-on-motion choice is a CL-002 accessibility exception,
+not a general production policy; reopen reduced-motion behavior before public
+release and during CL-013.
 
 Under reduced-transparency preferences or without `backdrop-filter`, replace
 translucent surfaces with opaque navy/white material tokens while preserving
@@ -4707,11 +4434,11 @@ Breakpoints are layout anchors, not device identity:
 
 | Range | Product mode |
 | --- | --- |
-| 320–599 px | Single-column landing and guided phone edit/review |
-| 600–1023 px | Stacked landing proof and tablet authoring |
-| 1024–1439 px | Split landing and primary compact-laptop workspace |
-| 1440–1919 px | Spacious landing and three-pane desktop workspace |
-| 1920–2560+ px | Bounded large-monitor workspace |
+| 320–599 px | Single-column landing and guided phone selection/review |
+| 600–1023 px | Stacked landing proof and tablet selection/review |
+| 1024–1439 px | Split landing and compact-laptop review layout |
+| 1440–1919 px | Spacious landing and desktop review layout |
+| 1920–2560+ px | Bounded large-monitor review layout |
 
 Rules:
 
@@ -4769,15 +4496,11 @@ Target WCAG 2.2 AA for the complete public flow.
 ### 19.2 Keyboard
 
 - every pointer interaction has keyboard controls;
-- Space toggles playback only when focus is not inside a text/edit control;
-- range handles use native/ARIA slider semantics with arrow/shift increments
-  and announced time/word value;
-- transcript words are not thousands of independent tab stops; use roving focus
-  or a composite/listbox pattern tested with screen readers;
+- Space toggles playback only when focus is not inside another control;
 - candidate tabs/cards use correct selection semantics;
-- undo/redo and Apply/Dismiss are ordinary labeled buttons; optional shortcuts
-  are documented but never required;
-- no keyboard trap in preview, timeline, tabs, or drawers.
+- candidate preview, `Build this clip`, render confirmation, download, and clear
+  are reachable with ordinary labeled controls;
+- no keyboard trap in preview, tabs, dialogs, or drawers.
 
 ### 19.3 Status and errors
 
@@ -4793,7 +4516,6 @@ Target WCAG 2.2 AA for the complete public flow.
 - video never autoplays with sound;
 - native or equivalently accessible play/pause, mute, seek, and time display;
 - transcript is a full text alternative for spoken content;
-- preview captions can be hidden for inspection but export state stays explicit;
 - burned-in export captions do not replace accessible transcript in app;
 - zoom to 200% and text spacing overrides do not lose content/actions;
 - minimum body size 16 px on phone forms; no input zoom trap;
@@ -4804,8 +4526,9 @@ Target WCAG 2.2 AA for the complete public flow.
 
 Automated checks are necessary but insufficient. Manually test Chrome/Edge
 keyboard, Windows screen reader coverage for the signature flow, focus after
-async transitions, range editing, proposal diff, errors, dialog/drawer, reduced
-motion, 200% zoom, and high-contrast/forced-colors behavior.
+async transitions, candidate selection, read-only preview, render confirmation,
+errors, dialog/drawer, reduced motion, 200% zoom, and
+high-contrast/forced-colors behavior.
 
 ## 20. Verification strategy
 
@@ -4846,7 +4569,8 @@ Cover:
 - shot/face/focus track ordering, bounds, shot-local identity, and confidence;
 - visual cue word-ID grounding, duration-band coverage, layouts, asset
   references, exact equation content, and non-overlap;
-- manifest feature gates, corrections, ranges, history, and render hash;
+- immutable-manifest feature gates, selected range, fixed caption profile, and
+  render hash;
 - operation progress monotonicity and terminal-state immutability;
 - frontend/backend fixtures parse through the same published contract version;
 - error envelope never reflects validation input.
@@ -4859,8 +4583,9 @@ Cover:
   server-conflicting projections;
 - no runtime/nonserializable/signed values enter persistence;
 - clear removes projection and owned effects;
-- proposal revision conflict, undo/redo branch behavior, and 20-revision cap;
-- refresh during upload, analysis, assembly, editor, render, result, and cleanup;
+- browser attempts to mutate or substitute the automatic manifest are rejected;
+- refresh during upload, analysis, assembly, clip review, render, result, and
+  cleanup;
 - route/UI selectors derive readiness from canonical state.
 
 ### 20.4 Security/admission tests
@@ -4894,7 +4619,7 @@ Run fake and live-shape fixture responses through the same normalization:
 - call count and SDK retry zero;
 - structured output with missing/invalid references;
 - image decode/dimensions/alpha/byte validation and zero automatic retry;
-- prompt injection inside transcript/instruction does not alter policy/schema;
+- prompt injection inside transcript does not alter policy/schema;
 - raw provider values do not cross the adapter boundary.
 
 Optional live contract tests are excluded from default CI and require explicit
@@ -4918,13 +4643,13 @@ At minimum:
 | Clear overlap/crosstalk | Speaker/caveat behavior |
 | Long setup then payoff | Boundary/rubric evaluation |
 | Three distinct strong moments | Happy candidate result |
-| No self-contained moment | Honest no-candidate/manual path |
+| No self-contained moment | Honest no-candidate state without manual editing |
 | Silent video and video without audio stream | Pre-provider rejection |
 | Variable frame rate within support | Sync/render validation |
 | Unsupported codec/container | Inspection rejection |
 | 61 fps / oversized dimensions metadata | Bounds rejection |
 | Very light and very dark footage | Caption contrast |
-| Long names, numbers, punctuation | Caption grouping/correction |
+| Long names, numbers, punctuation | Fixed caption grouping |
 | Spoken prompt-injection phrases | AI policy/eval |
 | Arabic/English code-switch | Stored only for future language gate, not public claim |
 | Corrupt/truncated media | Safe process/error cleanup |
@@ -4991,21 +4716,16 @@ visuals should clarify the spoken idea while leaving enough podcast footage to
 feel connected to the people speaking. This is an editorial demo acceptance
 check, not a general quality claim over arbitrary videos.
 
-### 20.9 Edit-assistant evaluations
+### 20.9 Automatic-composition evaluations
 
-- supported instructions map to legal operations;
-- unsupported requests decline without fabricated change;
-- resulting manifest is valid and meaning-preserving;
-- no caption rewrite, command, URL, path, asset, arbitrary style, or out-of-range
-  word enters operations;
-- proposal explanation matches the derived diff;
-- no-op and conflicting operations are handled deterministically;
-- stale revision cannot apply;
-- prompt injection in instruction/transcript cannot expand capabilities;
-- one user action equals at most one provider call;
-- refusal/invalid schema has no automatic repair call.
-
-Evaluate invariants and edit usefulness, not exact prose.
+- assembly produces one valid immutable manifest for the selected candidate;
+- range IDs exactly match that candidate and remain within 10–60 seconds;
+- captions always use `clean-emphasis` and provider words/times remain unchanged;
+- no browser request can submit a replacement range, caption profile, visual
+  layout, headline, instruction, or operation list;
+- preview repetition produces zero provider calls;
+- render accepts only the server-proven assembly manifest/hash;
+- preview and render share semantic inputs and golden parity evidence.
 
 ### 20.10 Media unit and integration tests
 
@@ -5017,14 +4737,14 @@ Evaluate invariants and edit usefulness, not exact prose.
 - focus smoothing and crop math for one-face/wide/cut/rotation sequences;
 - MathJax TeX-subset validation, SVG sanitization, and deterministic card image;
 - visual timeline coverage/overlap/safe-zone compilation;
-- caption grouping around punctuation, pauses, overlap, long words, corrections;
+- caption grouping around punctuation, pauses, overlap, and long words;
 - ASS escaping and forbidden override prevention;
 - manifest-to-plan and argument golden files with path placeholders;
 - output metadata/duration/stream validation;
 - first/middle/final rendered frame snapshots within visual tolerance;
 - start/middle/end audio-video-caption sync;
 - no black/transparent frames unless approved padding requires them;
-- caption/headline safe zones over light/dark footage;
+- caption safe zones over light/dark footage;
 - full-frame visual preserves podcast audio and captions;
 - transparent overlay/equation card does not cover the chosen face or captions;
 - exact file cleanup after success, failure, abort, and timeout;
@@ -5039,7 +4759,7 @@ Using the constructed Express app, fake ports, and no listening socket:
 - analysis success, no candidates, provider failure, retry reusing transcript;
 - assembly success, invalid visual plan, active-speaker timeout, image failure,
   idempotent replay, and bounded asset cleanup;
-- edit proposal success/refusal/invalid/stale;
+- render rejects substituted or stale manifest hashes;
 - render success/failure/retry/idempotency;
 - operation polling/cancel/expiry;
 - clear success and partial deletion;
@@ -5058,12 +4778,10 @@ Using the constructed Express app, fake ports, and no listening socket:
 - upload progress/cancel/resume states;
 - named analysis/assembly/render progress and coarse live announcements;
 - candidate evidence seek/highlight;
-- no-candidate manual range;
-- trim keyboard and pointer commit semantics;
-- caption correction preserving original evidence;
-- first-cut storyboard, speaker-focus timeline, visual cue summary, and
-  theme/headline controls;
-- proposal request/diff/apply/dismiss/stale/undo/redo;
+- no-candidate state without a manual range path;
+- read-only first-cut preview and automatic facts summary;
+- absence of trim, caption style/correction, headline, visual/focus controls,
+  instruction fields, proposal actions, timeline, and undo/redo;
 - render confirmation facts and one-render limit;
 - result download authorization and clear warning;
 - expired/cleanup-partial/offline recovery;
@@ -5071,8 +4789,8 @@ Using the constructed Express app, fake ports, and no listening socket:
 
 ### 20.13 End-to-end fake-mode scenarios
 
-1. New visitor → sample → three candidates → build selected clip → inspect
-   speaker-following Earth/Moon/equation first cut → edit → proposal → apply →
+1. New visitor → sample → three candidates → choose exactly one → build and
+   inspect the automatic speaker-following Earth/Moon/equation clip → confirm →
    render fake job → result → download fixture → clear.
 2. Live-upload-shaped fake: valid local fixture → resumable fake → inspection →
    analysis → refresh → candidates.
@@ -5082,11 +4800,11 @@ Using the constructed Express app, fake ports, and no listening socket:
 4. Analysis timeout preserves source and supports bounded retry.
 5. Candidate failure reuses transcript and does not increment transcription
    call count.
-6. No candidate → manual range → assemble first cut → editor.
-7. Edit invalid/refusal preserves manifest.
+6. No candidate → honest terminal choice to retry when allowed or clear.
+7. Manifest-substitution attempt fails before render work.
 8. Render failure preserves manifest and source; one permitted retry.
 9. Refresh at each safe stage creates no duplicate calls/jobs.
-10. Clear during upload, analysis, assembly, editor, render, and result.
+10. Clear during upload, analysis, assembly, clip review, render, and result.
 11. Expired grant denies access and clears local capability state.
 
 ### 20.14 Manual responsive/accessibility matrix
@@ -5107,7 +4825,7 @@ Verify at least:
 - slow network/offline transition and page visibility changes.
 
 Check no horizontal page scrolling, hidden primary/clear actions, focus loss,
-overlapping safe-area controls, inaccessible timeline, or misleading layout
+overlapping safe-area controls, inaccessible playback, or misleading layout
 change.
 
 ### 20.15 Owner-controlled live validation
@@ -5116,7 +4834,7 @@ After provider/privacy/spend gates and never in ordinary CI:
 
 1. verify provider/cloud dashboards, caps, project settings, and kill switches;
 2. use one previously unused short purpose-recorded fixture;
-3. run exactly one upload/analysis/assembly/proposal/render flow;
+3. run exactly one upload/analysis/assembly/render flow;
 4. verify active-speaker focus, visual grounding/rhythm, call counts, usage,
    sync, output, and deletion;
 5. reconcile cost and logs;
@@ -5172,14 +4890,13 @@ an owned requirement justifies it.
 | Identity | Minimum responsibility |
 | --- | --- |
 | Frontend service | Invoke private API only |
-| API service | Verify abuse, read/write known control/result objects, sign object-specific capabilities, start/status/cancel named media job, decrypt grant, access OpenAI only if proposal stays in API process |
+| API service | Verify abuse, read/write known control/result objects, sign object-specific capabilities, start/status/cancel named media job, and decrypt grants; it performs no visitor-directed AI editing call |
 | Media job | Read exact descriptors/source/assembly assets, write progress/result/output, run pinned ASD, call approved transcription/text/image providers, read only required secrets |
 | Deployer | Build/push/deploy/IAM under owner control; not used at runtime |
 
-If OpenAI proposal calls run in the API while candidate calls run in the job,
-scope the OpenAI secret to both identities deliberately. Prefer one project key
-with provider hard limits appropriate to the demo; never pass it through job
-descriptors.
+Candidate and visual-planning calls run only in the bounded media job. Scope the
+OpenAI secret to that identity deliberately with provider hard limits
+appropriate to the demo; never pass it through job descriptors.
 
 ### 21.3 Deployment sequence
 
@@ -5398,12 +5115,13 @@ upload-to-grounded-candidates feature.
 one idempotency/privacy/call-count contract and do not form useful intermediate
 user outcomes.
 
-**Acceptance:** Grounded distinct candidates and no-candidate/manual range pass;
+**Acceptance:** Zero-to-four grounded distinct candidates and the no-candidate
+state pass without padding or a manual-range fallback;
 injection/virality/invented quote/refusal/timeout cases fail safely; one action
 makes at most one transcription and one model call; candidate retry reuses a
 valid transcript; refresh creates no duplicate work.
 
-### M4 — AI first cut and editor
+### M4 — automatic AI first cut and review
 
 #### CL-008 — active-speaker assembly
 
@@ -5430,29 +5148,25 @@ footage, builds the Moon beat, and shows a smaller exact equation card; captions
 remain readable; the visual density table, 0–3 image-call cap, failure cleanup,
 and preview bundle all pass. This is required for release.
 
-#### CL-010 — reversible editor and assistant
+#### CL-010 — automatic clip review and render confirmation
 
-**Objective:** Build the canonical manifest reducer, preview, trim, immutable
-transcript/caption corrections, focus/visual tracks, themes/headline, undo/redo,
-plus the bounded edit planner, proposal diff/apply/dismiss, revision conflicts,
-allowance, and evaluations.
+**Objective:** Deliver the responsive read-only 9:16 preview, automatic clip
+facts, fixed-caption disclosure, one-render confirmation, refresh recovery, and
+preview/render parity boundary without any editing surface.
 
-**Depends:** CL-002 owner-approved direction, CL-004, and CL-009; provider/spend
-approval for live proposal checks.
+**Depends:** CL-002 owner-approved direction, CL-004, and CL-009.
 
-**Why combined:** The assistant is meaningful only against the exact manifest,
-operations, diff, revision history, and controls it proposes to change.
-
-**Acceptance:** Desktop/phone users can inspect and steer the full first cut;
-keyboard trim/corrections/history/parity pass; supported/unsupported/injection/
-stale/no-op/conflict cases preserve validity; one proposal makes one call with
-no repair; no manual crop or arbitrary asset canvas exists.
+**Acceptance:** Desktop/phone users can play and understand the complete
+automatic first cut, confirm the one render, and recover safely; the browser
+cannot alter the selected range, captions, speaker framing, visuals, headline,
+or manifest, and no editor/chatbot/assistant/timeline/history UI or provider
+call exists.
 
 ### M5 — deterministic render and result
 
 #### CL-011 — render and final delivery
 
-**Objective:** Compile speaker crop, visual timeline, ASS captions, headline,
+**Objective:** Compile speaker crop, visual timeline, fixed ASS captions,
 audio, and FFmpeg arguments; orchestrate the one render; validate output; and
 deliver result playback, short-lived download, retry evidence, and clear.
 
@@ -5482,7 +5196,7 @@ provider/bucket/image-spend settings ready for owner review.
 #### CL-013 — accessibility, responsive, and performance pass
 
 **Objective:** Named viewport/zoom/keyboard/screen-reader/reduced-motion matrix,
-assembly/editor responsiveness, bundle/media performance, and short-height
+assembly/review responsiveness, bundle/media performance, and short-height
 behavior.
 
 **Depends:** CL-012 and visual approval.
@@ -5509,7 +5223,7 @@ explicit deployment blocker.
 
 **Objective:** Deploy the exact audited revision as immutable images, prove
 private services/storage/IAM, run unpaid probes, execute only the approved
-bounded live analysis/assembly/proposal/render flow, reconcile cost/cleanup and
+bounded live analysis/assembly/render flow, reconcile cost/cleanup and
 public claims, and prove kill switch plus digest rollback.
 
 **Depends:** CL-014 and every required owner gate.
@@ -5549,9 +5263,11 @@ an eventual shape; each packet creates only the real modules it owns.
 - [ ] Demo/MVP/vision boundaries match UI, README, and source.
 - [ ] No virality, trend-awareness, rights, privacy, or deletion overclaim.
 - [ ] Sample provenance and redistribution permission recorded.
-- [ ] Public upload/language/speaker-framing/visual/limit/render/trend decisions approved.
+- [ ] The locked public-upload, source-limit, speaker-framing, visual,
+      one-render, and no-trend-input contract is unchanged; the v1 language
+      claim is approved.
 
-### Workflow and editor
+### Workflow and automatic clip review
 
 - [ ] Every canonical state, error, retry, cancel, refresh, expiry, and clear
       path is implemented and tested.
@@ -5560,8 +5276,11 @@ an eventual shape; each packet creates only the real modules it owns.
       follows the audible speaker in the purpose-recorded wide shot.
 - [ ] Visual cues resolve to transcript words; the sample proves full-frame
       Earth/Moon imagery and a smaller exact equation card.
-- [ ] AI proposals are typed, diffed, explicitly applied, undoable, and bounded.
-- [ ] Manual caption corrections preserve immutable provider transcript.
+- [ ] Visitor selects exactly one of zero-to-four grounded candidates; no weak
+      padding or manual-range fallback exists.
+- [ ] Automatic preview exposes no editor, assistant, trim, caption, headline,
+      focus/visual, timeline, proposal, or undo/redo controls.
+- [ ] Fixed captions preserve the immutable provider transcript.
 - [ ] Preview/export use the same manifest, caption groups, speaker-focus track,
       visual cues/assets, and safe zones.
 
@@ -5618,44 +5337,43 @@ These are not questions an implementation agent should answer silently. The
 recommendation and consequence are already specified so the owner can approve
 or change them efficiently.
 
-1. **Public live upload** — If anonymous upload is enabled, its limits are
-   locked at 20 minutes AND 500 MiB. The remaining decision is whether measured
-   latency, cost, abuse controls, and cleanup justify enabling it at launch;
-   otherwise keep public sample-only and owner live mode.
-2. **Language** — Recommend English first. Adding Arabic/English at release
+1. **Language** — Recommend English first. Adding Arabic/English at release
    materially expands transcription, bidi/font, caption, and QA scope.
-3. **Active-speaker implementation** — Active-speaker framing is required.
+2. **Active-speaker implementation** — Active-speaker framing is required.
    Recommend Light-ASD after the exact sample/Cloud Run CPU spike; compare
    TalkNet only if it misses the focus/runtime target. Do not replace this with
    center/left/right controls for the demo.
-4. **Render count** — Recommend one successful output per public session.
-5. **Trend input** — Recommend no trend-signal field in first public demo.
-6. **Sample rights** — Recommend a purpose-recorded conversation with written
+3. **Sample rights** — Recommend a purpose-recorded conversation with written
    contributor permission and no unlicensed music/assets.
-7. **Upload mechanism** — Recommend server-created resumable Cloud Storage
+4. **Upload mechanism** — Recommend server-created resumable Cloud Storage
    upload after the bounded spike.
-8. **Refresh recovery privacy** — Recommend private normalized transcript and
+5. **Refresh recovery privacy** — Recommend private normalized transcript and
    candidate JSON under the same temporary TTL; rejecting it removes reliable
    refresh recovery.
-9. **Provider/model** — Recommend Deepgram Nova-3 plus OpenAI Responses with
+6. **Provider/model** — Recommend Deepgram Nova-3 plus OpenAI Responses with
     `gpt-6-sol`, strict Structured Outputs, `store: false`, and no SDK retry;
     propose the OpenAI Image API with `gpt-image-2.5-flare` for at most three
     contextual stills, subject to current account/policy/latency/quality/cost
     review.
-10. **Region** — Recommend `us-central1` for the first cost baseline unless
+7. **Region** — Recommend `us-central1` for the first cost baseline unless
     residency or audience latency requires a different single region.
-11. **Retention** — Recommend 2-hour access, explicit clear, one-day lifecycle
+8. **Retention** — Recommend 2-hour access, explicit clear, one-day lifecycle
     eligibility, and honest asynchronous-deletion copy.
-12. **Visual identity** — The product name is already locked as **ClipBuilder**,
+9. **Visual identity** — The product name is already locked as **ClipBuilder**,
     with **ClipAssistant** as the backup. Approve or change the “Editorial Signal
     **Precision in the cut** direction, font licenses, wordmark treatment, and
     restrained light-neutral/cobalt system; do not reopen the name as part of
     routine visual exploration.
-13. **Visual system** — Approve the provisional `precision-cut-v1` direction,
+10. **Visual system** — Approve the provisional `precision-cut-v1` direction,
     generated stills for grounded concepts, MathJax 4 SVG cards for exact
     equations/text, and no arbitrary stock/web-image search.
-14. **Spend** — Set numerical text/image provider hard limits and Google Cloud
+11. **Spend** — Set numerical text/image provider hard limits and Google Cloud
     alert budget before any live call or job.
+
+Public upload, one final render, and the absence of a trend-input field are
+locked product behavior, not open owner decisions. Launch may still keep every
+live flag off until the named rights, security, privacy, provider, spend, and
+deployment gates are evidenced.
 
 Until approved, fake/sample foundations may proceed; public/live/provider or
 privacy-sensitive tickets stop at their named gate.
@@ -5670,7 +5388,10 @@ the references that ticket requires. The non-negotiable bootstrap is:
 > selects one, then the first-cut assembly follows the visible active speaker,
 > adds always-on captions, and balances podcast footage with transcript-grounded
 > contextual stills or exact equation cards before exporting one vertical MP4.
-> The AI may emit only strict candidate/visual/edit data that references real
+> The browser exposes only selection, read-only review, render confirmation,
+> download, and clear—never an editor, chatbot, trim, caption/style control,
+> visual control, timeline, proposal, or undo/redo. The AI may emit only strict
+> candidate and visual data that references real
 > word IDs. Deterministic code validates and compiles it. Never claim virality
 > or current platform knowledge, download remote platform media, generate
 > video, scrape/search B-roll, publish to social accounts, infer sensitive traits,
@@ -5683,7 +5404,7 @@ the references that ticket requires. The non-negotiable bootstrap is:
 > configuration without separate authorization.
 
 An agent may implement exactly one dependency-ready ticket. If a material
-decision is unresolved, it follows the specified fake/reversible work and stops
+decision is unresolved, it follows the specified fake/deterministic work and stops
 at the owner gate rather than inventing approval.
 
 ## Appendix A — Recovery matrix
@@ -5695,16 +5416,15 @@ at the owner gate rather than inventing approval.
 | Upload interrupted | Confirmed uploaded chunks/object | Analysis | Resume if proven, restart, clear |
 | Media unsupported/missing audio | Safe descriptor/error only | Providers | Choose another, sample, clear |
 | Transcription failure | Source + descriptor | Transcription | One permitted manual retry, clear |
-| Candidate model failure | Source + normalized transcript | Transcription; no model repair | Retry candidate selection, manual later, clear |
-| Invalid candidate schema | Source + transcript | Paid repair | Retry if allowance approved, manual range, clear |
-| No strong candidate | Source + transcript | Model call | Browse transcript, manual range, clear |
+| Candidate model failure | Source + normalized transcript | Transcription; no model repair | Retry candidate selection if allowed, clear |
+| Invalid candidate schema | Source + transcript | Paid repair | Retry if allowance approved, clear |
+| No strong candidate | Source + transcript | Model call | Retry if evidence/allowance permits, clear |
 | Active-speaker assembly failure | Source + transcript + selected range | ASD/job retry | Retry one bounded first-cut build if allowed, choose sample, clear |
 | Visual-plan/image failure | Source + focus track + selected range | Paid repair or substitute image | Retry one bounded assembly if allowed, choose sample, clear |
-| Edit assistant failure/refusal | Current manifest/history | Repair call | Edit manually, retry if allowance, dismiss |
-| Stale proposal | Current manifest/history | Rebase/apply | Discard, request new proposal |
-| Render failure | Source + analysis + manifest | Analysis/model | One permitted render retry, edit, clear |
+| Automatic preview failure | Source + analysis + immutable manifest | Analysis/model | Retry preview access/status, clear |
+| Render failure | Source + analysis + manifest | Analysis/model | One permitted render retry, clear |
 | Output validation failure | Source + manifest; delete output | Download | Retry if permitted, clear |
-| Browser refresh | Server-proven artifacts + allowed projection | Paid action/job | Resume polling/edit/result |
+| Browser refresh | Server-proven artifacts + allowed projection | Paid action/job | Resume polling/review/result |
 | Offline | Local projection; server artifacts untouched | Mutations | Reconnect/retry status, clear local only with warning |
 | Session expiry | Local indication only; no access | Grant renewal | Clear local, start new session |
 | Partial clear | No new access; lifecycle backstop | New work | Retry cleanup while possible, start fresh after local clear |
@@ -5743,7 +5463,7 @@ assembly.creating-visual-assets
 assembly.compiling-preview-bundle
 assembly.writing-result
 assembly.complete
-editor.proposing
+review.ready
 render.queued
 render.reading-descriptor
 render.validating-manifest
@@ -5778,11 +5498,10 @@ revealing content:
 | `CAPACITY_FULL` | “The demo is processing another clip. Try again shortly or use the sample.” |
 | `TRANSCRIPTION_FAILED` | “Speech transcription did not finish. Your source is still available for a bounded retry.” |
 | `MODEL_OUTPUT_REJECTED` | “The suggestion could not be safely matched to the transcript. Your completed work was preserved.” |
-| `NO_VALID_CANDIDATES` | “No strong self-contained moment met the current rubric. You can choose a range manually.” |
+| `NO_VALID_CANDIDATES` | “No strong self-contained moment met the current rubric. You can clear this source or retry when available.” |
 | `ACTIVE_SPEAKER_FAILED` | “The AI first cut could not follow the visible speaker. Your selected moment was preserved.” |
 | `VISUAL_GENERATION_FAILED` | “The contextual visuals could not be completed. Your selected moment was preserved.” |
 | `ASSEMBLY_OUTPUT_REJECTED` | “The AI first cut did not pass validation. Your selected moment was preserved.” |
-| `STALE_REVISION` | “Your edit changed after this suggestion was created. Request a new suggestion or keep editing manually.” |
 | `RENDER_OUTPUT_INVALID` | “The exported file did not pass validation. The draft and source were preserved.” |
 | `SESSION_EXPIRED` | “This temporary session has expired and can no longer access its media.” |
 | `INTERNAL_ERROR` | “Something unexpected happened. Your reference code is available below.” |
@@ -5859,7 +5578,7 @@ without a separate approved scope and current platform review.
 The portfolio demo is done when the approved signature journey is coherent,
 the purpose-recorded clip visibly follows the active speaker, grounded visuals
 clarify the spoken concepts without replacing most podcast footage, and the
-flow is reversible, recoverable, private within its stated limits,
+flow is understandable, recoverable, private within its stated limits,
 cost-bounded, accessible, responsive, deployed from an audited immutable
 artifact, and supported by recorded evidence. It is not done when every roadmap
 idea exists, when a single happy-path fake looks polished, or when unperformed

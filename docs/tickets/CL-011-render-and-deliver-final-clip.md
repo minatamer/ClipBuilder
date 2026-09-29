@@ -14,7 +14,7 @@ Ticket index: [`README.md`](README.md)
 ## Objective
 
 Deliver the complete confirmed-manifest-to-result feature: deterministic crop,
-visual, caption, headline, audio, and FFmpeg compilation; one render operation;
+visual, fixed-caption, audio, and FFmpeg compilation; one render operation;
 output validation; result playback; short-lived download authorization;
 failure/retry/refresh; and final clear/cleanup.
 
@@ -25,7 +25,7 @@ the system.
 
 ## Portfolio value
 
-Close the end-to-end proof with a real, inspectable artifact: the same edit the
+Close the end-to-end proof with a real, inspectable artifact: the same composition the
 visitor previewed becomes a content-safe 1080×1920 H.264/AAC MP4, validated
 before delivery and cleaned up with the source session.
 
@@ -38,10 +38,9 @@ before delivery and cleaned up with the source session.
   captions/focus/visual assets/manifest, and source-controlled profile/tokens.
   It returns argument arrays and a content-free plan; it never executes FFmpeg,
   reads environment/storage/HTTP, or calls AI.
-- Model/user text never becomes a command, path, filter expression, font, URL,
-  or arbitrary style. ASS and headline text are escaped and compiled from
-  bounded normalized content.
-- Speaker crop, visual timeline, caption grouping, safe zones, and headline/card
+- Model text never becomes a command, path, filter expression, font, URL,
+  or arbitrary style. ASS text is escaped and compiled from bounded normalized content.
+- Speaker crop, visual timeline, fixed caption grouping, safe zones, and card
   rules must match CL-010 preview semantics.
 - Output is downloadable only after ffprobe and bounded frame/audio checks pass.
   Invalid/partial output is deleted and never signed.
@@ -50,8 +49,9 @@ before delivery and cleaned up with the source session.
 
 - CL-005 must provide private storage, generation-safe write/delete/signing,
   render marker/lease primitives, grant ownership, and complete clear behavior.
-- CL-010 must provide the validated canonical manifest plus golden parity inputs
-  for word times, captions, focus/crop, visuals, headline/cards, and history.
+- CL-010 must provide the validated immutable automatic manifest/hash plus
+  golden parity inputs for word times, fixed captions, focus/crop, visuals, and
+  cards.
 
 Any semantic preview/compiler mismatch reopens the shared CL-010 boundary; it
 must not be patched with a render-only interpretation.
@@ -69,7 +69,7 @@ must not be patched with a render-only interpretation.
 ### In scope
 
 - Deterministic 1080×1920 composition from focus track, podcast footage,
-  full-frame/overlay/card visuals, always-on captions, bounded headline, and
+  full-frame/overlay/card visuals, always-on fixed captions, and
   speech-safe audio.
 - FFmpeg direct spawn with pinned binaries, protocols, fonts, filter/token
   compilation, abort/timeout/cancel, and exact temp cleanup.
@@ -93,13 +93,13 @@ must not be patched with a render-only interpretation.
 
 ### 1. Deterministic compiler
 
-- [ ] Resolve word IDs/times/caption corrections and build deterministic 2–7
+- [ ] Resolve immutable provider word IDs/times and build deterministic 2–7
   word caption groups with punctuation/pause/speaker rules and safe line bounds.
 - [ ] Escape ASS overrides/braces/newlines and use bundled licensed fonts only.
 - [ ] Convert validated focus segments into rotation-aware, clamped/even,
   headroom-safe 9:16 crop/scale/pad plans with cut/ease/hold semantics.
 - [ ] Compile full-frame/PIP/lower-card visual timelines, fixed motion/
-  transitions, and headline/cards so captions remain topmost.
+  transitions, and cards so captions remain topmost.
 - [ ] Apply a measured speech-safe normalization profile with no external audio.
 - [ ] Produce argument arrays/logical plan only; no shell, remote protocols,
   model strings, private path logs, or environment-dependent behavior.
@@ -136,8 +136,8 @@ must not be patched with a render-only interpretation.
 
 ## Contracts and state transitions
 
-- `editor -> render-confirmation -> rendering -> result | render-failed`;
-  Back to edit consumes no allowance before confirmation.
+- `clip-review -> render-confirmation -> rendering -> result | render-failed`;
+  Back to review consumes no allowance before confirmation.
 - `RENDER_CONFIRMED` atomically consumes the permitted attempt after validation.
   Successful output changes public allowance; an invalid output is never result.
 - Refresh/replay reconciles the same operation/output and never starts a new
@@ -162,7 +162,7 @@ must not be patched with a render-only interpretation.
 - [ ] A canonical manifest produces a playable 1080×1920 H.264/AAC MP4 within
   measured duration/sync/size/profile tolerances.
 - [ ] One-face/wide/cut focus, full-frame and overlay/card visuals, captions,
-  headline, safe zones, and audio match preview semantics and golden evidence.
+  safe zones, and audio match preview semantics and golden evidence.
 - [ ] Compiler uses arrays/source-controlled values only; no shell, remote
   protocol, arbitrary path/filter/font/style, or model/provider call exists.
 - [ ] One confirmation starts at most one render; replay/refresh is idempotent;
@@ -175,7 +175,7 @@ must not be patched with a render-only interpretation.
 ## Focused verification
 
 - [ ] Run caption/ASS escaping, crop, visual timeline, filter/argument golden,
-  headline/card, audio-profile, and manifest-hash tests.
+  card, audio-profile, and manifest-hash tests.
 - [ ] Render synthetic/licensed fixtures and validate first/middle/final frames,
   sync, streams, duration, size, captions, focus, visuals, and metadata.
 - [ ] Run process/output success/failure/abort/timeout/cancel/exact-cleanup tests.

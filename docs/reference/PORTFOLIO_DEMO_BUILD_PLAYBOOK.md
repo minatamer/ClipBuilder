@@ -1,5 +1,11 @@
 # Portfolio Demo Build Playbook
 
+> **ClipBuilder scope note:** This is a reusable methodology document, not the
+> ClipBuilder product contract. Generic editor examples do not apply to
+> ClipBuilder. Its locked demo flow exposes candidate selection, automatic clip
+> creation, read-only review/render confirmation, and download—no editor,
+> chatbot/assistant, manual trim, customization, proposal flow, or undo/redo.
+
 - Status: Reusable architecture and delivery guide
 - Derived from: the implemented ScreenPilot repository and its decision history
 - Last reviewed: 2026-09-29
@@ -18,7 +24,7 @@ discipline, architecture boundaries, design workflow, fake-first provider
 strategy, spend controls, verification gates, and documentation ownership.
 
 The companion concept that applies this playbook is
-[`AI_CLIPPING_DEMO_BRIEF.md`](AI_CLIPPING_DEMO_BRIEF.md).
+[`AI_CLIPPING_DEMO_BRIEF.md`](../research/AI_CLIPPING_DEMO_BRIEF.md).
 
 ## The method in one page
 
@@ -699,7 +705,7 @@ tokens.
 | No object storage | Inputs and outputs fit safely in browser/request memory. Video usually does not. |
 | `sessionStorage` state | The result is small and a same-tab disposable session is the product promise. |
 | Two Cloud Run services | The workload completes inside bounded requests. Long media processing may need a job/worker. |
-| Equal phone-to-large-monitor parity | The new workflow is genuinely useful at every size. An editor may be laptop-first while retaining a complete mobile review path. |
+| Equal phone-to-large-monitor parity | The new workflow is genuinely useful at every size. A complex authoring workflow may be laptop-first while retaining a complete mobile review path. ClipBuilder itself has no authoring surface. |
 | Turnstile on three paid routes | The new app identifies its own paid boundaries; do not challenge free local work. |
 | No provider fallback | One clear failure is acceptable and maintaining two paths would dilute the demo. |
 | One generated concept | One screen carries the product's visual thesis. Use more only after explicit approval. |

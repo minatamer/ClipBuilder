@@ -33,8 +33,8 @@ can remain available when live work is disabled.
   kill-switch/capacity interaction across all routes.
 - Anonymous controls are best-effort; there is no durable per-person quota or
   database. Public/operations text must not claim otherwise.
-- Turnstile protects upload authorization, analysis, assembly, assistant, and
-  render with action/hostname binding. Cheap validation/feature/admission checks
+- Turnstile protects upload authorization, analysis, assembly, and render with
+  action/hostname binding. Cheap validation/feature/admission checks
   occur before it; no rejected earlier condition may trigger paid/provider/job
   work.
 - Provider settings, bucket/IAM/CORS/lifecycle, hard rate/spend limits, cloud

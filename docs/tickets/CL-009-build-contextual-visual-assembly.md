@@ -1,7 +1,7 @@
 # CL-009 — Build contextual visuals and complete first-cut assembly
 
 Status: Planned<br>
-Milestone: M4 — AI first cut and reversible editor<br>
+Milestone: M4 — automatic AI first cut and review<br>
 Last synchronized: 2026-09-29<br>
 Depends on: CL-007 and CL-008<br>
 Blocks: CL-010 and CL-012<br>
@@ -27,7 +27,7 @@ decorative model output.
 
 ## Standalone implementation context
 
-- Assembly runs only after one candidate/manual 10–60 second range is selected.
+- Assembly runs only after exactly one grounded 10–60 second candidate is selected.
   It never re-transcribes or re-ranks candidates.
 - The visual planner receives bounded selected transcript words/turns, duration,
   cue cap, and `precision-cut-v1`; it may return zero to three grounded cues.
@@ -41,7 +41,7 @@ decorative model output.
 - The purpose-recorded fixture should demonstrate Earth and Moon full-frame
   beats plus a smaller exact equation card, but generic logic must never inject
   those subjects into unrelated transcripts.
-- The assembly result is atomic: no valid editor state is exposed until focus
+- The assembly result is atomic: no valid clip-review state is exposed until focus
   track, visual plan, every referenced asset, and initial manifest all validate.
 
 ## Dependency evidence required
@@ -88,7 +88,8 @@ re-run analysis inside assembly.
 - Stock/web search, remote URLs, scraped B-roll, generative video, user-uploaded
   overlays, asset marketplace/picker, arbitrary prompts/styles/layout/coordinates,
   or a general fallback editor.
-- Full editor controls/proposals (CL-010), final FFmpeg compilation (CL-011), or
+- Automatic clip review/confirmation (CL-010), final FFmpeg compilation
+  (CL-011), or
   public hardening/deployment.
 - Model-produced SVG/HTML/FFmpeg strings, real-person likeness, logos, brands,
   copyrighted characters, living-artist style imitation, or unsupported facts.
@@ -126,8 +127,9 @@ re-run analysis inside assembly.
 
 - [ ] Enforce selected revision/range, live/paid/image gates, allowance,
   capacity/budget, Turnstile, marker/idempotency, and one job start.
-- [ ] Combine CL-008 focus/shot track with the reconciled visual plan/assets and
-  a valid revision-zero `EditManifestV1`.
+- [ ] Combine CL-008 focus/shot track with the reconciled visual plan/assets,
+  immutable selected range, and fixed `clean-emphasis` captions in one valid
+  automatic `CompositionManifestV1`.
 - [ ] Write result only after every object generation/hash/reference validates;
   result fetch signs short-lived preview capabilities without exposing object
   names, prompts, raw boxes/scores, or provider payloads.
@@ -147,8 +149,8 @@ re-run analysis inside assembly.
 
 ## Contracts and state transitions
 
-- `candidates | no-candidates(manual) -> assembling -> editor |
-  assembly-failed`; `CHOOSE_ANOTHER` keeps analysis and discards partial
+- `candidates -> assembling -> clip-review | assembly-failed`;
+  `CHOOSE_ANOTHER` keeps analysis and discards partial
   selected-range artifacts.
 - One assembly may make one active-speaker pass (from CL-008), one visual-plan
   call, zero to three image calls, and local card renders. No hidden provider or
@@ -182,7 +184,7 @@ re-run analysis inside assembly.
   files pass type/dimension/byte/alpha/hash checks.
 - [ ] One assembly respects 1 visual-plan and 0–3 image calls; refresh/replay/
   retry never duplicates a successful or uncertain provider action.
-- [ ] Partial/invalid plans/assets do not open the editor and are cleaned up.
+- [ ] Partial/invalid plans/assets do not open clip review and are cleaned up.
 - [ ] Desktop/phone preparation UI reports only true stages/evidence and has
   correct cancel/retry/choose-another/clear behavior.
 
@@ -220,7 +222,7 @@ re-run analysis inside assembly.
 
 Keep visual planning, assets/cards, atomic assembly result, and its progress UI
 together as `CL-009: build contextual visual assembly`. Active-speaker remains
-CL-008; editing and final rendering remain CL-010/CL-011. No Git/provider/cloud
+CL-008; read-only automatic review and final rendering remain CL-010/CL-011. No Git/provider/cloud
 action is authorized by this packet alone.
 
 ## Precision references

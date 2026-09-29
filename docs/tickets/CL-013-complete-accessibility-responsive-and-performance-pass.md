@@ -15,14 +15,15 @@ Ticket index: [`README.md`](README.md)
 
 Audit and correct the complete implemented flow for responsive composition,
 short-height behavior, keyboard and screen-reader access, focus, status/errors,
-200% zoom, forced colors, reduced motion, media/editor usability, and measured
+200% zoom, forced colors, reduced motion, media/review usability, and measured
 frontend/media performance. Record one release-quality manual matrix rather
 than leaving these concerns fragmented across feature tickets.
 
 ## Portfolio value
 
 Make the full demo feel intentionally built at every practical viewport and
-interaction mode. The result should demonstrate the same editing capability on
+interaction mode. The result should demonstrate the same choose/build/review/
+download capability on
 phone, tablet, laptop, desktop, and large monitor without inaccessible or
 performance-heavy fallbacks.
 
@@ -35,7 +36,7 @@ performance-heavy fallbacks.
 - One semantic component tree and one reducer/state authority remain. Responsive
   modes change composition/density/affordances, not product capability or logic.
 - Target WCAG 2.2 AA. Automated checks are necessary but cannot replace manual
-  keyboard, screen-reader, zoom, forced-colors, motion, media, and editor review.
+  keyboard, screen-reader, zoom, forced-colors, motion, media, and automatic-review behavior.
 - The required anchors include 320×568, 390×844, 768×1024 portrait/landscape,
   1024×768, 1280×800, 1440×900, 1920×1080, 2560×1440, heights 600–700,
   intermediate drag resizes, and 200% zoom/text spacing.
@@ -54,7 +55,7 @@ complete CL-004–CL-011 flow; do not audit placeholder or alternate mock screen
 
 - Cross-flow frontend styles/tokens/motion and targeted component/hook fixes.
 - Accessibility/responsive/fake-flow E2E checks and the manual evidence record.
-- Measured bundle, loading, media preview, transcript, editor, polling, and
+- Measured bundle, loading, media preview, transcript, clip review, polling, and
   interaction performance corrections.
 - Minimal backend/media corrections only when a measured user-facing timing or
   cancellation problem is traced there.
@@ -63,11 +64,11 @@ complete CL-004–CL-011 flow; do not audit placeholder or alternate mock screen
 
 ### In scope
 
-- Landing, upload, analysis, candidate review, assembly, editor, render,
+- Landing, upload, analysis, candidate review, assembly, automatic clip review, render,
   result, errors, expiry, and clear at every named layout anchor.
-- Semantic landmarks/headings/forms/lists/tabs/dialogs/drawers/sliders/media;
+- Semantic landmarks/headings/forms/lists/tabs/dialogs/drawers/media;
   accessible names/descriptions; focus entry/return/order; live regions; error
-  summaries; composite transcript/timeline keyboard patterns.
+  summaries; candidate/evidence and playback keyboard patterns.
 - Safe-area insets, virtual keyboard, orientation, text-spacing overrides,
   short height, intermediate widths, no horizontal page scroll, and no hidden
   primary/Clear/privacy action.
@@ -91,7 +92,7 @@ complete CL-004–CL-011 flow; do not audit placeholder or alternate mock screen
 
 - [ ] Execute every signature/failure/recovery screen across named viewport,
   orientation, height, zoom, and intermediate resize anchors.
-- [ ] Preserve preview, evidence, correction, visual summary, proposal, render,
+- [ ] Preserve preview, evidence, automatic composition summary, render,
   download, clear, privacy, and errors at every width.
 - [ ] Fix overflow, clipped sticky/fixed panels, nested scroll traps, layout
   shifts, safe-area collisions, drawer/tab state resets, and virtual-keyboard
@@ -101,9 +102,9 @@ complete CL-004–CL-011 flow; do not audit placeholder or alternate mock screen
 
 - [ ] Verify one logical `h1`, landmarks, skip link, field labels/instructions,
   button/link semantics, tabs, dialogs/drawers, notices, and media controls.
-- [ ] Test candidate/evidence navigation, transcript composite, range sliders
-  and word steps, playback, corrections, visual tracks, proposal diff/apply,
-  undo/redo, render confirmation, download, and clear without pointer.
+- [ ] Test candidate/evidence navigation, playback, automatic clip facts, render
+  confirmation, download, and clear without pointer; verify excluded editor and
+  assistant controls are absent.
 - [ ] Move focus deliberately after stage/error transitions, restore it from
   dialogs/drawers, avoid traps, and keep disabled prerequisites explained in
   visible adjacent text.
@@ -119,13 +120,13 @@ complete CL-004–CL-011 flow; do not audit placeholder or alternate mock screen
 - [ ] Ensure video never autoplays with sound, controls remain accessible, and
   transcript provides the text alternative even though export has burned-in
   captions.
-- [ ] Verify captions, headline, faces, visual cards, controls, and focus do not
+- [ ] Verify captions, faces, visual cards, controls, and focus do not
   overlap at zoom/text-spacing/light/dark fixture extremes.
 
 ### 4. Measured performance and lifecycle
 
 - [ ] Measure production bundle/routes, initial sample-to-candidate timing,
-  editor interaction, transcript rendering, asset/media loading, polling, and
+  automatic-review playback, transcript rendering, asset/media loading, polling, and
   preview behavior with a documented environment.
 - [ ] Lazy-load heavy feature code only at its stage; avoid repeated full-array
   scans/serialization on high-frequency playback/poll events where structurally
@@ -141,14 +142,14 @@ complete CL-004–CL-011 flow; do not audit placeholder or alternate mock screen
   short height, intermediate resize, 200% zoom, and text-spacing override with
   no horizontal page scroll or lost action/content.
 - [ ] Keyboard-only and Windows screen-reader coverage completes the signature
-  flow, including range edit, transcript/evidence, proposal, dialogs, media,
+  flow, including candidate/transcript evidence, dialogs, media review,
   render, result, and clear with correct focus/announcements.
 - [ ] Automated accessibility checks report no critical/serious issue; every
   remaining lower-severity finding has a disposition.
 - [ ] Reduced motion and forced colors preserve meaning and usability; no flash,
   autoplay-with-sound, or color-only status remains.
 - [ ] Sample reaches candidates within the product goal in the recorded
-  production-like test, and bundle/editor/media performance has no unresolved
+  production-like test, and bundle/review/media performance has no unresolved
   measured release blocker.
 - [ ] Every correction has focused regression coverage and no duplicate device
   implementation/state authority is introduced.
@@ -160,7 +161,7 @@ complete CL-004–CL-011 flow; do not audit placeholder or alternate mock screen
 - [ ] Complete and record the full responsive/accessibility matrix, including
   intermediate resize, 200% zoom, text spacing, keyboard, screen reader,
   reduced motion, forced colors, slow network/offline, and visibility changes.
-- [ ] Record sample timing, bundle/route output, editor interaction evidence,
+- [ ] Record sample timing, bundle/route output, automatic-review interaction evidence,
   and any before/after material performance correction.
 - [ ] Re-run only live/manual states strictly needed by a fix and only with
   explicit authorization.

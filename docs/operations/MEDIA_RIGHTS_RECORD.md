@@ -35,8 +35,9 @@ evidence of redistribution permission for any future binary.
 - [ ] Poster and contextual visuals have independent rights review.
 - [ ] Duration, codecs, byte size, SHA-256, and private object generation match
   the approved immutable asset.
-- [ ] Transcript, candidates, focus track, visual plan, and assembly revisions
-  match the deployed sample manifest.
+- [ ] Transcript, three sample candidates, focus track, visual plan, fixed
+  caption profile, and immutable automatic-composition revision match the
+  deployed sample manifest.
 - [ ] Deployment and rollback evidence reference the same sample version.
 
 ## Versioning rule
