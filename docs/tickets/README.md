@@ -146,15 +146,18 @@ This plan deliberately consolidates the parent's earlier 22 draft slices into
 ## Ordered ticket index
 
 CL-001 is **completed** with its deterministic foundation evidence recorded in
-the packet. CL-002 has a reviewable standalone reference and is **awaiting
-explicit owner visual approval**; its broad styling dependents remain blocked.
-CL-003–CL-015 remain planned. Status changes belong in the individual packet
-and should be summarized here when work begins or finishes.
+the packet. The owner rejected CL-002's standalone HTML direction, then reviewed
+the first React replacement and requested stronger navy/cobalt atmosphere,
+glass materials, and scroll-driven motion. The revised CL-002 implementation
+and QA are **complete and awaiting explicit owner visual approval**; its broad
+styling dependents remain blocked. CL-003–CL-015 remain planned. Status changes
+belong in the individual packet and should be summarized here when work begins
+or finishes.
 
 | Order | Ticket | Milestone | Coherent outcome | Depends on |
 | ---: | --- | --- | --- | --- |
 | 1 | [CL-001](CL-001-initialize-workspace-and-contracts.md) | M0 | Reproducible workspace, safe config, browser-safe contracts, and quality foundation | — |
-| 2 | [CL-002](CL-002-create-and-approve-visual-reference.md) | M0 | Reviewable design reference plus desktop/phone concepts and explicit visual gate | CL-001 |
+| 2 | [CL-002](CL-002-create-and-approve-visual-reference.md) | M0 | Running responsive React landing prototype plus research evidence and explicit visual gate | CL-001 |
 | 3 | [CL-003](CL-003-build-canonical-session-and-sample-foundation.md) | M1 | Canonical reducer, safe persistence, rights-recorded fixtures, and deterministic sample data | CL-001 |
 | 4 | [CL-004](CL-004-deliver-sample-candidate-review.md) | M1 | Complete no-cost landing-to-candidate-review experience | CL-002, CL-003 |
 | 5 | [CL-005](CL-005-implement-secure-upload-and-storage.md) | M2 | Private direct resumable upload, grant/storage security, completion, and cleanup | CL-001, CL-003 |

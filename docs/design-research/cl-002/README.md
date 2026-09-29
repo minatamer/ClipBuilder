@@ -1,114 +1,276 @@
-# CL-002 visual reference research
+# CL-002 React visual prototype research
 
 Accessed: 2026-09-29
 
-Purpose: content-safe comparative research for the ClipBuilder standalone HTML
-visual reference.
+Purpose: current, content-safe design research and decision evidence for the
+ClipBuilder Next.js/React landing-page visual approval prototype.
 
-The screenshots in `screenshots/` are attributed captures of public official
-product pages. They are retained only as design-research evidence. They are not
-ClipBuilder runtime assets, are not redistributed inside the product, and must
-not be treated as permission to copy another product's artwork, copy, UI, or
-brand language.
+The earlier dark editorial/acid-lime synthesis was explicitly rejected by the
+owner and is not reused here. The screenshots in `screenshots/` are fresh
+captures of public official product pages at desktop and phone viewports. They
+are design-research evidence only, never ClipBuilder runtime assets or
+permission to copy another product's artwork, copy, layout, or brand language.
 
-The three `clipbuilder-*.png` files are original, content-safe review captures
-from the local standalone reference:
+## Skills used
 
-- `clipbuilder-reference-overview.png` — opening art-direction concept at
-  1440 × 1000;
-- `clipbuilder-editor-desktop.png` — signature three-pane editor at
-  1440 × 1000;
-- `clipbuilder-editor-phone.png` — guided phone editor at 390 × 844.
+- `execute` — forced the owner correction into the source of truth and active
+  ticket before implementation, kept work inside CL-002, preserved the explicit
+  approval gate, and prohibited staging/committing without new authorization.
+- `computer-use` — enabled direct visual inspection of the current official
+  pages at 1440 × 1000 and 390 × 844, rather than inferring visual decisions
+  from page text alone. It also drives responsive visual QA of the running local
+  React result.
 
-## Sources and captures
+The available Figma design/motion skills require a Figma source or Figma write
+task, and the Sites skill explicitly excludes development inside an existing
+non-Sites web project. No applicable standalone frontend-design or generic
+motion implementation skill was present in the current global catalog.
 
-| Product | Official source | Local capture | What was reviewed |
+## Official sources and fresh captures
+
+| Product | Official source | Desktop capture | Mobile capture | Why it is relevant |
+| --- | --- | --- | --- | --- |
+| OpusClip | <https://www.opus.pro/> | `opusclip-desktop-2026-09-29.jpg` | `opusclip-mobile-2026-09-29.jpg` | Direct clipping promise, concentrated CTA hierarchy, immediate product proof, confident reduction on phone |
+| Apple MacBook Air | <https://www.apple.com/macbook-air/> | `apple-macbook-air-desktop-2026-09-29.jpg` | `apple-macbook-air-mobile-2026-09-29.jpg` | Product-dominant storytelling, exceptional whitespace, material restraint, precise responsive scaling |
+| Descript | <https://www.descript.com/> | `descript-desktop-2026-09-29.jpg` | `descript-mobile-2026-09-29.jpg` | Aggressive type scale, short measure, one-action hierarchy, product surface entering below the fold |
+| Captions | <https://captions.ai/> | `captions-desktop-2026-09-29.jpg` | `captions-mobile-2026-09-29.jpg` | Soft premium material field, compact framed navigation, centered product action, vertical-output proof |
+
+OpusClip's current editor page was also reviewed for the useful product idea of
+“AI first pass, human last word”: <https://www.opus.pro/ai-video-editor>. The
+ClipBuilder prototype carries the inspectable/reversible principle, not its
+chat, publishing, trend, growth, or virality claims.
+
+## Concrete visual findings
+
+### OpusClip
+
+- **Layout rhythm:** compact navigation, unusually generous hero air, then a
+  large product-media frame immediately after the CTA.
+- **Hierarchy:** one declarative headline, one supporting sentence, one dominant
+  pill CTA, and a quieter alternate action.
+- **Product framing:** the interface/footage is the proof; the hero does not rely
+  on an abstract AI illustration.
+- **Mobile:** the same promise/action/product order survives; navigation reduces
+  sharply and actions become full-width without shrinking type into density.
+- **Carry forward:** immediate comprehension, product proof above the first
+  major scroll, controlled CTA hierarchy, and confident negative space.
+- **Reject:** black as ClipBuilder's dominant palette, “viral” or growth claims,
+  social platform marks, user/customer logos, link ingestion, and batch output.
+
+### Apple
+
+- **Layout rhythm:** a thin global bar gives way to a single product story with
+  long pauses between ideas.
+- **Typography:** the type is quiet because scale, weight, and measure do the
+  work; labels, headline, supporting fact, and action form an obvious ladder.
+- **Product framing:** the product image owns the largest area. Background color
+  supports the object instead of competing with it.
+- **Materials:** pale neutral and cool color fields feel substantial without
+  heavy shadows, glass panels, or repeated card outlines.
+- **Mobile:** the story order is unchanged. Product scale, whitespace, and action
+  placement adapt rather than becoming a separate reduced experience.
+- **Carry forward:** product-first proof, restrained blue action color, bounded
+  content width, calm material layers, and responsive continuity.
+- **Reject:** Apple product photography, vocabulary, exact navigation, hardware
+  composition, trade dress, and purchase patterns.
+
+### Descript
+
+- A very large headline and short body measure create confidence before product
+  detail. The single saturated CTA is unmistakable.
+- The product UI begins below the primary message, providing a clean transition
+  from promise to proof.
+- The mobile page preserves headline impact instead of replacing it with a dense
+  app-like shell.
+- ClipBuilder can borrow the clarity and scale, but not Descript's serif identity,
+  burgundy/coral palette, copy, or Underlord product composition.
+
+### Captions
+
+- A subtle warm-to-cool field makes a light page feel premium without forcing
+  every surface into a card.
+- The outlined navigation and large rounded product surface form a clear frame;
+  the central action remains legible on phone.
+- Vertical result examples make output format tangible immediately.
+- ClipBuilder can borrow tonal layering and output legibility, but not the grain
+  texture, serif wordmark/headline, Prism imagery, output thumbnails, or exact
+  peach/cyan gradient.
+
+## Research-to-design mapping
+
+| Research principle | ClipBuilder translation |
+| --- | --- |
+| One direct promise | “Find the moment. Keep the final word.” with a bounded supporting sentence |
+| Product is the proof | An original synthetic transcript → grounded range → 9:16 cut frame built in React/CSS |
+| One dominant action | “Preview the sample experience” scrolls to the visual product proof; it does not claim to process media |
+| Quiet secondary action | “Review privacy & limits” jumps to an honest disclosure section |
+| Generous whitespace | 1280 px content bound, wide desktop gutters, deliberate 96–128 px section rhythm |
+| Restrained materials | Light cloud canvas, white product surfaces, cool gray grouped layer, one deep ink preview stage |
+| Singular accent | Cobalt only for primary action, selected evidence, focus-independent cues, and rare proof highlights |
+| Same story on phone | Promise → action → product proof → evidence principles → limits; no desktop-only content |
+| Product-explanatory motion | Hero/product entrance and transcript/range sequencing explain the product once; no perpetual AI theater |
+
+## Motion, scroll, and material implementation review
+
+Current official sources were checked on 2026-09-29 before the revision. The
+comparison is deliberately implementation-specific: this page needs one
+three-step narrative and a selective glass recipe, not a general animation or
+component platform.
+
+| Option | Current evidence | Fit for React 19 / Next 16, SSR, and accessibility | Decision |
 | --- | --- | --- | --- |
-| Descript | <https://www.descript.com/tour> | `screenshots/descript-product-tour.png` | Script-first editing, product UI as the hero, familiar document/slide mental model |
-| OpusClip | <https://www.opus.pro/ai-video-editor> | `screenshots/opusclip-ai-video-editor.png` | Long-video-to-short flow, autonomy/control framing, dark editorial product presentation |
-| Riverside Magic Clips | <https://riverside.fm/magic-clips> | `screenshots/riverside-magic-clips.png` | Single-purpose clipping entry, simple upload/link prompt, edit-on-your-own-terms message |
-| Captions | <https://captions.ai/> | `screenshots/captions-home.png` | Strong display typography, immediate footage action, tactile editorial surface treatment |
-| VEED | <https://www.veed.io/tools/video-editor> | `screenshots/veed-video-editor.png` | Direct utility promise, bright action hierarchy, broad editor capability presentation |
-| Adobe Premiere | <https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-media-tool-overview.html> | Not retained—HelpX returned an automated-access denial instead of product content | Generated media stays in the timeline as an editable, reviewable object |
+| Motion 13.4.4 | MIT package; React 18/19 peers; `LazyMotion` documents a 4.6 kB feature path versus roughly 34 kB for the full component; first-party `useScroll` and `useReducedMotion` APIs | Strong React fit and reduced-motion story; still creates a client/runtime dependency for behavior the platform can supply here | Do not install for this bounded prototype |
+| GSAP 3.15 + ScrollTrigger | Actively maintained package; official ScrollTrigger supports pin/scrub/toggle behavior; official React helper provides SSR-safe effect selection and cleanup; GSAP uses its own no-charge standard license rather than MIT | Powerful and robust, but an imperative animation runtime and license surface are disproportionate for three semantic steps | Do not install |
+| Lenis 1.3.26 | MIT, React peer `>=17`, React wrapper available, and current releases honor reduced-motion by default | React 19 compatible, but it changes global scrolling/anchor behavior and adds an RAF loop where native scrolling is already sufficient | Do not install |
+| React Bits | React 19 package with a wide dependency set including Motion, GSAP, Lenis, and Three; MIT plus Commons Clause restrictions | Broad visual catalog, but licensing/dependency breadth and effect-led components do not fit a bespoke evidence narrative | Do not use |
+| Magic UI | MIT source; registry components commonly assume Tailwind/shadcn and Motion | Copy-in model avoids a package runtime, but imports unrelated styling conventions and maintenance ownership into this CSS-module page | Do not use |
+| Aceternity UI | Official material describes Next.js 15, Tailwind, and Framer Motion assumptions | No clear advantage for the current Next 16/CSS-module page; component-specific licensing and dependency boundaries were not sufficiently explicit in the official catalog reviewed | Do not use |
+| Web platform | `IntersectionObserver` is widely available and asynchronous; `backdrop-filter` is Baseline 2024; CSS scroll timelines are progressive enhancement; `prefers-reduced-transparency` exists but has limited availability | Server-rendered semantic content remains visible without JS. One small client island can activate steps; unsupported CSS retains the complete layout. Media-query and opaque fallbacks cover reduced motion/transparency and forced colors | **Selected: no new dependency** |
 
-Supporting official product text was also reviewed at:
+Selected architecture:
 
-- <https://www.opus.pro/>
-- <https://riverside.fm/video-editor/video-editing-glossary/magic-clips>
-- <https://help.captions.ai/docs/project/ai-edit>
-- <https://support.veed.io/en/articles/11652474-how-to-use-our-clips-feature>
-- <https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html>
+- Keep the page itself a Server Component and isolate step observation in
+  `process-narrative.tsx`.
+- Render the complete ordered list in the initial HTML. `IntersectionObserver`
+  adds only an active presentation cue; it never gates content, navigation, or
+  reading order.
+- Use a sticky visual rail and transform/opacity transitions for continuity.
+  CSS view timelines add reversible scroll-linked polish only inside
+  `@supports`; the static/observer baseline remains complete.
+- Use opaque dark-blue surfaces by default, then enable true translucent glass
+  with `backdrop-filter` only when supported. `prefers-reduced-transparency`
+  restores opaque surfaces where exposed, and forced colors removes decorative
+  compositing.
+- Do not override native scrolling. Reduced motion removes ambient, entrance,
+  scroll-linked, and active-step transitions while keeping every step visible.
 
-The failed Adobe capture was discarded rather than preserved as misleading
-evidence. The five retained PNGs below were visually checked and contain only
-public product-page content.
+Official implementation sources:
 
-## Patterns worth carrying forward
+- Motion package and docs: <https://github.com/motiondivision/motion/blob/main/packages/motion/package.json>,
+  <https://motion.dev/docs/react-lazy-motion>,
+  <https://motion.dev/docs/react-use-scroll>, and
+  <https://motion.dev/docs/react-use-reduced-motion>
+- GSAP and React helper: <https://github.com/greensock/GSAP/blob/master/package.json>,
+  <https://gsap.com/docs/v3/Plugins/ScrollTrigger/>, and
+  <https://github.com/greensock/react>
+- Lenis package and React wrapper: <https://github.com/darkroomengineering/lenis/blob/main/package.json>
+  and <https://github.com/darkroomengineering/lenis/blob/main/packages/react/README.md>
+- React Bits package/license: <https://github.com/DavidHDev/react-bits/blob/main/package.json>
+  and <https://github.com/DavidHDev/react-bits/blob/main/LICENSE.md>
+- Magic UI source/registry: <https://github.com/magicuidesign/magicui> and
+  <https://github.com/magicuidesign/magicui/blob/main/registry.json>
+- Aceternity implementation assumptions: <https://ui.aceternity.com/brand-facts>
+- Web platform references: <https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API>,
+  <https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/backdrop-filter>,
+  <https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Scroll-driven_animations>,
+  and <https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/%40media/prefers-reduced-transparency>
 
-- Put the product itself in the visual story. Descript's editor presentation is
-  more convincing than abstract AI decoration because the workflow is visible.
-- Pair automation with retained agency. OpusClip's strongest product idea is
-  the combination of a first pass and precise last-mile controls; ClipBuilder
-  should make the proposal, diff, Apply action, undo, and word boundaries even
-  more explicit.
-- Keep entry comprehension fast. Riverside and VEED explain the input and
-  outcome quickly. ClipBuilder should preserve that directness while showing
-  rights, limits, and temporary handling beside the action.
-- Use typography as product character. Captions demonstrates that a distinctive
-  editorial headline can carry personality without a mascot or AI orb.
-- Keep generated or automated work editable and attributable. Adobe's
-  timeline-integrated, labeled generated media is the closest analogue to
-  ClipBuilder's inspectable speaker-focus and visual-beat tracks.
-- Show real editor structures—transcript, preview, evidence, timeline, and
-  proposal state—instead of a feature-logo collage.
+## Palette and type exploration
 
-## Patterns ClipBuilder should deliberately avoid
+### A — Luminous Navy / Cloud / Cobalt — selected, revised
 
-- “Viral,” guaranteed-growth, view-count, or performance-score framing. The
-  candidate order is editorial judgment grounded in transcript evidence.
-- One-click magic that hides what changed. ClipBuilder names stages and exposes
-  the validated range, evidence, tracks, and diff.
-- Chat as the primary editor. The assistant is one bounded proposal rail, not a
-  conversation history or the source of state.
-- Every-tool marketing sprawl, template marketplaces, stock libraries, social
-  schedulers, or publishing dashboards. They weaken the single-edit story.
-- Generic black-and-neon AI styling, purple gradients, glassmorphism, floating
-  particles, and decorative waveform activity.
-- Product screenshots or competitor illustrations copied into ClipBuilder. The
-  reference uses original HTML, CSS, inline SVG, and synthetic text only.
+- Structural field `#07142F` → `#0B2D78` → `#1B63F0`, canvas `#F6F7FB`,
+  surface `#FFFFFF`, grouped layer `#EDF0F6`, ink `#0B1020`, secondary
+  `#596174`, border `#DCE1EA`, cobalt `#3157D5`.
+- Single neo-grotesk system sans for display/body/UI plus local system mono for
+  timecode and word ranges.
+- **Why selected:** the owner asked to promote the first pass's strongest navy
+  proof field into the structural identity. The luminous field now carries the
+  hero and major transitions while cloud product surfaces preserve Apple's
+  restraint and the eventual editor's legibility. Blue, rather than violet,
+  remains the singular chromatic idea.
 
-## Structural reference: ScreenPilot
+### B — Porcelain / Carbon / Persimmon — not selected
 
-Inspected locally:
+- Warm off-white, dark charcoal, and a restrained orange-red signal.
+- Humanist sans body with an editorial serif display role.
+- **Why not:** expressive and premium, but too close to the warm editorial
+  personality already used by Captions/Descript and less precise for product UI.
 
-- `C:\Users\minat\Work\screen-pilot\docs\SCREENPILOT_DESIGN_SYSTEM.html`
-- `C:\Users\minat\Work\screen-pilot\docs\tickets\SP-004-create-and-approve-visual-design-references.md`
+### C — Graphite / Frost / Violet — not selected
 
-ClipBuilder follows ScreenPilot's useful document architecture: one
-self-contained editable HTML file, a compact sticky guide, an opening product
-concept, token/type/layout specimens, component/state specimens, responsive
-product concepts, motion notes, and a final review checklist. It deliberately
-does not reuse ScreenPilot's Deep Ink/Warm Coral palette, friendly recruiting
-tone, rounded-card composition, handwriting motif, copy, or interview layout.
+- Near-black product field, cold white type, and violet-blue accent.
+- Wide geometric display sans with neutral body sans.
+- **Why not:** visually forceful but too close to the rejected dark direction
+  and the generic AI-product palette the source of truth explicitly avoids.
 
-## ClipBuilder synthesis
+## Typography and font-loading plan
 
-The proposed direction is **Night Edit / Signal Amber**: charcoal-black edit
-surfaces, cool slate structure, a pale transcript sheet, and a concentrated
-amber signal accent. A high-contrast editorial serif is reserved for a few
-display moments; a practical humanist sans carries UI and reading; a compact
-mono family carries timecode and provenance. All are expressed with local
-system fallbacks in the reference—no font is downloaded.
+- Prototype: `system-ui`, `-apple-system`, `BlinkMacSystemFont`, `"Segoe UI"`,
+  sans-serif; `"SFMono-Regular"`, `Cascadia Code`, `Consolas`, monospace for
+  compact evidence metadata. This keeps local review and CI network-free.
+- Production candidate after approval: source-controlled Geist Sans variable and
+  Geist Mono, or an owner-approved equivalent, with license files committed next
+  to the binaries. No remote font CDN and no font binary before approval.
+- Display uses the same sans at 620–680 weight, `clamp()` sizing, -0.05em to
+  -0.025em tracking, and 0.94–1.02 line-height.
+- Body stays 16–20 px with 1.55–1.65 leading and a 64–72 character measure.
+- Mono never carries long-form text; it labels time, word range, and visual
+  prototype status only.
 
-Motion is divided into two contracts:
+## Motion contract
 
-1. **Production UI motion** explains selection, panel continuity, progress,
-   proposal application, and focus. It uses 90/140/220/320 ms tokens and never
-   claims processing progress through decorative activity.
-2. **Rendered-video motion** describes output behavior: immediate editorial
-   cuts, short deterministic card transitions, a single slow push for approved
-   full-frame stills, and smoothed speaker framing. It is labeled separately so
-   UI motion can never be mistaken for an export promise.
+| Token | Duration | Use |
+| --- | ---: | --- |
+| `--motion-press` | 120 ms | Press, focus-adjacent state, active control |
+| `--motion-hover` | 180 ms | Hover border/fill and small product cue changes |
+| `--motion-panel` | 360 ms | Product-frame, active-step, and proof-panel continuity |
+| `--motion-entrance` | 640 ms | One-time hero copy and product-media entrance |
+| `--motion-ambient` | 12–18 s | Transform-only hero light drift; decorative and nonessential |
 
-The reference remains provisional until the owner explicitly approves or asks
-for revisions in CL-002.
+- Easing: `cubic-bezier(0.22, 1, 0.36, 1)` for settle; `cubic-bezier(0.2, 0, 0, 1)`
+  for direct control feedback.
+- Hero copy enters first; CTA and product frame follow with a short, bounded
+  delay. The synthetic transcript highlight, range, and 9:16 preview cues
+  sequence once to explain source → evidence → cut.
+- “How it works” uses a sticky server-rendered narrative with a tiny
+  `IntersectionObserver` client island for active-step presentation. CSS
+  view-timeline motion is progressive enhancement. The default state is
+  visible, so unsupported browsers or disabled JavaScript never hide content.
+- Motion is transform/opacity-only where possible. No filters in motion, layout
+  animation, autoplaying media, infinite marquee, pulse, or faux progress.
+- `prefers-reduced-motion: reduce` disables smooth scroll, all translation,
+  sequencing, and repeated motion; content appears immediately in final state.
+
+## Owner gate
+
+This synthesis and the resulting React prototype remain provisional until the
+owner explicitly approves or requests revisions. Implementation or Git activity
+does not count as visual approval.
+
+### Revision request — 2026-09-29
+
+The owner did not approve the first React pass. The next pass must carry the
+existing deep navy/cobalt “A first cut you can question” material much farther
+through the hero and section transitions, introduce a consistent glass system,
+make the hero feel immediately alive, and turn “How it works” into a true
+scroll-driven narrative. Generic purple AI gradients, indiscriminate blur,
+particle noise, hidden unsupported-browser content, and a large client bundle
+remain out of bounds. Current library research and a dependency decision must
+be added here before the revised implementation is considered complete.
+
+## Local prototype review evidence
+
+- Running review surface: `http://127.0.0.1:3000/` from the production build.
+- Revised desktop and phone hero/product compositions were captured and
+  visually inspected in the in-app browser; the production pass contains no
+  Next.js development badge.
+- The responsive matrix covered 320 × 568 through 2560 × 1440 plus a 1280 × 640
+  short-height case and a 720 × 450 200%-zoom equivalent. No horizontal page
+  overflow or clipped primary action remained.
+- The browser's active reduced-motion preference produced `0s` ambient
+  animation, one iteration, `0.000001s` transitions, and disabled smooth
+  scrolling while preserving all content.
+- Keyboard order, first-focus skip link, visible focus treatment, semantics,
+  44 px target sizing, core color contrast, forced-colors CSS, text-spacing
+  resilience, localhost-only assets, and localhost console output were checked.
+- One QA correction was made: the phone header action increased from 42 px to
+  the 44 px minimum, then passed at both 320 px and 390 px widths.
+- The page remains synthetic and non-operational. One narrow client island
+  changes only the active narrative cue while scrolling; product cues explain
+  source → evidence → cut, but no upload, analysis, provider, media, or render
+  path is present.
+- The current production browser exposed working `backdrop-filter` and CSS view
+  timelines, no external resource URL, and no warning/error console entry.
+  Opaque unsupported-browser, reduced-transparency, forced-colors, and
+  JavaScript-free content baselines are explicit in source.

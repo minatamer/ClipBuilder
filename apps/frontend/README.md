@@ -6,10 +6,21 @@ server-only configuration to browser code.
 
 ## Current responsibility
 
-CL-001 supplies only the accessible product shell, framework error/not-found
+CL-001 supplies the accessible product shell, framework error/not-found
 boundaries, metadata, robots policy, and deterministic build/test foundation.
+CL-002 adds the responsive landing-page visual approval prototype at `/` using
+the real Next.js/React framework. Its links reveal local visual-review sections
+only; no upload, analysis, media, provider, session, or render behavior exists.
+The page remains server-rendered except for one narrow `IntersectionObserver`
+client island that changes the active presentation cue in the semantic
+“How it works” list. The complete list is present without JavaScript. No motion,
+scroll, glass, font, or component dependency was added; CSS provides the visual
+system, progressive enhancement, and reduced-motion/transparency fallbacks.
+
 Session, intake, upload, analysis, candidate, assembly, editor, render, and
-cleanup features belong to later tickets and must not be pre-created here.
+cleanup behavior belongs to later tickets and must not be pre-created here.
+Broad application styling remains gated on explicit owner approval of the
+CL-002 prototype.
 
 ## Commands
 

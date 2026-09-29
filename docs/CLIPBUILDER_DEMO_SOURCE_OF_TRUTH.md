@@ -109,7 +109,7 @@ public claims, or the portfolio story must be promoted into this document.
 | Cloud region | `us-central1` for the first cost-validated deployment | **Proposed - owner approval required** | If residency or audience latency matters more, choose one compatible region before provisioning. |
 | Text model | OpenAI Responses API with `gpt-6-sol`, Structured Outputs, and `store: false` | **Proposed - owner approval required** | Re-check availability, pricing, retention, and project access before enabling live calls. |
 | Transcription | Deepgram Nova-3 pre-recorded with word timestamps and diarization | **Proposed - owner approval required** | Re-check language, retention, opt-out, limits, and project settings before live use. |
-| Visual direction | “Editorial Signal Room” with an acid-lime editorial system applied to captions and generated visual cards | **Proposed - owner approval required** | Broad screen styling waits for approval of one HTML reference and one editor concept. |
+| Visual direction | A modern, minimal, product-first system with spacious neutral surfaces, deep ink, and a restrained cobalt signal | **Proposed - owner approval required** | Broad screen styling waits for approval of the real responsive Next.js/React landing prototype. |
 | Retention | Session access expires after 2 hours; objects are explicitly deleted on clear and lifecycle-eligible after 1 day | **Proposed - owner approval required** | UI must describe asynchronous deletion honestly; do not promise an exact deletion second. |
 | Monthly spend | Start with the lowest provider hard caps that permit two owner-controlled full live validations | **Proposed - owner approval required** | Live flags stay off until numerical caps and alerts are recorded in release evidence. |
 
@@ -121,8 +121,8 @@ These gates are deliberate stop points, not missing implementation detail:
    absence of trend input.
 2. **Rights gate:** approve the sample, proof of permission, attribution, and
    redistribution terms.
-3. **Visual gate:** approve the HTML design reference and signature desktop and
-   phone concept before broad React styling.
+3. **Visual gate:** approve the real responsive Next.js/React landing prototype
+   at desktop and phone widths before broad application styling.
 4. **Provider/privacy gate:** approve provider projects, data settings, region,
    temporary transcript storage, and public privacy copy.
 5. **Spend gate:** record hard limits, alerts, kill switches, and the maximum
@@ -2193,7 +2193,7 @@ ai-assisted-video-editor/
 ├─ docs/
 │  ├─ AI_CLIPPING_DEMO_SOURCE_OF_TRUTH.md
 │  ├─ AI_CLIPPING_DEMO_BRIEF.md
-│  ├─ AI_CLIPPING_DESIGN_SYSTEM.html
+│  ├─ design-research/
 │  ├─ decisions/
 │  ├─ tickets/
 │  └─ operations/
@@ -2601,7 +2601,7 @@ type VisualAssetRequestV1 = {
   equationTex: string | null;
   exactText: string | null;
   background: "opaque" | "transparent";
-  artDirection: "editorial-signal-v1";
+  artDirection: "precision-cut-v1";
 };
 
 type VisualCuePlanV1 = {
@@ -2618,7 +2618,7 @@ type VisualCuePlanV1 = {
 type VisualPlanV1 = {
   version: 1;
   revision: string;
-  artDirection: "editorial-signal-v1";
+  artDirection: "precision-cut-v1";
   requests: VisualAssetRequestV1[];
   cues: VisualCuePlanV1[];
   totalCoverageMs: number;
@@ -3388,7 +3388,7 @@ interface VisualPlanner {
       speakerTurns: SpeakerTurnV1[];
       durationMs: number;
       maxCues: 3;
-      artDirection: "editorial-signal-v1";
+      artDirection: "precision-cut-v1";
     },
     context: ProviderCallContext
   ): Promise<VisualPlanProviderOutputV1>;
@@ -3433,7 +3433,7 @@ interface ContextImageGenerator {
       assetId: string;
       factualBrief: string;
       layout: "full-frame" | "transparent-overlay";
-      artDirection: "editorial-signal-v1";
+      artDirection: "precision-cut-v1";
       background: "opaque" | "transparent";
     },
     context: ProviderCallContext
@@ -4531,87 +4531,101 @@ signed URL, or secret in the cost ledger.
 
 ## 18. Visual design system
 
-### 18.1 Design thesis — Editorial Signal Room
+### 18.1 Design thesis — Precision in the cut
 
-The interface should feel like an editorial workstation where evidence becomes
-a cut. The vertical video, transcript marks, and edit diffs are the visual
-language. AI is present through useful judgment and provenance, not glowing
-orbs, purple gradients, robot illustrations, or chat bubbles.
+The interface should feel exceptionally modern, minimal, premium, confident,
+spacious, precise, and restrained. The product itself is the visual proof:
+source evidence becomes an inspectable vertical edit in one clear sequence.
+AI is present through useful judgment, provenance, and reversible proposals,
+not glowing orbs, robot illustrations, trend scores, or chat bubbles.
 
 Tone:
 
-- focused, editorial, high-contrast, and quietly technical;
-- near-black working surfaces with warm paper-like transcript surfaces;
-- one sharp signal accent for selection and provenance;
-- mono timecode/metadata paired with a confident readable sans;
-- cut marks, range brackets, and evidence links instead of decorative charts.
+- a light neutral foundation interrupted by a coherent deep navy-to-cobalt
+  luminous field that carries the hero, section transitions, and the existing
+  “first cut” proof into one visual story;
+- generous whitespace and a disciplined grid, with dark atmosphere used as a
+  deliberate product narrative rather than a dense control room;
+- one confident sans family carrying display and body roles through optical
+  scale, weight, and spacing, plus mono only for timecode and provenance;
+- product-media framing, transcript cues, and range/evidence marks as the hero;
+- premium material depth from a real glass system: translucent navy/white
+  surfaces, backdrop blur where supported, subtle specular edges, and readable
+  opaque fallbacks. Glass is selective hierarchy, never decoration on every
+  container.
 
 Anti-goals:
 
-- generic glassmorphism, excessive blur, neon gradients, or floating particles;
-- social platform cosplay or logo-heavy trend dashboards;
-- dense Premiere-like toolbars and unlabeled icons;
-- endless shimmer, pulsing AI avatars, or fake waveform activity;
-- style variation that cannot be reproduced by the renderer.
+- the rejected acid-lime, near-black editorial workstation direction;
+- generic purple AI gradients, indiscriminate blur, neon, or particle noise;
+- copying Apple, OpusClip, or another product's assets, copy, or signature
+  composition;
+- social-platform cosplay, viral-score claims, or logo-heavy dashboards;
+- dense nonlinear-editor chrome, unlabeled icons, fake waveform activity, or
+  motion that does not explain the product.
 
 ### 18.2 Provisional color tokens
 
-These are **Proposed - owner approval required** and must be tested in the HTML
-design reference.
+These are **Proposed - owner approval required** and must be tested in the real
+responsive Next.js/React landing prototype.
 
 | Token | Value | Role |
 | --- | --- | --- |
-| `--color-canvas` | `#0B0D0C` | App background |
-| `--color-surface-1` | `#111512` | Primary dark panel |
-| `--color-surface-2` | `#181D19` | Raised/interactive dark panel |
-| `--color-border-dark` | `#30362F` | Dark separators |
-| `--color-paper` | `#F1EEE5` | Transcript/evidence surface |
-| `--color-paper-strong` | `#FFFCF4` | High-emphasis light surface |
-| `--color-ink` | `#151815` | Text on paper/accent |
-| `--color-text` | `#F5F3EA` | Primary text on dark |
-| `--color-text-muted` | `#AEB5AD` | Secondary dark-surface text |
-| `--color-ink-muted` | `#5C635B` | Secondary paper text |
-| `--color-signal` | `#D9FF43` | Selection, provenance, primary accent |
-| `--color-signal-muted` | `#748A2A` | Non-text signal background/border |
-| `--color-danger` | `#FF655E` | Destructive/error emphasis |
-| `--color-warning` | `#F3C84B` | Caveat/warning |
-| `--color-success` | `#66D49A` | Confirmed success |
-| `--color-focus` | `#9CC8FF` | Focus ring independent from signal |
+| `--color-canvas` | `#F6F7FB` | Cool neutral page background |
+| `--color-surface` | `#FFFFFF` | Primary content surface |
+| `--color-surface-muted` | `#EDF0F6` | Product-stage and grouped-control layer |
+| `--color-ink` | `#0B1020` | Primary text and deep product frame |
+| `--color-ink-soft` | `#596174` | Secondary body text |
+| `--color-border` | `#DCE1EA` | Neutral separators and control boundaries |
+| `--color-brand` | `#3157D5` | Primary action and selected evidence |
+| `--color-brand-strong` | `#2144B9` | Hover/pressed action |
+| `--color-brand-soft` | `#E7ECFF` | Quiet selection and proof background |
+| `--color-focus` | `#006BFF` | Focus ring independent from fill state |
+| `--color-danger` | `#B9384A` | Destructive/error emphasis |
+| `--color-warning` | `#995400` | Caveat/warning |
+| `--color-success` | `#117A50` | Confirmed success |
 
-Never use signal, danger, warning, or success color as the only carrier of
-meaning. Text on signal uses ink. All text/background pairs must pass WCAG 2.2
-AA contrast; body text targets 4.5:1, large text/UI boundaries at least 3:1.
+Never use brand, danger, warning, or success color as the only carrier of
+meaning. All text/background pairs must pass WCAG 2.2 AA contrast; body text
+targets 4.5:1 and large text/UI boundaries at least 3:1.
 
 ### 18.3 Typography
 
-Proposed families:
+The prototype uses a fast local system stack so review and CI require no remote
+font request. The production candidate is a source-controlled licensed variable
+sans such as Geist Sans, with Geist Mono or an approved equivalent for timecode
+and provenance. Approval of family and license precedes adding binaries and
+license notices.
 
-- UI/editorial sans: a source-controlled licensed variable sans such as Geist
-  Sans or an approved equivalent;
-- mono: matching licensed mono such as Geist Mono for timecode, IDs, and compact
-  metadata only;
-- robust system fallbacks declared for offline/failure loading.
+- display: the same sans at 560–680 weight, slightly negative tracking, and
+  responsive `clamp()` sizing;
+- body: 400–500 weight, relaxed leading, and a 64–72 character measure;
+- UI: 560–650 weight with explicit labels and no all-caps paragraph copy;
+- mono: compact metadata only, never long-form explanation;
+- robust `system-ui`, `-apple-system`, `BlinkMacSystemFont`, and `Segoe UI`
+  fallbacks remain declared.
 
-Do not fetch fonts from a third-party CDN in production. Bundle only permitted
-font files and include license notices.
-
-Type scale (rem): `0.75`, `0.875`, `1`, `1.125`, `1.375`, `1.75`, `2.25`,
-`3`. Body line-height 1.5–1.65; compact metadata 1.3–1.4; display headings no
-tighter than 1.05. Browser zoom and user font settings must remain functional.
+Type scale (rem): `0.75`, `0.875`, `1`, `1.125`, `1.375`, `1.75`, `2.5`,
+`3.5`, `5.5`. Body line-height 1.5–1.65; display line-height 0.94–1.05.
+Browser zoom and user font settings must remain functional.
 
 ### 18.4 Spacing, size, shape, and elevation
 
 - base spacing unit: 4 px;
-- scale: 4, 8, 12, 16, 24, 32, 48, 64, 96 px;
-- content max width on landing/result: 1440 px;
-- editor max width: 1920 px with flexible center;
+- scale: 4, 8, 12, 16, 24, 32, 48, 64, 96, 128 px;
+- content max width on the landing page: 1280 px with generous gutters;
+- editor max width: 1920 px with a flexible center;
 - minimum interactive target: 44 × 44 CSS px;
-- radii: 4 px technical, 8 px controls, 12 px cards, 18 px major panels, pill
-  only for compact status/signal badges;
-- 1 px borders provide most separation; shadows are restrained and never the
-  only focus/state indication;
-- paper surfaces may use subtle warm texture only if static, CSS/local, and
-  contrast-safe; no remote decorative asset.
+- radii: 10 px controls, 16 px compact cards, 24 px product surfaces, and
+  32 px hero framing; pill only for compact status and segmented metadata;
+- glass surfaces use a shared material recipe: translucent fill, 1 px
+  high-contrast/specular edge, restrained inner highlight, and one soft shadow;
+- `backdrop-filter` is progressive enhancement. Unsupported or
+  reduced-transparency contexts receive an opaque, contrast-safe surface with
+  the same hierarchy; forced colors receives explicit borders and system colors;
+- the navy-to-cobalt gradient is a recurring structural field for the hero and
+  selected transitions. It stays blue-led and product-specific, not purple,
+  rainbow, noisy, or decorative.
 
 ### 18.5 Icon rules
 
@@ -4622,71 +4636,59 @@ undo, redo, evidence, warning, and status icons have consistent semantics.
 
 ### 18.6 Component inventory
 
-Build only when first used:
+CL-002 builds only the primitives needed by the landing prototype: header,
+primary/secondary text actions, trust/status strip, evidence steps, and a
+synthetic product-media frame. Later tickets build the functional controls when
+their behavior exists. Do not build a generalized dashboard/card system or
+pretend that the prototype actions already upload, analyze, or render media.
 
-- button variants: primary, secondary, quiet, destructive;
-- link, icon button, field, textarea, checkbox;
-- dialog and responsive drawer;
-- tabs/segmented control;
-- status badge and signal badge;
-- error/warning/caveat notice;
-- progress-stage list;
-- candidate card and evidence link;
-- transcript word/utterance;
-- range rail and word-step controls;
-- video frame with speaker-focus preview overlay;
-- assembly stage/storyboard strip;
-- speaker-focus timeline track and visual-beat timeline track;
-- visual cue summary card with subject, layout, and transcript evidence;
-- proposal diff row;
-- artifact fact list;
-- confirmation summary.
+### 18.7 Product-media art direction
 
-Do not build a generalized dashboard/card system or highly polymorphic component
-with unrelated boolean props.
-
-### 18.7 Contextual visual art direction
-
-All generated stills use the versioned `editorial-signal-v1` direction: bold,
-clean editorial imagery, one obvious subject, controlled dark/warm-neutral
-palette, and enough negative space for the always-on captions. It should feel
-like one visual editor assembled the clip, not like unrelated image-model
-outputs were pasted together.
+The landing hero uses original HTML/CSS and synthetic text to frame the future
+product. A vertical clip preview, transcript evidence, edit range, and named
+workflow cues make the product legible without copied screenshots, remote
+media, or fake provider output.
 
 Layout rules:
 
-- full-frame concept stills may use subtle depth/light and a single fixed slow
-  push, but contain no generated text, logos, UI, watermarks, or fake footage;
-- transparent overlays use a simple isolated subject with a validated alpha
-  channel and occupy a bounded lower safe region;
-- equations, numbers, quotations, and precise labels always use deterministic
-  local cards rather than generated lettering;
-- captions are the top content layer, followed by the bounded headline;
-- no visual covers a face unless it is an intentional full-frame cutaway;
-- visual changes are motivated by transcript cues, not decorative cadence.
-
-The art-direction string, prompt template, image model/quality, card renderer,
-and asset-validation rules are versioned together so preview, render, and the
-purpose-recorded sample have a coherent look.
+- the product frame is large enough to read and never treated as decoration;
+- synthetic preview content contains no generated faces, logos, UI, watermarks,
+  or real user material;
+- captions are the top content layer and remain legible over the preview;
+- proof text names grounded ranges and reversible edits, not virality or trend
+  performance;
+- contextual visuals and renderer-specific art remain later-ticket concerns.
 
 ### 18.8 Motion
 
-Motion explains state or spatial continuity:
+Motion explains product sequence and interaction:
 
-- 120 ms micro feedback;
-- 180 ms control/panel state;
-- 260 ms drawer/screen continuity;
-- easing uses two approved cubic-bezier tokens;
-- scrub/trim follows pointer immediately, with transform-only visual feedback;
-- candidate selection may animate the range highlight and preview focus;
-- full-frame stills may use one source-controlled slow-push preset;
-- proposal apply may briefly highlight changed controls;
-- background atmosphere stays still;
-- no flashing, rapid pulsing, autoplaying marquee, or fake processing motion.
+- `120ms` press/focus feedback;
+- `180ms` hover and selected-state feedback;
+- `320ms` panel and product-media continuity;
+- `560ms` hero/product entrance using approved settle easing;
+- the hero uses a layered entrance plus restrained ambient light movement so
+  the first viewport feels alive without reducing legibility or becoming a
+  perpetual particle effect;
+- transcript evidence, range, and preview cues sequence subtly inside the
+  synthetic product frame to explain source → grounded moment → vertical cut;
+- “How it works” becomes a smooth scroll-driven narrative with sticky spatial
+  continuity and a clearly active step on capable browsers. Semantic source
+  order and fully visible static content remain the baseline;
+- section transitions use progressive enhancement and do not hide content when
+  JavaScript, scroll timelines, or optional motion APIs are unsupported;
+- animation uses opacity and transform, avoids layout thrash, and does not run
+  a distracting perpetual decorative loop. Client motion, if justified, stays
+  in the smallest isolated component boundary rather than converting the page
+  into a large client bundle.
 
-Under `prefers-reduced-motion: reduce`, remove spatial translation, scrub
-inertia, animated crop movement, and repeated activity. Use immediate state,
-static stage indicator, and optional short opacity transition under 100 ms.
+Under `prefers-reduced-motion: reduce`, remove spatial translation, sequencing,
+smooth scrolling, and repeated activity. All content renders immediately in its
+final state; focus and selected-state differences remain visible.
+
+Under reduced-transparency preferences or without `backdrop-filter`, replace
+translucent surfaces with opaque navy/white material tokens while preserving
+contrast, borders, and hierarchy.
 
 ### 18.9 Responsive rules
 
@@ -4694,41 +4696,47 @@ Breakpoints are layout anchors, not device identity:
 
 | Range | Product mode |
 | --- | --- |
-| 320–599 px | Guided phone edit/review |
-| 600–1023 px | Stacked/tablet authoring |
-| 1024–1439 px | Primary compact-laptop workspace |
-| 1440–1919 px | Three-pane desktop workspace |
+| 320–599 px | Single-column landing and guided phone edit/review |
+| 600–1023 px | Stacked landing proof and tablet authoring |
+| 1024–1439 px | Split landing and primary compact-laptop workspace |
+| 1440–1919 px | Spacious landing and three-pane desktop workspace |
 | 1920–2560+ px | Bounded large-monitor workspace |
 
 Rules:
 
 - one semantic tree and one state authority;
 - no horizontal page scroll from 320 px through 2560 px;
-- use container queries for editor pane behavior where appropriate;
-- preserve error, provenance, clear, and primary action at every width;
+- preserve privacy, rights/limits, fake/sample status, and primary action at
+  every width where those actions exist;
 - account for height, orientation, virtual keyboard, safe-area insets, and 200%
   zoom—not width alone;
-- phone maintains candidate choice, first-cut assembly progress, playback,
-  transcript/caption correction, visual summary, assistant proposal, render,
-  download, and clear;
-- desktop precision affordances collapse into accessible step controls, not
-  disappear;
+- desktop spacing compresses before composition collapses;
 - avoid fixed full-viewport layouts that clip at short heights.
 
-### 18.10 HTML reference and concept authority
+### 18.10 React prototype and concept authority
 
-Before broad React styling:
+Before broad application styling:
 
-1. build `docs/AI_CLIPPING_DESIGN_SYSTEM.html` with tokens, type, spacing,
-   buttons, candidate/evidence, transcript, proposal diff, progress, error,
-   dialog, and responsive examples;
-2. create one signature desktop editor concept and one phone adaptation;
-3. review against this document's behavior/accessibility;
-4. record owner approval or changes;
-5. implement code from approved tokens.
+1. research current official OpusClip, Apple, and a small set of relevant
+   AI-video landing experiences at desktop and phone widths;
+2. record multiple credible palette/type directions and select one with a
+   written rationale;
+3. implement the real responsive landing-page visual prototype in the existing
+   Next.js/React frontend using the intended production framework;
+4. research current motion/scroll/glass implementation candidates and record
+   maintenance, React 19/Next 16 fit, license, bundle/client cost, SSR,
+   accessibility, and reduced-motion tradeoffs before choosing the smallest
+   justified dependency set;
+5. verify typography, spacing, color, glass fallbacks, focus, motion, reduced
+   motion, 200% zoom, forced colors, short-height behavior, and no horizontal
+   overflow in the running app;
+6. record explicit owner approval or requested changes before broad styling.
 
-The concept may inspire composition only. It cannot add a dashboard, change
-scope, hide labels, invent provider capability, or remove error/recovery states.
+The React page is the canonical visual review artifact. A standalone HTML file
+must not remain as a competing full-page concept; at most it may be a narrow
+token/type specimen. The prototype may not implement uploads, providers,
+session workflow, or later-ticket behavior, and it cannot imply that inactive
+visual controls already work.
 
 ## 19. Accessibility
 
@@ -5280,11 +5288,14 @@ dependency direction.
 and verify; fake health starts; production config fails closed; contract and
 dependency tests prove live providers cannot compose.
 
-#### CL-002 — visual reference and approval
+#### CL-002 — React visual prototype and approval
 
-**Objective:** Build the HTML token/component/state reference plus signature
-desktop and phone editor concepts, verify accessibility/responsiveness, and
-record explicit owner approval or requested changes.
+**Objective:** Research current premium product and AI-video landing patterns,
+then build the canonical responsive landing-page visual prototype in the real
+Next.js/React frontend. Verify its typography, spacing, product-media framing,
+motion, accessibility, and desktop/phone behavior before recording explicit
+owner approval or requested changes. The rejected standalone HTML concept is
+not an authority and must not remain as a competing full-page direction.
 
 **Depends:** CL-001.
 
@@ -5626,11 +5637,12 @@ or change them efficiently.
     eligibility, and honest asynchronous-deletion copy.
 12. **Visual identity** — The product name is already locked as **ClipBuilder**,
     with **ClipAssistant** as the backup. Approve or change the “Editorial Signal
-    Room” direction, font licenses, wordmark treatment, and acid-lime signal
-    palette; do not reopen the name as part of routine visual exploration.
-13. **Visual system** — Approve `editorial-signal-v1`, generated stills for
-    grounded concepts, MathJax 4 SVG cards for exact equations/text, and no
-    arbitrary stock/web-image search.
+    **Precision in the cut** direction, font licenses, wordmark treatment, and
+    restrained light-neutral/cobalt system; do not reopen the name as part of
+    routine visual exploration.
+13. **Visual system** — Approve the provisional `precision-cut-v1` direction,
+    generated stills for grounded concepts, MathJax 4 SVG cards for exact
+    equations/text, and no arbitrary stock/web-image search.
 14. **Spend** — Set numerical text/image provider hard limits and Google Cloud
     alert budget before any live call or job.
 

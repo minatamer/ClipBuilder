@@ -30,7 +30,7 @@ decorative model output.
 - Assembly runs only after one candidate/manual 10–60 second range is selected.
   It never re-transcribes or re-ranks candidates.
 - The visual planner receives bounded selected transcript words/turns, duration,
-  cue cap, and `editorial-signal-v1`; it may return zero to three grounded cues.
+  cue cap, and `precision-cut-v1`; it may return zero to three grounded cues.
 - OpenAI Responses uses strict Structured Outputs, `store: false`, one call, and
   no automatic repair/retry. Deterministic reconciliation resolves word IDs,
   derives time, enforces density/coverage/safe zones, and rejects unsafe or
@@ -212,7 +212,7 @@ re-run analysis inside assembly.
 
 - Provider/privacy/spend approval for OpenAI visual planning and image project,
   current exact model/access/data controls, and up to three image calls.
-- Owner visual approval of `editorial-signal-v1` and sample/asset rights.
+- Owner visual approval of `precision-cut-v1` and sample/asset rights.
 - Explicit permission before credentialed or paid validation. Fake assembly can
   complete without live evidence, but release readiness cannot.
 

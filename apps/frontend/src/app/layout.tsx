@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "ClipBuilder",
+  title: "ClipBuilder — Grounded AI-assisted clipping",
   description:
-    "Turn long owned or licensed conversations into grounded vertical clips.",
+    "Find grounded moments in owned conversations and keep control of the final vertical edit.",
 };
 
 type RootLayoutProperties = Readonly<{
