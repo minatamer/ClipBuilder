@@ -8,8 +8,11 @@ frontend implementation.
 
 CL-001 supplies strict configuration parsing, explicit application composition,
 a content-free `GET /v1/health`, safe error mapping, and deterministic tests.
-Storage, grants, upload, media jobs, providers, analysis, assembly, editor,
-render, and cleanup arrive only in their owning tickets.
+CL-003 adds a contract-validated synthetic analysis/assembly story plus
+deterministic fake clock, provider, and operation foundations under `src/demo`.
+They run with no credentials or network and are not a live-provider fallback.
+Storage, grants, upload, media jobs, live providers, editor endpoints, render,
+and cleanup arrive only in their owning tickets.
 
 `src/app.ts` constructs Express without listening. `src/server.ts` is the only
 module that reads `process.env` and opens the local port.

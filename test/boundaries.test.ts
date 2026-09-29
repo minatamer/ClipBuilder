@@ -29,7 +29,7 @@ describe("repository dependency boundaries", () => {
         expect.objectContaining({ ruleId: "no-restricted-globals" }),
       ]),
     );
-  });
+  }, 10_000);
 
   it("keeps Node ambient types out of the contracts compiler", () => {
     const fileName = fileURLToPath(

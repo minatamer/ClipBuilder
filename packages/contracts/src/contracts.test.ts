@@ -11,6 +11,7 @@ import {
   mediaDescriptorSchema,
   operationStatusSchema,
   safeErrorSchema,
+  sessionResponseSchema,
   transcriptBundleSchema,
 } from "./index.js";
 
@@ -258,6 +259,38 @@ describe("strict boundary schemas", () => {
 });
 
 describe("safe errors and operation lifecycle", () => {
+  it("publishes assembly-aware session evidence for reconciliation", () => {
+    const session = sessionResponseSchema.parse({
+      sessionId: opaqueId("ses"),
+      mode: "sample",
+      expiresAt: "2026-09-29T11:00:00.000Z",
+      accessState: "active",
+      provenStage: "editor",
+      media: validMedia,
+      activeOperation: null,
+      analysisId: opaqueId("ana"),
+      analysisRevision: opaqueId("rev"),
+      assemblyId: opaqueId("asm"),
+      assemblyRevision: opaqueId("rev"),
+      renderId: null,
+      outputAvailable: false,
+      remaining: {
+        analysisRetries: 1,
+        assistantProposals: 3,
+        renderAttempts: 1,
+      },
+    });
+
+    expect(session).toMatchObject({
+      provenStage: "editor",
+      assemblyId: opaqueId("asm"),
+    });
+    expect(
+      sessionResponseSchema.safeParse({ ...session, assemblyRevision: null })
+        .success,
+    ).toBe(false);
+  });
+
   it("never accepts a reflected message for a public error code", () => {
     const base = {
       code: "INVALID_REQUEST",

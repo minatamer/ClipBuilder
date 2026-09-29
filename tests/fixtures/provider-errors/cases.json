@@ -1,0 +1,17 @@
+[
+  {
+    "key": "timeout-v1",
+    "code": "REQUEST_TIMEOUT",
+    "ruleId": "fixture.timeout"
+  },
+  {
+    "key": "provider-rejection-v1",
+    "code": "TRANSCRIPTION_FAILED",
+    "ruleId": "fixture.provider-rejected"
+  },
+  {
+    "key": "malformed-output-v1",
+    "code": "MODEL_OUTPUT_REJECTED",
+    "ruleId": "fixture.malformed-output"
+  }
+]

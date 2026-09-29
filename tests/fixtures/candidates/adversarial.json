@@ -1,0 +1,14 @@
+[
+  { "key": "invalid-reference-v1", "expectedRuleId": "candidate.reference" },
+  { "key": "duplicate-range-v1", "expectedRuleId": "candidate.distinct-range" },
+  { "key": "invented-quote-v1", "expectedRuleId": "candidate.invented-quote" },
+  { "key": "invented-claim-v1", "expectedRuleId": "candidate.invented-claim" },
+  {
+    "key": "virality-promise-v1",
+    "expectedRuleId": "candidate.performance-claim"
+  },
+  {
+    "key": "no-strong-candidates-v1",
+    "expectedOutcome": "no-strong-candidates"
+  }
+]

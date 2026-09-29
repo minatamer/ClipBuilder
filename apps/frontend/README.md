@@ -17,10 +17,12 @@ client island that changes the active presentation cue in the semantic
 scroll, glass, font, or component dependency was added; CSS provides the visual
 system, progressive enhancement, and reduced-motion/transparency fallbacks.
 
-Session, intake, upload, analysis, candidate, assembly, editor, render, and
-cleanup behavior belongs to later tickets and must not be pre-created here.
-Broad application styling remains gated on explicit owner approval of the
-CL-002 prototype.
+CL-003 adds the complete canonical session reducer, derived selectors,
+allow-listed `sessionStorage` projection, server-evidence reconciliation,
+effect registry, and provider foundation under `src/features/session`. No CL-003
+module is mounted into the visual prototype, so production workflow screens
+remain owned by later tickets. Broad application styling remains gated on
+explicit owner approval of the CL-002 prototype.
 
 ## Commands
 

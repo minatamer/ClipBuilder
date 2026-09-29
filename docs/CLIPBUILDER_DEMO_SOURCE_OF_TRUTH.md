@@ -1127,6 +1127,8 @@ payloads, and SDK objects never enter reducer state or persistence.
 | `bootstrapping` | `RESTORE_EMPTY` | `intake` | Clear invalid local projection. |
 | `bootstrapping` | `RESTORE_VALID(stage)` | reconciled stage | Server evidence and schema version valid. |
 | `bootstrapping` | `RESTORE_EXPIRED` | `expired` | Do not renew grant. |
+| `bootstrapping` | `RESTORE_FATAL` | `fatal` | Preserve a valid projection when the server failure is retryable. |
+| `fatal` | `RETRY_RESTORE` | `bootstrapping` | Retry server reconciliation without discarding the local projection. |
 | `intake` | `SAMPLE_SELECTED` | `candidates` or sample preparation | Deterministic fixture only. |
 | `intake` | `FILE_SELECTED` | `local-inspection` | One local file; no network. |
 | `local-inspection` | `LOCAL_REJECTED` | `local-inspection` | Show bounded validation error. |
@@ -1140,7 +1142,7 @@ payloads, and SDK objects never enter reducer state or persistence.
 | `media-inspecting` | `MEDIA_REJECTED` | `analysis-failed` | Object deletion requested; no provider call. |
 | `analysis-confirmation` | `ANALYZE_CONFIRMED` | `analyzing` | Consume analysis nonce atomically. |
 | `analyzing` | `STAGE_UPDATED` | `analyzing` | Stage may advance, never regress except reconciliation after stale cache. |
-| `analyzing` | `ANALYSIS_SUCCEEDED` | `candidates` or `no-candidates` | Runtime-validated normalized result. |
+| `analyzing` | `ANALYSIS_SUCCEEDED` | `candidates` or `no-candidates` | Active operation and media evidence match; normalized result is runtime-validated. |
 | `analyzing` | `ANALYSIS_FAILED` | `analysis-failed` | Recovery encodes which completed artifact may be reused. |
 | `analyzing` | `CANCEL_REQUESTED` | `analyzing` | Mark cancel requested until server confirms. |
 | `analysis-failed` | `RETRY_ANALYSIS` | `analyzing` | Retry allowance and reusable inputs determine operation plan. |
@@ -1149,7 +1151,7 @@ payloads, and SDK objects never enter reducer state or persistence.
 | `candidates` | `CANDIDATE_SELECTED` | `candidates` | Preview selection; no mutation/provider call. |
 | `candidates` | `BUILD_SELECTED` | `assembling` | Consume assembly nonce and start one selected-range job. |
 | `assembling` | `STAGE_UPDATED` | `assembling` | Shot/face/speaker/visual/asset stage advances monotonically. |
-| `assembling` | `ASSEMBLY_SUCCEEDED` | `editor` | Open the composed manifest, tracks, and assets at revision 0. |
+| `assembling` | `ASSEMBLY_SUCCEEDED` | `editor` | Active operation, analysis revision, and selected range match; open the composed manifest, tracks, and assets at revision 0. |
 | `assembling` | `ASSEMBLY_FAILED` | `assembly-failed` | Do not open a manual fallback editor. |
 | `assembly-failed` | `RETRY_ASSEMBLY` | `assembling` | Bounded allowance and idempotency evidence permit it. |
 | `assembly-failed` | `CHOOSE_ANOTHER` | `candidates` | Keep analysis; discard partial selected-range assets. |
@@ -1162,7 +1164,7 @@ payloads, and SDK objects never enter reducer state or persistence.
 | `editor` | `RENDER_REVIEW` | `render-confirmation` | Manifest valid; no active proposal request. |
 | `render-confirmation` | `BACK_TO_EDIT` | `editor` | No allowance consumed. |
 | `render-confirmation` | `RENDER_CONFIRMED` | `rendering` | Atomically consume render nonce after validation. |
-| `rendering` | `RENDER_SUCCEEDED` | `result` | Output passed validation. |
+| `rendering` | `RENDER_SUCCEEDED` | `result` | Active operation and manifest revision match; output passed validation. |
 | `rendering` | `RENDER_FAILED` | `render-failed` | Preserve source and manifest. |
 | `render-failed` | `RETRY_RENDER` | `rendering` | Retry budget remains and no valid output exists. |
 | any clearable | `CLEAR` | `clearing` | Abort owned local work, then call API. |
@@ -2856,12 +2858,16 @@ type SessionResponse = {
     | "media-inspected"
     | "analyzing"
     | "candidates"
+    | "assembling"
+    | "editor"
     | "rendering"
     | "result";
   media: MediaDescriptor | null;
   activeOperation: OperationStatusV1 | null;
   analysisId: string | null;
   analysisRevision: string | null;
+  assemblyId: string | null;
+  assemblyRevision: string | null;
   renderId: string | null;
   outputAvailable: boolean;
   remaining: {
@@ -2871,6 +2877,11 @@ type SessionResponse = {
   };
 };
 ```
+
+`assemblyId` and `assemblyRevision` are both required once `provenStage` is
+`editor`, `rendering`, or `result`; they remain nullable while assembly is in
+progress. This lets restore accept user-authored editor state only when its
+source assembly revision still matches server evidence.
 
 It does not return signed URLs or full content. Expired/invalid cookie returns
 `401 SESSION_EXPIRED` and clears it.

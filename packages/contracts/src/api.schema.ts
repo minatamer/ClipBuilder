@@ -149,6 +149,8 @@ export const sessionResponseSchema = z
       "media-inspected",
       "analyzing",
       "candidates",
+      "assembling",
+      "editor",
       "rendering",
       "result",
     ]),
@@ -156,6 +158,8 @@ export const sessionResponseSchema = z
     activeOperation: operationStatusSchema.nullable(),
     analysisId: analysisIdSchema.nullable(),
     analysisRevision: revisionIdSchema.nullable(),
+    assemblyId: assemblyIdSchema.nullable(),
+    assemblyRevision: revisionIdSchema.nullable(),
     renderId: renderIdSchema.nullable(),
     outputAvailable: z.boolean(),
     remaining: z
@@ -174,7 +178,26 @@ export const sessionResponseSchema = z
       })
       .strict(),
   })
-  .strict();
+  .strict()
+  .superRefine((session, context) => {
+    if (session.assemblyRevision !== null && session.assemblyId === null) {
+      context.addIssue({
+        code: "custom",
+        message: "An assembly revision requires an assembly identifier.",
+        path: ["assemblyId"],
+      });
+    }
+    if (
+      ["editor", "rendering", "result"].includes(session.provenStage) &&
+      (session.assemblyId === null || session.assemblyRevision === null)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Post-assembly session stages require assembly evidence.",
+        path: ["assemblyRevision"],
+      });
+    }
+  });
 
 export const uploadAuthorizeRequestSchema = z
   .object({
