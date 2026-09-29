@@ -1,0 +1,37 @@
+{
+  "name": "clipbuilder",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI-assisted long-form conversation clipping portfolio demo",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": "^22.13.0 || ^24.0.0",
+    "pnpm": "11.19.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --sort build",
+    "build:backend": "pnpm --filter @clipbuilder/backend build",
+    "build:contracts": "pnpm --filter @clipbuilder/contracts build",
+    "build:frontend": "pnpm --filter @clipbuilder/frontend build",
+    "dev:backend": "pnpm --filter @clipbuilder/backend dev",
+    "dev:frontend": "pnpm --filter @clipbuilder/frontend dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "start:backend": "pnpm --filter @clipbuilder/backend start",
+    "start:frontend": "pnpm --filter @clipbuilder/frontend start",
+    "test:unit": "vitest run --config vitest.config.ts && pnpm -r --sort test:unit",
+    "typecheck": "pnpm --filter @clipbuilder/contracts build && tsc --noEmit -p tsconfig.tests.json && pnpm --filter @clipbuilder/backend typecheck && pnpm --filter @clipbuilder/frontend typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "24.19.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.7",
+    "globals": "17.12.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
+  }
+}

@@ -1,0 +1,75 @@
+# Dependencies and package-manager state
+node_modules/
+.pnpm-store/
+
+# Build, test, and framework output
+.next/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+test-results/
+playwright-report/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*service-account*.json
+*credentials*.json
+
+# Logs and diagnostics
+*.log
+*.log.*
+npm-debug.log*
+pnpm-debug.log*
+
+# Private media, transcripts, generated assets, and output
+private/
+tmp/
+temp/
+artifacts/
+uploads/
+outputs/
+generated/
+transcripts/
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.srt
+*.vtt
+*.ass
+
+# Python/model caches and weights
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+models/
+weights/
+*.pt
+*.pth
+*.onnx
+
+# IDE and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json

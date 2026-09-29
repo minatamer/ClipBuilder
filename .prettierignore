@@ -1,0 +1,6 @@
+**/*.md
+**/next-env.d.ts
+.next/
+coverage/
+dist/
+node_modules/
