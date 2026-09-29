@@ -1,0 +1,73 @@
+Read these documents completely:
+
+1. PORTFOLIO_DEMO_BUILD_PLAYBOOK.md
+2. AI_CLIPPING_DEMO_BRIEF.md
+
+Use the Portfolio Demo Build Playbook as the methodology and quality standard.
+Use the AI Clipping Demo Brief as the product idea, research, and starting
+architecture.
+
+Create a new document named:
+
+AI_CLIPPING_DEMO_SOURCE_OF_TRUTH.md
+
+Do not implement the application yet.
+
+Turn the clipping brief into a complete, implementation-ready product and
+architecture specification at the same level of depth as ScreenPilot's source
+of truth.
+
+The document must define:
+
+- the locked product promise, audience, and portfolio story;
+- demo, MVP, and long-term scope boundaries;
+- the complete end-to-end user journey;
+- every workflow stage and canonical state transition;
+- screen-by-screen desktop and responsive behavior;
+- loading, empty, error, retry, cancellation, and recovery states;
+- editor interactions and reversible AI-assisted editing behavior;
+- upload, transcription, candidate selection, preview, render, download, and
+  deletion flows;
+- exact frontend, backend, contracts, job, fixture, and documentation ownership;
+- a filename-level proposed repository structure;
+- API routes with request, response, validation, and error contracts;
+- shared Zod schemas and bounded field limits;
+- transcription, clip-selection, and edit-manifest contracts;
+- provider adapter responsibilities and deterministic fake behavior;
+- FFmpeg render, crop, caption, and output requirements;
+- temporary Cloud Storage and Cloud Run Job lifecycle behavior;
+- privacy, content rights, logging, cleanup, and retention rules;
+- environment-variable schema with credentials left blank;
+- paid-operation gates, retries, timeouts, concurrency, and spend controls;
+- design thesis, tokens, components, responsive rules, motion, and accessibility;
+- deterministic testing, AI evaluation, media fixtures, and manual acceptance
+  scenarios;
+- deployment architecture and release evidence;
+- an implementation sequence that can later be divided into ticket packets.
+
+Treat all candidate media, filenames, transcripts, captions, and AI output as
+untrusted data. Keep the demo database-free unless a concrete requirement makes
+that impossible. Temporary object storage and one bounded render job are
+allowed because video processing requires them.
+
+Do not blindly copy ScreenPilot-specific behavior. Reuse its decision
+discipline, documentation structure, fake-first strategy, cost controls,
+verification quality, and separation of responsibilities.
+
+Where the clipping brief contains an unresolved choice:
+
+1. Make a clearly labeled recommendation.
+2. Explain the tradeoff briefly.
+3. Mark it as "Proposed - owner approval required."
+4. Do not silently present it as an approved decision.
+
+Ask me only about decisions that would materially change product scope,
+architecture, privacy, cost, or the portfolio story. Make reasonable,
+reversible recommendations for smaller implementation details.
+
+The finished document should allow another implementation agent to build the
+demo without inventing major product or architectural behavior.
+
+If SCREENPILOT_DEMO_SOURCE_OF_TRUTH.md is available, inspect it as a benchmark
+for depth, specificity, acceptance criteria, and decision ownership. Do not
+copy its voice-interview functionality or product-specific contracts.
