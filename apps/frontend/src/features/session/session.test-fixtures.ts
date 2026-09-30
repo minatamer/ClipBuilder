@@ -1,18 +1,17 @@
 import {
   analysisBundleSchema,
   assemblyBundleSchema,
-  editManifestSchema,
+  compositionManifestSchema,
   mediaDescriptorSchema,
   operationStatusSchema,
-  type EditManifestV1,
-  type EditProposalV1,
+  type CompositionManifestV1,
   type OperationStatusV1,
   type SafeError,
 } from "@clipbuilder/contracts";
 
 import type {
+  ClipReviewSession,
   ClippingSessionState,
-  EditorSession,
   SessionIdentity,
 } from "./session.types";
 
@@ -41,12 +40,11 @@ export const media = mediaDescriptorSchema.parse({
   orientation: "landscape",
 });
 
-export const manifest: EditManifestV1 = editManifestSchema.parse({
+export const manifest: CompositionManifestV1 = compositionManifestSchema.parse({
   version: 1,
   baseCandidateId: id("cand", "c"),
   analysisRevision: id("rev", "a"),
   assemblyRevision: id("rev", "b"),
-  revision: 0,
   range: { startWordId: "w_000001", endWordId: "w_000030" },
   speakerFraming: {
     mode: "active-speaker",
@@ -54,46 +52,10 @@ export const manifest: EditManifestV1 = editManifestSchema.parse({
     shotTrackId: id("trk", "s"),
     smoothingProfile: "editorial",
   },
-  captions: {
-    theme: "clean-emphasis",
-    density: "comfortable",
-    corrections: [],
-    emphasizedWordIds: [],
-  },
-  headline: { text: "A bounded headline", placement: "top-safe" },
+  captions: { profile: "clean-emphasis" },
   visuals: { planRevision: id("rev", "v"), cues: [] },
   audio: { normalization: "speech-safe" },
 });
-
-const transcriptWords = [
-  {
-    id: "w_000001",
-    startMs: 0,
-    endMs: 1_000,
-    text: "Start",
-    punctuatedText: "Start",
-    speakerId: "spk_0",
-    confidence: 0.99,
-  },
-  {
-    id: "w_000002",
-    startMs: 5_000,
-    endMs: 6_000,
-    text: "clear",
-    punctuatedText: "clear",
-    speakerId: "spk_0",
-    confidence: 0.99,
-  },
-  {
-    id: "w_000030",
-    startMs: 12_000,
-    endMs: 13_000,
-    text: "payoff",
-    punctuatedText: "payoff.",
-    speakerId: "spk_0",
-    confidence: 0.99,
-  },
-] as const;
 
 export const analysis = analysisBundleSchema.parse({
   version: 1,
@@ -105,7 +67,35 @@ export const analysis = analysisBundleSchema.parse({
     revision: id("rev", "t"),
     language: "en",
     durationMs: 60_000,
-    words: transcriptWords,
+    words: [
+      {
+        id: "w_000001",
+        startMs: 0,
+        endMs: 1_000,
+        text: "Start",
+        punctuatedText: "Start",
+        speakerId: "spk_0",
+        confidence: 0.99,
+      },
+      {
+        id: "w_000002",
+        startMs: 5_000,
+        endMs: 6_000,
+        text: "clear",
+        punctuatedText: "clear",
+        speakerId: "spk_0",
+        confidence: 0.99,
+      },
+      {
+        id: "w_000030",
+        startMs: 12_000,
+        endMs: 13_000,
+        text: "payoff",
+        punctuatedText: "payoff.",
+        speakerId: "spk_0",
+        confidence: 0.99,
+      },
+    ],
     utterances: [
       {
         id: "utt_000001",
@@ -152,6 +142,7 @@ export const analysis = analysisBundleSchema.parse({
 export const noCandidateAnalysis = analysisBundleSchema.parse({
   ...analysis,
   revision: id("rev", "n"),
+  transcript: { ...analysis.transcript, revision: id("rev", "n") },
   candidates: [],
   outcome: "no-strong-candidates",
 });
@@ -217,13 +208,15 @@ export const assembly = assemblyBundleSchema.parse({
   visualPlan: {
     version: 1,
     revision: id("rev", "v"),
-    artDirection: "editorial-signal-v1",
+    artDirection: "precision-cut-v1",
     requests: [],
     cues: [],
     totalCoverageMs: 0,
   },
   assets: [],
-  initialManifest: manifest,
+  manifestId: id("man", "m"),
+  manifestHash: "2".repeat(64),
+  compositionManifest: manifest,
 });
 
 export const failure: SafeError = {
@@ -253,25 +246,28 @@ export function operation(
   });
 }
 
-export function editorSession(
-  currentManifest: EditManifestV1 = manifest,
-): EditorSession {
+export function reviewSession(): ClipReviewSession {
   return {
+    selectedCandidateId: manifest.baseCandidateId,
+    selectedStartWordId: manifest.range.startWordId,
+    selectedEndWordId: manifest.range.endWordId,
     assemblyReference: {
       assemblyId: assembly.assemblyId,
       revision: assembly.revision,
     },
-    manifest: currentManifest,
-    past: [],
-    future: [],
-    proposal: { status: "idle" },
-    playback: { status: "idle", currentTimeMs: 0, panel: "transcript" },
+    manifestReference: {
+      manifestId: assembly.manifestId,
+      manifestHash: assembly.manifestHash,
+      analysisRevision: assembly.analysisRevision,
+      assemblyRevision: assembly.revision,
+    },
+    playback: { status: "idle", currentTimeMs: 0 },
   };
 }
 
-export function editorState(): ClippingSessionState {
+export function reviewState(): ClippingSessionState {
   return {
-    stage: "editor",
+    stage: "clip-review",
     identity,
     analysis: {
       analysisId: analysis.analysisId,
@@ -279,18 +275,7 @@ export function editorState(): ClippingSessionState {
       bundle: analysis,
     },
     assembly,
-    editor: editorSession(),
+    review: reviewSession(),
     diagnosticCode: null,
-  };
-}
-
-export function proposal(baseRevision: number): EditProposalV1 {
-  return {
-    version: 1,
-    proposalId: id("prop", "p"),
-    baseRevision,
-    operations: [{ type: "set-headline", text: "A proposed headline" }],
-    explanation: "Tightens the headline.",
-    limitations: [],
   };
 }

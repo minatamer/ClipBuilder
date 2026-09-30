@@ -37,7 +37,6 @@ const liveAnalysisEnvironment = (): NodeJS.ProcessEnv => ({
   LIVE_ANALYSIS_ENABLED: "true",
   LIVE_ASSEMBLY_ENABLED: "false",
   LIVE_IMAGE_GENERATION_ENABLED: "false",
-  LIVE_EDIT_ASSISTANT_ENABLED: "false",
   LIVE_RENDER_ENABLED: "false",
   OPENAI_API_KEY: "fixture-openai-key",
   DEEPGRAM_API_KEY: "fixture-deepgram-key",

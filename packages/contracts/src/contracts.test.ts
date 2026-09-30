@@ -6,10 +6,13 @@ import {
   SAFE_ERROR_MESSAGES,
   analysisContextSchema,
   analysisBundleSchema,
+  assemblyRequestSchema,
   canOperationTransition,
   isSourceWithinLimitProfile,
   mediaDescriptorSchema,
   operationStatusSchema,
+  publicConfigResponseSchema,
+  renderRequestSchema,
   safeErrorSchema,
   sessionResponseSchema,
   transcriptBundleSchema,
@@ -256,6 +259,63 @@ describe("strict boundary schemas", () => {
       );
     }
   });
+
+  it("exposes zero-to-four candidate limits and accepts only hash-bound automatic renders", () => {
+    const config = publicConfigResponseSchema.parse({
+      mode: "fake",
+      sampleEnabled: true,
+      liveUploadEnabled: false,
+      liveAnalysisEnabled: false,
+      liveAssemblyEnabled: false,
+      liveRenderEnabled: false,
+      limits: {
+        sourceBytes: PUBLIC_LIMITS.maxSourceBytes,
+        sourceSeconds: PUBLIC_LIMITS.maxSourceSeconds,
+        clipSecondsMin: PUBLIC_LIMITS.minClipSeconds,
+        clipSecondsMax: PUBLIC_LIMITS.maxClipSeconds,
+        candidateTarget: 3,
+        candidateMax: 4,
+        renders: 1,
+      },
+      features: {
+        activeSpeakerFraming: true,
+        contextualVisuals: true,
+        trendSignals: false,
+        languages: ["en"],
+      },
+      accessTtlSeconds: 7_200,
+      deletionCopyVersion: "v1",
+    });
+    expect(config.limits).toMatchObject({
+      candidateTarget: 3,
+      candidateMax: 4,
+    });
+
+    const automaticRequest = {
+      analysisId: opaqueId("ana"),
+      assemblyId: opaqueId("asm"),
+      manifestHash: "a".repeat(64),
+      turnstileToken: "fixture-token",
+    };
+    expect(renderRequestSchema.safeParse(automaticRequest).success).toBe(true);
+    expect(
+      renderRequestSchema.safeParse({
+        ...automaticRequest,
+        manifest: { browserAuthored: true },
+      }).success,
+    ).toBe(false);
+    expect(
+      assemblyRequestSchema.safeParse({
+        analysisId: opaqueId("ana"),
+        selection: {
+          candidateId: "manual",
+          startWordId: "w_000001",
+          endWordId: "w_000002",
+        },
+        turnstileToken: "fixture-token",
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("safe errors and operation lifecycle", () => {
@@ -265,30 +325,65 @@ describe("safe errors and operation lifecycle", () => {
       mode: "sample",
       expiresAt: "2026-09-29T11:00:00.000Z",
       accessState: "active",
-      provenStage: "editor",
+      provenStage: "clip-review",
       media: validMedia,
       activeOperation: null,
       analysisId: opaqueId("ana"),
       analysisRevision: opaqueId("rev"),
       assemblyId: opaqueId("asm"),
       assemblyRevision: opaqueId("rev"),
+      manifestId: opaqueId("man"),
+      manifestHash: "a".repeat(64),
       renderId: null,
       outputAvailable: false,
       remaining: {
         analysisRetries: 1,
-        assistantProposals: 3,
         renderAttempts: 1,
       },
     });
 
     expect(session).toMatchObject({
-      provenStage: "editor",
+      provenStage: "clip-review",
       assemblyId: opaqueId("asm"),
+      manifestId: opaqueId("man"),
     });
     expect(
       sessionResponseSchema.safeParse({ ...session, assemblyRevision: null })
         .success,
     ).toBe(false);
+    expect(
+      sessionResponseSchema.safeParse({ ...session, manifestId: null }).success,
+    ).toBe(false);
+    expect(
+      sessionResponseSchema.safeParse({ ...session, manifestHash: null })
+        .success,
+    ).toBe(false);
+    expect(
+      sessionResponseSchema.safeParse({
+        ...session,
+        provenStage: "assembling",
+        assemblyId: null,
+        assemblyRevision: null,
+        manifestId: opaqueId("man"),
+        manifestHash: "a".repeat(64),
+      }).success,
+    ).toBe(false);
+    expect(
+      sessionResponseSchema.safeParse({
+        ...session,
+        provenStage: "result",
+        renderId: null,
+        outputAvailable: false,
+      }).success,
+    ).toBe(false);
+    expect(
+      sessionResponseSchema.safeParse({
+        ...session,
+        provenStage: "result",
+        renderId: opaqueId("rnd"),
+        outputAvailable: true,
+      }).success,
+    ).toBe(true);
   });
 
   it("never accepts a reflected message for a public error code", () => {

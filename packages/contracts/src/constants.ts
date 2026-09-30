@@ -8,8 +8,8 @@ export const PUBLIC_LIMITS = {
   maxClipSeconds: 60,
   maxTranscriptWords: 12_000,
   maxTranscriptCharacters: 200_000,
-  candidateCount: 3,
-  maxAssistantProposals: 3,
+  candidateTarget: 3,
+  maxCandidateCount: 4,
   maxFinalRenders: 1,
   maxOutputBytes: 200 * 1024 * 1024,
 } as const;
@@ -24,8 +24,8 @@ export const OWNER_VALIDATION_LIMITS = {
   maxClipSeconds: 60,
   maxTranscriptWords: 30_000,
   maxTranscriptCharacters: 500_000,
-  candidateCount: 5,
-  maxAssistantProposals: 5,
+  candidateTarget: 3,
+  maxCandidateCount: 4,
   maxFinalRenders: 3,
   maxOutputBytes: 300 * 1024 * 1024,
 } as const;
@@ -38,15 +38,6 @@ export const MEDIA_LIMITS = {
   maxFrameRate: 60,
   maxVideoStreams: 1,
   maxAudioStreams: 1,
-} as const;
-
-export const EDIT_LIMITS = {
-  maxInstructionCharacters: 500,
-  maxOperations: 6,
-  maxHistoryRevisions: 20,
-  maxCaptionCorrections: 100,
-  maxCaptionCorrectionCharacters: 4_000,
-  maxHeadlineCharacters: 80,
 } as const;
 
 export const ASSEMBLY_LIMITS = {

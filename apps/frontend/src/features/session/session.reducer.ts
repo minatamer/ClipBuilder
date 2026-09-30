@@ -2,18 +2,17 @@ import {
   analysisBundleSchema,
   assemblyBundleSchema,
   canOperationTransition,
-  EDIT_LIMITS,
-  editManifestSchema,
   isTerminalOperationState,
   renderIdSchema,
+  type AssemblyBundleV1,
   type OperationStatusV1,
 } from "@clipbuilder/contracts";
 
 import { selectIsClearable } from "./session.selectors";
 import type {
+  ClipReviewSession,
   ClippingSessionEvent,
   ClippingSessionState,
-  EditorSession,
   SessionDiagnosticCode,
 } from "./session.types";
 
@@ -38,6 +37,13 @@ function accept<T extends ClippingSessionState>(state: T): T {
   return { ...state, diagnosticCode: null };
 }
 
+function operationHasKind(
+  operation: OperationStatusV1,
+  kind: OperationStatusV1["kind"],
+): boolean {
+  return operation.kind === kind;
+}
+
 function operationProgresses(
   current: OperationStatusV1,
   next: OperationStatusV1,
@@ -45,16 +51,16 @@ function operationProgresses(
   if (current.operationId !== next.operationId || current.kind !== next.kind) {
     return false;
   }
-  if (isTerminalOperationState(current.state)) {
-    return false;
-  }
+  if (isTerminalOperationState(current.state)) return false;
   const order = OPERATION_STAGE_ORDER[current.kind];
   const currentIndex = order.indexOf(current.stageCode);
   const nextIndex = order.indexOf(next.stageCode);
-  const stateProgresses =
-    current.state === next.state ||
-    canOperationTransition(current.state, next.state);
-  return currentIndex >= 0 && nextIndex >= currentIndex && stateProgresses;
+  return (
+    currentIndex >= 0 &&
+    nextIndex >= currentIndex &&
+    (current.state === next.state ||
+      canOperationTransition(current.state, next.state))
+  );
 }
 
 function acceptsTerminalEvent(
@@ -80,40 +86,26 @@ function resultRevisionMatches(
   );
 }
 
-function snapshot(analysis: { analysisId: string; revision: string }): {
-  analysisId: string;
-  revision: string;
-  bundle: null;
-} {
-  return { ...analysis, bundle: null };
+function snapshot(analysis: { analysisId: string; revision: string }) {
+  return { ...analysis, bundle: null as null };
 }
 
-function createEditor(
-  manifest: EditorSession["manifest"],
-  assemblyReference: EditorSession["assemblyReference"],
-): EditorSession {
+function createReview(assembly: AssemblyBundleV1): ClipReviewSession {
   return {
-    assemblyReference,
-    manifest,
-    past: [],
-    future: [],
-    proposal: { status: "idle" },
-    playback: { status: "idle", currentTimeMs: 0, panel: "transcript" },
-  };
-}
-
-function commitManifest(
-  editor: EditorSession,
-  manifest: EditorSession["manifest"],
-): EditorSession {
-  return {
-    ...editor,
-    manifest,
-    past: [...editor.past, editor.manifest].slice(
-      -EDIT_LIMITS.maxHistoryRevisions,
-    ),
-    future: [],
-    proposal: { status: "idle" },
+    selectedCandidateId: assembly.compositionManifest.baseCandidateId,
+    selectedStartWordId: assembly.selectedStartWordId,
+    selectedEndWordId: assembly.selectedEndWordId,
+    assemblyReference: {
+      assemblyId: assembly.assemblyId,
+      revision: assembly.revision,
+    },
+    manifestReference: {
+      manifestId: assembly.manifestId,
+      manifestHash: assembly.manifestHash,
+      analysisRevision: assembly.analysisRevision,
+      assemblyRevision: assembly.revision,
+    },
+    playback: { status: "idle", currentTimeMs: 0 },
   };
 }
 
@@ -147,9 +139,7 @@ export function clippingSessionReducer(
           diagnosticCode: null,
         });
       }
-      if (event.type === "RESTORE_VALID") {
-        return accept(event.state);
-      }
+      if (event.type === "RESTORE_VALID") return accept(event.state);
       if (event.type === "RESTORE_EXPIRED") {
         return accept({
           stage: "expired",
@@ -175,23 +165,27 @@ export function clippingSessionReducer(
         });
       }
       if (event.type === "SAMPLE_SELECTED" && state.availability.sample) {
+        const parsed = analysisBundleSchema.safeParse(event.analysis);
+        if (!parsed.success) return reject(state);
         const analysis = {
-          analysisId: event.analysis.analysisId,
-          revision: event.analysis.revision,
-          bundle: event.analysis,
+          analysisId: parsed.data.analysisId,
+          revision: parsed.data.revision,
+          bundle: parsed.data,
         };
-        return accept({
-          stage:
-            event.analysis.outcome === "candidates"
-              ? "candidates"
-              : "no-candidates",
-          identity: event.identity,
-          analysis,
-          ...(event.analysis.outcome === "candidates"
-            ? { selectedId: null }
-            : {}),
-          diagnosticCode: null,
-        } as ClippingSessionState);
+        return parsed.data.outcome === "candidates"
+          ? accept({
+              stage: "candidates",
+              identity: event.identity,
+              analysis,
+              selectedId: null,
+              diagnosticCode: null,
+            })
+          : accept({
+              stage: "no-candidates",
+              identity: event.identity,
+              analysis,
+              diagnosticCode: null,
+            });
       }
       return reject(state);
 
@@ -258,7 +252,10 @@ export function clippingSessionReducer(
           upload: { ...state.upload, bytesSent: event.bytesSent },
         });
       }
-      if (event.type === "UPLOAD_COMPLETE") {
+      if (
+        event.type === "UPLOAD_COMPLETE" &&
+        operationHasKind(event.operation, "media-inspection")
+      ) {
         return accept({
           stage: "media-inspecting",
           identity: state.identity,
@@ -302,7 +299,10 @@ export function clippingSessionReducer(
       return reject(state);
 
     case "analysis-confirmation":
-      if (event.type === "ANALYZE_CONFIRMED") {
+      if (
+        event.type === "ANALYZE_CONFIRMED" &&
+        operationHasKind(event.operation, "analysis")
+      ) {
         return accept({
           stage: "analyzing",
           identity: state.identity,
@@ -342,34 +342,35 @@ export function clippingSessionReducer(
         ) {
           return reject(state);
         }
-        const bundle = parsed.data;
         const analysis = {
-          analysisId: bundle.analysisId,
-          revision: bundle.revision,
-          bundle,
+          analysisId: parsed.data.analysisId,
+          revision: parsed.data.revision,
+          bundle: parsed.data,
         };
-        return accept({
-          stage:
-            bundle.outcome === "candidates" ? "candidates" : "no-candidates",
-          identity: state.identity,
-          analysis,
-          ...(event.analysis.outcome === "candidates"
-            ? { selectedId: null }
-            : {}),
-          diagnosticCode: null,
-        } as ClippingSessionState);
+        return parsed.data.outcome === "candidates"
+          ? accept({
+              stage: "candidates",
+              identity: state.identity,
+              analysis,
+              selectedId: null,
+              diagnosticCode: null,
+            })
+          : accept({
+              stage: "no-candidates",
+              identity: state.identity,
+              analysis,
+              diagnosticCode: null,
+            });
       }
-      if (event.type === "ANALYSIS_FAILED") {
-        if (
-          !acceptsTerminalEvent(
-            state.operation,
-            event.operationId,
-            "analysis",
-            "failed",
-          )
-        ) {
-          return reject(state);
-        }
+      if (
+        event.type === "ANALYSIS_FAILED" &&
+        acceptsTerminalEvent(
+          state.operation,
+          event.operationId,
+          "analysis",
+          "failed",
+        )
+      ) {
         return accept({
           stage: "analysis-failed",
           identity: state.identity,
@@ -381,7 +382,11 @@ export function clippingSessionReducer(
       return reject(state);
 
     case "analysis-failed":
-      if (event.type === "RETRY_ANALYSIS" && state.recovery !== null) {
+      if (
+        event.type === "RETRY_ANALYSIS" &&
+        state.recovery !== null &&
+        operationHasKind(event.operation, "analysis")
+      ) {
         return accept({
           stage: "analyzing",
           identity: state.identity,
@@ -393,28 +398,12 @@ export function clippingSessionReducer(
       return reject(state);
 
     case "no-candidates":
-      if (event.type === "MANUAL_RANGE_VALID") {
-        return accept({
-          stage: "assembling",
-          identity: state.identity,
-          operation: event.operation,
-          lastKnown: {
-            analysis: state.analysis,
-            selectedId: "manual",
-            startWordId: event.startWordId,
-            endWordId: event.endWordId,
-          },
-          diagnosticCode: null,
-        });
-      }
       return reject(state);
 
     case "candidates":
       if (event.type === "CANDIDATE_SELECTED") {
-        if (state.analysis.bundle === null) {
-          return reject(state);
-        }
         if (
+          state.analysis.bundle === null ||
           !state.analysis.bundle.candidates.some(
             (candidate) => candidate.id === event.candidateId,
           )
@@ -426,7 +415,8 @@ export function clippingSessionReducer(
       if (
         event.type === "BUILD_SELECTED" &&
         state.selectedId !== null &&
-        state.analysis.bundle !== null
+        state.analysis.bundle !== null &&
+        operationHasKind(event.operation, "assembly")
       ) {
         const candidate = state.analysis.bundle.candidates.find(
           (item) => item.id === state.selectedId,
@@ -473,35 +463,32 @@ export function clippingSessionReducer(
           parsed.data.analysisRevision !== state.lastKnown.analysis.revision ||
           parsed.data.selectedStartWordId !== state.lastKnown.startWordId ||
           parsed.data.selectedEndWordId !== state.lastKnown.endWordId ||
-          parsed.data.initialManifest.baseCandidateId !==
+          parsed.data.compositionManifest.baseCandidateId !==
             state.lastKnown.selectedId
         ) {
-          return reject(state);
+          return reject(
+            state,
+            parsed.success ? "invalid-transition" : "invalid-manifest",
+          );
         }
-        const assembly = parsed.data;
         return accept({
-          stage: "editor",
+          stage: "clip-review",
           identity: state.identity,
           analysis: state.lastKnown.analysis,
-          assembly,
-          editor: createEditor(assembly.initialManifest, {
-            assemblyId: assembly.assemblyId,
-            revision: assembly.revision,
-          }),
+          assembly: parsed.data,
+          review: createReview(parsed.data),
           diagnosticCode: null,
         });
       }
-      if (event.type === "ASSEMBLY_FAILED") {
-        if (
-          !acceptsTerminalEvent(
-            state.operation,
-            event.operationId,
-            "assembly",
-            "failed",
-          )
-        ) {
-          return reject(state);
-        }
+      if (
+        event.type === "ASSEMBLY_FAILED" &&
+        acceptsTerminalEvent(
+          state.operation,
+          event.operationId,
+          "assembly",
+          "failed",
+        )
+      ) {
         return accept({
           stage: "assembly-failed",
           identity: state.identity,
@@ -516,7 +503,10 @@ export function clippingSessionReducer(
       return reject(state);
 
     case "assembly-failed":
-      if (event.type === "RETRY_ASSEMBLY") {
+      if (
+        event.type === "RETRY_ASSEMBLY" &&
+        operationHasKind(event.operation, "assembly")
+      ) {
         return accept({
           stage: "assembling",
           identity: state.identity,
@@ -541,209 +531,79 @@ export function clippingSessionReducer(
       }
       return reject(state);
 
-    case "editor":
-      if (event.type === "MANUAL_EDIT") {
-        if (!editManifestSchema.safeParse(event.manifest).success) {
-          return reject(state, "invalid-manifest");
-        }
+    case "clip-review":
+      if (event.type === "PLAYBACK_REQUESTED" && event.currentTimeMs >= 0) {
         return accept({
           ...state,
-          editor: commitManifest(state.editor, event.manifest),
-        });
-      }
-      if (event.type === "AI_PROPOSAL_REQUESTED") {
-        if (event.baseRevision !== state.editor.manifest.revision) {
-          return reject(state, "stale-proposal");
-        }
-        return accept({
-          ...state,
-          editor: {
-            ...state.editor,
-            proposal: {
-              status: "requesting",
-              requestId: event.requestId,
-              baseRevision: event.baseRevision,
-            },
-          },
-        });
-      }
-      if (event.type === "AI_PROPOSAL_RECEIVED") {
-        if (
-          state.editor.proposal.status !== "requesting" ||
-          event.proposal.baseRevision !== state.editor.manifest.revision ||
-          !editManifestSchema.safeParse(event.proposedManifest).success
-        ) {
-          return reject(state, "stale-proposal");
-        }
-        return accept({
-          ...state,
-          editor: {
-            ...state.editor,
-            proposal: {
-              status: "succeeded",
-              proposal: event.proposal,
-              proposedManifest: event.proposedManifest,
-              changedFields: [...new Set(event.changedFields)].slice(0, 10),
-            },
-          },
-        });
-      }
-      if (event.type === "AI_PROPOSAL_FAILED") {
-        return state.editor.proposal.status === "requesting"
-          ? accept({
-              ...state,
-              editor: {
-                ...state.editor,
-                proposal: { status: "failed", failure: event.failure },
-              },
-            })
-          : reject(state);
-      }
-      if (event.type === "AI_PROPOSAL_CANCEL_REQUESTED") {
-        return state.editor.proposal.status === "requesting"
-          ? accept({
-              ...state,
-              editor: {
-                ...state.editor,
-                proposal: {
-                  status: "cancel-requested",
-                  requestId: state.editor.proposal.requestId,
-                },
-              },
-            })
-          : reject(state);
-      }
-      if (event.type === "APPLY_PROPOSAL") {
-        if (
-          state.editor.proposal.status !== "succeeded" ||
-          state.editor.proposal.proposal.baseRevision !==
-            state.editor.manifest.revision
-        ) {
-          return reject(state, "stale-proposal");
-        }
-        return accept({
-          ...state,
-          editor: commitManifest(
-            state.editor,
-            state.editor.proposal.proposedManifest,
-          ),
-        });
-      }
-      if (event.type === "DISMISS_PROPOSAL") {
-        return accept({
-          ...state,
-          editor: { ...state.editor, proposal: { status: "idle" } },
-        });
-      }
-      if (event.type === "UNDO" && state.editor.past.length > 0) {
-        const previous = state.editor.past.at(-1);
-        if (previous === undefined) return reject(state);
-        return accept({
-          ...state,
-          editor: {
-            ...state.editor,
-            manifest: previous,
-            past: state.editor.past.slice(0, -1),
-            future: [state.editor.manifest, ...state.editor.future].slice(
-              0,
-              EDIT_LIMITS.maxHistoryRevisions,
-            ),
-            proposal: { status: "idle" },
-          },
-        });
-      }
-      if (event.type === "REDO" && state.editor.future.length > 0) {
-        const next = state.editor.future[0];
-        if (next === undefined) return reject(state);
-        return accept({
-          ...state,
-          editor: {
-            ...state.editor,
-            manifest: next,
-            past: [...state.editor.past, state.editor.manifest].slice(
-              -EDIT_LIMITS.maxHistoryRevisions,
-            ),
-            future: state.editor.future.slice(1),
-            proposal: { status: "idle" },
-          },
-        });
-      }
-      if (event.type === "PLAYBACK_REQUESTED") {
-        return accept({
-          ...state,
-          editor: {
-            ...state.editor,
+          review: {
+            ...state.review,
             playback: {
               status: "requesting",
-              currentTimeMs: Math.max(0, Math.floor(event.currentTimeMs)),
-              panel: event.panel,
+              currentTimeMs: event.currentTimeMs,
             },
           },
         });
       }
-      if (event.type === "PLAYBACK_UPDATED") {
+      if (
+        event.type === "PLAYBACK_UPDATED" &&
+        state.review.playback.status === "requesting" &&
+        event.currentTimeMs >= 0
+      ) {
         return accept({
           ...state,
-          editor: {
-            ...state.editor,
+          review: {
+            ...state.review,
             playback: {
               status: "succeeded",
-              currentTimeMs: Math.max(0, Math.floor(event.currentTimeMs)),
-              panel: event.panel,
+              currentTimeMs: event.currentTimeMs,
             },
           },
         });
       }
-      if (event.type === "PLAYBACK_FAILED") {
-        return state.editor.playback.status === "requesting"
-          ? accept({
-              ...state,
-              editor: {
-                ...state.editor,
-                playback: {
-                  status: "failed",
-                  currentTimeMs: state.editor.playback.currentTimeMs,
-                  panel: state.editor.playback.panel,
-                  failure: event.failure,
-                },
-              },
-            })
-          : reject(state);
+      if (
+        event.type === "PLAYBACK_FAILED" &&
+        state.review.playback.status === "requesting"
+      ) {
+        return accept({
+          ...state,
+          review: {
+            ...state.review,
+            playback: {
+              status: "failed",
+              currentTimeMs: state.review.playback.currentTimeMs,
+              failure: event.failure,
+            },
+          },
+        });
       }
-      if (event.type === "PLAYBACK_CANCEL_REQUESTED") {
-        return state.editor.playback.status === "requesting"
-          ? accept({
-              ...state,
-              editor: {
-                ...state.editor,
-                playback: {
-                  status: "cancel-requested",
-                  currentTimeMs: state.editor.playback.currentTimeMs,
-                  panel: state.editor.playback.panel,
-                },
-              },
-            })
-          : reject(state);
+      if (
+        event.type === "PLAYBACK_CANCEL_REQUESTED" &&
+        state.review.playback.status === "requesting"
+      ) {
+        return accept({
+          ...state,
+          review: {
+            ...state.review,
+            playback: {
+              status: "cancel-requested",
+              currentTimeMs: state.review.playback.currentTimeMs,
+            },
+          },
+        });
       }
       if (event.type === "RENDER_REVIEW") {
-        if (
-          state.editor.proposal.status === "requesting" ||
-          state.editor.proposal.status === "cancel-requested"
-        ) {
-          return reject(state);
-        }
-        return accept({
-          ...state,
-          stage: "render-confirmation",
-        });
+        return accept({ ...state, stage: "render-confirmation" });
       }
       return reject(state);
 
     case "render-confirmation":
-      if (event.type === "BACK_TO_EDIT") {
-        return accept({ ...state, stage: "editor" });
+      if (event.type === "BACK_TO_REVIEW") {
+        return accept({ ...state, stage: "clip-review" });
       }
-      if (event.type === "RENDER_CONFIRMED") {
+      if (
+        event.type === "RENDER_CONFIRMED" &&
+        operationHasKind(event.operation, "render")
+      ) {
         return accept({
           stage: "rendering",
           identity: state.identity,
@@ -751,7 +611,7 @@ export function clippingSessionReducer(
           lastKnown: {
             analysis: state.analysis,
             assembly: state.assembly,
-            editor: state.editor,
+            review: state.review,
           },
           diagnosticCode: null,
         });
@@ -772,36 +632,45 @@ export function clippingSessionReducer(
             "render",
             "succeeded",
           ) ||
-          event.manifestRevision !== state.lastKnown.editor.manifest.revision ||
+          event.manifestHash !==
+            state.lastKnown.review.manifestReference.manifestHash ||
           !renderIdSchema.safeParse(event.renderId).success
         ) {
-          return reject(state);
+          return reject(state, "invalid-manifest");
         }
         return accept({
           stage: "result",
           identity: state.identity,
           result: { renderId: event.renderId, outputAvailable: true },
-          editorSummary: { revision: state.lastKnown.editor.manifest.revision },
+          clipSummary: {
+            analysisId: state.lastKnown.analysis.analysisId,
+            analysisRevision: state.lastKnown.analysis.revision,
+            assemblyId: state.lastKnown.review.assemblyReference.assemblyId,
+            assemblyRevision: state.lastKnown.review.assemblyReference.revision,
+            manifestId: state.lastKnown.review.manifestReference.manifestId,
+            manifestHash: state.lastKnown.review.manifestReference.manifestHash,
+            selectedCandidateId: state.lastKnown.review.selectedCandidateId,
+            selectedStartWordId: state.lastKnown.review.selectedStartWordId,
+            selectedEndWordId: state.lastKnown.review.selectedEndWordId,
+          },
           diagnosticCode: null,
         });
       }
-      if (event.type === "RENDER_FAILED") {
-        if (
-          !acceptsTerminalEvent(
-            state.operation,
-            event.operationId,
-            "render",
-            "failed",
-          )
-        ) {
-          return reject(state);
-        }
+      if (
+        event.type === "RENDER_FAILED" &&
+        acceptsTerminalEvent(
+          state.operation,
+          event.operationId,
+          "render",
+          "failed",
+        )
+      ) {
         return accept({
           stage: "render-failed",
           identity: state.identity,
           analysis: state.lastKnown.analysis,
           assembly: state.lastKnown.assembly,
-          editor: state.lastKnown.editor,
+          review: state.lastKnown.review,
           failure: event.failure,
           diagnosticCode: null,
         });
@@ -809,7 +678,10 @@ export function clippingSessionReducer(
       return reject(state);
 
     case "render-failed":
-      if (event.type === "RETRY_RENDER") {
+      if (
+        event.type === "RETRY_RENDER" &&
+        operationHasKind(event.operation, "render")
+      ) {
         return accept({
           stage: "rendering",
           identity: state.identity,
@@ -817,7 +689,7 @@ export function clippingSessionReducer(
           lastKnown: {
             analysis: state.analysis,
             assembly: state.assembly,
-            editor: state.editor,
+            review: state.review,
           },
           diagnosticCode: null,
         });
@@ -849,10 +721,7 @@ export function clippingSessionReducer(
 
     case "fatal":
       if (event.type === "RETRY_RESTORE" && state.failure.retryable) {
-        return accept({
-          stage: "bootstrapping",
-          diagnosticCode: null,
-        });
+        return accept({ stage: "bootstrapping", diagnosticCode: null });
       }
       return reject(state);
   }

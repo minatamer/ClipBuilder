@@ -348,7 +348,7 @@ describe("representative visual and speaker cross-references", () => {
       visualPlanSchema.safeParse({
         version: 1,
         revision: opaqueId("rev"),
-        artDirection: "editorial-signal-v1",
+        artDirection: "precision-cut-v1",
         requests: [
           {
             id: opaqueId("vreq", "a"),
@@ -359,7 +359,7 @@ describe("representative visual and speaker cross-references", () => {
             equationTex: null,
             exactText: "42 percent",
             background: "opaque",
-            artDirection: "editorial-signal-v1",
+            artDirection: "precision-cut-v1",
           },
         ],
         cues: [

@@ -70,7 +70,6 @@ export const environmentShape = {
   LIVE_ANALYSIS_ENABLED: booleanValue(false),
   LIVE_ASSEMBLY_ENABLED: booleanValue(false),
   LIVE_IMAGE_GENERATION_ENABLED: booleanValue(false),
-  LIVE_EDIT_ASSISTANT_ENABLED: booleanValue(false),
   LIVE_RENDER_ENABLED: booleanValue(false),
   ACTIVE_SPEAKER_ENABLED: booleanValue(true),
   TREND_SIGNALS_ENABLED: booleanValue(false),
@@ -135,14 +134,12 @@ export const environmentShape = {
   OPENAI_API_KEY: optionalString(1_024),
   OPENAI_CLIP_MODEL: z.string().min(1).max(100).default("gpt-6-sol"),
   OPENAI_VISUAL_MODEL: z.string().min(1).max(100).default("gpt-6-sol"),
-  OPENAI_EDIT_MODEL: z.string().min(1).max(100).default("gpt-6-sol"),
   OPENAI_IMAGE_MODEL: z.string().min(1).max(100).default("gpt-image-2.5-flare"),
   OPENAI_IMAGE_QUALITY: z.enum(["low", "medium", "high"]).default("medium"),
   OPENAI_REASONING_EFFORT: z.enum(["low", "medium", "high"]).default("low"),
   OPENAI_TIMEOUT_MS: integerValue(60_000, 5_000, 120_000),
   OPENAI_MAX_OUTPUT_TOKENS_CLIP: integerValue(3_000, 1, 3_000),
   OPENAI_MAX_OUTPUT_TOKENS_VISUAL: integerValue(1_800, 1, 1_800),
-  OPENAI_MAX_OUTPUT_TOKENS_EDIT: integerValue(1_500, 1, 1_500),
   OPENAI_IMAGE_TIMEOUT_MS: integerValue(120_000, 5_000, 120_000),
   OPENAI_IMAGE_MAX_CALLS: integerValue(
     ASSEMBLY_LIMITS.maxGeneratedImageCalls,
@@ -197,11 +194,6 @@ export const environmentShape = {
     0,
     ASSEMBLY_LIMITS.maxVisualCoveragePercent,
   ),
-  MAX_ASSISTANT_PROPOSALS_PER_SESSION: integerValue(
-    PUBLIC_LIMITS.maxAssistantProposals,
-    0,
-    OWNER_VALIDATION_LIMITS.maxAssistantProposals,
-  ),
   MAX_RENDER_ATTEMPTS_PER_SESSION: integerValue(
     PUBLIC_LIMITS.maxFinalRenders,
     0,
@@ -216,7 +208,6 @@ export const environmentShape = {
   RATE_UPLOAD_AUTH_MAX: integerValue(3, 0, 3),
   RATE_ANALYSIS_MAX: integerValue(1, 0, 1),
   RATE_ASSEMBLY_MAX: integerValue(1, 0, 1),
-  RATE_EDIT_MAX: integerValue(3, 0, 3),
   RATE_RENDER_MAX: integerValue(1, 0, 1),
 } satisfies z.ZodRawShape;
 
@@ -233,7 +224,6 @@ export const environmentSchema = rawEnvironmentSchema
       environment.LIVE_ANALYSIS_ENABLED,
       environment.LIVE_ASSEMBLY_ENABLED,
       environment.LIVE_IMAGE_GENERATION_ENABLED,
-      environment.LIVE_EDIT_ASSISTANT_ENABLED,
       environment.LIVE_RENDER_ENABLED,
     ];
     const anyLiveFeature = liveFlags.some(Boolean);
@@ -308,9 +298,7 @@ export const environmentSchema = rawEnvironmentSchema
     }
 
     const needsOpenAi =
-      environment.LIVE_ANALYSIS_ENABLED ||
-      environment.LIVE_ASSEMBLY_ENABLED ||
-      environment.LIVE_EDIT_ASSISTANT_ENABLED;
+      environment.LIVE_ANALYSIS_ENABLED || environment.LIVE_ASSEMBLY_ENABLED;
     if (needsOpenAi && !hasValue(environment.OPENAI_API_KEY)) {
       issue(
         "Enabled live model features require OpenAI configuration.",
@@ -420,15 +408,6 @@ export const environmentSchema = rawEnvironmentSchema
       );
     }
     if (
-      environment.MAX_ASSISTANT_PROPOSALS_PER_SESSION >
-      limitCeiling.maxAssistantProposals
-    ) {
-      issue(
-        "Runtime proposal allowance exceeds the compiled profile ceiling.",
-        "MAX_ASSISTANT_PROPOSALS_PER_SESSION",
-      );
-    }
-    if (
       environment.MAX_RENDER_ATTEMPTS_PER_SESSION > limitCeiling.maxFinalRenders
     ) {
       issue(
@@ -461,7 +440,6 @@ export const environmentSchema = rawEnvironmentSchema
       liveAnalysis: environment.LIVE_ANALYSIS_ENABLED,
       liveAssembly: environment.LIVE_ASSEMBLY_ENABLED,
       liveImageGeneration: environment.LIVE_IMAGE_GENERATION_ENABLED,
-      liveEditAssistant: environment.LIVE_EDIT_ASSISTANT_ENABLED,
       liveRender: environment.LIVE_RENDER_ENABLED,
       activeSpeaker: environment.ACTIVE_SPEAKER_ENABLED,
       trendSignals: environment.TREND_SIGNALS_ENABLED,
@@ -519,14 +497,12 @@ export const environmentSchema = rawEnvironmentSchema
       apiKey: environment.OPENAI_API_KEY ?? null,
       clipModel: environment.OPENAI_CLIP_MODEL,
       visualModel: environment.OPENAI_VISUAL_MODEL,
-      editModel: environment.OPENAI_EDIT_MODEL,
       imageModel: environment.OPENAI_IMAGE_MODEL,
       imageQuality: environment.OPENAI_IMAGE_QUALITY,
       reasoningEffort: environment.OPENAI_REASONING_EFFORT,
       timeoutMs: environment.OPENAI_TIMEOUT_MS,
       maxOutputTokensClip: environment.OPENAI_MAX_OUTPUT_TOKENS_CLIP,
       maxOutputTokensVisual: environment.OPENAI_MAX_OUTPUT_TOKENS_VISUAL,
-      maxOutputTokensEdit: environment.OPENAI_MAX_OUTPUT_TOKENS_EDIT,
       imageTimeoutMs: environment.OPENAI_IMAGE_TIMEOUT_MS,
       imageMaxCalls: environment.OPENAI_IMAGE_MAX_CALLS,
       store: environment.OPENAI_STORE,
@@ -548,8 +524,6 @@ export const environmentSchema = rawEnvironmentSchema
       visualCuesPerClip: environment.MAX_VISUAL_CUES_PER_CLIP,
       imageCallsPerAssembly: environment.MAX_IMAGE_CALLS_PER_ASSEMBLY,
       visualCoveragePercent: environment.MAX_VISUAL_COVERAGE_PERCENT,
-      assistantProposalsPerSession:
-        environment.MAX_ASSISTANT_PROPOSALS_PER_SESSION,
       renderAttemptsPerSession: environment.MAX_RENDER_ATTEMPTS_PER_SESSION,
     },
     admission: {
@@ -562,7 +536,6 @@ export const environmentSchema = rawEnvironmentSchema
       rateUploadAuthorization: environment.RATE_UPLOAD_AUTH_MAX,
       rateAnalysis: environment.RATE_ANALYSIS_MAX,
       rateAssembly: environment.RATE_ASSEMBLY_MAX,
-      rateEdit: environment.RATE_EDIT_MAX,
       rateRender: environment.RATE_RENDER_MAX,
     },
   }));

@@ -1,18 +1,13 @@
 import type {
   AnalysisBundleV1,
   AssemblyBundleV1,
-  EditManifestV1,
-  EditProposalV1,
   MediaDescriptor,
   OperationStatusV1,
   SafeError,
 } from "@clipbuilder/contracts";
 
 export type SessionDiagnosticCode =
-  | "invalid-transition"
-  | "non-monotonic-progress"
-  | "stale-proposal"
-  | "invalid-manifest";
+  "invalid-transition" | "non-monotonic-progress" | "invalid-manifest";
 
 export type SessionAvailability = {
   sample: boolean;
@@ -32,10 +27,7 @@ export type LocalSourceSummary = {
   validation:
     | { status: "pending" }
     | { status: "accepted" }
-    | {
-        status: "rejected";
-        reasonCode: "type" | "size" | "duration";
-      };
+    | { status: "rejected"; reasonCode: "type" | "size" | "duration" };
 };
 
 export type UploadState =
@@ -50,34 +42,13 @@ export type UploadState =
   | { status: "failed"; failure: SafeError }
   | { status: "cancel-requested"; uploadId: string };
 
-export type ProposalDiffField =
-  "range" | "duration" | "captions" | "headline" | "visuals";
-
-export type ProposalState =
-  | { status: "idle" }
-  | { status: "requesting"; requestId: string; baseRevision: number }
-  | {
-      status: "succeeded";
-      proposal: EditProposalV1;
-      proposedManifest: EditManifestV1;
-      changedFields: ProposalDiffField[];
-    }
-  | { status: "failed"; failure: SafeError }
-  | { status: "cancel-requested"; requestId: string };
-
 export type PlaybackState =
-  | { status: "idle"; currentTimeMs: 0; panel: "transcript" }
+  | { status: "idle"; currentTimeMs: 0 }
   | {
       status: "requesting" | "succeeded" | "cancel-requested";
       currentTimeMs: number;
-      panel: "transcript" | "captions" | "visuals";
     }
-  | {
-      status: "failed";
-      currentTimeMs: number;
-      panel: "transcript" | "captions" | "visuals";
-      failure: SafeError;
-    };
+  | { status: "failed"; currentTimeMs: number; failure: SafeError };
 
 export type CleanupState =
   | { status: "idle" }
@@ -86,12 +57,17 @@ export type CleanupState =
   | { status: "failed"; failure: SafeError }
   | { status: "cancel-requested" };
 
-export type EditorSession = {
+export type ClipReviewSession = {
+  selectedCandidateId: string;
+  selectedStartWordId: string;
+  selectedEndWordId: string;
   assemblyReference: { assemblyId: string; revision: string };
-  manifest: EditManifestV1;
-  past: EditManifestV1[];
-  future: EditManifestV1[];
-  proposal: ProposalState;
+  manifestReference: {
+    manifestId: string;
+    manifestHash: string;
+    analysisRevision: string;
+    assemblyRevision: string;
+  };
   playback: PlaybackState;
 };
 
@@ -170,18 +146,18 @@ type SessionStage =
       failure: SafeError;
     }
   | {
-      stage: "editor";
+      stage: "clip-review";
       identity: SessionIdentity;
       analysis: AnalysisSnapshot;
       assembly: AssemblyBundleV1 | null;
-      editor: EditorSession;
+      review: ClipReviewSession;
     }
   | {
       stage: "render-confirmation";
       identity: SessionIdentity;
       analysis: AnalysisSnapshot;
       assembly: AssemblyBundleV1 | null;
-      editor: EditorSession;
+      review: ClipReviewSession;
     }
   | {
       stage: "rendering";
@@ -190,7 +166,7 @@ type SessionStage =
       lastKnown: {
         analysis: AnalysisSnapshot;
         assembly: AssemblyBundleV1 | null;
-        editor: EditorSession;
+        review: ClipReviewSession;
       };
     }
   | {
@@ -198,14 +174,24 @@ type SessionStage =
       identity: SessionIdentity;
       analysis: AnalysisSnapshot;
       assembly: AssemblyBundleV1 | null;
-      editor: EditorSession;
+      review: ClipReviewSession;
       failure: SafeError;
     }
   | {
       stage: "result";
       identity: SessionIdentity;
       result: { renderId: string; outputAvailable: true };
-      editorSummary: { revision: number };
+      clipSummary: {
+        analysisId: string;
+        analysisRevision: string;
+        assemblyId: string;
+        assemblyRevision: string;
+        manifestId: string;
+        manifestHash: string;
+        selectedCandidateId: string;
+        selectedStartWordId: string;
+        selectedEndWordId: string;
+      };
     }
   | {
       stage: "clearing";
@@ -254,12 +240,6 @@ export type ClippingSessionEvent =
   | { type: "ANALYSIS_FAILED"; operationId: string; failure: SafeError }
   | { type: "RETRY_ANALYSIS"; operation: OperationStatusV1 }
   | { type: "CANCEL_REQUESTED" }
-  | {
-      type: "MANUAL_RANGE_VALID";
-      operation: OperationStatusV1;
-      startWordId: string;
-      endWordId: string;
-    }
   | { type: "CANDIDATE_SELECTED"; candidateId: string }
   | {
       type: "BUILD_SELECTED";
@@ -275,43 +255,17 @@ export type ClippingSessionEvent =
   | { type: "ASSEMBLY_FAILED"; operationId: string; failure: SafeError }
   | { type: "RETRY_ASSEMBLY"; operation: OperationStatusV1 }
   | { type: "CHOOSE_ANOTHER" }
-  | { type: "MANUAL_EDIT"; manifest: EditManifestV1 }
-  | {
-      type: "AI_PROPOSAL_REQUESTED";
-      requestId: string;
-      baseRevision: number;
-    }
-  | {
-      type: "AI_PROPOSAL_RECEIVED";
-      proposal: EditProposalV1;
-      proposedManifest: EditManifestV1;
-      changedFields: ProposalDiffField[];
-    }
-  | { type: "AI_PROPOSAL_FAILED"; failure: SafeError }
-  | { type: "AI_PROPOSAL_CANCEL_REQUESTED" }
-  | { type: "APPLY_PROPOSAL" }
-  | { type: "DISMISS_PROPOSAL" }
-  | { type: "UNDO" }
-  | { type: "REDO" }
-  | {
-      type: "PLAYBACK_REQUESTED";
-      currentTimeMs: number;
-      panel: "transcript" | "captions" | "visuals";
-    }
-  | {
-      type: "PLAYBACK_UPDATED";
-      currentTimeMs: number;
-      panel: "transcript" | "captions" | "visuals";
-    }
+  | { type: "PLAYBACK_REQUESTED"; currentTimeMs: number }
+  | { type: "PLAYBACK_UPDATED"; currentTimeMs: number }
   | { type: "PLAYBACK_FAILED"; failure: SafeError }
   | { type: "PLAYBACK_CANCEL_REQUESTED" }
   | { type: "RENDER_REVIEW" }
-  | { type: "BACK_TO_EDIT" }
+  | { type: "BACK_TO_REVIEW" }
   | { type: "RENDER_CONFIRMED"; operation: OperationStatusV1 }
   | {
       type: "RENDER_SUCCEEDED";
       operationId: string;
-      manifestRevision: number;
+      manifestHash: string;
       renderId: string;
     }
   | { type: "RENDER_FAILED"; operationId: string; failure: SafeError }

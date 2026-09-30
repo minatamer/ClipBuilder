@@ -1,4 +1,3 @@
-import { assemblyBundleSchema } from "@clipbuilder/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -12,21 +11,22 @@ import { clippingSessionReducer } from "./session.reducer";
 import {
   analysis,
   assembly,
-  editorState,
   failure,
   identity,
-  manifest,
   media,
   noCandidateAnalysis,
   operation,
-  proposal,
+  reviewState,
 } from "./session.test-fixtures";
-import { initialClippingSessionState } from "./session.types";
+import {
+  initialClippingSessionState,
+  type ClippingSessionState,
+} from "./session.types";
 
 const availability = { sample: true, upload: true } as const;
 
 describe("canonical clipping-session reducer", () => {
-  it("runs the deterministic sample through candidates, editor, render, result, and clear", () => {
+  it("runs the deterministic sample through immutable review, render, result, and clear", () => {
     let state = clippingSessionReducer(initialClippingSessionState, {
       type: "RESTORE_EMPTY",
       availability,
@@ -36,8 +36,6 @@ describe("canonical clipping-session reducer", () => {
       identity,
       analysis,
     });
-    expect(state.stage).toBe("candidates");
-
     state = clippingSessionReducer(state, {
       type: "CANDIDATE_SELECTED",
       candidateId: analysis.candidates[0]!.id,
@@ -48,38 +46,33 @@ describe("canonical clipping-session reducer", () => {
       startWordId: "w_000001",
       endWordId: "w_000030",
     });
-    expect(state.stage).toBe("assembling");
     state = clippingSessionReducer(state, {
       type: "ASSEMBLY_SUCCEEDED",
       operationId: operation("assembly").operationId,
       assembly,
     });
-    expect(state.stage).toBe("editor");
-
-    const revisionOne = { ...manifest, revision: 1 };
-    state = clippingSessionReducer(state, {
-      type: "MANUAL_EDIT",
-      manifest: revisionOne,
+    expect(state).toMatchObject({
+      stage: "clip-review",
+      review: {
+        manifestReference: { manifestHash: assembly.manifestHash },
+      },
     });
-    state = clippingSessionReducer(state, { type: "UNDO" });
-    expect(state.stage === "editor" && state.editor.manifest.revision).toBe(0);
-    state = clippingSessionReducer(state, { type: "REDO" });
-    expect(state.stage === "editor" && state.editor.manifest.revision).toBe(1);
 
     state = clippingSessionReducer(state, {
-      type: "AI_PROPOSAL_REQUESTED",
-      requestId: `req_${"1".repeat(32)}`,
-      baseRevision: 1,
+      type: "PLAYBACK_REQUESTED",
+      currentTimeMs: 500,
     });
     state = clippingSessionReducer(state, {
-      type: "AI_PROPOSAL_RECEIVED",
-      proposal: proposal(1),
-      proposedManifest: { ...revisionOne, revision: 2 },
-      changedFields: ["headline", "headline"],
+      type: "PLAYBACK_UPDATED",
+      currentTimeMs: 2_000,
     });
-    state = clippingSessionReducer(state, { type: "APPLY_PROPOSAL" });
-    expect(state.stage === "editor" && state.editor.manifest.revision).toBe(2);
+    expect(
+      state.stage === "clip-review" && state.review.playback.currentTimeMs,
+    ).toBe(2_000);
 
+    state = clippingSessionReducer(state, { type: "RENDER_REVIEW" });
+    state = clippingSessionReducer(state, { type: "BACK_TO_REVIEW" });
+    expect(state.stage).toBe("clip-review");
     state = clippingSessionReducer(state, { type: "RENDER_REVIEW" });
     state = clippingSessionReducer(state, {
       type: "RENDER_CONFIRMED",
@@ -98,14 +91,16 @@ describe("canonical clipping-session reducer", () => {
     state = clippingSessionReducer(state, {
       type: "RENDER_SUCCEEDED",
       operationId: operation("render", "queued", "t").operationId,
-      manifestRevision: 2,
+      manifestHash: assembly.manifestHash,
       renderId: `rnd_${"r".repeat(22)}`,
     });
-    expect(state.stage).toBe("result");
+    expect(state).toMatchObject({
+      stage: "result",
+      clipSummary: { manifestHash: assembly.manifestHash },
+    });
     expect(selectProgress(state)).toBe(100);
 
     state = clippingSessionReducer(state, { type: "CLEAR" });
-    expect(state).toMatchObject({ stage: "clearing", previousStage: "result" });
     state = clippingSessionReducer(state, {
       type: "CLEAR_SUCCEEDED",
       availability,
@@ -113,7 +108,7 @@ describe("canonical clipping-session reducer", () => {
     expect(state.stage).toBe("intake");
   });
 
-  it("covers upload, inspection, analysis, retry, no-candidate, and assembly recovery", () => {
+  it("covers upload, inspection, analysis retry, and the honest no-candidate terminal", () => {
     let state = clippingSessionReducer(initialClippingSessionState, {
       type: "RESTORE_EMPTY",
       availability,
@@ -167,15 +162,30 @@ describe("canonical clipping-session reducer", () => {
       analysis: noCandidateAnalysis,
     });
     expect(state.stage).toBe("no-candidates");
-    state = clippingSessionReducer(state, {
-      type: "MANUAL_RANGE_VALID",
-      operation: operation("assembly"),
-      startWordId: "w_000001",
-      endWordId: "w_000030",
-    });
+    expect(selectAvailableActions(state)).toEqual(["clear"]);
+  });
+
+  it("preserves selected analysis across bounded assembly retry and choose-another", () => {
+    const assemblyOperation = operation("assembly");
+    let state: ClippingSessionState = {
+      stage: "assembling" as const,
+      identity,
+      operation: assemblyOperation,
+      lastKnown: {
+        analysis: {
+          analysisId: analysis.analysisId,
+          revision: analysis.revision,
+          bundle: analysis,
+        },
+        selectedId: analysis.candidates[0]!.id,
+        startWordId: "w_000001",
+        endWordId: "w_000030",
+      },
+      diagnosticCode: null,
+    };
     state = clippingSessionReducer(state, {
       type: "ASSEMBLY_FAILED",
-      operationId: operation("assembly").operationId,
+      operationId: assemblyOperation.operationId,
       failure,
     });
     state = clippingSessionReducer(state, {
@@ -188,19 +198,20 @@ describe("canonical clipping-session reducer", () => {
       failure,
     });
     state = clippingSessionReducer(state, { type: "CHOOSE_ANOTHER" });
-    expect(state.stage).toBe("candidates");
+    expect(state).toMatchObject({ stage: "candidates", selectedId: null });
   });
 
-  it("ignores illegal transitions and diagnoses only content-free codes", () => {
+  it("rejects illegal transitions, stale operations, and manifest substitution", () => {
     const intake = clippingSessionReducer(initialClippingSessionState, {
       type: "RESTORE_EMPTY",
       availability,
     });
-    const illegal = clippingSessionReducer(intake, {
-      type: "RENDER_CONFIRMED",
-      operation: operation("render"),
-    });
-    expect(illegal).toMatchObject({
+    expect(
+      clippingSessionReducer(intake, {
+        type: "RENDER_CONFIRMED",
+        operation: operation("render"),
+      }),
+    ).toMatchObject({
       stage: "intake",
       diagnosticCode: "invalid-transition",
     });
@@ -227,117 +238,7 @@ describe("canonical clipping-session reducer", () => {
     );
     expect(uploading.diagnosticCode).toBe("non-monotonic-progress");
 
-    let editor = editorState();
-    editor = clippingSessionReducer(editor, {
-      type: "AI_PROPOSAL_REQUESTED",
-      requestId: `req_${"1".repeat(32)}`,
-      baseRevision: 2,
-    });
-    expect(editor.diagnosticCode).toBe("stale-proposal");
-
-    const restoredCandidates = {
-      stage: "candidates" as const,
-      identity,
-      analysis: {
-        analysisId: analysis.analysisId,
-        revision: analysis.revision,
-        bundle: null,
-      },
-      selectedId: null,
-      diagnosticCode: null,
-    };
-    const unprovenSelection = clippingSessionReducer(restoredCandidates, {
-      type: "CANDIDATE_SELECTED",
-      candidateId: analysis.candidates[0]!.id,
-    });
-    expect(unprovenSelection).toMatchObject({
-      stage: "candidates",
-      selectedId: null,
-      diagnosticCode: "invalid-transition",
-    });
-
-    let hydratedCandidates = clippingSessionReducer(
-      {
-        ...restoredCandidates,
-        analysis: { ...restoredCandidates.analysis, bundle: analysis },
-      },
-      {
-        type: "CANDIDATE_SELECTED",
-        candidateId: analysis.candidates[0]!.id,
-      },
-    );
-    hydratedCandidates = clippingSessionReducer(hydratedCandidates, {
-      type: "BUILD_SELECTED",
-      operation: operation("assembly"),
-      startWordId: "w_000002",
-      endWordId: "w_000029",
-    });
-    expect(hydratedCandidates).toMatchObject({
-      stage: "candidates",
-      diagnosticCode: "invalid-transition",
-    });
-  });
-
-  it("rejects stale terminal results and mismatched assembly evidence", () => {
-    const analysisOperation = operation("analysis", "queued", "a");
-    const analyzing = {
-      stage: "analyzing" as const,
-      identity,
-      operation: analysisOperation,
-      lastKnown: { media },
-      diagnosticCode: null,
-    };
-    expect(
-      clippingSessionReducer(analyzing, {
-        type: "ANALYSIS_SUCCEEDED",
-        operationId: operation("analysis", "queued", "x").operationId,
-        analysis,
-      }),
-    ).toMatchObject({
-      stage: "analyzing",
-      diagnosticCode: "invalid-transition",
-    });
-
-    const assemblyOperation = operation("assembly", "queued", "a");
-    const assembling = {
-      stage: "assembling" as const,
-      identity,
-      operation: assemblyOperation,
-      lastKnown: {
-        analysis: {
-          analysisId: analysis.analysisId,
-          revision: analysis.revision,
-          bundle: analysis,
-        },
-        selectedId: analysis.candidates[0]!.id,
-        startWordId: "w_000001",
-        endWordId: "w_000030",
-      },
-      diagnosticCode: null,
-    };
-    const mismatchedAssembly = assemblyBundleSchema.parse({
-      ...assembly,
-      selectedStartWordId: "w_000002",
-      initialManifest: {
-        ...assembly.initialManifest,
-        range: {
-          startWordId: "w_000002",
-          endWordId: "w_000030",
-        },
-      },
-    });
-    expect(
-      clippingSessionReducer(assembling, {
-        type: "ASSEMBLY_SUCCEEDED",
-        operationId: assemblyOperation.operationId,
-        assembly: mismatchedAssembly,
-      }),
-    ).toMatchObject({
-      stage: "assembling",
-      diagnosticCode: "invalid-transition",
-    });
-
-    let rendering = clippingSessionReducer(editorState(), {
+    let rendering = clippingSessionReducer(reviewState(), {
       type: "RENDER_REVIEW",
     });
     rendering = clippingSessionReducer(rendering, {
@@ -347,90 +248,81 @@ describe("canonical clipping-session reducer", () => {
     expect(
       clippingSessionReducer(rendering, {
         type: "RENDER_SUCCEEDED",
-        operationId: operation("render", "queued", "x").operationId,
-        manifestRevision: 0,
-        renderId: `rnd_${"r".repeat(22)}`,
-      }),
-    ).toMatchObject({
-      stage: "rendering",
-      diagnosticCode: "invalid-transition",
-    });
-    expect(
-      clippingSessionReducer(rendering, {
-        type: "RENDER_SUCCEEDED",
         operationId: operation("render", "queued", "r").operationId,
-        manifestRevision: 1,
+        manifestHash: "3".repeat(64),
         renderId: `rnd_${"r".repeat(22)}`,
       }),
     ).toMatchObject({
       stage: "rendering",
-      diagnosticCode: "invalid-transition",
+      diagnosticCode: "invalid-manifest",
     });
   });
 
-  it("caps manifest history and clears redo after a branch edit", () => {
-    let state = editorState();
-    for (let revision = 1; revision <= 22; revision += 1) {
-      state = clippingSessionReducer(state, {
-        type: "MANUAL_EDIT",
-        manifest: { ...manifest, revision },
-      });
-    }
-    expect(state.stage === "editor" && state.editor.past).toHaveLength(20);
-    state = clippingSessionReducer(state, { type: "UNDO" });
-    expect(state.stage === "editor" && state.editor.future).toHaveLength(1);
-    state = clippingSessionReducer(state, {
-      type: "MANUAL_EDIT",
-      manifest: { ...manifest, revision: 23 },
-    });
-    expect(state.stage === "editor" && state.editor.future).toEqual([]);
-  });
-
-  it("covers restore, cancellation, nested async, back, expiry, and partial cleanup edges", () => {
+  it("covers restore, nested playback failure, expiry, and partial cleanup", () => {
     expect(
       clippingSessionReducer(initialClippingSessionState, {
         type: "RESTORE_VALID",
-        state: editorState(),
+        state: reviewState(),
       }).stage,
-    ).toBe("editor");
+    ).toBe("clip-review");
     expect(
       clippingSessionReducer(initialClippingSessionState, {
         type: "RESTORE_EXPIRED",
         localStatePresent: true,
       }),
     ).toMatchObject({ stage: "expired", localStatePresent: true });
-    expect(
-      clippingSessionReducer(initialClippingSessionState, {
-        type: "RESTORE_FATAL",
-        failure,
-      }).stage,
-    ).toBe("fatal");
 
-    let state = clippingSessionReducer(
+    let state = clippingSessionReducer(reviewState(), {
+      type: "PLAYBACK_REQUESTED",
+      currentTimeMs: 1_500,
+    });
+    state = clippingSessionReducer(state, {
+      type: "PLAYBACK_FAILED",
+      failure,
+    });
+    expect(state.stage === "clip-review" && state.review.playback.status).toBe(
+      "failed",
+    );
+    state = clippingSessionReducer(reviewState(), { type: "SESSION_EXPIRED" });
+    expect(state.stage).toBe("expired");
+
+    state = clippingSessionReducer(reviewState(), { type: "CLEAR" });
+    state = clippingSessionReducer(state, {
+      type: "CLEAR_PARTIAL",
+      failure,
+    });
+    expect(state).toMatchObject({
+      stage: "cleanup-partial",
+      cleanup: { status: "failed" },
+    });
+  });
+
+  it("covers the remaining legal validation, cancellation, and progress transitions", () => {
+    const localSource = {
+      sourceId: "local-1",
+      declaredBytes: 100,
+      contentType: "video/mp4" as const,
+      validation: { status: "pending" as const },
+    };
+    let state: ClippingSessionState = clippingSessionReducer(
       {
         stage: "local-inspection",
-        localSource: {
-          sourceId: "local-1",
-          declaredBytes: 100,
-          contentType: "video/mp4",
-          validation: { status: "pending" },
-        },
+        localSource,
         diagnosticCode: null,
       },
       { type: "LOCAL_REJECTED", reasonCode: "duration" },
     );
-    expect(
-      state.stage === "local-inspection" && state.localSource.validation,
-    ).toEqual({ status: "rejected", reasonCode: "duration" });
+    expect(state).toMatchObject({
+      stage: "local-inspection",
+      localSource: { validation: { status: "rejected" } },
+    });
 
     state = clippingSessionReducer(
       {
         stage: "upload-authorizing",
         identity,
         localSource: {
-          sourceId: "local-1",
-          declaredBytes: 100,
-          contentType: "video/mp4",
+          ...localSource,
           validation: { status: "accepted" },
         },
         diagnosticCode: null,
@@ -444,9 +336,7 @@ describe("canonical clipping-session reducer", () => {
         stage: "uploading",
         identity,
         localSource: {
-          sourceId: "local-1",
-          declaredBytes: 100,
-          contentType: "video/mp4",
+          ...localSource,
           validation: { status: "accepted" },
         },
         upload: {
@@ -462,7 +352,6 @@ describe("canonical clipping-session reducer", () => {
     expect(state).toMatchObject({
       stage: "clearing",
       previousStage: "uploading",
-      cleanup: { status: "requesting" },
     });
 
     state = clippingSessionReducer(
@@ -486,122 +375,90 @@ describe("canonical clipping-session reducer", () => {
       },
       { type: "CANCEL_REQUESTED" },
     );
-    expect(state.stage === "analyzing" && state.operation.state).toBe(
-      "cancel-requested",
+    expect(state).toMatchObject({
+      stage: "analyzing",
+      operation: { state: "cancel-requested" },
+    });
+
+    state = clippingSessionReducer(
+      {
+        stage: "analyzing",
+        identity,
+        operation: operation("analysis"),
+        lastKnown: { media },
+        diagnosticCode: null,
+      },
+      {
+        type: "ANALYSIS_SUCCEEDED",
+        operationId: operation("analysis").operationId,
+        analysis,
+      },
     );
+    expect(state.stage).toBe("candidates");
 
-    state = editorState();
-    state = clippingSessionReducer(state, {
-      type: "AI_PROPOSAL_REQUESTED",
-      requestId: `req_${"2".repeat(32)}`,
-      baseRevision: 0,
-    });
-    expect(
-      clippingSessionReducer(state, { type: "RENDER_REVIEW" }),
-    ).toMatchObject({
-      stage: "editor",
-      diagnosticCode: "invalid-transition",
-    });
-    expect(selectAvailableActions(state)).not.toContain("review-render");
-    state = clippingSessionReducer(state, {
-      type: "AI_PROPOSAL_CANCEL_REQUESTED",
-    });
-    expect(state.stage === "editor" && state.editor.proposal.status).toBe(
-      "cancel-requested",
+    const assemblyOperation = operation("assembly");
+    state = clippingSessionReducer(
+      {
+        stage: "assembling",
+        identity,
+        operation: assemblyOperation,
+        lastKnown: {
+          analysis: {
+            analysisId: analysis.analysisId,
+            revision: analysis.revision,
+            bundle: analysis,
+          },
+          selectedId: analysis.candidates[0]!.id,
+          startWordId: "w_000001",
+          endWordId: "w_000030",
+        },
+        diagnosticCode: null,
+      },
+      { type: "STAGE_UPDATED", operation: operation("assembly", "shots") },
     );
+    expect(state).toMatchObject({
+      stage: "assembling",
+      operation: { stageCode: "shots" },
+    });
 
-    expect(
-      clippingSessionReducer(state, { type: "RENDER_REVIEW" }),
-    ).toMatchObject({
-      stage: "editor",
-      diagnosticCode: "invalid-transition",
-    });
-    expect(selectAvailableActions(state)).not.toContain("review-render");
-
-    state = clippingSessionReducer(editorState(), {
-      type: "AI_PROPOSAL_REQUESTED",
-      requestId: `req_${"3".repeat(32)}`,
-      baseRevision: 0,
-    });
-    state = clippingSessionReducer(state, {
-      type: "AI_PROPOSAL_FAILED",
-      failure,
-    });
-    expect(state.stage === "editor" && state.editor.proposal.status).toBe(
-      "failed",
-    );
-
-    state = clippingSessionReducer(editorState(), {
-      type: "AI_PROPOSAL_REQUESTED",
-      requestId: `req_${"4".repeat(32)}`,
-      baseRevision: 0,
-    });
-    state = clippingSessionReducer(state, {
-      type: "AI_PROPOSAL_RECEIVED",
-      proposal: proposal(0),
-      proposedManifest: { ...manifest, revision: 1 },
-      changedFields: ["headline"],
-    });
-    state = clippingSessionReducer(state, { type: "DISMISS_PROPOSAL" });
-    expect(state.stage === "editor" && state.editor.proposal.status).toBe(
-      "idle",
-    );
-
-    state = editorState();
-    state = clippingSessionReducer(state, {
+    state = clippingSessionReducer(reviewState(), {
       type: "PLAYBACK_REQUESTED",
-      currentTimeMs: 1_500,
-      panel: "captions",
-    });
-    state = clippingSessionReducer(state, {
-      type: "PLAYBACK_FAILED",
-      failure,
-    });
-    expect(state.stage === "editor" && state.editor.playback.status).toBe(
-      "failed",
-    );
-    state = clippingSessionReducer(editorState(), {
-      type: "PLAYBACK_REQUESTED",
-      currentTimeMs: 500,
-      panel: "transcript",
-    });
-    state = clippingSessionReducer(state, {
-      type: "PLAYBACK_UPDATED",
-      currentTimeMs: 2_000,
-      panel: "captions",
-    });
-    expect(state.stage === "editor" && state.editor.playback).toMatchObject({
-      status: "succeeded",
-      currentTimeMs: 2_000,
-      panel: "captions",
-    });
-    state = clippingSessionReducer(editorState(), {
-      type: "PLAYBACK_REQUESTED",
-      currentTimeMs: 1_500,
-      panel: "visuals",
+      currentTimeMs: 250,
     });
     state = clippingSessionReducer(state, {
       type: "PLAYBACK_CANCEL_REQUESTED",
     });
-    expect(state.stage === "editor" && state.editor.playback.status).toBe(
+    expect(state.stage === "clip-review" && state.review.playback.status).toBe(
       "cancel-requested",
     );
 
-    state = clippingSessionReducer(editorState(), { type: "RENDER_REVIEW" });
-    state = clippingSessionReducer(state, { type: "BACK_TO_EDIT" });
-    expect(state.stage).toBe("editor");
-    state = clippingSessionReducer(state, { type: "SESSION_EXPIRED" });
-    expect(state.stage).toBe("expired");
+    let rendering = clippingSessionReducer(reviewState(), {
+      type: "RENDER_REVIEW",
+    });
+    rendering = clippingSessionReducer(rendering, {
+      type: "RENDER_CONFIRMED",
+      operation: operation("render"),
+    });
+    rendering = clippingSessionReducer(rendering, {
+      type: "STAGE_UPDATED",
+      operation: operation("render", "compose"),
+    });
+    expect(rendering).toMatchObject({
+      stage: "rendering",
+      operation: { stageCode: "compose" },
+    });
+  });
 
-    state = clippingSessionReducer(editorState(), { type: "CLEAR" });
-    state = clippingSessionReducer(state, {
-      type: "CLEAR_PARTIAL",
-      failure,
-    });
-    expect(state).toMatchObject({
-      stage: "cleanup-partial",
-      cleanup: { status: "failed" },
-    });
+  it("derives read-only labels, actions, blockers, progress, and clearability", () => {
+    const state = { ...reviewState(), assembly: null };
+    expect(selectStageTitle(state)).toBe("Review the automatic clip");
+    expect(selectAvailableActions(state)).toEqual(["review-render", "clear"]);
+    expect(selectBlockers(state)).toEqual([]);
+    expect(selectProgress(state)).toBe(75);
+    expect(selectIsClearable(state)).toBe(true);
+    expect(JSON.stringify(state)).not.toMatch(
+      /proposal|undo|redo|headline|captionCorrection/iu,
+    );
   });
 
   it("preserves retryable restore state and exposes an explicit retry", () => {
@@ -613,21 +470,5 @@ describe("canonical clipping-session reducer", () => {
     expect(
       clippingSessionReducer(offline, { type: "RETRY_RESTORE" }).stage,
     ).toBe("bootstrapping");
-  });
-
-  it("derives labels, actions, blockers, progress, and clearability", () => {
-    const state = {
-      ...editorState(),
-      assembly: null,
-    };
-    expect(selectStageTitle(state)).toBe("Refine the clip");
-    expect(selectAvailableActions(state)).toEqual([
-      "edit",
-      "review-render",
-      "clear",
-    ]);
-    expect(selectBlockers(state)).toEqual(["assembly-refresh-required"]);
-    expect(selectProgress(state)).toBe(75);
-    expect(selectIsClearable(state)).toBe(true);
   });
 });

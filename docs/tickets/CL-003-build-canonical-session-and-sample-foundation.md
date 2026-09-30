@@ -1,8 +1,8 @@
 # CL-003 — Build the canonical session and sample foundation
 
-Status: Reopened — implementation committed; automatic-flow alignment pending<br>
+Status: Completed — automatic one-choice alignment verified locally<br>
 Milestone: M1 — deterministic sample story<br>
-Last synchronized: 2026-09-29<br>
+Last synchronized: 2026-09-30<br>
 Depends on: CL-001<br>
 Blocks: CL-004, CL-005, CL-006<br>
 Suggested commit: `CL-003: build the canonical sample session`<br>
@@ -101,50 +101,50 @@ silently replace its schemas/configuration.
 
 ### 1. Canonical state and selectors
 
-- [ ] Implement every top-level state and legal event from the source-of-truth
+- [x] Implement every top-level state and legal event from the source-of-truth
   table as a strict discriminated union.
-- [ ] Reject invalid transitions without coercing forward; emit only a
+- [x] Reject invalid transitions without coercing forward; emit only a
   content-free development diagnostic code.
-- [ ] Derive stage title, available actions, blockers, current progress, and
+- [x] Derive stage title, available actions, blockers, current progress, and
   clearability through selectors rather than duplicate state.
-- [ ] Keep upload/playback/cleanup transient status in named nested
+- [x] Keep upload/playback/cleanup transient status in named nested
   discriminated states.
 
 ### 2. Safe persistence and restore
 
-- [ ] Persist only the allow-listed projection: content-free IDs/revisions,
+- [x] Persist only the allow-listed projection: content-free IDs/revisions,
   stage hint, selected candidate ID, immutable automatic-manifest ID/hash, and
   read-only preview playback time.
-- [ ] Exclude media/transcript/rationale copies, filenames, blobs, URLs,
+- [x] Exclude media/transcript/rationale copies, filenames, blobs, URLs,
   cookies/grants, provider/SDK objects, errors/stacks, Turnstile tokens,
   timers/listeners/controllers, and raw tracks/assets.
-- [ ] Enforce serialized size before parse, strict schema/version/expiry after
+- [x] Enforce serialized size before parse, strict schema/version/expiry after
   parse, and server-evidence reconciliation before restore.
-- [ ] Clear projection and every locally owned effect on clear/expiry/fatal
+- [x] Clear projection and every locally owned effect on clear/expiry/fatal
   reconciliation.
 
 ### 3. Sample and adversarial fixtures
 
-- [ ] Define a valid normalized transcript with stable word IDs and immutable
+- [x] Define a valid normalized transcript with stable word IDs and immutable
   timing evidence.
-- [ ] Provide exactly three materially distinct ranges for the curated sample;
+- [x] Provide exactly three materially distinct ranges for the curated sample;
   enforce zero-to-four general bounds, grounded evidence/caveats, and no weak
   padding, numeric virality score, or invented quote.
-- [ ] Include one purpose-recorded story that can later demonstrate one-face,
+- [x] Include one purpose-recorded story that can later demonstrate one-face,
   wide two-person, camera-cut, Earth/Moon, and exact-equation behavior without
   hard-coding those subjects into generic logic.
-- [ ] Provide valid precomputed shot/focus/visual/assembly shapes for sample
+- [x] Provide valid precomputed shot/focus/visual/assembly shapes for sample
   mode and invalid variants for reconciliation tests.
-- [ ] Record sample media and every visual asset as pending until rights and
+- [x] Record sample media and every visual asset as pending until rights and
   redistribution approval exist; do not add unapproved binaries.
 
 ### 4. Deterministic fakes
 
-- [ ] Implement fake clock/IDs and production-shaped fake interfaces without
+- [x] Implement fake clock/IDs and production-shaped fake interfaces without
   network or credentials.
-- [ ] Count calls and reject unknown fixture keys instead of silently returning
+- [x] Count calls and reject unknown fixture keys instead of silently returning
   success.
-- [ ] Support abort, deterministic latency, monotonic operation stages,
+- [x] Support abort, deterministic latency, monotonic operation stages,
   terminal immutability, and explicit failure fixtures.
 
 ## Contracts and state transitions
@@ -173,31 +173,31 @@ silently replace its schemas/configuration.
 
 ## Acceptance criteria
 
-- [ ] Every legal transition and representative illegal transition has focused
+- [x] Every legal transition and representative illegal transition has focused
   reducer coverage.
-- [ ] Restore safely handles empty, valid, corrupt, oversized, stale,
+- [x] Restore safely handles empty, valid, corrupt, oversized, stale,
   unknown-version, expired, and server-conflicting projections.
-- [ ] No forbidden runtime/content/capability value can serialize into session
+- [x] No forbidden runtime/content/capability value can serialize into session
   storage.
-- [ ] The three-candidate sample, one/four-boundary fixtures, and no-candidate
+- [x] The three-candidate sample, one/four-boundary fixtures, and no-candidate
   fixture pass production schemas and deterministic grounding/reconciliation.
-- [ ] Invalid references, overlap/duplicates, invented claims, virality promise,
+- [x] Invalid references, overlap/duplicates, invented claims, virality promise,
   and injection fixtures fail with safe rule evidence.
-- [ ] Fakes run with no network/credentials, honor abort/time, count calls, and
+- [x] Fakes run with no network/credentials, honor abort/time, count calls, and
   never mask an unknown fixture.
-- [ ] Sample provenance/rights state is explicit; no unapproved large media or
+- [x] Sample provenance/rights state is explicit; no unapproved large media or
   visual asset enters Git.
 
 ## Focused verification
 
-- [ ] Run contracts plus frontend reducer/persistence/reconciliation tests.
-- [ ] Run fixture validation and fake call-count/abort/clock tests.
-- [ ] Inspect serialized projections for the forbidden-field sentinel matrix
+- [x] Run contracts plus frontend reducer/persistence/reconciliation tests.
+- [x] Run fixture validation and fake call-count/abort/clock tests.
+- [x] Inspect serialized projections for the forbidden-field sentinel matrix
   and enforce the 256 KiB limit.
-- [ ] Run affected lint/typecheck/build commands.
-- [ ] Scan tracked changes for real media/content, credentials, signed URLs,
+- [x] Run affected lint/typecheck/build commands.
+- [x] Scan tracked changes for real media/content, credentials, signed URLs,
   filenames, and provider payloads.
-- [ ] Run `git diff --check` and inspect status without staging or committing.
+- [x] Run `git diff --check` and inspect status without staging or committing.
 
 ## Documentation updates
 
@@ -206,6 +206,36 @@ silently replace its schemas/configuration.
   replacing the sample in place.
 - Update parent and affected tickets if sample rights, recovery privacy, or
   state behavior changes materially.
+
+## Completion evidence — 2026-09-30
+
+- The canonical reducer now follows candidates → assembly → read-only
+  `clip-review` → render confirmation, with no editor, manual range, proposal,
+  caption correction/style, history, undo, or redo state/events.
+- The session projection contains only content-free identity, stage, operation,
+  analysis, selected candidate/range, assembly, automatic-manifest ID/hash,
+  playback time, and result references. It stores no manifest body or content.
+- Restore compares the projected automatic-manifest ID and hash with
+  `GET /v1/session` evidence before rebuilding clip review; a reconciled review
+  or prior render failure can proceed to render confirmation without restoring
+  the content-heavy assembly body.
+- Coherent newer server evidence advances stale in-flight projections to the
+  furthest safely representable candidates, assembly, clip-review, rendering,
+  or result state without repeating work; server-behind or conflicting evidence
+  still fails closed.
+- Per-effect cleanup now stops and unregisters owned pollers, timers, or abort
+  work exactly once, while registry-wide cleanup retains the same guarantee.
+- Shared contracts accept zero to four candidates (target three), expose the
+  fixed `clean-emphasis` automatic manifest, reject `manual` assembly selection,
+  and accept only the server-proven manifest hash for render requests.
+- The synthetic catalog validates zero, one, curated three, and maximum-four
+  candidate outcomes, plus the selected candidate's immutable sample assembly.
+- Verified from the repository root with `corepack pnpm format:check`,
+  `corepack pnpm lint`, `corepack pnpm typecheck`, `corepack pnpm test:unit`,
+  and `corepack pnpm build`; `git diff --check` passed and the change scan found
+  no media binaries, credential patterns, or signed URLs.
+- No Git action, provider call, credential use, cloud change, deployment, or
+  paid operation was performed.
 
 ## Owner gates and external blockers
 

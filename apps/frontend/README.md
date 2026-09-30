@@ -26,10 +26,13 @@ the same content. The header retains the only first-viewport CTA.
 
 CL-003 adds the complete canonical session reducer, derived selectors,
 allow-listed `sessionStorage` projection, server-evidence reconciliation,
-effect registry, and provider foundation under `src/features/session`. No CL-003
-module is mounted into the visual prototype, so production workflow screens
-remain owned by later tickets. Broad application styling remains gated on
-explicit owner approval of the CL-002 prototype.
+effect registry, and provider foundation under `src/features/session`. The
+projection stores only content-free selection, operation, assembly, automatic
+manifest ID/hash, and playback references; it never stores the manifest body,
+transcript, media, capability, proposal, or edit history. No CL-003 module is
+mounted into the visual prototype, so production workflow screens remain owned
+by later tickets. Broad application styling remains gated on explicit owner
+approval of the CL-002 prototype.
 
 The locked production journey is sample/upload → analysis → zero to four
 grounded candidates → choose exactly one → automatic clip preparation →

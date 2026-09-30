@@ -49,7 +49,11 @@ export const clipCandidateSchema = z
   .object({
     version: z.literal(1),
     id: candidateIdSchema,
-    rank: z.number().int().min(1).max(OWNER_VALIDATION_LIMITS.candidateCount),
+    rank: z
+      .number()
+      .int()
+      .min(1)
+      .max(OWNER_VALIDATION_LIMITS.maxCandidateCount),
     startWordId: wordIdSchema,
     endWordId: wordIdSchema,
     title: boundedPlainTextSchema(80),

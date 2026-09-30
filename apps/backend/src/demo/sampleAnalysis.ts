@@ -1,5 +1,4 @@
 import {
-  PUBLIC_LIMITS,
   analysisBundleSchema,
   assemblyBundleSchema,
   type AnalysisBundleV1,
@@ -14,27 +13,19 @@ const IDS = {
   analysisRevision: opaqueId("rev", "a"),
   assembly: opaqueId("asm", "a"),
   assemblyRevision: opaqueId("rev", "b"),
+  manifest: opaqueId("man", "m"),
+  manifestHash: "2".repeat(64),
   visualRevision: opaqueId("rev", "v"),
   candidateOne: opaqueId("cand", "1"),
   candidateTwo: opaqueId("cand", "2"),
   candidateThree: opaqueId("cand", "3"),
   shotOne: opaqueId("shot", "1"),
-  shotTwo: opaqueId("shot", "2"),
-  shotThree: opaqueId("shot", "3"),
   faceOne: opaqueId("face", "1"),
-  faceTwoLeft: opaqueId("face", "2"),
-  faceTwoRight: opaqueId("face", "3"),
-  faceThree: opaqueId("face", "4"),
   focusOne: opaqueId("focus", "1"),
-  focusTwo: opaqueId("focus", "2"),
-  focusThree: opaqueId("focus", "3"),
   focusTrack: opaqueId("trk", "f"),
   shotTrack: opaqueId("trk", "s"),
-  earthRequest: opaqueId("vreq", "e"),
   equationRequest: opaqueId("vreq", "q"),
-  earthCue: opaqueId("vcue", "e"),
   equationCue: opaqueId("vcue", "q"),
-  earthAsset: opaqueId("ast", "e"),
   equationAsset: opaqueId("ast", "q"),
 } as const;
 
@@ -104,11 +95,6 @@ const wordIdContaining = (text: string) => {
   );
   if (word === undefined) throw new Error("Missing fixture word.");
   return word.id;
-};
-
-const fullSampleRange = {
-  startWordId: utteranceRange(0).startWordId,
-  endWordId: utteranceRange(2).endWordId,
 };
 
 const transcript = {
@@ -237,23 +223,75 @@ export const SAMPLE_NO_CANDIDATES = analysisBundleSchema.parse({
   outcome: "no-strong-candidates",
 });
 
+export const SAMPLE_ONE_CANDIDATE = analysisBundleSchema.parse({
+  ...SAMPLE_ANALYSIS,
+  revision: opaqueId("rev", "o"),
+  transcript: {
+    ...SAMPLE_ANALYSIS.transcript,
+    revision: opaqueId("rev", "o"),
+  },
+  candidates: [{ ...SAMPLE_ANALYSIS.candidates[0], rank: 1 }],
+});
+
+function boundaryCandidate(
+  rank: number,
+  startMs: number,
+  minimumEndMs: number,
+) {
+  const startWord = words.find((word) => word.startMs >= startMs);
+  const endWord = words.find(
+    (word) =>
+      word.endMs >=
+      Math.max(minimumEndMs, (startWord?.startMs ?? startMs) + 10_000),
+  );
+  if (startWord === undefined || endWord === undefined) {
+    throw new Error("Missing boundary candidate word range.");
+  }
+  return {
+    version: 1 as const,
+    id: opaqueId("cand", String(rank + 4)),
+    rank,
+    startWordId: startWord.id,
+    endWordId: endWord.id,
+    title: `${startWord.text} to ${endWord.text}`,
+    hook: `${startWord.text} ${endWord.text}`,
+    rationale: "The range provides a complete deterministic boundary fixture.",
+    evidence: [
+      {
+        signal: "immediate-hook" as const,
+        wordIds: [startWord.id],
+        note: "The opening word anchors the boundary fixture.",
+      },
+      {
+        signal: "clear-payoff" as const,
+        wordIds: [endWord.id],
+        note: "The ending word anchors the boundary fixture.",
+      },
+    ],
+    caveats: [],
+  };
+}
+
+export const SAMPLE_FOUR_CANDIDATES = analysisBundleSchema.parse({
+  ...SAMPLE_ANALYSIS,
+  revision: opaqueId("rev", "4"),
+  transcript: {
+    ...SAMPLE_ANALYSIS.transcript,
+    revision: opaqueId("rev", "4"),
+  },
+  candidates: [
+    boundaryCandidate(1, 0, 10_000),
+    boundaryCandidate(2, 13_000, 23_000),
+    boundaryCandidate(3, 26_000, 36_000),
+    boundaryCandidate(4, 39_000, 49_000),
+  ],
+});
+
 const visualPlan = {
   version: 1,
   revision: IDS.visualRevision,
-  artDirection: "editorial-signal-v1",
+  artDirection: "precision-cut-v1",
   requests: [
-    {
-      id: IDS.earthRequest,
-      kind: "generated-concept-image",
-      subjectWordIds: [wordIdContaining("Earth"), wordIdContaining("Moon")],
-      factualBrief: "A simple scale comparison between Earth and the Moon.",
-      imagePrompt:
-        "Editorial scientific diagram of Earth and the Moon at relative visual scale.",
-      equationTex: null,
-      exactText: null,
-      background: "opaque",
-      artDirection: "editorial-signal-v1",
-    },
     {
       id: IDS.equationRequest,
       kind: "equation-card",
@@ -263,19 +301,10 @@ const visualPlan = {
       equationTex: "E = mc^2",
       exactText: null,
       background: "transparent",
-      artDirection: "editorial-signal-v1",
+      artDirection: "precision-cut-v1",
     },
   ],
   cues: [
-    {
-      id: IDS.earthCue,
-      ...utteranceRange(1),
-      assetRequestId: IDS.earthRequest,
-      layout: "full-frame",
-      motion: "slow-push-in",
-      transition: "short-dissolve",
-      rationale: "The comparison is explicitly grounded in the spoken example.",
-    },
     {
       id: IDS.equationCue,
       startWordId: wordIdContaining("equation"),
@@ -288,16 +317,15 @@ const visualPlan = {
         "The equation is copied exactly from the supported transcript beat.",
     },
   ],
-  totalCoverageMs: 12_000,
+  totalCoverageMs: 4_000,
 } as const;
 
-const initialManifest = {
+const compositionManifest = {
   version: 1,
-  baseCandidateId: "manual",
+  baseCandidateId: IDS.candidateOne,
   analysisRevision: IDS.analysisRevision,
   assemblyRevision: IDS.assemblyRevision,
-  revision: 0,
-  range: fullSampleRange,
+  range: utteranceRange(0),
   speakerFraming: {
     mode: "active-speaker",
     focusTrackId: IDS.focusTrack,
@@ -305,29 +333,11 @@ const initialManifest = {
     smoothingProfile: "editorial",
   },
   captions: {
-    theme: "clean-emphasis",
-    density: "comfortable",
-    corrections: [],
-    emphasizedWordIds: [
-      wordIdContaining("question"),
-      wordIdContaining("equation"),
-    ],
+    profile: "clean-emphasis",
   },
-  headline: { text: "One question changes the scale", placement: "top-safe" },
   visuals: {
     planRevision: IDS.visualRevision,
     cues: [
-      {
-        id: IDS.earthCue,
-        ...utteranceRange(1),
-        kind: "generated-concept-image",
-        assetId: IDS.earthAsset,
-        layout: "full-frame",
-        motion: "slow-push-in",
-        transition: "short-dissolve",
-        rationale:
-          "The comparison is explicitly grounded in the spoken example.",
-      },
       {
         id: IDS.equationCue,
         startWordId: wordIdContaining("equation"),
@@ -350,27 +360,20 @@ export const SAMPLE_ASSEMBLY = assemblyBundleSchema.parse({
   assemblyId: IDS.assembly,
   revision: IDS.assemblyRevision,
   analysisRevision: IDS.analysisRevision,
-  selectedStartWordId: fullSampleRange.startWordId,
-  selectedEndWordId: fullSampleRange.endWordId,
+  selectedStartWordId: utteranceRange(0).startWordId,
+  selectedEndWordId: utteranceRange(0).endWordId,
   speakerFocus: {
     version: 1,
     revision: opaqueId("rev", "f"),
     shots: [
-      { id: IDS.shotOne, startMs: 0, endMs: 19_000, cutIn: "source-start" },
-      {
-        id: IDS.shotTwo,
-        startMs: 19_000,
-        endMs: 39_000,
-        cutIn: "adaptive-cut",
-      },
-      { id: IDS.shotThree, startMs: 39_000, endMs: 60_000, cutIn: "hard-cut" },
+      { id: IDS.shotOne, startMs: 0, endMs: 18_000, cutIn: "source-start" },
     ],
     faceTracks: [
       {
         id: IDS.faceOne,
         shotId: IDS.shotOne,
         startMs: 0,
-        endMs: 19_000,
+        endMs: 18_000,
         samples: [
           {
             atMs: 0,
@@ -379,54 +382,6 @@ export const SAMPLE_ASSEMBLY = assemblyBundleSchema.parse({
             width: 0.3,
             height: 0.62,
             speakingProbability: 0.98,
-          },
-        ],
-      },
-      {
-        id: IDS.faceTwoLeft,
-        shotId: IDS.shotTwo,
-        startMs: 19_000,
-        endMs: 39_000,
-        samples: [
-          {
-            atMs: 19_000,
-            x: 0.08,
-            y: 0.2,
-            width: 0.3,
-            height: 0.58,
-            speakingProbability: 0.08,
-          },
-        ],
-      },
-      {
-        id: IDS.faceTwoRight,
-        shotId: IDS.shotTwo,
-        startMs: 19_000,
-        endMs: 39_000,
-        samples: [
-          {
-            atMs: 19_000,
-            x: 0.62,
-            y: 0.2,
-            width: 0.3,
-            height: 0.58,
-            speakingProbability: 0.94,
-          },
-        ],
-      },
-      {
-        id: IDS.faceThree,
-        shotId: IDS.shotThree,
-        startMs: 39_000,
-        endMs: 60_000,
-        samples: [
-          {
-            atMs: 39_000,
-            x: 0.34,
-            y: 0.16,
-            width: 0.3,
-            height: 0.62,
-            speakingProbability: 0.97,
           },
         ],
       },
@@ -441,40 +396,11 @@ export const SAMPLE_ASSEMBLY = assemblyBundleSchema.parse({
         cropCenterY: 0.47,
         transition: "hold",
       },
-      {
-        id: IDS.focusTwo,
-        shotId: IDS.shotTwo,
-        ...utteranceRange(1),
-        faceTrackId: IDS.faceTwoRight,
-        cropCenterX: 0.77,
-        cropCenterY: 0.49,
-        transition: "ease",
-      },
-      {
-        id: IDS.focusThree,
-        shotId: IDS.shotThree,
-        ...utteranceRange(2),
-        faceTrackId: IDS.faceThree,
-        cropCenterX: 0.49,
-        cropCenterY: 0.47,
-        transition: "cut",
-      },
     ],
     detectorConfigId: "sample-focus-v1",
   },
   visualPlan,
   assets: [
-    {
-      id: IDS.earthAsset,
-      requestId: IDS.earthRequest,
-      source: "fake-fixture",
-      contentType: "image/png",
-      width: 1_080,
-      height: 1_920,
-      bytes: 1,
-      sha256: "0".repeat(64),
-      hasAlpha: false,
-    },
     {
       id: IDS.equationAsset,
       requestId: IDS.equationRequest,
@@ -487,7 +413,9 @@ export const SAMPLE_ASSEMBLY = assemblyBundleSchema.parse({
       hasAlpha: true,
     },
   ],
-  initialManifest,
+  manifestId: IDS.manifest,
+  manifestHash: IDS.manifestHash,
+  compositionManifest,
 });
 
 export type FixtureRuleEvidence = { ruleId: string; path: string };
@@ -575,12 +503,6 @@ export function validateCandidateFixture(value: unknown): FixtureValidation {
       path: "transcript",
     });
   }
-  if (
-    parsed.data.outcome === "candidates" &&
-    parsed.data.candidates.length !== PUBLIC_LIMITS.candidateCount
-  ) {
-    evidence.push({ ruleId: "candidate.count", path: "candidates" });
-  }
   parsed.data.candidates.forEach((candidate, index) => {
     const publicCopy = `${candidate.title} ${candidate.hook} ${candidate.rationale}`;
     if (/guaranteed|go viral|million views|viral score/iu.test(publicCopy)) {
@@ -620,4 +542,8 @@ export const SAMPLE_FIXTURE_REVISIONS = Object.freeze({
   assembly: SAMPLE_ASSEMBLY.revision,
   speakerFocus: SAMPLE_ASSEMBLY.speakerFocus.revision,
   visualPlan: SAMPLE_ASSEMBLY.visualPlan.revision,
+  compositionManifest: {
+    id: SAMPLE_ASSEMBLY.manifestId,
+    hash: SAMPLE_ASSEMBLY.manifestHash,
+  },
 });

@@ -1,11 +1,13 @@
 import { z } from "zod";
 
+import { sha256DigestSchema } from "./boundary-primitives.schema.js";
+import { compositionManifestSchema } from "./composition-manifest.schema.js";
 import { ASSEMBLY_LIMITS, OWNER_VALIDATION_LIMITS } from "./constants.js";
-import { editManifestSchema } from "./editor.schema.js";
 import {
   assemblyIdSchema,
   faceTrackIdSchema,
   focusSegmentIdSchema,
+  manifestIdSchema,
   revisionIdSchema,
   shotIdSchema,
   wordIdSchema,
@@ -207,7 +209,9 @@ export const assemblyBundleSchema = z
     speakerFocus: speakerFocusTrackSchema,
     visualPlan: visualPlanSchema,
     assets: z.array(visualAssetSchema).max(ASSEMBLY_LIMITS.maxVisualCues),
-    initialManifest: editManifestSchema,
+    manifestId: manifestIdSchema,
+    manifestHash: sha256DigestSchema,
+    compositionManifest: compositionManifestSchema,
   })
   .strict()
   .superRefine((bundle, context) => {
@@ -219,40 +223,45 @@ export const assemblyBundleSchema = z
       });
     }
 
-    if (bundle.initialManifest.analysisRevision !== bundle.analysisRevision) {
-      context.addIssue({
-        code: "custom",
-        message: "Manifest and assembly analysis revisions must match.",
-        path: ["initialManifest", "analysisRevision"],
-      });
-    }
-
-    if (bundle.initialManifest.assemblyRevision !== bundle.revision) {
-      context.addIssue({
-        code: "custom",
-        message: "Manifest and assembly revisions must match.",
-        path: ["initialManifest", "assemblyRevision"],
-      });
-    }
-
     if (
-      bundle.initialManifest.range.startWordId !== bundle.selectedStartWordId ||
-      bundle.initialManifest.range.endWordId !== bundle.selectedEndWordId
+      bundle.compositionManifest.analysisRevision !== bundle.analysisRevision
     ) {
       context.addIssue({
         code: "custom",
-        message: "Initial manifest range must match the assembly selection.",
-        path: ["initialManifest", "range"],
+        message: "Manifest and assembly analysis revisions must match.",
+        path: ["compositionManifest", "analysisRevision"],
+      });
+    }
+
+    if (bundle.compositionManifest.assemblyRevision !== bundle.revision) {
+      context.addIssue({
+        code: "custom",
+        message: "Manifest and assembly revisions must match.",
+        path: ["compositionManifest", "assemblyRevision"],
       });
     }
 
     if (
-      bundle.initialManifest.visuals.planRevision !== bundle.visualPlan.revision
+      bundle.compositionManifest.range.startWordId !==
+        bundle.selectedStartWordId ||
+      bundle.compositionManifest.range.endWordId !== bundle.selectedEndWordId
+    ) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "Composition manifest range must match the assembly selection.",
+        path: ["compositionManifest", "range"],
+      });
+    }
+
+    if (
+      bundle.compositionManifest.visuals.planRevision !==
+      bundle.visualPlan.revision
     ) {
       context.addIssue({
         code: "custom",
         message: "Manifest and visual-plan revisions must match.",
-        path: ["initialManifest", "visuals", "planRevision"],
+        path: ["compositionManifest", "visuals", "planRevision"],
       });
     }
 
@@ -298,14 +307,14 @@ export const assemblyBundleSchema = z
 
     const knownAssetIds = new Set(assetIds);
     if (
-      bundle.initialManifest.visuals.cues.some(
+      bundle.compositionManifest.visuals.cues.some(
         (cue) => !knownAssetIds.has(cue.assetId),
       )
     ) {
       context.addIssue({
         code: "custom",
         message: "Manifest visual cues must reference assembly assets.",
-        path: ["initialManifest", "visuals", "cues"],
+        path: ["compositionManifest", "visuals", "cues"],
       });
     }
   });

@@ -161,11 +161,14 @@ pass navbar because it still read as an opaque gray bar instead of a glass
 bubble. A researched third material pass is now implemented with a floating
 native glass shell and scoped CTA refraction. CL-002 remains **in owner revision
 review** until explicit visual approval; its broad styling dependents remain
-blocked. CL-003 implementation was committed but is **reopened** to align its
+blocked. CL-003's committed implementation was **reopened** to align its
 candidate cardinality, reducer, persistence, and obsolete proposal contracts
-with the later owner decision that removed all editing/customization. CL-004–
-CL-015 remain planned; CL-010 is now automatic read-only clip review and render
-confirmation, not an editor/assistant ticket.
+with the later owner decision that removed all editing/customization. That
+alignment is now **completed and locally verified**: contracts allow zero to
+four candidates, the reducer uses immutable automatic clip review, persistence
+stores only manifest identity/hash, and legacy editor/assistant configuration is
+removed. CL-004–CL-015 remain planned; CL-010 is automatic read-only clip review
+and render confirmation, not an editor/assistant ticket.
 Status changes belong in the individual packet and should be summarized here
 when work begins or finishes.
 

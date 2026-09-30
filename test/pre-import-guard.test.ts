@@ -15,7 +15,6 @@ describe("pre-import deterministic safety", () => {
       LIVE_ANALYSIS_ENABLED: "false",
       LIVE_ASSEMBLY_ENABLED: "false",
       LIVE_IMAGE_GENERATION_ENABLED: "false",
-      LIVE_EDIT_ASSISTANT_ENABLED: "false",
       LIVE_RENDER_ENABLED: "false",
     });
   });

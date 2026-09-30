@@ -13,8 +13,8 @@ import {
   type PersistedStageHint,
 } from "./session.persistence";
 import type {
+  ClipReviewSession,
   ClippingSessionState,
-  EditorSession,
   SessionAvailability,
 } from "./session.types";
 
@@ -32,7 +32,7 @@ const SERVER_STAGE_ORDER: SessionResponse["provenStage"][] = [
   "analyzing",
   "candidates",
   "assembling",
-  "editor",
+  "clip-review",
   "rendering",
   "result",
 ];
@@ -53,12 +53,28 @@ const REQUIRED_SERVER_STAGE: Record<
   candidates: "candidates",
   assembling: "assembling",
   "assembly-failed": "candidates",
-  editor: "editor",
-  "render-confirmation": "editor",
+  "clip-review": "clip-review",
+  "render-confirmation": "clip-review",
   rendering: "rendering",
-  "render-failed": "editor",
+  "render-failed": "clip-review",
   result: "result",
   "cleanup-partial": "intake",
+};
+
+const SERVER_RESUME_STAGE: Record<
+  SessionResponse["provenStage"],
+  PersistedStageHint
+> = {
+  intake: "intake",
+  "upload-authorized": "intake",
+  uploaded: "media-inspecting",
+  "media-inspected": "analysis-confirmation",
+  analyzing: "analyzing",
+  candidates: "candidates",
+  assembling: "assembling",
+  "clip-review": "clip-review",
+  rendering: "rendering",
+  result: "result",
 };
 
 function safeFailure(code: ErrorCode, ruleId: string): SafeError {
@@ -78,20 +94,37 @@ export function restoreEvidenceUnavailableFailure(): SafeError {
   };
 }
 
-function restoredEditor(
+function restoredReview(
   projection: ClippingSessionProjectionV1,
-): EditorSession | null {
-  if (projection.editor === null) return null;
+  evidence: ServerSessionEvidence,
+): ClipReviewSession | null {
+  if (
+    projection.selection === null ||
+    evidence.analysisRevision === null ||
+    evidence.assemblyId === null ||
+    evidence.assemblyRevision === null ||
+    evidence.manifestId === null ||
+    evidence.manifestHash === null
+  ) {
+    return null;
+  }
   return {
-    assemblyReference: projection.editor.assemblyReference,
-    manifest: projection.editor.manifest,
-    past: projection.editor.past,
-    future: projection.editor.future,
-    proposal: { status: "idle" },
+    selectedCandidateId: projection.selection.candidateId,
+    selectedStartWordId: projection.selection.startWordId,
+    selectedEndWordId: projection.selection.endWordId,
+    assemblyReference: {
+      assemblyId: evidence.assemblyId,
+      revision: evidence.assemblyRevision,
+    },
+    manifestReference: {
+      manifestId: evidence.manifestId,
+      manifestHash: evidence.manifestHash,
+      analysisRevision: evidence.analysisRevision,
+      assemblyRevision: evidence.assemblyRevision,
+    },
     playback: {
       status: "succeeded",
-      currentTimeMs: projection.editor.playback.currentTimeMs,
-      panel: projection.editor.playback.panel,
+      currentTimeMs: projection.review?.playbackTimeMs ?? 0,
     },
   };
 }
@@ -100,14 +133,16 @@ function serverOperation(
   evidence: ServerSessionEvidence,
   kind: OperationStatusV1["kind"],
 ): OperationStatusV1 | null {
-  if (evidence.activeOperation?.kind === kind) return evidence.activeOperation;
-  return null;
+  return evidence.activeOperation?.kind === kind
+    ? evidence.activeOperation
+    : null;
 }
 
 function projectionToState(
   projection: ClippingSessionProjectionV1,
   evidence: ServerSessionEvidence,
   availability: SessionAvailability,
+  stageHint: PersistedStageHint = projection.stageHint,
 ): ClippingSessionState | null {
   const identity = {
     sessionId: evidence.sessionId,
@@ -118,9 +153,9 @@ function projectionToState(
     evidence.analysisId === null || evidence.analysisRevision === null
       ? null
       : analysisSnapshotFromIds(evidence.analysisId, evidence.analysisRevision);
-  const editor = restoredEditor(projection);
+  const review = restoredReview(projection, evidence);
 
-  switch (projection.stageHint) {
+  switch (stageHint) {
     case "media-inspecting": {
       const operation = serverOperation(evidence, "media-inspection");
       return operation === null
@@ -193,43 +228,57 @@ function projectionToState(
             diagnosticCode: null,
           };
     }
-    case "editor":
+    case "clip-review":
     case "render-confirmation":
     case "render-failed":
-      return analysis === null || editor === null
+      return analysis === null || review === null
         ? null
         : {
             stage:
-              projection.stageHint === "render-confirmation"
+              stageHint === "render-confirmation"
                 ? "render-confirmation"
-                : "editor",
+                : "clip-review",
             identity,
             analysis,
             assembly: null,
-            editor,
+            review,
             diagnosticCode: null,
           };
     case "rendering": {
       const operation = serverOperation(evidence, "render");
-      return analysis === null || editor === null || operation === null
+      return analysis === null || review === null || operation === null
         ? null
         : {
             stage: "rendering",
             identity,
             operation,
-            lastKnown: { analysis, assembly: null, editor },
+            lastKnown: { analysis, assembly: null, review },
             diagnosticCode: null,
           };
     }
     case "result":
-      return projection.result === null
+      return evidence.renderId === null ||
+        !evidence.outputAvailable ||
+        analysis === null ||
+        review === null
         ? null
         : {
             stage: "result",
             identity,
-            result: projection.result,
-            editorSummary: {
-              revision: projection.editor?.manifest.revision ?? 0,
+            result: {
+              renderId: evidence.renderId,
+              outputAvailable: true,
+            },
+            clipSummary: {
+              analysisId: analysis.analysisId,
+              analysisRevision: analysis.revision,
+              assemblyId: review.assemblyReference.assemblyId,
+              assemblyRevision: review.assemblyReference.revision,
+              manifestId: review.manifestReference.manifestId,
+              manifestHash: review.manifestReference.manifestHash,
+              selectedCandidateId: review.selectedCandidateId,
+              selectedStartWordId: review.selectedStartWordId,
+              selectedEndWordId: review.selectedEndWordId,
             },
             diagnosticCode: null,
           };
@@ -286,6 +335,10 @@ export function reconcileSessionProjection(
     (projection.assembly !== null &&
       (projection.assembly.assemblyId !== evidence.assemblyId ||
         projection.assembly.revision !== evidence.assemblyRevision)) ||
+    (projection.review !== null &&
+      (projection.review.manifestReference.manifestId !== evidence.manifestId ||
+        projection.review.manifestReference.manifestHash !==
+          evidence.manifestHash)) ||
     (projection.result !== null &&
       (projection.result.renderId !== evidence.renderId ||
         !evidence.outputAvailable)) ||
@@ -294,13 +347,6 @@ export function reconcileSessionProjection(
       projection.operation.operationId !==
         evidence.activeOperation.operationId);
 
-  if (projectedStage < evidenceStage) {
-    return {
-      status: "stale",
-      failure: safeFailure("STALE_REVISION", "restore.server-ahead"),
-    };
-  }
-
   if (projectedStage > evidenceStage || idConflict) {
     return {
       status: "server-conflict",
@@ -308,12 +354,23 @@ export function reconcileSessionProjection(
     };
   }
 
-  const state = projectionToState(projection, evidence, availability);
-  if (state === null) {
-    return {
-      status: "server-conflict",
-      failure: safeFailure("SESSION_INVALID", "restore.incomplete-projection"),
-    };
-  }
-  return { status: "restored", state };
+  const stageHint =
+    projectedStage < evidenceStage
+      ? SERVER_RESUME_STAGE[evidence.provenStage]
+      : projection.stageHint;
+  const state = projectionToState(
+    projection,
+    evidence,
+    availability,
+    stageHint,
+  );
+  return state === null
+    ? {
+        status: "server-conflict",
+        failure: safeFailure(
+          "SESSION_INVALID",
+          "restore.incomplete-projection",
+        ),
+      }
+    : { status: "restored", state };
 }

@@ -10,8 +10,8 @@ export type SessionAction =
   | "retry-analysis"
   | "select-candidate"
   | "build-selection"
-  | "edit"
   | "review-render"
+  | "back-to-review"
   | "confirm-render"
   | "retry-render"
   | "clear";
@@ -26,12 +26,12 @@ const STAGE_TITLES: Record<ClippingSessionState["stage"], string> = {
   "analysis-confirmation": "Ready to analyze",
   analyzing: "Finding strong moments",
   "analysis-failed": "Analysis needs attention",
-  "no-candidates": "Choose a moment manually",
+  "no-candidates": "No strong moment found",
   candidates: "Choose a candidate",
   assembling: "Building the first cut",
   "assembly-failed": "First cut needs attention",
-  editor: "Refine the clip",
-  "render-confirmation": "Review before rendering",
+  "clip-review": "Review the automatic clip",
+  "render-confirmation": "Confirm the final render",
   rendering: "Rendering the clip",
   "render-failed": "Render needs attention",
   result: "Your clip is ready",
@@ -55,7 +55,7 @@ const PROGRESS: Record<ClippingSessionState["stage"], number> = {
   candidates: 50,
   assembling: 60,
   "assembly-failed": 60,
-  editor: 75,
+  "clip-review": 75,
   "render-confirmation": 80,
   rendering: 90,
   "render-failed": 90,
@@ -85,12 +85,6 @@ export function selectBlockers(state: ClippingSessionState): string[] {
   ) {
     return ["analysis-refresh-required"];
   }
-  if (
-    (state.stage === "editor" || state.stage === "render-confirmation") &&
-    state.assembly === null
-  ) {
-    return ["assembly-refresh-required"];
-  }
   if (state.stage === "candidates" && state.selectedId === null) {
     return ["candidate-selection-required"];
   }
@@ -112,29 +106,23 @@ export function selectAvailableActions(
       return ["confirm-upload", ...clear];
     case "uploading":
     case "analyzing":
-    case "assembling":
-    case "rendering":
       return ["cancel", ...clear];
     case "analysis-confirmation":
       return ["confirm-analysis", ...clear];
     case "analysis-failed":
       return ["retry-analysis", ...clear];
-    case "no-candidates":
-      return ["build-selection", ...clear];
     case "candidates":
-      return ["select-candidate", "build-selection", ...clear];
-    case "editor":
       return [
-        "edit",
-        ...(!["requesting", "cancel-requested"].includes(
-          state.editor.proposal.status,
-        )
-          ? (["review-render"] as const)
+        "select-candidate",
+        ...(state.selectedId !== null && state.analysis.bundle !== null
+          ? (["build-selection"] as const)
           : []),
         ...clear,
       ];
+    case "clip-review":
+      return ["review-render", ...clear];
     case "render-confirmation":
-      return ["edit", "confirm-render", ...clear];
+      return ["back-to-review", "confirm-render", ...clear];
     case "render-failed":
       return ["retry-render", ...clear];
     case "fatal":

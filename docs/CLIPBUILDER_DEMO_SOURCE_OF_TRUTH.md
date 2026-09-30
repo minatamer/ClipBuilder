@@ -2175,7 +2175,7 @@ only with fixtures, browser preview behavior, render evidence, and cost review.
 IDs are content-free UUID v4 strings or 128-bit URL-safe random values with a
 fixed prefix, maximum 64 characters:
 
-- `ses_…`, `upl_…`, `op_…`, `ana_…`, `cand_…`, `prop_…`, `rnd_…`;
+- `ses_…`, `upl_…`, `op_…`, `ana_…`, `cand_…`, `asm_…`, `man_…`, `rnd_…`;
 - word IDs are deterministic local ordinals `w_000001` through the transcript
   bound;
 - speaker IDs are normalized `spk_0` through `spk_15` and are not identities;
@@ -2455,6 +2455,8 @@ type AssemblyBundleV1 = {
   speakerFocus: SpeakerFocusTrackV1;
   visualPlan: VisualPlanV1;
   assets: VisualAssetV1[];
+  manifestId: string;
+  manifestHash: string;
   compositionManifest: CompositionManifestV1;
 };
 ```
@@ -2547,7 +2549,7 @@ values never populate it. Development logs still obey the content ban.
 | `POST /v1/operations/:operationId/cancel` | Request cancellation | No new provider call |
 | `GET /v1/analyses/:analysisId` | Fetch normalized result | Private storage read |
 | `POST /v1/assemblies` | Build selected speaker/visual first cut | One ASD pass + one visual-plan call + 0–3 image calls |
-| `GET /v1/assemblies/:assemblyId` | Fetch tracks, plan, assets, and initial manifest | Private storage read/signing |
+| `GET /v1/assemblies/:assemblyId` | Fetch tracks, plan, assets, and immutable automatic manifest | Private storage read/signing |
 | `POST /v1/renders` | Start/reuse render | One media job, no AI provider |
 | `POST /v1/downloads/authorize` | Create one short-lived output URL | Storage signing only |
 
@@ -2658,6 +2660,8 @@ type SessionResponse = {
   analysisRevision: string | null;
   assemblyId: string | null;
   assemblyRevision: string | null;
+  manifestId: string | null;
+  manifestHash: string | null;
   renderId: string | null;
   outputAvailable: boolean;
   remaining: {
@@ -2667,10 +2671,11 @@ type SessionResponse = {
 };
 ```
 
-`assemblyId` and `assemblyRevision` are both required once `provenStage` is
-`clip-review`, `rendering`, or `result`; they remain nullable while assembly is
-in progress. The browser cannot restore or author an alternate manifest; the
-server-proven assembly revision identifies the automatic composition.
+`assemblyId`, `assemblyRevision`, `manifestId`, and `manifestHash` are all
+required once `provenStage` is `clip-review`, `rendering`, or `result`; they
+remain nullable while assembly is in progress. Manifest identity and hash must
+appear together and belong to the server-proven assembly. The browser cannot
+restore or author an alternate manifest.
 
 It does not return signed URLs or full content. Expired/invalid cookie returns
 `401 SESSION_EXPIRED` and clears it.
@@ -2823,7 +2828,7 @@ Request:
 {
   analysisId: string;
   selection: {
-    candidateId: string | "manual";
+    candidateId: string;
     startWordId: string;
     endWordId: string;
   };
@@ -2836,8 +2841,8 @@ Response `202` returns the assembly operation and `assemblyId`.
 The server verifies the selected legal 10–60 second range, assembly/image
 feature gates, allowance, capacity, and idempotency before writing one
 `assemble` descriptor. The job performs shot/face/active-speaker analysis,
-visual planning, bounded asset creation, and initial-manifest compilation. It
-does not re-transcribe or re-rank candidates.
+visual planning, bounded asset creation, and immutable automatic-manifest
+compilation. It does not re-transcribe or re-rank candidates.
 
 One assembly may make:
 

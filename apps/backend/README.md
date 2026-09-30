@@ -10,7 +10,9 @@ CL-001 supplies strict configuration parsing, explicit application composition,
 a content-free `GET /v1/health`, safe error mapping, and deterministic tests.
 CL-003 adds a contract-validated synthetic analysis/assembly story plus
 deterministic fake clock, provider, and operation foundations under `src/demo`.
-They run with no credentials or network and are not a live-provider fallback.
+The fixtures cover zero, one, three, and four candidate outcomes and one
+immutable automatic composition manifest with fixed captions. They run with no
+credentials or network and are not a live-provider fallback.
 Storage, grants, upload, media jobs, live providers, automatic composition,
 render, and cleanup arrive only in their owning tickets. No editor or assistant
 endpoint belongs in the demo API.

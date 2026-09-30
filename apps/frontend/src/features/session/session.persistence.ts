@@ -2,20 +2,18 @@ import {
   analysisIdSchema,
   assemblyIdSchema,
   candidateIdSchema,
-  EDIT_LIMITS,
-  editManifestSchema,
+  manifestIdSchema,
   offsetDateTimeSchema,
   operationIdSchema,
-  proposalIdSchema,
   renderIdSchema,
   revisionIdSchema,
   sessionIdSchema,
-  type EditManifestV1,
+  sha256DigestSchema,
   wordIdSchema,
 } from "@clipbuilder/contracts";
 import { z } from "zod";
 
-import type { ClippingSessionState, ProposalDiffField } from "./session.types";
+import type { ClipReviewSession, ClippingSessionState } from "./session.types";
 
 export const SESSION_PROJECTION_KEY = "clipbuilder.session.v1";
 export const SESSION_PROJECTION_VERSION = 1 as const;
@@ -35,7 +33,7 @@ const STAGES = [
   "candidates",
   "assembling",
   "assembly-failed",
-  "editor",
+  "clip-review",
   "render-confirmation",
   "rendering",
   "render-failed",
@@ -45,165 +43,53 @@ const STAGES = [
 
 export type PersistedStageHint = (typeof STAGES)[number];
 
-export type PersistedOperationReference = { operationId: string };
-
-export type ClippingSessionProjectionV1 = {
-  version: 1;
-  savedAt: string;
-  expiresAt: string;
-  session: {
-    sessionId: string;
-    mode: "sample" | "upload";
-  };
-  stageHint: PersistedStageHint;
-  analysis: { analysisId: string; revision: string } | null;
-  selection: {
-    candidateId: string;
-    startWordId: string;
-    endWordId: string;
-  } | null;
-  assembly: { assemblyId: string; revision: string } | null;
-  operation: PersistedOperationReference | null;
-  editor: {
-    assemblyReference: { assemblyId: string; revision: string };
-    manifest: EditManifestV1;
-    past: EditManifestV1[];
-    future: EditManifestV1[];
-    proposal: {
-      proposalId: string;
-      baseRevision: number;
-      changedFields: ProposalDiffField[];
-    } | null;
-    playback: {
-      currentTimeMs: number;
-      panel: "transcript" | "captions" | "visuals";
-    };
-  } | null;
-  result: { renderId: string; outputAvailable: true } | null;
-};
-
-export type SessionStoragePort = Pick<
-  Storage,
-  "getItem" | "setItem" | "removeItem"
->;
-
-export type ProjectionReadResult =
-  | { status: "empty" }
-  | { status: "valid"; projection: ClippingSessionProjectionV1 }
-  | {
-      status: "corrupt" | "oversized" | "unknown-version" | "expired";
-    };
-
-const persistedOperationSchema = z
-  .object({ operationId: operationIdSchema })
-  .strict();
-
-const projectionEditorSchema = z
+const identitySchema = z
   .object({
-    assemblyReference: z
-      .object({ assemblyId: assemblyIdSchema, revision: revisionIdSchema })
-      .strict(),
-    manifest: editManifestSchema,
-    past: z.array(editManifestSchema).max(EDIT_LIMITS.maxHistoryRevisions),
-    future: z.array(editManifestSchema).max(EDIT_LIMITS.maxHistoryRevisions),
-    proposal: z
-      .object({
-        proposalId: proposalIdSchema,
-        baseRevision: z.number().int().min(0),
-        changedFields: z
-          .array(
-            z.enum(["range", "duration", "captions", "headline", "visuals"]),
-          )
-          .max(10),
-      })
-      .strict()
-      .nullable(),
-    playback: z
-      .object({
-        currentTimeMs: z.number().int().min(0),
-        panel: z.enum(["transcript", "captions", "visuals"]),
-      })
-      .strict(),
+    sessionId: sessionIdSchema,
+    mode: z.enum(["sample", "upload"]),
   })
   .strict();
 
-export const clippingSessionProjectionV1Schema = z
+const analysisReferenceSchema = z
+  .object({ analysisId: analysisIdSchema, revision: revisionIdSchema })
+  .strict();
+
+const selectionReferenceSchema = z
   .object({
-    version: z.literal(SESSION_PROJECTION_VERSION),
-    savedAt: offsetDateTimeSchema,
-    expiresAt: offsetDateTimeSchema,
-    session: z
-      .object({
-        sessionId: sessionIdSchema,
-        mode: z.enum(["sample", "upload"]),
-      })
-      .strict(),
-    stageHint: z.enum(STAGES),
-    analysis: z
-      .object({ analysisId: analysisIdSchema, revision: revisionIdSchema })
-      .strict()
-      .nullable(),
-    selection: z
-      .object({
-        candidateId: z.union([candidateIdSchema, z.literal("manual")]),
-        startWordId: wordIdSchema,
-        endWordId: wordIdSchema,
-      })
-      .strict()
-      .refine((selection) => selection.startWordId !== selection.endWordId, {
-        path: ["endWordId"],
-        message: "Selection range must be nonempty.",
-      })
-      .nullable(),
-    assembly: z
-      .object({ assemblyId: assemblyIdSchema, revision: revisionIdSchema })
-      .strict()
-      .nullable(),
-    operation: persistedOperationSchema.nullable(),
-    editor: projectionEditorSchema.nullable(),
-    result: z
-      .object({
-        renderId: renderIdSchema,
-        outputAvailable: z.literal(true),
-      })
-      .strict()
-      .nullable(),
+    candidateId: candidateIdSchema,
+    startWordId: wordIdSchema,
+    endWordId: wordIdSchema,
   })
   .strict()
-  .superRefine((projection, context) => {
-    if (containsForbiddenProjectionValue(projection)) {
-      context.addIssue({
-        code: "custom",
-        message: "Projection contains a forbidden runtime or capability value.",
-      });
-    }
+  .refine((selection) => selection.startWordId !== selection.endWordId, {
+    path: ["endWordId"],
+    message: "Selection range must be nonempty.",
   });
 
-const exactKeys = (value: Record<string, unknown>, keys: string[]) =>
-  Object.keys(value).length === keys.length &&
-  keys.every((key) => Object.hasOwn(value, key));
+const assemblyReferenceSchema = z
+  .object({ assemblyId: assemblyIdSchema, revision: revisionIdSchema })
+  .strict();
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+const reviewReferenceSchema = z
+  .object({
+    assemblyReference: assemblyReferenceSchema,
+    manifestReference: z
+      .object({
+        manifestId: manifestIdSchema,
+        manifestHash: sha256DigestSchema,
+        analysisRevision: revisionIdSchema,
+        assemblyRevision: revisionIdSchema,
+      })
+      .strict(),
+    playbackTimeMs: z.number().int().min(0),
+  })
+  .strict();
 
-function isIsoDate(value: unknown): value is string {
-  return typeof value === "string" && Number.isFinite(Date.parse(value));
-}
+const resultReferenceSchema = z
+  .object({ renderId: renderIdSchema, outputAvailable: z.literal(true) })
+  .strict();
 
-function isOpaqueId(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.length <= 64 &&
-    /^[a-z]+_[A-Za-z0-9_-]{1,58}$/u.test(value)
-  );
-}
-
-function isWordId(value: unknown): value is string {
-  return typeof value === "string" && /^w_\d{6}$/u.test(value);
-}
-
-const FORBIDDEN_KEYS = new Set([
+const forbiddenKeys = new Set([
   "blob",
   "cookie",
   "controller",
@@ -221,258 +107,86 @@ const FORBIDDEN_KEYS = new Set([
   "url",
 ]);
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export function containsForbiddenProjectionValue(value: unknown): boolean {
   if (typeof value === "string") {
     return /(?:https?:\/\/|blob:|data:|bearer\s)/iu.test(value);
   }
-  if (Array.isArray(value)) {
-    return value.some(containsForbiddenProjectionValue);
-  }
+  if (Array.isArray(value)) return value.some(containsForbiddenProjectionValue);
   if (!isRecord(value)) return false;
   return Object.entries(value).some(
     ([key, nested]) =>
-      FORBIDDEN_KEYS.has(key.toLowerCase()) ||
+      forbiddenKeys.has(key.toLowerCase()) ||
       containsForbiddenProjectionValue(nested),
   );
 }
 
-function parseIdentity(value: unknown) {
-  if (
-    !isRecord(value) ||
-    !exactKeys(value, ["sessionId", "mode"]) ||
-    !isOpaqueId(value.sessionId) ||
-    (value.mode !== "sample" && value.mode !== "upload")
-  ) {
-    return null;
-  }
-  return { sessionId: value.sessionId, mode: value.mode } as const;
-}
+export const clippingSessionProjectionV1Schema = z
+  .object({
+    version: z.literal(SESSION_PROJECTION_VERSION),
+    savedAt: offsetDateTimeSchema,
+    expiresAt: offsetDateTimeSchema,
+    session: identitySchema,
+    stageHint: z.enum(STAGES),
+    analysis: analysisReferenceSchema.nullable(),
+    selection: selectionReferenceSchema.nullable(),
+    assembly: assemblyReferenceSchema.nullable(),
+    operation: z.object({ operationId: operationIdSchema }).strict().nullable(),
+    review: reviewReferenceSchema.nullable(),
+    result: resultReferenceSchema.nullable(),
+  })
+  .strict()
+  .superRefine((projection, context) => {
+    if (containsForbiddenProjectionValue(projection)) {
+      context.addIssue({
+        code: "custom",
+        message: "Projection contains a forbidden runtime or capability value.",
+      });
+    }
+    if (
+      projection.review !== null &&
+      (projection.analysis === null ||
+        projection.selection === null ||
+        projection.assembly === null ||
+        projection.review.assemblyReference.assemblyId !==
+          projection.assembly.assemblyId ||
+        projection.review.assemblyReference.revision !==
+          projection.assembly.revision ||
+        projection.review.manifestReference.analysisRevision !==
+          projection.analysis.revision ||
+        projection.review.manifestReference.assemblyRevision !==
+          projection.assembly.revision)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Review evidence must match analysis and assembly references.",
+        path: ["review"],
+      });
+    }
+  });
 
-function parseAnalysis(value: unknown) {
-  if (value === null) return null;
-  if (
-    !isRecord(value) ||
-    !exactKeys(value, ["analysisId", "revision"]) ||
-    !isOpaqueId(value.analysisId) ||
-    !isOpaqueId(value.revision)
-  ) {
-    return undefined;
-  }
-  return { analysisId: value.analysisId, revision: value.revision };
-}
+export type ClippingSessionProjectionV1 = z.infer<
+  typeof clippingSessionProjectionV1Schema
+>;
 
-function parseSelection(value: unknown) {
-  if (value === null) return null;
-  if (
-    !isRecord(value) ||
-    !exactKeys(value, ["candidateId", "startWordId", "endWordId"]) ||
-    !(value.candidateId === "manual" || isOpaqueId(value.candidateId)) ||
-    !isWordId(value.startWordId) ||
-    !isWordId(value.endWordId) ||
-    value.startWordId === value.endWordId
-  ) {
-    return undefined;
-  }
-  return {
-    candidateId: value.candidateId,
-    startWordId: value.startWordId,
-    endWordId: value.endWordId,
-  };
-}
+export type SessionStoragePort = Pick<
+  Storage,
+  "getItem" | "setItem" | "removeItem"
+>;
 
-function parseAssembly(value: unknown) {
-  if (value === null) return null;
-  if (
-    !isRecord(value) ||
-    !exactKeys(value, ["assemblyId", "revision"]) ||
-    !isOpaqueId(value.assemblyId) ||
-    !isOpaqueId(value.revision)
-  ) {
-    return undefined;
-  }
-  return { assemblyId: value.assemblyId, revision: value.revision };
-}
-
-function parseEditor(
-  value: unknown,
-): ClippingSessionProjectionV1["editor"] | undefined {
-  if (value === null) return null;
-  if (
-    !isRecord(value) ||
-    !exactKeys(value, [
-      "assemblyReference",
-      "manifest",
-      "past",
-      "future",
-      "proposal",
-      "playback",
-    ]) ||
-    !Array.isArray(value.past) ||
-    !Array.isArray(value.future) ||
-    value.past.length > EDIT_LIMITS.maxHistoryRevisions ||
-    value.future.length > EDIT_LIMITS.maxHistoryRevisions
-  ) {
-    return undefined;
-  }
-  const assemblyReference = parseAssembly(value.assemblyReference);
-  if (assemblyReference === null || assemblyReference === undefined) {
-    return undefined;
-  }
-  const manifest = editManifestSchema.safeParse(value.manifest);
-  const past = value.past.map((item) => editManifestSchema.safeParse(item));
-  const future = value.future.map((item) => editManifestSchema.safeParse(item));
-  if (
-    !manifest.success ||
-    past.some((item) => !item.success) ||
-    future.some((item) => !item.success)
-  ) {
-    return undefined;
-  }
-
-  let proposal: NonNullable<ClippingSessionProjectionV1["editor"]>["proposal"];
-  if (value.proposal === null) {
-    proposal = null;
-  } else if (
-    isRecord(value.proposal) &&
-    exactKeys(value.proposal, [
-      "proposalId",
-      "baseRevision",
-      "changedFields",
-    ]) &&
-    isOpaqueId(value.proposal.proposalId) &&
-    Number.isInteger(value.proposal.baseRevision) &&
-    Number(value.proposal.baseRevision) >= 0 &&
-    Array.isArray(value.proposal.changedFields) &&
-    value.proposal.changedFields.length <= 10 &&
-    value.proposal.changedFields.every((field) =>
-      ["range", "duration", "captions", "headline", "visuals"].includes(
-        String(field),
-      ),
-    )
-  ) {
-    proposal = {
-      proposalId: value.proposal.proposalId,
-      baseRevision: Number(value.proposal.baseRevision),
-      changedFields: value.proposal.changedFields as ProposalDiffField[],
-    };
-  } else {
-    return undefined;
-  }
-
-  if (
-    !isRecord(value.playback) ||
-    !exactKeys(value.playback, ["currentTimeMs", "panel"]) ||
-    !Number.isInteger(value.playback.currentTimeMs) ||
-    Number(value.playback.currentTimeMs) < 0 ||
-    !["transcript", "captions", "visuals"].includes(
-      String(value.playback.panel),
-    )
-  ) {
-    return undefined;
-  }
-
-  return {
-    assemblyReference,
-    manifest: manifest.data,
-    past: past.map((item) => item.data as EditManifestV1),
-    future: future.map((item) => item.data as EditManifestV1),
-    proposal,
-    playback: {
-      currentTimeMs: Number(value.playback.currentTimeMs),
-      panel: value.playback.panel as "transcript" | "captions" | "visuals",
-    },
-  };
-}
-
-function parseOperation(
-  value: unknown,
-): PersistedOperationReference | null | undefined {
-  if (value === null) return null;
-  if (
-    !isRecord(value) ||
-    !exactKeys(value, ["operationId"]) ||
-    !isOpaqueId(value.operationId)
-  ) {
-    return undefined;
-  }
-  return { operationId: value.operationId };
-}
-
-function parseResult(value: unknown) {
-  if (value === null) return null;
-  if (
-    !isRecord(value) ||
-    !exactKeys(value, ["renderId", "outputAvailable"]) ||
-    !isOpaqueId(value.renderId) ||
-    value.outputAvailable !== true
-  ) {
-    return undefined;
-  }
-  return { renderId: value.renderId, outputAvailable: true as const };
-}
+export type ProjectionReadResult =
+  | { status: "empty" }
+  | { status: "valid"; projection: ClippingSessionProjectionV1 }
+  | { status: "corrupt" | "oversized" | "unknown-version" | "expired" };
 
 export function parseSessionProjection(
   value: unknown,
 ): ClippingSessionProjectionV1 | null {
-  if (
-    !isRecord(value) ||
-    !exactKeys(value, [
-      "version",
-      "savedAt",
-      "expiresAt",
-      "session",
-      "stageHint",
-      "analysis",
-      "selection",
-      "assembly",
-      "operation",
-      "editor",
-      "result",
-    ]) ||
-    value.version !== SESSION_PROJECTION_VERSION ||
-    !isIsoDate(value.savedAt) ||
-    !isIsoDate(value.expiresAt) ||
-    !STAGES.includes(value.stageHint as PersistedStageHint) ||
-    containsForbiddenProjectionValue(value)
-  ) {
-    return null;
-  }
-
-  const session = parseIdentity(value.session);
-  const analysis = parseAnalysis(value.analysis);
-  const selection = parseSelection(value.selection);
-  const assembly = parseAssembly(value.assembly);
-  const editor = parseEditor(value.editor);
-  const result = parseResult(value.result);
-  const operation = parseOperation(value.operation);
-
-  if (
-    session === null ||
-    analysis === undefined ||
-    selection === undefined ||
-    assembly === undefined ||
-    editor === undefined ||
-    result === undefined ||
-    operation === undefined
-  ) {
-    return null;
-  }
-
-  const projection: ClippingSessionProjectionV1 = {
-    version: 1,
-    savedAt: value.savedAt,
-    expiresAt: value.expiresAt,
-    session,
-    stageHint: value.stageHint as PersistedStageHint,
-    analysis,
-    selection,
-    assembly,
-    operation,
-    editor,
-    result,
-  };
-  const validated = clippingSessionProjectionV1Schema.safeParse(projection);
-  return validated.success ? validated.data : null;
+  const parsed = clippingSessionProjectionV1Schema.safeParse(value);
+  return parsed.success ? parsed.data : null;
 }
 
 function identityFromState(state: ClippingSessionState) {
@@ -484,15 +198,85 @@ function analysisFromState(state: ClippingSessionState) {
   if ("lastKnown" in state && "analysis" in state.lastKnown) {
     return state.lastKnown.analysis;
   }
+  if (state.stage === "result") {
+    return {
+      analysisId: state.clipSummary.analysisId,
+      revision: state.clipSummary.analysisRevision,
+      bundle: null,
+    };
+  }
   return null;
 }
 
-function editorFromState(state: ClippingSessionState) {
-  if ("editor" in state) return state.editor;
-  if ("lastKnown" in state && "editor" in state.lastKnown) {
-    return state.lastKnown.editor;
+function reviewFromState(
+  state: ClippingSessionState,
+): ClipReviewSession | null {
+  if ("review" in state) return state.review;
+  if ("lastKnown" in state && "review" in state.lastKnown) {
+    return state.lastKnown.review;
+  }
+  if (state.stage === "result") {
+    return {
+      selectedCandidateId: state.clipSummary.selectedCandidateId,
+      selectedStartWordId: state.clipSummary.selectedStartWordId,
+      selectedEndWordId: state.clipSummary.selectedEndWordId,
+      assemblyReference: {
+        assemblyId: state.clipSummary.assemblyId,
+        revision: state.clipSummary.assemblyRevision,
+      },
+      manifestReference: {
+        manifestId: state.clipSummary.manifestId,
+        manifestHash: state.clipSummary.manifestHash,
+        analysisRevision: state.clipSummary.analysisRevision,
+        assemblyRevision: state.clipSummary.assemblyRevision,
+      },
+      playback: { status: "idle", currentTimeMs: 0 },
+    };
   }
   return null;
+}
+
+function selectionFromState(
+  state: ClippingSessionState,
+  review: ClipReviewSession | null,
+) {
+  if (state.stage === "assembling") {
+    return {
+      candidateId: state.lastKnown.selectedId,
+      startWordId: state.lastKnown.startWordId,
+      endWordId: state.lastKnown.endWordId,
+    };
+  }
+  if (state.stage === "assembly-failed") {
+    return {
+      candidateId: state.selectedId,
+      startWordId: state.startWordId,
+      endWordId: state.endWordId,
+    };
+  }
+  if (
+    state.stage === "candidates" &&
+    state.selectedId !== null &&
+    state.analysis.bundle !== null
+  ) {
+    const candidate = state.analysis.bundle.candidates.find(
+      (item) => item.id === state.selectedId,
+    );
+    return candidate === undefined
+      ? null
+      : {
+          candidateId: candidate.id,
+          startWordId: candidate.startWordId,
+          endWordId: candidate.endWordId,
+        };
+  }
+  return review === null
+    ? null
+    : {
+        candidateId: review.selectedCandidateId,
+        startWordId: review.selectedStartWordId,
+        endWordId: review.selectedEndWordId,
+      };
 }
 
 export function projectSessionState(
@@ -510,30 +294,10 @@ export function projectSessionState(
   }
 
   const analysis = analysisFromState(state);
-  const editor = editorFromState(state);
-  const selection =
-    state.stage === "assembling"
-      ? {
-          candidateId: state.lastKnown.selectedId,
-          startWordId: state.lastKnown.startWordId,
-          endWordId: state.lastKnown.endWordId,
-        }
-      : editor === null
-        ? null
-        : {
-            candidateId: editor.manifest.baseCandidateId,
-            startWordId: editor.manifest.range.startWordId,
-            endWordId: editor.manifest.range.endWordId,
-          };
-  const assemblyBundle =
-    "assembly" in state
-      ? state.assembly
-      : "lastKnown" in state && "assembly" in state.lastKnown
-        ? state.lastKnown.assembly
-        : null;
+  const review = reviewFromState(state);
+  const selection = selectionFromState(state, review);
   const operation =
     "operation" in state ? { operationId: state.operation.operationId } : null;
-
   const projection: ClippingSessionProjectionV1 = {
     version: 1,
     savedAt: now.toISOString(),
@@ -546,49 +310,30 @@ export function projectSessionState(
         : { analysisId: analysis.analysisId, revision: analysis.revision },
     selection,
     assembly:
-      assemblyBundle === null
-        ? editor === null
-          ? null
-          : {
-              assemblyId: editor.assemblyReference.assemblyId,
-              revision: editor.assemblyReference.revision,
-            }
-        : {
-            assemblyId: assemblyBundle.assemblyId,
-            revision: assemblyBundle.revision,
-          },
-    operation,
-    editor:
-      editor === null
+      review === null
         ? null
         : {
-            assemblyReference: editor.assemblyReference,
-            manifest: editor.manifest,
-            past: editor.past.slice(-EDIT_LIMITS.maxHistoryRevisions),
-            future: editor.future.slice(0, EDIT_LIMITS.maxHistoryRevisions),
-            proposal:
-              editor.proposal.status === "succeeded"
-                ? {
-                    proposalId: editor.proposal.proposal.proposalId,
-                    baseRevision: editor.proposal.proposal.baseRevision,
-                    changedFields: editor.proposal.changedFields,
-                  }
-                : null,
-            playback: {
-              currentTimeMs: editor.playback.currentTimeMs,
-              panel: editor.playback.panel,
-            },
+            assemblyId: review.assemblyReference.assemblyId,
+            revision: review.assemblyReference.revision,
+          },
+    operation,
+    review:
+      review === null
+        ? null
+        : {
+            assemblyReference: review.assemblyReference,
+            manifestReference: review.manifestReference,
+            playbackTimeMs: review.playback.currentTimeMs,
           },
     result:
       state.stage === "result"
-        ? {
-            renderId: state.result.renderId,
-            outputAvailable: true,
-          }
+        ? { renderId: state.result.renderId, outputAvailable: true }
         : null,
   };
 
-  return containsForbiddenProjectionValue(projection) ? null : projection;
+  return clippingSessionProjectionV1Schema.safeParse(projection).success
+    ? projection
+    : null;
 }
 
 export function serializeSessionProjection(

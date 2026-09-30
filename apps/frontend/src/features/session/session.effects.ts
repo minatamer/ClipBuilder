@@ -11,7 +11,9 @@ export class SessionEffectRegistry {
 
   registerStopper(stop: StopEffect): StopEffect {
     this.#stoppers.add(stop);
-    return () => this.#stoppers.delete(stop);
+    return () => {
+      if (this.#stoppers.delete(stop)) stop();
+    };
   }
 
   revokeObjectUrl(url: string): void {

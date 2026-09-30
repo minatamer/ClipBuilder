@@ -3,15 +3,16 @@ import { z } from "zod";
 import { assemblyBundleSchema } from "./assembly.schema.js";
 import {
   offsetDateTimeSchema,
+  sha256DigestSchema,
   turnstileTokenSchema,
 } from "./boundary-primitives.schema.js";
 import { clipCandidateSchema } from "./candidate.schema.js";
 import { OWNER_VALIDATION_LIMITS, PUBLIC_LIMITS } from "./constants.js";
-import { editManifestSchema, editProposalSchema } from "./editor.schema.js";
 import {
   analysisIdSchema,
   assemblyIdSchema,
   candidateIdSchema,
+  manifestIdSchema,
   mediaIdSchema,
   renderIdSchema,
   revisionIdSchema,
@@ -64,16 +65,8 @@ export const publicConfigResponseSchema = z
           .int()
           .min(PUBLIC_LIMITS.minClipSeconds)
           .max(OWNER_VALIDATION_LIMITS.maxClipSeconds),
-        candidateCount: z
-          .number()
-          .int()
-          .min(1)
-          .max(OWNER_VALIDATION_LIMITS.candidateCount),
-        assistantProposals: z
-          .number()
-          .int()
-          .min(0)
-          .max(OWNER_VALIDATION_LIMITS.maxAssistantProposals),
+        candidateTarget: z.literal(PUBLIC_LIMITS.candidateTarget),
+        candidateMax: z.literal(PUBLIC_LIMITS.maxCandidateCount),
         renders: z
           .number()
           .int()
@@ -150,7 +143,7 @@ export const sessionResponseSchema = z
       "analyzing",
       "candidates",
       "assembling",
-      "editor",
+      "clip-review",
       "rendering",
       "result",
     ]),
@@ -160,16 +153,13 @@ export const sessionResponseSchema = z
     analysisRevision: revisionIdSchema.nullable(),
     assemblyId: assemblyIdSchema.nullable(),
     assemblyRevision: revisionIdSchema.nullable(),
+    manifestId: manifestIdSchema.nullable(),
+    manifestHash: sha256DigestSchema.nullable(),
     renderId: renderIdSchema.nullable(),
     outputAvailable: z.boolean(),
     remaining: z
       .object({
         analysisRetries: z.number().int().min(0).max(1),
-        assistantProposals: z
-          .number()
-          .int()
-          .min(0)
-          .max(OWNER_VALIDATION_LIMITS.maxAssistantProposals),
         renderAttempts: z
           .number()
           .int()
@@ -180,21 +170,64 @@ export const sessionResponseSchema = z
   })
   .strict()
   .superRefine((session, context) => {
-    if (session.assemblyRevision !== null && session.assemblyId === null) {
+    const hasAssemblyId = session.assemblyId !== null;
+    const hasAssemblyRevision = session.assemblyRevision !== null;
+    const hasManifestId = session.manifestId !== null;
+    const hasManifestHash = session.manifestHash !== null;
+    const isPostAssembly = ["clip-review", "rendering", "result"].includes(
+      session.provenStage,
+    );
+
+    if (hasAssemblyId !== hasAssemblyRevision) {
       context.addIssue({
         code: "custom",
-        message: "An assembly revision requires an assembly identifier.",
+        message: "Assembly evidence requires both identifier and revision.",
+        path: [hasAssemblyId ? "assemblyRevision" : "assemblyId"],
+      });
+    }
+    if (hasManifestId !== hasManifestHash) {
+      context.addIssue({
+        code: "custom",
+        message: "Manifest evidence requires both identifier and hash.",
+        path: [hasManifestId ? "manifestHash" : "manifestId"],
+      });
+    }
+    if ((hasManifestId || hasManifestHash) && !hasAssemblyId) {
+      context.addIssue({
+        code: "custom",
+        message: "Manifest evidence requires assembly evidence.",
         path: ["assemblyId"],
       });
     }
-    if (
-      ["editor", "rendering", "result"].includes(session.provenStage) &&
-      (session.assemblyId === null || session.assemblyRevision === null)
-    ) {
+    if (isPostAssembly && (!hasAssemblyId || !hasAssemblyRevision)) {
       context.addIssue({
         code: "custom",
         message: "Post-assembly session stages require assembly evidence.",
         path: ["assemblyRevision"],
+      });
+    }
+    if (isPostAssembly && (!hasManifestId || !hasManifestHash)) {
+      context.addIssue({
+        code: "custom",
+        message: "Post-assembly session stages require manifest evidence.",
+        path: ["manifestHash"],
+      });
+    }
+    if (session.outputAvailable && session.renderId === null) {
+      context.addIssue({
+        code: "custom",
+        message: "Available output requires a render identifier.",
+        path: ["renderId"],
+      });
+    }
+    if (
+      session.provenStage === "result" &&
+      (session.renderId === null || !session.outputAvailable)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Result stage requires an available rendered output.",
+        path: ["outputAvailable"],
       });
     }
   });
@@ -282,7 +315,7 @@ export const analysisBundleSchema = z
     transcript: transcriptBundleSchema,
     candidates: z
       .array(clipCandidateSchema)
-      .max(OWNER_VALIDATION_LIMITS.candidateCount),
+      .max(OWNER_VALIDATION_LIMITS.maxCandidateCount),
     outcome: z.enum(["candidates", "no-strong-candidates"]),
     warnings: z.array(analysisWarningSchema).max(10),
   })
@@ -446,7 +479,7 @@ export const assemblyRequestSchema = z
     analysisId: analysisIdSchema,
     selection: z
       .object({
-        candidateId: z.union([candidateIdSchema, z.literal("manual")]),
+        candidateId: candidateIdSchema,
         startWordId: wordIdSchema,
         endWordId: wordIdSchema,
       })
@@ -479,35 +512,11 @@ export const assemblyResultResponseSchema = z
   })
   .strict();
 
-export const editorProposalResponseSchema = z
-  .object({
-    proposal: editProposalSchema,
-    proposedManifest: editManifestSchema,
-    diff: z
-      .array(
-        z
-          .object({
-            field: z.enum([
-              "range",
-              "duration",
-              "captions",
-              "headline",
-              "visuals",
-            ]),
-            before: boundedPlainTextSchema(240),
-            after: boundedPlainTextSchema(240),
-          })
-          .strict(),
-      )
-      .max(10),
-  })
-  .strict();
-
 export const renderRequestSchema = z
   .object({
     analysisId: analysisIdSchema,
     assemblyId: assemblyIdSchema,
-    manifest: editManifestSchema,
+    manifestHash: sha256DigestSchema,
     turnstileToken: turnstileTokenSchema,
   })
   .strict();

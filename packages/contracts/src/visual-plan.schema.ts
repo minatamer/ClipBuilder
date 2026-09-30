@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { ASSEMBLY_LIMITS } from "./constants.js";
+import { sha256DigestSchema } from "./boundary-primitives.schema.js";
 import {
   revisionIdSchema,
   visualAssetIdSchema,
@@ -26,7 +27,7 @@ export const visualLayoutSchema = z.enum([
 ]);
 export const visualMotionSchema = z.enum(["none", "slow-push-in"]);
 export const visualTransitionSchema = z.enum(["cut", "short-dissolve"]);
-export const artDirectionSchema = z.literal("editorial-signal-v1");
+export const artDirectionSchema = z.literal("precision-cut-v1");
 
 export const visualAssetRequestSchema = z
   .object({
@@ -159,7 +160,7 @@ export const visualAssetSchema = z
     width: z.number().int().min(1).max(4_096),
     height: z.number().int().min(1).max(4_096),
     bytes: z.number().int().min(1).max(ASSEMBLY_LIMITS.maxGeneratedAssetBytes),
-    sha256: z.string().regex(/^[a-f0-9]{64}$/u),
+    sha256: sha256DigestSchema,
     hasAlpha: z.boolean(),
   })
   .strict();

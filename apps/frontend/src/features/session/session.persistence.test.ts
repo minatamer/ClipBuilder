@@ -22,16 +22,22 @@ import {
   reconcileSessionProjection,
   restoreEvidenceUnavailableFailure,
 } from "./session.reconciliation";
+import { clippingSessionReducer } from "./session.reducer";
+import { selectAvailableActions, selectBlockers } from "./session.selectors";
 import {
   analysis,
   assembly,
-  editorSession,
-  editorState,
   failure,
   identity,
   media,
   operation,
+  reviewSession,
+  reviewState,
 } from "./session.test-fixtures";
+import {
+  initialClippingSessionState,
+  type ClippingSessionState,
+} from "./session.types";
 
 class MemoryStorage implements SessionStoragePort {
   readonly values = new Map<string, string>();
@@ -53,8 +59,8 @@ const now = new Date("2026-09-29T10:05:00.000Z");
 const availability = { sample: true, upload: true } as const;
 
 function projection(): ClippingSessionProjectionV1 {
-  const projected = projectSessionState(editorState(), now);
-  if (projected === null) throw new Error("Expected an editor projection.");
+  const projected = projectSessionState(reviewState(), now);
+  if (projected === null) throw new Error("Expected a clip-review projection.");
   return projected;
 }
 
@@ -64,26 +70,24 @@ function evidence(overrides: Partial<SessionResponse> = {}): SessionResponse {
     mode: identity.mode,
     accessState: "active" as const,
     expiresAt: identity.expiresAt,
-    provenStage: "editor" as const,
+    provenStage: "clip-review" as const,
     analysisId: analysis.analysisId,
     analysisRevision: analysis.revision,
     assemblyId: assembly.assemblyId,
     assemblyRevision: assembly.revision,
+    manifestId: assembly.manifestId,
+    manifestHash: assembly.manifestHash,
     renderId: null,
     outputAvailable: false,
     media,
     activeOperation: null,
-    remaining: {
-      analysisRetries: 1,
-      assistantProposals: 3,
-      renderAttempts: 1,
-    },
+    remaining: { analysisRetries: 1, renderAttempts: 1 },
     ...overrides,
   });
 }
 
 describe("allow-listed session projection", () => {
-  it("round-trips a valid bounded projection", () => {
+  it("round-trips content-free review references without a manifest body", () => {
     const storage = new MemoryStorage();
     const value = projection();
     writeSessionProjection(storage, value);
@@ -92,6 +96,10 @@ describe("allow-listed session projection", () => {
       status: "valid",
       projection: value,
     });
+    const serialized = storage.getItem(SESSION_PROJECTION_KEY)!;
+    expect(serialized).toContain(assembly.manifestHash);
+    expect(serialized).not.toContain("clean-emphasis");
+    expect(serialized).not.toContain("compositionManifest");
     clearSessionProjection(storage);
     expect(storage.getItem(SESSION_PROJECTION_KEY)).toBeNull();
   });
@@ -137,6 +145,7 @@ describe("allow-listed session projection", () => {
       "track",
       "transcript",
       "media",
+      "manifestBody",
     ];
     for (const key of sentinels) {
       expect(
@@ -144,16 +153,14 @@ describe("allow-listed session projection", () => {
       ).toBeNull();
     }
 
-    const state = editorState() as typeof editorState extends () => infer T
-      ? T & Record<string, unknown>
-      : never;
+    const state = reviewState() as ReturnType<typeof reviewState> &
+      Record<string, unknown>;
     state.filename = "private-source.mp4";
     state.token = "secret";
     state.objectUrl = "blob:private";
     state.transcript = { words: ["private transcript sentinel"] };
     state.rationale = "private rationale sentinel";
-    const projected = projectSessionState(state, now);
-    const serialized = JSON.stringify(projected);
+    const serialized = JSON.stringify(projectSessionState(state, now));
     expect(serialized).not.toContain("private-source");
     expect(serialized).not.toContain("secret");
     expect(serialized).not.toContain("blob:private");
@@ -161,11 +168,11 @@ describe("allow-listed session projection", () => {
     expect(serialized).not.toContain("private rationale sentinel");
   });
 
-  it("enforces the 256 KiB hard ceiling before storage", () => {
-    const value = projection();
-    value.editor!.manifest.headline.text = "x".repeat(
-      MAX_SESSION_PROJECTION_BYTES,
-    );
+  it("enforces the 256 KiB hard ceiling before schema parsing", () => {
+    const value = projection() as ClippingSessionProjectionV1 & {
+      oversized?: string;
+    };
+    value.oversized = "x".repeat(MAX_SESSION_PROJECTION_BYTES);
     expect(() => serializeSessionProjection(value)).toThrow(
       "Session projection exceeds the storage limit.",
     );
@@ -196,7 +203,7 @@ describe("allow-listed session projection", () => {
 });
 
 describe("restore reconciliation", () => {
-  it("restores valid editor evidence without content-heavy analysis", () => {
+  it("restores server-proven review references and resumes the render flow", () => {
     const result = reconcileSessionProjection(
       projection(),
       evidence(),
@@ -205,22 +212,71 @@ describe("restore reconciliation", () => {
     );
     expect(result).toMatchObject({
       status: "restored",
-      state: { stage: "editor", assembly: null },
+      state: { stage: "clip-review", assembly: null },
     });
-    if (result.status === "restored" && result.state.stage === "editor") {
+    if (result.status === "restored" && result.state.stage === "clip-review") {
       expect(result.state.analysis.bundle).toBeNull();
+      expect(result.state.review.manifestReference.manifestHash).toBe(
+        assembly.manifestHash,
+      );
+      expect(selectAvailableActions(result.state)).toContain("review-render");
+      expect(selectBlockers(result.state)).toEqual([]);
+
+      const restored = clippingSessionReducer(initialClippingSessionState, {
+        type: "RESTORE_VALID",
+        state: result.state,
+      });
+      expect(
+        clippingSessionReducer(restored, { type: "RENDER_REVIEW" }).stage,
+      ).toBe("render-confirmation");
+    }
+  });
+
+  it("restores render failure to review and permits a new confirmation", () => {
+    const review = reviewState();
+    if (review.stage !== "clip-review") {
+      throw new Error("Expected the review fixture to be at clip review.");
+    }
+    const failedState: ClippingSessionState = {
+      ...review,
+      stage: "render-failed",
+      failure,
+    };
+    const failedProjection = projectSessionState(failedState, now);
+    if (failedProjection === null) {
+      throw new Error("Expected a render-failed projection.");
+    }
+
+    const result = reconcileSessionProjection(
+      failedProjection,
+      evidence(),
+      now,
+      availability,
+    );
+    expect(result).toMatchObject({
+      status: "restored",
+      state: { stage: "clip-review", assembly: null },
+    });
+    if (result.status === "restored") {
+      const restored = clippingSessionReducer(initialClippingSessionState, {
+        type: "RESTORE_VALID",
+        state: result.state,
+      });
+      expect(
+        clippingSessionReducer(restored, { type: "RENDER_REVIEW" }).stage,
+      ).toBe("render-confirmation");
     }
   });
 
   it("discards stale, expired, missing, and conflicting server evidence", () => {
-    const stale = {
-      ...projection(),
-      savedAt: "2026-09-29T09:00:00.000Z",
-    };
     expect(
-      reconcileSessionProjection(stale, evidence(), now, availability),
+      reconcileSessionProjection(
+        { ...projection(), savedAt: "2026-09-29T09:00:00.000Z" },
+        evidence(),
+        now,
+        availability,
+      ),
     ).toMatchObject({ status: "stale" });
-
     expect(
       reconcileSessionProjection(
         projection(),
@@ -240,83 +296,132 @@ describe("restore reconciliation", () => {
         availability,
       ),
     ).toMatchObject({ status: "server-conflict" });
-  });
-
-  it("reconciles in-flight analysis, assembly, render, and upload rollback", () => {
-    const analysisOperation = operation("analysis");
-    const analysisState = {
-      stage: "analyzing" as const,
-      identity,
-      operation: analysisOperation,
-      lastKnown: { media },
-      diagnosticCode: null,
-    };
-    const analysisProjection = projectSessionState(analysisState, now)!;
-    expect(analysisProjection.operation).toEqual({
-      operationId: analysisOperation.operationId,
-    });
     expect(
       reconcileSessionProjection(
-        analysisProjection,
-        evidence({
-          provenStage: "analyzing" as const,
-          analysisId: null,
-          analysisRevision: null,
-          assemblyId: null,
-          assemblyRevision: null,
-          activeOperation: analysisOperation,
-        }),
-        now,
-        availability,
-      ),
-    ).toMatchObject({ status: "restored", state: { stage: "analyzing" } });
-    expect(
-      reconcileSessionProjection(
-        analysisProjection,
-        evidence({
-          provenStage: "analyzing" as const,
-          analysisId: null,
-          analysisRevision: null,
-          assemblyId: null,
-          assemblyRevision: null,
-          activeOperation: null,
-        }),
+        projection(),
+        evidence({ manifestId: `man_${"x".repeat(22)}` }),
         now,
         availability,
       ),
     ).toMatchObject({ status: "server-conflict" });
     expect(
       reconcileSessionProjection(
-        analysisProjection,
-        evidence({
-          provenStage: "candidates" as const,
-          assemblyId: null,
-          assemblyRevision: null,
-          activeOperation: null,
-        }),
+        projection(),
+        evidence({ manifestHash: "3".repeat(64) }),
         now,
         availability,
       ),
-    ).toMatchObject({ status: "stale" });
+    ).toMatchObject({ status: "server-conflict" });
 
-    const assemblyOperation = operation("assembly");
-    const assemblingState = {
-      stage: "assembling" as const,
-      identity,
-      operation: assemblyOperation,
-      lastKnown: {
+    const candidateProjection = projectSessionState(
+      {
+        stage: "candidates",
+        identity,
         analysis: {
           analysisId: analysis.analysisId,
           revision: analysis.revision,
           bundle: analysis,
         },
-        selectedId: analysis.candidates[0]!.id,
-        startWordId: "w_000001",
-        endWordId: "w_000030",
+        selectedId: null,
+        diagnosticCode: null,
       },
-      diagnosticCode: null,
-    };
-    const assemblyProjection = projectSessionState(assemblingState, now)!;
+      now,
+    )!;
+    expect(
+      reconcileSessionProjection(
+        candidateProjection,
+        evidence({
+          provenStage: "analyzing",
+          assemblyId: null,
+          assemblyRevision: null,
+          manifestId: null,
+          manifestHash: null,
+          activeOperation: operation("analysis", "queued", "b"),
+        }),
+        now,
+        availability,
+      ),
+    ).toMatchObject({ status: "server-conflict" });
+  });
+
+  it("reconciles in-flight analysis, assembly, render, and upload rollback", () => {
+    const analysisOperation = operation("analysis");
+    const analysisProjection = projectSessionState(
+      {
+        stage: "analyzing",
+        identity,
+        operation: analysisOperation,
+        lastKnown: { media },
+        diagnosticCode: null,
+      },
+      now,
+    )!;
+    expect(
+      reconcileSessionProjection(
+        analysisProjection,
+        evidence({
+          provenStage: "analyzing" as const,
+          analysisId: null,
+          analysisRevision: null,
+          assemblyId: null,
+          assemblyRevision: null,
+          manifestId: null,
+          manifestHash: null,
+          activeOperation: analysisOperation,
+        }),
+        now,
+        availability,
+      ),
+    ).toMatchObject({ status: "restored", state: { stage: "analyzing" } });
+    const completedAnalysis = reconcileSessionProjection(
+      analysisProjection,
+      evidence({
+        provenStage: "candidates",
+        assemblyId: null,
+        assemblyRevision: null,
+        manifestId: null,
+        manifestHash: null,
+        activeOperation: null,
+      }),
+      now,
+      availability,
+    );
+    expect(completedAnalysis).toMatchObject({
+      status: "restored",
+      state: {
+        stage: "candidates",
+        analysis: { bundle: null },
+      },
+    });
+    if (
+      completedAnalysis.status === "restored" &&
+      completedAnalysis.state.stage === "candidates"
+    ) {
+      expect(selectBlockers(completedAnalysis.state)).toEqual([
+        "analysis-refresh-required",
+      ]);
+    }
+
+    const assemblyOperation = operation("assembly");
+    const assemblyProjection = projectSessionState(
+      {
+        stage: "assembling",
+        identity,
+        operation: assemblyOperation,
+        lastKnown: {
+          analysis: {
+            analysisId: analysis.analysisId,
+            revision: analysis.revision,
+            bundle: analysis,
+          },
+          selectedId: analysis.candidates[0]!.id,
+          startWordId: "w_000001",
+          endWordId: "w_000030",
+        },
+        diagnosticCode: null,
+      },
+      now,
+    )!;
     expect(
       reconcileSessionProjection(
         assemblyProjection,
@@ -324,30 +429,58 @@ describe("restore reconciliation", () => {
           provenStage: "assembling" as const,
           assemblyId: null,
           assemblyRevision: null,
+          manifestId: null,
+          manifestHash: null,
           activeOperation: assemblyOperation,
         }),
         now,
         availability,
       ),
     ).toMatchObject({ status: "restored", state: { stage: "assembling" } });
+    const completedAssembly = reconcileSessionProjection(
+      assemblyProjection,
+      evidence({ activeOperation: null }),
+      now,
+      availability,
+    );
+    expect(completedAssembly).toMatchObject({
+      status: "restored",
+      state: {
+        stage: "clip-review",
+        assembly: null,
+        review: {
+          manifestReference: { manifestHash: assembly.manifestHash },
+        },
+      },
+    });
+    if (
+      completedAssembly.status === "restored" &&
+      completedAssembly.state.stage === "clip-review"
+    ) {
+      expect(selectAvailableActions(completedAssembly.state)).toContain(
+        "review-render",
+      );
+    }
 
     const renderOperation = operation("render");
-    const renderingState = {
-      stage: "rendering" as const,
-      identity,
-      operation: renderOperation,
-      lastKnown: {
-        analysis: {
-          analysisId: analysis.analysisId,
-          revision: analysis.revision,
-          bundle: analysis,
+    const renderProjection = projectSessionState(
+      {
+        stage: "rendering",
+        identity,
+        operation: renderOperation,
+        lastKnown: {
+          analysis: {
+            analysisId: analysis.analysisId,
+            revision: analysis.revision,
+            bundle: analysis,
+          },
+          assembly,
+          review: reviewSession(),
         },
-        assembly,
-        editor: editorSession(),
+        diagnosticCode: null,
       },
-      diagnosticCode: null,
-    };
-    const renderProjection = projectSessionState(renderingState, now)!;
+      now,
+    )!;
     expect(
       reconcileSessionProjection(
         renderProjection,
@@ -359,6 +492,26 @@ describe("restore reconciliation", () => {
         availability,
       ),
     ).toMatchObject({ status: "restored", state: { stage: "rendering" } });
+    const serverRenderId = `rnd_${"s".repeat(22)}`;
+    const completedRender = reconcileSessionProjection(
+      renderProjection,
+      evidence({
+        provenStage: "result",
+        activeOperation: null,
+        renderId: serverRenderId,
+        outputAvailable: true,
+      }),
+      now,
+      availability,
+    );
+    expect(completedRender).toMatchObject({
+      status: "restored",
+      state: {
+        stage: "result",
+        result: { renderId: serverRenderId, outputAvailable: true },
+        clipSummary: { manifestHash: assembly.manifestHash },
+      },
+    });
 
     const uploadingProjection = projectSessionState(
       {
@@ -390,6 +543,8 @@ describe("restore reconciliation", () => {
           analysisRevision: null,
           assemblyId: null,
           assemblyRevision: null,
+          manifestId: null,
+          manifestHash: null,
           media: null,
         }),
         now,
@@ -400,6 +555,19 @@ describe("restore reconciliation", () => {
 });
 
 describe("session effect ownership", () => {
+  it("stops and unregisters an effect exactly once through its cleanup", () => {
+    const stop = vi.fn();
+    const effects = new SessionEffectRegistry();
+    const cleanup = effects.registerStopper(stop);
+
+    cleanup();
+    cleanup();
+    effects.clear();
+
+    expect(stop).toHaveBeenCalledOnce();
+    expect(effects.ownedEffectCount).toBe(0);
+  });
+
   it("clears object URLs and registered polling/abort cleanup", () => {
     const revoke = vi
       .spyOn(URL, "revokeObjectURL")
