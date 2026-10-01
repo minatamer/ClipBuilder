@@ -12,6 +12,14 @@
   <a href="docs/README.md">Documentation</a>
 </p>
 
+<p align="center">
+  <img
+    src="docs/assets/clipbuilder-overview.png"
+    alt="ClipBuilder concept overview: long-form video, selected moments, and a captioned vertical clip"
+    width="900"
+  />
+</p>
+
 ClipBuilder is an automatic AI-assisted clipping demo that finds strong moments
 inside long-form conversations and turns one visitor-selected moment into a
 polished vertical clip with active-speaker framing, one fixed caption style,
