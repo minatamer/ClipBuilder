@@ -10,6 +10,8 @@ export type SessionAction =
   | "retry-analysis"
   | "select-candidate"
   | "build-selection"
+  | "retry-assembly"
+  | "choose-another"
   | "review-render"
   | "back-to-review"
   | "confirm-render"
@@ -80,13 +82,23 @@ export function selectIsClearable(state: ClippingSessionState): boolean {
 
 export function selectBlockers(state: ClippingSessionState): string[] {
   if (
-    (state.stage === "candidates" || state.stage === "no-candidates") &&
+    (state.stage === "candidates" ||
+      state.stage === "no-candidates" ||
+      state.stage === "assembly-failed") &&
     state.analysis.bundle === null
   ) {
     return ["analysis-refresh-required"];
   }
   if (state.stage === "candidates" && state.selectedId === null) {
     return ["candidate-selection-required"];
+  }
+  if (
+    (state.stage === "clip-review" ||
+      state.stage === "render-confirmation" ||
+      state.stage === "render-failed") &&
+    state.identity.remaining.renderAttempts === 0
+  ) {
+    return ["render-allowance-exhausted"];
   }
   return [];
 }
@@ -105,26 +117,68 @@ export function selectAvailableActions(
     case "local-inspection":
       return ["confirm-upload", ...clear];
     case "uploading":
-    case "analyzing":
       return ["cancel", ...clear];
+    case "analyzing":
+      return [
+        ...(!state.cancelRequested &&
+        (state.operation.state === "queued" ||
+          state.operation.state === "running")
+          ? (["cancel"] as const)
+          : []),
+        ...clear,
+      ];
     case "analysis-confirmation":
       return ["confirm-analysis", ...clear];
     case "analysis-failed":
-      return ["retry-analysis", ...clear];
+      return [
+        ...(state.recovery !== null &&
+        state.failure.retryable &&
+        state.identity.remaining.analysisRetries > 0
+          ? (["retry-analysis"] as const)
+          : []),
+        ...clear,
+      ];
     case "candidates":
       return [
-        "select-candidate",
+        ...(state.analysis.bundle !== null
+          ? (["select-candidate"] as const)
+          : []),
         ...(state.selectedId !== null && state.analysis.bundle !== null
           ? (["build-selection"] as const)
           : []),
         ...clear,
       ];
+    case "assembly-failed":
+      return [
+        ...(state.failure.retryable && state.analysis.bundle !== null
+          ? (["retry-assembly"] as const)
+          : []),
+        "choose-another",
+        ...clear,
+      ];
     case "clip-review":
-      return ["review-render", ...clear];
+      return [
+        ...(state.identity.remaining.renderAttempts > 0
+          ? (["review-render"] as const)
+          : []),
+        ...clear,
+      ];
     case "render-confirmation":
-      return ["back-to-review", "confirm-render", ...clear];
+      return [
+        "back-to-review",
+        ...(state.identity.remaining.renderAttempts > 0
+          ? (["confirm-render"] as const)
+          : []),
+        ...clear,
+      ];
     case "render-failed":
-      return ["retry-render", ...clear];
+      return [
+        ...(state.failure.retryable &&
+        state.identity.remaining.renderAttempts > 0
+          ? (["retry-render"] as const)
+          : []),
+        ...clear,
+      ];
     case "fatal":
       return [
         ...(state.failure.retryable ? (["retry-restore"] as const) : []),

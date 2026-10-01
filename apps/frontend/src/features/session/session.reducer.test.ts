@@ -76,21 +76,22 @@ describe("canonical clipping-session reducer", () => {
     state = clippingSessionReducer(state, { type: "RENDER_REVIEW" });
     state = clippingSessionReducer(state, {
       type: "RENDER_CONFIRMED",
-      operation: operation("render", "queued", "r"),
+      operation: operation("render", "render.queued", "r"),
     });
     state = clippingSessionReducer(state, {
       type: "RENDER_FAILED",
-      operationId: operation("render", "queued", "r").operationId,
+      operationId: operation("render", "render.queued", "r").operationId,
       failure,
+      remaining: identity.remaining,
     });
     expect(state.stage).toBe("render-failed");
     state = clippingSessionReducer(state, {
       type: "RETRY_RENDER",
-      operation: operation("render", "queued", "t"),
+      operation: operation("render", "render.queued", "t"),
     });
     state = clippingSessionReducer(state, {
       type: "RENDER_SUCCEEDED",
-      operationId: operation("render", "queued", "t").operationId,
+      operationId: operation("render", "render.queued", "t").operationId,
       manifestHash: assembly.manifestHash,
       renderId: `rnd_${"r".repeat(22)}`,
     });
@@ -140,7 +141,7 @@ describe("canonical clipping-session reducer", () => {
     });
     state = clippingSessionReducer(state, {
       type: "STAGE_UPDATED",
-      operation: operation("media-inspection", "probe"),
+      operation: operation("media-inspection", "media.inspecting"),
     });
     state = clippingSessionReducer(state, { type: "MEDIA_ACCEPTED", media });
     state = clippingSessionReducer(state, {
@@ -151,14 +152,15 @@ describe("canonical clipping-session reducer", () => {
       type: "ANALYSIS_FAILED",
       operationId: operation("analysis").operationId,
       failure,
+      remaining: identity.remaining,
     });
     state = clippingSessionReducer(state, {
       type: "RETRY_ANALYSIS",
-      operation: operation("analysis", "queued", "z"),
+      operation: operation("analysis", "analysis.queued", "z"),
     });
     state = clippingSessionReducer(state, {
       type: "ANALYSIS_SUCCEEDED",
-      operationId: operation("analysis", "queued", "z").operationId,
+      operationId: operation("analysis", "analysis.queued", "z").operationId,
       analysis: noCandidateAnalysis,
     });
     expect(state.stage).toBe("no-candidates");
@@ -190,11 +192,11 @@ describe("canonical clipping-session reducer", () => {
     });
     state = clippingSessionReducer(state, {
       type: "RETRY_ASSEMBLY",
-      operation: operation("assembly", "queued", "y"),
+      operation: operation("assembly", "assembly.queued", "y"),
     });
     state = clippingSessionReducer(state, {
       type: "ASSEMBLY_FAILED",
-      operationId: operation("assembly", "queued", "y").operationId,
+      operationId: operation("assembly", "assembly.queued", "y").operationId,
       failure,
     });
     state = clippingSessionReducer(state, { type: "CHOOSE_ANOTHER" });
@@ -243,12 +245,12 @@ describe("canonical clipping-session reducer", () => {
     });
     rendering = clippingSessionReducer(rendering, {
       type: "RENDER_CONFIRMED",
-      operation: operation("render", "queued", "r"),
+      operation: operation("render", "render.queued", "r"),
     });
     expect(
       clippingSessionReducer(rendering, {
         type: "RENDER_SUCCEEDED",
-        operationId: operation("render", "queued", "r").operationId,
+        operationId: operation("render", "render.queued", "r").operationId,
         manifestHash: "3".repeat(64),
         renderId: `rnd_${"r".repeat(22)}`,
       }),
@@ -377,7 +379,7 @@ describe("canonical clipping-session reducer", () => {
     );
     expect(state).toMatchObject({
       stage: "analyzing",
-      operation: { state: "cancel-requested" },
+      cancelRequested: true,
     });
 
     state = clippingSessionReducer(
@@ -414,11 +416,14 @@ describe("canonical clipping-session reducer", () => {
         },
         diagnosticCode: null,
       },
-      { type: "STAGE_UPDATED", operation: operation("assembly", "shots") },
+      {
+        type: "STAGE_UPDATED",
+        operation: operation("assembly", "assembly.detecting-shots"),
+      },
     );
     expect(state).toMatchObject({
       stage: "assembling",
-      operation: { stageCode: "shots" },
+      operation: { stageCode: "assembly.detecting-shots" },
     });
 
     state = clippingSessionReducer(reviewState(), {
@@ -441,11 +446,11 @@ describe("canonical clipping-session reducer", () => {
     });
     rendering = clippingSessionReducer(rendering, {
       type: "STAGE_UPDATED",
-      operation: operation("render", "compose"),
+      operation: operation("render", "render.compiling-plan"),
     });
     expect(rendering).toMatchObject({
       stage: "rendering",
-      operation: { stageCode: "compose" },
+      operation: { stageCode: "render.compiling-plan" },
     });
   });
 

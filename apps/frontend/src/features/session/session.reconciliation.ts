@@ -138,6 +138,42 @@ function serverOperation(
     : null;
 }
 
+function correlatedFailureStage(
+  projection: ClippingSessionProjectionV1,
+  evidence: ServerSessionEvidence,
+): PersistedStageHint | null {
+  const operation = evidence.activeOperation;
+  if (
+    operation === null ||
+    operation.state !== "failed" ||
+    operation.error === null ||
+    projection.operation?.operationId !== operation.operationId
+  ) {
+    return null;
+  }
+
+  let failureStage: PersistedStageHint;
+  switch (projection.stageHint) {
+    case "analyzing":
+      if (operation.kind !== "analysis" || evidence.media === null) return null;
+      failureStage = "analysis-failed";
+      break;
+    case "assembling":
+      if (operation.kind !== "assembly") return null;
+      failureStage = "assembly-failed";
+      break;
+    case "rendering":
+      if (operation.kind !== "render") return null;
+      failureStage = "render-failed";
+      break;
+    default:
+      return null;
+  }
+  return evidence.provenStage === REQUIRED_SERVER_STAGE[failureStage]
+    ? failureStage
+    : null;
+}
+
 function projectionToState(
   projection: ClippingSessionProjectionV1,
   evidence: ServerSessionEvidence,
@@ -148,6 +184,7 @@ function projectionToState(
     sessionId: evidence.sessionId,
     mode: evidence.mode,
     expiresAt: evidence.expiresAt,
+    remaining: evidence.remaining,
   } as const;
   const analysis =
     evidence.analysisId === null || evidence.analysisRevision === null
@@ -168,7 +205,6 @@ function projectionToState(
           };
     }
     case "analysis-confirmation":
-    case "analysis-failed":
       return evidence.media === null
         ? null
         : {
@@ -177,6 +213,16 @@ function projectionToState(
             media: evidence.media,
             diagnosticCode: null,
           };
+    case "analysis-failed":
+      return {
+        stage: "analysis-failed",
+        identity,
+        failure:
+          serverOperation(evidence, "analysis")?.error ??
+          safeFailure("SESSION_INVALID", "restore.retry-evidence-required"),
+        recovery: evidence.media === null ? null : { media: evidence.media },
+        diagnosticCode: null,
+      };
     case "analyzing": {
       const operation = serverOperation(evidence, "analysis");
       return evidence.media === null || operation === null
@@ -199,7 +245,6 @@ function projectionToState(
             diagnosticCode: null,
           };
     case "candidates":
-    case "assembly-failed":
       return analysis === null
         ? null
         : {
@@ -207,6 +252,21 @@ function projectionToState(
             identity,
             analysis,
             selectedId: projection.selection?.candidateId ?? null,
+            diagnosticCode: null,
+          };
+    case "assembly-failed":
+      return analysis === null || projection.selection === null
+        ? null
+        : {
+            stage: "assembly-failed",
+            identity,
+            analysis,
+            selectedId: projection.selection.candidateId,
+            startWordId: projection.selection.startWordId,
+            endWordId: projection.selection.endWordId,
+            failure:
+              serverOperation(evidence, "assembly")?.error ??
+              safeFailure("SESSION_INVALID", "restore.retry-evidence-required"),
             diagnosticCode: null,
           };
     case "assembling": {
@@ -230,7 +290,6 @@ function projectionToState(
     }
     case "clip-review":
     case "render-confirmation":
-    case "render-failed":
       return analysis === null || review === null
         ? null
         : {
@@ -242,6 +301,20 @@ function projectionToState(
             analysis,
             assembly: null,
             review,
+            diagnosticCode: null,
+          };
+    case "render-failed":
+      return analysis === null || review === null
+        ? null
+        : {
+            stage: "render-failed",
+            identity,
+            analysis,
+            assembly: null,
+            review,
+            failure:
+              serverOperation(evidence, "render")?.error ??
+              safeFailure("SESSION_INVALID", "restore.retry-evidence-required"),
             diagnosticCode: null,
           };
     case "rendering": {
@@ -328,6 +401,7 @@ export function reconcileSessionProjection(
   const projectedStage = SERVER_STAGE_ORDER.indexOf(
     REQUIRED_SERVER_STAGE[projection.stageHint],
   );
+  const failureStage = correlatedFailureStage(projection, evidence);
   const idConflict =
     (projection.analysis !== null &&
       (projection.analysis.analysisId !== evidence.analysisId ||
@@ -347,7 +421,7 @@ export function reconcileSessionProjection(
       projection.operation.operationId !==
         evidence.activeOperation.operationId);
 
-  if (projectedStage > evidenceStage || idConflict) {
+  if ((projectedStage > evidenceStage && failureStage === null) || idConflict) {
     return {
       status: "server-conflict",
       failure: safeFailure("STALE_REVISION", "restore.server-conflict"),
@@ -355,9 +429,10 @@ export function reconcileSessionProjection(
   }
 
   const stageHint =
-    projectedStage < evidenceStage
+    failureStage ??
+    (projectedStage < evidenceStage
       ? SERVER_RESUME_STAGE[evidence.provenStage]
-      : projection.stageHint;
+      : projection.stageHint);
   const state = projectionToState(
     projection,
     evidence,

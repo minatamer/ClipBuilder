@@ -11,7 +11,7 @@ type Waiter = {
   onAbort?: () => void;
 };
 
-function abortError(): Error {
+export function abortError(): Error {
   const error = new Error("The deterministic operation was stopped.");
   error.name = "AbortError";
   return error;
@@ -87,15 +87,16 @@ export class SystemClock implements Clock {
         reject(abortError());
         return;
       }
-      const timeout = setTimeout(resolve, milliseconds);
-      signal?.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeout);
-          reject(abortError());
-        },
-        { once: true },
-      );
+      const onAbort = () => {
+        clearTimeout(timeout);
+        signal?.removeEventListener("abort", onAbort);
+        reject(abortError());
+      };
+      const timeout = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, milliseconds);
+      signal?.addEventListener("abort", onAbort, { once: true });
     });
   }
 }

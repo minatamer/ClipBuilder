@@ -1,30 +1,22 @@
 import {
   analysisBundleSchema,
   assemblyBundleSchema,
-  canOperationTransition,
+  canObserveOperationState,
   isTerminalOperationState,
+  operationStageOrdinal,
+  operationStatusSchema,
   renderIdSchema,
   type AssemblyBundleV1,
   type OperationStatusV1,
 } from "@clipbuilder/contracts";
 
-import { selectIsClearable } from "./session.selectors";
+import { selectAvailableActions, selectIsClearable } from "./session.selectors";
 import type {
   ClipReviewSession,
   ClippingSessionEvent,
   ClippingSessionState,
   SessionDiagnosticCode,
 } from "./session.types";
-
-const OPERATION_STAGE_ORDER: Readonly<
-  Record<OperationStatusV1["kind"], string[]>
-> = {
-  "media-inspection": ["queued", "probe", "validate", "complete"],
-  analysis: ["queued", "transcribe", "normalize", "candidates", "complete"],
-  assembly: ["queued", "shots", "focus", "visuals", "complete"],
-  render: ["queued", "compose", "encode", "validate", "complete"],
-  cleanup: ["queued", "delete", "verify", "complete"],
-};
 
 function reject(
   state: ClippingSessionState,
@@ -52,14 +44,15 @@ function operationProgresses(
     return false;
   }
   if (isTerminalOperationState(current.state)) return false;
-  const order = OPERATION_STAGE_ORDER[current.kind];
-  const currentIndex = order.indexOf(current.stageCode);
-  const nextIndex = order.indexOf(next.stageCode);
+  const currentIndex = operationStageOrdinal(current.kind, current.stageCode);
+  const nextIndex = operationStageOrdinal(next.kind, next.stageCode);
   return (
+    operationStatusSchema.safeParse(next).success &&
+    Date.parse(next.updatedAt) >= Date.parse(current.updatedAt) &&
     currentIndex >= 0 &&
     nextIndex >= currentIndex &&
-    (current.state === next.state ||
-      canOperationTransition(current.state, next.state))
+    (nextIndex > currentIndex || current.stageCode === next.stageCode) &&
+    canObserveOperationState(current.state, next.state)
   );
 }
 
@@ -72,8 +65,7 @@ function acceptsTerminalEvent(
   return (
     operation.operationId === operationId &&
     operation.kind === kind &&
-    (operation.state === terminalState ||
-      canOperationTransition(operation.state, terminalState))
+    canObserveOperationState(operation.state, terminalState)
   );
 }
 
@@ -126,6 +118,58 @@ export function clippingSessionReducer(
       stage: "clearing",
       previousStage: state.stage,
       cleanup: { status: "requesting" },
+      diagnosticCode: null,
+    });
+  }
+
+  if (event.type === "ANALYSIS_REFRESHED") {
+    if (
+      state.stage !== "candidates" &&
+      state.stage !== "no-candidates" &&
+      state.stage !== "assembly-failed"
+    )
+      return reject(state);
+    const parsed = analysisBundleSchema.safeParse(event.analysis);
+    if (
+      !parsed.success ||
+      event.sessionId !== state.identity.sessionId ||
+      parsed.data.analysisId !== state.analysis.analysisId ||
+      parsed.data.revision !== state.analysis.revision ||
+      state.analysis.bundle !== null
+    )
+      return reject(state);
+    const analysis = { ...state.analysis, bundle: parsed.data };
+    if (state.stage === "assembly-failed") {
+      const selected = parsed.data.candidates.find(
+        (candidate) => candidate.id === state.selectedId,
+      );
+      if (
+        selected?.startWordId !== state.startWordId ||
+        selected.endWordId !== state.endWordId
+      )
+        return reject(state);
+      return accept({ ...state, analysis });
+    }
+    if (parsed.data.outcome === "no-strong-candidates") {
+      return accept({
+        stage: "no-candidates",
+        identity: state.identity,
+        analysis,
+        diagnosticCode: null,
+      });
+    }
+    const selectedId =
+      state.stage === "candidates" &&
+      parsed.data.candidates.some(
+        (candidate) => candidate.id === state.selectedId,
+      )
+        ? state.selectedId
+        : null;
+    return accept({
+      stage: "candidates",
+      identity: state.identity,
+      analysis,
+      selectedId,
       diagnosticCode: null,
     });
   }
@@ -319,10 +363,13 @@ export function clippingSessionReducer(
           ? accept({ ...state, operation: event.operation })
           : reject(state, "non-monotonic-progress");
       }
-      if (event.type === "CANCEL_REQUESTED") {
+      if (
+        event.type === "CANCEL_REQUESTED" &&
+        !isTerminalOperationState(state.operation.state)
+      ) {
         return accept({
           ...state,
-          operation: { ...state.operation, state: "cancel-requested" },
+          cancelRequested: true,
         });
       }
       if (event.type === "ANALYSIS_SUCCEEDED") {
@@ -373,7 +420,7 @@ export function clippingSessionReducer(
       ) {
         return accept({
           stage: "analysis-failed",
-          identity: state.identity,
+          identity: { ...state.identity, remaining: event.remaining },
           failure: event.failure,
           recovery: state.lastKnown,
           diagnosticCode: null,
@@ -384,12 +431,19 @@ export function clippingSessionReducer(
     case "analysis-failed":
       if (
         event.type === "RETRY_ANALYSIS" &&
+        selectAvailableActions(state).includes("retry-analysis") &&
         state.recovery !== null &&
         operationHasKind(event.operation, "analysis")
       ) {
         return accept({
           stage: "analyzing",
-          identity: state.identity,
+          identity: {
+            ...state.identity,
+            remaining: {
+              ...state.identity.remaining,
+              analysisRetries: state.identity.remaining.analysisRetries - 1,
+            },
+          },
           operation: event.operation,
           lastKnown: state.recovery,
           diagnosticCode: null,
@@ -505,6 +559,7 @@ export function clippingSessionReducer(
     case "assembly-failed":
       if (
         event.type === "RETRY_ASSEMBLY" &&
+        selectAvailableActions(state).includes("retry-assembly") &&
         operationHasKind(event.operation, "assembly")
       ) {
         return accept({
@@ -532,7 +587,11 @@ export function clippingSessionReducer(
       return reject(state);
 
     case "clip-review":
-      if (event.type === "PLAYBACK_REQUESTED" && event.currentTimeMs >= 0) {
+      if (
+        event.type === "PLAYBACK_REQUESTED" &&
+        Number.isInteger(event.currentTimeMs) &&
+        event.currentTimeMs >= 0
+      ) {
         return accept({
           ...state,
           review: {
@@ -546,7 +605,9 @@ export function clippingSessionReducer(
       }
       if (
         event.type === "PLAYBACK_UPDATED" &&
-        state.review.playback.status === "requesting" &&
+        (state.review.playback.status === "requesting" ||
+          state.review.playback.status === "succeeded") &&
+        Number.isInteger(event.currentTimeMs) &&
         event.currentTimeMs >= 0
       ) {
         return accept({
@@ -562,7 +623,8 @@ export function clippingSessionReducer(
       }
       if (
         event.type === "PLAYBACK_FAILED" &&
-        state.review.playback.status === "requesting"
+        (state.review.playback.status === "requesting" ||
+          state.review.playback.status === "succeeded")
       ) {
         return accept({
           ...state,
@@ -578,7 +640,8 @@ export function clippingSessionReducer(
       }
       if (
         event.type === "PLAYBACK_CANCEL_REQUESTED" &&
-        state.review.playback.status === "requesting"
+        (state.review.playback.status === "requesting" ||
+          state.review.playback.status === "succeeded")
       ) {
         return accept({
           ...state,
@@ -591,7 +654,10 @@ export function clippingSessionReducer(
           },
         });
       }
-      if (event.type === "RENDER_REVIEW") {
+      if (
+        event.type === "RENDER_REVIEW" &&
+        selectAvailableActions(state).includes("review-render")
+      ) {
         return accept({ ...state, stage: "render-confirmation" });
       }
       return reject(state);
@@ -602,11 +668,18 @@ export function clippingSessionReducer(
       }
       if (
         event.type === "RENDER_CONFIRMED" &&
+        selectAvailableActions(state).includes("confirm-render") &&
         operationHasKind(event.operation, "render")
       ) {
         return accept({
           stage: "rendering",
-          identity: state.identity,
+          identity: {
+            ...state.identity,
+            remaining: {
+              ...state.identity.remaining,
+              renderAttempts: state.identity.remaining.renderAttempts - 1,
+            },
+          },
           operation: event.operation,
           lastKnown: {
             analysis: state.analysis,
@@ -667,7 +740,7 @@ export function clippingSessionReducer(
       ) {
         return accept({
           stage: "render-failed",
-          identity: state.identity,
+          identity: { ...state.identity, remaining: event.remaining },
           analysis: state.lastKnown.analysis,
           assembly: state.lastKnown.assembly,
           review: state.lastKnown.review,
@@ -680,11 +753,18 @@ export function clippingSessionReducer(
     case "render-failed":
       if (
         event.type === "RETRY_RENDER" &&
+        selectAvailableActions(state).includes("retry-render") &&
         operationHasKind(event.operation, "render")
       ) {
         return accept({
           stage: "rendering",
-          identity: state.identity,
+          identity: {
+            ...state.identity,
+            remaining: {
+              ...state.identity.remaining,
+              renderAttempts: state.identity.remaining.renderAttempts - 1,
+            },
+          },
           operation: event.operation,
           lastKnown: {
             analysis: state.analysis,

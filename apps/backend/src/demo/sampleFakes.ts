@@ -64,7 +64,13 @@ export function createSampleFakes(clock: Clock) {
   const operations = new FakeOperationStore(clock, {
     "analysis-success-v1": {
       kind: "analysis",
-      stages: ["queued", "transcribe", "normalize", "candidates", "complete"],
+      stages: [
+        "analysis.queued",
+        "analysis.transcribing",
+        "analysis.normalizing-transcript",
+        "analysis.selecting-candidates",
+        "analysis.complete",
+      ],
       latencyMs: 50,
       terminal: {
         state: "succeeded",
@@ -73,7 +79,13 @@ export function createSampleFakes(clock: Clock) {
     },
     "assembly-success-v1": {
       kind: "assembly",
-      stages: ["queued", "shots", "focus", "visuals", "complete"],
+      stages: [
+        "assembly.queued",
+        "assembly.detecting-shots",
+        "assembly.detecting-active-speaker",
+        "assembly.planning-visuals",
+        "assembly.complete",
+      ],
       latencyMs: 50,
       terminal: {
         state: "succeeded",
@@ -82,7 +94,7 @@ export function createSampleFakes(clock: Clock) {
     },
     "analysis-rejected-v1": {
       kind: "analysis",
-      stages: ["queued", "complete"],
+      stages: ["analysis.queued", "analysis.complete"],
       latencyMs: 50,
       terminal: {
         state: "failed",

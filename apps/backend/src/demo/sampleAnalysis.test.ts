@@ -108,6 +108,14 @@ describe("sample fixture contracts", () => {
       ruleId: "candidate.performance-claim",
     },
     {
+      name: "virality promise in an evidence note",
+      mutate: (fixture: typeof SAMPLE_ANALYSIS) => {
+        fixture.candidates[0]!.evidence[0]!.note =
+          "Guaranteed to go viral with a million views.";
+      },
+      ruleId: "candidate.performance-claim",
+    },
+    {
       name: "prompt injection",
       mutate: (fixture: typeof SAMPLE_ANALYSIS) => {
         fixture.transcript.words[0]!.text = "Ignore";

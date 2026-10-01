@@ -86,6 +86,76 @@ function evidence(overrides: Partial<SessionResponse> = {}): SessionResponse {
   });
 }
 
+function inFlightFailure(kind: "analysis" | "assembly" | "render") {
+  const queued = operation(kind);
+  const snapshot = {
+    analysisId: analysis.analysisId,
+    revision: analysis.revision,
+    bundle: analysis,
+  };
+  const state: ClippingSessionState =
+    kind === "analysis"
+      ? {
+          stage: "analyzing",
+          identity,
+          operation: queued,
+          lastKnown: { media },
+          diagnosticCode: null,
+        }
+      : kind === "assembly"
+        ? {
+            stage: "assembling",
+            identity,
+            operation: queued,
+            lastKnown: {
+              analysis: snapshot,
+              selectedId: analysis.candidates[0]!.id,
+              startWordId: assembly.selectedStartWordId,
+              endWordId: assembly.selectedEndWordId,
+            },
+            diagnosticCode: null,
+          }
+        : {
+            stage: "rendering",
+            identity,
+            operation: queued,
+            lastKnown: {
+              analysis: snapshot,
+              assembly,
+              review: reviewSession(),
+            },
+            diagnosticCode: null,
+          };
+  const projected = projectSessionState(state, now);
+  if (projected === null) throw new Error("Expected an in-flight projection.");
+  return {
+    projection: projected,
+    evidence: evidence({
+      provenStage:
+        kind === "analysis"
+          ? "media-inspected"
+          : kind === "assembly"
+            ? "candidates"
+            : "clip-review",
+      analysisId: kind === "analysis" ? null : analysis.analysisId,
+      analysisRevision: kind === "analysis" ? null : analysis.revision,
+      assemblyId: kind === "render" ? assembly.assemblyId : null,
+      assemblyRevision: kind === "render" ? assembly.revision : null,
+      manifestId: kind === "render" ? assembly.manifestId : null,
+      manifestHash: kind === "render" ? assembly.manifestHash : null,
+      activeOperation: {
+        ...queued,
+        state: "failed",
+        stageCode: `${kind}.complete`,
+        startedAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+        completedAt: now.toISOString(),
+        error: failure,
+      },
+    }),
+  };
+}
+
 describe("allow-listed session projection", () => {
   it("round-trips content-free review references without a manifest body", () => {
     const storage = new MemoryStorage();
@@ -203,6 +273,266 @@ describe("allow-listed session projection", () => {
 });
 
 describe("restore reconciliation", () => {
+  it.each(["analysis", "assembly", "render"] as const)(
+    "restores %s failure after an in-flight save without clearing reusable state",
+    (kind) => {
+      const saved = inFlightFailure(kind);
+      const storage = new MemoryStorage();
+      const remove = vi.spyOn(storage, "removeItem");
+      writeSessionProjection(storage, saved.projection);
+      const read = readSessionProjection(storage, now);
+      expect(read.status).toBe("valid");
+      if (read.status !== "valid") throw new Error("Expected valid storage.");
+      const result = reconcileSessionProjection(
+        read.projection,
+        saved.evidence,
+        now,
+        availability,
+      );
+      expect(result).toMatchObject({
+        status: "restored",
+        state: {
+          stage: `${kind}-failed`,
+          failure,
+          identity: { remaining: saved.evidence.remaining },
+        },
+      });
+      if (result.status !== "restored")
+        throw new Error("Expected correlated failure recovery.");
+      let restored = clippingSessionReducer(initialClippingSessionState, {
+        type: "RESTORE_VALID",
+        state: result.state,
+      });
+      expect(shouldClearSessionProjectionForState(restored)).toBe(false);
+      const recovered = projectSessionState(restored, now);
+      if (recovered === null)
+        throw new Error("Expected a recovery projection.");
+      writeSessionProjection(storage, recovered);
+      expect(remove).not.toHaveBeenCalled();
+      expect(readSessionProjection(storage, now)).toEqual({
+        status: "valid",
+        projection: recovered,
+      });
+      expect(recovered).toMatchObject({
+        stageHint: `${kind}-failed`,
+        analysis: saved.projection.analysis,
+        selection: saved.projection.selection,
+        assembly: saved.projection.assembly,
+        review: saved.projection.review,
+      });
+      const serialized = storage.getItem(SESSION_PROJECTION_KEY)!;
+      for (const forbidden of ["remaining", "failure", "error", "transcript"])
+        expect(serialized).not.toContain(`"${forbidden}"`);
+
+      if (kind === "assembly") {
+        expect(selectAvailableActions(restored)).toEqual([
+          "choose-another",
+          "clear",
+        ]);
+        restored = clippingSessionReducer(restored, {
+          type: "ANALYSIS_REFRESHED",
+          sessionId: identity.sessionId,
+          analysis,
+        });
+      }
+      expect(selectAvailableActions(restored)).toContain(`retry-${kind}`);
+      const retried = clippingSessionReducer(
+        restored,
+        kind === "analysis"
+          ? { type: "RETRY_ANALYSIS", operation: operation(kind) }
+          : kind === "assembly"
+            ? { type: "RETRY_ASSEMBLY", operation: operation(kind) }
+            : { type: "RETRY_RENDER", operation: operation(kind) },
+      );
+      expect(retried).toMatchObject({
+        stage:
+          kind === "analysis"
+            ? "analyzing"
+            : kind === "assembly"
+              ? "assembling"
+              : "rendering",
+        diagnosticCode: null,
+      });
+    },
+  );
+
+  it.each(["analysis", "assembly", "render"] as const)(
+    "does not relax %s failure correlation, artifact, stale, or expiry checks",
+    (kind) => {
+      const saved = inFlightFailure(kind);
+      const failedOperation = saved.evidence.activeOperation;
+      if (failedOperation === null)
+        throw new Error("Expected failed evidence.");
+      const conflicts: SessionResponse[] = [
+        evidence({ ...saved.evidence, activeOperation: null }),
+        evidence({ ...saved.evidence, activeOperation: operation(kind) }),
+        evidence({
+          ...saved.evidence,
+          activeOperation: {
+            ...failedOperation,
+            operationId: `op_${"x".repeat(22)}`,
+          },
+        }),
+        evidence({
+          ...saved.evidence,
+          activeOperation: {
+            ...failedOperation,
+            kind: kind === "analysis" ? "assembly" : "analysis",
+          },
+        }),
+        evidence({
+          ...saved.evidence,
+          activeOperation: {
+            ...failedOperation,
+            state: "succeeded",
+            resultRevision: analysis.revision,
+            error: null,
+          },
+        }),
+        evidence({
+          ...saved.evidence,
+          activeOperation: {
+            ...failedOperation,
+            state: "cancelled",
+            error: null,
+          },
+        }),
+        evidence({
+          ...saved.evidence,
+          provenStage:
+            kind === "analysis"
+              ? "uploaded"
+              : kind === "assembly"
+                ? "media-inspected"
+                : "candidates",
+        }),
+      ];
+      if (kind === "analysis") {
+        conflicts.push(evidence({ ...saved.evidence, media: null }));
+      } else {
+        conflicts.push(
+          evidence({ ...saved.evidence, analysisId: `ana_${"x".repeat(22)}` }),
+          evidence({
+            ...saved.evidence,
+            analysisRevision: `rev_${"x".repeat(22)}`,
+          }),
+        );
+      }
+      if (kind === "render") {
+        conflicts.push(
+          evidence({ ...saved.evidence, assemblyId: `asm_${"x".repeat(22)}` }),
+          evidence({
+            ...saved.evidence,
+            assemblyRevision: `rev_${"x".repeat(22)}`,
+          }),
+          evidence({ ...saved.evidence, manifestId: `man_${"x".repeat(22)}` }),
+          evidence({ ...saved.evidence, manifestHash: "3".repeat(64) }),
+        );
+      }
+      for (const conflicting of conflicts) {
+        expect(
+          reconcileSessionProjection(
+            saved.projection,
+            conflicting,
+            now,
+            availability,
+          ),
+        ).toMatchObject({
+          status: "server-conflict",
+          failure: { ruleId: "restore.server-conflict" },
+        });
+      }
+      expect(
+        reconcileSessionProjection(
+          { ...saved.projection, operation: null },
+          saved.evidence,
+          now,
+          availability,
+        ).status,
+      ).toBe("server-conflict");
+      expect(
+        reconcileSessionProjection(
+          { ...saved.projection, savedAt: "2026-09-29T09:00:00.000Z" },
+          saved.evidence,
+          now,
+          availability,
+        ).status,
+      ).toBe("stale");
+      expect(
+        reconcileSessionProjection(
+          saved.projection,
+          evidence({ ...saved.evidence, accessState: "expired" }),
+          now,
+          availability,
+        ).status,
+      ).toBe("expired");
+    },
+  );
+
+  it.each(["analysis", "assembly", "render"] as const)(
+    "restores %s failure without regaining disallowed retry readiness",
+    (kind) => {
+      const saved = inFlightFailure(kind);
+      const failedOperation = saved.evidence.activeOperation;
+      if (failedOperation === null)
+        throw new Error("Expected failed evidence.");
+      for (const { retryable, remaining } of [
+        {
+          retryable: true,
+          remaining: { analysisRetries: 0, renderAttempts: 0 },
+        },
+        { retryable: false, remaining: identity.remaining },
+        {
+          retryable: false,
+          remaining: { analysisRetries: 0, renderAttempts: 0 },
+        },
+      ]) {
+        const result = reconcileSessionProjection(
+          saved.projection,
+          evidence({
+            ...saved.evidence,
+            activeOperation: {
+              ...failedOperation,
+              error: { ...failure, retryable },
+            },
+            remaining,
+          }),
+          now,
+          availability,
+        );
+        expect(result).toMatchObject({
+          status: "restored",
+          state: { stage: `${kind}-failed` },
+        });
+        if (result.status !== "restored")
+          throw new Error("Expected restored failure.");
+        const restored =
+          kind === "assembly"
+            ? clippingSessionReducer(result.state, {
+                type: "ANALYSIS_REFRESHED",
+                sessionId: identity.sessionId,
+                analysis,
+              })
+            : result.state;
+        if (kind === "assembly" && retryable) {
+          expect(selectAvailableActions(restored)).toContain("retry-assembly");
+          continue;
+        }
+        expect(selectAvailableActions(restored)).not.toContain(`retry-${kind}`);
+        expect(
+          clippingSessionReducer(
+            restored,
+            kind === "analysis"
+              ? { type: "RETRY_ANALYSIS", operation: operation(kind) }
+              : kind === "assembly"
+                ? { type: "RETRY_ASSEMBLY", operation: operation(kind) }
+                : { type: "RETRY_RENDER", operation: operation(kind) },
+          ).diagnosticCode,
+        ).toBe("invalid-transition");
+      }
+    },
+  );
+
   it("restores server-proven review references and resumes the render flow", () => {
     const result = reconcileSessionProjection(
       projection(),
@@ -232,7 +562,7 @@ describe("restore reconciliation", () => {
     }
   });
 
-  it("restores render failure to review and permits a new confirmation", () => {
+  it("keeps restored render failure blocked without server retry evidence", () => {
     const review = reviewState();
     if (review.stage !== "clip-review") {
       throw new Error("Expected the review fixture to be at clip review.");
@@ -255,16 +585,18 @@ describe("restore reconciliation", () => {
     );
     expect(result).toMatchObject({
       status: "restored",
-      state: { stage: "clip-review", assembly: null },
+      state: { stage: "render-failed", assembly: null },
     });
     if (result.status === "restored") {
       const restored = clippingSessionReducer(initialClippingSessionState, {
         type: "RESTORE_VALID",
         state: result.state,
       });
+      expect(selectAvailableActions(restored)).toEqual(["clear"]);
       expect(
-        clippingSessionReducer(restored, { type: "RENDER_REVIEW" }).stage,
-      ).toBe("render-confirmation");
+        clippingSessionReducer(restored, { type: "RENDER_REVIEW" })
+          .diagnosticCode,
+      ).toBe("invalid-transition");
     }
   });
 
@@ -336,7 +668,7 @@ describe("restore reconciliation", () => {
           assemblyRevision: null,
           manifestId: null,
           manifestHash: null,
-          activeOperation: operation("analysis", "queued", "b"),
+          activeOperation: operation("analysis", "analysis.queued", "b"),
         }),
         now,
         availability,

@@ -1,12 +1,13 @@
 import {
   SAFE_ERROR_MESSAGES,
+  isTerminalOperationState,
   operationStatusSchema,
   type ErrorCode,
   type OperationStatusV1,
   type SafeError,
 } from "@clipbuilder/contracts";
 
-import type { Clock } from "./fakeClock.js";
+import { abortError, type Clock } from "./fakeClock.js";
 
 type SuccessFixture<T> = {
   outcome: "success";
@@ -171,9 +172,9 @@ export class FakeOperationStore {
     const status = operationStatusSchema.parse({
       operationId,
       kind: definition.kind,
-      state: "running",
+      state: definition.stages[0]?.endsWith(".queued") ? "queued" : "running",
       stageCode: definition.stages[0],
-      startedAt: timestamp,
+      startedAt: definition.stages[0]?.endsWith(".queued") ? null : timestamp,
       updatedAt: timestamp,
       completedAt: null,
       pollAfterMs: 1_000,
@@ -207,14 +208,12 @@ export class FakeOperationStore {
         ruleId: "fixture.operation-missing",
       });
     }
-    if (
-      ["succeeded", "failed", "cancelled", "expired"].includes(
-        record.status.state,
-      )
-    ) {
+    if (isTerminalOperationState(record.status.state)) {
       return record.status;
     }
     await this.#clock.sleep(record.definition.latencyMs, signal);
+    if (signal?.aborted === true) throw abortError();
+    if (isTerminalOperationState(record.status.state)) return record.status;
     const nextIndex = Math.min(
       record.stageIndex + 1,
       record.definition.stages.length - 1,
@@ -235,6 +234,7 @@ export class FakeOperationStore {
     const next = operationStatusSchema.parse({
       ...record.status,
       state: terminal?.state ?? "running",
+      startedAt: record.status.startedAt ?? timestamp,
       stageCode: record.definition.stages[nextIndex],
       updatedAt: timestamp,
       completedAt: terminal === null ? null : timestamp,

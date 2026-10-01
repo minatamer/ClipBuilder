@@ -8,6 +8,7 @@ import {
   analysisBundleSchema,
   assemblyRequestSchema,
   canOperationTransition,
+  canObserveOperationState,
   isSourceWithinLimitProfile,
   mediaDescriptorSchema,
   operationStatusSchema,
@@ -40,7 +41,7 @@ const validOperation = {
   operationId: opaqueId("op"),
   kind: "analysis",
   state: "running",
-  stageCode: "transcript.normalize",
+  stageCode: "analysis.normalizing-transcript",
   startedAt: "2026-09-29T10:00:00.000Z",
   updatedAt: "2026-09-29T10:00:01.000Z",
   completedAt: null,
@@ -418,5 +419,33 @@ describe("safe errors and operation lifecycle", () => {
     ).toBe(false);
     expect(canOperationTransition("queued", "running")).toBe(true);
     expect(canOperationTransition("succeeded", "running")).toBe(false);
+    expect(canOperationTransition("queued", "succeeded")).toBe(false);
+  });
+
+  it("distinguishes skipped polling observations from server lifecycle transitions", () => {
+    expect(canObserveOperationState("queued", "succeeded")).toBe(true);
+    expect(canObserveOperationState("cancel-requested", "succeeded")).toBe(
+      true,
+    );
+    expect(canObserveOperationState("running", "queued")).toBe(false);
+    expect(canObserveOperationState("cancel-requested", "running")).toBe(false);
+    for (const terminal of [
+      "succeeded",
+      "failed",
+      "cancelled",
+      "expired",
+    ] as const) {
+      expect(canObserveOperationState(terminal, terminal)).toBe(true);
+      expect(canObserveOperationState(terminal, "running")).toBe(false);
+      for (const next of [
+        "succeeded",
+        "failed",
+        "cancelled",
+        "expired",
+      ] as const) {
+        if (terminal !== next)
+          expect(canObserveOperationState(terminal, next)).toBe(false);
+      }
+    }
   });
 });

@@ -4,6 +4,7 @@ import type {
   MediaDescriptor,
   OperationStatusV1,
   SafeError,
+  SessionResponse,
 } from "@clipbuilder/contracts";
 
 export type SessionDiagnosticCode =
@@ -18,6 +19,8 @@ export type SessionIdentity = {
   sessionId: string;
   mode: "sample" | "upload";
   expiresAt: string;
+  // Latest server readiness evidence; never restored from browser storage.
+  remaining: SessionResponse["remaining"];
 };
 
 export type LocalSourceSummary = {
@@ -106,6 +109,7 @@ type SessionStage =
       stage: "analyzing";
       identity: SessionIdentity;
       operation: OperationStatusV1;
+      cancelRequested?: true;
       lastKnown: { media: MediaDescriptor };
     }
   | {
@@ -237,7 +241,17 @@ export type ClippingSessionEvent =
       operationId: string;
       analysis: AnalysisBundleV1;
     }
-  | { type: "ANALYSIS_FAILED"; operationId: string; failure: SafeError }
+  | {
+      type: "ANALYSIS_FAILED";
+      operationId: string;
+      failure: SafeError;
+      remaining: SessionResponse["remaining"];
+    }
+  | {
+      type: "ANALYSIS_REFRESHED";
+      sessionId: string;
+      analysis: AnalysisBundleV1;
+    }
   | { type: "RETRY_ANALYSIS"; operation: OperationStatusV1 }
   | { type: "CANCEL_REQUESTED" }
   | { type: "CANDIDATE_SELECTED"; candidateId: string }
@@ -268,7 +282,12 @@ export type ClippingSessionEvent =
       manifestHash: string;
       renderId: string;
     }
-  | { type: "RENDER_FAILED"; operationId: string; failure: SafeError }
+  | {
+      type: "RENDER_FAILED";
+      operationId: string;
+      failure: SafeError;
+      remaining: SessionResponse["remaining"];
+    }
   | { type: "RETRY_RENDER"; operation: OperationStatusV1 }
   | { type: "CLEAR" }
   | { type: "CLEAR_SUCCEEDED"; availability: SessionAvailability }

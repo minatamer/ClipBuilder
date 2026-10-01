@@ -22,6 +22,7 @@ export const identity: SessionIdentity = {
   sessionId: id("ses", "s"),
   mode: "sample",
   expiresAt: "2026-09-29T12:00:00.000Z",
+  remaining: { analysisRetries: 1, renderAttempts: 1 },
 };
 
 export const media = mediaDescriptorSchema.parse({
@@ -229,15 +230,21 @@ export const failure: SafeError = {
 
 export function operation(
   kind: OperationStatusV1["kind"],
-  stageCode = "queued",
+  stageCode = kind === "media-inspection"
+    ? "media.inspecting"
+    : kind === "cleanup"
+      ? "cleanup.cancelling"
+      : `${kind}.queued`,
   character = "o",
 ): OperationStatusV1 {
   return operationStatusSchema.parse({
     operationId: id("op", character),
     kind,
-    state: "running",
+    state: stageCode.endsWith(".queued") ? "queued" : "running",
     stageCode,
-    startedAt: "2026-09-29T10:00:00.000Z",
+    startedAt: stageCode.endsWith(".queued")
+      ? null
+      : "2026-09-29T10:00:00.000Z",
     updatedAt: "2026-09-29T10:00:00.000Z",
     completedAt: null,
     pollAfterMs: 1_000,
@@ -265,7 +272,10 @@ export function reviewSession(): ClipReviewSession {
   };
 }
 
-export function reviewState(): ClippingSessionState {
+export function reviewState(): Extract<
+  ClippingSessionState,
+  { stage: "clip-review" }
+> {
   return {
     stage: "clip-review",
     identity,

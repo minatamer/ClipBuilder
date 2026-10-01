@@ -17,6 +17,68 @@ export const OPERATION_STATES = [
 export const operationStateSchema = z.enum(OPERATION_STATES);
 export type OperationState = z.infer<typeof operationStateSchema>;
 
+export const OPERATION_STAGE_ORDER: Readonly<
+  Record<OperationStatusV1["kind"], readonly (string | readonly string[])[]>
+> = {
+  "media-inspection": ["media.inspecting"],
+  analysis: [
+    "analysis.queued",
+    "analysis.reading-descriptor",
+    "analysis.inspecting-media",
+    "analysis.extracting-audio",
+    ["analysis.transcribing", "analysis.reusing-transcript"],
+    "analysis.normalizing-transcript",
+    "analysis.selecting-candidates",
+    "analysis.reconciling-candidates",
+    "analysis.writing-result",
+    "analysis.complete",
+  ],
+  assembly: [
+    "assembly.queued",
+    "assembly.reading-selected-range",
+    "assembly.downloading-source-window",
+    "assembly.detecting-shots",
+    "assembly.tracking-faces",
+    "assembly.detecting-active-speaker",
+    "assembly.smoothing-speaker-focus",
+    "assembly.planning-visuals",
+    "assembly.reconciling-visual-plan",
+    "assembly.creating-visual-assets",
+    "assembly.compiling-preview-bundle",
+    "assembly.writing-result",
+    "assembly.complete",
+  ],
+  render: [
+    "render.queued",
+    "render.reading-descriptor",
+    "render.validating-manifest",
+    "render.downloading-source",
+    "render.downloading-assembly-assets",
+    "render.compiling-speaker-framing",
+    "render.compiling-visual-layers",
+    "render.compiling-captions",
+    "render.compiling-plan",
+    "render.encoding",
+    "render.validating-output",
+    "render.uploading-output",
+    "render.complete",
+  ],
+  cleanup: [
+    "cleanup.cancelling",
+    "cleanup.deleting",
+    ["cleanup.complete", "cleanup.partial"],
+  ],
+};
+
+export function operationStageOrdinal(
+  kind: OperationStatusV1["kind"],
+  stageCode: string,
+): number {
+  return OPERATION_STAGE_ORDER[kind].findIndex((stage) =>
+    typeof stage === "string" ? stage === stageCode : stage.includes(stageCode),
+  );
+}
+
 export const operationStatusSchema = z
   .object({
     operationId: operationIdSchema,
@@ -118,6 +180,18 @@ export function canOperationTransition(
   next: OperationState,
 ): boolean {
   return LEGAL_OPERATION_TRANSITIONS[current].includes(next);
+}
+
+// Polling observes reachable states and can miss intermediate server writes.
+export function canObserveOperationState(
+  current: OperationState,
+  next: OperationState,
+): boolean {
+  if (isTerminalOperationState(current)) return current === next;
+  if (current === next) return true;
+  return LEGAL_OPERATION_TRANSITIONS[current].some(
+    (state) => state === next || canObserveOperationState(state, next),
+  );
 }
 
 export type OperationStatusV1 = z.infer<typeof operationStatusSchema>;

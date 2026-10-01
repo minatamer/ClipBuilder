@@ -1,7 +1,7 @@
 # ClipBuilder standalone ticket index
 
 Status: active execution-packet index<br>
-Last synchronized: 2026-09-29<br>
+Last synchronized: 2026-10-01<br>
 Parent source of truth: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)
 
 ---
@@ -164,11 +164,24 @@ review** until explicit visual approval; its broad styling dependents remain
 blocked. CL-003's committed implementation was **reopened** to align its
 candidate cardinality, reducer, persistence, and obsolete proposal contracts
 with the later owner decision that removed all editing/customization. That
-alignment is now **completed and locally verified**: contracts allow zero to
+alignment was **completed and locally verified**: contracts allow zero to
 four candidates, the reducer uses immutable automatic clip review, persistence
 stores only manifest identity/hash, and legacy editor/assistant configuration is
 removed. CL-004–CL-015 remain planned; CL-010 is automatic read-only clip review
 and render confirmation, not an editor/assistant ticket.
+The owner subsequently reopened CL-003 for independent validation of nine
+session/restore/progress/fake/cleanup findings. All nine reproduced locally.
+The first corrections passed the local 150-test/build gate. A second independent
+review verified eight findings but found finding 5 still partial (failure after
+an in-flight save) and a new custom-abort-reason regression. CL-003 is
+**locally complete** after independently reproducing both remaining defects,
+applying scoped fixes, and passing fresh format, lint, typecheck, 162-test unit,
+build, and diff checks. Independent side-chat revalidation is requested; its
+next verdict is not inferred from local success. Earlier completion evidence
+is historical. Per-finding requirements, reproduction, context, fixes, evidence,
+changed files, and integration boundaries are recorded in the CL-003 packet.
+Media rights, visual approval, live retention/provider/paid/cloud work, and
+browser/media verification remain unchecked at their later-packet gates.
 Status changes belong in the individual packet and should be summarized here
 when work begins or finishes.
 

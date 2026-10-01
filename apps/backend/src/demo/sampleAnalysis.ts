@@ -505,7 +505,14 @@ export function validateCandidateFixture(value: unknown): FixtureValidation {
   }
   parsed.data.candidates.forEach((candidate, index) => {
     const publicCopy = `${candidate.title} ${candidate.hook} ${candidate.rationale}`;
-    if (/guaranteed|go viral|million views|viral score/iu.test(publicCopy)) {
+    const performanceCopy = [
+      publicCopy,
+      ...candidate.evidence.map((item) => item.note),
+      ...candidate.caveats.map((item) => item.note),
+    ].join(" ");
+    if (
+      /guaranteed|go viral|million views|viral score/iu.test(performanceCopy)
+    ) {
       evidence.push({
         ruleId: "candidate.performance-claim",
         path: `candidates.${index}`,
