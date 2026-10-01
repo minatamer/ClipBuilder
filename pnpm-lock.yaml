@@ -74,6 +74,9 @@ importers:
       lucide-react:
         specifier: 1.49.0
         version: 1.49.0(@types/react@19.3.0)(react@19.3.0)
+      mediabunny:
+        specifier: 1.61.0
+        version: 1.61.0
       next:
         specifier: 16.3.7
         version: 16.3.7(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@24.19.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -1211,6 +1214,18 @@ packages:
     resolution:
       {
         integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==,
+      }
+
+  "@types/dom-mediacapture-transform@0.1.12":
+    resolution:
+      {
+        integrity: sha512-d7/QsLRwF864A5mgIM/YrfiglHoYn7zgCcAoJgW404r+2DwnNr7EBbLnCWpmOMgH8y0te73L1AV6H1bmauaWFw==,
+      }
+
+  "@types/dom-webcodecs@0.1.13":
+    resolution:
+      {
+        integrity: sha512-O5hkiFIcjjszPIYyUSyvScyvrBoV3NOEEZx/pMlsu44TKzWNkLVBBxnxJz42in5n3QIolYOcBYFCPZZ0h8SkwQ==,
       }
 
   "@types/estree@1.0.9":
@@ -3244,6 +3259,12 @@ packages:
       }
     engines: { node: ">= 0.8" }
 
+  mediabunny@1.61.0:
+    resolution:
+      {
+        integrity: sha512-WciPOYwKZwgYkoBKcEK6JzzIf+w5whypPzFdOihOylZ/5Qv19FmNfRnTcaprH+jD136YpEASU30Eb6VNCJiz3A==,
+      }
+
   merge-descriptors@2.0.0:
     resolution:
       {
@@ -4884,6 +4905,12 @@ snapshots:
 
   "@types/deep-eql@4.0.2": {}
 
+  "@types/dom-mediacapture-transform@0.1.12":
+    dependencies:
+      "@types/dom-webcodecs": 0.1.13
+
+  "@types/dom-webcodecs@0.1.13": {}
+
   "@types/estree@1.0.9": {}
 
   "@types/express-serve-static-core@5.1.3":
@@ -6262,6 +6289,11 @@ snapshots:
   math-intrinsics@1.1.0: {}
 
   media-typer@1.1.1: {}
+
+  mediabunny@1.61.0:
+    dependencies:
+      "@types/dom-mediacapture-transform": 0.1.12
+      "@types/dom-webcodecs": 0.1.13
 
   merge-descriptors@2.0.0: {}
 

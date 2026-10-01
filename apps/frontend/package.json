@@ -10,12 +10,14 @@
     "format:write": "prettier --write --ignore-path ../../.prettierignore .",
     "lint": "eslint .",
     "start": "next start --hostname 127.0.0.1 --port 3000",
+    "test:media": "node feasibility/browser-media/server.mjs",
     "test:unit": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@clipbuilder/contracts": "workspace:*",
     "lucide-react": "1.49.0",
+    "mediabunny": "1.61.0",
     "next": "16.3.7",
     "react": "19.3.0",
     "react-dom": "19.3.0",

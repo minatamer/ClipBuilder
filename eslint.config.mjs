@@ -66,6 +66,8 @@ export default defineConfig([
       "**/*.config.{js,mjs,ts}",
       "test/**/*.ts",
       "apps/backend/**/*.ts",
+      "apps/frontend/feasibility/browser-media/server.mjs",
+      "apps/frontend/feasibility/browser-media/server.test.mjs",
     ],
     languageOptions: {
       globals: {
@@ -73,6 +75,19 @@ export default defineConfig([
         ...globals.node,
       },
     },
+  },
+  {
+    files: [
+      "apps/frontend/feasibility/browser-media/{main,worker,sync-access,sync-access.test}.mjs",
+    ],
+    languageOptions: {
+      globals: {
+        ...disabledNodeGlobals,
+        ...globals.browser,
+        ...globals.worker,
+      },
+    },
+    rules: applicationBoundaryRules,
   },
   {
     files: ["apps/frontend/src/**/*.{ts,tsx}"],
