@@ -97,45 +97,19 @@ Real local media, protected analysis, automatic assembly, local export/download,
 deployment remain owned by their dependency-ordered tickets. Technical choices
 marked as proposed remain subject to the documented validation gates.
 
-## Local foundation
+## Explore the repository
 
-Use Node.js `^22.13.0` or `^24.0.0` and the pinned pnpm `11.19.0`:
+| Area | Responsibility | Guide |
+| --- | --- | --- |
+| `apps/frontend` | Responsive video workflow, browser-owned media, and local preview/export | [Frontend guide](apps/frontend/README.md) |
+| `apps/backend` | Private Express API, configuration, and protected AI request boundaries | [Backend guide](apps/backend/README.md) |
+| `packages/contracts` | Browser-safe schemas and compiled limits shared across the API boundary | [Contracts guide](packages/contracts/README.md) |
+| `docs` | Product decisions, design research, and implementation tickets | [Documentation](docs/README.md) |
+| `test` | Shared deterministic test isolation | [Agent instructions](AGENTS.md#deterministic-verification) |
 
-```powershell
-corepack pnpm install --frozen-lockfile
-corepack pnpm dev:frontend
-corepack pnpm dev:backend
-```
-
-Run the two development commands in separate terminals. Open the workflow at
-`http://localhost:3000/start` (matching the committed origin policy).
-The backend defaults to
-`http://127.0.0.1:4000`; `GET /v1/health` is content-free and cannot select a
-provider or paid operation. Committed configuration is documented in
-`.env.example` and defaults to fake, paid-disabled behavior with credentials
-blank. An ignored root `.env.local` is loaded only by explicit backend startup;
-`FAKE_MODE=true` selects the development preview. False does not enable the
-unimplemented real pipeline or bypass readiness/paid gates.
-
-Run the deterministic quality baseline from the repository root:
-
-```powershell
-corepack pnpm format:check
-corepack pnpm lint
-corepack pnpm typecheck
-corepack pnpm test:unit
-corepack pnpm build
-```
-
-Repository map:
-
-```text
-apps/frontend       public Next.js application shell
-apps/backend        private Express API and configuration boundary
-packages/contracts  browser-safe Zod contracts and compiled limits
-docs                 product authority, research, and implementation tickets
-test                 shared deterministic test isolation
-```
+For local setup and verification, start with the [backend guide](apps/backend/README.md#run-locally),
+then the [frontend guide](apps/frontend/README.md#run-locally). Automated coding
+agents follow the process and safety rules in [AGENTS.md](AGENTS.md#canonical-local-app-startup).
 
 ## Project documentation
 

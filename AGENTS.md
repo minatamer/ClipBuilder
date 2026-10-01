@@ -8,12 +8,16 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 - Follow the latest explicit owner decision, then the source of truth, then the
   active ticket, then an approved ADR, then research/history.
-- `README.md` owns the concise public product story, repository map, and safe
-  first-time local commands. Do not turn it into an operations manual.
+- `README.md` owns the concise public, portfolio-facing product story and
+  repository map. Link to service guides for setup and verification; do not put
+  detailed commands, environment setup, or an operations manual there.
 - Application/package READMEs own their commands, configuration boundaries, and
   focused verification.
-- This file owns repository operating constraints. Keep product decisions in the
-  source of truth and ticket-local decisions/evidence in the active packet.
+- This file owns repository operating constraints, including canonical local
+  startup, sandbox permissions, process cleanup, and logging. Its lifecycle
+  rules apply alongside the commands in the application READMEs. Keep product
+  decisions in the source of truth and ticket-local decisions/evidence in the
+  active packet.
 - Update the narrowest owning document when behavior changes. A ticket cannot
   silently change architecture, privacy, rights, spend, or public claims.
 
@@ -120,10 +124,65 @@ corepack pnpm test:unit
 corepack pnpm build
 ```
 
-The frontend uses port `3000`; the backend defaults to `4000`. When asked to
-start or restart long-lived local applications, stop stale listeners first,
-launch only the required process, capture content-safe logs, and report the
-process ID and log path. Never print environment values.
+## Canonical local app startup
+
+- An unqualified `run`, `run all`, `restart`, or `restart all` targets both the
+  frontend and backend. A named target operates only on that service. `kill`
+  or `kill all` stops this repository's app stack, not other repositories or
+  every Node process. Contracts are a build prerequisite, not another server;
+  the media feasibility harness is opt-in and is not part of the default stack.
+- Follow the [backend guide](apps/backend/README.md#run-locally) and
+  [frontend guide](apps/frontend/README.md#run-locally). Use the pinned package
+  manager from the repository root. Build contracts before first startup and
+  after contract changes with `corepack pnpm build:contracts`. Normal local
+  launches use `corepack pnpm dev:backend` and `corepack pnpm dev:frontend`;
+  use the guides' build/start commands only for a requested production-like run.
+- For a full-stack start, launch the backend first and wait for content-free
+  `GET http://127.0.0.1:4000/v1/health` to return `200`, then start the frontend.
+  The frontend binds to `127.0.0.1:3000`; open `http://localhost:3000/start`
+  to match the origin policy. Check `/start` and `/api/sample/config` return
+  `200` before reporting the workflow reachable. These GET checks do not prove
+  provider readiness or authorize a processing request.
+- The backend defaults to `127.0.0.1:4000`, and the current frontend fixture
+  bridge pins that upstream port. Do not silently choose different ports,
+  rewrite origins, or change the owner's environment to resolve a conflict.
+  If an intentional backend port override makes the bridge incompatible,
+  report the mismatch rather than claim the full stack works.
+- Launch long-lived local app processes outside the restricted sandbox through
+  the tool's explicit escalation/approval mechanism. Do not change sandbox
+  policy or bypass a denied operation. Deterministic tests and CI retain their
+  isolated fake/paid-disabled setup; a local run is not approval for providers,
+  paid calls, cloud changes, or deployment.
+- Use normal owner-managed configuration. On explicit non-test local startup,
+  `apps/backend/src/server.ts` loads the ignored root `.env.local` if present;
+  existing process-environment values take precedence. Let the entry point
+  load it, without reading, printing, copying, or overwriting its contents.
+  Do not force fake/test flags for a requested normal run, create a second
+  frontend mode setting, or bypass feature gates. Missing setup is described
+  using the blank entries in `.env.example`; never inspect secrets to diagnose it.
+- Before launching, inspect the intended ports and establish process ownership.
+  Reuse a healthy matching instance for `run`. Stop a verified stale matching
+  instance first, including its watcher and children. Never kill an unrelated
+  or unidentified port owner; report the conflict without a port fallback.
+- For `kill` and `restart`, capture the owned launcher/watcher tree and orphan
+  identities before shutdown. Stop the supervisor so it cannot respawn workers,
+  use graceful shutdown followed by bounded tree-aware forced cleanup when
+  needed, and verify PID creation times before terminating survivors. Stopping
+  only the pnpm/tsx wrapper or freeing one port is insufficient. Recheck owned
+  descendants and listeners through a stabilization check. Do not claim success
+  or launch replacements while owned leftovers remain. Full-stack restart stops
+  the frontend before the backend, then starts the backend before the frontend.
+- On Windows, keep agent-managed background launches detached and hidden with
+  `Start-Process -WindowStyle Hidden` unless a visible app was requested. Track
+  the actual app and supervisor identities plus descendants in a content-free
+  runtime record outside Git. Capture stdout/stderr in separate content-safe
+  logs outside Git and report absolute log paths, owning PIDs, verified ports,
+  and app URLs. Never print environment values or sensitive startup output.
+- A returned launcher PID is not readiness. Verify actual listeners and the
+  non-metered GET checks above. If a new instance fails, stop its entire newly
+  created tree and verify cleanup; preserve unrelated healthy services. Restart
+  means verified shutdown followed by verified startup, not another launch over
+  an existing process. Leave healthy requested apps running after the handoff.
 
 ## Ticket completion
 

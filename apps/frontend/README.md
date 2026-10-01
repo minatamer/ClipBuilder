@@ -6,14 +6,29 @@ server-only configuration to browser code.
 
 ## Current responsibility
 
-**Planning handoff (2026-10-01):** the browser will own source/results/assets/
-final output through the [browser-media contract](../../docs/architecture/BROWSER_OWNED_MEDIA.md).
-CL-005 migrates File lifetime, OPFS/IndexedDB recovery, actual range playback,
-legacy upload/generation/config assumptions and capability preflight; downstream
-tickets implement audio/model/composition/export. The existing fake behavior
-documented below is unchanged: it does not read the selected video or download
-an MP4. Backend services cannot open browser storage. No media implementation,
-dependency install, env migration or device proof occurred in this docs pass.
+**CL-005 local foundation (2026-10-01):** real local composition now retains one
+File, inspects actual supported MP4/WebM tracks and bounds in a worker, probes
+actual native portrait H.264/AAC encode/decode, and incrementally copies the
+source into OPFS. A bounded versioned IndexedDB journal commits only on
+transaction completion. An exclusive Web Lock, advisory content-free
+BroadcastChannel notifications and runtime generation fencing protect one
+workspace. Recovery re-inspects and hashes the actual source before accepting
+cached analysis/selection; it never spends or requires a server-owned bundle.
+The owner-approved expiry is fixed at two hours from source selection, with
+active/next-open orphan cleanup and best-effort deletion. Closing a tab is not
+a deletion guarantee; no persistent-storage permission or history is requested.
+Missing storage/locking/codec support fails closed; no unproved memory fallback
+is enabled. Downstream tickets implement audio/model/composition/export.
+Default fake behavior documented below is unchanged: it reads no File bytes
+and cannot download an MP4. Real mode does not use synthetic build/render
+fallbacks and stops truthfully at prepared source until CL-007 is connected.
+Backend services cannot open browser storage. CL-005 pins `mediabunny@1.61.0` and supplies a
+separate [synthetic media feasibility harness](feasibility/browser-media/README.md)
+with measured Windows in-app Chromium codec/storage/range/full-bound evidence
+in the ticket. Run `corepack pnpm --filter @clipbuilder/frontend test:media`
+only for that manual local spike; it is not part of normal tests or `/start`.
+Local intake/recovery and protected-admission foundations are implemented;
+no provider, final product download or release claim.
 
 CL-001 supplies the accessible product shell, framework error/not-found
 boundaries, metadata, robots policy, and deterministic build/test foundation.
@@ -123,7 +138,8 @@ blur, border and inset highlights, with a stronger 72% media tint for legibility
 over bright footage. No-blur/reduced-transparency states use an opaque fallback;
 forced colors use native system colors. These controls are the intended shared
 shell when gated real-media playback is connected; the current implementation
-still renders placeholders and simulated playback, not recorded video.
+uses actual locally owned video and immutable source ranges in real local mode;
+the fake adapter retains placeholders and simulated playback.
 
 Fake operation screens show simulated percentages derived from the canonical
 reported stage order, with a shared animated fill. Progress stops when reported
@@ -146,23 +162,90 @@ read-only preview and render confirmation → result/download. The frontend will
 not expose an editor, chatbot, manual trim, caption or visual controls, an
 editable timeline, proposals, or undo/redo.
 
-## Commands
+## Run locally
+
+Use Node.js `^22.13.0` or `^24.0.0` and the pinned pnpm `11.19.0`.
+From the repository root, install dependencies and compile the shared contracts:
+
+```powershell
+corepack pnpm install --frozen-lockfile
+corepack pnpm build:contracts
+```
+
+The landing at `/` can run on its own. The `/start` workflow also needs the
+[backend](../backend/README.md#run-locally) on `127.0.0.1:4000`; start it first
+and wait for its content-free health check to return `200`.
+
+Start the frontend in its own terminal, from the repository root:
+
+```powershell
+corepack pnpm dev:frontend
+```
+
+The server binds to `127.0.0.1:3000`. Open
+[http://localhost:3000/start](http://localhost:3000/start) to match the committed
+frontend-origin policy. Check `/start` and `/api/sample/config` return `200`;
+the second GET verifies the backend bridge without starting a paid operation.
+The fixture bridge pins upstream port `4000`, so a different backend port is
+not a working full-stack setup. Do not accept a silent frontend port fallback.
+
+For a requested production-like local run, stop the frontend instance first,
+then run from the repository root:
+
+```powershell
+corepack pnpm build:frontend
+corepack pnpm start:frontend
+```
+
+Rebuild contracts after changes to `packages/contracts` before restarting
+either app. Normal startup keeps the owner's backend configuration: its entry
+point loads the root `.env.local` as described in the backend guide. This
+frontend has no provider credential or separate mode setting to populate; do
+not create a frontend `.env.local` to override backend mode or expose secrets.
+
+For a manual stop, use Ctrl+C in the owning terminal and confirm no frontend
+watcher/child or listener remains on `3000`. Restart means stop and verify
+cleanup first, then run the selected launch command and verify readiness again.
+Agent-managed runs use the outside-sandbox, hidden-launch, process-tree,
+logging, and cleanup rules in
+[AGENTS.md](../../AGENTS.md#canonical-local-app-startup). `run all` includes
+both apps; `run frontend` targets this server only. The media spike is a separate
+opt-in command, not another default app service.
+
+## Verification commands
 
 Run from the repository root:
 
-```text
-corepack pnpm dev:frontend
-corepack pnpm build:frontend
+```powershell
 corepack pnpm --filter @clipbuilder/frontend typecheck
 corepack pnpm --filter @clipbuilder/frontend test:unit
 ```
 
-The local development server binds to `127.0.0.1:3000`. Run
-`corepack pnpm dev:backend` in another terminal for the workflow. Open
-`http://localhost:3000/start` to match the committed frontend-origin policy.
-No provider credential is required or read by this package.
+For the complete deterministic workspace baseline:
+
+```powershell
+corepack pnpm format:check
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm test:unit
+corepack pnpm build
+```
+
+Automated tests use their isolated safe configuration, not owner-managed local
+environment files. These checks are separate from running the normal app.
 
 ## Focused manual verification
+
+For real local mode, the owner-managed backend configuration selects
+`FAKE_MODE=false`, `APP_ENV=local`; no credentials or paid flags are needed for
+intake. Keep every paid/live/grant gate disabled. Choose one owned or synthetic
+supported video; inspect local byte progress, actual playback, refresh recovery,
+fixed expiry, second-tab refusal/reconnect and Clear followed by refresh. The
+source remains local. Analysis/build/export remain unavailable, not simulated.
+Private-mode denial and actual eviction/freezing remain unchecked as recorded
+in CL-005. Automated and responsive viewport checks are the demo verification
+scope; runtime probes reject unsupported capabilities. No temporary proof route is
+part of the application.
 
 Use prepared input or choose/drop a metadata-only video, watch simulated upload/
 analysis, check initial portraits without transcript/Proceed, play one choice,

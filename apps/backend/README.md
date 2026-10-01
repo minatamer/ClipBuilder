@@ -25,33 +25,121 @@ Production/real composition does not register these fixture routes; safe
 `GET /v1/sample/config` remains available with all unimplemented real features
 disabled. There is no fixture download route or valid output capability.
 
-CL-005 migrates legacy future cloud/native-media configuration and establishes
-protected admission; CL-007/009 add bounded request-scoped audio/text provider
+CL-005 removes the retired cloud/native-media configuration and establishes
+process-local protected admission; CL-007/009 add bounded request-scoped audio/text provider
 adapters. Browser media/composition/export arrive in their frontend tickets.
-No editor or assistant endpoint belongs in the demo API. The current config
-still contains legacy planned storage/job fields; do not populate them from old
-instructions. No application code/config was changed by the documentation pass.
+No editor or assistant endpoint belongs in the demo API. The schema/example no
+longer require GCP buckets, native executables, model paths or media jobs.
+Retired server upload/render feature flags cannot be enabled. In local real
+mode, the public config permits browser intake without credentials; all remote
+analysis/assembly/export capabilities still report unavailable.
 See [Browser-owned media](../../docs/architecture/BROWSER_OWNED_MEDIA.md) for
 process-local replay guarantees, restart/uncertain-result failures and public
 paid gates; the fake Map/cookie are not their implementation.
 
+`src/admission` owns AES-256-GCM HttpOnly/Secure/SameSite grants with an issuing
+boot epoch, fixed expiry, exact origin/CSRF and bounded canonical keyring.
+Its ledger reserves four one-use action slots per grant and keeps replay/
+uncertain/canceled tombstones until expiry. Overflow is refused, not evicted.
+Grant issuance is globally rate-bounded, actions are once per grant/kind, active
+transport capacity is held until settlement, and dispatch budget is process-life
+only. Timed-out/disconnected actions cannot be automatically retried/refunded.
+Normalized-result receipt contracts bind a completed action and request/result
+digests; they do not prove browser metadata or unseen video content.
+
+Default `PROCESSING_GRANTS_ENABLED=false` exposes no grant/clear route.
+The explicit local foundation composition requires validated owner-populated
+blank grant key entries, but still composes no provider and always refuses paid
+dispatch. `/v1/admission/grant` and `/clear` additionally require actual secure
+transport; untrusted forwarded-protocol headers do not make HTTP secure. There
+is no generic body relay or audio endpoint. Public protected/paid composition
+is refused pending CL-015 safeguards. No cross-replica exactly-once, durable
+counter, stored provider content or lost-response recovery is promised.
+
 `src/app.ts` constructs Express without listening. `src/server.ts` is the only
 module that reads `process.env` and opens the local port.
 
-## Commands
+## Run locally
+
+Use Node.js `^22.13.0` or `^24.0.0` and the pinned pnpm `11.19.0`.
+From the repository root, install dependencies and compile the shared contracts:
+
+```powershell
+corepack pnpm install --frozen-lockfile
+corepack pnpm build:contracts
+```
+
+Start the backend in its own terminal, from the repository root:
+
+```powershell
+corepack pnpm dev:backend
+```
+
+This runs `tsx watch src/server.ts`: it launches the API and reloads it after
+source changes, rather than only compiling TypeScript. On explicit non-test
+local startup, the server loads the ignored root `.env.local` if present.
+Existing process-environment values take precedence. No environment flags need
+to be copied into the command. Defaults without local overrides are fake and
+paid-disabled; normal startup does not force a mode over the owner's settings.
+See [Configuration and secrets](#configuration-and-secrets).
+
+The API binds to `127.0.0.1:4000` by default. Before starting or testing the
+frontend workflow, confirm the content-free GET returns `200`:
+
+```text
+http://127.0.0.1:4000/v1/health
+```
+
+This endpoint does not call a provider, cloud service, or user object and does
+not prove that a paid feature is ready. The current frontend fixture bridge
+pins upstream port `4000`; an intentional backend `PORT` override must not be
+mistaken for a working default full stack. Do not change ports or origins to
+hide a conflict.
+
+For a requested production-like local run, stop the backend instance first,
+then run from the repository root:
+
+```powershell
+corepack pnpm build:backend
+corepack pnpm start:backend
+```
+
+The explicit executable entry point loads the same root local configuration
+when eligible; imports and tests do not. Rebuild contracts after changes to
+`packages/contracts`. After owner-managed environment changes, restart the
+whole backend watcher/launcher to load fresh settings; a source reload alone
+is not an environment-reload guarantee.
+
+For a manual stop, use Ctrl+C in the owning terminal and confirm both the tsx
+watcher/children and backend listener are gone. Restart means verified stop
+first, then the selected launch command and health check. Agent-managed runs
+follow the outside-sandbox, hidden-launch, process-tree, logging, and cleanup
+rules in [AGENTS.md](../../AGENTS.md#canonical-local-app-startup).
+`run all` includes the backend and frontend; `run backend` targets this API only.
+Missing credentials do not require fake overrides or a cloud setup: leave
+gated features unavailable and report the owner-only setup that remains.
+
+## Verification commands
 
 Run from the repository root:
 
-```text
-corepack pnpm dev:backend
-corepack pnpm build:backend
+```powershell
 corepack pnpm --filter @clipbuilder/backend typecheck
 corepack pnpm --filter @clipbuilder/backend test:unit
 ```
 
-After a build, `corepack pnpm start:backend` binds to `127.0.0.1:4000` by
-default. `GET http://127.0.0.1:4000/v1/health` is content-free and does not call
-a provider, cloud service, or user object.
+For the complete deterministic workspace baseline:
+
+```powershell
+corepack pnpm format:check
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm test:unit
+corepack pnpm build
+```
+
+Tests own their fake/paid-disabled environment and never load `.env.local`.
+These checks are separate from the normal local app launch.
 
 ## Configuration and secrets
 
@@ -59,7 +147,8 @@ The committed schema is [`.env.example`](../../.env.example). `FAKE_MODE=true`
 is the authoritative default; internal provider mode is derived. Legacy
 `PROVIDER_MODE`, when supplied, must match and cannot override the boolean.
 Paid/live flags remain independent admission gates, not alternative mode knobs.
-False selects real mode without fallback; currently its adapters are unavailable.
+False selects real mode without fallback; browser-local intake is available
+only in local composition, while remote processing adapters are unavailable.
 Credentials and owner-owned identifiers remain blank.
 
 An ignored root `.env.local` was created from the safe blank example because
