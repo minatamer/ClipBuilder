@@ -23,7 +23,7 @@ const opaqueId = (prefix: string) => `${prefix}_${"a".repeat(22)}`;
 
 const validMedia = {
   mediaId: opaqueId("med"),
-  objectGeneration: "123",
+  sourceRevision: opaqueId("rev"),
   container: "mp4",
   videoCodec: "h264",
   audioCodec: "aac",
@@ -265,7 +265,7 @@ describe("strict boundary schemas", () => {
     const config = publicConfigResponseSchema.parse({
       mode: "fake",
       sampleEnabled: true,
-      liveUploadEnabled: false,
+      localMediaEnabled: false,
       liveAnalysisEnabled: false,
       liveAssemblyEnabled: false,
       liveRenderEnabled: false,

@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowRight, Clapperboard, Film, Upload, X } from "lucide-react";
-import type { PublicConfigResponse, SafeError } from "@clipbuilder/contracts";
+import {
+  type PublicConfigResponse,
+  type SafeError,
+} from "@clipbuilder/contracts";
 import { PrivacyDialog } from "../../app/privacy-dialog";
 import { Button } from "../../shared/ui/button";
 import { Progress } from "../../shared/ui/progress";
@@ -33,13 +36,18 @@ import {
   type SampleApi,
 } from "./sample.api";
 import styles from "./sample.module.css";
+import { localMediaFailure } from "../media/media.errors";
+import { localSessionIdentity } from "../media/workspace.restore";
+import { SourcePreview } from "./source-preview";
 
 function Workspace({
   children,
   clear,
+  localMode = false,
 }: {
   children: ReactNode;
   clear?: () => void;
+  localMode?: boolean;
 }) {
   return (
     <div className={styles.workspace}>
@@ -53,6 +61,7 @@ function Workspace({
         </a>
         <div className={styles.headerActions}>
           <PrivacyDialog
+            localMedia={localMode}
             triggerVariant="secondary"
             triggerClassName={styles.headerButton}
           />
@@ -91,7 +100,9 @@ export function SampleExperience({ api = sampleApi }: { api?: SampleApi }) {
     );
     return () => controller.abort();
   }, [api, attempt]);
-  const enabled = config?.mode === "fake" && config.sampleEnabled;
+  const localMode = config?.mode === "live" && config.localMediaEnabled;
+  const enabled =
+    (config?.mode === "fake" && config.sampleEnabled) || localMode;
   const availability = useMemo(
     () => ({ sample: false, upload: enabled }),
     [enabled],
@@ -152,6 +163,7 @@ export function SampleExperience({ api = sampleApi }: { api?: SampleApi }) {
     <ClippingSessionProvider
       availability={availability}
       loadServerEvidence={api.evidence}
+      localMode={localMode}
     >
       <SampleScreen api={api} availability={availability} />
     </ClippingSessionProvider>
@@ -165,7 +177,9 @@ function SampleScreen({
   api: SampleApi;
   availability: { sample: boolean; upload: boolean };
 }) {
-  const { state, dispatch, effects } = useClippingSession();
+  const { state, dispatch, effects, workspace, retryRestore } =
+    useClippingSession();
+  const localMode = workspace !== null;
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<SafeError | null>(null);
   const [evidenceAttempt, setEvidenceAttempt] = useState(0);
@@ -196,7 +210,7 @@ function SampleScreen({
     [],
   );
   useEffect(() => {
-    if (identity === null) return;
+    if (identity === null || localMode) return;
     const timer = setTimeout(
       () => {
         effects.clear();
@@ -207,9 +221,10 @@ function SampleScreen({
       Math.max(0, Date.parse(identity.expiresAt) - Date.now()),
     );
     return () => clearTimeout(timer);
-  }, [dispatch, effects, identity]);
+  }, [dispatch, effects, identity, localMode]);
 
   useEffect(() => {
+    if (localMode) return;
     const operationId = "operation" in state ? state.operation.operationId : "";
     const key = `${state.stage}:${operationId}:${evidenceAttempt}`;
     if (phase.current?.key === key) return;
@@ -225,10 +240,11 @@ function SampleScreen({
           );
       })
       .finally(stop);
-  }, [api, dispatch, effects, evidenceAttempt, state]);
+  }, [api, dispatch, effects, evidenceAttempt, state, localMode]);
 
   useEffect(() => {
     if (
+      localMode ||
       identity === null ||
       snapshot === null ||
       (snapshot.bundle !== null && (review === null || assembly !== null))
@@ -261,13 +277,22 @@ function SampleScreen({
       if (!controller.signal.aborted) setFailure(sampleFailure());
     });
     return () => controller.abort();
-  }, [api, assembly, dispatch, identity, snapshot, review, evidenceAttempt]);
+  }, [
+    api,
+    assembly,
+    dispatch,
+    identity,
+    snapshot,
+    review,
+    evidenceAttempt,
+    localMode,
+  ]);
 
   useEffect(() => {
     if (state.stage !== "clearing") return;
     const controller = new AbortController();
     effects.clear();
-    void api.clear(controller.signal).then(
+    void (workspace ? workspace.clear() : api.clear(controller.signal)).then(
       () => {
         if (!controller.signal.aborted)
           dispatch({ type: "CLEAR_SUCCEEDED", availability });
@@ -278,7 +303,7 @@ function SampleScreen({
       },
     );
     return () => controller.abort();
-  }, [api, availability, dispatch, effects, state.stage]);
+  }, [api, availability, dispatch, effects, state.stage, workspace]);
 
   async function run(action: (signal: AbortSignal) => Promise<void>) {
     if (pending.current !== null) return;
@@ -301,6 +326,12 @@ function SampleScreen({
     }
   }
   const clear = () => {
+    if (
+      localMode &&
+      state.stage === "fatal" &&
+      state.failure.code === "ACTIVE_SESSION_EXISTS"
+    )
+      return;
     pending.current?.abort();
     phase.current?.controller.abort();
     pending.current = null;
@@ -310,13 +341,59 @@ function SampleScreen({
   };
   const selectInput = (file?: File) => {
     if (state.stage !== "intake") return;
+    if (workspace) {
+      if (!file) return;
+      try {
+        const preparation = workspace.prepare(file, (bytes) =>
+          dispatch({
+            type: "LOCAL_COPY_PROGRESS",
+            epoch: workspace.snapshot?.epoch ?? "",
+            bytes,
+          }),
+        );
+        dispatch({
+          type: "LOCAL_PREPARATION_STARTED",
+          identity: localSessionIdentity(preparation.pending),
+          epoch: preparation.pending.epoch,
+          artifact: preparation.pending.artifacts[0]!,
+        });
+        void preparation.completion.then(
+          (record) => {
+            if (record.source)
+              dispatch({
+                type: "LOCAL_SOURCE_READY",
+                epoch: record.epoch,
+                media: record.source.media,
+              });
+          },
+          (error) => {
+            const failure = localMediaFailure(error);
+            dispatch({
+              type: "LOCAL_SOURCE_FAILED",
+              epoch: preparation.pending.epoch,
+              failure,
+            });
+            void workspace.clear().catch(() => {
+              dispatch({ type: "CLEAR" });
+            });
+          },
+        );
+      } catch (error) {
+        setFailure(localMediaFailure(error));
+      }
+      return;
+    }
     dispatch({
       type: "FILE_SELECTED",
       localSource: developmentInput(file),
     });
   };
   const build = () => {
-    if (state.stage !== "candidates" || !actions.includes("build-selection"))
+    if (
+      localMode ||
+      state.stage !== "candidates" ||
+      !actions.includes("build-selection")
+    )
       return;
     const selected = state.analysis.bundle?.candidates.find(
       (item) => item.id === state.selectedId,
@@ -346,6 +423,7 @@ function SampleScreen({
   };
   const render = () => {
     if (
+      localMode ||
       state.stage !== "clip-review" ||
       !actions.includes("confirm-render") ||
       state.assembly === null
@@ -385,7 +463,7 @@ function SampleScreen({
     state.stage === "uploading" ||
     state.stage === "upload-authorizing" ||
     state.stage === "media-inspecting" ||
-    state.stage === "analysis-confirmation" ||
+    (state.stage === "analysis-confirmation" && !localMode) ||
     state.stage === "analyzing" ||
     state.stage === "assembling" ||
     state.stage === "rendering" ||
@@ -407,12 +485,27 @@ function SampleScreen({
     state.stage === "local-inspection" &&
     state.localSource.validation.status === "rejected";
   return (
-    <Workspace {...(selectIsClearable(state) ? { clear } : {})}>
+    <Workspace
+      localMode={localMode}
+      {...(selectIsClearable(state) &&
+      !(
+        localMode &&
+        state.stage === "fatal" &&
+        state.failure.code === "ACTIVE_SESSION_EXISTS"
+      )
+        ? { clear }
+        : {})}
+    >
       <WorkflowFrame
         title={stageTitles[state.stage] ?? selectStageTitle(state)}
         bounded={
-          ["candidates", "clip-review", "result"].includes(state.stage) &&
-          !loading
+          [
+            "candidates",
+            "clip-review",
+            "result",
+            "local-preparing",
+            "analysis-confirmation",
+          ].includes(state.stage) && !loading
         }
         headingRef={title}
         subtitle={
@@ -445,7 +538,7 @@ function SampleScreen({
         footer={
           state.stage === "candidates" && state.selectedId === null ? null : (
             <div className={styles.footerActions}>
-              {state.stage === "intake" && (
+              {state.stage === "intake" && !localMode && (
                 <Button
                   variant="secondary"
                   icon={ArrowRight}
@@ -458,7 +551,9 @@ function SampleScreen({
                 <Button
                   icon={ArrowRight}
                   onClick={build}
-                  disabled={busy || !actions.includes("build-selection")}
+                  disabled={
+                    localMode || busy || !actions.includes("build-selection")
+                  }
                 >
                   {busy ? "Starting build..." : "Proceed"}
                 </Button>
@@ -472,14 +567,17 @@ function SampleScreen({
                     if (event.detail <= 1) clear();
                   }}
                 >
-                  Cancel preview
+                  {localMode ? "Cancel preparation" : "Cancel preview"}
                 </Button>
               )}
               {state.stage === "clip-review" && (
                 <Button
                   icon={ArrowRight}
                   disabled={
-                    busy || loading || !actions.includes("confirm-render")
+                    localMode ||
+                    busy ||
+                    loading ||
+                    !actions.includes("confirm-render")
                   }
                   onClick={render}
                 >
@@ -509,9 +607,7 @@ function SampleScreen({
                 </Button>
               )}
               {state.stage === "fatal" && actions.includes("retry-restore") && (
-                <Button onClick={() => dispatch({ type: "RETRY_RESTORE" })}>
-                  Reconnect
-                </Button>
+                <Button onClick={retryRestore}>Reconnect</Button>
               )}
               {state.stage === "fatal" &&
                 !actions.includes("retry-restore") && (
@@ -566,6 +662,30 @@ function SampleScreen({
               : { fraction: processingFraction })}
           />
         )}
+        {state.stage === "local-preparing" && (
+          <section className={styles.processing} aria-label="Local preparation">
+            <Progress
+              label="Preparing video on this device"
+              fraction={state.copiedBytes / state.artifact.bytes}
+            />
+            {workspace?.sourceUrl && (
+              <SourcePreview sourceUrl={workspace.sourceUrl} />
+            )}
+          </section>
+        )}
+        {state.stage === "analysis-confirmation" &&
+          localMode &&
+          workspace?.sourceUrl && (
+            <>
+              <SourcePreview
+                sourceUrl={workspace.sourceUrl}
+                durationMs={state.media.durationMs}
+              />
+              <p className={styles.modeNote}>
+                Video prepared locally. Moment analysis is not connected yet.
+              </p>
+            </>
+          )}
         {state.stage === "intake" && (
           <section className={styles.intake} aria-label="Video intake">
             <div
@@ -593,7 +713,9 @@ function SampleScreen({
                 className={styles.screenReaderText}
                 type="file"
                 tabIndex={-1}
-                aria-label="Development input video"
+                aria-label={
+                  localMode ? "Local input video" : "Development input video"
+                }
                 accept="video/mp4,video/webm"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
@@ -618,7 +740,9 @@ function SampleScreen({
             </p>
             <p className={styles.rights}>
               Only videos, voices and music you own or have permission to edit.
-              Real media will be temporary, with clear and expiry.
+              {localMode
+                ? " Video stays on this device in one temporary workspace for up to two hours. Clear media attempts to remove it. Closing the tab does not guarantee deletion; expired files are cleaned while open or on the next visit. Browser storage may be removed sooner."
+                : " Real media will be temporary, with clear and expiry."}
             </p>
           </section>
         )}
@@ -635,11 +759,24 @@ function SampleScreen({
           <CandidateReview
             analysis={state.analysis.bundle}
             selectedId={state.selectedId}
-            onSelect={(candidateId) =>
-              dispatch({ type: "CANDIDATE_SELECTED", candidateId })
-            }
-            onClose={() => dispatch({ type: "CANDIDATE_PREVIEW_CLOSED" })}
+            onSelect={(candidateId) => {
+              dispatch({ type: "CANDIDATE_SELECTED", candidateId });
+              if (workspace)
+                void workspace
+                  .select(candidateId)
+                  .catch((error) => setFailure(localMediaFailure(error)));
+            }}
+            onClose={() => {
+              dispatch({ type: "CANDIDATE_PREVIEW_CLOSED" });
+              if (workspace)
+                void workspace
+                  .select(null)
+                  .catch((error) => setFailure(localMediaFailure(error)));
+            }}
             busy={busy}
+            {...(localMode && workspace?.sourceUrl
+              ? { sourceUrl: workspace.sourceUrl }
+              : {})}
           />
         )}
         {state.stage === "no-candidates" && (
@@ -673,6 +810,9 @@ function SampleScreen({
         {state.stage === "fatal" && (
           <section className={styles.empty}>
             <p role="alert">{state.failure.message}</p>
+            {localMode && state.failure.code === "ACTIVE_SESSION_EXISTS" && (
+              <p>Close the other workspace tab, then reconnect here.</p>
+            )}
           </section>
         )}
         {state.stage === "expired" && (
@@ -683,7 +823,9 @@ function SampleScreen({
         {state.stage === "cleanup-partial" && (
           <section className={styles.empty}>
             <p role="alert">
-              Local data is cleared. Service cleanup could not be confirmed.
+              {localMode
+                ? "Local deletion could not be confirmed. Keep this tab open and retry cleanup."
+                : "Local data is cleared. Service cleanup could not be confirmed."}
             </p>
           </section>
         )}

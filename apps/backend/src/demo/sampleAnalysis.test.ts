@@ -63,7 +63,7 @@ describe("sample fixture contracts", () => {
     });
     expect(SAMPLE_MANIFEST).toMatchObject({
       rightsStatus: "pending",
-      media: { objectGeneration: null, sha256: null, bytes: null },
+      media: { sourceRevision: null, sha256: null, bytes: null },
       poster: { status: "pending", sha256: null },
     });
   });

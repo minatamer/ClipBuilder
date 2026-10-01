@@ -11,3 +11,4 @@ export * from "./operation.schema.js";
 export * from "./text.schema.js";
 export * from "./transcript.schema.js";
 export * from "./visual-plan.schema.js";
+export * from "./admission.schema.js";

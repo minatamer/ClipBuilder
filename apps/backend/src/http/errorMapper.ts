@@ -21,6 +21,10 @@ const HTTP_STATUS_BY_ERROR_CODE: Readonly<Partial<Record<ErrorCode, number>>> =
     ACTION_IN_PROGRESS: 409,
     STALE_REVISION: 409,
     CAPACITY_FULL: 429,
+    SESSION_INVALID: 401,
+    PAID_DEMO_DISABLED: 403,
+    RATE_LIMITED: 429,
+    PROVIDER_BUDGET_EXHAUSTED: 429,
   };
 
 export class ApplicationError extends Error {

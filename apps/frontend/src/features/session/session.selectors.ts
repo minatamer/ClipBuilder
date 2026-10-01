@@ -20,6 +20,7 @@ const STAGE_TITLES: Record<ClippingSessionState["stage"], string> = {
   bootstrapping: "Restoring session",
   intake: "Choose a source",
   "local-inspection": "Review local video",
+  "local-preparing": "Preparing video locally",
   "upload-authorizing": "Preparing upload",
   uploading: "Uploading video",
   "media-inspecting": "Inspecting media",
@@ -44,6 +45,7 @@ const PROGRESS: Record<ClippingSessionState["stage"], number> = {
   bootstrapping: 0,
   intake: 0,
   "local-inspection": 5,
+  "local-preparing": 5,
   "upload-authorizing": 10,
   uploading: 15,
   "media-inspecting": 25,
@@ -111,6 +113,7 @@ export function selectAvailableActions(
     case "local-inspection":
       return ["confirm-upload", ...clear];
     case "uploading":
+    case "local-preparing":
       return ["cancel", ...clear];
     case "analyzing":
       return [
@@ -122,7 +125,12 @@ export function selectAvailableActions(
         ...clear,
       ];
     case "analysis-confirmation":
-      return ["confirm-analysis", ...clear];
+      return [
+        ...(state.identity.authority === "local"
+          ? []
+          : ["confirm-analysis" as const]),
+        ...clear,
+      ];
     case "analysis-failed":
       return [
         ...(state.recovery !== null &&
@@ -137,7 +145,9 @@ export function selectAvailableActions(
         ...(state.analysis.bundle !== null
           ? (["select-candidate"] as const)
           : []),
-        ...(state.selectedId !== null && state.analysis.bundle !== null
+        ...(state.identity.authority !== "local" &&
+        state.selectedId !== null &&
+        state.analysis.bundle !== null
           ? (["build-selection"] as const)
           : []),
         ...clear,
@@ -152,7 +162,8 @@ export function selectAvailableActions(
       ];
     case "clip-review":
       return [
-        ...(state.identity.remaining.renderAttempts > 0 &&
+        ...(state.identity.authority !== "local" &&
+        state.identity.remaining.renderAttempts > 0 &&
         state.analysis.bundle !== null &&
         state.assembly !== null
           ? (["confirm-render"] as const)

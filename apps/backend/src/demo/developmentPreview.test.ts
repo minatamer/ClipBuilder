@@ -306,7 +306,9 @@ describe("CL-004 complete development preview", () => {
         true,
       );
       expect(config.body.sampleEnabled).toBe(false);
-      expect(config.body.liveUploadEnabled).toBe(false);
+      expect(config.body.localMediaEnabled).toBe(
+        environment.FAKE_MODE === "false",
+      );
       expect(config.body.mode).toBe(
         environment.FAKE_MODE === "false" ? "live" : "fake",
       );

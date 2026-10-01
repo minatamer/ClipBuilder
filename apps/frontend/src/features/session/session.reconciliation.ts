@@ -43,6 +43,7 @@ const REQUIRED_SERVER_STAGE: Record<
 > = {
   intake: "intake",
   "local-inspection": "intake",
+  "local-preparing": "intake",
   "upload-authorizing": "intake",
   uploading: "upload-authorized",
   "media-inspecting": "uploaded",

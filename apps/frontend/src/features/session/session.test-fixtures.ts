@@ -27,7 +27,7 @@ export const identity: SessionIdentity = {
 
 export const media = mediaDescriptorSchema.parse({
   mediaId: id("med", "m"),
-  objectGeneration: "1",
+  sourceRevision: id("rev", "m"),
   container: "mp4",
   videoCodec: "h264",
   audioCodec: "aac",

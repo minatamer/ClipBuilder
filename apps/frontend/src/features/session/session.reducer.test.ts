@@ -26,6 +26,78 @@ import {
 const availability = { sample: true, upload: true } as const;
 
 describe("canonical clipping-session reducer", () => {
+  it("admits one local artifact and accepts only matching monotonic copy/ready results", () => {
+    const epoch = "00000000-0000-4000-8000-000000000001";
+    const artifact = {
+      artifactId: `loc_${"a".repeat(22)}`,
+      sourceRevision: media.sourceRevision,
+      bytes: media.bytes,
+    };
+    let state = clippingSessionReducer(initialClippingSessionState, {
+      type: "RESTORE_EMPTY",
+      availability,
+    });
+    state = clippingSessionReducer(state, {
+      type: "LOCAL_PREPARATION_STARTED",
+      identity: { ...identity, authority: "local" },
+      epoch,
+      artifact,
+    });
+    expect(state.stage).toBe("local-preparing");
+    state = clippingSessionReducer(state, {
+      type: "LOCAL_COPY_PROGRESS",
+      epoch,
+      bytes: 100,
+    });
+    expect(state).toMatchObject({ copiedBytes: 100 });
+    for (const [resultEpoch, bytes] of [
+      [epoch, 99],
+      [epoch, media.bytes + 1],
+      ["stale", 101],
+    ] as const) {
+      state = clippingSessionReducer(state, {
+        type: "LOCAL_COPY_PROGRESS",
+        epoch: resultEpoch,
+        bytes,
+      });
+      expect(state).toMatchObject({ copiedBytes: 100 });
+    }
+    state = clippingSessionReducer(state, {
+      type: "LOCAL_SOURCE_READY",
+      epoch: "stale",
+      media,
+    });
+    expect(state.stage).toBe("local-preparing");
+    state = clippingSessionReducer(state, {
+      type: "LOCAL_SOURCE_READY",
+      epoch,
+      media,
+    });
+    expect(state.stage).toBe("analysis-confirmation");
+    expect(selectAvailableActions(state)).not.toContain("confirm-analysis");
+    expect(JSON.stringify(state)).not.toContain("blob:");
+  });
+  it("keeps synthetic build and export unavailable for restored local bundles", () => {
+    const state: ClippingSessionState = {
+      stage: "candidates",
+      identity: { ...identity, authority: "local" },
+      analysis: {
+        analysisId: analysis.analysisId,
+        revision: analysis.revision,
+        bundle: analysis,
+      },
+      selectedId: analysis.candidates[0]!.id,
+      diagnosticCode: null,
+    };
+    expect(selectAvailableActions(state)).toContain("select-candidate");
+    expect(selectAvailableActions(state)).not.toContain("build-selection");
+    expect(
+      selectAvailableActions({
+        ...reviewState(),
+        identity: { ...identity, authority: "local" },
+      }),
+    ).not.toContain("confirm-render");
+  });
   it("runs the deterministic sample through immutable review, render, result, and clear", () => {
     let state = clippingSessionReducer(initialClippingSessionState, {
       type: "RESTORE_EMPTY",

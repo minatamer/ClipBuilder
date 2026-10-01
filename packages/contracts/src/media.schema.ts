@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 import { MEDIA_LIMITS, OWNER_VALIDATION_LIMITS } from "./constants.js";
-import { mediaIdSchema } from "./ids.schema.js";
+import {
+  mediaIdSchema,
+  revisionIdSchema,
+  localArtifactIdSchema,
+} from "./ids.schema.js";
 
 export const mediaContainerSchema = z.enum(["mp4", "webm"]);
 export const videoCodecSchema = z.enum(["h264", "vp8", "vp9"]);
@@ -15,7 +19,7 @@ export const mediaOrientationSchema = z.enum([
 export const mediaDescriptorSchema = z
   .object({
     mediaId: mediaIdSchema,
-    objectGeneration: z.string().regex(/^\d{1,32}$/u),
+    sourceRevision: revisionIdSchema,
     container: mediaContainerSchema,
     videoCodec: videoCodecSchema,
     audioCodec: audioCodecSchema,
@@ -72,3 +76,19 @@ export const mediaDescriptorSchema = z
   });
 
 export type MediaDescriptor = z.infer<typeof mediaDescriptorSchema>;
+
+export const localArtifactReferenceSchema = z
+  .object({
+    artifactId: localArtifactIdSchema,
+    sourceRevision: revisionIdSchema,
+    bytes: z
+      .number()
+      .int()
+      .positive()
+      .max(OWNER_VALIDATION_LIMITS.maxSourceBytes),
+  })
+  .strict();
+
+export type LocalArtifactReference = z.infer<
+  typeof localArtifactReferenceSchema
+>;

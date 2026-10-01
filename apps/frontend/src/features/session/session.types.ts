@@ -2,6 +2,7 @@ import type {
   AnalysisBundleV1,
   AssemblyBundleV1,
   MediaDescriptor,
+  LocalArtifactReference,
   OperationStatusV1,
   SafeError,
   SessionResponse,
@@ -18,6 +19,7 @@ export type SessionAvailability = {
 export type SessionIdentity = {
   sessionId: string;
   mode: "sample" | "upload";
+  authority?: "local";
   expiresAt: string;
   // Latest server readiness evidence; never restored from browser storage.
   remaining: SessionResponse["remaining"];
@@ -84,6 +86,13 @@ type SessionStage =
   | { stage: "bootstrapping" }
   | { stage: "intake"; availability: SessionAvailability }
   | { stage: "local-inspection"; localSource: LocalSourceSummary }
+  | {
+      stage: "local-preparing";
+      identity: SessionIdentity;
+      epoch: string;
+      artifact: LocalArtifactReference;
+      copiedBytes: number;
+    }
   | {
       stage: "upload-authorizing";
       identity: SessionIdentity;
@@ -224,6 +233,15 @@ export type ClippingSessionEvent =
       analysis: AnalysisBundleV1;
     }
   | { type: "FILE_SELECTED"; localSource: LocalSourceSummary }
+  | {
+      type: "LOCAL_PREPARATION_STARTED";
+      identity: SessionIdentity;
+      epoch: string;
+      artifact: LocalArtifactReference;
+    }
+  | { type: "LOCAL_COPY_PROGRESS"; epoch: string; bytes: number }
+  | { type: "LOCAL_SOURCE_READY"; epoch: string; media: MediaDescriptor }
+  | { type: "LOCAL_SOURCE_FAILED"; epoch: string; failure: SafeError }
   | { type: "LOCAL_REJECTED"; reasonCode: "type" | "size" | "duration" }
   | { type: "UPLOAD_CONFIRMED"; identity: SessionIdentity }
   | { type: "AUTHORIZED"; uploadId: string }

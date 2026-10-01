@@ -15,41 +15,28 @@ const blankCommittedEnvironmentKeys = [
   "TURNSTILE_SITE_KEY",
   "TURNSTILE_SECRET_KEY",
   "TURNSTILE_EXPECTED_HOSTNAME",
-  "GCP_PROJECT_ID",
-  "GCP_REGION",
-  "TEMP_MEDIA_BUCKET",
-  "SAMPLE_MEDIA_OBJECT",
-  "SAMPLE_MEDIA_GENERATION",
-  "SAMPLE_MEDIA_SHA256",
-  "MEDIA_JOB_NAME",
-  "MEDIA_JOB_SERVICE_ACCOUNT",
-  "ACTIVE_SPEAKER_WEIGHTS_SHA256",
   "OPENAI_API_KEY",
   "DEEPGRAM_API_KEY",
 ] as const;
 
 const liveAnalysisEnvironment = (): NodeJS.ProcessEnv => ({
   NODE_ENV: "development",
-  APP_ENV: "preview",
+  APP_ENV: "local",
   PROVIDER_MODE: "live",
   FAKE_MODE: "false",
   PAID_DEMO_ENABLED: "true",
-  LIVE_UPLOAD_ENABLED: "false",
   LIVE_ANALYSIS_ENABLED: "true",
   LIVE_ASSEMBLY_ENABLED: "false",
   LIVE_IMAGE_GENERATION_ENABLED: "false",
-  LIVE_RENDER_ENABLED: "false",
   OPENAI_API_KEY: "fixture-openai-key",
   DEEPGRAM_API_KEY: "fixture-deepgram-key",
   PROCESSING_GRANT_ACTIVE_KEY_ID: "fixture-key-v1",
-  PROCESSING_GRANT_KEYS_JSON: '{"fixture-key-v1":"fixture-only-material"}',
+  PROCESSING_GRANT_KEYS_JSON: JSON.stringify({
+    "fixture-key-v1": Buffer.alloc(32, 1).toString("base64url"),
+  }),
   TURNSTILE_SITE_KEY: "fixture-site-key",
   TURNSTILE_SECRET_KEY: "fixture-secret-key",
   TURNSTILE_EXPECTED_HOSTNAME: "preview.example.test",
-  GCP_PROJECT_ID: "fixture-project",
-  GCP_REGION: "fixture-region",
-  TEMP_MEDIA_BUCKET: "fixture-private-bucket",
-  MEDIA_JOB_NAME: "fixture-media-job",
 });
 
 describe("loadConfig", () => {
@@ -58,13 +45,29 @@ describe("loadConfig", () => {
     const real = loadConfig({ FAKE_MODE: "false" });
     expect(real.providerMode).toBe("live");
     expect(real.paidDemoEnabled).toBe(false);
-    expect(real.features.liveUpload).toBe(false);
+    expect(real.features.liveAnalysis).toBe(false);
     expect(() =>
       loadConfig({ FAKE_MODE: "false", PROVIDER_MODE: "fake" }),
     ).toThrow();
     expect(() => loadConfig({ FAKE_MODE: "maybe" })).toThrow();
     expect(() =>
-      loadConfig({ FAKE_MODE: "false", LIVE_UPLOAD_ENABLED: "true" }),
+      loadConfig({ FAKE_MODE: "false", LIVE_ANALYSIS_ENABLED: "true" }),
+    ).toThrow();
+  });
+  it("rejects retired media flags and malformed grant keys during composition", () => {
+    expect(() => loadConfig({ LIVE_UPLOAD_ENABLED: "true" })).toThrow();
+    expect(() => loadConfig({ LIVE_RENDER_ENABLED: "true" })).toThrow();
+    expect(() =>
+      loadConfig({
+        ...liveAnalysisEnvironment(),
+        PROCESSING_GRANT_KEYS_JSON: "{}",
+      }),
+    ).toThrow();
+    expect(() =>
+      loadConfig({
+        ...liveAnalysisEnvironment(),
+        PROCESSING_GRANT_ACTIVE_KEY_ID: "missing",
+      }),
     ).toThrow();
   });
   it("composes only fake, paid-disabled defaults in tests", () => {
@@ -99,13 +102,16 @@ describe("loadConfig", () => {
     ).toThrow();
   });
 
-  it("accepts live analysis only with provider, grant, abuse, storage, and job configuration", () => {
+  it("accepts controlled local analysis configuration without any storage or media job", () => {
     const config = loadConfig(liveAnalysisEnvironment());
 
     expect(config.providerMode).toBe("live");
     expect(config.features.liveAnalysis).toBe(true);
-    expect(config.storage.projectId).toBe("fixture-project");
-    expect(config.storage.mediaJobName).toBe("fixture-media-job");
+    expect(config).not.toHaveProperty("storage");
+    expect(config).not.toHaveProperty("jobs");
+    expect(() =>
+      loadConfig({ ...liveAnalysisEnvironment(), APP_ENV: "preview" }),
+    ).toThrow();
   });
 
   it.each([
@@ -116,10 +122,6 @@ describe("loadConfig", () => {
     "TURNSTILE_SITE_KEY",
     "TURNSTILE_SECRET_KEY",
     "TURNSTILE_EXPECTED_HOSTNAME",
-    "GCP_PROJECT_ID",
-    "GCP_REGION",
-    "TEMP_MEDIA_BUCKET",
-    "MEDIA_JOB_NAME",
   ])("rejects live analysis when %s is missing", (missingKey) => {
     const environment = liveAnalysisEnvironment();
     delete environment[missingKey];

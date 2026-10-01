@@ -8,6 +8,7 @@ import {
   useState,
   type KeyboardEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { ArrowLeft, Film, Pause, Play } from "lucide-react";
 import { IconButton } from "../../shared/ui/button";
@@ -40,6 +41,7 @@ export function PortraitPlayer({
   onClose,
   onKeyDown,
   children,
+  videoRef,
 }: {
   label: string;
   range: { startMs: number; endMs: number };
@@ -52,6 +54,7 @@ export function PortraitPlayer({
   onClose?: () => void;
   onKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
   children?: ReactNode;
+  videoRef?: RefObject<HTMLVideoElement | null>;
 }) {
   const controlsId = useId();
   const [awake, setAwake] = useState(true);
@@ -116,7 +119,17 @@ export function PortraitPlayer({
         reveal();
       }}
     >
-      <PortraitPlaceholder>{children}</PortraitPlaceholder>
+      {videoRef ? (
+        <video
+          ref={videoRef}
+          className={styles.localVideo}
+          playsInline
+          preload="metadata"
+          aria-label={label}
+        />
+      ) : (
+        <PortraitPlaceholder>{children}</PortraitPlaceholder>
+      )}
       <button
         type="button"
         className={styles.playerReveal}

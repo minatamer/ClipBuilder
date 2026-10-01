@@ -6,6 +6,9 @@ import {
   operationStageOrdinal,
   operationStatusSchema,
   renderIdSchema,
+  localArtifactReferenceSchema,
+  mediaDescriptorSchema,
+  uuidV4Schema,
   type AssemblyBundleV1,
   type OperationStatusV1,
 } from "@clipbuilder/contracts";
@@ -234,6 +237,22 @@ export function clippingSessionReducer(
       return reject(state);
 
     case "intake":
+      if (
+        event.type === "LOCAL_PREPARATION_STARTED" &&
+        state.availability.upload &&
+        event.identity.authority === "local" &&
+        uuidV4Schema.safeParse(event.epoch).success &&
+        localArtifactReferenceSchema.safeParse(event.artifact).success
+      ) {
+        return accept({
+          stage: "local-preparing",
+          identity: event.identity,
+          epoch: event.epoch,
+          artifact: event.artifact,
+          copiedBytes: 0,
+          diagnosticCode: null,
+        });
+      }
       if (event.type === "FILE_SELECTED" && state.availability.upload) {
         return accept({
           stage: "local-inspection",
@@ -264,6 +283,36 @@ export function clippingSessionReducer(
               diagnosticCode: null,
             });
       }
+      return reject(state);
+
+    case "local-preparing":
+      if (
+        event.type === "LOCAL_COPY_PROGRESS" &&
+        event.epoch === state.epoch &&
+        Number.isSafeInteger(event.bytes) &&
+        event.bytes >= state.copiedBytes &&
+        event.bytes <= state.artifact.bytes
+      )
+        return accept({ ...state, copiedBytes: event.bytes });
+      if (
+        event.type === "LOCAL_SOURCE_READY" &&
+        event.epoch === state.epoch &&
+        mediaDescriptorSchema.safeParse(event.media).success &&
+        event.media.sourceRevision === state.artifact.sourceRevision &&
+        event.media.bytes === state.artifact.bytes
+      )
+        return accept({
+          stage: "analysis-confirmation",
+          identity: state.identity,
+          media: event.media,
+          diagnosticCode: null,
+        });
+      if (event.type === "LOCAL_SOURCE_FAILED" && event.epoch === state.epoch)
+        return accept({
+          stage: "fatal",
+          failure: event.failure,
+          diagnosticCode: null,
+        });
       return reject(state);
 
     case "local-inspection":
@@ -417,8 +466,8 @@ export function clippingSessionReducer(
           !parsed.success ||
           !resultRevisionMatches(state.operation, parsed.data.revision) ||
           parsed.data.media.mediaId !== state.lastKnown.media.mediaId ||
-          parsed.data.media.objectGeneration !==
-            state.lastKnown.media.objectGeneration
+          parsed.data.media.sourceRevision !==
+            state.lastKnown.media.sourceRevision
         ) {
           return reject(state);
         }

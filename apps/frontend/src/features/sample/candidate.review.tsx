@@ -2,6 +2,7 @@
 
 import {
   useLayoutEffect,
+  useEffect,
   useRef,
   useState,
   useId,
@@ -16,6 +17,7 @@ import { PortraitPlaceholder, PortraitPlayer } from "./portrait-player";
 import { ReviewTranscript } from "./review-transcript";
 import { useRangePlayback } from "./use-range-playback";
 import { useMomentLayout } from "./use-moment-layout";
+import { useSessionEffects } from "../session/session.provider";
 import styles from "./sample.module.css";
 
 function MomentChoice({
@@ -24,10 +26,12 @@ function MomentChoice({
   busy,
   choose,
   move,
+  sourceUrl,
 }: {
   analysis: AnalysisBundleV1;
   candidate: ClipCandidateV1;
   busy: boolean;
+  sourceUrl?: string;
   choose: (item: ClipCandidateV1) => void;
   move: (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -50,7 +54,11 @@ function MomentChoice({
         data-moment-surface={candidate.id}
         style={{ viewTransitionName: `moment-${candidate.rank}` }}
       >
-        <PortraitPlaceholder />
+        {sourceUrl ? (
+          <MomentThumbnail sourceUrl={sourceUrl} startMs={range.startMs} />
+        ) : (
+          <PortraitPlaceholder />
+        )}
         <span className={styles.choicePlay}>
           <Play size={14} aria-hidden="true" />
         </span>
@@ -67,6 +75,46 @@ function MomentChoice({
   );
 }
 
+function MomentThumbnail({
+  sourceUrl,
+  startMs,
+}: {
+  sourceUrl: string;
+  startMs: number;
+}) {
+  const video = useRef<HTMLVideoElement>(null);
+  const effects = useSessionEffects();
+  useEffect(() => {
+    const element = video.current;
+    if (!element) return;
+    const ready = () => {
+      element.currentTime = startMs / 1000;
+    };
+    element.addEventListener("loadedmetadata", ready);
+    let stopped = false;
+    const cleanup = () => {
+      if (stopped) return;
+      stopped = true;
+      element.removeEventListener("loadedmetadata", ready);
+      element.pause();
+      element.removeAttribute("src");
+      element.load();
+    };
+    return effects ? effects.registerStopper(cleanup) : cleanup;
+  }, [sourceUrl, startMs, effects]);
+  return (
+    <video
+      ref={video}
+      src={sourceUrl}
+      className={styles.localVideo}
+      muted
+      playsInline
+      preload="metadata"
+      aria-hidden="true"
+    />
+  );
+}
+
 function MomentPreview({
   analysis,
   candidate,
@@ -76,6 +124,7 @@ function MomentPreview({
   close,
   tab,
   setTab,
+  sourceUrl,
 }: {
   analysis: AnalysisBundleV1;
   candidate: ClipCandidateV1;
@@ -88,13 +137,20 @@ function MomentPreview({
   close: () => void;
   tab: "transcript" | "notes";
   setTab: (value: "transcript" | "notes") => void;
+  sourceUrl?: string;
 }) {
   const range = candidateRange(analysis, candidate);
-  const { currentMs, playing, seek, toggle, pause } = useRangePlayback(range, {
-    timeMs: range.startMs,
-    play,
-    ordinal: 0,
-  });
+  const { currentMs, playing, seek, toggle, pause, videoRef } =
+    useRangePlayback(
+      range,
+      {
+        timeMs: range.startMs,
+        play,
+        ordinal: 0,
+      },
+      undefined,
+      sourceUrl,
+    );
   const [highlighted, setHighlighted] = useState<readonly string[]>([]);
   const tabsId = useId();
   const jump = (timeMs: number, wordIds: readonly string[]) => {
@@ -114,6 +170,7 @@ function MomentPreview({
           range={range}
           currentMs={currentMs}
           playing={playing}
+          {...(sourceUrl ? { videoRef } : {})}
           toggle={toggle}
           seek={(timeMs) => {
             setHighlighted([]);
@@ -216,12 +273,14 @@ export function CandidateReview({
   onSelect,
   onClose,
   busy,
+  sourceUrl,
 }: {
   analysis: AnalysisBundleV1;
   selectedId: string | null;
   onSelect: (id: string) => void;
   onClose: () => void;
   busy: boolean;
+  sourceUrl?: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const keyboardFocus = useRef<number | null>(null);
@@ -293,6 +352,7 @@ export function CandidateReview({
               busy={busy}
               choose={choose}
               move={move}
+              {...(sourceUrl ? { sourceUrl } : {})}
             />
           ))}
       </div>
@@ -313,6 +373,7 @@ export function CandidateReview({
           }
           tab={tab}
           setTab={setTab}
+          {...(sourceUrl ? { sourceUrl } : {})}
         />
       )}
     </div>

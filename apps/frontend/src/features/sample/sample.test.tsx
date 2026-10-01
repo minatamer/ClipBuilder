@@ -70,6 +70,35 @@ const evidence = sessionResponseSchema.parse({
 });
 
 describe("CL-004 sample browser boundary", () => {
+  it("uses locally owned video portraits without exposing transcript before selection", () => {
+    const bundle = choices(3);
+    const gallery = renderToStaticMarkup(
+      <CandidateReview
+        analysis={bundle}
+        selectedId={null}
+        onSelect={() => {}}
+        onClose={() => {}}
+        busy={false}
+        sourceUrl="blob:synthetic-local"
+      />,
+    );
+    expect(gallery.match(/<video/g)).toHaveLength(3);
+    expect(gallery).not.toContain('aria-label="Selected moment transcript"');
+    expect(gallery).not.toContain("Transcript</button>");
+    const preview = renderToStaticMarkup(
+      <CandidateReview
+        analysis={bundle}
+        selectedId={bundle.candidates[1]!.id}
+        onSelect={() => {}}
+        onClose={() => {}}
+        busy={false}
+        sourceUrl="blob:synthetic-local"
+      />,
+    );
+    expect(preview.match(/<video/g)).toHaveLength(3);
+    expect(preview).toContain('aria-label="Selected moment transcript"');
+    expect(preview).toContain('value="15000"');
+  });
   it.each([1, 2, 3, 4])(
     "supports %i validated choices with one selected portrait and correct paused restored range",
     (count) => {

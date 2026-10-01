@@ -14,6 +14,7 @@ export const sessionIdSchema = opaqueIdSchema("ses");
 export const uploadIdSchema = opaqueIdSchema("upl");
 export const operationIdSchema = opaqueIdSchema("op");
 export const mediaIdSchema = opaqueIdSchema("med");
+export const localArtifactIdSchema = opaqueIdSchema("loc");
 export const analysisIdSchema = opaqueIdSchema("ana");
 export const candidateIdSchema = opaqueIdSchema("cand");
 export const assemblyIdSchema = opaqueIdSchema("asm");

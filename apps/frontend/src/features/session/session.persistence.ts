@@ -24,6 +24,7 @@ export const MAX_PROJECTION_AGE_MS = 30 * 60 * 1_000;
 const STAGES = [
   "intake",
   "local-inspection",
+  "local-preparing",
   "upload-authorizing",
   "uploading",
   "media-inspecting",

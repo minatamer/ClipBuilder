@@ -117,7 +117,7 @@ const transcript = {
 
 const media = {
   mediaId: IDS.media,
-  objectGeneration: "1",
+  sourceRevision: opaqueId("rev", "m"),
   container: "mp4",
   videoCodec: "h264",
   audioCodec: "aac",

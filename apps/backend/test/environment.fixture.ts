@@ -4,11 +4,11 @@ const safeTestEnvironment = {
   APP_ENV: "local",
   PROVIDER_MODE: "fake",
   PAID_DEMO_ENABLED: "false",
-  LIVE_UPLOAD_ENABLED: "false",
+  PROCESSING_GRANTS_ENABLED: "false",
+  ADMISSION_MAX_PROCESS_DISPATCHES: "0",
   LIVE_ANALYSIS_ENABLED: "false",
   LIVE_ASSEMBLY_ENABLED: "false",
   LIVE_IMAGE_GENERATION_ENABLED: "false",
-  LIVE_RENDER_ENABLED: "false",
 } as const;
 
 export function createSafeTestEnvironment(

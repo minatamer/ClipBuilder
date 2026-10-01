@@ -55,6 +55,16 @@ export const LIMIT_PROFILES = {
   validation: OWNER_VALIDATION_LIMITS,
 } as const;
 
+export const LOCAL_WORKSPACE_LIMITS = {
+  ttlMs: 2 * 60 * 60 * 1_000,
+  maxJournalBytes: 8 * 1024 * 1024,
+  maxArtifacts: 8,
+  ioChunkBytes: 1024 * 1024,
+  provisionalAudioBytes: 16 * 1024 * 1024,
+  scratchIoBytes: 8 * 1024 * 1024,
+  minimumReserveBytes: 64 * 1024 * 1024,
+} as const;
+
 export type LimitProfile = keyof typeof LIMIT_PROFILES;
 
 export function isSourceWithinLimitProfile(

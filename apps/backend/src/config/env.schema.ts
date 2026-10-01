@@ -51,8 +51,6 @@ const commaSeparatedOriginsSchema = z
   .transform((value) => value.split(",").map((origin) => origin.trim()))
   .pipe(z.array(exactOriginSchema).min(1).max(10));
 
-const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/u);
-
 export const environmentShape = {
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -66,11 +64,9 @@ export const environmentShape = {
 
   FAKE_MODE: booleanValue(true),
   PAID_DEMO_ENABLED: booleanValue(false),
-  LIVE_UPLOAD_ENABLED: booleanValue(false),
   LIVE_ANALYSIS_ENABLED: booleanValue(false),
   LIVE_ASSEMBLY_ENABLED: booleanValue(false),
   LIVE_IMAGE_GENERATION_ENABLED: booleanValue(false),
-  LIVE_RENDER_ENABLED: booleanValue(false),
   ACTIVE_SPEAKER_ENABLED: booleanValue(true),
   TREND_SIGNALS_ENABLED: booleanValue(false),
   PUBLIC_LANGUAGE_PROFILE: z.literal("en").default("en"),
@@ -81,55 +77,14 @@ export const environmentShape = {
   PROCESSING_GRANT_ACTIVE_KEY_ID: optionalString(80),
   PROCESSING_GRANT_KEYS_JSON: optionalString(16_384),
   CSRF_ALLOWED_ORIGINS: commaSeparatedOriginsSchema,
-  IDEMPOTENCY_TTL_SECONDS: integerValue(86_400, 7_200, 604_800),
+  PROCESSING_GRANTS_ENABLED: booleanValue(false),
+  ADMISSION_MAX_RECORDS: integerValue(256, 1, 1024),
+  ADMISSION_MAX_CONCURRENT_ACTIONS: integerValue(1, 1, 4),
+  ADMISSION_MAX_PROCESS_DISPATCHES: integerValue(0, 0, 32),
   TURNSTILE_SITE_KEY: optionalString(500),
   TURNSTILE_SECRET_KEY: optionalString(500),
   TURNSTILE_EXPECTED_HOSTNAME: optionalString(253),
   TURNSTILE_TIMEOUT_MS: integerValue(5_000, 1_000, 10_000),
-
-  GCP_PROJECT_ID: optionalString(100),
-  GCP_REGION: optionalString(100),
-  TEMP_MEDIA_BUCKET: optionalString(222),
-  SAMPLE_MEDIA_OBJECT: optionalString(1_024),
-  SAMPLE_MEDIA_GENERATION: z.preprocess(
-    (value) => (value === "" || value === undefined ? undefined : value),
-    z
-      .string()
-      .regex(/^\d{1,32}$/u)
-      .optional(),
-  ),
-  SAMPLE_MEDIA_SHA256: z.preprocess(
-    (value) => (value === "" || value === undefined ? undefined : value),
-    sha256Schema.optional(),
-  ),
-  MEDIA_JOB_NAME: optionalString(100),
-  MEDIA_JOB_SERVICE_ACCOUNT: optionalString(320),
-  UPLOAD_AUTH_TTL_SECONDS: integerValue(900, 300, 900),
-  DOWNLOAD_AUTH_TTL_SECONDS: integerValue(300, 60, 300),
-  OBJECT_LIFECYCLE_DAYS: z.literal("1").default("1").transform(Number),
-  JOB_ANALYSIS_TIMEOUT_SECONDS: integerValue(900, 60, 900),
-  JOB_ASSEMBLY_TIMEOUT_SECONDS: integerValue(900, 60, 900),
-  JOB_RENDER_TIMEOUT_SECONDS: integerValue(900, 60, 900),
-  JOB_CPU: integerValue(2, 1, 8),
-  JOB_MEMORY_MIB: integerValue(4_096, 512, 32_768),
-  JOB_EPHEMERAL_STORAGE_MIB: integerValue(10_240, 1_024, 65_536),
-  FFMPEG_PATH: z.string().default("/usr/local/bin/ffmpeg"),
-  FFPROBE_PATH: z.string().default("/usr/local/bin/ffprobe"),
-  FONT_DIR: z.string().default("/app/fonts"),
-  PYTHON_PATH: z.string().default("/opt/venv/bin/python"),
-  ACTIVE_SPEAKER_ENTRYPOINT: z
-    .string()
-    .default("/app/vision/active_speaker.py"),
-  ACTIVE_SPEAKER_MODEL: z.literal("light-asd").default("light-asd"),
-  ACTIVE_SPEAKER_WEIGHTS_PATH: z
-    .string()
-    .default("/app/models/light-asd/model.pth"),
-  ACTIVE_SPEAKER_WEIGHTS_SHA256: z.preprocess(
-    (value) => (value === "" || value === undefined ? undefined : value),
-    sha256Schema.optional(),
-  ),
-  ACTIVE_SPEAKER_TIMEOUT_MS: integerValue(240_000, 10_000, 240_000),
-  SCENE_DETECT_PROFILE: z.literal("podcast-cuts-v1").default("podcast-cuts-v1"),
 
   OPENAI_API_KEY: optionalString(1_024),
   OPENAI_CLIP_MODEL: z.string().min(1).max(100).default("gpt-6-sol"),
@@ -201,14 +156,12 @@ export const environmentShape = {
   ),
   MAX_CONCURRENT_ANALYSES: integerValue(1, 0, 1),
   MAX_CONCURRENT_ASSEMBLIES: integerValue(1, 0, 1),
-  MAX_CONCURRENT_RENDERS: integerValue(1, 0, 1),
   API_MAX_INSTANCES: integerValue(1, 1, 1),
   FRONTEND_MAX_INSTANCES: integerValue(2, 1, 2),
   RATE_WINDOW_SECONDS: integerValue(300, 60, 3_600),
-  RATE_UPLOAD_AUTH_MAX: integerValue(3, 0, 3),
+  RATE_GRANT_MAX: integerValue(3, 0, 3),
   RATE_ANALYSIS_MAX: integerValue(1, 0, 1),
   RATE_ASSEMBLY_MAX: integerValue(1, 0, 1),
-  RATE_RENDER_MAX: integerValue(1, 0, 1),
 } satisfies z.ZodRawShape;
 
 const rawEnvironmentSchema = z.object(environmentShape).strict();
@@ -220,11 +173,9 @@ export const ENVIRONMENT_KEYS = Object.freeze([
 export const environmentSchema = rawEnvironmentSchema
   .superRefine((environment, context) => {
     const liveFlags = [
-      environment.LIVE_UPLOAD_ENABLED,
       environment.LIVE_ANALYSIS_ENABLED,
       environment.LIVE_ASSEMBLY_ENABLED,
       environment.LIVE_IMAGE_GENERATION_ENABLED,
-      environment.LIVE_RENDER_ENABLED,
     ];
     const anyLiveFeature = liveFlags.some(Boolean);
     const hasValue = (value: string | undefined) => value !== undefined;
@@ -235,6 +186,8 @@ export const environmentSchema = rawEnvironmentSchema
       if (
         !environment.FAKE_MODE ||
         environment.PAID_DEMO_ENABLED ||
+        environment.PROCESSING_GRANTS_ENABLED ||
+        environment.ADMISSION_MAX_PROCESS_DISPATCHES !== 0 ||
         anyLiveFeature
       ) {
         issue(
@@ -326,35 +279,34 @@ export const environmentSchema = rawEnvironmentSchema
       }
     }
 
-    const needsStorageOrJob =
-      environment.LIVE_UPLOAD_ENABLED ||
-      environment.LIVE_ANALYSIS_ENABLED ||
-      environment.LIVE_ASSEMBLY_ENABLED ||
-      environment.LIVE_RENDER_ENABLED;
-    if (needsStorageOrJob) {
-      const storageValues = [
-        environment.GCP_PROJECT_ID,
-        environment.GCP_REGION,
-        environment.TEMP_MEDIA_BUCKET,
-        environment.MEDIA_JOB_NAME,
-      ];
-      if (!storageValues.every(hasValue)) {
-        issue(
-          "Enabled media features require complete storage and job configuration.",
-          "GCP_PROJECT_ID",
-        );
-      }
-    }
-
     if (
-      environment.LIVE_ASSEMBLY_ENABLED &&
-      !hasValue(environment.ACTIVE_SPEAKER_WEIGHTS_SHA256)
-    ) {
+      environment.PROCESSING_GRANTS_ENABLED &&
+      (environment.FAKE_MODE ||
+        !hasValue(environment.PROCESSING_GRANT_ACTIVE_KEY_ID) ||
+        !hasValue(environment.PROCESSING_GRANT_KEYS_JSON))
+    )
       issue(
-        "Live assembly requires a pinned active-speaker weights hash.",
-        "ACTIVE_SPEAKER_WEIGHTS_SHA256",
+        "Processing grants require real mode and explicit signing configuration.",
+        "PROCESSING_GRANTS_ENABLED",
       );
-    }
+    if (
+      environment.PROCESSING_GRANTS_ENABLED &&
+      environment.SESSION_COOKIE_NAME !== "__Host-clipping_session"
+    )
+      issue(
+        "Protected grants require the fixed host-only session cookie name.",
+        "SESSION_COOKIE_NAME",
+      );
+    if (
+      (environment.PROCESSING_GRANTS_ENABLED ||
+        environment.PAID_DEMO_ENABLED ||
+        anyLiveFeature) &&
+      environment.APP_ENV !== "local"
+    )
+      issue(
+        "Public protected/paid processing remains disabled pending deployment safeguards.",
+        "PAID_DEMO_ENABLED",
+      );
 
     if (environment.APP_ENV === "production") {
       if (
@@ -431,11 +383,9 @@ export const environmentSchema = rawEnvironmentSchema
     providerMode: environment.FAKE_MODE ? ("fake" as const) : ("live" as const),
     paidDemoEnabled: environment.PAID_DEMO_ENABLED,
     features: {
-      liveUpload: environment.LIVE_UPLOAD_ENABLED,
       liveAnalysis: environment.LIVE_ANALYSIS_ENABLED,
       liveAssembly: environment.LIVE_ASSEMBLY_ENABLED,
       liveImageGeneration: environment.LIVE_IMAGE_GENERATION_ENABLED,
-      liveRender: environment.LIVE_RENDER_ENABLED,
       activeSpeaker: environment.ACTIVE_SPEAKER_ENABLED,
       trendSignals: environment.TREND_SIGNALS_ENABLED,
     },
@@ -448,45 +398,12 @@ export const environmentSchema = rawEnvironmentSchema
         environment.PROCESSING_GRANT_ACTIVE_KEY_ID ?? null,
       processingGrantKeysJson: environment.PROCESSING_GRANT_KEYS_JSON ?? null,
       csrfAllowedOrigins: environment.CSRF_ALLOWED_ORIGINS,
-      idempotencyTtlSeconds: environment.IDEMPOTENCY_TTL_SECONDS,
     },
     turnstile: {
       siteKey: environment.TURNSTILE_SITE_KEY ?? null,
       secretKey: environment.TURNSTILE_SECRET_KEY ?? null,
       expectedHostname: environment.TURNSTILE_EXPECTED_HOSTNAME ?? null,
       timeoutMs: environment.TURNSTILE_TIMEOUT_MS,
-    },
-    storage: {
-      projectId: environment.GCP_PROJECT_ID ?? null,
-      region: environment.GCP_REGION ?? null,
-      bucket: environment.TEMP_MEDIA_BUCKET ?? null,
-      sampleObject: environment.SAMPLE_MEDIA_OBJECT ?? null,
-      sampleGeneration: environment.SAMPLE_MEDIA_GENERATION ?? null,
-      sampleSha256: environment.SAMPLE_MEDIA_SHA256 ?? null,
-      mediaJobName: environment.MEDIA_JOB_NAME ?? null,
-      mediaJobServiceAccount: environment.MEDIA_JOB_SERVICE_ACCOUNT ?? null,
-      uploadAuthTtlSeconds: environment.UPLOAD_AUTH_TTL_SECONDS,
-      downloadAuthTtlSeconds: environment.DOWNLOAD_AUTH_TTL_SECONDS,
-      objectLifecycleDays: environment.OBJECT_LIFECYCLE_DAYS,
-    },
-    jobs: {
-      analysisTimeoutSeconds: environment.JOB_ANALYSIS_TIMEOUT_SECONDS,
-      assemblyTimeoutSeconds: environment.JOB_ASSEMBLY_TIMEOUT_SECONDS,
-      renderTimeoutSeconds: environment.JOB_RENDER_TIMEOUT_SECONDS,
-      cpu: environment.JOB_CPU,
-      memoryMiB: environment.JOB_MEMORY_MIB,
-      ephemeralStorageMiB: environment.JOB_EPHEMERAL_STORAGE_MIB,
-      ffmpegPath: environment.FFMPEG_PATH,
-      ffprobePath: environment.FFPROBE_PATH,
-      fontDirectory: environment.FONT_DIR,
-      pythonPath: environment.PYTHON_PATH,
-      activeSpeakerEntrypoint: environment.ACTIVE_SPEAKER_ENTRYPOINT,
-      activeSpeakerModel: environment.ACTIVE_SPEAKER_MODEL,
-      activeSpeakerWeightsPath: environment.ACTIVE_SPEAKER_WEIGHTS_PATH,
-      activeSpeakerWeightsSha256:
-        environment.ACTIVE_SPEAKER_WEIGHTS_SHA256 ?? null,
-      activeSpeakerTimeoutMs: environment.ACTIVE_SPEAKER_TIMEOUT_MS,
-      sceneDetectProfile: environment.SCENE_DETECT_PROFILE,
     },
     openAi: {
       apiKey: environment.OPENAI_API_KEY ?? null,
@@ -522,16 +439,18 @@ export const environmentSchema = rawEnvironmentSchema
       renderAttemptsPerSession: environment.MAX_RENDER_ATTEMPTS_PER_SESSION,
     },
     admission: {
+      grantsEnabled: environment.PROCESSING_GRANTS_ENABLED,
+      maxRecords: environment.ADMISSION_MAX_RECORDS,
+      maxConcurrentActions: environment.ADMISSION_MAX_CONCURRENT_ACTIONS,
+      maxProcessDispatches: environment.ADMISSION_MAX_PROCESS_DISPATCHES,
       concurrentAnalyses: environment.MAX_CONCURRENT_ANALYSES,
       concurrentAssemblies: environment.MAX_CONCURRENT_ASSEMBLIES,
-      concurrentRenders: environment.MAX_CONCURRENT_RENDERS,
       apiMaxInstances: environment.API_MAX_INSTANCES,
       frontendMaxInstances: environment.FRONTEND_MAX_INSTANCES,
       rateWindowSeconds: environment.RATE_WINDOW_SECONDS,
-      rateUploadAuthorization: environment.RATE_UPLOAD_AUTH_MAX,
+      rateGrant: environment.RATE_GRANT_MAX,
       rateAnalysis: environment.RATE_ANALYSIS_MAX,
       rateAssembly: environment.RATE_ASSEMBLY_MAX,
-      rateRender: environment.RATE_RENDER_MAX,
     },
   }));
 

@@ -7,7 +7,7 @@ export const SAMPLE_MANIFEST = Object.freeze({
   rightsStatus: "pending",
   privateRightsEvidenceReference: null,
   media: {
-    objectGeneration: null,
+    sourceRevision: null,
     sha256: null,
     durationMs: 60_000,
     container: "mp4",

@@ -13,6 +13,8 @@ import { createHealthRouter } from "./http/routes/health.route.js";
 import { createSampleRouter } from "./http/routes/sample.route.js";
 import { sendNoStoreJson } from "./http/response.js";
 import { SampleSession } from "./demo/sampleSession.js";
+import { composeAdmission } from "./admission/admission.composition.js";
+import { createAdmissionRouter } from "./http/routes/admission.route.js";
 
 export function createApplication(config: BackendConfig): Express {
   const application = express();
@@ -26,6 +28,12 @@ export function createApplication(config: BackendConfig): Express {
   });
 
   application.use("/v1", createHealthRouter(config.appRevision));
+  const admission = composeAdmission(config);
+  if (admission)
+    application.use(
+      "/v1/admission",
+      createAdmissionRouter(admission, config.session.csrfAllowedOrigins),
+    );
   application.get("/v1/sample/config", (_request, response) => {
     const developmentPreview =
       config.providerMode === "fake" && config.appEnv === "local";
@@ -35,8 +43,8 @@ export function createApplication(config: BackendConfig): Express {
       publicConfigResponseSchema.parse({
         mode: config.providerMode,
         sampleEnabled: developmentPreview,
-        // No real adapter is implemented or admitted in this packet.
-        liveUploadEnabled: false,
+        localMediaEnabled:
+          config.providerMode === "live" && config.appEnv === "local",
         liveAnalysisEnabled: false,
         liveAssemblyEnabled: false,
         liveRenderEnabled: false,
@@ -50,13 +58,15 @@ export function createApplication(config: BackendConfig): Express {
           renders: 1,
         },
         features: {
-          activeSpeakerFraming: true,
+          activeSpeakerFraming: developmentPreview,
           contextualVisuals: false,
           trendSignals: false,
           languages: ["en"],
         },
         accessTtlSeconds: config.session.accessTtlSeconds,
-        deletionCopyVersion: "development-preview-v1",
+        deletionCopyVersion: developmentPreview
+          ? "development-preview-v1"
+          : "local-workspace-v1",
       }),
     );
   });

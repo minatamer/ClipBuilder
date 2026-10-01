@@ -85,7 +85,7 @@ function createAnalysisBundle(
     revision: opaqueId("rev"),
     media: {
       mediaId: opaqueId("med"),
-      objectGeneration: "123",
+      sourceRevision: opaqueId("rev"),
       container: "mp4",
       videoCodec: "h264",
       audioCodec: "aac",

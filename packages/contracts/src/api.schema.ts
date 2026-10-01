@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { assemblyBundleSchema } from "./assembly.schema.js";
 import {
   offsetDateTimeSchema,
   sha256DigestSchema,
@@ -18,7 +17,6 @@ import {
   revisionIdSchema,
   sessionIdSchema,
   uploadIdSchema,
-  visualAssetIdSchema,
   wordIdSchema,
 } from "./ids.schema.js";
 import { mediaDescriptorSchema } from "./media.schema.js";
@@ -28,8 +26,6 @@ import {
   boundedTextWithoutUrlSchema,
 } from "./text.schema.js";
 import { transcriptBundleSchema } from "./transcript.schema.js";
-
-const capabilityUrlSchema = z.url().max(4_096);
 
 export const healthResponseSchema = z
   .object({
@@ -43,7 +39,7 @@ export const publicConfigResponseSchema = z
   .object({
     mode: z.enum(["fake", "live"]),
     sampleEnabled: z.boolean(),
-    liveUploadEnabled: z.boolean(),
+    localMediaEnabled: z.boolean(),
     liveAnalysisEnabled: z.boolean(),
     liveAssemblyEnabled: z.boolean(),
     liveRenderEnabled: z.boolean(),
@@ -80,7 +76,7 @@ export const publicConfigResponseSchema = z
       }),
     features: z
       .object({
-        activeSpeakerFraming: z.literal(true),
+        activeSpeakerFraming: z.boolean(),
         contextualVisuals: z.boolean(),
         trendSignals: z.boolean(),
         languages: z.array(boundedPlainTextSchema(16)).min(1).max(10),
@@ -91,6 +87,7 @@ export const publicConfigResponseSchema = z
   })
   .strict();
 
+// Fixture-only workflow contracts; these never authorize real media upload or rendering.
 export const startSessionRequestSchema = z
   .object({ mode: z.enum(["sample", "upload"]) })
   .strict();
@@ -241,24 +238,6 @@ export const uploadAuthorizeRequestSchema = z
       .max(OWNER_VALIDATION_LIMITS.maxSourceBytes),
     declaredContentType: z.enum(["video/mp4", "video/webm"]),
     turnstileToken: turnstileTokenSchema,
-  })
-  .strict();
-
-export const uploadAuthorizeResponseSchema = z
-  .object({
-    uploadId: uploadIdSchema,
-    protocol: z.literal("gcs-resumable"),
-    uploadUrl: capabilityUrlSchema,
-    expiresAt: offsetDateTimeSchema,
-    requiredHeaders: z.record(
-      z.string().min(1).max(100),
-      z.string().max(1_000),
-    ),
-    maxBytes: z
-      .number()
-      .int()
-      .min(1)
-      .max(OWNER_VALIDATION_LIMITS.maxSourceBytes),
   })
   .strict();
 
@@ -506,19 +485,6 @@ export const assemblyStartResponseSchema = z
   })
   .strict();
 
-export const assemblyResultResponseSchema = z
-  .object({
-    assembly: assemblyBundleSchema,
-    preview: z
-      .object({
-        sourceUrl: capabilityUrlSchema,
-        assetUrls: z.record(visualAssetIdSchema, capabilityUrlSchema),
-        expiresAt: offsetDateTimeSchema,
-      })
-      .strict(),
-  })
-  .strict();
-
 export const renderRequestSchema = z
   .object({
     analysisId: analysisIdSchema,
@@ -532,19 +498,6 @@ export const renderStartResponseSchema = z
   .object({
     renderId: renderIdSchema,
     operation: operationStatusSchema,
-  })
-  .strict();
-
-export const downloadAuthorizeRequestSchema = z
-  .object({ renderId: renderIdSchema })
-  .strict();
-
-export const downloadAuthorizeResponseSchema = z
-  .object({
-    downloadUrl: capabilityUrlSchema,
-    expiresAt: offsetDateTimeSchema,
-    suggestedFilename: z.literal("clipping-demo-export.mp4"),
-    bytes: z.number().int().min(1).max(OWNER_VALIDATION_LIMITS.maxOutputBytes),
   })
   .strict();
 
