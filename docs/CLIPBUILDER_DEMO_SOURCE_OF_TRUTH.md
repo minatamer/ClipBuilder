@@ -1,6 +1,6 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
-- Status: Implementation-ready specification; revised 2026-09-30 around the locked automatic one-choice demo flow
+- Status: Implementation-ready specification; automatic one-choice flow with owner-directed single-workspace UI revision on 2026-10-01
 - Document authority: Product, behavior, architecture, data, cost, design, verification, and release decisions for the portfolio demo
 - Created: 2026-09-29
 - Research baseline: 2026-09-29; provider names, prices, limits, and policies must be re-checked before live-provider work or launch
@@ -106,12 +106,16 @@ public claims, or the portfolio story must be promoted into this document.
 | Trend context | Omit trend-signal input from the first public demo | **Locked** | The demo avoids stale or user-injected platform claims. Candidate reasoning uses the source transcript and the source-controlled editorial rubric only. |
 | Sample rights | Use purpose-recorded media and signed contributor permission | **Proposed - owner approval required** | No sample media enters Git or deployment until provenance is recorded. |
 | Publishing | Download only; no direct social publishing | **Locked** | No platform OAuth, app review, scheduling, or posting liability. |
-| Upload mechanism | Server-created resumable Cloud Storage upload session | **Proposed - owner approval required** | A time-boxed browser spike must prove CORS, size enforcement, abort, and cleanup before live upload implementation. |
+| Upload mechanism | Server-created resumable Cloud Storage upload session | **Proposed - owner approval required** | Final CL-015 must prove CORS, size enforcement, abort, and cleanup before live upload enablement; earlier adapter code is locally contract-tested, not cloud-proven. |
 | Refresh recovery | Store a normalized transcript/candidate bundle in the private temporary bucket under the source TTL | **Proposed - owner approval required** | This is the minimum privacy tradeoff that enables truthful refresh recovery without a database. |
 | Cloud region | `us-central1` for the first cost-validated deployment | **Proposed - owner approval required** | If residency or audience latency matters more, choose one compatible region before provisioning. |
 | Text model | OpenAI Responses API with `gpt-6-sol`, Structured Outputs, and `store: false` | **Proposed - owner approval required** | Re-check availability, pricing, retention, and project access before enabling live calls. |
 | Transcription | Deepgram Nova-3 pre-recorded with word timestamps and diarization | **Proposed - owner approval required** | Re-check language, retention, opt-out, limits, and project settings before live use. |
-| Visual direction | A modern, minimal, product-first system with spacious neutral surfaces, deep ink, and a restrained cobalt signal | **Proposed - owner approval required** | Broad screen styling waits for approval of the real responsive Next.js/React landing prototype. |
+| Visual direction | CL-002 brand colors/type remain the interim foundation; the core flow uses one responsive dynamic workspace inspired by ScreenPilot | **Owner-directed revision - 2026-10-01** | Replace the rejected CL-004 multi-panel/equation UI now. Establish shared tokens and used primitives; later visual refinement remains required. |
+| Candidate duration preference | Prefer a complete interesting conversation near 60 seconds when the source earns it, within the locked 10-60 second bounds | **Owner-directed - 2026-10-01** | Target three to four strong choices, never pad weak candidates or stretch an incomplete idea to hit a duration/count. |
+| Automatic pause/filler removal | Owner requests natural context-preserving internal cuts as a later pipeline enhancement | **Deferred contract revision - 2026-10-01** | Current candidates remain contiguous word ranges. A future ticket must define immutable ordered segments, output-duration accounting, evidence, audio continuity, preview/render parity and regression tests before internal cuts ship. |
+| Landing product film | CL-013 owns an original motion-graphics walkthrough authored from finalized UI captures by the owner-designated `gpt-6.1-sol` agent | **Owner-directed - 2026-10-01** | Not CL-004. Final UI/capture, storyboard, rights and film approvals precede production/integration; external sharing is illustrative manual posting after download, not direct publishing. |
+| Third-party setup order | CL-004A owns thorough non-GCloud owner setup guides; GCloud setup and external cloud evidence stay in final CL-015 | **Owner-directed - 2026-10-01** | Earlier tickets use local/fake verification; CL-012 audits provider readiness, CL-014 carries explicit cloud deferrals, and no setup/live/spend approval is inferred from documentation. |
 | Retention | Session access expires after 2 hours; objects are explicitly deleted on clear and lifecycle-eligible after 1 day | **Proposed - owner approval required** | UI must describe asynchronous deletion honestly; do not promise an exact deletion second. |
 | Monthly spend | Start with the lowest provider hard caps that permit two owner-controlled full live validations | **Proposed - owner approval required** | Live flags stay off until numerical caps and alerts are recorded in release evidence. |
 
@@ -154,9 +158,195 @@ This principle supersedes any later passage or historical input that could be
 read as requiring an editor, assistant, manual repair surface, or configurable
 caption/visual treatment.
 
+### 0.6 Owner-directed core-flow revision (2026-10-01)
+
+The owner rejected the first CL-004 multi-panel synthetic/equation treatment.
+This supersedes the earlier interim approval for that core-flow composition,
+not the CL-002 brand foundation or any rights/privacy/spend gate.
+
+- One viewport-aware workspace changes content through intake, upload,
+  analysis, single-candidate choice, automatic assembly and final review.
+- Intake foregrounds drop/choose video, formats and exact limits. Until live
+  upload is implemented and enabled, show its unavailable state honestly and
+  keep the no-cost sample usable. Never upload bytes to the application server.
+- Shared reusable tokens, buttons, stage framing, action footer and progress
+  primitives own consistency. Use ClipBuilder's approved palette/type, not
+  ScreenPilot's colors or its product-specific components.
+- Keep mode details in Privacy & limits, not a header badge or repeated
+  synthetic explanations, per the latest explicit owner direction.
+  Evidence/rationale/caveats remain available on demand rather than dominating
+  the first view. Remove the equation illustration from this UI; this does not
+  remove grounded equation rendering from the later composition pipeline.
+- Animate deliberate selection/actual playback and genuine progress, with
+  reduced-motion alternatives. Upload percentage is measurable; analysis and
+  assembly use known stage labels and indeterminate progress, never timer-based
+  percentages, fictional work, or invented completion.
+- Prefer fuller moments near one minute when editorially sound. Three to four
+  is a target, not a quota; zero-to-four and the honest no-candidate state stay.
+- Live upload, analysis, speaker/visual/caption assembly, render/download and
+  media rights remain in their existing gated tickets. CL-004 establishes the
+  reusable flow and implements only locally possible sample behavior.
+
+The detailed implementation plan and ScreenPilot reference evidence are owned
+by `tickets/CL-004-deliver-sample-candidate-review.md`. This revision takes
+precedence over older screen-layout instructions in sections 6 and 18.
+
+**Latest video-first review clarification:** CL-004 prioritizes a large portrait
+with inline playback controls, a compact candidate rail and Transcript / Agentic
+Notes tabs. Notes explain existing timestamp-grounded selection evidence; final
+review places manifest-bound edit notes left and transcript right. They do not
+invent trends, views, internal cuts or successful real processing. Result uses
+preview/download left and display-only Facebook, Instagram, TikTok and X buttons
+right, disabled with owner-requested Soon labels. These inert action teasers are
+the sole exception to the disabled-roadmap-navigation rule; direct publishing
+remains excluded. Repeated demo prose and the header mode badge are removed at
+the owner's direction. The owner also removes the privacy dialog's bottom
+development-summary paragraph; its rights/scope/size rows and no-file-read/
+upload statement remain. Explicit video placeholders and disabled unavailable
+actions are unchanged. Actual download still requires validated output.
+
+**Latest export confirmation decision:** Final review exposes Confirm export
+directly. There is no Continue to export hop, separate confirmation screen or
+Back action for that hop. This explicit click starts the manifest-bound render;
+entering or restoring review never starts a job. The one-render allowance,
+validated evidence, duplicate-start safeguards and existing progress remain.
+Old persisted confirmation hints restore to review, not automatic export.
+
+The owner explicitly removes app-level motion suppression permanently; this
+supersedes reduced-motion alternatives for this application without authorizing
+changes to OS/browser settings. Motion accessibility and final visual approval
+remain open gates, not inferred compliance. Fake progress keeps its simulated
+stage percentages; real presentation may show elapsed time and an asymptotic
+indeterminate activity fill, never its cosmetic value as measured percent/ETA.
+Proven completion finishes the fill before the next screen. Detailed execution
+and verification remain in the active CL-004 packet.
+
+### 0.7 Landing product-film ownership (2026-10-01)
+
+The owner assigns the original landing motion-graphics film to CL-013, after
+the actual UI has been finalized and visually approved. CL-002 reserves the
+hero/placeholder; CL-004 implements the functional frontend, not this film.
+CL-013 owns sanitized final-UI screenshots, the `gpt-6.1-sol` authoring handoff,
+storyboard/animatic, cinematic cursor-led screen transitions and titles, approved
+result reveal, editable composition, web/master/poster delivery and landing QA.
+Its detailed readiness/production/approval contract is in
+`tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md`.
+
+The story can end with the downloaded clip being uploaded manually to approved
+representative social destinations in a clearly separate external vignette.
+This does not add direct publishing, account/OAuth integrations, actual posts,
+or an "all platforms" compatibility promise. Capture/media/privacy/rights,
+external-action, spend and public-claim gates still apply; no unapproved real
+content or generated media enters Git. Final UI, film and landing placement
+approval are separate from automated engineering checks.
+
+### 0.8 Provider readiness and final-ticket cloud setup (2026-10-01)
+
+The owner requests complete non-GCloud dashboard/software setup documentation
+before real integrations, and all GCloud setup at the very end. Add the
+owner-requested CL-004A readiness packet after CL-004 without renumbering existing
+IDs. Its canonical guides are `operations/PROVIDER_SETUP.md`,
+`operations/COST_MODEL.md` and `operations/THIRD_PARTY_SOFTWARE.md`.
+
+These cover OpenAI, Deepgram and Cloudflare Turnstile accounts/projects, model
+access, billing, scoped keys, ignored local env mapping, privacy/retention,
+numeric budget decisions, hard-limit versus alert behavior, verification,
+troubleshooting, rotation/revocation, and local media/vision/card dependencies.
+The documentation is prepared; owner account/settings/budget evidence remains
+unchecked. No provider account mutation, purchase, key use or paid check is
+authorized by this planning decision.
+
+CL-015 remains the final packet and exclusively owns GCloud account/billing,
+project/API enablement, IAM, bucket/CORS/lifecycle, registry, Secret Manager,
+service/job provisioning, cloud benchmarks, deployment and external cloud
+verification. CL-005's GCS mechanism spike, CL-006/008's actual Cloud Run
+performance proof, and CL-011's cloud render/storage proof transfer there.
+Earlier packets still implement source-controlled adapters/configuration and
+prove them with local/fake contract tests; no live-cloud dependency is required.
+CL-006 must produce a rights-approved local speaker go/no-go before CL-008;
+local measurements are not deployed performance evidence.
+
+CL-012 audits provider documentation and implemented controls, not cloud setup.
+CL-014 may declare repository readiness with these explicitly named CL-015
+external deferrals, never public/live readiness. CL-015 enters with the audited
+candidate and owner authorization, then satisfies its cloud gates in order
+before enablement. Any failed mechanism/runtime gate blocks release; a material
+fix returns to its owner and receives the smallest relevant CL-014 re-audit.
+Do not create a circular requirement for deployed evidence before deployment.
+
+This ordering supersedes older passages that allow early cloud execution or
+require cloud proof to finish local implementation. Rights, privacy, numerical
+spend, paid-call, visual and launch approval gates remain intact.
+
 ## 1. Locked product contract
 
+### Owner clarification: development preview (2026-10-01)
+
+This clarification supersedes the sample-only implementation restriction in
+section 0.6 and older CL-004/queued UI ownership descriptions. Fake mode is a
+development-only preview of the same product workflow, not a second public
+sample product. CL-004 owns the complete frontend journey: intake, simulated
+upload, analysis stages, exactly one choice, automatic build, read-only review,
+render confirmation, render and export states. All stages reuse the existing
+session reducer, contracts and shared design system. Later packets replace fake
+adapters and prove real behavior; they must not recreate the UI or mark their
+provider/media/privacy/rights gates passed by this preview.
+
+Synthetic stage labels, byte progress, tracks and completion are permitted only
+in the local development preview disclosed in Privacy & limits. Selected files
+are never read, played or transmitted by this preview, and names are not
+displayed or persisted. Prepared original transcript animation is not recorded
+footage.
+The export state has no media download capability and must not produce a file
+presented as a valid edited video. The latest owner direction removes the
+header mode badge, repeated notices and the privacy dialog's bottom development
+summary. Its rights/scope/size rows and no-file-read/upload statement remain,
+alongside explicit video placeholders and disabled unavailable actions. This
+presentation change does not enable real upload, processing or download.
+
+Interrupted pre-media upload restoration in this development flow must confirm
+cleanup through the existing clearing state before returning to intake. Pending
+cleanup intent survives failure or refresh as a separate content-free marker,
+even after the ordinary projection is removed. Bootstrap retries the existing
+idempotent cookie-scoped cleanup before enabling input, removing the marker
+only on confirmed success. No identity, media or capability is retained in it.
+Runtime input metadata is deliberately not persisted and cannot safely reuse a retained
+authorization for a replacement source. A cleanup failure keeps the existing
+retry boundary; completed upload and later operation restoration still use
+validated server evidence. Same-input retries remain idempotent and stale session/
+upload IDs remain rejected. This is not proof of real resumable transport; CL-005
+still owns that gated adapter and any verified source-reselection/resume path.
+
+Latest owner progress revision: fake inspection, analysis, assembly and render
+also show an advancing percentage/fill derived from the canonical reported
+stage order. This is simulated presentation progress, not measured provider
+completeness or an ETA; it stops when stage evidence stops and reaches 100%
+only on proven success. This exception supersedes older no-fake-percentage
+wording only inside this local development preview. Real processing
+retains named stages/indeterminate progress until measurable totals exist.
+
+`FAKE_MODE=true` is the one authoritative server mode selection, defaulting to
+true. Internal `providerMode` is derived; legacy `PROVIDER_MODE` may only assert
+the same value, never override it. `.env.local` is ignored and owner-managed,
+with matching example entries and blank credentials/identifiers. Only explicit
+server startup loads that file; tests/CI never load it. The browser receives
+only safe mode/availability data, not server settings or secrets. False selects
+real mode without fallback, but existing paid/live/readiness/rights/cloud gates
+still apply; unimplemented real adapters remain unavailable. No external
+processing or spend is authorized by this clarification.
+
 ### 1.1 Product sentence
+
+Owner-approved landing process copy (2026-10-01): **Turn long-form video into a
+clip worth sharing.** Supporting copy: "AI finds the standout moments in
+interviews, podcasts, speeches, and more. You choose one. We finish it with
+captions and visuals." This positions the intended product around spoken-content
+video rather than podcasts/conversations alone, including talk shows and
+monologues. It does not claim validated support for every content type or
+arbitrary/silent video. The conversation remains the canonical demo fixture;
+per-format real-media validation and all rights/privacy/provider/spend/release
+gates remain open. One source, one selected 10-60 second clip and automatic
+captions/contextual visuals are unchanged.
 
 > ClipBuilder helps a solo podcaster, editor, or social-content manager
 > turn one owned or licensed long-form conversation into one polished vertical
@@ -1308,6 +1498,17 @@ and show recovery choices.
 
 ### 6.5 Candidate review
 
+**Latest owner revision (2026-10-01), superseding the layouts below:** Start
+with one to four 9:16 candidate previews and no transcript. Playing a choice
+selects it, smoothly relocates its player to the center, keeps other vertical
+choices in a scrollable left rail, reveals transcript/evidence on the right,
+and shows Proceed for that one selection. Tablet/phone rearrange the same
+content into bounded panes without growing the workspace. Source preview uses
+the immutable word-derived start/end range, not separately rendered variants.
+Development mode shows explicit resolution placeholders and simulated playback;
+actual footage/capabilities remain gated in the real-media adapters. Detailed
+implementation and verification are owned by CL-004.
+
 **Desktop ≥ 1440 px:**
 
 - left: ranked candidate list, 360–440 px;
@@ -1362,8 +1563,9 @@ This is a read-only review screen, not an editor.
 **Desktop/laptop:** Place the 9:16 preview as the visual hero beside a compact
 facts panel containing the chosen candidate, exact range/duration, automatic
 caption status, active-speaker framing status, visual count/layout summary,
-output format, one-render limit, and temporary-data deadline. `Render this
-clip` is the primary action.
+output format, one-render limit, and temporary-data deadline. `Confirm export`
+is the primary action, integrated into this same review screen under the latest
+owner decision.
 
 **Tablet/phone:** Video first, followed by the same facts, rights reminder, and
 full-width render action. Preserve natural page scroll and safe-area insets.
@@ -1382,13 +1584,15 @@ title, close, and primary action visible.
 
 ### 6.8 Render confirmation and progress
 
-Confirmation is a real review step, not a generic modal. It lists the output
-facts, one-render limit, temporary-data deadline, and rights reminder. The
-primary button says `Render 43-second clip` or equivalent, never merely `Go`.
+Confirmation is the explicit `Confirm export` action on automatic clip review,
+not another screen or generic modal. Keep the output facts, one-render limit,
+temporary-data deadline and rights reminder in the read-only review context.
+The click starts the manifest-bound job; mounting or restoring review does not.
 
 Render progress uses named stages and elapsed time. The automatic composition
-summary remains read-only. `Back` is disabled only while a confirmed job is
-actively starting; leaving the page does not cancel the job.
+summary remains read-only. Disable confirmation while its request is starting
+and when evidence or allowance is unavailable; there is no intermediate Back
+action. Leaving the page does not cancel the server job.
 
 ### 6.9 Result
 
@@ -1997,6 +2201,7 @@ ClipBuilder/
 │  └─ operations/
 │     ├─ LOCAL_DEVELOPMENT.md
 │     ├─ PROVIDER_SETUP.md
+│     ├─ THIRD_PARTY_SOFTWARE.md
 │     ├─ MEDIA_RIGHTS_RECORD.md
 │     ├─ COST_MODEL.md
 │     ├─ DEPLOYMENT.md
@@ -3911,7 +4116,7 @@ service identity, preserves safe response headers, and never logs bodies.
 
 | Variable | Committed default | Rule |
 | --- | --- | --- |
-| `PROVIDER_MODE` | `fake` | `fake` or `live` |
+| `FAKE_MODE` | `true` | Authoritative boolean: true derives fake provider mode; false derives live with no fallback |
 | `PAID_DEMO_ENABLED` | `false` | Master fail-closed switch |
 | `LIVE_UPLOAD_ENABLED` | `false` | Requires storage/abuse config and product approval |
 | `LIVE_ANALYSIS_ENABLED` | `false` | Requires paid master, providers, and spend gate |
@@ -3923,7 +4128,7 @@ service identity, preserves safe response headers, and never logs bodies.
 | `PUBLIC_LANGUAGE_PROFILE` | `en` | Only declared tested profile |
 | `LIMIT_PROFILE` | `public` | `public` or owner-only `validation` |
 
-Production startup fails if `PROVIDER_MODE=live` and paid operations appear
+Production startup fails if derived provider mode is live and paid operations appear
 enabled without explicit `PAID_DEMO_ENABLED=true`. `test` rejects live mode.
 
 ### 16.4 Session/security variables
@@ -4055,7 +4260,7 @@ APP_REVISION=
 FRONTEND_ORIGIN=http://localhost:3000
 BACKEND_ORIGIN=http://localhost:4000
 
-PROVIDER_MODE=fake
+FAKE_MODE=true
 PAID_DEMO_ENABLED=false
 LIVE_UPLOAD_ENABLED=false
 LIVE_ANALYSIS_ENABLED=false
@@ -4999,7 +5204,8 @@ is their canonical dependency summary; the packets do not authorize
 implementation, Git actions, paid calls, provider/cloud changes, or deployment.
 
 The earlier 22-slice draft was consolidated into 15 cohesive tickets on
-2026-09-29. A single user-visible feature remains one vertical slice when its
+2026-09-29; owner-requested CL-004A adds a provider-readiness gate on 2026-10-01.
+CL-015 remains last. A single user-visible feature remains one vertical slice when its
 frontend, backend, contracts, recovery, and focused verification form one
 reviewable outcome. A split remains only for a genuine approval gate, distinct
 risk domain, or independently reviewable artifact. Closely related work is
@@ -5067,6 +5273,18 @@ range path.
 evidence seek/highlight, zero provider calls, and phone/tablet/laptop/desktop/
 keyboard checks pass.
 
+#### CL-004A - non-GCloud provider readiness
+
+**Objective:** Deliver and maintain the complete owner-facing provider,
+budget and local-software setup guides before real integrations.
+
+**Depends:** CL-001 config/secret boundaries and CL-004 development preview.
+
+**Acceptance:** Current official dashboard paths, model/access/data/key setup,
+env mapping, budget worksheet, enforcement classification, troubleshooting,
+rotation and owner evidence are documented. Documentation readiness is separate
+from external account/live approval. All GCloud work stays in final CL-015.
+
 ### M2 — private media intake and job foundation
 
 #### CL-005 — secure upload and temporary storage
@@ -5075,16 +5293,17 @@ keyboard checks pass.
 temporary-storage port/fake, idempotency/leases/clear, browser local inspection,
 server-created resumable upload, completion checks, cancel, and partial cleanup.
 
-**Depends:** CL-001 and CL-003; product/provider privacy and cloud authorization
-before the live GCS adapter/spike.
+**Depends:** CL-001, CL-003 and CL-004A's documented Turnstile/config handoff;
+product/provider privacy approval before real provider use. GCloud setup and
+the live GCS mechanism spike occur only in final CL-015.
 
 **Why combined:** Upload is not safe or useful without the grant, object,
 metadata, idempotency, and cleanup lifecycle that owns its bearer capability.
 
 **Acceptance:** Tamper/expiry/key-rotation/atomic marker/deletion-partial tests;
 no app-service media body; wrong/oversized/partial objects delete; the resumable
-capability never persists/logs; authorized live spike proves exact CORS/resume/
-generation/abort behavior.
+capability never persists/logs; adapter requests pass fake contract tests.
+Actual CORS/resume/generation/abort proof is an unchecked CL-015 enablement gate.
 
 #### CL-006 — media job and active-speaker feasibility
 
@@ -5093,8 +5312,8 @@ safe process runner/temp workspace, authoritative ffprobe inspection/audio
 extraction boundary, fake job runner, and exact-sample Light-ASD feasibility
 benchmark on the intended CPU/container.
 
-**Depends:** CL-003 and CL-005; rights/model/network/cloud gates for the
-purpose-recorded benchmark.
+**Depends:** CL-003 and CL-005; rights/model/download approval for the
+purpose-recorded local benchmark. Actual Cloud Run benchmark stays in CL-015.
 
 **Why combined:** The risky spike depends directly on the same pinned process,
 container, fixture, cleanup, and resource foundation; it is the job ticket's
@@ -5114,7 +5333,8 @@ ports/fakes/live adapters, prompt/reconciliation/evaluations, analyze job/API,
 poll/cancel/refresh/retry, and progress/candidate/no-candidate UI as one
 upload-to-grounded-candidates feature.
 
-**Depends:** CL-004 and CL-006; provider/privacy/spend approval for live checks.
+**Depends:** CL-004, CL-004A and CL-006; provider/privacy/spend approval for any
+separately authorized local provider check. Cloud end-to-end proof stays CL-015.
 
 **Why combined:** Transcription, selection, orchestration, recovery, and UI share
 one idempotency/privacy/call-count contract and do not form useful intermediate
@@ -5145,8 +5365,9 @@ abort, cleanup, and no-identity rules pass. This is required for release.
 OpenAI Image adapter, MathJax equation/card renderer, asset validation, and
 `AssemblyBundleV1` orchestration/UI stages.
 
-**Depends:** CL-007 transcript-grounded model boundary, CL-008 focus track,
-provider/privacy/spend approval for live checks.
+**Depends:** CL-004A readiness, CL-007 transcript-grounded model boundary,
+CL-008 local-go focus track, and provider/privacy/spend approval for any local
+provider check. Cloud end-to-end proof stays CL-015.
 
 **Acceptance:** The sample builds the Earth full-frame beat, returns to podcast
 footage, builds the Moon beat, and shows a smaller exact equation card; captions
@@ -5195,8 +5416,9 @@ privacy and call-count checks.
 
 **Depends:** CL-007, CL-009, CL-010, and CL-011.
 
-**Acceptance:** Rejection order/call-count/security tests; model weights/license,
-provider/bucket/image-spend settings ready for owner review.
+**Acceptance:** Rejection order/call-count/security tests; model weights/license
+and provider/image-spend readiness audited. Cloud checklist prepared for final
+CL-015, not recorded as applied or verified.
 
 #### CL-013 — accessibility, responsive, and performance pass
 
@@ -5226,14 +5448,17 @@ explicit deployment blocker.
 
 #### CL-015 — deploy, validate, measure, and roll back
 
-**Objective:** Deploy the exact audited revision as immutable images, prove
+**Objective:** As the final ticket, guide and perform only authorized GCloud
+setup, then deploy the exact audited revision as immutable images, prove
 private services/storage/IAM, run unpaid probes, execute only the approved
 bounded live analysis/assembly/render flow, reconcile cost/cleanup and
 public claims, and prove kill switch plus digest rollback.
 
-**Depends:** CL-014 and every required owner gate.
+**Depends:** CL-014 repository audit, provider readiness and owner authorization.
+Cloud evidence is produced inside this final packet, not required before entry.
 
 **Acceptance:** SHA/digests/revisions/config and release evidence are complete;
+transferred GCS mechanism, target-runtime speaker and cloud render checks pass;
 unpaid probes precede live flags; exact call/usage/cost/output/cleanup results
 match the plan; public speaker-framing/visual/privacy claims match measured
 state; kill switches and rollback are proven.
@@ -5588,8 +5813,5 @@ cost-bounded, accessible, responsive, deployed from an audited immutable
 artifact, and supported by recorded evidence. It is not done when every roadmap
 idea exists, when a single happy-path fake looks polished, or when unperformed
 live/provider/rights/cleanup checks are described as complete.
-
-
-
 
 

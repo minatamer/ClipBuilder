@@ -2,7 +2,7 @@
 
 Status: Planned<br>
 Milestone: M6 — public-demo hardening and audit<br>
-Last synchronized: 2026-09-29<br>
+Last synchronized: 2026-10-01<br>
 Depends on: CL-013<br>
 Blocks: CL-015<br>
 Suggested commit: `CL-014: audit the ClipBuilder release candidate`<br>
@@ -12,6 +12,14 @@ Ticket index: [`README.md`](README.md)
 ---
 
 ## Objective
+
+Owner setup ordering (2026-10-01): include CL-004A and its provider/cost/software
+guides in the audit. All GCloud setup and external cloud mechanism/runtime/
+render/operational proof remain explicitly deferred to final CL-015. These
+owner-approved deferrals do not prevent a repository-ready verdict; they do
+prevent any claim of public/live readiness. CL-015 must satisfy each deferred
+gate before enablement, and material corrections return for focused re-audit.
+Do not require already-deployed resources as a prerequisite for this audit.
 
 Reconcile every required ticket against code, evidence, Git history, current
 documentation, and the source of truth; then perform one deliberate

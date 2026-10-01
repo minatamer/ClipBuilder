@@ -2,8 +2,8 @@
 
 Status: Planned<br>
 Milestone: M3 — live analysis<br>
-Last synchronized: 2026-09-29<br>
-Depends on: CL-004 and CL-006<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-004, CL-004A, and CL-006<br>
 Blocks: CL-008, CL-009, CL-012<br>
 Suggested commit: `CL-007: deliver grounded live analysis`<br>
 Parent plan: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)<br>
@@ -12,6 +12,31 @@ Ticket index: [`README.md`](README.md)
 ---
 
 ## Objective
+
+Owner setup ordering (2026-10-01): [CL-004A](CL-004A-prepare-third-party-provider-readiness.md)
+and [provider setup](../operations/PROVIDER_SETUP.md) own the dashboard/key/data/
+budget walkthrough. Inspect its documentation handoff before implementation;
+actual account readiness is needed only for separately authorized local provider
+checks. Build/test adapters with fake ports/transports here, with no GCloud
+setup or credentialed cloud execution. Full cloud flow proof stays final CL-015.
+Update the exact Deepgram endpoint and model-improvement opt-out request policy
+with fake request proof; do not invent an env flag or infer privacy from a key.
+
+Latest owner clarification (2026-10-01): CL-004 owns the complete development-
+only frontend preview and its reusable screens. This packet replaces the fake
+adapter with its real implementation and proves integration, media, recovery,
+privacy/rights/spend/readiness gates; it does not recreate the workflow UI.
+Earlier restrictions on synthetic progress apply to real/public mode, not the
+explicitly labelled local preview. Fake completion is not evidence for this
+packet's unchecked acceptance. See the parent development-preview clarification.
+
+Owner UI/content revision (2026-10-01): reuse CL-004's one changing workspace
+and shared Progress. Show one known analysis-stage message, never invented
+percentages or timed fake work. Prefer complete interesting moments near 60
+seconds when earned, targeting three to four strong choices without padding;
+zero-to-four/no-candidate validity remains. Internal pause/filler cuts are
+deferred pending a separate ordered-segment contract revision, not authorized
+in this contiguous-range ticket. Parent section 0.6 governs this revision.
 
 Deliver one coherent upload-to-candidate-review analysis feature: audio
 extraction integration, transcription port/fake/live adapter, candidate

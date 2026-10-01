@@ -1,8 +1,8 @@
 # CL-002 — Build and approve the React visual prototype
 
-Status: Owner revisions requested — latest landing revisions implemented, approval pending<br>
+Status: Owner-approved interim baseline - further visual refinement deferred<br>
 Milestone: M0 — foundation and visual gate<br>
-Last synchronized: 2026-09-30<br>
+Last synchronized: 2026-10-01<br>
 Depends on: CL-001<br>
 Blocks: CL-004 broad styling and CL-010 automatic-review styling<br>
 Suggested commit: `CL-002: rebuild the visual approval prototype`<br>
@@ -18,6 +18,47 @@ real responsive ClipBuilder landing-page visual prototype in the existing
 Next.js/React frontend. The running page is the canonical surface for judging
 typography, spacing, color, product-media framing, interaction, motion, and
 responsive feel before broad application styling begins.
+
+## Owner baseline approval - 2026-10-01
+
+### Immediate podcast-figure correction - 2026-10-01
+
+The owner explicitly reopened only the How it works podcast illustration:
+the existing capsule bodies and stick-like limbs are rejected. Redraw both
+speakers with natural head/neck proportions, sloping connected shoulders,
+clothed torsos, tapered arms, and shaped hands. Preserve the centered speaker
+turns, articulated gestures, boom microphones, captions, pi cue, 8-second
+conversation loop, and 21.1-second Upload/Read/Cut choreography.
+
+Implementation plan: reuse the existing animation wrappers and replace their
+primitive geometry with original inline vector artwork; share the repeated
+speaker construction and keep colors local to this illustration. Check both
+speaking poses and elbow/shoulder connections at desktop, tablet, and phone
+sizes, then run the frontend format/lint/type/unit/build gate. No remote asset,
+dependency, provider, or production-workflow change belongs to this correction.
+The interim baseline approval remains valid; this redraw needs new owner visual
+feedback and does not authorize the larger CL-013 film/polish scope.
+
+- [x] Replace primitive figures and preserve the existing animation contract.
+- [x] Verify desktop/tablet/phone rendering and the frontend quality gate.
+- [ ] Receive explicit owner visual approval of the redrawn figures.
+
+Subsequent decision on the same date: the owner rejected the in-progress
+CL-004 multi-panel/equation core UI and requested one dynamic responsive
+workspace plus shared reusable components. CL-002 colors/type remain the
+interim foundation; this is not approval of the rejected CL-004 composition.
+The immediate redesign is planned in CL-004/source-of-truth section 0.6.
+
+The owner explicitly approved the current desktop and phone design as an
+interim baseline for CL-004. Functional implementation may proceed now using
+the existing composition/tokens. This is not a claim of final visual polish:
+the owner expects substantial further visual feedback and adjustments in a
+later ticket, after the functional journey exists. Carry that review into the
+whole-flow CL-013 quality pass; baseline responsiveness/accessibility still
+belongs to each feature ticket, and public-release motion/accessibility checks
+remain required. No media-rights, provider, paid, cloud, or release gate is
+approved by this visual decision. Earlier pending-approval entries below are
+historical and superseded only by this narrowly scoped baseline approval.
 
 ## Owner correction superseding the rejected direction
 
@@ -76,6 +117,8 @@ approving CL-002:
 3. Reserve the hero's central media area for a future original motion-graphics
    product film. The eventual film should show an AI-assisted use of the
    platform, but this ticket uses an honest, code-native placeholder only.
+   Owner assignment on 2026-10-01: CL-013 produces/integrates that film only
+   after final UI approval and sanitized captures; CL-004 does not own it.
 4. Replace the separate product-proof section with one “How it works” flow.
    Animate transcript/console bars resolving, energy moving toward a muted
    phone, the phone gaining color, and synthetic video layers moving.
@@ -539,7 +582,7 @@ foundation. Reuse it rather than creating a parallel prototype application.
 - [x] Always-on prototype motion, forced colors, material fallbacks, 200% zoom,
   text spacing, short height, and widths from 320–2560 px preserve content and
   actions without page overflow.
-- [ ] The current rework receives explicit owner visual approval; any further
+- [x] The current rework receives explicit owner visual approval; any further
       requested changes are recorded explicitly.
 
 ## Focused verification
@@ -903,9 +946,45 @@ foundation. Reuse it rather than creating a parallel prototype application.
   neither run emitted a browser warning or error. This remains implementation
   evidence rather than owner approval.
 
+### Podcast-figure correction evidence - 2026-10-01
+
+- Changed only the speaker artwork in `process-narrative.tsx`, its geometry and
+  paint in `page.module.css`, and this ticket. `PodcastSpeaker` and `SpeakerArm`
+  share the repeated vector construction; React IDs keep each speaker's paint
+  references stable and distinct. Removed the superseded capsule/head/limb CSS.
+- Both speakers now have shaped faces, hair, necks, sloping shirt shoulders,
+  collars, subtle fabric folds, tapered articulated limbs, and connected hands.
+  The slightly lower microphone position and shorter arm framing keep the
+  mouth and open-hand pose inside the portrait composition. No gesture
+  keyframe, stage phase, caption, cue, timer, or observer was changed.
+- Live review covered 1280 x 800, 768 x 1024, 390 x 844, and 320 x 568.
+  Desktop captured the answer speaker's cross-body/open-hand pose; tablet
+  showed the question speaker's open gesture; phone/compact phone retained
+  the complete portrait, captions, and timeline. Every checked size had zero
+  horizontal overflow. All illustration SVGs remain decorative/nonfocusable;
+  the browser reported no warning or error.
+- Active speaker and all four forearm styles retained the shared `8s` duration
+  and `1.1s` delay. The deterministic stage test still proves the unchanged
+  21.1-second Upload/Read/Cut cycle. Upload, Read, Cut, and the return
+  to Upload were observed during the review.
+- Passed `corepack pnpm --filter @clipbuilder/frontend format`, `lint`,
+  `typecheck`, `test:unit` (89 tests), and `build`. The focused landing/timing
+  run passed all nine tests before the full frontend gate.
+- Content-safe desktop/phone review captures are outside Git in the Codex
+  visualization workspace: `cl002-speakers-desktop.png` and
+  `cl002-speakers-phone.png`. Artwork is original inline geometry, with no
+  downloaded/generated image, font, package, remote request, provider, cost,
+  cloud, or media-rights action. Existing CL-004 and owner-authored CL-013
+  changes were preserved; nothing was staged or committed.
+- The `execute` skill kept this explicitly owner-requested correction local
+  to CL-002; `computer-use` supplied responsive and live-pose verification.
+  New owner visual approval remains unchecked. The previously recorded
+  public-release accessibility/browser gates and landing motion exception
+  remain unchanged; no broader polish or release approval is claimed.
+
 ## Privacy, provider, and cost constraints
 
-Use synthetic/source-controlled text and CSS shapes only. Do not call an image
+Use synthetic/source-controlled text and original code-native CSS/SVG shapes only. Do not call an image
 model, load remote production media, download fonts/assets, change provider
 settings, create cloud resources, or enable any paid/live behavior.
 

@@ -2,7 +2,7 @@
 
 Status: Planned<br>
 Milestone: M2 — private media foundation<br>
-Last synchronized: 2026-09-29<br>
+Last synchronized: 2026-10-01<br>
 Depends on: CL-003 and CL-005<br>
 Blocks: CL-007 and CL-008<br>
 Suggested commit: `CL-006: build the media job foundation`<br>
@@ -17,7 +17,15 @@ Build the single safe media-job entry point, descriptor/progress/result
 lifecycle, process and temporary-workspace foundation, authoritative ffprobe
 inspection, audio extraction boundary, fake job runner, and a time-boxed
 Light-ASD active-speaker feasibility spike on the exact intended sample and
-deployment CPU profile.
+deployment-like local CPU profile. Actual Cloud Run performance proof remains
+unchecked until final CL-015.
+
+Owner setup ordering (2026-10-01): use the
+[local software guide](../operations/THIRD_PARTY_SOFTWARE.md). No GCloud setup,
+credentials or cloud execution occurs here. Rights-approved local/container
+speaker feasibility is the CL-008 go/no-go dependency; CL-015 repeats the approved
+benchmark on the actual deployed profile before launch. If the local benchmark
+cannot run, the feasibility gate remains blocked; fake results do not replace it.
 
 The feasibility spike stays in this packet because it depends directly on the
 same pinned container, process runner, media fixtures, cleanup, and resource
@@ -64,7 +72,8 @@ synthetic-only run cannot be relabeled as the release feasibility decision.
 ## Files and areas owned
 
 - Backend `media-job.ts`, descriptor schema, progress writer, cancellation,
-  cleanup, fake/Cloud Run job ports as authorized.
+  cleanup, fake job runner and source-controlled Cloud Run adapter code tested
+  with fake transport, not credentialed cloud execution.
 - Process runner, temp workspace, ffprobe parser, media inspection, and bounded
   audio extraction foundation.
 - Pinned backend/job container definition and media binary/version record.
@@ -169,9 +178,9 @@ synthetic-only run cannot be relabeled as the release feasibility decision.
 - Do not make Deepgram, OpenAI, image-model, or Turnstile calls.
 - Weights and code licenses/hashes are release evidence; do not download or
   accept unknown model artifacts without recording source and terms.
-- The intended Cloud Run CPU/profile benchmark may require authorized cloud or
-  equivalent controlled runtime. Local-only numbers cannot be relabeled as
-  deployment evidence.
+- Benchmark a controlled local/container CPU profile here. Actual Cloud Run
+  CPU/memory/runtime evidence belongs to CL-015; local numbers cannot be
+  relabeled as deployment evidence.
 
 ## Acceptance criteria
 
@@ -197,8 +206,10 @@ synthetic-only run cannot be relabeled as the release feasibility decision.
   at zero.
 - [ ] Build the pinned job/container image and record binary/model versions and
   scan results when tooling is available.
-- [ ] Run the speaker benchmark only with approved media/model/network/cloud
+- [ ] Run the local speaker benchmark only with approved media/model/download
   access; otherwise leave that gate unchecked and do not start CL-008.
+- [ ] Hand off the pinned benchmark/method/profile to CL-015 for actual Cloud Run
+  proof; perform no cloud benchmark here.
 - [ ] Run affected lint/typecheck/build, Python/schema checks, `git diff --check`,
   and final status inspection.
 
@@ -215,8 +226,8 @@ synthetic-only run cannot be relabeled as the release feasibility decision.
 
 - Rights gate for the exact purpose-recorded sample.
 - Model/license/download and network authorization for Light-ASD assets.
-- Owner approval for intended deployment-profile benchmarking or TalkNet
-  comparison.
+- Owner approval for local intended-profile benchmarking or TalkNet comparison;
+  actual cloud-profile approval/execution stays in final CL-015.
 - The packet can complete job/inspection/fake foundations without live cloud;
   CL-008 remains blocked until the feasibility go decision exists.
 

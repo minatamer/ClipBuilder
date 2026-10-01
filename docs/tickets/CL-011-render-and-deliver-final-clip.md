@@ -2,7 +2,7 @@
 
 Status: Planned<br>
 Milestone: M5 — final render and delivery<br>
-Last synchronized: 2026-09-29<br>
+Last synchronized: 2026-10-01<br>
 Depends on: CL-005 and CL-010<br>
 Blocks: CL-012<br>
 Suggested commit: `CL-011: render and deliver the final clip`<br>
@@ -12,6 +12,28 @@ Ticket index: [`README.md`](README.md)
 ---
 
 ## Objective
+
+Owner setup ordering (2026-10-01): implement and prove the render/output/
+download lifecycle locally with approved fixtures and fake storage/job transports.
+Use the [software guide](../operations/THIRD_PARTY_SOFTWARE.md); no GCloud setup,
+credential use, Cloud Run job or GCS execution occurs here. Actual cloud render,
+storage/range/download/cleanup evidence is transferred to final CL-015 and stays
+unchecked. Local MP4 output is local proof, not deployed-flow proof.
+
+Latest owner clarification (2026-10-01): CL-004 owns the complete development-
+only frontend preview and its reusable screens. This packet replaces the fake
+adapter with its real implementation and proves integration, media, recovery,
+privacy/rights/spend/readiness gates; it does not recreate the workflow UI.
+Earlier restrictions on synthetic progress apply to real/public mode, not the
+explicitly labelled local preview. Fake completion is not evidence for this
+packet's unchecked acceptance. See the parent development-preview clarification.
+
+Owner UI revision (2026-10-01): render/result/download stay inside CL-004's
+single changing workspace with shared tokens/progress/buttons/footer. Stage
+messages must reflect operation evidence, and completion requires validated
+output, never a timer-based fake success. Keep one render confirmation and
+download, no editing controls. Parent section 0.6 governs layout continuity;
+provider/cloud/spend/rights/release gates remain unchanged.
 
 Deliver the complete confirmed-manifest-to-result feature: deterministic crop,
 visual, fixed-caption, audio, and FFmpeg compilation; one render operation;
@@ -154,8 +176,8 @@ must not be patched with a render-only interpretation.
   assets, full FFmpeg command, URLs, and media never enter logs/metrics/errors.
 - Suggested filename is constant/content-safe. Output metadata contains no
   source title/filename/author/comment.
-- Owner/cloud authorization is required for actual Cloud Run/GCS render
-  evidence; local synthetic fixtures remain default verification.
+- Final CL-015 with explicit owner/cloud authorization owns actual Cloud Run/GCS
+  render evidence; local synthetic fixtures remain default verification.
 
 ## Acceptance criteria
 
@@ -183,7 +205,7 @@ must not be patched with a render-only interpretation.
   invalid output, expiry, retry evidence, and clear partial deletion.
 - [ ] Run frontend confirmation/progress/failure/result/download/clear/restore
   tests and manual phone/desktop playback.
-- [ ] Run live/cloud render only with explicit authorization; otherwise record it
+- [ ] Transfer actual cloud render verification to final CL-015; record it
   unchecked.
 - [ ] Run affected lint/typecheck/build/container checks, scans,
   `git diff --check`, and status inspection.
@@ -202,8 +224,8 @@ must not be patched with a render-only interpretation.
 - Owner approval of one public successful render per session and the measured
   render profile.
 - Rights gate for any non-synthetic rendered evidence.
-- Cloud/spend authorization before actual Cloud Run/GCS execution or public
-  enablement. Deterministic local/fake implementation may complete first.
+- Final CL-015 cloud/spend authorization before actual Cloud Run/GCS execution
+  or public enablement. Deterministic local/fake implementation may complete first.
 
 ## Commit boundary
 

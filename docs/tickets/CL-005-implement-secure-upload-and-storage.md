@@ -2,8 +2,8 @@
 
 Status: Planned<br>
 Milestone: M2 — private media foundation<br>
-Last synchronized: 2026-09-29<br>
-Depends on: CL-001 and CL-003<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-001, CL-003, and CL-004A's documentation handoff<br>
 Blocks: CL-006, CL-011<br>
 Suggested commit: `CL-005: implement secure direct upload`<br>
 Parent plan: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)<br>
@@ -12,6 +12,30 @@ Ticket index: [`README.md`](README.md)
 ---
 
 ## Objective
+
+Latest owner clarification (2026-10-01): CL-004 owns the complete development-
+only frontend preview and its reusable screens. This packet replaces the fake
+adapter with its real implementation and proves integration, media, recovery,
+privacy/rights/spend/readiness gates; it does not recreate the workflow UI.
+Earlier restrictions on synthetic progress apply to real/public mode, not the
+explicitly labelled local preview. Fake completion is not evidence for this
+packet's unchecked acceptance. See the parent development-preview clarification.
+
+Owner UI revision (2026-10-01): reuse CL-004's shared single-workspace frame,
+buttons and progress for drop/pick, local inspection and direct upload. Replace
+the disabled intake with real capability-gated selection here. Animate only
+actual transferred-byte progress; preserve formats/limits/rights, safe-area
+actions and short-height scrolling. Parent section 0.6 takes precedence over
+older layout instructions; rights/privacy/spend/live gates remain. The cloud
+ordering decision below supersedes earlier permission to run cloud work here.
+
+Owner setup ordering (2026-10-01): [CL-004A](CL-004A-prepare-third-party-provider-readiness.md)
+owns non-GCloud setup guides. Implement storage/upload adapter code and prove
+its request/response contracts locally here; no GCloud account, resource,
+credential use or live spike is required or performed. Actual GCS CORS/resume/
+generation/abort/cleanup evidence transfers to final CL-015 and stays unchecked
+until then. A failed deployment spike reopens the mechanism/implementation and
+requires focused re-audit before live enablement.
 
 Implement the complete private-media intake boundary: encrypted processing
 grant, content-free object naming, temporary-storage port/fake, atomic markers
@@ -48,7 +72,7 @@ cleanup—one of the strongest architecture proofs in the portfolio story.
   expire together, are explicitly clearable, and are never listed as product
   history.
 - Public live upload remains owner-gated. Implement and prove the bounded fake
-  path first; the live GCS/CORS spike and adapter stop at their named gate.
+  path first; actual GCS/CORS mechanism evidence is a final CL-015 gate.
 
 ## Dependency evidence required
 
@@ -56,6 +80,8 @@ cleanup—one of the strongest architecture proofs in the portfolio story.
   composition, and verified secret-file ignore rules.
 - CL-003 must provide canonical intake/upload/clear transitions and adversarial
   persistence/restore coverage.
+- CL-004A must provide the provider/env/budget guides and Turnstile handoff;
+  owner account/key readiness is not required for local/fake implementation.
 
 Inspect and reuse those boundaries; a missing contract/state transition reopens
 the owning dependency rather than becoming a second implementation here.
@@ -65,8 +91,8 @@ the owning dependency rather than becoming a second implementation here.
 - Backend processing-grant, CSRF/source checks, idempotency markers, leases,
   signed capabilities, content-safe logging helpers, object naming, and clear
   use case.
-- `TemporaryStorage` port plus bounded in-memory fake; GCS adapter only after
-  the live mechanism gate.
+- `TemporaryStorage` port plus bounded in-memory fake and proposed GCS adapter
+  code verified with injected fake transport; actual mechanism proof is CL-015.
 - Session, upload-authorize, upload-complete, and clear routes/use cases and
   their shared contracts.
 - Frontend local inspection, rights disclosure, upload progress/lifecycle,
@@ -88,9 +114,9 @@ the owning dependency rather than becoming a second implementation here.
 - Upload progress, abort/resume only when the validated protocol actually
   supports it, visibility/network recovery, partial-object deletion, and
   bounded cleanup retry.
-- Time-boxed live spike proving GCS resumable CORS, required headers, capability
-  expiry, size/generation enforcement, range behavior needed later, abort, and
-  cleanup before the live adapter is accepted.
+- Local storage-adapter request/response tests for the proposed GCS mechanism;
+  hand off the exact CORS/header/expiry/size/generation/range/abort/cleanup matrix
+  to CL-015 before the live mechanism can be accepted.
 
 ### Out of scope
 
@@ -101,7 +127,7 @@ the owning dependency rather than becoming a second implementation here.
   in object keys, database-backed sessions, durable per-user quota, or a general
   storage repository abstraction.
 - Reading user local secret files, creating credentials/service-account JSON,
-  or mutating cloud resources without separate owner authorization.
+  or any GCloud setup/mutation/credential use/live spike (final CL-015 only).
 
 ## Implementation checklist
 
@@ -143,16 +169,15 @@ the owning dependency rather than becoming a second implementation here.
   verifies authoritative metadata/generation/type/size and starts the one fake
   inspection operation idempotently.
 
-### 4. Bounded GCS mechanism spike
+### 4. Local mechanism contract and final-cloud handoff
 
-- [ ] With explicit authorization, verify exact-origin CORS and the chosen
-  server-created resumable session against a non-public test object.
-- [ ] Prove start expiry, required headers, chunk/restart behavior, cancel,
-  wrong-size/type/generation handling, and partial-object cleanup.
-- [ ] Confirm signed/resumable URLs never appear in service/browser logs,
-  persistence, cacheable HTML, errors, or screenshots.
-- [ ] Record the selected mechanism and remaining limitations; if it fails,
-  stop and update architecture rather than inventing a public proxy upload.
+- [ ] Verify proposed server-created session/header and storage precondition
+  requests using local fake transport, including failure and leakage sentinels.
+- [ ] Prepare the exact live matrix for CORS, start expiry, chunk/restart,
+  cancel, size/type/generation/range, partial cleanup and no-capability leakage.
+- [ ] Assign that matrix to CL-015; keep every actual cloud result unchecked.
+- [ ] Document that local transport tests cannot prove browser/GCS behavior;
+  stop live enablement if final CL-015 evidence fails, with no public proxy fallback.
 
 ## Contracts and state transitions
 
@@ -192,8 +217,9 @@ the owning dependency rather than becoming a second implementation here.
   scheduled/deleted without provider calls.
 - [ ] Cancel, clear, expiry, partial cleanup, and object URL/request cleanup are
   truthful and tested.
-- [ ] If live GCS work is authorized, the time-boxed spike records passing CORS,
-  resume, generation, abort, and cleanup evidence before the adapter is claimed.
+- [ ] Local storage adapter contract tests pass and the live CORS/resume/
+  generation/abort/cleanup acceptance matrix is explicitly transferred to CL-015;
+  cloud readiness is not claimed here.
 
 ## Focused verification
 
@@ -203,8 +229,8 @@ the owning dependency rather than becoming a second implementation here.
 - [ ] Run frontend local-limit/upload-progress/cancel/object-URL tests.
 - [ ] Assert Deepgram/OpenAI/image/job-start call counts remain zero on every
   rejected intake case.
-- [ ] Run live GCS checks only with explicit owner/cloud authorization; otherwise
-  leave them unchecked with the exact blocker.
+- [ ] Leave actual GCS checks unchecked for final CL-015; no GCloud setup or
+  credentialed cloud execution occurs in this packet.
 - [ ] Run affected lint/typecheck/build, secret/ignore scans, `git diff --check`,
   and final status inspection.
 
@@ -212,8 +238,9 @@ the owning dependency rather than becoming a second implementation here.
 
 - Document local intake/upload behavior, committed environment schema, and
   ignored local secret rules in app READMEs.
-- Add/update storage, data-retention, and provider/cloud setup runbooks with
-  blank identifiers and exact manual owner steps.
+- Add/update local storage/data-retention and adapter-contract docs; reuse
+  [provider setup](../operations/PROVIDER_SETUP.md) for Turnstile. Prepare cloud
+  settings/mechanism requirements for CL-015, not an early cloud setup run.
 - Promote any mechanism/CORS/preview architecture change into the parent and
   affected tickets before completion.
 
@@ -222,10 +249,12 @@ the owning dependency rather than becoming a second implementation here.
 - Product gate: approve public anonymous upload; otherwise deployment stays
   sample-only.
 - Provider/privacy gate: approve temporary storage/recovery and public copy.
-- Cloud authorization: required before creating/changing bucket, IAM, CORS,
-  lifecycle, Turnstile, or running the live GCS spike.
+- Turnstile setup/settings or a bounded local verification require separate
+  provider authorization; CL-004A owns its owner guide.
+- Bucket/IAM/CORS/lifecycle setup and the live GCS spike belong to final CL-015
+  and require explicit cloud authorization there.
 - Missing approval does not block fake ports, contracts, UI, or tests; it blocks
-  only the live adapter/evidence and public enablement.
+  actual provider/cloud evidence and public enablement, not local adapter code.
 
 ## Commit boundary
 

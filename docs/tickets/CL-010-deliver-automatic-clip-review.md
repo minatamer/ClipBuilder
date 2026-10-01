@@ -2,7 +2,7 @@
 
 Status: Planned<br>
 Milestone: M4 — automatic AI first cut and review<br>
-Last synchronized: 2026-09-29<br>
+Last synchronized: 2026-10-01<br>
 Depends on: CL-002 owner-approved direction, CL-004, and CL-009<br>
 Blocks: CL-011 and CL-012<br>
 Suggested commit: `CL-010: deliver automatic clip review`<br>
@@ -12,6 +12,21 @@ Ticket index: [`README.md`](README.md)
 ---
 
 ## Objective
+
+Latest owner clarification (2026-10-01): CL-004 owns the complete development-
+only frontend preview and its reusable screens. This packet replaces the fake
+adapter with its real implementation and proves integration, media, recovery,
+privacy/rights/spend/readiness gates; it does not recreate the workflow UI.
+Earlier restrictions on synthetic progress apply to real/public mode, not the
+explicitly labelled local preview. Fake completion is not evidence for this
+packet's unchecked acceptance. See the parent development-preview clarification.
+
+Owner UI revision (2026-10-01): reuse CL-004's shared single-workspace frame,
+tokens/buttons and stable footer for the completed read-only video/confirmation.
+Size the real preview against both device width and available height; retain
+natural scrolling for short-height/zoom/evidence. This supersedes older mandatory
+two-column/facts-panel composition, not the required facts/parity/accessibility
+or media-rights gates. See parent section 0.6.
 
 Deliver the complete post-assembly visitor experience: a responsive read-only
 9:16 preview of the automatic clip, a concise factual summary, explicit

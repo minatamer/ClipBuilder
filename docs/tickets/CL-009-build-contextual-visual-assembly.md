@@ -2,8 +2,8 @@
 
 Status: Planned<br>
 Milestone: M4 — automatic AI first cut and review<br>
-Last synchronized: 2026-09-29<br>
-Depends on: CL-007 and CL-008<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-004A, CL-007, and CL-008<br>
 Blocks: CL-010 and CL-012<br>
 Suggested commit: `CL-009: build contextual visual assembly`<br>
 Parent plan: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)<br>
@@ -12,6 +12,30 @@ Ticket index: [`README.md`](README.md)
 ---
 
 ## Objective
+
+Owner setup ordering (2026-10-01): reuse CL-004A's
+[provider walkthrough](../operations/PROVIDER_SETUP.md),
+[cost worksheet](../operations/COST_MODEL.md) and
+[software inventory](../operations/THIRD_PARTY_SOFTWARE.md), updating exact
+visual/image/card configuration and observed evidence rather than creating a
+second setup guide. Local/fake adapters and tests need no GCloud resources.
+Any local paid provider check still needs explicit rights/privacy/call/cost
+approval; the deployed cloud journey remains final CL-015 only.
+
+Latest owner clarification (2026-10-01): CL-004 owns the complete development-
+only frontend preview and its reusable screens. This packet replaces the fake
+adapter with its real implementation and proves integration, media, recovery,
+privacy/rights/spend/readiness gates; it does not recreate the workflow UI.
+Earlier restrictions on synthetic progress apply to real/public mode, not the
+explicitly labelled local preview. Fake completion is not evidence for this
+packet's unchecked acceptance. See the parent development-preview clarification.
+
+Owner UI revision (2026-10-01): continue CL-004's single dynamic workspace and
+shared progress/footer through automatic assembly. Show speaker/visual/caption
+messages only when the corresponding job evidence exists. The rejected equation
+demo UI is not the sample default; do not inject its subjects into the new
+general conversation fixture. Generic grounded equation rendering remains in
+scope. Parent section 0.6 supersedes older screen-layout directions; gates stay.
 
 Complete selected-clip assembly with a transcript-grounded visual planner,
 strict reconciliation, bounded still-image generation, deterministic

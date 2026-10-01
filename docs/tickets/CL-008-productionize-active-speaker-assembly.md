@@ -2,8 +2,8 @@
 
 Status: Planned<br>
 Milestone: M4 — automatic AI first cut and review<br>
-Last synchronized: 2026-09-29<br>
-Depends on: CL-006 explicit feasibility go decision and CL-007<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-006 explicit local feasibility go decision and CL-007<br>
 Blocks: CL-009 and CL-010<br>
 Suggested commit: `CL-008: productionize active-speaker framing`<br>
 Parent plan: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)<br>
@@ -12,6 +12,12 @@ Ticket index: [`README.md`](README.md)
 ---
 
 ## Objective
+
+Owner setup ordering (2026-10-01): use CL-006's rights-approved local/container
+go decision and the [software guide](../operations/THIRD_PARTY_SOFTWARE.md).
+Do not require or run GCloud setup/benchmarks here. CL-015 owns actual Cloud Run
+resource/performance proof as the final release gate; local results must remain
+labelled local, and a later cloud no-go blocks launch pending correction/re-audit.
 
 Turn the approved feasibility result into the production selected-range
 active-speaker pipeline: scene cuts, bounded face tracking, Light-ASD inference,
@@ -167,8 +173,8 @@ feasibility dependency.
 
 - Requires CL-006's explicit Light-ASD go decision and rights approval for the
   exact sample.
-- Any new model download, cloud execution, or target-runtime benchmark requires
-  the corresponding network/cloud authorization.
+- Any new model download/local target-profile benchmark requires appropriate
+  explicit authorization. Actual cloud execution/benchmark is final CL-015 only.
 - A failed production regression reopens the feasibility/architecture decision;
   it cannot be marked complete with only fake tracks.
 

@@ -2,8 +2,8 @@
 
 Status: Planned<br>
 Milestone: M7 — deployment and controlled live evidence<br>
-Last synchronized: 2026-09-29<br>
-Depends on: CL-014 and every required owner gate<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-014 repository audit, CL-004A provider readiness, and explicit owner authorization<br>
 Blocks: Public release completion<br>
 Suggested commit: `CL-015: deploy and validate ClipBuilder`<br>
 Parent plan: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)<br>
@@ -12,6 +12,22 @@ Ticket index: [`README.md`](README.md)
 ---
 
 ## Objective
+
+Owner setup ordering (2026-10-01): this is the final ticket, after every local
+implementation/quality/audit packet. It exclusively owns all GCloud account,
+billing, project/API, IAM, bucket, registry, secrets, service/job setup, external
+cloud verification and deployment. CL-004A owns non-GCloud setup guides; CL-012
+audits them and CL-014 carries a named deferred-cloud checklist. Cloud evidence
+is produced inside this packet, never a circular prerequisite for entering it.
+
+Before any external step, author/review the complete dated owner-facing GCloud
+walkthrough using current official docs: prerequisites and account security,
+console navigation and equivalent content-safe CLI where needed, billing and
+numeric advisory budget, chosen region, required APIs, least-privilege identities,
+registry/image costs, private bucket settings, Secret Manager access, service/job
+caps/retries/timeouts, unpaid verification, bounded live approval, troubleshooting,
+kill switch, rollback and authorized teardown/residual charges. Keep identifiers
+and secrets blank; do not output credentials or service-account JSON.
 
 Deploy the exact audited ClipBuilder revision as immutable frontend and
 backend/job images; prove private service/storage/IAM/lifecycle configuration;
@@ -47,9 +63,11 @@ operations, and no gap between the code story and the deployed system.
 
 CL-014 must identify the exact auditable revision/build inputs, record a green
 deterministic gate, and list no unresolved repository-owned release blocker.
-Every required owner gate must have explicit current evidence: visual, rights,
-provider/privacy, retention, region, spend/call budget, bucket/IAM, public mode,
-and launch. A commit subject or unchecked operations template is insufficient.
+Visual, rights, non-GCloud provider/privacy/retention and numerical spend/call
+approval must have current evidence before their corresponding external phase.
+An approved region/cloud setup action is needed before provisioning; bucket/IAM,
+mechanism/runtime, unpaid probes and launch evidence are produced in the phases
+below, not demanded before entry. A commit subject or template is insufficient.
 
 ## Files and areas owned
 
@@ -85,10 +103,23 @@ and launch. A commit subject or unchecked operations template is insufficient.
 
 ## Locked sequence and checkpoints
 
+### Phase 0 - owner guide and cloud setup authorization
+
+- [ ] Confirm CL-004A/CL-012 provider evidence and CL-014 repository audit;
+  enumerate every deferred cloud gate and its original owning ticket.
+- [ ] Prepare/update the full deployment/storage/secrets/budget/rollback guide
+  with dated official links, exact console steps and safe CLI equivalents,
+  expected outcome, permission/billing prerequisites and stop conditions.
+- [ ] Obtain explicit approval for cloud account/billing/project creation or
+  selection, region, API enablement, resource caps, advisory budget/recipients,
+  funding and each external provisioning/deploy action. Never infer approval.
+- [ ] Configure owner-approved numeric cloud alerts and resource ceilings before
+  metered workloads; distinguish advisory alerts from enforced caps.
+
 ### Phase 1 — freeze and build the audited candidate
 
-- [ ] Confirm CL-014 ledger, exact clean/auditable revision, required owner gates,
-  and no material source/config drift.
+- [ ] Confirm CL-014 ledger, exact clean/auditable revision, current phase's owner
+  gates and deferred-cloud checklist, and no material source/config drift.
 - [ ] Re-run the release commands/scans required by the ledger and build the two
   immutable images with exact SHA labels and reproducible inputs.
 - [ ] Scan images/dependencies/secrets/licenses, record digests and runtime binary/
@@ -96,14 +127,24 @@ and launch. A commit subject or unchecked operations template is insufficient.
 
 ### Phase 2 — verify minimum cloud foundation
 
+- [ ] Following the owner guide, create/configure only the authorized minimum
+  project/APIs, regional registry, secrets, identities and private bucket. Verify
+  least privilege, cost/resource ceilings and no service-account JSON keys.
+
 - [ ] Verify approved project/region, Artifact Registry, Secret Manager, service
-  identities, private API/job, and exact IAM without recording project/account
-  IDs in public evidence.
+  identities and planned private API/job IAM without recording project/account
+  IDs in public evidence. Verify deployed service/job bindings after Phase 3.
 - [ ] Verify the private bucket's PAP, uniform access, Standard class, versioning,
   soft-delete decision, one-day lifecycle for temporary prefixes, explicit
   sample exclusion, exact-origin CORS, and no public/list permission.
 - [ ] Upload/reference the rights-approved versioned sample by exact generation
   and SHA; never replace it in place.
+- [ ] Complete CL-005's transferred GCS browser mechanism spike on approved
+  synthetic/rights-safe media: exact-origin CORS, headers/start expiry, resumable
+  chunks/restart, size/type/generation/range, cancel/partial deletion and no
+  capability in logs/errors/persistence/screenshots. Failure blocks enablement.
+- [ ] Return any mechanism/runtime/code correction to its owner and re-audit
+  affected source/config/image inputs under CL-014 before continuing deployment.
 
 ### Phase 3 — deploy fake and paid-disabled
 
@@ -116,6 +157,14 @@ and launch. A commit subject or unchecked operations template is insufficient.
   not public while frontend invocation works.
 
 ### Phase 4 — unpaid deployed checkpoint
+
+- [ ] With the private job now provisioned, repeat CL-006/008's pinned speaker
+  benchmark on actual Cloud Run CPU/RAM/time/storage settings using approved
+  media; record deployment quality/runtime/memory go/no-go, not local inference.
+- [ ] Prove CL-011's transferred job/output integrity, private preview/range/
+  download, revocation and cleanup without AI calls. This checkpoint means zero
+  paid provider calls, not free cloud compute/storage; obtain a bounded cloud
+  execution approval. Re-audit any material correction before progressing.
 
 - [ ] Run health/readiness/config, complete sample flow, refresh/recovery, clear,
   expiry, and kill-switch probes without provider calls.
@@ -164,6 +213,11 @@ and launch. A commit subject or unchecked operations template is insufficient.
 ## Acceptance criteria
 
 ### Technical deployment checkpoint
+
+- [ ] Complete owner GCloud setup guide exists and all actual account/billing/
+  API/IAM/resource/budget actions are explicitly authorized and evidenced.
+- [ ] Transferred CL-005 mechanism, CL-006/008 target-runtime and CL-011 cloud
+  render/storage/delivery/cleanup gates pass; none are inferred from local tests.
 
 - [ ] Exact audited SHA maps to recorded immutable frontend/backend-job digests
   and deployed revisions with no material drift.

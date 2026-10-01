@@ -8,6 +8,17 @@ Parent source of truth: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDE
 
 ## Why these files exist
 
+Latest owner clarification (2026-10-01): CL-004 now owns the entire
+development-only frontend journey, not a separate public sample feature.
+`FAKE_MODE` selects one server composition. CL-005/007/009/010/011 retain real
+adapter and media/privacy/rights/spend/cloud evidence, reusing CL-004 screens.
+The expanded local flow passes 200 tests and all five root gates. The earlier
+186-test slice is historical; independent/owner and real-media gates remain.
+The latest Moments revision replaces transcript-first tabs with a vertical
+gallery and a play-to-select focused player/alternatives/transcript layout;
+its new verification is recorded separately at the top of CL-004. Full-motion
+visual approval and real source-footage playback remain unchecked.
+
 Each implementation ticket is a standalone execution packet for one coherent,
 reviewable change. A fresh agent should be able to read the selected packet,
 inspect the completed dependencies, and implement it without first loading the
@@ -86,7 +97,8 @@ committing, pushing, history rewriting, deployment, or provider/cloud changes.
 ## Cohesion and ordering rules
 
 This plan deliberately consolidates the parent's earlier 22 draft slices into
-15 execution packets. Ticket count is not a quality metric.
+15 original execution packets, plus owner-requested CL-004A for non-GCloud
+provider readiness. Ticket count is not a quality metric; CL-015 remains last.
 
 - One user-visible feature stays in one ticket when its frontend, backend,
   contract, and focused tests form a single reviewable vertical slice.
@@ -153,21 +165,54 @@ This plan deliberately consolidates the parent's earlier 22 draft slices into
 
 ## Ordered ticket index
 
+CL-002's colors/type remain an **owner-approved interim foundation
+(2026-10-01)**. The owner subsequently rejected CL-004's multi-panel/equation UI
+and directed one dynamic responsive workspace with shared reusable primitives.
+The revised plan is in CL-004/source-of-truth section 0.6; live/rights gates are
+unchanged. CL-004's **complete local single-workspace development preview is verified** following CL-003's committed
+validation fixes at `0e14f23`. Further visual feedback and substantial polish
+are deferred to the later whole-flow CL-013 quality pass, not declared final.
+Rights, live retention/provider/paid/cloud, and release approvals are unchanged.
+Its 200-test/five-gate and responsive/cancel/restore/no-fallback results are
+recorded in the packet. Actual recorded media, upload/processing and remaining accessibility
+manual checks are not complete. Independent revalidation and owner review of
+the revised UI remain pending.
+
+Owner addition (2026-10-01): CL-013 also owns the original landing product film,
+after the actual UI is finalized and owner-approved. Its finalized screenshot
+handoff to `gpt-6.1-sol`, storyboard, cinematic cursor/screen/title treatment,
+approved result reveal, web delivery and integration gates are detailed in the
+packet. This is not CL-004 work. A multi-platform ending illustrates manual
+sharing after download, not ClipBuilder publishing or real social uploads.
+
+Owner setup decision (2026-10-01): [CL-004A](CL-004A-prepare-third-party-provider-readiness.md)
+prepares the complete non-GCloud provider dashboard, budget and local-software
+guides before integrations. [Provider setup](../operations/PROVIDER_SETUP.md),
+[cost/budget worksheet](../operations/COST_MODEL.md) and
+[local software readiness](../operations/THIRD_PARTY_SOFTWARE.md) now exist;
+owner account/settings/budget/live evidence remains pending. CL-012 audits
+them later. All GCloud provisioning and cloud verification occur only in final
+CL-015. Earlier tickets implement locally and carry explicit cloud deferrals;
+fake/local success never completes those external acceptance items.
+
+The following paragraphs are historical dependency/validation evidence, not
+current UI approval or ticket status.
+
 CL-001 is **completed** with its deterministic foundation evidence recorded in
 the packet. The owner rejected CL-002's standalone HTML direction, then reviewed
 the first React replacement and requested stronger navy/cobalt atmosphere,
 glass materials, and scroll-driven motion. The owner then rejected the second
 pass navbar because it still read as an opaque gray bar instead of a glass
 bubble. A researched third material pass is now implemented with a floating
-native glass shell and scoped CTA refraction. CL-002 remains **in owner revision
-review** until explicit visual approval; its broad styling dependents remain
-blocked. CL-003's committed implementation was **reopened** to align its
+native glass shell and scoped CTA refraction. That review gate was subsequently
+superseded by the owner's interim foundation approval and core-flow revision
+above. CL-003's committed implementation was **reopened** to align its
 candidate cardinality, reducer, persistence, and obsolete proposal contracts
 with the later owner decision that removed all editing/customization. That
 alignment was **completed and locally verified**: contracts allow zero to
 four candidates, the reducer uses immutable automatic clip review, persistence
 stores only manifest identity/hash, and legacy editor/assistant configuration is
-removed. CL-004–CL-015 remain planned; CL-010 is automatic read-only clip review
+removed. CL-005–CL-015 remain planned; CL-010 is automatic read-only clip review
 and render confirmation, not an editor/assistant ticket.
 The owner subsequently reopened CL-003 for independent validation of nine
 session/restore/progress/fake/cleanup findings. All nine reproduced locally.
@@ -190,29 +235,30 @@ when work begins or finishes.
 | 1 | [CL-001](CL-001-initialize-workspace-and-contracts.md) | M0 | Reproducible workspace, safe config, browser-safe contracts, and quality foundation | — |
 | 2 | [CL-002](CL-002-create-and-approve-visual-reference.md) | M0 | Running responsive React landing prototype plus research evidence and explicit visual gate | CL-001 |
 | 3 | [CL-003](CL-003-build-canonical-session-and-sample-foundation.md) | M1 | Canonical reducer, safe persistence, rights-recorded fixtures, and deterministic sample data | CL-001 |
-| 4 | [CL-004](CL-004-deliver-sample-candidate-review.md) | M1 | Complete no-cost landing-to-candidate-review experience | CL-002, CL-003 |
-| 5 | [CL-005](CL-005-implement-secure-upload-and-storage.md) | M2 | Private direct resumable upload, grant/storage security, completion, and cleanup | CL-001, CL-003 |
-| 6 | [CL-006](CL-006-build-media-job-and-speaker-feasibility.md) | M2 | Safe media-job runtime, authoritative inspection, and active-speaker go/no-go evidence | CL-003, CL-005 |
-| 7 | [CL-007](CL-007-deliver-live-analysis-vertical-slice.md) | M3 | Upload-to-grounded-candidates analysis across adapters, job, API, recovery, and UI | CL-004, CL-006 |
-| 8 | [CL-008](CL-008-productionize-active-speaker-assembly.md) | M4 | Validated shot/face/active-speaker focus track for the selected clip | CL-006, CL-007 |
-| 9 | [CL-009](CL-009-build-contextual-visual-assembly.md) | M4 | Grounded visual plan, bounded assets/cards, complete assembly bundle, and progress UI | CL-007, CL-008 |
-| 10 | [CL-010](CL-010-deliver-automatic-clip-review.md) | M4 | Read-only automatic clip preview, facts, and one-render confirmation | CL-002, CL-004, CL-009 |
-| 11 | [CL-011](CL-011-render-and-deliver-final-clip.md) | M5 | Deterministic MP4 render, validation, result, download, retry, and clear | CL-005, CL-010 |
-| 12 | [CL-012](CL-012-harden-security-privacy-abuse-and-spend.md) | M6 | Public-demo security, privacy, abuse, capacity, retention, and spend controls | CL-007, CL-009, CL-010, CL-011 |
-| 13 | [CL-013](CL-013-complete-accessibility-responsive-and-performance-pass.md) | M6 | Whole-flow responsive, accessibility, motion, and performance evidence | CL-012 |
-| 14 | [CL-014](CL-014-audit-release-candidate.md) | M6 | Reconciled tickets, whole-codebase quality pass, deterministic release gate | CL-013 |
-| 15 | [CL-015](CL-015-deploy-validate-measure-and-rollback.md) | M7 | Immutable deployment, unpaid probes, bounded live validation, cost/cleanup evidence, and rollback proof | CL-014 and every owner gate |
+| 4 | [CL-004](CL-004-deliver-sample-candidate-review.md) | M1 | Complete single-workspace development frontend journey; real adapters remain gated | CL-002, CL-003 |
+| 5 | [CL-004A](CL-004A-prepare-third-party-provider-readiness.md) | M1 | Detailed non-GCloud provider dashboards, local software, privacy/keys and budget readiness | CL-001, CL-004 |
+| 6 | [CL-005](CL-005-implement-secure-upload-and-storage.md) | M2 | Secure upload/storage implementation and local proof; cloud mechanism gate deferred | CL-001, CL-003, CL-004A docs |
+| 7 | [CL-006](CL-006-build-media-job-and-speaker-feasibility.md) | M2 | Safe local media runtime, authoritative inspection and local speaker go/no-go | CL-003, CL-005 |
+| 8 | [CL-007](CL-007-deliver-live-analysis-vertical-slice.md) | M3 | Grounded-candidate analysis adapters, job, API, recovery and UI; no cloud prerequisite | CL-004, CL-004A, CL-006 |
+| 9 | [CL-008](CL-008-productionize-active-speaker-assembly.md) | M4 | Validated local shot/face/active-speaker focus track for the selected clip | CL-006 local go, CL-007 |
+| 10 | [CL-009](CL-009-build-contextual-visual-assembly.md) | M4 | Grounded visual plan, bounded assets/cards, complete assembly bundle and progress UI | CL-004A, CL-007, CL-008 |
+| 11 | [CL-010](CL-010-deliver-automatic-clip-review.md) | M4 | Read-only automatic clip preview, facts and one-render confirmation | CL-002, CL-004, CL-009 |
+| 12 | [CL-011](CL-011-render-and-deliver-final-clip.md) | M5 | Local deterministic MP4 render, validation, result, download and clear; cloud proof deferred | CL-005, CL-010 |
+| 13 | [CL-012](CL-012-harden-security-privacy-abuse-and-spend.md) | M6 | Implemented controls and provider-readiness audit; cloud checklist only | CL-004A, CL-007, CL-009, CL-010, CL-011 |
+| 14 | [CL-013](CL-013-complete-accessibility-responsive-and-performance-pass.md) | M6 | Whole-flow quality evidence plus the finalized-UI landing product film | CL-012 |
+| 15 | [CL-014](CL-014-audit-release-candidate.md) | M6 | Repository release audit with explicit CL-015 external deferrals | CL-013 |
+| 16 (final) | [CL-015](CL-015-deploy-validate-measure-and-rollback.md) | M7 | GCloud setup, transferred cloud checks, immutable deployment, unpaid probes, bounded live evidence and rollback | CL-014, provider readiness and owner authorization |
 
 ## Milestone boundaries
 
 - **M0 — foundation and visual gate:** CL-001–CL-002.
-- **M1 — deterministic sample story:** CL-003–CL-004.
+- **M1 — deterministic sample story and provider setup guides:** CL-003–CL-004A.
 - **M2 — private media foundation:** CL-005–CL-006.
 - **M3 — live analysis:** CL-007.
 - **M4 — automatic AI first cut and review:** CL-008–CL-010.
 - **M5 — final render and delivery:** CL-011.
 - **M6 — public-demo hardening and audit:** CL-012–CL-014.
-- **M7 — deployment and controlled live evidence:** CL-015.
+- **M7 — final GCloud setup, deployment and controlled live evidence:** CL-015.
 
 CL-014 is the final pre-deployment audit. CL-015 may deploy only the exact
 revision and immutable image inputs that pass CL-014; any material change after
@@ -223,17 +269,21 @@ that audit requires the smallest relevant re-audit.
 Ticket numbers define the reading order; dependencies define safe execution:
 
 ```text
-Foundation lane:  CL-001 -> CL-003 -> CL-005 -> CL-006 -> CL-007
+Foundation lane:  CL-001 -> CL-003
 Visual lane:      CL-001 -> CL-002 (owner approval)
 Sample slice:     CL-002 + CL-003 -> CL-004
+Readiness lane:   CL-001 + CL-004 -> CL-004A (non-GCloud guides/owner gates)
+Media/analysis:   CL-003 + CL-004A docs -> CL-005 -> CL-006 (local go) -> CL-007
 Assembly/review:  CL-006 + CL-007 -> CL-008 -> CL-009 -> CL-010
 Delivery/release: CL-005 + CL-010 -> CL-011 -> CL-012 -> CL-013 -> CL-014 -> CL-015
 ```
 
 CL-003 may proceed while CL-002 waits for visual approval. Broad production UI
-styling and CL-004 completion wait for the visual gate. Live/cloud portions of
-CL-005–CL-012 also stop at their named owner gates, while fake adapters,
-contracts, local composition, and deterministic tests can continue.
+styling and CL-004 completion wait for the visual gate. CL-004A documentation
+supports deterministic CL-005–CL-012 work without requiring credential setup.
+Any local provider check still stops at its named owner gates. All GCloud setup,
+cloud mechanism/benchmark/render proof and deployed live validation wait for
+final CL-015; local/fake evidence is never relabeled as cloud readiness.
 
 Do not begin feature work until CL-001 exists in code: one lockfile, three
 targetable workspaces, enforced dependency direction, real quality commands,

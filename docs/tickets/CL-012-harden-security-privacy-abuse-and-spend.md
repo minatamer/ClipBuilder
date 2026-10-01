@@ -2,8 +2,8 @@
 
 Status: Planned<br>
 Milestone: M6 — public-demo hardening and audit<br>
-Last synchronized: 2026-09-29<br>
-Depends on: CL-007, CL-009, CL-010, and CL-011<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-004A, CL-007, CL-009, CL-010, and CL-011<br>
 Blocks: CL-013<br>
 Suggested commit: `CL-012: harden public demo controls`<br>
 Parent plan: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)<br>
@@ -12,6 +12,14 @@ Ticket index: [`README.md`](README.md)
 ---
 
 ## Objective
+
+Owner setup ordering (2026-10-01): CL-004A already owns the complete non-GCloud
+dashboard/key/privacy/budget and local-software guides. Audit and reconcile
+those guides against the implemented adapters/controls and actual owner
+evidence here; do not postpone the first setup walkthrough to this ticket.
+All GCloud setup, applied settings and external cloud verification belong to
+final CL-015. Prepare its cloud checklist here using source/config/fake tests,
+but leave saved cloud settings, benchmarks and operational results unchecked.
 
 Complete the cross-cutting public-demo security, privacy, rights, abuse,
 capacity, retention, logging, configuration, dependency/container, and spend
@@ -127,11 +135,18 @@ ticket; CL-012 owns cross-cutting proof and corrections, not shadow versions.
 - [ ] Route logs/metrics/errors through typed allow-lists and run content/secret
   sentinel tests across serialized output.
 
-### 4. External readiness record
+### 4. Provider audit and final-cloud readiness record
 
-- [ ] Prepare owner checklists for provider data settings/retention/project hard
-  limits, Turnstile hostname/actions, bucket PAP/IAM/CORS/lifecycle/soft delete/
-  versioning, model weights/licenses, Cloud Run caps, and alerts.
+- [ ] Audit [provider setup](../operations/PROVIDER_SETUP.md),
+  [cost controls](../operations/COST_MODEL.md) and
+  [software readiness](../operations/THIRD_PARTY_SOFTWARE.md) against current
+  official docs, implemented requests and dated owner evidence. Recheck model
+  access, privacy/retention/opt-out, scoped keys, actual hard limits versus alerts,
+  rate limits, zero retries and rotation/shutdown; list every unresolved item.
+- [ ] Prepare final CL-015 checklists for bucket PAP/IAM/CORS/lifecycle/soft
+  delete/versioning, Secret Manager/runtime identities, Cloud Run caps/retries,
+  target-runtime speaker proof, cloud render/cleanup and numeric cloud alerts.
+  Do not create/configure/inspect real GCloud resources here.
 - [ ] Keep account/project IDs, keys, object names, signed URLs, source content,
   and secret-bearing screenshots out of the record.
 - [ ] Leave every dashboard/cloud/user-only item unchecked until evidenced by
@@ -173,15 +188,16 @@ ticket; CL-012 owns cross-cutting proof and corrections, not shadow versions.
 - [ ] Run dependency vulnerability, secret, container/image, tracked-media,
   license/model, and forbidden-content scans supported by the repository.
 - [ ] Exercise all kill-switch combinations and prove sample isolation.
-- [ ] Review actual external settings only with explicit owner/cloud/provider
-  authorization; do not infer them from code.
+- [ ] Review non-GCloud provider settings only with explicit provider
+  authorization; do not infer them from code. Actual GCloud settings wait CL-015.
 - [ ] Run repository format/lint/typecheck/unit/build/fake E2E as proportional
   regression evidence, plus `git diff --check` and status review.
 
 ## Documentation updates
 
-- Complete provider setup, data retention, media rights, cost model, local
-  development, incident priorities, and release-evidence template.
+- Audit/update the existing CL-004A provider setup, cost and software guides;
+  complete data retention, media rights, local development, incident priorities
+  and release-evidence template. Preserve explicit final CL-015 cloud deferrals.
 - Update public README/copy only for actual implemented privacy/limit/claim
   changes; keep operations details out of marketing copy.
 - Promote any material architecture/privacy/provider/cost/claim correction into
