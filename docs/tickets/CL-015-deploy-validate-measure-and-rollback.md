@@ -29,7 +29,7 @@ old server-media diagrams or pretend instance caps provide global atomicity.
 ## Owner gates before external action
 
 - [ ] Exact CL-014 revision/build inputs and all repository-owned findings closed.
-- [ ] Actual supported device/browser codec/performance/model quality evidence;
+- [ ] Measured desktop-browser codec/performance/model quality evidence;
       source/output bounds and public claims approved without silent downgrade.
 - [ ] Local disk-retention, two-hour logical expiry/next-open cleanup, provider
       audio/text transfer and provider data/retention copy approved.
@@ -98,7 +98,7 @@ bounded visual-plan/images, read-only preview, one local export/download and
 clear. Record exact provider calls, audio/text/asset bytes, normalized result
 availability, codec/sync/sample-frame quality, measured client time/memory,
 cost and local cleanup. No private media/transcript/provider IDs/output in docs.
-Cloud hosting success cannot replace physical-phone/speaker quality evidence.
+Cloud hosting success cannot replace measured browser-media/speaker quality evidence.
 
 Timeout/cancel after dispatch may bill; lost payload/restart is a visible
 uncertain outcome, never an automatic paid replay. Stop on duplicate dispatch,

@@ -1,10 +1,12 @@
 # Browser-owned media architecture
 
-Status: researched implementation proposal; browser ownership is owner-directed,
-runtime and release gates are not yet passed<br>
+Status: browser ownership and two-hour retention are owner-approved; CL-005 local
+foundation implemented, broader runtime/release gates remain open<br>
 Decision/research date: 2026-10-01<br>
 Authority: source of truth section 0.9; migration owner: CL-005<br>
-Scope of this pass: inspection, primary-source research and documentation only
+Initial pass: inspection, primary-source research and documentation only.
+Subsequent local implementation/measurement evidence is owned by
+[CL-005](../tickets/CL-005-implement-secure-upload-and-storage.md#phase-23-execution-and-independent-recheck-2026-10-01).
 
 ## Decision and non-goals
 
@@ -200,7 +202,8 @@ backend paid-operation lock.
 
 ### Lifecycle and physical deletion
 
-Propose two-hour logical expiry without durable history. Sweep on bootstrap,
+Approved: fixed two-hour logical expiry from source admission without durable
+history or a processing-time deadline. Sweep on bootstrap,
 before operations and while active; time/clock anomalies fail closed. Expiry
 does not guarantee disk deletion while the browser is closed. Tab close is not
 a reliable asynchronous cleanup event. A later opening reconciles expired and
@@ -275,7 +278,7 @@ track. Inspect/export the actual classifier, not only its feature encoders.
 The graph has 2D/3D convolution/pooling, reshape/transpose, GRUs, temporal
 reversal and GELU; exact export/opset/dynamic-time shapes and runtime kernels
 must be tested. Begin with ORT WASM for parity, then consider WebGPU only with
-operator and device proof. No operator support or conversion success is assumed.
+operator and runtime proof. No operator support or conversion success is assumed.
 [Model](https://github.com/Junhua-Liao/Light-ASD/blob/ed38c232de5efe0261dbd68627c0ade7cdfe14eb/model/Model.py),
 [encoders](https://github.com/Junhua-Liao/Light-ASD/blob/ed38c232de5efe0261dbd68627c0ade7cdfe14eb/model/Encoder.py),
 [recurrent classifier](https://github.com/Junhua-Liao/Light-ASD/blob/ed38c232de5efe0261dbd68627c0ade7cdfe14eb/model/Classifier.py).
@@ -446,9 +449,9 @@ suppression; the existing owner decision and open accessibility gate remain.
 | Production audio pipeline | CL-006 | Worker throughput, streaming/downmix/resample quality, timestamps, cancellation and memory |
 | Active speaker | CL-006 -> CL-008 | Browser model/license/weights/operator feasibility and actual quality go/no-go |
 | Composition and MP4 | CL-009/010/011 | Shared parity, fonts/assets, synced H.264/AAC 1080x1920 output, validation and cleanup |
-| Local retention/privacy | Owner before real persistence/provider use | Two-hour logical expiry, possible disk survival until next open, off-device audio/text/provider retention |
+| Local retention/privacy | Owner; local baseline approved 2026-10-01 | Fixed non-renewing two-hour expiry from source admission, best-effort clear/active/next-open cleanup, partial intent and possible disk survival approved; off-device audio/text/provider retention remains gated |
 | Anonymous paid guarantees | Owner + CL-012/015 | Accept bounded process-local limitations or approve new coordination; hard-cap evidence |
-| Device/public claims | Owner + CL-013/015 | Measured desktop/mobile/tablet codec, memory, time and thermal results; no silent scope reduction |
+| Public compatibility claims | Owner + CL-013/015 | Measured desktop-browser codec, memory and time results plus responsive viewport checks; no universal compatibility claim |
 
 CL-005 starts with independently testable synthetic/offline work. Freeze library,
 audio profile and local persistence choices only after its spikes. CL-006
@@ -462,16 +465,17 @@ byte/duration boundaries, extract its complete bounded audio, and export a
 60-second 1080x1920 H.264/AAC range with bounded queues/scratch. Include cancel,
 reload, background suspension, quota failure and output reopen/playback. Agree
 measurable time/memory/responsiveness/A-V-sync/quality thresholds before a go
-verdict; record supported physical-device results or leave them pending.
+verdict; record the measured browser environment and its limitations.
 CL-005 proves the essential media route early; CL-011 later productionizes it,
 not discovers whether the core local export is possible for the first time.
 
 Record browser/OS/device class, exact dependency/model versions and hashes,
 codec configs, fixture class, source bytes/duration/resolution, copy/extract/
 encode time, memory observations, responsiveness, output bytes/sync and cleanup.
-Include Chromium Windows/laptop, Safari macOS/iOS, Android Chromium and a tablet;
-private browsing, denied quota, tab suspension, refresh, two tabs and resource
-pressure are separate cases. Automation/emulation is not physical-device proof.
+Use the available desktop Chromium runtime and responsive viewport emulation.
+The owner approved this demo verification scope on 2026-10-01; no hardware
+certification or cross-engine matrix is required. Private browsing, denied quota,
+tab suspension, refresh, two tabs and resource pressure are separate cases.
 Performance targets must be agreed before benchmark interpretation; no
 unmeasured universal speed, RAM or battery claim is authorized here.
 

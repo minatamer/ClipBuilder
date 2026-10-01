@@ -116,7 +116,7 @@ public claims, or the portfolio story must be promoted into this document.
 | Automatic pause/filler removal | Owner requests natural context-preserving internal cuts as a later pipeline enhancement | **Deferred contract revision - 2026-10-01** | Current candidates remain contiguous word ranges. A future ticket must define immutable ordered segments, output-duration accounting, evidence, audio continuity, preview/render parity and regression tests before internal cuts ship. |
 | Landing product film | CL-013 owns an original motion-graphics walkthrough authored from finalized UI captures by the owner-designated `gpt-6.1-sol` agent | **Owner-directed - 2026-10-01** | Not CL-004. Final UI/capture, storyboard, rights and film approvals precede production/integration; external sharing is illustrative manual posting after download, not direct publishing. |
 | Third-party setup order | CL-004A owns thorough non-GCloud owner setup guides; GCloud setup and external cloud evidence stay in final CL-015 | **Owner-directed - 2026-10-01** | Earlier tickets use local/fake verification; CL-012 audits provider readiness, CL-014 carries explicit cloud deferrals, and no setup/live/spend approval is inferred from documentation. |
-| Retention | Proposed 2-hour logical local expiry, explicit clear and next-open orphan/expiry sweep | **Proposed - owner approval required** | No bucket lifecycle exists. Browser disk data can outlive a closed tab; provider retention is separate and must be disclosed. |
+| Retention | One disposable workspace with fixed non-renewing 2-hour logical expiry from source admission, explicit clear and active/next-open orphan/expiry sweep | **Owner-approved - 2026-10-01** | Best-effort browser storage; no history or persistent-storage permission. Closing a tab cannot guarantee immediate deletion. Partial cleanup intent survives; provider transfer/retention approval remains separate. |
 | Monthly spend | Start with the lowest provider hard caps that permit two owner-controlled full live validations | **Proposed - owner approval required** | Live flags stay off until numerical caps and alerts are recorded in release evidence. |
 
 ### 0.4 Approval gates
@@ -334,6 +334,12 @@ possible codec fallback after exact dependency/build licensing and performance
 review. Neither container support nor a successful API-presence check proves
 1080x1920 H.264/AAC output on a particular phone/laptop.
 
+The owner's verification decision on 2026-10-01 limits the demo gate to
+automated checks, measured desktop-browser media/storage behavior and responsive
+viewport checks. Hardware certification and a cross-engine test matrix are not
+required. Keep runtime capability probes and explicit unsupported states;
+successful measurements do not authorize universal compatibility claims.
+
 Active-speaker framing remains required. Face landmarks or mouth-motion
 heuristics alone are not equivalent to synchronized audio/visual active-speaker
 inference. CL-006 must prove a browser-executable model and CL-008 must preserve
@@ -353,7 +359,9 @@ memory-only mode may proceed only if the complete bounded output path passes
 preflight; refresh then needs re-selection and validated source identity.
 If that cannot be proved, stop before paid work rather than silently upload.
 
-Proposed local access expiry is two hours. Clear/replacement/cancel first fence
+The owner explicitly approved a fixed, non-renewing two-hour local access
+expiry measured from source admission on 2026-10-01. It is a recovery/retention
+policy, not a two-hour processing-time limit. Clear/replacement/cancel first fence
 late worker results and record cleanup intent, then stop workers, close handles,
 revoke Blob URLs and delete owned artifacts. IndexedDB and OPFS are not one
 atomic transaction: publish references only after complete writes and reconcile
@@ -366,7 +374,9 @@ guarantee physical deletion; expiry cleanup runs while active or on next open.
 Same-origin scripts, eviction and user-cleared site data remain relevant. No
 privacy copy may claim that all processing is offline, no bytes leave the
 device, or provider retention is zero merely because `store: false` is used.
-The public copy and this disk-retention tradeoff require owner approval.
+The owner approved this disk-retention/recovery tradeoff, including possible
+disk survival until the next opening and best-effort eviction. Public provider
+transfer/retention copy and other privacy/release gates remain separate.
 
 #### Protected AI and honest coordination guarantees
 
@@ -411,7 +421,7 @@ CL-006 owns production audio extraction and browser speaker feasibility;
 CL-007 protected transcription/selection; CL-008 selected-range speaker tracks;
 CL-009 browser-owned assembly/assets; CL-010 compositor review parity;
 CL-011 local validated MP4 export; CL-012 control/privacy audit;
-CL-013 device/visual/accessibility/film quality; CL-014 repository audit;
+CL-013 responsive/visual/accessibility/film quality; CL-014 repository audit;
 CL-015 hosting, actual transport/deployment controls and authorized release proof.
 CL-004A retains non-cloud provider readiness. No cloud bucket, native media job
 or cloud rendering proof is deferred to CL-015: those mechanisms are withdrawn.
@@ -421,7 +431,8 @@ baseline and legacy future schemas. This documentation pass does not change
 them. CL-005 must migrate `objectGeneration`, cloud-dependent config, backend-
 authoritative artifact reconciliation and upload/render capabilities together,
 without breaking fake/off defaults or re-creating the single-card UI.
-All feasibility/device/license/rights/paid/cloud results remain unchecked.
+Implementation evidence and outstanding feasibility/license/rights/paid/cloud
+results are recorded in the owning tickets, not inferred from this plan.
 
 #### Superseded technical text and reading boundary
 
@@ -4933,7 +4944,7 @@ high-contrast/forced-colors behavior.
 
 ## 20. Verification strategy
 
-**Browser-owned revision (2026-10-01):** Fake test isolation, grounding/quality, rights and cleanup checks remain. Replace historical GCS/native-job tests with the revised packet's browser storage/codec/worker/provenance/admission tests. A tiny synthetic clip or emulator viewport is not full-bound/physical-device performance proof.
+**Browser-owned revision (2026-10-01):** Fake test isolation, grounding/quality, rights and cleanup checks remain. Replace historical GCS/native-job tests with the revised packet's browser storage/codec/worker/provenance/admission tests. A tiny synthetic clip alone is not full-bound performance proof; responsive viewport checks follow the demo verification policy in section 0.9.
 
 Verification is proportional to risk. Ordinary tickets run the smallest tests
 and manual checks that cover their change. Milestones and release run broader
@@ -5684,7 +5695,7 @@ an eventual shape; each packet creates only the real modules it owns.
 
 ## 23. Release acceptance checklist
 
-**Browser-owned revision (2026-10-01):** Apply unchanged product/quality/security/rights requirements, but withdraw cloud-object/native-job acceptance items. Current release additionally requires local persistence/privacy approval, full-bound device codec/performance proof, browser speaker go and justified no-shared-store paid guarantees. Historical boxes are not evidence.
+**Browser-owned revision (2026-10-01):** Apply unchanged product/quality/security/rights requirements, but withdraw cloud-object/native-job acceptance items. Current release additionally requires local persistence/privacy approval, full-bound desktop-browser codec/performance proof, browser speaker go and justified no-shared-store paid guarantees. Historical boxes are not evidence.
 
 ### Product and claims
 
@@ -5762,7 +5773,7 @@ an eventual shape; each packet creates only the real modules it owns.
 
 ## 24. Owner decisions still required
 
-**Browser-owned revision (2026-10-01):** Older GCS upload/retention and Cloud Run media-model decisions below are withdrawn. The current open decisions are in section 0.9 and Browser-owned media: local persistence/disclosure, browser model/codec/device feasibility, audio profile, provider data/cost approvals and paid deployment guarantees.
+**Browser-owned revision (2026-10-01):** Older GCS upload/retention and Cloud Run media-model decisions below are withdrawn. The current open decisions are in section 0.9 and Browser-owned media: browser model/codec feasibility, audio profile, provider data/cost approvals and paid deployment guarantees. The local retention baseline is owner-approved.
 
 These are not questions an implementation agent should answer silently. The
 recommendation and consequence are already specified so the owner can approve

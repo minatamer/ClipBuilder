@@ -16,7 +16,7 @@ Ticket index: [`README.md`](README.md)
 **Current audit contract (2026-10-01):** section 0.9 and
 [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md) replace historical
 GCS/native-job/server-render deferrals below. Audit browser-owned source/results/
-assets/output, exact local codecs/model/parity/device proof, OPFS/IDB cleanup,
+assets/output, exact local codecs/model/parity/runtime proof, OPFS/IDB cleanup,
 protected request input/provenance/admission and process-lifetime-only guarantees.
 CL-015's remaining external gates are hosting/routing/transport/restart/rollout/
 hard-cap/provider/client evidence, not bucket lifecycle or cloud media jobs.

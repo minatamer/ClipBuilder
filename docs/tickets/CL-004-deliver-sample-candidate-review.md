@@ -100,7 +100,7 @@ without altering the approved direct-export UI or backend authorization guards.
   Inspected cleanup/request ownership, retained values, dependency direction,
   obsolete imports and approved export behavior. No scope deviation or external
   action; unrelated work preserved and nothing staged/committed. Independent/
-  owner/native AT/zoom/other-engine and existing real-media/rights/privacy/provider/
+  owner/native AT/zoom and existing real-media/rights/privacy/provider/
   credentials/paid/spend/cloud/release gates remain open. Revalidation request
   delivered to the same authorized chat; no verdict or whole-ticket approval
   is inferred.
@@ -180,7 +180,7 @@ cancel/restart before recording success.
   selectors/reducer/reconciliation/persistence and their three existing test
   files, frontend README, parent sections 0.6/6.7/6.8 and this packet. Unrelated
   work is preserved; nothing staged or committed. No scope deviation or external
-  action. Independent/owner visual approval, native AT/zoom/other-engine checks,
+  action. Independent/owner visual approval, native AT/zoom checks,
   real-media/rights/privacy/provider/credentials/paid/spend/cloud/release gates
   remain open. Revalidation request delivered to the same authorized side chat;
   no verdict is inferred and the whole ticket is not marked approved.
@@ -272,7 +272,7 @@ Keep the approved landing copy and unrelated provider/film work unchanged.
   Approved landing copy and unrelated changes are preserved. No scope deviation
   or external/Git action; final diff check passes and staged diff is empty.
   Revalidation requested in the same authorized side chat; no verdict inferred.
-  Independent/owner/native AT/zoom/other-engine and prior real-media/rights/
+  Independent/owner/native AT/zoom and prior real-media/rights/
   privacy/credentials/paid/spend/cloud/release gates remain open. The two newly
   reproduced issues are locally fixed; the older Clear/restart report is not
   claimed fixed or definitively disproven by this evidence.
@@ -306,7 +306,7 @@ Git action, workflow change or unrelated visual fix.
   `corepack pnpm test:unit`, `corepack pnpm build`; **229 tests pass**. No new
   dependency/schema/state/timer/listener/request, media or provider exposure.
   Unrelated work preserved; nothing staged or committed. No scope deviation.
-- Independent revalidation/owner visual acceptance, native AT/zoom/other-engine
+- Independent revalidation/owner visual acceptance, native AT/zoom
   checks, per-format real-media validation and all prior rights/privacy/provider/
   credentials/paid/spend/cloud/release gates remain pending. Prior reset/smallest
   delivery findings are unchanged. Revalidation requested in the same side chat.
@@ -363,7 +363,7 @@ No provider/media/Git action or unrelated reset/result-layout fix.
   diff empty and unrelated work preserved; nothing staged or committed.
 - Shared controls remain intended for later real playback, not currently
   wired to video. Owner/independent visual acceptance, native AT/zoom/forced-
-  colors/reduced-transparency/other-engine/physical-touch checks and previous
+  colors/reduced-transparency checks and previous
   real-media/rights/privacy/credentials/paid/spend/cloud/release gates remain
   pending. Prior reset/smallest delivery findings are unchanged. Revalidation
   requested in the same authorized side chat.
@@ -414,8 +414,8 @@ or unrelated reset/result-layout fix.
   `corepack pnpm build`; **229 tests pass**. No new dependency/schema/state/
   timer/listener/request/provider action. `git diff --check` passes and staged
   diff is empty; unrelated work preserved, nothing staged or committed.
-- Independent/owner/native AT/zoom/forced-colors/reduced-transparency/physical-
-  touch/other-engine and all prior real-media/rights/privacy/credentials/paid/
+- Independent/owner/native AT/zoom/forced-colors/reduced-transparency
+  and all prior real-media/rights/privacy/credentials/paid/
   spend/cloud/release gates remain pending. CSS fallbacks are implemented,
   not manually accepted. Prior reset-path/smallest delivery findings remain
   unchanged. Revalidation requested in the same authorized side chat.
@@ -450,7 +450,7 @@ changes, Git/provider/cloud action, or unrelated reset/result-layout fix.
   `corepack pnpm test:unit`, `corepack pnpm build`; **229 tests pass**.
   `git diff --check` passes and staged diff is empty. No new dependency,
   schema, state, timer, listener, request or configuration/capability change.
-- Independent/owner/native AT/zoom/forced-colors/physical-touch/other-engine
+- Independent/owner/native AT/zoom/forced-colors
   approval and all prior real-media/rights/privacy/credentials/paid/spend/
   cloud/release gates remain pending. Previously recorded reset-path and
   smallest delivery-layout findings are unchanged, not claimed resolved.
@@ -508,8 +508,8 @@ no new workflow, disclosure, capability or Git action.
   revalidation rather than altering session
   behavior in this presentation-only request. The previously recorded smallest
   delivery overlap also remains unresolved; this revision claims only header
-  bounds. Independent/owner/native AT/zoom/forced-colors/physical-touch/other-
-  engine and all prior real-media/rights/privacy/credentials/paid/spend/cloud/
+  bounds. Independent/owner/native AT/zoom/forced-colors
+  and all prior real-media/rights/privacy/credentials/paid/spend/cloud/
   release gates remain pending. No Git/provider/cloud action; unrelated work
   preserved and staged diff empty.
 
@@ -551,7 +551,7 @@ the same authorized side chat to revalidate. No Git or external action.
   authorized validation chat. It supersedes the prior blanket small-screen
   delivery no-overlap claim, not the verified header result.
 - Independent revalidation and owner approval remain pending, along with
-  physical touch/other engines/native AT/zoom/forced colors and all previous
+  native AT/zoom/forced colors and all previous
   real-media/rights/privacy/credentials/paid/spend/cloud/release gates. Nothing
   staged or committed.
 
@@ -615,8 +615,8 @@ the five root gates and ask the same authorized side chat to revalidate.
   boundaries. No new schema/dependency/provider/job/request/listener/object
   URL, secret or real-media exposure. App motion gates remain removed, native
   scrollbar correction unchanged and unrelated work preserved. Independent
-  revalidation/owner visual approval, physical touch-device testing, other
-  engine/native AT/zoom/forced-color checks and all previous external gates
+  revalidation/owner visual approval, native AT/zoom/forced-color checks
+  and all previous external gates
   remain pending. `git diff --check` passes and the staged diff is empty.
   Revalidation request delivered to the same authorized side chat; verdict
   remains pending. No provider/paid/cloud or Git mutation.
@@ -643,7 +643,7 @@ advances the transcript. Zero horizontal overflow and no browser warnings/
 errors captured; viewport override reset and paused preview retained. All five
 root gates pass again with **225 tests**. Prior computed-style checks were
 insufficient to prove custom rendering and are explicitly superseded here.
-Other engines' standard fallback, native forced colors/AT and owner approval
+Native forced colors/AT and owner approval
 remain unchecked; external gates, motion and workflow behavior are unchanged.
 
 The owner requests thin, repo-consistent scrollbars throughout the webapp and

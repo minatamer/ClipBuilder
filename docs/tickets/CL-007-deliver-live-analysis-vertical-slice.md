@@ -76,7 +76,7 @@ reads env/media, listens, contacts providers or obtains credentials.
 - [ ] Existing UI/notes remain timestamp-grounded, responsive and read-only;
       source remains on device, no provider/raw content enters logs/errors/URLs.
 - [ ] Run focused adapters/contracts/session/component/browser checks and all
-      five root gates; document every rights/provider/privacy/spend/device gate
+      five root gates; document every rights/provider/privacy/spend/runtime gate
       still unchecked. Live checks require specific owner call/budget permission.
 
 Update provider/retention/cost guides with actual adapter options and results.

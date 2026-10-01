@@ -324,10 +324,8 @@ Selected architecture and rationale:
   motion already removes ambient/entrance/scroll transitions; the optics have no
   continuous animation. Unsupported `backdrop-filter` receives opaque navy and
   cobalt fallbacks.
-- Windows provides no Safari runtime. WebKit behavior is therefore documented
-  from the selected package's Playwright-tested browser matrix rather than
-  falsely claimed as locally exercised. Safari/Firefox keep the CSS frost,
-  tint, border, specular, and shadow; only live-backdrop displacement is absent.
+- WebKit/Firefox keep the CSS frost, tint, border, specular, and shadow;
+  only live-backdrop displacement is absent.
 
 Primary sources:
 
@@ -365,7 +363,7 @@ Visual verification used the production build in the in-app Chromium browser:
 - Runtime inspection found the SVG filters in the hydrated DOM, no warning/error
   console entries, one H1, no remote asset request, and no hydration mismatch.
 - The browser's active reduced-motion setting was tested directly. Normal-motion
-  and forced-colors media emulation, plus a native Safari binary, were not
+  and forced-colors media emulation were not
   available in this Windows in-app browser; their source branches and documented
   fallback behavior were inspected without claiming native execution.
 

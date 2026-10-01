@@ -47,7 +47,7 @@ A face detector or center crop is not an active-speaker implementation.
       Preserve source timestamp/rotation/VFR mapping and shot-boundary resets.
 - [ ] Export/probe exact 2D/3D convolution/pooling, reshape/transpose, GRU,
       temporal reversal, GELU and classifier operations/opset/time shapes.
-      Begin with ORT WASM parity; WebGPU requires its own operator/device proof.
+      Begin with ORT WASM parity; WebGPU requires its own operator/runtime proof.
       A PyTorch checkpoint or server CPU run is not a browser execution result.
 - [ ] Golden-test preprocessing/tensors and model scores against an approved
       offline reference; no approximation of MFCC/crop/normalization.
@@ -63,7 +63,7 @@ A face detector or center crop is not an active-speaker implementation.
       audio timing, time/memory/responsiveness thresholds before verdict.
       Evaluate one face, alternating wide two-speaker, listener motion, overlap,
       cuts, missed faces and off-screen speech using approved media.
-- [ ] Publish a browser-model go/no-go with versions/hashes/device matrix.
+- [ ] Publish a browser-model go/no-go with versions/hashes/measured runtime.
       No-go blocks CL-008 and reopens architecture; no generic-crop downgrade
       or remote frames/video fallback without a new owner decision.
 
@@ -79,7 +79,8 @@ Test exact limits/malformed/truncated/unsupported/silent tracks, VFR/rotation/
 offset mapping, bounded buffering, queue backpressure, model/operator failures,
 cancel/reload/background pressure and every resource cleanup. Assert zero
 Deepgram/text/image calls. Exercise a synthetic 20min/near-500MiB path and
-60s selected range; physical phone/tablet results remain pending until tested.
+60s selected range on the measured desktop-browser runtime, plus responsive
+viewport checks under the demo verification policy.
 Run focused checks and all five root gates before completion.
 
 ## Acceptance, gates and handoff

@@ -60,8 +60,9 @@ format/profile picker or real-mode fake success.
 - [ ] Test duplicate confirmation, wrong source/manifest, stale workers,
       canceled/backgrounded/reloaded encode, quota/GPU/codec failure, mux flush
       failure, validation rejection and explicit same-manifest recovery.
-- [ ] Re-run full-bound source/60s output performance, memory and physical-device
-      matrix; record measured quality/time/sync against agreed thresholds.
+- [ ] Re-run full-bound source/60s output performance and memory in the measured
+      desktop browser, plus responsive viewport checks; record measured
+      quality/time/sync against agreed thresholds.
 
 ## Verification, gates and handoff
 
@@ -73,7 +74,7 @@ gates remain separate; no secret or real media/content enters Git/evidence.
 
 Run focused compositor/encode/mux/session/flow tests and all five root gates.
 Record versions, output-validation/performance/cancel/cleanup proof, files,
-commands/manual states and remaining owner/rights/visual/device gates.
+commands/manual states and remaining owner/rights/visual/runtime gates.
 CL-015 validates deployed runtime/model/static headers and real client output,
 not a remote render job or bucket lifecycle. No extra AI/provider call is
 authorized merely to validate local export.
@@ -293,7 +294,7 @@ must not be patched with a render-only interpretation.
 - [ ] Run render/download API tests for validation, replay, conflict, one-output,
   invalid output, expiry, retry evidence, and clear partial deletion.
 - [ ] Run frontend confirmation/progress/failure/result/download/clear/restore
-  tests and manual phone/desktop playback.
+  tests and responsive phone/desktop viewport playback.
 - [ ] Transfer actual cloud render verification to final CL-015; record it
   unchecked.
 - [ ] Run affected lint/typecheck/build/container checks, scans,

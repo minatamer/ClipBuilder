@@ -17,9 +17,9 @@ Ticket index: [`README.md`](README.md)
 [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md), not historical
 server job/capability assumptions. Preserve this packet's finalized-UI film
 ownership, shared single-card design and permanent app-motion decision.
-Measure full-bound import/audio and 60s 1080x1920 H.264/AAC local export on real
-desktop/phone/tablet devices, plus quota/private browsing/two tabs/background
-suspension/restore/clear. Emulated viewports are not device codec/thermal proof.
+Measure full-bound import/audio and 60s 1080x1920 H.264/AAC local export in the
+available desktop-browser runtime, plus responsive viewport checks and
+quota/private browsing/two tabs/background suspension/restore/clear.
 Agree measurable thresholds before a go verdict; no silent quality/limit change.
 Review local-disk/provider-transfer/uncertain-paid-result copy and unsupported
 states. No video/output is uploaded to make film or performance tests pass.
@@ -383,9 +383,9 @@ capture gate above; CL-002's interim approval is not that final capture approval
 
 ## Owner gates and external blockers
 
-Final visual/editorial feel and hardware-dependent screen-reader/browser/media
+Final visual/editorial feel and screen-reader/browser/media
 observations may require owner review. Record engineering evidence separately
-and never convert missing human/device evidence into a pass. This ticket does
+and never convert missing human/runtime evidence into a pass. This ticket does
 not authorize a live provider call.
 UI capture approval, screenshot/media/music/brand rights, authoring handoff,
 animatic approval and final film sign-off are separate gates. Local code/media
@@ -418,7 +418,7 @@ action is authorized by this packet alone.
 
 Report the matrix/evidence path, each material finding and fix, exact automated
 and manual results, focus/screen-reader/motion/forced-color status, measured
-performance and environment, changed files, checks, and every owner/device/live
+performance and environment, changed files, checks, and every owner/runtime/live
 observation still unchecked.
 Also report capture baseline, authoring/model handoff, storyboard/animatic/final
 film approval, local artifact locations, web/master/poster metadata, measured

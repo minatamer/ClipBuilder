@@ -1,6 +1,6 @@
 # Browser media and third-party software readiness
 
-Status: researched inventory; installation/model/device proof pending<br>
+Status: Mediabunny installed; conditional Windows spike recorded; broader proof pending<br>
 Last synchronized: 2026-10-01<br>
 Setup owner: CL-004A; foundation owner: CL-005; pipelines: CL-006/008/009/010/011<br>
 Actual hosting/setup/model delivery proof: final CL-015
@@ -66,7 +66,7 @@ or lockfile changed by this architecture planning pass.
    containers with runtime encoders. Use incremental OPFS output and backpressure.
 3. Before a go verdict, exercise synthetic 20min/near-500MiB source import/audio
    and a 60s 1080x1920 export with bounded resources; agree time/memory/sync/
-   responsiveness thresholds first. Physical-device proof is separate.
+   responsiveness thresholds first. Record the measured desktop-browser runtime.
 4. Select the bounded protected audio format with quality/duration/body proof.
    16kHz mono16 PCM20min is 38.4MB plus header, beyond Cloud Run HTTP/1's 32MiB:
    prove HTTP/2 or a compressed route; never silently add paid transcription calls.
@@ -90,7 +90,18 @@ The detailed research document records inspected source revisions:
 Mediabunny `0f91fe768e7ee42703f15e2b8845551b0f1028b3`,
 LocalCut `24f3d9489ae8aff24187f03b0b6dbe039b35515b`,
 Light-ASD `ed38c232de5efe0261dbd68627c0ade7cdfe14eb`.
-These are research snapshots, not installed/pinned runtime dependencies.
+These were research snapshots. CL-005 subsequently approved and installed
+`mediabunny@1.61.0` (MPL-2.0, matching the recorded upstream manifest), with
+MIT type dependencies `@types/dom-webcodecs@0.1.13` and
+`@types/dom-mediacapture-transform@0.1.12`. No third-party source was modified.
+Native AAC was available on the measured Windows in-app Chromium laptop; no
+AAC WASM, FFmpeg or model was installed. The
+[synthetic harness](../../apps/frontend/feasibility/browser-media/README.md) and
+[CL-005 record](../tickets/CL-005-implement-secure-upload-and-storage.md#phase-1-execution-evidence-2026-10-01)
+own exact commands, licenses, full-bound timings/memory scopes/AAC presentation
+fix and remaining storage/transport gates. Two-hour disposable retention
+is owner-approved and the local intake/journal foundation is implemented. This changes no
+production mode or public support claim. LocalCut/Light-ASD remain research only.
 
 Light-ASD's actual demo uses CUDA/S3FD/native preprocessing. Its model's
 2D/3D convolution/pooling, GRU/reversal/GELU and learned classifier need exact
@@ -101,16 +112,17 @@ distribution. Approve download/source/license/hash and browser serving before
 assets arrive; never download on import/startup/per request.
 
 Native tools may be approved for offline reference parity only. Their existing
-`FFMPEG_PATH/FFPROBE_PATH/PYTHON_PATH/ACTIVE_SPEAKER_*` example values are legacy
-future schema, migrated in CL-005; not an instruction to install a server media
+`FFMPEG_PATH/FFPROBE_PATH/PYTHON_PATH/ACTIVE_SPEAKER_*` executable/model example
+values were retired in CL-005; not an instruction to install a server media
 stack or fill paths now. Browser capability/model configuration is public only
 when deliberately safe; keys/backend origin/host identities remain private.
 
 ## Runtime configuration and headers
 
 Keep fake/off defaults and feature-specific fail-closed gates. CL-005 migrates
-schema/example/tests/public capability meanings together; no app code or env
-example was changed by this documentation pass. Read `.env.example` only;
+schema/example/tests/public capability meanings together. The initial planning
+pass made no code changes; the subsequent local foundation now implements that
+migration. Read `.env.example` only;
 the owner populates valid matching blanks manually after implementation.
 
 Worker URLs/WASM/model assets/fonts must have exact origin/cache/integrity/CSP

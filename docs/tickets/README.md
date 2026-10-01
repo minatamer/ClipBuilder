@@ -17,8 +17,23 @@ migration packet, not resumable GCS upload. CL-006 proves browser audio/model
 quality; later packets produce local composition/export. GCS/native-media/job
 instructions retained in collapsed historical packets are withdrawn, not
 remaining gates. CL-015 owns hosting/transport/process-guarantee/provider proof.
-This plan has no implementation/device/paid/cloud evidence yet. Two-hour local
-disk lifecycle/disclosure and public paid guarantees remain explicit owner gates.
+CL-005 is now in progress with an approved Mediabunny 1.61.0 installation and
+synthetic full-bound media spike on a Windows in-app Chromium laptop. Its packet
+records the measured results, AAC timing correction and reproducible harness.
+This is a conditional desktop media-route go, not universal device/paid/cloud
+proof. The owner explicitly approved the fixed
+two-hour disposable local-workspace policy and truthful best-effort cleanup
+disclosure on 2026-10-01. CL-005 now implements local intake, OPFS/IDB recovery,
+actual range playback, process-local protected admission and the contracts/config
+migration. Its independent finding recheck and fresh gate are recorded in the
+packet. The R3 disposal/lease race was confirmed and repaired, with 316 tests
+and all five root gates passing. Independent R4 revalidation found no actionable
+issues and passed 18 focused tests; remaining feasibility/release gates stay open.
+Private-mode/eviction/freeze observations remain open. The owner-approved
+demo gate uses automated checks, measured desktop-browser behavior and responsive
+viewport checks, with no hardware certification or cross-engine matrix;
+CL-006 has not been started. Provider transfer/privacy,
+public paid guarantees and unverified release claims remain owner gates.
 
 Latest owner clarification (2026-10-01): CL-004 now owns the entire
 development-only frontend journey, not a separate public sample feature.
@@ -224,7 +239,8 @@ with the later owner decision that removed all editing/customization. That
 alignment was **completed and locally verified**: contracts allow zero to
 four candidates, the reducer uses immutable automatic clip review, persistence
 stores only manifest identity/hash, and legacy editor/assistant configuration is
-removed. CL-005–CL-015 remain planned; CL-010 is automatic read-only clip review
+removed. CL-005 is locally verified with independent validation and release
+gates open; CL-006–CL-015 remain planned. CL-010 is automatic read-only clip review
 and render confirmation, not an editor/assistant ticket.
 The owner subsequently reopened CL-003 for independent validation of nine
 session/restore/progress/fake/cleanup findings. All nine reproduced locally.
@@ -259,7 +275,7 @@ when work begins or finishes.
 | 13 | [CL-012](CL-012-harden-security-privacy-abuse-and-spend.md) | M6 | Implemented controls and provider-readiness audit; cloud checklist only | CL-004A, CL-007, CL-009, CL-010, CL-011 |
 | 14 | [CL-013](CL-013-complete-accessibility-responsive-and-performance-pass.md) | M6 | Whole-flow quality evidence plus the finalized-UI landing product film | CL-012 |
 | 15 | [CL-014](CL-014-audit-release-candidate.md) | M6 | Repository release audit with explicit CL-015 external deferrals | CL-013 |
-| 16 (final) | [CL-015](CL-015-deploy-validate-measure-and-rollback.md) | M7 | Approved hosting/audio transport/process-guarantee/client proof, immutable deployment, bounded live evidence and rollback; no media bucket/job | CL-014, provider/device readiness and owner authorization |
+| 16 (final) | [CL-015](CL-015-deploy-validate-measure-and-rollback.md) | M7 | Approved hosting/audio transport/process-guarantee/client proof, immutable deployment, bounded live evidence and rollback; no media bucket/job | CL-014, provider/runtime readiness and owner authorization |
 
 ## Milestone boundaries
 
@@ -296,7 +312,7 @@ supports deterministic CL-005–CL-012 work without requiring credential setup.
 Any local provider check still stops at its named owner gates. Actual hosting,
 transport/restart/rollout/hard-cap and deployed live validation wait for final
 CL-015; cloud-media jobs/storage/render are withdrawn, not deferred. Local/fake
-evidence is never relabeled as deployed or actual-device readiness.
+evidence is never relabeled as deployed or universal runtime readiness.
 
 Do not begin feature work until CL-001 exists in code: one lockfile, three
 targetable workspaces, enforced dependency direction, real quality commands,

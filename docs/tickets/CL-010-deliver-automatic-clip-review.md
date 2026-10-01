@@ -51,7 +51,7 @@ preview never starts rendering or another paid action.
 - [ ] Test local hydration, tampered/stale revisions, absent assets, clear during
       playback, worker/GPU failure, seek/sync and pixel/parity fixtures.
 - [ ] Run focused contracts/compositor/session/component/browser tests and all
-      five root gates. Record actual device/font/media/visual/accessibility gates
+      five root gates. Record runtime/font/media/visual/accessibility gates
       separately from mock or viewport-emulation evidence.
 
 Own compositor preview integration, source-to-output mapping, player lifecycle,

@@ -46,7 +46,8 @@ No visual-plan generation, final renderer, editor or paid API in this packet.
 - [ ] Test crop safety, empty/invalid track, jitter, speaker switches, scene cuts,
       rotation/VFR/audio offset and golden model/focus evidence.
 - [ ] Run the agreed CL-006 quality/runtime/memory matrix on approved actual
-      media/devices. Quantization/detector/window changes reopen parity proof.
+      media in the measured browser runtime. Quantization/detector/window
+      changes reopen parity proof.
 - [ ] Fake/injected tests assert zero transcription/text/image calls. Run
       focused contracts/worker/browser tests and all five root gates.
 - [ ] Report exact versions/hashes/licenses/rights, measured states and pending

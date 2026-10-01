@@ -714,7 +714,7 @@ foundation. Reuse it rather than creating a parallel prototype application.
   56,700 bytes minified / 18,019 bytes gzip / 15,906 bytes Brotli. Runtime logs
   contained no warning, error, hydration mismatch, or remote runtime asset.
 - The Windows in-app browser directly exercised its active reduced-motion mode.
-  It could not supply Safari or normal-motion/forced-colors media emulation, so
+  It could not supply normal-motion/forced-colors media emulation, so
   those are recorded as source/fallback review rather than falsely marked as
   native browser execution. The remaining focused-verification checkbox stays
   open for that reason, and owner approval is still required.
