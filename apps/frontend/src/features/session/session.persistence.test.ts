@@ -8,9 +8,12 @@ import { SessionEffectRegistry } from "./session.effects";
 import {
   MAX_SESSION_PROJECTION_BYTES,
   SESSION_PROJECTION_KEY,
+  SESSION_CLEANUP_KEY,
   clearSessionProjection,
   parseSessionProjection,
   projectSessionState,
+  persistSessionState,
+  isSessionCleanupRequired,
   readSessionProjection,
   serializeSessionProjection,
   shouldClearSessionProjectionForState,
@@ -157,6 +160,88 @@ function inFlightFailure(kind: "analysis" | "assembly" | "render") {
 }
 
 describe("allow-listed session projection", () => {
+  it.each(["clearing", "cleanup-partial"] as const)(
+    "retains only cleanup intent across %s, reload and retry until success",
+    (stage) => {
+      const storage = new MemoryStorage();
+      persistSessionState(storage, reviewState(), now);
+      const pending = clippingSessionReducer(reviewState(), { type: "CLEAR" });
+      const state =
+        stage === "clearing"
+          ? pending
+          : clippingSessionReducer(pending, {
+              type: "CLEAR_PARTIAL",
+              failure,
+            });
+      persistSessionState(storage, state, now);
+      expect([...storage.values]).toEqual([[SESSION_CLEANUP_KEY, "required"]]);
+      expect(readSessionProjection(storage, now)).toEqual({ status: "empty" });
+      expect(isSessionCleanupRequired(storage)).toBe(true);
+      expect(selectAvailableActions(state)).not.toContain("select-file");
+      const retry = clippingSessionReducer(initialClippingSessionState, {
+        type: "RESTORE_VALID",
+        state: {
+          stage: "clearing",
+          previousStage: "cleanup-partial",
+          cleanup: { status: "requesting" },
+          diagnosticCode: null,
+        },
+      });
+      persistSessionState(storage, retry, now);
+      const failed = clippingSessionReducer(retry, {
+        type: "CLEAR_PARTIAL",
+        failure,
+      });
+      persistSessionState(storage, failed, now);
+      expect(isSessionCleanupRequired(storage)).toBe(true);
+      const succeeded = clippingSessionReducer(
+        clippingSessionReducer(failed, { type: "CLEAR" }),
+        {
+          type: "CLEAR_SUCCEEDED",
+          availability,
+        },
+      );
+      persistSessionState(storage, succeeded, now);
+      expect(storage.values.size).toBe(0);
+      expect(isSessionCleanupRequired(storage)).toBe(false);
+      expect(selectAvailableActions(succeeded)).toContain("select-file");
+      const replacement = clippingSessionReducer(succeeded, {
+        type: "FILE_SELECTED",
+        localSource: {
+          sourceId: "replacement-input",
+          declaredBytes: 10,
+          contentType: "video/webm",
+          validation: { status: "accepted" },
+        },
+      });
+      expect(replacement).toMatchObject({
+        stage: "local-inspection",
+        diagnosticCode: null,
+      });
+    },
+  );
+
+  it("fails closed for unknown cleanup markers and does not save content or refresh allowance", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(SESSION_CLEANUP_KEY, "unknown-version");
+    expect(isSessionCleanupRequired(storage)).toBe(true);
+    const pending = clippingSessionReducer(reviewState(), { type: "CLEAR" });
+    persistSessionState(storage, pending, now);
+    expect([...storage.values]).toEqual([[SESSION_CLEANUP_KEY, "required"]]);
+    const expired = clippingSessionReducer(initialClippingSessionState, {
+      type: "RESTORE_EXPIRED",
+      localStatePresent: false,
+    });
+    persistSessionState(storage, expired, now);
+    expect(isSessionCleanupRequired(storage)).toBe(true);
+    const succeeded = clippingSessionReducer(pending, {
+      type: "CLEAR_SUCCEEDED",
+      availability,
+    });
+    persistSessionState(storage, succeeded, now);
+    expect(storage.values.size).toBe(0);
+  });
+
   it("round-trips content-free review references without a manifest body", () => {
     const storage = new MemoryStorage();
     const value = projection();
@@ -273,6 +358,92 @@ describe("allow-listed session projection", () => {
 });
 
 describe("restore reconciliation", () => {
+  it.each([
+    ["upload-authorizing", "intake"],
+    ["upload-authorizing", "upload-authorized"],
+    ["uploading", "upload-authorized"],
+  ] as const)(
+    "cleans up %s restored against %s before accepting replacement input",
+    (stage, provenStage) => {
+      const localSource = {
+        sourceId: "local-only",
+        declaredBytes: 100,
+        contentType: "video/mp4" as const,
+        validation: { status: "accepted" as const },
+      };
+      const base = {
+        identity: { ...identity, mode: "upload" as const },
+        localSource,
+        diagnosticCode: null,
+      };
+      const state: ClippingSessionState =
+        stage === "upload-authorizing"
+          ? { ...base, stage }
+          : {
+              ...base,
+              stage,
+              upload: {
+                status: "requesting",
+                uploadId: `upl_${"u".repeat(22)}`,
+                bytesSent: 50,
+                totalBytes: 100,
+              },
+            };
+      const saved = projectSessionState(state, now)!;
+      expect(JSON.stringify(saved)).not.toContain("declaredBytes");
+      const restored = reconcileSessionProjection(
+        saved,
+        evidence({
+          mode: "upload",
+          provenStage,
+          analysisId: null,
+          analysisRevision: null,
+          assemblyId: null,
+          assemblyRevision: null,
+          manifestId: null,
+          manifestHash: null,
+          media: null,
+        }),
+        now,
+        availability,
+      );
+      if (restored.status !== "restored")
+        throw new Error("Expected recoverable interrupted upload.");
+      expect(restored.state).toMatchObject({
+        stage: "clearing",
+        cleanup: { status: "requesting" },
+      });
+      expect(shouldClearSessionProjectionForState(restored.state)).toBe(true);
+      expect(selectAvailableActions(restored.state)).toEqual([]);
+      expect(
+        clippingSessionReducer(restored.state, {
+          type: "FILE_SELECTED",
+          localSource,
+        }).stage,
+      ).toBe("clearing");
+      const partial = clippingSessionReducer(restored.state, {
+        type: "CLEAR_PARTIAL",
+        failure,
+      });
+      expect(selectAvailableActions(partial)).toEqual(["clear"]);
+      const retried = clippingSessionReducer(partial, { type: "CLEAR" });
+      const cleared = clippingSessionReducer(retried, {
+        type: "CLEAR_SUCCEEDED",
+        availability,
+      });
+      expect(cleared).toMatchObject({ stage: "intake", availability });
+      expect(
+        clippingSessionReducer(cleared, {
+          type: "FILE_SELECTED",
+          localSource: { ...localSource, declaredBytes: 200 },
+        }),
+      ).toMatchObject({
+        stage: "local-inspection",
+        localSource: { declaredBytes: 200 },
+        diagnosticCode: null,
+      });
+    },
+  );
   it.each(["analysis", "assembly", "render"] as const)(
     "restores %s failure after an in-flight save without clearing reusable state",
     (kind) => {
@@ -549,16 +720,25 @@ describe("restore reconciliation", () => {
       expect(result.state.review.manifestReference.manifestHash).toBe(
         assembly.manifestHash,
       );
-      expect(selectAvailableActions(result.state)).toContain("review-render");
+      expect(selectAvailableActions(result.state)).toEqual(["clear"]);
       expect(selectBlockers(result.state)).toEqual([]);
 
       const restored = clippingSessionReducer(initialClippingSessionState, {
         type: "RESTORE_VALID",
         state: result.state,
       });
+      const hydrated = clippingSessionReducer(restored, {
+        type: "REVIEW_BUNDLES_REFRESHED",
+        analysis,
+        assembly,
+      });
+      expect(selectAvailableActions(hydrated)).toContain("confirm-render");
       expect(
-        clippingSessionReducer(restored, { type: "RENDER_REVIEW" }).stage,
-      ).toBe("render-confirmation");
+        clippingSessionReducer(hydrated, {
+          type: "RENDER_CONFIRMED",
+          operation: operation("render"),
+        }).stage,
+      ).toBe("rendering");
     }
   });
 
@@ -594,11 +774,60 @@ describe("restore reconciliation", () => {
       });
       expect(selectAvailableActions(restored)).toEqual(["clear"]);
       expect(
-        clippingSessionReducer(restored, { type: "RENDER_REVIEW" })
-          .diagnosticCode,
+        clippingSessionReducer(restored, {
+          type: "RENDER_CONFIRMED",
+          operation: operation("render"),
+        }).diagnosticCode,
       ).toBe("invalid-transition");
     }
   });
+
+  it.each([0, 1])(
+    "restores legacy confirmation to review without rendering (allowance %i)",
+    (renderAttempts) => {
+      const legacy = {
+        ...projection(),
+        stageHint: "render-confirmation" as const,
+      };
+      const result = reconcileSessionProjection(
+        legacy,
+        evidence({
+          remaining: { ...identity.remaining, renderAttempts },
+        }),
+        now,
+        availability,
+      );
+      expect(result).toMatchObject({
+        status: "restored",
+        state: {
+          stage: "clip-review",
+          assembly: null,
+          identity: { remaining: { renderAttempts } },
+        },
+      });
+      if (result.status !== "restored")
+        throw new Error("Expected legacy review restoration.");
+      expect(selectAvailableActions(result.state)).toEqual(["clear"]);
+      const hydrated = clippingSessionReducer(result.state, {
+        type: "REVIEW_BUNDLES_REFRESHED",
+        analysis,
+        assembly,
+      });
+      expect(hydrated.stage).toBe("clip-review");
+      expect(selectAvailableActions(hydrated)).toEqual(
+        renderAttempts > 0 ? ["confirm-render", "clear"] : ["clear"],
+      );
+      expect(projectSessionState(hydrated, now)?.stageHint).toBe("clip-review");
+      expect(
+        reconcileSessionProjection(
+          legacy,
+          evidence({ manifestHash: "3".repeat(64) }),
+          now,
+          availability,
+        ),
+      ).toMatchObject({ status: "server-conflict" });
+    },
+  );
 
   it("discards stale, expired, missing, and conflicting server evidence", () => {
     expect(
@@ -789,9 +1018,9 @@ describe("restore reconciliation", () => {
       completedAssembly.status === "restored" &&
       completedAssembly.state.stage === "clip-review"
     ) {
-      expect(selectAvailableActions(completedAssembly.state)).toContain(
-        "review-render",
-      );
+      expect(selectAvailableActions(completedAssembly.state)).toEqual([
+        "clear",
+      ]);
     }
 
     const renderOperation = operation("render");
@@ -882,7 +1111,7 @@ describe("restore reconciliation", () => {
         now,
         availability,
       ),
-    ).toMatchObject({ status: "restored", state: { stage: "intake" } });
+    ).toMatchObject({ status: "restored", state: { stage: "clearing" } });
   });
 });
 

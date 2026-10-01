@@ -42,7 +42,8 @@ automatically composes it, and renders a real downloadable MP4.
    control surface.
 5. **Download the result** — receive one validated 1080 × 1920 H.264/AAC MP4.
 
-Contextual visuals are chosen from what is actually being discussed. Earth, the Moon, or an equation may appear in one demonstration fixture; they are examples of the system's visual reasoning, not hard-coded assets or a recurring template.
+Contextual visuals come from what is actually being discussed, not a fixed
+example or recurring template.
 
 ## Built around the core edit
 
@@ -83,10 +84,13 @@ The model proposes bounded editorial data. Deterministic application code valida
 
 ## Repository status
 
-CL-001 is implemented and locally verified. CL-002's responsive landing remains
-in owner visual review. CL-003's session/sample foundation was implemented but
-is reopened for alignment with the later locked automatic-flow decision before
-CL-004 begins. Upload, live analysis, automatic assembly/review, rendering, and
+CL-001 and CL-003 are implemented and locally verified. CL-002's colors/type
+are an interim foundation. CL-004 previews the whole single-card journey at
+`/start` in development-only fake mode: intake and simulated progress, three
+prepared 58-second choices, one selection, read-only review and export states.
+It does not read/upload files, edit recorded footage or produce a downloadable
+video. Recorded media and owner approval of the revised UI remain pending.
+Real upload, live analysis, automatic assembly, rendering/download, and
 deployment remain owned by their dependency-ordered tickets. Technical choices
 marked as proposed remain subject to the documented validation gates.
 
@@ -100,11 +104,15 @@ corepack pnpm dev:frontend
 corepack pnpm dev:backend
 ```
 
-The frontend is available at `http://127.0.0.1:3000`. The backend defaults to
+Run the two development commands in separate terminals. Open the workflow at
+`http://localhost:3000/start` (matching the committed origin policy).
+The backend defaults to
 `http://127.0.0.1:4000`; `GET /v1/health` is content-free and cannot select a
 provider or paid operation. Committed configuration is documented in
 `.env.example` and defaults to fake, paid-disabled behavior with credentials
-blank.
+blank. An ignored root `.env.local` is loaded only by explicit backend startup;
+`FAKE_MODE=true` selects the development preview. False does not enable the
+unimplemented real pipeline or bypass readiness/paid gates.
 
 Run the deterministic quality baseline from the repository root:
 

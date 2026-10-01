@@ -1,17 +1,21 @@
 "use client";
 
 import { useId, useRef } from "react";
+import { X } from "lucide-react";
+import { Button } from "../shared/ui/button";
 
 import styles from "./page.module.css";
 
 type PrivacyDialogProperties = {
   triggerClassName?: string | undefined;
   triggerLabel?: string;
+  triggerVariant?: "secondary";
 };
 
 export function PrivacyDialog({
   triggerClassName,
   triggerLabel = "Privacy & limits",
+  triggerVariant,
 }: PrivacyDialogProperties) {
   const dialogReference = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -27,14 +31,25 @@ export function PrivacyDialog({
 
   return (
     <>
-      <button
-        className={triggerClassName}
-        type="button"
-        aria-haspopup="dialog"
-        onClick={openDialog}
-      >
-        {triggerLabel}
-      </button>
+      {triggerVariant === "secondary" ? (
+        <Button
+          variant="secondary"
+          className={triggerClassName}
+          aria-haspopup="dialog"
+          onClick={openDialog}
+        >
+          {triggerLabel}
+        </Button>
+      ) : (
+        <button
+          className={triggerClassName}
+          type="button"
+          aria-haspopup="dialog"
+          onClick={openDialog}
+        >
+          {triggerLabel}
+        </button>
+      )}
 
       <dialog
         className={styles.privacyDialog}
@@ -60,7 +75,7 @@ export function PrivacyDialog({
                 aria-label="Close privacy and limits"
                 onClick={closeDialog}
               >
-                <span aria-hidden="true">×</span>
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
@@ -76,7 +91,7 @@ export function PrivacyDialog({
               <h3>Owned media only</h3>
               <p>
                 Use only a recording you own or have permission to edit. The
-                sample experience stays synthetic.
+                development preview never reads or uploads selected files.
               </p>
             </section>
             <section>
@@ -97,10 +112,6 @@ export function PrivacyDialog({
               </p>
             </section>
           </div>
-
-          <p className={styles.dialogNote}>
-            This visual prototype does not upload or process media.
-          </p>
         </div>
       </dialog>
     </>

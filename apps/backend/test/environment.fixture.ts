@@ -1,5 +1,6 @@
 const safeTestEnvironment = {
   NODE_ENV: "test",
+  FAKE_MODE: "true",
   APP_ENV: "local",
   PROVIDER_MODE: "fake",
   PAID_DEMO_ENABLED: "false",

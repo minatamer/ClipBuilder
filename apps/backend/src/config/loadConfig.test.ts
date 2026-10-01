@@ -32,6 +32,7 @@ const liveAnalysisEnvironment = (): NodeJS.ProcessEnv => ({
   NODE_ENV: "development",
   APP_ENV: "preview",
   PROVIDER_MODE: "live",
+  FAKE_MODE: "false",
   PAID_DEMO_ENABLED: "true",
   LIVE_UPLOAD_ENABLED: "false",
   LIVE_ANALYSIS_ENABLED: "true",
@@ -52,6 +53,20 @@ const liveAnalysisEnvironment = (): NodeJS.ProcessEnv => ({
 });
 
 describe("loadConfig", () => {
+  it("uses one authoritative boolean without real-mode fallback or paid admission", () => {
+    expect(loadConfig({}).providerMode).toBe("fake");
+    const real = loadConfig({ FAKE_MODE: "false" });
+    expect(real.providerMode).toBe("live");
+    expect(real.paidDemoEnabled).toBe(false);
+    expect(real.features.liveUpload).toBe(false);
+    expect(() =>
+      loadConfig({ FAKE_MODE: "false", PROVIDER_MODE: "fake" }),
+    ).toThrow();
+    expect(() => loadConfig({ FAKE_MODE: "maybe" })).toThrow();
+    expect(() =>
+      loadConfig({ FAKE_MODE: "false", LIVE_UPLOAD_ENABLED: "true" }),
+    ).toThrow();
+  });
   it("composes only fake, paid-disabled defaults in tests", () => {
     const config = loadConfig(createSafeTestEnvironment());
 

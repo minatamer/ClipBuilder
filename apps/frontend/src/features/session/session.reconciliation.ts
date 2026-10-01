@@ -43,7 +43,7 @@ const REQUIRED_SERVER_STAGE: Record<
 > = {
   intake: "intake",
   "local-inspection": "intake",
-  "upload-authorizing": "upload-authorized",
+  "upload-authorizing": "intake",
   uploading: "upload-authorized",
   "media-inspecting": "uploaded",
   "analysis-confirmation": "media-inspected",
@@ -193,6 +193,19 @@ function projectionToState(
   const review = restoredReview(projection, evidence);
 
   switch (stageHint) {
+    case "intake":
+    case "local-inspection":
+    case "upload-authorizing":
+    case "uploading":
+      // Runtime source metadata cannot be restored; release its authorization first.
+      return identity.mode === "upload"
+        ? {
+            stage: "clearing",
+            previousStage: stageHint,
+            cleanup: { status: "requesting" },
+            diagnosticCode: null,
+          }
+        : { stage: "intake", availability, diagnosticCode: null };
     case "media-inspecting": {
       const operation = serverOperation(evidence, "media-inspection");
       return operation === null
@@ -293,10 +306,7 @@ function projectionToState(
       return analysis === null || review === null
         ? null
         : {
-            stage:
-              stageHint === "render-confirmation"
-                ? "render-confirmation"
-                : "clip-review",
+            stage: "clip-review",
             identity,
             analysis,
             assembly: null,

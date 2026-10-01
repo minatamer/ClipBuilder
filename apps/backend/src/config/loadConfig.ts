@@ -19,5 +19,12 @@ export function loadConfig(environment: NodeJS.ProcessEnv): BackendConfig {
     }),
   );
 
-  return environmentSchema.parse(selected);
+  const config = environmentSchema.parse(selected);
+  if (
+    environment.PROVIDER_MODE !== undefined &&
+    environment.PROVIDER_MODE !== config.providerMode
+  ) {
+    throw new Error("Legacy provider mode conflicts with FAKE_MODE.");
+  }
+  return config;
 }

@@ -226,12 +226,10 @@ describe("CL-003 independent validation regressions", () => {
             }
           : kind === "assembly"
             ? { ...assemblingState(), operation: queued }
-            : clippingSessionReducer(
-                clippingSessionReducer(reviewState(), {
-                  type: "RENDER_REVIEW",
-                }),
-                { type: "RENDER_CONFIRMED", operation: queued },
-              );
+            : clippingSessionReducer(reviewState(), {
+                type: "RENDER_CONFIRMED",
+                operation: queued,
+              });
       const succeeded = operationStatusSchema.parse({
         ...queued,
         state: "succeeded",
@@ -311,12 +309,10 @@ describe("CL-003 independent validation regressions", () => {
             }
           : kind === "assembly"
             ? assemblingState()
-            : clippingSessionReducer(
-                clippingSessionReducer(reviewState(), {
-                  type: "RENDER_REVIEW",
-                }),
-                { type: "RENDER_CONFIRMED", operation: queued },
-              );
+            : clippingSessionReducer(reviewState(), {
+                type: "RENDER_CONFIRMED",
+                operation: queued,
+              });
       const succeeded =
         kind === "analysis"
           ? clippingSessionReducer(state, {
@@ -546,8 +542,10 @@ describe("CL-003 independent validation regressions", () => {
     const restored = restore(failed, "clip-review", 0);
     expect(selectAvailableActions(restored)).toEqual(["clear"]);
     expect(
-      clippingSessionReducer(restored, { type: "RENDER_REVIEW" })
-        .diagnosticCode,
+      clippingSessionReducer(restored, {
+        type: "RENDER_CONFIRMED",
+        operation: operation("render"),
+      }).diagnosticCode,
     ).toBe("invalid-transition");
   });
 
@@ -660,23 +658,11 @@ describe("CL-003 independent validation regressions", () => {
     ).toMatchObject({ stage: "candidates", selectedId: null });
   });
 
-  it("keeps exhausted review and confirmation actions blocked after refresh", () => {
+  it("keeps direct confirmation blocked after refresh with exhausted allowance", () => {
     const review = restore(reviewState(), "clip-review", 0);
     expect(selectAvailableActions(review)).toEqual(["clear"]);
     expect(
-      clippingSessionReducer(review, { type: "RENDER_REVIEW" }).diagnosticCode,
-    ).toBe("invalid-transition");
-    const confirmation = restore(
-      clippingSessionReducer(reviewState(), { type: "RENDER_REVIEW" }),
-      "clip-review",
-      0,
-    );
-    expect(selectAvailableActions(confirmation)).toEqual([
-      "back-to-review",
-      "clear",
-    ]);
-    expect(
-      clippingSessionReducer(confirmation, {
+      clippingSessionReducer(review, {
         type: "RENDER_CONFIRMED",
         operation: operation("render"),
       }).diagnosticCode,

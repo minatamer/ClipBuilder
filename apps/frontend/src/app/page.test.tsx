@@ -3,8 +3,26 @@ import { describe, expect, it } from "vitest";
 
 import HomePage from "./page";
 import robots from "./robots";
+import { PrivacyDialog } from "./privacy-dialog";
 
 describe("visual approval prototype", () => {
+  it.each([undefined, "secondary"] as const)(
+    "preserves one named privacy-dialog trigger with variant %s",
+    (triggerVariant) => {
+      const markup = renderToStaticMarkup(
+        <PrivacyDialog {...(triggerVariant ? { triggerVariant } : {})} />,
+      );
+      expect(markup.match(/aria-haspopup="dialog"/g)).toHaveLength(1);
+      expect(markup).toMatch(
+        /type="button"[^>]*>Privacy &amp; limits<\/button>/,
+      );
+      expect(markup.match(/<dialog\b/g)).toHaveLength(1);
+      expect(markup).toContain("Close privacy and limits");
+      expect(markup).not.toContain("The local development preview simulates");
+      expect(markup).toContain("development preview never reads or uploads");
+      expect(markup).toContain("Maximum: 20 minutes and 500 MiB");
+    },
+  );
   it("renders the revised rotating two-line promise without the removed prototype labels", () => {
     const markup = renderToStaticMarkup(<HomePage />);
 
@@ -53,7 +71,10 @@ describe("visual approval prototype", () => {
   it("keeps the animated flow semantic and fully present in server markup", () => {
     const markup = renderToStaticMarkup(<HomePage />);
 
-    expect(markup).toContain("Your words become a finished vertical cut.");
+    expect(markup).toContain("Turn long-form video into a clip worth sharing.");
+    expect(markup).toContain(
+      "AI finds the standout moments in interviews, podcasts, speeches, and more. You choose one. We finish it with captions and visuals.",
+    );
     expect(markup.match(/data-process-step="true"/g)).toHaveLength(3);
     expect(markup.match(/aria-current="step"/g)).toHaveLength(1);
     expect(markup).toContain("Upload a conversation with potential");

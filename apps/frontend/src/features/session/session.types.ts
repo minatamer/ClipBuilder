@@ -157,13 +157,6 @@ type SessionStage =
       review: ClipReviewSession;
     }
   | {
-      stage: "render-confirmation";
-      identity: SessionIdentity;
-      analysis: AnalysisSnapshot;
-      assembly: AssemblyBundleV1 | null;
-      review: ClipReviewSession;
-    }
-  | {
       stage: "rendering";
       identity: SessionIdentity;
       operation: OperationStatusV1;
@@ -221,6 +214,11 @@ export type ClippingSessionEvent =
   | { type: "RESTORE_FATAL"; failure: SafeError }
   | { type: "RETRY_RESTORE" }
   | {
+      type: "REVIEW_BUNDLES_REFRESHED";
+      analysis: AnalysisBundleV1;
+      assembly: AssemblyBundleV1;
+    }
+  | {
       type: "SAMPLE_SELECTED";
       identity: SessionIdentity;
       analysis: AnalysisBundleV1;
@@ -255,6 +253,7 @@ export type ClippingSessionEvent =
   | { type: "RETRY_ANALYSIS"; operation: OperationStatusV1 }
   | { type: "CANCEL_REQUESTED" }
   | { type: "CANDIDATE_SELECTED"; candidateId: string }
+  | { type: "CANDIDATE_PREVIEW_CLOSED" }
   | {
       type: "BUILD_SELECTED";
       operation: OperationStatusV1;
@@ -273,8 +272,6 @@ export type ClippingSessionEvent =
   | { type: "PLAYBACK_UPDATED"; currentTimeMs: number }
   | { type: "PLAYBACK_FAILED"; failure: SafeError }
   | { type: "PLAYBACK_CANCEL_REQUESTED" }
-  | { type: "RENDER_REVIEW" }
-  | { type: "BACK_TO_REVIEW" }
   | { type: "RENDER_CONFIRMED"; operation: OperationStatusV1 }
   | {
       type: "RENDER_SUCCEEDED";

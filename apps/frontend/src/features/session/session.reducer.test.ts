@@ -70,10 +70,7 @@ describe("canonical clipping-session reducer", () => {
       state.stage === "clip-review" && state.review.playback.currentTimeMs,
     ).toBe(2_000);
 
-    state = clippingSessionReducer(state, { type: "RENDER_REVIEW" });
-    state = clippingSessionReducer(state, { type: "BACK_TO_REVIEW" });
-    expect(state.stage).toBe("clip-review");
-    state = clippingSessionReducer(state, { type: "RENDER_REVIEW" });
+    expect(selectAvailableActions(state)).toEqual(["confirm-render", "clear"]);
     state = clippingSessionReducer(state, {
       type: "RENDER_CONFIRMED",
       operation: operation("render", "render.queued", "r"),
@@ -240,10 +237,7 @@ describe("canonical clipping-session reducer", () => {
     );
     expect(uploading.diagnosticCode).toBe("non-monotonic-progress");
 
-    let rendering = clippingSessionReducer(reviewState(), {
-      type: "RENDER_REVIEW",
-    });
-    rendering = clippingSessionReducer(rendering, {
+    const rendering = clippingSessionReducer(reviewState(), {
       type: "RENDER_CONFIRMED",
       operation: operation("render", "render.queued", "r"),
     });
@@ -438,9 +432,6 @@ describe("canonical clipping-session reducer", () => {
     );
 
     let rendering = clippingSessionReducer(reviewState(), {
-      type: "RENDER_REVIEW",
-    });
-    rendering = clippingSessionReducer(rendering, {
       type: "RENDER_CONFIRMED",
       operation: operation("render"),
     });
@@ -457,7 +448,7 @@ describe("canonical clipping-session reducer", () => {
   it("derives read-only labels, actions, blockers, progress, and clearability", () => {
     const state = { ...reviewState(), assembly: null };
     expect(selectStageTitle(state)).toBe("Review the automatic clip");
-    expect(selectAvailableActions(state)).toEqual(["review-render", "clear"]);
+    expect(selectAvailableActions(state)).toEqual(["clear"]);
     expect(selectBlockers(state)).toEqual([]);
     expect(selectProgress(state)).toBe(75);
     expect(selectIsClearable(state)).toBe(true);
@@ -475,5 +466,51 @@ describe("canonical clipping-session reducer", () => {
     expect(
       clippingSessionReducer(offline, { type: "RETRY_RESTORE" }).stage,
     ).toBe("bootstrapping");
+  });
+
+  it("confirms directly once and rejects missing bundles, wrong jobs and exhausted allowance", () => {
+    const review = reviewState();
+    const confirmation = {
+      type: "RENDER_CONFIRMED",
+      operation: operation("render"),
+    } as const;
+    const rendering = clippingSessionReducer(review, confirmation);
+    expect(rendering).toMatchObject({
+      stage: "rendering",
+      identity: { remaining: { renderAttempts: 0 } },
+      lastKnown: { review: review.review, assembly: review.assembly },
+      diagnosticCode: null,
+    });
+    expect(clippingSessionReducer(rendering, confirmation)).toMatchObject({
+      stage: "rendering",
+      identity: { remaining: { renderAttempts: 0 } },
+      diagnosticCode: "invalid-transition",
+    });
+    for (const blocked of [
+      { ...review, assembly: null },
+      { ...review, analysis: { ...review.analysis, bundle: null } },
+      {
+        ...review,
+        identity: {
+          ...identity,
+          remaining: { ...identity.remaining, renderAttempts: 0 },
+        },
+      },
+    ]) {
+      expect(selectAvailableActions(blocked)).toEqual(["clear"]);
+      expect(clippingSessionReducer(blocked, confirmation)).toMatchObject({
+        stage: "clip-review",
+        diagnosticCode: "invalid-transition",
+      });
+    }
+    expect(
+      clippingSessionReducer(review, {
+        type: "RENDER_CONFIRMED",
+        operation: operation("assembly"),
+      }),
+    ).toMatchObject({
+      stage: "clip-review",
+      diagnosticCode: "invalid-transition",
+    });
   });
 });

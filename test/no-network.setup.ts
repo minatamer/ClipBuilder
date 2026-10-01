@@ -5,6 +5,7 @@ const originalConnect = net.Socket.prototype.connect;
 const originalFetch = globalThis.fetch;
 const deterministicEnvironment = {
   NODE_ENV: "test",
+  FAKE_MODE: "true",
   PROVIDER_MODE: "fake",
   PAID_DEMO_ENABLED: "false",
   LIVE_UPLOAD_ENABLED: "false",

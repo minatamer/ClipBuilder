@@ -174,6 +174,39 @@ export function clippingSessionReducer(
     });
   }
 
+  if (event.type === "REVIEW_BUNDLES_REFRESHED") {
+    if (state.stage !== "clip-review" && state.stage !== "render-failed")
+      return reject(state);
+    const analysis = analysisBundleSchema.safeParse(event.analysis);
+    const assembly = assemblyBundleSchema.safeParse(event.assembly);
+    if (!analysis.success || !assembly.success)
+      return reject(state, "invalid-manifest");
+    const candidate = analysis.data.candidates.find(
+      (item) => item.id === state.review.selectedCandidateId,
+    );
+    if (
+      analysis.data.analysisId !== state.analysis.analysisId ||
+      analysis.data.revision !== state.analysis.revision ||
+      assembly.data.assemblyId !== state.review.assemblyReference.assemblyId ||
+      assembly.data.revision !== state.review.assemblyReference.revision ||
+      assembly.data.manifestId !== state.review.manifestReference.manifestId ||
+      assembly.data.manifestHash !==
+        state.review.manifestReference.manifestHash ||
+      assembly.data.analysisRevision !== analysis.data.revision ||
+      assembly.data.compositionManifest.baseCandidateId !== candidate?.id ||
+      assembly.data.selectedStartWordId !== candidate?.startWordId ||
+      assembly.data.selectedEndWordId !== candidate?.endWordId ||
+      assembly.data.selectedStartWordId !== state.review.selectedStartWordId ||
+      assembly.data.selectedEndWordId !== state.review.selectedEndWordId
+    )
+      return reject(state, "invalid-manifest");
+    return accept({
+      ...state,
+      analysis: { ...state.analysis, bundle: analysis.data },
+      assembly: assembly.data,
+    });
+  }
+
   switch (state.stage) {
     case "bootstrapping":
       if (event.type === "RESTORE_EMPTY") {
@@ -455,6 +488,8 @@ export function clippingSessionReducer(
       return reject(state);
 
     case "candidates":
+      if (event.type === "CANDIDATE_PREVIEW_CLOSED")
+        return accept({ ...state, selectedId: null });
       if (event.type === "CANDIDATE_SELECTED") {
         if (
           state.analysis.bundle === null ||
@@ -653,18 +688,6 @@ export function clippingSessionReducer(
             },
           },
         });
-      }
-      if (
-        event.type === "RENDER_REVIEW" &&
-        selectAvailableActions(state).includes("review-render")
-      ) {
-        return accept({ ...state, stage: "render-confirmation" });
-      }
-      return reject(state);
-
-    case "render-confirmation":
-      if (event.type === "BACK_TO_REVIEW") {
-        return accept({ ...state, stage: "clip-review" });
       }
       if (
         event.type === "RENDER_CONFIRMED" &&

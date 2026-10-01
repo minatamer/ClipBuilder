@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import styles from "./page.module.css";
 import {
@@ -53,6 +53,173 @@ function BoomMicrophone() {
         <path d="M57.5 58v5M53.5 63h8" />
       </g>
     </svg>
+  );
+}
+
+function SpeakerArm({
+  side,
+  paintId,
+}: {
+  side: "left" | "right";
+  paintId: string;
+}) {
+  return (
+    <span
+      className={`${styles.speakerArm} ${side === "left" ? styles.speakerArmLeft : styles.speakerArmRight}`}
+      data-speaker-arm
+    >
+      <svg
+        className={styles.speakerUpperArm}
+        viewBox="0 0 24 70"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        focusable="false"
+        data-speaker-upper-arm
+      >
+        <path
+          fill={`url(#${paintId}-skin)`}
+          d="M4 27 21 28 19 61Q18 69 12 69T5 61Z"
+        />
+        <path
+          fill={`url(#${paintId}-shirt)`}
+          d="M12 1C5 1 1 7 1 16L2 36Q12 41 23 36L23 16C23 7 19 1 12 1Z"
+        />
+        <path className={styles.speakerSeam} d="M3 35Q12 39 22 35M5 10 4 27" />
+      </svg>
+      <span className={styles.speakerForearm} data-speaker-forearm>
+        <svg
+          viewBox="0 0 24 70"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            fill={`url(#${paintId}-skin)`}
+            d="M12 1C5 1 1 5 2 14L5 38 8 69H18L21 38 23 14C24 5 19 1 12 1Z"
+          />
+          <path className={styles.speakerSkinDetail} d="M5 15 9 47" />
+        </svg>
+        <svg
+          className={styles.speakerHand}
+          viewBox="0 0 32 38"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          focusable="false"
+          data-speaker-hand
+        >
+          <path
+            fill={`url(#${paintId}-skin)`}
+            d="M9 1H22L23 11 28 19Q29 23 26 23L22 19 23 29Q23 36 17 37C11 37 8 33 8 28L7 15Z"
+          />
+          <path
+            className={styles.speakerSkinDetail}
+            d="M13 25V32M17 26V33M21 25V31"
+          />
+        </svg>
+      </span>
+    </span>
+  );
+}
+
+function PodcastSpeaker({ turn }: { turn: "question" | "answer" }) {
+  const paintId = useId();
+  const isQuestion = turn === "question";
+
+  return (
+    <div
+      className={
+        isQuestion ? styles.conversationSpeakerA : styles.conversationSpeakerB
+      }
+      data-conversation-speaker
+    >
+      <svg
+        className={styles.speakerBody}
+        viewBox="0 0 100 170"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <defs>
+          <linearGradient id={`${paintId}-shirt`} x1="0" y1="0" x2="0.8" y2="1">
+            <stop stopColor="var(--speaker-shirt-light)" />
+            <stop offset="1" stopColor="var(--speaker-shirt-shadow)" />
+          </linearGradient>
+          <linearGradient id={`${paintId}-skin`} x1="0" y1="0" x2="1" y2="0.6">
+            <stop stopColor="var(--speaker-skin-light)" />
+            <stop offset="1" stopColor="var(--speaker-skin-shadow)" />
+          </linearGradient>
+        </defs>
+        <path className={styles.speakerUndershirt} d="M38 57H62L72 170H28Z" />
+        <path fill={`url(#${paintId}-skin)`} d="M44 39H57L58 57Q50 67 42 57Z" />
+        <path
+          className={styles.speakerNeckShade}
+          d="M44 42 57 44V49Q49 52 44 47Z"
+        />
+        <path
+          fill={`url(#${paintId}-shirt)`}
+          d="M43 54C34 57 24 58 18 66L23 103C25 125 22 148 20 170H80C77 149 75 125 77 103L82 66C76 58 66 57 57 54L54 66H47Z"
+        />
+        <path
+          className={styles.speakerFabricShade}
+          d="M23 84 33 100 29 144 25 170H20Q26 124 23 103ZM77 84 67 105 72 170H80Q74 124 77 103Z"
+        />
+        <path
+          className={styles.speakerSeam}
+          d="M49 75 48 169M31 108 34 127M69 105 65 125M29 158Q36 161 43 160"
+        />
+        <path
+          className={styles.speakerPocket}
+          d="M58 82H69L68 94Q64 98 59 94Z"
+        />
+        <g transform={isQuestion ? undefined : "translate(100 0) scale(-1 1)"}>
+          <path
+            fill={`url(#${paintId}-skin)`}
+            d="M38 25C33 24 33 34 39 35L41 40Q45 48 53 47C61 46 65 38 65 27V21H39Z"
+          />
+          <path
+            className={styles.speakerHair}
+            d={
+              isQuestion
+                ? "M37 31C31 19 36 9 46 8C54 5 66 11 67 21L63 27 61 18C55 22 49 23 40 20L40 31Z"
+                : "M37 32C31 21 35 10 46 8C54 6 65 11 67 22L63 29 62 20C53 24 47 18 41 22L40 33Z"
+            }
+          />
+          <path className={styles.speakerHairLight} d="M39 16Q49 10 58 15" />
+          <path
+            className={styles.speakerFeatures}
+            d="M47 29h3M58 28h3M55 30 54 35h3M50 40q5 2 9-1"
+          />
+          <path className={styles.speakerSkinDetail} d="M37 29 39 32" />
+          {!isQuestion && (
+            <path
+              className={styles.speakerBeard}
+              d="M42 36 46 40Q54 44 62 37L60 43Q53 50 47 45Z"
+            />
+          )}
+        </g>
+      </svg>
+      <SpeakerArm side="left" paintId={paintId} />
+      <SpeakerArm side="right" paintId={paintId} />
+      <svg
+        className={styles.speakerShoulderMold}
+        viewBox="0 0 100 170"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        focusable="false"
+        data-speaker-shoulder-mold="true"
+      >
+        <path
+          fill={`url(#${paintId}-shirt)`}
+          d="M43 54C34 57 24 58 18 66L21 74Q28 66 35 66L43 60ZM57 54C66 57 76 58 82 66L79 74Q72 66 65 66L57 60Z"
+        />
+        <path
+          className={styles.speakerCollar}
+          d="M43 54 35 58 43 73 50 65ZM57 54 65 58 57 73 50 65Z"
+        />
+        <path className={styles.speakerSeam} d="m35 58 8 15 7-8 7 8 8-15" />
+      </svg>
+      <BoomMicrophone />
+    </div>
   );
 }
 
@@ -138,9 +305,12 @@ export function ProcessNarrative() {
     >
       <div className={styles.processIntro}>
         <p className={styles.eyebrowLight}>How it works</p>
-        <h2 id="process-title">Your words become a finished vertical cut.</h2>
+        <h2 id="process-title">
+          Turn long-form video into a clip worth sharing.
+        </h2>
         <p>
-          Follow one conversation through a visible, grounded transformation.
+          AI finds the standout moments in interviews, podcasts, speeches, and
+          more. You choose one. We finish it with captions and visuals.
         </p>
       </div>
 
@@ -218,92 +388,8 @@ export function ProcessNarrative() {
                     <strong>= 3.14159…</strong>
                   </div>
                   <div className={styles.conversationSpeakers}>
-                    <div
-                      className={styles.conversationSpeakerA}
-                      data-conversation-speaker
-                    >
-                      <span className={styles.speakerHead} />
-                      <strong className={styles.speakerBody} />
-                      <span
-                        className={`${styles.speakerArm} ${styles.speakerArmLeft}`}
-                        data-speaker-arm
-                      >
-                        <i
-                          className={styles.speakerUpperArm}
-                          data-speaker-upper-arm
-                        />
-                        <i
-                          className={styles.speakerForearm}
-                          data-speaker-forearm
-                        >
-                          <b className={styles.speakerHand} data-speaker-hand />
-                        </i>
-                      </span>
-                      <span
-                        className={`${styles.speakerArm} ${styles.speakerArmRight}`}
-                        data-speaker-arm
-                      >
-                        <i
-                          className={styles.speakerUpperArm}
-                          data-speaker-upper-arm
-                        />
-                        <i
-                          className={styles.speakerForearm}
-                          data-speaker-forearm
-                        >
-                          <b className={styles.speakerHand} data-speaker-hand />
-                        </i>
-                      </span>
-                      <span
-                        className={styles.speakerShoulderMold}
-                        data-speaker-shoulder-mold="true"
-                        aria-hidden="true"
-                      />
-                      <BoomMicrophone />
-                    </div>
-                    <div
-                      className={styles.conversationSpeakerB}
-                      data-conversation-speaker
-                    >
-                      <span className={styles.speakerHead} />
-                      <strong className={styles.speakerBody} />
-                      <span
-                        className={`${styles.speakerArm} ${styles.speakerArmLeft}`}
-                        data-speaker-arm
-                      >
-                        <i
-                          className={styles.speakerUpperArm}
-                          data-speaker-upper-arm
-                        />
-                        <i
-                          className={styles.speakerForearm}
-                          data-speaker-forearm
-                        >
-                          <b className={styles.speakerHand} data-speaker-hand />
-                        </i>
-                      </span>
-                      <span
-                        className={`${styles.speakerArm} ${styles.speakerArmRight}`}
-                        data-speaker-arm
-                      >
-                        <i
-                          className={styles.speakerUpperArm}
-                          data-speaker-upper-arm
-                        />
-                        <i
-                          className={styles.speakerForearm}
-                          data-speaker-forearm
-                        >
-                          <b className={styles.speakerHand} data-speaker-hand />
-                        </i>
-                      </span>
-                      <span
-                        className={styles.speakerShoulderMold}
-                        data-speaker-shoulder-mold="true"
-                        aria-hidden="true"
-                      />
-                      <BoomMicrophone />
-                    </div>
+                    <PodcastSpeaker turn="question" />
+                    <PodcastSpeaker turn="answer" />
                   </div>
                   <div className={styles.videoCaptions}>
                     <span className={styles.videoCaptionA}>

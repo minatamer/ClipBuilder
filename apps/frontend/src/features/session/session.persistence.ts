@@ -16,6 +16,7 @@ import { z } from "zod";
 import type { ClipReviewSession, ClippingSessionState } from "./session.types";
 
 export const SESSION_PROJECTION_KEY = "clipbuilder.session.v1";
+export const SESSION_CLEANUP_KEY = "clipbuilder.cleanup.v1";
 export const SESSION_PROJECTION_VERSION = 1 as const;
 export const MAX_SESSION_PROJECTION_BYTES = 256 * 1024;
 export const MAX_PROJECTION_AGE_MS = 30 * 60 * 1_000;
@@ -34,6 +35,7 @@ const STAGES = [
   "assembling",
   "assembly-failed",
   "clip-review",
+  // Compatibility with saved sessions from the former separate confirmation.
   "render-confirmation",
   "rendering",
   "render-failed",
@@ -394,6 +396,32 @@ export function writeSessionProjection(
 
 export function clearSessionProjection(storage: SessionStoragePort): void {
   storage.removeItem(SESSION_PROJECTION_KEY);
+}
+
+export function isSessionCleanupRequired(storage: SessionStoragePort): boolean {
+  // Unknown marker values also fail closed until cleanup is confirmed.
+  return storage.getItem(SESSION_CLEANUP_KEY) !== null;
+}
+
+export function persistSessionState(
+  storage: SessionStoragePort,
+  state: ClippingSessionState,
+  now: Date,
+): void {
+  if (state.stage === "clearing" || state.stage === "cleanup-partial") {
+    storage.setItem(SESSION_CLEANUP_KEY, "required");
+    clearSessionProjection(storage);
+    return;
+  }
+  if (state.stage === "intake") storage.removeItem(SESSION_CLEANUP_KEY);
+  if (shouldClearSessionProjectionForState(state)) {
+    clearSessionProjection(storage);
+    return;
+  }
+  if (state.stage === "fatal") return;
+  const projection = projectSessionState(state, now);
+  if (projection === null) clearSessionProjection(storage);
+  else writeSessionProjection(storage, projection);
 }
 
 export function shouldClearSessionProjectionForState(

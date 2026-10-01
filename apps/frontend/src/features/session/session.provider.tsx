@@ -6,6 +6,7 @@ import {
   type ReactNode,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useReducer,
   useState,
@@ -14,11 +15,11 @@ import {
 import { SessionEffectRegistry } from "./session.effects";
 import {
   clearSessionProjection,
-  projectSessionState,
+  isSessionCleanupRequired,
+  persistSessionState,
   readSessionProjection,
   shouldClearSessionProjectionForState,
   type SessionStoragePort,
-  writeSessionProjection,
 } from "./session.persistence";
 import {
   reconcileSessionProjection,
@@ -79,6 +80,18 @@ export function ClippingSessionProvider({
     }
 
     const controller = new AbortController();
+    if (isSessionCleanupRequired(activeStorage)) {
+      dispatch({
+        type: "RESTORE_VALID",
+        state: {
+          stage: "clearing",
+          previousStage: "cleanup-partial",
+          cleanup: { status: "requesting" },
+          diagnosticCode: null,
+        },
+      });
+      return () => controller.abort();
+    }
     const read = readSessionProjection(activeStorage, now());
     if (read.status === "empty") {
       dispatch({ type: "RESTORE_EMPTY", availability });
@@ -130,21 +143,12 @@ export function ClippingSessionProvider({
     return () => controller.abort();
   }, [availability, effects, loadServerEvidence, now, state.stage, storage]);
 
-  useEffect(() => {
+  // Save cleanup intent before child passive effects can start the clear request.
+  useLayoutEffect(() => {
     const activeStorage = storage ?? browserSessionStorage();
     if (activeStorage === null || state.stage === "bootstrapping") return;
-    if (shouldClearSessionProjectionForState(state)) {
-      clearSessionProjection(activeStorage);
-      effects.clear();
-      return;
-    }
-    if (state.stage === "fatal") return;
-    const projection = projectSessionState(state, now());
-    if (projection === null) {
-      clearSessionProjection(activeStorage);
-    } else {
-      writeSessionProjection(activeStorage, projection);
-    }
+    persistSessionState(activeStorage, state, now());
+    if (shouldClearSessionProjectionForState(state)) effects.clear();
   }, [effects, now, state, storage]);
 
   useEffect(

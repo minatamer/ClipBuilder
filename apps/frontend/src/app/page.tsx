@@ -52,12 +52,9 @@ export default function HomePage() {
             <PrivacyDialog triggerClassName={styles.navButton} />
           </nav>
 
-          <SmoothScrollLink
-            className={styles.headerAction}
-            href="#how-it-works"
-          >
+          <a className={styles.headerAction} href="/start">
             Get Started
-          </SmoothScrollLink>
+          </a>
         </div>
       </header>
 

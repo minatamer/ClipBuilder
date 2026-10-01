@@ -1,4 +1,17 @@
 import { composeBackend } from "./composition.js";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+// Only the executable entry point loads owner-managed local configuration.
+const localEnvironment = fileURLToPath(
+  new URL("../../../.env.local", import.meta.url),
+);
+if (
+  process.env.NODE_ENV !== "test" &&
+  (process.env.APP_ENV === undefined || process.env.APP_ENV === "local") &&
+  existsSync(localEnvironment)
+)
+  process.loadEnvFile(localEnvironment);
 
 const { application, config } = composeBackend(process.env);
 

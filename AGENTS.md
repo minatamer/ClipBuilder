@@ -32,7 +32,8 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   generated assets, output videos, signed capabilities, account identifiers, and
   credentials out of Git, fixtures, logs, errors, URLs, screenshots, and
   documentation.
-- Committed/default/test composition is `PROVIDER_MODE=fake`,
+- Committed/default/test composition is `FAKE_MODE=true` (derived provider mode
+  is `fake`; a legacy `PROVIDER_MODE=fake` assertion cannot override it),
   `PAID_DEMO_ENABLED=false`, and every `LIVE_*` flag false. Ordinary tests and
   CI must be unable to contact providers or consume credits.
 - Never read an ignored `.env.local` or secret file to answer a configuration
@@ -85,7 +86,7 @@ application code.
 
 ## Deterministic verification
 
-- Tests set `NODE_ENV=test`, `PROVIDER_MODE=fake`, `PAID_DEMO_ENABLED=false`,
+- Tests set `NODE_ENV=test`, `FAKE_MODE=true`, `PROVIDER_MODE=fake`, `PAID_DEMO_ENABLED=false`,
   and every live flag false before application modules load.
 - The shared Vitest setup installs those values and network interception at
   module top level. A `beforeAll` hook is too late because Vitest imports test

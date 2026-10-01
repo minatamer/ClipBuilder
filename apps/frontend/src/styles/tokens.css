@@ -1,0 +1,123 @@
+:root {
+  --cb-canvas: #f6f7fb;
+  --cb-surface: #ffffff;
+  --cb-surface-muted: #edf0f6;
+  --cb-ink: #0b1020;
+  --cb-ink-soft: #596174;
+  --cb-navy: #07142f;
+  --cb-navy-raised: #0b2459;
+  --cb-blue-light: #78afff;
+  --cb-border: #dce1ea;
+  --cb-brand: #3157d5;
+  --cb-brand-strong: #2144b9;
+  --cb-brand-soft: #e7ecff;
+  --cb-success: #146953;
+  --cb-success-soft: #e8f4ee;
+  --cb-danger: #a52c35;
+  --cb-focus: #006bff;
+  --cb-scrollbar-size: 0.25rem;
+  --cb-scrollbar-thumb: #a9b3c5;
+  --cb-scrollbar-thumb-hover: #7f8da6;
+  --cb-glass-surface: rgb(7 22 52 / 50%);
+  --cb-glass-border: rgb(206 226 255 / 32%);
+  --cb-glass-backdrop: blur(18px) saturate(175%) contrast(108%);
+  --cb-glass-edge-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 28%), inset 0 -1px 0 rgb(76 129 224 / 16%);
+  --cb-glass-sheen: linear-gradient(
+    112deg,
+    rgb(255 255 255 / 10%),
+    transparent 27% 68%,
+    rgb(103 167 255 / 10%)
+  );
+  --cb-glass-fallback: #0b214d;
+  --cb-media-controls: rgb(7 22 52 / 72%);
+  --cb-font-sans:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --cb-font-mono: Consolas, "Liberation Mono", monospace;
+  --cb-text-title: 1.75rem;
+  --cb-text-body: 1rem;
+  --cb-text-small: 0.875rem;
+  --cb-text-meta: 0.75rem;
+  --cb-space-1: 0.25rem;
+  --cb-space-2: 0.5rem;
+  --cb-space-3: 0.75rem;
+  --cb-space-4: 1rem;
+  --cb-space-6: 1.5rem;
+  --cb-space-8: 2rem;
+  --cb-radius: 0.5rem;
+  --cb-target: 2.75rem;
+  --cb-motion-press: 120ms;
+  --cb-motion-hover: 180ms;
+  --cb-motion-panel: 360ms;
+  --cb-motion-entrance: 640ms;
+  --cb-ease-direct: cubic-bezier(0.2, 0, 0, 1);
+  --cb-ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cb-scrollbar-thumb) transparent;
+}
+@supports selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+}
+*::-webkit-scrollbar {
+  width: var(--cb-scrollbar-size);
+  height: var(--cb-scrollbar-size);
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--cb-scrollbar-thumb);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--cb-scrollbar-thumb-hover);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+@media (forced-colors: active) {
+  * {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  *::-webkit-scrollbar,
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-button,
+  *::-webkit-scrollbar-thumb,
+  *::-webkit-scrollbar-thumb:hover,
+  *::-webkit-scrollbar-corner {
+    all: revert;
+  }
+}
+
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-group(moment-1),
+::view-transition-group(moment-2),
+::view-transition-group(moment-3),
+::view-transition-group(moment-4),
+::view-transition-group(moment-detail) {
+  animation-duration: var(--cb-motion-entrance);
+  animation-timing-function: var(--cb-ease-settle);
+}
+::view-transition-old(moment-detail),
+::view-transition-new(moment-detail) {
+  animation-duration: var(--cb-motion-panel);
+}

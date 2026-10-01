@@ -12,8 +12,6 @@ export type SessionAction =
   | "build-selection"
   | "retry-assembly"
   | "choose-another"
-  | "review-render"
-  | "back-to-review"
   | "confirm-render"
   | "retry-render"
   | "clear";
@@ -33,7 +31,6 @@ const STAGE_TITLES: Record<ClippingSessionState["stage"], string> = {
   assembling: "Building the first cut",
   "assembly-failed": "First cut needs attention",
   "clip-review": "Review the automatic clip",
-  "render-confirmation": "Confirm the final render",
   rendering: "Rendering the clip",
   "render-failed": "Render needs attention",
   result: "Your clip is ready",
@@ -58,7 +55,6 @@ const PROGRESS: Record<ClippingSessionState["stage"], number> = {
   assembling: 60,
   "assembly-failed": 60,
   "clip-review": 75,
-  "render-confirmation": 80,
   rendering: 90,
   "render-failed": 90,
   result: 100,
@@ -93,9 +89,7 @@ export function selectBlockers(state: ClippingSessionState): string[] {
     return ["candidate-selection-required"];
   }
   if (
-    (state.stage === "clip-review" ||
-      state.stage === "render-confirmation" ||
-      state.stage === "render-failed") &&
+    (state.stage === "clip-review" || state.stage === "render-failed") &&
     state.identity.remaining.renderAttempts === 0
   ) {
     return ["render-allowance-exhausted"];
@@ -158,15 +152,9 @@ export function selectAvailableActions(
       ];
     case "clip-review":
       return [
-        ...(state.identity.remaining.renderAttempts > 0
-          ? (["review-render"] as const)
-          : []),
-        ...clear,
-      ];
-    case "render-confirmation":
-      return [
-        "back-to-review",
-        ...(state.identity.remaining.renderAttempts > 0
+        ...(state.identity.remaining.renderAttempts > 0 &&
+        state.analysis.bundle !== null &&
+        state.assembly !== null
           ? (["confirm-render"] as const)
           : []),
         ...clear,

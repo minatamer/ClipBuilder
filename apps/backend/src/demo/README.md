@@ -9,6 +9,20 @@ operation fixtures. The fake clock, fixture provider, and operation store run
 without network or credentials, expose call counts, reject unknown keys, and
 never replace a failed live call.
 
+CL-004's `conversationSample.ts` is a separate original precomputed text
+fixture: three distinct 58-second conversations for the revised UI. Its timings
+are synthetic, not a recorded/transcribed source. Existing CL-003 fixtures stay
+immutable. `sampleSession.ts` exposes this analysis only through fake/local
+fixture routes. Following the owner's scope clarification, its operation store
+now advances explicitly development-only inspection/analysis/build/render
+scripts. Starts are counted/idempotent, provider calls stay zero, and no bytes
+are uploaded, inferred or rendered. `conversationAssembly.ts` provides an
+immutable synthetic framing/quote/caption specification for each choice, never
+real assets or recorded footage. No download capability exists.
+The bounded ephemeral session map/cookie is not a production grant or storage
+implementation; `sampleSession.test.ts` asserts expiry/capacity/clear and call
+counts alongside existing zero-to-four fixture boundaries.
+
 No sample video, poster, or generated visual binary is present. After the
 rights gate is approved, add a new immutable sample version in private storage,
 pin its object generation and SHA-256 in the manifest, and retain the old

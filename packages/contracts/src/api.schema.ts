@@ -273,6 +273,13 @@ export const uploadCompleteRequestSchema = z
   })
   .strict();
 
+// Local preview metadata only: deliberately no upload URL or storage protocol.
+export const developmentUploadResponseSchema = z
+  .object({
+    uploadId: uploadIdSchema,
+  })
+  .strict();
+
 export const analysisContextSchema = z
   .object({
     contentCategory: boundedTextWithoutUrlSchema(120).optional(),
@@ -564,3 +571,8 @@ export type StartSessionRequest = z.infer<typeof startSessionRequestSchema>;
 export type StartSessionResponse = z.infer<typeof startSessionResponseSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type AnalysisBundleV1 = z.infer<typeof analysisBundleSchema>;
+export type AssemblyRequest = z.infer<typeof assemblyRequestSchema>;
+export type RenderRequest = z.infer<typeof renderRequestSchema>;
+export type UploadAuthorizeRequest = z.infer<
+  typeof uploadAuthorizeRequestSchema
+>;

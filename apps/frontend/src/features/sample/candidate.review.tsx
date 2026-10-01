@@ -1,0 +1,320 @@
+"use client";
+
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  useId,
+  type KeyboardEvent,
+} from "react";
+import { Play } from "lucide-react";
+import type { AnalysisBundleV1, ClipCandidateV1 } from "@clipbuilder/contracts";
+
+import { candidateRange, timecode } from "./candidate.evidence";
+import { AgenticNotes, candidateNotes } from "./agentic-notes";
+import { PortraitPlaceholder, PortraitPlayer } from "./portrait-player";
+import { ReviewTranscript } from "./review-transcript";
+import { useRangePlayback } from "./use-range-playback";
+import { useMomentLayout } from "./use-moment-layout";
+import styles from "./sample.module.css";
+
+function MomentChoice({
+  analysis,
+  candidate,
+  busy,
+  choose,
+  move,
+}: {
+  analysis: AnalysisBundleV1;
+  candidate: ClipCandidateV1;
+  busy: boolean;
+  choose: (item: ClipCandidateV1) => void;
+  move: (
+    event: KeyboardEvent<HTMLButtonElement>,
+    item: ClipCandidateV1,
+  ) => void;
+}) {
+  const range = candidateRange(analysis, candidate);
+  return (
+    <button
+      type="button"
+      className={styles.momentChoice}
+      id={`moment-choice-${candidate.rank}`}
+      aria-label={`Play moment ${candidate.rank}: ${candidate.title}`}
+      disabled={busy}
+      onClick={() => choose(candidate)}
+      onKeyDown={(event) => move(event, candidate)}
+    >
+      <div
+        className={styles.choicePortrait}
+        data-moment-surface={candidate.id}
+        style={{ viewTransitionName: `moment-${candidate.rank}` }}
+      >
+        <PortraitPlaceholder />
+        <span className={styles.choicePlay}>
+          <Play size={14} aria-hidden="true" />
+        </span>
+        <span className={styles.choiceDuration}>
+          {Math.round(range.durationMs / 1000)}s
+        </span>
+      </div>
+      <span className={styles.momentMeta}>Moment {candidate.rank}</span>
+      <strong>{candidate.title}</strong>
+      <span className={styles.momentRange}>
+        {timecode(range.startMs)} - {timecode(range.endMs)}
+      </span>
+    </button>
+  );
+}
+
+function MomentPreview({
+  analysis,
+  candidate,
+  play,
+  busy,
+  move,
+  close,
+  tab,
+  setTab,
+}: {
+  analysis: AnalysisBundleV1;
+  candidate: ClipCandidateV1;
+  play: boolean;
+  busy: boolean;
+  move: (
+    event: KeyboardEvent<HTMLButtonElement>,
+    item: ClipCandidateV1,
+  ) => void;
+  close: () => void;
+  tab: "transcript" | "notes";
+  setTab: (value: "transcript" | "notes") => void;
+}) {
+  const range = candidateRange(analysis, candidate);
+  const { currentMs, playing, seek, toggle, pause } = useRangePlayback(range, {
+    timeMs: range.startMs,
+    play,
+    ordinal: 0,
+  });
+  const [highlighted, setHighlighted] = useState<readonly string[]>([]);
+  const tabsId = useId();
+  const jump = (timeMs: number, wordIds: readonly string[]) => {
+    pause();
+    seek(timeMs);
+    setHighlighted(wordIds);
+  };
+  return (
+    <>
+      <section
+        className={styles.activeMoment}
+        aria-label={`Selected moment ${candidate.rank}`}
+      >
+        <PortraitPlayer
+          label={candidate.title}
+          moment={candidate}
+          range={range}
+          currentMs={currentMs}
+          playing={playing}
+          toggle={toggle}
+          seek={(timeMs) => {
+            setHighlighted([]);
+            seek(timeMs);
+          }}
+          busy={busy}
+          onClose={close}
+          onKeyDown={(event) => move(event, candidate)}
+        />
+      </section>
+      <section
+        className={styles.momentTranscript}
+        aria-label="Selected moment transcript"
+        style={{ viewTransitionName: "moment-detail" }}
+      >
+        <div
+          className={styles.detailTabs}
+          role="tablist"
+          aria-label="Moment details"
+        >
+          {(["transcript", "notes"] as const).map((value) => (
+            <button
+              key={value}
+              id={`${tabsId}-${value}`}
+              type="button"
+              role="tab"
+              aria-selected={tab === value}
+              aria-controls={`${tabsId}-panel`}
+              tabIndex={tab === value ? 0 : -1}
+              onClick={() => setTab(value)}
+              onKeyDown={(event) => {
+                if (
+                  !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                    event.key,
+                  )
+                )
+                  return;
+                event.preventDefault();
+                const next =
+                  event.key === "Home"
+                    ? "transcript"
+                    : event.key === "End"
+                      ? "notes"
+                      : value === "transcript"
+                        ? "notes"
+                        : "transcript";
+                setTab(next);
+                document.getElementById(`${tabsId}-${next}`)?.focus();
+              }}
+            >
+              {value === "transcript" ? "Transcript" : "Agentic Notes"}
+            </button>
+          ))}
+        </div>
+        <div
+          id={`${tabsId}-panel`}
+          role="tabpanel"
+          aria-labelledby={`${tabsId}-${tab}`}
+          className={styles.detailBody}
+        >
+          {tab === "transcript" ? (
+            <ReviewTranscript
+              analysis={analysis}
+              range={range}
+              currentMs={currentMs}
+              highlighted={highlighted}
+            />
+          ) : (
+            <div
+              className={styles.notesScroll}
+              tabIndex={0}
+              aria-label="Scrollable agentic notes"
+            >
+              <h2>{candidate.title}</h2>
+              <p className={styles.rationale}>{candidate.rationale}</p>
+              <AgenticNotes
+                notes={candidateNotes(analysis, candidate)}
+                rangeStartMs={range.startMs}
+                onSeek={jump}
+                busy={busy}
+              />
+              {candidate.caveats.length > 0 && (
+                <ul className={styles.caveats}>
+                  {candidate.caveats.map((item) => (
+                    <li key={item.code}>{item.note}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
+export function CandidateReview({
+  analysis,
+  selectedId,
+  onSelect,
+  onClose,
+  busy,
+}: {
+  analysis: AnalysisBundleV1;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+  busy: boolean;
+}) {
+  const root = useRef<HTMLDivElement>(null);
+  const keyboardFocus = useRef<number | null>(null);
+  const [playedId, setPlayedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<"transcript" | "notes">("transcript");
+  const transition = useMomentLayout(root, selectedId);
+  const selected = analysis.candidates.find((item) => item.id === selectedId);
+  useLayoutEffect(() => {
+    if (keyboardFocus.current === null) return;
+    document
+      .getElementById(
+        `moment-${selectedId === null ? "choice" : "play"}-${keyboardFocus.current}`,
+      )
+      ?.focus({ preventScroll: true });
+    keyboardFocus.current = null;
+  }, [selectedId]);
+  function choose(item: ClipCandidateV1) {
+    if (busy) return;
+    transition(() => {
+      keyboardFocus.current = item.rank;
+      setPlayedId(item.id);
+      onSelect(item.id);
+    });
+  }
+  function move(
+    event: KeyboardEvent<HTMLButtonElement>,
+    item: ClipCandidateV1,
+  ) {
+    const direction =
+      event.key === "ArrowRight" || event.key === "ArrowDown"
+        ? 1
+        : event.key === "ArrowLeft" || event.key === "ArrowUp"
+          ? -1
+          : 0;
+    if (direction === 0 && event.key !== "Home" && event.key !== "End") return;
+    event.preventDefault();
+    const index = analysis.candidates.indexOf(item);
+    const ordinal =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? analysis.candidates.length - 1
+          : (index + direction + analysis.candidates.length) %
+            analysis.candidates.length;
+    const next = analysis.candidates[ordinal];
+    if (next === undefined || busy || next.id === selectedId) return;
+    keyboardFocus.current = next.rank;
+    choose(next);
+  }
+  if (analysis.candidates.length === 0) return null;
+  return (
+    <div
+      ref={root}
+      className={`${styles.review} ${selected ? styles.previewMode : styles.galleryMode}`}
+      data-moment-layout={selected ? "preview" : "gallery"}
+    >
+      <div
+        className={styles.momentChoices}
+        role="group"
+        aria-label={selected ? "Other moments" : "Candidate moments"}
+      >
+        {analysis.candidates
+          .filter((item) => item.id !== selected?.id)
+          .map((item) => (
+            <MomentChoice
+              key={item.id}
+              analysis={analysis}
+              candidate={item}
+              busy={busy}
+              choose={choose}
+              move={move}
+            />
+          ))}
+      </div>
+      {selected && (
+        <MomentPreview
+          key={selected.id}
+          analysis={analysis}
+          candidate={selected}
+          play={playedId === selected.id}
+          busy={busy}
+          move={move}
+          close={() =>
+            transition(() => {
+              keyboardFocus.current = selected.rank;
+              setPlayedId(null);
+              onClose();
+            })
+          }
+          tab={tab}
+          setTab={setTab}
+        />
+      )}
+    </div>
+  );
+}

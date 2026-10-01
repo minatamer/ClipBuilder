@@ -64,7 +64,7 @@ export const environmentShape = {
   BACKEND_AUDIENCE: optionalString(500),
   PORT: integerValue(4_000, 1, 65_535),
 
-  PROVIDER_MODE: z.enum(["fake", "live"]).default("fake"),
+  FAKE_MODE: booleanValue(true),
   PAID_DEMO_ENABLED: booleanValue(false),
   LIVE_UPLOAD_ENABLED: booleanValue(false),
   LIVE_ANALYSIS_ENABLED: booleanValue(false),
@@ -233,13 +233,13 @@ export const environmentSchema = rawEnvironmentSchema
 
     if (environment.NODE_ENV === "test") {
       if (
-        environment.PROVIDER_MODE !== "fake" ||
+        !environment.FAKE_MODE ||
         environment.PAID_DEMO_ENABLED ||
         anyLiveFeature
       ) {
         issue(
           "Test configuration must be fake with every paid/live gate disabled.",
-          "PROVIDER_MODE",
+          "FAKE_MODE",
         );
       }
       if (
@@ -255,22 +255,17 @@ export const environmentSchema = rawEnvironmentSchema
       }
     }
 
-    if (environment.PROVIDER_MODE === "fake") {
+    if (environment.FAKE_MODE) {
       if (environment.PAID_DEMO_ENABLED || anyLiveFeature) {
         issue(
           "Fake provider mode cannot enable paid or live behavior.",
-          "PROVIDER_MODE",
+          "FAKE_MODE",
         );
       }
-    } else if (!environment.PAID_DEMO_ENABLED) {
-      issue(
-        "Live provider mode requires the paid-operation master gate.",
-        "PAID_DEMO_ENABLED",
-      );
     }
 
-    if (anyLiveFeature && environment.PROVIDER_MODE !== "live") {
-      issue("Live features require live provider mode.", "PROVIDER_MODE");
+    if (anyLiveFeature && environment.FAKE_MODE) {
+      issue("Live features require real mode.", "FAKE_MODE");
     }
     if (anyLiveFeature && !environment.PAID_DEMO_ENABLED) {
       issue(
@@ -433,7 +428,7 @@ export const environmentSchema = rawEnvironmentSchema
     backendOrigin: environment.BACKEND_ORIGIN,
     backendAudience: environment.BACKEND_AUDIENCE ?? null,
     port: environment.PORT,
-    providerMode: environment.PROVIDER_MODE,
+    providerMode: environment.FAKE_MODE ? ("fake" as const) : ("live" as const),
     paidDemoEnabled: environment.PAID_DEMO_ENABLED,
     features: {
       liveUpload: environment.LIVE_UPLOAD_ENABLED,
