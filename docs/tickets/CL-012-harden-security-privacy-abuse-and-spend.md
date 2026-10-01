@@ -1,3 +1,90 @@
+# CL-012 - Audit browser privacy and no-shared-store paid controls
+
+Status: Planned; browser-owned execution revision, external gates pending<br>
+Milestone: M6 - controls and privacy<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-004A, CL-005 admission, CL-007, CL-009, CL-010 and CL-011<br>
+Suggested commit: `CL-012: validate browser privacy and paid-request safeguards`<br>
+Parent: [source of truth section 0.9](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#09-browser-owned-media-architecture-revision-2026-10-01)<br>
+Technical contract: [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md)<br>
+Index: [README.md](README.md)
+
+**Execution authority:** this current packet and the linked browser contract
+supersede the server-media mechanics retained below as history. No GCS,
+generation/capability/lease, native media job or cloud-render acceptance item
+survives by being left unchecked in that history. Preserve unchanged product,
+grounding/quality, rights, secret handling, fake/off test and dependency rules.
+No Git, provider, paid, install or cloud action is authorized by this document.
+
+## Objective and boundaries
+
+Audit implemented browser-owned content boundaries and protected AI admission.
+No original video/final MP4/server objects/database, no object-backed atomic
+markers/leases, no cookie-only exactly-once or seamless lost-paid-result claim.
+CL-004A owns provider setup guides; this packet audits their actual implementation
+and authorized owner settings evidence. CL-015 owns final hosting actions.
+
+## Current audit checklist
+
+- [ ] Browser original/results/assets/output lifecycle, local expiry disclosure,
+      OPFS/IDB quota/eviction/private browsing, publication journal, cross-tab
+      locks/epoch fencing and partial-clear intent are truthful and tested.
+- [ ] Provider-transfer consent says bounded audio/text leave the device.
+      store:false is not zero abuse-retention; project MIP/data/retention and
+      model/image policy evidence is current. No fully-offline privacy claim.
+- [ ] Origin/Fetch Metadata/CSRF/grant/key/version/expiry/boot-epoch checks,
+      actual received audio/JSON/token/image bounds and cheapest-first rejection
+      precede provider dispatch. Receipt validity is not trust in local metadata.
+- [ ] Atomic process-local reservation prevents duplicate paid starts during its
+      lifetime; records/tombstones are retained through grants, capacity overflow
+      fails closed and no stale cookie can reset consumed allowance.
+- [ ] Cancellation/disconnect/timeout/uncertain result is consumed and cannot
+      auto-retry; restart fails closed and local success reuse makes zero calls.
+      Fresh anonymous sessions and revision overlap limitations are explicit.
+- [ ] No promised distributed exactly-once, per-person quota or durable global
+      monthly accounting without an approved coordination mechanism. Keep
+      anonymous public paid traffic disabled until the owner accepts justified
+      bounded safeguards; no DB/Redis/GCS workaround.
+- [ ] Provider call ceilings, SDK retries=0, numerical hard limits versus alerts,
+      rate/concurrency/time bounds and kill switches are actually enforceable.
+      Missing hard caps remain a launch blocker, not a green checkbox.
+- [ ] CSP/Trusted Types direction, worker/model/static fetch policy, dependency/
+      license supply chain, safe fonts/cards and no arbitrary user URL are
+      audited. COOP/COEP/SAB is conditional and must not break Turnstile/assets.
+- [ ] Logs/errors/metrics/URLs exclude filenames, transcript/caption/prompt,
+      capabilities/receipts/raw provider responses and content hashes; errors
+      are bounded/safe. Content-safe aggregates do not expose a private ledger.
+- [ ] Rights/contributor/sample/asset/font/code/weights evidence is separate from
+      engineering success; no identity/emotion/sensitive inference.
+- [ ] Full cleanup covers requests/workers/codecs/handles/frames/audio/URLs/
+      timers/listeners/temporary artifacts. App disposal does not claim RAM
+      erasure, provider deletion or deletion of visitor-downloaded copies.
+
+## Verification and release handoff
+
+Adversarial tests cover replay/races/stale grants/restarts, malformed bodies/
+provenance, oversize/truncated audio and images, quota/eviction/two tabs,
+in-flight clear and uncertain paid results. Assert exact zero rejected-case
+provider counts and documented allowed counts, using fake transports only.
+Inspect actual code/dependency direction and secret/content-leak boundaries,
+then run focused tests and all five root gates.
+
+Update source of truth/provider/cost/software/privacy docs only for observed
+evidence. Report guaranteed scope, residual abuse/cost/recovery risks and every
+unapproved setting/rights/device/owner item. CL-014 audits that exact revision;
+CL-015 verifies actual routing, rollout/restart/instance behavior and controls.
+No cloud account/configuration inspection or paid verification without specific
+authorization; fake tests cannot approve a public paid deployment.
+
+## Historical packet
+
+<details>
+<summary>Superseded server-media plan, retained only for decision history</summary>
+
+The following text is not an execution checklist, setup instruction or evidence
+of completion under the browser-owned architecture. It must not be used to
+reintroduce cloud content storage, jobs or unsupported guarantees.
+
 # CL-012 — Harden security, privacy, abuse, and spend
 
 Status: Planned<br>
@@ -231,3 +318,5 @@ Report every finding/correction, exact route order and call-count proof, header/
 CSP/proxy/cookie behavior, data/log/retention/rights reconciliation, scans,
 cost/control plan, changed files, commands, and a separate checked/blocked list
 for every owner/provider/cloud item.
+
+</details>

@@ -1,7 +1,7 @@
 <h1 align="center">ClipBuilder</h1>
 
 <p align="center">
-  <strong>Turn long conversations into finished vertical clips.</strong>
+  <strong>Turn long-form video into a clip worth sharing.</strong>
 </p>
 
 <p align="center">
@@ -50,7 +50,7 @@ example or recurring template.
 - **Grounded selection:** candidate moments and visual cues reference real transcript words and timestamps.
 - **AI-directed framing:** active-speaker detection drives the vertical crop instead of asking the user to choose generic left, center, or right presets.
 - **Purposeful visuals:** generated imagery and deterministic graphic cards support the spoken idea while preserving a healthy balance with the original footage.
-- **Deterministic output:** validated edit data is compiled into an FFmpeg render rather than allowing a model to generate executable media commands.
+- **Deterministic output:** validated edit data drives one shared browser compositor and local export; the model never generates executable media commands.
 - **Demo-sized scope:** one temporary session, one selected clip, and one final export keep the experience focused and affordable.
 - **No editing surface:** candidate selection and render confirmation are the
   only creative decisions exposed to the visitor.
@@ -62,25 +62,28 @@ example or recurring template.
 | Experience | Next.js, React, TypeScript |
 | API and contracts | Node.js, Express, shared Zod schemas |
 | Transcript and planning | Deepgram Nova-3, OpenAI Responses API |
-| Speaker and scene analysis | Light-ASD, face tracking, PySceneDetect |
+| Speaker and scene analysis | Browser audiovisual-model feasibility gate; no assumed Python server path |
 | Contextual visuals | OpenAI Image API, MathJax SVG cards |
-| Composition and export | FFmpeg and ffprobe |
-| Storage and execution | Google Cloud Storage, Cloud Run services and jobs |
+| Composition and export | Proposed WebCodecs/Mediabunny worker pipeline and shared browser compositor |
+| Local media storage | Proposed OPFS binaries, IndexedDB journal/results; bounded File/Blob fallback |
+| Hosting | Frontend and protected request-scoped AI API; no content bucket/database/media job |
 | Abuse protection | Cloudflare Turnstile and bounded admission controls |
 
 ```text
 Browser
-  └─ Next.js experience + same-origin /v1 proxy
-       ├─ browser-safe contracts
-       └─ private Express API
-            ├─ Deepgram + OpenAI adapters
-            └─ bounded media jobs
-                 ├─ scene + active-speaker analysis
-                 ├─ visual asset assembly
-                 └─ FFmpeg render + validation
+  +-- Next.js experience + local source/results/assets/output
+  +-- browser-safe contracts + workers + local compositor/encode
+  +-- same-origin protected bounded audio/text requests
+       +-- private Express API -> Deepgram/OpenAI adapters
+       +-- bounded results/assets returned to browser; no durable content store
 ```
 
 The model proposes bounded editorial data. Deterministic application code validates that data, resolves it against the source transcript, and owns every media operation.
+
+The original video and final MP4 stay on-device. AI audio/text transfer and
+provider retention remain explicit privacy gates. Browser codecs, active-speaker
+quality, full-bound device performance and no-shared-store paid safeguards are
+not yet proved; see the [current architecture plan](docs/architecture/BROWSER_OWNED_MEDIA.md).
 
 ## Repository status
 
@@ -90,7 +93,7 @@ are an interim foundation. CL-004 previews the whole single-card journey at
 prepared 58-second choices, one selection, read-only review and export states.
 It does not read/upload files, edit recorded footage or produce a downloadable
 video. Recorded media and owner approval of the revised UI remain pending.
-Real upload, live analysis, automatic assembly, rendering/download, and
+Real local media, protected analysis, automatic assembly, local export/download, and
 deployment remain owned by their dependency-ordered tickets. Technical choices
 marked as proposed remain subject to the documented validation gates.
 

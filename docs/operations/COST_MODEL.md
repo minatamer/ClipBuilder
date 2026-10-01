@@ -22,15 +22,24 @@ add an unimplemented dollar counter, database, queue or new env variable.
 
 ## Exact Action Budgets
 
+**Current architecture (2026-10-01):** [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md)
+replaces cloud media compute/storage with local import/audio/vision/encode.
+The provider call ceilings below remain; local rendering has zero AI calls.
+Refresh reuses committed browser results only. A lost/in-flight paid payload or
+backend restart is uncertain/fail-closed, not guaranteed free result recovery.
+Process-local action records do not enforce global monthly/per-person limits
+across fresh sessions, replicas or restarts. Public paid traffic remains off
+until explicit owner safeguards/hard-cap evidence; alerts are insufficient.
+
 | Action                                         |                Deepgram |                                 OpenAI text | OpenAI images | Local/cloud work                              |
 | ---------------------------------------------- | ----------------------: | ------------------------------------------: | ------------: | --------------------------------------------- |
 | Fake development journey                       |                       0 |                                           0 |             0 | Local simulation only                         |
-| Rejected intake/admission                      |                       0 |                                           0 |             0 | No metered provider/job start                 |
-| One source analysis                            | At most 1 transcription |                    At most 1 candidate call |             0 | One analyze job in deployed flow              |
+| Rejected intake/admission                      |                       0 |                                           0 |             0 | No metered provider start                     |
+| One source analysis                            | At most 1 transcription |                    At most 1 candidate call |             0 | Local audio extraction; protected requests     |
 | Candidate retry with valid retained transcript |                       0 | At most 1 separately allowed candidate call |             0 | Never retranscribe implicitly                 |
 | One selected-range assembly                    |                       0 |                  At most 1 visual-plan call |           0-3 | One speaker pass; deterministic cards locally |
-| Repeated preview, refresh or idempotent replay |                   0 new |                                       0 new |         0 new | Reuses valid existing evidence                |
-| One confirmed final render                     |                       0 |                                           0 |             0 | One render; public final-render allowance 1   |
+| Preview/refresh of committed local success     |                   0 new |                                       0 new |         0 new | Reuses validated local artifacts; lost paid response is not recoverable automatically |
+| One confirmed final render                     |                       0 |                                           0 |             0 | Local encode/mux; one final artifact, explicit same-manifest failure retry policy |
 | Download/clear                                 |                       0 |                                           0 |             0 | Delivery/delete operations; no new AI work    |
 
 Automatic paid SDK retries are zero. User-authorized retry is a new explicit
@@ -58,7 +67,7 @@ this account.
 | Deepgram Nova-3 monolingual | Prerecorded Pay As You Go: USD 0.0043 / minute                                                | [Deepgram pricing](https://deepgram.com/pricing); recheck actual plan and add-ons; not streaming pricing                           |
 | Turnstile                   | Free-plan planning baseline                                                                   | [Cloudflare plans](https://developers.cloudflare.com/turnstile/plans/); no paid upgrade approved                                   |
 | Media/vision/cards          | No provider call for local processing                                                         | Binary/model/font licenses and hardware costs still matter                                                                         |
-| GCloud                      | Not priced/approved in this readiness packet                                                  | CL-015 records current regional compute/storage/network/build/registry/secret charges and advisory budget                          |
+| Hosting                     | Not priced/approved in this readiness packet                                                  | CL-015 records API/static/model delivery, registry/secrets/network/build costs; no media bucket or render job |
 
 No cached-input discount is assumed. Direct Images API cache behavior differs
 from Responses-tool behavior. Use the
@@ -145,10 +154,10 @@ cap.
 | Provider budget alert/email                             | Notification only                                       | Threshold, recipient confirmation and response owner                                                                          |
 | Deepgram account monetary control                       | Unverified until owner confirms                         | Current plan/control behavior; balance alone is not a verified cap                                                            |
 | Rate/concurrency limit                                  | Throughput bound, not USD cap                           | Provider project setting and matching application test                                                                        |
-| Per-action allowances, marker/idempotency, zero retries | Application call-count enforcement                      | Owning ticket's rejection/replay/uncertain-ack tests                                                                          |
+| Process-local reservations/idempotency, zero retries   | Process-lifetime action enforcement, not global quota   | Rejection/replay/uncertain-ack/restart tests; tombstones retained through grant expiry |
 | Paid master/per-feature flags                           | Blocks new dispatch when actually implemented           | CL-012 tests and CL-015 operational proof; not cancellation of already billed work                                            |
 | Cloud budget alerts                                     | Advisory notification                                   | Final CL-015 numeric budget/recipients, not an automatic cap                                                                  |
-| Cloud Run instance/task/time/resource caps              | Infrastructure exposure bounds                          | Final CL-015 saved configuration and target-runtime checks                                                                    |
+| Hosting instance/time/resource caps                     | Exposure bounds, not global atomicity across rollouts    | Final CL-015 saved config and actual restart/overlap/client/transport checks |
 
 If a vendor offers only alerts, do not label them hard limits. Keep its live
 feature disabled until a reliable enforced control or an explicitly approved
@@ -161,7 +170,7 @@ Before one live check, obtain a specific human instruction approving provider,
 model/endpoint, rights-approved synthetic/purpose-recorded fixture, allowed
 calls, maximum added cost, timeout and stop conditions. A local provider-only
 check may be authorized in CL-007/009 after adapter gates; it proves no cloud
-behavior. The complete deployed upload-to-download flow belongs only to final
+behavior. The complete deployed local-source-to-download flow belongs only to final
 CL-015.
 
 - [ ] Current pricing, account access, privacy/retention and rights are
@@ -178,7 +187,7 @@ CL-015.
 - [ ] Record aggregate counts/duration/billable usage, estimated versus billed
       cost and delayed-reporting uncertainty; reconcile later without another
       call.
-- [ ] Complete local/object cleanup under the owning ticket and restore live/off
+- [ ] Complete local artifact/request cleanup under the owning ticket and restore live/off
       state unless a separate instruction authorizes otherwise.
 
 ## Budget Incident and Retirement
@@ -191,5 +200,5 @@ unlimited key. Revocation is containment, not a refund or deletion guarantee.
 
 When retiring the demo, disable live gates, reconcile delayed charges, revoke
 unused keys, turn off approved recurring funding and remove unused external
-resources only with authorization. Cloud services/registry/storage/secrets and
+resources only with authorization. Hosting services/registry/secrets and
 their residual cost/lifecycle remain final CL-015 operations ownership.

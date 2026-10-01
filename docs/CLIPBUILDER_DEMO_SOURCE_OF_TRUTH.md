@@ -1,6 +1,6 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
-- Status: Implementation-ready specification; automatic one-choice flow with owner-directed single-workspace UI revision on 2026-10-01
+- Status: Browser-owned-media architecture revision planned on 2026-10-01; CL-005 feasibility and privacy/spend decisions remain gated
 - Document authority: Product, behavior, architecture, data, cost, design, verification, and release decisions for the portfolio demo
 - Created: 2026-09-29
 - Research baseline: 2026-09-29; provider names, prices, limits, and policies must be re-checked before live-provider work or launch
@@ -94,20 +94,20 @@ public claims, or the portfolio story must be promoted into this document.
 | Product promise | One long owned/licensed conversation becomes up to four grounded candidate moments; the visitor chooses exactly one and receives one automatically composed vertical clip with speaker-aware framing, fixed captions, and contextual visuals | **Locked** | The finished clip—not editing controls—is the center of the demo. |
 | Interaction model | Selection and confirmation only; no editor, chatbot, assistant prompt, manual trim, caption styling, visual controls, undo, or redo | **Locked** | After choosing one candidate, the visitor watches automatic preparation, reviews the completed preview, confirms one render, and downloads it. |
 | AI claim | Editorial shareability judgment, never virality prediction or private algorithm knowledge | **Locked** | Copy, schemas, prompts, and evaluations must reject unsupported performance claims. |
-| State | No application database; use browser state plus narrow private temporary objects and content-free coordination markers | **Locked** | Object storage is not a general record system; all objects expire and are clearable. |
-| Public live upload | Include one bounded anonymous live upload in addition to the sample | **Locked** | Upload is part of the product flow. It remains disabled in committed/default/test configuration and cannot be enabled in a deployment until the security, privacy, spend, provider, and launch gates pass. |
+| State | Browser owns original video, normalized results, assembly assets and final output; no application database or cloud object-storage service | **Owner-directed revision - 2026-10-01** | OPFS/IndexedDB are browser-local, not backend storage. See section 0.9; server GCS objects, markers and leases are withdrawn. |
+| Public real source flow | Include one bounded local source flow in addition to the sample | **Owner-directed architecture revision - 2026-10-01** | Original video stays on-device. Protected audio/text AI remains disabled in committed/default/test configuration and cannot be enabled until security, privacy, spend, provider and launch gates pass. |
 | Languages | English transcription and Latin-script caption QA for v1 | **Proposed - owner approval required** | Arabic/English code-switching is not claimed until bidi, font, punctuation, and provider tests pass. |
 | Speaker framing | Detect camera cuts, visible faces, and the active speaker, then keep the speaking person centered in the vertical frame | **Locked** | Active-speaker reframing is a core proof, not an optional feature or manual crop preset. |
-| Active-speaker tool | Spike Light-ASD first; compare TalkNet only if the spike fails the sample/CPU target | **Proposed - owner approval required** | The chosen model must run on the purpose-recorded sample inside the bounded media job before architecture is locked. |
+| Active-speaker tool | Prove a browser-executable audio/visual model before productionizing speaker framing | **Feasibility gate - revised 2026-10-01** | A Python/Cloud Run Light-ASD result is not browser feasibility. CL-006 must prove model conversion/runtime/license/quality or return a no-go; landmarks alone do not satisfy this requirement. |
 | Contextual visuals | AI plans and inserts 1–3 grounded visual beats using generated stills or deterministic graphic/equation cards | **Locked** | Visual storytelling is a core automatic-composition layer, not a vague decorative accent. |
 | Visual asset tool | OpenAI Image API with a fast current GPT Image model for generated stills/cutouts; MathJax SVG for exact equations/cards | **Proposed - owner approval required** | Re-check model access, cost, latency, data policy, and visual quality before live enablement. |
 | Public source bound | 20 minutes **and** 500 MiB; owner validation ceiling 60 minutes and 1.5 GiB | **Locked** | A public upload must satisfy both independent ceilings. Raising them requires a future spec/code revision plus measured latency and cost evidence; runtime configuration may only lower them. |
-| Render count | One final render per public session | **Locked** | Browser previews zero to four candidates; only the one selected automatic manifest renders. |
+| Render count | One confirmed immutable manifest and final local artifact per workspace | **Locked product intent; local semantics revised** | Browser previews zero to four candidates. Failed local encode recovery needs an explicit same-manifest policy; local UI counters are not hostile-client enforcement or a paid-operation ledger. |
 | Trend context | Omit trend-signal input from the first public demo | **Locked** | The demo avoids stale or user-injected platform claims. Candidate reasoning uses the source transcript and the source-controlled editorial rubric only. |
 | Sample rights | Use purpose-recorded media and signed contributor permission | **Proposed - owner approval required** | No sample media enters Git or deployment until provenance is recorded. |
 | Publishing | Download only; no direct social publishing | **Locked** | No platform OAuth, app review, scheduling, or posting liability. |
-| Upload mechanism | Server-created resumable Cloud Storage upload session | **Proposed - owner approval required** | Final CL-015 must prove CORS, size enforcement, abort, and cleanup before live upload enablement; earlier adapter code is locally contract-tested, not cloud-proven. |
-| Refresh recovery | Store a normalized transcript/candidate bundle in the private temporary bucket under the source TTL | **Proposed - owner approval required** | This is the minimum privacy tradeoff that enables truthful refresh recovery without a database. |
+| Source intake | Local File preview and bounded browser-managed import | **Owner-directed revision - 2026-10-01** | Original video is not uploaded. Measured local-copy progress must not claim network upload. Only separately disclosed, bounded audio/text may reach protected AI routes. |
+| Refresh recovery | One disposable browser workspace: OPFS binaries and IndexedDB metadata/results, with memory-only fallback | **Proposed - approval and spike required** | Recovery depends on origin storage surviving; interrupted remote work is not automatically retried. Physical cleanup while the browser is closed cannot be promised. |
 | Cloud region | `us-central1` for the first cost-validated deployment | **Proposed - owner approval required** | If residency or audience latency matters more, choose one compatible region before provisioning. |
 | Text model | OpenAI Responses API with `gpt-6-sol`, Structured Outputs, and `store: false` | **Proposed - owner approval required** | Re-check availability, pricing, retention, and project access before enabling live calls. |
 | Transcription | Deepgram Nova-3 pre-recorded with word timestamps and diarization | **Proposed - owner approval required** | Re-check language, retention, opt-out, limits, and project settings before live use. |
@@ -116,7 +116,7 @@ public claims, or the portfolio story must be promoted into this document.
 | Automatic pause/filler removal | Owner requests natural context-preserving internal cuts as a later pipeline enhancement | **Deferred contract revision - 2026-10-01** | Current candidates remain contiguous word ranges. A future ticket must define immutable ordered segments, output-duration accounting, evidence, audio continuity, preview/render parity and regression tests before internal cuts ship. |
 | Landing product film | CL-013 owns an original motion-graphics walkthrough authored from finalized UI captures by the owner-designated `gpt-6.1-sol` agent | **Owner-directed - 2026-10-01** | Not CL-004. Final UI/capture, storyboard, rights and film approvals precede production/integration; external sharing is illustrative manual posting after download, not direct publishing. |
 | Third-party setup order | CL-004A owns thorough non-GCloud owner setup guides; GCloud setup and external cloud evidence stay in final CL-015 | **Owner-directed - 2026-10-01** | Earlier tickets use local/fake verification; CL-012 audits provider readiness, CL-014 carries explicit cloud deferrals, and no setup/live/spend approval is inferred from documentation. |
-| Retention | Session access expires after 2 hours; objects are explicitly deleted on clear and lifecycle-eligible after 1 day | **Proposed - owner approval required** | UI must describe asynchronous deletion honestly; do not promise an exact deletion second. |
+| Retention | Proposed 2-hour logical local expiry, explicit clear and next-open orphan/expiry sweep | **Proposed - owner approval required** | No bucket lifecycle exists. Browser disk data can outlive a closed tab; provider retention is separate and must be disclosed. |
 | Monthly spend | Start with the lowest provider hard caps that permit two owner-controlled full live validations | **Proposed - owner approval required** | Live flags stay off until numerical caps and alerts are recorded in release evidence. |
 
 ### 0.4 Approval gates
@@ -131,7 +131,8 @@ These gates are deliberate stop points, not missing implementation detail:
 3. **Visual gate:** approve the real responsive Next.js/React landing prototype
    at desktop and phone widths before broad application styling.
 4. **Provider/privacy gate:** approve provider projects, data settings, region,
-   temporary transcript storage, and public privacy copy.
+   browser-local disk retention/recovery, admitted audio/text transfer, and
+   public privacy copy. No cloud transcript/object store is planned.
 5. **Spend gate:** record hard limits, alerts, kill switches, and the maximum
    authorized number of live checks.
 6. **Launch gate:** audit the exact commit, deploy immutable images, run unpaid
@@ -168,7 +169,8 @@ not the CL-002 brand foundation or any rights/privacy/spend gate.
   analysis, single-candidate choice, automatic assembly and final review.
 - Intake foregrounds drop/choose video, formats and exact limits. Until live
   upload is implemented and enabled, show its unavailable state honestly and
-  keep the no-cost sample usable. Never upload bytes to the application server.
+  keep the no-cost sample usable. Original video stays local; section 0.9
+  separately permits disclosed bounded audio/text at protected AI routes.
 - Shared reusable tokens, buttons, stage framing, action footer and progress
   primitives own consistency. Use ClipBuilder's approved palette/type, not
   ScreenPilot's colors or its product-specific components.
@@ -242,6 +244,10 @@ approval are separate from automated engineering checks.
 
 ### 0.8 Provider readiness and final-ticket cloud setup (2026-10-01)
 
+**Resource inventory superseded by section 0.9:** final-ticket ordering remains,
+but bucket/storage/native-media jobs and cloud render proofs are withdrawn,
+not deferred. CL-015 owns hosting/transport/admission release proof only.
+
 The owner requests complete non-GCloud dashboard/software setup documentation
 before real integrations, and all GCloud setup at the very end. Add the
 owner-requested CL-004A readiness packet after CL-004 without renumbering existing
@@ -277,6 +283,163 @@ Do not create a circular requirement for deployed evidence before deployment.
 This ordering supersedes older passages that allow early cloud execution or
 require cloud proof to finish local implementation. Rights, privacy, numerical
 spend, paid-call, visual and launch approval gates remain intact.
+
+### 0.9 Browser-owned-media architecture revision (2026-10-01)
+
+**Latest owner decision:** the original video and final output belong in the
+browser. "No database" does not mean a database-free backend that still keeps
+source media, transcripts, jobs, results, coordination markers and leases in
+GCS. No application database or cloud object-storage service is part of this
+revision. Hosting and protected AI requests remain possible; neither is
+permission to store visitor content remotely.
+
+The detailed current architecture, evidence, alternatives, recovery matrix and
+feasibility gates are in
+[Browser-owned media](architecture/BROWSER_OWNED_MEDIA.md). This section
+incorporates that document as the current technical planning contract;
+implementation ownership and file-level migration belong to
+[CL-005](tickets/CL-005-implement-secure-upload-and-storage.md).
+Browser ownership is decided; the library/runtime, privacy details and paid
+deployment guarantees below are recommendations awaiting proof, not completed
+implementation or approval to contact providers.
+
+#### Current pipeline and boundaries
+
+1. Choose an owned/licensed MP4 or WebM. Retain the `File` in a runtime owner
+   for immediate local playback, inspect locally, and perform capability/quota
+   preflight before paid work. Preserve the 15-second minimum, independent
+   20-minute/500-MiB public ceilings and 10-60-second selected-clip bound.
+2. When available, stream one source copy into OPFS. IndexedDB owns a bounded,
+   versioned workspace record and normalized transcript/candidate/manifest
+   JSON; OPFS owns large binaries/assets/output. No video/base64 belongs in
+   sessionStorage/localStorage. No durable projects/history are introduced.
+3. Extract only audio locally with a worker and a proven media library. Send
+   bounded audio to a protected transcription request; send bounded normalized
+   text to protected candidate/visual-planning requests. Provider keys remain
+   backend-only. Original video and final MP4 do not cross those routes.
+4. Return bounded results/assets to the browser. Validate them, resolve exact
+   word ranges, and preview the chosen source using immutable start/end times.
+   Notes remain read-only and timestamp grounded, never a chatbot/trend claim.
+5. Analyze only the selected range for speaker/scene framing locally, assemble
+   fixed captions/contextual visuals, and use one shared deterministic browser
+   compositor for preview and the one confirmed export.
+6. Encode/mux the final clip locally, validate it locally, and download the
+   browser-owned file. A remote backend cannot open OPFS/IndexedDB. No server
+   FFmpeg/ffprobe/Python job can be retained by pretending it has those bytes.
+
+WebCodecs plus Mediabunny demux/mux, workers and a bounded Canvas2D/WebGL
+compositor are the recommended starting point, subject to CL-005 probes and
+CL-006/008/011 proofs. Broad ffmpeg.wasm is not the default. AAC-only WASM is a
+possible codec fallback after exact dependency/build licensing and performance
+review. Neither container support nor a successful API-presence check proves
+1080x1920 H.264/AAC output on a particular phone/laptop.
+
+Active-speaker framing remains required. Face landmarks or mouth-motion
+heuristics alone are not equivalent to synchronized audio/visual active-speaker
+inference. CL-006 must prove a browser-executable model and CL-008 must preserve
+its quality; a no-go blocks that release claim. A remote selected-video/frame
+analysis fallback needs a new explicit owner privacy/architecture decision and
+is not approved by this plan. No internal filler cuts are introduced until the
+existing deferred ordered-segment contract revision is approved.
+
+#### Local storage and retention
+
+Use a single workspace, opaque local artifact names, bounded incremental I/O,
+and no full-source `ArrayBuffer`/base64 or duplicate IndexedDB video copy.
+Quota estimates are advisory: quota failure/eviction/private browsing must
+leave a truthful recoverable or unsupported state. Default to best-effort
+storage, not a request for durable persistence. When OPFS is unavailable,
+memory-only mode may proceed only if the complete bounded output path passes
+preflight; refresh then needs re-selection and validated source identity.
+If that cannot be proved, stop before paid work rather than silently upload.
+
+Proposed local access expiry is two hours. Clear/replacement/cancel first fence
+late worker results and record cleanup intent, then stop workers, close handles,
+revoke Blob URLs and delete owned artifacts. IndexedDB and OPFS are not one
+atomic transaction: publish references only after complete writes and reconcile
+incomplete/orphaned records on open. Use an exclusive cross-tab workspace owner;
+if no reliable lock exists, disable persisted multi-tab mutation. Never clear
+another application's origin storage.
+
+Refresh can recover committed local artifacts. Closing the tab does not
+guarantee physical deletion; expiry cleanup runs while active or on next open.
+Same-origin scripts, eviction and user-cleared site data remain relevant. No
+privacy copy may claim that all processing is offline, no bytes leave the
+device, or provider retention is zero merely because `store: false` is used.
+The public copy and this disk-retention tradeoff require owner approval.
+
+#### Protected AI and honest coordination guarantees
+
+The backend receives only explicitly admitted bounded audio/text and returns
+bounded normalized results/assets within request scope. No content is saved to
+a bucket, database, durable job or application log. Any bounded request buffer
+is released on terminal paths; application buffer disposal is not a promise of
+cryptographic RAM erasure or control over provider/platform retention.
+Admission validates actual received bytes/format and bounded audio duration;
+browser metadata cannot establish a server-trusted original-video descriptor.
+
+Authentication/CSRF checks, short-lived HttpOnly grants, Turnstile, input/token/
+image limits, timeout/cancel and zero automatic paid retries remain. A cookie
+counter is not a replay lock: previously valid cookies can be replayed.
+Recommended initial admission is bounded process-local atomic reservation plus
+content-free idempotency/tombstones, with a boot-epoch-bound grant that fails
+closed after restart. A lost/uncertain paid response does not permit resubmission.
+Completed browser-cached evidence can be reused without new calls; an in-flight
+request cannot be recovered by reading browser storage from the server.
+
+These controls provide at-most-one dispatch only within the issuing process's
+lifetime and retained action record. They do not provide distributed exactly-once
+execution, a durable global monthly counter, per-person quota, cross-replica
+recovery or provider-result retrieval after restart. One configured instance
+does not prove global atomicity across deployments/restarts. Public anonymous
+paid enablement remains gated on explicit owner acceptance of a controlled
+deployment's limitations and independently verified provider hard caps, or a
+new approved coordination design. Do not silently introduce Redis/GCS/SQL or
+claim that encryption solves this gap.
+
+Local rendering has zero AI calls and no backend render job. One confirmed
+manifest produces one final artifact; retrying a failed local encode is not a
+paid retry, but requires an explicit immutable-manifest local recovery policy.
+Do not claim a hostile browser is prevented from copying/downloading its own
+bytes or from bypassing local UI counters.
+
+#### Migration and ticket readiness
+
+CL-005 owns local intake/storage/recovery, actual range playback, capability
+spikes, shared-contract/state/config migration and protected-admission foundations.
+CL-006 owns production audio extraction and browser speaker feasibility;
+CL-007 protected transcription/selection; CL-008 selected-range speaker tracks;
+CL-009 browser-owned assembly/assets; CL-010 compositor review parity;
+CL-011 local validated MP4 export; CL-012 control/privacy audit;
+CL-013 device/visual/accessibility/film quality; CL-014 repository audit;
+CL-015 hosting, actual transport/deployment controls and authorized release proof.
+CL-004A retains non-cloud provider readiness. No cloud bucket, native media job
+or cloud rendering proof is deferred to CL-015: those mechanisms are withdrawn.
+
+Existing application code and `.env.example` still implement the CL-004 fake
+baseline and legacy future schemas. This documentation pass does not change
+them. CL-005 must migrate `objectGeneration`, cloud-dependent config, backend-
+authoritative artifact reconciliation and upload/render capabilities together,
+without breaking fake/off defaults or re-creating the single-card UI.
+All feasibility/device/license/rights/paid/cloud results remain unchecked.
+
+#### Superseded technical text and reading boundary
+
+Older detailed passages below remain decision history where they prescribe
+GCS objects/capabilities/generations, object-backed leases, server media jobs,
+native/Python runtime paths, FFmpeg final rendering, bucket TTL or cloud-media
+benchmarks. They are **not active requirements or executable setup instructions**.
+This applies to the old media mechanics in sections 4-7, the future tree in 9,
+object/operation fields in 10, routes in 11, storage/job ports in 12, the native
+pipeline in 13, storage lifecycle in 14, retention inventory in 15, configuration
+tables/example in 16, coordination/cost details in 17, deployment in 21,
+ticket summaries in 22, media-specific release/owner items in 23-25 and
+Appendices A-D. Use this section, its linked architecture contract and revised
+ticket checklists instead. Product constraints, exact source/clip bounds,
+grounding/caption/visual quality, shared boundary direction, fake test isolation,
+rights, secret handling, safety, single-card UI and permanent motion decision
+remain in force. Historical checkboxes cannot be relabeled as passing the new
+browser pipeline. Only the owning ticket's actual code/proof can replace them.
 
 ## 1. Locked product contract
 
@@ -623,6 +786,8 @@ scale. It demonstrates a credible vertical slice and the discipline required to
 expand it safely.
 
 ## 4. End-to-end signature journey
+
+**Browser-owned revision (2026-10-01):** Current media/recovery mechanics are section 0.9 and Browser-owned media. Older upload/job/capability steps here are historical; local preparation and bounded protected audio/text replace them.
 
 Every stage defines entry conditions, user goal, visible behavior, data
 effects, paid work, success, recovery, refresh, and cancellation.
@@ -1272,6 +1437,8 @@ grant is still valid.
 
 ## 5. Canonical workflow and state transitions
 
+**Browser-owned revision (2026-10-01):** The existing reducer is migrated in CL-005, not replaced by a parallel machine. Server-authoritative artifact restoration and cloud upload/job hints below are legacy; section 0.9 and the current recovery matrix govern real mode.
+
 ### 5.1 State authority
 
 The frontend owns one canonical `ClippingSessionState` reducer for user-visible
@@ -1401,6 +1568,8 @@ Zod schema, reject unknown versions, enforce size before parse, and reconcile
 against `GET /v1/session`.
 
 ## 6. Screen-by-screen experience
+
+**Browser-owned revision (2026-10-01):** Retain the latest CL-004 single-card presentation. References below to direct original-video upload, remote playback/render and separate confirmation are superseded by sections 0.6/0.9; do not build those surfaces.
 
 The application uses one semantic component tree per screen. Responsive modes
 change layout, density, and interaction affordances; they do not fork product
@@ -1622,6 +1791,8 @@ transcript excerpt, or filename inside diagnostics.
 
 ## 7. Automatic composition and preview parity
 
+**Browser-owned revision (2026-10-01):** Immutable ranges, caption/visual rules and shared preview/output semantics remain. Server asset capabilities and FFmpeg compilation are withdrawn; the browser compositor and local encode pipeline in section 0.9 replace those mechanics.
+
 ### 7.1 Immutable automatic manifest
 
 Assembly creates one server-validated manifest for the selected candidate. The
@@ -1739,6 +1910,8 @@ selection, browser video color, and exact FFmpeg text rasterization. Golden
 fixtures set tolerances; any semantic difference is a bug.
 
 ## 8. System architecture
+
+**Browser-owned revision (2026-10-01):** Superseded architecture history: sections 8.1-8.7's GCS/media-job/grant-counter/lease architecture is not an execution contract. Use section 0.9 and architecture/BROWSER_OWNED_MEDIA.md; section 8.8's dependency direction remains valid.
 
 ### 8.1 Deployment shape
 
@@ -1914,6 +2087,8 @@ lists the bucket to discover work.
 - `media-job.ts` owns process exit and signal handling; rendering modules do not.
 
 ## 9. Repository and decision ownership
+
+**Browser-owned revision (2026-10-01):** The eventual server-storage/job/vision/render tree below is historical and must not be scaffolded. CL-005's inspected file-level migration owns current changes; later browser modules arrive only in their named packets. Document ownership and dependency constraints remain.
 
 Create a directory only when its first real module arrives. The following is the
 proposed final shape, not permission to pre-create placeholders.
@@ -2238,6 +2413,8 @@ ClipBuilder/
 - Do not create both `domain` and `use-cases` versions of the same policy.
 
 ## 10. Shared contract vocabulary and exact limits
+
+**Browser-owned revision (2026-10-01):** Keep the exact source/clip bounds and grounded domain schemas. Cloud generation/capability/job fields below are legacy designs, migrated with fixtures in CL-005. No browser artifact metadata becomes server-trusted proof of unseen original bytes.
 
 All external input is untrusted. Zod schemas use `.strict()`, bounded arrays,
 bounded normalized strings, explicit enums, and refinements for cross-field
@@ -2722,6 +2899,8 @@ values never populate it. Development logs still obey the content ban.
 
 ## 11. HTTP API
 
+**Browser-owned revision (2026-10-01):** Historical route design, not permission to expose original-video uploads or server render/download capabilities. The current contract is bounded request-scoped AI plus protected admission, with browser-owned artifacts. CL-005/007/009 define only the routes their actual modules implement.
+
 ### 11.1 API conventions
 
 - Base path: same-origin `/v1`.
@@ -3151,6 +3330,8 @@ status alone.
 
 ## 12. Provider ports, prompts, and deterministic fakes
 
+**Browser-owned revision (2026-10-01):** Grounding, bounded structured output and deterministic fake isolation remain. Storage/job ports and content-retaining orchestration below are withdrawn; section 0.9 governs request-scoped provider transport, receipts and browser result ownership.
+
 ### 12.1 Provider policy
 
 Each external capability has a product-facing port, one deterministic fake, and
@@ -3469,6 +3650,8 @@ Its fake succeeds/fails deterministically. Tests never contact Turnstile.
 
 ## 13. Media analysis, assembly, and render pipeline
 
+**Browser-owned revision (2026-10-01):** Superseded native/server execution design. Do not implement Python/ffprobe/FFmpeg jobs from these steps. Preserve quality/timing/grounding requirements through the browser worker/compositor pipeline and CL-006's explicit browser active-speaker go/no-go.
+
 ### 13.1 Process execution safety
 
 Call `ffprobe`, FFmpeg, and the pinned active-speaker Python entry point with an
@@ -3762,6 +3945,8 @@ confirmed cancellation. Partial output never becomes downloadable.
 
 ## 14. Temporary storage and job lifecycle
 
+**Browser-owned revision (2026-10-01):** Historical GCS/bucket/sample/job lifecycle, withdrawn rather than deferred to CL-015. No bucket, object metadata/generations or server job is required. Current OPFS/IndexedDB publication, expiry, clear and recovery are in Browser-owned media.
+
 ### 14.1 Bucket configuration
 
 One dedicated private bucket:
@@ -3906,6 +4091,8 @@ The API reconciles Cloud Run execution status with the terminal object:
 | Signed capabilities | Issuer/browser memory | Expiry, action completion, clear, navigation |
 
 ## 15. Privacy, rights, safety, and security
+
+**Browser-owned revision (2026-10-01):** The old server-object data inventory and bucket-retention copy below are superseded. Section 0.9 separates local disk lifecycle from admitted audio/text/provider retention. Rights, sensitive-inference prohibitions, secret/content-safe logging and browser/API controls remain.
 
 ### 15.1 Data inventory
 
@@ -4079,6 +4266,8 @@ Do not overclaim bot prevention or durable quotas. If abuse exceeds these
 controls, disable public live upload/render and keep the sample path available.
 
 ## 16. Configuration and environment schema
+
+**Browser-owned revision (2026-10-01):** Legacy planned schema/example: current code still has these future server-media fields, but CL-005 must remove their live-feature dependency as one schema/example/test migration. Do not populate bucket/job/native-media variables from this historical table. Hosting config remains private and separately gated.
 
 ### 16.1 Configuration rules
 
@@ -4302,6 +4491,8 @@ The real file must also include documented nonsecret timeout/limit defaults.
 Never paste working credential examples into documentation.
 
 ## 17. Paid operations, timeouts, retries, concurrency, and spend
+
+**Browser-owned revision (2026-10-01):** Object-backed coordination and cloud-media cost entries below are withdrawn. Current admission is process-local, boot-epoch-bound and fail-closed, not cookie-only/distributed exactly-once. Browser encode has no AI call or remote job. Use current COST_MODEL and section 0.9; public paid enablement stays gated.
 
 ### 17.1 Operation budget per user action
 
@@ -4742,6 +4933,8 @@ high-contrast/forced-colors behavior.
 
 ## 20. Verification strategy
 
+**Browser-owned revision (2026-10-01):** Fake test isolation, grounding/quality, rights and cleanup checks remain. Replace historical GCS/native-job tests with the revised packet's browser storage/codec/worker/provenance/admission tests. A tiny synthetic clip or emulator viewport is not full-bound/physical-device performance proof.
+
 Verification is proportional to risk. Ordinary tickets run the smallest tests
 and manual checks that cover their change. Milestones and release run broader
 gates. Live-provider calls are rare evidence, never a substitute for fixtures.
@@ -5075,6 +5268,8 @@ Before a ticket/milestone is complete:
 
 ## 21. Deployment and operations
 
+**Browser-owned revision (2026-10-01):** Superseded media hosting inventory: no GCS bucket, Cloud Run media job or server renderer. CL-015 now proves frontend/protected-API hosting, same-origin bounded audio transport, process restart/rollout guarantees, secrets, costs and authorized live evidence. The region/topology is still proposed, not provisioned.
+
 ### 21.1 Target architecture
 
 - one public Next.js Cloud Run service;
@@ -5198,6 +5393,8 @@ Immediately disable live/paid actions for:
 Keep the sample available only if it is isolated from the incident.
 
 ## 22. Implementation sequence
+
+**Browser-owned revision (2026-10-01):** The detailed older server-media milestone summaries below are historical. Use section 0.9 and the revised ticket index/packets for execution: CL-005 browser foundation, CL-006 audio/model feasibility, downstream browser composition/export, CL-015 hosting only.
 
 The standalone execution packets live in [`tickets/`](tickets/README.md). This
 is their canonical dependency summary; the packets do not authorize
@@ -5487,6 +5684,8 @@ an eventual shape; each packet creates only the real modules it owns.
 
 ## 23. Release acceptance checklist
 
+**Browser-owned revision (2026-10-01):** Apply unchanged product/quality/security/rights requirements, but withdraw cloud-object/native-job acceptance items. Current release additionally requires local persistence/privacy approval, full-bound device codec/performance proof, browser speaker go and justified no-shared-store paid guarantees. Historical boxes are not evidence.
+
 ### Product and claims
 
 - [ ] Product sentence, audience, and five-minute story approved.
@@ -5563,6 +5762,8 @@ an eventual shape; each packet creates only the real modules it owns.
 
 ## 24. Owner decisions still required
 
+**Browser-owned revision (2026-10-01):** Older GCS upload/retention and Cloud Run media-model decisions below are withdrawn. The current open decisions are in section 0.9 and Browser-owned media: local persistence/disclosure, browser model/codec/device feasibility, audio profile, provider data/cost approvals and paid deployment guarantees.
+
 These are not questions an implementation agent should answer silently. The
 recommendation and consequence are already specified so the owner can approve
 or change them efficiently.
@@ -5610,6 +5811,8 @@ privacy-sensitive tickets stop at their named gate.
 
 ## 25. Implementation-agent handoff
 
+**Browser-owned revision (2026-10-01):** Use section 0.9 and the current active packet, not the historical private-object/server-media implementation text below. No original video/output leaves the browser; no DB/object store exception is inferred. Paid/external/Git actions still require explicit authorization.
+
 Give a fresh implementation agent this document, the active ticket, and only
 the references that ticket requires. The non-negotiable bootstrap is:
 
@@ -5639,6 +5842,8 @@ at the owner gate rather than inventing approval.
 
 ## Appendix A — Recovery matrix
 
+**Browser-owned revision (2026-10-01):** Historical server-object recovery matrix. Browser-owned media's current recovery matrix supersedes it, including eviction, local re-selection, partial writes, boot-epoch invalidation and uncertain paid-result failure.
+
 | Failure | Preserve | Do not repeat automatically | User actions |
 | --- | --- | --- | --- |
 | Local invalid file | Nothing remote; local selection | Upload/provider work | Choose another, sample |
@@ -5660,6 +5865,8 @@ at the owner gate rather than inventing approval.
 | Partial clear | No new access; lifecycle backstop | New work | Retry cleanup while possible, start fresh after local clear |
 
 ## Appendix B — Canonical stage codes
+
+**Browser-owned revision (2026-10-01):** Existing fake stage codes remain historical compatibility inputs until CL-005 migration. They are not evidence of real upload, media jobs or remote rendering; current local/remote work semantics must be mapped explicitly.
 
 Stage codes are stable machine values; UI copy may improve without changing
 them.
@@ -5715,6 +5922,8 @@ cleanup.partial
 
 ## Appendix C — Source-controlled public error messages
 
+**Browser-owned revision (2026-10-01):** Historical server-upload/object messages must not ship unchanged for local import. CL-005 maps storage/capability failures and uncertain paid work truthfully; raw filenames, content, credentials and provider details remain forbidden.
+
 Representative messages; exact wording may be usability-edited without
 revealing content:
 
@@ -5737,6 +5946,8 @@ revealing content:
 | `INTERNAL_ERROR` | “Something unexpected happened. Your reference code is available below.” |
 
 ## Appendix D — Official references and re-check list
+
+**Browser-owned revision (2026-10-01):** The native/cloud-media links below are historical alternatives, not a current resource list. Current primary-source browser research is in Browser-owned media; recheck exact runtime/provider versions and policies before execution.
 
 These links support the research baseline; they do not freeze future provider
 behavior or pricing.

@@ -1,8 +1,9 @@
 # ClipBuilder backend
 
-The backend is the private Express control API and later owns the single media
-job entry point. It may import `@clipbuilder/contracts`; it must never import
-frontend implementation.
+The backend is the private Express control API and future protected AI request
+boundary. It may import `@clipbuilder/contracts`; it must never import frontend
+implementation. Original video and final output stay browser-owned; no media
+job or cloud content store is part of the revised plan.
 
 ## Current responsibility
 
@@ -24,9 +25,15 @@ Production/real composition does not register these fixture routes; safe
 `GET /v1/sample/config` remains available with all unimplemented real features
 disabled. There is no fixture download route or valid output capability.
 
-Storage, grants, upload, media jobs, live providers, automatic composition,
-render, and cleanup arrive only in their owning tickets. No editor or assistant
-endpoint belongs in the demo API.
+CL-005 migrates legacy future cloud/native-media configuration and establishes
+protected admission; CL-007/009 add bounded request-scoped audio/text provider
+adapters. Browser media/composition/export arrive in their frontend tickets.
+No editor or assistant endpoint belongs in the demo API. The current config
+still contains legacy planned storage/job fields; do not populate them from old
+instructions. No application code/config was changed by the documentation pass.
+See [Browser-owned media](../../docs/architecture/BROWSER_OWNED_MEDIA.md) for
+process-local replay guarantees, restart/uncertain-result failures and public
+paid gates; the fake Map/cookie are not their implementation.
 
 `src/app.ts` constructs Express without listening. `src/server.ts` is the only
 module that reads `process.env` and opens the local port.

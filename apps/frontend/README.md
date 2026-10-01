@@ -6,6 +6,15 @@ server-only configuration to browser code.
 
 ## Current responsibility
 
+**Planning handoff (2026-10-01):** the browser will own source/results/assets/
+final output through the [browser-media contract](../../docs/architecture/BROWSER_OWNED_MEDIA.md).
+CL-005 migrates File lifetime, OPFS/IndexedDB recovery, actual range playback,
+legacy upload/generation/config assumptions and capability preflight; downstream
+tickets implement audio/model/composition/export. The existing fake behavior
+documented below is unchanged: it does not read the selected video or download
+an MP4. Backend services cannot open browser storage. No media implementation,
+dependency install, env migration or device proof occurred in this docs pass.
+
 CL-001 supplies the accessible product shell, framework error/not-found
 boundaries, metadata, robots policy, and deterministic build/test foundation.
 CL-002 adds the responsive landing prototype at `/`. CL-004 connects its Get

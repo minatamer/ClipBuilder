@@ -1,3 +1,113 @@
+# CL-006 - Build browser audio processing and prove active-speaker feasibility
+
+Status: Planned; browser-owned execution revision, external gates pending<br>
+Milestone: M2 - browser media feasibility<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-003 and CL-005 feasibility/foundation handoff<br>
+Suggested commit: `CL-006: validate browser audio and speaker feasibility`<br>
+Parent: [source of truth section 0.9](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#09-browser-owned-media-architecture-revision-2026-10-01)<br>
+Technical contract: [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md)<br>
+Index: [README.md](README.md)
+
+**Execution authority:** this current packet and the linked browser contract
+supersede the server-media mechanics retained below as history. No GCS,
+generation/capability/lease, native media job or cloud-render acceptance item
+survives by being left unchecked in that history. Preserve unchanged product,
+grounding/quality, rights, secret handling, fake/off test and dependency rules.
+No Git, provider, paid, install or cloud action is authorized by this document.
+
+## Objective and boundaries
+
+Productionize incremental browser audio extraction and prove a concrete
+browser-executable audiovisual active-speaker pipeline. No backend media job,
+cloud bucket, native ffprobe/FFmpeg request pipeline or Python subprocess.
+CL-005 must have proved basic and full-bound local media/storage/export
+feasibility; this packet proves production audio and speaker quality, not AI
+transcription or full assembly.
+
+Original video stays local. Keep the exact public 15s-20min/500-MiB bounds,
+selected 10-60s range, fake/off isolation and rights/privacy/license gates.
+A face detector or center crop is not an active-speaker implementation.
+
+## Current implementation checklist
+
+- [ ] Worker-owned demux/audio decode/downmix/resample/profile encode with
+      bounded queues and scratch; actual timestamps, frame/audio disposal,
+      abort/stall/timeout and background-suspension behavior.
+- [ ] Prove the selected full-bound audio profile fits protected route/hosting
+      size limits, with no extra transcription calls. Compare quality and timing
+      to reference PCM; validate exact received format/duration before spend.
+      Record conditional HTTP/2/compressed-profile conclusions, not guessed caps.
+- [ ] Inspect the pinned Light-ASD inference model plus final classifier,
+      preprocessing and code/checkpoint/detector licenses. Obtain explicit
+      model/download/media approval; no dataset/weights download by default.
+- [ ] Candidate: worker shot/face tracks, reference-equivalent 25fps face
+      sampling, 112x112 grayscale tensor preprocessing and 16kHz mono/13-MFCC
+      features (25ms windows/10ms hops), then ONNX audiovisual inference.
+      Preserve source timestamp/rotation/VFR mapping and shot-boundary resets.
+- [ ] Export/probe exact 2D/3D convolution/pooling, reshape/transpose, GRU,
+      temporal reversal, GELU and classifier operations/opset/time shapes.
+      Begin with ORT WASM parity; WebGPU requires its own operator/device proof.
+      A PyTorch checkpoint or server CPU run is not a browser execution result.
+- [ ] Golden-test preprocessing/tensors and model scores against an approved
+      offline reference; no approximation of MFCC/crop/normalization.
+      Native tooling is permitted only as an explicitly approved offline
+      comparison harness, never the deployed media path.
+- [ ] Measure actual converted model/download size, load time, tensor working
+      set and multi-face/multi-duration inference cost. Upstream checkpoint
+      metadata (~4.18MB) is not peak browser memory or ONNX size.
+- [ ] Face detector substitution, weight quantization, reduced ensemble or
+      sampling changes require explicit measured quality parity, not an assumed
+      speed improvement.
+- [ ] Agree measurable focus correctness/switch delay/jitter/off-screen behavior,
+      audio timing, time/memory/responsiveness thresholds before verdict.
+      Evaluate one face, alternating wide two-speaker, listener motion, overlap,
+      cuts, missed faces and off-screen speech using approved media.
+- [ ] Publish a browser-model go/no-go with versions/hashes/device matrix.
+      No-go blocks CL-008 and reopens architecture; no generic-crop downgrade
+      or remote frames/video fallback without a new owner decision.
+
+## Ownership and tests
+
+Own frontend media workers/audio pipeline, strict worker messages, browser-safe
+descriptor/provenance changes necessary for this slice, model-conversion/
+reference tooling only when approved, deterministic fake audio/vision ports and
+focused unit/browser tests. No cross-app import, arbitrary URL, shell string,
+provider request, application content log or model fetch on module import.
+
+Test exact limits/malformed/truncated/unsupported/silent tracks, VFR/rotation/
+offset mapping, bounded buffering, queue backpressure, model/operator failures,
+cancel/reload/background pressure and every resource cleanup. Assert zero
+Deepgram/text/image calls. Exercise a synthetic 20min/near-500MiB path and
+60s selected range; physical phone/tablet results remain pending until tested.
+Run focused checks and all five root gates before completion.
+
+## Acceptance, gates and handoff
+
+- [ ] Production audio profile has exact local/transport bounds and quality/
+      timing/cancel evidence, not a unit mock.
+- [ ] Active-speaker browser feasibility is explicitly go, or honestly no-go
+      with downstream blocked. Synthetic face tracks cannot approve it.
+- [ ] Real reference media, converted weights, legal distribution, actual
+      devices and measured performance are separately recorded.
+- [ ] No original-video/backend transfer, cloud/native job or paid call occurs.
+- [ ] Update software/runtime guide and narrow source-of-truth decisions;
+      changed files, exact tests/manual states and all unchecked owner gates
+      appear in the completion handoff.
+
+CL-008 depends on this browser go proof. CL-015 validates deployed model delivery/
+headers/caching and client behavior, not a Cloud Run speaker job. Preserve the
+single-card UI; do not implement editor, clip assembly or final export here.
+
+## Historical packet
+
+<details>
+<summary>Superseded server-media plan, retained only for decision history</summary>
+
+The following text is not an execution checklist, setup instruction or evidence
+of completion under the browser-owned architecture. It must not be used to
+reintroduce cloud content storage, jobs or unsupported guarantees.
+
 # CL-006 — Build the media job and prove speaker feasibility
 
 Status: Planned<br>
@@ -252,3 +362,5 @@ Report the job/descriptor/process architecture, media acceptance matrix,
 cleanup evidence, fake lifecycle, pinned binaries/model/weights/licenses,
 benchmark inputs and results, go/no-go decision, changed files, exact commands,
 and every rights/network/cloud blocker.
+
+</details>

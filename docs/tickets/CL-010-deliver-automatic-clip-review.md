@@ -1,3 +1,73 @@
+# CL-010 - Validate browser compositor review parity
+
+Status: Planned; browser-owned execution revision, external gates pending<br>
+Milestone: M4 - automatic review<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-002 design foundation, CL-004 screens and CL-009 browser assembly<br>
+Suggested commit: `CL-010: validate browser compositor review parity`<br>
+Parent: [source of truth section 0.9](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#09-browser-owned-media-architecture-revision-2026-10-01)<br>
+Technical contract: [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md)<br>
+Index: [README.md](README.md)
+
+**Execution authority:** this current packet and the linked browser contract
+supersede the server-media mechanics retained below as history. No GCS,
+generation/capability/lease, native media job or cloud-render acceptance item
+survives by being left unchecked in that history. Preserve unchanged product,
+grounding/quality, rights, secret handling, fake/off test and dependency rules.
+No Git, provider, paid, install or cloud action is authorized by this document.
+
+## Objective and boundaries
+
+Connect the existing read-only review to the shared deterministic browser
+compositor, locally owned source/assets and immutable manifest. Prioritize the
+central portrait video, edit notes left and transcript right, with responsive
+short-height rails and inline glass playback controls. No server playback
+capability or separate Continue to export/confirmation screen.
+
+CL-004 already owns these screens and animations. Improve integration/parity,
+not reconstruct UI. No editor, trim, style/visual controls, undo or chatbot.
+Confirm export directly is the only final creative approval; mount/restore/
+preview never starts rendering or another paid action.
+
+## Current checklist and acceptance
+
+- [ ] Hydrate local artifact references plus validated transcript/assembly/
+      manifest revisions; reject unavailable, wrong-source, expired or stale
+      assets before review or Confirm export.
+- [ ] Use one manifest sampling/composition implementation for captions/font
+      metrics, focus crop, overlays/cards, visual safe areas, source timestamps
+      and output frames. Separate preview/export renderers cannot invent
+      independent layout/timing semantics.
+- [ ] Keep player range-relative controls and timestamp jump mapping; notes
+      describe only validated edits and transcript evidence, never trend data.
+- [ ] Validate finite playback, source audio offsets, caption readability,
+      visual coverage, no unapproved content and actual frame samples.
+- [ ] Smooth candidate/review layout motion survives locally decoded media and
+      dynamic phone/tablet/laptop dimensions; no app motion-suppression flag.
+- [ ] Fake review remains synthetic and cannot become a valid download or
+      successful real processing fallback.
+- [ ] Playback/restore/notes seeking make zero new provider calls; local missing
+      content triggers truthful recovery, not backend fetch of OPFS.
+- [ ] Test local hydration, tampered/stale revisions, absent assets, clear during
+      playback, worker/GPU failure, seek/sync and pixel/parity fixtures.
+- [ ] Run focused contracts/compositor/session/component/browser tests and all
+      five root gates. Record actual device/font/media/visual/accessibility gates
+      separately from mock or viewport-emulation evidence.
+
+Own compositor preview integration, source-to-output mapping, player lifecycle,
+review facts/notes and proof fixtures. CL-011 owns full export/validation using
+the same compositor contract. Update the narrow docs and report exact checks,
+changed files, deviations and every pending owner/provider/rights/device item.
+
+## Historical packet
+
+<details>
+<summary>Superseded server-media plan, retained only for decision history</summary>
+
+The following text is not an execution checklist, setup instruction or evidence
+of completion under the browser-owned architecture. It must not be used to
+reintroduce cloud content storage, jobs or unsupported guarantees.
+
 # CL-010 — Deliver automatic clip review and render confirmation
 
 Status: Planned<br>
@@ -230,3 +300,5 @@ Report responsive compositions, immutable manifest/hash behavior, fixed-caption
 evidence, preview/render parity, zero-call assertions, excluded-control tests,
 cleanup, changed files, exact checks, and every remaining visual/rights/cloud
 blocker.
+
+</details>

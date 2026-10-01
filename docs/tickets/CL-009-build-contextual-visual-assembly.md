@@ -1,3 +1,87 @@
+# CL-009 - Build browser-owned contextual assembly
+
+Status: Planned; browser-owned execution revision, external gates pending<br>
+Milestone: M4 - automatic assembly<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-004A, CL-007 and CL-008 browser focus proof<br>
+Suggested commit: `CL-009: validate browser-owned contextual assembly`<br>
+Parent: [source of truth section 0.9](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#09-browser-owned-media-architecture-revision-2026-10-01)<br>
+Technical contract: [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md)<br>
+Index: [README.md](README.md)
+
+**Execution authority:** this current packet and the linked browser contract
+supersede the server-media mechanics retained below as history. No GCS,
+generation/capability/lease, native media job or cloud-render acceptance item
+survives by being left unchecked in that history. Preserve unchanged product,
+grounding/quality, rights, secret handling, fake/off test and dependency rules.
+No Git, provider, paid, install or cloud action is authorized by this document.
+
+## Objective and boundaries
+
+Complete one immutable browser-owned assembly manifest for the chosen range:
+proved speaker focus, fixed captions and sparse transcript-grounded visuals.
+Protected backend requests may plan visuals and generate bounded stills; they
+do not store a source, transcript, assembly bundle or asset bucket.
+
+Keep 1-3 planned visual beats when supported by source evidence, with existing
+image-call ceiling 0-3; do not force generation when deterministic cards suffice.
+No stock/web scraping, user remote URL resolver, likeness/logo imitation,
+generative video, editor controls or arbitrary renderer input.
+
+## Current implementation checklist
+
+- [ ] Validate submitted selected context and server provenance receipts,
+      session/range/revisions, input/output/token bounds and process-local
+      action admission before one foreground visual-plan call (SDK retry=0).
+- [ ] Reconcile word/time evidence; reject unsupported claims, fabricated trend/
+      view predictions and out-of-range cues. Internal filler cuts remain
+      deferred until the ordered-segment contract is approved.
+- [ ] Generate only approved bounded stills, at most three, with exact image
+      size/quality/token/call policy. Reserve each action; uncertain outcomes
+      are consumed, no hidden retry. Provider consent/retention gates remain.
+- [ ] Return bounded validated image bytes/content receipts, not arbitrary
+      signed provider URLs. Validate image type/pixels/dimensions and write
+      browser OPFS artifacts; no server result bucket/durable payload.
+- [ ] Render deterministic restricted MathJax/information cards locally using
+      approved fonts/packages, sanitized SVG/raster output and fixed limits.
+      No model-generated HTML/SVG/executable code.
+- [ ] Compile fixed caption groups/emphasis, focus track and visual timing into
+      a strict immutable manifest; browser journal publication follows complete
+      asset writes. Bind hashes/revisions/range and validate all references.
+- [ ] Reuse build progress UI and left-hand final-review Agentic Notes. Explain
+      only actual edits/captions/visuals/focus with clickable grounded timestamps;
+      never claim cuts or successful generation that did not occur.
+- [ ] Clear/cancel/replace fences late outputs and deletes partial cards/assets;
+      quotas, lost responses and orphan files cannot publish incomplete success.
+
+## Tests, acceptance and handoff
+
+Own protected visual/image adapters/use cases/routes plus browser card/asset
+assembly and strict shared schemas, not final encode. Fake transports verify
+exact visual-plan/image counts, zero rejected-case calls, all input/token/pixel
+caps, malformed provider/receipt/asset failures and replay/race/restart handling.
+Unit/browser tests cover caption grouping, emphasis, legal fonts, crop/visual
+bounds, asset timing, immutable source mapping, quota and worker cleanup.
+Run focused checks and all five root gates.
+
+- [ ] Completed browser assembly contains validated focus/captions/assets and
+      only source-grounded notes; preview/export semantics are shared downstream.
+- [ ] Backend stores no durable content and original video/output stay local.
+- [ ] Real provider/model/image cost/privacy/rights and visual-quality checks
+      remain explicitly gated until specifically authorized and performed.
+- [ ] Update provider/software/cost docs and exact assembly/asset ownership.
+      Record changed files, tests, deviations and every unchecked device/owner
+      item. No GCS/cloud assembly gate is transferred to CL-015.
+
+## Historical packet
+
+<details>
+<summary>Superseded server-media plan, retained only for decision history</summary>
+
+The following text is not an execution checklist, setup instruction or evidence
+of completion under the browser-owned architecture. It must not be used to
+reintroduce cloud content storage, jobs or unsupported guarantees.
+
 # CL-009 — Build contextual visuals and complete first-cut assembly
 
 Status: Planned<br>
@@ -251,7 +335,7 @@ action is authorized by this packet alone.
 
 ## Precision references
 
-- [Contextual visuals and manifest behavior](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#76-contextual-visual-beats-and-headline)
+- [Historical contextual visuals policy](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#75-contextual-visual-beats)
 - [Visual-plan and assembly contracts](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#108-speaker-focus-and-visual-plan-contracts)
 - [Planner, image, and card providers](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#129-visual-planner-port)
 - [Assembly and visual pipeline](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#135-assembly-job-stages)
@@ -263,3 +347,5 @@ Report plan/asset/card contracts and config revisions, sample/unrelated-fixture
 results, exact provider call counts, assembly/UI states, cleanup, live usage and
 cost if authorized, changed files, checks, and every remaining visual/provider/
 rights/spend blocker.
+
+</details>

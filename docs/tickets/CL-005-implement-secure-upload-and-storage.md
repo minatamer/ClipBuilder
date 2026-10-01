@@ -1,279 +1,268 @@
-# CL-005 — Implement secure upload and temporary storage
+# CL-005 - Establish browser-owned media and protected admission
 
-Status: Planned<br>
-Milestone: M2 — private media foundation<br>
+Status: Planned; feasibility-first, real/public enablement gated<br>
+Milestone: M2 - browser-owned media foundation<br>
 Last synchronized: 2026-10-01<br>
-Depends on: CL-001, CL-003, and CL-004A's documentation handoff<br>
-Blocks: CL-006, CL-011<br>
-Suggested commit: `CL-005: implement secure direct upload`<br>
-Parent plan: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)<br>
-Ticket index: [`README.md`](README.md)
+Depends on: CL-001, CL-003, CL-004 and CL-004A's documentation handoff<br>
+Blocks: CL-006, CL-007, CL-011<br>
+Suggested commit: `CL-005: establish and validate browser-owned media`<br>
+Parent plan: [source of truth](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#09-browser-owned-media-architecture-revision-2026-10-01)<br>
+Current technical contract: [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md)<br>
+Ticket index: [README.md](README.md)
 
----
+## Objective and owner decision
 
-## Objective
+Original video, transcript/candidates, assembly assets and final output belong
+to one disposable browser workspace. No application database or cloud object
+storage service: this is not the former GCS-backed database-free design.
+The old secure resumable upload/storage packet is withdrawn, not completed or
+deferred to deployment. Keep the filename stable for existing references;
+the new title/scope govern execution.
 
-Latest owner clarification (2026-10-01): CL-004 owns the complete development-
-only frontend preview and its reusable screens. This packet replaces the fake
-adapter with its real implementation and proves integration, media, recovery,
-privacy/rights/spend/readiness gates; it does not recreate the workflow UI.
-Earlier restrictions on synthetic progress apply to real/public mode, not the
-explicitly labelled local preview. Fake completion is not evidence for this
-packet's unchecked acceptance. See the parent development-preview clarification.
+Implement real local intake, browser storage/lifecycle and actual immutable
+candidate-range playback using CL-004's existing single-card UI. Establish
+protected request-admission foundations and migrate the legacy contracts,
+state/recovery and configuration that would otherwise force a server-media job.
+Do not implement transcription, full active-speaker processing, contextual
+assembly or final production export early. First prove that the recommended
+browser pipeline can meet its essential media/storage/transport boundaries.
 
-Owner UI revision (2026-10-01): reuse CL-004's shared single-workspace frame,
-buttons and progress for drop/pick, local inspection and direct upload. Replace
-the disabled intake with real capability-gated selection here. Animate only
-actual transferred-byte progress; preserve formats/limits/rights, safe-area
-actions and short-height scrolling. Parent section 0.6 takes precedence over
-older layout instructions; rights/privacy/spend/live gates remain. The cloud
-ordering decision below supersedes earlier permission to run cloud work here.
+This planning revision authorizes no code, package/model installation, media
+inspection, paid call, cloud mutation, Git action or deployment by itself.
+Execution requires the owner's separate request for this packet. Fake/off
+foundations may proceed independently; external proof stays gated.
 
-Owner setup ordering (2026-10-01): [CL-004A](CL-004A-prepare-third-party-provider-readiness.md)
-owns non-GCloud setup guides. Implement storage/upload adapter code and prove
-its request/response contracts locally here; no GCloud account, resource,
-credential use or live spike is required or performed. Actual GCS CORS/resume/
-generation/abort/cleanup evidence transfers to final CL-015 and stays unchecked
-until then. A failed deployment spike reopens the mechanism/implementation and
-requires focused re-audit before live enablement.
+## Product and architecture invariants
 
-Implement the complete private-media intake boundary: encrypted processing
-grant, content-free object naming, temporary-storage port/fake, atomic markers
-and leases, browser-local inspection, server-authorized resumable upload,
-authoritative completion checks, cancellation, and clear/partial-cleanup
-behavior.
+- One owned/licensed MP4 or WebM, 15 seconds through 20 minutes AND <=500 MiB
+  publicly; one chosen contiguous 10-60s clip. Do not lower those ceilings or
+  add internal filler cuts without an explicit source-of-truth revision.
+- Preserve one changing responsive card, design-system primitives, smooth
+  selection/layout motion, portrait video priority and glass inline controls.
+  No re-created screens/editor; no app-level animation suppression restored.
+- Original video and final output never reach the application backend.
+  Backend AI receives only disclosed bounded audio/text in later tickets.
+- OPFS owns large binaries, IndexedDB bounded normalized records; File/Blob,
+  handles, controllers, workers and URLs are runtime-owned. No video/base64 in
+  sessionStorage/localStorage, no durable history and no duplicated IDB source.
+- The backend cannot open browser storage. No Python Light-ASD, native ffprobe
+  or server FFmpeg path is presumed retained. Browser active-speaker quality is
+  a CL-006 gate, not solved by face landmarks.
+- Keep `FAKE_MODE=true`, derived `PROVIDER_MODE=fake`,
+  `PAID_DEMO_ENABLED=false`, and all live flags false in defaults/tests.
+  Real composition never falls back to synthetic success.
+- 1080x1920 H.264/AAC is the existing output target; code presence is not proof
+  of actual encode/mux/playback or universal browser/device support.
 
-This ticket deliberately keeps storage/security and upload together. The
-resumable mechanism is not independently useful or safe without its grant,
-object, idempotency, metadata, and cleanup rules; splitting them would create a
-capability with no trustworthy lifecycle.
+## Dependency evidence
 
-## Portfolio value
+Read the current source of truth section 0.9 and linked architecture contract,
+then inspect actual code. CL-004's development preview is locally verified at
+`c4f226b`, with documentation at `2efee17`; the pre-change root gate passed
+249 tests. This is historical fake-baseline evidence, not browser-media proof.
 
-Demonstrate that large private media can bypass the web/API body while the app
-still enforces strict limits, ownership, idempotency, honest retention, and
-cleanup—one of the strongest architecture proofs in the portfolio story.
+Reuse the canonical reducer, session effect ownership, immutable review
+bundles, range reconciliation and design system. The fake session's bounded Map
+and fixture cookie are not production admission or distributed coordination.
+CL-004A supplies provider/cost/software guides, not actual account approvals.
 
-## Standalone implementation context
+### Documentation-pass evidence (2026-10-01)
 
-- Browser JSON uses same-origin `/v1`; large media uploads directly to one
-  private temporary Cloud Storage object through a short-lived server-created
-  resumable capability.
-- Next.js and Express never buffer or proxy media bytes. The browser keeps the
-  upload URL in memory only; it never enters reducer state, session storage,
-  logs, errors, HTML, analytics, or documentation evidence.
-- The `__Host-clipping_session` cookie is HttpOnly, Secure, SameSite=Strict,
-  Path=/, authenticated-encrypted, <3,500 bytes, rotated as owned evidence and
-  action counters change, and contains no content or signed capability.
-- Public source acceptance requires both authoritative duration ≤20 minutes
-  and bytes ≤500 MiB (with the lower 15-second bound). Browser inspection is
-  advisory; object metadata and CL-006 ffprobe proof are authoritative.
-- Storage is not a database. Objects are addressed only through the grant,
-  expire together, are explicitly clearable, and are never listed as product
-  history.
-- Public live upload remains owner-gated. Implement and prove the bounded fake
-  path first; actual GCS/CORS mechanism evidence is a final CL-015 gate.
+This pass changed only 25 Markdown files: source of truth, browser research/
+architecture contract, CL-003/004 migration handoffs, CL-004A/005-015 packets and
+index, documentation index, provider/cost/software guides, and root/frontend/
+backend/demo READMEs. Application source, environment example, dependencies and
+lockfile were not changed. Nothing was staged/committed and no provider/paid/
+cloud action, media/model download or benchmark was performed. Public upstream
+source/docs were read for research; no ignored secret file was inspected.
 
-## Dependency evidence required
+Read-only verification: repository-installed Prettier Markdown AST parsing of
+all 25 changed/new documents; 188 relative file targets and 100 heading anchors
+resolved, with no missing links or unmatched historical details fences.
+`corepack pnpm format:check` and `git diff --check` passed. The repository
+intentionally ignores Markdown in Prettier, so the format gate is not a Markdown
+formatting claim. No application tests were rerun for this docs-only pass;
+the earlier 249-test baseline above is not new media verification.
+All implementation/spike/owner acceptance boxes below remain unchecked.
 
-- CL-001 must provide strict API/error/config contracts, fake-only test
-  composition, and verified secret-file ignore rules.
-- CL-003 must provide canonical intake/upload/clear transitions and adversarial
-  persistence/restore coverage.
-- CL-004A must provide the provider/env/budget guides and Turnstile handoff;
-  owner account/key readiness is not required for local/fake implementation.
+## Phase 1: feasibility before committing the implementation choice
 
-Inspect and reuse those boundaries; a missing contract/state transition reopens
-the owning dependency rather than becoming a second implementation here.
+- [ ] Pin proposed Mediabunny/runtime versions, inspect MPL-2.0 and any AAC WASM/
+      FFmpeg build licenses, and obtain installation/download approval first.
+- [ ] With approved synthetic local media, prove range preview, worker decode,
+      incremental OPFS write/read/delete and a small portrait H.264/AAC
+      encode/mux/reopen/playback validation. This is a spike, not CL-011.
+- [ ] Before a feasibility go, exercise a generated 20-minute source near the
+      500-MiB ceiling outside Git and exact independent limit boundaries;
+      extract full audio and export a 60-second 1080x1920 H.264/AAC range with
+      bounded queues/memory. Include cancellation, reload, background suspension
+      and output validation. Agree measurable time/memory/responsiveness/sync
+      thresholds first; actual device results remain pending until performed.
+- [ ] Probe exact source/target codec configurations, not just API presence.
+      Record unsupported platforms honestly; native AAC fallback is conditional.
+- [ ] Demonstrate bounded queues/backpressure/resource closure; no whole-source
+      ArrayBuffer/base64, full-source frame cache or hidden IDB video duplicate.
+- [ ] Establish quota working-set formula from source + bounded audio/assets/
+      output/scratch/reserve; exercise denial, eviction and mid-write failure.
+- [ ] Compare a full-bound audio transport profile: 20min 16kHz mono 16-bit WAV
+      is 38,400,000 bytes plus headers and exceeds HTTP/1 Cloud Run's 32-MiB cap.
+      Prove end-to-end HTTP/2 or a quality-preserving compressed profile with
+      actual duration/body validation; never silently add transcription calls.
+- [ ] Record device/browser matrix, measurement procedure, licenses and explicit
+      go/no-go. Synthetic tests cannot prove full-duration performance, physical
+      phone thermals, transcription quality or active-speaker quality.
+- [ ] Obtain owner decisions for local disk-retention disclosure, supported
+      release devices/claims and no-shared-store paid deployment guarantees
+      before those real/privacy/public paths are enabled.
 
-## Files and areas owned
+No-go blocks downstream assumptions. A remote original-video upload, server
+render fallback, silent WebM export or generic-crop substitute is not authorized.
+Audio profile/hosting conclusions may remain conditional until CL-006/015 proof,
+but the implementation must expose the unavailable state and name the gate.
 
-- Backend processing-grant, CSRF/source checks, idempotency markers, leases,
-  signed capabilities, content-safe logging helpers, object naming, and clear
-  use case.
-- `TemporaryStorage` port plus bounded in-memory fake and proposed GCS adapter
-  code verified with injected fake transport; actual mechanism proof is CL-015.
-- Session, upload-authorize, upload-complete, and clear routes/use cases and
-  their shared contracts.
-- Frontend local inspection, rights disclosure, upload progress/lifecycle,
-  resumable client, cancel/clear, and focused tests.
-- Storage/upload/retention operations documentation required by this scope.
+## Phase 2: local workspace and intake
 
-## Scope boundaries
+- [ ] Retain selected File in one runtime artifact owner; inspect container,
+      actual supported tracks/duration/dimensions/rotation and byte limits.
+      Filenames are neither persisted nor transmitted.
+- [ ] Immediately preview via owned Blob URL, then stream one copy into OPFS
+      when storage is supported and enough estimated working space exists.
+- [ ] Implement bounded versioned IndexedDB journal; transaction completion,
+      not individual request success, commits metadata. OPFS/IDB publication
+      uses pending/ready status and orphan reconciliation, not pretend atomicity.
+- [ ] Use opaque artifact IDs/epochs, one exclusive cross-tab mutation owner,
+      stale-result fencing and content-safe errors. BroadcastChannel does not
+      replace a lock. Fail closed for persisted mutation without reliable locking.
+- [ ] Implement proposed two-hour logical expiry and active/next-open cleanup.
+      Tab close cannot promise immediate physical deletion.
+- [ ] Memory-only fallback proceeds only when the entire bounded source/output
+      path is viable. Refresh asks re-selection plus validated source identity;
+      wrong-source cached results are rejected. Otherwise fail before paid work.
+- [ ] Clear/replacement/cancel fence new results, stop requests/workers, close
+      codecs/frame/audio/file handles and URLs, delete all known artifacts and
+      keep bounded content-free cleanup intent for partial deletion.
+- [ ] Preserve the legacy cleanup-marker compatibility until safe migration is
+      proved. Never clear unrelated origin storage or erase an existing user's
+      dirty work.
 
-### In scope
+Measured copy progress is local preparation, not a fictional network upload.
+Provider-wait progress remains elapsed/indeterminate; fake mode alone can show
+its simulated percentages. No valid download is implemented by this ticket.
 
-- Local file selection and object URL; advisory type/bytes/duration/orientation
-  checks; exact recommended/hard-limit and rights copy.
-- `POST /v1/session` upload mode, `GET /v1/session` reconciliation evidence,
-  `POST /v1/uploads/authorize`, `POST /v1/uploads/complete`, and
-  `DELETE /v1/session` through fake storage/job boundaries.
-- UUID idempotency keys, create-only markers, generation preconditions,
-  single-source leases, grant rotation/expiry/key-version support, and
-  content-free metadata.
-- Upload progress, abort/resume only when the validated protocol actually
-  supports it, visibility/network recovery, partial-object deletion, and
-  bounded cleanup retry.
-- Local storage-adapter request/response tests for the proposed GCS mechanism;
-  hand off the exact CORS/header/expiry/size/generation/range/abort/cleanup matrix
-  to CL-015 before the live mechanism can be accepted.
+## Phase 3: protected-admission foundation without a store
 
-### Out of scope
+- [ ] Use short-lived authenticated HttpOnly/Secure/SameSite grants bound to an
+      issuing process boot epoch; validate expiry/version/key/size/origin/CSRF.
+- [ ] Atomically reserve an action in a bounded process-local ledger before any
+      asynchronous paid dispatch. Include action kind, nonce, request digest,
+      expiry and terminal/uncertain tombstone; never content in logs/URLs.
+- [ ] Keep reservations through grant expiry. Refuse capacity overflow rather
+      than evicting replay protection. Restart invalidates old grants.
+- [ ] Validate current grant/action, actual bounded input, rate/capacity/budget
+      and action-bound Turnstile before spend; cheapest-first rejection.
+- [ ] Set exact adapter call budgets and automatic retry=0. Lost/disconnected/
+      timed-out paid results consume the action; do not refund/resubmit blindly.
+- [ ] Prepare integrity-receipt/provenance contracts for normalized later
+      provider results; a receipt is not an atomic ledger or trust in browser
+      source metadata. No provider integration or live verification here.
+- [ ] Prove concurrency, conflicting replay, stale cookie, restart, timeout,
+      cancel and partial-clear outcomes with injected fake clocks/transports.
+- [ ] State process-lifetime-only guarantees. No cross-replica exactly-once,
+      durable monthly/per-person counters or lost-content recovery is claimed.
+      Public paid mode stays off until owner-approved safeguards are evidenced.
 
-- ffprobe/process execution (CL-006), transcription/candidate analysis
-  (CL-007), playback-delivery architecture beyond evidence needed by the spike,
-  assembly, automatic clip review, render, production provisioning, or public enablement.
-- Multipart media requests, public bucket/object ACLs, bucket listing, filenames
-  in object keys, database-backed sessions, durable per-user quota, or a general
-  storage repository abstraction.
-- Reading user local secret files, creating credentials/service-account JSON,
-  or any GCloud setup/mutation/credential use/live spike (final CL-015 only).
+No DB/Redis/object-store exception is inferred. A single configured instance or
+encrypted cookie cannot be presented as distributed atomic coordination.
 
-## Implementation checklist
+## File-level migration and fix plan
 
-### 1. Grant, session, and object model
+Inspection identified real mismatches to repair **during CL-005**, not this
+documentation pass. Add modules only when their first implementation arrives;
+paths for new modules below are proposed owning areas, not scaffolding.
 
-- [ ] Implement authenticated-encrypted grant encode/decode/rotation with
-  active plus bounded previous decrypt-only key and strict size/version/expiry.
-- [ ] Keep only opaque session/source/operation IDs, allowed mode, revisions,
-  counters/nonces, key version, and expiry in the grant.
-- [ ] Generate content-free object paths under known class prefixes; never use
-  filename, title, speaker, IP, or provider/account identifier.
-- [ ] Implement trusted Origin/Fetch Metadata checks and content-free request
-  context/error/logging.
+| Existing files / new owning area | CL-005 change and verification |
+| --- | --- |
+| `packages/contracts/src/media.schema.ts` and `contracts.test.ts` | Replace GCS-only `objectGeneration` with validated local source identity/revision semantics; preserve exact bounds/rotation/codec checks. Never import File/OPFS/Node/application types into contracts. |
+| `packages/contracts/src/api.schema.ts`, `operation.schema.ts`, `assembly.schema.ts`, `index.ts`, contract boundary tests | Separate local artifact availability from backend admission/provenance; retire future signed upload/playback/download and server-job assumptions. Define only foundation contracts now, provider endpoints when their ticket arrives. Migrate synthetic fixtures atomically where necessary. |
+| `apps/frontend/src/features/session/session.types.ts`, `session.reducer.ts`, `session.selectors.ts` and reducer/regression tests | Model local intake/preparation and local artifact references in the existing machine. No second workflow; distinguish local work from protected remote actions. Keep one selection and direct Confirm export; migrate upload/render stage hints deliberately. |
+| `session.persistence.ts`, `session.reconciliation.ts`, `session.provider.tsx`, `session.effects.ts` and persistence/lifecycle tests | Keep content-free legacy sessionStorage projection/cleanup bridge; add validated IDB/OPFS artifact hydration. Browser artifacts become review/recovery authority, not mandatory backend-owned bundles. Old fake projections remain safely recoverable or explicitly cleared; no auto-spend on restore. |
+| Proposed frontend media feature: local artifact owner, workspace journal, OPFS adapter, capability probes and worker protocol | Narrow named responsibilities, one cleanup owner; versioning/quota/epoch/partial-write tests and browser integration proof. No general utils/services bucket or empty future render tree. |
+| `apps/frontend/src/features/sample/development.input.ts`, `sample.experience.tsx`, `sample.api.ts`, `development.progress.ts` and tests | Introduce real local media adapter alongside explicitly fake behavior; current fake path discards selected File and reads none. Do not silently make fake mode transmit media. Derive config/capability gates without duplicate constants. |
+| `portrait-player.tsx`, `use-range-playback.ts`, `candidate.review.tsx`, `candidate.evidence.ts` and review tests | Supply locally owned source playback and immutable range clamp/end/reset; retain glass controls and layout motion. Fake placeholder playback remains clearly synthetic. No real final-review/download claim until later pipeline. |
+| `apps/frontend/src/app/api/sample/[...path]/route.ts` and tests | Keep the fixture-only 8-KiB JSON/5-second route scoped to fake development. Never turn it into an unbounded audio/file proxy. Design a separate bounded same-origin transport foundation if required; actual audio endpoint is CL-007. |
+| `apps/backend/src/config/env.schema.ts`, `loadConfig.ts`, `loadConfig.test.ts`, root `.env.example` | Remove media-feature dependency on `GCP_PROJECT_ID/GCP_REGION/TEMP_MEDIA_BUCKET/MEDIA_JOB_NAME`; migrate server FFmpeg/Python/weights/storage/job config and legacy upload/render feature meaning. Keep later hosting config private and independent. Examples, schemas, tests and public capability semantics change together; no ignored env file read. |
+| `apps/backend/src/app.ts`, HTTP composition and proposed admission/grant modules | Compose fake/protected boundaries explicitly, no listen/provider effect on import. Fixture Map/cookie remain fake-only, not production grant. Introduce no GCS adapter, cloud media job or persistent result store. |
+| `apps/backend/src/demo/sampleSession.ts`, `sampleAnalysis.ts`, `sampleManifest.ts`, frontend `session.test-fixtures.ts`, fake operations and associated tests | Preserve deterministic baseline/call counts; migrate actual generation/capability/state fields together with shared schemas and reducer identity comparison, not unrelated fixture prose. |
+| Frontend/backend package READMEs, root README, source of truth, ops guides | Document implemented local capability/persistence/admission guarantees and unchecked downstream gates; update exact new commands/versions only when they exist. |
+| Package manifests and `pnpm-lock.yaml` | Add only approved proven dependencies at their owning workspace; no native stack retained merely because old planned schema named it. Re-run dependency direction and license inventory. |
 
-### 2. Storage, markers, and cleanup
+Current state is not a bug in the fake demo: it deliberately simulates media.
+The mismatch is a migration requirement for real mode, not permission to rewrite
+all prior modules or claim the new architecture already runs.
 
-- [ ] Define narrow storage methods for known-object read/write/delete,
-  metadata, generation preconditions, atomic marker creation, resumable
-  authorization, and signed capability issuance.
-- [ ] Make the fake simulate generations, conflicts, expiry, partial deletion,
-  and capability leakage sentinels.
-- [ ] Implement idempotent clear that attempts all known cancels/deletes even
-  after one failure, clears the cookie in all outcomes, and reports class-level
-  cleared/pending status without object names.
-- [ ] Ensure invalid, partial, superseded, and expired objects are deleted
-  immediately where possible and lifecycle remains a backstop.
+## Downstream ownership
 
-### 3. Browser intake and upload
+- CL-006: production incremental audio extraction and browser audio/visual
+  active-speaker feasibility; no native backend media job.
+- CL-007: protected bounded transcription/grounded selection requests, receipts,
+  browser-cached results and real candidate integration, subject to paid consent.
+- CL-008: production selected-range speaker/focus worker using CL-006 go proof.
+- CL-009: protected visual planning/images; locally owned cards/assets/manifest.
+- CL-010: shared-compositor read-only preview parity with transcript/edit notes.
+- CL-011: complete local H.264/AAC MP4 encoding/mux/validation/download.
+- CL-012/013/014: controls/privacy audit, physical-device/visual/accessibility/film
+  quality and exact repository release audit.
+- CL-015: actual hosting/proxy/audio transport, restart/rollout/rate/capacity/
+  cost guarantees and authorized deployment/provider validation. No GCS CORS,
+  bucket lifecycle, Cloud Run media jobs or server render gate survives.
 
-- [ ] Keep raw filename browser-memory-only and revoke the local object URL on
-  replacement, stage exit, clear, and unmount.
-- [ ] Reject obvious local-limit/type failures before requesting upload
-  authorization and keep the sample available.
-- [ ] Preserve the resumable URL/headers in one runtime upload owner only; never
-  dispatch or serialize them.
-- [ ] Report monotonic committed-byte progress; support cancel and truthful
-  recovery/resume based on the proven protocol behavior.
-- [ ] On completion, send only opaque upload ID and observed bytes; server
-  verifies authoritative metadata/generation/type/size and starts the one fake
-  inspection operation idempotently.
+## Acceptance and focused verification
 
-### 4. Local mechanism contract and final-cloud handoff
+- [ ] Original video remains local, candidate playback uses actual immutable
+      ranges and no transcript is shown before preview selection.
+- [ ] All declared source bounds and unsupported-format/capability failures
+      happen before a paid request; no limit or output-format drift.
+- [ ] Incremental OPFS/IDB publication, refresh, quota/eviction/private mode,
+      two tabs, wrong-source selection and expired/corrupt versions are covered.
+- [ ] Fake upload/build/render still complete without File reads or external
+      calls; real mode has no fake fallback or premature download.
+- [ ] Cleanup ownership covers every request/worker/listener/timer/handle/
+      frame/audio/URL/temporary artifact; partial intent survives restore.
+- [ ] Admission replay/races/stale grants/restart and uncertainty are fail-closed
+      within precisely documented process-local guarantees.
+- [ ] Rejected intake/admission assert transcription/text/image counts exactly
+      zero; no cloud/job adapter is called or created.
+- [ ] Shared schemas/config/session fixtures migrate together; contracts remain
+      browser-safe and cross-app/Node negative boundary tests still pass.
+- [ ] Named feasibility results, license/rights/device/owner decisions and
+      unresolved audio/provider/hosting gates are recorded, not inferred.
 
-- [ ] Verify proposed server-created session/header and storage precondition
-  requests using local fake transport, including failure and leakage sentinels.
-- [ ] Prepare the exact live matrix for CORS, start expiry, chunk/restart,
-  cancel, size/type/generation/range, partial cleanup and no-capability leakage.
-- [ ] Assign that matrix to CL-015; keep every actual cloud result unchecked.
-- [ ] Document that local transport tests cannot prove browser/GCS behavior;
-  stop live enablement if final CL-015 evidence fails, with no public proxy fallback.
+Run focused contracts/config/session/media/admission/flow tests while iterating.
+Final gate after changes settle:
 
-## Contracts and state transitions
+```text
+corepack pnpm format:check
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm test:unit
+corepack pnpm build
+```
 
-- `intake -> local-inspection -> upload-authorizing -> uploading ->
-  media-inspecting`; authorization failure returns to local inspection.
-- `CANCEL` during upload enters clearing and aborts transfer before deletion.
-- `POST /v1/uploads/authorize` rejects session/feature/source/bounds/admission
-  before Turnstile and object creation; exact route order remains cheapest-first.
-- `POST /v1/uploads/complete` returns one existing/new inspection operation on
-  idempotent replay. It does not assert a valid `MediaDescriptor`; CL-006 does.
-- Clear is available from every active stage and never promises synchronous
-  lifecycle deletion when infrastructure reports partial cleanup.
+Add real-browser synthetic storage/range/codec tests and manual desktop/tablet/
+phone/short-height states appropriate to the implemented foundation. Unit
+mocks or responsive viewport emulation do not replace actual device codec/
+performance proof. Check secret/content leakage, dead/debug code, duplicate
+schemas/flags, dependency direction, cleanup and `git diff --check`.
 
-## Privacy, provider, and cost constraints
+## Completion and commit boundary
 
-- The GCS bucket stays private with public access prevention, uniform access,
-  exact-origin CORS, no browser listing, bounded object metadata, and lifecycle
-  policy documented honestly.
-- No transcript/model/image provider is called. Turnstile fake is deterministic;
-  live verification is action/hostname-bound and only after approval.
-- No media body crosses Next.js/Express. No URL/cookie/token/object path appears
-  in log fields or error payloads.
-- Rate/capacity/idempotency controls are best-effort anonymous controls, not a
-  durable per-person quota claim.
+Report changed files, exact commands/manual states, dependency versions/licenses,
+measured feasibility results, truthful storage/admission/recovery guarantees,
+deviations and every remaining owner/rights/visual/device/provider/paid/hosting
+item. Update evidence only for checks actually performed. This packet is not
+complete because the old fake gate passed or because the plan is documented.
 
-## Acceptance criteria
-
-- [ ] Browser-local failures prevent authorization; exact hard boundaries and
-  the independent duration/byte rule are covered.
-- [ ] Grant tamper, expiry, unsupported version, wrong key, rotation, and size
-  checks fail closed.
-- [ ] One authorize/complete action creates at most one capability/object and
-  one inspection operation; conflicting replay fails safely.
-- [ ] Upload capability is memory-only and absent from state, storage, logs,
-  HTML, errors, tests, and docs evidence.
-- [ ] Wrong/missing/oversized/type-mismatched/partial objects are rejected and
-  scheduled/deleted without provider calls.
-- [ ] Cancel, clear, expiry, partial cleanup, and object URL/request cleanup are
-  truthful and tested.
-- [ ] Local storage adapter contract tests pass and the live CORS/resume/
-  generation/abort/cleanup acceptance matrix is explicitly transferred to CL-015;
-  cloud readiness is not claimed here.
-
-## Focused verification
-
-- [ ] Run grant/CSRF/idempotency/lease/storage/log-redaction unit tests.
-- [ ] Run API integration tests for session, authorize, complete, replay,
-  cancel/clear, expiry, and partial deletion using fake ports only.
-- [ ] Run frontend local-limit/upload-progress/cancel/object-URL tests.
-- [ ] Assert Deepgram/OpenAI/image/job-start call counts remain zero on every
-  rejected intake case.
-- [ ] Leave actual GCS checks unchecked for final CL-015; no GCloud setup or
-  credentialed cloud execution occurs in this packet.
-- [ ] Run affected lint/typecheck/build, secret/ignore scans, `git diff --check`,
-  and final status inspection.
-
-## Documentation updates
-
-- Document local intake/upload behavior, committed environment schema, and
-  ignored local secret rules in app READMEs.
-- Add/update local storage/data-retention and adapter-contract docs; reuse
-  [provider setup](../operations/PROVIDER_SETUP.md) for Turnstile. Prepare cloud
-  settings/mechanism requirements for CL-015, not an early cloud setup run.
-- Promote any mechanism/CORS/preview architecture change into the parent and
-  affected tickets before completion.
-
-## Owner gates and external blockers
-
-- Product gate: approve public anonymous upload; otherwise deployment stays
-  sample-only.
-- Provider/privacy gate: approve temporary storage/recovery and public copy.
-- Turnstile setup/settings or a bounded local verification require separate
-  provider authorization; CL-004A owns its owner guide.
-- Bucket/IAM/CORS/lifecycle setup and the live GCS spike belong to final CL-015
-  and require explicit cloud authorization there.
-- Missing approval does not block fake ports, contracts, UI, or tests; it blocks
-  actual provider/cloud evidence and public enablement, not local adapter code.
-
-## Commit boundary
-
-Keep secure grants/storage and the complete resumable-upload lifecycle together
-as `CL-005: implement secure direct upload`. Do not absorb ffprobe,
-transcription, assembly, render, or deployment. No Git, provider, or cloud
-mutation is authorized by this packet alone.
-
-## Precision references
-
-- [Upload journey and local inspection](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#43-stage-2--inspect-and-authorize-upload)
-- [Encrypted grant, objects, idempotency, and leases](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#84-control-objects-not-a-database)
-- [Upload/session/clear API](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#115-post-v1session)
-- [Temporary storage and job lifecycle](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#14-temporary-storage-and-job-lifecycle)
-- [Security/admission tests](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#204-securityadmission-tests)
-
-## Completion handoff
-
-Report the grant/object/session design, exact route order, upload mechanism and
-spike status, cleanup outcomes, changed files, zero-provider-call evidence,
-targeted commands, documentation updates, and every owner/cloud/privacy gate
-that remains unchecked.
+Keep local-media foundation and its necessary contracts/state/config/admission
+migration together; do not absorb full downstream pipelines. Suggested subject:
+`CL-005: establish and validate browser-owned media`. Separate authorization
+is required for staging/commit/push and every external or paid action.

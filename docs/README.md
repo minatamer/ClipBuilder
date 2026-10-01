@@ -8,6 +8,13 @@ This directory contains the product decisions, technical architecture, research 
 
 When documents disagree, follow the authority order inside the source of truth. The supporting documents below preserve research and decision history; they do not override the current specification.
 
+The latest [browser-owned-media contract](architecture/BROWSER_OWNED_MEDIA.md)
+is incorporated by source-of-truth section 0.9. Original video/final output stay
+local; there is no application DB or cloud object-storage service. Protected
+bounded audio/text AI requests remain proposed and gated. CL-005 owns the
+file-level migration and feasibility-first plan; older server-media sections
+are explicitly historical, not instructions to provision their resources.
+
 ## Locked demo flow
 
 ClipBuilder exposes one narrow visitor journey: choose the sample or upload one
@@ -27,6 +34,10 @@ editable timeline, proposal/diff workflow, undo, or redo.
 docs/
 ├─ README.md
 ├─ CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md
+├─ architecture/
+│  └─ BROWSER_OWNED_MEDIA.md
+├─ operations/
+│  └─ Provider, cost, software and rights guides
 ├─ tickets/
 │  ├─ README.md
 │  └─ CL-001-… through CL-015-….md

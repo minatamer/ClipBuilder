@@ -1,3 +1,97 @@
+# CL-007 - Deliver protected analysis with browser-owned results
+
+Status: Planned; browser-owned execution revision, external gates pending<br>
+Milestone: M3 - protected analysis<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-004, CL-004A, CL-005 admission foundation and CL-006 audio proof<br>
+Suggested commit: `CL-007: validate protected browser-owned analysis`<br>
+Parent: [source of truth section 0.9](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#09-browser-owned-media-architecture-revision-2026-10-01)<br>
+Technical contract: [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md)<br>
+Index: [README.md](README.md)
+
+**Execution authority:** this current packet and the linked browser contract
+supersede the server-media mechanics retained below as history. No GCS,
+generation/capability/lease, native media job or cloud-render acceptance item
+survives by being left unchecked in that history. Preserve unchanged product,
+grounding/quality, rights, secret handling, fake/off test and dependency rules.
+No Git, provider, paid, install or cloud action is authorized by this document.
+
+## Objective and boundaries
+
+Use local extracted audio and bounded protected requests to obtain a normalized
+timestamped transcript and zero-to-four grounded candidates. Target three/four
+strong moments near one minute without padding; the visitor chooses exactly
+one contiguous 10-60s word range. Reuse CL-004's gallery, local source preview,
+smooth selection layout, transcript and read-only notes.
+
+No original-video upload, server media job, GCS analysis bundle or durable
+provider-result store. Backend cannot read OPFS/IndexedDB. Public paid traffic
+stays gated on the current process-local admission limitations; no cookie-only
+quota/idempotency claim. Provider data/cost approval is separate from code.
+
+## Current implementation checklist
+
+- [ ] Implement a dedicated bounded same-origin binary-audio route/use case,
+      separate from the fixture-only 8-KiB JSON proxy. Enforce actual received
+      bytes/profile/duration, capacity/body deadlines and safe abort cleanup
+      before transcription. Hosting transport proof remains CL-015.
+- [ ] Submit one approved Deepgram pre-recorded binary audio request, never a
+      user URL/callback/file-store workaround. Exact call budget <=1; SDK retry=0.
+      Project opt-out/retention settings and rights/data consent stay explicit.
+- [ ] Validate provider response, normalize word IDs/speaker labels/timestamps/
+      finite bounds and discard raw data. Diarization labels are not real
+      identity or active-speaker visual inference.
+- [ ] Return normalized transcript and authenticated provenance receipt bound
+      to session/revision/hash/expiry. Cache success in bounded browser journal;
+      backend holds no durable transcript or payload-recovery repository.
+- [ ] Candidate request validates receipt/bounded submitted transcript and
+      approved token/schema limits; one foreground Structured Outputs call,
+      store:false, no background polling or automatic paid retry.
+- [ ] Reconcile all word references/order/ranges/reasons against real normalized
+      transcript. Handle zero candidates honestly; do not synthesize success,
+      fake trend evidence or pad count/duration.
+- [ ] Integrate process-local atomic action reservation and boot-epoch grants.
+      Conflicting replay/stale cookie/restart/capacity/uncertain result fail
+      closed; no paid re-dispatch from refresh/remount/network retry.
+- [ ] Candidate retry is a separately allowed explicit action with transcript
+      reuse and zero additional transcription, not implicit recovery.
+- [ ] Commit validated browser results before advancing UI. Unknown/lost remote
+      payload is a visible failure/uncertain result, not seamless resumability.
+- [ ] Resolve actual immutable ranges against local source identity; clamp
+      player seek/end/reset and reject mismatched cached source/revisions.
+
+## Verification and acceptance
+
+Own backend transcription/candidate adapters, ports/use cases/routes and receipt
+validation; frontend result hydration, analysis status and candidate integration;
+shared schema additions only at cross-boundary ownership. No application import
+reads env/media, listens, contacts providers or obtains credentials.
+
+- [ ] Fake/injected tests assert exact zero calls on every rejected case and
+      exact allowed transcription/candidate counts, including duplicate races.
+- [ ] Corrupt receipts, malicious transcript text, oversized payload/token limits,
+      provider timeout/disconnect, stale epoch and result-loss paths covered.
+- [ ] Refresh of committed local success makes zero new calls; in-flight/lost
+      work does not automatically retry. Clear fences late response publication.
+- [ ] Existing UI/notes remain timestamp-grounded, responsive and read-only;
+      source remains on device, no provider/raw content enters logs/errors/URLs.
+- [ ] Run focused adapters/contracts/session/component/browser checks and all
+      five root gates; document every rights/provider/privacy/spend/device gate
+      still unchecked. Live checks require specific owner call/budget permission.
+
+Update provider/retention/cost guides with actual adapter options and results.
+Paid model availability, language quality and audio-profile transcription parity
+are not proven by fake contracts. No speaker assembly/visuals/render here.
+
+## Historical packet
+
+<details>
+<summary>Superseded server-media plan, retained only for decision history</summary>
+
+The following text is not an execution checklist, setup instruction or evidence
+of completion under the browser-owned architecture. It must not be used to
+reintroduce cloud content storage, jobs or unsupported guarantees.
+
 # CL-007 — Deliver the live-analysis vertical slice
 
 Status: Planned<br>
@@ -268,3 +362,5 @@ credential, provider, or cloud mutation is authorized by this packet.
 Report adapters/config revisions, prompt/reconciliation rules, route/job/stage
 behavior, recovery/call-count evidence, UI states, changed files, exact checks,
 live usage/cost/cleanup if authorized, and every provider/privacy/spend blocker.
+
+</details>

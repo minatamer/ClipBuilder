@@ -10,6 +10,16 @@ GCloud setup and final live validation:
 
 ## Read This First
 
+**Browser-owned revision (2026-10-01):** the current technical contract is
+[Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md). Original video
+and final MP4 remain local; only disclosed bounded audio/text reaches protected
+AI routes. No application DB/object store, GCS bucket, cloud media job or durable
+provider-result repository. CL-015 remains final hosting setup, not media storage.
+Process-local admission cannot promise distributed exactly-once or durable
+anonymous quotas; public paid enablement needs explicit justified owner gates.
+The committed env schema/example still contain legacy future media settings;
+CL-005 migrates them together. Do not populate obsolete bucket/job/native paths.
+
 This is a guide, not evidence that any account, key, billing setting or live
 adapter works. Dashboard wording and available controls vary; reopen the linked
 official instructions immediately before setup and record the new review date.
@@ -37,7 +47,7 @@ validated live. No `.env.local` was inspected or modified to write this guide.
 | Deepgram                                   | Prerecorded audio transcription with word timing/diarization                | Yes; isolated demo project                                 | CL-007                         |
 | Cloudflare Turnstile                       | Live action abuse verification                                              | Yes for real widget; no paid upgrade required by this plan | CL-005, CL-012                 |
 | Media/vision/card tools and licensed fonts | Local inspection, speaker framing, cards and MP4 rendering                  | No; see [software guide](THIRD_PARTY_SOFTWARE.md)          | CL-006, CL-008, CL-009, CL-011 |
-| Google Cloud                               | Deployment, temporary storage, runtime identity, jobs, registry and secrets | Deferred entirely to final CL-015                          | CL-015                         |
+| Google Cloud                               | Proposed hosting, runtime identity, registry and secrets; no content storage/media jobs | Deferred entirely to final CL-015                          | CL-015                         |
 
 No YouTube/TikTok/Instagram/other social API, publishing OAuth, stock service,
 generative-video API, voice agent, database, queue or analytics account is
@@ -59,7 +69,7 @@ required. The result is a download, not an in-app publisher.
    does not authorize a Playground experiment or a paid smoke test.
 6. Integration tickets verify fake request contracts and implemented gates.
    CL-012 audits those controls; CL-014 records repository readiness.
-7. CL-015 alone provisions GCloud and verifies the cloud mechanism/runtime, then
+7. CL-015 alone provisions approved hosting and verifies transport/admission/client behavior, then
    runs unpaid probes and the explicitly budgeted live end-to-end flow.
 
 ## OpenAI Walkthrough
@@ -241,10 +251,11 @@ status, not by dumping env values. See
 | `PROCESSING_GRANT_ACTIVE_KEY_ID`, `PROCESSING_GRANT_KEYS_JSON`              | CL-005's local cryptographic setup, not a provider | Never reuse an API secret; private store, bounded rotation |
 | `FAKE_MODE`, paid master, all live flags                                    | Safe composition                                   | `true`, `false`, all `false` during setup                  |
 | `MAX_*`, `RATE_*`, timeouts                                                 | Source/contract ceilings                           | Capacity/call bounds, not a monthly USD ledger             |
-| `GCP_*`, bucket/sample/job/service identifiers and cloud audience           | Final CL-015 only                                  | Leave owner-specific cloud entries blank until then        |
+| Legacy bucket/sample/job/native-media entries                             | Withdrawn planned schema; CL-005 migration          | Do not populate; no content bucket or media job            |
+| Approved hosting/service audience/identity                               | Final CL-015 only                                  | Private hosting configuration; not browser/media storage   |
 
 All credentials, private origins and provider/cloud configuration remain
-server/job-only. Do not add `NEXT_PUBLIC_*` copies. Never paste secrets into
+backend-only. Do not add `NEXT_PUBLIC_*` copies. Never paste secrets into
 curl snippets, process arguments, test fixtures or support messages.
 
 ## Key Rotation, Revocation and Teardown
@@ -274,8 +285,8 @@ curl snippets, process arguments, test fixtures or support messages.
 | Documentation ready                   | Guide, public config mapping, source review and worksheet exist                                                  | Account/settings/keys or adapter access                         |
 | Owner account ready                   | Owner confirms project, model access, billing, privacy, scoped key and caps                                      | Runtime credential use or media processing                      |
 | Adapter ready                         | Integration ticket passes fake/off request, schema, timeout, retry, cancellation, redaction and call-count tests | Vendor behavior or cloud compatibility                          |
-| Explicit bounded local provider check | Only the separately authorized provider request/usage result                                                     | Cloud storage/job/production flow                               |
-| CL-015 release evidence               | Cloud mechanism/runtime, unpaid checkpoint and authorized live flow reconciled                                   | Unlimited spend, zero retention or general production readiness |
+| Explicit bounded local provider check | Only the separately authorized provider request/usage result                                                     | Hosting/client output/public paid readiness                     |
+| CL-015 release evidence               | Actual hosting/transport/control/client proof, unpaid checkpoint and authorized live flow reconciled             | Unlimited spend, zero retention or general production readiness |
 
 Do not run an unimplemented diagnostic command, send a test request from a
 Playground, or toggle real mode as a substitute for an owning ticket. When a

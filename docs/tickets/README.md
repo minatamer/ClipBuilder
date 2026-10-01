@@ -8,6 +8,18 @@ Parent source of truth: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDE
 
 ## Why these files exist
 
+**Latest architecture revision (2026-10-01):** original video/results/assets/
+final MP4 are browser-owned, with no application DB or cloud object storage.
+[Source of truth section 0.9](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#09-browser-owned-media-architecture-revision-2026-10-01)
+and [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md) govern.
+CL-005 is a feasibility-first local-media/admission/contracts/state/config
+migration packet, not resumable GCS upload. CL-006 proves browser audio/model
+quality; later packets produce local composition/export. GCS/native-media/job
+instructions retained in collapsed historical packets are withdrawn, not
+remaining gates. CL-015 owns hosting/transport/process-guarantee/provider proof.
+This plan has no implementation/device/paid/cloud evidence yet. Two-hour local
+disk lifecycle/disclosure and public paid guarantees remain explicit owner gates.
+
 Latest owner clarification (2026-10-01): CL-004 now owns the entire
 development-only frontend journey, not a separate public sample feature.
 `FAKE_MODE` selects one server composition. CL-005/007/009/010/011 retain real
@@ -142,19 +154,19 @@ provider readiness. Ticket count is not a quality metric; CL-015 remains last.
 - The only dependency direction is
   `apps/frontend -> packages/contracts <- apps/backend`. Applications never
   import each other; contracts stay browser-safe.
-- The application has no general database or queue. Browser state plus narrow,
-  private, expiring storage objects and content-free coordination markers are
-  the complete session model.
-- Large media bypasses Next.js and Express bodies. Provider secrets remain
-  backend/job-only. Signed/resumable capabilities remain short-lived and
-  memory-only.
+- The application has no database/cloud object store/general queue. One
+  disposable browser workspace owns OPFS binaries and bounded IndexedDB data;
+  backend admission is process-local, not a distributed or durable quota ledger.
+- Original video/final output never cross Next.js/Express. Only disclosed bounded
+  audio/text may reach protected provider routes. Provider secrets remain
+  backend-only; cookie counters alone do not provide replay/atomic guarantees.
 - Logs, metrics, errors, URLs, object names, fixtures, tests, and documentation
   contain no real media, filename, transcript, caption, prompt, provider raw
   payload, signed capability, credential, or user identity.
 - Committed and test defaults are `PROVIDER_MODE=fake` and
   `PAID_DEMO_ENABLED=false`; all live flags are false. Tests deny network and
   assert provider call counts.
-- No automatic paid-provider or Cloud Run task retry is permitted. A single
+- No automatic paid-provider retry is permitted. A single
   user action consumes at most the documented operation budget.
 - Every touched listener, timer, request, upload, object URL, media track,
   subprocess, temp file, lease, marker, and signed capability has an explicit
@@ -237,17 +249,17 @@ when work begins or finishes.
 | 3 | [CL-003](CL-003-build-canonical-session-and-sample-foundation.md) | M1 | Canonical reducer, safe persistence, rights-recorded fixtures, and deterministic sample data | CL-001 |
 | 4 | [CL-004](CL-004-deliver-sample-candidate-review.md) | M1 | Complete single-workspace development frontend journey; real adapters remain gated | CL-002, CL-003 |
 | 5 | [CL-004A](CL-004A-prepare-third-party-provider-readiness.md) | M1 | Detailed non-GCloud provider dashboards, local software, privacy/keys and budget readiness | CL-001, CL-004 |
-| 6 | [CL-005](CL-005-implement-secure-upload-and-storage.md) | M2 | Secure upload/storage implementation and local proof; cloud mechanism gate deferred | CL-001, CL-003, CL-004A docs |
-| 7 | [CL-006](CL-006-build-media-job-and-speaker-feasibility.md) | M2 | Safe local media runtime, authoritative inspection and local speaker go/no-go | CL-003, CL-005 |
-| 8 | [CL-007](CL-007-deliver-live-analysis-vertical-slice.md) | M3 | Grounded-candidate analysis adapters, job, API, recovery and UI; no cloud prerequisite | CL-004, CL-004A, CL-006 |
+| 6 | [CL-005](CL-005-implement-secure-upload-and-storage.md) | M2 | Full-bound browser feasibility, local media/storage/range playback, protected admission and schema/state/config migration | CL-001, CL-003, CL-004, CL-004A docs |
+| 7 | [CL-006](CL-006-build-media-job-and-speaker-feasibility.md) | M2 | Production worker audio profile and explicit browser audiovisual-model quality go/no-go | CL-003, CL-005 |
+| 8 | [CL-007](CL-007-deliver-live-analysis-vertical-slice.md) | M3 | Protected transcription/grounded analysis with provenance and browser-owned result recovery | CL-004, CL-004A, CL-005, CL-006 |
 | 9 | [CL-008](CL-008-productionize-active-speaker-assembly.md) | M4 | Validated local shot/face/active-speaker focus track for the selected clip | CL-006 local go, CL-007 |
 | 10 | [CL-009](CL-009-build-contextual-visual-assembly.md) | M4 | Grounded visual plan, bounded assets/cards, complete assembly bundle and progress UI | CL-004A, CL-007, CL-008 |
-| 11 | [CL-010](CL-010-deliver-automatic-clip-review.md) | M4 | Read-only automatic clip preview, facts and one-render confirmation | CL-002, CL-004, CL-009 |
-| 12 | [CL-011](CL-011-render-and-deliver-final-clip.md) | M5 | Local deterministic MP4 render, validation, result, download and clear; cloud proof deferred | CL-005, CL-010 |
+| 11 | [CL-010](CL-010-deliver-automatic-clip-review.md) | M4 | Shared browser-compositor read-only review and direct Confirm export parity | CL-002, CL-004, CL-009 |
+| 12 | [CL-011](CL-011-render-and-deliver-final-clip.md) | M5 | Production local H.264/AAC encode/mux/validation, final download and clear | CL-005 full-bound proof, CL-010 |
 | 13 | [CL-012](CL-012-harden-security-privacy-abuse-and-spend.md) | M6 | Implemented controls and provider-readiness audit; cloud checklist only | CL-004A, CL-007, CL-009, CL-010, CL-011 |
 | 14 | [CL-013](CL-013-complete-accessibility-responsive-and-performance-pass.md) | M6 | Whole-flow quality evidence plus the finalized-UI landing product film | CL-012 |
 | 15 | [CL-014](CL-014-audit-release-candidate.md) | M6 | Repository release audit with explicit CL-015 external deferrals | CL-013 |
-| 16 (final) | [CL-015](CL-015-deploy-validate-measure-and-rollback.md) | M7 | GCloud setup, transferred cloud checks, immutable deployment, unpaid probes, bounded live evidence and rollback | CL-014, provider readiness and owner authorization |
+| 16 (final) | [CL-015](CL-015-deploy-validate-measure-and-rollback.md) | M7 | Approved hosting/audio transport/process-guarantee/client proof, immutable deployment, bounded live evidence and rollback; no media bucket/job | CL-014, provider/device readiness and owner authorization |
 
 ## Milestone boundaries
 
@@ -281,9 +293,10 @@ Delivery/release: CL-005 + CL-010 -> CL-011 -> CL-012 -> CL-013 -> CL-014 -> CL-
 CL-003 may proceed while CL-002 waits for visual approval. Broad production UI
 styling and CL-004 completion wait for the visual gate. CL-004A documentation
 supports deterministic CL-005–CL-012 work without requiring credential setup.
-Any local provider check still stops at its named owner gates. All GCloud setup,
-cloud mechanism/benchmark/render proof and deployed live validation wait for
-final CL-015; local/fake evidence is never relabeled as cloud readiness.
+Any local provider check still stops at its named owner gates. Actual hosting,
+transport/restart/rollout/hard-cap and deployed live validation wait for final
+CL-015; cloud-media jobs/storage/render are withdrawn, not deferred. Local/fake
+evidence is never relabeled as deployed or actual-device readiness.
 
 Do not begin feature work until CL-001 exists in code: one lockfile, three
 targetable workspaces, enforced dependency direction, real quality commands,

@@ -1,3 +1,141 @@
+# CL-015 - Deploy and validate browser-owned ClipBuilder
+
+Status: Planned; final hosting/provider/launch gates pending<br>
+Milestone: M7 - deployment and controlled live evidence<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-014 exact repository audit, CL-004A provider readiness,
+browser/device feasibility and explicit owner authorization<br>
+Suggested commit: `CL-015: deploy and validate browser-owned ClipBuilder`<br>
+Parent: [source of truth section 0.9](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#09-browser-owned-media-architecture-revision-2026-10-01)<br>
+Contract: [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md)<br>
+Index: [README.md](README.md)
+
+## Objective and supersession
+
+Host the audited frontend and protected request-scoped AI API, prove actual
+routing/admission/provider/client-media behavior, measure authorized cost and
+demonstrate rollback. GCloud setup remains final, if that host is approved.
+No temporary media bucket, GCS CORS/lifecycle, Cloud Run media job, server
+speaker/render benchmark, signed playback/download or remote result store.
+Those prior deferrals are withdrawn, not this packet's remaining acceptance.
+
+The frontend owns source/normalized results/assets/final MP4 locally.
+Protected backend handles only admitted bounded audio/text and returns bounded
+results/assets. A server cannot read OPFS/IndexedDB. The existing two-service
+Cloud Run topology is a proposal until the actual binary transport, same-origin
+routing and process-local admission limitations are proved; do not deploy from
+old server-media diagrams or pretend instance caps provide global atomicity.
+
+## Owner gates before external action
+
+- [ ] Exact CL-014 revision/build inputs and all repository-owned findings closed.
+- [ ] Actual supported device/browser codec/performance/model quality evidence;
+      source/output bounds and public claims approved without silent downgrade.
+- [ ] Local disk-retention, two-hour logical expiry/next-open cleanup, provider
+      audio/text transfer and provider data/retention copy approved.
+- [ ] Provider projects/model/keys/settings, numerical hard limits, alerts,
+      exact fixture/call budget and kill switch explicitly authorized.
+- [ ] Hosting region/topology/account/API/billing/IAM/registry/secrets and action
+      permissions approved. No credential/account identifier in Git/evidence.
+- [ ] Controlled paid operating model approved. Anonymous public paid traffic
+      remains off unless bounded abuse/cost safeguards and process-lifetime
+      limitations are justified and accepted; no DB/object-store exception.
+
+Documentation/preparation is not provisioning, key use, funding or launch.
+
+## Final owner-facing setup guide
+
+Prepare current official instructions before running anything: account/MFA,
+billing/advisory budget, chosen region, minimum hosting APIs, least-privilege
+frontend/API/deployer identities, registry/image storage, Secret Manager,
+service ingress/routing, timeouts/body caps, instance/concurrency/rate policy,
+no-content logging, static/model/font delivery, unpaid probes, bounded live
+approval, kill switch, rollback and authorized teardown/residual charges.
+No service-account JSON or blank env identifier filled by an agent without
+explicit owner permission. App config and hosted secret mechanism are separate.
+
+Provision only approved hosting/control resources; never a content bucket or
+media job. Deploy immutable images/assets from exact audited inputs. Changes
+after the audit require the smallest relevant re-audit. Begin fake/paid-off/
+all-live-off. A project budget alert is not a provider hard spending cap.
+
+## Transport, topology and security proof
+
+- [ ] Same-origin protected browser route authenticates to private API without
+      exposing backend origins/credentials in NEXT_PUBLIC config.
+- [ ] Binary audio is handled only by its narrow allowlisted bounded route;
+      sample JSON proxy stays fixture-only, 8KiB/5s, not a media proxy.
+- [ ] Exercise full-bound selected audio profile and actual end-to-end ingress/
+      proxy/server/provider time/body/response limits. 20min 16kHz mono16 PCM
+      exceeds Cloud Run HTTP/1's 32MiB cap: prove HTTP/2 or the approved compressed
+      route. Streaming alone does not remove that request ceiling.
+- [ ] Bounded received-byte/codec/duration validation precedes spend; proxy and
+      platform retries cannot redispatch paid work. No original video/output
+      upload, durable audio/transcript/payload or arbitrary user URL.
+- [ ] Grant boot epoch, record capacity, atomic process-local reservations,
+      replay/tombstones, uncertainty, restart and shutdown behavior are exercised.
+      Actual old/new revision overlap and scale-out invalidate any unproved
+      global exactly-once claim; fail closed or keep paid exposure disabled.
+- [ ] Provider hard-limit enforcement and kill switches actually work within the
+      approved test budget; alert-only or missing controls stay a launch blocker.
+- [ ] CSP/worker/model/codec assets and CORS are limited; COOP/COEP/SAB headers
+      are enabled only when needed/proved and compatible with Turnstile/assets.
+      No model or media fetch on module import and no hidden external fonts.
+- [ ] Logging/metrics/error/APM/proxy/platform capture never records bodies,
+      filenames/transcripts/prompts/receipts/capabilities/provider raw payloads.
+      Provider/platform retention is independently documented, not promised away.
+
+## Unpaid probes, bounded live validation and rollback
+
+Run unpaid fake/off health/config/error/restore/clear probes first, verify static
+worker/model delivery and local storage/codec/compositor output with approved
+synthetic media, and inspect only content-safe aggregate diagnostics. No
+production fixture routes or fake real-mode success.
+
+Then only the explicitly approved live flow: bounded local source/audio consent,
+one transcription/candidate action, one selected-range local speaker pass,
+bounded visual-plan/images, read-only preview, one local export/download and
+clear. Record exact provider calls, audio/text/asset bytes, normalized result
+availability, codec/sync/sample-frame quality, measured client time/memory,
+cost and local cleanup. No private media/transcript/provider IDs/output in docs.
+Cloud hosting success cannot replace physical-phone/speaker quality evidence.
+
+Timeout/cancel after dispatch may bill; lost payload/restart is a visible
+uncertain outcome, never an automatic paid replay. Stop on duplicate dispatch,
+unexpected capture/retention, privacy/codec/quality failure or budget variance.
+Do not widen limits or public support to make a failed proof look successful.
+
+Demonstrate kill switch and rollback to exact prior audited assets/config with
+paid traffic disabled before topology/revision changes. Explain effects on
+in-flight grants/local workspaces; incompatible artifact schema requires
+safe migration/cleanup, not automatic new paid work. Authorized teardown must
+leave no needless hosting/registry/secret costs and cannot delete visitor-saved
+downloads or promise provider content erasure.
+
+## Completion
+
+- [ ] Dated guide and exact immutable revision/assets/topology recorded.
+- [ ] All actual transport, restart/overlap, logging, hard-cap and client-media
+      proofs performed, or remaining blockers left explicitly unchecked.
+- [ ] Only authorized external resources/actions and paid calls occurred.
+- [ ] Actual device/provider/rights/privacy/visual/public claims approved.
+- [ ] Local cleanup, incident stop and rollback evidence recorded honestly.
+- [ ] Changed files, commands/manual states, costs/call counts, deviations and
+      remaining owner-only items reported; no deployment or Git inferred here.
+
+Run focused release probes and the required root gate for any source changes;
+no unapproved paid E2E or cloud mutation. Public paid release cannot be marked
+complete while the no-shared-store guarantee/cap decision is unresolved.
+
+## Historical packet
+
+<details>
+<summary>Superseded cloud-media deployment plan, not setup instructions</summary>
+
+The prior resource inventory and acceptance matrix below are decision history.
+No bucket, media job, server rendering or object-backed coordination item is
+still required or implicitly authorized.
+
 # CL-015 — Deploy, validate, measure, and prove rollback
 
 Status: Planned<br>
@@ -295,3 +433,5 @@ IAM/job settings, unpaid probes, authorized live operation counts and measured
 usage/cost, output/cleanup evidence, public URL/state, kill-switch and rollback
 proof, documentation paths, local changed files/Git state, and every remaining
 owner/external blocker. Never include a secret or content-bearing identifier.
+
+</details>

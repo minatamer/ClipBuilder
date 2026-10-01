@@ -13,6 +13,16 @@ Ticket index: [`README.md`](README.md)
 
 ## Owner revision and execution plan (2026-10-01)
 
+### Browser-owned-media handoff (2026-10-01)
+
+The current fake implementation/evidence is unchanged. CL-005 now follows
+source-of-truth section 0.9 and [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md),
+not the older future GCS upload/server-render handoffs retained in this packet.
+It owns local File/OPFS/IndexedDB/range playback, capability/admission and shared
+schema/state/config migration. Later tickets own protected AI/local composition/
+export. Preserve the approved card, motion and existing fake cleanup fence;
+fake verification is not proof of new storage, codecs, device or model behavior.
+
 ### Latest interrupted-cleanup persistence revision
 
 The owner-authorized validation follow-up identifies a possible lost recovery

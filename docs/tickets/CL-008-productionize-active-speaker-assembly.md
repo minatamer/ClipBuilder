@@ -1,3 +1,73 @@
+# CL-008 - Productionize browser active-speaker framing
+
+Status: Planned; browser-owned execution revision, external gates pending<br>
+Milestone: M4 - local speaker assembly<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-006 explicit browser feasibility go and CL-007<br>
+Suggested commit: `CL-008: validate browser active-speaker framing`<br>
+Parent: [source of truth section 0.9](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#09-browser-owned-media-architecture-revision-2026-10-01)<br>
+Technical contract: [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md)<br>
+Index: [README.md](README.md)
+
+**Execution authority:** this current packet and the linked browser contract
+supersede the server-media mechanics retained below as history. No GCS,
+generation/capability/lease, native media job or cloud-render acceptance item
+survives by being left unchecked in that history. Preserve unchanged product,
+grounding/quality, rights, secret handling, fake/off test and dependency rules.
+No Git, provider, paid, install or cloud action is authorized by this document.
+
+## Objective and boundaries
+
+Compile one chosen candidate's locally decoded audio/video into a bounded,
+validated scene/face/active-speaker focus track. The model, preprocessing,
+runtime and quality gates must be the exact CL-006 browser go choice, not the
+old Python Light-ASD bridge or server job. No original or selected video/frames
+leave the device under this architecture.
+
+Active-speaker framing is required. A face/landmark detector or generic center
+crop is not equivalent; do not add crop controls or silently weaken the claim.
+No visual-plan generation, final renderer, editor or paid API in this packet.
+
+## Current checklist and acceptance
+
+- [ ] Decode only the immutable selected 10-60s range plus bounded context/
+      keyframe pre-roll. Preserve normalized rotation, VFR/source times, audio
+      offsets, shot boundaries and word-range provenance.
+- [ ] Produce bounded face tracks and synchronized audio/face tensors using
+      the proved model. Handle overlap/listener motion/no face/off-screen voice
+      with deterministic documented focus policy, not inferred identity.
+- [ ] Emit strict focus points/crop bounds/speaker evidence, with smoothing,
+      hysteresis and shot-cut resets; no executable model output or raw tensors
+      escape adapters. Store the track in browser-owned validated assembly data.
+- [ ] Bind track/notes to source identity, candidate range, model version and
+      manifest revision; reject stale worker results after selection/clear.
+- [ ] Bound multi-face tensors, queues, scratch/model caches and time; abort/
+      suspend/resume policy and frame/codec/worker cleanup are explicit.
+- [ ] Test crop safety, empty/invalid track, jitter, speaker switches, scene cuts,
+      rotation/VFR/audio offset and golden model/focus evidence.
+- [ ] Run the agreed CL-006 quality/runtime/memory matrix on approved actual
+      media/devices. Quantization/detector/window changes reopen parity proof.
+- [ ] Fake/injected tests assert zero transcription/text/image calls. Run
+      focused contracts/worker/browser tests and all five root gates.
+- [ ] Report exact versions/hashes/licenses/rights, measured states and pending
+      phone/tablet/model/deployed-delivery gates; no mock-only go verdict.
+
+Own frontend selected-range framing worker and deterministic focus compiler,
+shared focus schemas as needed, tests and read-only timestamped framing notes.
+Respect dependency direction and local artifact cleanup. Use the existing card
+and progress presentation; actual phase work or elapsed/indeterminate activity,
+never fabricated real-mode percentage/ETA. CL-015 checks client/model hosting
+delivery, not cloud media compute. A core regression blocks downstream assembly.
+
+## Historical packet
+
+<details>
+<summary>Superseded server-media plan, retained only for decision history</summary>
+
+The following text is not an execution checklist, setup instruction or evidence
+of completion under the browser-owned architecture. It must not be used to
+reintroduce cloud content storage, jobs or unsupported guarantees.
+
 # CL-008 — Productionize active-speaker assembly
 
 Status: Planned<br>
@@ -198,3 +268,5 @@ perform unauthorized Git/cloud actions.
 Report the selected model/profile, shot/face/focus/crop behavior, exact sample
 evaluation, baseline/regression runtime and memory, one-pass proof, cleanup and
 privacy evidence, changed files, exact checks, and any reopened gate.
+
+</details>

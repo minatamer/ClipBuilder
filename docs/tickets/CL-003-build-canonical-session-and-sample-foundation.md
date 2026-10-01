@@ -13,6 +13,14 @@ Ticket index: [`README.md`](README.md)
 
 ## Objective
 
+**Later migration handoff (2026-10-01):** the verified fake reducer/projection
+and fixtures remain unchanged. Source-of-truth section 0.9 and CL-005 now own
+browser-local artifact authority/recovery, generation/capability/config migration
+and protected process-local admission. Do not copy the older planned server
+object/job assumptions into real mode or treat fake session recovery as proof
+of OPFS/IndexedDB/provider-result recovery. Preserve the cleanup fence and
+safe legacy projection migration while replacing only the necessary semantics.
+
 Implement the single canonical frontend workflow reducer, allow-listed session
 persistence and restore reconciliation, rights-safe deterministic sample data,
 and fake operation/provider foundations needed for the no-cost signature path.

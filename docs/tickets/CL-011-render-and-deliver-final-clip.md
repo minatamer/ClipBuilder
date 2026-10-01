@@ -1,3 +1,92 @@
+# CL-011 - Encode, validate and deliver a browser-owned MP4
+
+Status: Planned; browser-owned execution revision, external gates pending<br>
+Milestone: M5 - local export and delivery<br>
+Last synchronized: 2026-10-01<br>
+Depends on: CL-005 full-bound encode feasibility and CL-010 shared compositor proof<br>
+Suggested commit: `CL-011: validate and deliver browser-owned MP4 export`<br>
+Parent: [source of truth section 0.9](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#09-browser-owned-media-architecture-revision-2026-10-01)<br>
+Technical contract: [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md)<br>
+Index: [README.md](README.md)
+
+**Execution authority:** this current packet and the linked browser contract
+supersede the server-media mechanics retained below as history. No GCS,
+generation/capability/lease, native media job or cloud-render acceptance item
+survives by being left unchecked in that history. Preserve unchanged product,
+grounding/quality, rights, secret handling, fake/off test and dependency rules.
+No Git, provider, paid, install or cloud action is authorized by this document.
+
+## Objective and boundaries
+
+Productionize the early proved local export path: the one explicitly confirmed
+immutable manifest becomes one validated 1080x1920 H.264/AAC MP4 owned by the
+browser. No backend FFmpeg compiler/job, GCS output, signed download capability
+or cloud-render proof. CL-005 must already have tested a 60s portrait export
+from a full-bound synthetic source; do not postpone core feasibility here.
+
+Keep direct Confirm export, shared single-card progress/review/result UI,
+central video without surrounding noise, local Download MP4 and inert disabled
+Soon social teasers. No OAuth/publishing, output editor, arbitrary manifest,
+format/profile picker or real-mode fake success.
+
+## Current implementation checklist
+
+- [ ] Freeze selected range/source identity/manifest revision/hash at explicit
+      confirmation; never start on mount, hydration or returning to review.
+- [ ] Re-probe actual H.264/AAC encoder configurations and required local assets/
+      fonts. Use the proved worker/WebCodecs/Mediabunny pipeline and only
+      approved/pinned fallback codec code; not broad ffmpeg.wasm by default.
+- [ ] Decode with bounded pre-roll and exact timestamp mapping, invoke the
+      CL-010 shared compositor and fixed caption/visual/focus policy, preserve
+      source audio/timing and enforce source/output frame/pixel/resource bounds.
+- [ ] Encode with bounded queues/backpressure, close every sample/frame/audio
+      resource and flush codecs. Mux via offset-correct stream writes to OPFS;
+      no blindly concatenated MP4 chunks or full-source RAM copy.
+- [ ] Report measured phase progress for processed samples/frames, then explicit
+      mux/final validation; elapsed/indeterminate when unknown, never fake ETA.
+      Finish 100% only after validated success.
+- [ ] Validate bytes/container/codecs/1080x1920/duration10-60s/audio presence/
+      finite samples/A-V sync and caption/focus/visual frame parity. Reopen/play
+      final output before enabling Download MP4. Do not silently deliver WebM.
+- [ ] Publish one ready final artifact only after complete output; journal
+      partial writes and clean crash/cancel/quota failures. Failures cannot
+      download a truncated file.
+- [ ] Define approved failed-local-encode retry policy using the same immutable
+      manifest, with zero AI rework and no additional final artifact/history.
+      A browser UI limit does not enforce hostile-client download counts.
+- [ ] Blob URL/download lifecycle and generic filename disclose no source name;
+      revoked handles/URLs and downloaded visitor copies have distinct ownership.
+      Clear cannot delete copies already saved by the visitor.
+- [ ] Test duplicate confirmation, wrong source/manifest, stale workers,
+      canceled/backgrounded/reloaded encode, quota/GPU/codec failure, mux flush
+      failure, validation rejection and explicit same-manifest recovery.
+- [ ] Re-run full-bound source/60s output performance, memory and physical-device
+      matrix; record measured quality/time/sync against agreed thresholds.
+
+## Verification, gates and handoff
+
+Fake/injected tests assert zero provider/job starts for render/preview/download/
+clear, plus exact local attempt/ready-artifact counts. Unit/browser media tests
+must inspect actual synthetic MP4 codecs/audio/dimensions/duration/sampled pixels,
+not only an .mp4 filename. Actual fixture rights/fonts/device/codec/license
+gates remain separate; no secret or real media/content enters Git/evidence.
+
+Run focused compositor/encode/mux/session/flow tests and all five root gates.
+Record versions, output-validation/performance/cancel/cleanup proof, files,
+commands/manual states and remaining owner/rights/visual/device gates.
+CL-015 validates deployed runtime/model/static headers and real client output,
+not a remote render job or bucket lifecycle. No extra AI/provider call is
+authorized merely to validate local export.
+
+## Historical packet
+
+<details>
+<summary>Superseded server-media plan, retained only for decision history</summary>
+
+The following text is not an execution checklist, setup instruction or evidence
+of completion under the browser-owned architecture. It must not be used to
+reintroduce cloud content storage, jobs or unsupported guarantees.
+
 # CL-011 — Render and deliver the final clip
 
 Status: Planned<br>
@@ -237,7 +326,7 @@ action is authorized by this packet.
 ## Precision references
 
 - [Render confirmation and result UX](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#68-render-confirmation-and-progress)
-- [Render API and download authorization](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#1116-post-v1renders)
+- [Historical render API](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#1115-post-v1renders)
 - [Render compiler/profile/validation](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#1312-deterministic-render-profile)
 - [Cleanup ownership](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#148-cleanup-ownership)
 - [Media unit/integration verification](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#2010-media-unit-and-integration-tests)
@@ -248,3 +337,5 @@ Report the locked render profile, compiler/parity behavior, golden/rendered
 fixture results, output validation, idempotency/allowance, result/download/
 cleanup states, cloud/live evidence if authorized, changed files, exact checks,
 and every rights/profile/cloud blocker.
+
+</details>

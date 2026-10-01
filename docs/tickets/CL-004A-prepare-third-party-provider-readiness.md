@@ -13,6 +13,17 @@ Ticket index: [`README.md`](README.md)
 
 ## Objective
 
+**Browser-owned revision (2026-10-01):** source-of-truth section 0.9 and the
+[browser contract](../architecture/BROWSER_OWNED_MEDIA.md) supersede this
+packet's native-media/software/cloud-resource inventory. Prepare WebCodecs,
+Mediabunny (MPL-2.0), browser workers/OPFS/IndexedDB, conditional codec/model
+dependencies, fonts/cards and protected bounded audio/text readiness instead.
+No original-video upload, GCS bucket or Cloud Run media job is part of CL-015.
+Provider dashboards/privacy/budgets remain; existing env entries still describe
+legacy planned code until CL-005 migrates schema/example/tests together. Do not
+populate obsolete storage/job/native-media fields. Download/install/model,
+provider/paid/cloud authorizations remain separate from these guides.
+
 Give the owner one complete, understandable setup path for every non-GCloud
 third-party dependency before real integrations: official dashboard links,
 account/project and billing steps, model access, least-privilege credentials,
@@ -20,9 +31,9 @@ ignored local configuration, privacy/retention, numerical spending decisions,
 rate limits, verification, troubleshooting, rotation, and shutdown.
 
 Owner decision (2026-10-01): prepare these detailed guides now. GCloud account,
-billing, project/API enablement, IAM, storage, registry, secrets, service/job
-provisioning, cloud benchmarks, deployment and cloud verification belong only to
-CL-015, the final ticket. Earlier packets implement and verify local/fake ports,
+billing, project/API enablement, IAM, registry, secrets, hosting service
+provisioning, deployed transport/control proof and deployment belong only to
+CL-015, the final ticket. No media bucket/job is planned. Earlier packets implement and verify local/fake ports,
 adapters and configuration without requiring cloud resources.
 
 This suffix is an owner-requested readiness gate, not a renumbering of existing
@@ -48,10 +59,9 @@ evidence; it must not be the owner's first provider-setup guide.
 
 OpenAI provides candidate analysis, visual planning and bounded image
 generation; Deepgram provides prerecorded speech-to-text; Cloudflare Turnstile
-protects live intake/actions. Local FFmpeg/ffprobe, Python/PyTorch,
-PySceneDetect, Light-ASD code/weights, conditional TalkNet comparison,
-MathJax/card rasterization and licensed fonts are software dependencies, not
-recurring dashboard services.
+protects admitted live actions. Browser media/model/card/font dependencies are
+listed in the current software guide. Native/Python tools are only conditional
+approved offline reference tooling, not the deployed browser media pipeline.
 
 No social-platform accounts, publishing APIs, OAuth integrations, stock-media
 subscription, generative-video service, database, queue, analytics/replay
@@ -100,10 +110,11 @@ code.
 
 ### 3. Handoff without premature live/cloud work
 
-- [ ] CL-005 owns Turnstile adapter/action validation and local upload behavior.
-- [ ] CL-006 owns local media tools and rights-approved local speaker
-      feasibility; CL-008 needs that local go decision. Cloud performance
-      remains CL-015.
+- [ ] CL-005 owns protected admission and real local media/storage/range
+      playback, capability preflight and schema/state/config migration.
+- [ ] CL-006 owns production worker audio and rights-approved browser speaker
+      feasibility; CL-008 needs that browser go decision. Actual deployed
+      runtime delivery/transport proof remains CL-015, not server media compute.
 - [ ] CL-007 owns Deepgram/OpenAI analysis adapters, exact request settings,
       privacy proof and fake contract tests; CL-009 owns visual/image/card
       adapters.
@@ -113,7 +124,7 @@ code.
 - [ ] CL-012 audits readiness, real implemented gates and exact call counts.
 - [ ] CL-014 audits repository readiness and explicitly carries outstanding
       CL-015 cloud evidence, without requiring deployment before its own audit.
-- [ ] CL-015 provisions GCloud last, runs transferred mechanism/target-runtime
+- [ ] CL-015 provisions approved hosting last, runs transport/control/client
       checks, starts unpaid, then performs only specifically approved live
       validation.
 

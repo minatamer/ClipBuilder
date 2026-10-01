@@ -1,54 +1,50 @@
-# Local third-party software readiness
+# Browser media and third-party software readiness
 
-Status: inventory and procedure prepared; media-tool installation not
-verified<br> Last synchronized: 2026-10-01<br> Setup owner: CL-004A;
-implementation owners: CL-006/008/009/011<br> GCloud
-installation/authentication/provisioning and target-runtime evidence: final
-CL-015
+Status: researched inventory; installation/model/device proof pending<br>
+Last synchronized: 2026-10-01<br>
+Setup owner: CL-004A; foundation owner: CL-005; pipelines: CL-006/008/009/010/011<br>
+Actual hosting/setup/model delivery proof: final CL-015
 
-## Scope and Safety
+## Current scope and safety
 
-This guide distinguishes local dependencies from provider dashboards. It does
-not authorize installing/downloading software or model weights, accepting terms,
-reading private media, calling providers, building/pushing cloud images or
-starting/restarting another thread's processes. Use only approved synthetic or
-rights-approved media; store actual media, weights and private artifacts outside
-Git. Synthetic contract tests do not prove model quality or real MP4 output.
+[Source of truth section 0.9](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#09-browser-owned-media-architecture-revision-2026-10-01)
+and [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md) supersede the
+former native-server media inventory. Original video/final MP4 stay browser
+owned; no media bucket, cloud job or server FFmpeg/Python request pipeline.
 
-The future source-of-truth tree is not proof that a module, binary, script or
-container exists today. The owning feature ticket must deliver the exact pinned
-installation commands and verification alongside its first real module. Do not
-run guessed Python entry points or scaffold future directories to satisfy a
-list.
+This guide authorizes no installation, model download, license acceptance,
+private media read, provider call, cloud setup, registry push or process restart.
+Read only committed examples, never ignored secrets. Keep source/video/audio/
+assets/output/weights outside Git; research source inspection is not execution
+or redistribution approval. Fake tests remain offline and zero-spend.
 
-## Inventory and Ownership
+## Inventory and ownership
 
-| Software                                                    | Role                                                                 | Owning ticket / readiness gate                                                                         |
-| ----------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Node.js and Corepack/pnpm                                   | Existing Next/Express/contracts toolchain                            | CL-001; root package engine and package-manager pin                                                    |
-| OpenAI/Deepgram/storage/job SDKs                            | Backend-only adapter dependencies                                    | CL-007/009 and cloud adapter code owners; exact lockfile versions, fake request tests, zero paid retry |
-| FFmpeg and ffprobe                                          | Inspection, speech extraction, captions/crops/assets, MP4 validation | CL-006 pins binaries/build features; CL-011 proves output                                              |
-| Python, PyTorch and vision dependencies                     | Local bounded speaker processor                                      | CL-006 pins platform/CPU-compatible versions and locks                                                 |
-| PySceneDetect and detector/tracker dependencies             | Shot boundaries and bounded face geometry                            | CL-006 spike, CL-008 production compiler                                                               |
-| Light-ASD code and weights                                  | First active-speaker feasibility target                              | CL-006 exact commit/hash/license/download approval and local go/no-go                                  |
-| TalkNet code and weights                                    | Conditional comparison, not a second pass for each clip              | CL-006 only after Light-ASD no-go and explicit owner comparison approval                               |
-| MathJax and card rasterizer                                 | Exact source-controlled equation/information cards                   | CL-009 exact Node dependency, sanitization and deterministic render proof                              |
-| Fonts, codec/build dependencies and approved static assets  | Fixed captions/card layout and legal distribution                    | CL-006/009/011 exact revisions, rights/license inventory and renderer parity                           |
-| Local container runtime/build tools                         | Reproducible job runtime and constrained local benchmark             | CL-006; install only when needed/authorized; no registry push                                          |
-| GCloud CLI, project identity, registry/storage/secrets/jobs | Deployment operations                                                | CL-015 only; no service-account JSON in env or repo                                                    |
+| Dependency | Current purpose | Owner and required proof |
+| --- | --- | --- |
+| Node.js/Corepack/pnpm, Next/React/Express/Zod | Existing workspace and protected API | CL-001; root engine/manager pins and dependency direction |
+| WebCodecs | Browser decode/encode | CL-005 actual codec/config/output spike; CL-006/011 production proof |
+| Mediabunny | Proven container/media I/O and mux/demux | CL-005 chooses/pins after spike; MPL-2.0, not MIT |
+| OPFS/IndexedDB/Web Locks/workers | Binary artifacts, journal, exclusive ownership and processing | CL-005 quota/eviction/transactions/orphans/multi-tab/cleanup proof |
+| Canvas2D/OffscreenCanvas; conditional WebGL | Shared immutable compositor | CL-009/010 parity; CL-011 output pixels/timing |
+| Conditional Mediabunny AAC WASM extension | Missing native AAC encode | CL-005/011 exact package/core/build notices, support/time/memory; not blanket fallback |
+| ONNX Runtime Web / candidate browser face and audiovisual model | Selected-range active-speaker inference | CL-006 operator/preprocessing/weights/license/quality go; CL-008 production |
+| MathJax/card rasterization and licensed fonts | Exact deterministic cards/fixed captions | CL-009/010/011 strict subset/sanitization/layout/output parity |
+| OpenAI/Deepgram SDK or narrow transport | Protected request-scoped AI, backend only | CL-007/009 exact limits/retention/options/zero retry; no durable payload store |
+| ffmpeg.wasm | Conditional narrow alternative only | Explicit benchmark/license/isolation decision; not default mobile/full-source pipeline |
+| Native FFmpeg/ffprobe/Python/PyTorch | Optional approved offline model/reference comparison | CL-006 only when justified/authorized; not deployed browser media execution |
+| Hosting CLI/registry/secrets/identities | Frontend/private protected API delivery | Final CL-015; no content bucket/media job or service-account JSON |
 
-No paid vision API, speech synthesis, generative-video tool or stock
-subscription is needed for the locked flow. CL-013's editable product film may
-need a local authoring dependency chosen in that ticket; do not purchase a tool
-or expand the production request path here.
+Models, fonts, WASM and codec builds have their own terms; a package license is
+not a conclusion that every bundled artifact can be redistributed. No paid
+vision API, generative video, stock subscription or hosted render service is
+needed. CL-013 may select a separately approved local film-authoring dependency;
+do not add it to the visitor processing path.
 
-## Existing JavaScript Toolchain
+## Existing toolchain checks
 
-Check the public root `package.json` before setup. At this review its Node
-engine is `^22.13.0 || ^24.0.0` and package manager is `pnpm@11.19.0`. Use the
-pinned manager, not a global unpinned `pnpm` or mixed npm lockfile.
-
-Read-only version checks from repository root:
+Current root engines are `^22.13.0 || ^24.0.0`, manager `pnpm@11.19.0`.
+Read the actual package manifest before any change. Read-only checks:
 
 ```powershell
 node --version
@@ -56,111 +52,100 @@ corepack --version
 corepack pnpm --version
 ```
 
-Corepack can retrieve a missing pinned runtime; obtain download approval when
-needed. If dependencies are missing, the owner-authorized first-time command is
-`corepack pnpm install --frozen-lockfile`. That install can use the network and
-is not a provider smoke test. Do not run it automatically during a docs review.
+Corepack/install may download code and requires the appropriate permission.
+An authorized first-time install uses `corepack pnpm install --frozen-lockfile`;
+do not run it during documentation review. No new media dependency was installed
+or lockfile changed by this architecture planning pass.
 
-The fake application's commands/config belong to the app READMEs. Do not
-reinstall, restart listeners or run the main thread's full checks as a side-chat
-readiness probe. For implementation, the owning ticket requires the focused
-tests and final root gate; tests never load local secrets or contact providers.
+## Browser runtime selection procedure
 
-## Media and Vision Installation Procedure
+1. CL-005 inspects exact upstream versions/APIs/licenses/build inputs and obtains
+   permission for packages/codec/model downloads before adding dependencies.
+2. Start with WebCodecs/Mediabunny/worker pipeline; probe actual input decode and
+   portrait H.264/AAC encode/mux/reopen playback. Do not confuse supported
+   containers with runtime encoders. Use incremental OPFS output and backpressure.
+3. Before a go verdict, exercise synthetic 20min/near-500MiB source import/audio
+   and a 60s 1080x1920 export with bounded resources; agree time/memory/sync/
+   responsiveness thresholds first. Physical-device proof is separate.
+4. Select the bounded protected audio format with quality/duration/body proof.
+   16kHz mono16 PCM20min is 38.4MB plus header, beyond Cloud Run HTTP/1's 32MiB:
+   prove HTTP/2 or a compressed route; never silently add paid transcription calls.
+5. If native AAC is unavailable, assess the narrow AAC extension and exact WASM
+   build/dependency notices. Do not load broad ffmpeg.wasm without measured
+   necessity, resource bounds and an approved license/isolation decision.
+6. CL-006 separately proves active-speaker model conversion/operator support,
+   reference-equivalent MFCC/face preprocessing and quality. ONNX support or
+   face landmarks alone is not a go verdict. CL-008 uses only that proved path.
+7. CL-009/010/011 prove exact fonts/cards/shared compositor and validated MP4;
+   no arbitrary executable model output or external remote-font dependency.
+8. CL-013/015 verify actual device/browser and deployed worker/model/header
+   delivery; no server CPU benchmark stands in for browser performance.
 
-1. CL-006 first selects an approved local execution route (native tools or a
-   local pinned container), compatible with the owner's Windows host and
-   intended Linux/CPU job image. Record OS/architecture and available
-   CPU/RAM/disk.
-2. Read official release/installation sources and code/weights licenses before
-   installing. Pin every binary/package/commit and hash the actual weights; do
-   not use mutable `latest`, untrusted download mirrors or a private source URL.
-3. Obtain explicit approval for downloads/installations and model terms. Keep
-   weights read-only outside Git or in approved build inputs; do not download
-   model artifacts on application import, startup or per request.
-4. Build a locked isolated Python environment; record the exact supported CPU
-   build, detector/tracker dependencies and download sources. GPU/cloud access
-   must not become a prerequisite for local/fake development.
-5. Verify ffprobe/FFmpeg version and required
-   demuxer/decoder/encoder/filter/font features, then test only synthetic media
-   within strict local process bounds. Verify process abort/timeout/output caps
-   and cleanup before real sample work.
-6. Run the rights-approved local Light-ASD feasibility matrix on the pinned
-   runtime: one face, wide alternating speakers, listener motion, overlap and
-   cuts. Record runtime/memory/quality; issue a local go/no-go for CL-008.
-7. If tooling/media/license approval is missing, finish only independently
-   testable foundations and retain an unchecked feasibility gate. A fake track
-   cannot authorize speaker productionization.
-8. CL-015 later repeats the approved benchmark on actual Cloud Run resources.
-   Label local numbers local; failed cloud feasibility blocks launch and can
-   reopen the implementation/architecture followed by a focused CL-014 re-audit.
+Unsupported capability fails before paid work. Memory-only fallback needs full
+bounded output viability; no silent remote media/upload/render fallback.
 
-Useful read-only binary checks once the approved tools exist:
+## Models, source and licensing evidence
 
-```powershell
-ffmpeg -version
-ffprobe -version
-python --version
-```
+The detailed research document records inspected source revisions:
+Mediabunny `0f91fe768e7ee42703f15e2b8845551b0f1028b3`,
+LocalCut `24f3d9489ae8aff24187f03b0b6dbe039b35515b`,
+Light-ASD `ed38c232de5efe0261dbd68627c0ade7cdfe14eb`.
+These are research snapshots, not installed/pinned runtime dependencies.
 
-Do not assume those tools are installed or on PATH. Root example values such as
-`/usr/local/bin/ffmpeg`, `/opt/venv/bin/python` and `/app/models/...` describe
-the intended container, not Windows paths. Use only the owning ticket's approved
-absolute local overrides for `FFMPEG_PATH`, `FFPROBE_PATH`, `PYTHON_PATH`,
-`FONT_DIR`, `ACTIVE_SPEAKER_ENTRYPOINT` and `ACTIVE_SPEAKER_WEIGHTS_PATH`. Never
-overwrite other ignored env settings or dump their contents to diagnose PATH.
+Light-ASD's actual demo uses CUDA/S3FD/native preprocessing. Its model's
+2D/3D convolution/pooling, GRU/reversal/GELU and learned classifier need exact
+export/opset/kernel proof. Its MFCC/crop/timing/ensemble behavior must be
+golden-tested, not guessed. Upstream ~4.18MB checkpoint metadata is not converted
+model size or peak memory. Code MIT alone does not settle checkpoint/detector
+distribution. Approve download/source/license/hash and browser serving before
+assets arrive; never download on import/startup/per request.
 
-## Cards, Fonts and Output
+Native tools may be approved for offline reference parity only. Their existing
+`FFMPEG_PATH/FFPROBE_PATH/PYTHON_PATH/ACTIVE_SPEAKER_*` example values are legacy
+future schema, migrated in CL-005; not an instruction to install a server media
+stack or fill paths now. Browser capability/model configuration is public only
+when deliberately safe; keys/backend origin/host identities remain private.
 
-CL-009 must choose/pin the actual MathJax/rasterization packages and document
-the executable command for its real script/module. It must restrict the TeX
-subset, sanitize generated SVG, bound dimensions/output size and prove offline
-deterministic cards. Generated-image pricing does not apply to these local
-cards. CL-011 must prove licensed font resolution, fixed-caption styling, safe
-crop/ asset argument compilation and valid synced MP4 output. Do not install
-arbitrary system fonts, introduce remote font fetches in jobs or call a headless
-external render service to fill a missing local component.
+## Runtime configuration and headers
 
-Record exact font/code/model/weights licenses and distribution conditions for
-the specific versions. An upstream project's license alone does not prove that
-downloaded weights, sample media, fonts or a selected codec build may be
-bundled. No redistribution approval or legal conclusion is inferred from this
-inventory.
+Keep fake/off defaults and feature-specific fail-closed gates. CL-005 migrates
+schema/example/tests/public capability meanings together; no app code or env
+example was changed by this documentation pass. Read `.env.example` only;
+the owner populates valid matching blanks manually after implementation.
 
-## Readiness Record and Troubleshooting
+Worker URLs/WASM/model assets/fonts must have exact origin/cache/integrity/CSP
+ownership. SharedArrayBuffer/multi-thread WASM may require COOP/COEP; do not
+enable them indiscriminately or break Turnstile/third-party assets. A single
+threaded bounded path is preferable when sufficient. Actual headers/hosting
+transport are CL-015 evidence, not inferred from library examples.
 
-- [ ] Owner-approved install/download route and OS/CPU profile recorded.
-- [ ] Exact versions/commits/lockfiles/weights hashes and sources recorded.
-- [ ] Code, binary build, weights, fonts and fixture rights/licenses reviewed.
-- [ ] Approved absolute runtime paths resolve; no startup/model network
-      download.
-- [ ] Synthetic inspection/process/card/render tests run offline with cleanup.
-- [ ] Actual local speaker benchmark provides explicit go/no-go, not fake proof.
-- [ ] Focus/preview/render parity and output gates completed in owning tickets.
-- [ ] Final Cloud Run CPU/memory/runtime proof still unchecked until CL-015.
+## Readiness record
 
-If a command is missing, report the binary name and owning ticket, not a guessed
-install. If CPU libraries fail, reconcile OS/Python/runtime pins before changing
-the model. If weights or fonts fail, check approved local path/hash/license
-without printing media or secrets. If resource bounds fail, do not raise them or
-rent a GPU silently; record a no-go and obtain an architecture decision.
+- [ ] Installation/download route authorized; exact runtime versions recorded.
+- [ ] Code/package/WASM/core/model/weights/font rights and notices reviewed.
+- [ ] Real source decode and target H.264/AAC output probe performed.
+- [ ] Full-bound source/audio/60s export time/memory/sync/cleanup gates met.
+- [ ] OPFS quota/denial/eviction/private mode/multi-tab/journal failures tested.
+- [ ] Browser active-speaker conversion/preprocessing/quality go documented.
+- [ ] Cards/fonts/preview-export parity and validated output proven.
+- [ ] Actual desktop/phone/tablet results and unsupported states recorded.
+- [ ] Deployed model/worker/codec/header/audio transport proof completed in CL-015.
 
-Each implementation handoff must append the real install/version/hash commands,
-expected non-content output, observed status and OS-specific troubleshooting to
-this guide or its owning package README. Until then installation is unverified.
+A missing binary is not a reason to install the old server stack. An unsupported
+codec/model/kernel, resource failure or quality no-go reopens the owning
+architecture choice; do not rent a GPU, call a remote renderer or reduce limits
+silently. Exact executable verification commands arrive with the owning real
+module. No placeholder folders/scripts are required by this inventory.
 
-## Canonical References
+## Primary references
 
-These are the approved upstream starting points already named by the product
-plan; re-open the exact version's installation/license documentation at
-execution.
-
-- [FFmpeg documentation](https://ffmpeg.org/documentation.html) and
-  [license/build guidance](https://ffmpeg.org/legal.html).
-- [Light-ASD upstream](https://github.com/Junhua-Liao/Light-ASD).
-- [TalkNet upstream](https://github.com/TaoRuijie/TalkNet-ASD), conditional
-  comparison only.
-- [PySceneDetect documentation](https://www.scenedetect.com/docs/).
-- [MathJax server components](https://docs.mathjax.org/en/v4.0/server/components.html).
-- [Backend local commands and configuration](../../apps/backend/README.md).
-- [Frontend local commands and configuration](../../apps/frontend/README.md).
+- [WebCodecs](https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API).
+- [Mediabunny codecs](https://mediabunny.dev/guide/supported-formats-and-codecs),
+  [output streaming](https://mediabunny.dev/guide/writing-media-files),
+  [AAC extension](https://mediabunny.dev/guide/extensions/aac-encoder).
+- [OPFS](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API/Origin_private_file_system).
+- [ONNX Runtime Web](https://onnxruntime.ai/docs/tutorials/web/).
+- [Light-ASD](https://github.com/Junhua-Liao/Light-ASD).
+- [ffmpeg.wasm caveats](https://ffmpegwasm.netlify.app/docs/faq/).
+- [Backend configuration](../../apps/backend/README.md) and
+  [frontend configuration](../../apps/frontend/README.md).

@@ -23,7 +23,10 @@ The bounded ephemeral session map/cookie is not a production grant or storage
 implementation; `sampleSession.test.ts` asserts expiry/capacity/clear and call
 counts alongside existing zero-to-four fixture boundaries.
 
-No sample video, poster, or generated visual binary is present. After the
-rights gate is approved, add a new immutable sample version in private storage,
-pin its object generation and SHA-256 in the manifest, and retain the old
-version until all references and rollback evidence have moved.
+No sample video, poster, or generated visual binary is present. Source-of-truth
+section 0.9 supersedes the former GCS sample/object-generation handoff. CL-005
+migrates the legacy synthetic descriptor fields with shared contracts/tests;
+later approved sample delivery must supply immutable rights-approved assets
+to the browser without introducing visitor-content storage or a media job.
+The delivery/rights/publication choice is still gated; this documentation pass
+does not add a binary, read real media or alter these fixtures.

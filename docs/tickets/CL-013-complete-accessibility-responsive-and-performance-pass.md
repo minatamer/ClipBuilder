@@ -13,6 +13,17 @@ Ticket index: [`README.md`](README.md)
 
 ## Objective
 
+**Current media architecture (2026-10-01):** use section 0.9 and
+[Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md), not historical
+server job/capability assumptions. Preserve this packet's finalized-UI film
+ownership, shared single-card design and permanent app-motion decision.
+Measure full-bound import/audio and 60s 1080x1920 H.264/AAC local export on real
+desktop/phone/tablet devices, plus quota/private browsing/two tabs/background
+suspension/restore/clear. Emulated viewports are not device codec/thermal proof.
+Agree measurable thresholds before a go verdict; no silent quality/limit change.
+Review local-disk/provider-transfer/uncertain-paid-result copy and unsupported
+states. No video/output is uploaded to make film or performance tests pass.
+
 Audit and correct the complete implemented flow for responsive composition,
 short-height behavior, keyboard and screen-reader access, focus, status/errors,
 200% zoom, forced colors, reduced motion, media/review usability, and measured
@@ -70,7 +81,7 @@ existing results or clearly identified illustrative material.
 
 ### Screenshot and authoring handoff
 
-- Capture the actual finalized UI: intake/drop target, upload progress, analysis
+- Capture the actual finalized UI: intake/drop target, local preparation progress, analysis
   stages, candidate choices, exactly-one selection, automatic build, read-only
   review, render confirmation/progress, result and download. Include desktop
   framing and phone reference where composition changes.
@@ -109,7 +120,7 @@ legible without sound; do not compress every action into a rapid montage.
 | Beat | Visual treatment and action | Truthfulness boundary |
 | --- | --- | --- |
 | 1. Identity | Open with ClipBuilder, a restrained title and a clean front-facing view of the finalized workspace. | Use approved product copy, not virality, speed, or integration claims. |
-| 2. Bring a conversation | An animated cursor drags a synthetic/approved video tile into the real drop target; briefly show formats/limits and upload progress. | No private file-picker/account details. Progress is illustrative film editing, not measured product latency. |
+| 2. Bring a recording | An animated cursor drags a synthetic/approved video tile into the real drop target; briefly show formats/limits and local preparation progress. | No private file-picker/account details. Progress is illustrative film editing, not measured product latency or a remote original-video upload. |
 | 3. Find moments | Push into the same workspace as analysis moves through actual stage labels; use restrained title transitions and useful close-ups. | No invented controls, fabricated percentage promises, or suggestion of a chatbot/editor. |
 | 4. Choose one | Reveal the grounded choices, move the cursor deliberately, select exactly one and show the real selected-state response. | Never suggest batch rendering, manual trimming, or multiple selected clips. |
 | 5. Automatic build | Transition through speaker-aware framing, fixed captions and contextual visuals, then reveal the completed vertical composition. | Use approved output that actually demonstrates those layers; no editable timeline or styling controls. |
@@ -245,7 +256,7 @@ capture gate above; CL-002's interim approval is not that final capture approval
 
 ### In scope
 
-- Landing, upload, analysis, candidate review, assembly, automatic clip review, render,
+- Landing, local intake/preparation, analysis, candidate review, assembly, automatic clip review, local export,
   result, errors, expiry, and clear at every named layout anchor.
 - Semantic landmarks/headings/forms/lists/tabs/dialogs/drawers/media;
   accessible names/descriptions; focus entry/return/order; live regions; error

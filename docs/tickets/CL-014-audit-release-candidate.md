@@ -13,6 +13,17 @@ Ticket index: [`README.md`](README.md)
 
 ## Objective
 
+**Current audit contract (2026-10-01):** section 0.9 and
+[Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md) replace historical
+GCS/native-job/server-render deferrals below. Audit browser-owned source/results/
+assets/output, exact local codecs/model/parity/device proof, OPFS/IDB cleanup,
+protected request input/provenance/admission and process-lifetime-only guarantees.
+CL-015's remaining external gates are hosting/routing/transport/restart/rollout/
+hard-cap/provider/client evidence, not bucket lifecycle or cloud media jobs.
+Historical cloud-media checklist items are withdrawn, not passed. Public paid
+readiness remains blocked by unresolved owner safeguards/retention/quality
+decisions; do not infer it from repository gate success.
+
 Owner setup ordering (2026-10-01): include CL-004A and its provider/cost/software
 guides in the audit. All GCloud setup and external cloud mechanism/runtime/
 render/operational proof remain explicitly deferred to final CL-015. These
@@ -111,10 +122,12 @@ not proof by itself.
   effects.
 - [ ] Prove the canonical reducer/manifest are the sole workflow/edit authority
   and persistence is an allow-listed projection.
-- [ ] Prove no database/general repository/durable queue/history/hidden session
-  exists; temporary objects/markers/leases match the declared model.
+- [ ] Prove no application database/cloud object store/general repository/
+  durable queue/history/hidden session exists; browser artifact journal and
+  process-local admission/tombstones match the declared limits.
 - [ ] Reconcile shared contracts, HTTP routes, operation states, provider ports,
-  job descriptors/stages, focus/visual tracks, render profile, and cleanup.
+  local worker stages, protected receipts, focus/visual tracks, local output
+  profile, and cleanup.
 
 ### 3. Whole-codebase quality and efficiency pass
 
@@ -133,10 +146,11 @@ not proof by itself.
 
 ### 4. Lifecycle, calls, privacy, and security
 
-- [ ] Trace listeners/timers/observers/URLs/media/request controllers/uploads,
-  cookies/capabilities, markers/leases, subprocesses/temp files/assets/output
+- [ ] Trace listeners/timers/observers/URLs/media/request controllers/audio transfers,
+  grants/receipts, admission records/tombstones, workers/codecs/frames/audio/
+  OPFS handles/journal/assets/output
   across success/failure/abort/timeout/cancel/refresh/clear/expiry.
-- [ ] Prove one user action makes at most the documented provider/job/image
+- [ ] Prove one user action makes at most the documented provider/local/image
   operations; validation/auth/rate/budget/nonretryable failures never retry.
 - [ ] Scan tracked files/history/diffs/fixtures/logs/screenshots/docs for secrets,
   content, signed URLs, account IDs, media/transcripts/prompts/outputs, raw paths,
@@ -162,7 +176,7 @@ not proof by itself.
 
 - [ ] Every prior ticket has an evidence-backed classification with no
   unexplained unchecked acceptance item.
-- [ ] Architecture, state, contracts, temporary-storage model, provider/job
+- [ ] Architecture, state, contracts, browser-storage model, provider/local-worker
   boundaries, preview/render parity, and cleanup match the source of truth.
 - [ ] No known material dead/duplicate/obsolete code, unsafe diagnostic, content
   leak, lifecycle leak, duplicate paid operation, stale dependency, unlicensed
