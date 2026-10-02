@@ -13,6 +13,10 @@ const deterministicEnvironment = {
   LIVE_ANALYSIS_ENABLED: "false",
   LIVE_ASSEMBLY_ENABLED: "false",
   LIVE_IMAGE_GENERATION_ENABLED: "false",
+  CLOUD_RENDER_ENVIRONMENT: "disabled",
+  CLOUD_SPEND_APPROVED: "false",
+  RENDERER_ENABLED: "false",
+  RENDERER_MAX_OPERATIONS: "0",
 } as const;
 const originalEnvironment = Object.fromEntries(
   Object.keys(deterministicEnvironment).map((key) => [key, process.env[key]]),

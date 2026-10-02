@@ -61,6 +61,9 @@ export const environmentShape = {
   BACKEND_ORIGIN: exactOriginSchema.default("http://localhost:4000"),
   BACKEND_AUDIENCE: optionalString(500),
   PORT: integerValue(4_000, 1, 65_535),
+  CLOUD_RENDER_ENVIRONMENT: z.enum(["disabled", "cloud"]).default("disabled"),
+  CLOUD_SPEND_APPROVED: booleanValue(false),
+  PRIVATE_RENDERER_ORIGIN: optionalString(500),
 
   FAKE_MODE: booleanValue(true),
   PAID_DEMO_ENABLED: booleanValue(false),
@@ -86,33 +89,14 @@ export const environmentShape = {
   TURNSTILE_EXPECTED_HOSTNAME: optionalString(253),
   TURNSTILE_TIMEOUT_MS: integerValue(5_000, 1_000, 10_000),
 
-  OPENAI_API_KEY: optionalString(1_024),
-  OPENAI_CLIP_MODEL: z.string().min(1).max(100).default("gpt-6-sol"),
-  OPENAI_VISUAL_MODEL: z.string().min(1).max(100).default("gpt-6-sol"),
-  OPENAI_IMAGE_MODEL: z.string().min(1).max(100).default("gpt-image-2.5-flare"),
-  OPENAI_IMAGE_QUALITY: z.enum(["low", "medium", "high"]).default("medium"),
-  OPENAI_REASONING_EFFORT: z.enum(["low", "medium", "high"]).default("low"),
-  OPENAI_TIMEOUT_MS: integerValue(60_000, 5_000, 120_000),
-  OPENAI_MAX_OUTPUT_TOKENS_CLIP: integerValue(3_000, 1, 3_000),
-  OPENAI_MAX_OUTPUT_TOKENS_VISUAL: integerValue(1_800, 1, 1_800),
-  OPENAI_IMAGE_TIMEOUT_MS: integerValue(120_000, 5_000, 120_000),
-  OPENAI_IMAGE_MAX_CALLS: integerValue(
-    ASSEMBLY_LIMITS.maxGeneratedImageCalls,
-    0,
-    ASSEMBLY_LIMITS.maxGeneratedImageCalls,
-  ),
-  OPENAI_STORE: z
-    .literal("false")
-    .default("false")
-    .transform(() => false as const),
-  OPENAI_SDK_MAX_RETRIES: z.literal("0").default("0").transform(Number),
-
-  DEEPGRAM_API_KEY: optionalString(1_024),
-  DEEPGRAM_MODEL: z.string().min(1).max(100).default("nova-3"),
-  DEEPGRAM_LANGUAGE: z.literal("en").default("en"),
-  DEEPGRAM_DIARIZE: booleanValue(true),
-  DEEPGRAM_TIMEOUT_MS: integerValue(360_000, 10_000, 360_000),
-  DEEPGRAM_SDK_MAX_RETRIES: z.literal("0").default("0").transform(Number),
+  GEMINI_API_KEY: optionalString(1_024),
+  GEMINI_MODEL: z.literal("gemini-3.8-flash").default("gemini-3.8-flash"),
+  GEMINI_TIMEOUT_MS: integerValue(180_000, 5_000, 360_000),
+  GEMINI_MAX_OUTPUT_TOKENS: integerValue(65_536, 1_024, 65_536),
+  GEMINI_SDK_MAX_RETRIES: z.literal("0").default("0").transform(Number),
+  GEMINI_MAX_CALLS: z.literal("2").default("2").transform(Number),
+  GEMINI_TRANSFER_APPROVED: booleanValue(false),
+  GEMINI_PAID_PROJECT_CONFIRMED: booleanValue(false),
 
   MAX_SOURCE_BYTES: integerValue(
     PUBLIC_LIMITS.maxSourceBytes,
@@ -188,6 +172,8 @@ export const environmentSchema = rawEnvironmentSchema
         environment.PAID_DEMO_ENABLED ||
         environment.PROCESSING_GRANTS_ENABLED ||
         environment.ADMISSION_MAX_PROCESS_DISPATCHES !== 0 ||
+        environment.CLOUD_RENDER_ENVIRONMENT !== "disabled" ||
+        environment.CLOUD_SPEND_APPROVED ||
         anyLiveFeature
       ) {
         issue(
@@ -196,16 +182,35 @@ export const environmentSchema = rawEnvironmentSchema
         );
       }
       if (
-        hasValue(environment.OPENAI_API_KEY) ||
-        hasValue(environment.DEEPGRAM_API_KEY) ||
+        hasValue(environment.GEMINI_API_KEY) ||
         hasValue(environment.TURNSTILE_SECRET_KEY) ||
         hasValue(environment.PROCESSING_GRANT_KEYS_JSON)
       ) {
         issue(
           "Test configuration must not contain credentials.",
-          "OPENAI_API_KEY",
+          "GEMINI_API_KEY",
         );
       }
+    }
+
+    if (environment.CLOUD_RENDER_ENVIRONMENT === "cloud") {
+      const origin = environment.PRIVATE_RENDERER_ORIGIN;
+      if (
+        !environment.CLOUD_SPEND_APPROVED ||
+        !origin ||
+        !exactOriginSchema.safeParse(origin).success ||
+        !new URL(origin).hostname.endsWith(".run.app") ||
+        !origin.startsWith("https://")
+      )
+        issue(
+          "Cloud compute requires approved spend and an exact private renderer origin.",
+          "PRIVATE_RENDERER_ORIGIN",
+        );
+      if (environment.APP_ENV !== "local")
+        issue(
+          "Public cloud processing is not enabled by this test foundation.",
+          "CLOUD_RENDER_ENVIRONMENT",
+        );
     }
 
     if (environment.FAKE_MODE) {
@@ -245,21 +250,21 @@ export const environmentSchema = rawEnvironmentSchema
       );
     }
 
-    const needsOpenAi =
-      environment.LIVE_ANALYSIS_ENABLED || environment.LIVE_ASSEMBLY_ENABLED;
-    if (needsOpenAi && !hasValue(environment.OPENAI_API_KEY)) {
-      issue(
-        "Enabled live model features require OpenAI configuration.",
-        "OPENAI_API_KEY",
-      );
-    }
     if (
-      environment.LIVE_ANALYSIS_ENABLED &&
-      !hasValue(environment.DEEPGRAM_API_KEY)
+      anyLiveFeature &&
+      (!hasValue(environment.GEMINI_API_KEY) ||
+        !environment.GEMINI_TRANSFER_APPROVED ||
+        !environment.GEMINI_PAID_PROJECT_CONFIRMED)
     ) {
       issue(
-        "Live analysis requires transcription configuration.",
-        "DEEPGRAM_API_KEY",
+        "Live Google features require credentials and approved paid-project media transfer.",
+        "GEMINI_API_KEY",
+      );
+    }
+    if (environment.LIVE_IMAGE_GENERATION_ENABLED) {
+      issue(
+        "Raster generation has no approved Google image model; use fixed templates.",
+        "LIVE_IMAGE_GENERATION_ENABLED",
       );
     }
 
@@ -380,6 +385,11 @@ export const environmentSchema = rawEnvironmentSchema
     backendOrigin: environment.BACKEND_ORIGIN,
     backendAudience: environment.BACKEND_AUDIENCE ?? null,
     port: environment.PORT,
+    renderer: {
+      environment: environment.CLOUD_RENDER_ENVIRONMENT,
+      spendApproved: environment.CLOUD_SPEND_APPROVED,
+      origin: environment.PRIVATE_RENDERER_ORIGIN ?? null,
+    },
     providerMode: environment.FAKE_MODE ? ("fake" as const) : ("live" as const),
     paidDemoEnabled: environment.PAID_DEMO_ENABLED,
     features: {
@@ -405,28 +415,15 @@ export const environmentSchema = rawEnvironmentSchema
       expectedHostname: environment.TURNSTILE_EXPECTED_HOSTNAME ?? null,
       timeoutMs: environment.TURNSTILE_TIMEOUT_MS,
     },
-    openAi: {
-      apiKey: environment.OPENAI_API_KEY ?? null,
-      clipModel: environment.OPENAI_CLIP_MODEL,
-      visualModel: environment.OPENAI_VISUAL_MODEL,
-      imageModel: environment.OPENAI_IMAGE_MODEL,
-      imageQuality: environment.OPENAI_IMAGE_QUALITY,
-      reasoningEffort: environment.OPENAI_REASONING_EFFORT,
-      timeoutMs: environment.OPENAI_TIMEOUT_MS,
-      maxOutputTokensClip: environment.OPENAI_MAX_OUTPUT_TOKENS_CLIP,
-      maxOutputTokensVisual: environment.OPENAI_MAX_OUTPUT_TOKENS_VISUAL,
-      imageTimeoutMs: environment.OPENAI_IMAGE_TIMEOUT_MS,
-      imageMaxCalls: environment.OPENAI_IMAGE_MAX_CALLS,
-      store: environment.OPENAI_STORE,
-      sdkMaxRetries: environment.OPENAI_SDK_MAX_RETRIES,
-    },
-    deepgram: {
-      apiKey: environment.DEEPGRAM_API_KEY ?? null,
-      model: environment.DEEPGRAM_MODEL,
-      language: environment.DEEPGRAM_LANGUAGE,
-      diarize: environment.DEEPGRAM_DIARIZE,
-      timeoutMs: environment.DEEPGRAM_TIMEOUT_MS,
-      sdkMaxRetries: environment.DEEPGRAM_SDK_MAX_RETRIES,
+    gemini: {
+      apiKey: environment.GEMINI_API_KEY ?? null,
+      model: environment.GEMINI_MODEL,
+      timeoutMs: environment.GEMINI_TIMEOUT_MS,
+      maxOutputTokens: environment.GEMINI_MAX_OUTPUT_TOKENS,
+      sdkMaxRetries: environment.GEMINI_SDK_MAX_RETRIES,
+      maxCalls: environment.GEMINI_MAX_CALLS,
+      transferApproved: environment.GEMINI_TRANSFER_APPROVED,
+      paidProjectConfirmed: environment.GEMINI_PAID_PROJECT_CONFIRMED,
     },
     limits: {
       sourceBytes: environment.MAX_SOURCE_BYTES,

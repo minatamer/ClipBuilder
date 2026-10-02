@@ -15,8 +15,7 @@ const blankCommittedEnvironmentKeys = [
   "TURNSTILE_SITE_KEY",
   "TURNSTILE_SECRET_KEY",
   "TURNSTILE_EXPECTED_HOSTNAME",
-  "OPENAI_API_KEY",
-  "DEEPGRAM_API_KEY",
+  "GEMINI_API_KEY",
 ] as const;
 
 const liveAnalysisEnvironment = (): NodeJS.ProcessEnv => ({
@@ -28,8 +27,9 @@ const liveAnalysisEnvironment = (): NodeJS.ProcessEnv => ({
   LIVE_ANALYSIS_ENABLED: "true",
   LIVE_ASSEMBLY_ENABLED: "false",
   LIVE_IMAGE_GENERATION_ENABLED: "false",
-  OPENAI_API_KEY: "fixture-openai-key",
-  DEEPGRAM_API_KEY: "fixture-deepgram-key",
+  GEMINI_API_KEY: "fixture-google-key",
+  GEMINI_TRANSFER_APPROVED: "true",
+  GEMINI_PAID_PROJECT_CONFIRMED: "true",
   PROCESSING_GRANT_ACTIVE_KEY_ID: "fixture-key-v1",
   PROCESSING_GRANT_KEYS_JSON: JSON.stringify({
     "fixture-key-v1": Buffer.alloc(32, 1).toString("base64url"),
@@ -76,8 +76,7 @@ describe("loadConfig", () => {
     expect(config.providerMode).toBe("fake");
     expect(config.paidDemoEnabled).toBe(false);
     expect(Object.values(config.features).filter(Boolean)).toEqual([true]);
-    expect(config.openAi.apiKey).toBeNull();
-    expect(config.deepgram.apiKey).toBeNull();
+    expect(config.gemini.apiKey).toBeNull();
   });
 
   it("rejects live or paid composition in tests", () => {
@@ -96,7 +95,7 @@ describe("loadConfig", () => {
     expect(() =>
       loadConfig(
         createSafeTestEnvironment({
-          OPENAI_API_KEY: "not-a-real-key",
+          GEMINI_API_KEY: "not-a-real-key",
         }),
       ),
     ).toThrow();
@@ -115,8 +114,7 @@ describe("loadConfig", () => {
   });
 
   it.each([
-    "OPENAI_API_KEY",
-    "DEEPGRAM_API_KEY",
+    "GEMINI_API_KEY",
     "PROCESSING_GRANT_ACTIVE_KEY_ID",
     "PROCESSING_GRANT_KEYS_JSON",
     "TURNSTILE_SITE_KEY",

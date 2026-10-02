@@ -16,11 +16,14 @@
   },
   "dependencies": {
     "@clipbuilder/contracts": "workspace:*",
+    "@clipbuilder/composition": "workspace:*",
+    "@remotion/player": "4.0.532",
     "lucide-react": "1.49.0",
     "mediabunny": "1.61.0",
     "next": "16.3.7",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "remotion": "4.0.532",
     "zod": "4.6.5"
   },
   "devDependencies": {

@@ -2,8 +2,15 @@ packages:
   - apps/*
   - packages/*
 
+# Keep built workspace dependencies portable in the renderer's production image.
+injectWorkspacePackages: true
+syncInjectedDepsAfterScripts:
+  - build
+
 allowBuilds:
+  "@google/genai": false
   esbuild: true
+  protobufjs: false
   unrs-resolver: true
 
 minimumReleaseAgeExclude:

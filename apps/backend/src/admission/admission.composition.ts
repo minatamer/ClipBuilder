@@ -30,7 +30,7 @@ export function composeAdmission(
       maxGrantsPerWindow: config.admission.rateGrant,
       allowedOrigins: config.session.csrfAllowedOrigins,
       paidEnabled: false,
-      timeoutMs: config.openAi.timeoutMs,
+      timeoutMs: config.gemini.timeoutMs,
     },
     { verify: async () => false },
     now,

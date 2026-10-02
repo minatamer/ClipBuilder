@@ -107,8 +107,50 @@ describe("repository dependency boundaries", () => {
   });
 
   it.each([
+    {
+      path: "../apps/frontend/src/__boundary-negative__.ts",
+      source: 'import "../../renderer/src/server.js";',
+    },
+    {
+      path: "../apps/renderer/src/__boundary-negative__.ts",
+      source: 'import "../../backend/src/app.js";',
+    },
+    {
+      path: "../packages/contracts/src/__boundary-negative__.ts",
+      source: 'import "../../../apps/renderer/src/server.js";',
+    },
+    {
+      path: "../packages/contracts/src/__boundary-negative__.ts",
+      source: 'import "@clipbuilder/composition";',
+    },
+    {
+      path: "../packages/composition/src/__boundary-negative__.tsx",
+      source: 'import "node:fs";\nvoid process;\nvoid Buffer;',
+    },
+    {
+      path: "../packages/composition/src/__boundary-negative__.tsx",
+      source: 'import "@remotion/renderer";',
+    },
+    {
+      path: "../apps/backend/src/__boundary-negative__.ts",
+      source: 'import "@clipbuilder/composition";',
+    },
+  ])(
+    "enforces the reviewed renderer/composition extension from $path",
+    async ({ path, source }) => {
+      expect(await lintFixture(path, source)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ ruleId: "no-restricted-imports" }),
+        ]),
+      );
+    },
+  );
+
+  it.each([
     "../apps/frontend/src/__boundary-valid__.ts",
     "../apps/backend/src/__boundary-valid__.ts",
+    "../apps/renderer/src/__boundary-valid__.ts",
+    "../packages/composition/src/__boundary-valid__.tsx",
   ])(
     "allows applications to import published contracts from %s",
     async (path) => {

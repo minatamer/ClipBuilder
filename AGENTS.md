@@ -54,12 +54,18 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 ```text
 apps/frontend       @clipbuilder/frontend  Next.js browser experience
 apps/backend        @clipbuilder/backend   Express control API / later job entry
+apps/renderer       @clipbuilder/renderer  Private Node/Docker media service
 packages/contracts  @clipbuilder/contracts Browser-safe cross-boundary schemas
+packages/composition @clipbuilder/composition Fixed shared React preview/render layout
 ```
 
-The only internal dependency direction is
-`apps/frontend -> packages/contracts <- apps/backend`. Applications never import
-each other. `packages/contracts` cannot import React, Next.js, Express,
+The approved internal directions are
+`apps/frontend -> packages/contracts <- apps/backend`,
+`apps/renderer -> packages/contracts`,
+`apps/frontend -> packages/composition <- apps/renderer`, and
+`packages/composition -> packages/contracts`. Applications never import each
+other; backend cannot import composition. Shared composition has no Node,
+environment, provider/cloud SDK or application dependency. `packages/contracts` cannot import React, Next.js, Express,
 Node-only APIs, provider/cloud SDKs, environment readers, fixtures, or
 application code.
 
@@ -87,6 +93,30 @@ application code.
 - Browser code receives only explicitly public configuration. Never expose a
   backend origin, credential, bucket, private service name, or provider setting
   through `NEXT_PUBLIC_*`.
+- The renderer's explicit server composition owns listening on injected PORT,
+  private caller verification and storage credentials; it has no Gemini key.
+  Build its fixed bundle/binaries into the image. No runtime tool download or
+  arbitrary composition, command, path or remote asset input is permitted.
+  Cloud compute/spend gates are independent of fake/live AI. Renderer tests use
+  injected ports without ADC or network. Private test infrastructure has its own
+  approval checkpoint at the first cloud-dependent test, not after release audit.
+
+## Explain fake-mode and live capabilities
+
+- Whenever explaining a feature, proposing a test, requesting owner input, or
+  reporting ticket status, explicitly state what currently works with
+  `FAKE_MODE=true` and no API keys, and what requires real provider API keys,
+  enabled live flags, and the applicable approvals. Identify fixture/mock
+  results separately from real processing; fake results do not prove live AI
+  quality or readiness.
+- Distinguish API-free processing from AI-free processing. A real local AI
+  model may need approved weights and runtime tooling without needing provider
+  API keys. State whether those assets and the implementation are available,
+  verified, or still missing.
+- Before asking for media, credentials, or another prerequisite, explain which
+  test or capability it unlocks and what else remains necessary. Separate
+  implemented and verified behavior from planned or blocked behavior; do not
+  imply that supplying one input completes an unfinished pipeline.
 
 ## Deterministic verification
 
