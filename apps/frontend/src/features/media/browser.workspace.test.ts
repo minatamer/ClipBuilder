@@ -139,6 +139,70 @@ function fixture() {
   };
 }
 
+describe("local audio workspace ownership", () => {
+  it("extracts only from the admitted source and retains the source after scratch cleanup", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    const snapshot = f.owner.snapshot;
+    const audio = {
+      profile: "opus-webm" as const,
+      file: new Blob([new Uint8Array(4)], { type: "audio/webm" }),
+      sourceDurationMs: snapshot!.source!.media.durationMs,
+      sourceFirstSampleMs: 0,
+      sourceLastSampleMs: snapshot!.source!.media.durationMs,
+      presentationDurationMs: snapshot!.source!.media.durationMs,
+      decodedFirstSampleMs: 0,
+      decodedLastSampleMs: snapshot!.source!.media.durationMs,
+      decodedSampleRate: 48_000,
+      bytes: 4,
+    };
+    f.run.mockImplementation(async (command) =>
+      command.action === "extract-audio" ? { audio } : {},
+    );
+    expect(
+      await f.owner.extractAudio(new AbortController().signal, () => {}),
+    ).toBe(audio);
+    const command = f.run.mock.calls.find(
+      (call) => call[0].action === "extract-audio",
+    )![0];
+    expect(command.file).toBe(f.file);
+    expect(command.sourceDurationMs).toBe(snapshot!.source!.media.durationMs);
+    expect(f.owner.snapshot).toBe(snapshot);
+    expect(f.owner.sourceUrl).not.toBeNull();
+    expect(f.run.mock.calls.at(-1)![0]).toEqual({ action: "clear-audio" });
+    await f.owner.dispose();
+  });
+  it("fences a late extraction result and drains it before releasing the lease", async () => {
+    const f = fixture();
+    const release = vi.fn();
+    f.ports.lock.acquire = vi.fn(async () => ({ release }));
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    const gate = drainGate();
+    const entered = drainGate();
+    f.run.mockImplementation(async (command) => {
+      if (command.action === "extract-audio") {
+        entered.finish();
+        await gate.pending;
+        return {};
+      }
+      return {};
+    });
+    const work = f.owner.extractAudio(new AbortController().signal, () => {});
+    const rejected = expect(work).rejects.toMatchObject({ code: "canceled" });
+    await entered.pending;
+    const disposal = f.owner.dispose();
+    await Promise.resolve();
+    expect(release).not.toHaveBeenCalled();
+    gate.finish();
+    await disposal;
+    await rejected;
+    expect(release).toHaveBeenCalledOnce();
+    expect(f.owner.sourceUrl).toBeNull();
+  });
+});
+
 afterEach(() => vi.useRealTimers());
 describe("browser workspace publication and lifecycle", () => {
   it("publishes pending then ready, retains no filename, restores without any remote calls", async () => {

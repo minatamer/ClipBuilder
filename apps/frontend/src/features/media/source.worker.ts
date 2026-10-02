@@ -23,6 +23,9 @@ import {
 } from "mediabunny";
 import { LocalMediaError } from "./media.errors";
 import { copyLocalSource } from "./opfs.copy";
+import { extractLocalAudio } from "./audio.extraction";
+import { audioRequestSchema } from "./audio.protocol";
+import { AUDIO_SCRATCH_FOLDER } from "./audio.profile";
 import {
   WORKSPACE_FOLDER,
   type SourceCommand,
@@ -296,7 +299,33 @@ onmessage = async ({
   try {
     let result = {};
     if (data.action === "probe") result = await probe(controller.signal);
-    else if (data.action === "delete") {
+    else if (data.action === "extract-audio") {
+      const request = audioRequestSchema.safeParse(data);
+      if (!request.success) throw new LocalMediaError("unsupported");
+      const scratch = await (
+        await directory()
+      ).getDirectoryHandle(AUDIO_SCRATCH_FOLDER, { create: true });
+      result = {
+        audio: await extractLocalAudio(
+          request.data.file,
+          request.data.sourceDurationMs,
+          request.data.profile,
+          scratch,
+          controller.signal,
+          (progress) =>
+            send({ type: "audio-progress", jobId: data.jobId, progress }),
+        ),
+      };
+    } else if (data.action === "clear-audio") {
+      try {
+        await (
+          await directory()
+        ).removeEntry(AUDIO_SCRATCH_FOLDER, { recursive: true });
+      } catch (error) {
+        if (!(error instanceof DOMException) || error.name !== "NotFoundError")
+          throw error;
+      }
+    } else if (data.action === "delete") {
       const root = await navigator.storage.getDirectory();
       try {
         await root.removeEntry(WORKSPACE_FOLDER, { recursive: true });

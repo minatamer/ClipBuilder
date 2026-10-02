@@ -4,6 +4,7 @@ import {
   type AnalysisBundleV1,
 } from "@clipbuilder/contracts";
 import { LocalMediaError } from "./media.errors";
+import type { AudioProgress, ExtractedAudio } from "./audio.profile";
 import { BrowserSourceProcessor, type SourceProcessor } from "./source.client";
 import {
   IndexedWorkspaceJournal,
@@ -49,6 +50,7 @@ export class BrowserWorkspace {
   private generation = 0;
   private record: WorkspaceRecord | null = null;
   private work: Promise<WorkspaceRecord> | null = null;
+  private audioWork: Promise<ExtractedAudio> | null = null;
   private task: AbortController | null = null;
   private clearing: Promise<void> | null = null;
   private writes: Promise<void> = Promise.resolve();
@@ -156,6 +158,11 @@ export class BrowserWorkspace {
       return null;
     }
     try {
+      await this.ports.processor.run(
+        { action: "clear-audio" },
+        this.lifetime.signal,
+      );
+      this.check(generation);
       await this.ports.processor.run({ action: "probe" }, this.lifetime.signal);
       this.check(generation);
       const reopened = await this.ports.processor.run(
@@ -290,6 +297,74 @@ export class BrowserWorkspace {
     return record;
   }
 
+  extractAudio(
+    signal: AbortSignal,
+    progress: (value: AudioProgress) => void,
+  ): Promise<ExtractedAudio> {
+    const generation = this.generation;
+    this.check(generation);
+    if (
+      !this.lease ||
+      this.record?.status !== "ready" ||
+      !this.record.source ||
+      !this.file
+    )
+      return Promise.reject(new LocalMediaError("missing"));
+    if (this.work || this.audioWork || this.clearing)
+      return Promise.reject(new LocalMediaError("busy"));
+    if (signal.aborted) return Promise.reject(new LocalMediaError("canceled"));
+    const task = new AbortController();
+    this.task = task;
+    const abort = () => task.abort();
+    signal.addEventListener("abort", abort, { once: true });
+    const file = this.file;
+    const sourceDurationMs = this.record.source.media.durationMs;
+    const completion = (async () => {
+      try {
+        await this.ports.processor.run({ action: "clear-audio" }, task.signal);
+        this.check(generation);
+        const result = await this.ports.processor.run(
+          {
+            action: "extract-audio",
+            file,
+            sourceDurationMs,
+            profile: "opus-webm",
+          },
+          task.signal,
+          undefined,
+          (value) => {
+            this.check(generation);
+            if (!task.signal.aborted) progress(value);
+          },
+        );
+        this.check(generation);
+        if (task.signal.aborted) throw new LocalMediaError("canceled");
+        if (!result.audio) throw new LocalMediaError("unavailable");
+        return result.audio;
+      } finally {
+        signal.removeEventListener("abort", abort);
+        await this.ports.processor.stop();
+        if (!this.disposed && generation === this.generation) {
+          await this.ports.processor.run(
+            { action: "clear-audio" },
+            this.lifetime.signal,
+          );
+          this.check(generation);
+        }
+      }
+    })();
+    this.audioWork = completion;
+    void completion.then(
+      () => {
+        if (this.audioWork === completion) this.audioWork = null;
+      },
+      () => {
+        if (this.audioWork === completion) this.audioWork = null;
+      },
+    );
+    return completion;
+  }
+
   async select(candidateId: string | null): Promise<void> {
     const generation = this.generation;
     this.check(generation);
@@ -331,6 +406,7 @@ export class BrowserWorkspace {
         }
       await this.ports.processor.stop();
       await this.work?.catch(() => {});
+      await this.audioWork?.catch(() => {});
       await this.ports.processor.run(
         { action: "delete" },
         this.lifetime.signal,
@@ -353,6 +429,7 @@ export class BrowserWorkspace {
     if (this.timer) clearTimeout(this.timer);
     this.releaseMedia();
     await this.ports.processor.stop();
+    await this.audioWork?.catch(() => {});
     await this.writes.catch(() => {});
     await this.clearing?.catch(() => {});
     this.ports.journal.close();
