@@ -1,5 +1,20 @@
 # ClipBuilder sample media rights record
 
+## Current cloud-media consent gate — 2026-10-02
+
+Private temporary GCS is architecturally approved, not media-specific rights or upload approval. Confirm consent for original upload to our private bucket/renderer, bounded audiovisual proxy transfer to paid Google Gemini, derived clips/captions/templates and separately authorized display/download. Delete raw/proxies/intermediates/assets immediately on validated final output publication; keep output only ten minutes/session expiry and use the independent expiry/retry plan. Download initiation is not a completion guarantee. No raw archive/history is allowed. Provider retention and storage outage limitations are disclosed in the [current plan](../architecture/GEMINI_REMOTION_MIGRATION.md). No private source filename/content/identity/consent signature belongs here. Fake synthetic tests need no real clip; live rights/call/transfer gates remain unchecked.
+
+On 2026-10-02 the owner explicitly authorized the 2:45 source for the bounded
+private GCS/Cloud Run test and confirmed ownership or permission to use it and
+create a derived test clip. This is an owner attestation for CL-006 testing only.
+Gemini transfer, public portfolio display, deployed sample approval and Git
+redistribution remain unapproved. Source identity and fingerprint stay private;
+this does not approve the pending public sample ledger below. The private test
+subsequently passed upload/proxy/derived render/cancellation/expiry deletion;
+[CL-006](../tickets/CL-006-build-media-job-and-speaker-feasibility.md#completed-private-cloud-foundation--2026-10-02) owns aggregate evidence.
+The original owner source was preserved and downloaded test media removed.
+
+
 Status: **Pending — no media is approved for Git or deployment**  
 Record version: `sample-v1-pending`  
 Last reviewed: 2026-09-29

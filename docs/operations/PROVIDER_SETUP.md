@@ -1,4 +1,23 @@
+# Google AI and cloud readiness
+
+Current authority: [cloud migration](../architecture/GEMINI_REMOTION_MIGRATION.md) and [later setup guide](CLOUD_RUN_RENDERER_SETUP.md). Documentation review/owner approval precedes further code correction; cloud setup and paid/private media tests have separate later authorization. Private temporary GCS is architecturally approved; no resource was created.
+
+Gemini 3.8 Flash / @google/genai 2.26.0 is the researched starting model/SDK. Confirm actual supported structured output, word timing/diarization, audiovisual sampling and quality before acceptance. No speculative image/ASR model is selected. Server-only GEMINI_API_KEY is blank in the committed example; never inspect .env.local or put credentials/IDs in browser config. Interrupted config changes are incomplete and frozen.
+
+Fake/live describes AI; local/cloud describes compute independently. Fake offline tests use injected storage/renderer/provider ports and zero external calls. A local app can later invoke authenticated remote Cloud Run with fake AI; that still needs cloud credentials and spend approval. Cloud Run runtime identity, gcloud CLI login and local ADC are distinct, detailed in the setup guide. Media renderer has no Gemini key. No AWS or Deepgram/OpenAI setup is currently required.
+
+Confirm Google paid-project data terms/retention, owned media rights/transfer, call/token budget, Remotion SSR licensing/telemetry, exact project ID/region and named identities privately at setup. Do not assume the ClipBuilder display name is the ID. Final render/proxy preparation use our standard Node/Docker Cloud Run service, not phone encoding or the alpha package.
+
+<details><summary>Earlier provider setup, retained as history — do not follow superseded provider instructions</summary>
+
 # Non-GCloud provider setup
+
+## Current Google migration setup — 2026-10-02
+
+The [migration contract](../architecture/GEMINI_REMOTION_MIGRATION.md) supersedes OpenAI/Deepgram setup below. Populate only the blank GEMINI_API_KEY in owner-managed secret storage. Exact model gemini-3.8-flash and time/token/call caps are in .env.example; leave all paid/live/transfer/paid-project gates off until applicable approvals. No image/ASR model is selected. Do not read or copy .env.local for diagnosis. Fake mode needs no keys and proves fixtures only. Live transfer/retention, rights/spend and actual model quality remain unchecked.
+
+Earlier provider/model records below are historical where superseded.
+
 
 Status: owner guide prepared; account/readiness checks not performed<br>
 Official references reviewed: 2026-10-01<br> Initial owner:
@@ -337,3 +356,5 @@ Sanitized record fields: service role, guide review date, owner confirmation
 date, model/config revision, numerical controls, enforcement class, test
 ticket/verdict, remaining blocker and next owning ticket. Never include keys,
 IDs or real content.
+
+</details>

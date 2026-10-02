@@ -1,4 +1,21 @@
+# Earlier browser-owned media architecture — superseded
+
+The owner now selects [Google + private Cloud Run Node rendering](GEMINI_REMOTION_MIGRATION.md) and approves private temporary GCS media with terminal deletion and independent expiry cleanup. Browser-only originals/outputs/final encoding and the no-cloud-store gate are retired. Useful intake/clock/local cleanup evidence survives where applicable. Implementation is paused for documentation approval.
+
+<details><summary>Earlier browser architecture and evidence, retained as history</summary>
+
 # Browser-owned media architecture
+
+**Current owner revision, 2026-10-02:** the
+[Gemini/Remotion migration contract](GEMINI_REMOTION_MIGRATION.md) supersedes
+conflicting mechanisms below. Local originals, OPFS ownership, expiry, bounds,
+clocks and cleanup remain. A bounded audiovisual proxy may intentionally be
+transferred through the protected API to Google; Gemini supplies grounded
+analysis/focus/visual data and fixed Remotion browser compositions render it
+using Mediabunny/WebCodecs. Deepgram/OpenAI, browser LR-ASD/ORT and server media
+jobs are historical alternatives. Do not execute their old gates. Fake/off
+defaults and separate live rights/privacy/spend/license/device/deployment gates
+remain. The detailed file-level plan and revised packets own implementation.
 
 Status: browser ownership and two-hour retention are owner-approved; CL-005 local
 foundation implemented, broader runtime/release gates remain open<br>
@@ -487,3 +504,5 @@ browser execution locations. No implementation, installation, cloud setup,
 credential use, paid call, benchmark or Git mutation was performed to produce
 this document. Preserve historical CL-004 verification separately from every
 new pipeline gate.
+
+</details>

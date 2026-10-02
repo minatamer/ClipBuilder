@@ -1,4 +1,72 @@
+# Google AI and private media-compute cost plan
+
+Current [cloud migration](../architecture/GEMINI_REMOTION_MIGRATION.md) and [setup guide](CLOUD_RUN_RENDERER_SETUP.md) supersede old provider/browser-only costs. Documentation approval precedes code correction; cloud/test expenditure is separately authorized. Private cloud phase timings are measured in CL-006; no billed cloud charge or live AI cost was verified.
+
+Proposed AI allowance is one full-source analysis plus one selected-range plan, zero image calls and zero automatic paid retries; export uses frozen results and zero AI calls. Cloud proxy preparation and one final Node render incur independent compute cost, even with fake AI. Count actual CPU/RAM active duration/cold start, storage bytes/operations/egress, build/registry/secrets/expiry schedule, Gemini input/output tokens and Remotion license. No accounts/history/general queue is introduced.
+
+The [official Cloud Run pricing table](https://cloud.google.com/run/pricing) currently lists Tier-1 request-based active CPU at USD 0.000024/vCPU-second and memory at USD 0.0000025/GiB-second. The proposed 4-vCPU/8-GiB active shape therefore costs about USD 0.000116 per active second (USD 0.0348 for a hypothetical 300-second interval), excluding requests, cold start, proxy work, Storage/egress/builds/secrets/Scheduler, Google AI and license. This is an illustrative calculation, not measured latency or a quote for an unchosen region. Recheck regional rates and current Gemini pricing at authorization.
+
+Each setup checkpoint needs a concrete small test budget and exact permitted calls/bytes/actions. The dated build-only approval below does not authorize later media or AI tests. Alerts are advisory, not hard spend caps; fail-closed reservations, timeouts/scratch/body limits, single expensive slot and intake kill switch are required. Maximum instances alone is not an atomic quota across rollout/restart. Public paid use stays disabled. Cleanup reduces retention/storage but also needs bounded retry cost.
+
+## Recorded GCloud budgets and build limits — 2026-10-02
+
+The owner reported completing two alerts. The build preflight independently
+verified the following configuration; private project/billing/account identifiers
+remain outside Git.
+
+| Control | Recorded value | Evidence and scope |
+| --- | --- | --- |
+| ClipBuilder monthly project budget | USD 10; only the selected project; all services | CLI verified actual-spend alert thresholds at 50%, 90%, 100% |
+| Separate ClipBuilder Cloud Run alert | USD 5 intended | Not found in the CLI preflight; remains unconfirmed and was not created or changed by this execution |
+| Build region and machine | europe-west1; E2_HIGHCPU_8 | All five submitted Docker builds used this configuration |
+| Per-build execution timeout | 1,200 seconds / 20 minutes | First four builds; final corrected build used a reduced 1,111-second submission timeout |
+| Approved per-build compute estimate | Approximately USD 0.31 for twenty minutes | Dated authorization estimate; excludes storage, logs and network; no billed charge verified |
+| Submitted build count | Five, under explicit owner approvals including necessary retries until the private test passed | Initial failure 112 s; packaging success 104.45 s; rawvideo fixture failure 83.737 s; BMP fixture failure 88.978 s; PNG/render-verified success 156.928 s |
+
+The ScreenPilot comparison used europe-west1 and project-scoped USD 10 / Cloud
+Run-specific USD 5 alerts. Its services had minimum zero and maximum one instance;
+that comparison is not evidence of a deployed ClipBuilder runtime limit.
+
+Budget alerts send notifications and do not stop spend. The build timeout bounds
+execution duration; it is not a global monthly dollar cap. Submitted source archives
+use a private build-only staging bucket with an age-one deletion lifecycle;
+repository storage can continue until separately authorized cleanup. No media
+bucket, Cloud Run renderer, live AI or media-processing allowance was established
+by this build checkpoint.
+
+The owner subsequently approved the private renderer/bucket/identities/cleanup
+secret/schedule and a **USD 1 test allowance for at most two synthetic media
+operations**, with AI disabled. Setup/authentication is verified. The owner later
+approved the rights-confirmed 2:45 source for this private test. Operations used
+are **four total**: the earlier prepare/cancelled-render pair plus the separately
+authorized successful prepare/render pair on the corrected image; zero AI calls.
+The owner authorized necessary build retries until the functional test passed.
+Previous counts were preserved; each test process retained its two-operation cap.
+Partial-upload cancel/replay and expiry checks added no media dispatch. Measured
+retest phases were 5158 ms preparation and 25855 ms rendering;
+these are small private-source observations, not billed charges or an SLA.
+The original USD 1 media allowance remained the test ceiling. Runtime configuration
+is 4 CPU/8 GiB, service/revision min-zero/max-one, request concurrency two,
+900-second request timeout, 840-second work deadline and two-operation process
+cap. Startup CPU boost is disabled. These controls are not a global dollar cap.
+The enabled 15-minute cleanup scheduler and retained storage/secret/image
+resources can continue charging until cleanup. No billed charge was verified.
+Live Gemini and public deployment remain outside these private test approvals.
+
+Exact build evidence is in [CL-006](../tickets/CL-006-build-media-job-and-speaker-feasibility.md#completed-private-cloud-foundation--2026-10-02).
+The [setup guide](CLOUD_RUN_RENDERER_SETUP.md) owns private-service configuration
+and the completed isolated test checkpoint; later external actions remain gated.
+
+<details><summary>Earlier provider cost models and evidence — historical where superseded</summary>
+
 # Provider cost model and budget controls
+
+## Current Google call budget — 2026-10-02
+
+The [migration contract](../architecture/GEMINI_REMOTION_MIGRATION.md) supersedes old provider costs below: one source analysis plus one selected-range plan, zero image calls and zero automatic paid retries. Track actual Google input/output tokens and phase wall time. Pricing must be checked at live authorization; no observed live cost or latency exists. Export reuses a frozen manifest and makes zero AI calls. Remotion license/operational telemetry is separate from AI cost.
+
+Earlier provider/model records below are historical where superseded.
+
 
 Status: planning worksheet; numerical spending approval pending<br> Official
 pricing/control references reviewed: 2026-10-01<br> Setup owner:
@@ -202,3 +270,5 @@ When retiring the demo, disable live gates, reconcile delayed charges, revoke
 unused keys, turn off approved recurring funding and remove unused external
 resources only with authorization. Hosting services/registry/secrets and
 their residual cost/lifecycle remain final CL-015 operations ownership.
+
+</details>
