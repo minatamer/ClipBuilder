@@ -12,3 +12,5 @@ export * from "./text.schema.js";
 export * from "./transcript.schema.js";
 export * from "./visual-plan.schema.js";
 export * from "./admission.schema.js";
+export * from "./edit-plan.schema.js";
+export * from "./cloud-media.schema.js";

@@ -51,7 +51,7 @@ export const transcriptBundleSchema = z
     utterances: z.array(transcriptUtteranceSchema).max(10_000),
     providerMetadata: z
       .object({
-        provider: z.enum(["fake", "deepgram"]),
+        provider: z.enum(["fake", "google-gemini"]),
         modelConfigId: boundedPlainTextSchema(80),
         diarizationAvailable: z.boolean(),
       })

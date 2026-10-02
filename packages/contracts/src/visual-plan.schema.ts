@@ -155,7 +155,7 @@ export const visualAssetSchema = z
   .object({
     id: visualAssetIdSchema,
     requestId: visualRequestIdSchema,
-    source: z.enum(["openai-image", "deterministic-card", "fake-fixture"]),
+    source: z.enum(["google-image", "deterministic-card", "fake-fixture"]),
     contentType: z.enum(["image/png", "image/webp"]),
     width: z.number().int().min(1).max(4_096),
     height: z.number().int().min(1).max(4_096),

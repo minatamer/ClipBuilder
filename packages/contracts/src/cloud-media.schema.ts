@@ -1,0 +1,115 @@
+import { z } from "zod";
+import { PUBLIC_LIMITS, MEDIA_LIMITS } from "./constants.js";
+import {
+  sessionIdSchema,
+  revisionIdSchema,
+  uuidV4Schema,
+} from "./ids.schema.js";
+import { sha256DigestSchema } from "./boundary-primitives.schema.js";
+import { compositionManifestV2Schema } from "./edit-plan.schema.js";
+
+export const TEMPORARY_MEDIA_LIMITS = {
+  sessionTtlMs: 7_200_000,
+  outputTtlMs: 600_000,
+  maxSessions: 16,
+  maxObjects: 256,
+  maxObjectsPerSession: 8,
+  proxyBytes: 24 * 1024 * 1024,
+  descriptorBytes: 128 * 1024,
+  workDeadlineMs: 840_000,
+  sweepDeadlineMs: 180_000,
+  scratchBytes: 2 * 1024 * 1024 * 1024,
+} as const;
+export const mediaBindingSchema = z
+  .object({
+    sessionId: sessionIdSchema,
+    sourceRevision: revisionIdSchema,
+    fingerprint: sha256DigestSchema,
+  })
+  .strict();
+export const objectGenerationSchema = z.string().regex(/^[1-9][0-9]{0,24}$/);
+export const artifactReferenceSchema = z
+  .object({
+    artifactId: uuidV4Schema,
+    generation: objectGenerationSchema,
+    bytes: z.number().int().positive().max(PUBLIC_LIMITS.maxSourceBytes),
+    checksum: sha256DigestSchema,
+  })
+  .strict();
+export const mediaUploadRequestSchema = z
+  .object({
+    binding: mediaBindingSchema,
+    bytes: z.number().int().positive().max(PUBLIC_LIMITS.maxSourceBytes),
+    contentType: z.enum(["video/mp4", "video/webm"]),
+    rightsAcknowledged: z.literal(true),
+    dataTransferAcknowledged: z.literal(true),
+  })
+  .strict();
+export const mediaPrepareRequestSchema = z
+  .object({
+    binding: mediaBindingSchema,
+    generation: objectGenerationSchema,
+    nonce: uuidV4Schema,
+  })
+  .strict();
+export const inspectedSourceSchema = z
+  .object({
+    fingerprint: sha256DigestSchema,
+    bytes: z.number().int().positive().max(PUBLIC_LIMITS.maxSourceBytes),
+    durationMs: z
+      .number()
+      .int()
+      .min(PUBLIC_LIMITS.minSourceSeconds * 1000)
+      .max(PUBLIC_LIMITS.maxSourceSeconds * 1000),
+    width: z.number().int().positive().max(MEDIA_LIMITS.maxVideoWidth),
+    height: z.number().int().positive().max(MEDIA_LIMITS.maxVideoHeight),
+    audioStartMs: z.number().int().min(-1000).max(10_000),
+  })
+  .strict()
+  .refine((s) => s.width * s.height <= MEDIA_LIMITS.maxFramePixels);
+export const mediaRenderRequestSchema = z
+  .object({
+    binding: mediaBindingSchema,
+    nonce: uuidV4Schema,
+    manifestHash: sha256DigestSchema,
+    manifest: compositionManifestV2Schema,
+  })
+  .strict();
+export const mediaCancelRequestSchema = z
+  .object({ binding: mediaBindingSchema })
+  .strict();
+export const mediaUploadResponseSchema = z
+  .object({
+    // A runtime-only bearer capability; never persist it or use it as renderer authority.
+    uploadUrl: z
+      .url()
+      .max(8192)
+      .regex(/^https:\/\/storage\.googleapis\.com\//),
+    expiresAtMs: z.number().int().positive(),
+  })
+  .strict();
+export const mediaPrepareResponseSchema = z
+  .object({
+    source: inspectedSourceSchema,
+    analysisProxy: artifactReferenceSchema.extend({
+      bytes: z.number().int().positive().max(TEMPORARY_MEDIA_LIMITS.proxyBytes),
+    }),
+  })
+  .strict();
+export const mediaRenderResponseSchema = z
+  .object({
+    manifestHash: sha256DigestSchema,
+    output: artifactReferenceSchema.extend({
+      bytes: z.number().int().positive().max(PUBLIC_LIMITS.maxOutputBytes),
+    }),
+    expiresAtMs: z.number().int().positive(),
+  })
+  .strict();
+export type MediaBinding = z.infer<typeof mediaBindingSchema>;
+export type MediaUploadRequest = z.infer<typeof mediaUploadRequestSchema>;
+export type MediaPrepareRequest = z.infer<typeof mediaPrepareRequestSchema>;
+export type MediaRenderRequest = z.infer<typeof mediaRenderRequestSchema>;
+export type MediaPrepareResponse = z.infer<typeof mediaPrepareResponseSchema>;
+export type MediaRenderResponse = z.infer<typeof mediaRenderResponseSchema>;
+export type ArtifactReference = z.infer<typeof artifactReferenceSchema>;
+export type InspectedSource = z.infer<typeof inspectedSourceSchema>;
