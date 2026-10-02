@@ -1,5 +1,7 @@
 # Dependencies and package-manager state
 node_modules/
+apps/renderer/bundle/
+apps/renderer/runtime-tools.json
 .pnpm-store/
 
 # Build, test, and framework output

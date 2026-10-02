@@ -1,0 +1,16 @@
+# Submit ONLY the locally generated allowlisted context, after cloud approval.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      [
+        build,
+        --platform=linux/amd64,
+        --file=apps/renderer/Dockerfile,
+        "--tag=${_IMAGE}",
+        .,
+      ]
+images: ["${_IMAGE}"]
+timeout: 1200s
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
