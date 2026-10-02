@@ -1,0 +1,88 @@
+import { z } from "zod";
+import {
+  mediaBindingSchema,
+  artifactReferenceSchema,
+  inspectedSourceSchema,
+  uuidV4Schema,
+  objectGenerationSchema,
+} from "@clipbuilder/contracts";
+export const temporaryIntentSchema = z
+  .object({
+    version: z.literal(1),
+    binding: mediaBindingSchema,
+    expiresAtMs: z.number().int().positive(),
+    expectedBytes: z.number().int().positive(),
+    contentType: z.enum(["video/mp4", "video/webm"]),
+    sourceId: uuidV4Schema,
+    phase: z.enum([
+      "uploading",
+      "preparing",
+      "prepared",
+      "rendering",
+      "complete",
+      "terminal",
+    ]),
+    encryptedUpload: z.string().max(16_384).nullable(),
+    nonce: uuidV4Schema.nullable(),
+    manifestHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .nullable(),
+    source: inspectedSourceSchema.nullable(),
+    sourceGeneration: objectGenerationSchema.nullable(),
+    analysisProxy: artifactReferenceSchema.nullable(),
+    output: artifactReferenceSchema.nullable(),
+    outputExpiresAtMs: z.number().int().positive().nullable(),
+    cleanupPending: z.boolean(),
+    cleanupAttempts: z.number().int().min(0).max(1_000_000),
+    nextCleanupAtMs: z.number().int().nonnegative(),
+  })
+  .strict();
+export type TemporaryIntent = z.infer<typeof temporaryIntentSchema>;
+export type IntentRecord = { intent: TemporaryIntent; generation: string };
+
+export interface TemporaryMediaStore {
+  withSignal<T>(signal: AbortSignal, work: () => Promise<T>): Promise<T>;
+  assertDisposable(): Promise<void>;
+  expiredArtifacts(
+    nowMs: number,
+  ): Promise<
+    Array<{ sessionId: string; artifactId: string; generation: string }>
+  >;
+  listIntents(): Promise<IntentRecord[]>;
+  getIntent(sessionId: string): Promise<IntentRecord | null>;
+  saveIntent(
+    intent: TemporaryIntent,
+    previousGeneration: string,
+  ): Promise<IntentRecord>;
+  deleteIntent(sessionId: string, generation: string): Promise<void>;
+  beginUpload(intent: TemporaryIntent): Promise<string>;
+  cancelUpload(url: string): Promise<void>;
+  listArtifacts(
+    sessionId: string,
+  ): Promise<Array<{ artifactId: string; generation: string; bytes: number }>>;
+  deleteArtifact(
+    sessionId: string,
+    artifactId: string,
+    generation: string,
+  ): Promise<void>;
+  artifactMetadata(
+    sessionId: string,
+    artifactId: string,
+    generation: string,
+  ): Promise<{ bytes: number; contentType: string }>;
+  download(
+    sessionId: string,
+    artifactId: string,
+    generation: string,
+    destination: string,
+    signal: AbortSignal,
+  ): Promise<void>;
+  upload(
+    sessionId: string,
+    artifactId: string,
+    source: string,
+    expiresAtMs: number,
+    signal: AbortSignal,
+  ): Promise<import("@clipbuilder/contracts").ArtifactReference>;
+}

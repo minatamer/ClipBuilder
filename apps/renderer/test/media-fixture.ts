@@ -1,0 +1,64 @@
+import { MediaSessions } from "../src/expiry/media-sessions.js";
+import { UploadCapabilityCipher } from "../src/expiry/upload-capability.js";
+import { MediaOperations } from "../src/media/media-operations.js";
+import { MemoryMediaStore } from "./memory-store.js";
+import type { MediaPipeline } from "../src/media/node-pipeline.js";
+export const binding = {
+  sessionId: "ses_" + "a".repeat(22),
+  sourceRevision: "rev_" + "b".repeat(22),
+  fingerprint: "a".repeat(64),
+};
+export const nonce = "00000000-0000-4000-8000-000000000001";
+export function mediaFixture(
+  pipeline?: MediaPipeline,
+  budget = 2,
+  removeScratch?: (directory: string) => Promise<void>,
+) {
+  const store = new MemoryMediaStore();
+  const sessions = new MediaSessions(
+    store,
+    new UploadCapabilityCipher(Buffer.alloc(32, 7)),
+    () => 1_000_000,
+  );
+  const calls = { inspect: 0, proxy: 0, render: 0 };
+  const operations = new MediaOperations(
+    sessions,
+    pipeline ?? {
+      async inspect() {
+        calls.inspect++;
+        return {
+          fingerprint: binding.fingerprint,
+          bytes: 1024,
+          width: 320,
+          height: 180,
+          durationMs: 15_000,
+          audioStartMs: 0,
+        };
+      },
+      async proxy() {
+        calls.proxy++;
+      },
+      async render() {
+        calls.render++;
+      },
+    },
+    budget,
+    () => 1_000_000,
+    removeScratch,
+  );
+  async function admit() {
+    const response = await sessions.admit({
+      binding,
+      bytes: 1024,
+      contentType: "video/mp4",
+      rightsAcknowledged: true,
+      dataTransferAcknowledged: true,
+    });
+    const record = await store.getIntent(binding.sessionId);
+    store.objects.set(binding.sessionId, [
+      { artifactId: record!.intent.sourceId, generation: "12", bytes: 1024 },
+    ]);
+    return response;
+  }
+  return { store, sessions, operations, calls, admit };
+}
