@@ -1,10 +1,47 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
+import {
+  LOCAL_WORKSPACE_LIMITS,
+  PUBLIC_LIMITS,
+  SAFE_ERROR_MESSAGES,
+  isSourceWithinLimitProfile,
+} from "@clipbuilder/contracts";
+
+const audioModules = new Map([
+  ["/audio-extraction.mjs", "audio.extraction"],
+  ["/audio-samples.mjs", "audio.samples"],
+  ["/audio-profile.mjs", "audio.profile"],
+
+  ["/opfs-access.mjs", "opfs.access"],
+  ["/media-errors.mjs", "media.errors"],
+]);
+const audioImports = new Map([
+  ["mediabunny", "/mediabunny.mjs"],
+  ["@clipbuilder/contracts", "/audio-contracts.mjs"],
+  ...[...audioModules].map(([path, name]) => [`./${name}`, path]),
+]);
+async function readAudioModule(name) {
+  const source = await readFile(
+    new URL(`../../src/features/media/${name}.ts`, import.meta.url),
+    "utf8",
+  );
+  let body = ts.transpileModule(source, {
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.ESNext,
+    },
+  }).outputText;
+  for (const [specifier, path] of audioImports)
+    body = body.replaceAll(JSON.stringify(specifier), JSON.stringify(path));
+  return body;
+}
 
 const files = new Map([
   ["/", [new URL("./index.html", import.meta.url), "text/html"]],
   ["/main.mjs", [new URL("./main.mjs", import.meta.url), "text/javascript"]],
+
   [
     "/sync-access.mjs",
     [new URL("./sync-access.mjs", import.meta.url), "text/javascript"],
@@ -27,14 +64,20 @@ const files = new Map([
 export function createFeasibilityServer() {
   return createServer(async (request, response) => {
     const entry = files.get(request.url);
-    if (request.method !== "GET" || !entry) {
+    const audioModule = audioModules.get(request.url);
+    const contracts = request.url === "/audio-contracts.mjs";
+    if (request.method !== "GET" || (!entry && !audioModule && !contracts)) {
       response.writeHead(404).end();
       return;
     }
     try {
-      const body = await readFile(fileURLToPath(entry[0]));
+      const body = contracts
+        ? `export const LOCAL_WORKSPACE_LIMITS = ${JSON.stringify(LOCAL_WORKSPACE_LIMITS)}; export const PUBLIC_LIMITS = ${JSON.stringify(PUBLIC_LIMITS)}; export const SAFE_ERROR_MESSAGES = ${JSON.stringify(SAFE_ERROR_MESSAGES)}; export const isSourceWithinLimitProfile = ${isSourceWithinLimitProfile.toString()}; const LIMIT_PROFILES = { public: PUBLIC_LIMITS };`
+        : audioModule
+          ? await readAudioModule(audioModule)
+          : await readFile(fileURLToPath(entry[0]));
       response.writeHead(200, {
-        "Content-Type": entry[1],
+        "Content-Type": entry?.[1] ?? "text/javascript",
         "Cache-Control": "no-store",
         "Cross-Origin-Opener-Policy": "same-origin",
         "Cross-Origin-Embedder-Policy": "require-corp",

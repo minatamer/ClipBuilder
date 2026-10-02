@@ -76,4 +76,32 @@ describe("synthetic feasibility server", () => {
   it("has no upload or media write endpoint", async () => {
     expect(await read("/", "POST")).toMatchObject({ status: 404, body: "" });
   });
+  it.each([
+    "/audio-extraction.mjs",
+    "/audio-samples.mjs",
+    "/audio-profile.mjs",
+
+    "/opfs-access.mjs",
+    "/media-errors.mjs",
+  ])(
+    "serves the current production audio module at %s without unresolved imports",
+    async (path) => {
+      const response = await read(path);
+      expect(response.status).toBe(200);
+      expect(response.headers["content-type"]).toBe("text/javascript");
+      expect(response.body).not.toContain('from "@clipbuilder/contracts"');
+      expect(response.body).not.toContain('from "mediabunny"');
+      expect(response.body).not.toMatch(/from "\.\//u);
+    },
+  );
+  it("serves only source-controlled public limits to the synthetic audio modules", async () => {
+    const response = await read("/audio-contracts.mjs");
+    expect(response.status).toBe(200);
+    expect(response.body).toContain("isSourceWithinLimitProfile");
+    expect(response.body).not.toContain("process.env");
+    expect(await read("/audio-contracts.mjs?file=.env.local")).toMatchObject({
+      status: 404,
+      body: "",
+    });
+  });
 });

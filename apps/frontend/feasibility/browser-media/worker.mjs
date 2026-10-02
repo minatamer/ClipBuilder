@@ -12,6 +12,7 @@ import {
   BlobSource,
   MP4,
   WEBM,
+  WAVE,
   VideoSampleSink,
   AudioSampleSink,
   Conversion,
@@ -21,6 +22,7 @@ import {
   EncodedAudioPacketSource,
 } from "/mediabunny.mjs";
 import { withTruncatedSyncAccess } from "/sync-access.mjs";
+import { extractLocalAudio } from "/audio-extraction.mjs";
 
 const videoConfig = {
   codec: "avc1.420028",
@@ -40,6 +42,8 @@ const audioConfig = {
 const folderName = "clipbuilder-cl005-feasibility";
 let canceled = false;
 let activeConversion;
+let activeAudio;
+
 let releaseLock;
 function checkCanceled() {
   if (canceled) throw new Error("canceled");
@@ -130,6 +134,12 @@ async function diskTarget(name, maxBytes) {
 }
 
 async function generate(durationSeconds = 1200) {
+  if (
+    !Number.isSafeInteger(durationSeconds) ||
+    durationSeconds < 15 ||
+    durationSeconds > 1200
+  )
+    throw new Error("invalid-synthetic-duration");
   phase(
     durationSeconds === 1200
       ? "Generating an actual 20-minute 720p H.264/AAC source near 500 MiB"
@@ -438,6 +448,165 @@ async function boundDuration() {
   await validate("bounded-portrait.mp4");
 }
 
+async function extractProductionAudio(profile, injectFailure = false) {
+  const source = await (
+    await (await folder()).getFileHandle("source.mp4")
+  ).getFile();
+  const input = new Input({
+    source: new BlobSource(source, { maxCacheSize: 4 * 1024 * 1024 }),
+    formats: [MP4],
+  });
+  let sourceDurationMs;
+  try {
+    sourceDurationMs = Math.ceil((await input.computeDuration()) * 1000);
+  } finally {
+    input.dispose();
+  }
+  const controller = new AbortController();
+  activeAudio = controller;
+  if (canceled) controller.abort();
+  const scratch = await (
+    await folder()
+  ).getDirectoryHandle("cl006-audio-scratch", { create: true });
+  const start = performance.now();
+  let committedBytes = 0;
+  const scratchPort = injectFailure
+    ? {
+        async getFileHandle(name, options) {
+          const handle = await scratch.getFileHandle(name, options);
+          return {
+            getFile: () => handle.getFile(),
+            async createSyncAccessHandle() {
+              const access = await handle.createSyncAccessHandle();
+              return {
+                truncate: (size) => access.truncate(size),
+                flush: () => access.flush(),
+                close: () => access.close(),
+                write(data, options) {
+                  if (committedBytes >= 4096)
+                    throw new DOMException(
+                      "Injected synthetic storage denial.",
+                      "QuotaExceededError",
+                    );
+                  const count = access.write(
+                    data.subarray(
+                      0,
+                      Math.min(data.byteLength, 4096 - committedBytes),
+                    ),
+                    options,
+                  );
+                  committedBytes += count;
+                  return count;
+                },
+              };
+            },
+          };
+        },
+        removeEntry: (name) => scratch.removeEntry(name),
+      }
+    : scratch;
+  try {
+    const extracted = await extractLocalAudio(
+      source,
+      sourceDurationMs,
+      profile,
+      scratchPort,
+      controller.signal,
+      (value) =>
+        phase(
+          `CL-006 ${value.phase}: ${value.processedMs.toFixed(1)} / ${sourceDurationMs} ms, ${value.bytes} bytes`,
+        ),
+    );
+    const { file: boundedAudio, ...evidence } = extracted;
+    const elapsedMs = performance.now() - start;
+    let scratchFileDeletedBeforeResult = false;
+    try {
+      await scratch.getFileHandle("encoded");
+    } catch (error) {
+      if (error.name !== "NotFoundError") throw error;
+      scratchFileDeletedBeforeResult = true;
+    }
+    if (!scratchFileDeletedBeforeResult)
+      throw new Error("audio-scratch-retained");
+    const markers = new Input({
+      source: new BlobSource(boundedAudio, { maxCacheSize: 1024 * 1024 }),
+      formats: profile === "opus-webm" ? [WEBM] : [WAVE],
+    });
+    const syntheticToneOnsets = [];
+    try {
+      const sink = new AudioSampleSink(await markers.getPrimaryAudioTrack());
+      for (const second of [
+        1,
+        Math.floor(sourceDurationMs / 2000),
+        Math.floor(sourceDurationMs / 1000) - 1,
+      ]) {
+        let onset;
+        for await (const sample of sink.samples(second - 0.06, second + 0.08)) {
+          try {
+            checkCanceled();
+            const values = new Float32Array(sample.numberOfFrames);
+            sample.copyTo(values, { planeIndex: 0, format: "f32-planar" });
+            for (let frame = 0; frame < values.length; frame++)
+              if (Math.abs(values[frame]) > 0.3 && onset === undefined)
+                onset = (sample.timestamp + frame / sample.sampleRate) * 1000;
+          } finally {
+            sample.close();
+          }
+        }
+        if (onset === undefined) throw new Error("audio-tone-marker-missing");
+        syntheticToneOnsets.push({
+          expectedMs: second * 1000,
+          decodedMs: onset,
+        });
+      }
+    } finally {
+      markers.dispose();
+    }
+    result(
+      profile === "opus-webm" ? "cl006AudioCandidate" : "cl006AudioReference",
+      {
+        ...evidence,
+        elapsedMs,
+        sourceBytes: source.size,
+        scratchFileDeletedBeforeResult,
+        boundedBlobBytes: boundedAudio.size,
+        syntheticToneOnsets,
+        providerCalls: { transcription: 0, text: 0, image: 0 },
+      },
+    );
+  } catch (error) {
+    let partialDeleted = false;
+    try {
+      await scratch.getFileHandle("encoded");
+    } catch (failure) {
+      if (failure.name === "NotFoundError") partialDeleted = true;
+      else throw failure;
+    }
+    result(
+      injectFailure
+        ? "cl006AudioWriteFailure"
+        : controller.signal.aborted
+          ? "cl006AudioCancellation"
+          : "cl006AudioFailure",
+      {
+        committedBytes,
+        partialDeleted,
+        sourceRetained:
+          (await (await (await folder()).getFileHandle("source.mp4")).getFile())
+            .size === source.size,
+        canceled: controller.signal.aborted,
+        storageFailure: error.code === "storage",
+      },
+    );
+    throw error;
+  } finally {
+    activeAudio = undefined;
+    await (
+      await folder()
+    ).removeEntry("cl006-audio-scratch", { recursive: true });
+  }
+}
+
 async function sync() {
   phase("Comparing decoded flash/tone onsets at 1, 30 and 59 seconds");
   const file = await (
@@ -697,6 +866,8 @@ onmessage = async ({ data }) => {
   }
   if (data.action === "cancel") {
     canceled = true;
+    activeAudio?.abort();
+
     await activeConversion?.cancel();
     return;
   }
@@ -740,7 +911,22 @@ onmessage = async ({ data }) => {
         await validate("source.mp4");
       });
     } else if (data.action === "generate")
-      await navigator.locks.request("clipbuilder-cl005-feasibility", generate);
+      await navigator.locks.request("clipbuilder-cl005-feasibility", () =>
+        generate(),
+      );
+    else if (data.action === "audio-failure")
+      await navigator.locks.request("clipbuilder-cl005-feasibility", () =>
+        extractProductionAudio("opus-webm", true),
+      );
+    else if (
+      data.action === "audio-candidate" ||
+      data.action === "audio-reference"
+    )
+      await navigator.locks.request("clipbuilder-cl005-feasibility", () =>
+        extractProductionAudio(
+          data.action === "audio-candidate" ? "opus-webm" : "pcm-wav-reference",
+        ),
+      );
     else if (data.action === "extract" || data.action === "export")
       await navigator.locks.request("clipbuilder-cl005-feasibility", () =>
         convert(data.action),
@@ -750,7 +936,11 @@ onmessage = async ({ data }) => {
         "clipbuilder-cl005-feasibility",
         async () => {
           const root = await navigator.storage.getDirectory();
-          await root.removeEntry(folderName, { recursive: true });
+          try {
+            await root.removeEntry(folderName, { recursive: true });
+          } catch (error) {
+            if (error.name !== "NotFoundError") throw error;
+          }
           let deleted = false;
           try {
             await root.getDirectoryHandle(folderName);
