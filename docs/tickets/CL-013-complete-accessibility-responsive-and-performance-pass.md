@@ -1,4 +1,22 @@
-# CL-013 — Finalize experience quality and the landing product film
+# CL-013 — Accessible responsive workflow and measured quality
+
+## Current cloud-render packet — approved local execution, 2026-10-02
+
+Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+
+Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+
+Verify phone/desktop source upload, preview/download/error/cancel accessibility and actual final MP4 layout/caption/A/V correctness. Browser final encoding/model hardware tests are retired. Record real phases and speaker evidence, never an assumed cloud SLA.
+
+Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
+
+- [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
+- [ ] Implement and verify this current packet after approval.
+- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+
+<details>
+<summary>Earlier packet and evidence, retained as history where superseded</summary>
+
 
 Status: Planned<br>
 Milestone: M6 — public-demo hardening and audit<br>
@@ -424,3 +442,5 @@ Also report capture baseline, authoring/model handoff, storyboard/animatic/final
 film approval, local artifact locations, web/master/poster metadata, measured
 landing impact, and every rights/editorial/audio/platform/integration item still
 unchecked. No film or public-release approval is inferred from code checks.
+
+</details>

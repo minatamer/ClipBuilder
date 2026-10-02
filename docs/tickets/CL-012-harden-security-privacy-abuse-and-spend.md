@@ -1,4 +1,22 @@
-# CL-012 - Audit browser privacy and no-shared-store paid controls
+# CL-012 — Cloud/Google safeguards and cleanup
+
+## Current cloud-render packet — approved local execution, 2026-10-02
+
+Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+
+Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+
+Audit purpose-scoped service identities, admission/replay/epoch, temporary storage soft-delete=0/no versions/holds/retention, independent 15-minute expiry/retries/verification, provider Files cleanup, privacy/rights/license and separate AI/cloud spend gates.
+
+Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
+
+- [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
+- [ ] Implement and verify this current packet after approval.
+- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+
+<details>
+<summary>Earlier packet and evidence, retained as history where superseded</summary>
+
 
 Status: Planned; browser-owned execution revision, external gates pending<br>
 Milestone: M6 - controls and privacy<br>
@@ -318,5 +336,7 @@ Report every finding/correction, exact route order and call-count proof, header/
 CSP/proxy/cookie behavior, data/log/retention/rights reconciliation, scans,
 cost/control plan, changed files, commands, and a separate checked/blocked list
 for every owner/provider/cloud item.
+
+</details>
 
 </details>

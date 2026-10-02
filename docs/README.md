@@ -8,12 +8,7 @@ This directory contains the product decisions, technical architecture, research 
 
 When documents disagree, follow the authority order inside the source of truth. The supporting documents below preserve research and decision history; they do not override the current specification.
 
-The latest [browser-owned-media contract](architecture/BROWSER_OWNED_MEDIA.md)
-is incorporated by source-of-truth section 0.9. Original video/final output stay
-local; there is no application DB or cloud object-storage service. Protected
-bounded audio/text AI requests remain proposed and gated. CL-005 owns the
-file-level migration and feasibility-first plan; older server-media sections
-are explicitly historical, not instructions to provision their resources.
+The current [Gemini/private Cloud Run plan](architecture/GEMINI_REMOTION_MIGRATION.md), [full file inventory](architecture/MIGRATION_FILE_INVENTORY.md) and [setup guide](operations/CLOUD_RUN_RENDERER_SETUP.md) replace older browser-only/local-model/provider mechanisms. CL-005's prerequisite and CL-006's local/Linux/private cloud media foundation are complete, including the rights-confirmed 2:45 test and independent deletion. CL-007 is next; browser integration, live Gemini, public sample/release and new external actions retain separate gates. Fake/live AI and local/cloud compute are independent. The older browser contract and evidence are collapsed history where superseded.
 
 ## Locked demo flow
 
@@ -35,8 +30,12 @@ docs/
 ├─ README.md
 ├─ CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md
 ├─ architecture/
-│  └─ BROWSER_OWNED_MEDIA.md
+│  ├─ GEMINI_REMOTION_MIGRATION.md
+│  ├─ MIGRATION_FILE_INVENTORY.md
+│  ├─ DOCUMENTATION_REVIEW.md
+│  └─ BROWSER_OWNED_MEDIA.md (superseded history)
 ├─ operations/
+│  ├─ CLOUD_RUN_RENDERER_SETUP.md
 │  └─ Provider, cost, software and rights guides
 ├─ tickets/
 │  ├─ README.md

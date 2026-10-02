@@ -1,4 +1,22 @@
-# CL-009 - Build browser-owned contextual assembly
+# CL-009 — Fixed contextual composition assembly
+
+## Current cloud-render packet — approved local execution, 2026-10-02
+
+Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+
+Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+
+Freeze versioned source/manifest/object-generation data with word-grounded fixed captions and contextual templates. Zero raster calls initially; any Google image model requires later measured need and caps.
+
+Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
+
+- [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
+- [ ] Implement and verify this current packet after approval.
+- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+
+<details>
+<summary>Earlier packet and evidence, retained as history where superseded</summary>
+
 
 Status: Planned; browser-owned execution revision, external gates pending<br>
 Milestone: M4 - automatic assembly<br>
@@ -347,5 +365,7 @@ Report plan/asset/card contracts and config revisions, sample/unrelated-fixture
 results, exact provider call counts, assembly/UI states, cleanup, live usage and
 cost if authorized, changed files, checks, and every remaining visual/provider/
 rights/spend blocker.
+
+</details>
 
 </details>

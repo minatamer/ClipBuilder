@@ -1,9 +1,17 @@
 # ClipBuilder backend
 
+## Current cloud migration — approved local foundation
+
+[Current authority](../../docs/architecture/GEMINI_REMOTION_MIGRATION.md) and [cloud setup](../../docs/operations/CLOUD_RUN_RENDERER_SETUP.md) govern private temporary artifacts and generation-bound cleanup. The owner approved local corrections. Google config and an isolated typed private-renderer client are implemented; public product routes still use fixtures. Cloud creation/credential use/paid tests remain separate gates.
+
+Fake/live selects AI; local/cloud selects renderer environment. A local API will obtain an audience-bound private renderer ID token via server ADC; Cloud Run has its own runtime identity, the browser no credentials. Fake cloud rendering still costs compute; fully offline tests inject all remote ports and telemetry. No service/project ID is populated in Git and no source/provider content is logged.
+
+
 The backend is the private Express control API and future protected AI request
 boundary. It may import `@clipbuilder/contracts`; it must never import frontend
-implementation. Original video and final output stay browser-owned; no media
-job or cloud content store is part of the revised plan.
+implementation. The current approved architecture uses private temporary GCS
+media and a separate authenticated Node/Docker Cloud Run renderer. The control
+API owns admission/Google orchestration and private streaming, not heavy rendering.
 
 ## Current responsibility
 
@@ -25,17 +33,22 @@ Production/real composition does not register these fixture routes; safe
 `GET /v1/sample/config` remains available with all unimplemented real features
 disabled. There is no fixture download route or valid output capability.
 
-CL-005 removes the retired cloud/native-media configuration and establishes
-process-local protected admission; CL-007/009 add bounded request-scoped audio/text provider
-adapters. Browser media/composition/export arrive in their frontend tickets.
-No editor or assistant endpoint belongs in the demo API. The schema/example no
-longer require GCP buckets, native executables, model paths or media jobs.
+The earlier CL-005 code removed cloud/native-media configuration and established
+process-local protected admission. The migration now adds a typed server-only
+renderer client with ADC audience identity and both identity headers. Gemini
+orchestration and public source/preview/download integration remain later packet
+work. Final export belongs to cloud compute. No editor or assistant endpoint
+belongs in the demo API. Root `.env.example` now defines the disabled server-only
+CLOUD_RENDER_ENVIRONMENT/CLOUD_SPEND_APPROVED/PRIVATE_RENDERER_ORIGIN fields;
+they require separate cloud authorization even with fake AI. Renderer service
+config belongs to `apps/renderer/.env.example`; no browser config exposes it.
 Retired server upload/render feature flags cannot be enabled. In local real
 mode, the public config permits browser intake without credentials; all remote
 analysis/assembly/export capabilities still report unavailable.
-See [Browser-owned media](../../docs/architecture/BROWSER_OWNED_MEDIA.md) for
-process-local replay guarantees, restart/uncertain-result failures and public
-paid gates; the fake Map/cookie are not their implementation.
+See the [current migration plan](../../docs/architecture/GEMINI_REMOTION_MIGRATION.md)
+for cloud ownership, restart/uncertain-result failures and paid gates. The
+[earlier browser contract](../../docs/architecture/BROWSER_OWNED_MEDIA.md)
+preserves process-local admission evidence; the fake Map/cookie are not its implementation.
 
 `src/admission` owns AES-256-GCM HttpOnly/Secure/SameSite grants with an issuing
 boot epoch, fixed expiry, exact origin/CSRF and bounded canonical keyring.

@@ -1,4 +1,22 @@
-# CL-010 - Validate browser compositor review parity
+# CL-010 — Read-only automatic cloud clip preview
+
+## Current cloud-render packet — approved local execution, 2026-10-02
+
+Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+
+Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+
+Reuse the existing one-card preview over a server-prepared selected proxy and shared fixed React composition. Browser playback/layout only; no final encoder/editor. Compare preview and Node output by sampled layout/audio/caption evidence.
+
+Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
+
+- [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
+- [ ] Implement and verify this current packet after approval.
+- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+
+<details>
+<summary>Earlier packet and evidence, retained as history where superseded</summary>
+
 
 Status: Planned; browser-owned execution revision, external gates pending<br>
 Milestone: M4 - automatic review<br>
@@ -300,5 +318,7 @@ Report responsive compositions, immutable manifest/hash behavior, fixed-caption
 evidence, preview/render parity, zero-call assertions, excluded-control tests,
 cleanup, changed files, exact checks, and every remaining visual/rights/cloud
 blocker.
+
+</details>
 
 </details>

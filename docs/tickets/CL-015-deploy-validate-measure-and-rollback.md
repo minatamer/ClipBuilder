@@ -1,8 +1,57 @@
-# CL-015 - Deploy and validate browser-owned ClipBuilder
+# CL-015 — Bounded renderer setup and later public deployment
+
+## Current cloud-render packet — approved local execution, 2026-10-02
+
+Status: early private resources/authentication/Linux media/expiry-deletion checkpoint verified under completed CL-006. Later complete public deployment remains gated.
+
+Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+
+This packet has two separate checkpoints. Preserve owner debug-page exclusion
+and prior evidence; neither checkpoint is authorized by documentation alone.
+
+### Early private infrastructure for local tests
+
+After documentation approval, prepare the minimum ready image/adapters and
+authentication/lifecycle/spend controls required by the first actual
+cloud-dependent test. Pause there for explicit provisioning and synthetic-test
+budget authorization, potentially during CL-005/006 integration. Use the setup
+guide to establish only private renderer/bucket/expiry/registry/identities in the
+verified existing project. Private IAM, generation fencing, cancel/scratch
+cleanup, independent expiry/deletion verification and bounded spend/logging
+controls are prerequisites; bring those relevant CL-012 controls forward.
+Completion of all later features, the complete CL-012 packet and the CL-014
+public release audit are not prerequisites for this isolated synthetic test
+renderer. Verify with fake AI/synthetic input, then resume the owning packet.
+Live reference media and Gemini calls require separate later authorization.
+
+### Later complete public deployment
+
+Complete public application hosting/release retains the exact CL-014 revision
+audit and separate owner hosting/privacy/rights/live/spend approval. It is
+distinct from early private test infrastructure and cannot silently expand it.
+
+After documentation approval, implement one dependency-ready packet at a time
+and run focused checks plus the required settled five root gates. Fake/live AI
+and local/cloud compute are independent; cloud render can incur cost with fake
+AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network
+through injected ports. Early setup authorization/evidence is recorded in CL-006;
+its source-specific private media and cleanup tests passed. Public deployment,
+new real-source/live-AI transfer and
+Git actions retain separate gates. Usage polling and independent review remain stopped.
+
+- [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
+- [x] Owner separately approved early private setup and bounded synthetic allowance; resource/authentication evidence is in [CL-006](CL-006-build-media-job-and-speaker-feasibility.md#private-renderer-setup-and-deferred-media-validation--2026-10-02).
+- [x] Early private cloud media/expiry-deletion validation: rights-confirmed 2:45 private test passed under CL-006; fake AI, verified Linux image, cancellation and accelerated independent deletion.
+- [ ] Implement and verify this current packet after approval.
+- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+
+<details>
+<summary>Earlier packet and evidence, retained as history where superseded</summary>
+
 
 Status: Planned; final hosting/provider/launch gates pending<br>
 Milestone: M7 - deployment and controlled live evidence<br>
-Last synchronized: 2026-10-01<br>
+Last synchronized: 2026-10-02<br>
 Depends on: CL-014 exact repository audit, CL-004A provider readiness,
 browser/device feasibility and explicit owner authorization<br>
 Suggested commit: `CL-015: deploy and validate browser-owned ClipBuilder`<br>
@@ -58,6 +107,42 @@ Provision only approved hosting/control resources; never a content bucket or
 media job. Deploy immutable images/assets from exact audited inputs. Changes
 after the audit require the smallest relevant re-audit. Begin fake/paid-off/
 all-live-off. A project budget alert is not a provider hard spending cap.
+
+## Local feasibility tools must be absent from deployment
+
+Owner decision (2026-10-02): the synthetic browser-media test page shown during
+CL-005/006 work is local-only and must not be exposed by the deployed app.
+Its owner is `apps/frontend/feasibility/browser-media/`; the opt-in `test:media`
+command serves it on `127.0.0.1:4185`. This requirement applies independently
+of `FAKE_MODE`, paid enablement and live flags, including the initial deployed
+fake/paid-off checkpoint.
+
+- [ ] Exclude the feasibility harness directory, its HTML, test controls,
+      standalone server and harness scripts from the published frontend output,
+      static assets and final runtime image. Inspect the exact immutable build
+      artifact and route/static-file inventory; do not copy the harness into
+      `public`, mount it as an app route or expose it through a proxy.
+      Production media workers and codec/model assets used by the real app
+      retain their deliberate allowlisted delivery paths.
+- [ ] Verify production startup/entrypoints and ingress expose only the audited
+      app services. Do not launch `test:media` or expose its port 4185 through
+      the deployment, reverse proxy or another public hosting origin.
+- [ ] Before paid enablement or public launch, run content-free unpaid negative
+      GET probes against the deployed app for the harness URLs: `/main.mjs`,
+      `/worker.mjs`, `/sync-access.mjs`, `/mediabunny.mjs`,
+      `/audio-extraction.mjs`, `/audio-samples.mjs`, `/audio-profile.mjs`,
+      `/opfs-access.mjs`, `/media-errors.mjs`, `/audio-contracts.mjs`, and
+      `/feasibility/browser-media/index.html`. Each must return 404 without
+      serving harness code or controls. Inventory any new harness/proof paths
+      added by later local work and include them in the same exclusion/probes.
+      The deployed `/` must serve the intended landing page; the harness's
+      local `/` must never replace it.
+- [ ] Record the audited artifact identity, excluded paths and actual negative
+      probe statuses in sanitized release evidence. Any reachable harness page,
+      test endpoint or harness asset blocks deployment acceptance/public
+      launch. Correct the owning build/routing configuration and re-audit
+      affected CL-014 inputs before redeploying; do not mark this gate passed
+      from local loopback binding, hidden navigation or a unit mock alone.
 
 ## Transport, topology and security proof
 
@@ -115,6 +200,8 @@ downloads or promise provider content erasure.
 ## Completion
 
 - [ ] Dated guide and exact immutable revision/assets/topology recorded.
+- [ ] Local feasibility/test tools are excluded from the deployed artifact and
+      direct page/asset probes prove they are not exposed by the deployed app.
 - [ ] All actual transport, restart/overlap, logging, hard-cap and client-media
       proofs performed, or remaining blockers left explicitly unchecked.
 - [ ] Only authorized external resources/actions and paid calls occurred.
@@ -433,5 +520,7 @@ IAM/job settings, unpaid probes, authorized live operation counts and measured
 usage/cost, output/cleanup evidence, public URL/state, kill-switch and rollback
 proof, documentation paths, local changed files/Git state, and every remaining
 owner/external blocker. Never include a secret or content-bearing identifier.
+
+</details>
 
 </details>

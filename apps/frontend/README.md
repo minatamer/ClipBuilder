@@ -1,5 +1,12 @@
 # ClipBuilder frontend
 
+## Current cloud migration — approved local foundation
+
+The [current plan](../../docs/architecture/GEMINI_REMOTION_MIGRATION.md) replaces browser final export and browser-only originals/outputs. Browser selects/uploads to approved private temporary GCS, plays a read-only selected proxy/fixed preview and downloads a validated result. Our authenticated Remotion Node/Docker Cloud Run service prepares proxies/cuts and performs final encoding. Mediabunny is retained only for useful intake/inspection. Existing local source/audio foundations and the interrupted browser-render experiment are preserved but are not the current final-export architecture. The owner approved local corrections; the browser exporter was retired and the fixed layout moved into packages/composition.
+
+Fake/live AI and local/cloud compute are separate: current fake journey supplies fixtures without keys; ordinary tests inject cloud/renderer ports without network. Future local app plus remote renderer needs ADC/cloud-spend approval even with fake AI. Live Gemini needs key/flags/rights/data-transfer/paid approval. The isolated private renderer's 2:45 processing/cancellation/deletion proof is recorded in CL-006; browser/control integration, live AI and device quality remain later gates. See the [setup guide](../../docs/operations/CLOUD_RUN_RENDERER_SETUP.md). Exclude every feasibility/debug harness from deployment.
+
+
 The frontend is the public Next.js experience. It may import
 `@clipbuilder/contracts`; it must never import backend implementation or expose
 server-only configuration to browser code.
@@ -18,7 +25,8 @@ The owner-approved expiry is fixed at two hours from source selection, with
 active/next-open orphan cleanup and best-effort deletion. Closing a tab is not
 a deletion guarantee; no persistent-storage permission or history is requested.
 Missing storage/locking/codec support fails closed; no unproved memory fallback
-is enabled. Downstream tickets implement audio/model/composition/export.
+is enabled. CL-006 adds a callable worker audio pipeline; downstream work still
+owns model/composition/export and connecting audio to protected analysis.
 Default fake behavior documented below is unchanged: it reads no File bytes
 and cannot download an MP4. Real mode does not use synthetic build/render
 fallbacks and stops truthfully at prepared source until CL-007 is connected.
@@ -29,6 +37,29 @@ in the ticket. Run `corepack pnpm --filter @clipbuilder/frontend test:media`
 only for that manual local spike; it is not part of normal tests or `/start`.
 Local intake/recovery and protected-admission foundations are implemented;
 no provider, final product download or release claim.
+
+**CL-006 audio slice (2026-10-02):** the admitted browser workspace can extract
+bounded mono audio through the same owned worker. Positional OPFS writes,
+native downmix/resampling, actual-clock and decoded-result validation, strict
+messages, measured progress, stall/deadline cancellation and scratch cleanup
+are implemented. Both profiles pad initial offsets and internal audio gaps in
+bounded awaited samples. Clear/dispose drain audio work before deleting storage or
+releasing ownership. The Opus/WebM profile is provisional; PCM/WAV exists for
+local browser comparison only. With `FAKE_MODE=true` and no API keys, this worker
+performs real local audio processing; the AI journey still uses fixtures.
+The owner replaced local LR-ASD/YuNet and Deepgram/OpenAI with Google Gemini
+and private Remotion Node/Docker Cloud Run rendering. See the [current migration contract](../../docs/architecture/GEMINI_REMOTION_MIGRATION.md).
+Source/OPFS/clock/cleanup and local audio processing are retained. Model-specific
+MFCC/ORT/Python probes are retired. Fake mode without keys still supplies fixture
+AI results; real local media/render software does not prove understanding.
+Google live analysis needs a server-only key, live flags and approved media
+transfer, paid-project terms, rights and spend. Local corrections are owner-approved; no live speed/speaker accuracy or phone support is
+claimed. The owner confirmed applicable Node/SSR license coverage for the private
+checkpoint; complete notices and operational telemetry retain release verification.
+The earlier browser export experiment
+and its browser telemetry requirement are superseded.
+The existing `/start` prepared-source boundary remains until CL-007 connects
+the protected analysis workflow. No new user control or provider call is added.
 
 CL-001 supplies the accessible product shell, framework error/not-found
 boundaries, metadata, robots policy, and deterministic build/test foundation.

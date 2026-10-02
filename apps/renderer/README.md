@@ -1,0 +1,127 @@
+# Private media renderer
+
+Standard Remotion Node SSR, compiled fixed composition, baked Chromium and
+Remotion's matching FFmpeg/FFprobe. This isolated service has no Gemini key,
+arbitrary input URL, public processing route or general job queue. The initial
+cloud foundation is not wired to the browser product yet.
+
+## Verification
+
+Run from the repository root with the pinned package manager:
+
+```text
+corepack pnpm --filter @clipbuilder/renderer test:unit
+corepack pnpm build:contracts
+corepack pnpm --filter @clipbuilder/composition build
+corepack pnpm --filter @clipbuilder/renderer build
+corepack pnpm --filter @clipbuilder/renderer bundle
+```
+
+Unit tests use synthetic injected ports, fake AI, paid/cloud-disabled composition
+and import-time external-network interception. They never use ADC or a bucket.
+
+The opt-in synthetic Node proof also needs an explicitly prepared Chromium:
+`corepack pnpm --filter @clipbuilder/renderer prepare:browser`. This downloads
+the browser at tooling time, never on a service request. Set `FIXTURE_FFMPEG_PATH`
+to an approved full FFmpeg executable solely for creating the synthetic RGB/tone
+input, decoding proof PCM and extracting the proof image. Remotion's minimal
+FFmpeg lacks the synthetic-source decoders. The production inspect/proxy/cut/
+render path still uses Remotion's packaged binaries. Then run
+`corepack pnpm --filter @clipbuilder/renderer test:media` outside the restricted
+sandbox. Source, PCM and output are removed in `finally`; the synthetic PNG in
+the ignored `.pnpm-store` is removed after visual inspection. Windows Chromium
+defaults to the prepared package cache; Linux proof requires `CHROMIUM_PATH`.
+
+The current local proof is 15-second 320×180 synthetic input and one 10-second
+1080×1920 output. The additional Linux image and rights-confirmed 2:45 cloud
+proof are recorded below. Full 20-minute/500-MiB stress, live AI/speaker quality,
+public throughput and phone playback remain later gates.
+
+## Private routes and lifecycle
+
+`GET /v1/health` returns content-free readiness. Cloud Run IAM still requires
+authentication. Every `/internal` route also verifies a Google ID token with
+the exact service audience and purpose identity. Control identity can admit
+upload, prepare, render and cancel; the separate expiry identity can only sweep.
+The typed backend adapter sends the same token in Authorization and
+X-Serverless-Authorization so platform verification preserves the application
+token. Identity headers, capabilities and raw provider errors are never logged.
+
+Original/proxy/output generations and source revision/fingerprint/manifest hash
+are fenced in a bounded encrypted cleanup journal. One media operation occupies
+the process; there is no queued work. Source lifetime is two hours; final output
+ten minutes, capped by source expiry. Completion deletes source/proxy; cancel,
+expiry, failure and an independent authenticated sweep verify deletion. Failed
+cleanup blocks intake and records retry obligations. A 15-minute schedule and
+one retry yield healthy targets of 2h33m raw /43m output; outages can extend
+physical retention. The opaque unfinished-upload capability is encrypted with
+a separately mounted 32-byte base64url key, never stored as plaintext.
+
+Work has an 840-second deadline and a monitored 2-GiB scratch ceiling; sweep
+has a 180-second deadline. Dispatch cap 0–4 is per process lifetime and is not a
+global billing quota. Restart does not grant permission for more tests. Every
+authorized smoke run needs an explicit total attempt/build budget and teardown.
+
+Scratch removal failure retains the exact owned directory as a cleanup
+obligation and returns cleanup_pending. Admission and media processing remain
+blocked until deletion succeeds; the independent expiry endpoint retries local
+scratch as well as GCS cleanup, and shutdown retries the same obligation.
+Local filesystem errors and private paths never escape the safe failure code.
+The renderer uses the contracts' shared AAC/Opus/Vorbis and H.264/VP8/VP9
+allowlists; the synthetic harness checks actual Vorbis/WebM decode and proxy.
+
+## Image and setup
+
+The Dockerfile pins official Node 22 Bookworm image digest. Build stages install
+locked dependencies, compile, bundle, bake matching Linux x64 Chromium/media
+tools and write binary hashes plus the resolved Debian package list inside the
+image. Only production deployed packages and the bundle reach the runtime;
+source tests, private media, feasibility pages and env files are excluded.
+Workspace dependencies are injected and synchronized after build; standard
+`pnpm deploy --prod` assembles a self-contained production dependency graph.
+Before publication, the build runs scripts/verify-linux-media.mjs as node:
+Node-generated PNG/PCM fixture, fixed portrait render, scratch accounting with
+special entries, native cancellation and zero surviving owned processes. It uses
+packaged tools, needs no full FFmpeg and removes fixtures in finally. The Linux
+compositor supports PNG/image2/PCM input; BMP/rawvideo fixture paths are unsupported.
+Only aggregate proof JSON reaches the runtime. The final image checks production
+imports, bundle, tool hashes and executable versions as the unprivileged runtime user.
+Debian system packages resolve at build time; the resulting image must be
+identified and invoked by immutable digest. Based on
+[Remotion's standard Docker guidance](https://www.remotion.dev/docs/docker).
+
+Create the allowlisted context from the renderer directory with
+`corepack pnpm exec tsx scripts/build-context.ts`; use only the returned directory
+for Docker/Cloud Build and delete it afterward. The script refuses links and
+unexpected source file types, excludes tests and copies only renderer/shared
+source plus pinned build metadata. Never submit the repository root.
+
+Docker is unavailable on the current Windows host, so Linux build validation
+requires a separately authorized Cloud Build run. The first approved build's
+runtime check found workspace links escaping the production export. The local
+correction passed a 417-link containment check and production imports. The
+separately authorized retry succeeded on 2026-10-02 in 104.45 seconds: Linux x64
+production imports, fixed bundle, binary hashes and executable versions passed
+as the unprivileged runtime user. Artifact Registry's immutable digest matched
+the build result recorded in [CL-006](../../docs/tickets/CL-006-build-media-job-and-speaker-feasibility.md#separately-authorized-corrected-image-retry--2026-10-02).
+The private renderer was subsequently deployed in europe-west1 with 4 CPU/8 GiB,
+min-zero/max-one service and revision limits, request concurrency two, 900-second
+timeout and two-operation cap. Owner confirmed SSR license coverage. Corrected
+caller ADC/private health, negative authorization and scheduled empty expiry
+invocation passed. The owner subsequently authorized the rights-confirmed 2:45
+source and necessary build retries. Linux image/native cleanup and real cloud
+upload/proxy/10-second render/output profile/audio timing/partial-upload cancel
+and independent accelerated expiry all passed. Source/proxy generations were
+deleted on completion; final output and all owned test intents were independently
+swept and verified not found. Downloaded test media/build contexts were removed.
+Five builds and four cloud media dispatches total are recorded in
+[CL-006](../../docs/tickets/CL-006-build-media-job-and-speaker-feasibility.md#completed-private-cloud-foundation--2026-10-02).
+The browser/control journey still uses fixtures. Fake plans
+need no AI key for cloud processing; live Gemini requires separate key/live/paid/
+transfer approval. Resources and the enabled cleanup schedule are retained. Follow the
+[bounded cloud setup guide](../../docs/operations/CLOUD_RUN_RENDERER_SETUP.md).
+Populate only the matching blank identity/bucket/key-mount entries from this
+package's `.env.example` in owner-managed service configuration. Enable
+RENDERER_ENABLED, CLOUD_SPEND_APPROVED, REMOTION_LICENSE_CONFIRMED and a bounded
+RENDERER_MAX_OPERATIONS only after the setup gate. No service startup reads the
+root `.env.local`; attached Cloud Run identity supplies Storage credentials.

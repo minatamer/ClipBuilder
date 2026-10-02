@@ -1,4 +1,22 @@
-# CL-008 - Productionize browser active-speaker framing
+# CL-008 — Validated selected-range speaker focus
+
+## Current cloud-render packet — approved local execution, 2026-10-02
+
+Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+
+Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+
+One bounded selected-range Google audiovisual plan; validate audible/visible association, boxes/rotation/cuts/source bounds and safe deterministic smoothing/wide fallback. Node physically cuts/proxies the validated range. Fake plans do not prove speaker quality.
+
+Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
+
+- [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
+- [ ] Implement and verify this current packet after approval.
+- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+
+<details>
+<summary>Earlier packet and evidence, retained as history where superseded</summary>
+
 
 Status: Planned; browser-owned execution revision, external gates pending<br>
 Milestone: M4 - local speaker assembly<br>
@@ -269,5 +287,7 @@ perform unauthorized Git/cloud actions.
 Report the selected model/profile, shot/face/focus/crop behavior, exact sample
 evaluation, baseline/regression runtime and memory, one-pass proof, cleanup and
 privacy evidence, changed files, exact checks, and any reopened gate.
+
+</details>
 
 </details>

@@ -50,48 +50,52 @@ automatically composes it, and renders a real downloadable MP4.
    control surface.
 5. **Download the result** — receive one validated 1080 × 1920 H.264/AAC MP4.
 
-Contextual visuals come from what is actually being discussed, not a fixed
-example or recurring template.
+Contextual visuals express what is actually being discussed using fixed graphic
+templates grounded in the selected conversation.
 
 ## Built around the core edit
 
 - **Grounded selection:** candidate moments and visual cues reference real transcript words and timestamps.
 - **AI-directed framing:** active-speaker detection drives the vertical crop instead of asking the user to choose generic left, center, or right presets.
-- **Purposeful visuals:** generated imagery and deterministic graphic cards support the spoken idea while preserving a healthy balance with the original footage.
-- **Deterministic output:** validated edit data drives one shared browser compositor and local export; the model never generates executable media commands.
+- **Purposeful visuals:** deterministic graphic cards support the spoken idea while preserving a healthy balance with the original footage.
+- **Deterministic output:** validated edit data drives a shared fixed preview composition and private Node renderer; the model never generates executable media commands.
 - **Demo-sized scope:** one temporary session, one selected clip, and one final export keep the experience focused and affordable.
 - **No editing surface:** candidate selection and render confirmation are the
   only creative decisions exposed to the visitor.
 
 ## Planned architecture
 
+The owner selected Gemini and private Cloud Run rendering. The [migration plan](docs/architecture/GEMINI_REMOTION_MIGRATION.md) is owner-approved. The local Node renderer foundation is verified; browser/cloud integration and live AI quality remain unfinished.
+
 | Layer | Technology |
 | --- | --- |
 | Experience | Next.js, React, TypeScript |
 | API and contracts | Node.js, Express, shared Zod schemas |
-| Transcript and planning | Deepgram Nova-3, OpenAI Responses API |
-| Speaker and scene analysis | Browser audiovisual-model feasibility gate; no assumed Python server path |
-| Contextual visuals | OpenAI Image API, MathJax SVG cards |
-| Composition and export | Proposed WebCodecs/Mediabunny worker pipeline and shared browser compositor |
-| Local media storage | Proposed OPFS binaries, IndexedDB journal/results; bounded File/Blob fallback |
-| Hosting | Frontend and protected request-scoped AI API; no content bucket/database/media job |
+| Transcript and planning | Google Gemini (migration in progress) |
+| Speaker and scene analysis | Google audiovisual association, validated and smoothed locally |
+| Contextual visuals | Fixed React cards/diagrams from bounded Google plans |
+| Composition and export | Fixed Remotion Node/Docker renderer on private Google Cloud Run |
+| Temporary media | Private GCS for active-flow media, terminal deletion and independent expiry cleanup |
+| Hosting | Lightweight control API plus isolated private Cloud Run media service; no database/queue |
 | Abuse protection | Cloudflare Turnstile and bounded admission controls |
 
 ```text
 Browser
-  +-- Next.js experience + local source/results/assets/output
-  +-- browser-safe contracts + workers + local compositor/encode
-  +-- same-origin protected bounded audio/text requests
-       +-- private Express API -> Deepgram/OpenAI adapters
-       +-- bounded results/assets returned to browser; no durable content store
+  +-- Next.js source selection + read-only preview + download
+  +-- browser-safe contracts + validated fixed composition preview
+  +-- same-origin protected upload/analysis/render requests
+       +-- private Express API -> server-only Google Gemini adapter
+       +-- private temporary GCS + authenticated Node renderer; cleanup after flow
 ```
 
 The model proposes bounded editorial data. Deterministic application code validates that data, resolves it against the source transcript, and owns every media operation.
 
-The original video and final MP4 stay on-device. AI audio/text transfer and
-provider retention remain explicit privacy gates. Browser codecs, active-speaker
-quality, full-bound device performance and no-shared-store paid safeguards are
-not yet proved; see the [current architecture plan](docs/architecture/BROWSER_OWNED_MEDIA.md).
+The planned flow temporarily uploads the original to private GCS and sends a
+bounded audiovisual proxy to Gemini. Private Cloud Run prepares and renders
+media. Terminal deletion, independent expiry cleanup and separate provider
+retention are explicit privacy requirements. Gemini speaking-face accuracy,
+Node/cloud performance, full-bound media handling and device playback/download
+remain unproved; see the [current migration plan](docs/architecture/GEMINI_REMOTION_MIGRATION.md).
 
 ## Repository status
 
@@ -101,15 +105,15 @@ are an interim foundation. CL-004 previews the whole single-card journey at
 prepared 58-second choices, one selection, read-only review and export states.
 It does not read/upload files, edit recorded footage or produce a downloadable
 video. Recorded media and owner approval of the revised UI remain pending.
-Real local media, protected analysis, automatic assembly, local export/download, and
-deployment remain owned by their dependency-ordered tickets. Technical choices
+Real intake/cloud transfer, protected analysis, automatic assembly, private Node
+export/download and deployment remain owned by their dependency-ready tickets. Technical choices
 marked as proposed remain subject to the documented validation gates.
 
 ## Explore the repository
 
 | Area | Responsibility | Guide |
 | --- | --- | --- |
-| `apps/frontend` | Responsive video workflow, browser-owned media, and local preview/export | [Frontend guide](apps/frontend/README.md) |
+| `apps/frontend` | Responsive source selection, read-only preview and download | [Frontend guide](apps/frontend/README.md) |
 | `apps/backend` | Private Express API, configuration, and protected AI request boundaries | [Backend guide](apps/backend/README.md) |
 | `packages/contracts` | Browser-safe schemas and compiled limits shared across the API boundary | [Contracts guide](packages/contracts/README.md) |
 | `docs` | Product decisions, design research, and implementation tickets | [Documentation](docs/README.md) |

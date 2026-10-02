@@ -1,7 +1,55 @@
-# ClipBuilder standalone ticket index
+# ClipBuilder canonical ticket index
+
+Status: CL-005 foundation and CL-006 migration foundation complete. CL-006 passed Linux image/native cleanup and the rights-confirmed 2:45 private cloud upload/proxy/render/audio/cancellation/independent deletion checks. CL-007 is next; live AI and public release remain gated.
+
+Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md),
+[file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),
+[later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+The isolated private renderer/GCS checkpoint is provisioned and verified under
+the recorded owner approvals. New external actions retain their own gates.
+The owner's 2026-10-02 approvals covered build resources, private renderer setup,
+ADC and bounded media tests, followed by this source-specific rights confirmation.
+Exact attempts and remaining gates are in [CL-006](CL-006-build-media-job-and-speaker-feasibility.md#completed-private-cloud-foundation--2026-10-02).
+The owner authorized necessary image retries until this private test passed.
+Five builds and four cloud media operations were recorded, with zero AI calls.
+Live AI, public deployment and Git actions remain unapproved.
+Fake/live AI and local/cloud compute are independent. Ordinary tests remain
+synthetic, fake/off, credential-free and zero-network. No usage polling or new
+independent code review. Continue one dependency-ready packet at a time.
+
+The early CL-015 private-infrastructure checkpoint interleaves at the first
+genuine cloud-dependent test, once its minimum local image/adapters and private
+access/cleanup/spend safeguards are ready. It does not wait for all later features
+or CL-014. Resume the owning feature packet after separately authorized synthetic
+setup verification. Full public deployment retains the later release-audit gate.
+
+| Order | Canonical packet | Current responsibility / dependency |
+| --- | --- | --- |
+| Readiness | [CL-004A](CL-004A-prepare-third-party-provider-readiness.md) | Google/license/rights/cloud readiness docs; setup approval separate |
+| 1 | [CL-005](CL-005-implement-secure-upload-and-storage.md) | Temporary private upload/admission/lifecycle; retain useful foundations |
+| 2 | [CL-006](CL-006-build-media-job-and-speaker-feasibility.md) | Complete: Google/config/contracts, isolated Node renderer/shared composition, local/Linux/private cloud media and cleanup proof; after CL-005 |
+| Conditional early checkpoint | [CL-015 private test setup](CL-015-deploy-validate-measure-and-rollback.md) | At the first actual cloud-dependent test; minimum locally ready image/adapters/auth/lifecycle/spend controls, then explicit bounded setup/synthetic-test approval; no CL-014 prerequisite |
+| 3 | [CL-007](CL-007-deliver-live-analysis-vertical-slice.md) | Grounded Gemini words/turns/candidates/receipt; after CL-006 local foundation |
+| 4 | [CL-008](CL-008-productionize-active-speaker-assembly.md) | Selected-range speaker association/validation/smoothing and physical proxy range; after CL-007 |
+| 5 | [CL-009](CL-009-build-contextual-visual-assembly.md) | Frozen source-bound fixed captions/templates; after CL-008 |
+| 6 | [CL-010](CL-010-deliver-automatic-clip-review.md) | Read-only preview over selected proxy/shared layout; after CL-009 |
+| 7 | [CL-011](CL-011-render-and-deliver-final-clip.md) | Private Node final render/MP4 validation/download/cleanup; after CL-010 |
+| 8 | [CL-012](CL-012-harden-security-privacy-abuse-and-spend.md) | IAM/retention/independent expiry/AI-cloud budgets and failure/replay safeguards |
+| 9 | [CL-013](CL-013-complete-accessibility-responsive-and-performance-pass.md) | Responsive upload/playback/download/accessibility, measured media quality |
+| 10 | [CL-014](CL-014-audit-release-candidate.md) | Local migration audit and settled five root gates; external evidence separately unchecked |
+| 11 | [CL-015 later public deployment](CL-015-deploy-validate-measure-and-rollback.md) | Complete public hosting/release only after CL-014 and separate approval; early private local-test setup is the conditional checkpoint above |
+
+There is exactly one CL-007 packet, the canonical link above. No duplicate path
+is introduced. CL-001–004 foundation/product/visual evidence remains; preserve
+its gates and unchanged product behavior. Old local-model go was never passed;
+its architecture gate is retired, not marked complete. Every affected packet has
+current cloud authority followed by collapsed earlier evidence. Five-gate/fake
+results do not prove live Gemini quality or deployed cleanup.
+
+<details><summary>Earlier index, ticket dependencies and historical evidence</summary>
 
 Status: active execution-packet index<br>
-Last synchronized: 2026-10-01<br>
+Last synchronized: 2026-10-02<br>
 Parent source of truth: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)
 
 ---
@@ -32,8 +80,51 @@ issues and passed 18 focused tests; remaining feasibility/release gates stay ope
 Private-mode/eviction/freeze observations remain open. The owner-approved
 demo gate uses automated checks, measured desktop-browser behavior and responsive
 viewport checks, with no hardware certification or cross-engine matrix;
-CL-006 has not been started. Provider transfer/privacy,
+The owner confirmed on 2026-10-02 that CL-005's local validation passed completely
+on 2026-10-01 and authorized its CL-006 handoff. CL-006 is now in progress;
+its earlier dependency-blocked preflight is superseded. Its bounded worker audio
+slice now has actual 20-minute/near-500MiB Opus/PCM timing, quota/cancel cleanup
+and repeat 60-second range evidence. A scoped CL-005 synthetic-generator callback
+repair was also measured. The owner supplied real media for private local tests:
+the production worker passed decoding, Opus/PCM extraction, numerical alignment,
+cancel/retry and cleanup without provider keys. Independent R1 found one Opus
+gap-allocation defect, now repaired with 55 focused tests and native Opus checks;
+R2 confirmed the code repair and requested one harness capability paragraph,
+now added. R3 found `No actionable findings` in the local scope, followed by
+343 unit tests and all five root commands passing. A later owner-requested
+independent S1 review again found `No actionable findings` in the implemented
+audio scope; whole-ticket acceptance remains open. Local speaker AI needs no
+API keys. The owner approved licensed local downloads/CPU tooling; the default AVA
+checkpoint was hash verified and privately present in that earlier phase.
+Windows Application Control blocked PyTorch import and external detector terms
+were unverified then; the subsequent owner-directed LR-ASD proof below supersedes
+that tooling/model status. Independent
+MFCC goldens passed 17 tests and actual worker comparison of 8,281 coefficients;
+the six-second window took 32.38 ms. Model conversion/crop/tensor/ORT WASM parity,
+speaker quality and agreed thresholds remain open. R4 found no code issue and one
+stale capability paragraph, now resolved; R5 reported `No actionable findings`
+in the local scope. All five subsequent root gates passed, with 362 unit tests.
+Earlier R3/S1 and 343-test results cover the audio snapshot. The fake-mode AI
+journey still uses fixtures; real provider analysis needs keys, live flags and
+approvals. No speaker go/no-go or whole-ticket completion is claimed. Provider transfer/privacy,
 public paid guarantees and unverified release claims remain owner gates.
+
+The owner subsequently requested a current speaker-path decision investigation
+before further port work. CL-006 now links the substantial
+[active-speaker options report](../research/ACTIVE_SPEAKER_OPTIONS.md): local
+models, existing Deepgram/OpenAI, dedicated APIs, six implementation examples,
+three-to-five-person constraints and explicit cost/validation scenarios.
+The owner subsequently selected LR-ASD default AVA plus YuNet provisionally and
+approved pinned local assets, export, private reference/browser checks and
+verified replacement cleanup. The full score export passes upstream/native/WASM
+numerical parity, with a local 60-second/two-track reference probe. Full browser
+video/crop/track parity, labelled focus quality and resource acceptance remain
+open, so CL-006 is incomplete and CL-008 stays gated. NVIDIA Maxine ASD remains
+the conditional API finalist. The four-face-per-shot bound, fake/off defaults,
+Deepgram/OpenAI composition and original-video privacy contract remain.
+The earlier Windows import block is historical after the owner's manual host
+change; the agent made no security change. Independent review is stopped at
+the owner's explicit request and will not be run again.
 
 Latest owner clarification (2026-10-01): CL-004 now owns the entire
 development-only frontend journey, not a separate public sample feature.
@@ -240,7 +331,8 @@ alignment was **completed and locally verified**: contracts allow zero to
 four candidates, the reducer uses immutable automatic clip review, persistence
 stores only manifest identity/hash, and legacy editor/assistant configuration is
 removed. CL-005 is locally verified with independent validation and release
-gates open; CL-006–CL-015 remain planned. CL-010 is automatic read-only clip review
+gates open; CL-006 has resumed after the owner-confirmed handoff and CL-007–CL-015 remain
+planned. CL-010 is automatic read-only clip review
 and render confirmation, not an editor/assistant ticket.
 The owner subsequently reopened CL-003 for independent validation of nine
 session/restore/progress/fake/cleanup findings. All nine reproduced locally.
@@ -318,3 +410,5 @@ Do not begin feature work until CL-001 exists in code: one lockfile, three
 targetable workspaces, enforced dependency direction, real quality commands,
 blank environment examples, explicit fake/paid-disabled composition, safe
 error contracts, and a backend health path.
+
+</details>

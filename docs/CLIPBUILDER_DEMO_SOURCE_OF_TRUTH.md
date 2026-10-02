@@ -1,5 +1,72 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Current owner revision — Gemini and private Cloud Run rendering (2026-10-02)
+
+Status: **CL-005 foundation and CL-006 local/Linux/private cloud media foundation complete; later Gemini/product/release integration pending.**
+
+The owner selected Google Gemini for understanding/transcription/candidates/
+speaking-face association and our private Google Cloud Run Remotion Node/Docker
+media service for proxy preparation, physical cutting and final editing/encoding.
+Private temporary Google Cloud Storage is explicitly approved for artifacts needed
+by the active demo flow; this does not authorize provisioning or paid tests.
+The [current migration contract](architecture/GEMINI_REMOTION_MIGRATION.md),
+[full file-level inventory](architecture/MIGRATION_FILE_INVENTORY.md) and
+[later Cloud Run setup guide](operations/CLOUD_RUN_RENDERER_SETUP.md) own exact
+responsibilities, dependencies, privacy/retention, limits, service identities,
+AI/cloud spend gates, licensing and evidence. They supersede conflicting
+Deepgram/OpenAI/local-LR-ASD and browser-only/export/no-GCS rules below.
+No AWS, alpha Remotion cloudrun package, general queue, durable raw archive or
+arbitrary renderer API is selected. Mediabunny remains only where useful for intake.
+
+The product remains one owned/licensed source, zero-to-four grounded candidates,
+exactly one selected 10–60-second clip, automatic fixed captions/contextual
+visuals, read-only preview, Confirm export and one validated portrait MP4 download.
+Gemini chooses the grounded range; the media service physically cuts/renders it.
+Flash produces structured text; fixed templates initially need zero image calls.
+
+Fake/live selects AI behavior; local/cloud selects compute independently.
+Ordinary fake tests use synthetic plans and injected cloud/renderer transports,
+no credentials/network/spend. An authorized local app may use a remote private
+renderer with fake AI and still incur cloud cost. Browser does not hold Google
+keys or cloud credentials and need not encode the final clip. Live Google
+understanding needs keys/flags and rights/data-transfer/paid-call approval.
+Windows/Linux synthetic Node compatibility and the rights-confirmed 2:45
+private cloud upload/proxy/render/audio/cancellation/deletion checkpoint are proved
+in CL-006. Those small-source timings are not throughput evidence or an SLA.
+Live grounding/speaking-face quality and full maximum-envelope stress remain unproved.
+
+Cleanup has priority over retention: private GCS objects only, raw/proxies/
+intermediates/assets removed when no longer needed and immediately when a
+validated final MP4 is published; output kept only for the earlier of ten minutes
+or session expiry. Download initiation does not prove a saved file. Cancellation,
+failure, clear/reset, expiry, abandonment/disconnect and service crash/restart
+are covered by terminal deletion and an independent authenticated 15-minute
+expiry sweeper, bounded retries and content-free not-found verification. Proposed
+bucket settings disable soft delete/versioning/holds/retention preservation.
+Logical source expiry is two hours; proposed healthy cleanup bounds are 2h33m
+raw and 43m output, including scheduled retry and sweep execution. Outages can extend physical retention and trigger intake
+shutdown/incident cleanup; no unconditional permanent-deletion SLA is claimed.
+Lifecycle alone is an eventual backstop. Google provider retention is separate.
+
+The owner explicitly approved this documentation and necessary local corrections
+on 2026-10-02. The owner subsequently approved the verified existing cloud
+project/region/private resources, ADC, Remotion license coverage, a USD 1 media
+test allowance, the private source rights and necessary image retries until
+the functional test passed. CL-006 is complete; its ticket owns exact evidence.
+Project/account identifiers remain private. CL-007 is next. New live AI, public
+rights/release and Git actions retain separate authorization.
+Earlier related source/audio changes were continued; later product integration remains incomplete.
+Usage polling and independent code review remain stopped. Deployed images must
+exclude every feasibility/debug page and obsolete model/runtime tool.
+
+Unchanged product/grounding/security requirements in the earlier specification
+remain applicable where consistent with this current revision. The collapsed
+body retains historical decisions/evidence; its conflicting mechanisms and
+old gates are not current implementation instructions.
+
+<details>
+<summary>Earlier source-of-truth revisions and evidence — conflicting mechanisms superseded</summary>
+
 - Status: Browser-owned-media architecture revision planned on 2026-10-01; CL-005 feasibility and privacy/spend decisions remain gated
 - Document authority: Product, behavior, architecture, data, cost, design, verification, and release decisions for the portfolio demo
 - Created: 2026-09-29
@@ -98,7 +165,7 @@ public claims, or the portfolio story must be promoted into this document.
 | Public real source flow | Include one bounded local source flow in addition to the sample | **Owner-directed architecture revision - 2026-10-01** | Original video stays on-device. Protected audio/text AI remains disabled in committed/default/test configuration and cannot be enabled until security, privacy, spend, provider and launch gates pass. |
 | Languages | English transcription and Latin-script caption QA for v1 | **Proposed - owner approval required** | Arabic/English code-switching is not claimed until bidi, font, punctuation, and provider tests pass. |
 | Speaker framing | Detect camera cuts, visible faces, and the active speaker, then keep the speaking person centered in the vertical frame | **Locked** | Active-speaker reframing is a core proof, not an optional feature or manual crop preset. |
-| Active-speaker tool | Prove a browser-executable audio/visual model before productionizing speaker framing | **Feasibility gate - revised 2026-10-01** | A Python/Cloud Run Light-ASD result is not browser feasibility. CL-006 must prove model conversion/runtime/license/quality or return a no-go; landmarks alone do not satisfy this requirement. |
+| Active-speaker tool | Provisionally use browser LR-ASD default AVA plus YuNet, preserving the complete audiovisual score path | **Owner-directed candidate - 2026-10-02; feasibility gated** | Local assets/export/native/WASM inference are authorized and measured in CL-006. Full browser preprocessing/tracking, labelled quality and resource acceptance remain required; landmarks or a native run alone do not satisfy this gate. |
 | Contextual visuals | AI plans and inserts 1–3 grounded visual beats using generated stills or deterministic graphic/equation cards | **Locked** | Visual storytelling is a core automatic-composition layer, not a vague decorative accent. |
 | Visual asset tool | OpenAI Image API with a fast current GPT Image model for generated stills/cutouts; MathJax SVG for exact equations/cards | **Proposed - owner approval required** | Re-check model access, cost, latency, data policy, and visual quality before live enablement. |
 | Public source bound | 20 minutes **and** 500 MiB; owner validation ceiling 60 minutes and 1.5 GiB | **Locked** | A public upload must satisfy both independent ceilings. Raising them requires a future spec/code revision plus measured latency and cost evidence; runtime configuration may only lower them. |
@@ -347,6 +414,23 @@ its quality; a no-go blocks that release claim. A remote selected-video/frame
 analysis fallback needs a new explicit owner privacy/architecture decision and
 is not approved by this plan. No internal filler cuts are introduced until the
 existing deferred ordered-segment contract revision is approved.
+
+**Active-speaker owner decision (2026-10-02):** provisionally select the released
+LR-ASD default AVA model and small MIT YuNet detector for the local browser path.
+This supersedes the older Light-ASD-first/control choice below. The owner
+authorized pinned local assets, complete score-head conversion, independent
+upstream numerical references, private local media tests, browser inference
+checks and scoped removal of superseded Light-ASD artifacts after verification.
+The [CL-006 evidence](tickets/CL-006-build-media-job-and-speaker-feasibility.md#lr-asd-local-export-and-inference-evidence-2026-10-02)
+records actual results and deviations. Scores are raw class-1 logits, not
+calibrated speaking probabilities. Preserve all six distinct 1-6-second
+durations and the four simultaneous face-track bound. Complete browser
+video/crop/track parity, labelled focus quality and agreed resource thresholds
+remain gated; this is no shipping-quality winner or public release approval.
+Deepgram/OpenAI composition and the prohibition on remote original/video/frame
+analysis remain unchanged. Native Python/FFmpeg are offline comparison tools
+only. The owner manually changed host policy; no agent security change is
+authorized. Independent review was explicitly stopped by the owner.
 
 #### Local storage and retention
 
@@ -6037,3 +6121,5 @@ idea exists, when a single happy-path fake looks polished, or when unperformed
 live/provider/rights/cleanup checks are described as complete.
 
 
+
+</details>

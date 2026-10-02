@@ -1,8 +1,46 @@
-# CL-005 - Establish browser-owned media and protected admission
+# CL-005 — Temporary private media admission and lifecycle
 
-Status: Local foundation independently revalidated; remaining feasibility/release gates open<br>
+## Current cloud-render packet — approved local execution, 2026-10-02
+
+Status: **Temporary-media prerequisite and isolated private GCS/upload/cancel/expiry proof verified under CL-006. Browser product integration and public release remain later gates.**
+
+Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+
+Retain useful local intake/clock/cleanup work and the implemented private generation-bound GCS upload, verification, encrypted expiring cleanup intents and independent expiry ports. The owner subsequently authorized the isolated private setup and rights-confirmed test; new external actions retain their gates.
+
+Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
+
+- [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
+- [x] Implement strict generation-bound admission/prepare/render/cancel schemas and bounded encrypted cleanup journal.
+- [x] Verify synthetic cleanup/retry/restart/orphan/late-publication behavior through injected ports.
+- [x] Verify real GCS resumable upload/cancellation, IAM, bucket settings and independent accelerated scheduled expiry under CL-006's separately authorized private checkpoint.
+
+Current implementation: `packages/contracts/src/cloud-media.schema.ts` and
+`apps/renderer/src/expiry/{temporary-intent,upload-capability,media-sessions,gcs-media-store}.ts`.
+Admission persists an intent before capability allocation; plaintext capability
+is runtime-only. Exact source/generation/CAS fences protect terminal cleanup.
+Completion retains only the ten-minute validated output; failures/expiry/cancel
+delete and verify all generations, track retries and block intake when unresolved.
+Expired orphan/late-upload objects are scanned independently. Journal intent
+objects are preserved by the configured lifecycle prefix rule until cancellation/
+deletion is verified. Store SDK/REST effects passed the isolated private checkpoint
+recorded in [CL-006](CL-006-build-media-job-and-speaker-feasibility.md#completed-private-cloud-foundation--2026-10-02).
+
+Seven focused lifecycle tests passed in the initial prerequisite snapshot.
+The settled CL-006 gate passed all five root checks and 383 units; its ticket
+records the owner-approved private upload/proxy/render, partial-upload cancel,
+generation deletion and separately authenticated scheduler proof. Production
+package/schema boundaries and fake operation counts are executable. No Gemini
+calls occurred; ordinary tests remain credential-free and zero-network.
+Actual browser/control source transfer remains later integration work.
+
+<details>
+<summary>Earlier packet and evidence, retained as history where superseded</summary>
+
+
+Status: Local foundation validation passed; owner confirms CL-006 dependency handoff, external release gates open<br>
 Milestone: M2 - browser-owned media foundation<br>
-Last synchronized: 2026-10-01<br>
+Last synchronized: 2026-10-02<br>
 Depends on: CL-001, CL-003, CL-004 and CL-004A's documentation handoff<br>
 Blocks: CL-006, CL-007, CL-011<br>
 Suggested commit: `CL-005: establish and validate browser-owned media`<br>
@@ -411,6 +449,42 @@ No staging, commit, CL-006 execution or public paid approval is inferred.
 
 ## Phase 1: feasibility before committing the implementation choice
 
+### Owner handoff clarification (2026-10-02)
+
+The owner clarified through the side conversation that CL-005's validation
+passed completely on 2026-10-01 and instructed the execution chat to correct
+the documentation and continue CL-006. The existing R4 record above independently
+reports no actionable findings; the 316-test/five-root-gate and measured
+full-bound desktop-browser evidence are already recorded in their owning passes.
+This clarification supplies the local dependency handoff to CL-006. Stale
+unchecked aggregate boxes below must not be used to block that authorized work.
+
+It supplies no new observation or blanket release approval. Private-mode,
+actual eviction/freeze/resource-pressure observations remain unperformed as
+previously disclosed; audio quality/profile/model proof belongs to CL-006,
+and deployed transport/provider/privacy/paid/support/license/rights/visual/
+accessibility acceptance remains separately gated. Preserve the historical
+conditional spike verdict and exact evidence rather than checking an aggregate
+box for observations that were not made.
+
+During CL-006's new full-bound audio check, the existing harness passed
+`generate` directly as a Web Lock callback after its duration parameter had
+been added for the 20-second fixture. The native callback supplies a Lock
+object, so the numeric generation loop emitted no frames: the fresh observation
+was a 176-byte, zero-duration file. The scoped prerequisite repair wraps the
+callback to call `generate()` with its numeric default and rejects invalid
+synthetic durations before opening/truncating an artifact. This is a harness
+repair, not an application/media architecture change. New full-bound regression
+evidence and required local checks are recorded with the CL-006 pass; no fresh
+independent validation is inferred from the earlier R4 verdict. The corrected
+generator produced 1,200 seconds / 514,629,785 bytes in 146,327.38 ms, with
+1-MiB maximum writes. The repeated selected-range export/remux produced an exact
+60-second 1080x1920 H.264/AAC artifact; decoded flash/tone differences were
+0.2083 ms at 1/30/59 seconds, and native playback reached its end. These are
+fresh synthetic regression observations, not new private-mode/eviction/freeze
+or release acceptance. The [CL-006 audio evidence](CL-006-build-media-job-and-speaker-feasibility.md#audio-execution-evidence-2026-10-02)
+owns the new pipeline checks and cleanup record.
+
 - [x] Pin proposed Mediabunny/runtime versions, inspect MPL-2.0 and any AAC WASM/
       FFmpeg build licenses, and obtain installation/download approval first.
 - [x] With approved synthetic local media, prove range preview, worker decode,
@@ -591,3 +665,5 @@ Keep local-media foundation and its necessary contracts/state/config/admission
 migration together; do not absorb full downstream pipelines. Suggested subject:
 `CL-005: establish and validate browser-owned media`. Separate authorization
 is required for staging/commit/push and every external or paid action.
+
+</details>

@@ -17,3 +17,14 @@ application imports; executable negative fixtures guard those boundaries.
 
 Import only from `@clipbuilder/contracts`. Consumers must parse every value at
 its trust boundary; inferred types do not replace runtime validation.
+
+## Implemented cloud contracts
+
+The [current migration](../../docs/architecture/GEMINI_REMOTION_MIGRATION.md) uses
+the implemented strict v2 edit/focus/caption/card schemas and source/object-
+generation/upload/prepare/render/output/cleanup descriptors. Google provenance
+labels are normalized contract values. Framework/Node/provider raw types and
+credentials remain forbidden here. Fixed React composition is implemented in
+the separate `@clipbuilder/composition` package. CL-006 records local/Linux/private
+cloud foundation evidence; live Gemini quality and browser integration remain
+later work. Ordinary tests use synthetic values, fake AI and no credentials/network.

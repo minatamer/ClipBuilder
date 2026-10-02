@@ -1,3 +1,9 @@
+# CL-004A — Google and cloud readiness
+
+Current authority: [cloud migration](../architecture/GEMINI_REMOTION_MIGRATION.md), [provider guide](../operations/PROVIDER_SETUP.md), [cloud setup](../operations/CLOUD_RUN_RENDERER_SETUP.md). Status: documentation/local corrections approved; account/setup/live readiness remains unchecked. Private temporary GCS is approved as design, not provisioning. Verify model/structured output, paid Google data policy/rights/call budget, Remotion SSR licensing/Linux notices and actual project ID/region/identities privately at the external gate. Fake offline tests remain key/ADC/network-free; fake AI plus remote compute still costs cloud resources. Do not follow superseded Deepgram/OpenAI/no-GCS setup. CL-006 records installed SDKs and current local proof; no documentation approval is needed again.
+
+<details><summary>Earlier readiness packet — historical where superseded</summary>
+
 # CL-004A - Prepare third-party provider readiness
 
 Status: Planned<br> Milestone: M1 - provider readiness before real
@@ -217,3 +223,5 @@ checks, owner decisions and remaining blockers. Separate documentation-ready,
 account-ready, adapter-ready and authorized-live states. Do not stage/commit,
 message another thread, provision, fund, install or call anything merely because
 this packet exists.
+
+</details>

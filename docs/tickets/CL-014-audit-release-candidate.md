@@ -1,4 +1,22 @@
-# CL-014 — Audit the release candidate
+# CL-014 — Audit cloud migration release candidate
+
+## Current cloud-render packet — approved local execution, 2026-10-02
+
+Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+
+Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+
+Audit current boundaries/schemas/dependencies/retention/private logging/network isolation/call budgets and all five root gates; record exact local/fake versus authorized cloud/AI evidence.
+
+Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
+
+- [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
+- [ ] Implement and verify this current packet after approval.
+- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+
+<details>
+<summary>Earlier packet and evidence, retained as history where superseded</summary>
+
 
 Status: Planned<br>
 Milestone: M6 — public-demo hardening and audit<br>
@@ -247,3 +265,5 @@ Report the ledger path, exact candidate identity, every finding/correction/
 disposition, changed files, focused regressions, complete deterministic gate,
 scans/audits, behavior-preservation evidence, and every remaining owner/external
 blocker. State precisely what CL-015 may deploy.
+
+</details>
