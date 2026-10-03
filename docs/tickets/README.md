@@ -6,6 +6,16 @@ Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md
 [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),
 [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
+Owner-authorized post-CL-015 browser QA is recorded in
+[CL-013](CL-013-complete-accessibility-responsive-and-performance-pass.md#authorized-browser-follow-up--2026-10-03).
+Three reproduced target-size defects received CSS minimum-dimension fixes; a
+tooltip-only fake Download prerequisite received visible associated text;
+production fixture journey, recovery/cancel/cleanup and eleven emulated viewport
+anchors have partial runtime evidence. See the [quality matrix](../operations/EXPERIENCE_QUALITY_MATRIX.md)
+and [whole-file follow-up plan](CL-013-BROWSER-QA-COMMIT_PLAN.md). This does not
+complete the physical-device/screen-reader/native-media/film or deployment gates,
+or carry the earlier release audit forward to a changed revision automatically.
+
 Current Git handoff: [CL-007/CL-008 file-level commit plan](CL-007-008-COMMIT_PLAN.md)
 documents the seven owner-authorized sequential whole-file commits. Implementation
 steps 1–5 are committed; the final execution record is in

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Download, Share2 } from "lucide-react";
 import type {
   AnalysisBundleV1,
@@ -40,6 +40,7 @@ function SelectedClipReview({
   onPosition,
   presentation = "review",
 }: ClipReviewProps & { selected: ClipCandidateV1 }) {
+  const downloadNoticeId = useId();
   const range = candidateRange(analysis, selected);
   const { currentMs, playing, seek, toggle, pause } = useRangePlayback(
     range,
@@ -108,13 +109,19 @@ function SelectedClipReview({
       >
         <div className={styles.exportVideo}>
           <div className={styles.exportVideoFrame}>{player}</div>
-          <Button
-            icon={Download}
-            disabled
-            title="A validated output video is required"
-          >
-            Download MP4
-          </Button>
+          <div className={styles.downloadNotice}>
+            <p id={downloadNoticeId} className={styles.modeNote}>
+              Simulated preview. No downloadable video was created.
+            </p>
+            <Button
+              icon={Download}
+              disabled
+              aria-describedby={downloadNoticeId}
+              title="A validated output video is required"
+            >
+              Download MP4
+            </Button>
+          </div>
         </div>
         <section
           className={styles.socialDestinations}

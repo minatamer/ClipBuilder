@@ -145,6 +145,16 @@ describe("video-first review revision", () => {
     );
     expect(markup).toContain('aria-label="Clip delivery" tabindex="0"');
     expect(markup).toContain("Download MP4");
+    const download = markup.match(
+      /<button([^>]*aria-describedby="([^"]+)"[^>]*)>/,
+    );
+    const descriptionId = download?.[2];
+    expect(descriptionId).toBeTruthy();
+    expect(download?.[1]).toContain('disabled=""');
+    expect(markup).toContain(`<p id="${descriptionId}"`);
+    expect(markup).toContain(
+      "Simulated preview. No downloadable video was created.",
+    );
     expect(markup.match(/disabled=""/g)).toHaveLength(5);
     for (const name of ["Facebook", "Instagram", "TikTok", "X"])
       expect(markup).toContain(`${name} sharing unavailable, coming soon`);

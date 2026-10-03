@@ -54,6 +54,7 @@
 .brand {
   display: inline-flex;
   align-items: center;
+  min-height: var(--cb-target);
   gap: 0.6rem;
   color: var(--cb-ink);
   font-size: 1.125rem;
@@ -524,6 +525,7 @@
 }
 .noteHeading button {
   flex: 0 0 auto;
+  min-width: var(--cb-target);
   min-height: var(--cb-target);
   border: 0;
   background: transparent;
@@ -621,6 +623,12 @@
   display: grid;
   place-items: center;
   container-type: size;
+}
+.downloadNotice {
+  display: grid;
+  justify-items: center;
+  gap: var(--cb-space-2);
+  text-align: center;
 }
 .exportVideo[data-output-delivery="true"] {
   grid-template-rows: auto;

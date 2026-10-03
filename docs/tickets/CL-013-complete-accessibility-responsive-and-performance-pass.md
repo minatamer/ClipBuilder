@@ -57,6 +57,92 @@ before/after production chunk inventories; no SLA or runtime metric is inferred.
 
 Commit: [file-level plan](CL-013-COMMIT_PLAN.md), authorized through CL-015.
 
+## Authorized browser follow-up — 2026-10-03
+
+The owner requested thorough local fake-mode QA after CL-015 and explicitly
+required reproducing actual bugs before changing functionality. Baseline was
+clean `632eb7689ba53d1f23e3b0b50f7cd192f72de2cb`. This pass stays in CL-013's
+experience scope; no new film, paid, cloud, credential or deployment approval is
+inferred. See the [updated quality matrix](../operations/EXPERIENCE_QUALITY_MATRIX.md#authorized-browser-follow-up--2026-10-03).
+
+Reproduced three target-size defects against the existing 44px requirement:
+note timestamp width about 41px; workflow home-link height 24–27px; narrow
+landing logo-link width about 27px. Corrected only minimum dimensions in the
+two owning CSS modules using `--cb-target`. Processing, selection, playback,
+session/persistence, API/provider/render and cleanup logic remain unchanged.
+After production rebuild, timestamps measure 44×44px across every anchor,
+workflow home height is 44px, and both narrow landing logos are 44×44px with
+navigation still inside the header. Existing seek/home actions still work.
+
+The first follow-up validation found one additional Low accessibility issue:
+fake Download's disabled prerequisite existed only in its tooltip, contrary to
+source-of-truth section 19.1. Browser output and the owning component confirmed
+the defect. Added one visible “Simulated preview. No downloadable video was
+created.” notice with a unique `aria-describedby` association, and extended the
+existing delivery regression to verify its visible text/association and the
+still-disabled button. Download behavior and all four inert destinations stay
+unchanged. This finding was independently checked against the requirement before
+correction; the earlier target findings were also reproduced before edits.
+
+Browser fixture observations cover landing/intake, three candidates, each
+selection, transcript/notes, pause/seek, read-only review, explicit simulated
+export, disabled Download and reset. Normal keyboard Tab entry/focus and action
+activation, privacy modal isolation/Escape return, refresh at review/result and
+acknowledged assembly, cancellation during upload/analysis/assembly/export,
+invalid/empty intake, repeated clear/new-input cycles, a second fixture-tab
+conflict, and owned-backend outage/cleanup/reconnect were checked. Intentional
+disabled download and uncertainty were retained. There was no actionable error
+in the post-build browser's captured warning/error log.
+
+All eleven dimension anchors were inspected for fixture geometry:
+320×568, 390×844, 768×1024, 1024×768, 1280×800, 1440×900, 1920×1080,
+2560×1440, 900×600, 1100×700 and 640×640. No horizontal page overflow was
+observed in the checked stages; bounded notes/transcript/privacy panes scroll.
+This is partial emulated browser coverage, not the complete acceptance matrix.
+One instrumented fixture journey reached candidates in 8,444ms including tool
+overhead and deliberate delays. Real processing and native performance are not
+proved. The focused existing behavior regression suite passed **54 tests in 5
+files**; browser geometry supplies the direct CSS regression evidence.
+
+With `FAKE_MODE=true` and no keys, only synthetic processing works and Download
+is intentionally unavailable. No local AI runtime/weights were used. Real AI
+still needs keys/live/rights/data/paid approval; actual MP4/private storage/render
+needs independent cloud/compute/IAM approval. Physical devices, Windows screen
+reader, 200% zoom/text-spacing/virtual keyboard, forced colors/full contrast,
+full keyboard scroll audit, suspension/eviction/real Web Locks, zero/four
+candidate browser fixtures, real Turnstile/upload, actual media/caption/A/V/parity,
+maximum-envelope performance, automated serious/critical accessibility audit,
+motion disposition, final UI/film/rights approvals and public release remain
+unchecked. Earlier audit evidence remains revision-specific and must be refreshed
+before releasing this later revision.
+
+Commit follows the [whole-file browser QA plan](CL-013-BROWSER-QA-COMMIT_PLAN.md).
+
+Follow-up validation pass 2: **Meets ticket with concerns** for the authorized
+local follow-up; **no actionable findings** on the combined eight-file worktree
+change from `632eb7689ba53d1f23e3b0b50f7cd192f72de2cb`. Pass 1's Low
+tooltip-only Download issue is resolved by visible associated text, the existing
+delivery regression and final production browser observation. All three target
+issues are resolved by geometry and preserved seek/navigation behavior. Reviewed
+the full packet, source-of-truth requirements, applicable instructions, combined
+diff, the plan and nearby rendering/styles/fixture boundaries. No requirement or
+unchecked approval box was weakened. Covered: narrow fixes, disabled behavior,
+regression and honest evidence. Partial: emulated responsive/keyboard/recovery
+matrix. Unverified: the manual/native/film/external items listed above. Validation
+was read-only, with no delegation or full-suite execution during that phase.
+
+Execution's settled gates after the final correction all passed:
+`corepack pnpm format:check`, `lint`, `typecheck`, `test:unit`, `build`, and
+`git diff --check`. Total **632 tests in 65 files**; no timeout was widened.
+The final production browser journey and result refresh retain disabled Download,
+visible notice/association, no root horizontal overflow at all anchors, and zero
+captured warning/error logs. At 320×568, keyboard End scrolls delivery to its
+bottom while the Start over footer remains available. All temporary browser tabs
+and viewport overrides were cleaned up. Both owned QA process trees and ports
+3000/4000 were verified stopped. Logs/records/crops stay ignored under
+`artifacts/qa/cl013-followup-20261003/`. Deviation: none; this later owner-approved
+fake browser pass does not complete previously deferred real-media/device gates.
+
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>
 

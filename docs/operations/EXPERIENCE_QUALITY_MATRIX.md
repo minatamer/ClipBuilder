@@ -1,13 +1,103 @@
 # Local experience quality and pending runtime matrix
 
-CL-013, 2026-10-03. The owner asked to continue building in fake mode and defer
+Initial CL-013 pass, 2026-10-03. The owner asked to continue building in fake mode and defer
 actual media/device testing until CL-014/015. This record distinguishes source /
 synthetic checks from runtime observations. No app, browser, real media, cloud,
-provider or screen reader was launched for this pass. No captures or film exist.
+provider or screen reader was launched for that initial pass. It produced no captures or film.
 `FAKE_MODE=true` and no keys support the labelled fixture journey and synthetic
 checks; they do not encode a real final MP4 or prove AI quality. Real analysis
 requires keys/live/data/rights/paid approvals; rendering needs independent cloud
 compute/IAM/storage approval. No local AI runtime or weights are used.
+
+## Authorized browser follow-up — 2026-10-03
+
+The owner subsequently authorized thorough local fake-mode QA and required that
+suspected defects be reproduced against intended behavior before correction.
+Baseline: clean worktree at CL-015 `632eb7689ba53d1f23e3b0b50f7cd192f72de2cb`.
+Windows, pinned pnpm 11.19.0 / Next 16.3.7, production build, Codex in-app Chromium
+browser. Viewport overrides emulate dimensions; they are not physical devices.
+Backend test composition explicitly set `NODE_ENV=test`, `FAKE_MODE=true`,
+`PROVIDER_MODE=fake`, paid/grant/live/cloud/render gates disabled before import.
+The test entry did not load the ignored owner environment. Frontend mode came
+from the backend's public configuration. Only synthetic fixtures and empty/text
+sentinels were used; no source bytes, real media, provider keys, weights, cloud
+operations or deployment were involved. Fixture previews and export are simulated;
+Download remains disabled. Real AI and MP4 evidence still require the separately
+approved keys/live/rights/data/spend and private cloud/compute/IAM gates.
+
+Reproduced findings and post-build regression evidence:
+
+| Finding | Before | Narrow correction | Verified after rebuild |
+| --- | --- | --- | --- |
+| Note timestamp targets violated the documented 44px minimum | About 41×44px in candidate/review notes | Minimum width uses existing `--cb-target` | 44×44px; all seven review timestamps at every anchor; candidate evidence seek still pauses at its source word |
+| Workflow home link target too short | 24px high on phone, about 27px on desktop | Minimum height uses existing target token | 44px high across anchors; header actions fit and home navigation still works |
+| Landing home logo targets too narrow when text hides | About 27×44px in header/footer below the wordmark breakpoint | Minimum width uses existing target token | Both links 44×44px on narrow layouts; wider wordmarks unchanged, navigation remains within the header |
+| Fake Download prerequisite was explained only by a tooltip | Disabled Download had a `title` but no adjacent explanation, contrary to section 19.1 | Visible simulated-preview notice, associated with the still-disabled button using `aria-describedby` | Existing delivery regression and final browser verify copy/association/disabled state; notice wraps without root overflow at all eleven anchors, survives refresh, and 320px delivery scrolls with End while Start over stays reachable |
+
+No processing, selection, playback, reducer, persistence, API, provider, render,
+cleanup or motion logic changed. Changes are three CSS minimum dimensions and
+one fake-delivery explanation with its layout and accessibility association.
+Focused regression evidence is browser geometry plus existing behavioral checks,
+not a test that merely repeats a CSS declaration.
+
+Observed fixture states: prepared intake → upload/media inspection → analysis →
+three candidates; each candidate selected; pause/seek; Transcript/Agentic Notes;
+source-word timestamp and review quote jumps; one selected automatic assembly;
+read-only review; explicit simulated export; disabled Download; Start over.
+Keyboard activation, normal Tab entry, a 3px visible focus outline, stage heading
+focus, privacy modal isolation and Escape return to its opener were observed.
+Refresh preserved review and result, and acknowledged in-flight assembly recovered
+to review. Cancellation during upload, analysis, assembly and export returned to
+intake; refresh after cancel stayed cleared. Repeated clear/new-input cycles did
+not resurrect late results. Unsupported text and empty MP4 sentinels showed the
+intended rejection screen, then allowed a new fixture journey. A second fixture
+tab reported the active-session conflict and did not replace the original; this
+does not verify the real OPFS/Web Locks path.
+
+Stopping only the owned fake backend reproduced unconfirmed cleanup. Clear and
+retry showed “Cleanup needs attention”; offline reload showed service unavailable.
+After backend restart, Retry connection resumed the persisted cleanup intent and
+returned to intake. This intentional uncertainty was preserved, not called a bug.
+The second production browser run completed the happy path after the CSS fixes,
+with zero captured warning/error logs. Real challenge/upload/CSP compatibility
+and a complete automated accessibility audit remain unverified.
+
+One measured prepared-input-to-visible-candidates sample took **8,444ms** using
+the browser tool's elapsed clock and locator polling. This includes automation
+observation overhead and deliberate fixture delays; it is not a provider timing,
+LCP/INP, network throughput, memory, real media performance or SLA measurement.
+
+The intermediate CSS-only build inventory had 1,276 files, 26 external package
+links, 22,018,061 bytes, SHA-256
+`0db9f5bf2de291d8879358d5b7621cf737b264fc75bc42a699b01aad33019496`.
+The final build including the download notice has 1,276 files, 26 external package
+links, 22,018,726 bytes, SHA-256
+`c37df27b121c4cda3657f1f2329b0c935ab940e8200ca4fb45e9de0e035edaa3`.
+It remains **not self-contained**; this does not supersede CL-015's target-platform
+immutable artifact and deployment gate. The CL-014/015 audit evidence is tied to
+its recorded revision; a later release must re-audit the new revision.
+
+QA records/logs and synthetic screenshots stay ignored under
+`artifacts/qa/cl013-followup-20261003/`; no screenshot baseline or film approval
+is inferred. Several PowerShell HTTP probes timed out while browser and Python
+clients received complete 200 document/config responses. The temporary QA helper
+was corrected to use complete-response probes; production code was not changed.
+Each failed launcher tree was verified stopped before another launch.
+After the final browser check, temporary tabs were closed and the viewport
+override reset. Frontend launcher 9548/listener 18220 and backend launcher
+20924/listener 12336 were stopped in that order. All eight owned identities per
+service and loopback ports 3000/4000 were verified absent through stabilization;
+runtime records are marked stopped. No test app remains running.
+
+Settled verification after the notice correction: `corepack pnpm format:check`,
+`corepack pnpm lint`, `corepack pnpm typecheck`, `corepack pnpm test:unit`,
+`corepack pnpm build`, and `git diff --check` passed. Total: **632 tests in 65
+files** (root 29/4, contracts 58/5, composition 3/1, backend 195/14, renderer
+56/11, frontend 291/30). Units ran after the CPU-heavy build/type checks; no
+timeout or test threshold was changed. The only unit-run warning was the existing
+renderer dependency's `fs.Stats` deprecation. No new dependency or test harness
+was installed. Final read-only validation has no actionable findings in this
+eight-file follow-up; the full acceptance matrix and external gates stay open.
 
 ## Verified local corrections
 
@@ -39,8 +129,9 @@ semantics, existing selection/review/reducer cases. Settled gates recorded in
 
 ## Responsive and accessibility observation matrix
 
-Every row below remains **unverified** for this revision. Code and component
-markup are inspected; they cannot certify screen-reader, contrast or reflow.
+The browser follow-up supplies **partial fixture observations** below. Code,
+emulated dimensions and keyboard checks cannot certify physical devices, Windows
+screen readers, full contrast, native media or the entire required matrix.
 Run the same semantic flow at each anchor, using synthetic content only: landing,
 intake/consent/preparation/upload, analysis, zero/four candidates and selection,
 automatic assembly, read-only review, explicit export, result/download, connection
@@ -48,17 +139,17 @@ failure, cancellation/Clear, uncertain restore, expiry and partial cleanup.
 
 | Anchor or mode | Required observation | Current evidence / next owner test |
 | --- | --- | --- |
-| 320×568 and 390×844 | Preview, notes/transcript, all actions and privacy reachable; no horizontal page scroll or target collision | Unverified; natural result rows and wrapping controls implemented |
-| 768×1024 portrait/landscape and 1024×768 | Same capabilities, orientation preserves state, evidence panels scroll without traps | Unverified |
-| 1280×800, 1440×900, 1920×1080, 2560×1440 | Portrait framing, text/action legibility, bounded workspace and no layout overlap | Unverified |
-| Heights 600–700 and intermediate resize | Footer, source/portrait frames and dialogs remain reachable | Unverified |
+| 320×568 and 390×844 | Preview, notes/transcript, all actions and privacy reachable; no horizontal page scroll or target collision | Fixture landing/intake/candidates/selected preview/review/result/privacy geometry observed; root did not overflow horizontally; internal panes scroll; physical devices and real media unverified |
+| 768×1024 portrait/landscape and 1024×768 | Same capabilities, orientation preserves state, evidence panels scroll without traps | Fixture viewport resize preserved state and controls; no horizontal page overflow; physical rotation/touch and full keyboard scroll audit unverified |
+| 1280×800, 1440×900, 1920×1080, 2560×1440 | Portrait framing, text/action legibility, bounded workspace and no layout overlap | Fixture geometry and corrected targets checked; desktop/phone review screenshots inspected; final visual acceptance and native media unverified |
+| Heights 600–700 and intermediate resize | Footer, source/portrait frames and dialogs remain reachable | 900×600, 1100×700 and 640×640 checked with fixture stages/privacy; no root horizontal overflow; bounded scroll areas retain actions |
 | 200% zoom, text spacing and virtual keyboard | No clipped content, focus obstruction, input zoom trap or lost actions | Unverified |
-| Keyboard and Windows screen reader | Heading entry/return, ordinary controls, candidate/evidence, dialogs, status/errors, export/Clear | Markup/source and focused semantics covered; actual observations unverified |
-| Forced colors / contrast / focus / targets | Meaning independent of color, visible focus, readable media controls, 44px targets | Existing source rules traced; actual contrast/geometry unverified |
+| Keyboard and Windows screen reader | Heading entry/return, ordinary controls, candidate/evidence, dialogs, status/errors, export/Clear | Browser keyboard activation, Tab entry, stage focus, seek and privacy Escape return observed; Windows screen reader and full keyboard scroll sequence unverified |
+| Forced colors / contrast / focus / targets | Meaning independent of color, visible focus, readable media controls, 44px targets | Browser focus and target geometry observed; three target defects corrected; native forced colors, full contrast and screen-reader meaning unverified |
 | Motion accessibility | Record the owner's permanent app-motion exception and final visual disposition | No suppression introduced; accessibility/release acceptance remains unverified |
-| Slow/offline/hidden/background and two tabs | Bounded waits, honest uncertainty, no redispatch, cleanup/recovery and local lock | Synthetic lifecycle cases covered; browser suspension/eviction unverified |
+| Slow/offline/hidden/background and two tabs | Bounded waits, honest uncertainty, no redispatch, cleanup/recovery and local lock | Owned-backend outage/cleanup/reconnect and fixture second-tab conflict observed; browser network throttling/suspension/eviction and real local lock unverified |
 | Real Player/final MP4 | Matching cut/focus/cards/captions, A/V sync, visible frames, mute, transcript and download | Synthetic only; native actual media and device checks unverified |
-| CSP / Turnstile / upload | Dynamic nonce, correct allowed resources, actual challenge/media compatibility | CL-012 local headers/build checks only; runtime unverified |
+| CSP / Turnstile / upload | Dynamic nonce, correct allowed resources, actual challenge/media compatibility | Production fixture browser completed with zero captured warning/error logs after rebuild; actual challenge/private upload/resource compatibility unverified |
 
 No installed first-party automated accessibility/E2E command is declared.
 A transitive axe package is not a completed audit. No tooling was installed or
