@@ -21,6 +21,7 @@ import {
   mediaPreviewResponseSchema,
   type MediaPreviewRequest,
   type MediaPreviewAccess,
+  mediaOutputResponseSchema,
 } from "@clipbuilder/contracts";
 import type { BackendConfig } from "../config/env.schema.js";
 export interface RendererIdentity {
@@ -158,10 +159,33 @@ export class CloudRendererClient {
     range: string | undefined,
     signal: AbortSignal,
   ) {
+    return this.artifactContent("preview", input, range, signal);
+  }
+  outputInfo(input: MediaPreviewAccess, signal: AbortSignal) {
+    return this.call(
+      "/internal/output-info",
+      mediaPreviewAccessSchema.parse(input),
+      mediaOutputResponseSchema,
+      AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
+    );
+  }
+  outputContent(
+    input: MediaPreviewAccess,
+    range: string | undefined,
+    signal: AbortSignal,
+  ) {
+    return this.artifactContent("output", input, range, signal);
+  }
+  private async artifactContent(
+    kind: "preview" | "output",
+    input: MediaPreviewAccess,
+    range: string | undefined,
+    signal: AbortSignal,
+  ) {
     const authorization = await this.identity.authorization();
     signal.throwIfAborted();
     return this.transport(
-      this.config.renderer.origin + "/internal/preview-content",
+      this.config.renderer.origin + `/internal/${kind}-content`,
       {
         method: "POST",
         headers: {

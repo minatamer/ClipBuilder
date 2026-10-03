@@ -1,5 +1,18 @@
 # Private media renderer
 
+CL-011 connects explicit final export, receipt-checked output Range playback and
+attachment download. It deletes server source/proxies before publication success;
+output expires after ten minutes or at session expiry. Clear drains owned work and
+streams. Completed-output restore and download retries dispatch zero new jobs/AI.
+See [fixed output profile](../../docs/operations/RENDER_PROFILE.md).
+With `FAKE_MODE=true` and no keys, fixture UI cannot download; injected synthetic
+ports prove lifecycle and rejection behavior, not a real MP4. Real source/assembly
+and final rendering require keys/live flags (including `LIVE_RENDER_ENABLED`),
+paid/data/rights gates and independent private cloud/compute approval. Actual
+native pixels/audio/performance, devices, rights/licenses and rollout remain
+unchecked; no local AI model or weights are used.
+
+
 CL-010 adds private `/internal/preview`, `/internal/preview-info` and
 `/internal/preview-content`. After the consumed Google selected proxy is deleted,
 one separate proxy is prepared for the exact source generation/range/hash.

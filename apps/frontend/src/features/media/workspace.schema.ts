@@ -13,6 +13,8 @@ import {
   hasSameMediaIdentity,
   selectedAssemblyResultSchema,
   hasSameAssemblySource,
+  finalRenderResultSchema,
+  hasSameRenderedAssembly,
 } from "@clipbuilder/contracts";
 
 // Separate from media/result deletion; contains no session, capability or content.
@@ -63,6 +65,14 @@ export const workspaceRecordSchema = z
         status: z.enum(["pending", "uncertain", "complete"]),
         candidateId: candidateIdSchema,
         result: selectedAssemblyResultSchema.nullable(),
+      })
+      .strict()
+      .nullable()
+      .default(null),
+    cloudRender: z
+      .object({
+        status: z.enum(["pending", "uncertain", "complete"]),
+        result: finalRenderResultSchema.nullable(),
       })
       .strict()
       .nullable()
@@ -149,6 +159,24 @@ export const workspaceRecordSchema = z
           issue();
       } else if (assembled.result !== null) issue();
     }
+    if (record.cloudRender) {
+      if (
+        !record.cloudAssembly?.result ||
+        record.cloudAssembly.status !== "complete"
+      )
+        issue();
+      if (record.cloudRender.status === "complete") {
+        if (
+          !record.cloudRender.result ||
+          !record.cloudAssembly?.result ||
+          !hasSameRenderedAssembly(
+            record.cloudRender.result,
+            record.cloudAssembly.result,
+          )
+        )
+          issue();
+      } else if (record.cloudRender.result !== null) issue();
+    }
     const candidate = record.analysis?.candidates.find(
       (item) => item.id === record.selectedId,
     );
@@ -169,7 +197,8 @@ export const workspaceRecordSchema = z
         record.assembly ||
         record.selectedId ||
         record.cloudAnalysis ||
-        record.cloudAssembly)
+        record.cloudAssembly ||
+        record.cloudRender)
     )
       issue();
   });
@@ -196,5 +225,6 @@ export function cleanupRecord(record: WorkspaceRecord): WorkspaceRecord {
     selectedId: null,
     cloudAnalysis: null,
     cloudAssembly: null,
+    cloudRender: null,
   };
 }

@@ -5,6 +5,8 @@ import {
   type GroundedAnalysisResult,
   type SelectedAssemblyResult,
   selectedAssemblyResultSchema,
+  finalRenderResultSchema,
+  type FinalRenderResult,
 } from "@clipbuilder/contracts";
 import { LocalMediaError } from "./media.errors";
 import type { AudioProgress, ExtractedAudio } from "./audio.profile";
@@ -65,6 +67,7 @@ export class BrowserWorkspace {
   private expiry: (() => void) | null = null;
   private disposed = false;
   private assemblyReservation = false;
+  private renderReservation = false;
   constructor(private readonly ports: WorkspacePorts) {}
 
   get sourceUrl(): string | null {
@@ -189,6 +192,47 @@ export class BrowserWorkspace {
       .map((byte) => byte.toString(16).padStart(2, "0"))
       .join("");
     if (hash !== result.manifestHash) throw new LocalMediaError("missing");
+  }
+  async markCloudRender(status: "pending" | "uncertain") {
+    const generation = this.generation;
+    this.check(generation);
+    if (
+      !this.record?.cloudAssembly?.result ||
+      (status === "pending" &&
+        (this.renderReservation || this.record.cloudRender)) ||
+      (status === "uncertain" && this.record.cloudRender?.status !== "pending")
+    )
+      throw new LocalMediaError("missing");
+    this.renderReservation = true;
+    const record = parseWorkspaceRecord({
+      ...this.record,
+      cloudRender: { status, result: null },
+    });
+    try {
+      await this.write(record, generation);
+      this.record = record;
+    } catch (error) {
+      if (status === "pending") this.renderReservation = false;
+      throw error;
+    }
+  }
+  async storeFinalRender(value: FinalRenderResult, signal: AbortSignal) {
+    const generation = this.generation;
+    this.check(generation);
+    signal.throwIfAborted();
+    if (
+      !this.record?.cloudRender ||
+      this.record.cloudRender.status === "complete"
+    )
+      throw new LocalMediaError("missing");
+    const result = finalRenderResultSchema.parse(value);
+    const record = parseWorkspaceRecord({
+      ...this.record,
+      cloudRender: { status: "complete", result },
+    });
+    await this.write(record, generation);
+    signal.throwIfAborted();
+    this.record = record;
   }
   async storeSelectedAssembly(
     value: SelectedAssemblyResult,
@@ -594,6 +638,7 @@ export class BrowserWorkspace {
       await this.ports.journal.delete();
       this.record = null;
       this.assemblyReservation = false;
+      this.renderReservation = false;
       this.work = null;
       this.ports.finishCleanup();
     })().finally(() => {

@@ -27,6 +27,8 @@ import { createAnalysisRouter } from "../http/routes/analysis.route.js";
 import { mapError } from "../http/errorMapper.js";
 import { PreviewPlayback } from "../media/preview-playback.js";
 import { Writable } from "node:stream";
+import { FinalRender } from "../render/final-render.usecase.js";
+import { OutputDelivery } from "../media/output-delivery.js";
 
 async function fixture() {
   const origin = "http://localhost:3000",
@@ -44,7 +46,7 @@ async function fixture() {
       ttlMs: 7200000,
       maxRecords: 16,
       maxConcurrent: 1,
-      maxDispatches: 3,
+      maxDispatches: 4,
       rateWindowMs: 300000,
       maxGrantsPerWindow: 3,
       allowedOrigins: [origin],
@@ -202,6 +204,172 @@ async function fixture() {
     controller,
   };
 }
+
+describe("final render and delivery", () => {
+  async function finalFixture() {
+    const f = await fixture(),
+      assembly = await f.service.run(f.context, f.input);
+    const output = {
+      binding: assembly.binding,
+      manifestHash: assembly.manifestHash,
+      output: {
+        artifactId: randomUUID(),
+        generation: "4",
+        bytes: 1024,
+        checksum: "c".repeat(64),
+      },
+      expiresAtMs: 601000,
+    };
+    const media = {
+      render: vi.fn(async () => {
+        const { binding: _binding, ...value } = output;
+        void _binding;
+        return value;
+      }),
+      outputInfo: vi.fn(async () => output),
+      cancel: vi.fn(async () => {}),
+      outputContent: vi.fn(
+        async (_access: unknown, range: string | undefined) =>
+          new Response(new Uint8Array(range ? 10 : 1024), {
+            status: range ? 206 : 200,
+            headers: {
+              "Content-Type": "video/mp4",
+              "Content-Length": range ? "10" : "1024",
+              ...(range ? { "Content-Range": "bytes 0-9/1024" } : {}),
+            },
+          }),
+      ),
+    };
+    const render = new FinalRender(f.admission, f.service, media, () => 1000),
+      delivery = new OutputDelivery(f.admission, render, media, () => 1000);
+    return {
+      ...f,
+      assembly,
+      media,
+      render,
+      delivery,
+      request: { assembly, turnstileToken: "synthetic" },
+    };
+  }
+  it.each(["preview", "output"])(
+    "does not reopen %s access after Clear during metadata lookup",
+    async (kind) => {
+      const f = await finalFixture(),
+        result = await f.render.run(f.context, f.request);
+      let release = () => {},
+        entered = () => {};
+      const gate = new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+        waiting = new Promise<void>((resolve) => {
+          entered = resolve;
+        });
+      const previewDescriptor = await f.port.preview.mock.results[0]!.value,
+        outputDescriptor = await f.media.outputInfo();
+      f.media.outputInfo.mockImplementation(async () => {
+        entered();
+        await gate;
+        return outputDescriptor;
+      });
+      const preview = new PreviewPlayback(
+        f.admission,
+        f.service,
+        {
+          previewInfo: async () => {
+            entered();
+            await gate;
+            return previewDescriptor;
+          },
+          previewContent: vi.fn(),
+        },
+        () => 1000,
+      );
+      const target = kind === "preview" ? preview : f.delivery;
+      const pending = target.open(
+        f.context,
+        kind === "preview" ? f.assembly : result,
+      );
+      const rejected = expect(pending).rejects.toThrow();
+      await waiting;
+      target.clear(f.context);
+      f.admission.clear(f.context);
+      release();
+      await rejected;
+      expect(f.media.render).toHaveBeenCalledTimes(1);
+      expect(f.provider.plan).toHaveBeenCalledTimes(1);
+    },
+  );
+  it("renders once, restores the published receipt, ranges/downloads repeatedly with zero new AI", async () => {
+    const f = await finalFixture(),
+      result = await f.render.run(f.context, f.request);
+    expect(f.render.verify(f.context, result)).toEqual(result);
+    expect(await f.render.restore(f.context, f.assembly)).toEqual(result);
+    await expect(f.render.run(f.context, f.request)).rejects.toThrow();
+    await f.delivery.open(f.context, result);
+    for (let i = 0; i < 2; i++) {
+      let received = 0;
+      const headers = vi.fn(),
+        target = new Writable({
+          write(chunk: Buffer, _encoding, callback) {
+            received += chunk.length;
+            callback();
+          },
+        });
+      await f.delivery.stream(f.context, "bytes=0-9", target, headers, true);
+      expect(received).toBe(10);
+      expect(headers).toHaveBeenCalledWith(
+        206,
+        expect.objectContaining({
+          "Content-Disposition": 'attachment; filename="clipbuilder.mp4"',
+        }),
+      );
+    }
+    expect(f.media.render).toHaveBeenCalledTimes(1);
+    expect(f.provider.plan).toHaveBeenCalledTimes(1);
+    expect(f.sourceProvider.analyze).toHaveBeenCalledTimes(0);
+    expect(f.media.cancel).toHaveBeenCalledTimes(0);
+    expect(() => f.delivery.clear({ ...f.context, csrf: "wrong" })).toThrow();
+    f.delivery.clear(f.context);
+    await expect(
+      f.delivery.stream(f.context, undefined, new Writable(), () => {}),
+    ).rejects.toThrow();
+  });
+  it.each(["metadata", "expired", "failed"])(
+    "never signs %s outputs and consumes the uncertain render",
+    async (kind) => {
+      const f = await finalFixture();
+      if (kind === "metadata")
+        f.media.outputInfo.mockResolvedValue({
+          ...(await f.media.outputInfo()),
+          output: { ...(await f.media.outputInfo()).output, generation: "999" },
+        });
+      if (kind === "expired")
+        f.media.outputInfo.mockResolvedValue({
+          ...(await f.media.outputInfo()),
+          expiresAtMs: 1000,
+        });
+      if (kind === "failed")
+        f.media.render.mockRejectedValue(new Error("synthetic"));
+      await expect(f.render.run(f.context, f.request)).rejects.toThrow();
+      await expect(f.render.run(f.context, f.request)).rejects.toThrow();
+      await expect(f.render.restore(f.context, f.assembly)).rejects.toThrow();
+      expect(f.media.render).toHaveBeenCalledTimes(1);
+      expect(f.media.cancel).toHaveBeenCalledTimes(1);
+      expect(f.provider.plan).toHaveBeenCalledTimes(1);
+    },
+  );
+  it("rejects unsigned manifests and unconfirmed output recovery before render", async () => {
+    const f = await finalFixture();
+    await expect(f.render.restore(f.context, f.assembly)).rejects.toThrow();
+    await expect(
+      f.render.run(f.context, {
+        ...f.request,
+        assembly: { ...f.assembly, manifestHash: "e".repeat(64) },
+      }),
+    ).rejects.toThrow();
+    expect(f.media.render).toHaveBeenCalledTimes(0);
+  });
+});
 
 describe("frozen assembly preview access", () => {
   it("restores the signed manifest and byte ranges with zero new AI or media preparation", async () => {

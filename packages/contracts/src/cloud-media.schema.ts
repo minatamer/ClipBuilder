@@ -125,6 +125,10 @@ export const mediaRenderResponseSchema = z
     expiresAtMs: z.number().int().positive(),
   })
   .strict();
+export const mediaOutputResponseSchema = mediaRenderResponseSchema
+  .extend({ binding: mediaBindingSchema })
+  .strict();
+export type MediaOutputResponse = z.infer<typeof mediaOutputResponseSchema>;
 export type MediaBinding = z.infer<typeof mediaBindingSchema>;
 export type MediaUploadRequest = z.infer<typeof mediaUploadRequestSchema>;
 export type MediaPrepareRequest = z.infer<typeof mediaPrepareRequestSchema>;

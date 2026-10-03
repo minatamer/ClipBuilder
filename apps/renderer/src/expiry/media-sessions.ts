@@ -11,6 +11,7 @@ import {
   type MediaPreviewRequest,
   type MediaPreviewResponse,
   type MediaPreviewAccess,
+  mediaOutputResponseSchema,
   type MediaSelectRequest,
   type MediaSelectResponse,
   type MediaBinding,
@@ -250,6 +251,11 @@ export class MediaSessions {
       record.intent.phase !== "prepared" ||
       !source ||
       !record.intent.sourceGeneration ||
+      (record.intent.manifestHash !== null &&
+        record.intent.manifestHash !== request.manifestHash) ||
+      (record.intent.selectedRange !== null &&
+        JSON.stringify(record.intent.selectedRange) !==
+          JSON.stringify(request.manifest.range)) ||
       source.fingerprint !== planned.fingerprint ||
       source.width !== planned.width ||
       source.height !== planned.height ||
@@ -268,6 +274,34 @@ export class MediaSessions {
       },
       record.generation,
     );
+  }
+  async outputArtifact(input: MediaPreviewAccess) {
+    const request = mediaPreviewAccessSchema.parse(input),
+      record = await this.active(request.binding),
+      intent = record.intent;
+    if (
+      intent.phase !== "complete" ||
+      intent.cleanupPending ||
+      !intent.output ||
+      intent.manifestHash !== request.manifestHash ||
+      (intent.outputExpiresAtMs ?? 0) <= this.now()
+    )
+      throw new MediaFailure("conflict");
+    const metadata = await this.store.artifactMetadata(
+      request.binding.sessionId,
+      intent.output.artifactId,
+      intent.output.generation,
+    );
+    if (
+      metadata.contentType !== "video/mp4" ||
+      metadata.bytes !== intent.output.bytes
+    )
+      throw new MediaFailure("invalid");
+    return mediaOutputResponseSchema.parse({
+      ...request,
+      output: intent.output,
+      expiresAtMs: intent.outputExpiresAtMs,
+    });
   }
   async claimSelected(input: MediaSelectRequest): Promise<IntentRecord> {
     const request = mediaSelectRequestSchema.parse(input),

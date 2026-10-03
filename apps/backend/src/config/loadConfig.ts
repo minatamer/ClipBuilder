@@ -7,7 +7,7 @@ import { readGrantKeys } from "../admission/processing.grant.js";
 
 export function loadConfig(environment: NodeJS.ProcessEnv): BackendConfig {
   if (
-    ["LIVE_UPLOAD_ENABLED", "LIVE_RENDER_ENABLED"].some(
+    ["LIVE_UPLOAD_ENABLED"].some(
       (key) =>
         environment[key] !== undefined &&
         environment[key] !== "" &&

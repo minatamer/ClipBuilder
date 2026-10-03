@@ -1,5 +1,18 @@
 # ClipBuilder frontend
 
+CL-011 connects explicit final export, receipt-checked output Range playback and
+attachment download. It deletes server source/proxies before publication success;
+output expires after ten minutes or at session expiry. Clear drains owned work and
+streams. Completed-output restore and download retries dispatch zero new jobs/AI.
+See [fixed output profile](../../docs/operations/RENDER_PROFILE.md).
+With `FAKE_MODE=true` and no keys, fixture UI cannot download; injected synthetic
+ports prove lifecycle and rejection behavior, not a real MP4. Real source/assembly
+and final rendering require keys/live flags (including `LIVE_RENDER_ENABLED`),
+paid/data/rights gates and independent private cloud/compute approval. Actual
+native pixels/audio/performance, devices, rights/licenses and rollout remain
+unchecked; no local AI model or weights are used.
+
+
 ## CL-010 read-only selected review
 
 Proceed reserves the selected assembly once, journals its frozen result and
@@ -10,7 +23,10 @@ Remotion Player uses `@clipbuilder/composition`, the prepared selected proxy,
 the manifest's 30fps clock and source start zero. Playback, mute and bounded
 timestamp seeks are ordinary read-only controls. Notes describe the actual
 continuous cut, source speech, captions, focus and extractive cards. Confirm
-export stays disabled until CL-011 supplies final delivery.
+export is connected by CL-011 to one admitted render. Signed final metadata is
+restored without redispatch; a decoded portrait frame and duration gate Download
+MP4. Retry access/download makes zero AI calls and uses existing output only.
+Download requested does not mean saved. See the [fixed render profile](../../docs/operations/RENDER_PROFILE.md).
 
 Playback media uses the fixed same-origin `/api/analysis/preview` URL, protected
 cookie and validated byte streaming. No playback capabilities enter the journal

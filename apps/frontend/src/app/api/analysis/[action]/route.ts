@@ -2,6 +2,7 @@ import {
   SAFE_ERROR_MESSAGES,
   GROUNDED_ANALYSIS_LIMITS,
   TEMPORARY_MEDIA_LIMITS,
+  PUBLIC_LIMITS,
 } from "@clipbuilder/contracts";
 
 async function proxy(
@@ -31,6 +32,9 @@ async function proxy(
       "clear",
       "assemble",
       "preview",
+      "render",
+      "render-result",
+      "output",
     ].includes(action) ||
     origin !== "http://localhost:3000" ||
     request.headers.get("origin") !== origin ||
@@ -59,7 +63,13 @@ async function proxy(
           size += chunk.value.byteLength;
           if (
             size >
-            (action === "assemble" || action === "preview"
+            ([
+              "assemble",
+              "preview",
+              "render",
+              "render-result",
+              "output",
+            ].includes(action)
               ? GROUNDED_ANALYSIS_LIMITS.responseBytes
               : GROUNDED_ANALYSIS_LIMITS.requestBytes)
           )
@@ -149,7 +159,7 @@ export async function GET(
       headers: { "Cache-Control": "no-store" },
     });
   if (
-    action !== "preview" ||
+    !["preview", "output", "download"].includes(action) ||
     url.origin !== "http://localhost:3000" ||
     url.search ||
     request.headers.get("sec-fetch-site") !== "same-origin"
@@ -173,7 +183,7 @@ export async function GET(
   };
   let upstream: Response | undefined;
   try {
-    upstream = await fetch("http://127.0.0.1:4000/v1/analysis/preview", {
+    upstream = await fetch(`http://127.0.0.1:4000/v1/analysis/${action}`, {
       headers: {
         Cookie: cookie[0]!,
         Origin: url.origin,
@@ -191,7 +201,10 @@ export async function GET(
       upstream.headers.get("content-type")?.split(";")[0] !== "video/mp4" ||
       !Number.isSafeInteger(length) ||
       length <= 0 ||
-      length > TEMPORARY_MEDIA_LIMITS.proxyBytes
+      length >
+        (action === "preview"
+          ? TEMPORARY_MEDIA_LIMITS.proxyBytes
+          : PUBLIC_LIMITS.maxOutputBytes)
     )
       throw new Error();
     const headers = new Headers({
@@ -201,6 +214,11 @@ export async function GET(
       "Accept-Ranges": "bytes",
       "X-Content-Type-Options": "nosniff",
     });
+    if (action === "download")
+      headers.set(
+        "Content-Disposition",
+        'attachment; filename="clipbuilder.mp4"',
+      );
     const contentRange = upstream.headers.get("content-range");
     if (upstream.status === 206) {
       if (!contentRange || !/^bytes \d+-\d+\/\d+$/.test(contentRange))

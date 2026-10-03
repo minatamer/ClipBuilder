@@ -12,6 +12,10 @@ import {
   selectedAssemblyResultSchema,
   type SelectedAssemblyRequest,
   type SelectedAssemblyResult,
+  finalRenderRequestSchema,
+  finalRenderResultSchema,
+  type FinalRenderRequest,
+  type FinalRenderResult,
 } from "@clipbuilder/contracts";
 import { SampleApiFailure, sampleFailure } from "../sample/sample.api";
 
@@ -85,6 +89,32 @@ export function createSourceAnalysisApi(
         "assemble",
         selectedAssemblyRequestSchema.parse(input),
         selectedAssemblyResultSchema,
+        signal,
+      ),
+    render: (input: FinalRenderRequest, signal: AbortSignal) =>
+      call(
+        "render",
+        finalRenderRequestSchema.parse(input),
+        finalRenderResultSchema,
+        signal,
+      ),
+    renderResult: (input: SelectedAssemblyResult, signal: AbortSignal) =>
+      call(
+        "render-result",
+        selectedAssemblyResultSchema.parse(input),
+        finalRenderResultSchema,
+        signal,
+      ),
+    output: (input: FinalRenderResult, signal: AbortSignal) =>
+      call(
+        "output",
+        finalRenderResultSchema.parse(input),
+        z
+          .object({
+            ready: z.literal(true),
+            expiresAtMs: z.number().int().positive(),
+          })
+          .strict(),
         signal,
       ),
     preview: (input: SelectedAssemblyResult, signal: AbortSignal) =>

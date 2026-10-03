@@ -90,7 +90,40 @@ export class MediaOperations {
       return result;
     });
   }
-  async previewContent(
+  previewContent(
+    input: MediaPreviewAccess,
+    range: string | undefined,
+    destination: Writable,
+    signal: AbortSignal,
+    headers: (status: number, fields: Record<string, string>) => void,
+  ) {
+    return this.artifactContent(
+      "preview",
+      input,
+      range,
+      destination,
+      signal,
+      headers,
+    );
+  }
+  outputContent(
+    input: MediaPreviewAccess,
+    range: string | undefined,
+    destination: Writable,
+    signal: AbortSignal,
+    headers: (status: number, fields: Record<string, string>) => void,
+  ) {
+    return this.artifactContent(
+      "output",
+      input,
+      range,
+      destination,
+      signal,
+      headers,
+    );
+  }
+  private async artifactContent(
+    kind: "preview" | "output",
     input: MediaPreviewAccess,
     range: string | undefined,
     destination: Writable,
@@ -114,8 +147,13 @@ export class MediaOperations {
     });
     this.streams.set(key, { binding: input.binding, controller, done });
     try {
-      const descriptor = await this.sessions.previewArtifact(input),
-        bytes = descriptor.artifact.bytes;
+      const descriptor =
+          kind === "preview"
+            ? await this.sessions.previewArtifact(input)
+            : await this.sessions.outputArtifact(input),
+        artifact =
+          "artifact" in descriptor ? descriptor.artifact : descriptor.output,
+        bytes = artifact.bytes;
       let selected;
       try {
         selected = mediaByteRange(range, bytes);
@@ -144,8 +182,8 @@ export class MediaOperations {
       });
       await this.sessions.store.stream(
         sessionId,
-        descriptor.artifact.artifactId,
-        descriptor.artifact.generation,
+        artifact.artifactId,
+        artifact.generation,
         selected,
         destination,
         owned,

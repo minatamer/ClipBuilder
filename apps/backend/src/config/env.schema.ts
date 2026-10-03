@@ -69,6 +69,7 @@ export const environmentShape = {
   PAID_DEMO_ENABLED: booleanValue(false),
   LIVE_ANALYSIS_ENABLED: booleanValue(false),
   LIVE_ASSEMBLY_ENABLED: booleanValue(false),
+  LIVE_RENDER_ENABLED: booleanValue(false),
   LIVE_IMAGE_GENERATION_ENABLED: booleanValue(false),
   ACTIVE_SPEAKER_ENABLED: booleanValue(true),
   TREND_SIGNALS_ENABLED: booleanValue(false),
@@ -159,6 +160,7 @@ export const environmentSchema = rawEnvironmentSchema
     const liveFlags = [
       environment.LIVE_ANALYSIS_ENABLED,
       environment.LIVE_ASSEMBLY_ENABLED,
+      environment.LIVE_RENDER_ENABLED,
       environment.LIVE_IMAGE_GENERATION_ENABLED,
     ];
     const anyLiveFeature = liveFlags.some(Boolean);
@@ -300,6 +302,15 @@ export const environmentSchema = rawEnvironmentSchema
         "Selected-range assembly requires protected source analysis.",
         "LIVE_ASSEMBLY_ENABLED",
       );
+    if (
+      environment.LIVE_RENDER_ENABLED &&
+      (!environment.LIVE_ASSEMBLY_ENABLED ||
+        environment.ADMISSION_MAX_PROCESS_DISPATCHES < 4)
+    )
+      issue(
+        "Final rendering requires frozen assembly and four bounded admitted actions.",
+        "LIVE_RENDER_ENABLED",
+      );
 
     if (
       environment.PROCESSING_GRANTS_ENABLED &&
@@ -412,6 +423,7 @@ export const environmentSchema = rawEnvironmentSchema
     features: {
       liveAnalysis: environment.LIVE_ANALYSIS_ENABLED,
       liveAssembly: environment.LIVE_ASSEMBLY_ENABLED,
+      liveRender: environment.LIVE_RENDER_ENABLED,
       liveImageGeneration: environment.LIVE_IMAGE_GENERATION_ENABLED,
       activeSpeaker: environment.ACTIVE_SPEAKER_ENABLED,
       trendSignals: environment.TREND_SIGNALS_ENABLED,

@@ -10,7 +10,7 @@ export const processingActionSchema = z.enum([
   "transcription",
   "candidate-analysis",
   "visual-plan",
-  "image-generation",
+  "render",
 ]);
 export type ProcessingAction = z.infer<typeof processingActionSchema>;
 export const processingGrantRequestSchema = z

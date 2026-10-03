@@ -127,7 +127,7 @@ export class ProcessingAdmission {
         transcription: nonces.transcription!,
         "candidate-analysis": nonces["candidate-analysis"]!,
         "visual-plan": nonces["visual-plan"]!,
-        "image-generation": nonces["image-generation"]!,
+        render: nonces.render!,
       },
     };
     const actions = Object.fromEntries(
@@ -147,7 +147,7 @@ export class ProcessingAdmission {
         transcription: actions.transcription!,
         "candidate-analysis": actions["candidate-analysis"]!,
         "visual-plan": actions["visual-plan"]!,
-        "image-generation": actions["image-generation"]!,
+        render: actions.render!,
       },
     });
     this.grantTimes.push(issuedAtMs);

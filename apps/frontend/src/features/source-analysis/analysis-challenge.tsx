@@ -29,7 +29,7 @@ export function AnalysisChallenge({
   onFailure,
 }: {
   siteKey: string;
-  action: "transcription" | "candidate-analysis" | "visual-plan";
+  action: "transcription" | "candidate-analysis" | "visual-plan" | "render";
   sessionId: string;
   onToken(token: string): void;
   onFailure(): void;

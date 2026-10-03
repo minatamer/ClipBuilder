@@ -1,8 +1,5 @@
-import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
 import type { Writable } from "node:stream";
 import {
-  mediaByteRange,
   mediaPreviewResponseSchema,
   TEMPORARY_MEDIA_LIMITS,
   type MediaPreviewResponse,
@@ -14,6 +11,8 @@ import type {
 } from "../admission/processing.admission.js";
 import type { SelectedAssembly } from "../assembly/selected-assembly.usecase.js";
 import { ApplicationError } from "../http/errorMapper.js";
+
+import { streamArtifact } from "./artifact-stream.js";
 
 export interface PreviewMedia {
   previewInfo(
@@ -61,6 +60,7 @@ export class PreviewPlayback {
     )
       throw new ApplicationError({ code: "SESSION_INVALID" });
     context.signal?.throwIfAborted();
+    this.assembly.verify(context, input);
     this.references.set(result.binding.sessionId, descriptor);
     return { ready: true as const, expiresAtMs: descriptor.expiresAtMs };
   }
@@ -77,65 +77,23 @@ export class PreviewPlayback {
       descriptor = this.references.get(session.sessionId);
     if (!descriptor || descriptor.expiresAtMs <= this.now())
       throw new ApplicationError({ code: "SESSION_INVALID" });
-    let selected;
-    try {
-      selected = mediaByteRange(range, descriptor.artifact.bytes);
-    } catch {
-      throw new ApplicationError({ code: "INVALID_REQUEST" });
-    }
-    const signal = AbortSignal.any([
-      context.signal ?? new AbortController().signal,
-      AbortSignal.timeout(
-        Math.max(1, Math.min(60_000, descriptor.expiresAtMs - this.now())),
-      ),
-    ]);
-    const response = await this.media.previewContent(
-        { binding: descriptor.binding, manifestHash: descriptor.manifestHash },
-        range,
-        signal,
-      ),
-      length = selected.end - selected.start + 1,
-      contentRange = `bytes ${selected.start}-${selected.end}/${descriptor.artifact.bytes}`;
-    try {
-      if (
-        response.status !== (selected.partial ? 206 : 200) ||
-        !response.body ||
-        response.headers.get("content-type")?.split(";")[0] !== "video/mp4" ||
-        response.headers.get("content-length") !== String(length) ||
-        response.headers.get("content-range") !==
-          (selected.partial ? contentRange : null)
-      )
-        throw new ApplicationError({ code: "INVALID_REQUEST" });
-      headers(response.status, {
-        "Content-Type": "video/mp4",
-        "Content-Length": String(length),
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "no-store",
-        "X-Content-Type-Options": "nosniff",
-        ...(selected.partial ? { "Content-Range": contentRange } : {}),
-      });
-      const body = response.body;
-      async function* chunks() {
-        const reader = body.getReader();
-        let count = 0;
-        try {
-          for (;;) {
-            const value = await reader.read();
-            if (value.done) break;
-            count += value.value.byteLength;
-            if (count > length) throw new Error("invalid-media");
-            yield value.value;
-          }
-          if (count !== length) throw new Error("invalid-media");
-        } finally {
-          await reader.cancel().catch(() => undefined);
-          reader.releaseLock();
-        }
-      }
-      await pipeline(Readable.from(chunks()), destination, { signal });
-    } finally {
-      if (response.body && !response.body.locked)
-        await response.body.cancel().catch(() => undefined);
-    }
+    await streamArtifact({
+      bytes: descriptor.artifact.bytes,
+      expiresAtMs: descriptor.expiresAtMs,
+      now: this.now(),
+      range,
+      signal: context.signal,
+      destination,
+      headers,
+      fetch: (signal) =>
+        this.media.previewContent(
+          {
+            binding: descriptor.binding,
+            manifestHash: descriptor.manifestHash,
+          },
+          range,
+          signal,
+        ),
+    });
   }
 }

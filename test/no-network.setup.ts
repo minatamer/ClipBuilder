@@ -12,6 +12,7 @@ const deterministicEnvironment = {
   ADMISSION_MAX_PROCESS_DISPATCHES: "0",
   LIVE_ANALYSIS_ENABLED: "false",
   LIVE_ASSEMBLY_ENABLED: "false",
+  LIVE_RENDER_ENABLED: "false",
   LIVE_IMAGE_GENERATION_ENABLED: "false",
   CLOUD_RENDER_ENVIRONMENT: "disabled",
   CLOUD_SPEND_APPROVED: "false",

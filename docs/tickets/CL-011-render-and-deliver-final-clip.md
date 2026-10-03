@@ -2,17 +2,69 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+Status: locally complete; validate pass 2 has no actionable local findings. All five settled root gates and 592 synthetic tests in 60 files pass. Real-media, provider, cloud and owner gates remain deferred.
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
 Confirm export invokes one authenticated standard Node Remotion renderer on our Cloud Run compute. Validate 1080×1920/30fps AVC/AAC 10–60s MP4/200-MiB cap and private range stream. Delete raw/proxies/assets immediately on validated output publication; output window ten minutes/session expiry. Download initiation is not completion; retry makes zero AI calls.
 
-Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
+Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. The owner authorized local execute/validate loops and immediate file-level ticket-prefixed commits through CL-015 on 2026-10-03. No cloud provisioning, login, credential use, private upload, paid call, deployment or usage polling is authorized.
 
 - [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
-- [ ] Implement and verify this current packet after approval.
-- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+- [x] Implement and verify the locally buildable current packet.
+- [x] Record local checks and all remaining rights/AI/cloud/license/device gates.
+
+## Local execution evidence — 2026-10-03
+
+Implemented a distinct render admission action (replacing the unused image action;
+four actions total), signed frozen assembly verification, one renderer dispatch,
+output metadata/generation verification and final receipt. Completed-output lookup
+can restore a lost response only after a completed server action; uncertainty never
+redispatches. Renderer publication deletes source/proxies before delivery and keeps
+only the final generation. Output-info/content remain private; browser accesses
+fixed cookie-protected output/download paths with bounded single Range streams.
+
+Frontend journals pending/uncertain/complete final markers under the frozen source,
+uses distinct rendering/result states, explicit Confirm export and indeterminate
+real progress. Result uses the existing portrait/glass controls and Soon teasers.
+Download is disabled until a decoded 1080 × 1920 frame/duration check; copy reports
+request initiation only. Expiry, Clear and downloaded-copy limitations are explicit.
+Native validation checks fixed MP4 profile/timing and representative decoded frames
+and whole audio before publication. [Profile](../operations/RENDER_PROFILE.md).
+
+Fake/no-key checks use synthetic providers, output bytes and storage/job transports;
+no actual MP4 quality claim follows. Real providers require keys/live/data/paid
+approvals; cloud compute/IAM/storage approval is separate. No local AI weights or
+runtime are used. Native full-fixture/pixel/audio sync/parity/performance, device
+playback/download, font/license/rights, numerical budget, actual image/cloud/release
+and owner-only evidence remain unchecked under the owner's deferred-test decision.
+These are handoff gates, not blockers to the next local packet.
+
+Validation pass 1: Meets ticket with concerns for the locally buildable scope.
+One Medium finding at backend preview/output `open`: Clear during a pending
+metadata lookup could restore a stale access reference. Both independently added
+gated regressions failed before the fix (returned ready after Clear). Rechecking
+the signed completed-action receipt after metadata await makes both reject.
+First-pass tests covered Clear after opening, not Clear during metadata lookup;
+no finding was ignored. Pass 2 rechecks the complete tracked/untracked diff,
+current packet, routes/composition, source/receipt/generation/range binding,
+uncertainty, expiry/Clear cleanup, defaults, app boundaries and disclosures.
+Verdict: Meets the locally buildable ticket. No actionable local findings.
+
+Covered: explicit single render and zero-AI retries; private output publication
+and source/proxy deletion; immutable result/journal/metadata restore; read-only
+portrait result, decoded-frame download gate and truthful initiation; safe bounded
+streams, cancel/expiry and resource cleanup; owning profile/config/service docs.
+Unverified: the real-media/provider/cloud/owner evidence listed above.
+
+Settled checks: `corepack pnpm format:check`, `lint`, `typecheck`, `test:unit`,
+`build`, and `git diff --check` pass; 592 synthetic tests in 60 files (root 20/3,
+contracts 58/5, composition 3/1, backend 190/13, renderer 45/10, frontend 276/28).
+Focused final delivery/config: 41 backend checks; renderer output/profile 14;
+frontend final flow 9 and workspace/bridge 38. Validate itself is read-only and
+uses inspected evidence; no full suite is run inside that phase.
+No app service, external request, credential access, install or deployment occurred.
+Transient injected loopback listeners and owned scratch/streams clean up in tests.
 
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>

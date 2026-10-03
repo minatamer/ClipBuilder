@@ -12,6 +12,8 @@ import {
   type AssemblyBundleV1,
   type OperationStatusV1,
   selectedAssemblyResultSchema,
+  finalRenderResultSchema,
+  hasSameRenderedAssembly,
 } from "@clipbuilder/contracts";
 
 import { selectAvailableActions, selectIsClearable } from "./session.selectors";
@@ -226,6 +228,42 @@ export function clippingSessionReducer(
     });
   }
 
+  if (event.type === "CLOUD_RENDER_STARTED") {
+    if (state.stage !== "cloud-review") return reject(state);
+    return accept({
+      stage: "cloud-rendering",
+      identity: state.identity,
+      analysis: state.analysis,
+      assembly: state.result,
+      diagnosticCode: null,
+    });
+  }
+  if (event.type === "CLOUD_RENDER_COMPLETED") {
+    const parsed = finalRenderResultSchema.safeParse(event.result);
+    if (
+      (state.stage !== "cloud-rendering" &&
+        state.stage !== "cloud-render-failed") ||
+      !parsed.success ||
+      !hasSameRenderedAssembly(parsed.data, state.assembly)
+    )
+      return reject(state, "invalid-manifest");
+    return accept({
+      stage: "cloud-result",
+      identity: state.identity,
+      analysis: state.analysis,
+      assembly: state.assembly,
+      result: parsed.data,
+      diagnosticCode: null,
+    });
+  }
+  if (event.type === "CLOUD_RENDER_FAILED") {
+    if (state.stage !== "cloud-rendering") return reject(state);
+    return accept({
+      ...state,
+      stage: "cloud-render-failed",
+      failure: event.failure,
+    });
+  }
   if (event.type === "REVIEW_BUNDLES_REFRESHED") {
     if (state.stage !== "clip-review" && state.stage !== "render-failed")
       return reject(state);
@@ -919,6 +957,9 @@ export function clippingSessionReducer(
     case "cloud-assembling":
     case "cloud-assembly-failed":
     case "cloud-review":
+    case "cloud-rendering":
+    case "cloud-render-failed":
+    case "cloud-result":
     case "expired":
     case "result":
       return reject(state);

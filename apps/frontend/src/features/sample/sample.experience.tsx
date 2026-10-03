@@ -30,6 +30,8 @@ import { CandidateReview } from "./candidate.review";
 import { ClipReview } from "./clip.review";
 import { CloudClipReview } from "./cloud-clip.review";
 import { runSelectedAssembly } from "../assembly/selected-assembly.flow";
+import { CloudResult } from "./cloud-result";
+import { runFinalRender } from "../render/final-render.flow";
 import { ResultPreview } from "./result-preview";
 import { ProcessingStatus } from "./processing-status";
 import { developmentInput } from "./development.input";
@@ -205,7 +207,7 @@ function SampleScreen({
   const [analysisLabel, setAnalysisLabel] = useState("Preparing analysis");
   const [challenge, setChallenge] = useState<{
     sessionId: string;
-    action: "transcription" | "candidate-analysis" | "visual-plan";
+    action: "transcription" | "candidate-analysis" | "visual-plan" | "render";
   } | null>(null);
   const challengePromise = useRef<{
     resolve(token: string): void;
@@ -235,7 +237,10 @@ function SampleScreen({
     state.stage === "clip-review" || state.stage === "render-failed"
       ? state.review
       : null;
-  const assembly = "assembly" in state ? state.assembly : null;
+  const assembly =
+    state.stage === "clip-review" || state.stage === "render-failed"
+      ? state.assembly
+      : null;
 
   useEffect(() => {
     title.current?.focus();
@@ -360,7 +365,7 @@ function SampleScreen({
 
   async function requestChallenge(
     sessionId: string,
-    action: "transcription" | "candidate-analysis" | "visual-plan",
+    action: "transcription" | "candidate-analysis" | "visual-plan" | "render",
     signal: AbortSignal,
   ) {
     signal.throwIfAborted();
@@ -558,7 +563,48 @@ function SampleScreen({
         });
     });
   };
+  const restoreOutput = () => {
+    if (!workspace || state.stage !== "cloud-render-failed") return;
+    const assembled = state.assembly;
+    void run(async (signal) => {
+      const session = await cloudApi.session(signal);
+      if (session.sessionId !== assembled.binding.sessionId) throw new Error();
+      const result = await cloudApi.renderResult(assembled, signal);
+      await workspace.storeFinalRender(result, signal);
+      if (!signal.aborted) dispatch({ type: "CLOUD_RENDER_COMPLETED", result });
+    });
+  };
   const render = () => {
+    if (
+      workspace &&
+      state.stage === "cloud-review" &&
+      config.liveRenderEnabled &&
+      config.processingSiteKey &&
+      !workspace.snapshot?.cloudRender
+    ) {
+      void run(async (signal) => {
+        dispatch({ type: "CLOUD_RENDER_STARTED" });
+        try {
+          const result = await runFinalRender({
+            workspace,
+            api: cloudApi,
+            signal,
+            challenge: requestChallenge,
+            label: setAnalysisLabel,
+          });
+          if (!signal.aborted)
+            dispatch({ type: "CLOUD_RENDER_COMPLETED", result });
+        } catch (error) {
+          if (!signal.aborted)
+            dispatch({
+              type: "CLOUD_RENDER_FAILED",
+              failure: localMediaFailure(error),
+            });
+          throw error;
+        }
+      });
+      return;
+    }
     if (
       localMode ||
       state.stage !== "clip-review" ||
@@ -606,11 +652,12 @@ function SampleScreen({
     state.stage === "analyzing" ||
     state.stage === "assembling" ||
     state.stage === "cloud-assembling" ||
+    state.stage === "cloud-rendering" ||
     state.stage === "rendering" ||
     (state.stage === "local-inspection" &&
       state.localSource.validation.status === "accepted");
   const processingLabel =
-    state.stage === "cloud-assembling"
+    state.stage === "cloud-assembling" || state.stage === "cloud-rendering"
       ? analysisLabel
       : state.stage === "uploading"
         ? "Uploading video"
@@ -646,6 +693,9 @@ function SampleScreen({
             "candidates",
             "clip-review",
             "cloud-review",
+            "cloud-rendering",
+            "cloud-render-failed",
+            "cloud-result",
             "result",
             "local-preparing",
             "analysis-confirmation",
@@ -664,6 +714,9 @@ function SampleScreen({
             "assembling",
             "cloud-assembling",
             "cloud-review",
+            "cloud-rendering",
+            "cloud-render-failed",
+            "cloud-result",
             "cloud-assembly-failed",
             "assembly-failed",
             "clip-review",
@@ -737,17 +790,20 @@ function SampleScreen({
                 <Button
                   icon={ArrowRight}
                   disabled={
-                    localMode ||
                     busy ||
                     loading ||
-                    !actions.includes("confirm-render")
+                    (state.stage === "cloud-review"
+                      ? !config.liveRenderEnabled ||
+                        !config.processingSiteKey ||
+                        !!workspace?.snapshot?.cloudRender
+                      : localMode || !actions.includes("confirm-render"))
                   }
                   onClick={render}
                 >
                   Confirm export
                 </Button>
               )}
-              {state.stage === "result" && (
+              {(state.stage === "result" || state.stage === "cloud-result") && (
                 <>
                   <Button variant="secondary" onClick={clear}>
                     Start over
@@ -762,6 +818,7 @@ function SampleScreen({
                   "analysis-failed",
                   "assembly-failed",
                   "cloud-assembly-failed",
+                  "cloud-render-failed",
                   "render-failed",
                 ].includes(state.stage)) && (
                 <Button onClick={clear}>
@@ -999,6 +1056,34 @@ function SampleScreen({
             key={state.result.manifestHash}
             analysis={state.analysis.bundle}
             result={state.result}
+            api={cloudApi}
+          />
+        )}
+        {state.stage === "cloud-review" && (
+          <p className={styles.rights}>
+            Confirm one final 1080 � 1920, 30 fps H.264/AAC MP4 export. This
+            uses private cloud compute, makes zero AI calls, and deletes
+            temporary server source and preview copies after validated
+            publication. The output remains available for ten minutes or until
+            session expiry, whichever comes first.
+          </p>
+        )}
+        {state.stage === "cloud-render-failed" && (
+          <section className={styles.empty}>
+            <p role="alert">
+              Export could not be confirmed. Checking for an existing output
+              will never start another render.
+            </p>
+            <Button onClick={restoreOutput} disabled={busy}>
+              Check completed export
+            </Button>
+          </section>
+        )}
+        {state.stage === "cloud-result" && (
+          <CloudResult
+            key={state.result.output.artifactId}
+            result={state.result}
+            assembly={state.assembly}
             api={cloudApi}
           />
         )}

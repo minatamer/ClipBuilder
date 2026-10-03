@@ -45,6 +45,23 @@ const liveAnalysisEnvironment = (): NodeJS.ProcessEnv => ({
 });
 
 describe("loadConfig", () => {
+  it("requires frozen assembly, cloud/paid gates and all four actions for final rendering", () => {
+    const base = {
+      ...liveAnalysisEnvironment(),
+      LIVE_RENDER_ENABLED: "true",
+      LIVE_ASSEMBLY_ENABLED: "true",
+      ADMISSION_MAX_PROCESS_DISPATCHES: "4",
+    };
+    expect(loadConfig(base).features.liveRender).toBe(true);
+    for (const overrides of [
+      { LIVE_ASSEMBLY_ENABLED: "false" },
+      { ADMISSION_MAX_PROCESS_DISPATCHES: "3" },
+      { CLOUD_SPEND_APPROVED: "false" },
+      { PAID_DEMO_ENABLED: "false" },
+    ])
+      expect(() => loadConfig({ ...base, ...overrides })).toThrow();
+    expect(loadConfig({}).features.liveRender).toBe(false);
+  });
   it("requires source analysis and three reserved actions before live selected-range assembly", () => {
     expect(() =>
       loadConfig({

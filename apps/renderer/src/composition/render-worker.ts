@@ -88,6 +88,8 @@ export async function renderWorker(jobPath: string) {
       puppeteerInstance: browser,
       codec: "h264",
       audioCodec: "aac",
+      audioBitrate: "160k",
+      sampleRate: 48000,
       pixelFormat: "yuv420p",
       outputLocation: job.output,
       concurrency: 2,

@@ -185,6 +185,12 @@ export class NodeMediaPipeline implements MediaPipeline {
       },
       maxStdout: 16_384,
     });
-    await validateOutput(output, this.tools.ffprobe, duration * 1000, signal);
+    await validateOutput(
+      output,
+      this.tools.ffprobe,
+      this.tools.ffmpeg,
+      duration * 1000,
+      signal,
+    );
   }
 }

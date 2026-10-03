@@ -55,7 +55,35 @@ export function restoreLocalWorkspace(
       if (
         record.cloudAssembly.status === "complete" &&
         record.cloudAssembly.result
-      )
+      ) {
+        if (record.cloudRender) {
+          if (
+            record.cloudRender.status === "complete" &&
+            record.cloudRender.result
+          )
+            return {
+              stage: "cloud-result",
+              identity,
+              analysis,
+              assembly: record.cloudAssembly.result,
+              result: record.cloudRender.result,
+              diagnosticCode: null,
+            };
+          return {
+            stage: "cloud-render-failed",
+            identity,
+            analysis,
+            assembly: record.cloudAssembly.result,
+            failure: {
+              code: "MODEL_OUTPUT_REJECTED",
+              message:
+                "Export could not be confirmed. Check for a completed output or clear media.",
+              retryable: false,
+              requestId: `req_${"0".repeat(32)}`,
+            },
+            diagnosticCode: null,
+          };
+        }
         return {
           stage: "cloud-review",
           identity,
@@ -63,6 +91,7 @@ export function restoreLocalWorkspace(
           result: record.cloudAssembly.result,
           diagnosticCode: null,
         };
+      }
       return {
         stage: "cloud-assembly-failed",
         identity,

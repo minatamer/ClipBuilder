@@ -624,6 +624,64 @@ describe("browser workspace publication and lifecycle", () => {
     expect(restored.snapshot).toBeNull();
     await restored.dispose();
   });
+  it("reserves final export atomically, validates source identity and restores only an existing result", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    const source = f.owner.snapshot!.source!,
+      grounded = {
+        binding: {
+          sessionId: "ses_" + "c".repeat(22),
+          sourceRevision: source.media.sourceRevision,
+          fingerprint: source.fingerprint,
+        },
+        generation: "12",
+        analysis: { ...analysis, media: source.media },
+        receipt: "synthetic",
+      };
+    await f.owner.markCloudAnalysis("pending");
+    await f.owner.storeGroundedAnalysis(grounded);
+    const assembled = await selectedAssemblyFixture(grounded);
+    await f.owner.select(assembled.candidateId);
+    await f.owner.markCloudAssembly("pending");
+    await f.owner.storeSelectedAssembly(assembled);
+    const pending = f.owner.markCloudRender("pending");
+    await expect(f.owner.markCloudRender("pending")).rejects.toThrow();
+    await pending;
+    expect(restoreLocalWorkspace(f.owner.snapshot!).stage).toBe(
+      "cloud-render-failed",
+    );
+    const result = {
+      version: 1 as const,
+      binding: assembled.binding,
+      manifestHash: assembled.manifestHash,
+      output: {
+        artifactId: "00000000-0000-4000-8000-000000000001",
+        generation: "4",
+        bytes: 1024,
+        checksum: "e".repeat(64),
+      },
+      expiresAtMs: f.ports.now() + 600000,
+      receipt: "synthetic",
+    };
+    await expect(
+      f.owner.storeFinalRender(
+        { ...result, manifestHash: "b".repeat(64) },
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow();
+    await f.owner.storeFinalRender(result, new AbortController().signal);
+    await f.owner.dispose();
+    const restored = new BrowserWorkspace(f.ports);
+    await restored.initialize();
+    expect(restoreLocalWorkspace(restored.snapshot!).stage).toBe(
+      "cloud-result",
+    );
+    await expect(restored.markCloudRender("pending")).rejects.toThrow();
+    await restored.clear();
+    expect(restored.snapshot).toBeNull();
+    await restored.dispose();
+  });
   it("revalidates a journaled manifest hash before reopening review and retains remote cleanup", async () => {
     const f = fixture();
     await f.owner.initialize();

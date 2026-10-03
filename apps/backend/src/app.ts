@@ -42,6 +42,8 @@ export function createApplication(config: BackendConfig): Express {
         config.session.csrfAllowedOrigins,
         processing?.assembly ?? null,
         processing?.preview ?? null,
+        processing?.render ?? null,
+        processing?.output ?? null,
       ),
     );
   if (admission)
@@ -64,7 +66,8 @@ export function createApplication(config: BackendConfig): Express {
         ...(analysis ? { processingSiteKey: config.turnstile.siteKey } : {}),
         liveAssemblyEnabled:
           processing?.preview !== null && processing?.preview !== undefined,
-        liveRenderEnabled: false,
+        liveRenderEnabled:
+          processing?.output !== null && processing?.output !== undefined,
         limits: {
           sourceBytes: config.limits.sourceBytes,
           sourceSeconds: config.limits.sourceSeconds,

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { stat, readFile, rm } from "node:fs/promises";
 import { z } from "zod";
 import {
   MEDIA_LIMITS,
@@ -21,6 +21,8 @@ const streamSchema = z.object({
   duration: z.coerce.number().finite().optional(),
   sample_rate: z.coerce.number().optional(),
   channels: z.number().optional(),
+  pix_fmt: z.string().optional(),
+  sample_aspect_ratio: z.string().optional(),
   side_data_list: z
     .array(z.object({ rotation: z.number().optional() }))
     .optional(),
@@ -135,27 +137,142 @@ export async function inspectSource(
 export async function validateOutput(
   path: string,
   ffprobe: string,
+  ffmpeg: string,
   durationMs: number,
   signal: AbortSignal,
 ) {
   const info = await stat(path),
-    probe = await probeMedia(path, ffprobe, signal),
-    video = probe.streams.find((s) => s.codec_type === "video"),
-    audio = probe.streams.find((s) => s.codec_type === "audio");
-  if (
-    info.size <= 0 ||
-    info.size > PUBLIC_LIMITS.maxOutputBytes ||
-    video?.codec_name !== "h264" ||
-    audio?.codec_name !== "aac" ||
-    video.width !== 1080 ||
-    video.height !== 1920 ||
-    video.avg_frame_rate !== "30/1" ||
-    Math.abs(probe.format.duration * 1000 - durationMs) > 100
-  )
-    throw new MediaFailure("invalid");
+    probe = await probeMedia(path, ffprobe, signal);
+  assertOutputProbe(probe, info.size, durationMs);
+  const samples = [0, durationMs / 2, Math.max(0, durationMs - 1000 / 30)],
+    files = samples.map((_, index) => `${path}.frame-${index}.png`),
+    audioPath = `${path}.audio.pcm`;
+  try {
+    for (const [index, time] of samples.entries()) {
+      const file = files[index]!;
+      await runOwnedProcess(
+        ffmpeg,
+        [
+          "-hide_banner",
+          "-nostdin",
+          "-loglevel",
+          "error",
+          "-xerror",
+          "-y",
+          "-protocol_whitelist",
+          "file,pipe",
+          "-ss",
+          (time / 1000).toFixed(6),
+          "-i",
+          path,
+          "-map",
+          "0:v:0",
+          "-frames:v",
+          "1",
+          "-vf",
+          "scale=32:32",
+          "-c:v",
+          "png",
+          "-threads",
+          "1",
+          file,
+        ],
+        signal,
+      );
+      const size = await stat(file);
+      if (size.size < 24 || size.size > 65536)
+        throw new MediaFailure("invalid");
+      const png = await readFile(file);
+      if (
+        !png
+          .subarray(0, 8)
+          .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ||
+        png.readUInt32BE(16) !== 32 ||
+        png.readUInt32BE(20) !== 32
+      )
+        throw new MediaFailure("invalid");
+    }
+    await runOwnedProcess(
+      ffmpeg,
+      [
+        "-hide_banner",
+        "-nostdin",
+        "-loglevel",
+        "error",
+        "-xerror",
+        "-y",
+        "-protocol_whitelist",
+        "file,pipe",
+        "-i",
+        path,
+        "-map",
+        "0:a:0",
+        "-vn",
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
+        "-c:a",
+        "pcm_s16le",
+        "-f",
+        "s16le",
+        audioPath,
+      ],
+      signal,
+    );
+    const decoded = await stat(audioPath);
+    if (
+      decoded.size <= 0 ||
+      decoded.size % 2 !== 0 ||
+      Math.abs(decoded.size / 32 - durationMs) > 100
+    )
+      throw new MediaFailure("invalid");
+  } finally {
+    for (const file of [...files, audioPath]) await rm(file, { force: true });
+  }
   return {
     bytes: info.size,
     durationMs: Math.round(probe.format.duration * 1000),
     checksum: await fileChecksum(path, signal),
   };
+}
+export function assertOutputProbe(
+  value: unknown,
+  bytes: number,
+  durationMs: number,
+) {
+  const probe = probeSchema.parse(value),
+    video = probe.streams.find((s) => s.codec_type === "video"),
+    audio = probe.streams.find((s) => s.codec_type === "audio");
+  if (
+    !Number.isSafeInteger(bytes) ||
+    bytes <= 0 ||
+    bytes > PUBLIC_LIMITS.maxOutputBytes ||
+    durationMs < 10000 ||
+    durationMs > 60000 ||
+    !Number.isFinite(durationMs) ||
+    !probe.format.format_name.split(",").includes("mp4") ||
+    video?.codec_name !== "h264" ||
+    audio?.codec_name !== "aac" ||
+    video.width !== 1080 ||
+    video.height !== 1920 ||
+    video.avg_frame_rate !== "30/1" ||
+    video.pix_fmt !== "yuv420p" ||
+    video.sample_aspect_ratio !== "1:1" ||
+    ![1, 2].includes(audio.channels ?? 0) ||
+    audio.sample_rate !== 48000 ||
+    Math.abs((probe.format.start_time ?? NaN) * 1000) > 100 ||
+    !Number.isFinite(probe.format.start_time) ||
+    !Number.isFinite(video.start_time) ||
+    !Number.isFinite(audio.start_time) ||
+    Math.abs((video.start_time ?? Infinity) * 1000) > 100 ||
+    Math.abs((audio.start_time ?? Infinity) * 1000) > 100 ||
+    Math.abs((video.duration ?? Infinity) * 1000 - durationMs) > 100 ||
+    Math.abs((audio.duration ?? Infinity) * 1000 - durationMs) > 100 ||
+    video.side_data_list?.some(
+      (entry) => entry.rotation !== undefined && entry.rotation !== 0,
+    ) ||
+    Math.abs(probe.format.duration * 1000 - durationMs) > 100
+  )
+    throw new MediaFailure("invalid");
 }

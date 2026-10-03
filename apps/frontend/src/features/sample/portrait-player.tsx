@@ -43,6 +43,7 @@ export function PortraitPlayer({
   children,
   videoRef,
   surface,
+  videoPreload = "metadata",
 }: {
   label: string;
   range: { startMs: number; endMs: number };
@@ -57,6 +58,7 @@ export function PortraitPlayer({
   children?: ReactNode;
   videoRef?: RefObject<HTMLVideoElement | null>;
   surface?: ReactNode;
+  videoPreload?: "metadata" | "auto";
 }) {
   const controlsId = useId();
   const [awake, setAwake] = useState(true);
@@ -127,7 +129,7 @@ export function PortraitPlayer({
             ref={videoRef}
             className={styles.localVideo}
             playsInline
-            preload="metadata"
+            preload={videoPreload}
             aria-label={label}
           />
         ) : (

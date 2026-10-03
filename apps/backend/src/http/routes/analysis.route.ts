@@ -7,6 +7,7 @@ import {
   sourceAnalysisUploadSchema,
   sourceAnalysisRequestSchema,
   selectedAssemblyRequestSchema,
+  finalRenderRequestSchema,
 } from "@clipbuilder/contracts";
 import type {
   ProcessingAdmission,
@@ -15,6 +16,8 @@ import type {
 import type { SourceAnalysis } from "../../analysis/analysis.usecase.js";
 import type { SelectedAssembly } from "../../assembly/selected-assembly.usecase.js";
 import type { PreviewPlayback } from "../../media/preview-playback.js";
+import type { FinalRender } from "../../render/final-render.usecase.js";
+import type { OutputDelivery } from "../../media/output-delivery.js";
 import { ApplicationError } from "../errorMapper.js";
 import { sendNoStoreJson } from "../response.js";
 
@@ -25,6 +28,8 @@ export function createAnalysisRouter(
   origins: readonly string[],
   assembly: SelectedAssembly | null = null,
   preview: PreviewPlayback | null = null,
+  render: FinalRender | null = null,
+  output: OutputDelivery | null = null,
 ): Router {
   const router = Router();
   router.use((request, response, next) => {
@@ -63,7 +68,13 @@ export function createAnalysisRouter(
   router.use((request, response, next) => {
     const assembling =
       request.method === "POST" &&
-      (request.path === "/assemble" || request.path === "/preview");
+      [
+        "/assemble",
+        "/preview",
+        "/render",
+        "/render-result",
+        "/output",
+      ].includes(request.path);
     if (assembling) {
       if (!assembly) throw new ApplicationError({ code: "FEATURE_DISABLED" });
       admission.session(context(request, response));
@@ -157,6 +168,7 @@ export function createAnalysisRouter(
   });
   router.post("/clear", async (request, response) => {
     preview?.clear(context(request, response));
+    output?.clear(context(request, response));
     await analysis.clear(context(request, response));
     response.clearCookie(cookieName, {
       httpOnly: true,
@@ -195,5 +207,45 @@ export function createAnalysisRouter(
       },
     );
   });
+  router.post("/render", async (request, response) => {
+    if (!render) throw new ApplicationError({ code: "FEATURE_DISABLED" });
+    const parsed = finalRenderRequestSchema.safeParse(request.body);
+    if (!parsed.success)
+      throw new ApplicationError({ code: "INVALID_REQUEST" });
+    sendNoStoreJson(
+      response,
+      200,
+      await render.run(context(request, response), parsed.data),
+    );
+  });
+  router.post("/render-result", async (request, response) => {
+    if (!render) throw new ApplicationError({ code: "FEATURE_DISABLED" });
+    sendNoStoreJson(
+      response,
+      200,
+      await render.restore(context(request, response), request.body),
+    );
+  });
+  router.post("/output", async (request, response) => {
+    if (!output) throw new ApplicationError({ code: "FEATURE_DISABLED" });
+    sendNoStoreJson(
+      response,
+      200,
+      await output.open(context(request, response), request.body),
+    );
+  });
+  for (const path of ["/output", "/download"])
+    router.get(path, async (request, response) => {
+      if (!output) throw new ApplicationError({ code: "FEATURE_DISABLED" });
+      await output.stream(
+        context(request, response),
+        request.get("Range"),
+        response,
+        (status, headers) => {
+          response.status(status).set(headers);
+        },
+        path === "/download",
+      );
+    });
   return router;
 }

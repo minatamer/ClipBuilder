@@ -7,6 +7,7 @@ import type {
   SafeError,
   SessionResponse,
   SelectedAssemblyResult,
+  FinalRenderResult,
 } from "@clipbuilder/contracts";
 
 export type SessionDiagnosticCode =
@@ -84,6 +85,26 @@ export type AnalysisSnapshot = {
 };
 
 type SessionStage =
+  | {
+      stage: "cloud-rendering";
+      identity: SessionIdentity;
+      analysis: AnalysisSnapshot;
+      assembly: SelectedAssemblyResult;
+    }
+  | {
+      stage: "cloud-render-failed";
+      identity: SessionIdentity;
+      analysis: AnalysisSnapshot;
+      assembly: SelectedAssemblyResult;
+      failure: SafeError;
+    }
+  | {
+      stage: "cloud-result";
+      identity: SessionIdentity;
+      analysis: AnalysisSnapshot;
+      assembly: SelectedAssemblyResult;
+      result: FinalRenderResult;
+    }
   | {
       stage: "cloud-assembling";
       identity: SessionIdentity;
@@ -237,6 +258,9 @@ export type ClippingSessionState = SessionStage & {
 };
 
 export type ClippingSessionEvent =
+  | { type: "CLOUD_RENDER_STARTED" }
+  | { type: "CLOUD_RENDER_COMPLETED"; result: FinalRenderResult }
+  | { type: "CLOUD_RENDER_FAILED"; failure: SafeError }
   | { type: "CLOUD_ASSEMBLY_STARTED"; candidateId: string }
   | { type: "CLOUD_ASSEMBLY_COMPLETED"; result: SelectedAssemblyResult }
   | { type: "CLOUD_ASSEMBLY_FAILED"; failure: SafeError }

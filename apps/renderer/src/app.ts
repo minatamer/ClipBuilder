@@ -130,6 +130,36 @@ export function createRendererApplication(
       owned.dispose();
     }
   });
+  app.post("/internal/output-info", async (request, response) => {
+    const input = mediaPreviewAccessSchema.parse(request.body),
+      owned = requestSignal(response);
+    try {
+      response.json(
+        await operations.sessions.store.withSignal(owned.signal, () =>
+          operations.sessions.outputArtifact(input),
+        ),
+      );
+    } finally {
+      owned.dispose();
+    }
+  });
+  app.post("/internal/output-content", async (request, response) => {
+    const input = mediaPreviewAccessSchema.parse(request.body),
+      owned = requestSignal(response);
+    try {
+      await operations.outputContent(
+        input,
+        request.get("Range"),
+        response,
+        owned.signal,
+        (status, fields) => {
+          response.status(status).set(fields);
+        },
+      );
+    } finally {
+      owned.dispose();
+    }
+  });
   app.post("/internal/analysis-proxy", async (request, response) => {
     const { binding } = mediaCancelRequestSchema.parse(request.body),
       owned = requestSignal(response);

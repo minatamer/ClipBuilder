@@ -16,6 +16,35 @@ function input(action: string, body = "{}", origin = "http://localhost:3000") {
   });
 }
 describe("bounded same-origin analysis bridge", () => {
+  it.each(["output", "download"])(
+    "streams %s within the final output cap without dispatch or signed URL",
+    async (action) => {
+      const transport = vi.fn(async (_url: RequestInfo | URL) => {
+        void _url;
+        return new Response(new Uint8Array(10), {
+          headers: { "Content-Type": "video/mp4", "Content-Length": "10" },
+        });
+      });
+      vi.stubGlobal("fetch", transport);
+      const response = await GET(
+        new Request(`http://localhost:3000/api/analysis/${action}`, {
+          headers: {
+            "Sec-Fetch-Site": "same-origin",
+            Cookie: "__Host-clipping_session=synthetic",
+          },
+        }),
+        context(action),
+      );
+      expect(response.status).toBe(200);
+      expect((await response.arrayBuffer()).byteLength).toBe(10);
+      expect(response.headers.get("content-disposition")).toBe(
+        action === "download" ? 'attachment; filename="clipbuilder.mp4"' : null,
+      );
+      expect(transport.mock.calls[0]![0]).toBe(
+        `http://127.0.0.1:4000/v1/analysis/${action}`,
+      );
+    },
+  );
   it("streams selected preview ranges and forwards only the protected cookie", async () => {
     const transport = vi.fn(
       async (_url: RequestInfo | URL, _options?: RequestInit) => {
