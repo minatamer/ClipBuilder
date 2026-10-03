@@ -47,7 +47,7 @@ export function ClipComposition({
         trimBefore={Math.round((sourceStartMs * fps) / 1000)}
         style={{
           position: "absolute",
-          ...focusLayout(manifest.source, focus, width, height),
+          ...focusLayout(manifest.source, focus, width, height, ms),
         }}
       />
       {card && (
