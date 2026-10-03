@@ -13,6 +13,9 @@ import {
   type MediaPrepareRequest,
   type MediaRenderRequest,
   type MediaBinding,
+  type MediaSelectRequest,
+  mediaSelectRequestSchema,
+  mediaSelectResponseSchema,
 } from "@clipbuilder/contracts";
 import type { BackendConfig } from "../config/env.schema.js";
 export interface RendererIdentity {
@@ -121,9 +124,78 @@ export class CloudRendererClient {
       signal,
     );
   }
+  select(input: MediaSelectRequest, signal: AbortSignal) {
+    return this.call(
+      "/internal/select",
+      mediaSelectRequestSchema.parse(input),
+      mediaSelectResponseSchema,
+      signal,
+    );
+  }
   cancel(binding: MediaBinding, signal: AbortSignal) {
     return this.call(
       "/internal/cancel",
+      mediaCancelRequestSchema.parse({ binding }),
+      z.object({ deleted: z.literal(true) }).strict(),
+      signal,
+    );
+  }
+  async proxy(binding: MediaBinding, signal: AbortSignal): Promise<Blob> {
+    const body = mediaCancelRequestSchema.parse({ binding });
+    const deadline = AbortSignal.any([signal, AbortSignal.timeout(30_000)]);
+    let response: Response | undefined;
+    try {
+      const authorization = await this.identity.authorization();
+      deadline.throwIfAborted();
+      response = await this.transport(
+        this.config.renderer.origin + "/internal/analysis-proxy",
+        {
+          method: "POST",
+          body: JSON.stringify(body),
+          signal: deadline,
+          redirect: "error",
+          headers: {
+            Authorization: authorization,
+            "X-Serverless-Authorization": authorization,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      if (
+        !response.ok ||
+        response.headers.get("content-type")?.split(";")[0] !== "video/mp4" ||
+        !response.body
+      )
+        throw new Error();
+      const reader = response.body.getReader(),
+        chunks: Uint8Array[] = [];
+      let size = 0;
+      try {
+        for (;;) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          size += chunk.value.byteLength;
+          if (size > TEMPORARY_MEDIA_LIMITS.proxyBytes) throw new Error();
+          chunks.push(chunk.value);
+        }
+      } finally {
+        await reader.cancel();
+        reader.releaseLock();
+      }
+      return new Blob([Buffer.concat(chunks)], { type: "video/mp4" });
+    } catch {
+      throw new Error("renderer_unavailable");
+    } finally {
+      if (response?.body && !response.body.locked)
+        await response.body.cancel().catch(() => undefined);
+    }
+  }
+  async releaseProxy(
+    binding: MediaBinding,
+    signal: AbortSignal,
+  ): Promise<void> {
+    await this.call(
+      "/internal/release-analysis-proxy",
       mediaCancelRequestSchema.parse({ binding }),
       z.object({ deleted: z.literal(true) }).strict(),
       signal,

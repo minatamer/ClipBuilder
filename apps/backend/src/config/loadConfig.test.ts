@@ -25,6 +25,11 @@ const liveAnalysisEnvironment = (): NodeJS.ProcessEnv => ({
   FAKE_MODE: "false",
   PAID_DEMO_ENABLED: "true",
   LIVE_ANALYSIS_ENABLED: "true",
+  PROCESSING_GRANTS_ENABLED: "true",
+  ADMISSION_MAX_PROCESS_DISPATCHES: "2",
+  CLOUD_RENDER_ENVIRONMENT: "cloud",
+  CLOUD_SPEND_APPROVED: "true",
+  PRIVATE_RENDERER_ORIGIN: "https://renderer.example.run.app",
   LIVE_ASSEMBLY_ENABLED: "false",
   LIVE_IMAGE_GENERATION_ENABLED: "false",
   GEMINI_API_KEY: "fixture-google-key",
@@ -40,6 +45,29 @@ const liveAnalysisEnvironment = (): NodeJS.ProcessEnv => ({
 });
 
 describe("loadConfig", () => {
+  it("requires source analysis and three reserved actions before live selected-range assembly", () => {
+    expect(() =>
+      loadConfig({
+        ...liveAnalysisEnvironment(),
+        LIVE_ASSEMBLY_ENABLED: "true",
+      }),
+    ).toThrow();
+    expect(() =>
+      loadConfig({
+        ...liveAnalysisEnvironment(),
+        LIVE_ANALYSIS_ENABLED: "false",
+        LIVE_ASSEMBLY_ENABLED: "true",
+        ADMISSION_MAX_PROCESS_DISPATCHES: "3",
+      }),
+    ).toThrow();
+    expect(
+      loadConfig({
+        ...liveAnalysisEnvironment(),
+        LIVE_ASSEMBLY_ENABLED: "true",
+        ADMISSION_MAX_PROCESS_DISPATCHES: "3",
+      }).features.liveAssembly,
+    ).toBe(true);
+  });
   it("uses one authoritative boolean without real-mode fallback or paid admission", () => {
     expect(loadConfig({}).providerMode).toBe("fake");
     const real = loadConfig({ FAKE_MODE: "false" });
@@ -101,7 +129,7 @@ describe("loadConfig", () => {
     ).toThrow();
   });
 
-  it("accepts controlled local analysis configuration without any storage or media job", () => {
+  it("accepts gated local source analysis with separate private compute configuration", () => {
     const config = loadConfig(liveAnalysisEnvironment());
 
     expect(config.providerMode).toBe("live");

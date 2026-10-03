@@ -280,6 +280,35 @@ export class ProcessingAdmission {
     }
   }
 
+  session(context: AdmissionContext): ProcessingGrant {
+    return this.current(context).grant;
+  }
+  restoreSession(context: Omit<AdmissionContext, "csrf">): ProcessingGrant {
+    const grant = this.codec.decode(context.cookie);
+    return this.current({ ...context, csrf: grant.csrf }).grant;
+  }
+
+  completedReceipt(
+    context: AdmissionContext,
+    actionName: ProcessingAction,
+    sourceRevision: string,
+    resultDigest: string,
+  ): string {
+    const { grant, actions } = this.current(context);
+    const action = actions[actionName];
+    return this.receipt({
+      version: 1,
+      bootEpoch: grant.bootEpoch,
+      sessionId: grant.sessionId,
+      action: actionName,
+      nonce: action.nonce,
+      sourceRevision,
+      requestDigest: action.digest ?? "",
+      resultDigest,
+      expiresAtMs: grant.expiresAtMs,
+    });
+  }
+
   clear(context: AdmissionContext): void {
     const record = this.current(context);
     for (const action of Object.values(record.actions)) {

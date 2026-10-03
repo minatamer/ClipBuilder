@@ -2,6 +2,8 @@ import { randomBytes, randomUUID } from "node:crypto";
 import type { BackendConfig } from "../config/env.schema.js";
 import { ProcessingAdmission } from "./processing.admission.js";
 import { ProcessingGrantCodec, readGrantKeys } from "./processing.grant.js";
+import { composeAbuseVerifier } from "./turnstile.verifier.js";
+import { TEMPORARY_MEDIA_LIMITS } from "@clipbuilder/contracts";
 
 export function composeAdmission(
   config: BackendConfig,
@@ -29,10 +31,13 @@ export function composeAdmission(
       rateWindowMs: config.admission.rateWindowSeconds * 1000,
       maxGrantsPerWindow: config.admission.rateGrant,
       allowedOrigins: config.session.csrfAllowedOrigins,
-      paidEnabled: false,
-      timeoutMs: config.gemini.timeoutMs,
+      paidEnabled:
+        config.paidDemoEnabled &&
+        config.features.liveAnalysis &&
+        config.renderer.spendApproved,
+      timeoutMs: TEMPORARY_MEDIA_LIMITS.workDeadlineMs,
     },
-    { verify: async () => false },
+    composeAbuseVerifier(config),
     now,
     randomBytes(32),
   );

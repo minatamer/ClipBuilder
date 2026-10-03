@@ -15,6 +15,8 @@ import { sendNoStoreJson } from "./http/response.js";
 import { SampleSession } from "./demo/sampleSession.js";
 import { composeAdmission } from "./admission/admission.composition.js";
 import { createAdmissionRouter } from "./http/routes/admission.route.js";
+import { composeAnalysis } from "./analysis/analysis.composition.js";
+import { createAnalysisRouter } from "./http/routes/analysis.route.js";
 
 export function createApplication(config: BackendConfig): Express {
   const application = express();
@@ -29,6 +31,16 @@ export function createApplication(config: BackendConfig): Express {
 
   application.use("/v1", createHealthRouter(config.appRevision));
   const admission = composeAdmission(config);
+  const analysis = composeAnalysis(config, admission);
+  if (analysis && admission)
+    application.use(
+      "/v1/analysis",
+      createAnalysisRouter(
+        admission,
+        analysis,
+        config.session.csrfAllowedOrigins,
+      ),
+    );
   if (admission)
     application.use(
       "/v1/admission",
@@ -45,7 +57,8 @@ export function createApplication(config: BackendConfig): Express {
         sampleEnabled: developmentPreview,
         localMediaEnabled:
           config.providerMode === "live" && config.appEnv === "local",
-        liveAnalysisEnabled: false,
+        liveAnalysisEnabled: analysis !== null,
+        ...(analysis ? { processingSiteKey: config.turnstile.siteKey } : {}),
         liveAssemblyEnabled: false,
         liveRenderEnabled: false,
         limits: {

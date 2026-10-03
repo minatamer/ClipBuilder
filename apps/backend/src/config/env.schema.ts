@@ -283,6 +283,23 @@ export const environmentSchema = rawEnvironmentSchema
         );
       }
     }
+    if (
+      environment.LIVE_ANALYSIS_ENABLED &&
+      (!environment.PROCESSING_GRANTS_ENABLED ||
+        environment.CLOUD_RENDER_ENVIRONMENT !== "cloud" ||
+        environment.ADMISSION_MAX_PROCESS_DISPATCHES <
+          (environment.LIVE_ASSEMBLY_ENABLED ? 3 : 2))
+    )
+      issue(
+        "Source analysis requires protected admission, approved cloud compute and a bounded upload/analysis budget.",
+        "LIVE_ANALYSIS_ENABLED",
+      );
+
+    if (environment.LIVE_ASSEMBLY_ENABLED && !environment.LIVE_ANALYSIS_ENABLED)
+      issue(
+        "Selected-range assembly requires protected source analysis.",
+        "LIVE_ASSEMBLY_ENABLED",
+      );
 
     if (
       environment.PROCESSING_GRANTS_ENABLED &&
