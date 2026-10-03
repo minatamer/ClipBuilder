@@ -1,5 +1,24 @@
 # Google AI and private media-compute cost plan
 
+## CL-007 call envelope — 2026-10-03
+
+The local implementation reserves one upload admission and one analysis action
+before dispatch. Analysis permits one proxy preparation and one Google generation
+with at most 65,536 output tokens; file start/finalize are once each, readiness is
+at most 90 GETs, and deletion/404 verification precede success. Explicit cleanup
+retry makes zero generation calls. No images/assembly/final render or paid retry
+is included. Browser/control deadline is 840 seconds; Google work is 180 seconds
+by default. Budgets/counts are process-local and fail on epoch loss/replay.
+
+`FAKE_MODE=true` with no keys uses injected synthetic ports and no charges. No
+CL-007 AI/cloud/build cost was incurred or queried. Real keys/live flags and
+separate paid-project/data/rights/cloud approvals are required. A numerical
+incremental build/cloud/AI allowance is still owner-only; existing CL-006 spend
+permission does not authorize a new Gemini call. See the
+[reviewable check plan](GROUNDED_ANALYSIS_CHECK.md). Pricing/actual token usage,
+interrupted-call charges and maximum-envelope costs remain live checks; advisory
+alerts are not hard caps.
+
 Current [cloud migration](../architecture/GEMINI_REMOTION_MIGRATION.md) and [setup guide](CLOUD_RUN_RENDERER_SETUP.md) supersede old provider/browser-only costs. Documentation approval precedes code correction; cloud/test expenditure is separately authorized. Private cloud phase timings are measured in CL-006; no billed cloud charge or live AI cost was verified.
 
 Proposed AI allowance is one full-source analysis plus one selected-range plan, zero image calls and zero automatic paid retries; export uses frozen results and zero AI calls. Cloud proxy preparation and one final Node render incur independent compute cost, even with fake AI. Count actual CPU/RAM active duration/cold start, storage bytes/operations/egress, build/registry/secrets/expiry schedule, Gemini input/output tokens and Remotion license. No accounts/history/general queue is introduced.

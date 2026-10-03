@@ -1,12 +1,12 @@
 # Full repository migration file inventory
 
-Status: approved migration inventory; historical scout map retained. CL-005 foundation and CL-006 local/Linux/private cloud media foundation are complete in their owning packets; CL-007 is next. Scout date: 2026-10-02.
+Status: approved migration inventory; historical scout map retained. CL-005/006 foundations are complete; CL-007 records local analysis/fake browser flow and pass-2/pass-3 Clear/reload corrections. CL-008 records selected focus; five root gates and 483 combined tests pass. Native fixture proof needs its approved tool. Renderer rollout/paid AI are owner-deferred and live quality remains unchecked. Scout date: 2026-10-02; execution status updated 2026-10-03.
 
 Read-only Git state, repository file inventory, provider/model/cloud/privacy references, package/config/composition/admission/contracts/worker/workflow/test ownership were inspected. This is a structural correction map, not an independent code audit. No secret/private media files were opened. Owner AGENTS.md and pre-existing CL-015 changes are preserved.
 
 Current authority: [Gemini/Cloud Run plan](GEMINI_REMOTION_MIGRATION.md). Exactly one canonical [CL-007 packet](../tickets/CL-007-deliver-live-analysis-vertical-slice.md) exists; keep its path, supersede old mechanisms rather than create a duplicate.
 
-## Approved module responsibility map (planned names; see CL-006 for actual modules)
+## Approved module responsibility map (planned names; see CL-006/CL-007 for actual modules)
 
 | Proposed path | Responsibility | Dependency |
 | --- | --- | --- |

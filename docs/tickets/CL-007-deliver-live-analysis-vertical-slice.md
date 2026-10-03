@@ -2,7 +2,7 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+Status: local implementation, all five root gates and the actual fake browser workflow passed, 2026-10-03. The owner explicitly deferred the separate renderer rollout and paid/live AI checkpoint, and authorized continuing dependency-ready local packets one at a time. Live acceptance remains unchecked.
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -11,8 +11,237 @@ Implement bounded Google proxy upload/process/structured analysis/delete, ground
 Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
 
 - [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
-- [ ] Implement and verify this current packet after approval.
-- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+- [x] Implement this current packet and verify its locally possible synthetic behavior after approval.
+- [x] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+- [x] Verify the actual `FAKE_MODE=true`, API-key-free browser workflow and clean up its temporary services.
+- [ ] Controlled live analysis checkpoint: explicitly deferred by the owner; do not infer authorization from fake results or earlier CL-006 permission.
+
+## Local execution evidence — 2026-10-03
+
+Dependencies: clean worktree at `db58981`; CL-006 committed local/Linux/private
+foundation and CL-004 reusable candidate UI were present. Current migration
+authority supersedes the collapsed Deepgram/browser-audio/server-job mechanics.
+No adjacent assembly/preview/export packet was implemented.
+
+Implemented protected grant/restore/upload/run/clear routes; bounded same-origin
+bridge and direct runtime-only private upload; atomic action reservations and
+Turnstile hostname/action/session checks; checksum/generation/profile validation;
+one Gemini source call; strict normalization/reconciliation; signed source/result
+integrity receipt; explicit Google deletion/404 verification and proxy release;
+browser confirmation, truthful transfer copy, pending/uncertain recovery and atomic
+result commit into the existing read-only candidate UI.
+
+Source analysis uses compact word/turn tuples, server ordinal IDs, anonymous
+labels and null confidence. Public title/hook/evidence copy is extractive;
+rationale/caveats are contiguous source quotations or fixed editorial statements. Candidate
+word references/order/evidence/ranks/sentence boundaries/10–60s/overlap/claims/
+quotes are deterministic. Exact word overlap tolerance: 250ms accepted, 251ms
+rejected for fake and Google labels. No model repair, trend evidence or padding.
+
+Two metered action nonces are consumed: legacy `transcription` now means upload
+admission, and `candidate-analysis` means prepare/one source AI call. The migration
+does not permit a second candidate-only call. SDK 2.25.0's file uploader revealed
+independent retry/abort defects, so its documented REST Files start/finalize is
+bounded directly; generation/get/delete keep the pinned SDK with one attempt and
+bounded responses. Browser intake's former chained digest was incompatible with
+renderer SHA-256; it now uses bounded incremental standard SHA-256. Older local
+records fail source revalidation safely. These are ticket-local implementation
+choices, with no product/privacy/architecture gate changes.
+
+One verification deviation: root ESLint included six pre-existing errors in
+Git-ignored CL-006 private helper scripts. `eslint.config.mjs` now excludes
+`private/**`, matching the existing privacy/Git boundary. Those files were not
+opened or modified. No dependency installation or version change was required.
+
+Focused evidence covers: valid and no-candidate API results, exact upload/prepare/
+generation/release counts, duplicate race, tampered receipt/source/generation,
+CSRF/disabled spend/expiry, malformed/malicious/quote/claim/reference/turn/range/
+timing responses, refusal, cancellation, 90-poll cap, SDK wire/no-retry/deletion
+proof, failed deletion obligation, bounded ingress, journal failure, committed
+refresh with no calls, uncertain recovery, clear fencing and SHA-256 padding/
+chunk boundaries. Private proxy read verifies bytes/hash and removes owned scratch;
+failed release fences the session until its existing scheduled cleanup retry.
+Google cleanup is scoped to the owning session. Failed reservation-journal
+writes dispatch zero actions and remain visible; cloud-cleanup failure still
+deletes local media, reports partial cleanup and permits cleanup-only retry.
+
+Owner-directed review findings were reproduced before correction: valid browser
+and renderer duration/fps differences caused rejection; reordered source words
+could invent rationale/caveat assertions; Clear could delete before a late Google
+upload finished; and grant refusal left an uncleared workspace without a session.
+Regression checks now pass. Decoded duration/fps are authoritative for analysis,
+while the original intake descriptor remains available for source reinspection.
+Google cleanup waits for upload settlement and shares verified deletion with
+analysis finalization. The browser journals whether remote cleanup is required;
+only a never-admitted record accepts a missing session as already clean.
+
+Settled root evidence (all exit 0):
+
+```text
+corepack pnpm format:check
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm test:unit
+corepack pnpm build
+git diff --check
+```
+
+Unit totals: root 20, contracts 44, composition 2, backend 117, renderer 23,
+frontend 231: **437 tests across 50 files**. The build completed all five packages
+and generated `/start` plus `/api/analysis/[action]`. Synthetic state checks
+verified valid/no-candidate success, failure/uncertainty, source/result mismatch,
+refresh without redispatch, abort/clear fencing, local deletion despite remote
+failure and exact failed-release retry.
+
+Actual fake browser evidence: temporary documented build/start services on
+127.0.0.1:4000 and localhost:3000 passed health, `/start` and sample config GETs.
+An isolated environment used fake/off flags, no credentials and a loopback-only
+network guard. Prepared synthetic input produced three candidates; selecting
+the second, keyboard selection, transcript/notes, refresh restoration, Proceed,
+fixed read-only review and simulated export all worked. MP4 download remained
+disabled because no validated video exists. Desktop and 390×844 result views
+were inspected; the phone view had no horizontal overflow. Start over, refresh
+after reset and preview cancellation returned to intake. This is fixture UI
+evidence, not real media, challenge or AI-quality proof.
+
+An initial dev-server attempt was disrupted by rebuilding watched packages and
+Next HMR failure; its guard blocked one non-loopback attempt. It was cleaned up
+and replaced with settled build/start services. The successful run recorded zero
+external attempts. All 16 owned stable-run processes were stopped by verified
+PID/creation-time identity; repeated checks found zero owned survivors and zero
+listeners on 3000/4000. Content-free logs/runtime records are Git-ignored under
+`private/cl007-fake-check/`; no app remains running.
+
+Boundary fixtures and fake/off pre-import network guards passed. Final diff checks
+found no cross-app imports, Node/provider dependencies in contracts/browser code,
+duplicate cross-boundary schemas, unsafe casts, debug logging or stale TODOs in
+the new modules. Tests verified bounded response readers, deadline/listener
+cleanup, checksum chunk memory, renderer scratch removal and cleanup fencing.
+All verification commands returned; temporary app services were cleaned up.
+
+`FAKE_MODE=true` and no keys still provide synthetic development results. All new
+tests use synthetic injected transports, fake/off process environment and zero
+external calls. They prove engineering behavior and the fixture UI, not AI quality or real upload/
+challenge/clock/device readiness. No local AI model is required or claimed.
+
+Remaining unchecked: new renderer image build/rollout; Gemini key/model access,
+paid-project terms, new AI audiovisual-transfer rights/approval and numerical
+AI/cloud/build budget; real transcript/anonymous-turn/candidate quality; actual
+clock/codec/proxy parity, full maximum-envelope stress, responsive/keyboard/zoom/
+reduced-motion challenge/upload/device matrix, live deletion and interruption
+behavior; public sample/release rights, complete license/font/codec/telemetry
+notices and public paid/deployment controls. Provider cleanup obligations are
+process-local; crash/uncertain upload can rely on Google's separate 48h Files
+expiry, not an unconditional deletion guarantee. Later CL-008–011 work remains.
+
+Reviewable next checkpoint: [controlled analysis check](../operations/GROUNDED_ANALYSIS_CHECK.md).
+The owner deferred this checkpoint. It proposes one build/private revision update and one source analysis, with no
+automatic retry or resource creation; budget/rights/data/external authorization
+are still owner-only. No secrets/real media were read and no ADC/provider/cloud
+action, usage polling, new independent review agent, staging or commit was performed.
+CL-008 local engineering is dependency-ready under the owner's latest direction;
+its live speaker-quality evidence retains a separate gate.
+
+### Changed files
+
+Pass-2 owner revalidation found one additional local defect: a failed remote
+Clear followed by successful local deletion erased the only journal evidence,
+and reload lost the React ref that tracked cleanup. It was independently
+reproduced as a failing injected workspace test before correction. A separate
+strict `remote-cleanup` IndexedDB key contains only version, allow-missing and
+cleanup status, survives media/result deletion, and restores a cleanup-only state.
+New source preparation is blocked while it exists; only confirmed remote Clear
+plus committed acknowledgement removes it. Admitted work never weakens the
+missing-session rule. Failed obligation persistence still attempts physical
+media deletion and preserves the existing source evidence/recovery fence;
+metadata transactions drain before releasing workspace ownership. React-only
+cleanup refs were removed. No identity, content, receipt or capability is stored
+in the independent marker.
+
+Focused recovery/journal/session checks passed **103 tests across six files**,
+including repeated remote failure across reload, zero analysis calls, successful
+cleanup-only acknowledgement, denied journal writes, acknowledgement failure,
+transaction commit ordering and corrupt/content-bearing marker rejection.
+This is injected fake/off recovery evidence; the actual live Clear/challenge/
+browser sequence has not been rerun and remains at the deferred checkpoint.
+The combined CL-007/008 final suite now contains 478 tests across 52 files.
+All five root checks and `git diff --check` were rerun after this correction.
+The first root unit attempt hit the existing 10-second ESLint boundary-test
+timeout; an unchanged serial rerun passed that gate in 4.76 seconds, followed
+by all package tests and the five-package build. No timeout was increased.
+
+Pass-3 owner revalidation found a second cleanup edge: successful remote Clear
+expired the cookie, then a failed local acknowledgement left a marker that
+retried remote Clear after reload and could never recover from `SESSION_MISSING`.
+The real browser API with synthetic session/204/401 responses independently
+reproduced the failure before correction. Remote confirmation now commits as a
+separate marker status before local acknowledgement; confirmed markers retry
+only local deletion/acknowledgement, including after reload. Local deletion
+failure retains this confirmation. Legacy markers default to pending, and a
+missing session still cannot acknowledge unconfirmed admitted work. Confirmation
+and deletion transactions share the owned write queue. No new analysis request
+is dispatched. If confirmation itself cannot commit before reload, cleanup
+remains conservatively pending rather than claiming unproved deletion.
+
+Focused recovery/journal/session checks passed **108 tests across six files**.
+The new recovery test uses the real client API, explicitly observes the expired
+session response and then completes reload recovery without another remote call.
+Additional regressions cover unconfirmed missing-session fencing, local deletion
+failure after remote success, legacy/confirmed restoration and invalid status.
+The settled combined CL-007/008 suite contains **483 tests across 52 files**;
+all five required root gates and `git diff --check` pass. This evidence uses
+synthetic responses with fake/off configuration and no keys. The actual live
+Clear/challenge/browser sequence remains at the owner-deferred checkpoint.
+
+Owner-directed validation pass 4 reported no actionable findings on the settled
+CL-007 snapshot over `db58981`. All pass-1/pass-2/pass-3 findings remain resolved.
+The reviewer reran `corepack pnpm --filter @clipbuilder/frontend test:unit
+src/features/media/browser.workspace.test.ts`: **23 tests in one file passed**;
+`git diff --check` also passed. This was a read-only local review with synthetic
+fake/off tests, no credentials, provider/cloud calls, launches or Git mutations.
+The reviewer did not rerun the full root gates or the earlier browser session;
+their evidence remains recorded above. The verdict covers CL-007's authorized
+local scope only, excludes CL-008-specific additions and retains every deferred
+live, durability, rights, device and release limitation. In particular, failed
+confirmation persistence before reload remains conservatively pending.
+
+- Backend: `apps/backend/README.md`; `src/app.ts`;
+  `src/admission/{admission.composition,processing.admission,turnstile.verifier,turnstile.verifier.test}.ts`;
+  `src/config/{env.schema,loadConfig.test}.ts`; `src/media/renderer.cloudrun.ts`;
+  `src/http/routes/analysis.route.ts`;
+  `src/analysis/{analysis.composition,analysis.provider-shape,analysis.reconciliation,analysis.test,analysis.usecase,gemini.adapter}.ts`.
+- Frontend: `apps/frontend/README.md`; `src/app/privacy-dialog.tsx`;
+  `src/app/api/analysis/[action]/{route,route.test}.ts`;
+  `src/features/media/{browser.workspace,browser.workspace.test,source.worker,source.checksum,source.checksum.test,workspace.restore,workspace.schema,workspace.journal,workspace.journal.test}.ts`;
+  `src/features/session/session.provider.tsx`;
+  `src/features/sample/sample.experience.tsx`;
+  `src/features/source-analysis/analysis-challenge.tsx` and
+  `{source-analysis.api,source-analysis.flow,source-analysis.flow.test}.ts`.
+- Renderer: `apps/renderer/README.md`; `src/app.ts`;
+  `src/expiry/media-sessions.ts`;
+  `src/media/{inspection,media-operations,media-operations.test}.ts`;
+  `test/media-fixture.ts`.
+- Contracts: `packages/contracts/src/{api.schema,cloud-media.schema,grounded-analysis.schema,media.schema,index}.ts`.
+- Documentation/configuration: `eslint.config.mjs`;
+  `docs/operations/{COST_MODEL,PROVIDER_SETUP,GROUNDED_ANALYSIS_CHECK}.md`;
+  this packet and `docs/tickets/README.md`;
+  status updates in `docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md` and
+  `docs/architecture/{GEMINI_REMOTION_MIGRATION,MIGRATION_FILE_INVENTORY}.md`.
+
+Initial CL-007 Git state: 53 ticket-related modified/new files. After CL-008 and
+the pass-2/pass-3 local corrections, the combined worktree has 71 modified/new files;
+index empty, no commit.
+
+## File-level commit plan
+
+The [seven-step CL-007/CL-008 commit plan](CL-007-008-COMMIT_PLAN.md) lists exact
+whole-file staging commands and ticket-prefixed commit messages for the current
+combined worktree. It covers 72 distinct files including the plan itself.
+The owner authorized sequential execution on 2026-10-03. Implementation groups
+1–5 were staged whole and committed in order; this ticket is the step-6
+documentation checkpoint. Final completion is recorded in
+[CL-008](CL-008-productionize-active-speaker-assembly.md#commit-execution-record).
+The earlier unstaged worktree counts describe the pre-commit verification snapshot.
 
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>

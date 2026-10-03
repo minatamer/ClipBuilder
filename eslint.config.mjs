@@ -243,6 +243,7 @@ export default defineConfig([
     },
   },
   globalIgnores([
+    "private/**",
     "**/.next/**",
     "**/dist/**",
     "**/coverage/**",

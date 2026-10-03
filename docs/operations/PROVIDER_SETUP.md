@@ -1,8 +1,16 @@
 # Google AI and cloud readiness
 
-Current authority: [cloud migration](../architecture/GEMINI_REMOTION_MIGRATION.md) and [later setup guide](CLOUD_RUN_RENDERER_SETUP.md). Documentation review/owner approval precedes further code correction; cloud setup and paid/private media tests have separate later authorization. Private temporary GCS is architecturally approved; no resource was created.
+Current authority: [cloud migration](../architecture/GEMINI_REMOTION_MIGRATION.md) and [setup guide](CLOUD_RUN_RENDERER_SETUP.md). The owner approved local implementation on 2026-10-02; CL-006 separately records its authorized private resource/test checkpoint. CL-007's renderer revision update and Google AI transfer/paid test need new explicit authorization.
 
-Gemini 3.8 Flash / @google/genai 2.26.0 is the researched starting model/SDK. Confirm actual supported structured output, word timing/diarization, audiovisual sampling and quality before acceptance. No speculative image/ASR model is selected. Server-only GEMINI_API_KEY is blank in the committed example; never inspect .env.local or put credentials/IDs in browser config. Interrupted config changes are incomplete and frozen.
+CL-007 implements Gemini 3.8 Flash with pinned `@google/genai@2.25.0`, bounded
+REST Files upload, SDK structured generation with retries disabled, normalized
+words/anonymous turns/candidates, and explicit file deletion/404 proof. See the
+[controlled-check plan](GROUNDED_ANALYSIS_CHECK.md) for actual options, rights/data/
+paid-project/spend gates and remaining checks. No live call ran. `FAKE_MODE=true`
+needs no keys and uses synthetic injected results. Real word timing, diarization,
+model/account access, clock parity and maximum-size quality remain unverified.
+No local model or speculative image/ASR fallback is enabled. Keys/identifiers
+remain blank in examples; the owner populates ignored configuration manually.
 
 Fake/live describes AI; local/cloud describes compute independently. Fake offline tests use injected storage/renderer/provider ports and zero external calls. A local app can later invoke authenticated remote Cloud Run with fake AI; that still needs cloud credentials and spend approval. Cloud Run runtime identity, gcloud CLI login and local ADC are distinct, detailed in the setup guide. Media renderer has no Gemini key. No AWS or Deepgram/OpenAI setup is currently required.
 

@@ -1,10 +1,16 @@
 # ClipBuilder canonical ticket index
 
-Status: CL-005 foundation and CL-006 migration foundation complete. CL-006 passed Linux image/native cleanup and the rights-confirmed 2:45 private cloud upload/proxy/render/audio/cancellation/independent deletion checks. CL-007 is next; live AI and public release remain gated.
+Status: CL-005/006 foundations complete. CL-007 local source analysis/fake browser workflow passed; pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus is locally implemented. Five root gates and 483 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred; quality/device/public-release gates remain unchecked. Complete contextual assembly remains CL-009. CL-006's private 2:45 evidence is separate.
 
 Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md),
 [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),
 [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+
+Current Git handoff: [CL-007/CL-008 file-level commit plan](CL-007-008-COMMIT_PLAN.md)
+documents the seven owner-authorized sequential whole-file commits. Implementation
+steps 1–5 are committed; the final execution record is in
+[CL-008](CL-008-productionize-active-speaker-assembly.md#commit-execution-record).
+
 The isolated private renderer/GCS checkpoint is provisioned and verified under
 the recorded owner approvals. New external actions retain their own gates.
 The owner's 2026-10-02 approvals covered build resources, private renderer setup,
@@ -12,7 +18,9 @@ ADC and bounded media tests, followed by this source-specific rights confirmatio
 Exact attempts and remaining gates are in [CL-006](CL-006-build-media-job-and-speaker-feasibility.md#completed-private-cloud-foundation--2026-10-02).
 The owner authorized necessary image retries until this private test passed.
 Five builds and four cloud media operations were recorded, with zero AI calls.
-Live AI, public deployment and Git actions remain unapproved.
+Live AI and public deployment remain unapproved. The owner separately authorized
+the documented seven local commits on 2026-10-03; further Git actions retain
+their own authorization.
 Fake/live AI and local/cloud compute are independent. Ordinary tests remain
 synthetic, fake/off, credential-free and zero-network. No usage polling or new
 independent code review. Continue one dependency-ready packet at a time.

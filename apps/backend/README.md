@@ -1,8 +1,71 @@
 # ClipBuilder backend
 
+## CL-008 selected speaker focus — local foundation
+
+`src/assembly/selected-focus.usecase.ts` consumes a verified CL-007 source result
+and one immutable candidate. It reserves `visual-plan` once, requests a physical
+selected proxy, obtains one bounded speaker plan and signs validated geometry.
+The Google adapter reuses the source adapter's Files lifecycle with explicit
+5fps sampling. Source AI, repair, image and search calls are zero. Uncertain or
+replayed actions never dispatch again. Release failure prevents publication.
+CL-009 owns complete assembly and extends this same plan call for templates;
+the public assembly flag remains disabled until then.
+
+Fake/injected plans verify anonymous word association, confidence, wide fallback,
+cuts and bounded interpolation without keys/network. Real speaker quality needs
+keys/live flags, rights/data/paid approval and the separately deferred renderer
+rollout. No local AI model is used. Live assembly requires protected source
+analysis and at least three admitted actions; this is a process count, not a
+provider/cloud billing cap. See [CL-008 evidence](../../docs/tickets/CL-008-productionize-active-speaker-assembly.md).
+
+```text
+corepack pnpm --filter @clipbuilder/backend test:unit src/assembly
+```
+
+## CL-007 protected source analysis — local implementation
+
+`/v1/analysis/{grant,session,upload,run,clear}` connects protected local admission,
+private upload and one Gemini source analysis. Live execution remains gated by
+the [controlled-check plan](../../docs/operations/GROUNDED_ANALYSIS_CHECK.md).
+Public/hosted paid composition remains rejected. `FAKE_MODE=true` with no keys
+keeps the fixture journey and injected zero-network tests; it proves no AI quality.
+Real processing needs keys/live flags, rights/transfer/paid-project approval,
+Turnstile, grant signing, ADC and separate cloud/AI spend permission.
+
+Two atomic actions are reserved: the legacy `transcription` nonce now owns upload
+admission; `candidate-analysis` owns proxy preparation and one source call. There
+is no separate transcription/candidate retry under the migration's one-call
+budget. Origin/CSRF/epoch/expiry/rate/capacity precede dispatch. The dedicated
+bridge is fixed at localhost:3000 to loopback:4000. HTTP is accepted only on that
+loopback local origin; cookies retain Secure/HttpOnly/host-only attributes. No
+proxy-header trust. Turnstile checks exact hostname/action/session cdata once.
+
+Files uses bounded REST start/finalize because pinned `@google/genai@2.25.0` has
+independent uploader retries and incomplete upload abort propagation. Its SDK
+handles generateContent/get/delete with one attempt, deadlines and response-byte
+interception. Fixed schema/policy, one response, zero tools/search and no
+interaction/history storage. Compact word/turn tuples become ordinal IDs and
+unknown confidence. Titles/hooks/evidence are extractive; reconciliation checks
+references/order, sentence/turn starts, sentence endings, 10–60s duration,
+distinct evidence/overlap/claims/quotes. Word overlap tolerance is **250ms**.
+
+Proxy bytes/checksum and source codec/rotation/dimension identity must match
+before AI. Decoded duration/fps are authoritative; browser estimates may differ. Missing
+new image inspection fields fail closed. Success deletes/verifies the Google
+file and releases the analysis proxy, then signs session/epoch/source revision/
+request/result digests and expiry. The backend retains no transcript. Conflicting
+replay, uncertainty, abort and refresh never redispatch. Failed Google deletion
+waits for upload settlement, shares deletion with analysis finalization, and
+blocks intake on failure with an explicit process-local cleanup obligation; crash/
+provider expiry and actual media-clock parity remain live/release checks.
+
+```text
+corepack pnpm --filter @clipbuilder/backend test:unit src/analysis/analysis.test.ts src/admission/turnstile.verifier.test.ts src/admission/processing.admission.test.ts src/config/loadConfig.test.ts
+```
+
 ## Current cloud migration — approved local foundation
 
-[Current authority](../../docs/architecture/GEMINI_REMOTION_MIGRATION.md) and [cloud setup](../../docs/operations/CLOUD_RUN_RENDERER_SETUP.md) govern private temporary artifacts and generation-bound cleanup. The owner approved local corrections. Google config and an isolated typed private-renderer client are implemented; public product routes still use fixtures. Cloud creation/credential use/paid tests remain separate gates.
+[Current authority](../../docs/architecture/GEMINI_REMOTION_MIGRATION.md) and [cloud setup](../../docs/operations/CLOUD_RUN_RENDERER_SETUP.md) govern private temporary artifacts and generation-bound cleanup. The owner approved local corrections. CL-007 connects the protected local analysis path; the default fake journey uses fixtures. New cloud/credential/paid actions retain separate gates.
 
 Fake/live selects AI; local/cloud selects renderer environment. A local API will obtain an audience-bound private renderer ID token via server ADC; Cloud Run has its own runtime identity, the browser no credentials. Fake cloud rendering still costs compute; fully offline tests inject all remote ports and telemetry. No service/project ID is populated in Git and no source/provider content is logged.
 
@@ -30,21 +93,22 @@ development-only simulated operations, not media/provider implementations.
 ephemeral in-memory fixture map to 16 entries and two-hour access, not a durable
 store. Its HttpOnly/SameSite fixture cookie is not the future encrypted grant.
 Production/real composition does not register these fixture routes; safe
-`GET /v1/sample/config` remains available with all unimplemented real features
-disabled. There is no fixture download route or valid output capability.
+`GET /v1/sample/config` remains available and advertises protected local analysis
+only when composed behind its gates. Assembly/export remain disabled. There is
+no fixture download route or valid output capability.
 
 The earlier CL-005 code removed cloud/native-media configuration and established
 process-local protected admission. The migration now adds a typed server-only
 renderer client with ADC audience identity and both identity headers. Gemini
-orchestration and public source/preview/download integration remain later packet
-work. Final export belongs to cloud compute. No editor or assistant endpoint
+orchestration and protected local source upload/analysis are implemented in CL-007;
+preview/download integration remains later packet work. Final export belongs to cloud compute. No editor or assistant endpoint
 belongs in the demo API. Root `.env.example` now defines the disabled server-only
 CLOUD_RENDER_ENVIRONMENT/CLOUD_SPEND_APPROVED/PRIVATE_RENDERER_ORIGIN fields;
 they require separate cloud authorization even with fake AI. Renderer service
 config belongs to `apps/renderer/.env.example`; no browser config exposes it.
 Retired server upload/render feature flags cannot be enabled. In local real
-mode, the public config permits browser intake without credentials; all remote
-analysis/assembly/export capabilities still report unavailable.
+mode, the public config permits browser intake without credentials; remote
+analysis requires the CL-007 gates, and assembly/export remain unavailable.
 See the [current migration plan](../../docs/architecture/GEMINI_REMOTION_MIGRATION.md)
 for cloud ownership, restart/uncertain-result failures and paid gates. The
 [earlier browser contract](../../docs/architecture/BROWSER_OWNED_MEDIA.md)
@@ -62,8 +126,8 @@ digests; they do not prove browser metadata or unseen video content.
 
 Default `PROCESSING_GRANTS_ENABLED=false` exposes no grant/clear route.
 The explicit local foundation composition requires validated owner-populated
-blank grant key entries, but still composes no provider and always refuses paid
-dispatch. `/v1/admission/grant` and `/clear` additionally require actual secure
+blank grant key entries. It refuses paid dispatch unless CL-007 live analysis,
+paid and cloud-spend gates are enabled. `/v1/admission/grant` and `/clear` require actual secure
 transport; untrusted forwarded-protocol headers do not make HTTP secure. There
 is no generic body relay or audio endpoint. Public protected/paid composition
 is refused pending CL-015 safeguards. No cross-replica exactly-once, durable

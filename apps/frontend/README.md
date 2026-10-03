@@ -1,10 +1,51 @@
 # ClipBuilder frontend
 
+## CL-007 source analysis and recovery
+
+The prepared-source screen offers explicit rights/transfer/paid confirmation when
+backend gates are ready. The bounded same-origin bridge carries only grant/CSRF
+headers; the runtime upload capability goes directly to private storage and is
+never journaled. Ephemeral Turnstile widgets/listeners are removed on completion,
+cancel or unmount. Privacy copy discloses both original and AI proxy transfer.
+
+The browser marks pending before remote work and atomically journals validated
+source-bound analysis plus integrity receipt before advancing the existing
+candidate/transcript/notes UI. Committed refresh makes zero new calls. Pending/
+lost/failed work restores as visible failure with no automatic retry. Clear
+aborts work and requests cloud/local cleanup; failure stays visible. A journaled
+never-admitted grant refusal can clear without a remote session; admitted work
+still requires verified remote cleanup. Decoded analysis duration/fps may differ
+from browser measurements without invalidating source identity or refresh. Intake now
+uses bounded incremental standard SHA-256 to match renderer inspection. Older
+chained-digest workspaces fail source revalidation rather than being reused.
+
+Remote cleanup has a separate content-free IndexedDB marker. Deleting the local
+media/result journal cannot erase it. Reload restores a cleanup-only state,
+blocks source preparation and retries only Clear; a confirmed remote response
+is persisted separately from local acknowledgement. If local deletion or marker
+acknowledgement fails after remote Clear expires the cookie, reload retries only
+local cleanup using that confirmation. Unconfirmed admitted work still requires
+remote Clear; a missing session is not proof of deletion. Committed local cleanup
+and marker deletion are required before intake. Storage failure stays fenced,
+and metadata transactions finish before workspace ownership is released.
+
+With `FAKE_MODE=true` and no keys, the actual fixture browser workflow passed
+selection, refresh, read-only review, simulated export and reset on desktop and
+a 390×844 result view. MP4 download stays disabled. These results and injected
+analysis tests are synthetic. Live calls need keys/flags/approvals in the
+[controlled-check plan](../../docs/operations/GROUNDED_ANALYSIS_CHECK.md).
+Renderer rollout, real challenge/upload/clock behavior, AI quality and the manual
+device/responsive matrix remain unchecked. Automatic assembly/export is later work.
+
+```text
+corepack pnpm --filter @clipbuilder/frontend test:unit src/features/source-analysis/source-analysis.flow.test.ts src/features/media/browser.workspace.test.ts src/features/media/source.checksum.test.ts src/features/sample/sample.test.tsx
+```
+
 ## Current cloud migration — approved local foundation
 
 The [current plan](../../docs/architecture/GEMINI_REMOTION_MIGRATION.md) replaces browser final export and browser-only originals/outputs. Browser selects/uploads to approved private temporary GCS, plays a read-only selected proxy/fixed preview and downloads a validated result. Our authenticated Remotion Node/Docker Cloud Run service prepares proxies/cuts and performs final encoding. Mediabunny is retained only for useful intake/inspection. Existing local source/audio foundations and the interrupted browser-render experiment are preserved but are not the current final-export architecture. The owner approved local corrections; the browser exporter was retired and the fixed layout moved into packages/composition.
 
-Fake/live AI and local/cloud compute are separate: current fake journey supplies fixtures without keys; ordinary tests inject cloud/renderer ports without network. Future local app plus remote renderer needs ADC/cloud-spend approval even with fake AI. Live Gemini needs key/flags/rights/data-transfer/paid approval. The isolated private renderer's 2:45 processing/cancellation/deletion proof is recorded in CL-006; browser/control integration, live AI and device quality remain later gates. See the [setup guide](../../docs/operations/CLOUD_RUN_RENDERER_SETUP.md). Exclude every feasibility/debug harness from deployment.
+Fake/live AI and local/cloud compute are separate: current fake journey supplies fixtures without keys; ordinary tests inject cloud/renderer ports without network. A local app plus remote renderer needs ADC/cloud-spend approval even with fake AI. Live Gemini needs key/flags/rights/data-transfer/paid approval. The isolated private renderer's 2:45 processing/cancellation/deletion proof is recorded in CL-006. CL-007 implements browser/control source analysis locally; its live and device checks remain gated. See the [setup guide](../../docs/operations/CLOUD_RUN_RENDERER_SETUP.md). Exclude every feasibility/debug harness from deployment.
 
 
 The frontend is the public Next.js experience. It may import
@@ -25,18 +66,21 @@ The owner-approved expiry is fixed at two hours from source selection, with
 active/next-open orphan cleanup and best-effort deletion. Closing a tab is not
 a deletion guarantee; no persistent-storage permission or history is requested.
 Missing storage/locking/codec support fails closed; no unproved memory fallback
-is enabled. CL-006 adds a callable worker audio pipeline; downstream work still
-owns model/composition/export and connecting audio to protected analysis.
+is enabled. CL-006 adds a callable worker audio pipeline; CL-007 instead sends
+the admitted original to private storage and a full-clock audiovisual proxy to
+Gemini. Assembly/preview/export remain later packets.
 Default fake behavior documented below is unchanged: it reads no File bytes
 and cannot download an MP4. Real mode does not use synthetic build/render
-fallbacks and stops truthfully at prepared source until CL-007 is connected.
+fallbacks. Intake-only configuration stops at prepared source; the separately
+gated CL-007 path connects source analysis to candidate review.
 Backend services cannot open browser storage. CL-005 pins `mediabunny@1.61.0` and supplies a
 separate [synthetic media feasibility harness](feasibility/browser-media/README.md)
 with measured Windows in-app Chromium codec/storage/range/full-bound evidence
 in the ticket. Run `corepack pnpm --filter @clipbuilder/frontend test:media`
 only for that manual local spike; it is not part of normal tests or `/start`.
 Local intake/recovery and protected-admission foundations are implemented;
-no provider, final product download or release claim.
+the CL-007 provider path remains unverified live, with no final product download
+or release claim.
 
 **CL-006 audio slice (2026-10-02):** the admitted browser workspace can extract
 bounded mono audio through the same owned worker. Positional OPFS writes,

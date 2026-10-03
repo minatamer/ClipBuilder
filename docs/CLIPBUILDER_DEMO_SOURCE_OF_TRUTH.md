@@ -2,7 +2,7 @@
 
 ## Current owner revision — Gemini and private Cloud Run rendering (2026-10-02)
 
-Status: **CL-005 foundation and CL-006 local/Linux/private cloud media foundation complete; later Gemini/product/release integration pending.**
+Status: **CL-005/006 foundations complete; CL-007 local analysis/fake browser workflow passed without API keys, and pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus is implemented locally; five root gates and 483 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred. Live quality/device/product/release gates remain unchecked; contextual assembly remains CL-009.**
 
 The owner selected Google Gemini for understanding/transcription/candidates/
 speaking-face association and our private Google Cloud Run Remotion Node/Docker
@@ -53,7 +53,7 @@ on 2026-10-02. The owner subsequently approved the verified existing cloud
 project/region/private resources, ADC, Remotion license coverage, a USD 1 media
 test allowance, the private source rights and necessary image retries until
 the functional test passed. CL-006 is complete; its ticket owns exact evidence.
-Project/account identifiers remain private. CL-007 is next. New live AI, public
+Project/account identifiers remain private. [CL-007](tickets/CL-007-deliver-live-analysis-vertical-slice.md) records its local implementation and controlled-check gate. New live AI, public
 rights/release and Git actions retain separate authorization.
 Earlier related source/audio changes were continued; later product integration remains incomplete.
 Usage polling and independent code review remain stopped. Deployed images must

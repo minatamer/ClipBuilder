@@ -1,6 +1,6 @@
 # Gemini and Cloud Run Remotion migration
 
-Status: **CL-006 foundation complete: local/Linux/private cloud media and cleanup proof verified; later AI/product/release integration pending**<br>
+Status: **CL-006 foundation complete; CL-007 local analysis/fake browser workflow passed and pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus is implemented locally; five root gates and 483 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred; live quality/devices/product/release remain unchecked. Contextual assembly remains CL-009.**<br>
 Owner revision: 2026-10-02; supersedes the earlier same-day browser-render plan<br>
 Authority: latest explicit owner decision, then this current source-of-truth revision<br>
 Inventory: [file-level migration map](MIGRATION_FILE_INVENTORY.md)<br>
@@ -341,8 +341,8 @@ records 383 unit tests, all five root gates, synthetic Windows/Linux SSR/proxy/
 audio/cancellation proof and the rights-confirmed 2:45 private cloud upload,
 proxy, output/audio/layout, cancellation and independent deletion checkpoint.
 Five builds and four cloud media dispatches were explicitly authorized; AI calls
-were zero. Full browser integration remains unproved. Related changes remain
-unstaged/uncommitted. Owned diagnostic ports 4186/4187 and their recorded process
+were zero. Full live browser integration remains unproved. CL-006 was subsequently
+committed; CL-007 changes remain unstaged/uncommitted. Owned diagnostic ports 4186/4187 and their recorded process
 trees were stopped and checked absent; no app-stack launch occurred during closeout.
 
 Temporary private GCS storage is already approved and must not be requested again.
@@ -352,7 +352,9 @@ limits are approved. Region/project ID, billing/IAM, build/private-test approval
 Remotion SSR coverage and source-specific private rights were subsequently
 confirmed for the completed checkpoint. Identifiers stay in private runtime state.
 Live Gemini/provider data terms, public sample/release and complete software/
-telemetry notices retain their gates. CL-006 is complete; CL-007 is next.
+telemetry notices retain their gates. CL-006 is complete; CL-007's local implementation
+and fake browser workflow are verified; the owner explicitly deferred its
+controlled live checkpoint and authorized continuing dependency-ready local packets.
 
 Evidence still required: full-bound upload/inspection/proxy size/audio quality,
 maximum-envelope container memory/scratch/OOM and whole-flow browser/control

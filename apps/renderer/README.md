@@ -1,5 +1,30 @@
 # Private media renderer
 
+CL-008 adds authenticated `/internal/select`: one source-generation-bound
+10–60s range, claimed after the source-analysis proxy is released. It reinspects
+the original and physically creates an upright 20fps, 640×640/24-MiB AVC/AAC
+proxy. Exact-generation read/release and terminal cleanup reuse the analysis
+proxy lifecycle. Synthetic tests pass without keys/ADC/cloud access; the image
+has not been rebuilt/deployed and native selected-clock proof remains unchecked.
+
+The saved API-free/AI-free native check is
+`corepack pnpm --filter @clipbuilder/renderer exec tsx feasibility/selected-proxy.ts`
+after contracts/renderer builds, with an approved `FIXTURE_FFMPEG_PATH` for test
+pattern/tone synthesis and PCM decoding. It uses the pinned production binaries
+for the actual cut/proxy and removes all scratch in `finally`. The full fixture
+tool is unavailable locally; no download/install was performed. Live Google
+quality and renderer rollout remain deferred by the owner.
+
+CL-007 adds private `/internal/analysis-proxy` and
+`/internal/release-analysis-proxy` routes under the existing control identity.
+Only the prepared intent's exact proxy generation can be read; bytes/checksum
+are verified and owned scratch removed before return. Release deletes that
+generation while preserving the source. Failure fences the session and uses
+the existing independent cleanup retry. Inspection now returns codec/container/
+fps/rotation evidence for the control comparison. These routes are locally tested
+with `FAKE_MODE=true`, no keys and injected storage; the new image is not deployed.
+Live AI and rollout need [CL-007 check approval](../../docs/operations/GROUNDED_ANALYSIS_CHECK.md).
+
 Standard Remotion Node SSR, compiled fixed composition, baked Chromium and
 Remotion's matching FFmpeg/FFprobe. This isolated service has no Gemini key,
 arbitrary input URL, public processing route or general job queue. The initial
