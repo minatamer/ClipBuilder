@@ -154,11 +154,28 @@ export class BrowserWorkspace {
     this.record = record;
   }
 
-  async markCloudAssembly(status: "pending" | "uncertain") {
+  async markCloudAssembly(
+    status: "pending" | "uncertain",
+    candidateId?: string,
+    signal?: AbortSignal,
+  ) {
     const generation = this.generation;
     this.check(generation);
+    if (status === "pending") {
+      // Selection is visible before its journal transaction commits. Drain all
+      // queued selection writes before atomically checking and reserving it.
+      let writes: Promise<void>;
+      do {
+        signal?.throwIfAborted();
+        writes = this.writes;
+        await writes;
+        this.check(generation);
+        signal?.throwIfAborted();
+      } while (writes !== this.writes);
+    }
     if (
       !this.record?.selectedId ||
+      (candidateId !== undefined && this.record.selectedId !== candidateId) ||
       this.record.cloudAnalysis?.status !== "complete" ||
       (status === "pending" &&
         (this.assemblyReservation || this.record.cloudAssembly)) ||

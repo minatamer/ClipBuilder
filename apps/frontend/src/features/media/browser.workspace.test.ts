@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LOCAL_WORKSPACE_LIMITS } from "@clipbuilder/contracts";
+import {
+  LOCAL_WORKSPACE_LIMITS,
+  analysisBundleSchema,
+} from "@clipbuilder/contracts";
 import { analysis, media } from "../session/session.test-fixtures";
 import { BrowserWorkspace, type WorkspacePorts } from "./browser.workspace";
 import { LocalMediaError } from "./media.errors";
@@ -16,6 +19,7 @@ import { clearAnalysisMedia } from "../source-analysis/source-analysis.flow";
 import { createSourceAnalysisApi } from "../source-analysis/source-analysis.api";
 import { selectedAssemblyFixture } from "../assembly/selected-assembly.test-fixtures";
 import { runSelectedAssembly } from "../assembly/selected-assembly.flow";
+import { clippingSessionReducer } from "../session/session.reducer";
 
 function drainGate() {
   let finish = () => {};
@@ -518,6 +522,296 @@ describe("local audio workspace ownership", () => {
 });
 
 afterEach(() => vi.useRealTimers());
+async function assemblyWorkspaceFixture() {
+  const f = fixture();
+  await f.owner.initialize();
+  await f.owner.prepare(f.file, () => {}).completion;
+  const source = f.owner.snapshot!.source!;
+  const first = analysis.candidates[0]!;
+  const extra = analysis.transcript.words.map((word, index) => ({
+    ...word,
+    id: ["w_000031", "w_000032", "w_000060"][index]!,
+    startMs: word.startMs + 20_000,
+    endMs: word.endMs + 20_000,
+  }));
+  const bundle = analysisBundleSchema.parse({
+    ...analysis,
+    media: source.media,
+    transcript: {
+      ...analysis.transcript,
+      words: [...analysis.transcript.words, ...extra],
+      utterances: [
+        ...analysis.transcript.utterances,
+        {
+          id: "utt_000002",
+          speakerId: "spk_0",
+          startWordId: extra[0]!.id,
+          endWordId: extra.at(-1)!.id,
+        },
+      ],
+    },
+    candidates: [
+      first,
+      {
+        ...first,
+        id: "cand_" + "d".repeat(22),
+        rank: 2,
+        startWordId: extra[0]!.id,
+        endWordId: extra.at(-1)!.id,
+        evidence: [
+          { ...first.evidence[0]!, wordIds: [extra[0]!.id] },
+          { ...first.evidence[1]!, wordIds: [extra.at(-1)!.id] },
+        ],
+      },
+    ],
+  });
+  const grounded = {
+    binding: {
+      sessionId: "ses_" + "c".repeat(22),
+      sourceRevision: source.media.sourceRevision,
+      fingerprint: source.fingerprint,
+    },
+    generation: "12",
+    analysis: bundle,
+    receipt: "synthetic",
+  };
+  await f.owner.markCloudAnalysis("pending");
+  await f.owner.storeGroundedAnalysis(grounded);
+  const candidateId = bundle.candidates[1]!.id;
+  const result = await selectedAssemblyFixture(grounded, candidateId);
+  const input = {
+    workspace: f.owner,
+    candidateId,
+    api: {
+      session: vi.fn(async () => ({
+        sessionId: grounded.binding.sessionId,
+        csrfToken: "c".repeat(43),
+        expiresAtMs: 7201000,
+      })),
+      assemble: vi.fn(async () => result),
+    },
+    challenge: vi.fn(async () => "synthetic"),
+    signal: new AbortController().signal,
+    label: () => {},
+  };
+  return { ...f, grounded, result, input, firstId: first.id };
+}
+
+describe("selection commit before assembly dispatch", () => {
+  it.each(["first", "replacement"])(
+    "waits for a %s selection and prepares exactly the UI candidate",
+    async (kind) => {
+      const f = await assemblyWorkspaceFixture();
+      const gate = drainGate(),
+        entered = drainGate(),
+        original = f.ports.journal.write;
+      if (kind === "replacement") await f.owner.select(f.firstId);
+      f.ports.journal.write = async (record) => {
+        if (
+          record.selectedId === f.input.candidateId &&
+          !record.cloudAssembly
+        ) {
+          entered.finish();
+          await gate.pending;
+        }
+        await original(record);
+      };
+      try {
+        const selection = f.owner.select(f.input.candidateId);
+        await entered.pending;
+        let ui = restoreLocalWorkspace(f.owner.snapshot!);
+        ui = clippingSessionReducer(ui, {
+          type: "CANDIDATE_SELECTED",
+          candidateId: f.input.candidateId,
+        });
+        ui = clippingSessionReducer(ui, {
+          type: "CLOUD_ASSEMBLY_STARTED",
+          candidateId: f.input.candidateId,
+        });
+        const work = runSelectedAssembly(f.input);
+        // Attach rejection immediately; the old code fails before the pending save.
+        const outcome = work.then(
+          (value) => ({ value, error: null }),
+          (error) => ({ value: null, error }),
+        );
+        await Promise.resolve();
+        expect(f.input.api.assemble).toHaveBeenCalledTimes(0);
+        gate.finish();
+        await selection;
+        const settled = await outcome;
+        expect(settled.error).toBeNull();
+        expect(settled.value).toEqual(f.result);
+        expect(f.input.api.assemble).toHaveBeenCalledExactlyOnceWith(
+          {
+            analysis: f.grounded,
+            candidateId: f.input.candidateId,
+            turnstileToken: "synthetic",
+          },
+          expect.any(AbortSignal),
+        );
+        ui = clippingSessionReducer(ui, {
+          type: "CLOUD_ASSEMBLY_COMPLETED",
+          result: f.result,
+        });
+        expect(ui.stage).toBe("cloud-review");
+        expect(ui.diagnosticCode).toBeNull();
+        expect(f.owner.snapshot!.selectedId).toBe(f.input.candidateId);
+      } finally {
+        gate.finish();
+        await f.owner.dispose();
+      }
+    },
+  );
+
+  it("keeps a failed selection save unreserved and makes zero access/challenge/assembly calls", async () => {
+    const f = await assemblyWorkspaceFixture();
+    const gate = drainGate(),
+      entered = drainGate(),
+      original = f.ports.journal.write;
+    await f.owner.select(f.firstId);
+    f.ports.journal.write = async (record) => {
+      if (record.selectedId === f.input.candidateId && !record.cloudAssembly) {
+        entered.finish();
+        await gate.pending;
+        throw new LocalMediaError("storage");
+      }
+      await original(record);
+    };
+    try {
+      const selection = f.owner.select(f.input.candidateId);
+      const selectionFailure = expect(selection).rejects.toThrow();
+      await entered.pending;
+      const work = runSelectedAssembly(f.input);
+      const failure = expect(work).rejects.toThrow();
+      gate.finish();
+      await selectionFailure;
+      await failure;
+      expect(f.input.api.session).toHaveBeenCalledTimes(0);
+      expect(f.input.challenge).toHaveBeenCalledTimes(0);
+      expect(f.input.api.assemble).toHaveBeenCalledTimes(0);
+      expect(f.owner.snapshot!.cloudAssembly).toBeNull();
+      expect(f.owner.snapshot!.selectedId).toBe(f.firstId);
+    } finally {
+      gate.finish();
+      await f.owner.dispose();
+    }
+  });
+
+  it("rejects a superseded UI candidate before reserving or spending", async () => {
+    const f = await assemblyWorkspaceFixture();
+    try {
+      await f.owner.select(f.firstId);
+      await expect(runSelectedAssembly(f.input)).rejects.toThrow();
+      expect(f.input.api.session).toHaveBeenCalledTimes(0);
+      expect(f.input.challenge).toHaveBeenCalledTimes(0);
+      expect(f.input.api.assemble).toHaveBeenCalledTimes(0);
+      expect(f.owner.snapshot!.cloudAssembly).toBeNull();
+    } finally {
+      await f.owner.dispose();
+    }
+  });
+
+  it("waits for later queued selections and rejects the superseded request without spending", async () => {
+    const f = await assemblyWorkspaceFixture();
+    const gate = drainGate(),
+      entered = drainGate(),
+      original = f.ports.journal.write;
+    f.ports.journal.write = async (record) => {
+      if (record.selectedId === f.input.candidateId && !record.cloudAssembly) {
+        entered.finish();
+        await gate.pending;
+      }
+      await original(record);
+    };
+    try {
+      const selection = f.owner.select(f.input.candidateId);
+      await entered.pending;
+      const work = runSelectedAssembly(f.input);
+      const failure = expect(work).rejects.toThrow();
+      const replacement = f.owner.select(f.firstId);
+      gate.finish();
+      await selection;
+      await replacement;
+      await failure;
+      expect(f.input.api.session).toHaveBeenCalledTimes(0);
+      expect(f.input.challenge).toHaveBeenCalledTimes(0);
+      expect(f.input.api.assemble).toHaveBeenCalledTimes(0);
+      expect(f.owner.snapshot!.selectedId).toBe(f.firstId);
+      expect(f.owner.snapshot!.cloudAssembly).toBeNull();
+    } finally {
+      gate.finish();
+      await f.owner.dispose();
+    }
+  });
+
+  it("reserves only one concurrent assembly after a delayed selection save", async () => {
+    const f = await assemblyWorkspaceFixture();
+    const gate = drainGate(),
+      entered = drainGate(),
+      original = f.ports.journal.write;
+    f.ports.journal.write = async (record) => {
+      if (record.selectedId === f.input.candidateId && !record.cloudAssembly) {
+        entered.finish();
+        await gate.pending;
+      }
+      await original(record);
+    };
+    try {
+      const selection = f.owner.select(f.input.candidateId);
+      await entered.pending;
+      const work = runSelectedAssembly(f.input);
+      const replay = runSelectedAssembly(f.input);
+      const rejection = expect(replay).rejects.toThrow();
+      gate.finish();
+      await selection;
+      expect(await work).toEqual(f.result);
+      await rejection;
+      expect(f.input.api.session).toHaveBeenCalledOnce();
+      expect(f.input.challenge).toHaveBeenCalledOnce();
+      expect(f.input.api.assemble).toHaveBeenCalledOnce();
+      expect(f.owner.snapshot!.cloudAssembly?.status).toBe("complete");
+    } finally {
+      gate.finish();
+      await f.owner.dispose();
+    }
+  });
+
+  it("cancels while a selection is committing without reserving an assembly", async () => {
+    const f = await assemblyWorkspaceFixture();
+    const gate = drainGate(),
+      entered = drainGate(),
+      original = f.ports.journal.write;
+    const controller = new AbortController();
+    f.ports.journal.write = async (record) => {
+      if (record.selectedId === f.input.candidateId && !record.cloudAssembly) {
+        entered.finish();
+        await gate.pending;
+      }
+      await original(record);
+    };
+    try {
+      const selection = f.owner.select(f.input.candidateId);
+      await entered.pending;
+      const work = runSelectedAssembly({
+        ...f.input,
+        signal: controller.signal,
+      });
+      const failure = expect(work).rejects.toThrow();
+      controller.abort();
+      gate.finish();
+      await selection;
+      await failure;
+      expect(f.input.api.session).toHaveBeenCalledTimes(0);
+      expect(f.input.challenge).toHaveBeenCalledTimes(0);
+      expect(f.input.api.assemble).toHaveBeenCalledTimes(0);
+      expect(f.owner.snapshot!.cloudAssembly).toBeNull();
+    } finally {
+      gate.finish();
+      await f.owner.dispose();
+    }
+  });
+});
+
 describe("browser workspace publication and lifecycle", () => {
   it("cancel during the assembly journal commit replaces the late result with uncertainty", async () => {
     const f = fixture();
@@ -552,6 +846,7 @@ describe("browser workspace publication and lifecycle", () => {
     const assemble = vi.fn(async () => assembled);
     const work = runSelectedAssembly({
       workspace: f.owner,
+      candidateId: assembled.candidateId,
       api: {
         session: async () => ({
           sessionId: grounded.binding.sessionId,

@@ -52,6 +52,7 @@ async function fixture() {
   const controller = new AbortController();
   const input = {
     workspace,
+    candidateId: result.candidateId,
     api,
     signal: controller.signal,
     challenge: vi.fn(async () => "synthetic"),

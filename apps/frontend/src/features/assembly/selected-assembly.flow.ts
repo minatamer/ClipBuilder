@@ -12,6 +12,7 @@ export async function runSelectedAssembly(input: {
     "snapshot" | "markCloudAssembly" | "storeSelectedAssembly"
   >;
   api: Pick<SourceAnalysisApi, "session" | "assemble">;
+  candidateId: string;
   challenge(
     sessionId: string,
     action: "visual-plan",
@@ -21,8 +22,12 @@ export async function runSelectedAssembly(input: {
   label(value: string): void;
 }) {
   const analysis = input.workspace.snapshot?.cloudAnalysis?.result;
-  const candidateId = input.workspace.snapshot?.selectedId;
-  if (!analysis || !candidateId || input.workspace.snapshot?.cloudAssembly)
+  const candidateId = input.candidateId;
+  if (
+    !analysis ||
+    !analysis.analysis.candidates.some((item) => item.id === candidateId) ||
+    input.workspace.snapshot?.cloudAssembly
+  )
     throw new Error("assembly-unavailable");
   const controller = new AbortController(),
     abort = () => controller.abort();
@@ -32,8 +37,13 @@ export async function runSelectedAssembly(input: {
   let reserved = false;
   try {
     controller.signal.throwIfAborted();
-    await input.workspace.markCloudAssembly("pending");
+    await input.workspace.markCloudAssembly(
+      "pending",
+      candidateId,
+      controller.signal,
+    );
     reserved = true;
+    controller.signal.throwIfAborted();
     input.label("Verifying processing access");
     const session = await input.api.session(controller.signal);
     if (session.sessionId !== analysis.binding.sessionId)

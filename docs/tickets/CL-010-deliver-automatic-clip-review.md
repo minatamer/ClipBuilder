@@ -63,6 +63,86 @@ public-release evidence remain unchecked. Supplying keys alone does not satisfy
 those gates. Missing keys and no deployment do not block the authorized local
 sequence. Static markup/frame mapping tests are not pixel/audio proof.
 
+## Cross-ticket audit correction — 2026-10-03
+
+The owner authorized correcting the selection/Proceed race found during the
+full-history validation. Four new gated regressions failed before the repair:
+the first selection failed before assembly, switching selections dispatched the
+previous candidate, a failed save still made access/processing calls, and a stale
+UI candidate could reserve an assembly for another selection.
+
+The UI still publishes candidate preview changes immediately. Its existing
+pending-action guard disables Proceed and additional selection mutations until
+the journal save finishes; failed saves restore the committed selection and show
+a content-safe error. Assembly receives the explicit UI candidate ID. The
+workspace drains queued writes, checks that ID and atomically reserves the saved
+selection before any session/challenge/assembly call. Abort during the wait and
+superseded/failed selection commits leave assembly unreserved. Once reserved,
+selection remains frozen and uncertain processing is never automatically retried.
+
+Seven workspace/flow regressions cover first and replacement selection,
+failed save, stale and later queued selection, concurrent assembly and abort
+during commit. Success reaches the canonical reducer's `cloud-review` with the
+correct candidate and exactly one injected assembly call. Rejected cases make
+zero access/challenge/assembly calls. Concurrent attempts reserve only once.
+Focused workspace/assembly/candidate/reducer verification passed **69 tests in
+four files**. The combined settled root gate and final read-only validation are
+recorded below after all authorized audit corrections.
+
+Changed: frontend experience, workspace, selected-assembly flow and their existing
+tests/fixtures; this packet and index. No product controls, schema, dependency,
+provider/cloud setting or retained media changed. Nothing was staged or committed.
+Synthetic fake/off checks need no keys/network and do not prove real Gemini quality, actual browser
+device/media parity or deployment. Those prior external gates remain unchecked.
+
+### Settled cross-ticket verification and revalidation — 2026-10-03
+
+After all three corrections settled, these exact root checks passed:
+
+- `corepack pnpm format:check`
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test:unit`
+- `corepack pnpm build`
+- `git diff --check`
+
+The unit gate passed **665 tests in 66 files**: root 29/4, contracts 58/5,
+composition 3/1, backend 215/14, frontend 304/31 and renderer 56/11. This adds
+33 regression cases across the actual worker, workspace/flow/reducer and backend
+reconciliation paths. Tests keep import-time `FAKE_MODE=true`,
+`PROVIDER_MODE=fake`, `PAID_DEMO_ENABLED=false`, all live flags false and network
+interception. Provider-labelled reconciliation tests use in-memory synthetic
+output, not provider requests. No credentials or real source were used.
+
+The local production build and frontend artifact inventory passed: 1,276 files,
+26 links and digest `6c00515272d0b7ac494f3d2a1b2ba3fd4c67b3c282aa1f118d6f25b8079692b4`.
+The inventory still reports 26 external package links and `selfContained=false`;
+the earlier strict target-platform release gate remains open. This local build
+does not certify a deployable artifact.
+
+Final validation was read-only over the tracked correction diff and new worker
+test at unchanged Git HEAD `1c6e9bab483ac0d933b6fdfe7b41b32f1032e3cf`.
+**Verdict: no actionable findings in the authorized correction scope.** The
+three audit findings are resolved: selection commits and candidate binding
+precede assembly dispatch; intake retains actual source decoding while removing
+the obsolete final-encoding prerequisite; grounding checks complete contiguous
+normalized tokens rather than substrings or empty token lists. Reviewed failure,
+abort, stale/queued selection, concurrent reservation, response binding and
+cleanup paths; no new dependency/schema/configuration boundary, unsafe cast,
+debug/content leak or automatic paid retry was introduced.
+
+No interactive browser/device/media or real provider/cloud verification was
+performed in this correction pass. The previous physical/manual/native-media,
+pixel/audio/font, rights/license, spend, paid-quality and deployment gates remain
+unchecked. No local AI runtime or weights were added or verified. Pre-existing
+owner documentation changes were preserved; all changes remain unstaged and
+uncommitted. This evidence does not extend an earlier release audit to the new
+working-tree revision.
+
+Documentation-only follow-up verification parsed eight updated Markdown documents
+with the installed Prettier parser and resolved all five new ticket/anchor links.
+`git diff --check` passed after the evidence updates; the index remains empty.
+
 ## Validation and finding disposition
 
 Pass 1 read the combined tracked/new-file change against CL-009 `06ab834`,

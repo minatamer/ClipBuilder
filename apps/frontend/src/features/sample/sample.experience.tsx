@@ -440,6 +440,29 @@ function SampleScreen({
       }
     }
   }
+  const selectCandidate = (candidateId: string | null) => {
+    if (state.stage !== "candidates" || pending.current !== null) return;
+    const previousId = workspace
+      ? (workspace.snapshot?.selectedId ?? null)
+      : state.selectedId;
+    const publish = (id: string | null) =>
+      dispatch(
+        id === null
+          ? { type: "CANDIDATE_PREVIEW_CLOSED" }
+          : { type: "CANDIDATE_SELECTED", candidateId: id },
+      );
+    publish(candidateId);
+    if (workspace)
+      void run(async (signal) => {
+        try {
+          await workspace.select(candidateId);
+          signal.throwIfAborted();
+        } catch (error) {
+          if (!signal.aborted) publish(previousId);
+          throw new SampleApiFailure(localMediaFailure(error));
+        }
+      });
+  };
   const clear = () => {
     if (
       localMode &&
@@ -518,6 +541,7 @@ function SampleScreen({
         try {
           const result = await runSelectedAssembly({
             workspace,
+            candidateId,
             api: cloudApi,
             signal,
             challenge: requestChallenge,
@@ -1013,20 +1037,8 @@ function SampleScreen({
           <CandidateReview
             analysis={state.analysis.bundle}
             selectedId={state.selectedId}
-            onSelect={(candidateId) => {
-              dispatch({ type: "CANDIDATE_SELECTED", candidateId });
-              if (workspace)
-                void workspace
-                  .select(candidateId)
-                  .catch((error) => setFailure(localMediaFailure(error)));
-            }}
-            onClose={() => {
-              dispatch({ type: "CANDIDATE_PREVIEW_CLOSED" });
-              if (workspace)
-                void workspace
-                  .select(null)
-                  .catch((error) => setFailure(localMediaFailure(error)));
-            }}
+            onSelect={selectCandidate}
+            onClose={() => selectCandidate(null)}
             busy={busy}
             {...(localMode && workspace?.sourceUrl
               ? { sourceUrl: workspace.sourceUrl }

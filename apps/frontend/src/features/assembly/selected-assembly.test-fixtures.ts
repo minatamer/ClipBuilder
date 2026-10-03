@@ -18,9 +18,19 @@ export function groundedFixture(): GroundedAnalysisResult {
     receipt: "synthetic-source-receipt",
   };
 }
-export async function selectedAssemblyFixture(source = groundedFixture()) {
-  const words = source.analysis.transcript.words;
-  const candidate = source.analysis.candidates[0]!;
+export async function selectedAssemblyFixture(
+  source = groundedFixture(),
+  candidateId = source.analysis.candidates[0]!.id,
+) {
+  const candidate = source.analysis.candidates.find(
+    (item) => item.id === candidateId,
+  );
+  if (!candidate) throw new Error("Synthetic candidate is missing.");
+  const allWords = source.analysis.transcript.words;
+  const words = allWords.slice(
+    allWords.findIndex((word) => word.id === candidate.startWordId),
+    allWords.findIndex((word) => word.id === candidate.endWordId) + 1,
+  );
   const range = { startMs: words[0]!.startMs, endMs: words.at(-1)!.endMs };
   const media = source.analysis.media;
   const manifest = compositionManifestV2Schema.parse({
