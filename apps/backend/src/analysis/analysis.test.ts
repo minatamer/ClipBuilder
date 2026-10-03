@@ -183,6 +183,93 @@ function fixture(paidEnabled = true) {
     },
   };
 }
+describe("source quotation token boundaries", () => {
+  it.each(
+    ["title", "hook", "evidence", "rationale", "caveat"].flatMap((field) =>
+      ["ord0", "word", "..."].map((copy) => ({ field, copy })),
+    ),
+  )(
+    "rejects $copy in $field instead of accepting a substring or empty tokens",
+    ({ field, copy }) => {
+      const raw = output();
+      const candidate = {
+        ...raw.candidates[0]!,
+        caveats: [{ code: "needs-earlier-context", note: "word0" }],
+      };
+      if (field === "title") candidate.title = copy;
+      if (field === "hook") candidate.hook = copy;
+      if (field === "evidence") candidate.evidence[0]!.note = copy;
+      if (field === "rationale") candidate.rationale = copy;
+      if (field === "caveat") candidate.caveats[0]!.note = copy;
+      for (const provider of ["fake", "google-gemini"] as const)
+        expect(() =>
+          reconcileAnalysis(
+            { ...raw, candidates: [candidate] },
+            media,
+            provider,
+          ),
+        ).toThrow("MODEL_OUTPUT_REJECTED");
+    },
+  );
+
+  it("rejects an empty quoted span inside otherwise grounded text", () => {
+    const raw = output();
+    raw.candidates[0]!.title = 'word0 "..." word1';
+    expect(() => reconcileAnalysis(raw, media, "fake")).toThrow(
+      "MODEL_OUTPUT_REJECTED",
+    );
+  });
+
+  it.each(["title", "rationale"])(
+    "rejects noncontiguous %s tokens",
+    (field) => {
+      const raw = output();
+      if (field === "title") raw.candidates[0]!.title = "word0 word2";
+      else raw.candidates[0]!.rationale = "word0 word2";
+      expect(() => reconcileAnalysis(raw, media, "fake")).toThrow(
+        "MODEL_OUTPUT_REJECTED",
+      );
+    },
+  );
+
+  it("retains case, Unicode, whitespace and punctuation normalization for complete tokens", () => {
+    const raw = output();
+    raw.candidates[0]!.title = "ＷＯＲＤ０  word1";
+    raw.candidates[0]!.hook = "WORD0, word1 WORD2!";
+    raw.candidates[0]!.rationale = '"word0 word1"';
+    for (const provider of ["fake", "google-gemini"] as const)
+      expect(reconcileAnalysis(raw, media, provider).candidates).toHaveLength(
+        1,
+      );
+  });
+
+  it("preserves approved fixed editorial explanations", () => {
+    const raw = output();
+    raw.candidates[0]!.rationale =
+      "Self-contained opening and complete ending.";
+    expect(
+      reconcileAnalysis(
+        {
+          ...raw,
+          candidates: [
+            {
+              ...raw.candidates[0],
+              caveats: [
+                {
+                  code: "needs-earlier-context",
+                  note: "Needs earlier context.",
+                },
+              ],
+            },
+          ],
+        },
+        media,
+        "fake",
+      ).candidates,
+    ).toHaveLength(1);
+  });
+});
+
 describe("grounded source analysis", () => {
   it("uses authoritative decoded duration/frame rate despite browser sampling and rounding", async () => {
     const f = fixture();

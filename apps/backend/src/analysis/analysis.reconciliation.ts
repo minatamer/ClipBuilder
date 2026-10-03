@@ -43,6 +43,18 @@ const tokens = (text: string) =>
     .toLowerCase()
     .match(/[\p{L}\p{N}]+/gu) ?? [];
 
+function isSourceQuotation(source: readonly string[], copy: string): boolean {
+  const quotation = tokens(copy);
+  return (
+    quotation.length > 0 &&
+    source.some(
+      (token, index) =>
+        token === quotation[0] &&
+        quotation.every((word, offset) => word === source[index + offset]),
+    )
+  );
+}
+
 export function reconcileAnalysis(
   value: unknown,
   media: MediaDescriptor,
@@ -134,9 +146,7 @@ export function reconcileAnalysis(
         )
           throw new Error();
       }
-      const sourceText = tokens(
-        words.map((w) => w.punctuatedText).join(" "),
-      ).join(" ");
+      const sourceTokens = tokens(words.map((w) => w.punctuatedText).join(" "));
       // Public titles/hooks and evidence notes are extractive. This is intentionally
       // stricter than asking another model to certify its own unsupported facts.
       for (const copy of [
@@ -144,7 +154,7 @@ export function reconcileAnalysis(
         candidate.hook,
         ...candidate.evidence.map((e) => e.note),
       ]) {
-        if (!sourceText.includes(tokens(copy).join(" "))) throw new Error();
+        if (!isSourceQuotation(sourceTokens, copy)) throw new Error();
       }
       const copy = [
         candidate.title,
@@ -162,12 +172,11 @@ export function reconcileAnalysis(
       ])
         if (
           !ANALYSIS_EDITORIAL_NOTES.includes(note) &&
-          !sourceText.includes(tokens(note).join(" "))
+          !isSourceQuotation(sourceTokens, note)
         )
           throw new Error();
       for (const quote of copy.matchAll(/[“"]([^”"]+)[”"]/gu))
-        if (!sourceText.includes(tokens(quote[1]!).join(" ")))
-          throw new Error();
+        if (!isSourceQuotation(sourceTokens, quote[1]!)) throw new Error();
       if (!/[.!?][”"']?$/u.test(words.at(-1)!.punctuatedText))
         throw new Error();
     }

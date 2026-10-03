@@ -232,6 +232,32 @@ Initial CL-007 Git state: 53 ticket-related modified/new files. After CL-008 and
 the pass-2/pass-3 local corrections, the combined worktree has 71 modified/new files;
 index empty, no commit.
 
+## Cross-ticket audit correction — 2026-10-03
+
+The owner authorized fixing the full-history grounding finding. Sixteen new
+regression cases failed against the original substring check: partial prefixes,
+partial suffixes, punctuation-only copy and an empty quote inside otherwise
+grounded text were accepted as source evidence.
+
+Reconciliation now requires a nonempty contiguous sequence of complete normalized
+tokens for public title/hook/evidence, non-editorial rationale/caveats and quoted
+spans. NFKC/case/whitespace/punctuation normalization and approved fixed editorial
+explanations remain supported. Noncontiguous/reordered text is still rejected.
+The same checks apply to fake and Google provider labels without another model
+call, response repair or provider/config/schema change.
+
+Changed: backend analysis reconciliation, its existing test file and this packet.
+Twenty regressions cover the rejected cases plus accepted normalization and fixed
+editorial explanations. Focused analysis/fixed-assembly verification passed
+**70 tests in two files**. The combined settled gate passed all five root commands
+and **665 tests in 66 files**; final read-only revalidation found no actionable
+findings in the three corrections. Exact commands, test counts and limits are in
+[CL-010](CL-010-deliver-automatic-clip-review.md#settled-cross-ticket-verification-and-revalidation--2026-10-03).
+Tests use synthetic data, fake/off configuration and no keys/network; real
+transcript/candidate/quality, provider data/rights/spend, device and cloud release
+gates remain unchecked. No retained media, secret or provider/cloud resource was
+changed. Nothing was staged or committed.
+
 ## File-level commit plan
 
 The [seven-step CL-007/CL-008 commit plan](CL-007-008-COMMIT_PLAN.md) lists exact
