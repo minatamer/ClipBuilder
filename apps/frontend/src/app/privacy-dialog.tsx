@@ -111,7 +111,7 @@ export function PrivacyDialog({
                 {localMedia &&
                   " One recoverable workspace expires two hours after selection. Clear media deletes it best-effort. Closing the tab cannot guarantee deletion; expiry cleanup runs while open or on the next visit. Browser storage can be removed sooner."}
                 {cloudMedia &&
-                  " Cloud source access also expires after two hours. Cancel and clear request immediate deletion; an independent expiry sweep retries cleanup. Outages can delay physical deletion."}
+                  " Cloud source access also expires after two hours. After a validated export, server source and preview copies are deleted; the final MP4 remains available for ten minutes or until session expiry. Cancel and clear request immediate deletion; an independent fifteen-minute expiry sweep retries cleanup. Outages can delay physical deletion. Clear cannot remove a copy you downloaded."}
               </p>
             </section>
             <section>

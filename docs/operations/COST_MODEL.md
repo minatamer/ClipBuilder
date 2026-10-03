@@ -1,5 +1,17 @@
 # Google AI and private media-compute cost plan
 
+## CL-012 enforced limits and remaining monetary gates
+
+Atomic grants/counters bound one process lifetime; they do not create a global
+monthly ledger or a per-person quota. New visitors, processes, restarts and
+revision overlap can multiply allowance. Public paid use remains disabled until
+owner acceptance and enforceable vendor monetary controls; alerts alone are not
+hard caps. Final export adds one compute operation and zero AI calls, completing
+the four-operation envelope below. Metadata/playback/download retries add zero
+processing dispatches but may incur storage egress. No prices or accounts were
+queried. Fake/no-key injected tests prove local counts only; real AI and cloud
+spend retain separate approvals. See [controls](SECURITY_PRIVACY_CONTROLS.md).
+
 ## CL-010 preview compute envelope — 2026-10-03
 
 Selected assembly now prepares a separate bounded preview after verified deletion

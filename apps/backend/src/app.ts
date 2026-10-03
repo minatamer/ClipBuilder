@@ -23,6 +23,16 @@ export function createApplication(config: BackendConfig): Express {
 
   application.disable("x-powered-by");
   application.use((request, response, next) => {
+    response.set({
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Content-Security-Policy":
+        "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+    });
+    if (request.secure)
+      response.setHeader("Strict-Transport-Security", "max-age=31536000");
     const requestId = `req_${randomUUID().replaceAll("-", "")}`;
     response.setHeader("X-Request-Id", requestId);
     response.locals.requestId = requestId;

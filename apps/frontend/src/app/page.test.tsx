@@ -6,6 +6,21 @@ import robots from "./robots";
 import { PrivacyDialog } from "./privacy-dialog";
 
 describe("visual approval prototype", () => {
+  it("discloses original/cloud/provider transfer, output expiry and downloaded-copy limits", () => {
+    const markup = renderToStaticMarkup(
+      <PrivacyDialog localMedia cloudMedia />,
+    );
+    expect(markup).toContain(
+      "original is uploaded to temporary private storage",
+    );
+    expect(markup).toContain("Provider retention is separate");
+    expect(markup).toContain("ten minutes or until session expiry");
+    expect(markup).toContain("fifteen-minute expiry sweep");
+    expect(markup).toContain("cannot remove a copy you downloaded");
+    expect(markup).not.toContain(
+      "Original video stays on this device; it is not uploaded",
+    );
+  });
   it.each([undefined, "secondary"] as const)(
     "preserves one named privacy-dialog trigger with variant %s",
     (triggerVariant) => {

@@ -20,8 +20,16 @@ export function createRendererApplication(
 ): express.Express {
   const app = express();
   app.disable("x-powered-by");
+  app.enable("strict routing");
+  app.enable("case sensitive routing");
   app.use((_request, response, next) => {
     response.setHeader("Cache-Control", "no-store");
+    response.setHeader("Referrer-Policy", "no-referrer");
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    response.setHeader(
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'",
+    );
     next();
   });
   app.get("/v1/health", (_request, response) =>
@@ -36,6 +44,15 @@ export function createRendererApplication(
   });
   app.use(
     "/internal",
+    (request, _response, next) => {
+      if (
+        request.method !== "POST" ||
+        !request.is("application/json") ||
+        (request.get("Content-Encoding") ?? "identity") !== "identity"
+      )
+        throw new MediaFailure("invalid");
+      next();
+    },
     express.json({ limit: TEMPORARY_MEDIA_LIMITS.descriptorBytes }),
   );
   let admitting = false,

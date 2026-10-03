@@ -27,10 +27,12 @@ export async function streamArtifact(input: {
       Math.max(1, Math.min(60_000, input.expiresAtMs - input.now)),
     ),
   ]);
+  signal.throwIfAborted();
   const response = await input.fetch(signal),
     length = selected.end - selected.start + 1,
     contentRange = `bytes ${selected.start}-${selected.end}/${input.bytes}`;
   try {
+    signal.throwIfAborted();
     if (
       response.status !== (selected.partial ? 206 : 200) ||
       !response.body ||
@@ -54,10 +56,16 @@ export async function streamArtifact(input: {
     const body = response.body;
     async function* chunks() {
       const reader = body.getReader();
+      const cancel = () => {
+        void reader.cancel().catch(() => undefined);
+      };
+      signal.addEventListener("abort", cancel, { once: true });
       let count = 0;
       try {
+        signal.throwIfAborted();
         for (;;) {
           const value = await reader.read();
+          signal.throwIfAborted();
           if (value.done) break;
           count += value.value.byteLength;
           if (count > length) throw new Error("invalid-media");
@@ -65,6 +73,7 @@ export async function streamArtifact(input: {
         }
         if (count !== length) throw new Error("invalid-media");
       } finally {
+        signal.removeEventListener("abort", cancel);
         await reader.cancel().catch(() => undefined);
         reader.releaseLock();
       }

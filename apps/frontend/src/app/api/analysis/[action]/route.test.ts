@@ -16,6 +16,83 @@ function input(action: string, body = "{}", origin = "http://localhost:3000") {
   });
 }
 describe("bounded same-origin analysis bridge", () => {
+  it("rejects non-JSON/compressed requests before upstream work", async () => {
+    const transport = vi.fn();
+    vi.stubGlobal("fetch", transport);
+    for (const headers of [
+      { "Content-Type": "text/plain" },
+      { "Content-Type": "application/json", "Content-Encoding": "gzip" },
+    ]) {
+      const request = input("run");
+      for (const [key, value] of Object.entries(headers))
+        request.headers.set(key, value);
+      expect((await POST(request, context("run"))).status).toBe(400);
+    }
+    expect(transport).toHaveBeenCalledTimes(0);
+  });
+  it.each([
+    "bytes 0-9/1024",
+    "bytes 10-20/1024",
+    "bytes 10-19/99999999999999999999",
+  ])("rejects inconsistent upstream range %s", async (value) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(new Uint8Array(10), {
+            status: 206,
+            headers: {
+              "Content-Type": "video/mp4",
+              "Content-Length": "10",
+              "Content-Range": value,
+            },
+          }),
+      ),
+    );
+    expect(
+      (
+        await GET(
+          new Request("http://localhost:3000/api/analysis/output", {
+            headers: {
+              "Sec-Fetch-Site": "same-origin",
+              Cookie: "__Host-clipping_session=synthetic",
+              Range: "bytes=10-19",
+            },
+          }),
+          context("output"),
+        )
+      ).status,
+    ).toBe(503);
+  });
+  it("disconnect cancels a stalled upstream output reader", async () => {
+    const canceled = vi.fn(),
+      body = new ReadableStream<Uint8Array>({ cancel: canceled }),
+      controller = new AbortController();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(body, {
+            headers: { "Content-Type": "video/mp4", "Content-Length": "10" },
+          }),
+      ),
+    );
+    const response = await GET(
+      new Request("http://localhost:3000/api/analysis/output", {
+        signal: controller.signal,
+        headers: {
+          "Sec-Fetch-Site": "same-origin",
+          Cookie: "__Host-clipping_session=synthetic",
+        },
+      }),
+      context("output"),
+    );
+    const rejected = expect(response.arrayBuffer()).rejects.toThrow();
+    controller.abort();
+    await rejected;
+    expect(canceled).toHaveBeenCalledTimes(1);
+    expect(body.locked).toBe(false);
+  });
   it.each(["output", "download"])(
     "streams %s within the final output cap without dispatch or signed URL",
     async (action) => {

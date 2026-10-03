@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { connection } from "next/server";
 import "../styles/tokens.css";
 
 export const metadata: Metadata = {
@@ -12,7 +13,8 @@ type RootLayoutProperties = Readonly<{
   children: ReactNode;
 }>;
 
-export default function RootLayout({ children }: RootLayoutProperties) {
+export default async function RootLayout({ children }: RootLayoutProperties) {
+  await connection();
   return (
     <html lang="en">
       <body>{children}</body>

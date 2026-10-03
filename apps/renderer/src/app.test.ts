@@ -1,6 +1,6 @@
 import request from "supertest";
 import { rm } from "node:fs/promises";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createRendererApplication } from "./app.js";
 import { MediaFailure } from "./media/media.failure.js";
 import { binding, nonce, mediaFixture } from "../test/media-fixture.js";
@@ -16,6 +16,38 @@ function fixture(removeScratch?: (directory: string) => Promise<void>) {
   return { ...f, app };
 }
 describe("private renderer routes", () => {
+  it.each(["expiry/", "Expiry"])(
+    "refuses control caller access through noncanonical %s",
+    async (path) => {
+      const f = fixture(),
+        sweep = vi.spyOn(f.operations, "sweep");
+      const response = await request(f.app)
+        .post(`/internal/${path}`)
+        .set("Authorization", "Bearer control")
+        .send({});
+      expect(response.status).not.toBe(200);
+      expect(sweep).toHaveBeenCalledTimes(0);
+      expect(f.operations.counts).toEqual({ media: 0, ai: 0 });
+    },
+  );
+  it("rejects non-JSON/compressed methods without starting a media job", async () => {
+    const f = fixture();
+    for (const headers of [
+      { "Content-Type": "text/plain" },
+      { "Content-Type": "application/json", "Content-Encoding": "gzip" },
+    ]) {
+      const response = await request(f.app)
+        .post("/internal/render")
+        .set("Authorization", "Bearer control")
+        .set(headers)
+        .send("{}");
+      expect(response.status).toBe(400);
+      expect(response.headers["referrer-policy"]).toBe("no-referrer");
+      expect(response.text).not.toContain("Bearer");
+    }
+    expect(f.operations.counts).toEqual({ media: 0, ai: 0 });
+    expect(f.calls.render).toBe(0);
+  });
   it("refuses upload and reports failed local cleanup until an expiry retry succeeds", async () => {
     let fail = true;
     const f = fixture(async (directory) => {

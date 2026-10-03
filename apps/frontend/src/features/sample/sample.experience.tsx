@@ -988,7 +988,9 @@ function SampleScreen({
             <p className={styles.rights}>
               Only videos, voices and music you own or have permission to edit.
               {localMode
-                ? " Video stays on this device in one temporary workspace for up to two hours. Clear media attempts to remove it. Closing the tab does not guarantee deletion; expired files are cleaned while open or on the next visit. Browser storage may be removed sooner."
+                ? config.liveAnalysisEnabled
+                  ? " Video is kept in one temporary device workspace for up to two hours. After your consent, the original is uploaded to private temporary storage; bounded audiovisual proxies go to Google AI. Provider retention is separate. Clear requests server cleanup and attempts device deletion. Closing the tab does not guarantee deletion; independent server expiry and device cleanup on the next visit apply."
+                  : " Video stays on this device in one temporary workspace for up to two hours. Clear media attempts to remove it. Closing the tab does not guarantee deletion; expired files are cleaned while open or on the next visit. Browser storage may be removed sooner."
                 : " Real media will be temporary, with clear and expiry."}
             </p>
           </section>

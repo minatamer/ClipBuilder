@@ -65,6 +65,25 @@ const listSchema = z.object({
   items: z.array(metadataSchema.extend({ name: z.string() })).optional(),
   nextPageToken: z.string().optional(),
 });
+export function assertDisposableMetadata(value: unknown) {
+  const meta = z
+    .object({
+      iamConfiguration: z.object({
+        uniformBucketLevelAccess: z.object({ enabled: z.literal(true) }),
+        publicAccessPrevention: z.literal("enforced"),
+      }),
+      softDeletePolicy: z
+        .object({
+          retentionDurationSeconds: z.coerce.number().int().min(0).max(0),
+        })
+        .optional(),
+      versioning: z.object({ enabled: z.literal(false).optional() }).optional(),
+      retentionPolicy: z.never().optional(),
+      defaultEventBasedHold: z.literal(false).optional(),
+    })
+    .safeParse(value);
+  if (!meta.success) throw new MediaFailure("cleanup_pending");
+}
 export class GcsMediaStore implements TemporaryMediaStore {
   private readonly context = new AsyncLocalStorage<AbortSignal>();
   private readonly storage = new Storage({
@@ -122,23 +141,7 @@ export class GcsMediaStore implements TemporaryMediaStore {
     ).data;
   }
   async assertDisposable() {
-    const meta = z
-      .object({
-        iamConfiguration: z.object({
-          uniformBucketLevelAccess: z.object({ enabled: z.literal(true) }),
-          publicAccessPrevention: z.literal("enforced"),
-        }),
-        softDeletePolicy: z
-          .object({ retentionDurationSeconds: z.coerce.number().max(0) })
-          .optional(),
-        versioning: z
-          .object({ enabled: z.literal(false).optional() })
-          .optional(),
-        retentionPolicy: z.never().optional(),
-        defaultEventBasedHold: z.literal(false).optional(),
-      })
-      .safeParse(await this.json(this.bucketUrl()));
-    if (!meta.success) throw new MediaFailure("cleanup_pending");
+    assertDisposableMetadata(await this.json(this.bucketUrl()));
   }
   private async list(prefix: string, maximum: number) {
     const raw = listSchema.parse(

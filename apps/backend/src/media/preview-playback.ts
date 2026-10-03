@@ -33,15 +33,18 @@ export class PreviewPlayback {
     private readonly media: PreviewMedia,
     private readonly now = Date.now,
   ) {}
-  async open(context: AdmissionContext, input: unknown) {
-    const result = this.assembly.verify(context, input);
+  private capacity(sessionId: string) {
     for (const [key, value] of this.references)
       if (value.expiresAtMs <= this.now()) this.references.delete(key);
     if (
-      !this.references.has(result.binding.sessionId) &&
+      !this.references.has(sessionId) &&
       this.references.size >= TEMPORARY_MEDIA_LIMITS.maxSessions
     )
       throw new ApplicationError({ code: "ACTIVE_SESSION_EXISTS" });
+  }
+  async open(context: AdmissionContext, input: unknown) {
+    const result = this.assembly.verify(context, input);
+    this.capacity(result.binding.sessionId);
     const descriptor = mediaPreviewResponseSchema.parse(
       await this.media.previewInfo(
         {
@@ -61,6 +64,7 @@ export class PreviewPlayback {
       throw new ApplicationError({ code: "SESSION_INVALID" });
     context.signal?.throwIfAborted();
     this.assembly.verify(context, input);
+    this.capacity(result.binding.sessionId);
     this.references.set(result.binding.sessionId, descriptor);
     return { ready: true as const, expiresAtMs: descriptor.expiresAtMs };
   }

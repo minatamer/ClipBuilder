@@ -23,6 +23,7 @@ import {
 } from "./gemini-selected-plan.js";
 import { loadConfig } from "../config/loadConfig.js";
 import { selectedAssemblyPlanSchema } from "@clipbuilder/contracts";
+import { selectedAssemblyResultSchema } from "@clipbuilder/contracts";
 import { createAnalysisRouter } from "../http/routes/analysis.route.js";
 import { mapError } from "../http/errorMapper.js";
 import { PreviewPlayback } from "../media/preview-playback.js";
@@ -372,6 +373,51 @@ describe("final render and delivery", () => {
 });
 
 describe("frozen assembly preview access", () => {
+  it("bounds concurrent access publication after asynchronous metadata lookup", async () => {
+    const f = await fixture(),
+      result = await f.service.run(f.context, f.input),
+      descriptor = await f.port.preview.mock.results[0]!.value;
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const media = {
+      previewInfo: vi.fn(
+        async (input: import("@clipbuilder/contracts").MediaPreviewAccess) => {
+          await gate;
+          return { ...descriptor, binding: input.binding };
+        },
+      ),
+      previewContent: vi.fn(),
+    };
+    const preview = new PreviewPlayback(
+      f.admission,
+      {
+        verify: (_context, input) => selectedAssemblyResultSchema.parse(input),
+      },
+      media,
+      () => 1000,
+    );
+    const pending = Array.from({ length: 17 }, (_, index) =>
+      preview.open(f.context, {
+        ...result,
+        binding: {
+          ...result.binding,
+          sessionId: "ses_" + String.fromCharCode(97 + index).repeat(22),
+        },
+      }),
+    );
+    const finished = Promise.allSettled(pending);
+    release();
+    const states = await finished;
+    expect(states.filter((value) => value.status === "fulfilled")).toHaveLength(
+      16,
+    );
+    expect(states.filter((value) => value.status === "rejected")).toHaveLength(
+      1,
+    );
+    expect(f.provider.plan).toHaveBeenCalledTimes(1);
+  });
   it("restores the signed manifest and byte ranges with zero new AI or media preparation", async () => {
     const f = await fixture(),
       result = await f.service.run(f.context, f.input);

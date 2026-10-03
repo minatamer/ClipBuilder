@@ -75,6 +75,12 @@ export function createAnalysisRouter(
         "/render-result",
         "/output",
       ].includes(request.path);
+    if (
+      request.method === "POST" &&
+      (!request.is("application/json") ||
+        (request.get("Content-Encoding") ?? "identity") !== "identity")
+    )
+      throw new ApplicationError({ code: "UNSUPPORTED_CONTENT_TYPE" });
     if (assembling) {
       if (!assembly) throw new ApplicationError({ code: "FEATURE_DISABLED" });
       admission.session(context(request, response));

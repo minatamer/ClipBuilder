@@ -14,6 +14,11 @@ describe("backend application", () => {
     const response = await request(application).get("/v1/health").expect(200);
 
     expect(response.headers["cache-control"]).toBe("no-store");
+    expect(response.headers["referrer-policy"]).toBe("no-referrer");
+    expect(response.headers["x-content-type-options"]).toBe("nosniff");
+    expect(response.headers["content-security-policy"]).toContain(
+      "default-src 'none'",
+    );
     expect(response.headers["x-powered-by"]).toBeUndefined();
     expect(response.headers["x-request-id"]).toMatch(/^req_[a-f0-9]{32}$/u);
     expect(response.body).toEqual({

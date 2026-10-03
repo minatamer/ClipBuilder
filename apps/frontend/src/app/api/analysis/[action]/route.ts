@@ -3,6 +3,7 @@ import {
   GROUNDED_ANALYSIS_LIMITS,
   TEMPORARY_MEDIA_LIMITS,
   PUBLIC_LIMITS,
+  mediaByteRange,
 } from "@clipbuilder/contracts";
 
 async function proxy(
@@ -38,7 +39,9 @@ async function proxy(
     ].includes(action) ||
     origin !== "http://localhost:3000" ||
     request.headers.get("origin") !== origin ||
-    request.headers.get("sec-fetch-site") === "cross-site"
+    request.headers.get("content-type")?.split(";")[0] !== "application/json" ||
+    (request.headers.get("content-encoding") ?? "identity") !== "identity" ||
+    request.headers.get("sec-fetch-site") !== "same-origin"
   )
     return fail(400);
   const controller = new AbortController(),
@@ -47,14 +50,14 @@ async function proxy(
   if (request.signal.aborted) abort();
   let timer = setTimeout(abort, 5000);
   let reader = request.body?.getReader();
+  const cancelBody = () => {
+    void reader?.cancel().catch(() => undefined);
+  };
+  controller.signal.addEventListener("abort", cancelBody);
   let upstream: Response | undefined;
   try {
     const chunks: ArrayBuffer[] = [];
     let size = 0;
-    const cancelBody = () => {
-      void reader?.cancel().catch(() => undefined);
-    };
-    controller.signal.addEventListener("abort", cancelBody, { once: true });
     try {
       if (reader)
         for (;;) {
@@ -77,7 +80,6 @@ async function proxy(
           chunks.push(new Uint8Array(chunk.value).buffer);
         }
     } finally {
-      controller.signal.removeEventListener("abort", cancelBody);
       await reader?.cancel();
       reader?.releaseLock();
       reader = undefined;
@@ -136,6 +138,7 @@ async function proxy(
     return fail(503);
   } finally {
     clearTimeout(timer);
+    controller.signal.removeEventListener("abort", cancelBody);
     request.signal.removeEventListener("abort", abort);
     if (reader) {
       await reader.cancel().catch(() => undefined);
@@ -221,10 +224,26 @@ export async function GET(
       );
     const contentRange = upstream.headers.get("content-range");
     if (upstream.status === 206) {
-      if (!contentRange || !/^bytes \d+-\d+\/\d+$/.test(contentRange))
+      const parts = contentRange?.match(/^bytes (\d+)-(\d+)\/(\d+)$/),
+        total = Number(parts?.[3]);
+      const cap =
+        action === "preview"
+          ? TEMPORARY_MEDIA_LIMITS.proxyBytes
+          : PUBLIC_LIMITS.maxOutputBytes;
+      if (!range || !parts || !Number.isSafeInteger(total) || total > cap)
         throw new Error();
-      headers.set("Content-Range", contentRange);
+      const selected = mediaByteRange(range, total);
+      if (
+        Number(parts[1]) !== selected.start ||
+        Number(parts[2]) !== selected.end ||
+        length !== selected.end - selected.start + 1
+      )
+        throw new Error();
+      headers.set("Content-Range", contentRange!);
+    } else if (range || contentRange) {
+      throw new Error();
     }
+    controller.signal.throwIfAborted();
     const reader = upstream.body.getReader();
     let count = 0,
       closed = false;
@@ -234,12 +253,18 @@ export async function GET(
       abort();
       await reader.cancel().catch(() => undefined);
       reader.releaseLock();
+      controller.signal.removeEventListener("abort", cancelStream);
       dispose();
     }
+    const cancelStream = () => {
+      void reader.cancel().catch(() => undefined);
+    };
+    controller.signal.addEventListener("abort", cancelStream, { once: true });
     const body = new ReadableStream<Uint8Array>({
       async pull(output) {
         try {
           const chunk = await reader.read();
+          controller.signal.throwIfAborted();
           if (chunk.done) {
             if (count !== length) throw new Error();
             output.close();

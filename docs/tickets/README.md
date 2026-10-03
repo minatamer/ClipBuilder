@@ -1,6 +1,6 @@
 # ClipBuilder canonical ticket index
 
-Status: CL-005/006 foundations and CL-007/008/009 local analysis/focus/assembly are complete. CL-010 preview and CL-011 final render/download are locally complete; validation pass 2 is clean after reproduced/fixed Clear-during-metadata races. All five settled root gates and 592 synthetic tests in 60 files pass. CL-012 safeguards/cleanup is next. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
+Status: CL-005 through CL-012 local foundations, analysis, assembly, preview, export and safeguards are complete. CL-012 validation pass 2 is clean after reproduced/fixed purpose-route aliases and negative-retention findings. All five settled root gates and 616 synthetic tests in 63 files pass. CL-013 experience quality is next. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
 
 Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md),
 [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),
@@ -11,12 +11,12 @@ documents the seven owner-authorized sequential whole-file commits. Implementati
 steps 1–5 are committed; the final execution record is in
 [CL-008](CL-008-productionize-active-speaker-assembly.md#commit-execution-record).
 
-Current sequence: [CL-011 file-level plan](CL-011-COMMIT_PLAN.md) commits its
-complete locally validated change, then CL-012 continues. CL-010 is committed as `4749dcc`. CL-009 is committed
-as `06ab834`. The owner authorized
-local execute/validate loops, thorough finding disposition and sequential
-ticket-prefixed commits on 2026-10-03. API keys, paid/cloud tests and deployment
-are deferred and do not stop this locally buildable sequence.
+Current sequence: [CL-012 file-level plan](CL-012-COMMIT_PLAN.md) commits its
+validated local controls, then CL-013 continues. CL-011 is committed as `2e6af07`,
+CL-010 as `4749dcc`, and CL-009 as `06ab834`. The owner explicitly approved
+staging and ticket-prefixed commits through CL-015 on 2026-10-03. Local execute /
+validate / finding disposition loops remain authorized. API keys, paid/cloud
+tests and deployment are deferred and do not stop this local sequence.
 
 The isolated private renderer/GCS checkpoint is provisioned and verified under
 the recorded owner approvals. New external actions retain their own gates.

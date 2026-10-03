@@ -31,15 +31,18 @@ export class OutputDelivery {
     private readonly media: OutputMedia,
     private readonly now = Date.now,
   ) {}
-  async open(context: AdmissionContext, input: unknown) {
-    const result = this.render.verify(context, input);
+  private capacity(sessionId: string) {
     for (const [key, value] of this.references)
       if (value.expiresAtMs <= this.now()) this.references.delete(key);
     if (
-      !this.references.has(result.binding.sessionId) &&
+      !this.references.has(sessionId) &&
       this.references.size >= TEMPORARY_MEDIA_LIMITS.maxSessions
     )
       throw new ApplicationError({ code: "ACTIVE_SESSION_EXISTS" });
+  }
+  async open(context: AdmissionContext, input: unknown) {
+    const result = this.render.verify(context, input);
+    this.capacity(result.binding.sessionId);
     const descriptor = mediaOutputResponseSchema.parse(
       await this.media.outputInfo(
         { binding: result.binding, manifestHash: result.manifestHash },
@@ -56,6 +59,7 @@ export class OutputDelivery {
       throw new ApplicationError({ code: "SESSION_INVALID" });
     context.signal.throwIfAborted();
     this.render.verify(context, input);
+    this.capacity(result.binding.sessionId);
     this.references.set(result.binding.sessionId, descriptor);
     return { ready: true as const, expiresAtMs: descriptor.expiresAtMs };
   }

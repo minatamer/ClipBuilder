@@ -1,5 +1,11 @@
 # ClipBuilder backend
 
+CL-012 adds locally tested privacy headers, strict request/stream bounds and
+canonical private caller-purpose routes. Browser documents use fresh CSP nonces;
+Trusted Types remains report-only pending real compatibility checks. Storage
+policy and cleanup controls are code-tested, not proof of saved cloud settings.
+See [current safeguard evidence](../../docs/operations/SECURITY_PRIVACY_CONTROLS.md).
+
 CL-011 connects explicit final export, receipt-checked output Range playback and
 attachment download. It deletes server source/proxies before publication success;
 output expires after ten minutes or at session expiry. Clear drains owned work and

@@ -2,7 +2,7 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+Status: local controls complete; validation pass 2 clean; all five root gates pass; external evidence remains deferred.
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -11,8 +11,70 @@ Audit purpose-scoped service identities, admission/replay/epoch, temporary stora
 Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
 
 - [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
-- [ ] Implement and verify this current packet after approval.
-- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+- [x] Implement and verify the local current packet after approval.
+- [x] Record local evidence and separate remaining rights/AI/cloud/license/device gates.
+
+## Local execution and validation — 2026-10-03
+
+`FAKE_MODE=true` with no keys supports the labelled fixture UI and synthetic
+injected boundary/lifecycle checks; it does not produce a real MP4 or establish
+AI quality. Real processing requires provider keys/live flags/rights/data/paid
+approvals plus separately approved cloud compute/storage/IAM. No local AI
+runtime or weights are used. No secrets, account settings, cloud/provider calls,
+media, installs, deployment or prices were inspected or changed.
+
+Implemented: request-scoped CSP nonce and dynamic Next rendering, production
+script restrictions, exact provider/storage origins, response privacy headers,
+JSON/encoding/Fetch Metadata rejection, exact Range validation and disconnected
+reader cancellation. Preview/output access capacity is rechecked after metadata
+awaits. Private renderer routes are canonical and caller-purpose scoped.
+Storage metadata requires private uniform access and zero retention with no
+versions/holds. Privacy copy describes cloud/provider transfer, ten-minute
+output/session expiry, independent retry and downloaded-copy limits.
+See [control inventory and deferred evidence](../operations/SECURITY_PRIVACY_CONTROLS.md).
+
+Existing admission/replay/epoch tests were traced: cheapest-first rejection,
+atomic once-per-action reservation, consumed uncertainty, retained tombstones,
+bounded descriptors/counters and fail-closed restart. Google Files cleanup and
+SDK retry disabling were inspected; independent expiry code exists, while its
+actual deployed schedule and retry behavior remain unverified. No additional
+AI plans or jobs are introduced by this ticket.
+
+Validation pass 1 found two actionable issues. Express accepted `/expiry/` and
+`/Expiry` although the caller-purpose guard checked `/expiry` exactly. Independent
+regressions returned 200 and invoked sweep before the fix. Strict/case-sensitive
+routing now rejects both aliases before sweep. The disposable-storage schema
+also accepted negative retention; the independent negative test failed before
+adding integer lower/upper zero bounds. All three regressions then passed.
+The first implementation pass missed framework route canonicalization and the
+schema lower bound; neither finding was dismissed or deferred.
+
+Validation pass 2 inspected the combined tracked/new-file changes, ticket,
+admission/storage/stream dependencies and cleanup with no further actionable
+local findings. This was a focused revision, not an external security audit.
+Focused checks: renderer routing/storage 14 tests in 2 files; backend admission,
+Turnstile, assembly and headers 49 in 4; stalled-stream 4 in 1; frontend privacy,
+CSP and bridge 28 in 3. The settled root gate result is recorded below.
+
+Remaining unchecked: actual CSP/Player/Turnstile/upload compatibility; Trusted
+Types enforcement (report-only now); saved public TLS/proxy/static headers;
+private IAM/bucket/CORS/soft-delete settings and fifteen-minute scheduler;
+provider data/retention/model/project settings; hard monetary limits and
+restart/revision/anonymous-visitor multiplication; registry/image/license/font
+and source/contributor rights; native pixels/audio/performance, devices and
+owner public-release approval. Public paid configuration stays fail-closed.
+Tracked media/model binaries and private-key marker files: zero. Manifests and
+lockfile unchanged. Test listeners/readers/timers/scratch are disposed; no app
+was launched. Synthetic results cannot approve these external gates.
+
+Settled gates: `corepack pnpm format:check`, `lint`, `typecheck`, `test:unit`,
+and `build` all pass; `git diff --check` passes. Unit total: **616 tests in
+63 files** (root 20/3, contracts 58/5, composition 3/1, backend 195/14,
+renderer 56/11, frontend 284/29). Next production build has dynamic nonce-bearing
+`/` and `/start` plus Proxy; this is build evidence, not browser CSP proof.
+
+Commit: [whole-file sequential plan](CL-012-COMMIT_PLAN.md), authorized by the
+owner through CL-015 on 2026-10-03.
 
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>
