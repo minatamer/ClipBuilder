@@ -7,19 +7,12 @@ import {
   mediaDescriptorSchema,
 } from "@clipbuilder/contracts";
 import {
-  AudioSample,
   AudioSampleSink,
-  AudioSampleSource,
   BlobSource,
   Input,
   MP4,
   WEBM,
-  Mp4OutputFormat,
-  Output,
-  StreamTarget,
-  VideoSample,
   VideoSampleSink,
-  VideoSampleSource,
 } from "mediabunny";
 import { LocalMediaError } from "./media.errors";
 import { copyLocalSource } from "./opfs.copy";
@@ -147,121 +140,13 @@ async function copy(file: Blob, command: SourceCommand, signal: AbortSignal) {
 }
 
 async function probe(signal: AbortSignal) {
-  if (
-    !isSecureContext ||
-    typeof OffscreenCanvas === "undefined" ||
-    typeof VideoEncoder === "undefined" ||
-    typeof AudioEncoder === "undefined" ||
-    !navigator.storage?.getDirectory
-  )
+  if (!isSecureContext || typeof navigator.storage?.getDirectory !== "function")
     throw new LocalMediaError("unavailable");
-  if (
-    !(
-      await VideoEncoder.isConfigSupported({
-        codec: "avc1.420028",
-        width: 1080,
-        height: 1920,
-        framerate: 30,
-        bitrate: 4_000_000,
-        avc: { format: "avc" },
-      })
-    ).supported ||
-    !(
-      await AudioEncoder.isConfigSupported({
-        codec: "mp4a.40.2",
-        sampleRate: 48_000,
-        numberOfChannels: 1,
-        bitrate: 128_000,
-      })
-    ).supported
-  )
-    throw new LocalMediaError("unavailable");
-  const bytes = new Uint8Array(4 * LOCAL_WORKSPACE_LIMITS.ioChunkBytes);
-  let length = 0;
-  const output = new Output({
-    format: new Mp4OutputFormat({ fastStart: false }),
-    target: new StreamTarget(
-      new WritableStream({
-        write({ data, position }) {
-          check(signal);
-          if (position + data.byteLength > bytes.byteLength)
-            throw new LocalMediaError("unavailable");
-          bytes.set(data, position);
-          length = Math.max(length, position + data.byteLength);
-        },
-      }),
-      { chunked: true, chunkSize: LOCAL_WORKSPACE_LIMITS.ioChunkBytes },
-    ),
-  });
-  try {
-    const video = new VideoSampleSource({
-      codec: "avc",
-      bitrate: 4_000_000,
-      latencyMode: "realtime",
-    });
-    const audio = new AudioSampleSource({ codec: "aac", bitrate: 128_000 });
-    output.addVideoTrack(video, { frameRate: 30 });
-    output.addAudioTrack(audio);
-    const canvas = new OffscreenCanvas(1080, 1920);
-    const context = canvas.getContext("2d");
-    if (!context) throw new LocalMediaError("unavailable");
-    await output.start();
-    for (let index = 0; index < 4; index++) {
-      check(signal);
-      context.fillStyle = index % 2 ? "#2fb896" : "#154adc";
-      context.fillRect(0, 0, 1080, 1920);
-      const frame = new VideoSample(canvas, {
-        timestamp: index / 30,
-        duration: 1 / 30,
-      });
-      try {
-        await video.add(frame);
-      } finally {
-        frame.close();
-      }
-      const sample = new AudioSample({
-        data: new Float32Array(1600),
-        format: "f32-planar",
-        numberOfChannels: 1,
-        sampleRate: 48_000,
-        timestamp: index / 30,
-      });
-      try {
-        await audio.add(sample);
-      } finally {
-        sample.close();
-      }
-    }
-    await output.finalize();
-  } catch {
-    await output.cancel();
-    throw new LocalMediaError(signal.aborted ? "canceled" : "unavailable");
-  }
-  const input = new Input({
-    source: new BlobSource(new Blob([bytes.subarray(0, length)])),
-    formats: [MP4],
-  });
-  let frame;
-  let sample;
-  try {
-    const video = await input.getPrimaryVideoTrack();
-    const audio = await input.getPrimaryAudioTrack();
-    if (!video || !audio) throw new LocalMediaError("unavailable");
-    frame = await new VideoSampleSink(video).getSample(0);
-    sample = await new AudioSampleSink(audio).getSample(0);
-    if (
-      !frame ||
-      !sample ||
-      frame.displayWidth !== 1080 ||
-      frame.displayHeight !== 1920
-    )
-      throw new LocalMediaError("unavailable");
-    check(signal);
-  } finally {
-    frame?.close();
-    sample?.close();
-    input.dispose();
-  }
+  check(signal);
+  // Final H.264/AAC encoding belongs to the private renderer. Source-specific
+  // decoder support is checked by inspect, rather than an unrelated output probe.
+  await navigator.storage.getDirectory();
+  check(signal);
   return {};
 }
 

@@ -131,8 +131,8 @@ server-only configuration to browser code.
 ## Current responsibility
 
 **CL-005 local foundation (2026-10-01):** real local composition now retains one
-File, inspects actual supported MP4/WebM tracks and bounds in a worker, probes
-actual native portrait H.264/AAC encode/decode, and incrementally copies the
+File, checks secure OPFS access, inspects actual supported MP4/WebM tracks and
+bounds in a worker, and incrementally copies the
 source into OPFS. A bounded versioned IndexedDB journal commits only on
 transaction completion. An exclusive Web Lock, advisory content-free
 BroadcastChannel notifications and runtime generation fencing protect one
@@ -141,7 +141,7 @@ cached analysis/selection; it never spends or requires a server-owned bundle.
 The owner-approved expiry is fixed at two hours from source selection, with
 active/next-open orphan cleanup and best-effort deletion. Closing a tab is not
 a deletion guarantee; no persistent-storage permission or history is requested.
-Missing storage/locking/codec support fails closed; no unproved memory fallback
+Missing storage/locking/source-decoder support fails closed; no unproved memory fallback
 is enabled. CL-006 adds a callable worker audio pipeline; CL-007 instead sends
 the admitted original to private storage and a full-clock audiovisual proxy to
 Gemini. Assembly/preview/export remain later packets.

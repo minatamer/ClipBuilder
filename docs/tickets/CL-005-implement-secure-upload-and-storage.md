@@ -34,6 +34,32 @@ package/schema boundaries and fake operation counts are executable. No Gemini
 calls occurred; ordinary tests remain credential-free and zero-network.
 Actual browser/control source transfer remains later integration work.
 
+## Cross-ticket audit correction — 2026-10-03
+
+The owner authorized correction of the full-history audit findings. The retained
+browser probe still required portrait H.264/AAC encoding even though the current
+cloud migration assigns final encoding to the private renderer. New worker
+regressions reproduced that rejection before the correction.
+
+The production probe now verifies secure OPFS access and cancellation. Actual
+source inspection still validates supported tracks, decoding, dimensions, clocks
+and public bounds before readiness; workspace locking, quota and journal checks
+remain required. No browser output encoder or canvas is required by intake or
+restore. The opt-in historical encoding/audio harness is unchanged.
+
+Changed: frontend source worker, its new regression file, frontend guide and this
+packet. Focused worker/workspace/client/audio verification passed **47 tests in
+four files**. Six worker regressions cover absent/unsupported encoders, insecure
+or missing storage, denied access and cancellation during pending access.
+The combined settled gate passed all five root commands and **665 tests in 66
+files**; final read-only revalidation found no actionable findings in the three
+corrections. Exact commands, test counts and limits are recorded in
+[CL-010](CL-010-deliver-automatic-clip-review.md#settled-cross-ticket-verification-and-revalidation--2026-10-03).
+Synthetic fake/off tests use no keys or network; real decoder/device behavior,
+Gemini quality and cloud rollout remain unverified. No retained owner media,
+environment or provider/cloud resources were mutated. Nothing was staged or
+committed.
+
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>
 
