@@ -4,10 +4,16 @@ import { analysis, media } from "../session/session.test-fixtures";
 import { BrowserWorkspace, type WorkspacePorts } from "./browser.workspace";
 import { LocalMediaError } from "./media.errors";
 import type { SourceCommand, SourceResult } from "./source.protocol";
-import { parseWorkspaceRecord, type WorkspaceRecord } from "./workspace.schema";
+import {
+  parseWorkspaceRecord,
+  type WorkspaceRecord,
+  type RemoteCleanupObligation,
+} from "./workspace.schema";
 import { requiredWorkspaceBytes } from "./workspace.quota";
 import { restoreLocalWorkspace } from "./workspace.restore";
 import { BrowserWorkspaceLock } from "./workspace.lock";
+import { clearAnalysisMedia } from "../source-analysis/source-analysis.flow";
+import { createSourceAnalysisApi } from "../source-analysis/source-analysis.api";
 
 function drainGate() {
   let finish = () => {};
@@ -69,6 +75,7 @@ function fixture() {
   let stored: WorkspaceRecord | null = null;
   let time = 1000;
   let marker = false;
+  let remoteCleanup: RemoteCleanupObligation | null = null;
   const file = new File([new Uint8Array(8192)], "synthetic-only.mp4", {
     type: "video/mp4",
   });
@@ -94,16 +101,27 @@ function fixture() {
     },
   );
   const ports: WorkspacePorts = {
-    journal: {
-      read: vi.fn(async () => stored),
-      write: vi.fn(async (record) => {
-        stored = parseWorkspaceRecord(record);
-      }),
-      delete: vi.fn(async () => {
-        stored = null;
-      }),
-      close: vi.fn(),
-    },
+    journal: Object.assign(
+      {
+        read: vi.fn(async () => stored),
+        write: vi.fn(async (record) => {
+          stored = parseWorkspaceRecord(record);
+        }),
+        delete: vi.fn(async () => {
+          stored = null;
+        }),
+        close: vi.fn(),
+      },
+      {
+        readRemoteCleanup: vi.fn(async () => remoteCleanup),
+        writeRemoteCleanup: vi.fn(async (value: RemoteCleanupObligation) => {
+          remoteCleanup = value;
+        }),
+        deleteRemoteCleanup: vi.fn(async () => {
+          remoteCleanup = null;
+        }),
+      },
+    ),
     processor: { run, stop: vi.fn(async () => {}) },
     lock: { acquire: vi.fn(async () => ({ release: vi.fn() })) },
     estimate: vi.fn(async () => ({
@@ -129,6 +147,7 @@ function fixture() {
     file,
     run,
     stored: () => stored,
+    remoteCleanup: () => remoteCleanup,
     marker: () => marker,
     setRecord: (record: WorkspaceRecord | null) => {
       stored = record;
@@ -140,6 +159,299 @@ function fixture() {
 }
 
 describe("local audio workspace ownership", () => {
+  it("drains remote cleanup journal commits before releasing workspace ownership", async () => {
+    const f = fixture(),
+      release = vi.fn(),
+      gate = drainGate(),
+      entered = drainGate();
+    f.ports.lock.acquire = async () => ({ release });
+    await f.owner.initialize();
+    const write = f.ports.journal.writeRemoteCleanup;
+    f.ports.journal.writeRemoteCleanup = async (value) => {
+      entered.finish();
+      await gate.pending;
+      await write(value);
+    };
+    const remembering = f.owner.rememberRemoteCleanup(false);
+    await entered.pending;
+    const disposing = f.owner.dispose();
+    await Promise.resolve();
+    expect(release).toHaveBeenCalledTimes(0);
+    gate.finish();
+    await remembering;
+    await disposing;
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(f.remoteCleanup()).toEqual({
+      version: 1,
+      allowMissingSession: false,
+      status: "pending",
+    });
+  });
+  it("preserves a failed remote Clear obligation after media deletion and workspace reload", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    await f.owner.markCloudAnalysis("pending", true);
+    const api = {
+      clear: vi.fn(async (): Promise<void> => {
+        throw new Error("synthetic-remote-cleanup-failure");
+      }),
+      analyze: vi.fn(),
+    };
+    expect(
+      await clearAnalysisMedia({
+        workspace: f.owner,
+        api,
+        cloudPending: true,
+        signal: new AbortController().signal,
+      }),
+    ).toEqual({ complete: false, cloudPending: true });
+    expect(f.stored()).toBeNull();
+    expect(
+      f.run.mock.calls.some(([command]) => command.action === "delete"),
+    ).toBe(true);
+    await f.owner.dispose();
+    const reopened = new BrowserWorkspace(f.ports);
+    try {
+      const record = await reopened.initialize();
+      expect(f.remoteCleanup()).toEqual({
+        version: 1,
+        allowMissingSession: false,
+        status: "pending",
+      });
+      expect(record).toBeNull();
+      expect(reopened.sourceFile).toBeNull();
+      expect(
+        restoreLocalWorkspace(record, reopened.remoteCleanup),
+      ).toMatchObject({ stage: "clearing", previousStage: "cleanup-partial" });
+      expect(() => reopened.prepare(f.file, () => {})).toThrow();
+      // A fresh component has no old ref; persisted ownership still retries only Clear.
+      expect(
+        await clearAnalysisMedia({
+          workspace: reopened,
+          api,
+          cloudPending: false,
+          signal: new AbortController().signal,
+        }),
+      ).toEqual({ complete: false, cloudPending: true });
+      expect(f.remoteCleanup()).not.toBeNull();
+      api.clear.mockResolvedValueOnce();
+      expect(
+        await clearAnalysisMedia({
+          workspace: reopened,
+          api,
+          cloudPending: false,
+          signal: new AbortController().signal,
+        }),
+      ).toEqual({ complete: true, cloudPending: false });
+      expect(f.remoteCleanup()).toBeNull();
+      expect(reopened.remoteCleanup).toBeNull();
+      expect(api.clear).toHaveBeenCalledTimes(3);
+      expect(api.analyze).toHaveBeenCalledTimes(0);
+    } finally {
+      await reopened.dispose();
+    }
+  });
+  it("still deletes physical media when obligation persistence fails, and keeps recovery fenced", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    await f.owner.markCloudAnalysis("pending", true);
+    vi.mocked(f.ports.journal.writeRemoteCleanup).mockRejectedValue(
+      new LocalMediaError("storage"),
+    );
+    const api = {
+      clear: vi.fn(async () => {
+        throw new Error("synthetic");
+      }),
+    };
+    expect(
+      await clearAnalysisMedia({
+        workspace: f.owner,
+        api,
+        cloudPending: true,
+        signal: new AbortController().signal,
+      }),
+    ).toEqual({ complete: false, cloudPending: true });
+    expect(
+      f.run.mock.calls.some(([command]) => command.action === "delete"),
+    ).toBe(true);
+    expect(f.marker()).toBe(true);
+    expect(f.stored()?.cloudAnalysis?.cleanupRequired).toBe(true);
+    await f.owner.dispose();
+    const reopened = new BrowserWorkspace(f.ports);
+    try {
+      await expect(reopened.initialize()).rejects.toMatchObject({
+        code: "storage",
+      });
+    } finally {
+      await reopened.dispose();
+    }
+  });
+  it("recovers confirmed Clear after failed local acknowledgement and cookie expiry on reload", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    await f.owner.markCloudAnalysis("pending", true);
+    vi.mocked(f.ports.journal.deleteRemoteCleanup).mockRejectedValueOnce(
+      new LocalMediaError("storage"),
+    );
+    let sessionPresent = true;
+    const transport = vi.fn(async (url: RequestInfo | URL) => {
+      if (url === "/api/analysis/session")
+        return sessionPresent
+          ? Response.json({
+              sessionId: "ses_" + "c".repeat(22),
+              csrfToken: "c".repeat(43),
+              expiresAtMs: 7201000,
+            })
+          : Response.json(
+              {
+                error: {
+                  code: "SESSION_MISSING",
+                  message: "No active session was found.",
+                  retryable: false,
+                  requestId: "req_" + "0".repeat(32),
+                },
+              },
+              { status: 401 },
+            );
+      if (url === "/api/analysis/clear") {
+        sessionPresent = false;
+        return new Response(null, { status: 204 });
+      }
+      throw new Error("unexpected-processing-request");
+    });
+    const api = createSourceAnalysisApi(transport);
+    expect(
+      await clearAnalysisMedia({
+        workspace: f.owner,
+        api,
+        cloudPending: true,
+        signal: new AbortController().signal,
+      }),
+    ).toEqual({ complete: false, cloudPending: false });
+    expect(f.stored()).toBeNull();
+    expect(f.remoteCleanup()).toEqual({
+      version: 1,
+      allowMissingSession: false,
+      status: "confirmed",
+    });
+    expect(sessionPresent).toBe(false);
+    // The expired cookie cannot prove cleanup for a fresh, unconfirmed request.
+    await expect(api.clear(new AbortController().signal)).rejects.toMatchObject(
+      {
+        failure: { code: "SESSION_MISSING" },
+      },
+    );
+    await f.owner.dispose();
+    const reopened = new BrowserWorkspace(f.ports);
+    try {
+      const record = await reopened.initialize();
+      expect(restoreLocalWorkspace(record, reopened.remoteCleanup).stage).toBe(
+        "clearing",
+      );
+      expect(
+        await clearAnalysisMedia({
+          workspace: reopened,
+          api: createSourceAnalysisApi(transport),
+          cloudPending: false,
+          signal: new AbortController().signal,
+        }),
+      ).toEqual({ complete: true, cloudPending: false });
+      expect(reopened.remoteCleanup).toBeNull();
+      expect(f.remoteCleanup()).toBeNull();
+      expect(transport.mock.calls.map(([url]) => url)).toEqual([
+        "/api/analysis/session",
+        "/api/analysis/clear",
+        "/api/analysis/session",
+      ]);
+      await reopened.prepare(f.file, () => {}).completion;
+    } finally {
+      await reopened.dispose();
+    }
+  });
+  it("keeps admitted remote cleanup fenced when its session is missing without confirmed Clear", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    await f.owner.markCloudAnalysis("pending", true);
+    const transport = vi.fn(async (url: RequestInfo | URL) => {
+      expect(url).toBe("/api/analysis/session");
+      return Response.json(
+        {
+          error: {
+            code: "SESSION_MISSING",
+            message: "No active session was found.",
+            retryable: false,
+            requestId: "req_" + "0".repeat(32),
+          },
+        },
+        { status: 401 },
+      );
+    });
+    const api = createSourceAnalysisApi(transport);
+    try {
+      expect(
+        await clearAnalysisMedia({
+          workspace: f.owner,
+          api,
+          cloudPending: true,
+          signal: new AbortController().signal,
+        }),
+      ).toEqual({ complete: false, cloudPending: true });
+      expect(f.remoteCleanup()).toEqual({
+        version: 1,
+        allowMissingSession: false,
+        status: "pending",
+      });
+      await expect(f.owner.completeRemoteCleanup()).rejects.toMatchObject({
+        code: "storage",
+      });
+      expect(() => f.owner.prepare(f.file, () => {})).toThrow();
+      expect(transport).toHaveBeenCalledTimes(1);
+    } finally {
+      await f.owner.dispose();
+    }
+  });
+  it("keeps remote confirmation through failed local deletion and reload without repeating Clear", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    await f.owner.markCloudAnalysis("pending", true);
+    vi.mocked(f.ports.journal.delete).mockRejectedValueOnce(
+      new LocalMediaError("storage"),
+    );
+    const api = { clear: vi.fn(async () => {}) };
+    expect(
+      await clearAnalysisMedia({
+        workspace: f.owner,
+        api,
+        cloudPending: true,
+        signal: new AbortController().signal,
+      }),
+    ).toEqual({ complete: false, cloudPending: false });
+    expect(f.remoteCleanup()?.status).toBe("confirmed");
+    expect(f.stored()?.status).toBe("clearing");
+    await f.owner.dispose();
+    const reopened = new BrowserWorkspace(f.ports);
+    try {
+      await reopened.initialize();
+      expect(
+        await clearAnalysisMedia({
+          workspace: reopened,
+          api,
+          cloudPending: true,
+          signal: new AbortController().signal,
+        }),
+      ).toEqual({ complete: true, cloudPending: false });
+      expect(api.clear).toHaveBeenCalledTimes(1);
+      expect(f.remoteCleanup()).toBeNull();
+      expect(f.stored()).toBeNull();
+    } finally {
+      await reopened.dispose();
+    }
+  });
   it("extracts only from the admitted source and retains the source after scratch cleanup", async () => {
     const f = fixture();
     await f.owner.initialize();
@@ -205,6 +517,89 @@ describe("local audio workspace ownership", () => {
 
 afterEach(() => vi.useRealTimers());
 describe("browser workspace publication and lifecycle", () => {
+  it("commits grounded proof and analysis together, restores success locally, and rejects a foreign source", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    const source = f.owner.snapshot!.source!;
+    const result = {
+      binding: {
+        sessionId: "ses_" + "c".repeat(22),
+        sourceRevision: source.media.sourceRevision,
+        fingerprint: source.fingerprint,
+      },
+      generation: "12",
+      analysis: {
+        ...analysis,
+        media: {
+          ...source.media,
+          durationMs: source.media.durationMs + 1,
+          averageFrameRate: 29.97,
+        },
+        transcript: {
+          ...analysis.transcript,
+          durationMs: source.media.durationMs + 1,
+        },
+      },
+      receipt: "synthetic-integrity-receipt",
+    };
+    await f.owner.markCloudAnalysis("pending");
+    await expect(
+      f.owner.storeGroundedAnalysis({
+        ...result,
+        binding: { ...result.binding, fingerprint: "b".repeat(64) },
+      }),
+    ).rejects.toThrow();
+    expect(f.owner.snapshot!.analysis).toBeNull();
+    await f.owner.storeGroundedAnalysis(result);
+    expect(f.stored()!.cloudAnalysis?.result).toEqual(result);
+    expect(f.stored()!.analysis).toEqual(result.analysis);
+    await f.owner.dispose();
+    const restored = new BrowserWorkspace(f.ports);
+    await restored.initialize();
+    expect(restoreLocalWorkspace(restored.snapshot!).stage).toBe("candidates");
+    await restored.dispose();
+  });
+  it("restores a pending/lost remote result as failure without another action and fences late publication after clear", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    await f.owner.markCloudAnalysis("pending");
+    expect(restoreLocalWorkspace(f.owner.snapshot!).stage).toBe(
+      "analysis-failed",
+    );
+    const source = f.owner.snapshot!.source!;
+    const result = {
+      binding: {
+        sessionId: "ses_" + "c".repeat(22),
+        sourceRevision: source.media.sourceRevision,
+        fingerprint: source.fingerprint,
+      },
+      generation: "12",
+      analysis: { ...analysis, media: source.media },
+      receipt: "synthetic-integrity-receipt",
+    };
+    const gate = drainGate(),
+      entered = drainGate(),
+      original = f.ports.journal.write;
+    f.ports.journal.write = async (record) => {
+      if (record.cloudAnalysis?.status === "complete") {
+        entered.finish();
+        await gate.pending;
+      }
+      await original(record);
+    };
+    const write = f.owner.storeGroundedAnalysis(result),
+      rejected = expect(write).rejects.toMatchObject({ code: "canceled" });
+    await entered.pending;
+    const clear = f.owner.clear();
+    gate.finish();
+    await clear;
+    await rejected;
+    expect(f.stored()).toBeNull();
+    expect(f.owner.snapshot).toBeNull();
+    await f.owner.dispose();
+  });
   it("publishes pending then ready, retains no filename, restores without any remote calls", async () => {
     const f = fixture();
     await f.owner.initialize();

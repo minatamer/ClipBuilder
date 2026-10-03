@@ -23,6 +23,7 @@ import {
 } from "mediabunny";
 import { LocalMediaError } from "./media.errors";
 import { copyLocalSource } from "./opfs.copy";
+import { sourceChecksum } from "./source.checksum";
 import { extractLocalAudio } from "./audio.extraction";
 import { audioRequestSchema } from "./audio.protocol";
 import { AUDIO_SCRATCH_FOLDER } from "./audio.profile";
@@ -44,27 +45,8 @@ const directory = async () =>
   );
 
 async function fingerprint(file: Blob, signal: AbortSignal): Promise<string> {
-  let chain = new Uint8Array(32);
-  // Fixed chunk boundaries make identity independent of stream chunking.
-  for (
-    let offset = 0;
-    offset < file.size;
-    offset += LOCAL_WORKSPACE_LIMITS.ioChunkBytes
-  ) {
-    check(signal);
-    const bytes = await file
-      .slice(offset, offset + LOCAL_WORKSPACE_LIMITS.ioChunkBytes)
-      .arrayBuffer();
-    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
-    const pair = new Uint8Array(64);
-    pair.set(chain);
-    pair.set(digest, 32);
-    chain = new Uint8Array(await crypto.subtle.digest("SHA-256", pair));
-  }
   check(signal);
-  return Array.from(chain, (byte) => byte.toString(16).padStart(2, "0")).join(
-    "",
-  );
+  return sourceChecksum(file, signal, LOCAL_WORKSPACE_LIMITS.ioChunkBytes);
 }
 
 async function inspect(

@@ -2,6 +2,7 @@ import {
   LOCAL_WORKSPACE_LIMITS,
   PUBLIC_LIMITS,
   type AnalysisBundleV1,
+  type GroundedAnalysisResult,
 } from "@clipbuilder/contracts";
 import { LocalMediaError } from "./media.errors";
 import type { AudioProgress, ExtractedAudio } from "./audio.profile";
@@ -20,6 +21,7 @@ import {
   cleanupRecord,
   parseWorkspaceRecord,
   type WorkspaceRecord,
+  type RemoteCleanupObligation,
 } from "./workspace.schema";
 
 export interface WorkspacePorts {
@@ -49,6 +51,7 @@ export class BrowserWorkspace {
   private lifetime = new AbortController();
   private generation = 0;
   private record: WorkspaceRecord | null = null;
+  private remoteObligation: RemoteCleanupObligation | null = null;
   private work: Promise<WorkspaceRecord> | null = null;
   private audioWork: Promise<ExtractedAudio> | null = null;
   private task: AbortController | null = null;
@@ -66,6 +69,83 @@ export class BrowserWorkspace {
   }
   get snapshot(): WorkspaceRecord | null {
     return this.record;
+  }
+  get sourceFile(): Blob | null {
+    return this.file;
+  }
+  get remoteCleanup(): RemoteCleanupObligation | null {
+    return this.remoteObligation ? { ...this.remoteObligation } : null;
+  }
+  async rememberRemoteCleanup(allowMissingSession = false): Promise<void> {
+    if (!this.lease || this.disposed) throw new LocalMediaError("busy");
+    this.remoteObligation = {
+      version: 1,
+      status: this.remoteObligation?.status ?? "pending",
+      allowMissingSession:
+        (this.remoteObligation?.allowMissingSession ?? true) &&
+        allowMissingSession,
+    };
+    await this.writeRemoteCleanup(this.remoteObligation);
+  }
+  private writeRemoteCleanup(
+    obligation: RemoteCleanupObligation,
+  ): Promise<void> {
+    const write = this.writes
+      .catch(() => {})
+      .then(() => this.ports.journal.writeRemoteCleanup(obligation));
+    this.writes = write;
+    return write;
+  }
+  async confirmRemoteCleanup(): Promise<void> {
+    if (!this.lease || this.disposed) throw new LocalMediaError("busy");
+    if (!this.remoteObligation) throw new LocalMediaError("missing");
+    this.remoteObligation = { ...this.remoteObligation, status: "confirmed" };
+    await this.writeRemoteCleanup(this.remoteObligation);
+  }
+  async completeRemoteCleanup(): Promise<void> {
+    if (!this.lease || this.disposed) throw new LocalMediaError("busy");
+    if (this.remoteObligation?.status !== "confirmed")
+      throw new LocalMediaError("storage");
+    const write = this.writes
+      .catch(() => {})
+      .then(() => this.ports.journal.deleteRemoteCleanup());
+    this.writes = write;
+    await write;
+    this.remoteObligation = null;
+  }
+  async markCloudAnalysis(
+    status: "pending" | "uncertain",
+    cleanupRequired = true,
+  ) {
+    const generation = this.generation;
+    this.check(generation);
+    if (
+      !this.record?.source ||
+      this.record.analysis ||
+      this.record.cloudAnalysis?.status === "complete"
+    )
+      throw new LocalMediaError("missing");
+    const record = parseWorkspaceRecord({
+      ...this.record,
+      cloudAnalysis: { status, result: null, cleanupRequired },
+    });
+    await this.write(record, generation);
+    this.record = record;
+  }
+  async storeGroundedAnalysis(result: GroundedAnalysisResult) {
+    const generation = this.generation;
+    this.check(generation);
+    if (!this.record?.source || this.record.cloudAnalysis?.status !== "pending")
+      throw new LocalMediaError("missing");
+    const record = parseWorkspaceRecord({
+      ...this.record,
+      analysis: result.analysis,
+      selectedId: null,
+      assembly: null,
+      cloudAnalysis: { status: "complete", result },
+    });
+    await this.write(record, generation);
+    this.record = record;
   }
 
   private check(generation: number): void {
@@ -135,6 +215,8 @@ export class BrowserWorkspace {
     }
     this.lease = lease;
     this.check(generation);
+    this.remoteObligation = await this.ports.journal.readRemoteCleanup();
+    this.check(generation);
     let record: WorkspaceRecord | null;
     try {
       record = await this.ports.journal.read();
@@ -147,6 +229,7 @@ export class BrowserWorkspace {
     this.check(generation);
     this.record = record;
     if (
+      this.remoteObligation ||
       this.ports.cleanupRequired() ||
       !record ||
       record.status !== "ready" ||
@@ -200,6 +283,7 @@ export class BrowserWorkspace {
     progress: (bytes: number) => void,
   ): { pending: WorkspaceRecord; completion: Promise<WorkspaceRecord> } {
     if (!this.lease || this.disposed) throw new LocalMediaError("unavailable");
+    if (this.remoteObligation) throw new LocalMediaError("storage");
     if (this.record || this.work || this.clearing)
       throw new LocalMediaError("busy");
     if (!file.size || file.size > PUBLIC_LIMITS.maxSourceBytes)
@@ -393,12 +477,29 @@ export class BrowserWorkspace {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     this.releaseMedia();
+    const cloudAnalysis = this.record?.cloudAnalysis;
+    if (cloudAnalysis && this.remoteObligation?.status !== "confirmed")
+      this.remoteObligation = {
+        version: 1,
+        status: "pending",
+        allowMissingSession:
+          (this.remoteObligation?.allowMissingSession ?? true) &&
+          !cloudAnalysis.cleanupRequired,
+      };
     const tombstone = this.record ? cleanupRecord(this.record) : null;
     this.record = tombstone;
     this.clearing = (async () => {
       await this.writes.catch(() => {});
+      let remoteFenceFailed = false;
+      if (this.remoteObligation) {
+        try {
+          await this.writeRemoteCleanup(this.remoteObligation);
+        } catch {
+          remoteFenceFailed = true;
+        }
+      }
       // The legacy content-free marker still fences recovery if IDB is denied.
-      if (tombstone)
+      if (tombstone && !remoteFenceFailed)
         try {
           await this.ports.journal.write(tombstone);
         } catch {
@@ -411,6 +512,9 @@ export class BrowserWorkspace {
         { action: "delete" },
         this.lifetime.signal,
       );
+      // Keep the existing cloud evidence and legacy fence if its independent
+      // obligation could not commit. Physical media deletion is still attempted.
+      if (remoteFenceFailed) throw new LocalMediaError("storage");
       await this.ports.journal.delete();
       this.record = null;
       this.work = null;

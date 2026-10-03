@@ -11,6 +11,7 @@ type PrivacyDialogProperties = {
   triggerLabel?: string;
   triggerVariant?: "secondary";
   localMedia?: boolean;
+  cloudMedia?: boolean;
 };
 
 export function PrivacyDialog({
@@ -18,6 +19,7 @@ export function PrivacyDialog({
   triggerLabel = "Privacy & limits",
   triggerVariant,
   localMedia = false,
+  cloudMedia = false,
 }: PrivacyDialogProperties) {
   const dialogReference = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -93,9 +95,11 @@ export function PrivacyDialog({
               <h3>Owned media only</h3>
               <p>
                 Use only a recording you own or have permission to edit.
-                {localMedia
-                  ? " Original video stays on this device; it is not uploaded."
-                  : " The development preview never reads or uploads selected files."}
+                {cloudMedia
+                  ? " After confirmation, the original is uploaded to temporary private storage and a bounded audiovisual proxy is sent for AI analysis. Provider retention is separate."
+                  : localMedia
+                    ? " Original video stays on this device; it is not uploaded."
+                    : " The development preview never reads or uploads selected files."}
               </p>
             </section>
             <section>
@@ -106,6 +110,8 @@ export function PrivacyDialog({
                 publishing.
                 {localMedia &&
                   " One recoverable workspace expires two hours after selection. Clear media deletes it best-effort. Closing the tab cannot guarantee deletion; expiry cleanup runs while open or on the next visit. Browser storage can be removed sooner."}
+                {cloudMedia &&
+                  " Cloud source access also expires after two hours. Cancel and clear request immediate deletion; an independent expiry sweep retries cleanup. Outages can delay physical deletion."}
               </p>
             </section>
             <section>

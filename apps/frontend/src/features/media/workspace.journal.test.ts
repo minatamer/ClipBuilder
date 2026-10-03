@@ -6,11 +6,16 @@ function fixture() {
     result: undefined as unknown,
     onsuccess: null as (() => void) | null,
   };
+  const store = {
+    get: vi.fn(() => request),
+    put: vi.fn(() => request),
+    delete: vi.fn(() => request),
+  };
   const transaction = {
     oncomplete: null as (() => void) | null,
     onerror: null as (() => void) | null,
     onabort: null as (() => void) | null,
-    objectStore: () => ({ get: () => request, delete: () => request }),
+    objectStore: () => store,
     abort: () => transaction.onabort?.(),
   };
   const database = {
@@ -27,9 +32,90 @@ function fixture() {
   // Minimal event-driven IDB fixture; no application cast or alternate storage path.
   const factory = { open: () => opening } as unknown as IDBFactory;
   const journal = new IndexedWorkspaceJournal(() => factory);
-  return { journal, opening, request, transaction, database };
+  return { journal, opening, request, transaction, database, store };
 }
 describe("IndexedDB journal commit ownership", () => {
+  it("commits a separate content-free cleanup obligation and current-record deletion cannot erase it", async () => {
+    const f = fixture(),
+      obligation = {
+        version: 1 as const,
+        allowMissingSession: false,
+        status: "pending" as const,
+      };
+    let committed = false;
+    const write = f.journal.writeRemoteCleanup(obligation).then(() => {
+      committed = true;
+    });
+    f.opening.onsuccess?.();
+    await vi.waitFor(() =>
+      expect(f.store.put).toHaveBeenCalledWith(obligation, "remote-cleanup"),
+    );
+    f.request.onsuccess?.();
+    await Promise.resolve();
+    expect(committed).toBe(false);
+    f.transaction.oncomplete?.();
+    await write;
+    const removal = f.journal.delete();
+    await vi.waitFor(() =>
+      expect(f.store.delete).toHaveBeenCalledExactlyOnceWith("current"),
+    );
+    f.transaction.oncomplete?.();
+    await removal;
+    const acknowledgement = f.journal.deleteRemoteCleanup();
+    await vi.waitFor(() =>
+      expect(f.store.delete).toHaveBeenLastCalledWith("remote-cleanup"),
+    );
+    f.transaction.oncomplete?.();
+    await acknowledgement;
+    f.journal.close();
+  });
+  it.each([
+    [{ version: 1, allowMissingSession: false }, "pending"],
+    [
+      { version: 1, allowMissingSession: false, status: "confirmed" },
+      "confirmed",
+    ],
+  ])(
+    "restores legacy pending and confirmed cleanup separately",
+    async (value, status) => {
+      const f = fixture();
+      f.request.result = value;
+      const read = f.journal.readRemoteCleanup();
+      f.opening.onsuccess?.();
+      await vi.waitFor(() =>
+        expect(f.store.get).toHaveBeenCalledExactlyOnceWith("remote-cleanup"),
+      );
+      f.request.onsuccess?.();
+      f.transaction.oncomplete?.();
+      expect(await read).toEqual({
+        version: 1,
+        allowMissingSession: false,
+        status,
+      });
+      f.journal.close();
+    },
+  );
+  it.each([
+    { version: 2, allowMissingSession: false },
+    { version: 1, allowMissingSession: false, receipt: "synthetic" },
+    { version: 1, allowMissingSession: false, status: "unknown" },
+  ])(
+    "fails closed on corrupt or content-bearing remote cleanup evidence",
+    async (value) => {
+      const f = fixture();
+      f.request.result = value;
+      const read = f.journal.readRemoteCleanup(),
+        rejected = expect(read).rejects.toMatchObject({ code: "corrupt" });
+      f.opening.onsuccess?.();
+      await vi.waitFor(() =>
+        expect(f.store.get).toHaveBeenCalledExactlyOnceWith("remote-cleanup"),
+      );
+      f.request.onsuccess?.();
+      f.transaction.oncomplete?.();
+      await rejected;
+      f.journal.close();
+    },
+  );
   it.each([{ version: 2 }, { version: 1, source: "synthetic-corrupt" }])(
     "rejects unknown or corrupt journal evidence",
     async (value) => {

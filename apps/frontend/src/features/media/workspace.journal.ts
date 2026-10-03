@@ -1,10 +1,18 @@
 import { LocalMediaError } from "./media.errors";
-import { parseWorkspaceRecord, type WorkspaceRecord } from "./workspace.schema";
+import {
+  parseWorkspaceRecord,
+  remoteCleanupObligationSchema,
+  type RemoteCleanupObligation,
+  type WorkspaceRecord,
+} from "./workspace.schema";
 
 export interface WorkspaceJournal {
   read(): Promise<WorkspaceRecord | null>;
   write(record: WorkspaceRecord): Promise<void>;
   delete(): Promise<void>;
+  readRemoteCleanup(): Promise<RemoteCleanupObligation | null>;
+  writeRemoteCleanup(value: RemoteCleanupObligation): Promise<void>;
+  deleteRemoteCleanup(): Promise<void>;
   close(): void;
 }
 
@@ -85,6 +93,23 @@ export class IndexedWorkspaceJournal implements WorkspaceJournal {
   }
   async delete(): Promise<void> {
     await this.transact("readwrite", (store) => store.delete("current"));
+  }
+  async readRemoteCleanup(): Promise<RemoteCleanupObligation | null> {
+    const value = await this.transact("readonly", (store) =>
+      store.get("remote-cleanup"),
+    );
+    if (value === undefined) return null;
+    const parsed = remoteCleanupObligationSchema.safeParse(value);
+    if (!parsed.success) throw new LocalMediaError("corrupt");
+    return parsed.data;
+  }
+  async writeRemoteCleanup(value: RemoteCleanupObligation): Promise<void> {
+    await this.transact("readwrite", (store) =>
+      store.put(remoteCleanupObligationSchema.parse(value), "remote-cleanup"),
+    );
+  }
+  async deleteRemoteCleanup(): Promise<void> {
+    await this.transact("readwrite", (store) => store.delete("remote-cleanup"));
   }
   close(): void {
     this.closed = true;

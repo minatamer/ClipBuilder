@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
 import { ArrowRight, Clapperboard, Film, Upload, X } from "lucide-react";
 import {
   type PublicConfigResponse,
@@ -39,15 +46,23 @@ import styles from "./sample.module.css";
 import { localMediaFailure } from "../media/media.errors";
 import { localSessionIdentity } from "../media/workspace.restore";
 import { SourcePreview } from "./source-preview";
+import { createSourceAnalysisApi } from "../source-analysis/source-analysis.api";
+import { AnalysisChallenge } from "../source-analysis/analysis-challenge";
+import {
+  clearAnalysisMedia,
+  runSourceAnalysis,
+} from "../source-analysis/source-analysis.flow";
 
 function Workspace({
   children,
   clear,
   localMode = false,
+  cloudMode = false,
 }: {
   children: ReactNode;
   clear?: () => void;
   localMode?: boolean;
+  cloudMode?: boolean;
 }) {
   return (
     <div className={styles.workspace}>
@@ -62,6 +77,7 @@ function Workspace({
         <div className={styles.headerActions}>
           <PrivacyDialog
             localMedia={localMode}
+            cloudMedia={cloudMode}
             triggerVariant="secondary"
             triggerClassName={styles.headerButton}
           />
@@ -165,7 +181,7 @@ export function SampleExperience({ api = sampleApi }: { api?: SampleApi }) {
       loadServerEvidence={api.evidence}
       localMode={localMode}
     >
-      <SampleScreen api={api} availability={availability} />
+      <SampleScreen api={api} availability={availability} config={config} />
     </ClippingSessionProvider>
   );
 }
@@ -173,13 +189,34 @@ export function SampleExperience({ api = sampleApi }: { api?: SampleApi }) {
 function SampleScreen({
   api,
   availability,
+  config,
 }: {
   api: SampleApi;
   availability: { sample: boolean; upload: boolean };
+  config: PublicConfigResponse;
 }) {
   const { state, dispatch, effects, workspace, retryRestore } =
     useClippingSession();
   const localMode = workspace !== null;
+  const cloudApi = useMemo(() => createSourceAnalysisApi(), []);
+  const [consent, setConsent] = useState(false);
+  const [analysisLabel, setAnalysisLabel] = useState("Preparing analysis");
+  const [challenge, setChallenge] = useState<{
+    sessionId: string;
+    action: "transcription" | "candidate-analysis";
+  } | null>(null);
+  const challengePromise = useRef<{
+    resolve(token: string): void;
+    reject(): void;
+  } | null>(null);
+  const onToken = useCallback((token: string) => {
+    challengePromise.current?.resolve(token);
+    setChallenge(null);
+  }, []);
+  const onChallengeFailure = useCallback(() => {
+    challengePromise.current?.reject();
+    setChallenge(null);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<SafeError | null>(null);
   const [evidenceAttempt, setEvidenceAttempt] = useState(0);
@@ -200,12 +237,12 @@ function SampleScreen({
 
   useEffect(() => {
     title.current?.focus();
-    return () => pending.current?.abort();
   }, [state.stage]);
   useEffect(
     () => () => {
       pending.current?.abort();
       phase.current?.controller.abort();
+      challengePromise.current?.reject();
     },
     [],
   );
@@ -292,7 +329,21 @@ function SampleScreen({
     if (state.stage !== "clearing") return;
     const controller = new AbortController();
     effects.clear();
-    void (workspace ? workspace.clear() : api.clear(controller.signal)).then(
+    void (async () => {
+      if (workspace) {
+        const cleanup = await clearAnalysisMedia({
+          workspace,
+          api: cloudApi,
+          signal: controller.signal,
+          cloudPending:
+            !!workspace.snapshot?.cloudAnalysis || !!workspace.remoteCleanup,
+          allowMissingSession:
+            workspace.remoteCleanup?.allowMissingSession ??
+            !workspace.snapshot?.cloudAnalysis?.cleanupRequired,
+        });
+        if (!cleanup.complete) throw new SampleApiFailure(sampleFailure());
+      } else await api.clear(controller.signal);
+    })().then(
       () => {
         if (!controller.signal.aborted)
           dispatch({ type: "CLEAR_SUCCEEDED", availability });
@@ -303,7 +354,59 @@ function SampleScreen({
       },
     );
     return () => controller.abort();
-  }, [api, availability, dispatch, effects, state.stage, workspace]);
+  }, [api, availability, cloudApi, dispatch, effects, state.stage, workspace]);
+
+  async function requestChallenge(
+    sessionId: string,
+    action: "transcription" | "candidate-analysis",
+    signal: AbortSignal,
+  ) {
+    signal.throwIfAborted();
+    return new Promise<string>((resolve, reject) => {
+      const abort = () => {
+        challengePromise.current = null;
+        setChallenge(null);
+        reject(new Error("analysis-canceled"));
+      };
+      signal.addEventListener("abort", abort, { once: true });
+      challengePromise.current = {
+        resolve: (token) => {
+          signal.removeEventListener("abort", abort);
+          challengePromise.current = null;
+          resolve(token);
+        },
+        reject: () => {
+          signal.removeEventListener("abort", abort);
+          challengePromise.current = null;
+          reject(new Error("challenge-failed"));
+        },
+      };
+      setChallenge({ sessionId, action });
+    });
+  }
+  const analyzeSource = () => {
+    if (
+      !workspace ||
+      state.stage !== "analysis-confirmation" ||
+      !consent ||
+      !config.liveAnalysisEnabled ||
+      !config.processingSiteKey ||
+      !workspace.snapshot?.source ||
+      !workspace.sourceFile ||
+      workspace.snapshot.cloudAnalysis
+    )
+      return;
+    void run((signal) =>
+      runSourceAnalysis({
+        workspace,
+        api: cloudApi,
+        signal,
+        challenge: requestChallenge,
+        event: dispatch,
+        label: setAnalysisLabel,
+      }),
+    );
+  };
 
   async function run(action: (signal: AbortSignal) => Promise<void>) {
     if (pending.current !== null) return;
@@ -487,6 +590,7 @@ function SampleScreen({
   return (
     <Workspace
       localMode={localMode}
+      cloudMode={config.liveAnalysisEnabled}
       {...(selectIsClearable(state) &&
       !(
         localMode &&
@@ -547,6 +651,16 @@ function SampleScreen({
                   Use prepared input
                 </Button>
               )}
+              {state.stage === "analysis-confirmation" &&
+                localMode &&
+                config.liveAnalysisEnabled && (
+                  <Button
+                    onClick={analyzeSource}
+                    disabled={!consent || busy || !config.processingSiteKey}
+                  >
+                    Find moments
+                  </Button>
+                )}
               {state.stage === "candidates" && state.selectedId !== null && (
                 <Button
                   icon={ArrowRight}
@@ -653,8 +767,12 @@ function SampleScreen({
             key={
               "operation" in state ? state.operation.operationId : state.stage
             }
-            label={processingLabel}
-            mode="fake"
+            label={
+              localMode && state.stage === "analyzing"
+                ? analysisLabel
+                : processingLabel
+            }
+            mode={localMode ? "real" : "fake"}
             active={failure === null}
             {...("operation" in state ? { operation: state.operation } : {})}
             {...(processingFraction === undefined
@@ -682,10 +800,32 @@ function SampleScreen({
                 durationMs={state.media.durationMs}
               />
               <p className={styles.modeNote}>
-                Video prepared locally. Moment analysis is not connected yet.
+                {config.liveAnalysisEnabled
+                  ? "Your video will be uploaded to temporary private storage. A smaller video and audio proxy is sent for AI analysis. Source access expires after two hours; cleanup is best effort and provider retention is separate."
+                  : "Video prepared locally. Moment analysis requires enabled processing gates."}
               </p>
+              {config.liveAnalysisEnabled && (
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(event) => setConsent(event.target.checked)}
+                  />{" "}
+                  I own or have licensed this conversation and consent to these
+                  transfers and paid analysis.
+                </label>
+              )}
             </>
           )}
+        {challenge && config.processingSiteKey && (
+          <AnalysisChallenge
+            siteKey={config.processingSiteKey}
+            sessionId={challenge.sessionId}
+            action={challenge.action}
+            onToken={onToken}
+            onFailure={onChallengeFailure}
+          />
+        )}
         {state.stage === "intake" && (
           <section className={styles.intake} aria-label="Video intake">
             <div

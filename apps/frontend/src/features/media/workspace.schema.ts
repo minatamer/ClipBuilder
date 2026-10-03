@@ -9,7 +9,21 @@ import {
   sessionIdSchema,
   uuidV4Schema,
   LOCAL_WORKSPACE_LIMITS,
+  groundedAnalysisResultSchema,
+  hasSameMediaIdentity,
 } from "@clipbuilder/contracts";
+
+// Separate from media/result deletion; contains no session, capability or content.
+export const remoteCleanupObligationSchema = z
+  .object({
+    version: z.literal(1),
+    allowMissingSession: z.boolean(),
+    status: z.enum(["pending", "confirmed"]).default("pending"),
+  })
+  .strict();
+export type RemoteCleanupObligation = z.infer<
+  typeof remoteCleanupObligationSchema
+>;
 
 export const workspaceRecordSchema = z
   .object({
@@ -33,6 +47,15 @@ export const workspaceRecordSchema = z
     analysis: analysisBundleSchema.nullable(),
     assembly: assemblyBundleSchema.nullable(),
     selectedId: candidateIdSchema.nullable(),
+    cloudAnalysis: z
+      .object({
+        status: z.enum(["pending", "uncertain", "complete"]),
+        cleanupRequired: z.boolean().default(true),
+        result: groundedAnalysisResultSchema.nullable(),
+      })
+      .strict()
+      .nullable()
+      .default(null),
   })
   .strict()
   .superRefine((record, context) => {
@@ -68,8 +91,25 @@ export const workspaceRecordSchema = z
     if (
       record.analysis &&
       (!record.source ||
-        JSON.stringify(record.analysis.media) !==
-          JSON.stringify(record.source.media))
+        !(record.cloudAnalysis
+          ? hasSameMediaIdentity(record.analysis.media, record.source.media)
+          : JSON.stringify(record.analysis.media) ===
+            JSON.stringify(record.source.media)))
+    )
+      issue();
+    if (record.cloudAnalysis?.status === "complete") {
+      const result = record.cloudAnalysis.result;
+      if (
+        !result ||
+        !record.source ||
+        JSON.stringify(result.analysis) !== JSON.stringify(record.analysis) ||
+        result.binding.fingerprint !== record.source.fingerprint ||
+        result.binding.sourceRevision !== record.source.media.sourceRevision
+      )
+        issue();
+    } else if (
+      record.cloudAnalysis?.result !== null &&
+      record.cloudAnalysis !== null
     )
       issue();
     if (
@@ -92,7 +132,11 @@ export const workspaceRecordSchema = z
       issue();
     if (
       record.status !== "ready" &&
-      (record.source || record.analysis || record.assembly || record.selectedId)
+      (record.source ||
+        record.analysis ||
+        record.assembly ||
+        record.selectedId ||
+        record.cloudAnalysis)
     )
       issue();
   });
@@ -117,5 +161,6 @@ export function cleanupRecord(record: WorkspaceRecord): WorkspaceRecord {
     analysis: null,
     assembly: null,
     selectedId: null,
+    cloudAnalysis: null,
   };
 }

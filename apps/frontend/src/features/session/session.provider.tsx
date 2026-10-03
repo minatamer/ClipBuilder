@@ -130,8 +130,11 @@ export function ClippingSessionProvider({
         if (!mounted) return;
         owner.onExpiry(() => dispatch({ type: "CLEAR" }));
         dispatch(
-          record
-            ? { type: "RESTORE_VALID", state: restoreLocalWorkspace(record) }
+          record || owner.remoteCleanup
+            ? {
+                type: "RESTORE_VALID",
+                state: restoreLocalWorkspace(record, owner.remoteCleanup),
+              }
             : { type: "RESTORE_EMPTY", availability },
         );
       })
