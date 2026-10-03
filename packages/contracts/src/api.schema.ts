@@ -40,6 +40,7 @@ export const publicConfigResponseSchema = z
     processingSiteKey: z.string().min(1).max(500).optional(),
     mode: z.enum(["fake", "live"]),
     sampleEnabled: z.boolean(),
+    retainedSampleEnabled: z.boolean().optional(),
     localMediaEnabled: z.boolean(),
     liveAnalysisEnabled: z.boolean(),
     liveAssemblyEnabled: z.boolean(),

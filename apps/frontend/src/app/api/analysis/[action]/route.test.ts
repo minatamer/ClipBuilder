@@ -196,6 +196,49 @@ describe("bounded same-origin analysis bridge", () => {
     );
     await expect(response.arrayBuffer()).rejects.toThrow("media-unavailable");
   });
+  it("relays the fixed sample read without forwarding visitor cookies or accepting resource parameters", async () => {
+    const transport = vi.fn(
+      async () =>
+        new Response(new Uint8Array(10), {
+          headers: { "Content-Type": "video/mp4", "Content-Length": "10" },
+        }),
+    );
+    vi.stubGlobal("fetch", transport);
+    const response = await GET(
+      new Request("http://localhost:3000/api/analysis/sample-source", {
+        headers: {
+          "Sec-Fetch-Site": "same-origin",
+          Cookie: "__Host-clipping_session=synthetic; unrelated=sentinel",
+        },
+      }),
+      context("sample-source"),
+    );
+    expect(response.status).toBe(200);
+    expect((await response.arrayBuffer()).byteLength).toBe(10);
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(transport.mock.calls[0]).toMatchObject([
+      "http://127.0.0.1:4000/v1/retained-sample/video",
+      {
+        headers: {
+          Origin: "http://localhost:3000",
+          "Sec-Fetch-Site": "same-origin",
+        },
+        redirect: "error",
+      },
+    ]);
+    expect(JSON.stringify(transport.mock.calls)).not.toContain("sentinel");
+    const rejected = await GET(
+      new Request(
+        "http://localhost:3000/api/analysis/sample-source?object=untrusted",
+        {
+          headers: { "Sec-Fetch-Site": "same-origin" },
+        },
+      ),
+      context("sample-source"),
+    );
+    expect(rejected.status).toBe(503);
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
   it("admits the larger signed assembly context only on its fixed action and caps it", async () => {
     const transport = vi.fn(async () => Response.json({ ok: true }));
     vi.stubGlobal("fetch", transport);

@@ -1,5 +1,18 @@
 # ClipBuilder backend
 
+CL-016 adds a fixed, generation-pinned retained-sample read using server ADC.
+`GET /v1/retained-sample/video` exists only after explicit retained-read enablement,
+local real-media composition and approved cloud spend; it requires the fixed
+frontend origin, same-origin transport and a valid byte range. It reuses exact
+MIME/length/range streaming checks and has bounded work/rate/deadline limits.
+Its read-only port has no master-delete capability and is separate from renderer
+visitor cleanup. Public config exposes availability only. Defaults/tests disable
+it and cannot obtain ADC or call storage. Preview needs no Gemini key; analysis
+and rendering retain their separate approvals and feature gates.
+See [retained sample setup](../../docs/operations/RETAINED_SAMPLE_SETUP.md) for
+blank owner configuration, the required private bucket policy and actual ADC/
+upload checkpoint. Local synthetic checks do not prove that cloud setup.
+
 CL-012 adds locally tested privacy headers, strict request/stream bounds and
 canonical private caller-purpose routes. Browser documents use fresh CSP nonces;
 Trusted Types remains report-only pending real compatibility checks. Storage

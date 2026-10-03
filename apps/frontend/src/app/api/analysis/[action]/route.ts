@@ -162,7 +162,7 @@ export async function GET(
       headers: { "Cache-Control": "no-store" },
     });
   if (
-    !["preview", "output", "download"].includes(action) ||
+    !["preview", "output", "download", "sample-source"].includes(action) ||
     url.origin !== "http://localhost:3000" ||
     url.search ||
     request.headers.get("sec-fetch-site") !== "same-origin"
@@ -172,9 +172,19 @@ export async function GET(
     .split(";")
     .map((v) => v.trim())
     .filter((v) => v.startsWith("__Host-clipping_session="));
-  if (cookie.length !== 1 || cookie[0]!.length > 8192) return fail();
+  if (
+    action !== "sample-source" &&
+    (cookie.length !== 1 || cookie[0]!.length > 8192)
+  )
+    return fail();
   const range = request.headers.get("range");
   if (range && !/^bytes=\d*-\d*$/.test(range)) return fail();
+  const cap =
+    action === "sample-source"
+      ? PUBLIC_LIMITS.maxSourceBytes
+      : action === "preview"
+        ? TEMPORARY_MEDIA_LIMITS.proxyBytes
+        : PUBLIC_LIMITS.maxOutputBytes;
   const controller = new AbortController(),
     abort = () => controller.abort();
   request.signal.addEventListener("abort", abort, { once: true });
@@ -186,17 +196,22 @@ export async function GET(
   };
   let upstream: Response | undefined;
   try {
-    upstream = await fetch(`http://127.0.0.1:4000/v1/analysis/${action}`, {
-      headers: {
-        Cookie: cookie[0]!,
-        Origin: url.origin,
-        "Sec-Fetch-Site": "same-origin",
-        ...(range ? { Range: range } : {}),
+    upstream = await fetch(
+      action === "sample-source"
+        ? "http://127.0.0.1:4000/v1/retained-sample/video"
+        : `http://127.0.0.1:4000/v1/analysis/${action}`,
+      {
+        headers: {
+          ...(action === "sample-source" ? {} : { Cookie: cookie[0]! }),
+          Origin: url.origin,
+          "Sec-Fetch-Site": "same-origin",
+          ...(range ? { Range: range } : {}),
+        },
+        signal: controller.signal,
+        cache: "no-store",
+        redirect: "error",
       },
-      signal: controller.signal,
-      cache: "no-store",
-      redirect: "error",
-    });
+    );
     const length = Number(upstream.headers.get("content-length"));
     if (
       ![200, 206].includes(upstream.status) ||
@@ -204,10 +219,7 @@ export async function GET(
       upstream.headers.get("content-type")?.split(";")[0] !== "video/mp4" ||
       !Number.isSafeInteger(length) ||
       length <= 0 ||
-      length >
-        (action === "preview"
-          ? TEMPORARY_MEDIA_LIMITS.proxyBytes
-          : PUBLIC_LIMITS.maxOutputBytes)
+      length > cap
     )
       throw new Error();
     const headers = new Headers({
@@ -226,10 +238,6 @@ export async function GET(
     if (upstream.status === 206) {
       const parts = contentRange?.match(/^bytes (\d+)-(\d+)\/(\d+)$/),
         total = Number(parts?.[3]);
-      const cap =
-        action === "preview"
-          ? TEMPORARY_MEDIA_LIMITS.proxyBytes
-          : PUBLIC_LIMITS.maxOutputBytes;
       if (!range || !parts || !Number.isSafeInteger(total) || total > cap)
         throw new Error();
       const selected = mediaByteRange(range, total);

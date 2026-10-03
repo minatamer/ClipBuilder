@@ -17,6 +17,8 @@ import { composeAdmission } from "./admission/admission.composition.js";
 import { createAdmissionRouter } from "./http/routes/admission.route.js";
 import { composeAnalysis } from "./analysis/analysis.composition.js";
 import { createAnalysisRouter } from "./http/routes/analysis.route.js";
+import { composeRetainedSample } from "./media/retained-sample.gcs.js";
+import { createRetainedSampleRouter } from "./http/routes/retained-sample.route.js";
 
 export function createApplication(config: BackendConfig): Express {
   const application = express();
@@ -41,6 +43,12 @@ export function createApplication(config: BackendConfig): Express {
 
   application.use("/v1", createHealthRouter(config.appRevision));
   const admission = composeAdmission(config);
+  const retainedSample = composeRetainedSample(config);
+  if (retainedSample)
+    application.use(
+      "/v1/retained-sample",
+      createRetainedSampleRouter(retainedSample, config.frontendOrigin),
+    );
   const processing = composeAnalysis(config, admission);
   const analysis = processing?.analysis ?? null;
   if (analysis && admission)
@@ -70,6 +78,7 @@ export function createApplication(config: BackendConfig): Express {
       publicConfigResponseSchema.parse({
         mode: config.providerMode,
         sampleEnabled: developmentPreview,
+        retainedSampleEnabled: retainedSample !== null,
         localMediaEnabled:
           config.providerMode === "live" && config.appEnv === "local",
         liveAnalysisEnabled: analysis !== null,

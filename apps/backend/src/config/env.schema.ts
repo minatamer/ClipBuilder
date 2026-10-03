@@ -64,6 +64,11 @@ export const environmentShape = {
   CLOUD_RENDER_ENVIRONMENT: z.enum(["disabled", "cloud"]).default("disabled"),
   CLOUD_SPEND_APPROVED: booleanValue(false),
   PRIVATE_RENDERER_ORIGIN: optionalString(500),
+  RETAINED_SAMPLE_ENABLED: booleanValue(false),
+  RETAINED_SAMPLE_BUCKET: optionalString(223),
+  RETAINED_SAMPLE_OBJECT: optionalString(1_024),
+  RETAINED_SAMPLE_GENERATION: optionalString(30),
+  RETAINED_SAMPLE_BYTES: integerValue(0, 0, PUBLIC_LIMITS.maxSourceBytes),
 
   FAKE_MODE: booleanValue(true),
   PAID_DEMO_ENABLED: booleanValue(false),
@@ -167,6 +172,25 @@ export const environmentSchema = rawEnvironmentSchema
     const hasValue = (value: string | undefined) => value !== undefined;
     const issue = (message: string, path: string) =>
       context.addIssue({ code: "custom", message, path: [path] });
+
+    if (
+      environment.RETAINED_SAMPLE_ENABLED &&
+      (environment.NODE_ENV === "test" ||
+        environment.APP_ENV !== "local" ||
+        environment.FAKE_MODE ||
+        !environment.CLOUD_SPEND_APPROVED ||
+        !environment.RETAINED_SAMPLE_BUCKET ||
+        !/^[a-z0-9][a-z0-9._-]{1,221}[a-z0-9]$/.test(
+          environment.RETAINED_SAMPLE_BUCKET,
+        ) ||
+        !environment.RETAINED_SAMPLE_OBJECT ||
+        !/^[1-9]\d{0,29}$/.test(environment.RETAINED_SAMPLE_GENERATION ?? "") ||
+        environment.RETAINED_SAMPLE_BYTES === 0)
+    )
+      issue(
+        "Retained sample reads require local real-media mode, approved cloud spend and a complete fixed object reference; tests cannot enable them.",
+        "RETAINED_SAMPLE_ENABLED",
+      );
 
     if (environment.NODE_ENV === "test") {
       if (
@@ -417,6 +441,13 @@ export const environmentSchema = rawEnvironmentSchema
       environment: environment.CLOUD_RENDER_ENVIRONMENT,
       spendApproved: environment.CLOUD_SPEND_APPROVED,
       origin: environment.PRIVATE_RENDERER_ORIGIN ?? null,
+    },
+    retainedSample: {
+      enabled: environment.RETAINED_SAMPLE_ENABLED,
+      bucket: environment.RETAINED_SAMPLE_BUCKET ?? null,
+      object: environment.RETAINED_SAMPLE_OBJECT ?? null,
+      generation: environment.RETAINED_SAMPLE_GENERATION ?? null,
+      bytes: environment.RETAINED_SAMPLE_BYTES,
     },
     providerMode: environment.FAKE_MODE ? ("fake" as const) : ("live" as const),
     paidDemoEnabled: environment.PAID_DEMO_ENABLED,
