@@ -135,6 +135,12 @@ export function CloudClipReview({
               Math.min(duration, Math.round((frame * 1000) / 30))
             }
             playing={playing}
+            muted={muted}
+            toggleMute={() => {
+              if (muted) player.current?.unmute();
+              else player.current?.mute();
+              setMuted(!muted);
+            }}
             toggle={() =>
               playing ? player.current?.pause() : player.current?.play()
             }
@@ -172,18 +178,6 @@ export function CloudClipReview({
               ? "Preview access is unavailable. No new processing was started."
               : "Opening the prepared clip"}
           </p>
-        )}
-        {ready && (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              if (muted) player.current?.unmute();
-              else player.current?.mute();
-              setMuted(!muted);
-            }}
-          >
-            {muted ? "Unmute preview" : "Mute preview"}
-          </Button>
         )}
         {failed && (
           <Button

@@ -2,7 +2,10 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useSessionEffects } from "../session/session.provider";
-import { attachNativeRangePlayback } from "./native-range-playback";
+import {
+  attachNativeRangePlayback,
+  playbackPosition,
+} from "./native-range-playback";
 
 export type PreviewCommand = { timeMs: number; play: boolean; ordinal: number };
 
@@ -12,13 +15,11 @@ export function useRangePlayback(
   onPosition?: (clipTimeMs: number) => void,
   sourceUrl?: string,
 ) {
-  const initial = Math.max(
-    range.startMs,
-    Math.min(range.endMs, command.timeMs),
-  );
+  const initial = playbackPosition(command.timeMs, range);
   const position = useRef(initial);
   const [currentMs, setCurrentMs] = useState(initial);
   const [playing, setPlaying] = useState(command.play);
+  const [muted, setMuted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const effects = useSessionEffects();
   const reportPosition = useEffectEvent((sourceMs: number) =>
@@ -68,7 +69,7 @@ export function useRangePlayback(
     effects,
   ]);
   const seek = (value: number) => {
-    position.current = Math.max(range.startMs, Math.min(range.endMs, value));
+    position.current = playbackPosition(value, range);
     setCurrentMs(position.current);
     if (sourceUrl && videoRef.current)
       videoRef.current.currentTime = position.current / 1000;
@@ -86,6 +87,8 @@ export function useRangePlayback(
   return {
     currentMs,
     playing,
+    muted,
+    toggleMute: () => setMuted((value) => !value),
     seek,
     toggle,
     videoRef,

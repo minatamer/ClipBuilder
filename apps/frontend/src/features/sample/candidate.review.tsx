@@ -140,17 +140,25 @@ function MomentPreview({
   sourceUrl?: string;
 }) {
   const range = candidateRange(analysis, candidate);
-  const { currentMs, playing, seek, toggle, pause, videoRef } =
-    useRangePlayback(
-      range,
-      {
-        timeMs: range.startMs,
-        play,
-        ordinal: 0,
-      },
-      undefined,
-      sourceUrl,
-    );
+  const {
+    currentMs,
+    playing,
+    seek,
+    toggle,
+    pause,
+    videoRef,
+    muted,
+    toggleMute,
+  } = useRangePlayback(
+    range,
+    {
+      timeMs: range.startMs,
+      play,
+      ordinal: 0,
+    },
+    undefined,
+    sourceUrl,
+  );
   const [highlighted, setHighlighted] = useState<readonly string[]>([]);
   const tabsId = useId();
   const jump = (timeMs: number, wordIds: readonly string[]) => {
@@ -170,7 +178,7 @@ function MomentPreview({
           range={range}
           currentMs={currentMs}
           playing={playing}
-          {...(sourceUrl ? { videoRef } : {})}
+          {...(sourceUrl ? { videoRef, muted, toggleMute } : {})}
           toggle={toggle}
           seek={(timeMs) => {
             setHighlighted([]);

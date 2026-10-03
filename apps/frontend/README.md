@@ -1,5 +1,10 @@
 # ClipBuilder frontend
 
+CL-013 supplies shared mute/readable seeks and a final transcript, a bounded
+first-frame wait with metadata-only retry, natural result rows and stage-loaded
+Remotion review. See [quality evidence and pending runtime matrix](../../docs/operations/EXPERIENCE_QUALITY_MATRIX.md).
+Fake/no-key checks are synthetic; actual media/device/UI/film approvals remain open.
+
 CL-012 adds locally tested privacy headers, strict request/stream bounds and
 canonical private caller-purpose routes. Browser documents use fresh CSP nonces;
 Trusted Types remains report-only pending real compatibility checks. Storage

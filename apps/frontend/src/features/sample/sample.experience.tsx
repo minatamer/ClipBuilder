@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { ArrowRight, Clapperboard, Film, Upload, X } from "lucide-react";
+import dynamic from "next/dynamic";
 import {
   type PublicConfigResponse,
   type SafeError,
@@ -28,7 +29,6 @@ import {
 } from "../session/session.selectors";
 import { CandidateReview } from "./candidate.review";
 import { ClipReview } from "./clip.review";
-import { CloudClipReview } from "./cloud-clip.review";
 import { runSelectedAssembly } from "../assembly/selected-assembly.flow";
 import { CloudResult } from "./cloud-result";
 import { runFinalRender } from "../render/final-render.flow";
@@ -56,6 +56,11 @@ import {
   clearAnalysisMedia,
   runSourceAnalysis,
 } from "../source-analysis/source-analysis.flow";
+
+const CloudClipReview = dynamic(
+  () => import("./cloud-clip.review").then((module) => module.CloudClipReview),
+  { loading: () => <p role="status">Loading clip playback</p> },
+);
 
 function Workspace({
   children,

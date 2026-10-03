@@ -2,7 +2,7 @@
 
 ## Current owner revision — Gemini and private Cloud Run rendering (2026-10-02)
 
-Status: **CL-005 through CL-012 local foundations, analysis, assembly, preview, export and safeguards are complete. CL-012 validation pass 2 is clean after reproduced/fixed purpose-route aliases and negative-retention findings. All five settled root gates and 616 synthetic tests in 63 files pass. CL-013 experience quality is next. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**
+Status: **CL-005 through CL-012 local foundations, analysis, assembly, preview, export and safeguards are complete. CL-013 local experience corrections and validation are complete with no actionable findings; manual quality and owner film approval remain open. All five settled root gates and 623 synthetic tests in 64 files pass. CL-014 repository audit is next. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**
 
 The owner selected Google Gemini for understanding/transcription/candidates/
 speaking-face association and our private Google Cloud Run Remotion Node/Docker

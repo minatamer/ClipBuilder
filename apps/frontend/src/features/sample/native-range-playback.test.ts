@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { attachNativeRangePlayback } from "./native-range-playback";
+import {
+  attachNativeRangePlayback,
+  playbackPosition,
+} from "./native-range-playback";
 
 function player() {
   const events = new EventTarget();
@@ -46,6 +49,31 @@ function player() {
 }
 
 describe("actual video clock and immutable range ownership", () => {
+  it("keeps nonfinite seek commands and clock values out of the native timeline", () => {
+    const range = { startMs: 10_000, endMs: 25_000 };
+    for (const value of [NaN, Infinity, -Infinity])
+      expect(playbackPosition(value, range)).toBe(range.startMs);
+    expect(playbackPosition(-1, range)).toBe(range.startMs);
+    expect(playbackPosition(99_000, range)).toBe(range.endMs);
+    const f = player(),
+      report = vi.fn();
+    const stop = attachNativeRangePlayback(
+      f.video,
+      "blob:synthetic",
+      range,
+      NaN,
+      false,
+      report,
+      vi.fn(),
+    );
+    f.event("loadedmetadata");
+    expect(f.video.currentTime).toBe(10);
+    f.clock(NaN);
+    f.event("timeupdate");
+    expect(f.video.currentTime).toBe(10);
+    expect(report).toHaveBeenLastCalledWith(10_000);
+    stop();
+  });
   it("seeks to the source boundary, follows the native clock, and stops exactly at the end without a seek loop", () => {
     const f = player();
     const report = vi.fn();

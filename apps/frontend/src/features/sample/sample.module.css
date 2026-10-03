@@ -395,6 +395,7 @@
 }
 .playerCommands {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.25rem;
@@ -620,6 +621,22 @@
   display: grid;
   place-items: center;
   container-type: size;
+}
+.exportVideo[data-output-delivery="true"] {
+  grid-template-rows: auto;
+  align-content: start;
+  overflow-wrap: anywhere;
+}
+.exportVideo[data-output-delivery="true"] .exportVideoFrame {
+  height: clamp(20rem, 50dvh, 32rem);
+}
+.outputTranscript {
+  width: 100%;
+  text-align: start;
+  line-height: 1.8;
+}
+.outputTranscript h2 {
+  font-size: 1rem;
 }
 .socialDestinations {
   min-width: 0;

@@ -8,6 +8,9 @@ import { clippingSessionReducer } from "../session/session.reducer";
 import type { ClippingSessionState } from "../session/session.types";
 import { fixedReviewNotes, previewFrame } from "./fixed-review";
 import { CloudClipReview } from "./cloud-clip.review";
+import { CloudResult } from "./cloud-result";
+import { PortraitPlayer } from "./portrait-player";
+import { finalRenderResultSchema } from "@clipbuilder/contracts";
 const proof = groundedFixture(),
   analysis = proof.analysis;
 function candidates(): ClippingSessionState {
@@ -30,6 +33,50 @@ function candidates(): ClippingSessionState {
   };
 }
 describe("immutable cloud review", () => {
+  it("keeps final transcript and ordinary audio controls available without starting work on render", async () => {
+    const assembly = await selectedAssemblyFixture(),
+      api = { session: vi.fn(), output: vi.fn() };
+    const result = finalRenderResultSchema.parse({
+      version: 1,
+      binding: assembly.binding,
+      manifestHash: assembly.manifestHash,
+      output: {
+        artifactId: "00000000-0000-4000-8000-000000000001",
+        generation: "4",
+        bytes: 1024,
+        checksum: "c".repeat(64),
+      },
+      expiresAtMs: Date.now() + 60_000,
+      receipt: "synthetic-output",
+    });
+    const html = renderToStaticMarkup(
+      <CloudResult result={result} assembly={assembly} api={api} />,
+    );
+    expect(html).toContain('aria-label="Final clip transcript"');
+    expect(html).toContain(assembly.words[0]!.punctuatedText);
+    expect(html).toContain('aria-label="Mute clip audio"');
+    expect(html).toMatch(/<button[^>]+disabled=""[^>]*>.*?Download MP4/);
+    expect(html).not.toContain("autoplay");
+    expect(api.session).not.toHaveBeenCalled();
+    expect(api.output).not.toHaveBeenCalled();
+  });
+  it("presents seek positions in readable time without announcing every playback tick", () => {
+    const html = renderToStaticMarkup(
+      <PortraitPlayer
+        label="Synthetic clip"
+        range={{ startMs: 10_000, endMs: 25_000 }}
+        currentMs={15_000}
+        playing={false}
+        muted
+        toggleMute={() => {}}
+        seek={() => {}}
+        toggle={() => {}}
+      />,
+    );
+    expect(html).toContain('aria-valuetext="00:05 of 00:15"');
+    expect(html).toContain('aria-live="off"');
+    expect(html).toContain('aria-label="Unmute clip audio"');
+  });
   it("opens only the selected frozen revision and rejects late publication after Clear", async () => {
     const result = await selectedAssemblyFixture();
     const pending = clippingSessionReducer(candidates(), {

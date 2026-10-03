@@ -9,7 +9,7 @@ import type { SourceAnalysisApi } from "../source-analysis/source-analysis.api";
 import { Button } from "../../shared/ui/button";
 import { PortraitPlayer } from "./portrait-player";
 import { useRangePlayback } from "./use-range-playback";
-import { isDecodedOutput } from "../render/output-playback";
+import { observeOutputPlayback } from "../render/output-playback";
 import styles from "./sample.module.css";
 
 export function CloudResult({
@@ -73,24 +73,15 @@ export function CloudResult({
   useEffect(() => {
     const video = playback.videoRef.current;
     if (!access || !video) return;
-    const ready = () => {
-      if (isDecodedOutput(video, durationMs)) setDecoded(true);
-      else {
+    return observeOutputPlayback(
+      video,
+      durationMs,
+      () => setDecoded(true),
+      () => {
         setDecoded(false);
         setFailed(true);
-      }
-    };
-    const error = () => {
-      setDecoded(false);
-      setFailed(true);
-    };
-    video.addEventListener("loadeddata", ready);
-    video.addEventListener("error", error);
-    if (video.readyState >= 2) ready();
-    return () => {
-      video.removeEventListener("loadeddata", ready);
-      video.removeEventListener("error", error);
-    };
+      },
+    );
   }, [access, durationMs, playback.videoRef]);
   return (
     <section
@@ -98,7 +89,7 @@ export function CloudResult({
       aria-label="Clip delivery"
       tabIndex={0}
     >
-      <div className={styles.exportVideo}>
+      <div className={styles.exportVideo} data-output-delivery="true">
         <div className={styles.exportVideoFrame}>
           <PortraitPlayer
             label="Final MP4"
@@ -109,7 +100,9 @@ export function CloudResult({
             seek={playback.seek}
             videoRef={playback.videoRef}
             videoPreload="auto"
-            busy={!access || failed}
+            muted={playback.muted}
+            toggleMute={playback.toggleMute}
+            busy={!access || !decoded || failed}
           />
         </div>
         <p>
@@ -123,8 +116,9 @@ export function CloudResult({
         </p>
         {failed && (
           <p role="alert">
-            Output playback is unavailable. Retry access before the download
-            window ends.
+            {expired
+              ? "The output download window has ended. Start over for a new clip."
+              : "Output playback is unavailable. Retry access before the download window ends."}
           </p>
         )}
         {failed && (
@@ -134,6 +128,7 @@ export function CloudResult({
               setAccess(false);
               setDecoded(false);
               setFailed(false);
+              setRequested(false);
               setAttempt((value) => value + 1);
             }}
             disabled={expired}
@@ -162,12 +157,25 @@ export function CloudResult({
           Download MP4
         </Button>
         <p role="status">
-          {requested
-            ? "Download requested. Check your browser for progress or failure; you can retry while the output is available."
-            : decoded
-              ? "Playback verified. Your MP4 is ready to download."
-              : "Verifying output playback before download."}
+          {expired
+            ? "Output access has expired."
+            : failed
+              ? "Playback verification failed. Download is unavailable."
+              : requested
+                ? "Download requested. Check your browser for progress or failure; you can retry while the output is available."
+                : decoded
+                  ? "Playback verified. Your MP4 is ready to download."
+                  : "Verifying output playback before download."}
         </p>
+        <section
+          className={styles.outputTranscript}
+          aria-label="Final clip transcript"
+        >
+          <h2>Transcript</h2>
+          <p dir="auto">
+            {assembly.words.map((word) => word.punctuatedText).join(" ")}
+          </p>
+        </section>
       </div>
       <section
         className={styles.socialDestinations}

@@ -1,3 +1,12 @@
+export function playbackPosition(
+  value: number,
+  range: { startMs: number; endMs: number },
+) {
+  return Number.isFinite(value)
+    ? Math.max(range.startMs, Math.min(range.endMs, value))
+    : range.startMs;
+}
+
 export function attachNativeRangePlayback(
   video: HTMLVideoElement,
   sourceUrl: string,
@@ -11,9 +20,10 @@ export function attachNativeRangePlayback(
   let stopped = false;
   const update = () => {
     const actual = video.currentTime * 1000;
-    const value = Math.max(range.startMs, Math.min(range.endMs, actual));
+    const value = playbackPosition(actual, range);
     if (actual >= range.endMs) video.pause();
-    if (Math.abs(actual - value) > 0.01) video.currentTime = value / 1000;
+    if (!Number.isFinite(actual) || Math.abs(actual - value) > 0.01)
+      video.currentTime = value / 1000;
     report(value);
   };
   const tick = () => {
@@ -34,8 +44,7 @@ export function attachNativeRangePlayback(
     frame = null;
   };
   const ready = () => {
-    video.currentTime =
-      Math.max(range.startMs, Math.min(range.endMs, initialMs)) / 1000;
+    video.currentTime = playbackPosition(initialMs, range) / 1000;
     update();
     if (autoplay) void video.play().catch(pause);
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { AnalysisBundleV1 } from "@clipbuilder/contracts";
 import styles from "./sample.module.css";
 
@@ -18,11 +18,14 @@ export function ReviewTranscript({
   selectedWords?: AnalysisBundleV1["transcript"]["words"];
 }) {
   const pane = useRef<HTMLDivElement>(null);
-  const words =
-    selectedWords ??
-    analysis.transcript.words.filter(
-      (word) => word.startMs >= range.startMs && word.endMs <= range.endMs,
-    );
+  const words = useMemo(
+    () =>
+      selectedWords ??
+      analysis.transcript.words.filter(
+        (word) => word.startMs >= range.startMs && word.endMs <= range.endMs,
+      ),
+    [selectedWords, analysis.transcript.words, range.startMs, range.endMs],
+  );
   const activeId = words.find(
     (word) => word.startMs <= currentMs && word.endMs > currentMs,
   )?.id;
@@ -45,7 +48,11 @@ export function ReviewTranscript({
       tabIndex={0}
       aria-label="Scrollable moment transcript"
     >
-      <p className={styles.transcript} aria-label="Candidate transcript">
+      <p
+        className={styles.transcript}
+        aria-label="Candidate transcript"
+        dir="auto"
+      >
         {words.map((word) => (
           <span
             key={word.id}

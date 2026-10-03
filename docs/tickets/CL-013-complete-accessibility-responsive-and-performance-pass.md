@@ -2,7 +2,7 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+Status: local experience corrections implemented; runtime quality matrix and film approval remain open.
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -11,8 +11,51 @@ Verify phone/desktop source upload, preview/download/error/cancel accessibility 
 Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
 
 - [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
-- [ ] Implement and verify this current packet after approval.
-- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+- [x] Implement and verify dependency-ready local corrections after approval; runtime/film gates remain unchecked.
+- [x] Record synthetic checks and the explicitly unverified manual/film/media/rights gates.
+
+## Local execution — 2026-10-03
+
+Dependency CL-012 is committed as `3127c77`; worktree was clean. Owner authorized
+local execute/validate loops and ticket-prefixed commits through CL-015, with
+no new cloud/provider/deployment and actual media/device tests deferred.
+
+[Quality matrix](../operations/EXPERIENCE_QUALITY_MATRIX.md) records source,
+synthetic, build-inventory and unverified runtime evidence. Delivered shared
+ordinary mute/seek semantics, final transcript, bounded first-frame verification,
+honest expiry/failure status, nonfinite seek protection, natural result rows,
+stage-only Remotion loading and immutable transcript-filter reuse. Focus/status/
+keyboard/dialog/forced-color source paths were checked. No product/editor or
+motion decision changed. No service/browser/screen reader or actual media ran.
+
+`FAKE_MODE=true` / no keys supports labelled fixtures and synthetic regressions;
+actual MP4/AI quality is not proved. Real AI needs provider keys/live/data/rights/
+paid approval; cloud compute/storage/IAM is separately gated. No local AI weights.
+Full responsive/zoom/contrast/screen-reader/motion/browser performance, actual
+MP4/caption/A/V/parity/max-envelope/device observations, CSP/Turnstile compatibility,
+rights/licenses and owner film/UI approval remain unchecked. Film work is not
+pre-created before the required final-UI/capture/editorial approval sequence.
+
+Validation pass 1 (read-only current tracked + two new files): **Meets ticket
+with concerns** for the authorized local scope; **no actionable findings**.
+Covered: ordinary controls/transcript, bounds/decode/error/expiry cleanup,
+read-only integration, responsive source correction, staged loading and accurate
+evidence. Partial: semantic/focus/performance source checks. Unverified: the
+manual/media/device/film/provider/cloud/rights gates listed above. Inspected the
+complete ticket and changed code/docs plus nearby native Player, session reducer
+and installed Next guides. No edits, full suite, external calls or delegation
+occurred during validation. No earlier finding was dismissed. Focused execution
+checks passed 28 tests in 4 files plus the existing review regression checks.
+
+Settled gates: `corepack pnpm format:check`, `lint`, `typecheck`, `test:unit`,
+and `build` pass; `git diff --check` passes. Unit total: **623 tests in 64 files**
+(root 20/3, contracts 58/5, composition 3/1, backend 195/14, renderer 56/11,
+frontend 291/30). The first concurrent root run timed out in an unchanged
+boundary-lint test; rerunning units alone passed it in the original timeout and
+passed the complete gate. No threshold was widened. See the matrix for exact
+before/after production chunk inventories; no SLA or runtime metric is inferred.
+
+Commit: [file-level plan](CL-013-COMMIT_PLAN.md), authorized through CL-015.
 
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>

@@ -10,7 +10,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { ArrowLeft, Film, Pause, Play } from "lucide-react";
+import { ArrowLeft, Film, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { IconButton } from "../../shared/ui/button";
 import { timecode } from "./candidate.evidence";
 import styles from "./sample.module.css";
@@ -44,6 +44,8 @@ export function PortraitPlayer({
   videoRef,
   surface,
   videoPreload = "metadata",
+  muted = false,
+  toggleMute,
 }: {
   label: string;
   range: { startMs: number; endMs: number };
@@ -59,6 +61,8 @@ export function PortraitPlayer({
   videoRef?: RefObject<HTMLVideoElement | null>;
   surface?: ReactNode;
   videoPreload?: "metadata" | "auto";
+  muted?: boolean;
+  toggleMute?: () => void;
 }) {
   const controlsId = useId();
   const [awake, setAwake] = useState(true);
@@ -130,6 +134,7 @@ export function PortraitPlayer({
             className={styles.localVideo}
             playsInline
             preload={videoPreload}
+            muted={muted}
             aria-label={label}
           />
         ) : (
@@ -163,7 +168,15 @@ export function PortraitPlayer({
             onClick={toggle}
             {...(onKeyDown ? { onKeyDown } : {})}
           />
-          <output data-playback-time>
+          {toggleMute && (
+            <IconButton
+              icon={muted ? VolumeX : Volume2}
+              label={muted ? "Unmute clip audio" : "Mute clip audio"}
+              disabled={busy}
+              onClick={toggleMute}
+            />
+          )}
+          <output data-playback-time aria-live="off" aria-label="Playback time">
             {timecode(currentMs - range.startMs)} /{" "}
             {timecode(range.endMs - range.startMs)}
           </output>
@@ -177,6 +190,7 @@ export function PortraitPlayer({
           max={range.endMs}
           step={1}
           value={Math.round(currentMs)}
+          aria-valuetext={`${timecode(currentMs - range.startMs)} of ${timecode(range.endMs - range.startMs)}`}
           disabled={busy}
           onFocus={() => setSeekingFocused(true)}
           onBlur={() => setSeekingFocused(false)}
