@@ -4,13 +4,20 @@ import { fileURLToPath } from "node:url";
 import {
   type CompositionManifestV2,
   type InspectedSource,
+  type SelectedMediaRange,
+  selectedMediaRangeSchema,
 } from "@clipbuilder/contracts";
 import { inspectSource, validateOutput, probeMedia } from "./inspection.js";
 import { runOwnedProcess } from "./process-runner.js";
 import { MediaFailure } from "./media.failure.js";
 export interface MediaPipeline {
   inspect(path: string, signal: AbortSignal): Promise<InspectedSource>;
-  proxy(path: string, output: string, signal: AbortSignal): Promise<void>;
+  proxy(
+    path: string,
+    output: string,
+    signal: AbortSignal,
+    range?: SelectedMediaRange,
+  ): Promise<void>;
   render(
     path: string,
     output: string,
@@ -30,8 +37,19 @@ export class NodeMediaPipeline implements MediaPipeline {
   inspect(path: string, signal: AbortSignal) {
     return inspectSource(path, this.tools.ffprobe, signal);
   }
-  async proxy(path: string, output: string, signal: AbortSignal) {
+  async proxy(
+    path: string,
+    output: string,
+    signal: AbortSignal,
+    range?: SelectedMediaRange,
+  ) {
     const input = await probeMedia(path, this.tools.ffprobe, signal);
+    const selected = range ? selectedMediaRangeSchema.parse(range) : undefined;
+    if (selected && selected.endMs > Math.round(input.format.duration * 1000))
+      throw new MediaFailure("invalid");
+    const duration = selected
+      ? (selected.endMs - selected.startMs) / 1000
+      : input.format.duration;
     await runOwnedProcess(
       this.tools.ffmpeg,
       [
@@ -40,10 +58,11 @@ export class NodeMediaPipeline implements MediaPipeline {
         "error",
         "-protocol_whitelist",
         "file,pipe",
+        ...(selected ? ["-ss", String(selected.startMs / 1000)] : []),
         "-i",
         path,
         "-t",
-        String(input.format.duration),
+        String(duration),
         "-map",
         "0:v:0",
         "-map",
@@ -51,7 +70,7 @@ export class NodeMediaPipeline implements MediaPipeline {
         "-vf",
         "scale=w=640:h=640:force_original_aspect_ratio=decrease:force_divisible_by=2",
         "-r",
-        "10",
+        selected ? "20" : "10",
         "-af",
         "aresample=async=1:first_pts=0",
         "-c:v",
@@ -61,11 +80,11 @@ export class NodeMediaPipeline implements MediaPipeline {
         "-pix_fmt",
         "yuv420p",
         "-b:v",
-        "112k",
+        selected ? "512k" : "112k",
         "-maxrate",
-        "112k",
+        selected ? "512k" : "112k",
         "-bufsize",
-        "224k",
+        selected ? "1024k" : "224k",
         "-c:a",
         "aac",
         "-ac",
@@ -73,7 +92,7 @@ export class NodeMediaPipeline implements MediaPipeline {
         "-ar",
         "16000",
         "-b:a",
-        "32k",
+        selected ? "64k" : "32k",
         "-map_metadata",
         "-1",
         "-movflags",
@@ -85,7 +104,7 @@ export class NodeMediaPipeline implements MediaPipeline {
       signal,
     );
     const proxy = await probeMedia(output, this.tools.ffprobe, signal);
-    if (Math.abs(input.format.duration - proxy.format.duration) > 0.1)
+    if (Math.abs(duration - proxy.format.duration) > 0.1)
       throw new MediaFailure("invalid");
   }
   async render(

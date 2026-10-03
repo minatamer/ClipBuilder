@@ -4,6 +4,9 @@ import {
   mediaUploadRequestSchema,
   mediaPrepareRequestSchema,
   mediaRenderRequestSchema,
+  mediaSelectRequestSchema,
+  type MediaSelectRequest,
+  type MediaSelectResponse,
   type MediaBinding,
   type MediaUploadRequest,
   type MediaPrepareRequest,
@@ -67,6 +70,7 @@ export class MediaSessions {
         source: null,
         sourceGeneration: null,
         analysisProxy: null,
+        selectedRange: null,
         output: null,
         outputExpiresAtMs: null,
         cleanupPending: false,
@@ -191,6 +195,79 @@ export class MediaSessions {
       },
       record.generation,
     );
+  }
+  async claimSelected(input: MediaSelectRequest): Promise<IntentRecord> {
+    const request = mediaSelectRequestSchema.parse(input),
+      record = await this.active(request.binding);
+    if (this.cleanupBlocked) throw new MediaFailure("cleanup_pending");
+    if (
+      record.intent.phase !== "prepared" ||
+      !record.intent.source ||
+      record.intent.analysisProxy ||
+      record.intent.selectedRange ||
+      record.intent.sourceGeneration !== request.generation ||
+      request.range.endMs > record.intent.source.durationMs
+    )
+      throw new MediaFailure("conflict");
+    return this.store.saveIntent(
+      {
+        ...record.intent,
+        phase: "selecting",
+        selectedRange: request.range,
+        nonce: request.nonce,
+      },
+      record.generation,
+    );
+  }
+  async selected(
+    binding: MediaBinding,
+    nonce: string,
+    result: MediaSelectResponse,
+  ) {
+    const record = await this.active(binding);
+    if (
+      record.intent.phase !== "selecting" ||
+      record.intent.nonce !== nonce ||
+      JSON.stringify(record.intent.selectedRange) !==
+        JSON.stringify(result.range) ||
+      JSON.stringify(record.intent.source) !== JSON.stringify(result.source)
+    )
+      throw new MediaFailure("conflict");
+    await this.store.saveIntent(
+      {
+        ...record.intent,
+        phase: "prepared",
+        analysisProxy: result.analysisProxy,
+      },
+      record.generation,
+    );
+  }
+  async analysisProxy(binding: MediaBinding) {
+    const record = await this.active(binding);
+    if (record.intent.phase !== "prepared" || !record.intent.analysisProxy)
+      throw new MediaFailure("conflict");
+    return record.intent.analysisProxy;
+  }
+  async releaseAnalysisProxy(binding: MediaBinding) {
+    const record = await this.active(binding);
+    if (record.intent.phase !== "prepared") throw new MediaFailure("conflict");
+    const proxy = record.intent.analysisProxy;
+    if (!proxy) return;
+    try {
+      await this.store.deleteArtifact(
+        binding.sessionId,
+        proxy.artifactId,
+        proxy.generation,
+      );
+      await this.store.saveIntent(
+        { ...record.intent, analysisProxy: null },
+        record.generation,
+      );
+    } catch {
+      this.cleanupBlocked = true;
+      await this.terminate(binding);
+      throw new MediaFailure("cleanup_pending");
+    }
   }
   async publish(
     binding: MediaBinding,

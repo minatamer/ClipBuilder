@@ -5,6 +5,7 @@ import {
   inspectedSourceSchema,
   uuidV4Schema,
   objectGenerationSchema,
+  selectedMediaRangeSchema,
 } from "@clipbuilder/contracts";
 export const temporaryIntentSchema = z
   .object({
@@ -18,6 +19,7 @@ export const temporaryIntentSchema = z
       "uploading",
       "preparing",
       "prepared",
+      "selecting",
       "rendering",
       "complete",
       "terminal",
@@ -31,6 +33,7 @@ export const temporaryIntentSchema = z
     source: inspectedSourceSchema.nullable(),
     sourceGeneration: objectGenerationSchema.nullable(),
     analysisProxy: artifactReferenceSchema.nullable(),
+    selectedRange: selectedMediaRangeSchema.nullable().default(null),
     output: artifactReferenceSchema.nullable(),
     outputExpiresAtMs: z.number().int().positive().nullable(),
     cleanupPending: z.boolean(),

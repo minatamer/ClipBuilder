@@ -13,12 +13,13 @@ export function mediaFixture(
   pipeline?: MediaPipeline,
   budget = 2,
   removeScratch?: (directory: string) => Promise<void>,
+  now: () => number = () => 1_000_000,
 ) {
   const store = new MemoryMediaStore();
   const sessions = new MediaSessions(
     store,
     new UploadCapabilityCipher(Buffer.alloc(32, 7)),
-    () => 1_000_000,
+    now,
   );
   const calls = { inspect: 0, proxy: 0, render: 0 };
   const operations = new MediaOperations(
@@ -43,7 +44,7 @@ export function mediaFixture(
       },
     },
     budget,
-    () => 1_000_000,
+    now,
     removeScratch,
   );
   async function admit() {

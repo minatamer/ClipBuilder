@@ -7,6 +7,7 @@ import {
   mediaPrepareRequestSchema,
   mediaRenderRequestSchema,
   mediaCancelRequestSchema,
+  mediaSelectRequestSchema,
 } from "@clipbuilder/contracts";
 import type { CallerVerifier } from "./auth/caller-verifier.js";
 import { MediaFailure } from "./media/media.failure.js";
@@ -75,6 +76,36 @@ export function createRendererApplication(
       owned = requestSignal(response);
     try {
       response.json(await operations.render(input, owned.signal));
+    } finally {
+      owned.dispose();
+    }
+  });
+  app.post("/internal/select", async (request, response) => {
+    const input = mediaSelectRequestSchema.parse(request.body),
+      owned = requestSignal(response);
+    try {
+      response.json(await operations.select(input, owned.signal));
+    } finally {
+      owned.dispose();
+    }
+  });
+  app.post("/internal/analysis-proxy", async (request, response) => {
+    const { binding } = mediaCancelRequestSchema.parse(request.body),
+      owned = requestSignal(response);
+    try {
+      response
+        .type("video/mp4")
+        .send(await operations.analysisProxy(binding, owned.signal));
+    } finally {
+      owned.dispose();
+    }
+  });
+  app.post("/internal/release-analysis-proxy", async (request, response) => {
+    const { binding } = mediaCancelRequestSchema.parse(request.body),
+      owned = requestSignal(response);
+    try {
+      await operations.releaseAnalysisProxy(binding, owned.signal);
+      response.json({ deleted: true });
     } finally {
       owned.dispose();
     }

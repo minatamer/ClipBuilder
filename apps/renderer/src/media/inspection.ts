@@ -121,6 +121,15 @@ export async function inspectSource(
     audioStartMs: Math.round(
       ((audio.start_time ?? 0) - (video.start_time ?? 0)) * 1000,
     ),
+    profile: {
+      container: probe.format.format_name.startsWith("mov,mp4")
+        ? "mp4"
+        : "webm",
+      videoCodec: video.codec_name,
+      audioCodec: audio.codec_name,
+      averageFrameRate: fps,
+      rotationDegrees: ((rotation % 360) + 360) % 360,
+    },
   });
 }
 export async function validateOutput(

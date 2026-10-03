@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
@@ -9,11 +9,14 @@ import {
   type MediaRenderRequest,
   mediaPrepareResponseSchema,
   mediaRenderResponseSchema,
+  mediaSelectResponseSchema,
+  type MediaSelectRequest,
 } from "@clipbuilder/contracts";
 import { MediaSessions } from "../expiry/media-sessions.js";
 import { MediaFailure } from "./media.failure.js";
 import type { MediaPipeline } from "./node-pipeline.js";
 import { measureScratchBytes } from "./scratch-usage.js";
+import { fileChecksum } from "./inspection.js";
 export class MediaOperations {
   private active: {
     binding: MediaBinding;
@@ -102,10 +105,14 @@ export class MediaOperations {
     binding: MediaBinding,
     signal: AbortSignal,
     work: (directory: string, signal: AbortSignal) => Promise<T>,
+    metered = true,
   ): Promise<T> {
     this.assertIntakeReady();
     if (this.active) throw new MediaFailure("busy");
-    if (this.dispatches >= this.maxDispatches || this.sessions.blocked)
+    if (
+      (metered && this.dispatches >= this.maxDispatches) ||
+      this.sessions.blocked
+    )
       throw new MediaFailure("budget");
     const controller = new AbortController();
     const externalAbort = () => controller.abort();
@@ -143,7 +150,7 @@ export class MediaOperations {
               check = undefined;
             });
         }, 250);
-        this.dispatches++;
+        if (metered) this.dispatches++;
         try {
           controller.signal.throwIfAborted();
           return await work(directory, controller.signal);
@@ -210,6 +217,74 @@ export class MediaOperations {
         await this.sessions.prepared(request.binding, request.nonce, result);
         return result;
       },
+    );
+  }
+  analysisProxy(binding: MediaBinding, signal: AbortSignal) {
+    return this.owned(
+      binding,
+      signal,
+      async (directory, innerSignal) => {
+        const reference = await this.sessions.analysisProxy(binding);
+        if (reference.bytes > TEMPORARY_MEDIA_LIMITS.proxyBytes)
+          throw new MediaFailure("invalid");
+        const path = join(directory, "analysis.mp4");
+        await this.sessions.store.download(
+          binding.sessionId,
+          reference.artifactId,
+          reference.generation,
+          path,
+          innerSignal,
+        );
+        if (
+          (await stat(path)).size !== reference.bytes ||
+          (await fileChecksum(path, innerSignal)) !== reference.checksum
+        )
+          throw new MediaFailure("invalid");
+        return readFile(path, { signal: innerSignal });
+      },
+      false,
+    );
+  }
+  select(request: MediaSelectRequest, signal: AbortSignal) {
+    return this.owned(
+      request.binding,
+      signal,
+      async (directory, innerSignal) => {
+        const record = await this.sessions.claimSelected(request),
+          input = join(directory, "source"),
+          proxy = join(directory, "selected-proxy.mp4");
+        await this.sessions.store.download(
+          request.binding.sessionId,
+          record.intent.sourceId,
+          request.generation,
+          input,
+          innerSignal,
+        );
+        const source = await this.pipeline.inspect(input, innerSignal);
+        if (JSON.stringify(source) !== JSON.stringify(record.intent.source))
+          throw new MediaFailure("invalid");
+        await this.pipeline.proxy(input, proxy, innerSignal, request.range);
+        const analysisProxy = await this.sessions.store.upload(
+          request.binding.sessionId,
+          randomUUID(),
+          proxy,
+          record.intent.expiresAtMs,
+          innerSignal,
+        );
+        const result = mediaSelectResponseSchema.parse({
+          source,
+          analysisProxy,
+          range: request.range,
+        });
+        innerSignal.throwIfAborted();
+        await this.sessions.selected(request.binding, request.nonce, result);
+        return result;
+      },
+    );
+  }
+  releaseAnalysisProxy(binding: MediaBinding, signal: AbortSignal) {
+    return this.sessions.store.withSignal(signal, () =>
+      this.sessions.releaseAnalysisProxy(binding),
     );
   }
   render(request: MediaRenderRequest, signal: AbortSignal) {
