@@ -9,15 +9,73 @@ The audited CL-014 parent is `6ccd9d4aa487e15db27ea1b0f978f6a5b396897b`.
 [Release audit](RELEASE_CANDIDATE_AUDIT.md) retains its exact inputs and deferred
 acceptance. CL-015 changes only the frontend build's artifact inspection, its
 synthetic regressions and the owning documentation; the focused re-audit in
-the release ledger must accompany any later immutable build. No hosting topology, public API
-identity adapter, container family or provider configuration was invented.
+the release ledger must accompany any later immutable build. That local packaging
+pass did not invent a hosting topology, public API identity adapter, container
+family or provider configuration. The owner subsequently selected the public
+Cloud Run frontend/private API topology, runtime-identity trust chain, initial
+managed URL/manual releases and conditional public paid operating model in the
+[CL-015 decision record](../tickets/CL-015-deploy-validate-measure-and-rollback.md#owner-release-decisions--2026-10-03).
+Those choices are documented; their implementation and deployed proof are pending.
 
 `FAKE_MODE=true` with no keys supports labelled fixtures and injected tests;
 fixture Download remains disabled and these checks do not produce a real MP4.
 Real Gemini analysis requires keys, enabled live flags and rights/data/paid
 approval. Private storage/render compute requires independent IAM/cloud/spend
 approval even with fake AI. No local AI model, weights or runtime are used.
-Real media/device/quality evidence remains missing.
+End-to-end real processing, device and quality evidence remains missing.
+
+## Retained owner demonstration source
+
+On 2026-10-03 the owner authorized preparing the agreed continuous 7:41 excerpt
+from the locally downloaded conversation and retaining it for local use. The
+master belongs in the ignored `private/retained-demo-source/` directory. Its
+generic local entry is `input.mp4`; `PRESERVE.md` and `manifest.json` are also
+ignored. Original download names, source content and private checksum metadata
+stay outside committed documentation. The original download remains untouched.
+
+Choose local storage for this master. The current private GCS bucket is for
+disposable session media; its expiry/sweeper/lifecycle policy must remain intact.
+No cloud upload, resource change, provider call or application configuration
+change is part of this preparation. Any later retained cloud sample needs a
+separate owner-reviewed storage/delivery design outside disposable session
+storage; this local decision does not establish that design or authorize it.
+
+Preserve the entire retained-source directory during Clear/reset, cancellation,
+expiry, scratch cleanup, release work and repository housekeeping. Do not run
+`git clean -fdx` over it or treat `private/` as a temporary directory. Only an
+explicit owner request naming this retained asset permits replacement/deletion.
+The renderer's current scratch cleanup owns generated `clipbuilder-media-*`
+directories under the operating-system temporary directory; it does not own
+this master. Build delivery uses allowlisted renderer inputs and inspected
+frontend artifacts, not a copied repository root containing private media.
+
+For an approved real-source check, manually select this file through normal
+browser file intake. Processing admits a separate upload and deletes that copy,
+proxies, previews and outputs on the existing terminal/expiry rules. The retained
+master has no session identity, cleanup intent or provider file handle. Do not
+wire it into automatic startup, fixture routes, CI, build/public assets or a
+sample-specific extraction shortcut. The system must analyze its actual content
+and the visitor chooses one generated candidate through the ordinary flow.
+
+Prepared-master verification: MP4, 461.000 seconds (7:41), 1280×720 at 25fps,
+AVC video and stereo AAC audio, 58,268,450 bytes (55.57 MiB). Both tracks start
+at zero and have 461-second durations. Strict native FFprobe frame decoding
+(`-v error -err_detect explode -count_frames`) passed with 11,525 video frames
+and 19,854 decoded audio frames; container/frame/profile and recommended
+10-minute/250-MiB intake checks passed. Source/master SHA-256 and provenance are
+kept only in the ignored manifest. The bundled FFmpeg lacks the default
+`wrapped_avframe` encoder for a null-output decode command, so FFprobe performed
+the complete decode check. Subjective picture/audio quality and sync were not
+human-reviewed. No captions, overlays or source-specific candidate ranges were
+prepared; this is the continuous input only.
+
+Local FFmpeg preparation is API-free and AI-free, with no keys, weights or live
+flags. `FAKE_MODE=true` still produces synthetic application results; preparing
+this real input does not make fake analysis real. Gemini processing still needs
+keys/live flags, transfer/rights and a bounded paid-call approval; remote rendering
+retains its independent cloud/compute approval. Public/promotional rights,
+subjective source/AI/output quality and real-device playback remain separate
+unchecked gates.
 
 ## Existing build inspection
 
@@ -74,13 +132,20 @@ These are pending acceptance steps, not instructions to perform external work
 now. Use the current migration authority and dated setup guide, recheck official
 provider/platform docs and obtain the applicable owner approval first.
 
-1. Approve hosting/routing/private caller identities and the paid operating
-   model. Browser bridges currently pin loopback; protected/paid nonlocal backend
-   composition fails closed. Public transport/authentication and actual revision
-   overlap safeguards still need implementation/proof after those decisions.
-   Keys alone cannot complete that work. Resolve rights, licenses, sample,
-   provider data/retention, numerical hard monetary controls, saved bucket/IAM/
-   expiry policy and current source/device/quality/visual/film evidence.
+1. Implement/prove the owner-selected hosting/routing/runtime-identity topology
+   and conditional paid operating model from the CL-015 decision record. Obtain
+   approval for the concrete external actions before executing them. Browser
+   bridges currently pin loopback; protected/paid nonlocal backend composition
+   fails closed. Public transport/authentication and actual revision overlap
+   safeguards still need implementation/proof. Keys alone cannot complete that
+   work. Public sample/film rights remain unresolved. Paid-project policy intent
+   is accepted, but actual provider settings/privacy copy and transfer evidence
+   remain unverified. USD 10 project/USD 5 Cloud Run alert targets are confirmed;
+   the latter still needs verification. Gemini's numerical monthly limit and a
+   fresh bounded test allowance are deferred to paid testing: estimate and agree
+   the allowance before dispatch, then measure actual cost. Resolve enforceable
+   monetary controls, remaining license/rights notices, saved bucket/IAM/expiry
+   policy and current source/device/quality/visual/film evidence before acceptance.
 2. Build target-platform artifacts from the exact audited source and unchanged
    frozen lockfile. Record content-free source SHA, build configuration/toolchain,
    inspected input digest and immutable image digests. Run the strict frontend

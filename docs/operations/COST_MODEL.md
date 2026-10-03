@@ -1,5 +1,29 @@
 # Google AI and private media-compute cost plan
 
+## Owner budget decisions — 2026-10-03
+
+The owner confirmed the USD 10 ClipBuilder project and USD 5 Cloud Run alert
+targets after comparison with ScreenPilot. The USD 10 project alert was verified
+at the earlier checkpoint below; the intended USD 5 Cloud Run alert remains
+unconfirmed. No budget/account was inspected or changed in this documentation
+pass. Both targets are notifications, not an enforced monthly spending ceiling.
+
+The owner is deferring Gemini's numerical monthly limit until paid testing makes
+per-flow cost clearer. At that checkpoint, first prepare a current-price estimate
+for the exact source/call/token/compute envelope and agree a fresh bounded test
+allowance before any dispatch; measure actual usage/cost afterward and use that
+evidence to choose the monthly limit. No Gemini amount or new test allowance was
+approved here. The earlier USD 1 media-only allowance does not cover a Gemini
+call, the complete current flow or new builds.
+
+The accepted initial validation plan is one complete flow, at most two AI calls
+and four media operations, with no automatic paid retries. Call-count bounds do
+not replace a dollar allowance. Actual settings and enforceable monetary controls
+remain unverified and public paid traffic stays disabled. The
+[CL-015 decision record](../tickets/CL-015-deploy-validate-measure-and-rollback.md#owner-release-decisions--2026-10-03)
+keeps the remaining approval/evidence gates. Fake/no-key fixtures cost no provider
+calls; real Gemini and cloud compute still require separate budgeted approvals.
+
 ## CL-012 enforced limits and remaining monetary gates
 
 Atomic grants/counters bound one process lifetime; they do not create a global

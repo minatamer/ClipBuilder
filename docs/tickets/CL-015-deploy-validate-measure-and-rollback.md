@@ -54,10 +54,12 @@ CL-014 is `6ccd9d4aa487e15db27ea1b0f978f6a5b396897b`; initial worktree was clean
 [Local release preparation](../operations/LOCAL_RELEASE_PREPARATION.md) owns the
 existing-build inspection, later artifact/routing/negative-probe/rollback
 checkpoints and every remaining gate. Frontend README owns exact commands.
-No public hosting/authentication adapter or container topology is chosen without
-the outstanding owner hosting/paid operating-model decision. Existing nonlocal
-protected/paid composition remains fail-closed; missing keys are not a local
-implementation blocker or evidence of a complete public pipeline.
+At this packaging checkpoint, the public hosting/paid operating-model decision
+was still outstanding and no adapter/container topology was invented. The later
+[owner release decisions](#owner-release-decisions--2026-10-03) select the approach;
+implementation/proof remains pending. Existing nonlocal protected/paid
+composition remains fail-closed; missing keys are not a local implementation
+blocker or evidence of a complete public pipeline.
 
 `apps/frontend/scripts/verify-release-artifact.ts` inspects standalone, separate
 static and optional public inputs. The normal frontend build uses explicit local
@@ -122,6 +124,96 @@ provider privacy/current settings, licenses/rights/scans, monetary hard controls
 public topology/auth/rollout, immutable images, deployed probes and operational
 kill-switch/rollback/deletion/cost observations remain unverified. Earlier
 CL-006 private Linux/media evidence is preserved and does not attest this release.
+
+## Owner release decisions — 2026-10-03
+
+After reviewing ScreenPilot's SP-026 deployment, SP-028 private-backend trust
+boundary and recorded cost controls, the owner confirmed the proposed answers
+except the public-media rights question, which needs clarification, and Gemini's
+numerical spending amounts, which will be decided at paid testing. This section
+records decisions, not completed implementation or external execution.
+
+| Question | Owner-confirmed choice / remaining item |
+| --- | --- |
+| 1. Public hosting | Cloud Run frontend and control API alongside the existing private renderer, using the already-approved ClipBuilder project and europe-west1 region. |
+| 2. Public access and identities | Only the frontend is public. Browser API calls remain same-origin; limited runtime identities authenticate frontend-to-control and control-to-renderer. The expiry caller remains separately scoped. |
+| 3. First URL and release method | Managed frontend run.app URL, manual deployment of exact audited images; a custom domain is later and GitHub Actions remains quality-only. |
+| 4. Paid operating model | Hosted verification begins fake/paid-disabled/live-off. After controlled live verification and enforceable spend safeguards, separately approve anonymous public processing protected by Turnstile and existing limits. |
+| 5. Provider/privacy approach | ClipBuilder-scoped paid Gemini project, disclosed proxy transfer, no optional data sharing, limited provider safety retention and an adult audience in supported regions. This accepts the approach; actual account/settings and public privacy-copy verification remain pending. The hosting region is not a guarantee of provider processing residency. |
+| 6. Public sample/example/film | The owner selected the researched open-licensed conversation as the preferred source. The recommended 7:41 excerpt is input preparation only; actual source quality and remaining public/promotional/provider-transfer rights evidence are unverified. The earlier 2:45 source permission remains private-test-only. |
+| 7. Monthly spend | USD 10 project and USD 5 Cloud Run alert targets confirmed. Earlier USD 10 evidence remains valid for that checkpoint; the intended USD 5 alert is still unconfirmed. Gemini's numerical monthly limit is deferred until paid testing establishes per-flow cost. Alerts are not hard caps. |
+| 8. First complete live validation | Plan one complete flow, at most two AI calls and four media operations, with no automatic paid retries. Prepare a current-price estimate and obtain a fresh numerical test allowance before dispatch. No new dollar allowance or paid run is authorized now. |
+
+The public-media question concerns content supplied by the project: a prepared
+real sample, downloadable demonstration clip or real conversation shown in the
+landing film. Permission to process it privately does not itself record consent
+to those public uses. An owned/licensed source needs rights covering its speakers,
+audio, edits/redistribution and provider transfer, plus any included third-party
+assets. The preferred source selection records the owner's choice; remaining
+third-party permissions are not established by that choice alone.
+Keeping this pending does not block local fake code/documentation. Visitors'
+own uploads have a separate rights/transfer confirmation; they are not automatically
+public project samples. Public media remains outside Git and this decision record.
+
+The owner clarified that the recommended 7:41 input must exercise the normal
+system analysis and extraction flow. Its duration and preparation boundaries
+are not predetermined output ranges or an expected-answer fixture. Do not
+hardcode candidates, captions, contextual cards or speaker framing for this
+sample, or bypass analysis based on its filename, hash, episode or participants.
+The [current product rule](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#current-owner-revision--gemini-and-private-cloud-run-rendering-2026-10-02)
+owns this constraint. Live grounding, framing and output quality still need
+authorized real-source verification; no new implementation or live-quality
+evidence is claimed by this documentation.
+
+Project/region/private storage/cleanup and private-test Remotion coverage were
+already approved under CL-006 and are carried forward without another choice.
+Complete release license/telemetry/notices and actual saved cloud settings still
+need evidence. The [cost plan](../operations/COST_MODEL.md#owner-budget-decisions--2026-10-03)
+owns alert versus hard-limit status and the deferred Gemini/test amounts.
+
+No application/configuration/secret/cloud resource was changed, paid call made,
+deployment performed or public switch enabled by this documentation pass. Public
+transport/identity/container implementation, acceptable immutable artifacts,
+current-revision audit, hosted checks, real quality/cost/deletion/rollback and final
+UI/film/release acceptance remain outstanding. Fake/no-key fixtures still work
+with disabled Download and zero provider calls; no local AI model is implemented
+or verified. Real Gemini needs keys/live/rights and budgeted call approval; actual
+cloud rendering has independent IAM/compute/spend approval.
+
+Documentation-only verification: `corepack pnpm format:check` and
+`git diff --check` pass. That owner-release-choice pass changed five owning
+Markdown documents; application
+code/configuration and the lockfile are unchanged. No code test suite was rerun.
+
+## Retained local demonstration input — 2026-10-03
+
+The owner authorized local extraction of the agreed continuous 7:41 source and
+explicitly authorized retaining it. Local storage was selected, outside the
+disposable cloud bucket and every application session/scratch cleanup path.
+The ignored master, preservation notice and private manifest are under
+`private/retained-demo-source/`; original download content remains untouched.
+The operating constraint is recorded in `AGENTS.md`, the current source of
+truth and migration retention section. The [preparation record](../operations/LOCAL_RELEASE_PREPARATION.md#retained-owner-demonstration-source)
+owns exact use/preservation rules and aggregate media evidence. Replacement or
+deletion requires the owner's explicit instruction naming this retained asset.
+Separate uploaded copies and derived artifacts retain ordinary deletion.
+
+Verified: 461-second 1280×720/25fps AVC/AAC stereo MP4, 55.57 MiB; native full
+video/audio frame decoding, zero-based track clocks, intake bounds, private
+checksum manifest and Git exclusion. Renderer scratch ownership and allowlisted
+image context exclude the retained master. The minimal bundled FFmpeg lacks
+the null-output default encoder; strict FFprobe frame decoding provided the
+native validation instead. No subjective quality, live analysis, complete
+render or real-device acceptance is claimed. The source is input only, with no
+preselected candidate outputs or automatic upload/processing integration.
+
+Local preparation uses no AI, API keys or cloud resources. Fake-mode application
+results remain synthetic. Real Gemini and remote render keep their separate
+keys/live/rights/data/paid and cloud/compute gates; public/promotional rights and
+live-output quality remain unchecked. No credentials, provider call, cloud
+change, app startup, staging or commit was used. Documentation formatting and
+diff checks pass; application code/configuration and the lockfile are unchanged,
+so no code test suite was rerun for this preparation.
 
 
 <details>

@@ -2,7 +2,7 @@
 
 ## Current owner revision — Gemini and private Cloud Run rendering (2026-10-02)
 
-Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 632 synthetic tests in 65 files pass. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**
+Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 665 synthetic tests in 66 files pass. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**
 
 The owner selected Google Gemini for understanding/transcription/candidates/
 speaking-face association and our private Google Cloud Run Remotion Node/Docker
@@ -23,6 +23,15 @@ exactly one selected 10–60-second clip, automatic fixed captions/contextual
 visuals, read-only preview, Confirm export and one validated portrait MP4 download.
 Gemini chooses the grounded range; the media service physically cuts/renders it.
 Flash produces structured text; fixed templates initially need zero image calls.
+
+Owner clarification (2026-10-03): preparing a shorter demonstration source is
+input preparation only. Live analysis must derive grounded candidate ranges,
+transcript/caption content, speaking-face associations and contextual content
+from the supplied source. Do not add sample-specific timestamps, speaker/crop
+coordinates, canned transcript/cards or a preset extraction path. The visitor
+chooses one system-generated candidate through the normal flow. Shared fixed
+layout templates and generic framing rules remain approved; synthetic fake-mode
+fixtures remain isolated verification data and do not prove live analysis quality.
 
 Fake/live selects AI behavior; local/cloud selects compute independently.
 Ordinary fake tests use synthetic plans and injected cloud/renderer transports,
@@ -48,6 +57,17 @@ raw and 43m output, including scheduled retry and sweep execution. Outages can e
 shutdown/incident cleanup; no unconditional permanent-deletion SLA is claimed.
 Lifecycle alone is an eventual backstop. Google provider retention is separate.
 
+The owner separately authorized retention of one prepared local demonstration
+master on 2026-10-03. It stays ignored in `private/retained-demo-source/`, outside
+application session storage, scratch, build/public assets and automated cleanup.
+This is an owner-managed input for repeatable manual testing, not an application
+archive or a precomputed extraction. Preserve it until the owner explicitly asks
+to replace/delete that asset. Any copy admitted to a processing session and all
+derived artifacts still follow the temporary-media deletion policy above.
+No retained cloud object or cloud retention-policy change is selected.
+The [local preparation record](operations/LOCAL_RELEASE_PREPARATION.md#retained-owner-demonstration-source)
+owns use, preservation and verification evidence.
+
 The owner explicitly approved this documentation and necessary local corrections
 on 2026-10-02. The owner subsequently approved the verified existing cloud
 project/region/private resources, ADC, Remotion license coverage, a USD 1 media
@@ -58,6 +78,43 @@ rights/release and Git actions retain separate authorization.
 Earlier related source/audio changes were continued; later product integration remains incomplete.
 Usage polling and independent code review remain stopped. Deployed images must
 exclude every feasibility/debug page and obsolete model/runtime tool.
+
+### Owner-confirmed public release choices — 2026-10-03
+
+The owner confirmed the ScreenPilot-informed release choices: host the public
+Next.js frontend and private Express control API on Cloud Run in the existing
+ClipBuilder project/europe-west1 region alongside the private renderer. Browser
+API calls remain same-origin; limited runtime identities authenticate the
+frontend-to-control and control-to-renderer hops, with a separate expiry caller.
+Initial releases use the managed frontend run.app URL and manually deployed
+exact audited images; a custom domain is a later decision and CI stays quality-only.
+
+The hosted verification checkpoint starts fake/paid-disabled/live-off. Anonymous
+public live processing is the accepted eventual operating model, protected by
+Turnstile and the existing limits, after controlled live verification, enforceable
+spend safeguards and explicit enablement. The owner accepts the paid-project
+Gemini data-policy approach, disclosed proxy transfer, no optional data sharing,
+limited provider safety retention and an adult audience in supported regions.
+Actual provider/project settings, public privacy copy and release evidence remain
+unverified; hosting in europe-west1 does not promise provider processing there.
+
+The USD 10 project and USD 5 Cloud Run alert targets are confirmed; the USD 10
+project alert has earlier private-check evidence, while the USD 5 Cloud Run alert
+still needs verification. Gemini's numerical monthly limit and a fresh paid-test
+allowance are deferred to the paid-testing checkpoint. Prepare an estimate and
+agree the bounded allowance before dispatch, then measure actual per-flow cost.
+The first full-flow plan is one flow, at most two AI calls and four media
+operations, without automatic paid retries. No paid test is authorized by this
+decision. Public sample/download-example/product-film rights remain unresolved;
+the previous source permission covered only the private test.
+
+The [CL-015 decision record](tickets/CL-015-deploy-validate-measure-and-rollback.md#owner-release-decisions--2026-10-03)
+owns the confirmation and remaining evidence. This is documentation of choices;
+public transport/identity/container implementation, credential use, cloud
+changes, deployment and paid/public enablement remain separate work/checkpoints.
+Fake/no-key fixtures still work with disabled Download; no local AI model is
+implemented or verified. Real Gemini needs keys/live/rights and a budgeted call
+approval; real cloud rendering has its independent IAM/compute/spend gate.
 
 Unchanged product/grounding/security requirements in the earlier specification
 remain applicable where consistent with this current revision. The collapsed

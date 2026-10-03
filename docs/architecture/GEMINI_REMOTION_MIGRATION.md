@@ -1,6 +1,6 @@
 # Gemini and Cloud Run Remotion migration
 
-Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 632 synthetic tests in 65 files pass. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**<br>
+Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 665 synthetic tests in 66 files pass. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**<br>
 Owner revision: 2026-10-02; supersedes the earlier same-day browser-render plan<br>
 Authority: latest explicit owner decision, then this current source-of-truth revision<br>
 Inventory: [file-level migration map](MIGRATION_FILE_INVENTORY.md)<br>
@@ -71,8 +71,19 @@ private Cloud Run media service**, one private temporary bucket, one Artifact
 Registry repository and one authenticated Cloud Scheduler expiry trigger in the
 owner's verified project/region. The trigger invokes the service's restricted
 cleanup endpoint; it is an expiry backstop, not a media jobs queue. This is not a
-deployment of the full public app. Later hosted frontend/control API are a
-separate CL-015 decision.
+deployment of the full public app.
+
+On 2026-10-03 the owner selected the later public topology: public Cloud Run
+Next.js frontend, private Cloud Run Express control API and the existing private
+renderer in the verified ClipBuilder project/europe-west1 region. Browser API
+requests stay same-origin; the frontend runtime authenticates to control, control
+authenticates to the renderer, and the expiry caller retains a separate purpose
+and identity. Runtime grants are least-privilege. Use the managed frontend run.app
+URL and manual exact-audited-image releases initially; domain purchase/mapping
+and deployment CI stay later decisions. See the
+[CL-015 decision record](../tickets/CL-015-deploy-validate-measure-and-rollback.md#owner-release-decisions--2026-10-03).
+Public transport/identity/container implementation and deployed proof remain
+pending; this topology choice does not authorize provisioning or deployment.
 
 Isolate the media service from the API: Chromium/FFmpeg have larger CPU/RAM,
 scratch, startup, cancellation and attack surfaces. The API can hold a small
@@ -161,6 +172,12 @@ GCS bucket; Gemini receives a bounded audiovisual proxy. Disclose both transfers
 and separate their retention. Retain no durable transcript/prompts/provider
 payloads in our cloud: validated results/manifest stay in the temporary browser
 journal, server only holds bounded active descriptors and checks signed receipts.
+
+Owner clarification (2026-10-03): the separately retained local demonstration
+master is outside this application storage lifecycle. Its preservation/use rule
+is in [local release preparation](../operations/LOCAL_RELEASE_PREPARATION.md#retained-owner-demonstration-source).
+Every session-uploaded copy remains disposable. Do not upload a retained master
+into the disposable bucket or add an exemption to its expiry/deletion controls.
 
 Raw-source logical expiry is fixed at two hours after admission. Delete each
 analysis proxy after its Google call and each extracted intermediate after its

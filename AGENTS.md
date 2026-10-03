@@ -36,6 +36,14 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   generated assets, output videos, signed capabilities, account identifiers, and
   credentials out of Git, fixtures, logs, errors, URLs, screenshots, and
   documentation.
+- Owner retention decision (2026-10-03): `private/retained-demo-source/` holds
+  the ignored, owner-managed local demonstration master and its private metadata.
+  Preserve it during session cleanup, expiry, cancellation, repository housekeeping,
+  release preparation and `git clean`. Never use it as scratch, an ordinary test
+  fixture or a public/build asset. Replacement or deletion requires an explicit
+  owner instruction naming this retained asset. Processing uses a separate
+  uploaded copy whose original/proxies/output retain the normal deletion rules.
+  See [local source preparation](docs/operations/LOCAL_RELEASE_PREPARATION.md#retained-owner-demonstration-source).
 - Committed/default/test composition is `FAKE_MODE=true` (derived provider mode
   is `fake`; a legacy `PROVIDER_MODE=fake` assertion cannot override it),
   `PAID_DEMO_ENABLED=false`, and every `LIVE_*` flag false. Ordinary tests and

@@ -1,6 +1,6 @@
 # ClipBuilder canonical ticket index
 
-Status: Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 632 synthetic tests in 65 files pass. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
+Status: Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 665 synthetic tests in 66 files pass. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
 
 Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md),
 [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),
@@ -15,6 +15,22 @@ anchors have partial runtime evidence. See the [quality matrix](../operations/EX
 and [whole-file follow-up plan](CL-013-BROWSER-QA-COMMIT_PLAN.md). This does not
 complete the physical-device/screen-reader/native-media/film or deployment gates,
 or carry the earlier release audit forward to a changed revision automatically.
+
+Owner-authorized full-history audit corrections (2026-10-03) belong to
+[CL-005](CL-005-implement-secure-upload-and-storage.md#cross-ticket-audit-correction--2026-10-03)
+(remove browser output-encoding intake gate),
+[CL-007](CL-007-deliver-live-analysis-vertical-slice.md#cross-ticket-audit-correction--2026-10-03)
+(nonempty contiguous quotation tokens), and
+[CL-010](CL-010-deliver-automatic-clip-review.md#cross-ticket-audit-correction--2026-10-03)
+(commit and bind selection before assembly). Their new regressions reproduced
+the original defects before correction. Combined final checks and read-only
+revalidation are recorded in the owning packets; prior runtime/release evidence
+is not extended by these synthetic local corrections.
+
+The owner authorized all current changes to be staged and committed sequentially
+using the [four-step whole-file plan](CL-005-015-AUDIT-COMMIT_PLAN.md).
+It covers the three corrections and pending owner-decision/source-preservation
+documentation; no paid/cloud/deployment action or push is included.
 
 Current Git handoff: [CL-007/CL-008 file-level commit plan](CL-007-008-COMMIT_PLAN.md)
 documents the seven owner-authorized sequential whole-file commits. Implementation
