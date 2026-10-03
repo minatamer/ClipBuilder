@@ -2,7 +2,7 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: early private resources/authentication/Linux media/expiry-deletion checkpoint verified under completed CL-006. Later complete public deployment remains gated.
+Status: local release preparation complete; validation has no actionable local findings and all five root gates pass. Strict release verification rejects the current Windows artifact; actual target-platform deployment acceptance remains unchecked. Early private resources/authentication/Linux media/expiry-deletion evidence remains under CL-006. Complete public deployment remains gated and unperformed.
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -42,8 +42,87 @@ Git actions retain separate gates. Usage polling and independent review remain s
 - [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
 - [x] Owner separately approved early private setup and bounded synthetic allowance; resource/authentication evidence is in [CL-006](CL-006-build-media-job-and-speaker-feasibility.md#private-renderer-setup-and-deferred-media-validation--2026-10-02).
 - [x] Early private cloud media/expiry-deletion validation: rights-confirmed 2:45 private test passed under CL-006; fake AI, verified Linux image, cancellation and accelerated independent deletion.
-- [ ] Implement and verify this current packet after approval.
-- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+- [x] Implement locally buildable production-output exclusion and release/rollback preparation; external phases remain unchecked.
+- [x] Complete local validation, five root gates and exact build/input evidence; this is not complete deployment acceptance.
+- [ ] Build acceptable immutable target-platform images; verify actual deployment, negative URL probes, bounded live quality/cost, kill switch/rollback and remaining rights/AI/cloud/license/device gates after approval.
+
+## Local execution - 2026-10-03
+
+Owner authorized continued fake-mode local work and sequential ticket-prefixed
+commits through CL-015; deployment and real media/device tests are deferred.
+CL-014 is `6ccd9d4aa487e15db27ea1b0f978f6a5b396897b`; initial worktree was clean.
+[Local release preparation](../operations/LOCAL_RELEASE_PREPARATION.md) owns the
+existing-build inspection, later artifact/routing/negative-probe/rollback
+checkpoints and every remaining gate. Frontend README owns exact commands.
+No public hosting/authentication adapter or container topology is chosen without
+the outstanding owner hosting/paid operating-model decision. Existing nonlocal
+protected/paid composition remains fail-closed; missing keys are not a local
+implementation blocker or evidence of a complete public pipeline.
+
+`apps/frontend/scripts/verify-release-artifact.ts` inspects standalone, separate
+static and optional public inputs. The normal frontend build uses explicit local
+mode; a separate default-strict release command rejects external links. Eight
+current app entries, no rewrites, known framework routes/redirect and bounded
+path/file/hash inventory prevent the local harness becoming published input.
+No environment/secret read, copying, listener, provider or cloud work on import.
+No dependency or lockfile change. Synthetic fixtures are cleaned in finally.
+
+Initial real-build validation rejected the legitimate `[...path]` route because
+an overbroad `..` substring check treated catch-all syntax as traversal. Complete
+path segments are now checked; the regression fixture contains that route.
+A separate unresolved-public-input regression failed before the fix: ENOENT
+inside an existing public tree was silently treated as an absent directory.
+Narrowed the exception to root presence only; the existing tree's failures reject.
+Known Windows Next package junctions are not hidden: local mode inventories them
+without following them and reports `selfContained:false`; strict release rejects.
+The current 26 external package links require a later approved target-platform
+build and strict check. Local passing inventory cannot replace final image
+inspection or actual deployed 404 probes.
+
+Focused installed Vitest artifact tests: 8 passed in 1 file. Typecheck passed.
+Validation pass 1: **Meets ticket with concerns** for the owner-authorized local
+scope, **no actionable findings**. Read-only review inspected tracked and new
+files, the full current/historical ticket, installed Next output guidance,
+route/asset inventory, frontend build/entrypoint, renderer packaging boundaries
+and backend nonlocal fail-closed composition. No suite, edit, staging or external
+action ran in that review. Covered: local harness exclusion, exact current app
+routes, bounded hashing/link handling, synthetic rejection regressions, narrow
+command/document ownership and release/rollback handoff. Partial/unverified:
+actual self-contained target-platform image, deployed entrypoints/404 probes,
+public authenticated transport/paid model, live/media/device/rights/provider/
+cloud/operational evidence. The strict Windows rejection is intentional and
+recorded, not misreported as a deploy pass. Deferred items were not completed
+because the owner explicitly limited this sequence to local/fake work and
+postponed actual testing/deployment; the unresolved hosting/operating-model
+decision also precedes those implementation choices. They remain unchecked.
+Settled root results: `corepack pnpm format:check`, `lint`, `typecheck`,
+`test:unit` and `build` all pass; `git diff --check` passes. **632 synthetic tests
+in 65 files**: root 29/4, contracts 58/5, composition 3/1, backend 195/14,
+renderer 56/11, frontend 291/30. Units ran separately from CPU-heavy checks;
+no thresholds/timeouts changed. The final normal build's local inventory passes:
+1,276 files, 26 links, 22,017,979 bytes, eight app entries, SHA-256
+`56fe9dcedaa3844ee5058a4af1eb05e4e01bc6c924ccb714ac9a071c24a28062`.
+`externalPackageLinks:26`, `selfContained:false`. The strict command against
+that final output returns exit 1 / `release_artifact_invalid`, the expected
+external-junction rejection; it is not counted as a passed release gate.
+Focused three-file source/config/test input digest is
+`4ead811a10da6a8d8c010d6b29b89f0f810f814bbff8aa90b5d05fba5fc31777`;
+unchanged lockfile identity and re-audit scope are in the release ledger.
+Synthetic scratch is removed, no artifact-test temporary directories remain,
+and no app/listener/cloud/provider/manual/device/media action was started.
+[Whole-file commit plan](CL-015-COMMIT_PLAN.md) covers one immediately authorized
+sequential commit: `CL-015: prepare gated release verification`.
+
+Fake/no-key
+results prove synthetic/path/lifecycle boundaries, not a real MP4 or AI quality.
+Real Gemini needs keys/live/rights/data/paid approvals; private render/storage
+has an independent IAM/cloud/compute approval. No local AI weights/runtime.
+Actual native media/full bounds/device/accessibility/CSP/font/visual/film,
+provider privacy/current settings, licenses/rights/scans, monetary hard controls,
+public topology/auth/rollout, immutable images, deployed probes and operational
+kill-switch/rollback/deletion/cost observations remain unverified. Earlier
+CL-006 private Linux/media evidence is preserved and does not attest this release.
+
 
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>

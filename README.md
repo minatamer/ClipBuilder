@@ -99,7 +99,7 @@ remain unproved; see the [current migration plan](docs/architecture/GEMINI_REMOT
 
 ## Repository status
 
-Local code through CL-013 connects intake and temporary storage, protected
+Local code through CL-014 connects intake and temporary storage, protected
 analysis, immutable selected assembly, read-only preview, one confirmed private
 render, validated output access/download and cleanup. Deterministic checks use
 `FAKE_MODE=true`, no API keys and injected synthetic results. The fixture UI at
@@ -112,7 +112,9 @@ AI model or weights are used. Actual native media quality/performance, device
 and accessibility observations, final UI/film, public sample rights/licenses,
 provider settings, spend controls and public deployment remain open. See the
 [release candidate audit](docs/operations/RELEASE_CANDIDATE_AUDIT.md) and
-[quality matrix](docs/operations/EXPERIENCE_QUALITY_MATRIX.md).
+[quality matrix](docs/operations/EXPERIENCE_QUALITY_MATRIX.md). CL-015 adds
+[local release preparation](docs/operations/LOCAL_RELEASE_PREPARATION.md);
+public deployment and an acceptable immutable build remain pending.
 
 ## Explore the repository
 

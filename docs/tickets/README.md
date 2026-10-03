@@ -1,6 +1,6 @@
 # ClipBuilder canonical ticket index
 
-Status: Local code through CL-014 is audited and validated with no actionable local findings. The release ledger separates implemented code from unverified manual/media/device/film/provider/cloud/rights/spend gates. All five settled root gates and 624 synthetic tests in 64 files pass. CL-015 local release preparation is next; no deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
+Status: Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 632 synthetic tests in 65 files pass. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
 
 Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md),
 [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),
@@ -11,9 +11,11 @@ documents the seven owner-authorized sequential whole-file commits. Implementati
 steps 1–5 are committed; the final execution record is in
 [CL-008](CL-008-productionize-active-speaker-assembly.md#commit-execution-record).
 
-Current sequence: [CL-014 file-level plan](CL-014-COMMIT_PLAN.md) commits the
-local candidate audit, then CL-015 continues within local preparation only.
-CL-013 is `4bdf5d5`, CL-012 `3127c77`, CL-011 `2e6af07`, CL-010 `4749dcc`,
+Current sequence: [CL-015 file-level plan](CL-015-COMMIT_PLAN.md) commits the
+local artifact verification and release/rollback preparation after validated
+CL-014 `6ccd9d4`. All authorized local work through this endpoint is complete;
+CL-015 public deployment acceptance remains open. CL-013 is `4bdf5d5`,
+CL-012 `3127c77`, CL-011 `2e6af07`, CL-010 `4749dcc`,
 and CL-009 `06ab834`. The owner explicitly approved staging and ticket-prefixed
 commits through CL-015. Provider/cloud/deployment, actual media/device/film and
 public launch remain separate unverified gates.
@@ -52,7 +54,7 @@ setup verification. Full public deployment retains the later release-audit gate.
 | 8 | [CL-012](CL-012-harden-security-privacy-abuse-and-spend.md) | IAM/retention/independent expiry/AI-cloud budgets and failure/replay safeguards |
 | 9 | [CL-013](CL-013-complete-accessibility-responsive-and-performance-pass.md) | Responsive upload/playback/download/accessibility, measured media quality |
 | 10 | [CL-014](CL-014-audit-release-candidate.md) | Local migration audit and settled five root gates; external evidence separately unchecked |
-| 11 | [CL-015 later public deployment](CL-015-deploy-validate-measure-and-rollback.md) | Complete public hosting/release only after CL-014 and separate approval; early private local-test setup is the conditional checkpoint above |
+| 11 | [CL-015 later public deployment](CL-015-deploy-validate-measure-and-rollback.md) | Local artifact/release preparation validated; strict Windows artifact rejection and all public hosting/live/rollback gates remain open; early private evidence is separate |
 
 There is exactly one CL-007 packet, the canonical link above. No duplicate path
 is introduced. CL-001–004 foundation/product/visual evidence remains; preserve

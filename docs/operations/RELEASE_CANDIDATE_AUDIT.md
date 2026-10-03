@@ -155,3 +155,55 @@ playback/download/devices; sample/contributor/music/font/codec/code rights;
 final UI/capture/storyboard/film and motion acceptance; deployed unpaid probes,
 kill-switch/rollback/cleanup operational proof and public launch approval.
 Update/re-audit affected inputs if later implementation or cloud proof changes.
+
+## CL-015 focused re-audit - 2026-10-03
+
+Exact CL-014 parent: `6ccd9d4aa487e15db27ea1b0f978f6a5b396897b`. Its input
+identity above remains historical; this addendum covers the only changed code/
+configuration inputs after it: `apps/frontend/package.json`,
+`apps/frontend/scripts/verify-release-artifact.ts`, and
+`test/release-artifact.test.ts`. Sorted path UTF-8 + NUL + raw SHA-256 digest,
+then combined SHA-256: **3 files**, digest
+`4ead811a10da6a8d8c010d6b29b89f0f810f814bbff8aa90b5d05fba5fc31777`.
+The whole-file diff/new-file inventory confirms other changes are documentation.
+Lockfile remains unchanged at
+`48931c9bc43ce8dbeef056c8ff2c0579255eca046fdaf99cc50929635a886713`.
+Resolve the CL-015 commit by `CL-015: prepare gated release verification` after
+that parent before any later approved build. No image digest is asserted.
+
+Installed Next output guidance, actual traced app/routes/static inventory,
+source import/entrypoint/bounds/link/error behavior, regression fixtures and
+narrow documentation ownership were inspected. This tooling imports only Node
+built-ins, starts no work on import, uses no environment/credentials/network,
+and does not enter browser-safe contracts/composition or application imports.
+Existing public paid fail-closed/backend-loopback constraints remain intact.
+No product feature, dependency, secret/media/model asset or cloud configuration
+changed. The catch-all traversal false positive and public ENOENT omission were
+corrected and independently checked; current scratch fixtures clean up fully.
+
+Final local build inventory: **1,276 files / 26 links / 22,017,979 bytes / eight
+app entries**, SHA-256
+`56fe9dcedaa3844ee5058a4af1eb05e4e01bc6c924ccb714ac9a071c24a28062`.
+All 26 links are known external source-store package junctions, explicitly
+reported as `selfContained:false` in local mode. Strict release verification
+against this same final output intentionally fails exit 1 /
+`release_artifact_invalid`. A target-platform build with no external inputs,
+strict verification and actual immutable image/deployed route proof remains a
+release gate. This local inventory is not an image attestation, deployed 404
+proof or blanket content/rights/vulnerability scan.
+
+Read-only validation pass 1: **Meets ticket with concerns**, **no actionable
+local findings**. Complete local artifact/route/rejection/document coverage;
+partial/unverified target-platform image, public auth/transport/operating model
+and all actual provider/cloud/media/device/rights/rollback evidence. The owner
+explicitly deferred those external/manual phases; missing keys are not a local
+blocker and fake checks do not prove them. Five settled root gates and diff check
+pass: **632 synthetic tests / 65 files** (root 29/4, contracts 58/5,
+composition 3/1, backend 195/14, renderer 56/11, frontend 291/30). Focused artifact
+check passes 8/1. No ordinary test contacts providers; no app, secret, cloud,
+paid, actual media/device or deploy action occurred. No test scratch remains.
+
+[Local release preparation](LOCAL_RELEASE_PREPARATION.md) owns ordered future
+checkpoint/negative-probe/stop/rollback requirements. CL-015's authorized local
+preparation is complete; complete public/live/deployment acceptance remains
+unchecked, together with the quality matrix and preceding deferred ledger.

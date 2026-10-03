@@ -11,9 +11,10 @@ When documents disagree, follow the authority order inside the source of truth. 
 The current [Gemini/private Cloud Run plan](architecture/GEMINI_REMOTION_MIGRATION.md),
 [file inventory](architecture/MIGRATION_FILE_INVENTORY.md) and
 [setup guide](operations/CLOUD_RUN_RENDERER_SETUP.md) replace older browser-only,
-local-model and provider mechanisms. Local implementation through CL-013 is
-verified synthetically. The [release audit](operations/RELEASE_CANDIDATE_AUDIT.md)
-and [quality matrix](operations/EXPERIENCE_QUALITY_MATRIX.md) separate code
+local-model and provider mechanisms. Local implementation through CL-014 and
+CL-015 artifact preparation is verified synthetically. The [release audit](operations/RELEASE_CANDIDATE_AUDIT.md)
+and [quality matrix](operations/EXPERIENCE_QUALITY_MATRIX.md), with
+[local release preparation](operations/LOCAL_RELEASE_PREPARATION.md), separate code
 readiness from actual native/media/device/AI/cloud/owner release evidence.
 `FAKE_MODE=true` needs no keys and proves fixtures, not real MP4 or AI quality.
 Real providers require keys/live/data/rights/paid approval; private media compute

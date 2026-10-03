@@ -1,5 +1,11 @@
 # ClipBuilder frontend
 
+CL-015 adds production-output inventory checks to the normal build. See
+[local release preparation and deferred deployment gates](../../docs/operations/LOCAL_RELEASE_PREPARATION.md).
+Fake/no-key checks inspect owned build output and synthetic fixtures. Actual
+media, provider keys/live approvals and independent cloud/hosting acceptance
+remain separate.
+
 CL-013 supplies shared mute/readable seeks and a final transcript, a bounded
 first-frame wait with metadata-only retry, natural result rows and stage-loaded
 Remotion review. See [quality evidence and pending runtime matrix](../../docs/operations/EXPERIENCE_QUALITY_MATRIX.md).
@@ -356,6 +362,28 @@ logging, and cleanup rules in
 [AGENTS.md](../../AGENTS.md#canonical-local-app-startup). `run all` includes
 both apps; `run frontend` targets this server only. The media spike is a separate
 opt-in command, not another default app service.
+
+## Release artifact inspection
+
+`corepack pnpm build:frontend` (or the root build) runs Next standalone output
+and then the explicit local artifact check. It inspects standalone, separate
+static assets and optional public inputs without starting a server. Known
+Windows dependency-store junctions are counted as `selfContained:false`; this
+local pass is not acceptance of an immutable deployment artifact.
+
+After an approved target-platform build, strict verification must pass:
+
+```text
+corepack pnpm --filter @clipbuilder/frontend verify:release-artifact
+```
+
+Strict verification rejects the current Windows output's 26 external package
+junctions. It also rejects unexpected app routes/rewrites, feasibility harness
+assets, test/private/media/env inputs, unresolved links and other external
+inputs. No source-store junction may enter the final image. This command uses
+only existing build files; no credential, provider, server or cloud action.
+Deployed negative URL probes, final image inventory/scans and actual hosting
+proof remain required and unverified. See the linked release preparation guide.
 
 ## Verification commands
 
