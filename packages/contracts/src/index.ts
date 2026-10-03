@@ -16,3 +16,4 @@ export * from "./edit-plan.schema.js";
 export * from "./cloud-media.schema.js";
 export * from "./grounded-analysis.schema.js";
 export * from "./selected-focus.schema.js";
+export * from "./selected-assembly.schema.js";

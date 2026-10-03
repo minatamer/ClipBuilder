@@ -1,6 +1,21 @@
 import { z } from "zod";
 import { ASSEMBLY_LIMITS, PUBLIC_LIMITS } from "./constants.js";
 import { boundedPlainTextSchema } from "./text.schema.js";
+import { wordIdSchema } from "./ids.schema.js";
+
+export const FIXED_COMPOSITION_POLICY = {
+  version: "fixed-composition-v1",
+  captionProfile: "clean-emphasis",
+  captionWords: 7,
+  captionLineCharacters: 32,
+  captionGroupMs: 3500,
+  captionPauseMs: 400,
+  openingBeatMs: 2000,
+  cardSeparationMs: 1000,
+  rasterCalls: 0,
+  maxSelectedWords: 2000,
+  selectedContextBytes: 256 * 1024,
+} as const;
 
 export const normalizedBoxSchema = z
   .object({
@@ -63,7 +78,24 @@ export const compositionManifestV2Schema = z
       .max(ASSEMBLY_LIMITS.maxFocusSegments),
     captions: z
       .array(
-        z.object({ ...timeRange, text: boundedPlainTextSchema(80) }).strict(),
+        z
+          .object({
+            ...timeRange,
+            text: boundedPlainTextSchema(80),
+            wordIds: z
+              .array(wordIdSchema)
+              .min(1)
+              .max(FIXED_COMPOSITION_POLICY.captionWords)
+              .optional(),
+            lines: z.array(boundedPlainTextSchema(80)).min(1).max(2).optional(),
+            emphasisWordIndex: z
+              .number()
+              .int()
+              .min(0)
+              .max(FIXED_COMPOSITION_POLICY.captionWords - 1)
+              .optional(),
+          })
+          .strict(),
       )
       .max(500),
     cards: z
@@ -124,6 +156,17 @@ export const compositionManifestV2Schema = z
           });
         previous = item.endMs;
       }
+    }
+    for (const caption of plan.captions) {
+      if (
+        (caption.lines && caption.lines.join(" ") !== caption.text) ||
+        (caption.emphasisWordIndex !== undefined &&
+          caption.emphasisWordIndex >= caption.text.split(" ").length)
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Caption layout does not preserve its text.",
+        });
     }
     let coverage = 0;
     for (const card of plan.cards) {

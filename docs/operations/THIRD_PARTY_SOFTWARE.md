@@ -1,5 +1,12 @@
 # Google and Node media software readiness
 
+CL-009 uses existing pinned contracts/React/Remotion/Google SDK for fixed text
+cards and captions. No MathJax, SVG rasterizer, image SDK, font, dependency or
+runtime download was added. Equations remain escaped literal text. Existing
+Arial/system fallback metrics, licenses/notices and real preview/Node parity
+retain their release gates. Synthetic checks are key-free, fake/off and network
+intercepted; Gemini/paid/cloud verification remains separately authorized.
+
 Current [cloud migration](../architecture/GEMINI_REMOTION_MIGRATION.md) replaces browser final export/LR-ASD/ORT and Deepgram/OpenAI requirements. Owner-approved implementation uses standard Remotion renderer/bundler/remotion/player **4.0.532**. @remotion/cloudrun is not selected. Windows Node synthetic SSR/proxy/cancellation is proved in CL-006. Chrome Headless Shell **149.0.7790.0** was prepared explicitly at tooling time; no runtime download is allowed. Media processing uses matching compositor FFmpeg/FFprobe; an already approved full FFmpeg creates synthetic proof fixtures only.
 
 The approved correction removed @remotion/media/web-renderer and the abandoned browser export directories, moved the fixed layout to packages/composition and retained useful Mediabunny intake/audio foundations. Server @google/genai is **2.25.0**: 2.26.0 failed the unchanged minimum-release-age policy. Storage **8.2.0** and google-auth-library **11.1.0** remain server-only. Supply-chain verification and locked installation passed; Google/protobuf install scripts stay disabled.

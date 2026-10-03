@@ -9,6 +9,8 @@ import {
   GeminiAnalysisProvider,
   composeGeminiTransport,
 } from "./gemini.adapter.js";
+import { composeSelectedPlanProvider } from "../assembly/gemini-selected-plan.js";
+import { SelectedAssembly } from "../assembly/selected-assembly.usecase.js";
 export function composeAnalysis(
   config: BackendConfig,
   admission: ProcessingAdmission | null,
@@ -23,13 +25,27 @@ export function composeAnalysis(
     !config.renderer.origin
   )
     return null;
-  return new SourceAnalysis(
-    admission,
-    new CloudRendererClient(config, rendererIdentity(config.renderer.origin)),
-    new GeminiAnalysisProvider(
-      composeGeminiTransport(config),
-      config.gemini.timeoutMs,
-    ),
-    "google-gemini",
+  const media = new CloudRendererClient(
+    config,
+    rendererIdentity(config.renderer.origin),
   );
+  const files = new GeminiAnalysisProvider(
+    composeGeminiTransport(config),
+    config.gemini.timeoutMs,
+  );
+  const analysis = new SourceAnalysis(admission, media, files, "google-gemini");
+  const planner = composeSelectedPlanProvider(config, files);
+  // Clear and either AI phase share exactly the same provider-file and media ownership.
+  return {
+    analysis,
+    assembly: planner
+      ? new SelectedAssembly(
+          admission,
+          analysis,
+          media,
+          planner,
+          "google-gemini",
+        )
+      : null,
+  };
 }

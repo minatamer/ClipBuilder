@@ -1,5 +1,21 @@
 # Google AI and private media-compute cost plan
 
+## CL-009 selected assembly envelope — 2026-10-03
+
+CL-008's selected action now returns focus and extractive cards together: one
+proxy preparation, one Google upload/generation/verified delete, zero raster/
+image/source-analysis reruns and zero automatic repair/retry. Captions/cards
+use local computation with existing packages, without generated-asset storage.
+Replay/lost responses stay consumed; known invalid captions fail before media
+or AI dispatch. Existing token/deadline limits remain. Source/selected calls
+share Files cleanup. Cloud proxy work has a separate spend gate even with fake
+AI. No real usage, price or billed cost was queried here.
+
+`FAKE_MODE=true`/no keys uses injected synthetic ports and zero external calls.
+Real Gemini requires keys/live flags, rights/data/paid-project approval and a
+numeric owner budget; cloud execution requires its own authorization. Review/
+export adds zero AI plans. See [CL-009](../tickets/CL-009-build-contextual-visual-assembly.md).
+
 ## CL-007 call envelope — 2026-10-03
 
 The local implementation reserves one upload admission and one analysis action

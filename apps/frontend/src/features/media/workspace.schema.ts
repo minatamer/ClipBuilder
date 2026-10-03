@@ -11,6 +11,8 @@ import {
   LOCAL_WORKSPACE_LIMITS,
   groundedAnalysisResultSchema,
   hasSameMediaIdentity,
+  selectedAssemblyResultSchema,
+  hasSameAssemblySource,
 } from "@clipbuilder/contracts";
 
 // Separate from media/result deletion; contains no session, capability or content.
@@ -52,6 +54,15 @@ export const workspaceRecordSchema = z
         status: z.enum(["pending", "uncertain", "complete"]),
         cleanupRequired: z.boolean().default(true),
         result: groundedAnalysisResultSchema.nullable(),
+      })
+      .strict()
+      .nullable()
+      .default(null),
+    cloudAssembly: z
+      .object({
+        status: z.enum(["pending", "uncertain", "complete"]),
+        candidateId: candidateIdSchema,
+        result: selectedAssemblyResultSchema.nullable(),
       })
       .strict()
       .nullable()
@@ -117,6 +128,27 @@ export const workspaceRecordSchema = z
       !record.analysis?.candidates.some((c) => c.id === record.selectedId)
     )
       issue();
+    if (record.cloudAssembly) {
+      const assembled = record.cloudAssembly;
+      if (
+        record.cloudAnalysis?.status !== "complete" ||
+        assembled.candidateId !== record.selectedId ||
+        record.assembly
+      )
+        issue();
+      if (assembled.status === "complete") {
+        if (
+          !assembled.result ||
+          !record.cloudAnalysis?.result ||
+          !hasSameAssemblySource(
+            assembled.result,
+            record.cloudAnalysis.result,
+          ) ||
+          assembled.result.candidateId !== assembled.candidateId
+        )
+          issue();
+      } else if (assembled.result !== null) issue();
+    }
     const candidate = record.analysis?.candidates.find(
       (item) => item.id === record.selectedId,
     );
@@ -136,7 +168,8 @@ export const workspaceRecordSchema = z
         record.analysis ||
         record.assembly ||
         record.selectedId ||
-        record.cloudAnalysis)
+        record.cloudAnalysis ||
+        record.cloudAssembly)
     )
       issue();
   });
@@ -162,5 +195,6 @@ export function cleanupRecord(record: WorkspaceRecord): WorkspaceRecord {
     assembly: null,
     selectedId: null,
     cloudAnalysis: null,
+    cloudAssembly: null,
   };
 }

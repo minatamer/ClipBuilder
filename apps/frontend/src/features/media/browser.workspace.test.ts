@@ -14,6 +14,8 @@ import { restoreLocalWorkspace } from "./workspace.restore";
 import { BrowserWorkspaceLock } from "./workspace.lock";
 import { clearAnalysisMedia } from "../source-analysis/source-analysis.flow";
 import { createSourceAnalysisApi } from "../source-analysis/source-analysis.api";
+import { selectedAssemblyFixture } from "../assembly/selected-assembly.test-fixtures";
+import { runSelectedAssembly } from "../assembly/selected-assembly.flow";
 
 function drainGate() {
   let finish = () => {};
@@ -517,6 +519,148 @@ describe("local audio workspace ownership", () => {
 
 afterEach(() => vi.useRealTimers());
 describe("browser workspace publication and lifecycle", () => {
+  it("cancel during the assembly journal commit replaces the late result with uncertainty", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    const source = f.owner.snapshot!.source!;
+    const grounded = {
+      binding: {
+        sessionId: "ses_" + "c".repeat(22),
+        sourceRevision: source.media.sourceRevision,
+        fingerprint: source.fingerprint,
+      },
+      generation: "12",
+      analysis: { ...analysis, media: source.media },
+      receipt: "synthetic",
+    };
+    await f.owner.markCloudAnalysis("pending");
+    await f.owner.storeGroundedAnalysis(grounded);
+    const assembled = await selectedAssemblyFixture(grounded);
+    await f.owner.select(assembled.candidateId);
+    const original = f.ports.journal.write,
+      entered = drainGate(),
+      gate = drainGate(),
+      controller = new AbortController();
+    f.ports.journal.write = async (record) => {
+      if (record.cloudAssembly?.status === "complete") {
+        entered.finish();
+        await gate.pending;
+      }
+      await original(record);
+    };
+    const assemble = vi.fn(async () => assembled);
+    const work = runSelectedAssembly({
+      workspace: f.owner,
+      api: {
+        session: async () => ({
+          sessionId: grounded.binding.sessionId,
+          csrfToken: "c".repeat(43),
+          expiresAtMs: 7201000,
+        }),
+        assemble,
+      },
+      challenge: async () => "synthetic",
+      signal: controller.signal,
+      label: () => {},
+    });
+    const rejected = expect(work).rejects.toThrow();
+    await entered.pending;
+    controller.abort();
+    gate.finish();
+    await rejected;
+    expect(f.owner.snapshot!.cloudAssembly).toMatchObject({
+      status: "uncertain",
+      result: null,
+    });
+    expect(f.stored()!.cloudAssembly).toMatchObject({
+      status: "uncertain",
+      result: null,
+    });
+    await expect(f.owner.markCloudAssembly("pending")).rejects.toThrow();
+    expect(assemble).toHaveBeenCalledTimes(1);
+    await f.owner.dispose();
+  });
+  it("atomically stores a hash-checked assembly and restores it without new work", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    const source = f.owner.snapshot!.source!;
+    const grounded = {
+      binding: {
+        sessionId: "ses_" + "c".repeat(22),
+        sourceRevision: source.media.sourceRevision,
+        fingerprint: source.fingerprint,
+      },
+      generation: "12",
+      analysis: { ...analysis, media: source.media },
+      receipt: "synthetic",
+    };
+    await f.owner.markCloudAnalysis("pending");
+    await f.owner.storeGroundedAnalysis(grounded);
+    const assembled = await selectedAssemblyFixture(grounded);
+    await f.owner.select(assembled.candidateId);
+    await f.owner.markCloudAssembly("pending");
+    await expect(f.owner.markCloudAssembly("pending")).rejects.toThrow();
+    await expect(
+      f.owner.storeSelectedAssembly({
+        ...assembled,
+        manifestHash: "b".repeat(64),
+      }),
+    ).rejects.toThrow();
+    expect(f.owner.snapshot!.cloudAssembly?.status).toBe("pending");
+    await f.owner.storeSelectedAssembly(assembled);
+    expect(f.stored()!.cloudAssembly?.result).toEqual(assembled);
+    await expect(f.owner.select(null)).rejects.toThrow();
+    await f.owner.dispose();
+    const restored = new BrowserWorkspace(f.ports);
+    await restored.initialize();
+    expect(restored.snapshot!.cloudAssembly?.result).toEqual(assembled);
+    await expect(restored.markCloudAssembly("pending")).rejects.toThrow();
+    await restored.clear();
+    expect(restored.snapshot).toBeNull();
+    await restored.dispose();
+  });
+  it("a failed assembly commit remains pending and Clear fences an in-flight publication", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    const source = f.owner.snapshot!.source!;
+    const grounded = {
+      binding: {
+        sessionId: "ses_" + "c".repeat(22),
+        sourceRevision: source.media.sourceRevision,
+        fingerprint: source.fingerprint,
+      },
+      generation: "12",
+      analysis: { ...analysis, media: source.media },
+      receipt: "synthetic",
+    };
+    await f.owner.markCloudAnalysis("pending");
+    await f.owner.storeGroundedAnalysis(grounded);
+    const assembled = await selectedAssemblyFixture(grounded);
+    await f.owner.select(assembled.candidateId);
+    await f.owner.markCloudAssembly("pending");
+    const original = f.ports.journal.write,
+      entered = drainGate(),
+      gate = drainGate();
+    f.ports.journal.write = async (record) => {
+      if (record.cloudAssembly?.status === "complete") {
+        entered.finish();
+        await gate.pending;
+      }
+      await original(record);
+    };
+    const write = f.owner.storeSelectedAssembly(assembled),
+      rejected = expect(write).rejects.toMatchObject({ code: "canceled" });
+    await entered.pending;
+    const clear = f.owner.clear();
+    gate.finish();
+    await clear;
+    await rejected;
+    expect(f.stored()).toBeNull();
+    await f.owner.dispose();
+  });
   it("commits grounded proof and analysis together, restores success locally, and rejects a foreign source", async () => {
     const f = fixture();
     await f.owner.initialize();

@@ -16,6 +16,28 @@ function input(action: string, body = "{}", origin = "http://localhost:3000") {
   });
 }
 describe("bounded same-origin analysis bridge", () => {
+  it("admits the larger signed assembly context only on its fixed action and caps it", async () => {
+    const transport = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", transport);
+    expect(
+      (
+        await POST(
+          input("assemble", JSON.stringify({ synthetic: "x".repeat(9000) })),
+          context("assemble"),
+        )
+      ).status,
+    ).toBe(200);
+    expect(transport).toHaveBeenCalledTimes(1);
+    expect(
+      (
+        await POST(
+          input("assemble", "x".repeat(4 * 1024 * 1024 + 1)),
+          context("assemble"),
+        )
+      ).status,
+    ).toBe(413);
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
   it("forwards only protected headers to the fixed loopback API and carries the secure cookie", async () => {
     const transport = vi.fn(
       async (_url: RequestInfo | URL, _options?: RequestInit) => {

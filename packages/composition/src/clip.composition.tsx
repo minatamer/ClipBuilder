@@ -8,6 +8,7 @@ import {
 } from "remotion";
 import type { CompositionManifestV2 } from "@clipbuilder/contracts";
 import { focusLayout } from "./focus-layout.js";
+import { ContextualCard, FixedCaption } from "./fixed-layers.js";
 export type ClipCompositionProps = {
   manifest: CompositionManifestV2;
   sourceUrl: string;
@@ -50,47 +51,8 @@ export function ClipComposition({
           ...focusLayout(manifest.source, focus, width, height, ms),
         }}
       />
-      {card && (
-        <div
-          style={{
-            position: "absolute",
-            top: 200,
-            left: 80,
-            right: 80,
-            padding: 48,
-            backgroundColor: "#172c38",
-            borderRadius: 24,
-            opacity: Math.min(1, (ms - card.startMs) / 200),
-          }}
-        >
-          <div style={{ fontSize: 56, fontWeight: 700, marginBottom: 24 }}>
-            {card.title}
-          </div>
-          {card.lines.map((line, i) => (
-            <div key={i} style={{ fontSize: 42, marginBottom: 16 }}>
-              {line}
-            </div>
-          ))}
-        </div>
-      )}
-      {caption && (
-        <div
-          style={{
-            position: "absolute",
-            left: 80,
-            right: 80,
-            bottom: 220,
-            padding: 28,
-            backgroundColor: "#101215",
-            borderRadius: 16,
-            textAlign: "center",
-            fontSize: 52,
-            fontWeight: 700,
-          }}
-        >
-          {caption.text}
-        </div>
-      )}
+      {card && <ContextualCard card={card} ms={ms} />}
+      {caption && <FixedCaption caption={caption} />}
     </AbsoluteFill>
   );
 }

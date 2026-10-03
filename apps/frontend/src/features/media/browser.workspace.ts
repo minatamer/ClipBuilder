@@ -3,6 +3,8 @@ import {
   PUBLIC_LIMITS,
   type AnalysisBundleV1,
   type GroundedAnalysisResult,
+  type SelectedAssemblyResult,
+  selectedAssemblyResultSchema,
 } from "@clipbuilder/contracts";
 import { LocalMediaError } from "./media.errors";
 import type { AudioProgress, ExtractedAudio } from "./audio.profile";
@@ -62,6 +64,7 @@ export class BrowserWorkspace {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private expiry: (() => void) | null = null;
   private disposed = false;
+  private assemblyReservation = false;
   constructor(private readonly ports: WorkspacePorts) {}
 
   get sourceUrl(): string | null {
@@ -145,6 +148,71 @@ export class BrowserWorkspace {
       cloudAnalysis: { status: "complete", result },
     });
     await this.write(record, generation);
+    this.record = record;
+  }
+
+  async markCloudAssembly(status: "pending" | "uncertain") {
+    const generation = this.generation;
+    this.check(generation);
+    if (
+      !this.record?.selectedId ||
+      this.record.cloudAnalysis?.status !== "complete" ||
+      (status === "pending" &&
+        (this.assemblyReservation || this.record.cloudAssembly)) ||
+      (status === "uncertain" &&
+        this.record.cloudAssembly?.status !== "pending")
+    )
+      throw new LocalMediaError("missing");
+    this.assemblyReservation = true;
+    const record = parseWorkspaceRecord({
+      ...this.record,
+      cloudAssembly: {
+        status,
+        candidateId: this.record.selectedId,
+        result: null,
+      },
+    });
+    try {
+      await this.write(record, generation);
+      this.record = record;
+    } catch (error) {
+      if (status === "pending") this.assemblyReservation = false;
+      throw error;
+    }
+  }
+
+  async storeSelectedAssembly(
+    value: SelectedAssemblyResult,
+    signal?: AbortSignal,
+  ) {
+    const generation = this.generation;
+    this.check(generation);
+    signal?.throwIfAborted();
+    const result = selectedAssemblyResultSchema.parse(value);
+    const bytes = new TextEncoder().encode(JSON.stringify(result.manifest));
+    const hash = Array.from(
+      new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+    )
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+    this.check(generation);
+    signal?.throwIfAborted();
+    if (
+      !this.record ||
+      this.record.cloudAssembly?.status !== "pending" ||
+      hash !== result.manifestHash
+    )
+      throw new LocalMediaError("missing");
+    const record = parseWorkspaceRecord({
+      ...this.record,
+      cloudAssembly: {
+        status: "complete",
+        candidateId: this.record.selectedId,
+        result,
+      },
+    });
+    await this.write(record, generation);
+    signal?.throwIfAborted();
     this.record = record;
   }
 
@@ -453,6 +521,10 @@ export class BrowserWorkspace {
     const generation = this.generation;
     this.check(generation);
     if (this.record?.status !== "ready") throw new LocalMediaError("missing");
+    if (this.record.cloudAssembly || this.assemblyReservation) {
+      if (this.record.selectedId === candidateId) return;
+      throw new LocalMediaError("busy");
+    }
     const record = parseWorkspaceRecord({
       ...this.record,
       selectedId: candidateId,
@@ -517,6 +589,7 @@ export class BrowserWorkspace {
       if (remoteFenceFailed) throw new LocalMediaError("storage");
       await this.ports.journal.delete();
       this.record = null;
+      this.assemblyReservation = false;
       this.work = null;
       this.ports.finishCleanup();
     })().finally(() => {

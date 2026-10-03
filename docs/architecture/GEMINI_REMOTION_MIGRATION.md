@@ -1,6 +1,6 @@
 # Gemini and Cloud Run Remotion migration
 
-Status: **CL-006 foundation complete; CL-007 local analysis/fake browser workflow passed and pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus and its pass-1 voiced-timing correction are locally verified; validation pass 2 reports no actionable findings in the local scope. Five root gates and 492 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred; live quality/devices/product/release remain unchecked. Contextual assembly remains CL-009. The owner authorized committing the revalidated correction.**<br>
+Status: **CL-005/006 foundations complete; CL-007/008 local analysis/focus verified. CL-009 fixed contextual assembly is locally complete; validation pass 2 has no actionable local findings. Five root gates and 528 synthetic tests in 54 files pass. CL-010 read-only preview integration is next. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, human quality, font/license/rights and real device/public-release gates remain deferred.**<br>
 Owner revision: 2026-10-02; supersedes the earlier same-day browser-render plan<br>
 Authority: latest explicit owner decision, then this current source-of-truth revision<br>
 Inventory: [file-level migration map](MIGRATION_FILE_INVENTORY.md)<br>
@@ -17,7 +17,9 @@ independent deletion proof, five builds and four media dispatches with zero AI.
 Full maximum-envelope stress and live Gemini quality remain later gates.
 No AWS, dedicated alpha Remotion Cloud Run package or browser final-export
 requirement survives this revision. Preserve unrelated owner changes during implementation.
-Usage polling and independent code review remain stopped.
+Usage polling remains stopped. The owner authorized local execute/validate/fix
+loops and ticket-prefixed file-level commits through CL-014 and locally buildable
+CL-015 work on 2026-10-03. Keys/paid/cloud/deployment remain deferred.
 
 ## Product and compute responsibilities
 

@@ -2,7 +2,7 @@
 
 ## Current owner revision — Gemini and private Cloud Run rendering (2026-10-02)
 
-Status: **CL-005/006 foundations complete; CL-007 local analysis/fake browser workflow passed without API keys, and pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus and its pass-1 voiced-timing correction are locally verified; validation pass 2 reports no actionable findings in the local scope. Five root gates and 492 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred. Live quality/device/product/release gates remain unchecked; contextual assembly remains CL-009. The owner authorized committing the revalidated correction.**
+Status: **CL-005/006 foundations complete; CL-007/008 local analysis/focus verified. CL-009 fixed contextual assembly is locally complete; validation pass 2 has no actionable local findings. Five root gates and 528 synthetic tests in 54 files pass. CL-010 read-only preview integration is next. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, human quality, font/license/rights and real device/public-release gates remain deferred.**
 
 The owner selected Google Gemini for understanding/transcription/candidates/
 speaking-face association and our private Google Cloud Run Remotion Node/Docker

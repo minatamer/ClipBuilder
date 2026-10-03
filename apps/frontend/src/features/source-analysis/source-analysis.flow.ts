@@ -12,7 +12,7 @@ export async function runSourceAnalysis(input: {
     BrowserWorkspace,
     "snapshot" | "sourceFile" | "markCloudAnalysis" | "storeGroundedAnalysis"
   >;
-  api: SourceAnalysisApi;
+  api: Pick<SourceAnalysisApi, "grant" | "upload" | "transfer" | "analyze">;
   challenge(
     sessionId: string,
     action: "transcription" | "candidate-analysis",

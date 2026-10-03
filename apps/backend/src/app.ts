@@ -31,7 +31,8 @@ export function createApplication(config: BackendConfig): Express {
 
   application.use("/v1", createHealthRouter(config.appRevision));
   const admission = composeAdmission(config);
-  const analysis = composeAnalysis(config, admission);
+  const processing = composeAnalysis(config, admission);
+  const analysis = processing?.analysis ?? null;
   if (analysis && admission)
     application.use(
       "/v1/analysis",
@@ -39,6 +40,7 @@ export function createApplication(config: BackendConfig): Express {
         admission,
         analysis,
         config.session.csrfAllowedOrigins,
+        processing?.assembly ?? null,
       ),
     );
   if (admission)

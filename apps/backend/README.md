@@ -1,22 +1,26 @@
 # ClipBuilder backend
 
-## CL-008 selected speaker focus — local foundation
+## CL-009 fixed selected assembly — local implementation
 
-`src/assembly/selected-focus.usecase.ts` consumes a verified CL-007 source result
+`src/assembly/selected-assembly.usecase.ts` consumes a verified CL-007 source result
 and one immutable candidate. It reserves `visual-plan` once, requests a physical
-selected proxy, obtains one bounded speaker plan and signs validated geometry.
+selected proxy, obtains one combined speaker/card plan and signs the frozen
+word-grounded manifest/source generation/hash. `POST /v1/analysis/assemble`
+uses the protected session/CSRF path and bounded signed analysis context.
 The Google adapter reuses the source adapter's Files lifecycle with explicit
 5fps sampling. Source AI, repair, image and search calls are zero. Uncertain or
 replayed actions never dispatch again. Release failure prevents publication.
-CL-009 owns complete assembly and extends this same plan call for templates;
-the public assembly flag remains disabled until then.
+CL-009 extends that same call for extractive statement/comparison/steps cards
+and fixed captions, with zero raster calls. The browser stores a complete
+hash-checked result or uncertainty. CL-010 owns Proceed/Player/review integration;
+the public assembly UI flag remains disabled until then. CL-011 owns MP4 delivery.
 
 Fake/injected plans verify anonymous word association, confidence, wide fallback,
 cuts and bounded interpolation without keys/network. Real speaker quality needs
 keys/live flags, rights/data/paid approval and the separately deferred renderer
 rollout. No local AI model is used. Live assembly requires protected source
 analysis and at least three admitted actions; this is a process count, not a
-provider/cloud billing cap. See [CL-008 evidence](../../docs/tickets/CL-008-productionize-active-speaker-assembly.md).
+provider/cloud billing cap. See [CL-009 evidence](../../docs/tickets/CL-009-build-contextual-visual-assembly.md).
 
 The 1000ms switch hold counts the union of voiced transcript time in each
 unambiguous speaker turn. Word pauses add no hold time and always use wide

@@ -1,6 +1,6 @@
 # ClipBuilder canonical ticket index
 
-Status: CL-005/006 foundations complete. CL-007 local source analysis/fake browser workflow passed; pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus and its pass-1 voiced-timing correction are locally verified; validation pass 2 reports no actionable findings in the local scope. Five root gates and 492 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred; quality/device/public-release gates remain unchecked. Complete contextual assembly remains CL-009. The owner authorized committing the revalidated correction. CL-006's private 2:45 evidence is separate.
+Status: CL-005/006 foundations complete; CL-007/008 local analysis/focus verified. CL-009 fixed contextual assembly is locally complete; validation pass 2 has no actionable local findings. Five root gates and 528 synthetic tests in 54 files pass. CL-010 read-only preview integration is next. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, human quality, font/license/rights and real device/public-release gates remain deferred.
 
 Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md),
 [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),
@@ -11,6 +11,12 @@ documents the seven owner-authorized sequential whole-file commits. Implementati
 steps 1–5 are committed; the final execution record is in
 [CL-008](CL-008-productionize-active-speaker-assembly.md#commit-execution-record).
 
+Current sequence: [CL-009 file-level plan](CL-009-COMMIT_PLAN.md) commits its
+complete locally validated change, then CL-010 continues. The owner authorized
+local execute/validate loops, thorough finding disposition and sequential
+ticket-prefixed commits on 2026-10-03. API keys, paid/cloud tests and deployment
+are deferred and do not stop this locally buildable sequence.
+
 The isolated private renderer/GCS checkpoint is provisioned and verified under
 the recorded owner approvals. New external actions retain their own gates.
 The owner's 2026-10-02 approvals covered build resources, private renderer setup,
@@ -19,11 +25,11 @@ Exact attempts and remaining gates are in [CL-006](CL-006-build-media-job-and-sp
 The owner authorized necessary image retries until this private test passed.
 Five builds and four cloud media operations were recorded, with zero AI calls.
 Live AI and public deployment remain unapproved. The owner separately authorized
-the documented seven local commits on 2026-10-03; further Git actions retain
-their own authorization.
+the documented seven local commits on 2026-10-03, then the local ticket sequence
+and file-level commits described above.
 Fake/live AI and local/cloud compute are independent. Ordinary tests remain
-synthetic, fake/off, credential-free and zero-network. No usage polling or new
-independent code review. Continue one dependency-ready packet at a time.
+synthetic, fake/off, credential-free and zero-network. Usage polling remains
+stopped. Local validate loops are now authorized; continue one packet at a time.
 
 The early CL-015 private-infrastructure checkpoint interleaves at the first
 genuine cloud-dependent test, once its minimum local image/adapters and private
@@ -39,7 +45,7 @@ setup verification. Full public deployment retains the later release-audit gate.
 | Conditional early checkpoint | [CL-015 private test setup](CL-015-deploy-validate-measure-and-rollback.md) | At the first actual cloud-dependent test; minimum locally ready image/adapters/auth/lifecycle/spend controls, then explicit bounded setup/synthetic-test approval; no CL-014 prerequisite |
 | 3 | [CL-007](CL-007-deliver-live-analysis-vertical-slice.md) | Grounded Gemini words/turns/candidates/receipt; after CL-006 local foundation |
 | 4 | [CL-008](CL-008-productionize-active-speaker-assembly.md) | Selected-range speaker association/validation/smoothing and physical proxy range; after CL-007 |
-| 5 | [CL-009](CL-009-build-contextual-visual-assembly.md) | Frozen source-bound fixed captions/templates; after CL-008 |
+| 5 | [CL-009](CL-009-build-contextual-visual-assembly.md) | Local complete, validation pass 2 clean; fixed captions/templates and frozen source/hash/result; external gates deferred |
 | 6 | [CL-010](CL-010-deliver-automatic-clip-review.md) | Read-only preview over selected proxy/shared layout; after CL-009 |
 | 7 | [CL-011](CL-011-render-and-deliver-final-clip.md) | Private Node final render/MP4 validation/download/cleanup; after CL-010 |
 | 8 | [CL-012](CL-012-harden-security-privacy-abuse-and-spend.md) | IAM/retention/independent expiry/AI-cloud budgets and failure/replay safeguards |

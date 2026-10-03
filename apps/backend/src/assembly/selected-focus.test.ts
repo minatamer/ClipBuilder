@@ -1,26 +1,30 @@
 import { createHash, randomUUID } from "node:crypto";
+import express from "express";
+import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import {
   type GroundedAnalysisResult,
-  type SpeakerPlan,
+  type SelectedAssemblyPlan,
 } from "@clipbuilder/contracts";
 import { ProcessingAdmission } from "../admission/processing.admission.js";
 import { ProcessingGrantCodec } from "../admission/processing.grant.js";
 import { SourceAnalysis, resultDigest } from "../analysis/analysis.usecase.js";
 import { SAMPLE_ANALYSIS } from "../demo/sampleAnalysis.js";
-import { SelectedSpeakerFocus } from "./selected-focus.usecase.js";
-import { GeminiSpeakerFocusProvider } from "./gemini-speaker-focus.js";
+import { SelectedAssembly } from "./selected-assembly.usecase.js";
+import { GeminiSelectedPlanProvider } from "./gemini-selected-plan.js";
 import {
   GeminiAnalysisProvider,
   composeGeminiTransport,
   type GeminiTransport,
 } from "../analysis/gemini.adapter.js";
 import {
-  composeSpeakerFocusProvider,
-  SPEAKER_FOCUS_POLICY,
-} from "./gemini-speaker-focus.js";
+  composeSelectedPlanProvider,
+  SELECTED_PLAN_POLICY,
+} from "./gemini-selected-plan.js";
 import { loadConfig } from "../config/loadConfig.js";
-import { speakerPlanSchema } from "@clipbuilder/contracts";
+import { selectedAssemblyPlanSchema } from "@clipbuilder/contracts";
+import { createAnalysisRouter } from "../http/routes/analysis.route.js";
+import { mapError } from "../http/errorMapper.js";
 
 async function fixture() {
   const origin = "http://localhost:3000",
@@ -63,7 +67,11 @@ async function fixture() {
     sourceRevision: SAMPLE_ANALYSIS.media.sourceRevision,
     fingerprint: "a".repeat(64),
   };
-  const payload = { binding, generation: "1", analysis: SAMPLE_ANALYSIS };
+  const payload = {
+    binding,
+    generation: "1",
+    analysis: structuredClone(SAMPLE_ANALYSIS),
+  };
   // Seed a server-signed synthetic source result through the real completed-action gate.
   await admission.run(
     context,
@@ -140,14 +148,18 @@ async function fixture() {
         const durationMs = input.range.endMs - input.range.startMs;
         return {
           version: 1,
-          coordinateSpace: "upright-display",
-          durationMs,
-          shots: [{ startMs: 0, endMs: durationMs, observations: [] }],
+          speaker: {
+            version: 1,
+            coordinateSpace: "upright-display",
+            durationMs,
+            shots: [{ startMs: 0, endMs: durationMs, observations: [] }],
+          },
+          cards: [],
         };
       },
     ),
   };
-  const service = new SelectedSpeakerFocus(
+  const service = new SelectedAssembly(
     admission,
     source,
     port,
@@ -166,12 +178,110 @@ async function fixture() {
     provider,
     sourcePort,
     sourceProvider,
+    source,
     admission,
     context,
     controller,
   };
 }
 describe("selected speaker action and provenance", () => {
+  it("rejects unsupported caption input before either media or AI dispatch", async () => {
+    const f = await fixture();
+    const candidate = f.input.analysis.analysis.candidates[0]!;
+    f.input.analysis.analysis.transcript.words.find(
+      (w) => w.id === candidate.startWordId,
+    )!.punctuatedText = "one two three four five six seven eight nine";
+    const { receipt: _old, ...payload } = f.input.analysis;
+    void _old;
+    f.input.analysis.receipt = f.admission.completedReceipt(
+      f.context,
+      "candidate-analysis",
+      payload.binding.sourceRevision,
+      resultDigest(payload),
+    );
+    await expect(f.service.run(f.context, f.input)).rejects.toMatchObject({
+      code: "INVALID_REQUEST",
+    });
+    expect(f.port.select).toHaveBeenCalledTimes(0);
+    expect(f.provider.plan).toHaveBeenCalledTimes(0);
+  });
+  it("connects protected assembly HTTP to the combined action and rejects replay and CSRF before new calls", async () => {
+    const f = await fixture(),
+      app = express();
+    app.use(
+      "/v1/analysis",
+      createAnalysisRouter(
+        f.admission,
+        f.source,
+        [f.context.origin],
+        f.service,
+      ),
+    );
+    app.use(
+      (
+        error: unknown,
+        _req: express.Request,
+        res: express.Response,
+        next: express.NextFunction,
+      ) => {
+        void next;
+        const mapped = mapError(error, `req_${"0".repeat(32)}`);
+        res.status(mapped.status).json({ error: mapped.error });
+      },
+    );
+    const send = (csrf = f.context.csrf) =>
+      request(app)
+        .post("/v1/analysis/assemble")
+        .set("Origin", f.context.origin)
+        .set("Sec-Fetch-Site", "same-origin")
+        .set("Cookie", `__Host-clipping_session=${f.context.cookie}`)
+        .set("X-CSRF-Token", csrf)
+        .send(f.input);
+    expect(Buffer.byteLength(JSON.stringify(f.input))).toBeGreaterThan(8192);
+    expect((await send("wrong")).status).toBe(403);
+    expect(f.provider.plan).toHaveBeenCalledTimes(0);
+    const response = await send();
+    expect(response.status).toBe(200);
+    expect(response.headers["cache-control"]).toContain("no-store");
+    expect(f.service.verify(f.context, response.body).manifest.version).toBe(2);
+    expect((await send()).status).toBe(409);
+    expect(f.provider.plan).toHaveBeenCalledTimes(1);
+    expect(f.port.select).toHaveBeenCalledTimes(1);
+  });
+  it("an invalid contextual plan releases and terminally cancels without publishing or retrying", async () => {
+    const f = await fixture();
+    f.provider.plan.mockImplementation(async (_proxy, input) => ({
+      version: 1,
+      speaker: {
+        version: 1,
+        coordinateSpace: "upright-display",
+        durationMs: input.range.endMs - input.range.startMs,
+        shots: [
+          {
+            startMs: 0,
+            endMs: input.range.endMs - input.range.startMs,
+            observations: [],
+          },
+        ],
+      },
+      cards: [
+        {
+          kind: "statement",
+          anchorWordId: "w_999999",
+          durationMs: 2000,
+          title: { startWordId: "w_999999", endWordId: "w_999999" },
+          lines: [{ startWordId: "w_999999", endWordId: "w_999999" }],
+        },
+      ],
+    }));
+    await expect(f.service.run(f.context, f.input)).rejects.toMatchObject({
+      code: "MODEL_OUTPUT_REJECTED",
+    });
+    expect(f.port.releaseProxy).toHaveBeenCalledTimes(1);
+    expect(f.port.cancel).toHaveBeenCalledTimes(1);
+    await expect(f.service.run(f.context, f.input)).rejects.toThrow();
+    expect(f.provider.plan).toHaveBeenCalledTimes(1);
+  });
   it("keeps default/test/fake provider composition closed before uploading", () => {
     const transport: GeminiTransport = {
       upload: vi.fn(),
@@ -180,9 +290,9 @@ describe("selected speaker action and provenance", () => {
       delete: vi.fn(),
     };
     const files = new GeminiAnalysisProvider(transport, 1000);
-    expect(composeSpeakerFocusProvider(loadConfig({}), files)).toBeNull();
+    expect(composeSelectedPlanProvider(loadConfig({}), files)).toBeNull();
     expect(
-      composeSpeakerFocusProvider(loadConfig({ NODE_ENV: "test" }), files),
+      composeSelectedPlanProvider(loadConfig({ NODE_ENV: "test" }), files),
     ).toBeNull();
     expect(transport.upload).toHaveBeenCalledTimes(0);
   });
@@ -240,9 +350,9 @@ describe("selected speaker action and provenance", () => {
       "https://generativelanguage.googleapis.com/v1beta/files/synthetic",
       new AbortController().signal,
       {
-        policy: SPEAKER_FOCUS_POLICY,
+        policy: SELECTED_PLAN_POLICY,
         prompt: "synthetic-context",
-        schema: speakerPlanSchema,
+        schema: selectedAssemblyPlanSchema,
         videoFps: 5,
       },
     );
@@ -252,10 +362,10 @@ describe("selected speaker action and provenance", () => {
     const f = await fixture(),
       result = await f.service.run(f.context, f.input);
     expect(f.service.verify(f.context, result)).toEqual(result);
-    expect(result.focus).toEqual([
+    expect(result.manifest.focus).toEqual([
       {
         startMs: 0,
-        endMs: result.range.endMs - result.range.startMs,
+        endMs: result.manifest.range.endMs - result.manifest.range.startMs,
         mode: "wide",
       },
     ]);
@@ -343,15 +453,19 @@ describe("selected speaker action and provenance", () => {
       });
       return {
         version: 1,
-        coordinateSpace: "upright-display",
-        durationMs: input.range.endMs - input.range.startMs,
-        shots: [
-          {
-            startMs: 0,
-            endMs: input.range.endMs - input.range.startMs,
-            observations: [],
-          },
-        ],
+        cards: [],
+        speaker: {
+          version: 1,
+          coordinateSpace: "upright-display",
+          durationMs: input.range.endMs - input.range.startMs,
+          shots: [
+            {
+              startMs: 0,
+              endMs: input.range.endMs - input.range.startMs,
+              observations: [],
+            },
+          ],
+        },
       };
     });
     const job = f.service.run(f.context, f.input),
@@ -366,11 +480,15 @@ describe("selected speaker action and provenance", () => {
   });
   it("shares the bounded Files upload/generate/verified-delete lifecycle and explicit 5fps task", async () => {
     let file = "";
-    const plan: SpeakerPlan = {
+    const plan: SelectedAssemblyPlan = {
       version: 1,
-      coordinateSpace: "upright-display",
-      durationMs: 10000,
-      shots: [{ startMs: 0, endMs: 10000, observations: [] }],
+      cards: [],
+      speaker: {
+        version: 1,
+        coordinateSpace: "upright-display",
+        durationMs: 10000,
+        shots: [{ startMs: 0, endMs: 10000, observations: [] }],
+      },
     };
     const transport: GeminiTransport = {
       upload: vi.fn(async (name) => {
@@ -388,7 +506,7 @@ describe("selected speaker action and provenance", () => {
       })),
       delete: vi.fn(async () => {}),
     };
-    const provider = new GeminiSpeakerFocusProvider(
+    const provider = new GeminiSelectedPlanProvider(
       new GeminiAnalysisProvider(transport, 1000),
     );
     expect(

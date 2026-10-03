@@ -2,7 +2,7 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+Status: local implementation/verification complete; validation pass 2 has no actionable local findings. External evidence remains deferred.
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -11,8 +11,98 @@ Freeze versioned source/manifest/object-generation data with word-grounded fixed
 Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
 
 - [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
-- [ ] Implement and verify this current packet after approval.
-- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+- [x] Implement and verify the locally buildable current packet after approval.
+- [x] Record exact synthetic checks, cleanup and all remaining external gates.
+
+## Local execution record — 2026-10-03
+
+The owner authorized sequential execute/validate/fix loops through CL-014 and
+locally buildable CL-015 work, file-level plans and immediate ticket-prefixed
+commits. This later instruction authorizes local validation and Git actions;
+provider keys, paid calls, cloud execution and deployment remain excluded.
+
+One selected-range audiovisual call now supplies both CL-008 speaker focus and
+contextual cards. The strict planner returns word spans and fixed statement,
+two-column comparison or numbered steps templates. Exact quotes/numbers/
+equations remain escaped literal text. There is no free-form visible model
+prose, raster brief, image call, external asset, MathJax/SVG/code input,
+transcription rerun or candidate reranking.
+
+`fixed-composition-v1` retains `clean-emphasis`: at most seven display words,
+normally two lines of 32 characters, punctuation/speaker/pause boundaries and
+3.5-second grouping cap. Short groups and exceptional long words remain literal;
+unrepresentable simultaneous display groups fail before media/AI dispatch.
+Provider words/clocks remain unchanged. Cards follow a 2-second opening beat,
+last 1.5–4.5 seconds, have at least one second of separation, number at most
+three and cover at most 45 percent. Ordered disjoint title/line spans must be
+spoken during the cue. Zero cards is valid. Full-frame templates preserve audio
+and keep captions above them in a separate safe area; no face overlay is added.
+
+Manifest v2/result freeze source fingerprint/revision/object generation,
+analysis revision, candidate/range, selected words/evidence, fixed output,
+SHA-256 manifest hash and signed completed-action receipt. Protected
+`POST /v1/analysis/assemble` validates CSRF before its bounded larger body:
+4 MiB signed-context transport, at most 2,000 selected words/256 KiB. It reserves
+one `visual-plan`, one physical proxy preparation and one planner call, with
+zero repair/retry/image/source-AI calls. Verified proxy release precedes
+publication; failure terminally cancels media. Source/selected calls share
+Google Files cleanup. No durable server transcript/manifest/provider store.
+
+Same-origin API, preparation flow and atomic browser journal validate source/
+range/hash. Refresh/replay/uncertainty cannot plan again; Clear fences queued
+publication and retains the existing remote cleanup obligation. CL-010 owns
+Proceed, Player hydration, review state/notes; CL-011 owns MP4 delivery. The
+live assembly UI flag remains false until review integration. This explicit
+ticket boundary cannot become a fixture success fallback in real mode.
+
+Validation pass 1 reviewed the combined unstaged implementation against the
+current packet. Verdict: does not yet meet the local packet. Two Medium findings
+were independently confirmed and corrected:
+
+- Cancellation during an awaited journal commit lacked publication signal
+  checks; the first version checked only around the flow call. A regression
+  aborts while the actual journal write is blocked. Checks before/after hashing
+  and after commit now lead to persisted uncertainty, with no second plan.
+- Caption sizing used total text length despite fixed line width/height.
+  Long wide-glyph lines could overflow. Sizing now uses the longest line and
+  bounded 24/30/36/52-pixel choices. Static markup/safe-area regressions cover
+  extremes; actual human readability/font/device approval remains unverified.
+
+Execution also checks display tokens within a provider word and preflights
+captions before either metered boundary. A synthetic fixture mutation initially
+contaminated later tests; per-case cloned sources correct that test issue.
+Focused backend assembly: 61 passed. Focused frontend assembly/workspace: 34
+passed including the cancellation regression. Earlier five root gates passed
+525 tests before corrections. Settled commands all passed: `corepack pnpm
+format:check`, `corepack pnpm lint`, `corepack pnpm typecheck`, `corepack pnpm
+test:unit`, `corepack pnpm build`, and `git diff --check`. The final unit total
+is 528 in 54 files: root 20, contracts 44, composition 3, backend 179, renderer
+27, frontend 255. No external sockets/keys were used.
+
+Validation pass 2 reviewed the settled combined unstaged scope over `5a45cd9`,
+including new files and ticket evidence; index empty, unrelated changes none.
+Verdict: meets the locally buildable current packet, no actionable findings.
+Both pass-1 findings are resolved with the actual journal cancellation and
+caption extreme/safe-area regressions. Covered: one-call grounding/word mapping,
+fixed policy/coverage, generation/hash/receipt binding, protected HTTP, shared
+Files/proxy cleanup, atomic journal/replay/abort and narrow docs. Static markup
+does not prove pixel/audio/human/device quality. Five settled gates are execution
+evidence; no full suite was repeated during this read-only validation pass.
+
+Remaining gates: real Gemini/model/privacy/paid-project/data terms and source
+rights; numeric AI/cloud allowance; approved full fixture FFmpeg native timing/
+audio/rotation/VFR/max-envelope proof; renderer rollout/private cloud execution/
+cleanup; human speaker/visual/caption quality; font/codec/telemetry/notices and
+public sample rights; real device/accessibility and preview/final MP4 parity.
+No local AI model/weights are used. `FAKE_MODE=true`/no keys supports injected
+synthetic plans and the existing labelled sample flow without external calls;
+that does not prove live gates. No service, resource, provider request or
+persistent test artifact was created; timers/readers/listeners drain, and Clear
+deletes new journal fields through the existing source cleanup path.
+
+Deviation: none from the current cloud packet. Historical raster/MathJax/
+browser-final-export mechanisms are superseded. File-level plan:
+[CL-009-COMMIT_PLAN.md](CL-009-COMMIT_PLAN.md).
 
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>

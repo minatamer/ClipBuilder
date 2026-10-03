@@ -1,5 +1,23 @@
 # ClipBuilder frontend
 
+## CL-009 selected assembly preparation
+
+`features/assembly/selected-assembly.flow.ts` uses one protected same-origin
+selected plan, restores CSRF only in memory and atomically stores a validated
+source/generation/range/hash-bound result. Pending/uncertain/complete markers
+block re-dispatch; Clear and cancellation fence late publication. No raster
+assets, public mutation controls or final encoder are introduced. CL-010 owns
+Proceed/Remotion Player/read-only review integration; CL-011 owns MP4 delivery.
+
+Injected synthetic checks work with `FAKE_MODE=true`/no keys; real Gemini needs
+keys/live flags/provider rights/data/spend approval, and private proxy work needs
+separate cloud authorization. Human font/visual/device/parity checks remain
+unverified. No local AI model is used.
+
+```text
+corepack pnpm --filter @clipbuilder/frontend test:unit src/features/assembly src/features/media/browser.workspace.test.ts
+```
+
 ## CL-007 source analysis and recovery
 
 The prepared-source screen offers explicit rights/transfer/paid confirmation when

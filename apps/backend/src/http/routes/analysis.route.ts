@@ -6,12 +6,14 @@ import {
   processingGrantResponseSchema,
   sourceAnalysisUploadSchema,
   sourceAnalysisRequestSchema,
+  selectedAssemblyRequestSchema,
 } from "@clipbuilder/contracts";
 import type {
   ProcessingAdmission,
   AdmissionContext,
 } from "../../admission/processing.admission.js";
 import type { SourceAnalysis } from "../../analysis/analysis.usecase.js";
+import type { SelectedAssembly } from "../../assembly/selected-assembly.usecase.js";
 import { ApplicationError } from "../errorMapper.js";
 import { sendNoStoreJson } from "../response.js";
 
@@ -20,6 +22,7 @@ export function createAnalysisRouter(
   admission: ProcessingAdmission,
   analysis: SourceAnalysis,
   origins: readonly string[],
+  assembly: SelectedAssembly | null = null,
 ): Router {
   const router = Router();
   router.use((request, response, next) => {
@@ -55,9 +58,19 @@ export function createAnalysisRouter(
     });
     next();
   });
-  router.use(
-    json({ limit: GROUNDED_ANALYSIS_LIMITS.requestBytes, strict: true }),
-  );
+  router.use((request, response, next) => {
+    const assembling = request.path === "/assemble";
+    if (assembling) {
+      if (!assembly) throw new ApplicationError({ code: "FEATURE_DISABLED" });
+      admission.session(context(request, response));
+    }
+    json({
+      limit: assembling
+        ? GROUNDED_ANALYSIS_LIMITS.responseBytes
+        : GROUNDED_ANALYSIS_LIMITS.requestBytes,
+      strict: true,
+    })(request, response, next);
+  });
   router.use((_request, response, next) => {
     clearTimeout(response.locals.analysisBodyTimer);
     next();
@@ -147,6 +160,16 @@ export function createAnalysisRouter(
       path: "/",
     });
     response.status(204).end();
+  });
+  router.post("/assemble", async (request, response) => {
+    const parsed = selectedAssemblyRequestSchema.safeParse(request.body);
+    if (!parsed.success || !assembly)
+      throw new ApplicationError({ code: "INVALID_REQUEST" });
+    sendNoStoreJson(
+      response,
+      200,
+      await assembly.run(context(request, response), parsed.data),
+    );
   });
   return router;
 }

@@ -8,6 +8,9 @@ import {
   sourceAnalysisUploadSchema,
   sourceAnalysisRequestSchema,
   type SourceAnalysisUpload,
+  selectedAssemblyRequestSchema,
+  selectedAssemblyResultSchema,
+  type SelectedAssemblyRequest,
 } from "@clipbuilder/contracts";
 import { SampleApiFailure, sampleFailure } from "../sample/sample.api";
 
@@ -66,6 +69,23 @@ export function createSourceAnalysisApi(
     }
   }
   return {
+    async session(signal: AbortSignal) {
+      const grant = await call(
+        "session",
+        {},
+        processingGrantResponseSchema,
+        signal,
+      );
+      csrf = grant.csrfToken;
+      return grant;
+    },
+    assemble: (input: SelectedAssemblyRequest, signal: AbortSignal) =>
+      call(
+        "assemble",
+        selectedAssemblyRequestSchema.parse(input),
+        selectedAssemblyResultSchema,
+        signal,
+      ),
     async grant(signal: AbortSignal) {
       const result = await call(
         "grant",

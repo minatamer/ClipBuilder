@@ -2,12 +2,12 @@ import { createHash, randomUUID } from "node:crypto";
 import {
   GROUNDED_ANALYSIS_LIMITS,
   TEMPORARY_MEDIA_LIMITS,
-  SELECTED_FOCUS_POLICY,
-  selectedFocusRequestSchema,
-  selectedFocusResultSchema,
+  FIXED_COMPOSITION_POLICY,
+  selectedAssemblyRequestSchema,
+  selectedAssemblyResultSchema,
   mediaSelectResponseSchema,
-  type SelectedFocusRequest,
-  type SelectedFocusResult,
+  type SelectedAssemblyRequest,
+  type SelectedAssemblyResult,
   type MediaSelectRequest,
   type MediaSelectResponse,
   type MediaBinding,
@@ -18,12 +18,11 @@ import type {
 } from "../admission/processing.admission.js";
 import type { SourceAnalysis } from "../analysis/analysis.usecase.js";
 import { ApplicationError } from "../http/errorMapper.js";
-import {
-  compileSpeakerFocus,
-  type SpeakerPlanContext,
-} from "./speaker-focus.js";
+import { type SpeakerPlanContext } from "./speaker-focus.js";
+import { compileFixedAssembly, manifestDigest } from "./fixed-assembly.js";
+import { compileFixedCaptions } from "./fixed-captions.js";
 
-export interface SelectedFocusMedia {
+export interface SelectedAssemblyMedia {
   select(
     request: MediaSelectRequest,
     signal: AbortSignal,
@@ -32,7 +31,7 @@ export interface SelectedFocusMedia {
   releaseProxy(binding: MediaBinding, signal: AbortSignal): Promise<void>;
   cancel(binding: MediaBinding, signal: AbortSignal): Promise<unknown>;
 }
-export interface SpeakerFocusProvider {
+export interface SelectedAssemblyProvider {
   plan(
     proxy: Blob,
     context: SpeakerPlanContext,
@@ -44,19 +43,19 @@ export interface SpeakerFocusProvider {
 function digest(value: object) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
-export class SelectedSpeakerFocus {
+export class SelectedAssembly {
   constructor(
     private readonly admission: ProcessingAdmission,
     private readonly source: Pick<SourceAnalysis, "verify">,
-    private readonly media: SelectedFocusMedia,
-    private readonly provider: SpeakerFocusProvider,
+    private readonly media: SelectedAssemblyMedia,
+    private readonly provider: SelectedAssemblyProvider,
     private readonly providerName: "fake" | "google-gemini",
   ) {}
   async run(
     context: AdmissionContext,
-    input: SelectedFocusRequest,
-  ): Promise<SelectedFocusResult> {
-    const request = selectedFocusRequestSchema.parse(input),
+    input: SelectedAssemblyRequest,
+  ): Promise<SelectedAssemblyResult> {
+    const request = selectedAssemblyRequestSchema.parse(input),
       result = this.source.verify(context, request.analysis);
     const candidate = result.analysis.candidates.find(
       (item) => item.id === request.candidateId,
@@ -74,6 +73,18 @@ export class SelectedSpeakerFocus {
       words = allWords.filter(
         (word) => word.startMs < range.endMs && word.endMs > range.startMs,
       );
+    if (
+      words.length > FIXED_COMPOSITION_POLICY.maxSelectedWords ||
+      Buffer.byteLength(JSON.stringify(words)) >
+        FIXED_COMPOSITION_POLICY.selectedContextBytes
+    )
+      throw new ApplicationError({ code: "INVALID_REQUEST" });
+    let captions;
+    try {
+      captions = compileFixedCaptions({ range, words });
+    } catch {
+      throw new ApplicationError({ code: "INVALID_REQUEST" });
+    }
     const payload = await this.admission.run(
       context,
       {
@@ -142,19 +153,26 @@ export class SelectedSpeakerFocus {
               AbortSignal.timeout(GROUNDED_ANALYSIS_LIMITS.cleanupMs),
             );
           }
-          const focus = compileSpeakerFocus(raw, { range, words });
+          const compiled = compileFixedAssembly(
+            raw,
+            result,
+            { range, words },
+            captions,
+          );
           signal.throwIfAborted();
-          return {
-            version: 1 as const,
-            binding: result.binding,
-            generation: result.generation,
-            analysisRevision: result.analysis.revision,
-            candidateId: candidate.id,
-            range,
-            policy: SELECTED_FOCUS_POLICY.version,
-            provider: this.providerName,
-            focus,
-          };
+          const { receipt: _receipt, ...validated } =
+            selectedAssemblyResultSchema.parse({
+              version: 1 as const,
+              binding: result.binding,
+              generation: result.generation,
+              analysisRevision: result.analysis.revision,
+              candidateId: candidate.id,
+              provider: this.providerName,
+              ...compiled,
+              receipt: "pending",
+            });
+          void _receipt;
+          return validated;
         } catch (error) {
           await this.media.cancel(
             result.binding,
@@ -166,7 +184,7 @@ export class SelectedSpeakerFocus {
         }
       },
     );
-    return selectedFocusResultSchema.parse({
+    return selectedAssemblyResultSchema.parse({
       ...payload,
       receipt: this.admission.completedReceipt(
         context,
@@ -177,7 +195,7 @@ export class SelectedSpeakerFocus {
     });
   }
   verify(context: AdmissionContext, value: unknown) {
-    const result = selectedFocusResultSchema.parse(value),
+    const result = selectedAssemblyResultSchema.parse(value),
       claims = this.admission.verifyReceipt(result.receipt),
       { receipt: _receipt, ...payload } = result;
     void _receipt;
@@ -186,7 +204,8 @@ export class SelectedSpeakerFocus {
       claims.sessionId !== this.admission.session(context).sessionId ||
       claims.sessionId !== result.binding.sessionId ||
       claims.sourceRevision !== result.binding.sourceRevision ||
-      claims.resultDigest !== digest(payload)
+      claims.resultDigest !== digest(payload) ||
+      result.manifestHash !== manifestDigest(result.manifest)
     )
       throw new ApplicationError({ code: "SESSION_INVALID" });
     return result;

@@ -23,7 +23,9 @@ async function proxy(
     );
   const origin = new URL(request.url).origin;
   if (
-    !["grant", "session", "upload", "run", "clear"].includes(action) ||
+    !["grant", "session", "upload", "run", "clear", "assemble"].includes(
+      action,
+    ) ||
     origin !== "http://localhost:3000" ||
     request.headers.get("origin") !== origin ||
     request.headers.get("sec-fetch-site") === "cross-site"
@@ -49,7 +51,13 @@ async function proxy(
           const chunk = await reader.read();
           if (chunk.done) break;
           size += chunk.value.byteLength;
-          if (size > GROUNDED_ANALYSIS_LIMITS.requestBytes) return fail(413);
+          if (
+            size >
+            (action === "assemble"
+              ? GROUNDED_ANALYSIS_LIMITS.responseBytes
+              : GROUNDED_ANALYSIS_LIMITS.requestBytes)
+          )
+            return fail(413);
           chunks.push(new Uint8Array(chunk.value).buffer);
         }
     } finally {
