@@ -1,6 +1,6 @@
 # ClipBuilder canonical ticket index
 
-Status: CL-005 through CL-012 local foundations, analysis, assembly, preview, export and safeguards are complete. CL-013 local experience corrections and validation are complete with no actionable findings; manual quality and owner film approval remain open. All five settled root gates and 623 synthetic tests in 64 files pass. CL-014 repository audit is next. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
+Status: Local code through CL-014 is audited and validated with no actionable local findings. The release ledger separates implemented code from unverified manual/media/device/film/provider/cloud/rights/spend gates. All five settled root gates and 624 synthetic tests in 64 files pass. CL-015 local release preparation is next; no deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
 
 Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md),
 [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),
@@ -11,12 +11,12 @@ documents the seven owner-authorized sequential whole-file commits. Implementati
 steps 1–5 are committed; the final execution record is in
 [CL-008](CL-008-productionize-active-speaker-assembly.md#commit-execution-record).
 
-Current sequence: [CL-013 file-level plan](CL-013-COMMIT_PLAN.md) commits its
-validated local experience corrections, then CL-014 audits the candidate.
-CL-012 is committed as `3127c77`, CL-011 as `2e6af07`, CL-010 as `4749dcc`,
-and CL-009 as `06ab834`. The owner explicitly approved staging and ticket-prefixed
-commits through CL-015 on 2026-10-03. Local execute/validate loops are authorized;
-actual media/device, paid/cloud testing, film and deployment remain deferred.
+Current sequence: [CL-014 file-level plan](CL-014-COMMIT_PLAN.md) commits the
+local candidate audit, then CL-015 continues within local preparation only.
+CL-013 is `4bdf5d5`, CL-012 `3127c77`, CL-011 `2e6af07`, CL-010 `4749dcc`,
+and CL-009 `06ab834`. The owner explicitly approved staging and ticket-prefixed
+commits through CL-015. Provider/cloud/deployment, actual media/device/film and
+public launch remain separate unverified gates.
 
 The isolated private renderer/GCS checkpoint is provisioned and verified under
 the recorded owner approvals. New external actions retain their own gates.

@@ -8,7 +8,17 @@ This directory contains the product decisions, technical architecture, research 
 
 When documents disagree, follow the authority order inside the source of truth. The supporting documents below preserve research and decision history; they do not override the current specification.
 
-The current [Gemini/private Cloud Run plan](architecture/GEMINI_REMOTION_MIGRATION.md), [full file inventory](architecture/MIGRATION_FILE_INVENTORY.md) and [setup guide](operations/CLOUD_RUN_RENDERER_SETUP.md) replace older browser-only/local-model/provider mechanisms. CL-005's prerequisite and CL-006's local/Linux/private cloud media foundation are complete, including the rights-confirmed 2:45 test and independent deletion. CL-007 is next; browser integration, live Gemini, public sample/release and new external actions retain separate gates. Fake/live AI and local/cloud compute are independent. The older browser contract and evidence are collapsed history where superseded.
+The current [Gemini/private Cloud Run plan](architecture/GEMINI_REMOTION_MIGRATION.md),
+[file inventory](architecture/MIGRATION_FILE_INVENTORY.md) and
+[setup guide](operations/CLOUD_RUN_RENDERER_SETUP.md) replace older browser-only,
+local-model and provider mechanisms. Local implementation through CL-013 is
+verified synthetically. The [release audit](operations/RELEASE_CANDIDATE_AUDIT.md)
+and [quality matrix](operations/EXPERIENCE_QUALITY_MATRIX.md) separate code
+readiness from actual native/media/device/AI/cloud/owner release evidence.
+`FAKE_MODE=true` needs no keys and proves fixtures, not real MP4 or AI quality.
+Real providers require keys/live/data/rights/paid approval; private media compute
+needs independent cloud approval. No local AI weights are used. Older contracts
+and records remain collapsed history where superseded.
 
 ## Locked demo flow
 

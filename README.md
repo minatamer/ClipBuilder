@@ -34,7 +34,7 @@ automatically composes it, and renders a real downloadable MP4.
 
 | Find the moment | Follow the speaker | Build the visual story |
 | --- | --- | --- |
-| Identify up to four self-contained candidate moments and explain why each one works without padding weak results. | Detect who is actively speaking and keep that person centered as cameras and speakers change. | Balance the original footage with transcript-grounded stills, cutaways, information cards, and exact equations. |
+| Identify up to four self-contained candidate moments and explain why each one works without padding weak results. | Use validated speaking-face evidence for focus and keep the scene wide when uncertain. | Support the selected conversation with up to three fixed, extractive statement, comparison, or steps cards. |
 
 ## From upload to finished clip
 
@@ -63,17 +63,17 @@ templates grounded in the selected conversation.
 - **No editing surface:** candidate selection and render confirmation are the
   only creative decisions exposed to the visitor.
 
-## Planned architecture
+## Implemented architecture
 
-The owner selected Gemini and private Cloud Run rendering. The [migration plan](docs/architecture/GEMINI_REMOTION_MIGRATION.md) is owner-approved. The local Node renderer foundation is verified; browser/cloud integration and live AI quality remain unfinished.
+The owner selected Gemini and private Cloud Run rendering. The [migration plan](docs/architecture/GEMINI_REMOTION_MIGRATION.md) defines the implemented local pipeline; live quality and the complete public deployment remain unverified.
 
 | Layer | Technology |
 | --- | --- |
 | Experience | Next.js, React, TypeScript |
 | API and contracts | Node.js, Express, shared Zod schemas |
-| Transcript and planning | Google Gemini (migration in progress) |
+| Transcript and planning | Google Gemini through a server-only adapter |
 | Speaker and scene analysis | Google audiovisual association, validated and smoothed locally |
-| Contextual visuals | Fixed React cards/diagrams from bounded Google plans |
+| Contextual visuals | Fixed extractive React cards from bounded Google plans |
 | Composition and export | Fixed Remotion Node/Docker renderer on private Google Cloud Run |
 | Temporary media | Private GCS for active-flow media, terminal deletion and independent expiry cleanup |
 | Hosting | Lightweight control API plus isolated private Cloud Run media service; no database/queue |
@@ -90,7 +90,7 @@ Browser
 
 The model proposes bounded editorial data. Deterministic application code validates that data, resolves it against the source transcript, and owns every media operation.
 
-The planned flow temporarily uploads the original to private GCS and sends a
+The implemented processing path temporarily uploads the original to private GCS and sends a
 bounded audiovisual proxy to Gemini. Private Cloud Run prepares and renders
 media. Terminal deletion, independent expiry cleanup and separate provider
 retention are explicit privacy requirements. Gemini speaking-face accuracy,
@@ -99,15 +99,20 @@ remain unproved; see the [current migration plan](docs/architecture/GEMINI_REMOT
 
 ## Repository status
 
-CL-001 and CL-003 are implemented and locally verified. CL-002's colors/type
-are an interim foundation. CL-004 previews the whole single-card journey at
-`/start` in development-only fake mode: intake and simulated progress, three
-prepared 58-second choices, one selection, read-only review and export states.
-It does not read/upload files, edit recorded footage or produce a downloadable
-video. Recorded media and owner approval of the revised UI remain pending.
-Real intake/cloud transfer, protected analysis, automatic assembly, private Node
-export/download and deployment remain owned by their dependency-ready tickets. Technical choices
-marked as proposed remain subject to the documented validation gates.
+Local code through CL-013 connects intake and temporary storage, protected
+analysis, immutable selected assembly, read-only preview, one confirmed private
+render, validated output access/download and cleanup. Deterministic checks use
+`FAKE_MODE=true`, no API keys and injected synthetic results. The fixture UI at
+`/start` shows the journey with video placeholders and disabled download; it
+does not edit real footage or prove AI quality.
+
+Real analysis needs provider API keys, enabled live flags and rights/data/paid
+approvals; private media compute/storage needs separate cloud approval. No local
+AI model or weights are used. Actual native media quality/performance, device
+and accessibility observations, final UI/film, public sample rights/licenses,
+provider settings, spend controls and public deployment remain open. See the
+[release candidate audit](docs/operations/RELEASE_CANDIDATE_AUDIT.md) and
+[quality matrix](docs/operations/EXPERIENCE_QUALITY_MATRIX.md).
 
 ## Explore the repository
 
@@ -115,6 +120,8 @@ marked as proposed remain subject to the documented validation gates.
 | --- | --- | --- |
 | `apps/frontend` | Responsive source selection, read-only preview and download | [Frontend guide](apps/frontend/README.md) |
 | `apps/backend` | Private Express API, configuration, and protected AI request boundaries | [Backend guide](apps/backend/README.md) |
+| `apps/renderer` | Private fixed media pipeline and verified temporary cleanup | [Renderer guide](apps/renderer/README.md) |
+| `packages/composition` | Shared fixed React preview/render layout | [Composition guide](packages/composition/README.md) |
 | `packages/contracts` | Browser-safe schemas and compiled limits shared across the API boundary | [Contracts guide](packages/contracts/README.md) |
 | `docs` | Product decisions, design research, and implementation tickets | [Documentation](docs/README.md) |
 | `test` | Shared deterministic test isolation | [Agent instructions](AGENTS.md#deterministic-verification) |

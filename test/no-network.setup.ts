@@ -40,25 +40,27 @@ function isLoopbackHost(host: string | undefined): boolean {
   );
 }
 
+export function connectionHost(args: readonly unknown[]): string | undefined {
+  // net.connect/createConnection forwards Node's normalized [options, callback].
+  const values = Array.isArray(args[0]) ? args[0] : args;
+  const first = values[0];
+  if (typeof first === "object" && first !== null)
+    return "host" in first && typeof first.host === "string"
+      ? first.host
+      : undefined;
+  if (typeof first === "number" && typeof values[1] === "string")
+    return values[1];
+  if (typeof first === "string") return first;
+  return undefined;
+}
+
 Object.assign(process.env, deterministicEnvironment);
 
 vi.spyOn(net.Socket.prototype, "connect").mockImplementation(function (
   this: net.Socket,
   ...args: unknown[]
 ) {
-  const first = args[0];
-  let host: string | undefined;
-
-  if (typeof first === "object" && first !== null) {
-    host =
-      "host" in first && typeof first.host === "string"
-        ? first.host
-        : undefined;
-  } else if (typeof first === "number" && typeof args[1] === "string") {
-    host = args[1];
-  } else if (typeof first === "string") {
-    host = first;
-  }
+  const host = connectionHost(args);
 
   if (typeof host === "string" && !isLoopbackHost(host)) {
     unexpectedSocketConnections += 1;

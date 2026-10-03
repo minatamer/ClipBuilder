@@ -19,11 +19,16 @@ TTLs. Original owner input was preserved; test media and owned temporary build
 contexts were removed. Resources and the enabled expiry schedule remain retained;
 ancillary storage/scheduler/secret charges can continue. Alerts are advisory.
 
-Current frontend/backend flow still uses fixtures. CL-007 is next; live Gemini,
-public sample/release, full maximum-envelope stress and product integration remain
-separate gates. Fake-plan cloud media tests need no AI key. The
+CL-007 through CL-013 now connect the local browser/control/renderer pipeline,
+verified through fake/off synthetic tests. The earlier private image/checkpoint
+above predates those changes; it is not proof of the current complete workflow.
+Later rollout, native/full-envelope/device quality, live Gemini and public sample /
+release remain separately gated. Default fixture UI needs no keys and cannot
+produce a real output. Actual AI requires keys/live/data/rights/paid approval;
+remote compute requires its independent authorization even with fake AI.
+The [release audit](RELEASE_CANDIDATE_AUDIT.md) owns the current local revision;
 [cloud migration](../architecture/GEMINI_REMOTION_MIGRATION.md) owns product and
-privacy responsibilities; the [cost model](COST_MODEL.md) owns recorded budgets.
+privacy responsibilities, and [cost model](COST_MODEL.md) owns budgets.
 
 After documentation approval, reach this setup checkpoint as soon as a genuine
 cloud-dependent local test needs it and its minimum local image/adapters and

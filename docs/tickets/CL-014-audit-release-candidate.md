@@ -2,7 +2,7 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+Status: local candidate audit complete; validation has no actionable findings; all five gates pass; public release gates remain deferred.
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -11,8 +11,40 @@ Audit current boundaries/schemas/dependencies/retention/private logging/network 
 Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
 
 - [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
-- [ ] Implement and verify this current packet after approval.
-- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+- [x] Audit local code/docs and correct reproduced findings; external acceptance remains unchecked.
+- [x] Record the evidence ledger, exact local inputs and remaining owner/runtime/provider/cloud gates.
+
+## Local execution — 2026-10-03
+
+[Release audit ledger](../operations/RELEASE_CANDIDATE_AUDIT.md) contains the
+per-ticket classifications, exact input digest, A14-01/A14-02 reproduction and
+corrections, source/ignore/dependency/build-context checks and deferred gates.
+Dependency CL-013 is `4bdf5d5`; initial worktree was clean. Local Git actions are
+owner-authorized through CL-015. No new external action, real media or secret.
+
+The normalized socket-argument regression failed independently before the fix
+without opening a socket; it and the expanded pre-import assertions now pass.
+README/docs public claims now match fixed cards and locally connected pipeline.
+Fake/no-key checks are synthetic; real AI needs keys/live/data/rights/paid approval
+and cloud compute/IAM/storage has independent approval. No local AI weights.
+The owner deferred actual media/device/manual tests; the required quality matrix
+and film approval remain unverified, not passed. Current release is not public /
+paid ready. Historical private checkpoint is separate from this local revision.
+
+Validation pass 1: **Meets ticket with concerns** in the local authorized scope;
+**no actionable findings**. Covered: evidence classifications/input identity,
+fixed guard/CI flags, architecture/isolation/call/cleanup/source checks and
+corrected public claims. Partial/unverified: complete runtime accessibility,
+media/quality/film and external vulnerability/license/IAM/provider/monetary/
+deployment evidence, all explicitly handed to CL-013/015 owner gates. Inspected
+current tracked/new files, full ticket and neighboring boundary/config/build
+implementations. Recomputed the 262-file input hash and confirmed exact match.
+No full suite or external action ran during the read-only validation phase.
+
+Settled root gate: format/lint/typecheck/unit/build plus `git diff --check` all
+pass; **624 synthetic tests in 64 files**. Offline frozen installation passed.
+No external/manual gate is inferred. [Whole-file commit plan](CL-014-COMMIT_PLAN.md)
+is authorized and executed sequentially before CL-015 local preparation.
 
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>

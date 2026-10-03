@@ -1,5 +1,6 @@
 const expectedEnvironment = {
   NODE_ENV: "test",
+  FAKE_MODE: "true",
   PROVIDER_MODE: "fake",
   PAID_DEMO_ENABLED: "false",
   PROCESSING_GRANTS_ENABLED: "false",
@@ -8,6 +9,10 @@ const expectedEnvironment = {
   LIVE_ASSEMBLY_ENABLED: "false",
   LIVE_RENDER_ENABLED: "false",
   LIVE_IMAGE_GENERATION_ENABLED: "false",
+  CLOUD_RENDER_ENVIRONMENT: "disabled",
+  CLOUD_SPEND_APPROVED: "false",
+  RENDERER_ENABLED: "false",
+  RENDERER_MAX_OPERATIONS: "0",
 } as const;
 
 export const environmentObservedDuringImport = Object.fromEntries(
