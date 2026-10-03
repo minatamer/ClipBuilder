@@ -9,6 +9,208 @@ checks; they do not encode a real final MP4 or prove AI quality. Real analysis
 requires keys/live/data/rights/paid approvals; rendering needs independent cloud
 compute/IAM/storage approval. No local AI runtime or weights are used.
 
+## Mobile workflow readability — 2026-10-03
+
+Later result feedback moves Download MP4 into the footer beside Start over and
+uses the freed height for a responsive portrait. Four disabled glass social
+buttons now carry blurred platform marks/names beneath a bold centered Soon
+overlay, following the owner's later refinement. The repeated visible
+fake-download sentence is removed by owner decision; its accessible description
+and the intake's simulated-results disclosure remain. The
+[delivery-layout follow-up](../tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#later-owner-delivery-layout-follow-up--2026-10-03)
+owns local verification and the unchanged actual-media/device/live/release gaps.
+
+The phone left-list follow-up reproduces a 427px scroll viewport inside a
+404.609px visible area, clipping the final choice even at the list end. A
+container-height cap and vertical overscroll containment now keep all final
+details reachable independently of the main pane. Ten anchors, native scrolling
+at both edges, candidate switching, keyboard selection, pause/seek and gallery
+return passed; settled root gates passed 680 tests. The
+[independent-list follow-up](../tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#later-owner-independent-phone-moment-list-scroll--2026-10-03)
+owns exact evidence and the remaining owner/device/live/release gaps.
+
+Later phone review feedback shows Video, Agentic Notes and Transcript as three
+full-width native scroll-snap slides, with dots and no carousel arrows. Twelve
+viewport anchors, native horizontal/vertical scrolling, dot/keyboard navigation,
+resize focus, playback and note seeking passed; one player stays mounted. Settled
+root gates passed 680 tests. The
+[phone-review follow-up](../tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#later-owner-phone-clip-review-carousel--2026-10-03)
+owns exact evidence. Physical finger drag/momentum and actual-media/device/
+assistive-technology observations remain unverified; native browser scrolling
+does not certify those checks. Fake mode remains API-free and synthetic.
+
+Later laptop spacing feedback narrows the preview column and lets the selected
+candidate's detail area use spare width. At 35rem of measured available width it
+shows Transcript and Agentic Notes as two cards; tighter areas retain accessible
+tabs. Sixteen anchors and eleven threshold-edge observations retain readable
+panes, no horizontal overflow and working resize focus/note seeking. The
+[adaptive-details follow-up](../tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#later-owner-adaptive-candidate-detail-cards--2026-10-03)
+owns exact evidence and the unchanged broader manual/live/release gates.
+
+Later selection feedback replaces document-wide transition snapshots with the
+existing local portrait animation so cards remain inside ancestor clips. Gallery,
+first pick and switching passed nine phone/tablet/laptop anchors (27 states);
+in-flight captures, rapid keyboard switching, note seeking and the fixture export/
+reset journey retained full timing and working controls. Settled root gates pass
+680 tests. The [contained-selection follow-up](../tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#later-owner-contained-candidate-selection-motion--2026-10-03)
+owns exact evidence and the unchanged wider manual/live/release gates.
+
+Later footer CTA feedback adds fluid phone label/padding/gap sizes. Source-preview
+actions fit on one row at ten anchors from 320px to desktop with 44px targets;
+keyboard activation and the other fixture footers still work. Settled root gates
+passed 680 tests, with no actionable local validation finding. The
+[footer-CTA follow-up](../tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#later-owner-mobile-footer-cta-sizing--2026-10-03)
+owns exact evidence and the unchanged broader manual/live/release gates.
+
+Later candidate-panel feedback restores the missing mobile left border and equal
+8px insets. Both tabs fit on one row from 320px with 44px targets; eight anchors,
+internal keyboard scrolling, note seeking and candidate selection were checked.
+The [candidate-panel follow-up](../tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#later-owner-mobile-candidate-panel-border-and-spacing--2026-10-03)
+owns the narrow evidence. Settled root gates passed 680 tests; no actionable local
+validation findings. Wider manual/live gates remain.
+
+Later navbar sizing feedback reduces the visible workflow logo/action pills to
+32–38px with fluid 12–14px labels, while preserving 44px tap areas. Intake and
+preview with both actions passed all 22 anchors, and Privacy focus return/Clear
+were verified. Settled root gates passed 680 tests; no actionable local finding.
+The [compact-navbar follow-up](../tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#later-owner-compact-mobile-navbar--2026-10-03)
+owns exact evidence and the existing unverified owner/live/release gates.
+
+Later footer feedback hides the empty footer strip whenever no footer CTA exists;
+availability-only notices remain in the card body. Intake/preview passed all
+22 anchors, and the full fixture journey retained its action footers and reset.
+Settled root gates passed 680 tests; no actionable local validation finding.
+The [conditional-footer follow-up](../tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#later-owner-conditional-workflow-footer--2026-10-03)
+owns exact evidence and the unchanged owner/live/release gates.
+
+Later owner width feedback aligns the landing navbar, workflow navbar and main
+card through shared responsive container tokens. Both navbars and the frame
+match at 22 viewport anchors from 320px through 2560px, including gutter and
+phone-header breakpoint edges. Intake, source preview, selected candidate and
+clip review retain 44px header targets and no root overflow. The fixture journey
+reaches disabled Download and resets; settled five root gates pass 680 tests.
+The [shared-width follow-up](../tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#later-owner-shared-navbar-and-workflow-width--2026-10-03)
+owns exact evidence. This remains fake/no-key local QA; external and owner gates
+are unchanged.
+
+The preceding phone-header pass used a 44px logo and one row of Privacy/Clear media,
+with its wordmark visually hidden and its home link still named accessibly.
+Input/limit/guidance/source notes scale from 14px to 16px with phone width. This
+replaces the earlier stacked phone header, without changing processing controls.
+Intake, source preview, selected candidate and clip review fit 17 viewport anchors;
+actions measured at least 44px with no root overflow. Short-phone content scroll
+and keyboard access to guidance, the complete fixture journey, Privacy focus
+return and Clear media were verified. Settled root gates passed 680 tests/69 files.
+The [CL-013 packet](../tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#later-owner-mobile-workflow-readability--2026-10-03)
+owns exact checks, synthetic evidence and the remaining manual/live/release gates.
+Fake mode requires no keys; no real media, paid/cloud or Git action occurred.
+
+## Source preview and retained sample — 2026-10-03
+
+Later owner correction supersedes the disabled-fake-sample observation below:
+Use sample starts the existing synthetic journey
+without a file or cloud read. Step 1 waits for Find moments and labels simulations;
+real mode retains configured cloud input and never falls back to fixtures.
+Updated two-input flow regression and retained transport tests passed; settled
+root gates passed **680 tests in 69 files**. A concurrent packaging-test timeout
+passed unchanged when rerun without other heavy checks; exact owned temp cleanup
+was verified. The [packet](../tickets/CL-016-source-preview-and-retained-sample.md#later-owner-fake-sample-correction--2026-10-03)
+owns this later validation and build inventory. No actionable local findings or
+cloud/provider/credential/Git action; actual sample/AI/device evidence stays open.
+
+Subsequent owner navigation feedback removes the landing's Try sample video CTA.
+Get Started opens standard intake, where Use sample remains. This supersedes the
+earlier landing sample-entry observations below; sample processing is unchanged.
+
+CL-016 followed the locally validated CL-013 theme at HEAD
+`5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1`, with all changes unstaged. Added
+Use sample beside Choose a video, removed Use prepared input, connected landing
+Try sample video and made source confirmation remain in Step 1 until Find moments.
+Native source aspect and full-source controls are separate from portrait output.
+Existing consent/live/admission and automatic assembly/render paths remain.
+
+Fake mode/no keys: synthetic input metadata only, labelled simulated source and
+fixture candidates/review/delivery; no actual bytes uploaded/read, no real MP4 or
+AI quality proof. Actual local source preview needs real-media composition but no
+Gemini key/model. The retained cloud preview additionally requires the separate
+private retained bucket, read-only ADC, explicit opt-in and approved storage spend.
+Master references never reach visitor cleanup. Cloud setup, actual source playback,
+paid AI, provider/public rights, physical devices and owner acceptance remain open.
+
+Settled format/lint/typecheck/unit/build passed, **679 tests in 69 files**, and
+diff checks passed. Build: 1,277 files, 26 external package links, 21,956,364 bytes,
+SHA-256 `f98ab6cefa28800e9df6d4a315802f651563b344eb40ffab25aa3b454a6ed1f9`;
+existing Windows self-contained release gap and renderer deprecation unchanged.
+Synthetic tests cover exact bounded/range/cancel/private transport, fake/test
+zero-call gates and explicit analysis. No cloud/credential/provider use occurred.
+
+Post-build fixture browser completed preview/refresh/explicit analysis/selection/
+review/export/simulated delivery/Start over; Choose another clears the temporary
+session. Waiting preview made no automatic analysis transition for over a minute.
+All eleven CL-013 anchors retained no horizontal/root-height overflow and 44px
+targets in source confirmation. A leftover loading panel and obscuring floating
+source controls were reproduced, corrected and rechecked. Ignored synthetic proof:
+`artifacts/qa/cl016-source-preview-20261003/`. Landing sample entry defaults to an
+honest unavailable notice until configured, with no fake podcast substitute.
+
+Read-only scope validation: no actionable local findings after those fixes;
+full ticket remains **with concerns** for the external/owner evidence above.
+The [CL-016 packet](../tickets/CL-016-source-preview-and-retained-sample.md)
+and [setup guide](RETAINED_SAMPLE_SETUP.md) own exact coverage and next checkpoint.
+No deployment, film work or Git mutation was performed.
+
+## Owner workflow redesign — 2026-10-03
+
+Owner-directed CL-013 theme pass over the uncommitted illustration/Privacy/logo
+corrections at HEAD `5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1`. Normal local
+development services remained running; non-metered config reported fake mode,
+local/analysis/assembly/render disabled. Only synthetic fixture state was used.
+No real video, keys, provider/cloud request, weights/runtime, deployment or Git
+mutation occurred. Real analysis/rendering remain separately gated.
+
+Shared landing/workspace gradient and CTA edge/shadow recipes, scoped dark roles,
+glass header/frame, blue intake/candidates, rounded actions, opaque reading panes,
+status/progress/error and delivery styling were implemented. Background and CTA
+extraction preserve the landing recipe. No workflow/reducer/playback/composition
+logic changed. The [design plan](../tickets/CL-013-WORKFLOW-DESIGN-PLAN.md)
+records the file sequence and state coverage.
+
+Synthetic browser evidence: intake and automatic review checked at all eleven
+documented anchors; no horizontal or root-height overflow after corrections.
+44px interactive targets, candidate detail/notes, fixed portrait, bounded reading
+pane scrolling, keyboard selection/tabs, 3px focus and Privacy entry/Escape return
+were observed. Phone header actions and primary footer actions remain reachable.
+Screenshots and geometry records are ignored under
+`artifacts/qa/cl013-workflow-redesign-20261003/`. Emulated sizes are not physical
+device or screen-reader evidence. Zero/one/four-candidate and unavailable live
+states were checked through shared style/source and existing deterministic tests,
+not real-media browser claims. No-blur/reduced-transparency/forced-color rules
+were inspected; alternate browser/OS preferences are still unverified.
+
+Corrections before completion: header margin containment and phone frame height
+fixed measured 12px/4px root overflow; darker primary hover retains readable white
+labels. Calculated text contrast: primary including sheen 4.90:1, conservative
+hover with sheen 4.61:1, secondary against conservative composited navy 5.94:1,
+active tab 7.12:1, error 9.91:1, success 8.60:1. Focus/accent UI contrasts exceed
+3:1 against that bound. These CSS composition calculations do not certify contrast
+over actual source footage. No ambient loop, new font/dependency or page blur.
+Scrolling/playback remained responsive in this synthetic browser observation;
+no INP/memory/device-performance benchmark is inferred.
+
+Settled `corepack pnpm lint`, `typecheck`, `test:unit`, `build` passed; **665 tests
+in 66 files**. Build inventory: 1,277 files, 26 external package links, 21,948,007
+bytes, SHA-256 `2b41603557c9cd7f5d4469280cabca7b78acc671e962de245adb69ff025d0076`.
+This is 4,186 bytes above the prior logo pass, with no dependency addition. The
+Windows artifact remains not self-contained, so public release proof stays open.
+The existing renderer dependency emitted its `fs.Stats` deprecation warning.
+A contracts rebuild restarted the volatile backend and invalidated one fixture
+session; existing safe error/Clear recovery worked. The final journey is repeated
+after rebuilds, keeping this intentional runtime consequence separate from UI
+bugs. Final format/diff and scope validation are recorded in CL-013.
+
+Owner UI approval, actual footage/audio/AI quality, private cloud sample setup,
+physical devices/screen readers, film baseline and release remain unchecked.
+
 ## Authorized browser follow-up — 2026-10-03
 
 The owner subsequently authorized thorough local fake-mode QA and required that

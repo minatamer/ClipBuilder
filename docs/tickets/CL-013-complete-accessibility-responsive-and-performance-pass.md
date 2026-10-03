@@ -2,7 +2,17 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: local experience corrections implemented; runtime quality matrix and film approval remain open.
+Status: local experience corrections and owner-directed workflow redesign implemented; runtime quality matrix and film approval remain open.
+
+Latest owner checkpoint — 2026-10-03: this UI/UX feedback round is finished for
+now. The owner authorized all pending whole files to be staged and committed
+sequentially using the [combined file-level plan](CL-013-016-UI-COMMIT_PLAN.md).
+The [next-session checklist](../operations/LOCAL_RELEASE_PREPARATION.md#owner-next-session-checklist--planned-2026-10-04)
+records real 7:41 sample playback, Gemini setup and a bounded actual-flow test
+planned for 2026-10-04. This later Git authorization supersedes older no-Git
+scope notes below; external/media/device/film and public release gates remain
+unchecked. Fake mode remains keys-free and synthetic, with no actual MP4; real
+sample reads need ADC/cloud setup and real AI needs its keys/live/approval gates.
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -142,6 +152,204 @@ and viewport overrides were cleaned up. Both owned QA process trees and ports
 3000/4000 were verified stopped. Logs/records/crops stay ignored under
 `artifacts/qa/cl013-followup-20261003/`. Deviation: none; this later owner-approved
 fake browser pass does not complete previously deferred real-media/device gates.
+
+## Owner illustration feedback — 2026-10-03
+
+The owner requested a more natural torso, head and arms in the landing's
+illustrative conversation, especially its shoulders. This is an original SVG
+redraw in `apps/frontend/src/app/process-narrative.tsx` and
+`apps/frontend/src/app/page.module.css`, within the existing CL-013 UI follow-up.
+
+An [interview pose photograph](https://www.thobelafm.co.za/thobelafm/articles/taba-yaka-le-mankoko-baby-hlabirwa/)
+was inspected for shoulder slopes, sleeve fit and arm proportions. The photograph
+is reference only; no photograph or third-party media asset was added to the app.
+
+The redraw joins sloping sleeve tops to the shoulder/chest silhouette, mirrors
+their shape on the right side, tapers upper arms and forearms, rounds elbow
+contours and refines wrists/palms. Neck, jaw, face/hair planes and torso/cloth folds
+use the existing two speakers' palettes and bounded inline SVG gradients.
+Question/answer switching, microphone, captions, timeline, phase timing,
+animation ownership and cleanup retain their existing behavior. No workflow,
+API, provider, schema, dependency or application configuration was changed.
+
+Verification on the settled redraw passed: `corepack pnpm format:check`,
+`corepack pnpm lint`, `corepack pnpm typecheck`, `corepack pnpm test:unit`
+(665 tests in 66 files), `corepack pnpm build` and `git diff --check`.
+The local build retains the previously documented Windows external-package-link
+release limitation; this illustration does not change that release gate.
+
+Browser review checked the synthetic preview at 390 × 844 and 1440 × 900, with
+no horizontal page overflow. The phone capture shows the first speaker; the
+settled desktop capture shows the second speaker's conversational arm pose.
+Ignored preview evidence is under
+`artifacts/qa/cl013-speaker-redraw-20261003/` (`phone-portrait.jpg` and
+`desktop-portrait.jpg`). Backend health, `/start` and `/api/sample/config`
+returned 200; the config reported fake mode, local media disabled and all three
+live capabilities disabled. The requested local apps remain running.
+
+Read-only validation of the final diff found no actionable issue in this visual
+correction: changes are limited to SVG geometry/paint and proportional CSS;
+existing speaker markers, accessibility semantics, unique gradient IDs,
+animation timings and effect cleanup remain intact. No new listener, timer,
+request or dependency was introduced. The redraw is uncommitted for owner review.
+
+This is synthetic landing artwork available with `FAKE_MODE=true` and no keys,
+not AI-processed source footage or the final product film. Real Gemini processing
+still requires keys, enabled live flags and rights/data/spend approval; cloud
+compute is separately gated. No local AI runtime/weights or paid/provider/cloud
+action was used. Final owner visual approval and the broader physical-device,
+accessibility, real-media/quality, film and release gates remain unchecked.
+
+## Owner privacy-copy feedback — 2026-10-03
+
+The owner requested a Privacy-only panel, replacing duplicated product/upload
+limits with actual media-use and handling information. Continued the existing
+CL-013 owner-feedback worktree without changing the earlier speaker redraw.
+The shared `privacy-dialog.tsx` now labels both landing/workspace triggers
+Privacy and explains no publishing/marketing/demo reuse, temporary storage,
+Gemini transfer and Clear. Existing intake rights/limits remain enforced.
+
+The [current source-of-truth owner revision](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#owner-privacy-panel-revision--2026-10-03)
+records this policy/presentation decision. Copy follows the existing
+[migration retention contract](../architecture/GEMINI_REMOTION_MIGRATION.md#retention-cancellation-privacy-and-spend)
+and implemented local/cloud boundaries: two-hour local/source access,
+ten-minute-or-session output availability, independent expiry sweep, best-effort
+device clearing, asynchronous cloud deletion, separate Google retention and no
+control over downloaded copies. No unconditional no-storage/deletion or
+provider-training promise was added. No storage, API, provider, gate or
+interaction behavior changed; native modal semantics/close handling are retained.
+
+The existing page regression covers cloud, local-only and preview disclosures,
+the renamed trigger/close label and removal of duplicate upload limits.
+Focused `corepack pnpm --filter @clipbuilder/frontend test:unit src/app/page.test.tsx`
+passed 11 tests. Settled root `corepack pnpm format:check`, `lint`, `typecheck`,
+`test:unit` (665 tests in 66 files), `build` and `git diff --check` passed.
+The build retains the documented Windows external-package-link release gate.
+
+Browser review verified the shared Privacy trigger/content on landing and
+`/start`, initial Close focus, button closing and Escape focus return. The final
+copy fits at 1280 × 800; at 390 × 844 the native dialog scrolls to the complete
+last row without horizontal page overflow. Temporary viewport overrides and the
+workspace test tab were cleaned up; the owner's existing workspace was preserved.
+Final synthetic screenshots stay ignored in
+`artifacts/qa/cl013-privacy-copy-20261003/` (`privacy-desktop.jpg`,
+`privacy-phone.jpg`, `privacy-phone-bottom.jpg`). No selected file or processing
+request was used; the requested app stack remains running.
+
+Read-only validation: **Meets ticket** for this owner-copy correction;
+**no actionable findings**. Reviewed the final privacy component/page regression,
+source-of-truth and guide updates against the current migration contract and
+renderer publication/cleanup boundaries. Existing intake rights/size/duration
+controls remain visible and unchanged. The earlier illustration changes are
+preserved and covered by their separate evidence above. No effect, timer,
+request, listener, dependency or storage behavior was introduced or changed.
+No provider-training, zero-storage or instant-deletion claim is made; vendor
+configuration and physical/live retention are not proved by these synthetic checks.
+All seven changed tracked files remain unstaged and uncommitted for owner review.
+
+Fake/no-key preview
+reads/uploads no selected files, sends no selected media to AI and creates no
+downloadable video. Real AI remains gated on keys/live/rights/data/spend approval;
+cloud processing has its independent IAM/compute/storage gate. No local AI
+runtime/weights, credentials, provider calls or cloud changes were used. Owner
+copy approval and wider live/privacy/device/film/release evidence remain open.
+
+## Owner workspace-logo feedback — 2026-10-03
+
+The owner identified the generic clapperboard in the `/start` header as the wrong
+logo. Reused the landing's original blue two-bar ClipBuilder mark through
+`shared/ui/brand-mark.tsx` and its owning CSS module. Landing wordmarks and the
+workspace now share that same artwork. Hero-specific scale rules stay in the
+landing stylesheet; the text, home target, 44px link target, focus behavior and
+workspace header layout remain intact. Removed the unused clapperboard import
+and its dead header SVG-color rule. No workflow, provider, configuration or
+processing logic changed, and earlier illustration/privacy edits are preserved.
+
+Focused existing page/workflow checks passed 16 tests in 2 files. Root
+`corepack pnpm format:check`, `lint`, `typecheck`, `test:unit` (665 tests in
+66 files), `build` and `git diff --check` passed. Typecheck first identified
+the CSS-module lookup's possible undefined value; the shared component's optional
+class prop now explicitly permits it, consistent with the repository's strict
+optional-property handling. No cast or assertion was added. Local build inventory
+passes with the previously documented Windows external-link release limitation.
+
+Synthetic browser review verified the corrected `/start` logo at 1280 × 800,
+390 × 844 and 320 × 568, with no horizontal overflow. The mark measures about
+27.2 × 27.2px and the home link remains 44px high. Clicking that link returned
+to the landing; its header still uses the same 27.2px mark and its hero retains
+the larger 44.8px mark at 1280px. Both contain the same two-bar shared artwork.
+Ignored screenshots are under `artifacts/qa/cl013-workspace-logo-20261003/`
+(`workspace-desktop.jpg`, `workspace-phone.jpg`, `landing-desktop.jpg`).
+The temporary review tab and viewport overrides were cleaned up, the owner's
+workspace was preserved, and the requested local apps remain running.
+
+Read-only validation: **Meets ticket** for the owner logo correction;
+**no actionable findings**. Reviewed the extracted original mark geometry,
+landing sizing/forced-color selectors, workspace imports/home-link semantics,
+new shared files and guide update. Shared UI imports no application code and adds
+no effect, timer, listener, request, runtime dependency or processing behavior.
+Earlier illustration/privacy edits remain intact. Ten tracked modifications and
+the two new shared files remain unstaged and uncommitted for owner review.
+
+This UI correction works
+with `FAKE_MODE=true` and no keys. Real AI still requires keys/live/rights/data/
+spend approval; cloud compute/storage/IAM approval is separate. No local AI
+runtime/weights, selected media, credential, provider/cloud or Git mutation was
+used. Final owner logo/UI approval and broader release gates remain open.
+
+## Owner full-workflow design planning — 2026-10-03
+
+The owner requested a redesign plan for the full step-by-step flow, carrying the
+landing background, blue palette, glass cards/CTAs and typography into the
+workspace. The [workflow design plan](CL-013-WORKFLOW-DESIGN-PLAN.md) records
+the inspected mismatch (shared primitives currently inherit light defaults),
+visual direction, every state family, sequential file-level implementation,
+responsive/contrast/fallback checks and fake/live boundaries. The source of truth
+records this latest direction over the older light-workflow presentation.
+
+Planning only: no application source or running configuration changed this turn.
+Earlier speaker/Privacy/logo corrections stay uncommitted. Implementation,
+owner visual sign-off and wider device/live/media/film/release evidence are not
+marked complete. Existing fake/no-key fixtures can support the proposed UI work;
+real AI still needs keys/live/rights/data/spend approval and real cloud media
+has its independent IAM/compute/storage gate. No local AI weights/runtime,
+provider/cloud action, deployment or Git mutation was used.
+
+## Owner workflow redesign implementation — 2026-10-03
+
+The owner authorized implementing the documented design before the separate
+sample/upload preview flow. Implemented the shared background and CTA recipes,
+scoped dark palette, glass header/frame, rounded blue actions, blue-tinted intake
+and candidate cards, opaque reading panes, status/error and delivery treatments.
+Changed theme files: `styles/tokens.css`, `app/page.module.css`,
+`shared/ui/workflow.module.css` and `features/sample/sample.module.css`.
+No reducer, handler, schema, provider, playback or fixed-composition changes.
+Earlier speaker/Privacy/logo corrections are preserved and remain uncommitted.
+
+The [design plan](CL-013-WORKFLOW-DESIGN-PLAN.md#implementation-evidence--2026-10-03)
+and [quality matrix](../operations/EXPERIENCE_QUALITY_MATRIX.md#owner-workflow-redesign--2026-10-03)
+record geometry, contrast, screenshots, behavior checks and limitations. No real
+media, local AI weights/runtime, keys, live flags, paid calls, cloud resources,
+deployment or Git mutation were used. Owner visual approval and physical-device/
+screen-reader/live/film/release acceptance remain unchecked.
+
+Settled root format/lint/typecheck/unit/build and `git diff --check` passed;
+665 synthetic tests in 66 files. The final post-build browser journey reached
+disabled fake Download and Start over; delivery also fit all eleven anchors.
+The development rebuild invalidated an earlier volatile session; clearing and
+the repeated settled journey succeeded without a source change. Screenshots
+cover desktop/phone intake, candidate detail, review and delivery.
+
+Read-only validation pass: **Meets ticket** for this owner redesign follow-up;
+**no actionable findings**. Reviewed the combined uncommitted CL-013 changes
+over `5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1`, separating the already-verified
+speaker/Privacy/logo corrections from the new theme. Confirmed shared-token
+integration, full state CSS coverage, opaque/system fallbacks, responsive
+geometry, preserved actions/side effects and documentation. Existing behavioral
+tests, the complete settled fixture journey and five root gates provide local
+evidence. Alternate OS/browser preferences, real footage, native quality,
+physical devices, screen readers, film and deployment remain unverified. Git
+index is empty; no stage/commit/push was authorized for this UI pass.
 
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>
@@ -560,6 +768,705 @@ action is authorized by this packet alone.
 - [Accessibility requirements](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#19-accessibility)
 - [Frontend and E2E verification](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#2012-frontend-component-and-flow-tests)
 - [Manual matrix](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#2014-manual-responsiveaccessibility-matrix)
+
+## Later owner Privacy brevity follow-up — 2026-10-03
+
+Subsequent narrow label feedback removes only `· sample only` from the landing
+animation header, leaving `Illustrative flow` in `process-narrative.tsx`. No
+animation, sample-input path or processing behavior changes. Fake mode remains
+API-free illustrative/fixture output; real Gemini requires the existing keys,
+live flags and approvals. Focused page regression and formatting/diff checks
+passed; the rendered label was verified in the local browser. No new test,
+provider/cloud call or Git action was needed.
+
+The owner requested at most three points with short descriptions. Updated the
+shared `apps/frontend/src/app/privacy-dialog.tsx`, its existing
+`apps/frontend/src/app/page.test.tsx` regression, and the source-of-truth owner
+privacy revision. The panel now combines temporary storage and Clear in one row;
+the other rows cover no reuse/publishing and Gemini transfer/separate retention.
+The intro is shorter. Exact retention timings stay in the owning policy and
+processing disclosure; no storage, consent, cleanup, live gate or modal behavior
+changed. Copy still distinguishes fake, local-only and cloud-enabled modes and
+avoids promises to delete downloaded copies or delete cloud files immediately.
+
+Existing frontend tests passed (314 tests in 33 files), followed by the settled
+focused page regression (11 tests). Frontend lint, root formatting and diff
+checks passed. This copy-only follow-up did not repeat root typecheck/build or
+paid/cloud tests; earlier results remain tied to their recorded revisions.
+Read-only review found no actionable issue in this narrow change.
+
+Browser checked landing and workspace, three rows, initial Close focus, button
+close and Escape focus return. At 1280×800 and 390×844 the complete shortened
+panel fits; phone dialog client/scroll height is 656px, width/scroll width 354px.
+Synthetic screenshots are ignored in
+`artifacts/qa/cl013-privacy-brief-20261003/`. Viewport override was reset and the
+updated panel left open in the owned review tab; the owner's other tab and app
+processes were preserved. No real media, credential, provider/cloud call or Git
+mutation occurred. Fake mode needs no keys; actual Gemini still requires keys,
+live flags and the existing approvals. Cloud sample setup, real media/device,
+owner visual, film and release evidence remain unchecked.
+
+## Later owner lighter-workflow background — 2026-10-03
+
+The owner requested a brighter workflow background matching the landing's blue
+atmosphere. Changed only the `.workspace` background in `sample.module.css`:
+two static radial glows and a gradient fitted to the single-screen workflow keep
+the lower edge blue instead of nearly black. The source of truth and workflow
+design plan record this refinement. Glass opacity, opaque reading surfaces,
+layout, controls, handlers and provider/media gates are unchanged.
+
+Settled root format/lint/typecheck/unit/build checks passed: **680 tests in
+69 files**. Production inventory: 1,277 files, 26 external package links,
+21,954,748 bytes, SHA-256
+`a1ee22553d21bf360089d43ae588cb0d7c5d975e184c7233804f395d976bf2af`.
+The existing Windows self-contained release gap and renderer warning remain.
+No test or dependency was added for this background-only revision.
+
+Browser checked intake, waiting source preview, explicit fixture analysis,
+candidate selection and fixed clip review. Intake, selected candidate and clip
+review each fit all eleven planned viewport anchors without horizontal or root
+height overflow. Desktop/phone captures show the lighter shell and unchanged
+navy reading panes. A simultaneous full-strength glow calculation with backdrop
+saturation/contrast and white sheen estimated secondary-copy contrast at 5.90:1
+on the frame, 4.50:1 on the intake surface and 4.65:1 on the header. This synthetic
+CSS calculation is not actual-media, physical-display or complete accessibility
+certification. Forced-color and reduced-transparency overrides remain in place.
+
+Read-only validation reviewed this narrow background/docs follow-up and nearby
+shared frame/header/fallback rules at HEAD
+`5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1`; index empty. Earlier CL-013 visual
+corrections and CL-016 source/sample work remain preserved and are excluded from
+this revision's claim. Verdict: **Meets ticket with concerns**, with **no
+actionable local findings**; human visual acceptance and the existing runtime/
+media/cloud/film/release gates remain open. No new listeners, timers, requests,
+media URLs, models, weights or cleanup responsibilities were introduced by CSS.
+
+Synthetic evidence is ignored under
+`artifacts/qa/cl013-lighter-workflow-20261003/`. Fake mode works without API keys
+and uses simulated previews/results with Download disabled. Real sample reads
+still need ADC/cloud setup; Gemini needs keys, enabled live flags and existing
+rights/data/spend approval. No actual media, credential, paid/cloud call, film,
+deployment or Git mutation occurred during this revision.
+
+## Later owner mobile landing branding — 2026-10-03
+
+`page.module.css` hides the separate hero brand row at the existing mobile
+47.5rem breakpoint and shows the navbar wordmark with compact, nonwrapping
+spacing. The scoped header rule also wins over the later narrow-screen text
+hiding rule; desktop hero identity and the footer remain unchanged. Removed
+unused mobile sizing for the now-hidden hero mark. The source of truth records
+the owner's presentation decision. No JSX, handler, route or provider change.
+
+Browser checked widths 320, 360, 368, 390, 599, 760, 761, 768 and 1280px. Mobile
+hero branding is hidden through 760px, the navbar name stays visible, and the
+desktop hero brand returns at 761px. No horizontal or navbar overflow occurred.
+The first measurement found the existing mobile Privacy target only 36–40px
+wide; a 44px minimum fixes that confirmed issue without hiding an action. All
+visible header targets now measure at least 44px in both dimensions. Privacy
+open/Close/focus return was verified. Viewport override was reset and the owned
+landing tab left open; the owner's other tab and running services were preserved.
+
+Verification: 11 existing page tests, settled frontend production build, root
+formatting and diff checks passed. Build inventory: 1,277 files, 26 links,
+21,954,772 bytes, SHA-256
+`f56dac2bfa21afbd7a825eaa0bfda098ba33423ea0b4a526632ff236441ba312`;
+the existing Windows self-contained release limitation remains. No new test was
+added for CSS-only presentation, and root unit/lint/typecheck were not repeated
+for this revision. Earlier 680-test evidence belongs to the background revision.
+Synthetic screenshot and geometry: `artifacts/qa/cl013-mobile-branding-20261003/`.
+
+Read-only review of this CSS/authority follow-up and neighboring narrow-screen
+rules at HEAD `5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1` found no actionable
+local finding; index remains empty. Fake mode needs no keys and still shows
+simulated results. Real Gemini needs keys, enabled live flags and existing
+approvals; ADC/cloud sample, actual media/device, owner visual, film and release
+gates remain unchecked. No Git, real media, paid/cloud action or local AI model/
+weights/runtime was involved.
+
+## Later owner mobile workflow readability — 2026-10-03
+
+The owner identified the stacked/cramped `/start` navbar and undersized intake
+details. `sample.experience.tsx` wraps the wordmark and gives the home link an
+explicit accessible name. `sample.module.css` hides that wordmark below 600px,
+scales the mark to 44px with proportional strokes, and keeps Privacy/Clear media
+alongside it with 44px targets. Removed the old sub-480px stacked-header and
+matching frame-height override. The normal mobile frame calculation now applies.
+
+Input format, simulated-input note, recommended/maximum/final-clip details,
+input guidance, mode notice and source-preview explanation share a mobile
+`clamp(0.875rem, 3.9vw, 1rem)` size and 1.6 line height. This measures 14px at
+320px, 15.327px at 393px and 16px at 430px. Source captions/composition, controls,
+processing, consent, expiry and cleanup handlers are unchanged. The source of
+truth records this workflow-specific direction; landing mobile branding remains.
+
+Verification: settled root format/lint/typecheck/unit/build and diff checks
+passed, **680 tests in 69 files**. Production inventory: 1,277 files, 26 external
+package links, 21,954,805 bytes, SHA-256
+`9857372aec61a84e30911aa4c3abb9cf68e6159789470b35ebbd02ece6abdcd3`.
+Existing Windows self-contained release limitation and renderer warning remain.
+No new dependency, test, font, animation, blur layer or provider call boundary.
+
+Browser checked intake, source preview with Clear media, selected candidate and
+clip review at 17 anchors: all eleven prior sizes plus 360×640, 393×852, 430×932,
+479×800, 599×844 and 600×800. Header actions fit on one row with targets at least
+44px; no root horizontal/height overflow. The source explanation fits its media
+surface. On short phones, the existing content pane scrolls; keyboard End brought
+the complete input guidance into view at 320×568. The full fake journey reached
+simulated delivery with Download disabled and Start over returned to intake.
+A subsequent preview verified Privacy/Close/focus return and Clear media returning
+to intake. Viewport override was reset; owned intake and healthy services remain.
+
+Read-only validation of this narrow markup/CSS/authority change and neighboring
+header/frame/source rules at HEAD `5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1`
+found **no actionable local findings**. Verdict: **Meets ticket with concerns**;
+owner visual, physical devices, screen readers, full zoom/text-spacing/media,
+cloud/film/release gates remain unverified. Earlier CL-013 and CL-016 work is
+preserved outside this follow-up's claim. Index remains empty; no Git mutation.
+
+Ignored synthetic captures and geometry:
+`artifacts/qa/cl013-mobile-workflow-readability-20261003/`. Fake mode works with
+no API keys and uses fixtures; real sample reads need ADC/cloud setup and Gemini
+needs keys, enabled live flags and existing rights/data/spend approvals. No
+real media, credential, paid/cloud call or local AI model/weights/runtime was used.
+
+## Later owner shared navbar and workflow width — 2026-10-03
+
+The owner requested that the workflow navbar and main card match the landing
+navbar's dynamic width. The landing was already responsive, capped at 80rem;
+the workflow used 74rem and different phone gutters. Four owning stylesheets
+now consume `--cb-content-max` and `--cb-page-gutter` from `styles/tokens.css`:
+`app/page.module.css`, `features/sample/sample.module.css` and
+`shared/ui/workflow.module.css`. Shared gutters preserve the landing's 1.5rem,
+1rem through 58rem and 0.75rem through 47.5rem rules. A stable root scrollbar
+gutter removes the reproduced 4px difference between long-page navigation and
+the bounded workflow. The source of truth and design plan record this direction.
+No markup, handler, state, media-composition, provider or cleanup logic changed.
+
+Geometry checks cover 22 anchors: the previous 17 plus 760×844, 761×844,
+928×800, 929×800 and 1366×768. Both navbars and the workflow frame match in
+left/right edges and width. At 1366px they are 1280px wide, starting at 41px;
+at 1280px they are 1228px wide, starting at 24px; at 393px they are 365px
+wide, starting at 12px. Intake, source preview, selected candidate and clip
+review retain fitting header actions of at least 44px and no root overflow.
+The complete fixture journey reaches simulated delivery with Download disabled;
+Start over returns to intake. Short-phone guidance, Privacy focus return and
+Clear media were checked against the shared shell. Synthetic evidence stays
+ignored in `artifacts/qa/cl013-shared-width-20261003/`.
+
+Settled root `corepack pnpm format:check`, `lint`, `typecheck`, `test:unit`
+and `build` passed, with **680 tests in 69 files**; `git diff --check` passed.
+Production inventory: 1,277 files, 26 external package links, 21,955,009 bytes,
+SHA-256 `83a8788a18a8d3a9dc9ff8867dcd40fb817883bd69faaa74a1d1f681748a26c2`.
+The existing Windows self-contained release limitation and renderer warning
+remain. No new test, dependency, font, animation or blur layer was added for
+this reversible shared-layout change.
+
+Read-only validation of this width/token/documentation follow-up and neighboring
+responsive rules at HEAD `5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1` found
+**no actionable local findings**. Coverage includes dynamic sizing, identical
+shell geometry, breakpoint edges and preserved fixture controls. Verdict:
+**Meets ticket with concerns**, because owner visual acceptance, physical devices,
+screen readers, full zoom/text spacing, actual media, cloud/film/release evidence
+remain unverified. Earlier CL-013 and CL-016 work remains outside this revision's
+claim. Index stays empty; changes remain unstaged and uncommitted for review.
+
+Fake mode works without API keys and uses simulated previews/results. Real
+retained sample reads still require ADC/cloud setup, and Gemini needs keys,
+enabled live flags and rights/data/spend approvals. No local AI model, weights
+or runtime was used. No real media, credential, paid/cloud, deployment or Git
+mutation occurred. Viewport override was reset; owned intake and healthy local
+services remain available for owner review.
+
+## Later owner conditional workflow footer — 2026-10-03
+
+The owner requested no footer strip without a CTA. Intake reproduced a 25px
+empty footer at the normal review size. `shared/ui/workflow.module.css` now
+hides a footer without a button or actionable link; disabled CTAs still count.
+This follows the rendered actions without duplicating stage conditions.
+`features/sample/sample.experience.tsx` moves availability-only notices into the
+card content, supplies null footers there, and retains Retry connection in the
+failure footer. All notices, handlers, gates and existing CTA behavior remain.
+The source of truth records the presentation decision.
+
+Browser intake and source preview were checked at all 22 shared-width anchors:
+intake footer height is zero; preview retains both CTA buttons and its footer.
+No root overflow was observed. The fake journey verified Cancel during processing,
+no footer for unselected choices, Proceed after selection, Confirm export in
+review, Start over in simulated delivery, disabled Download, and no footer while
+clearing. Start over returned to intake. Ignored synthetic captures/geometry:
+`artifacts/qa/cl013-conditional-footer-20261003/`. Viewport override was reset;
+the owned intake and healthy local services remain running for review.
+
+Settled root format/lint/typecheck/unit/build and diff checks passed:
+**680 tests in 69 files**. Production inventory: 1,277 files, 26 external links,
+21,955,173 bytes, SHA-256
+`6dd1647d5cef9163d5f3f2b065fd1d3503eaed4dd185e73baf09adcfaa8b4701`.
+Existing Windows self-contained release limitation and renderer warning remain.
+No new test, dependency, listener, timer, request or media URL was introduced.
+
+Read-only validation of this narrow CSS/notice-placement follow-up and neighboring
+footer rules at HEAD `5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1` found
+**no actionable local findings**. Footer visibility, preserved notices, active
+and disabled actions, responsive geometry and fixture reset are covered.
+Verdict: **Meets ticket with concerns** for broader owner visual, physical-device,
+screen-reader, full zoom/text-spacing, actual-media, film/cloud/release evidence
+still unverified. Earlier CL-013/CL-016 work is preserved outside this revision's
+claim; index is empty and no Git mutation occurred.
+
+Fake mode works without API keys and uses simulated previews/results. Real
+sample reads require ADC/cloud setup; Gemini needs keys, enabled live flags and
+existing rights/data/spend approvals. No local AI model/weights/runtime, real
+media, credentials, paid/cloud calls or deployment was used.
+
+## Later owner compact mobile navbar — 2026-10-03
+
+The owner requested a smaller, dynamically sized logo and CTAs in the mobile
+workflow navbar. `features/sample/sample.module.css` now uses a shared mobile
+`clamp(2rem, 8.2vw, 2.375rem)` size for the visible mark and button pills,
+with labels at `clamp(0.75rem, 3.3vw, 0.875rem)`. The mark is centered in its
+existing 44px home target; each button paints its smaller pill through a
+noninteractive pseudo-element while retaining its 44px target and focus ring.
+Shared colors, edges and hover treatments remain. Desktop sizing, navbar/card
+widths, mobile detail typography, footer visibility and handlers are unchanged.
+The source of truth records this refinement of the earlier 44px visible mark.
+
+Intake and source preview with both Privacy/Clear media were checked at all
+22 shared-width anchors. Headers remain on one row with 44px targets, fitting
+actions and no root overflow. Visible logo/pill heights match within rounding;
+the mark measures 32px at 320px, about 32.22px at 393px, 35.25px at 430px and
+38px from 479px through 599px. Labels measure 12px at 320px and about 12.97px
+at 393px, capped at 14px. The existing desktop treatment returns at 600px.
+Privacy open/Close/focus return retained its 3px focus ring; Clear media returned
+the fixture preview to intake. Captures and geometry stay ignored under
+`artifacts/qa/cl013-compact-mobile-nav-20261003/`. Viewport override was reset
+and the owned intake and healthy local services remain available for review.
+
+Settled root format/lint/typecheck/unit/build and diff checks passed:
+**680 tests in 69 files**. Production inventory: 1,277 files, 26 external links,
+21,955,968 bytes, SHA-256
+`93c08528f00bbd60d263c680046dd2aa6e12bdd174080c1ca6436020aaf73fd0`.
+The existing Windows self-contained release limitation and renderer warning
+remain. No new test, font, dependency, blur layer, animation, listener or timer
+was introduced for this CSS-only refinement.
+
+Read-only validation of this narrow CSS/authority follow-up and adjacent shared
+button, mark and fallback rules at HEAD
+`5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1` found **no actionable local
+findings**. Covered: fluid paint/label sizes, aligned marks/actions, retained tap
+targets/focus/click behavior, breakpoint edges and unchanged desktop treatment.
+Verdict: **Meets ticket with concerns** for owner visual approval, physical
+devices, screen readers, complete zoom/text-spacing/preferences, actual-media,
+cloud/film/release evidence still unverified. Earlier CL-013/CL-016 changes are
+preserved outside this revision's claim. Index stays empty; no Git mutation.
+
+Fake mode works without keys and uses simulated previews/results. Real sample
+reads still require ADC/cloud setup; Gemini requires keys, enabled live flags
+and existing rights/data/spend approvals. No local AI weights/runtime, actual
+media, credentials, provider/paid/cloud calls or deployment were used.
+
+## Later owner mobile candidate-panel border and spacing — 2026-10-03
+
+Reproduced the owner's screenshot in the selected candidate's mobile Transcript /
+Agentic Notes panel. The below-600px rule removed the left border and all side /
+bottom padding: at 393×852 the tabs started flush at the panel's left edge.
+`features/sample/sample.module.css` now inherits the continuous shared 1px border,
+uses 8px padding on all sides and an 8px tab/body gap. Restoring the inset exposed
+tab wrapping at 320px; mobile-only tab gap/padding were reduced so both labels
+remain on one row with their existing 44px targets. No component, selection,
+playback, provider or session logic changed.
+
+Both tabs were measured at 320×568, 360×640, 393×852, 430×932, 599×844,
+600×800, 768×1024 and 1366×768. Mobile panels retain all four borders and equal
+insets; labels fit, and neither pane nor root has horizontal overflow. Existing
+desktop/tablet padding and wrapped tabs remain. At 320×568, keyboard Home /
+ArrowRight changed tabs and End reached the bottom of both internal scrollers.
+Note seeking reached 00:54, switching selected moment 2 and pausing worked,
+and Proceed reached read-only clip review. Confirm export reached simulated
+delivery with Download still disabled, and Start over returned to intake.
+Synthetic screenshots and geometry
+stay ignored under `artifacts/qa/cl013-mobile-candidate-panel-20261003/`.
+
+Settled `corepack pnpm format:check`, `lint`, `typecheck`, `test:unit` and
+`build` passed, with **680 tests in 69 files**; `git diff --check` passed.
+Production inventory: 1,277 files, 26 external links, 21,956,110 bytes, SHA-256
+`c7b1ea1d26792d97e3c015dd692392f3e081be221cf925bda03aa0b65c152a28`.
+The existing Windows self-contained release limitation and renderer warning
+remain. Post-build health, `/start` and `/api/sample/config` return 200.
+No new test, dependency, listener, timer or media URL was introduced.
+
+Read-only validation of these mobile candidate rules and neighboring panel,
+tab, focus, scrolling and breakpoint rules at HEAD
+`5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1` found **no actionable local
+findings**. Verdict: **Meets ticket with concerns** for the wider pending gates.
+Broader owner visual, physical-device, screen-reader, full zoom/text-spacing,
+actual-media, cloud/film/release evidence stays open. Fake mode works without
+keys through simulated previews/results; real sample reads require ADC/cloud
+setup and Gemini needs keys, live flags and rights/data/spend approvals. No
+local AI weights/runtime, real media, credentials, paid/cloud calls or Git action.
+Earlier CL-013/CL-016 edits remain outside this narrow correction's claim;
+index is empty and changes remain unstaged. The viewport override was reset and
+healthy local services remain running for owner review.
+
+## Later owner mobile footer CTA sizing — 2026-10-03
+
+Reproduced stacked source-preview actions at 320×600: desktop-sized button
+labels/padding plus the gap needed about 324px inside a 258px action row. The
+last-button auto margin aligned Find moments on a second row. In the owning
+`features/sample/sample.module.css`, mobile footer labels now scale from 12px
+to 14px, horizontal padding from 8px to 14px and gaps from 8px to 12px.
+Both full labels fit on one row at the checked phone widths, with unchanged
+44px minimum targets. Natural wrapping remains available for expanded text;
+single CTAs remain right aligned and desktop styles remain unchanged.
+
+Source preview passed 320×568, 320×600, 330×600, 360×640, 393×852,
+430×932, 599×844, 600×800, 768×1024 and 1366×768: one row, full labels,
+44px targets and no root overflow. At 320×600, footer height fell from 125px
+to 69px. Both CTAs retain 3px keyboard focus rings; Enter on Choose another
+video returns to intake with no empty footer, and Enter on Find moments starts
+the fixture journey. At 320×568, Proceed, Confirm export and Start over fit
+with 44px targets. The journey reached simulated delivery with disabled Download,
+then reset to intake. Ignored synthetic evidence:
+`artifacts/qa/cl013-mobile-footer-ctas-20261003/`.
+
+Settled root format/lint/typecheck/unit/build gates passed: **680 tests in 69
+files**. Production inventory: 1,277 files, 26 external links, 21,956,263 bytes,
+SHA-256 `b391ac17118083d5eadb182e7de1b7a9bc9bbd48717d993bfec1602c6687bdd5`.
+Existing Windows self-contained release limitation and renderer warning remain.
+No handler, gate, schema, dependency, timer, listener or media URL was changed.
+
+Read-only validation of this narrow mobile CSS correction and neighboring
+button/footer, focus, disabled and breakpoint rules at HEAD
+`5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1` found **no actionable local
+findings**. Verdict: **Meets ticket with concerns** for broader owner visual,
+physical-device, screen-reader, full zoom/text-spacing, actual-media and
+cloud/film/release evidence still open. Earlier CL-013/CL-016 edits are excluded
+from this correction's claim; nothing was staged or committed.
+
+Fake mode requires no keys and uses simulated previews/results. Real sample
+reads need ADC/cloud setup; Gemini needs keys, enabled live flags and existing
+rights/data/spend approvals. No real media, local AI weights/runtime,
+credentials, paid/provider/cloud calls or deployment was used. Temporary viewport
+overrides were reset; healthy local services remain running for owner review.
+
+## Later owner contained candidate-selection motion — 2026-10-03
+
+Reproduced the owner's escaping cards on 375×667 and 1366×768: native
+document-wide view-transition snapshots bypassed the main/content/rail clips,
+ghosting old/new portraits and painting the transcript or offscreen rail cards
+over the footer. The owning `features/sample/use-moment-layout.ts` now uses its
+existing local FLIP animation for all browsers. `candidate.review.tsx` and
+`portrait-player.tsx` remove snapshot names, and `styles/tokens.css` removes the
+unused global transition pseudo rules. The existing 640ms timing/easing, portrait
+mapping, keyboard/focus, playback and domain actions remain. Selection changes
+and unmount cancel local animations; no deferred snapshot callback remains.
+The source of truth records the owner's containment rule.
+
+Gallery, first pick and switching passed at 320×568, 375×667, 393×852,
+599×844, 600×800, 768×1024, 900×600, 1024×768 and 1366×768: 27 measured
+states, no root horizontal overflow, no named snapshots and painted card
+intersections inside their ancestor clips. Eight in-flight captures each on phone
+and laptop show local transforms still running without ghosting or footer overlap.
+Closing to the gallery also works. Playback/pause, matching Agentic Notes and
+rank-3 note seeking to clip 00:55 / source 02:55 passed. Rapid keyboard switching
+wraps 3→1→2 correctly. Proceed during movement removes candidate surfaces cleanly;
+read-only review, Confirm export, simulated delivery with disabled Download and
+Start over still work. Synthetic captures/geometry stay ignored under
+`artifacts/qa/cl013-contained-selection-20261003/`.
+
+Settled root `corepack pnpm format:check`, `lint`, `typecheck`, `test:unit` and
+`build` passed: **680 tests in 69 files**. Production inventory: 1,277 files,
+26 external package links, 21,954,005 bytes, SHA-256
+`3b3600d0d1a3403989517328586ea612a70e7a3aeeebbd401d5d79ab4f0bd7c7`.
+The existing Windows `selfContained: false` release limitation and renderer
+deprecation warning remain. Post-build health, `/start` and `/api/sample/config`
+return 200. No new test, dependency, listener, timer, media URL, schema or
+configuration/provider gate was introduced.
+
+Read-only validation of this narrow motion correction, clipping ancestors and
+selection lifecycle at HEAD `5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1`
+found **no actionable local findings**. Verdict: **Meets ticket with concerns**
+for broader owner visual approval, physical-device/screen-reader/full zoom and
+text-spacing, actual-media, cloud/film/release evidence still open. The existing
+owner motion-preference exception still needs public-release reconsideration.
+Earlier CL-013/CL-016 edits remain outside this correction's claim. Index stays
+empty; nothing was staged or committed. Temporary viewport overrides were reset,
+and healthy local services remain running for owner review.
+
+Fake mode works without API keys through simulated previews/results. Real sample
+reads require ADC/cloud setup; Gemini requires keys, enabled live flags and
+existing rights/data/spend approvals. No local AI weights/runtime, actual media,
+credentials, provider/paid/cloud calls or deployment were used.
+
+## Later owner adaptive candidate-detail cards — 2026-10-03
+
+The owner marked surplus space around the laptop candidate preview and requested
+simultaneous Transcript / Agentic Notes cards whenever they fit. Continued this
+CL-013 visual follow-up at HEAD `5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1`;
+earlier CL-013/CL-016 edits remain outside this correction's claim.
+
+`features/sample/sample.module.css` narrows the surplus preview track and gives
+the remaining width to the detail area. In `candidate.review.tsx`, a ResizeObserver
+measures that area and disconnects on unmount, rather than detecting a device or viewport
+category. At 35rem it fits two 17rem cards and a 1rem gap; narrower space retains
+tabs. The threshold follows the root font size. Initial/server rendering and
+unsupported ResizeObserver retain tabs. Both cards use shared reading surfaces,
+headings and independent scrollers. Narrow mode renders only the active pane,
+with unique tab/panel associations; wide mode uses labelled regions. Expanding
+from a focused tab transfers focus to its pane; shrinking preserves a focused
+pane or note action by selecting its tab. Playback, selected candidate, note
+seeking/highlights and contained local motion keep their existing ownership.
+No second video/player, observer polling, new dependency or provider gate was added.
+The source of truth records this owner visual direction.
+
+Measured 320×568, 375×667, 393×852, 599×844, 600×800, 768×1024,
+799×700, 800×700, 900×600, 1024×768, 1099×768, 1100×700,
+1280×720, 1366×768, 1440×900 and 1920×1080, plus eleven 768px-high
+threshold observations at widths 1038–1045 and 1099–1101. No root or active-pane
+horizontal overflow; phone content remains internally scrollable inside the frame.
+At 1366×768 the detail area is about 743px, giving two equal 364px cards;
+1024×768 uses tabs in about 548px. Actual border-box geometry makes the measured
+35rem threshold switch around 1043px in this particular shell, without repeated
+switching at the checked edges; it is not a hardcoded screen breakpoint.
+
+Wide note seeking reached clip 00:54 / source 00:54 for rank 1 and source 01:54
+for rank 2, highlighting the six matching transcript words. Shrinking while a
+note button was focused retained that action and the Notes tab. Expanding from
+the focused Notes tab moved focus to the notes scroller without losing the
+playback position/highlights. At 320×568 Home switched back to Transcript;
+both tab labels fit with 44px targets. First pick, candidate switching, pause
+and Back to moments worked. In-flight portrait transforms still obey content/
+rail/main clips, with no document-wide snapshots or footer overlap.
+The fresh post-build fixture journey reached read-only review for rank 3, then
+simulated delivery with the visible notice and disabled Download; Start over
+reset the session. No candidate detail surfaces remain after leaving selection.
+Ignored synthetic captures/geometry:
+`artifacts/qa/cl013-adaptive-moment-details-20261003/`.
+
+Focused existing sample/review regressions passed **34 tests in 2 files**.
+Root format/lint/typecheck/unit/build passed: **680 tests in 69 files**.
+Production inventory: 1,277 files, 26 external package links, 21,957,629 bytes,
+SHA-256 `923ac61e2a8d1bf786fa65be96cf85fa67ca21c1eec504757d9d0178ef315805`.
+The existing Windows `selfContained: false` release limitation and renderer
+deprecation warning remain. Post-build health, `/start` and `/api/sample/config`
+return 200. No actual-media, credential or paid/cloud action occurred.
+
+Read-only validation of these two source files, their owning authority/evidence,
+tab/panel semantics, focus/seek/playback paths and observer/animation cleanup
+found **no actionable local findings**. Verdict: **Meets ticket with concerns**
+for the broader unchecked owner/manual/live/release gates below. No earlier
+requirement or gate was weakened. No delegation or Git mutation occurred.
+
+Fake mode works without keys through labelled synthetic previews/results; no
+actual MP4 or live AI quality is proved. Real sample preview still needs the
+separate ADC/cloud setup, and Gemini needs keys, enabled live flags and existing
+rights/data/spend approvals. No local AI weights/runtime were used. Broader
+owner visual approval, physical devices, screen readers, full zoom/text-spacing,
+actual-media/cloud, film and release gates remain open. Nothing was staged or
+committed; services remain available for owner review.
+
+## Later owner phone clip-review carousel — 2026-10-03
+
+The owner requested full-width phone slides in the order Video, Agentic Notes,
+Transcript, dots below, no carousel arrows, and continuous finger-following
+movement. Continued this CL-013 follow-up at HEAD
+`5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1`; earlier CL-013/CL-016 changes
+remain outside this correction's claim.
+
+`features/sample/clip-review-layout.tsx` owns one shared layout for
+`clip.review.tsx` and `cloud-clip.review.tsx`. `sample.module.css` uses native
+horizontal overflow and mandatory scroll snapping below 600px. The browser owns
+drag tracking, momentum and release snapping; no touch handler, pointer capture,
+gesture threshold, transform animation or scroll-preventing listener was added.
+Player pointer handlers reveal controls without preventing native pan. The seek
+slider retains its ordinary scrubbing behavior. Notes/transcript retain their
+independent vertical scrollers. Dots are named buttons with 44px targets, current
+state and keyboard navigation; offscreen slides are inert. All slides stay mounted,
+preserving the single player, playback position, pause and note highlights.
+Tablet/desktop retain their existing review arrangement and delivery layout.
+
+Browser checks reproduced focus loss when phone dots became hidden on expansion.
+The correction transfers focus to the matching card after inactive restrictions
+are removed. Shrinking from a focused note action selects its slide and preserves
+that action. ResizeObserver disconnects on unmount; the fallback resize listener
+is also removed. No new timer, media URL, request, dependency or provider boundary
+was introduced.
+
+Measured 320×568, 375×667, 393×852, 430×932, 599×844, 600×800,
+699×800, 700×800, 768×1024, 900×600, 1024×768 and 1366×768.
+Phone slides match the track width; dots/export remain visible, with no root or
+text-pane horizontal overflow. Native horizontal input moved Video→Notes→Transcript
+and back, settling at the measured offsets and updating dots. Native vertical
+input scrolled Notes independently, with computed `touch-action: auto`.
+Dot clicks and keyboard ArrowRight/Home/End, Tab access to export, resize focus,
+continuous fake playback across slide changes, pause and note seeking to 00:54
+passed. A fresh post-build rank-3 fixture journey verified assembly/review/export,
+the simulated-delivery notice, disabled Download and reset; carousel surfaces
+are removed on leaving review.
+Synthetic captures and geometry stay ignored under
+`artifacts/qa/cl013-phone-review-carousel-20261003/`.
+
+Focused existing review regressions passed **24 tests in 2 files**. Settled root
+format/lint/typecheck/unit/build passed: **680 tests in 69 files**. Production
+inventory: 1,277 files, 26 external package links, 21,965,157 bytes, SHA-256
+`c13dfef65351099c7cbd17db98afd1bd501bce9bb0530a229ac2c9d0dae596f6`.
+The existing Windows `selfContained: false` release limitation and renderer
+deprecation warning remain.
+
+Read-only validation of the narrow layout, unchanged player/seek/access paths,
+responsive semantics, focus handoff and cleanup found **no actionable local
+findings** after correction. Verdict: **Meets ticket with concerns** for physical
+finger drag/momentum, iOS/Android behavior, screen readers, full zoom/text spacing,
+forced colors, actual media/cloud and broader owner/film/release evidence.
+Browser native-scroll checks do not certify a physical phone gesture.
+
+Fake mode works without keys through labelled synthetic previews/results; no
+actual MP4 or live AI quality is proved. Real sample access still requires the
+separate ADC/cloud setup; Gemini requires keys, enabled live flags and existing
+rights/data/spend approvals. No local AI weights/runtime, actual media,
+credentials, provider/paid/cloud action, deployment or Git mutation occurred.
+Post-build health, `/start` and `/api/sample/config` return 200. The index remains
+empty, temporary viewport overrides were reset, and healthy local services
+remain running for owner review.
+
+## Later owner independent phone moment-list scroll — 2026-10-03
+
+Reproduced the reported clipping at 375×667 with rank 3 selected. At the left
+list's actual scroll end, its 427px viewport exceeded the visible selected-moment
+area (404.609px). The last time range extended 18.063px below the clip. Scrolling
+the main pane from 0 to 55px exposed it, confirming that the two scroll areas were
+incorrectly coupled. This was a measured defect, not a change to a working flow.
+
+In `features/sample/sample.module.css`, phone `.previewMode` now establishes size
+containment and caps its sticky moment list at `100cqh`, the actual visible
+container height, replacing the screen-height estimate. Vertical overscroll
+containment prevents reaching either list edge from scrolling the main pane.
+Three CSS declarations change; no new component, state, observer, listener,
+timer, request, dependency or provider boundary is introduced. The source of
+truth records independent phone list scrolling and full final-choice details.
+Earlier CL-013/CL-016 changes remain outside this correction's claim at HEAD
+`5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1`.
+
+Checked 320×568, 375×667, 393×852, 430×932, 599×844, 600×800,
+768×1024, 900×600, 1024×768 and 1366×768. At the list end, the full final
+choice/title/time range fits with the main pane at both its top and bottom;
+measured bottom clipping is zero. Native extra list scrolling at its bottom
+leaves the main pane at zero; extra upward scrolling at the list top preserves
+the main pane's 55px position. No root horizontal overflow was observed.
+Rank-2 switching also exposes the complete final rank-3 choice. Play/pause,
+keyboard End selection, Notes, seeking to clip 00:55 / source 02:55, and Back to
+moments passed. Gallery return removes selected-layout size containment.
+Ignored synthetic before/after captures and geometry:
+`artifacts/qa/cl013-independent-moment-list-20261003/`.
+
+Focused existing candidate regressions passed **15 tests in 1 file**. Settled
+`corepack pnpm format:check`, `lint`, `typecheck`, `test:unit` and `build`
+passed: **680 tests in 69 files**. Production inventory: 1,277 files, 26
+external package links, 21,965,193 bytes, SHA-256
+`6611078da9dfdde78f91ca27578252cbf889d861fcbdf3bf12e3edb52b571591`.
+The existing Windows `selfContained: false` release limitation and renderer
+deprecation warning remain.
+
+Read-only validation of the three declarations, sizing/clipping ancestors,
+mobile media boundary, candidate lifecycle and authority/evidence found **no
+actionable local findings** after correction. Verdict: **Meets ticket with
+concerns** for broader owner visual approval, physical phones/touch, screen
+readers, full zoom/text spacing, forced colors, actual media/cloud, film and
+release evidence still open. No previous requirement or gate was weakened.
+
+Fake mode works without keys using labelled synthetic previews/results; it does
+not prove actual MP4 or AI quality. Real sample reads require separate ADC/cloud
+setup; Gemini requires keys, enabled live flags and existing rights/data/spend
+approvals. No local AI weights/runtime, real media, credentials, provider/paid/
+cloud action, deployment, delegation or Git mutation occurred.
+Post-build health, `/start` and `/api/sample/config` return 200. The index remains
+empty, viewport overrides were reset, and healthy local services remain running.
+
+## Later owner delivery layout follow-up — 2026-10-03
+
+Owner requests Download MP4 beside Start over, a larger responsive result video,
+removal of the repeated visible fake-download sentence, and platform marks/names
+inside glass social buttons. The owner's later refinement places a bold centered
+Soon overlay on each button, with the platform mark/name blurred behind it.
+This local CL-013 follow-up
+changes no social publishing capability or provider/storage gate. The source of
+truth records the result-only exception to the older adjacent visible
+fake-download explanation; a short screen-reader description stays associated
+with the disabled action, and intake still labels simulated results.
+
+`features/sample/clip-delivery.tsx` shares the inert social destinations and moves
+the owning result component's download action into the existing footer using a
+React portal. `sample.experience.tsx` supplies that footer node through
+`result-preview.tsx` to `clip.review.tsx`, and directly to `cloud-result.tsx`.
+The cloud component retains its existing access/decode/expiry checks, retry,
+request status, temporary link cleanup and final transcript. No readiness state
+or download handler is duplicated in the workflow. Standalone rendering retains
+an inline action when no footer node is supplied. React owns portal removal;
+reset was observed to remove the download and hide the empty footer.
+
+`sample.module.css` gives the result portrait the freed card height, bounds it to
+the real container dimensions, and gives its column more room. The social grid
+adapts to its actual width, using four local inline SVG marks and existing button
+and glass tokens; no remote logo requests or dependency were added. Phone action
+sizes retain 44px targets and one row. The existing delivery regression in
+`review-revision.test.tsx` checks the disabled action's new description, absence
+of the old sentence and four unavailable destinations.
+
+Focused existing review/output/candidate regressions passed **39 tests in 3
+files**. Browser fixture delivery was checked across phone, tablet and laptop
+sizes, with one footer download, disabled social buttons, no horizontal page
+overflow, play/pause, End seeking, native phone scroll, refresh restoration and
+keyboard Start over. Ignored screenshots and geometry are under
+`artifacts/qa/cl013-delivery-layout-20261003/`.
+
+Before the later overlay refinement, `corepack pnpm format:check`, `lint`,
+`typecheck`, `test:unit` and `build` passed: **680 tests in 69 files**.
+Production inventory: 1,277 files,
+26 external package links, 21,965,631 bytes, SHA-256
+`167bb64b11dd8909d9f8cc77d2a3169f55be0eb2b3d7f83f9817fc473d6b1692`.
+The existing Windows `selfContained: false` release limitation and renderer
+deprecation warning remain. Canonical health, `/start` and sample config GET
+checks returned 200; healthy services were reused.
+
+Read-only local validation compared the result-only owner decision, new shared
+module, footer integration, fake accessible description and output guards with
+the current source, focused regressions and browser states. **No actionable
+local findings**; verdict **Meets ticket with concerns** for wider runtime/device/
+media/assistive-technology/film/release evidence still open. Covered: shared fake
+and real result wiring, one owned download action, output safety/status/transcript,
+disabled destinations, responsive containment and reset cleanup. Unverified:
+actual cloud MP4 playback/download and physical phones; no external or full-suite
+work occurred during the read-only review itself. No domain guard or previous
+finding was dismissed to satisfy the layout change.
+
+The final overlay refinement retains each disabled button's platform-specific
+accessible name; its blurred logo/name and bold Soon layer are decorative.
+Browser observations confirm all four Soon layers are centered on their button,
+weight 750, over `blur(2px)` content. Final responsive anchors: 320×568,
+375×667, 393×852, 430×932, 599×844, 600×800, 768×1024, 900×600,
+1024×768 and 1366×768. All have one download, four inactive destinations, one-row
+44px footer actions, no root horizontal overflow and no button-content overflow.
+The portrait grows with available space (252.891×449.578px at 393×852;
+269.203×478.578px at 1366×768). Smaller phones scroll inside the bounded result
+area; footer actions remain outside that scroller. Final synthetic screenshots
+are `phone.jpg` and `laptop.jpg` beside the final `layouts.json`. The owned fixture
+session was cleared, viewport override reset, and the QA tab retained at intake.
+No new listeners, timers, requests, observer or provider state accompany the blur.
+
+After this final refinement, all five settled root gates passed again, including
+**680 tests in 69 files**. Final production inventory: 1,277 files, 26 links,
+21,966,116 bytes, SHA-256
+`af6950588ca34a509225f697f1342de8ad1f66878782bd035496d21bd5ec57c9`, eight app routes;
+the existing non-self-contained Windows artifact limitation remains. Final local
+read-only revalidation retained **no actionable findings** for this result/overlay
+scope; broader unverified gates above remain. No files were staged or committed.
+
+Fake mode uses synthetic previews/results without API keys and produces no MP4.
+Real sample reads still need separate ADC/cloud setup; real AI needs Gemini keys,
+enabled live flags and applicable rights/data/spend approvals. No real media,
+credentials, paid/provider/cloud action, deployment or Git mutation occurred.
+Actual media/device/assistive-technology, wider quality-matrix, owner visual/film
+and release gates remain open. Earlier CL-013/CL-016 changes stay outside this
+follow-up's claim at HEAD `5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1`.
 
 ## Completion handoff
 

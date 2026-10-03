@@ -79,6 +79,148 @@ Earlier related source/audio changes were continued; later product integration r
 Usage polling and independent code review remain stopped. Deployed images must
 exclude every feasibility/debug page and obsolete model/runtime tool.
 
+### Owner mobile landing branding — 2026-10-03
+
+On the landing's existing mobile layout (up to 47.5rem), omit the separate
+hero logo/name row and show **ClipBuilder** beside its mark in the navbar. The
+headline begins the hero copy, giving more room to the introduction and motion
+preview. Desktop keeps its hero identity. Primary navigation and 44px targets
+remain available; no workflow entry or processing behavior changes.
+
+### Owner workflow visual direction — 2026-10-03
+
+The owner requested a plan to carry the landing's navy/blue background, glass
+surfaces, CTA materials, palette and typography through the complete `/start`
+workflow. This supersedes the older light-canvas workflow presentation direction
+in section 18. Shared tokens and actual workflow primitives own the treatment,
+including intake, status, selection, read-only review, delivery and recovery.
+The existing single changing workspace, accessible step heading, exactly one
+candidate, fixed composition, action/gate semantics and owner motion decision
+remain. The [CL-013 workflow design plan](tickets/CL-013-WORKFLOW-DESIGN-PLAN.md)
+owns the file-level sequence, fallbacks and verification. This is a documented
+visual direction, implemented locally on the owner's subsequent instruction to
+do the redesign first. Local fake-mode checks do not imply final
+UI/film/provider/cloud/release approval or a Git action.
+
+Later owner feedback requests a lighter workflow background closer to the landing
+hero. The workflow uses static blue glow layers over a gradient scaled to its
+single-screen height, with a brighter blue lower edge. This refines the original
+shared-background direction for the workflow; the landing keeps its longer
+gradient. Glass opacity, reading surfaces, actions and processing gates stay as
+implemented. No additional blur layer or ambient animation is introduced.
+
+Later mobile workflow feedback replaces the stacked header with a single row:
+a logo, Privacy and (when available) Clear media. Below 600px the workflow
+wordmark is visually hidden; its home link keeps an accessible product name.
+Later sizing feedback makes the visible mark and action pills scale together
+from 32px to 38px with phone width, centered within their 44px tap areas. Header
+labels scale from 12px to 14px. Intake details, input guidance,
+mode notices and source-preview explanations scale from 14px to 16px with phone
+width instead of remaining at metadata size. Content may scroll inside the
+workflow on short screens; actions and disclosures remain reachable. This is
+specific to the workflow; the landing's mobile branding direction above remains.
+
+Later width feedback aligns both navbars and the main workflow card to the same
+responsive container: an 80rem maximum with 1.5rem gutters, 1rem through 58rem,
+and 0.75rem through 47.5rem. Shared tokens own these values. Reserve the root
+scrollbar gutter so switching between the long landing and bounded workflow does
+not change their available width. This replaces the older 1920px workflow maximum
+in section 18.4; content and controls remain responsive within the shared shell.
+
+The workflow footer appears only when it contains a CTA, including disabled
+actions with visible prerequisites. Screens without footer actions have no
+footer strip or divider; availability-only notices stay in the card content.
+
+Candidate cards and detail panels stay inside the workflow content during
+selection, switching and closing. They cannot draw over the heading/action
+footer or outside the rounded main frame.
+
+On phones, the left list of other moments scrolls independently of the selected
+preview/details pane. Its full final choice, including title and time range,
+must be reachable without scrolling the main pane. List-edge scrolling does not
+move the main pane.
+
+When the selected candidate's detail area has enough room for two readable
+cards, show Transcript and Agentic Notes beside each other. Use the actual
+available space rather than a laptop/device label; retain the tabbed presentation
+when the area is narrow. Reduce surplus space around the preview to make room
+for the evidence, with playback, note seeking and keyboard access preserved.
+
+On phones, Step 3 read-only review shows the vertical video, Agentic Notes and
+Transcript as three full-width swipeable slides in that order, with dots below
+them and no navigation arrows. Native horizontal scrolling follows the finger
+during the drag and snaps to a card on release. Preserve one mounted player,
+note seeking, keyboard access, the visible export action and card containment.
+Tablet and desktop retain their existing review card arrangement.
+
+### Owner source-preview and retained-sample direction — 2026-10-03
+
+After the workflow redesign, intake places **Use sample** beside **Choose a
+video** and removes **Use prepared input**. Preparation remains in Step 1 for
+full-source playback before explicit **Find moments**. Existing rights/transfer
+consent and live gates still apply. This supersedes automatic analysis immediately
+after intake in the fixture journey, and the earlier absence of a curated app
+sample path. The retained continuous 7:41 source is ordinary pipeline input;
+selection, captions, visuals and framing must be discovered by the system.
+
+Both the ignored local master and its separately configured private cloud master
+are owner-retained assets. The cloud master must be isolated from disposable
+visitor storage/lifecycle/sweepers; only disposable workspace/processing copies
+are cleared. Fixed generation-pinned reads pass through the same-origin API using
+server ADC; no cloud resource identifier or signed URL is browser configuration.
+The app reader has no deletion capability. Defaults/tests disable these reads.
+The [CL-016 packet](tickets/CL-016-source-preview-and-retained-sample.md) owns the
+local implementation and the actual ADC/cloud upload checkpoint. Cloud readiness,
+source/media-rights evidence and live AI quality are not established by this
+owner UI direction or fake tests.
+
+Later owner feedback explicitly keeps **Use sample** functional in fake mode:
+it starts the existing synthetic input/preview/candidate/review/export journey
+without a selected file, cloud read or provider call. Step 1 still waits for
+**Find moments**; sample previews/results are labelled simulated and Download
+remains disabled. In real-media
+mode only the configured retained source is available; no fixture fallback or
+source-specific podcast extraction is introduced. Real sample/cloud/AI gates above
+remain unchanged.
+
+Later navigation feedback removes **Try sample video** from the landing.
+**Get Started** opens the standard intake, where **Use sample** remains beside
+**Choose a video**. No automatic sample selection is linked from the landing;
+existing sample preview, explicit analysis and real-mode prerequisites remain.
+
+Later intake copy feedback replaces the redundant rights/temporary-media sentence
+with a recommendation: choose a clear conversation with focused topics, complete
+ideas and minimal background noise. Real-mode device storage/transfer disclosure,
+processing consent, rights requirements and upload bounds remain enforced. This
+guidance recommends suitable input; it does not promise live AI quality.
+
+### Owner privacy-panel revision — 2026-10-03
+
+The owner renamed the shared landing/workspace disclosure to **Privacy** and
+removed the repeated source-size/duration and product-scope rows. Existing rights
+requirements, processing consent and upload limits remain enforced.
+The privacy panel instead explains media use, temporary storage, Gemini transfer
+and clearing. Visitor source videos and final edits are used only for the requested
+clip: ClipBuilder does not publish them, reuse them in marketing or retain them
+as demo content. The separately owned, rights-approved demonstration master above
+does not authorize reuse or retention of visitor media.
+
+Later owner feedback limits this panel to three short points: no reuse/publishing,
+temporary storage combined with Clear, and Gemini transfer/retention. The intro
+is brief and still identifies the fake preview's no-file-read/upload behavior.
+The compact panel does not repeat retention timings; the exact policy below and
+the processing confirmation remain unchanged. No instant-deletion promise is added.
+
+Copy must match the current mode: fake development preview reads/uploads no
+selected file and creates no downloadable video; real processing uses temporary
+device/private cloud copies and transfers a bounded audio/video proxy to Gemini.
+Describe the existing two-hour workspace/source access, ten-minute-or-session
+output access and explicit Clear behavior without promising no storage, instant
+physical deletion, deletion of downloaded copies or control over Google's
+separate retention rules. This copy change does not verify vendor settings or
+alter retention, processing, storage, spend or release gates. Earlier
+`Privacy & limits` wording is superseded for current UI.
+
 ### Owner-confirmed public release choices — 2026-10-03
 
 The owner confirmed the ScreenPilot-informed release choices: host the public
@@ -330,6 +472,18 @@ the owner's direction. The owner also removes the privacy dialog's bottom
 development-summary paragraph; its rights/scope/size rows and no-file-read/
 upload statement remain. Explicit video placeholders and disabled unavailable
 actions are unchanged. Actual download still requires validated output.
+
+**Latest result-layout decision (2026-10-03):** Download MP4 shares the workflow
+footer with Start over, keeping the portrait preview free to scale with the
+available card space. Remove the repeated visible simulated-preview sentence;
+the fake download remains disabled with an accessible mode description, and
+intake still identifies simulated results. This owner decision supersedes the
+older adjacent visible fake-download notice requirement only on this result
+screen. Real playback verification, access/expiry/error status and transcript
+remain available. Facebook, Instagram, TikTok and X use platform marks with
+names inside glass buttons, blurred beneath a bold centered Soon overlay. They
+remain disabled display-only teasers; no social connection, upload or publishing
+is added.
 
 **Latest export confirmation decision:** Final review exposes Confirm export
 directly. There is no Continue to export hop, separate confirmation screen or
@@ -4864,7 +5018,8 @@ Browser zoom and user font settings must remain functional.
 - base spacing unit: 4 px;
 - scale: 4, 8, 12, 16, 24, 32, 48, 64, 96, 128 px;
 - content max width on the landing page: 1280 px with generous gutters;
-- workflow max width: 1920 px with a flexible preview center;
+- workflow and landing navbar max width: 80rem (1280px at the default font size),
+  with shared responsive gutters and a flexible preview center;
 - minimum interactive target: 44 × 44 CSS px;
 - radii: 10 px controls, 16 px compact cards, 24 px product surfaces, and
   32 px hero framing; pill only for compact status and segmented metadata;

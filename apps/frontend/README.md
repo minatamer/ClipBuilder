@@ -1,5 +1,22 @@
 # ClipBuilder frontend
 
+CL-016 places **Use sample** beside **Choose a video** and keeps prepared sources
+in Step 1 for playback before explicit **Find moments**. Fake intake reads only
+declared type/size and shows a labelled simulated source preview; the fixture
+analysis no longer starts automatically. In fake mode, **Use sample** starts
+that existing fixture journey without choosing a file or reading real media.
+Real local preview uses native source
+dimensions/playback in the existing disposable workspace and needs no Gemini key.
+The fixed cloud sample uses a bounded same-origin read into that workspace;
+in real-media mode its button remains disabled until the retained-source
+checkpoint is configured. Live mode never falls back to fixtures.
+The landing **Get Started** action opens intake; **Use sample** is offered there
+beside **Choose a video**, with no separate sample CTA on the landing.
+See [retained sample setup and preservation](../../docs/operations/RETAINED_SAMPLE_SETUP.md)
+for ADC/storage configuration and [CL-016](../../docs/tickets/CL-016-source-preview-and-retained-sample.md)
+for checks and outstanding real-media evidence. Existing consent/keys/live/grant/
+spend gates still protect AI; no local AI weights/runtime are used.
+
 CL-015 adds production-output inventory checks to the normal build. See
 [local release preparation and deferred deployment gates](../../docs/operations/LOCAL_RELEASE_PREPARATION.md).
 Fake/no-key checks inspect owned build output and synthetic fixtures. Actual
@@ -184,7 +201,7 @@ the protected analysis workflow. No new user control or provider call is added.
 CL-001 supplies the accessible product shell, framework error/not-found
 boundaries, metadata, robots policy, and deterministic build/test foundation.
 CL-002 adds the responsive landing prototype at `/`. CL-004 connects its Get
-Started action to `/start`; other actions show How it works or Privacy & limits.
+Started action to `/start`; other actions show How it works or Privacy.
 The landing remains server-rendered around narrow client
 islands for the IntersectionObserver flow, native dialog controls, deterministic
 anchor scrolling, and accessible hero-word rotation. The complete flow and
@@ -256,21 +273,38 @@ session/upload IDs cannot complete a replacement run. Delivery sizes the portrai
 inside its own grid slot, keeping Download and social actions in separate rows
 when the bounded phone layout scrolls.
 
-Privacy & limits uses the shared 28px heading (22px on phones), 14px intro/row
-text and 12px numbering. One framed lower panel holds three numbered rows with
+Privacy uses the shared 28px heading (22px on phones), 14px intro/row
+text and 12px numbering. One framed lower panel holds four numbered rows with
 thin separators; number/title/notes columns remain on larger screens, while
 phone notes sit under their title. Both dialog triggers use this same layout.
+The rows explain no reuse/publishing, mode-specific temporary storage, Gemini
+transfer and clearing. Upload rights/limits remain in intake. Copy distinguishes
+the no-file-read fake preview from real device/private-cloud processing and
+separates app cleanup from provider retention and downloaded copies.
 
-Workspace Privacy & limits and Clear media actions reuse the shared secondary
+Workspace Privacy and Clear media actions reuse the shared secondary
 Button. Clear is a two-word text command, not an icon-only action. Below 480px,
 the actions occupy one equal-width row below the brand; the workspace height
 accounts for this taller header. The landing's navigation trigger is unchanged.
+Landing/header/hero/footer and workspace reuse `shared/ui/brand-mark.tsx` for
+the blue two-bar ClipBuilder mark; the workspace does not use a clapperboard
+as the product logo. Landing-specific hero sizing stays in its page stylesheet.
 
 `src/styles/tokens.css` owns shared foundations. `src/shared/ui` supplies buttons,
 workflow frame and measurable/indeterminate progress. Each workflow title uses
 `Step N of 3: <stage title>` instead of a separate step tracker. Used tokens also
 feed the landing's foundation aliases. Feature components own sample content;
 they do not own a second workflow machine.
+The landing and workspace share `--cb-page-background` and CTA material tokens.
+The workspace scopes its light text, blue actions, dark status colors and navy
+surfaces without changing the global light defaults. Its header and 24px frame
+use glass; intake/candidates use blue tints and 16px cards, while transcript and
+notes panes have an opaque navy reading surface. Primary/secondary buttons share
+rounded edges and inset highlights. Opaque no-blur/reduced-transparency and native
+forced-color fallbacks remain. This is UI chrome; composition and playback logic
+are unchanged. Fake-mode fixtures support the complete visual journey with no
+keys; actual footage, AI quality, cloud delivery and final owner approval remain
+separate checks documented in the CL-013 packet.
 Scrollbars use one global transparent-track treatment with shared thumb tokens:
 4px rounded thumbs without arrow buttons in WebKit-compatible engines, standard
 thin styling elsewhere and native scrollbars in forced colors. The WebKit path

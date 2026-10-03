@@ -1,10 +1,24 @@
 # ClipBuilder canonical ticket index
 
-Status: Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 665 synthetic tests in 66 files pass. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
+Status: Local code through CL-014 and CL-015 release preparation has recorded audit evidence; later CL-013/CL-016 local follow-ups have no actionable validation findings. The final settled local state passes all five root gates and 680 synthetic tests in 69 files. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
 
 Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md),
 [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),
 [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+
+Current owner UI follow-ups: CL-013 workflow redesign is locally implemented and
+validated; [CL-016 source preview and retained sample](CL-016-source-preview-and-retained-sample.md)
+locally implements and validates the explicit Step 1 preview checkpoint and fixed
+private sample transport. ADC/cloud upload and real playback/AI evidence remain
+at the documented checkpoint. The owner finished this UI/UX feedback round for
+now on 2026-10-03 and explicitly authorized all pending whole files to be staged
+and committed sequentially using the [three-commit plan](CL-013-016-UI-COMMIT_PLAN.md).
+The [next-session checklist](../operations/LOCAL_RELEASE_PREPARATION.md#owner-next-session-checklist--planned-2026-10-04)
+records protected real-sample setup, Step 1 playback and a bounded Gemini/real-flow
+test planned for 2026-10-04. No credentials, cloud/provider actions, deployment or
+push are included in today's commit authorization. The final settled local code
+gates passed all 680 synthetic tests in 69 files; actual media/live evidence is
+still pending.
 
 Owner-authorized post-CL-015 browser QA is recorded in
 [CL-013](CL-013-complete-accessibility-responsive-and-performance-pass.md#authorized-browser-follow-up--2026-10-03).

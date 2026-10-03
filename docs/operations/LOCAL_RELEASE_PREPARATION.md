@@ -24,7 +24,54 @@ approval. Private storage/render compute requires independent IAM/cloud/spend
 approval even with fake AI. No local AI model, weights or runtime are used.
 End-to-end real processing, device and quality evidence remains missing.
 
+## Owner next-session checklist — planned 2026-10-04
+
+On 2026-10-03 the owner finished the current UI/UX feedback round for now and
+authorized the [whole-file commit plan](../tickets/CL-013-016-UI-COMMIT_PLAN.md).
+The next session is planned for tomorrow, 2026-10-04, in Africa/Cairo. This is a
+saved checklist, not a scheduled reminder or approval to run external work today.
+Actual-media feedback, physical-device/accessibility checks and film acceptance
+remain open.
+
+1. **Prepare the protected real sample.** Resolve the retained storage destination,
+   retention/IAM isolation and reader identity at the
+   [sample setup checkpoint](RETAINED_SAMPLE_SETUP.md#concrete-owner-checkpoint).
+   Obtain approval for the exact cloud/upload actions and complete owner ADC and
+   private configuration. Preserve the ignored local 7:41 master; visitor cleanup
+   must never delete either permanent master.
+2. **Play the sample before processing.** Select Use sample and verify actual
+   full-source playback, seeking and audio/video sync in Step 1. ADC/storage
+   configuration unlocks this preview without a Gemini key; keep AI/paid gates
+   disabled for the preview-only check. Continue only on explicit Find moments.
+3. **Set up one bounded Gemini test.** The owner manually fills the matching blank
+   entries from `.env.example` in ignored local configuration. Check the existing
+   source rights/provider-transfer consent and live prerequisites, agree the
+   model and estimated test allowance, and approve the applicable provider and
+   cloud/render spend before dispatch. The Gemini monthly spending ceiling is
+   still deferred to paid testing; budget alerts are not enforceable hard caps.
+   Supplying a key alone does not complete these independent gates.
+4. **Test the ordinary real flow and record the evidence.** Enable only the
+   necessary approved live flags, then run Find moments → choose exactly one
+   candidate → automatic review → Confirm export → real MP4 download. Check
+   grounding, complete ideas, multiple-speaker framing, captions, visuals, A/V
+   sync, failures, Clear/expiry and permanent-master protection. Record actual
+   cost, timings and quality; do not hardcode sample-specific ranges or output.
+   Fix confirmed findings and validate again. The landing hero motion-graphics
+   film follows real-flow evidence and the required final-UI/film approvals.
+
+Today’s keys-free `FAKE_MODE=true` flow uses synthetic previews/results and cannot
+produce a downloadable MP4. No local AI weights/runtime are available or verified.
+Real sample/ADC playback, Gemini/provider quality and real cloud rendering remain
+unverified. This checklist does not authorize deployment or public paid enablement.
+
 ## Retained owner demonstration source
+
+The later owner-authorized curated app path is implemented under
+[CL-016](../tickets/CL-016-source-preview-and-retained-sample.md), with the
+[retained sample setup guide](RETAINED_SAMPLE_SETUP.md) owning separate private
+cloud-master storage, ADC and verification. This supersedes the earlier local-
+only choice below when that checkpoint actually succeeds. The local master is
+still preserved; no upload/resource/credential change has yet been performed.
 
 On 2026-10-03 the owner authorized preparing the agreed continuous 7:41 excerpt
 from the locally downloaded conversation and retaining it for local use. The
