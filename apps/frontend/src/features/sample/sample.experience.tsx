@@ -28,6 +28,8 @@ import {
 } from "../session/session.selectors";
 import { CandidateReview } from "./candidate.review";
 import { ClipReview } from "./clip.review";
+import { CloudClipReview } from "./cloud-clip.review";
+import { runSelectedAssembly } from "../assembly/selected-assembly.flow";
 import { ResultPreview } from "./result-preview";
 import { ProcessingStatus } from "./processing-status";
 import { developmentInput } from "./development.input";
@@ -203,7 +205,7 @@ function SampleScreen({
   const [analysisLabel, setAnalysisLabel] = useState("Preparing analysis");
   const [challenge, setChallenge] = useState<{
     sessionId: string;
-    action: "transcription" | "candidate-analysis";
+    action: "transcription" | "candidate-analysis" | "visual-plan";
   } | null>(null);
   const challengePromise = useRef<{
     resolve(token: string): void;
@@ -358,7 +360,7 @@ function SampleScreen({
 
   async function requestChallenge(
     sessionId: string,
-    action: "transcription" | "candidate-analysis",
+    action: "transcription" | "candidate-analysis" | "visual-plan",
     signal: AbortSignal,
   ) {
     signal.throwIfAborted();
@@ -493,6 +495,38 @@ function SampleScreen({
   };
   const build = () => {
     if (
+      workspace &&
+      state.stage === "candidates" &&
+      state.selectedId &&
+      config.liveAssemblyEnabled &&
+      config.processingSiteKey &&
+      !workspace.snapshot?.cloudAssembly
+    ) {
+      const candidateId = state.selectedId;
+      void run(async (signal) => {
+        dispatch({ type: "CLOUD_ASSEMBLY_STARTED", candidateId });
+        try {
+          const result = await runSelectedAssembly({
+            workspace,
+            api: cloudApi,
+            signal,
+            challenge: requestChallenge,
+            label: setAnalysisLabel,
+          });
+          if (!signal.aborted)
+            dispatch({ type: "CLOUD_ASSEMBLY_COMPLETED", result });
+        } catch (error) {
+          if (!signal.aborted)
+            dispatch({
+              type: "CLOUD_ASSEMBLY_FAILED",
+              failure: localMediaFailure(error),
+            });
+          throw error;
+        }
+      });
+      return;
+    }
+    if (
       localMode ||
       state.stage !== "candidates" ||
       !actions.includes("build-selection")
@@ -553,6 +587,8 @@ function SampleScreen({
     analyzing: "Finding the best moments",
     candidates: "Pick one moment",
     assembling: "Building your clip",
+    "cloud-assembling": "Building your clip",
+    "cloud-review": "Review your clip",
     "clip-review": "Review your clip",
     rendering: "Exporting your clip",
     result: "Your clip",
@@ -569,15 +605,18 @@ function SampleScreen({
     (state.stage === "analysis-confirmation" && !localMode) ||
     state.stage === "analyzing" ||
     state.stage === "assembling" ||
+    state.stage === "cloud-assembling" ||
     state.stage === "rendering" ||
     (state.stage === "local-inspection" &&
       state.localSource.validation.status === "accepted");
   const processingLabel =
-    state.stage === "uploading"
-      ? "Uploading video"
-      : "operation" in state
-        ? developmentStageLabel(state.operation.stageCode)
-        : "Preparing your video";
+    state.stage === "cloud-assembling"
+      ? analysisLabel
+      : state.stage === "uploading"
+        ? "Uploading video"
+        : "operation" in state
+          ? developmentStageLabel(state.operation.stageCode)
+          : "Preparing your video";
   const processingFraction =
     state.stage === "uploading" && state.upload.status === "requesting"
       ? state.upload.bytesSent / state.upload.totalBytes
@@ -606,6 +645,7 @@ function SampleScreen({
           [
             "candidates",
             "clip-review",
+            "cloud-review",
             "result",
             "local-preparing",
             "analysis-confirmation",
@@ -622,6 +662,9 @@ function SampleScreen({
         step={
           [
             "assembling",
+            "cloud-assembling",
+            "cloud-review",
+            "cloud-assembly-failed",
             "assembly-failed",
             "clip-review",
             "rendering",
@@ -666,7 +709,12 @@ function SampleScreen({
                   icon={ArrowRight}
                   onClick={build}
                   disabled={
-                    localMode || busy || !actions.includes("build-selection")
+                    busy ||
+                    (localMode
+                      ? !config.liveAssemblyEnabled ||
+                        !config.processingSiteKey ||
+                        !!workspace?.snapshot?.cloudAssembly
+                      : !actions.includes("build-selection"))
                   }
                 >
                   {busy ? "Starting build..." : "Proceed"}
@@ -684,7 +732,8 @@ function SampleScreen({
                   {localMode ? "Cancel preparation" : "Cancel preview"}
                 </Button>
               )}
-              {state.stage === "clip-review" && (
+              {(state.stage === "clip-review" ||
+                state.stage === "cloud-review") && (
                 <Button
                   icon={ArrowRight}
                   disabled={
@@ -712,6 +761,7 @@ function SampleScreen({
                   "cleanup-partial",
                   "analysis-failed",
                   "assembly-failed",
+                  "cloud-assembly-failed",
                   "render-failed",
                 ].includes(state.stage)) && (
                 <Button onClick={clear}>
@@ -944,6 +994,14 @@ function SampleScreen({
               }}
             />
           )}
+        {state.stage === "cloud-review" && state.analysis.bundle && (
+          <CloudClipReview
+            key={state.result.manifestHash}
+            analysis={state.analysis.bundle}
+            result={state.result}
+            api={cloudApi}
+          />
+        )}
         {state.stage === "result" && (
           <ResultPreview summary={state.clipSummary} api={api} />
         )}
@@ -971,6 +1029,7 @@ function SampleScreen({
         )}
         {(state.stage === "analysis-failed" ||
           state.stage === "assembly-failed" ||
+          state.stage === "cloud-assembly-failed" ||
           state.stage === "render-failed") && (
           <section className={styles.empty}>
             <p role="alert">{state.failure.message}</p>

@@ -5,6 +5,12 @@ import {
   mediaPrepareRequestSchema,
   mediaRenderRequestSchema,
   mediaSelectRequestSchema,
+  mediaPreviewRequestSchema,
+  mediaPreviewResponseSchema,
+  mediaPreviewAccessSchema,
+  type MediaPreviewRequest,
+  type MediaPreviewResponse,
+  type MediaPreviewAccess,
   type MediaSelectRequest,
   type MediaSelectResponse,
   type MediaBinding,
@@ -63,6 +69,7 @@ export class MediaSessions {
         expectedBytes: request.bytes,
         contentType: request.contentType,
         sourceId: randomUUID(),
+        preview: null,
         phase: "uploading",
         encryptedUpload: null,
         nonce: null,
@@ -166,6 +173,72 @@ export class MediaSessions {
       },
       record.generation,
     );
+  }
+  async claimPreview(input: MediaPreviewRequest) {
+    const request = mediaPreviewRequestSchema.parse(input),
+      record = await this.active(request.binding),
+      intent = record.intent;
+    if (
+      intent.phase !== "prepared" ||
+      !intent.source ||
+      intent.analysisProxy ||
+      intent.preview ||
+      intent.sourceGeneration !== request.generation ||
+      JSON.stringify(intent.selectedRange) !== JSON.stringify(request.range)
+    )
+      throw new MediaFailure("conflict");
+    return this.store.saveIntent(
+      {
+        ...intent,
+        phase: "previewing",
+        nonce: request.nonce,
+        manifestHash: request.manifestHash,
+      },
+      record.generation,
+    );
+  }
+  async previewed(request: MediaPreviewRequest, value: MediaPreviewResponse) {
+    const response = mediaPreviewResponseSchema.parse(value),
+      record = await this.active(request.binding);
+    if (
+      record.intent.phase !== "previewing" ||
+      record.intent.nonce !== request.nonce ||
+      record.intent.manifestHash !== response.manifestHash ||
+      !sameBinding(response.binding, request.binding) ||
+      JSON.stringify(response.range) !==
+        JSON.stringify(record.intent.selectedRange) ||
+      response.expiresAtMs !== record.intent.expiresAtMs
+    )
+      throw new MediaFailure("conflict");
+    await this.store.saveIntent(
+      { ...record.intent, phase: "prepared", preview: response.artifact },
+      record.generation,
+    );
+  }
+  async previewArtifact(input: MediaPreviewAccess) {
+    const request = mediaPreviewAccessSchema.parse(input),
+      record = await this.active(request.binding),
+      intent = record.intent;
+    if (
+      intent.phase !== "prepared" ||
+      !intent.preview ||
+      !intent.selectedRange ||
+      intent.manifestHash !== request.manifestHash
+    )
+      throw new MediaFailure("conflict");
+    const meta = await this.store.artifactMetadata(
+      request.binding.sessionId,
+      intent.preview.artifactId,
+      intent.preview.generation,
+    );
+    if (meta.bytes !== intent.preview.bytes || meta.contentType !== "video/mp4")
+      throw new MediaFailure("invalid");
+    return mediaPreviewResponseSchema.parse({
+      ...request,
+      artifact: intent.preview,
+      range: intent.selectedRange,
+      expiresAtMs: intent.expiresAtMs,
+    });
   }
   async claimRender(input: MediaRenderRequest): Promise<IntentRecord> {
     const request = mediaRenderRequestSchema.parse(input),

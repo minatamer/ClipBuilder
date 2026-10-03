@@ -6,6 +6,7 @@ import type {
   OperationStatusV1,
   SafeError,
   SessionResponse,
+  SelectedAssemblyResult,
 } from "@clipbuilder/contracts";
 
 export type SessionDiagnosticCode =
@@ -83,6 +84,25 @@ export type AnalysisSnapshot = {
 };
 
 type SessionStage =
+  | {
+      stage: "cloud-assembling";
+      identity: SessionIdentity;
+      analysis: AnalysisSnapshot;
+      selectedId: string;
+    }
+  | {
+      stage: "cloud-assembly-failed";
+      identity: SessionIdentity;
+      analysis: AnalysisSnapshot;
+      selectedId: string;
+      failure: SafeError;
+    }
+  | {
+      stage: "cloud-review";
+      identity: SessionIdentity;
+      analysis: AnalysisSnapshot;
+      result: SelectedAssemblyResult;
+    }
   | { stage: "bootstrapping" }
   | { stage: "intake"; availability: SessionAvailability }
   | { stage: "local-inspection"; localSource: LocalSourceSummary }
@@ -217,6 +237,9 @@ export type ClippingSessionState = SessionStage & {
 };
 
 export type ClippingSessionEvent =
+  | { type: "CLOUD_ASSEMBLY_STARTED"; candidateId: string }
+  | { type: "CLOUD_ASSEMBLY_COMPLETED"; result: SelectedAssemblyResult }
+  | { type: "CLOUD_ASSEMBLY_FAILED"; failure: SafeError }
   | { type: "RESTORE_EMPTY"; availability: SessionAvailability }
   | { type: "RESTORE_VALID"; state: ClippingSessionState }
   | { type: "RESTORE_EXPIRED"; localStatePresent: boolean }

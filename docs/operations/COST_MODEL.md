@@ -1,5 +1,21 @@
 # Google AI and private media-compute cost plan
 
+## CL-010 preview compute envelope — 2026-10-03
+
+Selected assembly now prepares a separate bounded preview after verified deletion
+of its Google proxy. This adds **one** private compute operation and temporary
+proxy, with zero additional AI plans/images. The complete intended journey uses
+three proxy preparations and one later confirmed final render: four media
+operations maximum. Metadata reopening, streaming/playback, seek and refresh
+use zero processing dispatches; storage reads/egress can still cost money.
+Cancellation/expiry removes the owned preview with the original. Default
+`RENDERER_MAX_OPERATIONS=0` and fake/off composition remain unchanged.
+
+Synthetic/injected tests work with no keys and no external calls. Real provider
+and cloud execution retain independent rights/data/spend approvals and a numeric
+owner budget. No costs/usage/prices were queried, and no cloud/image deployment
+was performed. Native parity/device gates remain deferred in CL-010.
+
 ## CL-009 selected assembly envelope — 2026-10-03
 
 CL-008's selected action now returns focus and extractive cards together: one

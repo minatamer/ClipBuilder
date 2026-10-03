@@ -46,6 +46,38 @@ export function restoreLocalWorkspace(
       diagnosticCode: null,
     };
   if (record.analysis)
+    if (record.cloudAssembly) {
+      const analysis = {
+        analysisId: record.analysis.analysisId,
+        revision: record.analysis.revision,
+        bundle: record.analysis,
+      };
+      if (
+        record.cloudAssembly.status === "complete" &&
+        record.cloudAssembly.result
+      )
+        return {
+          stage: "cloud-review",
+          identity,
+          analysis,
+          result: record.cloudAssembly.result,
+          diagnosticCode: null,
+        };
+      return {
+        stage: "cloud-assembly-failed",
+        identity,
+        analysis,
+        selectedId: record.cloudAssembly.candidateId,
+        failure: {
+          code: "MODEL_OUTPUT_REJECTED",
+          message: SAFE_ERROR_MESSAGES.MODEL_OUTPUT_REJECTED,
+          retryable: false,
+          requestId: `req_${"0".repeat(32)}`,
+        },
+        diagnosticCode: null,
+      };
+    }
+  if (record.analysis)
     return {
       stage:
         record.analysis.outcome === "candidates"

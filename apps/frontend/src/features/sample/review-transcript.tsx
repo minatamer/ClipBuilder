@@ -9,16 +9,20 @@ export function ReviewTranscript({
   range,
   currentMs,
   highlighted = [],
+  selectedWords,
 }: {
   analysis: AnalysisBundleV1;
   range: { startMs: number; endMs: number };
   currentMs: number;
   highlighted?: readonly string[];
+  selectedWords?: AnalysisBundleV1["transcript"]["words"];
 }) {
   const pane = useRef<HTMLDivElement>(null);
-  const words = analysis.transcript.words.filter(
-    (word) => word.startMs >= range.startMs && word.endMs <= range.endMs,
-  );
+  const words =
+    selectedWords ??
+    analysis.transcript.words.filter(
+      (word) => word.startMs >= range.startMs && word.endMs <= range.endMs,
+    );
   const activeId = words.find(
     (word) => word.startMs <= currentMs && word.endMs > currentMs,
   )?.id;

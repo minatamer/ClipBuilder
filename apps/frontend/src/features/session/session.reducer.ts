@@ -11,6 +11,7 @@ import {
   uuidV4Schema,
   type AssemblyBundleV1,
   type OperationStatusV1,
+  selectedAssemblyResultSchema,
 } from "@clipbuilder/contracts";
 
 import { selectAvailableActions, selectIsClearable } from "./session.selectors";
@@ -174,6 +175,54 @@ export function clippingSessionReducer(
       analysis,
       selectedId,
       diagnosticCode: null,
+    });
+  }
+  if (event.type === "CLOUD_ASSEMBLY_STARTED") {
+    if (
+      state.stage !== "candidates" ||
+      state.identity.authority !== "local" ||
+      !state.analysis.bundle ||
+      state.selectedId !== event.candidateId
+    )
+      return reject(state);
+    return accept({
+      stage: "cloud-assembling",
+      identity: state.identity,
+      analysis: state.analysis,
+      selectedId: event.candidateId,
+      diagnosticCode: null,
+    });
+  }
+  if (event.type === "CLOUD_ASSEMBLY_COMPLETED") {
+    const parsed = selectedAssemblyResultSchema.safeParse(event.result);
+    if (
+      state.stage !== "cloud-assembling" ||
+      !parsed.success ||
+      parsed.data.candidateId !== state.selectedId ||
+      parsed.data.analysisRevision !== state.analysis.revision
+    )
+      return reject(state, "invalid-manifest");
+    const words = state.analysis.bundle?.transcript.words.filter(
+      (w) =>
+        w.startMs < parsed.data.manifest.range.endMs &&
+        w.endMs > parsed.data.manifest.range.startMs,
+    );
+    if (JSON.stringify(words) !== JSON.stringify(parsed.data.words))
+      return reject(state, "invalid-manifest");
+    return accept({
+      stage: "cloud-review",
+      identity: state.identity,
+      analysis: state.analysis,
+      result: parsed.data,
+      diagnosticCode: null,
+    });
+  }
+  if (event.type === "CLOUD_ASSEMBLY_FAILED") {
+    if (state.stage !== "cloud-assembling") return reject(state);
+    return accept({
+      ...state,
+      stage: "cloud-assembly-failed",
+      failure: event.failure,
     });
   }
 
@@ -867,6 +916,9 @@ export function clippingSessionReducer(
       return reject(state);
 
     case "cleanup-partial":
+    case "cloud-assembling":
+    case "cloud-assembly-failed":
+    case "cloud-review":
     case "expired":
     case "result":
       return reject(state);

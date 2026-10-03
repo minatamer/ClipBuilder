@@ -5,6 +5,7 @@ import type {
   TemporaryMediaStore,
 } from "../src/expiry/temporary-intent.js";
 import type { ArtifactReference } from "@clipbuilder/contracts";
+import type { Writable } from "node:stream";
 export class MemoryMediaStore implements TemporaryMediaStore {
   withSignal<T>(signal: AbortSignal, work: () => Promise<T>) {
     signal.throwIfAborted();
@@ -95,6 +96,18 @@ export class MemoryMediaStore implements TemporaryMediaStore {
   ) {
     void [_id, _artifact, _generation, _path, _signal];
     this.calls.download++;
+  }
+  async stream(
+    id: string,
+    artifactId: string,
+    generation: string,
+    range: { start: number; end: number },
+    destination: Writable,
+    signal: AbortSignal,
+  ) {
+    signal.throwIfAborted();
+    await this.artifactMetadata(id, artifactId, generation);
+    destination.end(Buffer.alloc(range.end - range.start + 1));
   }
   async upload(
     id: string,

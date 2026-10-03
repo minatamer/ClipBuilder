@@ -5,7 +5,7 @@ import {
 import type { BrowserWorkspace } from "../media/browser.workspace";
 import type { SourceAnalysisApi } from "../source-analysis/source-analysis.api";
 
-// This prepares an immutable result. CL-010 owns Player hydration and review transitions.
+// One explicit assembly dispatch; refresh only restores its frozen result.
 export async function runSelectedAssembly(input: {
   workspace: Pick<
     BrowserWorkspace,

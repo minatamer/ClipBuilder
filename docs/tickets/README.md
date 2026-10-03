@@ -1,6 +1,6 @@
 # ClipBuilder canonical ticket index
 
-Status: CL-005/006 foundations complete; CL-007/008 local analysis/focus verified. CL-009 fixed contextual assembly is locally complete; validation pass 2 has no actionable local findings. Five root gates and 528 synthetic tests in 54 files pass. CL-010 read-only preview integration is next. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, human quality, font/license/rights and real device/public-release gates remain deferred.
+Status: CL-005/006 foundations and CL-007/008/009 local analysis/focus/assembly are complete. CL-010 read-only Player/selected-preview integration is locally complete; validation pass 2 has no actionable findings after three reproduced/fixed findings. All five settled root gates and 558 synthetic tests in 57 files pass. CL-011 final render/download is next. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
 
 Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md),
 [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),
@@ -11,8 +11,9 @@ documents the seven owner-authorized sequential whole-file commits. Implementati
 steps 1–5 are committed; the final execution record is in
 [CL-008](CL-008-productionize-active-speaker-assembly.md#commit-execution-record).
 
-Current sequence: [CL-009 file-level plan](CL-009-COMMIT_PLAN.md) commits its
-complete locally validated change, then CL-010 continues. The owner authorized
+Current sequence: [CL-010 file-level plan](CL-010-COMMIT_PLAN.md) commits its
+complete locally validated change, then CL-011 continues. CL-009 is committed
+as `06ab834`. The owner authorized
 local execute/validate loops, thorough finding disposition and sequential
 ticket-prefixed commits on 2026-10-03. API keys, paid/cloud tests and deployment
 are deferred and do not stop this locally buildable sequence.

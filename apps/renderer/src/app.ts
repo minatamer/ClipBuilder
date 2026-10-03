@@ -8,6 +8,8 @@ import {
   mediaRenderRequestSchema,
   mediaCancelRequestSchema,
   mediaSelectRequestSchema,
+  mediaPreviewRequestSchema,
+  mediaPreviewAccessSchema,
 } from "@clipbuilder/contracts";
 import type { CallerVerifier } from "./auth/caller-verifier.js";
 import { MediaFailure } from "./media/media.failure.js";
@@ -89,6 +91,45 @@ export function createRendererApplication(
       owned.dispose();
     }
   });
+  app.post("/internal/preview", async (request, response) => {
+    const input = mediaPreviewRequestSchema.parse(request.body),
+      owned = requestSignal(response);
+    try {
+      response.json(await operations.preview(input, owned.signal));
+    } finally {
+      owned.dispose();
+    }
+  });
+  app.post("/internal/preview-info", async (request, response) => {
+    const input = mediaPreviewAccessSchema.parse(request.body),
+      owned = requestSignal(response);
+    try {
+      response.json(
+        await operations.sessions.store.withSignal(owned.signal, () =>
+          operations.sessions.previewArtifact(input),
+        ),
+      );
+    } finally {
+      owned.dispose();
+    }
+  });
+  app.post("/internal/preview-content", async (request, response) => {
+    const input = mediaPreviewAccessSchema.parse(request.body),
+      owned = requestSignal(response);
+    try {
+      await operations.previewContent(
+        input,
+        request.get("Range"),
+        response,
+        owned.signal,
+        (status, headers) => {
+          response.status(status).set(headers);
+        },
+      );
+    } finally {
+      owned.dispose();
+    }
+  });
   app.post("/internal/analysis-proxy", async (request, response) => {
     const { binding } = mediaCancelRequestSchema.parse(request.body),
       owned = requestSignal(response);
@@ -152,6 +193,10 @@ export function createRendererApplication(
       _next: express.NextFunction,
     ) => {
       void _next;
+      if (response.headersSent) {
+        response.destroy();
+        return;
+      }
       const code =
         error instanceof MediaFailure
           ? error.code

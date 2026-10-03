@@ -11,6 +11,9 @@ import {
   type MediaSelectRequest,
   type MediaSelectResponse,
   type MediaBinding,
+  type MediaPreviewRequest,
+  type MediaPreviewResponse,
+  mediaPreviewResponseSchema,
 } from "@clipbuilder/contracts";
 import type {
   ProcessingAdmission,
@@ -23,6 +26,10 @@ import { compileFixedAssembly, manifestDigest } from "./fixed-assembly.js";
 import { compileFixedCaptions } from "./fixed-captions.js";
 
 export interface SelectedAssemblyMedia {
+  preview(
+    request: MediaPreviewRequest,
+    signal: AbortSignal,
+  ): Promise<MediaPreviewResponse>;
   select(
     request: MediaSelectRequest,
     signal: AbortSignal,
@@ -172,6 +179,26 @@ export class SelectedAssembly {
               receipt: "pending",
             });
           void _receipt;
+          const preview = mediaPreviewResponseSchema.parse(
+            await this.media.preview(
+              {
+                binding: result.binding,
+                generation: result.generation,
+                nonce: randomUUID(),
+                range,
+                manifestHash: validated.manifestHash,
+              },
+              signal,
+            ),
+          );
+          if (
+            preview.manifestHash !== validated.manifestHash ||
+            JSON.stringify(preview.binding) !==
+              JSON.stringify(result.binding) ||
+            JSON.stringify(preview.range) !== JSON.stringify(range)
+          )
+            throw new Error();
+          signal.throwIfAborted();
           return validated;
         } catch (error) {
           await this.media.cancel(

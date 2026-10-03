@@ -11,6 +11,7 @@ import {
 } from "./gemini.adapter.js";
 import { composeSelectedPlanProvider } from "../assembly/gemini-selected-plan.js";
 import { SelectedAssembly } from "../assembly/selected-assembly.usecase.js";
+import { PreviewPlayback } from "../media/preview-playback.js";
 export function composeAnalysis(
   config: BackendConfig,
   admission: ProcessingAdmission | null,
@@ -35,17 +36,13 @@ export function composeAnalysis(
   );
   const analysis = new SourceAnalysis(admission, media, files, "google-gemini");
   const planner = composeSelectedPlanProvider(config, files);
+  const assembly = planner
+    ? new SelectedAssembly(admission, analysis, media, planner, "google-gemini")
+    : null;
   // Clear and either AI phase share exactly the same provider-file and media ownership.
   return {
     analysis,
-    assembly: planner
-      ? new SelectedAssembly(
-          admission,
-          analysis,
-          media,
-          planner,
-          "google-gemini",
-        )
-      : null,
+    assembly,
+    preview: assembly ? new PreviewPlayback(admission, assembly, media) : null,
   };
 }

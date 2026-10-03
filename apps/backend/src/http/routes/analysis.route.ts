@@ -14,6 +14,7 @@ import type {
 } from "../../admission/processing.admission.js";
 import type { SourceAnalysis } from "../../analysis/analysis.usecase.js";
 import type { SelectedAssembly } from "../../assembly/selected-assembly.usecase.js";
+import type { PreviewPlayback } from "../../media/preview-playback.js";
 import { ApplicationError } from "../errorMapper.js";
 import { sendNoStoreJson } from "../response.js";
 
@@ -23,6 +24,7 @@ export function createAnalysisRouter(
   analysis: SourceAnalysis,
   origins: readonly string[],
   assembly: SelectedAssembly | null = null,
+  preview: PreviewPlayback | null = null,
 ): Router {
   const router = Router();
   router.use((request, response, next) => {
@@ -59,7 +61,9 @@ export function createAnalysisRouter(
     next();
   });
   router.use((request, response, next) => {
-    const assembling = request.path === "/assemble";
+    const assembling =
+      request.method === "POST" &&
+      (request.path === "/assemble" || request.path === "/preview");
     if (assembling) {
       if (!assembly) throw new ApplicationError({ code: "FEATURE_DISABLED" });
       admission.session(context(request, response));
@@ -152,6 +156,7 @@ export function createAnalysisRouter(
     );
   });
   router.post("/clear", async (request, response) => {
+    preview?.clear(context(request, response));
     await analysis.clear(context(request, response));
     response.clearCookie(cookieName, {
       httpOnly: true,
@@ -169,6 +174,25 @@ export function createAnalysisRouter(
       response,
       200,
       await assembly.run(context(request, response), parsed.data),
+    );
+  });
+  router.post("/preview", async (request, response) => {
+    if (!preview) throw new ApplicationError({ code: "FEATURE_DISABLED" });
+    sendNoStoreJson(
+      response,
+      200,
+      await preview.open(context(request, response), request.body),
+    );
+  });
+  router.get("/preview", async (request, response) => {
+    if (!preview) throw new ApplicationError({ code: "FEATURE_DISABLED" });
+    await preview.stream(
+      context(request, response),
+      request.get("Range"),
+      response,
+      (status, headers) => {
+        response.status(status).set(headers);
+      },
     );
   });
   return router;

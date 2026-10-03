@@ -16,6 +16,11 @@ import {
   type MediaSelectRequest,
   mediaSelectRequestSchema,
   mediaSelectResponseSchema,
+  mediaPreviewRequestSchema,
+  mediaPreviewAccessSchema,
+  mediaPreviewResponseSchema,
+  type MediaPreviewRequest,
+  type MediaPreviewAccess,
 } from "@clipbuilder/contracts";
 import type { BackendConfig } from "../config/env.schema.js";
 export interface RendererIdentity {
@@ -130,6 +135,45 @@ export class CloudRendererClient {
       mediaSelectRequestSchema.parse(input),
       mediaSelectResponseSchema,
       signal,
+    );
+  }
+  preview(input: MediaPreviewRequest, signal: AbortSignal) {
+    return this.call(
+      "/internal/preview",
+      mediaPreviewRequestSchema.parse(input),
+      mediaPreviewResponseSchema,
+      signal,
+    );
+  }
+  previewInfo(input: MediaPreviewAccess, signal: AbortSignal) {
+    return this.call(
+      "/internal/preview-info",
+      mediaPreviewAccessSchema.parse(input),
+      mediaPreviewResponseSchema,
+      AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
+    );
+  }
+  async previewContent(
+    input: MediaPreviewAccess,
+    range: string | undefined,
+    signal: AbortSignal,
+  ) {
+    const authorization = await this.identity.authorization();
+    signal.throwIfAborted();
+    return this.transport(
+      this.config.renderer.origin + "/internal/preview-content",
+      {
+        method: "POST",
+        headers: {
+          Authorization: authorization,
+          "X-Serverless-Authorization": authorization,
+          "Content-Type": "application/json",
+          ...(range ? { Range: range } : {}),
+        },
+        body: JSON.stringify(mediaPreviewAccessSchema.parse(input)),
+        signal,
+        redirect: "error",
+      },
     );
   }
   cancel(binding: MediaBinding, signal: AbortSignal) {

@@ -3,6 +3,7 @@ import { UploadCapabilityCipher } from "../src/expiry/upload-capability.js";
 import { MediaOperations } from "../src/media/media-operations.js";
 import { MemoryMediaStore } from "./memory-store.js";
 import type { MediaPipeline } from "../src/media/node-pipeline.js";
+import { inspectedSourceSchema } from "@clipbuilder/contracts";
 export const binding = {
   sessionId: "ses_" + "a".repeat(22),
   sourceRevision: "rev_" + "b".repeat(22),
@@ -27,14 +28,14 @@ export function mediaFixture(
     pipeline ?? {
       async inspect() {
         calls.inspect++;
-        return {
+        return inspectedSourceSchema.parse({
           fingerprint: binding.fingerprint,
           bytes: 1024,
           width: 320,
           height: 180,
           durationMs: 15_000,
           audioStartMs: 0,
-        };
+        });
       },
       async proxy() {
         calls.proxy++;

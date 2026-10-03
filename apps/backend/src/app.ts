@@ -41,6 +41,7 @@ export function createApplication(config: BackendConfig): Express {
         analysis,
         config.session.csrfAllowedOrigins,
         processing?.assembly ?? null,
+        processing?.preview ?? null,
       ),
     );
   if (admission)
@@ -61,7 +62,8 @@ export function createApplication(config: BackendConfig): Express {
           config.providerMode === "live" && config.appEnv === "local",
         liveAnalysisEnabled: analysis !== null,
         ...(analysis ? { processingSiteKey: config.turnstile.siteKey } : {}),
-        liveAssemblyEnabled: false,
+        liveAssemblyEnabled:
+          processing?.preview !== null && processing?.preview !== undefined,
         liveRenderEnabled: false,
         limits: {
           sourceBytes: config.limits.sourceBytes,
@@ -113,6 +115,10 @@ export function createApplication(config: BackendConfig): Express {
       _next: express.NextFunction,
     ) => {
       void _next;
+      if (response.headersSent) {
+        response.destroy();
+        return;
+      }
       const mapped = mapError(error, String(response.locals.requestId));
       sendNoStoreJson(
         response,

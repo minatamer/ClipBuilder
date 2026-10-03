@@ -1,5 +1,21 @@
 # Private media renderer
 
+CL-010 adds private `/internal/preview`, `/internal/preview-info` and
+`/internal/preview-content`. After the consumed Google selected proxy is deleted,
+one separate proxy is prepared for the exact source generation/range/hash.
+Metadata restore and exact-generation byte streaming perform zero media/AI
+dispatches. Streams are bounded to four per session, 64 total, 60 seconds and
+session expiry; a canceled seek leaves the intent usable. Clear/shutdown abort
+and drain streams. Existing independent expiry deletes the preview and source.
+No source/manifest text is stored in the cleanup intent.
+
+This adds one compute operation: source proxy + selected AI proxy + selected
+preview = three before export, four including the later confirmed final render.
+`RENDERER_MAX_OPERATIONS` remains default zero and maximum four. Injected
+fake/off tests use no keys/ADC/storage/network. The image has not been rebuilt
+or deployed; actual proxy audio/clocks, Player/native-output parity and real
+device checks require the separately deferred cloud/media/AI/rights gates.
+
 CL-008 adds authenticated `/internal/select`: one source-generation-bound
 10–60s range, claimed after the source-analysis proxy is released. It reinspects
 the original and physically creates an upright 20fps, 640×640/24-MiB AVC/AAC
@@ -28,7 +44,8 @@ Live AI and rollout need [CL-007 check approval](../../docs/operations/GROUNDED_
 Standard Remotion Node SSR, compiled fixed composition, baked Chromium and
 Remotion's matching FFmpeg/FFprobe. This isolated service has no Gemini key,
 arbitrary input URL, public processing route or general job queue. The initial
-cloud foundation is not wired to the browser product yet.
+cloud foundation is wired through gated analysis/assembly/preview; final delivery
+is owned by CL-011.
 
 ## Verification
 

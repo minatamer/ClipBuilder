@@ -17,6 +17,9 @@ export type SessionAction =
   | "clear";
 
 const STAGE_TITLES: Record<ClippingSessionState["stage"], string> = {
+  "cloud-assembling": "Building your clip",
+  "cloud-assembly-failed": "Clip preparation needs attention",
+  "cloud-review": "Review your clip",
   bootstrapping: "Restoring session",
   intake: "Choose a source",
   "local-inspection": "Review local video",
@@ -42,6 +45,9 @@ const STAGE_TITLES: Record<ClippingSessionState["stage"], string> = {
 };
 
 const PROGRESS: Record<ClippingSessionState["stage"], number> = {
+  "cloud-assembling": 60,
+  "cloud-assembly-failed": 60,
+  "cloud-review": 75,
   bootstrapping: 0,
   intake: 0,
   "local-inspection": 5,

@@ -23,9 +23,15 @@ async function proxy(
     );
   const origin = new URL(request.url).origin;
   if (
-    !["grant", "session", "upload", "run", "clear", "assemble"].includes(
-      action,
-    ) ||
+    ![
+      "grant",
+      "session",
+      "upload",
+      "run",
+      "clear",
+      "assemble",
+      "preview",
+    ].includes(action) ||
     origin !== "http://localhost:3000" ||
     request.headers.get("origin") !== origin ||
     request.headers.get("sec-fetch-site") === "cross-site"
@@ -53,7 +59,7 @@ async function proxy(
           size += chunk.value.byteLength;
           if (
             size >
-            (action === "assemble"
+            (action === "assemble" || action === "preview"
               ? GROUNDED_ANALYSIS_LIMITS.responseBytes
               : GROUNDED_ANALYSIS_LIMITS.requestBytes)
           )
@@ -130,3 +136,113 @@ async function proxy(
   }
 }
 export const POST = proxy;
+
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ action: string }> },
+) {
+  const { action } = await context.params;
+  const url = new URL(request.url);
+  const fail = () =>
+    new Response(null, {
+      status: 503,
+      headers: { "Cache-Control": "no-store" },
+    });
+  if (
+    action !== "preview" ||
+    url.origin !== "http://localhost:3000" ||
+    url.search ||
+    request.headers.get("sec-fetch-site") !== "same-origin"
+  )
+    return fail();
+  const cookie = (request.headers.get("cookie") ?? "")
+    .split(";")
+    .map((v) => v.trim())
+    .filter((v) => v.startsWith("__Host-clipping_session="));
+  if (cookie.length !== 1 || cookie[0]!.length > 8192) return fail();
+  const range = request.headers.get("range");
+  if (range && !/^bytes=\d*-\d*$/.test(range)) return fail();
+  const controller = new AbortController(),
+    abort = () => controller.abort();
+  request.signal.addEventListener("abort", abort, { once: true });
+  if (request.signal.aborted) abort();
+  const timer = setTimeout(abort, 60_000);
+  const dispose = () => {
+    clearTimeout(timer);
+    request.signal.removeEventListener("abort", abort);
+  };
+  let upstream: Response | undefined;
+  try {
+    upstream = await fetch("http://127.0.0.1:4000/v1/analysis/preview", {
+      headers: {
+        Cookie: cookie[0]!,
+        Origin: url.origin,
+        "Sec-Fetch-Site": "same-origin",
+        ...(range ? { Range: range } : {}),
+      },
+      signal: controller.signal,
+      cache: "no-store",
+      redirect: "error",
+    });
+    const length = Number(upstream.headers.get("content-length"));
+    if (
+      ![200, 206].includes(upstream.status) ||
+      !upstream.body ||
+      upstream.headers.get("content-type")?.split(";")[0] !== "video/mp4" ||
+      !Number.isSafeInteger(length) ||
+      length <= 0 ||
+      length > TEMPORARY_MEDIA_LIMITS.proxyBytes
+    )
+      throw new Error();
+    const headers = new Headers({
+      "Content-Type": "video/mp4",
+      "Cache-Control": "no-store",
+      "Content-Length": String(length),
+      "Accept-Ranges": "bytes",
+      "X-Content-Type-Options": "nosniff",
+    });
+    const contentRange = upstream.headers.get("content-range");
+    if (upstream.status === 206) {
+      if (!contentRange || !/^bytes \d+-\d+\/\d+$/.test(contentRange))
+        throw new Error();
+      headers.set("Content-Range", contentRange);
+    }
+    const reader = upstream.body.getReader();
+    let count = 0,
+      closed = false;
+    async function close() {
+      if (closed) return;
+      closed = true;
+      abort();
+      await reader.cancel().catch(() => undefined);
+      reader.releaseLock();
+      dispose();
+    }
+    const body = new ReadableStream<Uint8Array>({
+      async pull(output) {
+        try {
+          const chunk = await reader.read();
+          if (chunk.done) {
+            if (count !== length) throw new Error();
+            output.close();
+            await close();
+            return;
+          }
+          count += chunk.value.byteLength;
+          if (count > length) throw new Error();
+          output.enqueue(chunk.value);
+        } catch {
+          output.error(new Error("media-unavailable"));
+          await close();
+        }
+      },
+      cancel: close,
+    });
+    return new Response(body, { status: upstream.status, headers });
+  } catch {
+    abort();
+    await upstream?.body?.cancel().catch(() => undefined);
+    dispose();
+    return fail();
+  }
+}

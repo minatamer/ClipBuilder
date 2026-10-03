@@ -1,5 +1,24 @@
 # ClipBuilder backend
 
+## CL-010 selected preview access
+
+Assembly success includes a separate physically trimmed 20fps preview proxy
+after the Google proxy is deleted. Preparation binds its source generation,
+selected range and frozen manifest hash. `POST /v1/analysis/preview` verifies the
+signed assembly and reopens existing metadata; `GET` streams a validated byte
+range under the protected session cookie. No media, provider or final-render
+dispatch occurs on refresh/playback. Only bounded expiring references live in
+control memory. Browser refresh reopens existing media; a lost control epoch
+fails closed, with independent renderer expiry retaining cleanup responsibility.
+Clear removes access and stops streams.
+
+The public assembly flag derives from this composed path. Default fake/off
+composition exposes the synthetic journey and cannot contact cloud/AI or
+produce a real MP4. Injected tests verify access, exact call counts, bounded
+streaming and cleanup without keys. Actual clocks, playback, audio and
+preview/final parity need deferred rights, cloud, AI and device gates. No local
+AI model or new provider dependency is used.
+
 ## CL-009 fixed selected assembly — local implementation
 
 `src/assembly/selected-assembly.usecase.ts` consumes a verified CL-007 source result
@@ -12,8 +31,8 @@ The Google adapter reuses the source adapter's Files lifecycle with explicit
 replayed actions never dispatch again. Release failure prevents publication.
 CL-009 extends that same call for extractive statement/comparison/steps cards
 and fixed captions, with zero raster calls. The browser stores a complete
-hash-checked result or uncertainty. CL-010 owns Proceed/Player/review integration;
-the public assembly UI flag remains disabled until then. CL-011 owns MP4 delivery.
+hash-checked result or uncertainty. CL-010 connects Proceed/Player/read-only
+review; CL-011 owns MP4 delivery.
 
 Fake/injected plans verify anonymous word association, confidence, wide fallback,
 cuts and bounded interpolation without keys/network. Real speaker quality needs

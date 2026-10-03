@@ -42,6 +42,7 @@ export function PortraitPlayer({
   onKeyDown,
   children,
   videoRef,
+  surface,
 }: {
   label: string;
   range: { startMs: number; endMs: number };
@@ -55,6 +56,7 @@ export function PortraitPlayer({
   onKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
   children?: ReactNode;
   videoRef?: RefObject<HTMLVideoElement | null>;
+  surface?: ReactNode;
 }) {
   const controlsId = useId();
   const [awake, setAwake] = useState(true);
@@ -119,17 +121,18 @@ export function PortraitPlayer({
         reveal();
       }}
     >
-      {videoRef ? (
-        <video
-          ref={videoRef}
-          className={styles.localVideo}
-          playsInline
-          preload="metadata"
-          aria-label={label}
-        />
-      ) : (
-        <PortraitPlaceholder>{children}</PortraitPlaceholder>
-      )}
+      {surface ??
+        (videoRef ? (
+          <video
+            ref={videoRef}
+            className={styles.localVideo}
+            playsInline
+            preload="metadata"
+            aria-label={label}
+          />
+        ) : (
+          <PortraitPlaceholder>{children}</PortraitPlaceholder>
+        ))}
       <button
         type="button"
         className={styles.playerReveal}

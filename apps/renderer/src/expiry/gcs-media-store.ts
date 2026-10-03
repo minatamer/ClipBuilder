@@ -371,6 +371,28 @@ export class GcsMediaStore implements TemporaryMediaStore {
       { signal },
     );
   }
+  async stream(
+    sessionId: string,
+    artifactId: string,
+    generation: string,
+    range: { start: number; end: number },
+    destination: Writable,
+    signal: AbortSignal,
+  ) {
+    const file = this.storage
+      .bucket(this.bucketName)
+      .file(artifactKey(sessionId, artifactId), { generation });
+    await pipeline(
+      file.createReadStream({
+        start: range.start,
+        end: range.end,
+        validation: false,
+      }),
+      boundedStream(range.end - range.start + 1),
+      destination,
+      { signal },
+    );
+  }
   async upload(
     sessionId: string,
     artifactId: string,

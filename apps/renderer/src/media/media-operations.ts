@@ -2,6 +2,7 @@ import { mkdtemp, rm, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
+import type { Writable } from "node:stream";
 import {
   TEMPORARY_MEDIA_LIMITS,
   type MediaBinding,
@@ -11,6 +12,10 @@ import {
   mediaRenderResponseSchema,
   mediaSelectResponseSchema,
   type MediaSelectRequest,
+  type MediaPreviewRequest,
+  mediaPreviewResponseSchema,
+  type MediaPreviewAccess,
+  mediaByteRange,
 } from "@clipbuilder/contracts";
 import { MediaSessions } from "../expiry/media-sessions.js";
 import { MediaFailure } from "./media.failure.js";
@@ -24,8 +29,13 @@ export class MediaOperations {
     done: Promise<unknown>;
   } | null = null;
   private dispatches = 0;
+  private stopped = false;
   private pendingScratch: string | null = null;
   private scratchRemoval: Promise<void> | null = null;
+  private readonly streams = new Map<
+    string,
+    { binding: MediaBinding; controller: AbortController; done: Promise<void> }
+  >();
   constructor(
     readonly sessions: MediaSessions,
     private readonly pipeline: MediaPipeline,
@@ -44,7 +54,109 @@ export class MediaOperations {
   get counts() {
     return { media: this.dispatches, ai: 0 };
   }
+  async preview(request: MediaPreviewRequest, signal: AbortSignal) {
+    return this.owned(request.binding, signal, async (directory, owned) => {
+      const record = await this.sessions.claimPreview(request),
+        intent = record.intent,
+        input = join(directory, "source"),
+        output = join(directory, "preview.mp4");
+      await this.sessions.store.download(
+        request.binding.sessionId,
+        intent.sourceId,
+        request.generation,
+        input,
+        owned,
+      );
+      const source = await this.pipeline.inspect(input, owned);
+      if (JSON.stringify(source) !== JSON.stringify(intent.source))
+        throw new MediaFailure("invalid");
+      await this.pipeline.proxy(input, output, owned, request.range);
+      const artifact = await this.sessions.store.upload(
+        request.binding.sessionId,
+        randomUUID(),
+        output,
+        intent.expiresAtMs,
+        owned,
+      );
+      const result = mediaPreviewResponseSchema.parse({
+        binding: request.binding,
+        manifestHash: request.manifestHash,
+        range: request.range,
+        artifact,
+        expiresAtMs: intent.expiresAtMs,
+      });
+      owned.throwIfAborted();
+      await this.sessions.previewed(request, result);
+      return result;
+    });
+  }
+  async previewContent(
+    input: MediaPreviewAccess,
+    range: string | undefined,
+    destination: Writable,
+    signal: AbortSignal,
+    headers: (status: number, fields: Record<string, string>) => void,
+  ) {
+    const key = randomUUID(),
+      sessionId = input.binding.sessionId;
+    this.assertIntakeReady();
+    if (
+      [...this.streams.values()].filter(
+        (s) => s.binding.sessionId === sessionId,
+      ).length >= 4 ||
+      this.streams.size >= TEMPORARY_MEDIA_LIMITS.maxSessions * 4
+    )
+      throw new MediaFailure("busy");
+    const controller = new AbortController();
+    let finished = () => {};
+    const done = new Promise<void>((resolve) => {
+      finished = resolve;
+    });
+    this.streams.set(key, { binding: input.binding, controller, done });
+    try {
+      const descriptor = await this.sessions.previewArtifact(input),
+        bytes = descriptor.artifact.bytes;
+      let selected;
+      try {
+        selected = mediaByteRange(range, bytes);
+      } catch {
+        throw new MediaFailure("invalid");
+      }
+      const owned = AbortSignal.any([
+        signal,
+        controller.signal,
+        AbortSignal.timeout(
+          Math.max(1, Math.min(60_000, descriptor.expiresAtMs - this.now())),
+        ),
+      ]);
+      owned.throwIfAborted();
+      headers(selected.partial ? 206 : 200, {
+        "Content-Type": "video/mp4",
+        "Content-Length": String(selected.end - selected.start + 1),
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        ...(selected.partial
+          ? {
+              "Content-Range": `bytes ${selected.start}-${selected.end}/${bytes}`,
+            }
+          : {}),
+      });
+      await this.sessions.store.stream(
+        sessionId,
+        descriptor.artifact.artifactId,
+        descriptor.artifact.generation,
+        selected,
+        destination,
+        owned,
+      );
+    } finally {
+      this.streams.delete(key);
+      finished();
+    }
+  }
   assertIntakeReady() {
+    if (this.stopped) throw new MediaFailure("busy");
     if (this.pendingScratch) throw new MediaFailure("cleanup_pending");
   }
   private async retryScratchCleanup() {
@@ -89,6 +201,10 @@ export class MediaOperations {
     }
   }
   async shutdown() {
+    this.stopped = true;
+    const streams = [...this.streams.values()];
+    for (const stream of streams) stream.controller.abort();
+    await Promise.allSettled(streams.map((stream) => stream.done));
     const active = this.active;
     if (active) {
       active.controller.abort();
@@ -345,6 +461,15 @@ export class MediaOperations {
       await this.sessions.terminate(binding);
     } finally {
       if (matching) active.controller.abort();
+      // Capture after the terminal commit: streams may arrive while storage awaits.
+      const streams = [...this.streams.values()].filter(
+        (stream) =>
+          stream.binding.sessionId === binding.sessionId &&
+          stream.binding.sourceRevision === binding.sourceRevision &&
+          stream.binding.fingerprint === binding.fingerprint,
+      );
+      for (const stream of streams) stream.controller.abort();
+      await Promise.allSettled(streams.map((stream) => stream.done));
     }
     if (matching) {
       try {

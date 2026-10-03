@@ -616,10 +616,54 @@ describe("browser workspace publication and lifecycle", () => {
     const restored = new BrowserWorkspace(f.ports);
     await restored.initialize();
     expect(restored.snapshot!.cloudAssembly?.result).toEqual(assembled);
+    expect(restoreLocalWorkspace(restored.snapshot!).stage).toBe(
+      "cloud-review",
+    );
     await expect(restored.markCloudAssembly("pending")).rejects.toThrow();
     await restored.clear();
     expect(restored.snapshot).toBeNull();
     await restored.dispose();
+  });
+  it("revalidates a journaled manifest hash before reopening review and retains remote cleanup", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    const source = f.owner.snapshot!.source!,
+      grounded = {
+        binding: {
+          sessionId: "ses_" + "c".repeat(22),
+          sourceRevision: source.media.sourceRevision,
+          fingerprint: source.fingerprint,
+        },
+        generation: "12",
+        analysis: { ...analysis, media: source.media },
+        receipt: "synthetic",
+      };
+    await f.owner.markCloudAnalysis("pending");
+    await f.owner.storeGroundedAnalysis(grounded);
+    const assembled = await selectedAssemblyFixture(grounded);
+    await f.owner.select(assembled.candidateId);
+    await f.owner.markCloudAssembly("pending");
+    await f.owner.storeSelectedAssembly(assembled);
+    await f.owner.dispose();
+    const changed = structuredClone(f.stored()!);
+    const duration =
+      assembled.manifest.range.endMs - assembled.manifest.range.startMs;
+    changed.cloudAssembly!.result!.manifest.focus = [
+      { mode: "wide", startMs: 0, endMs: Math.floor(duration / 2) },
+      { mode: "wide", startMs: Math.floor(duration / 2), endMs: duration },
+    ];
+    f.setRecord(parseWorkspaceRecord(changed));
+    const reopened = new BrowserWorkspace(f.ports);
+    try {
+      await expect(reopened.initialize()).rejects.toMatchObject({
+        code: "missing",
+      });
+      expect(reopened.snapshot).toBeNull();
+      expect(reopened.remoteCleanup).not.toBeNull();
+    } finally {
+      await reopened.dispose();
+    }
   });
   it("a failed assembly commit remains pending and Clear fences an in-flight publication", async () => {
     const f = fixture();

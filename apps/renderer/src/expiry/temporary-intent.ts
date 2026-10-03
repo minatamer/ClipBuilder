@@ -20,6 +20,7 @@ export const temporaryIntentSchema = z
       "preparing",
       "prepared",
       "selecting",
+      "previewing",
       "rendering",
       "complete",
       "terminal",
@@ -34,6 +35,7 @@ export const temporaryIntentSchema = z
     sourceGeneration: objectGenerationSchema.nullable(),
     analysisProxy: artifactReferenceSchema.nullable(),
     selectedRange: selectedMediaRangeSchema.nullable().default(null),
+    preview: artifactReferenceSchema.nullable().default(null),
     output: artifactReferenceSchema.nullable(),
     outputExpiresAtMs: z.number().int().positive().nullable(),
     cleanupPending: z.boolean(),
@@ -45,6 +47,14 @@ export type TemporaryIntent = z.infer<typeof temporaryIntentSchema>;
 export type IntentRecord = { intent: TemporaryIntent; generation: string };
 
 export interface TemporaryMediaStore {
+  stream(
+    sessionId: string,
+    artifactId: string,
+    generation: string,
+    range: { start: number; end: number },
+    destination: import("node:stream").Writable,
+    signal: AbortSignal,
+  ): Promise<void>;
   withSignal<T>(signal: AbortSignal, work: () => Promise<T>): Promise<T>;
   assertDisposable(): Promise<void>;
   expiredArtifacts(

@@ -181,6 +181,15 @@ export class BrowserWorkspace {
     }
   }
 
+  private async assertAssemblyIntegrity(result: SelectedAssemblyResult) {
+    const bytes = new TextEncoder().encode(JSON.stringify(result.manifest));
+    const hash = Array.from(
+      new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+    )
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+    if (hash !== result.manifestHash) throw new LocalMediaError("missing");
+  }
   async storeSelectedAssembly(
     value: SelectedAssemblyResult,
     signal?: AbortSignal,
@@ -189,19 +198,10 @@ export class BrowserWorkspace {
     this.check(generation);
     signal?.throwIfAborted();
     const result = selectedAssemblyResultSchema.parse(value);
-    const bytes = new TextEncoder().encode(JSON.stringify(result.manifest));
-    const hash = Array.from(
-      new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
-    )
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
+    await this.assertAssemblyIntegrity(result);
     this.check(generation);
     signal?.throwIfAborted();
-    if (
-      !this.record ||
-      this.record.cloudAssembly?.status !== "pending" ||
-      hash !== result.manifestHash
-    )
+    if (!this.record || this.record.cloudAssembly?.status !== "pending")
       throw new LocalMediaError("missing");
     const record = parseWorkspaceRecord({
       ...this.record,
@@ -309,6 +309,10 @@ export class BrowserWorkspace {
       return null;
     }
     try {
+      if (record.cloudAssembly?.result) {
+        await this.assertAssemblyIntegrity(record.cloudAssembly.result);
+        this.check(generation);
+      }
       await this.ports.processor.run(
         { action: "clear-audio" },
         this.lifetime.signal,

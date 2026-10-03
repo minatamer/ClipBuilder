@@ -2,7 +2,7 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+Status: locally complete; validation pass 2 has no actionable local findings after three independently reproduced/fixed findings. All five settled root gates and 558 synthetic tests in 57 files pass. External gates remain deferred by the owner's 2026-10-03 instruction.
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -11,8 +11,95 @@ Reuse the existing one-card preview over a server-prepared selected proxy and sh
 Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
 
 - [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
-- [ ] Implement and verify this current packet after approval.
-- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+- [x] Implement and verify the locally buildable current packet.
+- [x] Record exact local tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+
+## Local execution evidence — 2026-10-03
+
+CL-009 is committed as `06ab834`. The owner explicitly authorized local
+execute/validate/fix/document loops and ticket-prefixed stage/commit plans through
+CL-014 and locally buildable CL-015. This supersedes the earlier no-Git/no-review
+paragraph for these local actions. No provider/cloud/paid/deployment action is
+authorized or performed by this pass.
+
+- Proceed performs one selected assembly; the result is journaled before review.
+  Complete refresh restores the frozen result; uncertain refresh fails visibly.
+  Existing fake review remains synthetic and download-disabled.
+- Google selected proxy deletion precedes a separate physical preview preparation.
+  Its bounded expiring intent binds source generation, selected range and manifest
+  hash. One preparation; metadata reopening and playback make zero processing/AI
+  dispatches. Three proxy operations precede the later CL-011 final render.
+- Protected POST access verifies the signed result. GET playback streams exact
+  generation byte ranges through private renderer/control/same-origin bridge,
+  without full-source buffering, capabilities or content in URLs. Invalid access,
+  multiple ranges and byte mismatches fail closed. Only expiring references live
+  in backend memory; lost control epochs cannot resume processing.
+- The existing portrait/notes/transcript layout uses Remotion Player and the same
+  shared fixed React composition as Node rendering: 1080×1920, 30fps manifest,
+  clip-relative frames and zero proxy start. Timestamp jumps pause and clamp to
+  the selected range. Notes claim only actual validated edits, including source
+  speech beneath cards; no normalization/internal cuts/trend claims are invented.
+- Player listeners, access expiry timer, request listeners/readers and bounded
+  streaming are disposed on unmount/abort. Seek cancellation retains prepared
+  media; Clear aborts/drains streams and deletes owned artifacts. Synthetic tests
+  assert these states and exact processing counts. No app service was launched.
+
+Checks: focused contracts 14, renderer preview 4, backend assembly/access 17,
+frontend review/workspace 30 and bridge 8 passed. Settled `corepack pnpm
+format:check`, `lint`, `typecheck`, `test:unit`, `build` and `git diff --check`
+passed after the revisions: **558 tests in 57 files** (root 20/3, contracts 58/5, composition 3/1,
+backend 182/13, renderer 31/8, frontend 264/27). All use import-time fake/off
+network isolation, synthetic bytes and injected ports. No real API key, ADC,
+cloud resource, provider request or local AI model/weights were used.
+
+Still unchecked/deferred: actual selected proxy duration/audio offset/VFR/rotation
+and maximum-envelope evidence; native full-fixture FFmpeg tooling is unavailable
+locally, unchanged from CL-008. Actual browser/Node frame pixels, captions/font
+metrics, audio continuity and final MP4 parity are unverified; CL-011 owns final
+encode/delivery. Real devices, keyboard/zoom/reduced-motion/forced-color manual
+states, AI framing/card quality, rights/public sample, licenses/notices, numeric
+spend/privacy/data gates, renderer image rebuild/rollout and all cloud/provider/
+public-release evidence remain unchecked. Supplying keys alone does not satisfy
+those gates. Missing keys and no deployment do not block the authorized local
+sequence. Static markup/frame mapping tests are not pixel/audio proof.
+
+## Validation and finding disposition
+
+Pass 1 read the combined tracked/new-file change against CL-009 `06ab834`,
+current packet, migration authority and documented evidence. Coverage is locally
+implemented; three medium findings require revision:
+
+1. **Clear/stream race:** cancel captured stream ownership before awaiting the
+   terminal storage commit. A request arriving during that await could continue
+   after Clear. The existing ordinary Clear test did not cover arrival during
+   commit. An independently added gated regression failed (`aborted=false`).
+   Capture/drain now follows the terminal fence, so subsequent streams cannot
+   open prepared media. Shutdown also blocks new intake before draining streams.
+2. **POST CSRF:** preview reference deletion reused the GET/restore session path,
+   skipping CSRF before mutation. The main media clear still checked CSRF, but
+   references could be removed by a rejected request. A regression independently
+   failed because invalid-CSRF deletion did not throw. Deletion now requires the
+   normal protected session check; GET retains cookie-only playback verification.
+3. **Restore integrity:** hash checking existed at assembly publication but was
+   absent when reopening the journal. A valid-shape changed focus track could
+   display a stale result before remote signed access rejected it. The tampered
+   restore regression independently resolved instead of rejecting. One shared
+   browser integrity method now runs on write and restore; rejection deletes local
+   result/media while preserving the remote cleanup obligation. Backend signature
+   verification remains required before Player access.
+
+No earlier finding was ignored: these were gaps in the first execution's race,
+mutation-admission and reload coverage. All are local and independently
+reproducible without API keys. Provider/cloud/human/pixel/audio gates remain
+deferred evidence, not inferred successes or blockers for this sequence.
+
+Pass 2 inspected the complete combined diff/new files, all three dispositions,
+restore/cancel/stream ownership, current packet coverage, dependency directions,
+strict schemas, dead/debug/unsafe code and documentation claims. Verdict:
+**Meets the locally buildable current packet; no actionable local findings.**
+The pre-fix regressions failed independently and all now pass; settled five
+gates plus diff checks pass. No paid/live/native/device result was inferred.
+Whole-file stage/commit handoff: [CL-010 commit plan](CL-010-COMMIT_PLAN.md).
 
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>

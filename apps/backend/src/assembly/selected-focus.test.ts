@@ -25,6 +25,8 @@ import { loadConfig } from "../config/loadConfig.js";
 import { selectedAssemblyPlanSchema } from "@clipbuilder/contracts";
 import { createAnalysisRouter } from "../http/routes/analysis.route.js";
 import { mapError } from "../http/errorMapper.js";
+import { PreviewPlayback } from "../media/preview-playback.js";
+import { Writable } from "node:stream";
 
 async function fixture() {
   const origin = "http://localhost:3000",
@@ -121,6 +123,22 @@ async function fixture() {
     clock,
   );
   const port = {
+    preview: vi.fn(
+      async (
+        request: import("@clipbuilder/contracts").MediaPreviewRequest,
+      ) => ({
+        binding: request.binding,
+        range: request.range,
+        manifestHash: request.manifestHash,
+        artifact: {
+          artifactId: randomUUID(),
+          generation: "3",
+          bytes: 1024,
+          checksum: "a".repeat(64),
+        },
+        expiresAtMs: clock() + 60_000,
+      }),
+    ),
     select: vi.fn(
       async (request: { range: { startMs: number; endMs: number } }) => ({
         range: request.range,
@@ -184,6 +202,153 @@ async function fixture() {
     controller,
   };
 }
+
+describe("frozen assembly preview access", () => {
+  it("restores the signed manifest and byte ranges with zero new AI or media preparation", async () => {
+    const f = await fixture(),
+      result = await f.service.run(f.context, f.input);
+    const descriptor = await f.port.preview.mock.results[0]!.value;
+    const media = {
+      previewInfo: vi.fn(async () => descriptor),
+      previewContent: vi.fn(
+        async (_input: unknown, range: string | undefined) => {
+          const partial = range === "bytes=100-199";
+          return new Response(new Uint8Array(partial ? 100 : 1024), {
+            status: partial ? 206 : 200,
+            headers: {
+              "Content-Type": "video/mp4",
+              "Content-Length": partial ? "100" : "1024",
+              ...(partial ? { "Content-Range": "bytes 100-199/1024" } : {}),
+            },
+          });
+        },
+      ),
+    };
+    const access = new PreviewPlayback(
+      f.admission,
+      f.service,
+      media,
+      () => 1000,
+    );
+    await access.open(f.context, result);
+    await access.open(f.context, result);
+    const received: Buffer[] = [],
+      headers = vi.fn();
+    await access.stream(
+      { ...f.context, csrf: "" },
+      "bytes=100-199",
+      new Writable({
+        write(chunk: Buffer, _encoding, done) {
+          received.push(chunk);
+          done();
+        },
+      }),
+      headers,
+    );
+    expect(Buffer.concat(received).length).toBe(100);
+    expect(headers).toHaveBeenCalledWith(
+      206,
+      expect.objectContaining({ "Content-Range": "bytes 100-199/1024" }),
+    );
+    expect(f.provider.plan).toHaveBeenCalledTimes(1);
+    expect(f.port.preview).toHaveBeenCalledTimes(1);
+    await expect(
+      access.open(f.context, { ...result, manifestHash: "f".repeat(64) }),
+    ).rejects.toBeDefined();
+    expect(media.previewInfo).toHaveBeenCalledTimes(2);
+    expect(() => access.clear({ ...f.context, csrf: "invalid" })).toThrow();
+    access.clear(f.context);
+    await expect(
+      access.stream(f.context, undefined, new Writable(), () => {}),
+    ).rejects.toBeDefined();
+    expect(media.previewContent).toHaveBeenCalledTimes(1);
+  });
+  it("rejects expired or mismatched preview descriptors and malformed ranges before streaming", async () => {
+    const f = await fixture(),
+      result = await f.service.run(f.context, f.input),
+      descriptor = await f.port.preview.mock.results[0]!.value;
+    const media = {
+      previewInfo: vi.fn(async () => ({
+        ...descriptor,
+        manifestHash: "f".repeat(64),
+      })),
+      previewContent: vi.fn(),
+    };
+    const access = new PreviewPlayback(
+      f.admission,
+      f.service,
+      media,
+      () => 1000,
+    );
+    await expect(access.open(f.context, result)).rejects.toBeDefined();
+    media.previewInfo.mockResolvedValue({ ...descriptor, expiresAtMs: 999 });
+    await expect(access.open(f.context, result)).rejects.toBeDefined();
+    media.previewInfo.mockResolvedValue(descriptor);
+    await access.open(f.context, result);
+    await expect(
+      access.stream(f.context, "bytes=1-2,4-5", new Writable(), () => {}),
+    ).rejects.toBeDefined();
+    expect(media.previewContent).not.toHaveBeenCalled();
+    expect(f.provider.plan).toHaveBeenCalledTimes(1);
+  });
+  it("serves authenticated GET playback without a browser CSRF header and refuses a missing cookie", async () => {
+    const f = await fixture(),
+      result = await f.service.run(f.context, f.input),
+      descriptor = await f.port.preview.mock.results[0]!.value;
+    const media = {
+      previewInfo: vi.fn(async () => descriptor),
+      previewContent: vi.fn(
+        async () =>
+          new Response(new Uint8Array(1024), {
+            headers: { "Content-Type": "video/mp4", "Content-Length": "1024" },
+          }),
+      ),
+    };
+    const preview = new PreviewPlayback(
+      f.admission,
+      f.service,
+      media,
+      () => 1000,
+    );
+    await preview.open(f.context, result);
+    const app = express();
+    app.use(
+      "/v1/analysis",
+      createAnalysisRouter(
+        f.admission,
+        f.source,
+        [f.context.origin],
+        f.service,
+        preview,
+      ),
+    );
+    app.use(
+      (
+        error: unknown,
+        _req: express.Request,
+        res: express.Response,
+        _next: express.NextFunction,
+      ) => {
+        void _next;
+        const mapped = mapError(error, `req_${"0".repeat(32)}`);
+        res.status(mapped.status).json({ error: mapped.error });
+      },
+    );
+    const response = await request(app)
+      .get("/v1/analysis/preview")
+      .set("Origin", f.context.origin)
+      .set("Sec-Fetch-Site", "same-origin")
+      .set("Cookie", `__Host-clipping_session=${f.context.cookie}`);
+    expect(response.status).toBe(200);
+    expect(response.body.length).toBe(1024);
+    const missing = await request(app)
+      .get("/v1/analysis/preview")
+      .set("Origin", f.context.origin)
+      .set("Sec-Fetch-Site", "same-origin");
+    expect(missing.status).toBe(401);
+    expect(media.previewContent).toHaveBeenCalledTimes(1);
+  });
+});
 describe("selected speaker action and provenance", () => {
   it("rejects unsupported caption input before either media or AI dispatch", async () => {
     const f = await fixture();

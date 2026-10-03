@@ -1,5 +1,30 @@
 # ClipBuilder frontend
 
+## CL-010 read-only selected review
+
+Proceed reserves the selected assembly once, journals its frozen result and
+opens the existing notes/portrait/transcript layout. A separate cloud review
+state cannot become a legacy fixture assembly. Refresh hydrates a complete
+result; pending/uncertain work restores as failure without another AI/job call.
+Remotion Player uses `@clipbuilder/composition`, the prepared selected proxy,
+the manifest's 30fps clock and source start zero. Playback, mute and bounded
+timestamp seeks are ordinary read-only controls. Notes describe the actual
+continuous cut, source speech, captions, focus and extractive cards. Confirm
+export stays disabled until CL-011 supplies final delivery.
+
+Playback media uses the fixed same-origin `/api/analysis/preview` URL, protected
+cookie and validated byte streaming. No playback capabilities enter the journal
+or URLs; validated transcript/manifest content remains in the browser journal.
+Access failure offers metadata-only retry. Unmount/Clear removes
+Player listeners and streams, and expiry removes playback access.
+
+With `FAKE_MODE=true` and no keys the existing synthetic UI remains labelled
+and download-disabled; injected tests exercise new review, restore, stream and
+call-count boundaries. Real Player/native-output pixel and audio parity, font
+metrics and device accessibility remain unverified. Real provider keys/live
+flags and rights/data/spend approval plus separately approved cloud processing
+are necessary for actual media. No local AI runtime/weights are used.
+
 ## CL-009 selected assembly preparation
 
 `features/assembly/selected-assembly.flow.ts` uses one protected same-origin
@@ -7,7 +32,7 @@ selected plan, restores CSRF only in memory and atomically stores a validated
 source/generation/range/hash-bound result. Pending/uncertain/complete markers
 block re-dispatch; Clear and cancellation fence late publication. No raster
 assets, public mutation controls or final encoder are introduced. CL-010 owns
-Proceed/Remotion Player/read-only review integration; CL-011 owns MP4 delivery.
+Proceed/Remotion Player/read-only review, now connected by CL-010; CL-011 owns MP4 delivery.
 
 Injected synthetic checks work with `FAKE_MODE=true`/no keys; real Gemini needs
 keys/live flags/provider rights/data/spend approval, and private proxy work needs
