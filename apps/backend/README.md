@@ -18,6 +18,12 @@ rollout. No local AI model is used. Live assembly requires protected source
 analysis and at least three admitted actions; this is a process count, not a
 provider/cloud billing cap. See [CL-008 evidence](../../docs/tickets/CL-008-productionize-active-speaker-assembly.md).
 
+The 1000ms switch hold counts the union of voiced transcript time in each
+unambiguous speaker turn. Word pauses add no hold time and always use wide
+framing; overlap/unknown speech ends the turn. Provider observation subdivision
+does not shorten a sustained turn. Motion resets after wide gaps and shot cuts,
+and transcript-driven segmentation retains the fixed public geometry limit.
+
 ```text
 corepack pnpm --filter @clipbuilder/backend test:unit src/assembly
 ```

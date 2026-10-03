@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   speakerPlanSchema,
+  compositionManifestV2Schema,
   type SpeakerPlan,
   type TranscriptWord,
 } from "@clipbuilder/contracts";
@@ -54,6 +55,57 @@ describe("selected-range anonymous speaker focus", () => {
       },
     ]);
   });
+  it("uses actual speech duration for a brief turn padded by provider silence", () => {
+    const sourceWords = [
+      { ...words[0]!, startMs: 5000, endMs: 7000 },
+      { ...words[1]!, startMs: 7000, endMs: 7500, speakerId: "spk_1" },
+      { ...words[2]!, startMs: 14000, endMs: 15000 },
+    ];
+    const input = plan(),
+      item = input.shots[0]!.observations[0]!;
+    input.shots[0]!.observations = [
+      {
+        ...item,
+        startMs: 0,
+        endMs: 2000,
+        evidenceWordIds: [sourceWords[0]!.id],
+      },
+      {
+        ...item,
+        startMs: 2000,
+        endMs: 9000,
+        speakerId: "spk_1",
+        evidenceWordIds: [sourceWords[1]!.id],
+      },
+      {
+        ...item,
+        startMs: 9000,
+        endMs: 10000,
+        evidenceWordIds: [sourceWords[2]!.id],
+      },
+    ];
+    const focus = compileSpeakerFocus(input, {
+      ...context,
+      words: sourceWords,
+    });
+    expect(
+      focus
+        .filter((segment) => segment.mode === "speaker")
+        .map((segment) => ({
+          startMs: segment.startMs,
+          endMs: segment.endMs,
+          speaker: segment.speaker,
+        })),
+    ).toEqual([
+      { startMs: 0, endMs: 2000, speaker: "spk_0" },
+      { startMs: 9000, endMs: 10000, speaker: "spk_0" },
+    ]);
+    expect(
+      focus
+        .filter((segment) => segment.startMs >= 2000 && segment.endMs <= 9000)
+        .every((segment) => segment.mode === "wide"),
+    ).toBe(true);
+  });
   it.each(["overlap", "offscreen", "absent", "ambiguous"] as const)(
     "uses wide for %s",
     (association) => {
@@ -82,7 +134,9 @@ describe("selected-range anonymous speaker focus", () => {
     item.startMs = 1000;
     item.endMs = 1500;
     item.evidenceWordIds = [words[2]!.id];
-    expect(compileSpeakerFocus(input, context)).toEqual([
+    expect(
+      compileSpeakerFocus(input, { ...context, words: [words[2]!] }),
+    ).toEqual([
       { startMs: 0, endMs: 1000, mode: "wide" },
       { startMs: 1000, endMs: 1500, mode: "wide" },
       { startMs: 1500, endMs: 10000, mode: "wide" },
@@ -93,6 +147,164 @@ describe("selected-range anonymous speaker focus", () => {
         context,
       ),
     ).toEqual([{ startMs: 0, endMs: 10000, mode: "wide" }]);
+  });
+  it("emits wide for internal and trailing silence and resets motion after the gap", () => {
+    const sourceWords = [
+      { ...words[0]!, startMs: 5000, endMs: 7000 },
+      { ...words[1]!, startMs: 9000, endMs: 11000 },
+    ];
+    const focus = compileSpeakerFocus(plan(), {
+      ...context,
+      words: sourceWords,
+    });
+    expect(focus).toEqual([
+      {
+        startMs: 0,
+        endMs: 2000,
+        mode: "speaker",
+        speaker: "spk_0",
+        confidence: 0.95,
+        box,
+      },
+      { startMs: 2000, endMs: 4000, mode: "wide" },
+      {
+        startMs: 4000,
+        endMs: 6000,
+        mode: "speaker",
+        speaker: "spk_0",
+        confidence: 0.95,
+        box,
+      },
+      { startMs: 6000, endMs: 10000, mode: "wide" },
+    ]);
+  });
+  it.each([999, 1000])(
+    "counts %i ms of voiced coverage without adding silent word pauses",
+    (speechMs) => {
+      const sourceWords = [
+        { ...words[0]!, startMs: 5000, endMs: 5500 },
+        { ...words[1]!, startMs: 10000, endMs: 10000 + speechMs - 500 },
+      ];
+      const focus = compileSpeakerFocus(plan(), {
+        ...context,
+        words: sourceWords,
+      });
+      const matched = focus.filter((segment) => segment.mode === "speaker");
+      expect(
+        matched.reduce(
+          (total, segment) => total + segment.endMs - segment.startMs,
+          0,
+        ),
+      ).toBe(speechMs === 1000 ? 1000 : 0);
+      expect(
+        focus.find(
+          (segment) => segment.startMs === 500 && segment.endMs === 5000,
+        )?.mode,
+      ).toBe("wide");
+    },
+  );
+  it("does not double-count overlapping word timestamps for the same speaker", () => {
+    const sourceWords = [
+      { ...words[0]!, startMs: 5000, endMs: 5700 },
+      { ...words[1]!, startMs: 5200, endMs: 5900 },
+    ];
+    expect(
+      compileSpeakerFocus(plan(), { ...context, words: sourceWords }).every(
+        (segment) => segment.mode === "wide",
+      ),
+    ).toBe(true);
+  });
+  it("keeps a sustained turn through provider subdivision with bounded pan, and resets at cuts", () => {
+    const input = plan(),
+      item = input.shots[0]!.observations[0]!;
+    input.shots[0]!.observations = words.map((word, index) => ({
+      ...item,
+      startMs: index * 500,
+      endMs: (index + 1) * 500,
+      evidenceWordIds: [word.id],
+      box: index === 0 ? box : { ...box, x: 0.7 },
+    }));
+    const focus = compileSpeakerFocus(input, context);
+    expect(focus).toHaveLength(20);
+    expect(focus.every((segment) => segment.mode === "speaker")).toBe(true);
+    for (const segment of focus.slice(1)) {
+      if (segment.mode !== "speaker" || !segment.fromBox)
+        throw new Error("missing-sustained-focus");
+      const from = segment.fromBox;
+      expect(
+        Math.hypot(
+          segment.box.x + segment.box.width / 2 - from.x - from.width / 2,
+          segment.box.y + segment.box.height / 2 - from.y - from.height / 2,
+        ),
+      ).toBeLessThanOrEqual(0.125 + Number.EPSILON);
+    }
+    input.shots = input.shots[0]!.observations.map((observation) => ({
+      startMs: observation.startMs,
+      endMs: observation.endMs,
+      observations: [observation],
+    }));
+    const cutFocus = compileSpeakerFocus(input, context);
+    expect(
+      cutFocus.every(
+        (segment) => segment.mode === "speaker" && !segment.fromBox,
+      ),
+    ).toBe(true);
+  });
+  it("localizes overlap and unknown speech to wide intervals instead of extending a crop through them", () => {
+    const sourceWords = [
+      { ...words[0]!, startMs: 5000, endMs: 15000 },
+      { ...words[1]!, startMs: 7000, endMs: 7500, speakerId: "spk_1" },
+      { ...words[2]!, startMs: 10000, endMs: 10500, speakerId: null },
+    ];
+    const focus = compileSpeakerFocus(plan(), {
+      ...context,
+      words: sourceWords,
+    });
+    expect(
+      focus.map(({ startMs, endMs, mode }) => ({ startMs, endMs, mode })),
+    ).toEqual([
+      { startMs: 0, endMs: 2000, mode: "speaker" },
+      { startMs: 2000, endMs: 2500, mode: "wide" },
+      { startMs: 2500, endMs: 5000, mode: "speaker" },
+      { startMs: 5000, endMs: 5500, mode: "wide" },
+      { startMs: 5500, endMs: 10000, mode: "speaker" },
+    ]);
+    for (const segment of focus) expect(segment).not.toHaveProperty("fromBox");
+  });
+  it("clips transcript coverage to the selected range and ignores speech outside it", () => {
+    const sourceWords = [
+      { ...words[1]!, startMs: 0, endMs: 5000, speakerId: "spk_1" },
+      { ...words[0]!, startMs: 4000, endMs: 16000 },
+      { ...words[2]!, startMs: 15000, endMs: 17000, speakerId: null },
+    ];
+    expect(
+      compileSpeakerFocus(plan(), { ...context, words: sourceWords }),
+    ).toEqual([
+      {
+        startMs: 0,
+        endMs: 10000,
+        mode: "speaker",
+        speaker: "spk_0",
+        confidence: 0.95,
+        box,
+      },
+    ]);
+  });
+  it("falls back to bounded complete wide coverage when transcript splits exceed the geometry limit", () => {
+    const sourceWords = Array.from({ length: 100 }, (_, index) => ({
+      ...words[0]!,
+      id: `w_${String(index + 1).padStart(6, "0")}`,
+      startMs: 5000 + index * 100,
+      endMs: 5050 + index * 100,
+    }));
+    const focus = compileSpeakerFocus(plan(), {
+      ...context,
+      words: sourceWords,
+    });
+    expect(focus).toEqual([{ startMs: 0, endMs: 10000, mode: "wide" }]);
+    expect(
+      compositionManifestV2Schema.shape.focus.safeParse(focus).success,
+    ).toBe(true);
   });
   it("limits continuous-shot pan velocity and resets at a camera cut", () => {
     const input = plan(),

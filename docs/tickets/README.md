@@ -1,6 +1,6 @@
 # ClipBuilder canonical ticket index
 
-Status: CL-005/006 foundations complete. CL-007 local source analysis/fake browser workflow passed; pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus is locally implemented. Five root gates and 483 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred; quality/device/public-release gates remain unchecked. Complete contextual assembly remains CL-009. CL-006's private 2:45 evidence is separate.
+Status: CL-005/006 foundations complete. CL-007 local source analysis/fake browser workflow passed; pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus and its pass-1 voiced-timing correction are locally verified; validation pass 2 reports no actionable findings in the local scope. Five root gates and 492 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred; quality/device/public-release gates remain unchecked. Complete contextual assembly remains CL-009. The owner authorized committing the revalidated correction. CL-006's private 2:45 evidence is separate.
 
 Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md),
 [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),

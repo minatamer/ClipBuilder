@@ -1,6 +1,6 @@
 # Gemini and Cloud Run Remotion migration
 
-Status: **CL-006 foundation complete; CL-007 local analysis/fake browser workflow passed and pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus is implemented locally; five root gates and 483 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred; live quality/devices/product/release remain unchecked. Contextual assembly remains CL-009.**<br>
+Status: **CL-006 foundation complete; CL-007 local analysis/fake browser workflow passed and pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus and its pass-1 voiced-timing correction are locally verified; validation pass 2 reports no actionable findings in the local scope. Five root gates and 492 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred; live quality/devices/product/release remain unchecked. Contextual assembly remains CL-009. The owner authorized committing the revalidated correction.**<br>
 Owner revision: 2026-10-02; supersedes the earlier same-day browser-render plan<br>
 Authority: latest explicit owner decision, then this current source-of-truth revision<br>
 Inventory: [file-level migration map](MIGRATION_FILE_INVENTORY.md)<br>

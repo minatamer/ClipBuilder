@@ -2,7 +2,7 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: local selected-range implementation and synthetic verification recorded, 2026-10-03. Native fixture proof remains unverified because the approved full fixture FFmpeg tool is unavailable locally. Renderer rollout and live human-labelled quality remain explicitly deferred by the owner.
+Status: local selected-range implementation and the pass-1 transcript-timing correction verified synthetically, 2026-10-03. Validation pass 2 reports no actionable findings in the owner-authorized local scope. All five root gates and 492 combined tests pass. Native fixture proof remains unverified because the approved full fixture FFmpeg tool is unavailable locally. Renderer rollout and live human-labelled quality remain explicitly deferred by the owner. The owner subsequently authorized staging and committing the revalidated correction with `CL-008: fix speaker framing for short turns and silence`.
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -125,6 +125,91 @@ Deviation: the native fixture check was prepared but not executed because its
 approved fixture executable was unavailable; no fake result substitutes for it.
 At the end of verification, all changes were available for review, unstaged and
 uncommitted. The owner subsequently authorized the sequential commits below.
+
+## Post-commit validation correction — 2026-10-03
+
+The owner-directed CL-008 validation pass 1 found that the compiler measured
+the 1000ms hold using provider observation duration. A 500ms interjection with
+6500ms of following silence could therefore receive speaker framing throughout
+the seven-second observation. The main execution independently reproduced this
+as a failing source-module Vitest regression over committed `19eda11` before
+changing the compiler. The earlier 28-test review and 483-test root suite had
+not covered this case; they do not prove the old predicate correct.
+
+The compiler now sweeps selected-range word start/end boundaries to derive
+unambiguous voiced coverage. Simultaneous different or unknown speakers use
+wide and end the turn. Consecutive same-speaker speech across word pauses forms
+a turn, but the hold counts only its union of voiced milliseconds: neither
+silence nor overlapping word timestamps can inflate it. Each observation is
+intersected with the transcript intervals. Silence and provider coverage gaps
+use wide; short actual turns stay wide even inside long observations. A
+sustained turn can retain speaker focus when the provider divides it into
+sub-second observations. Shot cuts and wide intervals reset geometry; bounded
+interpolation uses the actual emitted interval duration. The existing 0.85
+confidence, 1000ms hold, 0.25 normalized-center-units/s velocity, upright
+coordinates and 120-segment ceiling remain unchanged. Excess segmentation
+falls back to complete wide shot coverage. No model, call count, schema,
+receipt, privacy, public feature or architecture gate changed.
+
+Changed files: `apps/backend/src/assembly/speaker-focus.ts`, its test,
+`apps/backend/README.md`, this packet, the ticket index and parent current-status
+lines in the source of truth, migration plan and file inventory. Nine added
+regressions cover the reported padded interjection, internal/trailing silence,
+999/1000ms voiced thresholds, same-speaker timestamp union, provider subdivision,
+cut resets/pan speed, localized overlap/unknown speech, selected-range clipping
+and bounded complete coverage. The earlier short-observation test now supplies
+an actual 500ms transcript turn rather than treating a short provider fragment
+of continuous ten-second speech as a short turn.
+
+Focused checks (exit 0):
+
+```text
+corepack pnpm --filter @clipbuilder/backend test:unit src/assembly/speaker-focus.test.ts src/assembly/selected-focus.test.ts
+corepack pnpm --filter @clipbuilder/backend typecheck
+```
+
+The focused suite passed **37 tests across two files** (26 compiler, 11
+selected-action tests), including unchanged one-plan/zero-new-source-AI counts.
+Settled final checks also returned exit 0:
+
+```text
+corepack pnpm format:check
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm test:unit
+corepack pnpm build
+git diff --check
+```
+
+Final totals: root 20, contracts 44, composition 3, backend 155, renderer 27,
+frontend 243: **492 tests across 52 files**. All five packages built. Synthetic
+fake/off tests and pre-import network interception used no API keys, provider
+or cloud calls, local AI weights or media services. No native fixture, browser
+journey, actual media/quality, deployment or external gate was rerun. The
+compiler added no listener, timer, process or persistent content. The
+native/live/device/stress/rights/notices/release limits above
+remain unchecked. At verification time, this correction was neither staged nor
+committed. The owner's seven earlier commits did not themselves authorize
+another Git action; the subsequent explicit authorization is recorded below.
+
+Validation pass 2 reported **no actionable findings** and the pass-1 defect
+resolved on a settled snapshot of all eight unstaged files over `19eda11`.
+The verdict meets the owner-authorized local engineering scope with concerns
+limited to the deferred native/live acceptance and documented durability/release
+limits. The reviewer reran the exact focused backend command above: **37 tests
+across two files passed**; `git diff --check` passed. Source hashes matched at
+the start and end, HEAD was unchanged, the index was empty and no untracked files
+were present. The review did not rerun the full root gates, native harness or
+browser session; their separate evidence and unchecked limits remain as recorded.
+The review used synthetic fake/off tests without credentials, external calls,
+service launches, Git mutations or a local AI model. The correction is ready for
+the owner. At revalidation, further staging/commits/amend/push remained explicitly
+unauthorized. The owner subsequently requested staging and committing this work.
+
+Correction commit: this commit, `CL-008: fix speaker framing for short turns and
+silence`, contains the eight validated correction/documentation files. Only the
+commit authorization record changed after revalidation; code and the recorded
+492-test/five-gate evidence remain unchanged. No push or external gate is included.
 
 ## File-level commit plan
 

@@ -2,7 +2,7 @@
 
 ## Current owner revision — Gemini and private Cloud Run rendering (2026-10-02)
 
-Status: **CL-005/006 foundations complete; CL-007 local analysis/fake browser workflow passed without API keys, and pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus is implemented locally; five root gates and 483 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred. Live quality/device/product/release gates remain unchecked; contextual assembly remains CL-009.**
+Status: **CL-005/006 foundations complete; CL-007 local analysis/fake browser workflow passed without API keys, and pass-2/pass-3 Clear/reload recovery is corrected with synthetic real-client evidence. CL-008 selected focus and its pass-1 voiced-timing correction are locally verified; validation pass 2 reports no actionable findings in the local scope. Five root gates and 492 combined synthetic tests pass. Native fixture proof needs an approved full fixture FFmpeg tool. Renderer rollout/paid/live acceptance remain owner-deferred. Live quality/device/product/release gates remain unchecked; contextual assembly remains CL-009. The owner authorized committing the revalidated correction.**
 
 The owner selected Google Gemini for understanding/transcription/candidates/
 speaking-face association and our private Google Cloud Run Remotion Node/Docker

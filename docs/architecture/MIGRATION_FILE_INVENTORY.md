@@ -1,6 +1,6 @@
 # Full repository migration file inventory
 
-Status: approved migration inventory; historical scout map retained. CL-005/006 foundations are complete; CL-007 records local analysis/fake browser flow and pass-2/pass-3 Clear/reload corrections. CL-008 records selected focus; five root gates and 483 combined tests pass. Native fixture proof needs its approved tool. Renderer rollout/paid AI are owner-deferred and live quality remains unchecked. Scout date: 2026-10-02; execution status updated 2026-10-03.
+Status: approved migration inventory; historical scout map retained. CL-005/006 foundations are complete; CL-007 records local analysis/fake browser flow and pass-2/pass-3 Clear/reload corrections. CL-008 records selected focus and its locally verified pass-1 voiced-timing correction; validation pass 2 reports no actionable findings in the local scope. Five root gates and 492 combined tests pass. Native fixture proof needs its approved tool. Renderer rollout/paid AI are owner-deferred and live quality remains unchecked. The owner authorized committing the revalidated correction. Scout date: 2026-10-02; execution status updated 2026-10-03.
 
 Read-only Git state, repository file inventory, provider/model/cloud/privacy references, package/config/composition/admission/contracts/worker/workflow/test ownership were inspected. This is a structural correction map, not an independent code audit. No secret/private media files were opened. Owner AGENTS.md and pre-existing CL-015 changes are preserved.
 
