@@ -2,7 +2,7 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: documentation approved; awaiting dependency-ready packet execution and separate external gates.
+Status: local selected-range implementation and synthetic verification recorded, 2026-10-03. Native fixture proof remains unverified because the approved full fixture FFmpeg tool is unavailable locally. Renderer rollout and live human-labelled quality remain explicitly deferred by the owner.
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -11,8 +11,154 @@ One bounded selected-range Google audiovisual plan; validate audible/visible ass
 Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
 
 - [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
-- [ ] Implement and verify this current packet after approval.
-- [ ] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+- [x] Implement and verify the locally possible synthetic behavior after approval.
+- [x] Record exact tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+- [ ] Run the saved native selected-proxy fixture check with an approved full fixture FFmpeg executable.
+- [ ] Separately authorized renderer rollout and real human-labelled speaker quality; deferred by the owner.
+
+## Local execution evidence — 2026-10-03
+
+Dependency evidence: CL-006 private renderer/shared composition foundation and
+CL-007 grounded result/receipt were present. The owner's latest direction
+deferred new cloud/paid work, required the actual key-free fake workflow to pass
+first, and authorized sequential dependency-ready local packets. CL-007's browser
+workflow and four reproduced review corrections passed before this packet began.
+Related CL-007 edits remain unstaged; no unrelated work was overwritten.
+
+Implemented one authenticated private `/internal/select` operation. It accepts
+only an admitted source binding/generation, opaque nonce and validated 10–60s
+range. The full-source analysis proxy must already be released; selected range
+is claimed once in the expiring private intent. Reinspection must match the
+original decoded source. Node passes the actual range to FFmpeg, produces a
+20fps upright AVC/AAC selected proxy bounded to 640×640/24 MiB, and validates
+its duration. Reading/releasing uses the existing exact-generation proxy path;
+failure/cancel removes artifacts through the existing terminal cleanup system.
+No cloud image build or native/media invocation was performed here.
+
+Backend `SelectedSpeakerFocus` verifies the CL-007 signed source result, derives
+the candidate's immutable word boundaries and supplies only overlapping word
+IDs/times/anonymous speaker labels for one selected-range call. The Google
+adapter shares CL-007's bounded Files upload/poll/generate/verified-delete
+lifecycle, including late-upload cleanup, and serializes explicit **5fps**
+sampling with a strict speaker-plan schema. There is no second source analysis,
+model repair, tools/search, image call or transcript store. Fake/test composition
+is closed; live assembly needs live analysis and at least three protected action
+reservations. The reserved action is `visual-plan`; CL-009 must extend this same
+one-call boundary for contextual templates rather than dispatch another plan.
+The public assembly feature remains disabled until its complete CL-009 bundle.
+
+Plan validation requires upright display coordinates, at most 30 contiguous
+shots/120 observations, bounded boxes/confidence and anonymous in-range word
+evidence. Observations cannot cross a cut or overlap. Matched crops require
+visible geometry, confidence >=0.85 and consistent audible speaker evidence;
+overlap, unknown/offscreen/absent/ambiguous voices, low confidence, silence and
+gaps use wide framing. Speaker changes shorter than 1000ms use wide. Continuous
+shot motion is linearly interpolated at at most 0.25 normalized-center units/s;
+camera cuts reset interpolation. Excess compiled segmentation falls back to
+bounded wide shots. Shared preview/render geometry clamps all interpolated
+upright landscape/portrait/square crops to the source. The signed result binds
+session, source revision/fingerprint/generation, analysis revision, candidate,
+range, focus policy, provider and final geometry; fake results are labelled fake.
+
+Focused checks verified: safe/low-confidence/overlap/offscreen/absent/ambiguous
+focus; missing/corrupt/out-of-range/wrong-speaker evidence, source duration,
+geometry/cuts/coordinate-space/extra-field rejection; short turns, gap coverage,
+bounded pan and cut reset; upright crop interpolation; exact selected generation,
+unreleased proxy/out-of-source range rejection; one physical proxy argument,
+one selected plan, zero new source AI; signed-result tampering/replay; Clear
+with a late result; byte/checksum rejection before AI; release failure prevents
+publication and cannot redispatch; SDK schema/sampling serialization and one
+Files generation/deletion lifecycle. All data and transports were synthetic.
+Unit cleanup checks remove owned scratch and exact proxy generations; no app
+service, listener, native child or cloud resource was launched by this packet.
+
+Required settled root gate evidence:
+
+```text
+corepack pnpm format:check
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm test:unit
+corepack pnpm build
+git diff --check
+```
+
+All six commands returned exit 0. Final totals: root 20, contracts 44,
+composition 3, backend 146, renderer 27 and frontend 243: **483 tests across
+52 files**. All five packages built, including the unchanged `/start` and
+same-origin analysis routes. Boundary fixtures/pre-import fake/off network
+interception passed. Final inspection found no cross-app imports, unsafe casts,
+provider/Node dependencies in contracts/shared composition, duplicated schemas,
+debug logging, TODOs or leaked real content/credentials in this packet.
+This combined total includes the subsequent CL-007 pass-2/pass-3 Clear/reload corrections.
+The earlier focused source-analysis/selected-focus/config suite passed 71 tests;
+additional checksum/release-failure regressions are included in the final suite.
+
+Changed files: new backend `src/assembly/{speaker-focus,gemini-speaker-focus,
+selected-focus.usecase,speaker-focus.test,selected-focus.test}.ts`; shared
+`selected-focus.schema.ts`; existing `cloud-media.schema.ts`, `edit-plan.schema.ts`,
+`constants.ts`, `index.ts`; backend Google/renderer adapters and config schema/test;
+renderer app, private intent/session lifecycle, media operations/test and Node
+pipeline; shared composition/focus layout/test; native fixture harness
+`apps/renderer/feasibility/selected-proxy.ts`; backend/renderer guides and ticket/
+parent status records. No dependency version, external resource or Git action changed.
+
+`FAKE_MODE=true` without API keys still runs the verified fixture browser journey
+and these injected speaker-plan engineering checks. No local AI model, weights
+or quality inference is used. The native harness is API-free and AI-free, but
+requires an approved full fixture FFmpeg solely to synthesize/decode its test
+video/tone; production proxy processing uses the pinned Remotion binaries.
+The tool was absent from PATH, repository-private tooling, WinGet packages and
+the bundled runtime. No replacement was downloaded or installed.
+
+Unchecked: actual native selected-proxy clock/audio/rotation/VFR proof; new
+renderer image rollout, real Gemini key/live flags, specific AI-transfer rights,
+paid-project terms and numerical budget; independently human-labelled quality
+across one/multiple speakers, listener motion, brief turns, overlap, camera cuts,
+offscreen/absent/ambiguous people; full-size/resource/scratch/runtime envelope;
+actual device/video/sync/accessibility matrix, licensing/notices and public
+release gates. Supplying a key or fixture tool alone does not complete those
+checks. Later contextual assembly/preview/output integration remains CL-009–011.
+Google cleanup is process-local with separate provider expiry as a crash fallback.
+
+Deviation: the native fixture check was prepared but not executed because its
+approved fixture executable was unavailable; no fake result substitutes for it.
+At the end of verification, all changes were available for review, unstaged and
+uncommitted. The owner subsequently authorized the sequential commits below.
+
+## File-level commit plan
+
+The [seven-step CL-007/CL-008 commit plan](CL-007-008-COMMIT_PLAN.md) records
+whole-file staging and sequential commits. Shared files land once in the earlier
+CL-007 groups; dedicated speaker-focus modules land in step 5 and this ticket's
+evidence in step 7. Every subject starts with `CL-007:` or `CL-008:`. The owner
+authorized execution on 2026-10-03; the live/native/deployment gates above remain
+unchecked.
+
+## Commit execution record
+
+The seven planned groups were staged as whole files and committed sequentially
+at the owner's request, starting from `db58981`. This ticket is the final
+documentation commit. The sequence covers 72 distinct non-ignored files,
+including the commit plan; the index was empty before execution.
+
+| Order | Commit | Subject |
+| --- | --- | --- |
+| 1 | `86505c5` | `CL-007: define grounded analysis and focus contracts` |
+| 2 | `542bd36` | `CL-007: extend private analysis and selected proxy operations` |
+| 3 | `e15ba9d` | `CL-007: implement protected grounded source analysis` |
+| 4 | `b02c2e3` | `CL-007: integrate browser analysis and recoverable cleanup` |
+| 5 | `80e585d` | `CL-008: implement validated selected-range speaker focus` |
+| 6 | `a0eaaf3` | `CL-007: document source analysis and local verification` |
+| 7 | This final documentation commit | `CL-008: record selected-focus verification and remaining gates` |
+
+Each staged group was checked against the exact planned paths before committing.
+Only execution records changed during the sequence; application behavior and
+the settled 483-test/five-root-gate evidence are unchanged. Intermediate commits
+were not reconstructed or separately tested. No push, branch switch, history
+rewrite, provider/cloud action or new test/service launch was performed. Fake
+fixture behavior works without keys; live keys/flags/rights/spend, native fixture
+proof and the other external checks above remain separately gated.
 
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>
