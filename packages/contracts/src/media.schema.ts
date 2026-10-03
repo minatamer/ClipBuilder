@@ -77,6 +77,18 @@ export const mediaDescriptorSchema = z
 
 export type MediaDescriptor = z.infer<typeof mediaDescriptorSchema>;
 
+// Duration and frame rate are measurements, not source identity. Browser packet
+// sampling and authoritative decoder inspection may produce different values.
+export function hasSameMediaIdentity(
+  left: MediaDescriptor,
+  right: MediaDescriptor,
+): boolean {
+  return (
+    JSON.stringify({ ...left, durationMs: 0, averageFrameRate: 0 }) ===
+    JSON.stringify({ ...right, durationMs: 0, averageFrameRate: 0 })
+  );
+}
+
 export const localArtifactReferenceSchema = z
   .object({
     artifactId: localArtifactIdSchema,

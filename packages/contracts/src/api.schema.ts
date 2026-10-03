@@ -37,6 +37,7 @@ export const healthResponseSchema = z
 
 export const publicConfigResponseSchema = z
   .object({
+    processingSiteKey: z.string().min(1).max(500).optional(),
     mode: z.enum(["fake", "live"]),
     sampleEnabled: z.boolean(),
     localMediaEnabled: z.boolean(),

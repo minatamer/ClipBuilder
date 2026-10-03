@@ -6,7 +6,11 @@ import {
   uuidV4Schema,
 } from "./ids.schema.js";
 import { sha256DigestSchema } from "./boundary-primitives.schema.js";
-import { compositionManifestV2Schema } from "./edit-plan.schema.js";
+import {
+  compositionManifestV2Schema,
+  selectedMediaRangeSchema,
+} from "./edit-plan.schema.js";
+import { mediaDescriptorSchema } from "./media.schema.js";
 
 export const TEMPORARY_MEDIA_LIMITS = {
   sessionTtlMs: 7_200_000,
@@ -52,6 +56,9 @@ export const mediaPrepareRequestSchema = z
     nonce: uuidV4Schema,
   })
   .strict();
+export const mediaSelectRequestSchema = mediaPrepareRequestSchema.extend({
+  range: selectedMediaRangeSchema,
+});
 export const inspectedSourceSchema = z
   .object({
     fingerprint: sha256DigestSchema,
@@ -64,6 +71,16 @@ export const inspectedSourceSchema = z
     width: z.number().int().positive().max(MEDIA_LIMITS.maxVideoWidth),
     height: z.number().int().positive().max(MEDIA_LIMITS.maxVideoHeight),
     audioStartMs: z.number().int().min(-1000).max(10_000),
+    profile: z
+      .object({
+        container: mediaDescriptorSchema.shape.container,
+        videoCodec: mediaDescriptorSchema.shape.videoCodec,
+        audioCodec: mediaDescriptorSchema.shape.audioCodec,
+        averageFrameRate: mediaDescriptorSchema.shape.averageFrameRate,
+        rotationDegrees: mediaDescriptorSchema.shape.rotationDegrees,
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .refine((s) => s.width * s.height <= MEDIA_LIMITS.maxFramePixels);
@@ -96,6 +113,9 @@ export const mediaPrepareResponseSchema = z
     }),
   })
   .strict();
+export const mediaSelectResponseSchema = mediaPrepareResponseSchema.extend({
+  range: selectedMediaRangeSchema,
+});
 export const mediaRenderResponseSchema = z
   .object({
     manifestHash: sha256DigestSchema,
@@ -108,6 +128,8 @@ export const mediaRenderResponseSchema = z
 export type MediaBinding = z.infer<typeof mediaBindingSchema>;
 export type MediaUploadRequest = z.infer<typeof mediaUploadRequestSchema>;
 export type MediaPrepareRequest = z.infer<typeof mediaPrepareRequestSchema>;
+export type MediaSelectRequest = z.infer<typeof mediaSelectRequestSchema>;
+export type MediaSelectResponse = z.infer<typeof mediaSelectResponseSchema>;
 export type MediaRenderRequest = z.infer<typeof mediaRenderRequestSchema>;
 export type MediaPrepareResponse = z.infer<typeof mediaPrepareResponseSchema>;
 export type MediaRenderResponse = z.infer<typeof mediaRenderResponseSchema>;

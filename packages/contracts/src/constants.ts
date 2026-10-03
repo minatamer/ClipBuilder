@@ -41,6 +41,7 @@ export const MEDIA_LIMITS = {
 } as const;
 
 export const ASSEMBLY_LIMITS = {
+  maxFocusSegments: 120,
   maxFaceTracksPerShot: 4,
   maxVisualCues: 3,
   minVisualCueMilliseconds: 1_500,

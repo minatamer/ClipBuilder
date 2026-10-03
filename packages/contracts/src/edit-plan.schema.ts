@@ -16,6 +16,15 @@ const timeRange = {
   startMs: z.number().int().min(0),
   endMs: z.number().int().positive(),
 };
+export const selectedMediaRangeSchema = z
+  .object(timeRange)
+  .strict()
+  .refine(
+    (range) =>
+      range.endMs - range.startMs >= PUBLIC_LIMITS.minClipSeconds * 1000 &&
+      range.endMs - range.startMs <= PUBLIC_LIMITS.maxClipSeconds * 1000,
+  );
+export type SelectedMediaRange = z.infer<typeof selectedMediaRangeSchema>;
 export const focusSegmentSchema = z.discriminatedUnion("mode", [
   z.object({ ...timeRange, mode: z.literal("wide") }).strict(),
   z
@@ -23,6 +32,7 @@ export const focusSegmentSchema = z.discriminatedUnion("mode", [
       ...timeRange,
       mode: z.literal("speaker"),
       box: normalizedBoxSchema,
+      fromBox: normalizedBoxSchema.optional(),
       confidence: z.number().finite().min(0).max(1),
       speaker: boundedPlainTextSchema(32),
     })
@@ -47,7 +57,10 @@ export const compositionManifestV2Schema = z
         fps: z.literal(30),
       })
       .strict(),
-    focus: z.array(focusSegmentSchema).min(1).max(120),
+    focus: z
+      .array(focusSegmentSchema)
+      .min(1)
+      .max(ASSEMBLY_LIMITS.maxFocusSegments),
     captions: z
       .array(
         z.object({ ...timeRange, text: boundedPlainTextSchema(80) }).strict(),
