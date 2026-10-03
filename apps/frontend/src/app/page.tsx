@@ -3,6 +3,7 @@ import { HeroHeadline } from "./hero-headline";
 import { PrivacyDialog } from "./privacy-dialog";
 import { ProcessNarrative } from "./process-narrative";
 import { SmoothScrollLink } from "./smooth-scroll-link";
+import { BrandMark } from "../shared/ui/brand-mark";
 
 const clippingPlatforms = [
   { name: "whop", detail: "Content Rewards", brand: "whop" },
@@ -19,10 +20,7 @@ const clippingPlatforms = [
 function Wordmark() {
   return (
     <>
-      <span className={styles.wordmarkMark} aria-hidden="true">
-        <span />
-        <span />
-      </span>
+      <BrandMark className={styles.wordmarkMark} />
       <span className={styles.wordmarkText}>ClipBuilder</span>
     </>
   );

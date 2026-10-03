@@ -46,6 +46,8 @@ export function PortraitPlayer({
   videoPreload = "metadata",
   muted = false,
   toggleMute,
+  aspectRatio,
+  source = false,
 }: {
   label: string;
   range: { startMs: number; endMs: number };
@@ -63,6 +65,8 @@ export function PortraitPlayer({
   videoPreload?: "metadata" | "auto";
   muted?: boolean;
   toggleMute?: () => void;
+  aspectRatio?: number;
+  source?: boolean;
 }) {
   const controlsId = useId();
   const [awake, setAwake] = useState(true);
@@ -75,12 +79,12 @@ export function PortraitPlayer({
   }, []);
   const scheduleHide = useCallback(() => {
     stopHide();
-    if (!playing || busy || keyboardFocused || seekingFocused) return;
+    if (source || !playing || busy || keyboardFocused || seekingFocused) return;
     idleTimer.current = setTimeout(() => {
       idleTimer.current = null;
       setAwake(false);
     }, 2200);
-  }, [playing, busy, keyboardFocused, seekingFocused, stopHide]);
+  }, [source, playing, busy, keyboardFocused, seekingFocused, stopHide]);
   useEffect(() => {
     scheduleHide();
     return stopHide;
@@ -90,16 +94,34 @@ export function PortraitPlayer({
     scheduleHide();
   };
   const controlsVisible =
-    !playing || busy || awake || keyboardFocused || seekingFocused;
+    source || !playing || busy || awake || keyboardFocused || seekingFocused;
+  const videoSurface =
+    surface ??
+    (videoRef ? (
+      <video
+        ref={videoRef}
+        className={styles.localVideo}
+        playsInline
+        preload={videoPreload}
+        muted={muted}
+        aria-label={label}
+      />
+    ) : (
+      <PortraitPlaceholder>{children}</PortraitPlaceholder>
+    ));
   return (
     <div
-      className={styles.portraitPlayer}
+      className={`${styles.portraitPlayer} ${source ? styles.sourcePlayer : ""}`}
       aria-label={label}
       data-controls-visible={controlsVisible}
       data-moment-surface={moment?.id}
-      style={
-        moment ? { viewTransitionName: `moment-${moment.rank}` } : undefined
-      }
+      style={{
+        ...(source && aspectRatio
+          ? { width: `min(100%, calc(40dvh * ${aspectRatio}))` }
+          : aspectRatio
+            ? { aspectRatio, width: `min(100%, calc(100cqh * ${aspectRatio}))` }
+            : {}),
+      }}
       onPointerEnter={reveal}
       onPointerMove={reveal}
       onPointerDownCapture={() => {
@@ -127,19 +149,13 @@ export function PortraitPlayer({
         reveal();
       }}
     >
-      {surface ??
-        (videoRef ? (
-          <video
-            ref={videoRef}
-            className={styles.localVideo}
-            playsInline
-            preload={videoPreload}
-            muted={muted}
-            aria-label={label}
-          />
-        ) : (
-          <PortraitPlaceholder>{children}</PortraitPlaceholder>
-        ))}
+      {source ? (
+        <div className={styles.sourceMedia} style={{ aspectRatio }}>
+          {videoSurface}
+        </div>
+      ) : (
+        videoSurface
+      )}
       <button
         type="button"
         className={styles.playerReveal}
@@ -162,7 +178,7 @@ export function PortraitPlayer({
         <div className={styles.playerCommands}>
           <IconButton
             icon={playing ? Pause : Play}
-            label={`${playing ? "Pause" : "Play"} ${moment ? `moment ${moment.rank} preview` : "clip preview"}`}
+            label={`${playing ? "Pause" : "Play"} ${moment ? `moment ${moment.rank} preview` : source ? "source video" : "clip preview"}`}
             {...(moment ? { id: `moment-play-${moment.rank}` } : {})}
             disabled={busy}
             onClick={toggle}
@@ -171,7 +187,11 @@ export function PortraitPlayer({
           {toggleMute && (
             <IconButton
               icon={muted ? VolumeX : Volume2}
-              label={muted ? "Unmute clip audio" : "Mute clip audio"}
+              label={
+                muted
+                  ? `Unmute ${source ? "source" : "clip"} audio`
+                  : `Mute ${source ? "source" : "clip"} audio`
+              }
               disabled={busy}
               onClick={toggleMute}
             />
@@ -183,7 +203,11 @@ export function PortraitPlayer({
         </div>
         <input
           aria-label={
-            moment ? "Moment playback position" : "Clip playback position"
+            moment
+              ? "Moment playback position"
+              : source
+                ? "Source playback position"
+                : "Clip playback position"
           }
           type="range"
           min={range.startMs}

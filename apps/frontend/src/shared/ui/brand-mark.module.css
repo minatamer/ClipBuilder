@@ -1,0 +1,50 @@
+.mark {
+  position: relative;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 auto;
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-radius: 0.55rem;
+  background: linear-gradient(
+    145deg,
+    rgb(120 182 255 / 0.94),
+    rgb(49 87 213 / 0.9)
+  );
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28);
+}
+
+.mark span {
+  position: absolute;
+  left: 0.38rem;
+  width: 0.95rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: white;
+  transform-origin: left center;
+}
+
+.mark span:first-child {
+  top: 0.49rem;
+  rotate: -8deg;
+}
+
+.mark span:last-child {
+  bottom: 0.49rem;
+  width: 0.7rem;
+  rotate: 8deg;
+}
+
+@media (forced-colors: active) {
+  .mark {
+    forced-color-adjust: none;
+    background: ButtonText;
+    border-color: ButtonText;
+    box-shadow: none;
+  }
+
+  .mark span {
+    background: ButtonFace;
+  }
+}

@@ -10,6 +10,7 @@ import type { SourceAnalysisApi } from "../source-analysis/source-analysis.api";
 import { PortraitPlayer } from "./portrait-player";
 import { AgenticNotes, candidateNotes } from "./agentic-notes";
 import { ReviewTranscript } from "./review-transcript";
+import { ClipReviewLayout } from "./clip-review-layout";
 import { fixedReviewNotes, previewFrame } from "./fixed-review";
 import { Button } from "../../shared/ui/button";
 import styles from "./sample.module.css";
@@ -93,118 +94,127 @@ export function CloudClipReview({
   };
   if (!selected) return <p role="alert">The selected clip is unavailable.</p>;
   return (
-    <section className={styles.clipReview} aria-label="Read-only clip preview">
-      <section className={styles.editNotes} aria-label="Clip agentic notes">
-        <h2>Agentic Notes</h2>
-        <div
-          className={styles.notesScroll}
-          tabIndex={0}
-          aria-label="Scrollable edit notes"
-        >
-          <h3>{selected.title}</h3>
-          <p className={styles.rationale}>{selected.rationale}</p>
-          <h3>Edit decisions</h3>
-          <AgenticNotes
-            notes={fixedReviewNotes(result)}
-            rangeStartMs={range.startMs}
-            busy={!ready}
-            onSeek={(ms, ids) => {
-              seek(ms);
-              setHighlighted(ids);
-            }}
-          />
-          <h3>Interest points</h3>
-          <AgenticNotes
-            notes={candidateNotes(analysis, selected)}
-            rangeStartMs={range.startMs}
-            busy={!ready}
-            onSeek={(ms, ids) => {
-              seek(ms);
-              setHighlighted(ids);
-            }}
-          />
-        </div>
-      </section>
-      <div className={styles.reviewVideo}>
-        {ready ? (
-          <PortraitPlayer
-            label={selected.title}
-            range={range}
-            currentMs={
-              range.startMs +
-              Math.min(duration, Math.round((frame * 1000) / 30))
-            }
-            playing={playing}
-            muted={muted}
-            toggleMute={() => {
-              if (muted) player.current?.unmute();
-              else player.current?.mute();
-              setMuted(!muted);
-            }}
-            toggle={() =>
-              playing ? player.current?.pause() : player.current?.play()
-            }
-            seek={(ms) => {
-              setHighlighted([]);
-              seek(ms);
-            }}
-            surface={
-              <Player
-                ref={player}
-                component={ClipComposition}
-                inputProps={{
-                  manifest: result.manifest,
-                  sourceUrl: "/api/analysis/preview",
-                  sourceStartMs: 0,
-                }}
-                durationInFrames={Math.ceil((duration * 30) / 1000)}
-                fps={30}
-                compositionWidth={1080}
-                compositionHeight={1920}
-                controls={false}
-                clickToPlay={false}
-                doubleClickToFullscreen={false}
-                spaceKeyToPlayOrPause={false}
-                style={{ width: "100%", height: "100%" }}
-                errorFallback={() => (
-                  <p role="alert">Preview playback is unavailable.</p>
-                )}
-              />
-            }
-          />
-        ) : (
-          <p role={failed ? "alert" : "status"}>
-            {failed
-              ? "Preview access is unavailable. No new processing was started."
-              : "Opening the prepared clip"}
-          </p>
-        )}
-        {failed && (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setFailed(false);
-              setReady(false);
-              setPlaying(false);
-              setFrame(0);
-              setMuted(false);
-              setAttempt((value) => value + 1);
-            }}
+    <ClipReviewLayout
+      notes={
+        <section className={styles.editNotes} aria-label="Clip agentic notes">
+          <h2>Agentic Notes</h2>
+          <div
+            className={styles.notesScroll}
+            tabIndex={0}
+            aria-label="Scrollable edit notes"
           >
-            Retry preview access
-          </Button>
-        )}
-      </div>
-      <section className={styles.momentTranscript} aria-label="Clip transcript">
-        <h2>Transcript</h2>
-        <ReviewTranscript
-          selectedWords={result.words}
-          analysis={analysis}
-          range={range}
-          currentMs={range.startMs + Math.round((frame * 1000) / 30)}
-          highlighted={highlighted}
-        />
-      </section>
-    </section>
+            <h3>{selected.title}</h3>
+            <p className={styles.rationale}>{selected.rationale}</p>
+            <h3>Edit decisions</h3>
+            <AgenticNotes
+              notes={fixedReviewNotes(result)}
+              rangeStartMs={range.startMs}
+              busy={!ready}
+              onSeek={(ms, ids) => {
+                seek(ms);
+                setHighlighted(ids);
+              }}
+            />
+            <h3>Interest points</h3>
+            <AgenticNotes
+              notes={candidateNotes(analysis, selected)}
+              rangeStartMs={range.startMs}
+              busy={!ready}
+              onSeek={(ms, ids) => {
+                seek(ms);
+                setHighlighted(ids);
+              }}
+            />
+          </div>
+        </section>
+      }
+      video={
+        <div className={styles.reviewVideo}>
+          {ready ? (
+            <PortraitPlayer
+              label={selected.title}
+              range={range}
+              currentMs={
+                range.startMs +
+                Math.min(duration, Math.round((frame * 1000) / 30))
+              }
+              playing={playing}
+              muted={muted}
+              toggleMute={() => {
+                if (muted) player.current?.unmute();
+                else player.current?.mute();
+                setMuted(!muted);
+              }}
+              toggle={() =>
+                playing ? player.current?.pause() : player.current?.play()
+              }
+              seek={(ms) => {
+                setHighlighted([]);
+                seek(ms);
+              }}
+              surface={
+                <Player
+                  ref={player}
+                  component={ClipComposition}
+                  inputProps={{
+                    manifest: result.manifest,
+                    sourceUrl: "/api/analysis/preview",
+                    sourceStartMs: 0,
+                  }}
+                  durationInFrames={Math.ceil((duration * 30) / 1000)}
+                  fps={30}
+                  compositionWidth={1080}
+                  compositionHeight={1920}
+                  controls={false}
+                  clickToPlay={false}
+                  doubleClickToFullscreen={false}
+                  spaceKeyToPlayOrPause={false}
+                  style={{ width: "100%", height: "100%" }}
+                  errorFallback={() => (
+                    <p role="alert">Preview playback is unavailable.</p>
+                  )}
+                />
+              }
+            />
+          ) : (
+            <p role={failed ? "alert" : "status"}>
+              {failed
+                ? "Preview access is unavailable. No new processing was started."
+                : "Opening the prepared clip"}
+            </p>
+          )}
+          {failed && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setFailed(false);
+                setReady(false);
+                setPlaying(false);
+                setFrame(0);
+                setMuted(false);
+                setAttempt((value) => value + 1);
+              }}
+            >
+              Retry preview access
+            </Button>
+          )}
+        </div>
+      }
+      transcript={
+        <section
+          className={styles.momentTranscript}
+          aria-label="Clip transcript"
+        >
+          <h2>Transcript</h2>
+          <ReviewTranscript
+            selectedWords={result.words}
+            analysis={analysis}
+            range={range}
+            currentMs={range.startMs + Math.round((frame * 1000) / 30)}
+            highlighted={highlighted}
+          />
+        </section>
+      }
+    />
   );
 }

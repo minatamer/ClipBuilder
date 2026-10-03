@@ -49,11 +49,7 @@ function MomentChoice({
       onClick={() => choose(candidate)}
       onKeyDown={(event) => move(event, candidate)}
     >
-      <div
-        className={styles.choicePortrait}
-        data-moment-surface={candidate.id}
-        style={{ viewTransitionName: `moment-${candidate.rank}` }}
-      >
+      <div className={styles.choicePortrait} data-moment-surface={candidate.id}>
         {sourceUrl ? (
           <MomentThumbnail sourceUrl={sourceUrl} startMs={range.startMs} />
         ) : (
@@ -161,6 +157,44 @@ function MomentPreview({
   );
   const [highlighted, setHighlighted] = useState<readonly string[]>([]);
   const tabsId = useId();
+  const details = useRef<HTMLDivElement>(null);
+  const [splitDetails, setSplitDetails] = useState(false);
+  const split = useRef(false);
+  const resizeFocus = useRef<"transcript" | "notes" | null>(null);
+  useLayoutEffect(() => {
+    const element = details.current;
+    if (!element || typeof ResizeObserver !== "function") return;
+    const observer = new ResizeObserver(() => {
+      // Two readable 17rem cards plus their 1rem gap, using actual panel space.
+      const rem = Number.parseFloat(
+        getComputedStyle(document.documentElement).fontSize,
+      );
+      const next = element.clientWidth >= 35 * rem;
+      if (next === split.current) return;
+      const focused = document.activeElement;
+      if (focused && element.contains(focused)) {
+        const notes = element.querySelector('[data-detail="notes"]');
+        if (!next && notes?.contains(focused)) setTab("notes");
+        else if (!next) setTab("transcript");
+        else if (focused.getAttribute("role") === "tab")
+          resizeFocus.current =
+            focused.id === `${tabsId}-notes` ? "notes" : "transcript";
+      }
+      split.current = next;
+      setSplitDetails(next);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [setTab, tabsId]);
+  useLayoutEffect(() => {
+    if (!resizeFocus.current) return;
+    details.current
+      ?.querySelector<HTMLElement>(
+        `[data-detail="${resizeFocus.current}"] [tabindex="0"]`,
+      )
+      ?.focus({ preventScroll: true });
+    resizeFocus.current = null;
+  }, [splitDetails]);
   const jump = (timeMs: number, wordIds: readonly string[]) => {
     pause();
     seek(timeMs);
@@ -189,15 +223,16 @@ function MomentPreview({
           onKeyDown={(event) => move(event, candidate)}
         />
       </section>
-      <section
-        className={styles.momentTranscript}
-        aria-label="Selected moment transcript"
-        style={{ viewTransitionName: "moment-detail" }}
+      <div
+        ref={details}
+        className={styles.momentDetails}
+        data-details-layout={splitDetails ? "cards" : "tabs"}
       >
         <div
           className={styles.detailTabs}
           role="tablist"
           aria-label="Moment details"
+          hidden={splitDetails}
         >
           {(["transcript", "notes"] as const).map((value) => (
             <button
@@ -206,7 +241,7 @@ function MomentPreview({
               type="button"
               role="tab"
               aria-selected={tab === value}
-              aria-controls={`${tabsId}-panel`}
+              aria-controls={`${tabsId}-${value}-panel`}
               tabIndex={tab === value ? 0 : -1}
               onClick={() => setTab(value)}
               onKeyDown={(event) => {
@@ -233,26 +268,46 @@ function MomentPreview({
             </button>
           ))}
         </div>
-        <div
-          id={`${tabsId}-panel`}
-          role="tabpanel"
-          aria-labelledby={`${tabsId}-${tab}`}
-          className={styles.detailBody}
+        <section
+          id={`${tabsId}-transcript-panel`}
+          role={splitDetails ? "region" : "tabpanel"}
+          aria-label="Selected moment transcript"
+          aria-labelledby={`${tabsId}-${splitDetails ? "transcript-heading" : "transcript"}`}
+          className={styles.detailCard}
+          data-detail="transcript"
+          hidden={!splitDetails && tab !== "transcript"}
         >
-          {tab === "transcript" ? (
+          <h2 id={`${tabsId}-transcript-heading`} hidden={!splitDetails}>
+            Transcript
+          </h2>
+          {(splitDetails || tab === "transcript") && (
             <ReviewTranscript
               analysis={analysis}
               range={range}
               currentMs={currentMs}
               highlighted={highlighted}
             />
-          ) : (
+          )}
+        </section>
+        <section
+          id={`${tabsId}-notes-panel`}
+          role={splitDetails ? "region" : "tabpanel"}
+          aria-label="Selected moment agentic notes"
+          aria-labelledby={`${tabsId}-${splitDetails ? "notes-heading" : "notes"}`}
+          className={styles.detailCard}
+          data-detail="notes"
+          hidden={!splitDetails && tab !== "notes"}
+        >
+          <h2 id={`${tabsId}-notes-heading`} hidden={!splitDetails}>
+            Agentic Notes
+          </h2>
+          {(splitDetails || tab === "notes") && (
             <div
               className={styles.notesScroll}
               tabIndex={0}
               aria-label="Scrollable agentic notes"
             >
-              <h2>{candidate.title}</h2>
+              <h3>{candidate.title}</h3>
               <p className={styles.rationale}>{candidate.rationale}</p>
               <AgenticNotes
                 notes={candidateNotes(analysis, candidate)}
@@ -269,8 +324,8 @@ function MomentPreview({
               )}
             </div>
           )}
-        </div>
-      </section>
+        </section>
+      </div>
     </>
   );
 }

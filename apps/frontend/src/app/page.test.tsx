@@ -6,19 +6,34 @@ import robots from "./robots";
 import { PrivacyDialog } from "./privacy-dialog";
 
 describe("visual approval prototype", () => {
-  it("discloses original/cloud/provider transfer, output expiry and downloaded-copy limits", () => {
+  it("discloses media use, mode-specific storage, AI transfer and deletion boundaries", () => {
     const markup = renderToStaticMarkup(
       <PrivacyDialog localMedia cloudMedia />,
     );
-    expect(markup).toContain(
-      "original is uploaded to temporary private storage",
+    expect(markup.match(/<section\b/g)).toHaveLength(3);
+    expect(markup).toContain("No reuse or publishing");
+    expect(markup).toContain("reuse them in marketing");
+    expect(markup).toContain("short audio/video copy to Google Gemini");
+    expect(markup).toContain("retention rules are separate");
+    expect(markup).toContain("Device and cloud copies are temporary");
+    expect(markup).toContain("Clear media requests deletion");
+    expect(markup).toContain("cleanup may be delayed");
+    expect(markup).toContain("Downloaded files remain");
+    expect(markup).not.toContain("Your video stays on this device");
+    expect(markup).not.toContain("Development preview never reads or uploads");
+
+    const localMarkup = renderToStaticMarkup(<PrivacyDialog localMedia />);
+    expect(localMarkup).toContain("Your video stays on this device");
+    expect(localMarkup).toContain("closing the tab doesn’t");
+    expect(localMarkup).toContain("best-effort");
+    expect(localMarkup).not.toContain("cloud copies");
+
+    const previewMarkup = renderToStaticMarkup(<PrivacyDialog />);
+    expect(previewMarkup).toContain(
+      "Development preview never reads or uploads",
     );
-    expect(markup).toContain("Provider retention is separate");
-    expect(markup).toContain("ten minutes or until session expiry");
-    expect(markup).toContain("fifteen-minute expiry sweep");
-    expect(markup).toContain("cannot remove a copy you downloaded");
-    expect(markup).not.toContain(
-      "Original video stays on this device; it is not uploaded",
+    expect(previewMarkup).toContain(
+      "Real processing uses temporary private storage",
     );
   });
   it.each([undefined, "secondary"] as const)(
@@ -28,14 +43,13 @@ describe("visual approval prototype", () => {
         <PrivacyDialog {...(triggerVariant ? { triggerVariant } : {})} />,
       );
       expect(markup.match(/aria-haspopup="dialog"/g)).toHaveLength(1);
-      expect(markup).toMatch(
-        /type="button"[^>]*>Privacy &amp; limits<\/button>/,
-      );
+      expect(markup).toMatch(/type="button"[^>]*>Privacy<\/button>/);
       expect(markup.match(/<dialog\b/g)).toHaveLength(1);
-      expect(markup).toContain("Close privacy and limits");
+      expect(markup).toContain("Close privacy");
       expect(markup).not.toContain("The local development preview simulates");
-      expect(markup).toContain("development preview never reads or uploads");
-      expect(markup).toContain("Maximum: 20 minutes and 500 MiB");
+      expect(markup).toContain("Development preview never reads or uploads");
+      expect(markup).not.toContain("Maximum: 20 minutes and 500 MiB");
+      expect(markup).not.toContain("Visible bounds");
     },
   );
   it("renders the revised rotating two-line promise without the removed prototype labels", () => {
@@ -71,7 +85,7 @@ describe("visual approval prototype", () => {
     expect(markup).not.toContain("No upload or processing runs on this page.");
   });
 
-  it("uses one unified flow and presents privacy and limits in a dialog", () => {
+  it("uses one unified flow and presents privacy without upload limits in a dialog", () => {
     const markup = renderToStaticMarkup(<HomePage />);
 
     expect(markup).toContain('href="#how-it-works"');
@@ -79,8 +93,9 @@ describe("visual approval prototype", () => {
     expect(markup.match(/>Get Started</g)).toHaveLength(1);
     expect(markup).toContain("<dialog");
     expect(markup).toContain('aria-haspopup="dialog"');
-    expect(markup).toContain("Small scope. Plain limits.");
-    expect(markup).toContain("MP4 under 10 minutes and 250 MiB");
+    expect(markup).toContain("Your media stays yours.");
+    expect(markup).toContain("No reuse or publishing");
+    expect(markup).not.toContain("MP4 under 10 minutes and 250 MiB");
   });
 
   it("keeps the animated flow semantic and fully present in server markup", () => {

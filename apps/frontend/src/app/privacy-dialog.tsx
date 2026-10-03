@@ -16,7 +16,7 @@ type PrivacyDialogProperties = {
 
 export function PrivacyDialog({
   triggerClassName,
-  triggerLabel = "Privacy & limits",
+  triggerLabel = "Privacy",
   triggerVariant,
   localMedia = false,
   cloudMedia = false,
@@ -70,13 +70,13 @@ export function PrivacyDialog({
           <div className={styles.dialogLead}>
             <div className={styles.dialogHeading}>
               <div>
-                <p className={styles.dialogEyebrow}>Privacy &amp; limits</p>
-                <h2 id={titleId}>Small scope. Plain limits.</h2>
+                <p className={styles.dialogEyebrow}>Privacy</p>
+                <h2 id={titleId}>Your media stays yours.</h2>
               </div>
               <button
                 className={styles.dialogClose}
                 type="button"
-                aria-label="Close privacy and limits"
+                aria-label="Close privacy"
                 onClick={closeDialog}
               >
                 <X size={18} aria-hidden="true" />
@@ -84,43 +84,39 @@ export function PrivacyDialog({
             </div>
 
             <p className={styles.dialogIntro} id={descriptionId}>
-              ClipBuilder is a focused demo for one owned conversation and one
-              temporary vertical edit.
+              Used only to create your requested clip.
+              {!localMedia &&
+                !cloudMedia &&
+                " Development preview never reads or uploads selected files."}
             </p>
           </div>
 
           <div className={styles.dialogGrid}>
             <section>
               <span>01</span>
-              <h3>Owned media only</h3>
+              <h3>No reuse or publishing</h3>
               <p>
-                Use only a recording you own or have permission to edit.
-                {cloudMedia
-                  ? " After confirmation, the original is uploaded to temporary private storage and a bounded audiovisual proxy is sent for AI analysis. Provider retention is separate."
-                  : localMedia
-                    ? " Original video stays on this device; it is not uploaded."
-                    : " The development preview never reads or uploads selected files."}
+                We don’t publish your video or edit, reuse them in marketing, or
+                keep them as demo content.
               </p>
             </section>
             <section>
               <span>02</span>
-              <h3>One temporary edit</h3>
+              <h3>Temporary storage</h3>
               <p>
-                No account, project history, batch workflow, or direct social
-                publishing.
-                {localMedia &&
-                  " One recoverable workspace expires two hours after selection. Clear media deletes it best-effort. Closing the tab cannot guarantee deletion; expiry cleanup runs while open or on the next visit. Browser storage can be removed sooner."}
-                {cloudMedia &&
-                  " Cloud source access also expires after two hours. After a validated export, server source and preview copies are deleted; the final MP4 remains available for ten minutes or until session expiry. Cancel and clear request immediate deletion; an independent fifteen-minute expiry sweep retries cleanup. Outages can delay physical deletion. Clear cannot remove a copy you downloaded."}
+                {cloudMedia
+                  ? "Device and cloud copies are temporary. Clear media requests deletion; cleanup may be delayed. Downloaded files remain."
+                  : localMedia
+                    ? "Your video stays on this device. Clear media removes temporary files best-effort; closing the tab doesn’t. Downloaded files remain."
+                    : "Real processing uses temporary private storage. Clear media requests deletion; cleanup may be delayed. Downloaded files remain."}
               </p>
             </section>
             <section>
               <span>03</span>
-              <h3>Visible bounds</h3>
+              <h3>AI processing</h3>
               <p>
-                For the fastest demo, use an MP4 under 10 minutes and 250 MiB.
-                Maximum: 20 minutes and 500 MiB. Your final clip will be 10–60
-                seconds.
+                Real AI processing sends a short audio/video copy to Google
+                Gemini. Google’s retention rules are separate.
               </p>
             </section>
           </div>

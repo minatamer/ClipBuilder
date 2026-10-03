@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Download, Share2 } from "lucide-react";
+import { Download } from "lucide-react";
 import type {
   FinalRenderResult,
   SelectedAssemblyResult,
@@ -10,16 +10,19 @@ import { Button } from "../../shared/ui/button";
 import { PortraitPlayer } from "./portrait-player";
 import { useRangePlayback } from "./use-range-playback";
 import { observeOutputPlayback } from "../render/output-playback";
+import { ClipDeliveryActions, SocialDestinations } from "./clip-delivery";
 import styles from "./sample.module.css";
 
 export function CloudResult({
   result,
   assembly,
   api,
+  deliveryFooter,
 }: {
   result: FinalRenderResult;
   assembly: SelectedAssemblyResult;
   api: Pick<SourceAnalysisApi, "session" | "output">;
+  deliveryFooter?: HTMLElement | null;
 }) {
   const [expired, setExpired] = useState(false);
   const [access, setAccess] = useState(false),
@@ -136,26 +139,28 @@ export function CloudResult({
             Retry output access
           </Button>
         )}
-        <Button
-          icon={Download}
-          disabled={!access || !decoded || failed}
-          onClick={() => {
-            if (Date.now() >= result.expiresAtMs) {
-              setDecoded(false);
-              setFailed(true);
-              return;
-            }
-            const link = document.createElement("a");
-            link.href = "/api/analysis/download";
-            link.download = "clipbuilder.mp4";
-            document.body.append(link);
-            link.click();
-            link.remove();
-            setRequested(true);
-          }}
-        >
-          Download MP4
-        </Button>
+        <ClipDeliveryActions target={deliveryFooter}>
+          <Button
+            icon={Download}
+            disabled={!access || !decoded || failed}
+            onClick={() => {
+              if (Date.now() >= result.expiresAtMs) {
+                setDecoded(false);
+                setFailed(true);
+                return;
+              }
+              const link = document.createElement("a");
+              link.href = "/api/analysis/download";
+              link.download = "clipbuilder.mp4";
+              document.body.append(link);
+              link.click();
+              link.remove();
+              setRequested(true);
+            }}
+          >
+            Download MP4
+          </Button>
+        </ClipDeliveryActions>
         <p role="status">
           {expired
             ? "Output access has expired."
@@ -177,28 +182,7 @@ export function CloudResult({
           </p>
         </section>
       </div>
-      <section
-        className={styles.socialDestinations}
-        aria-labelledby="social-heading"
-      >
-        <h2 id="social-heading">
-          <span>OR</span> Share on social media
-        </h2>
-        <div className={styles.socialActions}>
-          {["Facebook", "Instagram", "TikTok", "X"].map((name) => (
-            <button
-              key={name}
-              type="button"
-              disabled
-              aria-label={`${name} sharing unavailable, coming soon`}
-            >
-              <Share2 size={18} aria-hidden="true" />
-              <strong>{name}</strong>
-              <span>Soon</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      <SocialDestinations />
     </section>
   );
 }

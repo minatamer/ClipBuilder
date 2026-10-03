@@ -71,11 +71,6 @@ export async function runDevelopmentStage(
       type: "UPLOAD_COMPLETE",
       operation: await api.completeUpload(state.upload.uploadId, bytes, signal),
     });
-  } else if (state.stage === "analysis-confirmation") {
-    send({
-      type: "ANALYZE_CONFIRMED",
-      operation: await api.analyze(state.media.mediaId, signal),
-    });
   } else if (
     state.stage === "media-inspecting" ||
     state.stage === "analyzing" ||
@@ -153,6 +148,17 @@ export async function runDevelopmentStage(
       });
     else throw new SampleApiFailure(sampleFailure());
   }
+}
+
+export async function confirmDevelopmentAnalysis(
+  state: ClippingSessionState,
+  api: SampleApi,
+  dispatch: (event: ClippingSessionEvent) => void,
+  signal: AbortSignal,
+) {
+  if (state.stage !== "analysis-confirmation" || signal.aborted) return;
+  const operation = await api.analyze(state.media.mediaId, signal);
+  if (!signal.aborted) dispatch({ type: "ANALYZE_CONFIRMED", operation });
 }
 
 export function developmentStageLabel(stageCode: string): string {

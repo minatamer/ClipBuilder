@@ -152,13 +152,14 @@ describe("video-first review revision", () => {
     expect(descriptionId).toBeTruthy();
     expect(download?.[1]).toContain('disabled=""');
     expect(markup).toContain(`<p id="${descriptionId}"`);
-    expect(markup).toContain(
-      "Simulated preview. No downloadable video was created.",
-    );
+    expect(markup).toContain("Downloads are unavailable in simulated mode.");
     expect(markup.match(/disabled=""/g)).toHaveLength(5);
     for (const name of ["Facebook", "Instagram", "TikTok", "X"])
       expect(markup).toContain(`${name} sharing unavailable, coming soon`);
     expect(markup.match(/>Soon</g)).toHaveLength(4);
+    expect(markup).not.toContain(
+      "Simulated preview. No downloadable video was created.",
+    );
     expect(markup).not.toMatch(
       /href=|The export screen is ready|Clip transcript/,
     );

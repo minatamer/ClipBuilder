@@ -6,9 +6,10 @@ import {
   useRef,
   useState,
   useCallback,
+  useEffectEvent,
   type ReactNode,
 } from "react";
-import { ArrowRight, Clapperboard, Film, Upload, X } from "lucide-react";
+import { ArrowRight, Film, Upload, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import {
   type PublicConfigResponse,
@@ -16,6 +17,7 @@ import {
 } from "@clipbuilder/contracts";
 import { PrivacyDialog } from "../../app/privacy-dialog";
 import { Button } from "../../shared/ui/button";
+import { BrandMark } from "../../shared/ui/brand-mark";
 import { Progress } from "../../shared/ui/progress";
 import { WorkflowFrame } from "../../shared/ui/workflow-frame";
 import {
@@ -37,6 +39,7 @@ import { ProcessingStatus } from "./processing-status";
 import { developmentInput } from "./development.input";
 import {
   developmentOperationFraction,
+  confirmDevelopmentAnalysis,
   developmentStageLabel,
   runDevelopmentStage,
 } from "./development.progress";
@@ -50,6 +53,7 @@ import styles from "./sample.module.css";
 import { localMediaFailure } from "../media/media.errors";
 import { localSessionIdentity } from "../media/workspace.restore";
 import { SourcePreview } from "./source-preview";
+import { loadRetainedSample } from "./retained-sample.input";
 import { createSourceAnalysisApi } from "../source-analysis/source-analysis.api";
 import { AnalysisChallenge } from "../source-analysis/analysis-challenge";
 import {
@@ -79,9 +83,9 @@ function Workspace({
         Skip to main content
       </a>
       <header className={styles.header}>
-        <a href="/" className={styles.brand}>
-          <Clapperboard size={24} aria-hidden="true" />
-          ClipBuilder
+        <a href="/" className={styles.brand} aria-label="ClipBuilder home">
+          <BrandMark className={styles.brandMark} />
+          <span className={styles.brandText}>ClipBuilder</span>
         </a>
         <div className={styles.headerActions}>
           <PrivacyDialog
@@ -106,7 +110,13 @@ function Workspace({
   );
 }
 
-export function SampleExperience({ api = sampleApi }: { api?: SampleApi }) {
+export function SampleExperience({
+  api = sampleApi,
+  sampleRequested = false,
+}: {
+  api?: SampleApi;
+  sampleRequested?: boolean;
+}) {
   const [config, setConfig] = useState<PublicConfigResponse | null>(null);
   const [configFailed, setConfigFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -129,8 +139,20 @@ export function SampleExperience({ api = sampleApi }: { api?: SampleApi }) {
   const enabled =
     (config?.mode === "fake" && config.sampleEnabled) || localMode;
   const availability = useMemo(
-    () => ({ sample: false, upload: enabled }),
-    [enabled],
+    () => ({
+      sample: !!(
+        (config?.mode === "fake" && config.sampleEnabled) ||
+        (localMode && config?.retainedSampleEnabled)
+      ),
+      upload: enabled,
+    }),
+    [
+      enabled,
+      localMode,
+      config?.mode,
+      config?.sampleEnabled,
+      config?.retainedSampleEnabled,
+    ],
   );
   if (config === null)
     return (
@@ -143,16 +165,17 @@ export function SampleExperience({ api = sampleApi }: { api?: SampleApi }) {
               <Button onClick={() => setAttempt((value) => value + 1)}>
                 Retry connection
               </Button>
-            ) : (
-              <p className={styles.modeNote}>Checking local availability</p>
-            )
+            ) : null
           }
         >
           <section className={styles.processing}>
             {configFailed ? (
               <p role="alert">The local service is unavailable.</p>
             ) : (
-              <Progress label="Checking availability" />
+              <>
+                <Progress label="Checking availability" />
+                <p className={styles.modeNote}>Checking local availability</p>
+              </>
             )}
           </section>
         </WorkflowFrame>
@@ -161,21 +184,16 @@ export function SampleExperience({ api = sampleApi }: { api?: SampleApi }) {
   if (!enabled)
     return (
       <Workspace>
-        <WorkflowFrame
-          title="Choose your video"
-          step={0}
-          footer={
-            <p className={styles.modeNote}>
-              Real processing is unavailable. No development fallback.
-            </p>
-          }
-        >
+        <WorkflowFrame title="Choose your video" step={0} footer={null}>
           <section className={styles.empty}>
             <Film size={40} aria-hidden="true" />
             <h2>Processing is not connected yet.</h2>
             <p>
               Real upload and processing require the remaining implementation
               and readiness gates.
+            </p>
+            <p className={styles.modeNote}>
+              Real processing is unavailable. No development fallback.
             </p>
             <Button icon={Upload} disabled>
               Choose a video
@@ -190,7 +208,12 @@ export function SampleExperience({ api = sampleApi }: { api?: SampleApi }) {
       loadServerEvidence={api.evidence}
       localMode={localMode}
     >
-      <SampleScreen api={api} availability={availability} config={config} />
+      <SampleScreen
+        api={api}
+        availability={availability}
+        config={config}
+        sampleRequested={sampleRequested}
+      />
     </ClippingSessionProvider>
   );
 }
@@ -199,10 +222,12 @@ function SampleScreen({
   api,
   availability,
   config,
+  sampleRequested,
 }: {
   api: SampleApi;
   availability: { sample: boolean; upload: boolean };
   config: PublicConfigResponse;
+  sampleRequested: boolean;
 }) {
   const { state, dispatch, effects, workspace, retryRestore } =
     useClippingSession();
@@ -229,12 +254,16 @@ function SampleScreen({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<SafeError | null>(null);
   const [evidenceAttempt, setEvidenceAttempt] = useState(0);
+  const [deliveryFooter, setDeliveryFooter] = useState<HTMLDivElement | null>(
+    null,
+  );
   const pending = useRef<AbortController | null>(null);
   const phase = useRef<{ key: string; controller: AbortController } | null>(
     null,
   );
   const title = useRef<HTMLHeadingElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const sampleEntryHandled = useRef(false);
   const actions = selectAvailableActions(state);
   const identity = "identity" in state ? state.identity : null;
   const snapshot = "analysis" in state ? state.analysis : null;
@@ -475,10 +504,11 @@ function SampleScreen({
     pending.current = null;
     setBusy(false);
     setFailure(null);
-    dispatch({ type: "CLEAR" });
+    if (selectIsClearable(state)) dispatch({ type: "CLEAR" });
   };
-  const selectInput = (file?: File) => {
+  const selectInput = (file: File) => {
     if (state.stage !== "intake") return;
+    setConsent(false);
     if (workspace) {
       if (!file) return;
       try {
@@ -525,6 +555,39 @@ function SampleScreen({
       type: "FILE_SELECTED",
       localSource: developmentInput(file),
     });
+  };
+  const selectSample = () => {
+    if (state.stage !== "intake" || !availability.sample || pending.current)
+      return;
+    if (config.mode === "fake") {
+      dispatch({ type: "FILE_SELECTED", localSource: developmentInput() });
+      return;
+    }
+    if (!workspace) return;
+    void run(async (signal) => {
+      const file = await loadRetainedSample(signal, config.limits.sourceBytes);
+      signal.throwIfAborted();
+      selectInput(file);
+    });
+  };
+  const startRequestedSample = useEffectEvent(selectSample);
+  useEffect(() => {
+    if (
+      !sampleRequested ||
+      state.stage !== "intake" ||
+      sampleEntryHandled.current
+    )
+      return;
+    sampleEntryHandled.current = true;
+    if (availability.sample) startRequestedSample();
+  }, [sampleRequested, state.stage, availability.sample]);
+
+  const findMoments = () => {
+    if (localMode) analyzeSource();
+    else
+      void run((signal) =>
+        confirmDevelopmentAnalysis(state, api, dispatch, signal),
+      );
   };
   const build = () => {
     if (
@@ -658,6 +721,7 @@ function SampleScreen({
   };
   const stageTitles: Partial<Record<typeof state.stage, string>> = {
     intake: "Choose your video",
+    "analysis-confirmation": "Preview your video",
     uploading: "Uploading video",
     analyzing: "Finding the best moments",
     candidates: "Pick one moment",
@@ -677,7 +741,6 @@ function SampleScreen({
     state.stage === "uploading" ||
     state.stage === "upload-authorizing" ||
     state.stage === "media-inspecting" ||
-    (state.stage === "analysis-confirmation" && !localMode) ||
     state.stage === "analyzing" ||
     state.stage === "assembling" ||
     state.stage === "cloud-assembling" ||
@@ -706,7 +769,7 @@ function SampleScreen({
     <Workspace
       localMode={localMode}
       cloudMode={config.liveAnalysisEnabled}
-      {...(selectIsClearable(state) &&
+      {...((selectIsClearable(state) || busy) &&
       !(
         localMode &&
         state.stage === "fatal" &&
@@ -727,7 +790,6 @@ function SampleScreen({
             "cloud-result",
             "result",
             "local-preparing",
-            "analysis-confirmation",
           ].includes(state.stage) && !loading
         }
         headingRef={title}
@@ -755,7 +817,6 @@ function SampleScreen({
           ].includes(state.stage)
             ? 2
             : [
-                  "analysis-confirmation",
                   "analyzing",
                   "analysis-failed",
                   "candidates",
@@ -766,26 +827,27 @@ function SampleScreen({
         }
         footer={
           state.stage === "candidates" && state.selectedId === null ? null : (
-            <div className={styles.footerActions}>
-              {state.stage === "intake" && !localMode && (
-                <Button
-                  variant="secondary"
-                  icon={ArrowRight}
-                  onClick={() => selectInput()}
-                >
-                  Use prepared input
-                </Button>
-              )}
-              {state.stage === "analysis-confirmation" &&
-                localMode &&
-                config.liveAnalysisEnabled && (
+            <div className={styles.footerActions} ref={setDeliveryFooter}>
+              {state.stage === "analysis-confirmation" && (
+                <>
+                  <Button variant="secondary" onClick={clear}>
+                    Choose another video
+                  </Button>
                   <Button
-                    onClick={analyzeSource}
-                    disabled={!consent || busy || !config.processingSiteKey}
+                    onClick={findMoments}
+                    disabled={
+                      busy ||
+                      !!failure ||
+                      (localMode &&
+                        (!consent ||
+                          !config.liveAnalysisEnabled ||
+                          !config.processingSiteKey))
+                    }
                   >
                     Find moments
                   </Button>
-                )}
+                </>
+              )}
               {state.stage === "candidates" && state.selectedId !== null && (
                 <Button
                   icon={ArrowRight}
@@ -927,32 +989,34 @@ function SampleScreen({
             )}
           </section>
         )}
-        {state.stage === "analysis-confirmation" &&
-          localMode &&
-          workspace?.sourceUrl && (
-            <>
-              <SourcePreview
-                sourceUrl={workspace.sourceUrl}
-                durationMs={state.media.durationMs}
-              />
-              <p className={styles.modeNote}>
-                {config.liveAnalysisEnabled
+        {state.stage === "analysis-confirmation" && (
+          <>
+            <SourcePreview
+              {...(workspace?.sourceUrl
+                ? { sourceUrl: workspace.sourceUrl }
+                : {})}
+              durationMs={state.media.durationMs}
+            />
+            <p className={styles.modeNote}>
+              {!localMode
+                ? "This is a simulated source preview. Selected video bytes are not read or uploaded; Find moments continues the fixture journey."
+                : config.liveAnalysisEnabled
                   ? "Your video will be uploaded to temporary private storage. A smaller video and audio proxy is sent for AI analysis. Source access expires after two hours; cleanup is best effort and provider retention is separate."
                   : "Video prepared locally. Moment analysis requires enabled processing gates."}
-              </p>
-              {config.liveAnalysisEnabled && (
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={consent}
-                    onChange={(event) => setConsent(event.target.checked)}
-                  />{" "}
-                  I own or have licensed this conversation and consent to these
-                  transfers and paid analysis.
-                </label>
-              )}
-            </>
-          )}
+            </p>
+            {config.liveAnalysisEnabled && (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(event) => setConsent(event.target.checked)}
+                />{" "}
+                I own or have licensed this conversation and consent to these
+                transfers and paid analysis.
+              </label>
+            )}
+          </>
+        )}
         {challenge && config.processingSiteKey && (
           <AnalysisChallenge
             siteKey={config.processingSiteKey}
@@ -972,8 +1036,10 @@ function SampleScreen({
               }}
               onDrop={(event) => {
                 event.preventDefault();
-                if (event.dataTransfer.files.length === 1)
-                  selectInput(event.dataTransfer.files[0]);
+                if (pending.current) return;
+                const file = event.dataTransfer.files[0];
+                if (event.dataTransfer.files.length === 1 && file)
+                  selectInput(file);
                 else
                   setFailure({
                     ...sampleFailure(),
@@ -996,12 +1062,51 @@ function SampleScreen({
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   event.target.value = "";
-                  if (file !== undefined) selectInput(file);
+                  if (file !== undefined && !pending.current) selectInput(file);
                 }}
               />
-              <Button icon={Film} onClick={() => fileInput.current?.click()}>
-                Choose a video
-              </Button>
+              <div className={styles.intakeActions}>
+                <Button
+                  icon={Film}
+                  disabled={busy}
+                  onClick={() => fileInput.current?.click()}
+                >
+                  Choose a video
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={busy || !availability.sample}
+                  onClick={selectSample}
+                  aria-describedby={
+                    config.mode === "fake"
+                      ? "sample-preview-note"
+                      : !availability.sample
+                        ? "sample-unavailable"
+                        : undefined
+                  }
+                >
+                  Use sample
+                </Button>
+              </div>
+              {config.mode === "fake" && (
+                <p id="sample-preview-note" className={styles.sampleNotice}>
+                  Sample previews and results are simulated.
+                </p>
+              )}
+              {!availability.sample && (
+                <p id="sample-unavailable" className={styles.sampleNotice}>
+                  Sample video is not configured yet. You can choose your own
+                  video.
+                </p>
+              )}
+              {busy && (
+                <div role="status" className={styles.sampleLoading}>
+                  <Progress label="Preparing sample video" />
+                  <Button variant="quiet" onClick={clear}>
+                    Cancel sample
+                  </Button>
+                </div>
+              )}
             </div>
             <p className={styles.limits}>
               <span>
@@ -1015,13 +1120,16 @@ function SampleScreen({
               </span>
             </p>
             <p className={styles.rights}>
-              Only videos, voices and music you own or have permission to edit.
-              {localMode
-                ? config.liveAnalysisEnabled
-                  ? " Video is kept in one temporary device workspace for up to two hours. After your consent, the original is uploaded to private temporary storage; bounded audiovisual proxies go to Google AI. Provider retention is separate. Clear requests server cleanup and attempts device deletion. Closing the tab does not guarantee deletion; independent server expiry and device cleanup on the next visit apply."
-                  : " Video stays on this device in one temporary workspace for up to two hours. Clear media attempts to remove it. Closing the tab does not guarantee deletion; expired files are cleaned while open or on the next visit. Browser storage may be removed sooner."
-                : " Real media will be temporary, with clear and expiry."}
+              For the best results, choose a clear conversation with focused
+              topics, complete ideas, and minimal background noise.
             </p>
+            {localMode && (
+              <p className={styles.rights}>
+                {config.liveAnalysisEnabled
+                  ? "Video is kept in one temporary device workspace for up to two hours. After your consent, the original is uploaded to private temporary storage; bounded audiovisual proxies go to Google AI. Provider retention is separate. Clear requests server cleanup and attempts device deletion. Closing the tab does not guarantee deletion; independent server expiry and device cleanup on the next visit apply."
+                  : "Video stays on this device in one temporary workspace for up to two hours. Clear media attempts to remove it. Closing the tab does not guarantee deletion; expired files are cleaned while open or on the next visit. Browser storage may be removed sooner."}
+              </p>
+            )}
           </section>
         )}
         {rejected && (
@@ -1104,10 +1212,15 @@ function SampleScreen({
             result={state.result}
             assembly={state.assembly}
             api={cloudApi}
+            deliveryFooter={deliveryFooter}
           />
         )}
         {state.stage === "result" && (
-          <ResultPreview summary={state.clipSummary} api={api} />
+          <ResultPreview
+            summary={state.clipSummary}
+            api={api}
+            deliveryFooter={deliveryFooter}
+          />
         )}
         {state.stage === "fatal" && (
           <section className={styles.empty}>

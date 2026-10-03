@@ -54,20 +54,11 @@
   --motion-entrance: var(--cb-motion-entrance);
   --ease-direct: var(--cb-ease-direct);
   --ease-settle: var(--cb-ease-settle);
-  --content: 80rem;
+  --content: var(--cb-content-max);
   min-width: 0;
   min-height: 100vh;
   overflow-x: clip;
-  background: linear-gradient(
-    180deg,
-    #06112a 0%,
-    #0b347f 17%,
-    #081b41 31%,
-    #0b2f76 53%,
-    #071a40 76%,
-    #04112b 91%,
-    #030b1e 100%
-  );
+  background: var(--cb-page-background);
   color: var(--ink);
   font-size: 1rem;
   line-height: 1.6;
@@ -106,7 +97,7 @@
   position: fixed;
   inset: 0 0 auto;
   z-index: 50;
-  padding: max(0.75rem, env(safe-area-inset-top)) 1.5rem 0;
+  padding: max(0.75rem, env(safe-area-inset-top)) var(--cb-page-gutter) 0;
   color: white;
   pointer-events: none;
 }
@@ -178,44 +169,6 @@
   text-decoration: none;
 }
 
-.wordmarkMark {
-  position: relative;
-  width: 1.7rem;
-  height: 1.7rem;
-  flex: 0 0 auto;
-  display: block;
-  overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 0.28);
-  border-radius: 0.55rem;
-  background: linear-gradient(
-    145deg,
-    rgb(120 182 255 / 0.94),
-    rgb(49 87 213 / 0.9)
-  );
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28);
-}
-
-.wordmarkMark span {
-  position: absolute;
-  left: 0.38rem;
-  width: 0.95rem;
-  height: 0.28rem;
-  border-radius: 999px;
-  background: white;
-  transform-origin: left center;
-}
-
-.wordmarkMark span:first-child {
-  top: 0.49rem;
-  rotate: -8deg;
-}
-
-.wordmarkMark span:last-child {
-  bottom: 0.49rem;
-  width: 0.7rem;
-  rotate: 8deg;
-}
-
 .primaryNav {
   display: flex;
   align-items: center;
@@ -263,14 +216,11 @@
   align-items: center;
   justify-content: center;
   padding-inline: 1.15rem;
-  border: 1px solid rgb(255 255 255 / 0.34);
+  border: 1px solid var(--cb-cta-edge);
   border-radius: 999px;
-  background-color: rgb(60 126 244 / 0.64);
+  background-color: var(--cb-cta-fill);
   color: white;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.28),
-    inset 0 -1px 0 rgb(16 55 132 / 0.24),
-    0 0.35rem 1rem rgb(0 8 28 / 0.18);
+  box-shadow: var(--cb-cta-shadow);
   font-size: 0.875rem;
   font-weight: 680;
   text-decoration: none;
@@ -280,10 +230,9 @@
 }
 
 .headerAction:hover {
-  border-color: rgb(255 255 255 / 0.56);
-  background-color: rgb(75 143 255 / 0.78);
+  border-color: var(--cb-cta-hover-edge);
+  background-color: var(--cb-cta-hover);
 }
-
 .headerAction:active,
 .backToTop:active {
   transform: translateY(1px) scale(0.99);
@@ -1390,6 +1339,16 @@
   opacity: 0.12;
 }
 
+.speakerFabricLight {
+  fill: #fff;
+  opacity: 0.12;
+}
+
+.speakerSkinShade {
+  fill: var(--speaker-skin-shadow);
+  opacity: 0.38;
+}
+
 .speakerCollar {
   fill: var(--speaker-collar);
 }
@@ -1449,10 +1408,10 @@
 .speakerArm {
   position: absolute;
   z-index: 3;
-  top: 37%;
-  width: 20%;
-  height: 42%;
-  transform-origin: 50% 5%;
+  top: 35.5%;
+  width: 22%;
+  height: 50%;
+  transform-origin: 50% 7%;
   will-change: transform;
 }
 
@@ -1461,12 +1420,12 @@
 }
 
 .speakerArmLeft {
-  left: 10%;
+  left: 8%;
   transform: rotate(10deg);
 }
 
 .speakerArmRight {
-  right: 10%;
+  right: 8%;
   transform: rotate(-10deg);
 }
 
@@ -1480,15 +1439,19 @@
 .speakerUpperArm {
   z-index: 2;
   top: 0;
-  width: 96%;
-  height: 56%;
+  width: 100%;
+  height: 60%;
   transform: translateX(-50%);
+}
+
+.speakerArmRight .speakerUpperArm {
+  transform: translateX(-50%) scaleX(-1);
 }
 
 .speakerForearm {
   z-index: 3;
-  top: 45%;
-  width: 66%;
+  top: 50%;
+  width: 78%;
   height: 55%;
   transform-origin: 50% 8%;
   will-change: transform;
@@ -1511,10 +1474,10 @@
 
 .speakerHand {
   position: absolute;
-  top: 85%;
+  top: 89%;
   left: 50%;
-  width: 125%;
-  height: 30%;
+  width: 115%;
+  height: 38%;
   overflow: visible;
   transform: translateX(-50%);
 }
@@ -3004,10 +2967,6 @@
 }
 
 @media (max-width: 58rem) {
-  .siteHeader {
-    padding-inline: 1rem;
-  }
-
   .headerInner {
     gap: 1rem;
   }
@@ -3065,7 +3024,7 @@
 
 @media (max-width: 47.5rem) {
   .siteHeader {
-    padding: max(0.6rem, env(safe-area-inset-top)) 0.75rem 0;
+    padding-top: max(0.6rem, env(safe-area-inset-top));
   }
 
   .headerInner {
@@ -3078,6 +3037,8 @@
   }
 
   .navButton {
+    min-width: var(--cb-target);
+    justify-content: center;
     font-size: 0.78rem;
   }
 
@@ -3105,15 +3066,7 @@
   }
 
   .heroBrand {
-    gap: 0.65rem;
-    margin-bottom: clamp(0.8rem, 2.2svh, 1.1rem);
-    font-size: clamp(1.05rem, 4.8vw, 1.3rem);
-  }
-
-  .heroBrand .wordmarkMark {
-    width: clamp(2.15rem, 10vw, 2.65rem);
-    height: clamp(2.15rem, 10vw, 2.65rem);
-    border-radius: 0.72rem;
+    display: none;
   }
 
   .hero h1 {
@@ -3168,6 +3121,17 @@
 
   .wordmarkText {
     display: none;
+  }
+
+  .siteHeader .wordmark {
+    flex-shrink: 0;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  .siteHeader .wordmarkText {
+    display: inline;
   }
 
   .processSection {

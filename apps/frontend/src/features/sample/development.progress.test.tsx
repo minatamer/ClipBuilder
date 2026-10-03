@@ -26,6 +26,7 @@ import {
   abortableDelay,
   developmentOperationFraction,
   runDevelopmentStage,
+  confirmDevelopmentAnalysis,
 } from "./development.progress";
 import { createSampleApi } from "./sample.api";
 import { ClipReview } from "./clip.review";
@@ -170,203 +171,222 @@ describe("complete frontend development flow", () => {
       developmentInput({ size: 1, type: "text/plain" }).validation,
     ).toEqual({ status: "rejected", reasonCode: "type" });
   });
-  it("uses canonical events from intake to result, restores immutable review, and sends no media or download requests", async () => {
-    const uploadedIdentity = { ...identity, mode: "upload" as const };
-    const inspection = operation("media-inspection", "media.inspecting", "i");
-    const analyzing = operation("analysis", "analysis.queued", "a");
-    const building = operation("assembly", "assembly.queued", "b");
-    const rendering = operation("render", "render.queued", "r");
-    let current = inspection;
-    let provenStage = "intake";
-    const transport = vi.fn<typeof fetch>(async (input, init) => {
-      const path = String(input).replace("/api/sample/", "");
-      if (path === "sessions")
-        return Response.json({
-          ...uploadedIdentity,
-          remaining: undefined,
-          stage: "intake",
-        });
-      if (path === "upload/authorize")
-        return Response.json({ uploadId: `upl_${"u".repeat(22)}` });
-      if (path === "upload/complete") {
-        provenStage = "uploaded";
-        current = inspection;
-        return Response.json(current);
-      }
-      if (path === "analyze") {
-        provenStage = "analyzing";
-        current = analyzing;
-        return Response.json(current);
-      }
-      if (path === "assemble") {
-        provenStage = "assembling";
-        current = building;
-        return Response.json({
-          assemblyId: assembly.assemblyId,
-          operation: current,
-        });
-      }
-      if (path === "render") {
-        provenStage = "rendering";
-        current = rendering;
-        return Response.json({
-          renderId: `rnd_${"r".repeat(22)}`,
-          operation: current,
-        });
-      }
-      if (path.startsWith("operations/")) {
-        current = operationStatusSchema.parse({
-          ...current,
-          state: "succeeded",
-          stageCode:
-            current.kind === "media-inspection"
-              ? "media.inspecting"
-              : `${current.kind}.complete`,
-          startedAt: identity.expiresAt,
-          updatedAt: identity.expiresAt,
-          completedAt: identity.expiresAt,
-          resultRevision:
-            current.kind === "analysis" || current.kind === "media-inspection"
-              ? analysis.revision
-              : assembly.revision,
-        });
-        provenStage =
-          current.kind === "media-inspection"
-            ? "media-inspected"
-            : current.kind === "analysis"
-              ? "candidates"
-              : current.kind === "assembly"
-                ? "clip-review"
-                : "result";
-        return Response.json(current);
-      }
-      if (path === "session")
-        return Response.json(
-          sessionResponseSchema.parse({
+  it.each(["file", "sample"] as const)(
+    "uses %s fixture input from intake to result, restores immutable review, and sends no media or download requests",
+    async (inputKind) => {
+      const uploadedIdentity = { ...identity, mode: "upload" as const };
+      const inspection = operation("media-inspection", "media.inspecting", "i");
+      const analyzing = operation("analysis", "analysis.queued", "a");
+      const building = operation("assembly", "assembly.queued", "b");
+      const rendering = operation("render", "render.queued", "r");
+      let current = inspection;
+      let provenStage = "intake";
+      const transport = vi.fn<typeof fetch>(async (input, init) => {
+        const path = String(input).replace("/api/sample/", "");
+        if (path === "sessions")
+          return Response.json({
             ...uploadedIdentity,
-            accessState: "active",
-            provenStage,
-            media,
-            activeOperation: current,
-            analysisId: analysis.analysisId,
-            analysisRevision: analysis.revision,
-            assemblyId:
-              provenStage === "clip-review" || provenStage === "result"
-                ? assembly.assemblyId
-                : null,
-            assemblyRevision:
-              provenStage === "clip-review" || provenStage === "result"
-                ? assembly.revision
-                : null,
-            manifestId:
-              provenStage === "clip-review" || provenStage === "result"
-                ? assembly.manifestId
-                : null,
-            manifestHash:
-              provenStage === "clip-review" || provenStage === "result"
-                ? assembly.manifestHash
-                : null,
-            renderId: provenStage === "result" ? `rnd_${"r".repeat(22)}` : null,
-            outputAvailable: provenStage === "result",
-          }),
-        );
-      if (path.startsWith("analysis/")) return Response.json(analysis);
-      if (path.startsWith("assembly/")) return Response.json(assembly);
-      void init;
-      throw new Error("Unexpected preview request.");
-    });
-    const api = createSampleApi(transport);
-    const signal = new AbortController().signal;
-    let state: ClippingSessionState = clippingSessionReducer(
-      initialClippingSessionState,
-      { type: "RESTORE_EMPTY", availability: { sample: false, upload: true } },
-    );
-    const events: ClippingSessionEvent[] = [];
-    const dispatch = (event: ClippingSessionEvent) => {
-      events.push(event);
-      state = clippingSessionReducer(state, event);
-      expect(state.diagnosticCode).toBeNull();
-    };
-    dispatch({
-      type: "FILE_SELECTED",
-      localSource: {
-        sourceId: "development-input",
-        declaredBytes: 100,
-        contentType: "video/mp4",
-        validation: { status: "accepted" },
-      },
-    });
-    for (let step = 0; step < 6; step += 1)
+            remaining: undefined,
+            stage: "intake",
+          });
+        if (path === "upload/authorize")
+          return Response.json({ uploadId: `upl_${"u".repeat(22)}` });
+        if (path === "upload/complete") {
+          provenStage = "uploaded";
+          current = inspection;
+          return Response.json(current);
+        }
+        if (path === "analyze") {
+          provenStage = "analyzing";
+          current = analyzing;
+          return Response.json(current);
+        }
+        if (path === "assemble") {
+          provenStage = "assembling";
+          current = building;
+          return Response.json({
+            assemblyId: assembly.assemblyId,
+            operation: current,
+          });
+        }
+        if (path === "render") {
+          provenStage = "rendering";
+          current = rendering;
+          return Response.json({
+            renderId: `rnd_${"r".repeat(22)}`,
+            operation: current,
+          });
+        }
+        if (path.startsWith("operations/")) {
+          current = operationStatusSchema.parse({
+            ...current,
+            state: "succeeded",
+            stageCode:
+              current.kind === "media-inspection"
+                ? "media.inspecting"
+                : `${current.kind}.complete`,
+            startedAt: identity.expiresAt,
+            updatedAt: identity.expiresAt,
+            completedAt: identity.expiresAt,
+            resultRevision:
+              current.kind === "analysis" || current.kind === "media-inspection"
+                ? analysis.revision
+                : assembly.revision,
+          });
+          provenStage =
+            current.kind === "media-inspection"
+              ? "media-inspected"
+              : current.kind === "analysis"
+                ? "candidates"
+                : current.kind === "assembly"
+                  ? "clip-review"
+                  : "result";
+          return Response.json(current);
+        }
+        if (path === "session")
+          return Response.json(
+            sessionResponseSchema.parse({
+              ...uploadedIdentity,
+              accessState: "active",
+              provenStage,
+              media,
+              activeOperation: current,
+              analysisId: analysis.analysisId,
+              analysisRevision: analysis.revision,
+              assemblyId:
+                provenStage === "clip-review" || provenStage === "result"
+                  ? assembly.assemblyId
+                  : null,
+              assemblyRevision:
+                provenStage === "clip-review" || provenStage === "result"
+                  ? assembly.revision
+                  : null,
+              manifestId:
+                provenStage === "clip-review" || provenStage === "result"
+                  ? assembly.manifestId
+                  : null,
+              manifestHash:
+                provenStage === "clip-review" || provenStage === "result"
+                  ? assembly.manifestHash
+                  : null,
+              renderId:
+                provenStage === "result" ? `rnd_${"r".repeat(22)}` : null,
+              outputAvailable: provenStage === "result",
+            }),
+          );
+        if (path.startsWith("analysis/")) return Response.json(analysis);
+        if (path.startsWith("assembly/")) return Response.json(assembly);
+        void init;
+        throw new Error("Unexpected preview request.");
+      });
+      const api = createSampleApi(transport);
+      const signal = new AbortController().signal;
+      let state: ClippingSessionState = clippingSessionReducer(
+        initialClippingSessionState,
+        { type: "RESTORE_EMPTY", availability: { sample: true, upload: true } },
+      );
+      const events: ClippingSessionEvent[] = [];
+      const dispatch = (event: ClippingSessionEvent) => {
+        events.push(event);
+        state = clippingSessionReducer(state, event);
+        expect(state.diagnosticCode).toBeNull();
+      };
+      expect(selectAvailableActions(state)).toContain("select-sample");
+      expect(transport).not.toHaveBeenCalled();
+      dispatch({
+        type: "FILE_SELECTED",
+        localSource:
+          inputKind === "sample"
+            ? developmentInput()
+            : developmentInput({ size: 100, type: "video/mp4" }),
+      });
+      for (let step = 0; step < 4; step += 1)
+        await runDevelopmentStage(state, api, dispatch, signal, async () => {});
+      expect(state.stage).toBe("analysis-confirmation");
+      const beforeConfirm = transport.mock.calls.length;
       await runDevelopmentStage(state, api, dispatch, signal, async () => {});
-    expect(state.stage).toBe("candidates");
-    dispatch({
-      type: "CANDIDATE_SELECTED",
-      candidateId: assembly.compositionManifest.baseCandidateId,
-    });
-    const built = await api.build(
-      {
-        analysisId: analysis.analysisId,
-        selection: {
-          candidateId: assembly.compositionManifest.baseCandidateId,
-          startWordId: assembly.selectedStartWordId,
-          endWordId: assembly.selectedEndWordId,
+      expect(state.stage).toBe("analysis-confirmation");
+      expect(transport).toHaveBeenCalledTimes(beforeConfirm);
+      await confirmDevelopmentAnalysis(state, api, dispatch, signal);
+      expect(transport).toHaveBeenCalledTimes(beforeConfirm + 1);
+      await runDevelopmentStage(state, api, dispatch, signal, async () => {});
+      expect(state.stage).toBe("candidates");
+      dispatch({
+        type: "CANDIDATE_SELECTED",
+        candidateId: assembly.compositionManifest.baseCandidateId,
+      });
+      const built = await api.build(
+        {
+          analysisId: analysis.analysisId,
+          selection: {
+            candidateId: assembly.compositionManifest.baseCandidateId,
+            startWordId: assembly.selectedStartWordId,
+            endWordId: assembly.selectedEndWordId,
+          },
+          turnstileToken: "local-synthetic-fixture",
         },
-        turnstileToken: "local-synthetic-fixture",
-      },
-      signal,
-    );
-    dispatch({
-      type: "BUILD_SELECTED",
-      operation: built.operation,
-      startWordId: assembly.selectedStartWordId,
-      endWordId: assembly.selectedEndWordId,
-    });
-    await runDevelopmentStage(state, api, dispatch, signal, async () => {});
-    expect(state.stage).toBe("clip-review");
-    const projection = projectSessionState(
-      state,
-      new Date("2026-09-29T10:00:00.000Z"),
-    );
-    if (projection === null) throw new Error("Missing review projection.");
-    const evidence = await api.evidence(identity.sessionId, signal);
-    const restored = reconcileSessionProjection(
-      projection,
-      evidence,
-      new Date("2026-09-29T10:00:01.000Z"),
-      { sample: false, upload: true },
-    );
-    if (restored.status !== "restored")
-      throw new Error("Review restore failed.");
-    state = restored.state;
-    dispatch({ type: "REVIEW_BUNDLES_REFRESHED", analysis, assembly });
-    expect(selectAvailableActions(state)).toContain("confirm-render");
-    const rendered = await api.render(
-      {
-        analysisId: analysis.analysisId,
-        assemblyId: assembly.assemblyId,
-        manifestHash: assembly.manifestHash,
-        turnstileToken: "local-synthetic-fixture",
-      },
-      signal,
-    );
-    dispatch({ type: "RENDER_CONFIRMED", operation: rendered.operation });
-    await runDevelopmentStage(state, api, dispatch, signal, async () => {});
-    expect(state.stage).toBe("result");
-    expect(
-      events.filter((event) => event.type === "UPLOAD_PROGRESS"),
-    ).toHaveLength(5);
-    expect(
-      events.filter((event) => event.type === "RENDER_CONFIRMED"),
-    ).toHaveLength(1);
-    expect(
-      transport.mock.calls.every(
-        ([, options]) => !String(options?.body).includes("filename"),
-      ),
-    ).toBe(true);
-    expect(
-      transport.mock.calls.some(([path]) => String(path).includes("download")),
-    ).toBe(false);
-  });
+        signal,
+      );
+      dispatch({
+        type: "BUILD_SELECTED",
+        operation: built.operation,
+        startWordId: assembly.selectedStartWordId,
+        endWordId: assembly.selectedEndWordId,
+      });
+      await runDevelopmentStage(state, api, dispatch, signal, async () => {});
+      expect(state.stage).toBe("clip-review");
+      const projection = projectSessionState(
+        state,
+        new Date("2026-09-29T10:00:00.000Z"),
+      );
+      if (projection === null) throw new Error("Missing review projection.");
+      const evidence = await api.evidence(identity.sessionId, signal);
+      const restored = reconcileSessionProjection(
+        projection,
+        evidence,
+        new Date("2026-09-29T10:00:01.000Z"),
+        { sample: true, upload: true },
+      );
+      if (restored.status !== "restored")
+        throw new Error("Review restore failed.");
+      state = restored.state;
+      dispatch({ type: "REVIEW_BUNDLES_REFRESHED", analysis, assembly });
+      expect(selectAvailableActions(state)).toContain("confirm-render");
+      const rendered = await api.render(
+        {
+          analysisId: analysis.analysisId,
+          assemblyId: assembly.assemblyId,
+          manifestHash: assembly.manifestHash,
+          turnstileToken: "local-synthetic-fixture",
+        },
+        signal,
+      );
+      dispatch({ type: "RENDER_CONFIRMED", operation: rendered.operation });
+      await runDevelopmentStage(state, api, dispatch, signal, async () => {});
+      expect(state.stage).toBe("result");
+      expect(
+        events.filter((event) => event.type === "UPLOAD_PROGRESS"),
+      ).toHaveLength(5);
+      expect(
+        events.filter((event) => event.type === "RENDER_CONFIRMED"),
+      ).toHaveLength(1);
+      expect(
+        transport.mock.calls.every(
+          ([, options]) => !String(options?.body).includes("filename"),
+        ),
+      ).toBe(true);
+      expect(
+        transport.mock.calls.some(([path]) =>
+          String(path).includes("download"),
+        ),
+      ).toBe(false);
+      expect(
+        transport.mock.calls.every(([path]) =>
+          String(path).startsWith("/api/sample/"),
+        ),
+      ).toBe(true);
+    },
+  );
   it("cancels owned delays without timers, listeners, dispatch or transport", async () => {
     vi.useFakeTimers();
     const controller = new AbortController();
@@ -379,6 +399,12 @@ describe("complete frontend development flow", () => {
     const transport = vi.fn<typeof fetch>();
     const dispatch = vi.fn();
     await runDevelopmentStage(
+      reviewState(),
+      createSampleApi(transport),
+      dispatch,
+      controller.signal,
+    );
+    await confirmDevelopmentAnalysis(
       reviewState(),
       createSampleApi(transport),
       dispatch,

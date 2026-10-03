@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Download, Share2 } from "lucide-react";
+import { Download } from "lucide-react";
 import type {
   AnalysisBundleV1,
   AssemblyBundleV1,
@@ -13,6 +13,8 @@ import { AgenticNotes, assemblyNotes, candidateNotes } from "./agentic-notes";
 import { PortraitPlayer } from "./portrait-player";
 import { ReviewTranscript } from "./review-transcript";
 import { useRangePlayback } from "./use-range-playback";
+import { ClipReviewLayout } from "./clip-review-layout";
+import { ClipDeliveryActions, SocialDestinations } from "./clip-delivery";
 import styles from "./sample.module.css";
 
 type ClipReviewProps = {
@@ -21,6 +23,7 @@ type ClipReviewProps = {
   playbackTimeMs?: number;
   onPosition?: (clipTimeMs: number) => void;
   presentation?: "review" | "export";
+  deliveryFooter?: HTMLElement | null;
 };
 
 export function ClipReview(props: ClipReviewProps) {
@@ -39,6 +42,7 @@ function SelectedClipReview({
   playbackTimeMs = 0,
   onPosition,
   presentation = "review",
+  deliveryFooter,
 }: ClipReviewProps & { selected: ClipCandidateV1 }) {
   const downloadNoticeId = useId();
   const range = candidateRange(analysis, selected);
@@ -109,86 +113,72 @@ function SelectedClipReview({
       >
         <div className={styles.exportVideo}>
           <div className={styles.exportVideoFrame}>{player}</div>
-          <div className={styles.downloadNotice}>
-            <p id={downloadNoticeId} className={styles.modeNote}>
-              Simulated preview. No downloadable video was created.
+          <ClipDeliveryActions target={deliveryFooter}>
+            <p id={downloadNoticeId} className={styles.screenReaderText}>
+              Downloads are unavailable in simulated mode.
             </p>
             <Button
               icon={Download}
               disabled
               aria-describedby={downloadNoticeId}
-              title="A validated output video is required"
+              title="Downloads are unavailable in simulated mode"
             >
               Download MP4
             </Button>
-          </div>
+          </ClipDeliveryActions>
         </div>
-        <section
-          className={styles.socialDestinations}
-          aria-labelledby="social-heading"
-        >
-          <h2 id="social-heading">
-            <span>OR</span> Share on social media
-          </h2>
-          <div className={styles.socialActions}>
-            {["Facebook", "Instagram", "TikTok", "X"].map((name) => (
-              <button
-                key={name}
-                type="button"
-                disabled
-                aria-label={`${name} sharing unavailable, coming soon`}
-              >
-                <Share2 size={18} aria-hidden="true" />
-                <strong>{name}</strong>
-                <span>Soon</span>
-              </button>
-            ))}
-          </div>
-        </section>
+        <SocialDestinations />
       </section>
     );
   return (
-    <section className={styles.clipReview} aria-label="Read-only clip preview">
-      <section className={styles.editNotes} aria-label="Clip agentic notes">
-        <h2>Agentic Notes</h2>
-        <div
-          className={styles.notesScroll}
-          tabIndex={0}
-          aria-label="Scrollable edit notes"
+    <ClipReviewLayout
+      notes={
+        <section className={styles.editNotes} aria-label="Clip agentic notes">
+          <h2>Agentic Notes</h2>
+          <div
+            className={styles.notesScroll}
+            tabIndex={0}
+            aria-label="Scrollable edit notes"
+          >
+            <h3>{selected.title}</h3>
+            <p className={styles.rationale}>{selected.rationale}</p>
+            <h3>Edit decisions</h3>
+            <AgenticNotes
+              notes={assemblyNotes(analysis, selected, assembly)}
+              rangeStartMs={range.startMs}
+              onSeek={jump}
+            />
+            <h3>Interest points</h3>
+            <AgenticNotes
+              notes={candidateNotes(analysis, selected)}
+              rangeStartMs={range.startMs}
+              onSeek={jump}
+            />
+            {selected.caveats.length > 0 && (
+              <ul className={styles.caveats}>
+                {selected.caveats.map((item) => (
+                  <li key={item.code}>{item.note}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      }
+      video={<div className={styles.reviewVideo}>{player}</div>}
+      transcript={
+        <section
+          className={styles.momentTranscript}
+          aria-label="Clip transcript"
         >
-          <h3>{selected.title}</h3>
-          <p className={styles.rationale}>{selected.rationale}</p>
-          <h3>Edit decisions</h3>
-          <AgenticNotes
-            notes={assemblyNotes(analysis, selected, assembly)}
-            rangeStartMs={range.startMs}
-            onSeek={jump}
+          <h2>Transcript</h2>
+          <ReviewTranscript
+            analysis={analysis}
+            range={range}
+            currentMs={currentMs}
+            highlighted={highlighted}
           />
-          <h3>Interest points</h3>
-          <AgenticNotes
-            notes={candidateNotes(analysis, selected)}
-            rangeStartMs={range.startMs}
-            onSeek={jump}
-          />
-          {selected.caveats.length > 0 && (
-            <ul className={styles.caveats}>
-              {selected.caveats.map((item) => (
-                <li key={item.code}>{item.note}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
-      <div className={styles.reviewVideo}>{player}</div>
-      <section className={styles.momentTranscript} aria-label="Clip transcript">
-        <h2>Transcript</h2>
-        <ReviewTranscript
-          analysis={analysis}
-          range={range}
-          currentMs={currentMs}
-          highlighted={highlighted}
-        />
-      </section>
-    </section>
+        </section>
+      }
+    />
   );
 }

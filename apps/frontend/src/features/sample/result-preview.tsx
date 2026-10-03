@@ -46,9 +46,11 @@ export function resultBundlesMatch(
 export function ResultPreview({
   summary,
   api,
+  deliveryFooter,
 }: {
   summary: ResultSummary;
   api: SampleApi;
+  deliveryFooter?: HTMLElement | null;
 }) {
   const [bundles, setBundles] = useState<{
     analysis: AnalysisBundleV1;
@@ -78,7 +80,14 @@ export function ResultPreview({
     });
     return () => controller.abort();
   }, [api, summary, attempt]);
-  if (bundles) return <ClipReview {...bundles} presentation="export" />;
+  if (bundles)
+    return (
+      <ClipReview
+        {...bundles}
+        presentation="export"
+        {...(deliveryFooter ? { deliveryFooter } : {})}
+      />
+    );
   return (
     <section className={styles.processing}>
       {failed ? (
