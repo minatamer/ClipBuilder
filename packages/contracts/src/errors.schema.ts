@@ -32,6 +32,8 @@ export const ERROR_CODES = [
   "DURATION_OUT_OF_RANGE",
   "NO_VALID_CANDIDATES",
   "MODEL_OUTPUT_REJECTED",
+  "ANALYSIS_PROVIDER_FAILED",
+  "CLEANUP_PENDING",
   "ASSEMBLY_OUTPUT_REJECTED",
   "RENDER_OUTPUT_INVALID",
   "RATE_LIMITED",
@@ -81,6 +83,10 @@ export const SAFE_ERROR_MESSAGES: Readonly<Record<ErrorCode, string>> = {
   DURATION_OUT_OF_RANGE: "The media duration is outside the supported range.",
   NO_VALID_CANDIDATES: "No strong self-contained moments were found.",
   MODEL_OUTPUT_REJECTED: "The suggested result could not be validated.",
+  ANALYSIS_PROVIDER_FAILED:
+    "The analysis service could not finish the request.",
+  CLEANUP_PENDING:
+    "Temporary processing cleanup could not be confirmed. Retry cleanup.",
   ASSEMBLY_OUTPUT_REJECTED: "The first cut could not be validated.",
   RENDER_OUTPUT_INVALID: "The rendered clip could not be validated.",
   RATE_LIMITED: "Too many requests were made. Try again later.",

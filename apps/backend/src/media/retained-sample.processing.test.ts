@@ -59,7 +59,7 @@ describe("deferred retained sample processing", () => {
       requests.map((r) => new Headers(r.headers).get("content-range")),
     ).toEqual(["bytes 0-4194303/4194307", "bytes 4194304-4194306/4194307"]);
     for (const r of requests)
-      expect(r).toMatchObject({ method: "PUT", redirect: "error" });
+      expect(r).toMatchObject({ method: "PUT", redirect: "manual" });
     for (const [i, r] of requests.entries()) {
       if (!(r.body instanceof Uint8Array))
         throw new Error("missing-upload-bytes");
@@ -126,6 +126,34 @@ describe("deferred retained sample processing", () => {
     expect(master.read).toHaveBeenCalledOnce();
     expect(transport).toHaveBeenCalledOnce();
   });
+
+  it.each([308, 200])(
+    "rejects a redirect destination even alongside a valid %s acknowledgement",
+    async (status) => {
+      const master = source(new Uint8Array(status === 308 ? 4194305 : 3));
+      const transport = vi.fn<typeof fetch>(
+        async () =>
+          new Response(status === 308 ? null : '{"generation":"12"}', {
+            status,
+            headers: {
+              Range: "bytes=0-4194303",
+              Location: "https://untrusted.invalid/upload",
+            },
+          }),
+      );
+      await expect(
+        new RetainedSampleProcessing(master, transport).transfer(
+          uploadUrl,
+          signal(),
+        ),
+      ).rejects.toThrow();
+      expect(transport).toHaveBeenCalledExactlyOnceWith(
+        uploadUrl,
+        expect.objectContaining({ redirect: "manual" }),
+      );
+      expect(master.read).toHaveBeenCalledOnce();
+    },
+  );
 
   it.each([
     { generation: "0" },

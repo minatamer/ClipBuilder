@@ -246,11 +246,13 @@ describe("confirmed browser source analysis", () => {
     expect(await clearAnalysisMedia(input)).toEqual({
       complete: false,
       cloudPending: true,
+      localComplete: true,
     });
     expect(local.clear).toHaveBeenCalledOnce();
     expect(await clearAnalysisMedia(input)).toEqual({
       complete: true,
       cloudPending: false,
+      localComplete: true,
     });
     expect(f.api.clear).toHaveBeenCalledTimes(2);
     expect(f.api.analyze).toHaveBeenCalledTimes(0);
@@ -286,7 +288,7 @@ describe("confirmed browser source analysis", () => {
         cloudPending: true,
         allowMissingSession: !f.record().cloudAnalysis?.cleanupRequired,
       }),
-    ).toEqual({ complete: true, cloudPending: false });
+    ).toEqual({ complete: true, cloudPending: false, localComplete: true });
     expect(local.clear).toHaveBeenCalledOnce();
     expect(transport).toHaveBeenCalledTimes(2);
     expect(f.api.upload).toHaveBeenCalledTimes(0);

@@ -8,6 +8,8 @@ describe("full-source preview checkpoint", () => {
       <SourcePreview sourceUrl="/api/analysis/sample-source" />,
     );
     expect(markup).toContain("--:--");
+    expect(markup).toContain('role="status"');
+    expect(markup).toContain("Loading video…");
     expect(markup).toContain('aria-valuetext="Loading video duration"');
     expect(markup).toMatch(
       /<button(?=[^>]*aria-label="Play source video")(?=[^>]*disabled="")[^>]*>/,
@@ -22,6 +24,7 @@ describe("full-source preview checkpoint", () => {
     const markup = renderToStaticMarkup(<SourcePreview durationMs={180_000} />);
     expect(markup).toContain("Simulated source preview");
     expect(markup).not.toContain("<video");
+    expect(markup).not.toContain("Loading video…");
     expect(markup).toContain('aria-label="Play source video"');
     expect(markup).toContain('aria-label="Source playback position"');
     expect(markup).toContain('max="180000"');

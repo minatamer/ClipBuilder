@@ -26,6 +26,7 @@ import type {
 import { ApplicationError } from "../http/errorMapper.js";
 import { reconcileAnalysis } from "./analysis.reconciliation.js";
 import type { AnalysisProvider } from "./gemini.adapter.js";
+import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
 
 export interface AnalysisMediaPort {
   upload(
@@ -65,6 +66,7 @@ export class SourceAnalysis {
     private readonly providerName: "fake" | "google-gemini",
     private readonly now = () => Date.now(),
     private readonly sample: RetainedSampleProcessingPort | null = null,
+    private readonly diagnostics = new AnalysisDiagnostics(),
   ) {}
   private cleanupSignal() {
     return AbortSignal.timeout(GROUNDED_ANALYSIS_LIMITS.cleanupMs);
@@ -102,15 +104,17 @@ export class SourceAnalysis {
         this.sources.set(grant.sessionId, source);
         try {
           return mediaUploadResponseSchema.parse(
-            await this.media.upload(
-              {
-                binding: source.binding,
-                bytes: request.media.bytes,
-                contentType: "video/mp4",
-                rightsAcknowledged: true,
-                dataTransferAcknowledged: true,
-              },
-              signal,
+            await this.diagnostics.step("source_upload", () =>
+              this.media.upload(
+                {
+                  binding: source.binding,
+                  bytes: request.media.bytes,
+                  contentType: "video/mp4",
+                  rightsAcknowledged: true,
+                  dataTransferAcknowledged: true,
+                },
+                signal,
+              ),
             ),
           );
         } catch {
@@ -143,7 +147,10 @@ export class SourceAnalysis {
       },
       () => {},
       async (signal) => {
-        const fingerprint = await sample.fingerprint(signal);
+        const fingerprint = await this.diagnostics.step(
+          "sample_fingerprint",
+          () => sample.fingerprint(signal),
+        );
         signal.throwIfAborted();
         const source: SourceRecord = {
           binding: {
@@ -160,18 +167,23 @@ export class SourceAnalysis {
         this.sources.set(grant.sessionId, source);
         try {
           const upload = mediaUploadResponseSchema.parse(
-            await this.media.upload(
-              {
-                binding: source.binding,
-                bytes: source.bytes,
-                contentType: "video/mp4",
-                rightsAcknowledged: true,
-                dataTransferAcknowledged: true,
-              },
-              signal,
+            await this.diagnostics.step("source_upload", () =>
+              this.media.upload(
+                {
+                  binding: source.binding,
+                  bytes: source.bytes,
+                  contentType: "video/mp4",
+                  rightsAcknowledged: true,
+                  dataTransferAcknowledged: true,
+                },
+                signal,
+              ),
             ),
           );
-          const generation = await sample.transfer(upload.uploadUrl, signal);
+          const generation = await this.diagnostics.step(
+            "sample_transfer",
+            () => sample.transfer(upload.uploadUrl, signal),
+          );
           signal.throwIfAborted();
           return retainedSampleAnalysisResponseSchema.parse({ generation });
         } catch {
@@ -211,87 +223,100 @@ export class SourceAnalysis {
       async (signal) => {
         try {
           const prepared = mediaPrepareResponseSchema.parse(
-            await this.media.prepare(
-              {
-                binding: source.binding,
-                generation: request.generation,
-                nonce: randomUUID(),
-              },
-              signal,
+            await this.diagnostics.step("media_prepare", () =>
+              this.media.prepare(
+                {
+                  binding: source.binding,
+                  generation: request.generation,
+                  nonce: randomUUID(),
+                },
+                signal,
+              ),
             ),
           );
-          const expectedWidth =
-            source.media &&
-            (source.media.rotationDegrees % 180
-              ? source.media.height
-              : source.media.width);
-          const expectedHeight =
-            source.media &&
-            (source.media.rotationDegrees % 180
-              ? source.media.width
-              : source.media.height);
-          const profile = prepared.source.profile;
-          if (
-            !profile ||
-            (source.media &&
-              (profile.container !== source.media.container ||
-                profile.videoCodec !== source.media.videoCodec ||
-                profile.audioCodec !== source.media.audioCodec ||
-                profile.rotationDegrees !== source.media.rotationDegrees ||
-                prepared.source.width !== expectedWidth ||
-                prepared.source.height !== expectedHeight)) ||
-            prepared.source.fingerprint !== source.binding.fingerprint ||
-            prepared.source.bytes !== source.bytes
-          )
-            throw new Error();
-          const authoritativeMedia = mediaDescriptorSchema.parse({
-            ...(source.media ?? {
-              mediaId: source.mediaId,
-              sourceRevision: source.binding.sourceRevision,
-              container: profile.container,
-              videoCodec: profile.videoCodec,
-              audioCodec: profile.audioCodec,
-              rotationDegrees: profile.rotationDegrees,
-              hasAudio: true,
-              bytes: source.bytes,
-              width:
-                profile.rotationDegrees % 180
-                  ? prepared.source.height
-                  : prepared.source.width,
-              height:
-                profile.rotationDegrees % 180
-                  ? prepared.source.width
-                  : prepared.source.height,
-              orientation:
-                prepared.source.width === prepared.source.height
-                  ? "square"
-                  : prepared.source.width > prepared.source.height
-                    ? "landscape"
-                    : "portrait",
-            }),
-            durationMs: prepared.source.durationMs,
-            averageFrameRate: profile.averageFrameRate,
-          });
+          const authoritativeMedia = this.diagnostics.check(
+            "source_validation",
+            () => {
+              const expectedWidth =
+                source.media &&
+                (source.media.rotationDegrees % 180
+                  ? source.media.height
+                  : source.media.width);
+              const expectedHeight =
+                source.media &&
+                (source.media.rotationDegrees % 180
+                  ? source.media.width
+                  : source.media.height);
+              const profile = prepared.source.profile;
+              if (
+                !profile ||
+                (source.media &&
+                  (profile.container !== source.media.container ||
+                    profile.videoCodec !== source.media.videoCodec ||
+                    profile.audioCodec !== source.media.audioCodec ||
+                    profile.rotationDegrees !== source.media.rotationDegrees ||
+                    prepared.source.width !== expectedWidth ||
+                    prepared.source.height !== expectedHeight)) ||
+                prepared.source.fingerprint !== source.binding.fingerprint ||
+                prepared.source.bytes !== source.bytes
+              )
+                throw new Error();
+              return mediaDescriptorSchema.parse({
+                ...(source.media ?? {
+                  mediaId: source.mediaId,
+                  sourceRevision: source.binding.sourceRevision,
+                  container: profile.container,
+                  videoCodec: profile.videoCodec,
+                  audioCodec: profile.audioCodec,
+                  rotationDegrees: profile.rotationDegrees,
+                  hasAudio: true,
+                  bytes: source.bytes,
+                  width:
+                    profile.rotationDegrees % 180
+                      ? prepared.source.height
+                      : prepared.source.width,
+                  height:
+                    profile.rotationDegrees % 180
+                      ? prepared.source.width
+                      : prepared.source.height,
+                  orientation:
+                    prepared.source.width === prepared.source.height
+                      ? "square"
+                      : prepared.source.width > prepared.source.height
+                        ? "landscape"
+                        : "portrait",
+                }),
+                durationMs: prepared.source.durationMs,
+                averageFrameRate: profile.averageFrameRate,
+              });
+            },
+          );
           signal.throwIfAborted();
           let raw: unknown;
           try {
-            const proxy = await this.media.proxy(source.binding, signal);
-            if (
-              proxy.size !== prepared.analysisProxy.bytes ||
-              proxy.size > TEMPORARY_MEDIA_LIMITS.proxyBytes ||
-              createHash("sha256")
-                .update(Buffer.from(await proxy.arrayBuffer()))
-                .digest("hex") !== prepared.analysisProxy.checksum
-            )
-              throw new Error();
-            raw = await this.provider.analyze(proxy, signal, grant.sessionId);
+            const proxy = await this.diagnostics.step("proxy_fetch", () =>
+              this.media.proxy(source.binding, signal),
+            );
+            await this.diagnostics.step("proxy_validation", async () => {
+              if (
+                proxy.size !== prepared.analysisProxy.bytes ||
+                proxy.size > TEMPORARY_MEDIA_LIMITS.proxyBytes ||
+                createHash("sha256")
+                  .update(Buffer.from(await proxy.arrayBuffer()))
+                  .digest("hex") !== prepared.analysisProxy.checksum
+              )
+                throw new Error();
+            });
+            raw = await this.diagnostics.step("analysis_provider", () =>
+              this.provider.analyze(proxy, signal, grant.sessionId),
+            );
           } finally {
-            await this.media.releaseProxy(source.binding, this.cleanupSignal());
+            await this.diagnostics.step("proxy_cleanup", () =>
+              this.media.releaseProxy(source.binding, this.cleanupSignal()),
+            );
           }
-          const analysis = reconcileAnalysis(
-            raw,
-            authoritativeMedia,
-            this.providerName,
+          const analysis = this.diagnostics.check("reconciliation", () =>
+            reconcileAnalysis(raw, authoritativeMedia, this.providerName),
           );
           signal.throwIfAborted();
           if (source.cleared) throw new Error();
@@ -301,8 +326,11 @@ export class SourceAnalysis {
             analysis,
           };
         } catch (error) {
+          this.diagnostics.failure("analysis_result", error);
           source.cleared = true;
-          await this.media.cancel(source.binding, this.cleanupSignal());
+          await this.diagnostics.step("source_cleanup", () =>
+            this.media.cancel(source.binding, this.cleanupSignal()),
+          );
           throw error instanceof ApplicationError
             ? error
             : new ApplicationError({ code: "MODEL_OUTPUT_REJECTED" });
@@ -335,18 +363,47 @@ export class SourceAnalysis {
       throw new ApplicationError({ code: "SESSION_INVALID" });
     return result;
   }
+  async exit(context: Omit<AdmissionContext, "csrf">) {
+    let grant;
+    try {
+      grant = this.admission.restoreSession(context);
+    } catch (error) {
+      if (
+        error instanceof ApplicationError &&
+        ["SESSION_INVALID", "SESSION_MISSING"].includes(error.code)
+      )
+        return;
+      throw error;
+    }
+    const source = this.sources.get(grant.sessionId);
+    if (source) source.cleared = true;
+    this.admission.exit({ ...context, csrf: grant.csrf });
+    await this.cleanupSource(grant.sessionId, source);
+  }
   async clear(context: AdmissionContext) {
     const grant = this.admission.session(context),
       source = this.sources.get(grant.sessionId);
     if (source) source.cleared = true;
     this.admission.clear(context);
+    await this.cleanupSource(grant.sessionId, source);
+  }
+  private async cleanupSource(
+    sessionId: string,
+    source: SourceRecord | undefined,
+  ) {
     const cleanup = await Promise.allSettled([
-      this.provider.cleanup?.(this.cleanupSignal(), grant.sessionId),
+      this.provider.cleanup?.(this.cleanupSignal(), sessionId),
       source
         ? this.media.cancel(source.binding, this.cleanupSignal())
         : Promise.resolve(),
     ]);
-    if (cleanup.some((result) => result.status === "rejected"))
-      throw new ApplicationError({ code: "FEATURE_DISABLED" });
+    for (const result of cleanup)
+      if (result.status === "rejected")
+        throw result.reason instanceof ApplicationError
+          ? result.reason
+          : new ApplicationError({
+              code: "CLEANUP_PENDING",
+              ruleId: "temporary_media_cleanup_failed",
+            });
   }
 }

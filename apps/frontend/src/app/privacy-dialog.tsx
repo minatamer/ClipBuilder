@@ -105,10 +105,10 @@ export function PrivacyDialog({
               <h3>Temporary storage</h3>
               <p>
                 {cloudMedia
-                  ? "Device and cloud copies are temporary. Clear media requests deletion; cleanup may be delayed. Downloaded files remain."
+                  ? "Device and cloud copies are temporary. Exit starts background deletion; cleanup may be delayed. Downloaded files remain."
                   : localMedia
-                    ? "Your video stays on this device. Clear media removes temporary files best-effort; closing the tab doesn’t. Downloaded files remain."
-                    : "Real processing uses temporary private storage. Clear media requests deletion; cleanup may be delayed. Downloaded files remain."}
+                    ? "Your video stays on this device. Exit starts best-effort cleanup; closing the tab doesn’t. Downloaded files remain."
+                    : "Real processing uses temporary private storage. Exit starts background deletion; cleanup may be delayed. Downloaded files remain."}
               </p>
             </section>
             <section>

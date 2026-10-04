@@ -105,10 +105,14 @@ export function createAnalysisRouter(
       .split(";")
       .map((v) => v.trim())
       .filter((v) => v.startsWith(`${cookieName}=`));
-    if (cookies.length !== 1 || cookies[0]!.length > 8192)
+    if (
+      cookies.length > 1 ||
+      cookies.length !== 1 ||
+      (cookies[0]?.length ?? 0) > 8192
+    )
       throw new ApplicationError({ code: "SESSION_MISSING" });
     return {
-      cookie: cookies[0]!.slice(cookieName.length + 1),
+      cookie: cookies[0]?.slice(cookieName.length + 1) ?? "",
       origin: request.get("Origin")!,
       fetchSite: request.get("Sec-Fetch-Site")!,
       csrf: request.get("X-CSRF-Token") ?? "",

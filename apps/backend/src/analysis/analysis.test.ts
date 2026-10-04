@@ -11,7 +11,8 @@ import { loadConfig } from "../config/loadConfig.js";
 import { type MediaDescriptor } from "@clipbuilder/contracts";
 import { ProcessingAdmission } from "../admission/processing.admission.js";
 import { ProcessingGrantCodec } from "../admission/processing.grant.js";
-import { mapError } from "../http/errorMapper.js";
+import { ApplicationError, mapError } from "../http/errorMapper.js";
+import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
 import { createAnalysisRouter } from "../http/routes/analysis.route.js";
 import {
   SourceAnalysis,
@@ -96,6 +97,7 @@ function wireOutput() {
 function fixture(
   paidEnabled = true,
   sample: RetainedSampleProcessingPort | null = null,
+  diagnostics = new AnalysisDiagnostics(),
 ) {
   let now = 1000;
   const origin = "http://localhost:3000",
@@ -177,6 +179,7 @@ function fixture(
     "fake",
     clock,
     sample,
+    diagnostics,
   );
   const upload = {
     media,
@@ -202,6 +205,87 @@ function fixture(
   };
 }
 describe("protected retained sample analysis", () => {
+  it("logs the primary provider failure before proxy and source cleanup failures without changing dispatches", async () => {
+    const lines: string[] = [];
+    const diagnostics = new AnalysisDiagnostics((line) => lines.push(line));
+    const f = fixture(true, null, diagnostics);
+    await f.service.upload(f.context, f.upload);
+    f.provider.analyze.mockRejectedValueOnce(
+      new ApplicationError({
+        code: "ANALYSIS_PROVIDER_FAILED",
+        ruleId: "google_generation_http_400",
+      }),
+    );
+    f.port.releaseProxy.mockRejectedValueOnce(
+      new Error("synthetic-private-proxy-error"),
+    );
+    const terminal = new Error("synthetic-private-cancel-error");
+    f.port.cancel.mockRejectedValueOnce(terminal);
+    const result = new Promise((resolve, reject) => {
+      diagnostics.request(`req_${"c".repeat(32)}`, "run", (finish) => {
+        f.service
+          .analyze(f.context, f.analyze)
+          .then(resolve, (error: unknown) => {
+            finish("completed", 500);
+            reject(error);
+          });
+      });
+    });
+    // Existing response semantics remain unchanged; this task adds diagnostics only.
+    await expect(result).rejects.toBe(terminal);
+    const records = lines.map((line) => JSON.parse(line));
+    const primary = records.findIndex(
+      (record) =>
+        record.phase === "analysis_provider" && record.outcome === "failed",
+    );
+    const proxyCleanup = records.findIndex(
+      (record) =>
+        record.phase === "proxy_cleanup" && record.outcome === "failed",
+    );
+    const sourceCleanup = records.findIndex(
+      (record) =>
+        record.phase === "source_cleanup" && record.outcome === "failed",
+    );
+    expect(primary).toBeGreaterThan(0);
+    expect(proxyCleanup).toBeGreaterThan(primary);
+    expect(sourceCleanup).toBeGreaterThan(proxyCleanup);
+    expect(records[primary]).toMatchObject({
+      code: "ANALYSIS_PROVIDER_FAILED",
+      rules: ["google_generation_http_400"],
+      requestId: `req_${"c".repeat(32)}`,
+    });
+    expect(lines.join("\n")).not.toMatch(
+      /synthetic-private|sessionId|fingerprint|"generation"|med_|rev_/,
+    );
+    expect(f.provider.analyze).toHaveBeenCalledOnce();
+    expect(f.port.prepare).toHaveBeenCalledOnce();
+    expect(f.port.proxy).toHaveBeenCalledOnce();
+    expect(f.port.releaseProxy).toHaveBeenCalledOnce();
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+  });
+  it("Exit revokes the grant before quiet deletion settles, without another AI call", async () => {
+    const f = fixture();
+    await f.service.upload(f.context, f.upload);
+    let finish = () => {};
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    f.port.cancel.mockImplementationOnce(async () => {
+      await pending;
+      return { deleted: true };
+    });
+    const exit = f.service.exit(f.context);
+    expect(() => f.admission.restoreSession(f.context)).toThrow(
+      "SESSION_INVALID",
+    );
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+    finish();
+    await exit;
+    await expect(f.service.exit(f.context)).resolves.toBeUndefined();
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+  });
+
   it("prepares one server sample copy after admission, then validates and analyzes it once", async () => {
     const sample = {
       bytes: 1024,
@@ -762,6 +846,183 @@ describe("grounded source analysis", () => {
 });
 
 describe("bounded Google Files adapter", () => {
+  it.each([204, 200, 404])(
+    "confirms deletion after an empty %s response without SDK JSON parsing",
+    async (status) => {
+      const transport = vi.fn<typeof fetch>(
+        async (_url, init) =>
+          new Response(null, {
+            status: init?.method === "DELETE" ? status : 404,
+            headers: { "content-type": "application/json" },
+          }),
+      );
+      const gateway = composeGeminiTransport(
+        loadConfig(
+          createLiveValidationEnvironment(),
+          createLiveValidationSettings("analysis"),
+        ),
+        transport,
+      );
+      await gateway.delete(
+        "files/synthetic-file",
+        new AbortController().signal,
+      );
+      expect(transport).toHaveBeenCalledTimes(2);
+      expect(transport.mock.calls.map(([, init]) => init?.method)).toEqual([
+        "DELETE",
+        "GET",
+      ]);
+      expect(transport.mock.calls[0]![1]?.body).toBeUndefined();
+      for (const [url, init] of transport.mock.calls) {
+        expect(String(url)).toBe(
+          "https://generativelanguage.googleapis.com/v1beta/files/synthetic-file",
+        );
+        expect(init).toMatchObject({ redirect: "error" });
+      }
+    },
+  );
+  it.each([403, 200])(
+    "never treats a %s absence check as confirmed deletion",
+    async (status) => {
+      const transport = vi.fn<typeof fetch>(
+        async (_url, init) =>
+          new Response(null, {
+            status: init?.method === "DELETE" ? 200 : status,
+          }),
+      );
+      const gateway = composeGeminiTransport(
+        loadConfig(
+          createLiveValidationEnvironment(),
+          createLiveValidationSettings("analysis"),
+        ),
+        transport,
+      );
+      await expect(
+        gateway.delete("files/synthetic-file", new AbortController().signal),
+      ).rejects.toThrow();
+      expect(transport).toHaveBeenCalledTimes(status === 403 ? 3 : 2);
+    },
+  );
+  it.each([200, 403])(
+    "confirms an already absent file after DELETE %s only with an authorized complete list",
+    async (status) => {
+      const transport = vi.fn<typeof fetch>(async (url, init) => {
+        if (String(url).includes("pageSize=100"))
+          return Response.json({ files: [] });
+        return new Response(null, {
+          status: init?.method === "DELETE" ? status : 403,
+        });
+      });
+      const gateway = composeGeminiTransport(
+        loadConfig(
+          createLiveValidationEnvironment(),
+          createLiveValidationSettings("analysis"),
+        ),
+        transport,
+      );
+      await gateway.delete(
+        "files/synthetic-file",
+        new AbortController().signal,
+      );
+      expect(transport).toHaveBeenCalledTimes(3);
+      expect(transport.mock.calls.map(([, init]) => init?.method)).toEqual([
+        "DELETE",
+        "GET",
+        "GET",
+      ]);
+    },
+  );
+  it.each(["still-present", "list-denied", "incomplete-list"])(
+    "keeps cleanup pending when absence proof is %s",
+    async (kind) => {
+      const transport = vi.fn<typeof fetch>(async (url, init) => {
+        if (String(url).includes("pageSize=100")) {
+          if (kind === "list-denied")
+            return new Response(null, { status: 403 });
+          return Response.json(
+            kind === "still-present"
+              ? { files: [{ name: "files/synthetic-file" }] }
+              : { nextPageToken: "synthetic-next-page" },
+          );
+        }
+        return new Response(null, {
+          status: init?.method === "DELETE" ? 200 : 403,
+        });
+      });
+      const gateway = composeGeminiTransport(
+        loadConfig(
+          createLiveValidationEnvironment(),
+          createLiveValidationSettings("analysis"),
+        ),
+        transport,
+      );
+      await expect(
+        gateway.delete("files/synthetic-file", new AbortController().signal),
+      ).rejects.toThrow();
+      expect(transport).toHaveBeenCalledTimes(
+        kind === "incomplete-list" ? 5 : 3,
+      );
+      expect(
+        transport.mock.calls.filter(([, init]) => init?.method === "DELETE"),
+      ).toHaveLength(1);
+    },
+  );
+  it("checks every page before confirming a missing owned file", async () => {
+    const transport = vi.fn<typeof fetch>(async (url, init) => {
+      if (String(url).includes("pageSize=100"))
+        return Response.json(
+          String(url).includes("pageToken=")
+            ? {}
+            : {
+                files: [{ name: "files/other-synthetic" }],
+                nextPageToken: "synthetic-next",
+              },
+        );
+      return new Response(null, {
+        status: init?.method === "DELETE" ? 200 : 403,
+      });
+    });
+    const gateway = composeGeminiTransport(
+      loadConfig(
+        createLiveValidationEnvironment(),
+        createLiveValidationSettings("analysis"),
+      ),
+      transport,
+    );
+    await gateway.delete("files/synthetic-file", new AbortController().signal);
+    expect(transport).toHaveBeenCalledTimes(4);
+    expect(String(transport.mock.calls[3]![0])).toContain(
+      "pageToken=synthetic-next",
+    );
+  });
+  it("does not leave a phantom cleanup obligation after a definitively rejected upload start", async () => {
+    const transport = vi.fn<typeof fetch>(async () =>
+      Response.json(
+        { error: { message: "synthetic-private-key-and-content" } },
+        { status: 403 },
+      ),
+    );
+    const provider = new GeminiAnalysisProvider(
+      composeGeminiTransport(
+        loadConfig(
+          createLiveValidationEnvironment(),
+          createLiveValidationSettings("analysis"),
+        ),
+        transport,
+      ),
+      1000,
+    );
+    const proxy = new Blob([new Uint8Array([1])], { type: "video/mp4" });
+    await expect(
+      provider.analyze(proxy, new AbortController().signal, "synthetic-scope"),
+    ).rejects.toMatchObject({
+      code: "ANALYSIS_PROVIDER_FAILED",
+      ruleId: "google_files_upload_start_http_403",
+    });
+    await provider.cleanup(new AbortController().signal, "synthetic-scope");
+    expect(transport).toHaveBeenCalledOnce();
+    expect(transport.mock.calls[0]![1]?.method).toBe("POST");
+  });
   it("pins the SDK request/schema and disables retries with an injected HTTP transport", async () => {
     const requests: { url: string; method: string; body: unknown }[] = [];
     let fileName = "",
@@ -972,13 +1233,32 @@ describe("bounded Google Files adapter", () => {
         new AbortController().signal,
         "owner-session",
       ),
-    ).rejects.toMatchObject({ code: "FEATURE_DISABLED" });
+    ).rejects.toMatchObject({ code: "CLEANUP_PENDING" });
     await f.provider.cleanup(new AbortController().signal, "other-session");
     expect(f.transport.delete).toHaveBeenCalledOnce();
     await f.provider.cleanup(new AbortController().signal, "owner-session");
     expect(f.transport.delete).toHaveBeenCalledTimes(2);
     expect(f.transport.upload).toHaveBeenCalledOnce();
     expect(f.transport.generate).toHaveBeenCalledOnce();
+  });
+  it("keeps the original analysis reason when cleanup also fails without leaking error content", async () => {
+    const f = gateway();
+    vi.mocked(f.transport.generate).mockRejectedValue(
+      Object.assign(new Error("synthetic-private-content"), { status: 429 }),
+    );
+    vi.mocked(f.transport.delete).mockRejectedValue(
+      new Error("synthetic-private-content"),
+    );
+    const failed = await f.provider
+      .analyze(f.proxy, new AbortController().signal)
+      .catch((error: unknown) => error);
+    expect(failed).toMatchObject({
+      code: "CLEANUP_PENDING",
+      ruleId: "google_generation_http_429;google_files_cleanup_failed",
+    });
+    expect(JSON.stringify(failed)).not.toContain("synthetic-private-content");
+    expect(f.transport.generate).toHaveBeenCalledOnce();
+    expect(f.transport.delete).toHaveBeenCalledOnce();
   });
   it("propagates cancellation after generation and deletes with an independent bounded cleanup signal", async () => {
     const f = gateway(),
@@ -1066,7 +1346,9 @@ describe("bounded Google Files adapter", () => {
         );
       await expect(
         f.provider.analyze(f.proxy, new AbortController().signal),
-      ).rejects.toThrow(/MODEL_OUTPUT_REJECTED|FEATURE_DISABLED/u);
+      ).rejects.toThrow(
+        /MODEL_OUTPUT_REJECTED|ANALYSIS_PROVIDER_FAILED|CLEANUP_PENDING/u,
+      );
       expect(f.transport.upload).toHaveBeenCalledOnce();
       expect(f.transport.delete).toHaveBeenCalledOnce();
       expect(f.transport.generate).toHaveBeenCalledTimes(
@@ -1077,7 +1359,7 @@ describe("bounded Google Files adapter", () => {
       if (kind === "delete") {
         await expect(
           f.provider.analyze(f.proxy, new AbortController().signal),
-        ).rejects.toMatchObject({ code: "FEATURE_DISABLED" });
+        ).rejects.toMatchObject({ code: "CLEANUP_PENDING" });
         expect(f.transport.upload).toHaveBeenCalledOnce();
       }
     },

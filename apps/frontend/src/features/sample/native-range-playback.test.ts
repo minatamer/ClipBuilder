@@ -13,6 +13,8 @@ function player() {
     src: "",
     paused: true,
     ended: false,
+    seeking: false,
+    readyState: 0,
     load: vi.fn(),
     removeAttribute: vi.fn(),
     pause: vi.fn(() => {
@@ -49,6 +51,68 @@ function player() {
 }
 
 describe("actual video clock and immutable range ownership", () => {
+  it("keeps loading through metadata, then follows available frames, buffering and seeks", () => {
+    const f = player();
+    const loading = vi.fn();
+    const stop = attachNativeRangePlayback(
+      f.video,
+      "blob:synthetic",
+      { startMs: 0, endMs: 15_000 },
+      0,
+      false,
+      vi.fn(),
+      vi.fn(),
+      loading,
+    );
+    expect(loading).toHaveBeenLastCalledWith(true);
+    f.event("loadedmetadata");
+    expect(loading).toHaveBeenLastCalledWith(true);
+    Object.defineProperty(f.video, "readyState", { value: 2, writable: true });
+    f.event("loadeddata");
+    expect(loading).toHaveBeenLastCalledWith(false);
+    f.event("waiting");
+    expect(loading).toHaveBeenLastCalledWith(true);
+    f.event("playing");
+    expect(loading).toHaveBeenLastCalledWith(false);
+    Object.defineProperty(f.video, "seeking", { value: true, writable: true });
+    f.event("seeking");
+    f.event("canplay");
+    expect(loading).toHaveBeenLastCalledWith(true);
+    Object.defineProperty(f.video, "seeking", { value: false, writable: true });
+    f.event("seeked");
+    expect(loading).toHaveBeenLastCalledWith(false);
+    stop();
+    loading.mockClear();
+    for (const event of [
+      "waiting",
+      "loadeddata",
+      "canplay",
+      "seeked",
+      "playing",
+    ])
+      f.event(event);
+    expect(loading).not.toHaveBeenCalled();
+  });
+  it("does not claim a frame after an incomplete seek and clears loading on media error", () => {
+    const f = player();
+    const loading = vi.fn();
+    const stop = attachNativeRangePlayback(
+      f.video,
+      "blob:synthetic",
+      { startMs: 0, endMs: 15_000 },
+      0,
+      false,
+      vi.fn(),
+      vi.fn(),
+      loading,
+    );
+    f.event("seeked");
+    expect(loading).toHaveBeenLastCalledWith(true);
+    f.event("error");
+    expect(loading).toHaveBeenLastCalledWith(false);
+    expect(f.video.paused).toBe(true);
+    stop();
+  });
   it("keeps nonfinite seek commands and clock values out of the native timeline", () => {
     const range = { startMs: 10_000, endMs: 25_000 };
     for (const value of [NaN, Infinity, -Infinity])

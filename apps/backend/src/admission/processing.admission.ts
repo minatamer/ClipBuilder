@@ -317,6 +317,12 @@ export class ProcessingAdmission {
     }
   }
 
+  exit(context: AdmissionContext): void {
+    const record = this.current(context);
+    this.clear(context);
+    this.records.delete(record.grant.sessionId);
+  }
+
   receipt(claims: IntegrityReceiptClaims): string {
     const parsed = integrityReceiptClaimsSchema.parse(claims);
     const record = this.records.get(parsed.sessionId);

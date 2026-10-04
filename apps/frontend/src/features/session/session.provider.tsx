@@ -19,6 +19,7 @@ import { SessionEffectRegistry } from "./session.effects";
 import {
   clearSessionProjection,
   SESSION_CLEANUP_KEY,
+  SESSION_ABANDONED_KEY,
   isSessionCleanupRequired,
   persistSessionState,
   readSessionProjection,
@@ -39,6 +40,7 @@ import {
 } from "./session.types";
 import {
   createBrowserWorkspace,
+  waitForWorkspaceExit,
   type BrowserWorkspace,
 } from "../media/browser.workspace";
 import { restoreLocalWorkspace } from "../media/workspace.restore";
@@ -112,17 +114,23 @@ export function ClippingSessionProvider({
     const activeStorage = storage ?? browserSessionStorage();
     void disposal.current
       .then(async () => {
+        await waitForWorkspaceExit();
         if (!mounted) return;
         if (!activeStorage) throw new Error("local-storage-unavailable");
         owner = createBrowserWorkspace({
           onOtherRelease: () => otherReleased(),
           releaseConsumers: () => effects.clear(),
-          cleanupRequired: () => isSessionCleanupRequired(activeStorage),
+          cleanupRequired: () =>
+            isSessionCleanupRequired(activeStorage) ||
+            (!!owner?.snapshot &&
+              activeStorage.getItem(SESSION_ABANDONED_KEY) ===
+                owner?.snapshot?.epoch),
           markCleanup: () =>
             activeStorage.setItem(SESSION_CLEANUP_KEY, "required"),
           finishCleanup: () => {
             clearSessionProjection(activeStorage);
             activeStorage.removeItem(SESSION_CLEANUP_KEY);
+            activeStorage.removeItem(SESSION_ABANDONED_KEY);
           },
         });
         setWorkspace(owner);

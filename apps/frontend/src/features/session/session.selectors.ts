@@ -41,8 +41,8 @@ const STAGE_TITLES: Record<ClippingSessionState["stage"], string> = {
   rendering: "Rendering the clip",
   "render-failed": "Render needs attention",
   result: "Your clip is ready",
-  clearing: "Clearing session data",
-  "cleanup-partial": "Cleanup needs attention",
+  clearing: "Leaving your session",
+  "cleanup-partial": "Leaving your session",
   expired: "Session expired",
   fatal: "Session unavailable",
 };

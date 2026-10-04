@@ -1,12 +1,73 @@
 import { SAFE_ERROR_MESSAGES } from "@clipbuilder/contracts";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
+import { AnalysisDiagnostics } from "./analysis/analysis.diagnostics.js";
 
 import { composeBackend } from "./composition.js";
 import { ApplicationError, mapError } from "./http/errorMapper.js";
 import { createSafeTestEnvironment } from "../test/environment.fixture.js";
 
 describe("backend application", () => {
+  it("correlates fixed analysis routes without logging request bodies, URLs or headers", async () => {
+    const lines: string[] = [];
+    const { application } = composeBackend(
+      createSafeTestEnvironment(),
+      {},
+      new AnalysisDiagnostics((line) => lines.push(line)),
+    );
+    const response = await request(application)
+      .post("/v1/analysis/run?private=query")
+      .set("Cookie", "synthetic-private-cookie")
+      .send({ secret: "synthetic-private-body" })
+      .expect(404);
+    const records = lines.map((line) => JSON.parse(line));
+    expect(records).toHaveLength(2);
+    expect(records[0]).toMatchObject({
+      phase: "request",
+      outcome: "started",
+      requestId: response.headers["x-request-id"],
+      action: "run",
+    });
+    expect(records[1]).toMatchObject({
+      phase: "request",
+      outcome: "completed",
+      applicationHttpStatus: 404,
+    });
+    expect(lines.join("\n")).not.toMatch(/private|secret|Cookie|query/);
+    await request(application).get("/v1/health").expect(200);
+    expect(lines).toHaveLength(2);
+  });
+  it("allows Exit with paid processing disabled and no credentials", async () => {
+    const { application } = composeBackend(createSafeTestEnvironment());
+    const response = await request(application)
+      .post("/v1/session/exit")
+      .set({ Origin: "http://localhost:3000", "Sec-Fetch-Site": "same-origin" })
+      .send({})
+      .expect(204);
+    expect(response.headers["set-cookie"]).toHaveLength(2);
+  });
+
+  it.each(["preview", "production"])(
+    "does not expose samples in %s deployment",
+    async (appEnvironment) => {
+      const { application } = composeBackend({
+        NODE_ENV: appEnvironment === "production" ? "production" : "test",
+        APP_ENV: appEnvironment,
+        APP_REVISION: "synthetic-release",
+        FAKE_MODE: "true",
+        PAID_DEMO_ENABLED: "false",
+      });
+      const config = await request(application)
+        .get("/v1/sample/config")
+        .expect(200);
+      expect(config.body).toMatchObject({
+        sampleEnabled: false,
+        retainedSampleEnabled: false,
+      });
+      await request(application).get("/v1/retained-sample/video").expect(404);
+      await request(application).post("/v1/sample/start").send({}).expect(404);
+    },
+  );
   it("constructs without listening and serves content-free health", async () => {
     const { application } = composeBackend(
       createSafeTestEnvironment({ APP_REVISION: "test-revision" }),

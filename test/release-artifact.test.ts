@@ -20,6 +20,7 @@ async function fixture() {
       "/_global-error/page",
       "/api/analysis/[action]/route",
       "/api/sample/[...path]/route",
+      "/api/session/exit/route",
       "/icon.svg/route",
       "/robots.txt/route",
     ].map((key, index) => [
@@ -66,7 +67,7 @@ describe("production-only artifact inspection", () => {
     try {
       const first = await verifyReleaseArtifact(f.root);
       expect(first).toEqual(await verifyReleaseArtifact(f.root));
-      expect(first.appRoutes).toBe(8);
+      expect(first.appRoutes).toBe(9);
       expect(first.sha256).toMatch(/^[a-f0-9]{64}$/);
       await f.put(".next/static/chunks/app.js", "changed synthetic code");
       expect((await verifyReleaseArtifact(f.root)).sha256).not.toBe(

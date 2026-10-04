@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { compositionManifestSchema } from "@clipbuilder/contracts";
 import { analysis, assembly, identity } from "../session/session.test-fixtures";
 import { clippingSessionReducer } from "../session/session.reducer";
@@ -11,6 +11,7 @@ import { resultBundlesMatch } from "./result-preview";
 import {
   processingActivityFraction,
   ProcessingStatus,
+  FINDING_MOMENTS_MESSAGES,
 } from "./processing-status";
 import { Progress } from "../../shared/ui/progress";
 import { motionDurationMs } from "./use-moment-layout";
@@ -253,5 +254,49 @@ describe("video-first review revision", () => {
     );
     expect(fake).toContain('aria-valuenow="75"');
     expect(fake).toContain("75%");
+  });
+  it("cycles finding-moments copy, wraps without claiming progress, and stops at terminal states", () => {
+    const start = Date.parse("2026-01-01T00:00:00Z");
+    const operation = {
+      operationId: "op_synthetic",
+      kind: "analysis" as const,
+      state: "running" as const,
+      stageCode: "analysis.selecting-candidates",
+      startedAt: new Date(start).toISOString(),
+      updatedAt: new Date(start).toISOString(),
+      completedAt: null,
+      pollAfterMs: 1000,
+      resultRevision: null,
+      error: null,
+    };
+    const clock = vi.spyOn(Date, "now");
+    try {
+      for (const tick of [0, 1, 4, 5, 21]) {
+        clock.mockReturnValue(start + tick * 5000);
+        const markup = renderToStaticMarkup(
+          <ProcessingStatus
+            mode="real"
+            label="Reading your video"
+            operation={operation}
+            findingMoments
+          />,
+        );
+        expect(markup).toContain(FINDING_MOMENTS_MESSAGES[tick % 5]);
+        expect(markup).not.toContain("aria-valuenow");
+        expect(markup).not.toContain("%");
+      }
+      const stopped = renderToStaticMarkup(
+        <ProcessingStatus
+          mode="real"
+          label="Analysis stopped"
+          operation={{ ...operation, state: "failed" }}
+          findingMoments
+        />,
+      );
+      expect(stopped).toContain("Analysis stopped");
+      expect(stopped).not.toContain(FINDING_MOMENTS_MESSAGES[0]);
+    } finally {
+      clock.mockRestore();
+    }
   });
 });

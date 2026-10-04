@@ -16,7 +16,7 @@ describe("visual approval prototype", () => {
     expect(markup).toContain("short audio/video copy to Google Gemini");
     expect(markup).toContain("retention rules are separate");
     expect(markup).toContain("Device and cloud copies are temporary");
-    expect(markup).toContain("Clear media requests deletion");
+    expect(markup).toContain("Exit starts background deletion");
     expect(markup).toContain("cleanup may be delayed");
     expect(markup).toContain("Downloaded files remain");
     expect(markup).not.toContain("Your video stays on this device");

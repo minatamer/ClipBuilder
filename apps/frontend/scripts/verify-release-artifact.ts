@@ -12,6 +12,7 @@ const appRoutes = new Set([
   "/_global-error/page",
   "/api/analysis/[action]/route",
   "/api/sample/[...path]/route",
+  "/api/session/exit/route",
   "/icon.svg/route",
   "/robots.txt/route",
 ]);

@@ -19,6 +19,7 @@ export function useRangePlayback(
   const position = useRef(initial);
   const [currentMs, setCurrentMs] = useState(initial);
   const [playing, setPlaying] = useState(command.play);
+  const [loading, setLoading] = useState(Boolean(sourceUrl));
   const [muted, setMuted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const effects = useSessionEffects();
@@ -57,6 +58,7 @@ export function useRangePlayback(
         reportPosition(value);
       },
       setPlaying,
+      setLoading,
     );
     return effects ? effects.registerStopper(cleanup) : cleanup;
   }, [
@@ -87,6 +89,7 @@ export function useRangePlayback(
   return {
     currentMs,
     playing,
+    loading: Boolean(sourceUrl) && loading,
     muted,
     toggleMute: () => setMuted((value) => !value),
     seek,

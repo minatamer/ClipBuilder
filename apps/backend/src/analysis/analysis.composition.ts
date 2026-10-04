@@ -16,9 +16,11 @@ import { FinalRender } from "../render/final-render.usecase.js";
 import { OutputDelivery } from "../media/output-delivery.js";
 import { composeRetainedSampleReader } from "../media/retained-sample.gcs.js";
 import { RetainedSampleProcessing } from "../media/retained-sample.processing.js";
+import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
 export function composeAnalysis(
   config: BackendConfig,
   admission: ProcessingAdmission | null,
+  diagnostics = new AnalysisDiagnostics(),
 ) {
   if (
     !admission ||
@@ -37,6 +39,8 @@ export function composeAnalysis(
   const files = new GeminiAnalysisProvider(
     composeGeminiTransport(config),
     config.gemini.timeoutMs,
+    undefined,
+    diagnostics,
   );
   const sampleReader = composeRetainedSampleReader(config);
   const analysis = new SourceAnalysis(
@@ -46,6 +50,7 @@ export function composeAnalysis(
     "google-gemini",
     Date.now,
     sampleReader ? new RetainedSampleProcessing(sampleReader) : null,
+    diagnostics,
   );
   const planner = composeSelectedPlanProvider(config, files);
   const assembly = planner

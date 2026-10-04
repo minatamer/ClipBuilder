@@ -190,6 +190,7 @@ describe("local audio workspace ownership", () => {
       expect(reopened.sourceUrl).toBe("/api/analysis/sample-source");
       expect(f.run).not.toHaveBeenCalled();
       await reopened.clear();
+      expect(f.run).not.toHaveBeenCalled();
       expect(f.stored()).toBeNull();
       expect(reopened.sourceUrl).toBeNull();
       expect(f.ports.revokeUrl).not.toHaveBeenCalled();
@@ -198,6 +199,80 @@ describe("local audio workspace ownership", () => {
     }
   });
 
+  it("clears a sample selection without invoking uploaded-file deletion, while keeping remote copy cleanup", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepareRetainedSample();
+    await f.owner.markCloudAnalysis("uncertain", true);
+    f.run.mockClear();
+    const api = { clear: vi.fn(async () => {}) };
+    expect(
+      await clearAnalysisMedia({
+        workspace: f.owner,
+        api,
+        cloudPending: true,
+        signal: new AbortController().signal,
+      }),
+    ).toEqual({ complete: true, cloudPending: false, localComplete: true });
+    expect(api.clear).toHaveBeenCalledOnce();
+    expect(f.run).not.toHaveBeenCalled();
+    expect(f.stored()).toBeNull();
+    expect(f.owner.sourceUrl).toBeNull();
+    await f.owner.dispose();
+  });
+
+  it("Exit drains uploaded cleanup across unmount before releasing the workspace lease", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    const gate = drainGate();
+    let deleteSignal: AbortSignal | undefined;
+    f.ports.processor.run = vi.fn(async (_command, signal) => {
+      deleteSignal = signal;
+      await gate.pending;
+      return {};
+    });
+    const exiting = f.owner.exit();
+    const disposal = f.owner.dispose();
+    await vi.waitFor(() => expect(deleteSignal).toBeDefined());
+    expect(deleteSignal?.aborted).toBe(false);
+    expect(f.ports.journal.close).not.toHaveBeenCalled();
+    expect(f.owner.sourceUrl).toBeNull();
+    gate.finish();
+    await Promise.all([exiting, disposal]);
+    expect(f.stored()).toBeNull();
+    expect(f.remoteCleanup()).toBeNull();
+    expect(f.ports.journal.close).toHaveBeenCalledOnce();
+  });
+  it("failed local deletion stays private and is retried on the next entry without restoring the abandoned source", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    await f.owner.rememberRemoteCleanup(false);
+    f.run.mockRejectedValue(new LocalMediaError("storage"));
+    await f.owner.exit();
+    expect(f.stored()?.status).toBe("clearing");
+    expect(f.remoteCleanup()).toBeNull();
+    const fresh = new BrowserWorkspace(f.ports);
+    await expect(fresh.initialize()).resolves.toBeNull();
+    expect(fresh.snapshot).toBeNull();
+    expect(fresh.remoteCleanup).toBeNull();
+    await fresh.dispose();
+  });
+  it("Exit never invokes uploaded-file deletion for a retained sample, even when its journal cleanup fails", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepareRetainedSample(new AbortController().signal);
+    f.run.mockClear();
+    vi.mocked(f.ports.journal.delete).mockRejectedValueOnce(
+      new LocalMediaError("storage"),
+    );
+    await expect(f.owner.exit()).resolves.toBeUndefined();
+    expect(f.run).not.toHaveBeenCalled();
+    expect(f.stored()?.retainedSample).toBe(true);
+    expect(f.stored()?.status).toBe("clearing");
+    expect(f.owner.sourceUrl).toBeNull();
+  });
   it("cancels a pending sample journal commit and releases the preview without leaving a ready record", async () => {
     const f = fixture();
     await f.owner.initialize();
@@ -338,7 +413,7 @@ describe("local audio workspace ownership", () => {
         cloudPending: true,
         signal: new AbortController().signal,
       }),
-    ).toEqual({ complete: false, cloudPending: true });
+    ).toEqual({ complete: false, cloudPending: true, localComplete: true });
     expect(f.stored()).toBeNull();
     expect(
       f.run.mock.calls.some(([command]) => command.action === "delete"),
@@ -366,7 +441,7 @@ describe("local audio workspace ownership", () => {
           cloudPending: false,
           signal: new AbortController().signal,
         }),
-      ).toEqual({ complete: false, cloudPending: true });
+      ).toEqual({ complete: false, cloudPending: true, localComplete: true });
       expect(f.remoteCleanup()).not.toBeNull();
       api.clear.mockResolvedValueOnce();
       expect(
@@ -376,7 +451,7 @@ describe("local audio workspace ownership", () => {
           cloudPending: false,
           signal: new AbortController().signal,
         }),
-      ).toEqual({ complete: true, cloudPending: false });
+      ).toEqual({ complete: true, cloudPending: false, localComplete: true });
       expect(f.remoteCleanup()).toBeNull();
       expect(reopened.remoteCleanup).toBeNull();
       expect(api.clear).toHaveBeenCalledTimes(3);
@@ -405,7 +480,7 @@ describe("local audio workspace ownership", () => {
         cloudPending: true,
         signal: new AbortController().signal,
       }),
-    ).toEqual({ complete: false, cloudPending: true });
+    ).toEqual({ complete: false, cloudPending: true, localComplete: false });
     expect(
       f.run.mock.calls.some(([command]) => command.action === "delete"),
     ).toBe(true);
@@ -414,9 +489,9 @@ describe("local audio workspace ownership", () => {
     await f.owner.dispose();
     const reopened = new BrowserWorkspace(f.ports);
     try {
-      await expect(reopened.initialize()).rejects.toMatchObject({
-        code: "storage",
-      });
+      await expect(reopened.initialize()).resolves.toBeNull();
+      expect(reopened.snapshot).toBeNull();
+      expect(reopened.remoteCleanup?.status).toBe("pending");
     } finally {
       await reopened.dispose();
     }
@@ -463,7 +538,7 @@ describe("local audio workspace ownership", () => {
         cloudPending: true,
         signal: new AbortController().signal,
       }),
-    ).toEqual({ complete: false, cloudPending: false });
+    ).toEqual({ complete: false, cloudPending: false, localComplete: false });
     expect(f.stored()).toBeNull();
     expect(f.remoteCleanup()).toEqual({
       version: 1,
@@ -491,7 +566,7 @@ describe("local audio workspace ownership", () => {
           cloudPending: false,
           signal: new AbortController().signal,
         }),
-      ).toEqual({ complete: true, cloudPending: false });
+      ).toEqual({ complete: true, cloudPending: false, localComplete: true });
       expect(reopened.remoteCleanup).toBeNull();
       expect(f.remoteCleanup()).toBeNull();
       expect(transport.mock.calls.map(([url]) => url)).toEqual([
@@ -532,7 +607,7 @@ describe("local audio workspace ownership", () => {
           cloudPending: true,
           signal: new AbortController().signal,
         }),
-      ).toEqual({ complete: false, cloudPending: true });
+      ).toEqual({ complete: false, cloudPending: true, localComplete: true });
       expect(f.remoteCleanup()).toEqual({
         version: 1,
         allowMissingSession: false,
@@ -563,7 +638,7 @@ describe("local audio workspace ownership", () => {
         cloudPending: true,
         signal: new AbortController().signal,
       }),
-    ).toEqual({ complete: false, cloudPending: false });
+    ).toEqual({ complete: false, cloudPending: false, localComplete: false });
     expect(f.remoteCleanup()?.status).toBe("confirmed");
     expect(f.stored()?.status).toBe("clearing");
     await f.owner.dispose();
@@ -577,7 +652,7 @@ describe("local audio workspace ownership", () => {
           cloudPending: true,
           signal: new AbortController().signal,
         }),
-      ).toEqual({ complete: true, cloudPending: false });
+      ).toEqual({ complete: true, cloudPending: false, localComplete: true });
       expect(api.clear).toHaveBeenCalledTimes(1);
       expect(f.remoteCleanup()).toBeNull();
       expect(f.stored()).toBeNull();

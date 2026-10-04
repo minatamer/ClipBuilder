@@ -10,7 +10,15 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { ArrowLeft, Film, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import {
+  ArrowLeft,
+  Film,
+  LoaderCircle,
+  Pause,
+  Play,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { IconButton } from "../../shared/ui/button";
 import { timecode } from "./candidate.evidence";
 import styles from "./sample.module.css";
@@ -37,6 +45,7 @@ export function PortraitPlayer({
   toggle,
   seek,
   busy = false,
+  loading = false,
   moment,
   onClose,
   onKeyDown,
@@ -57,6 +66,7 @@ export function PortraitPlayer({
   toggle: () => void;
   seek: (timeMs: number) => void;
   busy?: boolean;
+  loading?: boolean;
   moment?: { id: string; rank: number };
   onClose?: () => void;
   onKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
@@ -111,6 +121,12 @@ export function PortraitPlayer({
     ) : (
       <PortraitPlaceholder>{children}</PortraitPlaceholder>
     ));
+  const loadingIndicator = loading ? (
+    <div className={styles.playerLoading} role="status">
+      <LoaderCircle className={styles.playerSpinner} aria-hidden="true" />
+      <span>Loading video…</span>
+    </div>
+  ) : null;
   return (
     <div
       className={`${styles.portraitPlayer} ${source ? styles.sourcePlayer : ""}`}
@@ -154,9 +170,13 @@ export function PortraitPlayer({
       {source ? (
         <div className={styles.sourceMedia} style={{ aspectRatio }}>
           {videoSurface}
+          {loadingIndicator}
         </div>
       ) : (
-        videoSurface
+        <>
+          {videoSurface}
+          {loadingIndicator}
+        </>
       )}
       <button
         type="button"

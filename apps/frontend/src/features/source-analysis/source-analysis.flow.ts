@@ -109,7 +109,7 @@ export async function runSourceAnalysis(input: {
       "candidate-analysis",
       signal,
     );
-    input.label("Preparing the proxy and finding grounded moments");
+    input.label("Reading your video and finding moments");
     const result = await api.analyze(generation, token, signal);
     signal.throwIfAborted();
     if (result.binding.sessionId !== grant.sessionId)
@@ -218,6 +218,7 @@ export async function clearAnalysisMedia(input: {
     }
   }
   return {
+    localComplete: local.status === "fulfilled" && acknowledged,
     cloudPending: input.workspace.remoteCleanup?.status === "pending",
     complete:
       cloud.status === "fulfilled" &&

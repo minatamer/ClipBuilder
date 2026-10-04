@@ -1,0 +1,52 @@
+.dialog {
+  box-sizing: border-box;
+  width: min(calc(100% - 2rem), 24rem);
+  max-height: 90dvh;
+  padding: 1.5rem;
+  border: 1px solid var(--cb-glass-border);
+  border-radius: var(--cb-radius-card);
+  background: var(--cb-frame-fill);
+  color: var(--cb-ink);
+  font-family: var(--cb-font-sans);
+  box-shadow: 0 1rem 4rem rgb(0 8 26 / 40%);
+}
+.dialog::backdrop {
+  background: rgb(2 9 25 / 72%);
+  backdrop-filter: blur(8px);
+}
+/* Keep the same iframe mounted while Turnstile controls its background
+   appearance. showModal places this existing dialog in the top layer. */
+.dialog:not([open]) {
+  display: block;
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.dialog:not([open]) .content {
+  display: none;
+}
+.content h2 {
+  margin: 0 0 0.5rem;
+  font-size: var(--cb-text-title);
+}
+.content p {
+  margin: 0 0 1rem;
+  color: var(--cb-ink-soft);
+  font-size: var(--cb-text-small);
+}
+.widget {
+  width: max-content;
+  margin-inline: auto;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}

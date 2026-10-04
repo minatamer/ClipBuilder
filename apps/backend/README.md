@@ -1,5 +1,16 @@
 # ClipBuilder backend
 
+**Session Exit (CL-007 owner decision, 2026-10-04):** same-origin
+`POST /v1/session/exit` expires application cookies and returns 204 independently
+of cleanup. It is composed even when paid analysis is disabled. A valid session
+cancels actions and revokes the grant before bounded provider/renderer deletion
+settles; stale/missing cookies still exit, with independent expiry for old copies.
+The browser never receives a deletion-failure recovery requirement. This response
+is access reset, not deletion evidence. Default fake/no-key tests use only injected
+ports; real deletion remains an owner-run check requiring configured storage/provider
+access and recorded approvals.
+
+
 CL-016 adds a fixed, generation-pinned retained-sample read using server ADC.
 `GET /v1/retained-sample/video` exists only after explicit retained-read enablement,
 local real-media composition and approved cloud spend; it requires the fixed
@@ -123,7 +134,7 @@ file and releases the analysis proxy, then signs session/epoch/source revision/
 request/result digests and expiry. The backend retains no transcript. Conflicting
 replay, uncertainty, abort and refresh never redispatch. Failed Google deletion
 waits for upload settlement, shares deletion with analysis finalization, and
-blocks intake on failure with an explicit process-local cleanup obligation; crash/
+retains an explicit process-local cleanup obligation independently of visitor Exit; crash/
 provider expiry and actual media-clock parity remain live/release checks.
 
 ```text
@@ -273,6 +284,38 @@ rules in [AGENTS.md](../../AGENTS.md#canonical-local-app-startup).
 `run all` includes the backend and frontend; `run backend` targets this API only.
 Missing credentials do not require fake overrides or a cloud setup: leave
 gated features unavailable and report the owner-only setup that remains.
+
+## Analysis diagnostics
+
+The executable server writes bounded JSON lines to stderr for the fixed
+analysis upload/sample/run/clear routes. Each line has
+`event: "analysis_diagnostic"`, an opaque `requestId`, action, phase, outcome and
+elapsed milliseconds. Phase records distinguish source transfer, proxy
+preparation/fetch/check, Gemini upload/file processing/generation/validation,
+reconciliation and cleanup. Request completion includes the application HTTP
+status; a numeric upstream status, when available, is a separate field.
+Source-controlled error codes/rules, allowlisted error classes and structural
+network codes help classify failures. Original failed-phase records are emitted
+before later cleanup, so cleanup cannot erase them from the logs.
+
+No request/response body, SDK message or stack, URL, filename, source/provider
+identifier, transcript, prompt, cookie, key or account value is logged. Records
+are capped at 48 per request, with no database, queue, extra provider request or
+retry. Logging failures cannot change the work's result. `createApplication` and
+`composeBackend` default to a silent injected sink; only explicit server startup
+enables stderr output. Ordinary tests use injected sinks and fake transports
+with no keys or external network. They do not prove a successful Gemini response
+or physical cloud deletion; those remain owner-run checks with the enabled live
+setup and approvals. No local AI runtime/weights are used.
+
+Agent-managed startup captures stderr in its ignored runtime log. Its supervisor
+uses the same strict diagnostic validator; unknown fields, arbitrary values and
+oversized lines stay redacted. Inspect only
+these structural records when diagnosing analysis, correlating the safe response's
+`requestId` with the first failed phase and later cleanup/request completion.
+An application 500 alone does not identify Google's status. Do not enable raw SDK
+debug output or retry a paid request merely to collect logs. See the
+[current diagnosis record](../../docs/operations/GROUNDED_ANALYSIS_CHECK.md#priority-backend-diagnostics--2026-10-04).
 
 ## Verification commands
 

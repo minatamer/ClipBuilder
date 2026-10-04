@@ -2,6 +2,7 @@ import { composeBackend } from "./composition.js";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { readLocalRuntimeSettings } from "./config/runtime.local.js";
+import { AnalysisDiagnostics } from "./analysis/analysis.diagnostics.js";
 
 // Only the executable entry point loads owner-managed local configuration.
 const localEnvironment = fileURLToPath(
@@ -21,7 +22,11 @@ const runtime =
         new URL("../runtime.local.json", import.meta.url),
       )
     : {};
-const { application, config } = composeBackend(process.env, runtime);
+const { application, config } = composeBackend(
+  process.env,
+  runtime,
+  new AnalysisDiagnostics((line) => console.warn(line)),
+);
 if (config.processingUnavailableReasons.length)
   console.warn(
     `ClipBuilder paid processing unavailable: ${config.processingUnavailableReasons.join(", ")}`,

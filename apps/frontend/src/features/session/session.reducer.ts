@@ -969,6 +969,7 @@ export function clippingSessionReducer(
       return reject(state);
 
     case "cleanup-partial":
+      return reject(state);
     case "cloud-assembling":
     case "cloud-assembly-failed":
     case "cloud-review":

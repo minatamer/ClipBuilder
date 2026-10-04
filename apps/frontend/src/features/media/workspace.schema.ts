@@ -213,7 +213,7 @@ export const workspaceRecordSchema = z
     if (
       record.status !== "ready" &&
       (record.source ||
-        record.retainedSample ||
+        (record.retainedSample && record.status !== "clearing") ||
         record.analysis ||
         record.assembly ||
         record.selectedId ||
@@ -241,7 +241,7 @@ export function cleanupRecord(record: WorkspaceRecord): WorkspaceRecord {
     ...record,
     status: "clearing",
     source: null,
-    retainedSample: undefined,
+    retainedSample: record.retainedSample,
     analysis: null,
     assembly: null,
     selectedId: null,

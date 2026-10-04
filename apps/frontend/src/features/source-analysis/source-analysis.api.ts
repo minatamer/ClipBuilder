@@ -42,6 +42,7 @@ export function createSourceAnalysisApi(
         body: JSON.stringify(value),
         signal,
       });
+      if (response.status === 204) return schema.parse(undefined);
       if (!response.body) throw new Error();
       const reader = response.body.getReader(),
         chunks: ArrayBuffer[] = [];
@@ -221,16 +222,7 @@ export function createSourceAnalysisApi(
         return;
       }
       csrf = grant.csrfToken;
-      const response = await transport("/api/analysis/clear", {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
-        body: "{}",
-        signal,
-      });
-      await response.body?.cancel();
-      if (response.status !== 204) throw new SampleApiFailure(sampleFailure());
+      await call("clear", {}, z.undefined(), signal);
       csrf = "";
     },
   };

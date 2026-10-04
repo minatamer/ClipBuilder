@@ -1,21 +1,11 @@
 "use client";
-import { useEffect, useRef } from "react";
-
-type Turnstile = {
-  render(
-    element: HTMLElement,
-    options: {
-      sitekey: string;
-      action: string;
-      cData: string;
-      size: "compact";
-      callback(token: string): void;
-      "error-callback"(): void;
-      "expired-callback"(): void;
-    },
-  ): string;
-  remove(id: string): void;
-};
+import { useEffect, useId, useRef, useState } from "react";
+import { Button } from "../../shared/ui/button";
+import {
+  mountProcessingChallenge,
+  type Turnstile,
+} from "./processing-challenge";
+import styles from "./analysis-challenge.module.css";
 declare global {
   interface Window {
     turnstile?: Turnstile;
@@ -35,40 +25,76 @@ export function AnalysisChallenge({
   onFailure(): void;
 }) {
   const host = useRef<HTMLDivElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId(),
+    descriptionId = useId();
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    let active = true,
-      widget: string | undefined;
-    const mount = () => {
-      if (active && host.current && window.turnstile)
-        widget = window.turnstile.render(host.current, {
-          sitekey: siteKey,
-          action,
-          cData: sessionId,
-          size: "compact",
-          callback: (token) => {
-            if (active) onToken(token);
-          },
-          "error-callback": onFailure,
-          "expired-callback": onFailure,
-        });
+    if (!host.current) return;
+    const open = () => {
+      if (dialog.current && !dialog.current.open) dialog.current.showModal();
     };
-    const script = document.createElement("script");
-    script.src =
-      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-    script.async = true;
-    if (window.turnstile) mount();
-    else {
-      script.addEventListener("load", mount);
-      script.addEventListener("error", onFailure);
-      document.head.append(script);
-    }
+    const stop = mountProcessingChallenge({
+      host: host.current,
+      document,
+      api: () => window.turnstile,
+      siteKey,
+      action,
+      sessionId,
+      onInteractive: () => {
+        setFailed(false);
+        open();
+      },
+      onFinished: () => dialog.current?.close(),
+      onToken,
+      onError: () => {
+        setFailed(true);
+        open();
+      },
+    });
+    const currentDialog = dialog.current;
     return () => {
-      active = false;
-      if (widget) window.turnstile?.remove(widget);
-      script.removeEventListener("load", mount);
-      script.removeEventListener("error", onFailure);
-      script.remove();
+      stop();
+      currentDialog?.close();
     };
-  }, [action, onFailure, onToken, sessionId, siteKey]);
-  return <div ref={host} aria-label="Processing verification" />;
+  }, [action, attempt, onToken, sessionId, siteKey]);
+  return (
+    <dialog
+      ref={dialog}
+      className={styles.dialog}
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
+      onCancel={(event) => {
+        event.preventDefault();
+        onFailure();
+      }}
+    >
+      <div className={styles.content}>
+        <h2 id={titleId}>Quick verification</h2>
+        <p id={descriptionId}>
+          {failed
+            ? "Verification couldn’t finish. Please try again."
+            : "Complete this check to continue."}
+        </p>
+      </div>
+      <div ref={host} className={styles.widget} />
+      <div className={`${styles.content} ${styles.actions}`}>
+        {failed && (
+          <Button
+            onClick={() => {
+              dialog.current?.close();
+              setFailed(false);
+              setAttempt((value) => value + 1);
+            }}
+          >
+            Try again
+          </Button>
+        )}
+        <Button variant="secondary" onClick={onFailure}>
+          Cancel
+        </Button>
+      </div>
+    </dialog>
+  );
 }

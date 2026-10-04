@@ -17,6 +17,7 @@ import type { ClipReviewSession, ClippingSessionState } from "./session.types";
 
 export const SESSION_PROJECTION_KEY = "clipbuilder.session.v1";
 export const SESSION_CLEANUP_KEY = "clipbuilder.cleanup.v1";
+export const SESSION_ABANDONED_KEY = "clipbuilder.abandoned.v1";
 export const SESSION_PROJECTION_VERSION = 1 as const;
 export const MAX_SESSION_PROJECTION_BYTES = 256 * 1024;
 export const MAX_PROJECTION_AGE_MS = 30 * 60 * 1_000;

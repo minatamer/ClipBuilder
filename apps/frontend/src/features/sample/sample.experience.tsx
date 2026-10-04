@@ -11,6 +11,11 @@ import {
 } from "react";
 import { ArrowRight, Film, Upload, X } from "lucide-react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import {
+  exitClippingSession,
+  finishPendingExit,
+} from "../session/session.exit";
 import {
   type PublicConfigResponse,
   type SafeError,
@@ -26,7 +31,6 @@ import {
 } from "../session/session.provider";
 import {
   selectAvailableActions,
-  selectIsClearable,
   selectStageTitle,
 } from "../session/session.selectors";
 import { CandidateReview } from "./candidate.review";
@@ -55,10 +59,7 @@ import { localSessionIdentity } from "../media/workspace.restore";
 import { SourcePreview } from "./source-preview";
 import { createSourceAnalysisApi } from "../source-analysis/source-analysis.api";
 import { AnalysisChallenge } from "../source-analysis/analysis-challenge";
-import {
-  clearAnalysisMedia,
-  runSourceAnalysis,
-} from "../source-analysis/source-analysis.flow";
+import { runSourceAnalysis } from "../source-analysis/source-analysis.flow";
 
 const CloudClipReview = dynamic(
   () => import("./cloud-clip.review").then((module) => module.CloudClipReview),
@@ -82,7 +83,19 @@ function Workspace({
         Skip to main content
       </a>
       <header className={styles.header}>
-        <a href="/" className={styles.brand} aria-label="ClipBuilder home">
+        <a
+          href="/"
+          className={styles.brand}
+          aria-label="ClipBuilder home"
+          onClick={
+            clear
+              ? (event) => {
+                  event.preventDefault();
+                  clear();
+                }
+              : undefined
+          }
+        >
           <BrandMark className={styles.brandMark} />
           <span className={styles.brandText}>ClipBuilder</span>
         </a>
@@ -99,7 +112,7 @@ function Workspace({
               className={styles.headerButton}
               onClick={clear}
             >
-              Clear media
+              Exit
             </Button>
           )}
         </div>
@@ -121,17 +134,19 @@ export function SampleExperience({
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    void api.config(controller.signal).then(
-      (value) => {
-        if (!controller.signal.aborted) {
-          setConfig(value);
-          setConfigFailed(false);
-        }
-      },
-      () => {
-        if (!controller.signal.aborted) setConfigFailed(true);
-      },
-    );
+    void finishPendingExit()
+      .then(() => api.config(controller.signal))
+      .then(
+        (value) => {
+          if (!controller.signal.aborted) {
+            setConfig(value);
+            setConfigFailed(false);
+          }
+        },
+        () => {
+          if (!controller.signal.aborted) setConfigFailed(true);
+        },
+      );
     return () => controller.abort();
   }, [api, attempt]);
   const localMode = config?.mode === "live" && config.localMediaEnabled;
@@ -232,7 +247,6 @@ function SampleScreen({
     useClippingSession();
   const localMode = workspace !== null;
   const cloudApi = useMemo(() => createSourceAnalysisApi(), []);
-  const [consent, setConsent] = useState(false);
   const [analysisLabel, setAnalysisLabel] = useState("Preparing analysis");
   const [challenge, setChallenge] = useState<{
     sessionId: string;
@@ -252,6 +266,8 @@ function SampleScreen({
   }, []);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<SafeError | null>(null);
+  const router = useRouter();
+  const exiting = useRef(false);
   const [evidenceAttempt, setEvidenceAttempt] = useState(0);
   const [deliveryFooter, setDeliveryFooter] = useState<HTMLDivElement | null>(
     null,
@@ -365,37 +381,6 @@ function SampleScreen({
     localMode,
   ]);
 
-  useEffect(() => {
-    if (state.stage !== "clearing") return;
-    const controller = new AbortController();
-    effects.clear();
-    void (async () => {
-      if (workspace) {
-        const cleanup = await clearAnalysisMedia({
-          workspace,
-          api: cloudApi,
-          signal: controller.signal,
-          cloudPending:
-            !!workspace.snapshot?.cloudAnalysis || !!workspace.remoteCleanup,
-          allowMissingSession:
-            workspace.remoteCleanup?.allowMissingSession ??
-            !workspace.snapshot?.cloudAnalysis?.cleanupRequired,
-        });
-        if (!cleanup.complete) throw new SampleApiFailure(sampleFailure());
-      } else await api.clear(controller.signal);
-    })().then(
-      () => {
-        if (!controller.signal.aborted)
-          dispatch({ type: "CLEAR_SUCCEEDED", availability });
-      },
-      () => {
-        if (!controller.signal.aborted)
-          dispatch({ type: "CLEAR_PARTIAL", failure: sampleFailure() });
-      },
-    );
-    return () => controller.abort();
-  }, [api, availability, cloudApi, dispatch, effects, state.stage, workspace]);
-
   async function requestChallenge(
     sessionId: string,
     action: "transcription" | "candidate-analysis" | "visual-plan" | "render",
@@ -428,7 +413,6 @@ function SampleScreen({
     if (
       !workspace ||
       state.stage !== "analysis-confirmation" ||
-      !consent ||
       !config.liveAnalysisEnabled ||
       !config.processingSiteKey ||
       ((!workspace.snapshot?.source || !workspace.sourceFile) &&
@@ -492,22 +476,37 @@ function SampleScreen({
       });
   };
   const clear = () => {
-    if (
-      localMode &&
-      state.stage === "fatal" &&
-      state.failure.code === "ACTIVE_SESSION_EXISTS"
-    )
-      return;
-    pending.current?.abort();
-    phase.current?.controller.abort();
-    pending.current = null;
-    setBusy(false);
-    setFailure(null);
-    if (selectIsClearable(state)) dispatch({ type: "CLEAR" });
+    if (exiting.current) return;
+    exiting.current = true;
+    let storage: Storage | null = null;
+    try {
+      storage = window.sessionStorage;
+    } catch {
+      /* Exit works without storage. */
+    }
+    void exitClippingSession({
+      storage,
+      workspaceEpoch: workspace?.snapshot?.epoch,
+      stop: () => {
+        pending.current?.abort();
+        phase.current?.controller.abort();
+        challengePromise.current?.reject();
+        pending.current = null;
+        effects.clear();
+      },
+      cleanup: async () => {
+        if (workspace) await workspace.exit();
+      },
+      navigate: () => router.replace("/"),
+    });
   };
+  const leaveCleanup = useEffectEvent(clear);
+  useEffect(() => {
+    if (state.stage === "clearing" || state.stage === "cleanup-partial")
+      leaveCleanup();
+  }, [state.stage]);
   const selectInput = (file: File) => {
     if (state.stage !== "intake") return;
-    setConsent(false);
     if (workspace) {
       if (!file) return;
       try {
@@ -771,14 +770,7 @@ function SampleScreen({
     <Workspace
       localMode={localMode}
       cloudMode={config.liveAnalysisEnabled}
-      {...((selectIsClearable(state) || busy) &&
-      !(
-        localMode &&
-        state.stage === "fatal" &&
-        state.failure.code === "ACTIVE_SESSION_EXISTS"
-      )
-        ? { clear }
-        : {})}
+      clear={clear}
     >
       <WorkflowFrame
         title={stageTitles[state.stage] ?? selectStageTitle(state)}
@@ -841,8 +833,7 @@ function SampleScreen({
                       busy ||
                       !!failure ||
                       (localMode &&
-                        (!consent ||
-                          !config.liveAnalysisEnabled ||
+                        (!config.liveAnalysisEnabled ||
                           !config.processingSiteKey))
                     }
                   >
@@ -914,10 +905,8 @@ function SampleScreen({
                   "cloud-render-failed",
                   "render-failed",
                 ].includes(state.stage)) && (
-                <Button onClick={clear}>
-                  {state.stage === "cleanup-partial"
-                    ? "Retry cleanup"
-                    : "Start over"}
+                <Button disabled={busy} onClick={clear}>
+                  {state.stage === "cleanup-partial" ? "Exit" : "Start over"}
                 </Button>
               )}
               {state.stage === "fatal" && actions.includes("retry-restore") && (
@@ -974,6 +963,11 @@ function SampleScreen({
             }
             mode={localMode ? "real" : "fake"}
             active={failure === null}
+            findingMoments={
+              state.stage === "analyzing" &&
+              (!localMode ||
+                analysisLabel === "Reading your video and finding moments")
+            }
             {...("operation" in state ? { operation: state.operation } : {})}
             {...(processingFraction === undefined
               ? {}
@@ -999,30 +993,17 @@ function SampleScreen({
                 : {})}
               {...(state.media ? { durationMs: state.media.durationMs } : {})}
             />
-            {(!localMode || config.liveAnalysisEnabled) && (
+            {!localMode && (
               <p className={styles.modeNote}>
-                {!localMode
-                  ? "This is a simulated source preview. Selected video bytes are not read or uploaded; Find moments continues the fixture journey."
-                  : workspace?.snapshot?.retainedSample
-                    ? "After your consent, a separate sample copy is prepared in temporary private storage. A smaller video and audio proxy is sent for AI analysis. Source access expires after two hours; cleanup is best effort and provider retention is separate."
-                    : "Your video will be uploaded to temporary private storage. A smaller video and audio proxy is sent for AI analysis. Source access expires after two hours; cleanup is best effort and provider retention is separate."}
+                This is a simulated source preview. Selected video bytes are not
+                read or uploaded; Find moments continues the fixture journey.
               </p>
-            )}
-            {config.liveAnalysisEnabled && (
-              <label>
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(event) => setConsent(event.target.checked)}
-                />{" "}
-                I own or have licensed this conversation and consent to these
-                transfers and paid analysis.
-              </label>
             )}
           </>
         )}
         {challenge && config.processingSiteKey && (
           <AnalysisChallenge
+            key={`${challenge.sessionId}:${challenge.action}`}
             siteKey={config.processingSiteKey}
             sessionId={challenge.sessionId}
             action={challenge.action}
@@ -1077,30 +1058,22 @@ function SampleScreen({
                 >
                   Choose a video
                 </Button>
-                <Button
-                  variant="secondary"
-                  disabled={busy || !availability.sample}
-                  onClick={selectSample}
-                  aria-describedby={
-                    config.mode === "fake"
-                      ? "sample-preview-note"
-                      : !availability.sample
-                        ? "sample-unavailable"
-                        : undefined
-                  }
-                >
-                  Use sample
-                </Button>
+                {availability.sample && (
+                  <Button
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={selectSample}
+                    aria-describedby={
+                      config.mode === "fake" ? "sample-preview-note" : undefined
+                    }
+                  >
+                    Use sample
+                  </Button>
+                )}
               </div>
               {config.mode === "fake" && (
                 <p id="sample-preview-note" className={styles.sampleNotice}>
                   Sample previews and results are simulated.
-                </p>
-              )}
-              {!availability.sample && (
-                <p id="sample-unavailable" className={styles.sampleNotice}>
-                  Sample video is not configured yet. You can choose your own
-                  video.
                 </p>
               )}
               {busy && (
@@ -1130,8 +1103,8 @@ function SampleScreen({
             {localMode && (
               <p className={styles.rights}>
                 {config.liveAnalysisEnabled
-                  ? "Video is kept in one temporary device workspace for up to two hours. After your consent, the original is uploaded to private temporary storage; bounded audiovisual proxies go to Google AI. Provider retention is separate. Clear requests server cleanup and attempts device deletion. Closing the tab does not guarantee deletion; independent server expiry and device cleanup on the next visit apply."
-                  : `Chosen files stay on this device in one temporary workspace for up to two hours. Clear media attempts to remove them. Closing the tab does not guarantee deletion; expired files are cleaned while open or on the next visit. Browser storage may be removed sooner.${config.retainedSampleEnabled ? " The sample streams from private storage." : ""}`}
+                  ? "Video is kept in one temporary device workspace for up to two hours. Find moments uploads the original to private temporary storage; bounded audiovisual proxies go to Google AI. Provider retention is separate. Exit starts quiet server and device cleanup. Closing the tab does not guarantee deletion; independent server expiry and device cleanup on the next visit apply."
+                  : `Chosen files stay on this device in one temporary workspace for up to two hours. Exit starts cleanup in the background. Closing the tab does not guarantee deletion; expired files are cleaned while open or on the next visit. Browser storage may be removed sooner.${config.retainedSampleEnabled ? " The sample streams from private storage." : ""}`}
               </p>
             )}
           </section>
@@ -1241,11 +1214,7 @@ function SampleScreen({
         )}
         {state.stage === "cleanup-partial" && (
           <section className={styles.empty}>
-            <p role="alert">
-              {localMode
-                ? "Local deletion could not be confirmed. Keep this tab open and retry cleanup."
-                : "Local data is cleared. Service cleanup could not be confirmed."}
-            </p>
+            <p role="status">Returning home...</p>
           </section>
         )}
         {(state.stage === "analysis-failed" ||

@@ -13,6 +13,7 @@ import {
   normalizeGeminiAnalysis,
 } from "./analysis.provider-shape.js";
 import { ANALYSIS_POLICY, ANALYSIS_REQUEST } from "./analysis.prompt.js";
+import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
 
 export interface AnalysisProvider {
   analyze(proxy: Blob, signal: AbortSignal, scope?: string): Promise<unknown>;
@@ -40,6 +41,20 @@ const fileSchema = z.object({
   mimeType: z.literal("video/mp4").optional(),
   state: z.enum(["PROCESSING", "ACTIVE", "FAILED"]),
 });
+
+class GoogleFilesFailure extends Error {
+  constructor(
+    readonly phase:
+      "upload_start" | "upload_finalize" | "delete" | "delete_confirm",
+    readonly status: number,
+    readonly neverCreated = false,
+  ) {
+    super("google_files_request_failed");
+  }
+  get ruleId() {
+    return `google_files_${this.phase}_http_${this.status}`;
+  }
+}
 export function composeGeminiTransport(
   config: BackendConfig,
   transport?: typeof fetch,
@@ -109,11 +124,16 @@ export function composeGeminiTransport(
             body: JSON.stringify({ file: { name } }),
           },
         );
+        if (!start.ok)
+          throw new GoogleFilesFailure(
+            "upload_start",
+            start.status,
+            [400, 401, 403, 404, 413, 429].includes(start.status),
+          );
         const capability = new URL(
           start.headers.get("x-goog-upload-url") ?? "",
         );
         if (
-          !start.ok ||
           capability.origin !== "https://generativelanguage.googleapis.com" ||
           capability.pathname !== "/upload/v1beta/files" ||
           capability.username ||
@@ -131,7 +151,9 @@ export function composeGeminiTransport(
             "Content-Type": "video/mp4",
           },
         });
-        if (!final.ok || final.headers.get("x-goog-upload-status") !== "final")
+        if (!final.ok)
+          throw new GoogleFilesFailure("upload_finalize", final.status);
+        if (final.headers.get("x-goog-upload-status") !== "final")
           throw new Error("provider_upload_rejected");
         return z.object({ file: fileSchema }).parse(await final.json()).file;
       } finally {
@@ -187,23 +209,67 @@ export function composeGeminiTransport(
       };
     },
     async delete(name, abortSignal) {
-      const missing = (error: unknown) =>
-        typeof error === "object" &&
-        error !== null &&
-        "status" in error &&
-        error.status === 404;
+      if (!/^files\/[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/.test(name))
+        throw new Error("provider_file_rejected");
+      const url = `https://generativelanguage.googleapis.com/v1beta/${name}`;
+      let deleted: Response | undefined, confirmed: Response | undefined;
       try {
-        await ai.files.delete({ name, config: { abortSignal } });
-      } catch (error) {
-        if (!missing(error)) throw error;
+        // Google can return 403 for a missing private file. That status alone
+        // cannot prove deletion; an authorized complete list must confirm it.
+        deleted = await boundedFetch(url, {
+          method: "DELETE",
+          signal: abortSignal,
+          headers: { "x-goog-api-key": config.gemini.apiKey! },
+        });
+        if (!deleted.ok && ![403, 404].includes(deleted.status))
+          throw new GoogleFilesFailure("delete", deleted.status);
+        abortSignal.throwIfAborted();
+        confirmed = await boundedFetch(url, {
+          method: "GET",
+          signal: abortSignal,
+          headers: { "x-goog-api-key": config.gemini.apiKey! },
+        });
+        if (confirmed.status === 403) {
+          let pageToken: string | undefined;
+          const listSchema = z.object({
+            files: z
+              .array(z.object({ name: z.string().min(1).max(80) }))
+              .max(100)
+              .default([]),
+            nextPageToken: z.string().min(1).max(2048).optional(),
+          });
+          for (let page = 0; page < 3; page++) {
+            abortSignal.throwIfAborted();
+            const listUrl = new URL(
+              "https://generativelanguage.googleapis.com/v1beta/files",
+            );
+            listUrl.searchParams.set("pageSize", "100");
+            if (pageToken) listUrl.searchParams.set("pageToken", pageToken);
+            const listed = await boundedFetch(listUrl, {
+              method: "GET",
+              signal: abortSignal,
+              headers: { "x-goog-api-key": config.gemini.apiKey! },
+            });
+            try {
+              if (!listed.ok)
+                throw new GoogleFilesFailure("delete_confirm", listed.status);
+              const files = listSchema.parse(await listed.json());
+              if (files.files.some((file) => file.name === name))
+                throw new GoogleFilesFailure("delete_confirm", 403);
+              pageToken = files.nextPageToken;
+              if (!pageToken) return;
+            } finally {
+              await listed.body?.cancel().catch(() => undefined);
+            }
+          }
+          throw new Error("provider_cleanup_list_incomplete");
+        }
+        if (confirmed.status !== 404)
+          throw new GoogleFilesFailure("delete_confirm", confirmed.status);
+      } finally {
+        await deleted?.body?.cancel().catch(() => undefined);
+        await confirmed?.body?.cancel().catch(() => undefined);
       }
-      try {
-        await ai.files.get({ name, config: { abortSignal } });
-      } catch (error) {
-        if (missing(error)) return;
-        throw error;
-      }
-      throw new Error("provider_cleanup_pending");
     },
   };
 }
@@ -212,6 +278,7 @@ type PendingGoogleFile = {
   scope: string;
   uploadSettled: Promise<void>;
   deletion: Promise<void> | null;
+  neverCreated: boolean;
 };
 export class GeminiAnalysisProvider implements AnalysisProvider {
   private pendingFiles = new Map<string, PendingGoogleFile>();
@@ -224,6 +291,7 @@ export class GeminiAnalysisProvider implements AnalysisProvider {
     ) => Promise<void> = async (ms, signal) => {
       await delay(ms, undefined, { signal });
     },
+    private readonly diagnostics = new AnalysisDiagnostics(),
   ) {}
   async analyze(
     proxy: Blob,
@@ -232,7 +300,7 @@ export class GeminiAnalysisProvider implements AnalysisProvider {
     task?: GeminiTask,
   ): Promise<unknown> {
     if (this.pendingFiles.size)
-      throw new ApplicationError({ code: "FEATURE_DISABLED" });
+      throw new ApplicationError({ code: "CLEANUP_PENDING" });
     if (
       proxy.type !== "video/mp4" ||
       proxy.size <= 0 ||
@@ -251,10 +319,12 @@ export class GeminiAnalysisProvider implements AnalysisProvider {
         settleUpload = resolve;
       }),
       deletion: null,
+      neverCreated: false,
     };
     let registered = false;
     let value: unknown;
     let failure: ApplicationError | undefined;
+    let phase: "upload" | "processing" | "generation" | "validation" = "upload";
     try {
       deadline.throwIfAborted();
       // Preassigned opaque name lets cleanup target even an uncertain upload response.
@@ -262,50 +332,109 @@ export class GeminiAnalysisProvider implements AnalysisProvider {
       registered = true;
       let uploaded: unknown;
       try {
-        uploaded = await this.transport.upload(name, proxy, deadline);
+        uploaded = await this.diagnostics.step("gemini_upload", () =>
+          this.transport.upload(name, proxy, deadline),
+        );
+      } catch (error) {
+        if (error instanceof GoogleFilesFailure && error.neverCreated) {
+          pending.neverCreated = true;
+          this.pendingFiles.delete(name);
+        }
+        throw error;
       } finally {
         settleUpload();
       }
       let file = fileSchema.parse(uploaded);
-      for (let polls = 0; file.state === "PROCESSING"; polls++) {
-        if (file.name !== name) throw new Error();
-        if (polls >= GROUNDED_ANALYSIS_LIMITS.maxFilePolls) throw new Error();
-        await this.wait(GROUNDED_ANALYSIS_LIMITS.filePollMs, deadline);
-        file = fileSchema.parse(await this.transport.get(name, deadline));
-      }
-      if (
-        file.name !== name ||
-        file.state !== "ACTIVE" ||
-        file.uri !== `https://generativelanguage.googleapis.com/v1beta/${name}`
-      )
-        throw new Error();
-      deadline.throwIfAborted();
-      const result = await this.transport.generate(file.uri, deadline, task);
-      deadline.throwIfAborted();
-      if (
-        !result.finished ||
-        !result.text ||
-        new TextEncoder().encode(result.text).length >
-          GROUNDED_ANALYSIS_LIMITS.responseBytes
-      )
-        throw new Error();
-      value = task
-        ? task.schema.parse(JSON.parse(result.text))
-        : normalizeGeminiAnalysis(JSON.parse(result.text));
-    } catch {
-      failure = new ApplicationError({
-        code: deadline.aborted ? "CLIENT_ABORTED" : "MODEL_OUTPUT_REJECTED",
+      phase = "processing";
+      const uri = await this.diagnostics.step("gemini_processing", async () => {
+        for (let polls = 0; file.state === "PROCESSING"; polls++) {
+          if (file.name !== name) throw new Error();
+          if (polls >= GROUNDED_ANALYSIS_LIMITS.maxFilePolls) throw new Error();
+          await this.wait(GROUNDED_ANALYSIS_LIMITS.filePollMs, deadline);
+          file = fileSchema.parse(await this.transport.get(name, deadline));
+        }
+        if (
+          file.name !== name ||
+          file.state !== "ACTIVE" ||
+          file.uri !==
+            `https://generativelanguage.googleapis.com/v1beta/${name}`
+        )
+          throw new Error();
+        return file.uri;
       });
+      deadline.throwIfAborted();
+      phase = "generation";
+      const result = await this.diagnostics.step("gemini_generation", () =>
+        this.transport.generate(uri, deadline, task),
+      );
+      deadline.throwIfAborted();
+      phase = "validation";
+      value = this.diagnostics.check("gemini_validation", () => {
+        if (
+          !result.finished ||
+          !result.text ||
+          new TextEncoder().encode(result.text).length >
+            GROUNDED_ANALYSIS_LIMITS.responseBytes
+        )
+          throw new Error();
+        return task
+          ? task.schema.parse(JSON.parse(result.text))
+          : normalizeGeminiAnalysis(JSON.parse(result.text));
+      });
+    } catch (error) {
+      const status =
+        error instanceof Error &&
+        "status" in error &&
+        typeof error.status === "number" &&
+        Number.isInteger(error.status) &&
+        error.status >= 400 &&
+        error.status <= 599
+          ? error.status
+          : undefined;
+      failure = new ApplicationError({
+        code: deadline.aborted
+          ? signal.aborted
+            ? "CLIENT_ABORTED"
+            : "OPERATION_TIMEOUT"
+          : phase === "validation" || phase === "processing"
+            ? "MODEL_OUTPUT_REJECTED"
+            : "ANALYSIS_PROVIDER_FAILED",
+        ruleId:
+          error instanceof GoogleFilesFailure
+            ? error.ruleId
+            : `google_${phase}_${status === undefined ? "failed" : `http_${status}`}`,
+      });
+      this.diagnostics.failure(
+        phase === "upload"
+          ? "gemini_upload"
+          : phase === "processing"
+            ? "gemini_processing"
+            : phase === "generation"
+              ? "gemini_generation"
+              : "gemini_validation",
+        failure,
+      );
     }
     if (registered) {
       try {
-        await this.deleteFile(
-          name,
-          pending,
-          AbortSignal.timeout(GROUNDED_ANALYSIS_LIMITS.cleanupMs),
+        await this.diagnostics.step("gemini_cleanup", () =>
+          this.deleteFile(
+            name,
+            pending,
+            AbortSignal.timeout(GROUNDED_ANALYSIS_LIMITS.cleanupMs),
+          ),
         );
-      } catch {
-        failure = new ApplicationError({ code: "FEATURE_DISABLED" });
+      } catch (error) {
+        // Keep the analysis reason alongside the cleanup reason. Neither code
+        // includes provider payloads, file IDs, capabilities or credentials.
+        const cleanupRule =
+          error instanceof GoogleFilesFailure
+            ? error.ruleId
+            : "google_files_cleanup_failed";
+        failure = new ApplicationError({
+          code: "CLEANUP_PENDING",
+          ruleId: `${failure?.ruleId ?? "analysis_complete"};${cleanupRule}`,
+        });
       }
     }
     if (failure) throw failure;
@@ -326,14 +455,25 @@ export class GeminiAnalysisProvider implements AnalysisProvider {
         signal.removeEventListener("abort", abort);
       }
       signal.throwIfAborted();
-      await this.deleteFile(name, pending, signal);
+      try {
+        await this.deleteFile(name, pending, signal);
+      } catch (error) {
+        throw new ApplicationError({
+          code: "CLEANUP_PENDING",
+          ruleId:
+            error instanceof GoogleFilesFailure
+              ? error.ruleId
+              : "google_files_cleanup_failed",
+        });
+      }
     }
   }
   private deleteFile(
     name: string,
-    pending: { deletion: Promise<void> | null },
+    pending: PendingGoogleFile,
     signal: AbortSignal,
   ) {
+    if (pending.neverCreated) return Promise.resolve();
     pending.deletion ??= this.transport.delete(name, signal).then(
       () => {
         this.pendingFiles.delete(name);

@@ -99,6 +99,7 @@ export function CloudResult({
             range={range}
             currentMs={playback.currentMs}
             playing={playback.playing}
+            loading={!failed && (!access || playback.loading)}
             toggle={playback.toggle}
             seek={playback.seek}
             videoRef={playback.videoRef}

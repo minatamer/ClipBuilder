@@ -139,6 +139,7 @@ function MomentPreview({
   const {
     currentMs,
     playing,
+    loading,
     seek,
     toggle,
     pause,
@@ -212,6 +213,7 @@ function MomentPreview({
           range={range}
           currentMs={currentMs}
           playing={playing}
+          loading={loading}
           {...(sourceUrl ? { videoRef, muted, toggleMute } : {})}
           toggle={toggle}
           seek={(timeMs) => {

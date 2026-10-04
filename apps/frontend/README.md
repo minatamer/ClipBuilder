@@ -7,18 +7,34 @@ analysis no longer starts automatically. In fake mode, **Use sample** starts
 that existing fixture journey without choosing a file or reading real media.
 Real local preview uses native source
 dimensions/playback in the existing disposable workspace and needs no Gemini key.
+Native previews show a centered loading spinner until a frame is available and
+while buffering or seeking; synthetic placeholders stay labelled.
 The fixed cloud sample streams through the same-origin video endpoint. Selecting
 or restoring it journals only the selection, with no full download, checksum or
 OPFS source copy. Explicit **Find moments** prepares its separate temporary
 processing copy on the server through the existing protected admission;
-in real-media mode its button remains disabled until the retained-source
-checkpoint is configured. Live mode never falls back to fixtures.
+its CTA appears only when the local backend enables the configured sample.
+Preview and production omit it. Clearing a streamed sample removes its session
+selection without uploaded-file OPFS deletion; retained masters stay protected.
+Disposable processing copies retain remote cleanup. Live mode never falls back
+to fixtures.
 The landing **Get Started** action opens intake; **Use sample** is offered there
 beside **Choose a video**, with no separate sample CTA on the landing.
 See [retained sample setup and preservation](../../docs/operations/RETAINED_SAMPLE_SETUP.md)
 for ADC/storage configuration and [CL-016](../../docs/tickets/CL-016-source-preview-and-retained-sample.md)
-for checks and outstanding real-media evidence. Existing consent/keys/live/grant/
+for checks and outstanding real-media evidence. Existing keys/live/grant/
 spend gates still protect AI; no local AI weights/runtime are used.
+
+Finding moments loops brief task messages every five seconds while retaining
+elapsed time and cancellation. The messages do not report measured stages or
+a percentage. **Exit** returns home, forgets the workflow and expires app cookies.
+Temporary media deletion runs quietly and never asks visitors to retry. The
+cookie-expiry route responds even if the backend is unavailable, then schedules
+one bounded handoff through Next's `after` lifecycle. If cookie reset itself is
+unreachable, Exit still navigates and preserves a content-free intent; next entry
+resets cookies before intake. Uploaded local cleanup drains under the exclusive
+lease across navigation; a failed deletion tombstone is retried on next entry.
+Retained sample selection never invokes uploaded-file deletion.
 
 CL-015 adds production-output inventory checks to the normal build. See
 [local release preparation and deferred deployment gates](../../docs/operations/LOCAL_RELEASE_PREPARATION.md).
@@ -98,32 +114,33 @@ corepack pnpm --filter @clipbuilder/frontend test:unit src/features/assembly src
 
 ## CL-007 source analysis and recovery
 
-The prepared-source screen offers explicit rights/transfer/paid confirmation when
+The prepared-source screen starts analysis on explicit **Find moments** when
 backend gates are ready. The bounded same-origin bridge carries only grant/CSRF
 headers; the runtime upload capability goes directly to private storage and is
 never journaled. Ephemeral Turnstile widgets/listeners are removed on completion,
 cancel or unmount. Privacy copy discloses both original and AI proxy transfer.
+Verification normally runs in the background. Required interaction or a failure
+opens a centered dialog with cancellation and explicit verification-only retry.
 
 The browser marks pending before remote work and atomically journals validated
 source-bound analysis plus integrity receipt before advancing the existing
 candidate/transcript/notes UI. Committed refresh makes zero new calls. Pending/
-lost/failed work restores as visible failure with no automatic retry. Clear
-aborts work and requests cloud/local cleanup; failure stays visible. A journaled
-never-admitted grant refusal can clear without a remote session; admitted work
-still requires verified remote cleanup. Decoded analysis duration/fps may differ
+lost/failed work restores as visible failure with no automatic retry. Exit
+aborts owned work, resets access and requests best-effort cloud/local cleanup
+without requiring deletion confirmation from the visitor. Decoded analysis duration/fps may differ
 from browser measurements without invalidating source identity or refresh. Intake now
 uses bounded incremental standard SHA-256 to match renderer inspection. Older
 chained-digest workspaces fail source revalidation rather than being reused.
 
-Remote cleanup has a separate content-free IndexedDB marker. Deleting the local
-media/result journal cannot erase it. Reload restores a cleanup-only state,
-blocks source preparation and retries only Clear; a confirmed remote response
-is persisted separately from local acknowledgement. If local deletion or marker
-acknowledgement fails after remote Clear expires the cookie, reload retries only
-local cleanup using that confirmation. Unconfirmed admitted work still requires
-remote Clear; a missing session is not proof of deletion. Committed local cleanup
-and marker deletion are required before intake. Storage failure stays fenced,
-and metadata transactions finish before workspace ownership is released.
+Internal deletion confirmation remains separate from session reset. The previous
+cleanup marker is migrated by leaving that abandoned session, with no cleanup
+retry control. Exit hands cloud responsibility to the control API and independent
+expiry; a missing/invalid cookie never counts as physical deletion. Unmount does
+not abort the local deletion worker; its lease is released only after work drains.
+Local deletion failure retains a clearing journal with no restorable source and
+is retried best-effort on next entry. No background task can delete a newer upload.
+Control restart loses volatile cleanup bindings, so old cloud copies can require
+the existing private/provider expiry fallback. These are remaining live limitations.
 
 With `FAKE_MODE=true` and no keys, the actual fixture browser workflow passed
 selection, refresh, read-only review, simulated export and reset on desktop and

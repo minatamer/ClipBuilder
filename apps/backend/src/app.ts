@@ -16,11 +16,16 @@ import { SampleSession } from "./demo/sampleSession.js";
 import { composeAdmission } from "./admission/admission.composition.js";
 import { createAdmissionRouter } from "./http/routes/admission.route.js";
 import { composeAnalysis } from "./analysis/analysis.composition.js";
+import { createSessionExitRouter } from "./http/routes/session-exit.route.js";
 import { createAnalysisRouter } from "./http/routes/analysis.route.js";
 import { composeRetainedSample } from "./media/retained-sample.gcs.js";
 import { createRetainedSampleRouter } from "./http/routes/retained-sample.route.js";
+import { AnalysisDiagnostics } from "./analysis/analysis.diagnostics.js";
 
-export function createApplication(config: BackendConfig): Express {
+export function createApplication(
+  config: BackendConfig,
+  diagnostics = new AnalysisDiagnostics(),
+): Express {
   const application = express();
 
   application.disable("x-powered-by");
@@ -42,6 +47,22 @@ export function createApplication(config: BackendConfig): Express {
   });
 
   application.use("/v1", createHealthRouter(config.appRevision));
+  application.use("/v1/analysis", (request, response, next) => {
+    const action = request.path.slice(1);
+    if (
+      request.method !== "POST" ||
+      (action !== "upload" &&
+        action !== "sample" &&
+        action !== "run" &&
+        action !== "clear")
+    )
+      return next();
+    diagnostics.request(String(response.locals.requestId), action, (finish) => {
+      response.once("finish", () => finish("completed", response.statusCode));
+      response.once("close", () => finish("disconnected", response.statusCode));
+      next();
+    });
+  });
   const admission = composeAdmission(config);
   const retainedSample = composeRetainedSample(config);
   if (retainedSample)
@@ -49,8 +70,28 @@ export function createApplication(config: BackendConfig): Express {
       "/v1/retained-sample",
       createRetainedSampleRouter(retainedSample, config.frontendOrigin),
     );
-  const processing = composeAnalysis(config, admission);
+  const processing = composeAnalysis(config, admission, diagnostics);
   const analysis = processing?.analysis ?? null;
+  const sample =
+    config.providerMode === "fake" && config.appEnv === "local"
+      ? new SampleSession()
+      : null;
+  application.use(
+    "/v1/session",
+    createSessionExitRouter(
+      config.session.csrfAllowedOrigins,
+      async (cookie, origin) => {
+        if (analysis)
+          await analysis.exit({
+            cookie,
+            origin,
+            fetchSite: "same-origin",
+            signal: AbortSignal.timeout(5000),
+          });
+      },
+      (token) => sample?.clear(token),
+    ),
+  );
   if (analysis && admission)
     application.use(
       "/v1/analysis",
@@ -109,11 +150,11 @@ export function createApplication(config: BackendConfig): Express {
       }),
     );
   });
-  if (config.providerMode === "fake" && config.appEnv === "local") {
+  if (sample) {
     application.use(
       "/v1/sample",
       express.json({ limit: "8kb" }),
-      createSampleRouter(new SampleSession(), config.frontendOrigin),
+      createSampleRouter(sample, config.frontendOrigin),
     );
   }
 
@@ -142,6 +183,7 @@ export function createApplication(config: BackendConfig): Express {
         return;
       }
       const mapped = mapError(error, String(response.locals.requestId));
+      diagnostics.failure("request", error, mapped.status);
       sendNoStoreJson(
         response,
         mapped.status,

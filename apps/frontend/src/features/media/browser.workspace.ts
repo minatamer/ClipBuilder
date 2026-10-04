@@ -42,6 +42,9 @@ export interface WorkspacePorts {
   finishCleanup(): void;
 }
 
+let workspaceExit: Promise<void> = Promise.resolve();
+export const waitForWorkspaceExit = () => workspaceExit;
+
 function opaque(prefix: string): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   return `${prefix}_${btoa(String.fromCharCode(...bytes))
@@ -60,6 +63,7 @@ export class BrowserWorkspace {
   private audioWork: Promise<ExtractedAudio> | null = null;
   private task: AbortController | null = null;
   private clearing: Promise<void> | null = null;
+  private exiting: Promise<void> | null = null;
   private writes: Promise<void> = Promise.resolve();
   private url: string | null = null;
   private file: Blob | null = null;
@@ -369,7 +373,11 @@ export class BrowserWorkspace {
       this.ports.now() < record.admittedAtMs ||
       this.ports.now() >= record.expiresAtMs
     ) {
-      await this.clear();
+      // Recovery cleanup is application work. Its failure must not restore a
+      // user-facing cleanup screen or the abandoned source.
+      await this.clear().catch(() => undefined);
+      this.record = null;
+      this.work = null;
       return null;
     }
     try {
@@ -673,7 +681,10 @@ export class BrowserWorkspace {
           !cloudAnalysis.cleanupRequired,
       };
     const tombstone = this.record ? cleanupRecord(this.record) : null;
+    const retainedSampleOnly = this.record?.retainedSample === true;
     this.record = tombstone;
+    const cleanupController = new AbortController();
+    const cleanupTimer = setTimeout(() => cleanupController.abort(), 5000);
     this.clearing = (async () => {
       await this.writes.catch(() => {});
       let remoteFenceFailed = false;
@@ -694,10 +705,13 @@ export class BrowserWorkspace {
       await this.ports.processor.stop();
       await this.work?.catch(() => {});
       await this.audioWork?.catch(() => {});
-      await this.ports.processor.run(
-        { action: "delete" },
-        this.lifetime.signal,
-      );
+      // Streaming the retained sample creates no local media files. Clear its
+      // session journal without invoking the uploaded-file deletion worker.
+      if (!retainedSampleOnly)
+        await this.ports.processor.run(
+          { action: "delete" },
+          AbortSignal.any([this.lifetime.signal, cleanupController.signal]),
+        );
       // Keep the existing cloud evidence and legacy fence if its independent
       // obligation could not commit. Physical media deletion is still attempted.
       if (remoteFenceFailed) throw new LocalMediaError("storage");
@@ -708,12 +722,35 @@ export class BrowserWorkspace {
       this.work = null;
       this.ports.finishCleanup();
     })().finally(() => {
+      clearTimeout(cleanupTimer);
       this.clearing = null;
     });
     return this.clearing;
   }
 
+  exit(): Promise<void> {
+    if (this.exiting) return this.exiting;
+    this.exiting = (async () => {
+      try {
+        await this.clear().catch(() => undefined);
+        await this.ports.journal.deleteRemoteCleanup().catch(() => undefined);
+        this.remoteObligation = null;
+      } finally {
+        await this.disposeResources();
+      }
+    })();
+    workspaceExit = this.exiting.catch(() => undefined);
+    return this.exiting;
+  }
+
   async dispose(): Promise<void> {
+    // Unmount must not abort the deletion worker started by Exit. Keep the
+    // exclusive lease until it drains, before any fresh workspace can open.
+    if (this.exiting) return this.exiting;
+    await this.disposeResources();
+  }
+
+  private async disposeResources(): Promise<void> {
     this.disposed = true;
     this.generation++;
     this.lifetime.abort();

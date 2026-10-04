@@ -55,7 +55,9 @@ export class RetainedSampleProcessing {
     for await (const chunk of this.chunks(signal)) {
       const response = await this.transport(uploadUrl, {
         method: "PUT",
-        redirect: "error",
+        // GCS uses 308 for chunk acknowledgement. Fetch's error mode rejects it
+        // before we can validate Range; manual mode never follows a redirect.
+        redirect: "manual",
         signal,
         headers: {
           "Content-Type": "video/mp4",
@@ -65,6 +67,8 @@ export class RetainedSampleProcessing {
       });
       try {
         signal.throwIfAborted();
+        if (response.headers.has("location"))
+          throw new Error("sample_copy_failed");
         if (chunk.end < this.bytes - 1) {
           if (
             response.status !== 308 ||
