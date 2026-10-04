@@ -1,14 +1,13 @@
 # CL-007 controlled analysis check
 
 Status: **Gemini account/key/spend setup reported complete on 2026-10-04;
-the owner requested a paid-flow check, but the numerical allowance, Google
-transfer confirmation and controlled renderer rollout remain pending;
-live analysis is unperformed**. The owner subsequently reserved all paid-flow
+one existing private renderer image build/revision update and local setup are
+authorized; rollout is in progress and live analysis is unperformed**. The owner reserved all paid-flow
 testing for their own manual actions. Agents may run fake-mode automated checks;
 they must not trigger the paid analysis described below.
 The local fake browser workflow passed without keys/external calls; continuing
 dependency-ready local tickets is authorized. This checkpoint
-authorizes no Git action, new resources, public release, assembly, images or
+authorizes no new resources, public release, assembly, images or
 final export. `FAKE_MODE=true` with no keys supplies synthetic fixture and
 injected zero-network results; CL-006 separately proved real media processing
 with fake AI. Genuine understanding requires Gemini; no local AI model is used.
@@ -24,13 +23,17 @@ with fake AI. Genuine understanding requires Gemini; no local AI model is used.
   separately authorized live checkpoint; no credentialed request was made.
 - [x] Owner reports manually saving the Turnstile sitekey and secret in the
   backend's ignored `.env.local`.
-- [ ] Confirm the expected hostname and verify genuine Turnstile validation.
+- [x] Owner confirms the widget dashboard allows `localhost`; the backend's
+  ignored runtime metadata now records that expected hostname.
+- [ ] Verify genuine Turnstile validation during the owner's manual test.
 - [x] Normal local startup validates the configured grant key format, without
   inspecting or printing the secret. `PROCESSING_GRANT_KEY` accepts the key
   directly; `v1` stays in code and the old entry remains readable for migration.
   Random generation and private storage remain owner-managed.
-- [ ] Approve the incremental renderer build/revision update, Google audiovisual
-  transfer and numerical AI/cloud/build test allowance before dispatch.
+- [x] Owner authorizes one existing renderer image build and private revision
+  update, plus local processing setup for their own manual tests.
+- [ ] Owner confirms source rights and Google audiovisual transfer in the
+  application before manually dispatching analysis.
 
 Automatic reload was disabled in the owner's prepayment view and the setup
 instructions keep it off; no final dashboard inspection or account usage polling
@@ -97,13 +100,17 @@ made; the apps remain running. All five fake-only root gates pass, including
 This is an owner-only manual paid-check plan. The agent may prepare and verify
 fake-mode code, and separately authorized private renderer build/revision work,
 but does not dispatch the media admission, Google upload or Gemini generation.
-The prior combined agent-run update/paid-test proposal is withdrawn. A cloud
-update still needs its own bounded build/compute allowance; it is independent
-of Gemini funding and owner-only manual processing.
+The prior combined agent-run update/paid-test proposal is withdrawn. On
+2026-10-04 the owner authorized the existing private renderer update and rejected
+the assistant-added requirement to repeatedly choose a dollar ceiling. This
+update is bounded by one Cloud Build with a 1,200-second timeout and one private
+revision update, preserving the existing resource and operation caps. No numerical
+cloud ceiling is claimed. Gemini funding remains separate from cloud charges;
+the agent must not trigger paid media tests.
 
 1. Owner confirms one English, owned/licensed 15-second–20-minute source within
-   500 MiB, consent to **Google AI** audiovisual transfer, paid-project data terms,
-   and a **numerical incremental AI/cloud/build spend allowance**. Earlier private
+   500 MiB, consent to **Google AI** audiovisual transfer and paid-project data terms
+   before their manual analysis dispatch. Earlier private
    renderer rights approval does not authorize this new AI transfer. Keep media,
    filenames, identifiers and keys out of the evidence record.
 2. After explicit authorization, use existing CL-006 resources/workflow for
@@ -140,13 +147,14 @@ of Gemini funding and owner-only manual processing.
 6. Delete the Google file and verify GET 404; release the exact analysis proxy
    before publication. Clear and verify source-generation absence. Failed Google
    deletion blocks intake and retains a process-local obligation; explicit Clear
-   can retry deletion without AI. A second failure/cancellation experiment needs
-   a separate budget rather than reusing this single-call authorization.
+   can retry deletion without AI. The owner plans two manual input-path tests:
+   retained sample and upload of the same source. Each requires its own browser
+   confirmation; neither authorizes agent dispatch or automatic retries.
 
 ## Evidence and limits
 
 Record only model/config revision, image digest, counts, bytes, phase durations,
-tokens when available, budget estimate versus allowance, safe rule codes and
+tokens when available, authorized operation limits, safe rule codes and
 verified deletion. No account usage polling or content/capability/key logging.
 Alerts are advisory; interrupted calls can incur usage.
 

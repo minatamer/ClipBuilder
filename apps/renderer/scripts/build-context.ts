@@ -32,6 +32,7 @@ export async function prepareBuildContext(root: string) {
       "pnpm-lock.yaml",
       "pnpm-workspace.yaml",
       "tsconfig.base.json",
+      "test/deterministic.environment.ts",
       "apps/renderer/package.json",
       "apps/renderer/tsconfig.json",
       "apps/renderer/src",

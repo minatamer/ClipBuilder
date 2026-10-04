@@ -16,6 +16,33 @@ Dependencies follow the numbered migration sequence. After documentation approva
 - [x] Verify the actual `FAKE_MODE=true`, API-key-free browser workflow and clean up its temporary services.
 - [ ] Controlled live analysis checkpoint: explicitly deferred by the owner; do not infer authorization from fake results or earlier CL-006 permission.
 
+## Authorized private renderer update follow-up — 2026-10-04
+
+The owner authorized updating the existing private renderer and local connection
+for two owner-run manual input-path tests (retained sample and upload of the same
+source). They rejected the assistant-added recurring numerical build-budget
+prompt. Proceed with one allowlisted image build, its existing 1,200-second
+timeout and one private revision update; preserve IAM, attached identity,
+storage, expiry schedule and resource/operation caps. No new resources or public
+release are authorized. Paid media dispatch remains exclusively the owner's.
+
+The widget dashboard's `localhost` allowance is owner-confirmed; the backend's
+ignored runtime metadata now records the matching expected hostname. Genuine
+widget/provider quality and media deletion remain unchecked. Image proof now
+preloads the same hardcoded fake/paid-off/credential-clearing environment guard
+as the ordinary synthetic tests. Local normal startup keeps owner configuration.
+The previously approved local validation stage remains `analysis`; later
+assembly/render activation is outside this update. See the
+[controlled-check record](../operations/GROUNDED_ANALYSIS_CHECK.md).
+
+Before cloud submission, all five root gates passed again: `format:check`,
+`lint`, `typecheck`, `test:unit` (721 synthetic tests across 70 files) and `build`.
+The context boundary check accepts the shared environment guard while still
+rejecting environment files, frontend/backend code, private media and test
+suites. No provider or paid media dispatch occurred. The owner authorized
+committing the pending work; cloud rollout evidence is recorded separately
+only after successful verification.
+
 ## Owner Gemini setup follow-up — 2026-10-04
 
 The owner reports creating the Gemini key and manually saving it in ignored

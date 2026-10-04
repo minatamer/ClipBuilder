@@ -21,9 +21,10 @@ describe("private renderer build upload", () => {
       await inventory(directory);
       expect(paths).toContain("apps/renderer/src/server.ts");
       expect(paths).toContain("apps/renderer/Dockerfile");
+      expect(paths).toContain("test/deterministic.environment.ts");
       expect(
         paths.some((path) =>
-          /frontend|backend|\.env|\.git|fixture|feasibility|node_modules|\.test\./.test(
+          /frontend|backend|(?:^|\/)\.env(?:$|\.)|\.git|fixture|feasibility|node_modules|\.test\./.test(
             path,
           ),
         ),

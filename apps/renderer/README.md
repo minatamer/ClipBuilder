@@ -151,6 +151,10 @@ packaged tools, needs no full FFmpeg and removes fixtures in finally. The Linux
 compositor supports PNG/image2/PCM input; BMP/rawvideo fixture paths are unsupported.
 Only aggregate proof JSON reaches the runtime. The final image checks production
 imports, bundle, tool hashes and executable versions as the unprivileged runtime user.
+Both image checks preload `test/deterministic.environment.ts`, forcing fake AI,
+paid/live/cloud flags off and removing inherited credentials before application
+imports. The final check removes this temporary guard file; normal service
+startup uses its independently configured runtime settings.
 Debian system packages resolve at build time; the resulting image must be
 identified and invoked by immutable digest. Based on
 [Remotion's standard Docker guidance](https://www.remotion.dev/docs/docker).
@@ -158,8 +162,9 @@ identified and invoked by immutable digest. Based on
 Create the allowlisted context from the renderer directory with
 `corepack pnpm exec tsx scripts/build-context.ts`; use only the returned directory
 for Docker/Cloud Build and delete it afterward. The script refuses links and
-unexpected source file types, excludes tests and copies only renderer/shared
-source plus pinned build metadata. Never submit the repository root.
+unexpected source file types, excludes test suites and copies only renderer/shared
+source, pinned build metadata and the shared deterministic environment guard.
+Never submit the repository root.
 
 Docker is unavailable on the current Windows host, so Linux build validation
 requires a separately authorized Cloud Build run. The first approved build's

@@ -4,6 +4,15 @@ Status: **Private setup, authentication, verified Linux image and the rights-con
 2:45 upload/proxy/render/audio/cancellation/independent expiry proof passed. CL-006
 is complete.** This guide itself authorizes no cloud, credential, paid or Git action.
 
+Current update authorization (2026-10-04): the owner authorized one build and
+one revision update of these existing private resources for local manual
+analysis preparation. They declined the assistant-added repeated dollar-ceiling
+question. The existing 20-minute build timeout and service resource/operation
+caps bound this update; do not invent a numerical approved amount or repeat the
+historical bootstrap budget prompt. Paid media tests remain owner-only. The
+[CL-007 controlled check](GROUNDED_ANALYSIS_CHECK.md#proposed-bounded-execution)
+owns this follow-up.
+
 The existing project's ID, billing, europe-west1 region and exact private resource
 names were verified privately. The owner approved build/private setup, ADC,
 Remotion SSR license coverage, the USD 1 media test allowance, this source's rights
