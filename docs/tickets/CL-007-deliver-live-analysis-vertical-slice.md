@@ -43,8 +43,33 @@ suites. No provider or paid media dispatch occurred. The owner authorized
 committing the pending work; cloud rollout evidence is recorded separately
 only after successful verification.
 
-## Owner Gemini setup follow-up — 2026-10-04
+## Corrected native image preparation — 2026-10-04
 
+The first authorized build failed at its synthetic render check before image
+publication or private service update. Local reproduction found the default
+JPEG/full-range output was `yuvj420p`; the approved validator correctly rejected
+it. The worker now fixes BT.709 limited-range output through Remotion's supported
+option. Packaged FFmpeg lacks the raw `s16le` muxer, so bounded audio validation
+uses PCM WAV with exact RIFF/chunk, mono/16 kHz/16-bit and sample-duration checks.
+Malformed header/chunk/duration tests cover this parser. Native proof callers
+also now pass the validator's required FFmpeg argument.
+
+A fake, credential-free Windows adaptation of the Linux proof passed using only
+generated PNG/tone media and already installed tools: 10,005 ms output, 242,761
+bytes, 17,555,095-byte peak scratch, decoded frames/audio, cancellation, zero
+owned processes and zero AI calls. Synthetic files were removed in `finally`.
+No retained owner media was used. The local opt-in harness also type-checks with
+the pinned TypeScript compiler. One corrected build retry is necessary to finish
+the existing private-update request; preserve the 1,200-second build timeout and
+one revision update. No automatic paid-media retry is authorized.
+
+The final fake-only unit gate passed 732 tests across 71 files, including 11
+malformed/valid decoded-WAV cases. Format, lint, typecheck and build also passed.
+The isolated native worker receives hardcoded fake AI and disabled paid/live/cloud
+settings, with `NODE_ENV=test` during synthetic proof. Its minimal environment
+contains no parent credentials. Genuine AI/source quality remains owner-only.
+
+## Owner Gemini setup follow-up — 2026-10-04
 The owner reports creating the Gemini key and manually saving it in ignored
 `apps/backend/.env.local`, completing a USD 5 API prepayment and saving a USD 5
 monthly project spend cap. Automatic reload was disabled in the prepayment view

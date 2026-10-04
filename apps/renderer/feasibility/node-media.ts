@@ -130,7 +130,13 @@ try {
     ],
   });
   await pipeline.render(input, output, manifest, directory, signal);
-  const result = await validateOutput(output, tools.ffprobe, 10_000, signal);
+  const result = await validateOutput(
+    output,
+    tools.ffprobe,
+    tools.ffmpeg,
+    10_000,
+    signal,
+  );
   async function onset(path: string, name: string) {
     const pcm = join(directory, `${name}.pcm`);
     await runOwnedProcess(

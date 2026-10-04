@@ -102,9 +102,14 @@ fake-mode code, and separately authorized private renderer build/revision work,
 but does not dispatch the media admission, Google upload or Gemini generation.
 The prior combined agent-run update/paid-test proposal is withdrawn. On
 2026-10-04 the owner authorized the existing private renderer update and rejected
-the assistant-added requirement to repeatedly choose a dollar ceiling. This
-update is bounded by one Cloud Build with a 1,200-second timeout and one private
-revision update, preserving the existing resource and operation caps. No numerical
+the assistant-added requirement to repeatedly choose a dollar ceiling.
+The initial Cloud Build failed its synthetic output proof before publishing or
+changing the service. Local native reproduction identified stale validator calls,
+the default full-range color format and an unsupported raw-audio muxer. These
+were corrected and a synthetic render/decode/cancel proof passed. One corrected
+build retry completes the already-authorized update; each build retains its
+1,200-second timeout, with one private revision update and the existing resource
+and operation caps. No numerical
 cloud ceiling is claimed. Gemini funding remains separate from cloud charges;
 the agent must not trigger paid media tests.
 
@@ -114,7 +119,7 @@ the agent must not trigger paid media tests.
    renderer rights approval does not authorize this new AI transfer. Keep media,
    filenames, identifiers and keys out of the evidence record.
 2. After explicit authorization, use existing CL-006 resources/workflow for
-   **one image build and one private revision update**. Preserve IAM, storage,
+   **one corrected image and one private revision update**. Preserve IAM, storage,
    expiry schedule, resource ceilings and licensing. No resource creation or
    public deployment. The old image lacks the new proxy read/release routes and
    inspection profile; analysis rejects it before Gemini. Record image digest

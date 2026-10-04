@@ -91,6 +91,7 @@ export async function renderWorker(jobPath: string) {
       audioBitrate: "160k",
       sampleRate: 48000,
       pixelFormat: "yuv420p",
+      colorSpace: "bt709",
       outputLocation: job.output,
       concurrency: 2,
       imageFormat: "jpeg",

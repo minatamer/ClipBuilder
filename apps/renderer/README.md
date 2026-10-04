@@ -155,6 +155,9 @@ Both image checks preload `test/deterministic.environment.ts`, forcing fake AI,
 paid/live/cloud flags off and removing inherited credentials before application
 imports. The final check removes this temporary guard file; normal service
 startup uses its independently configured runtime settings.
+The media worker receives a minimal environment with hardcoded fake AI and
+paid/live/cloud access disabled, with `NODE_ENV=test` during synthetic proofs.
+Only the parent private service owns approved cloud compute and credentials.
 Debian system packages resolve at build time; the resulting image must be
 identified and invoked by immutable digest. Based on
 [Remotion's standard Docker guidance](https://www.remotion.dev/docs/docker).

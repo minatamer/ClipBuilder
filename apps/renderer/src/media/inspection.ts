@@ -10,6 +10,10 @@ import {
   videoCodecSchema,
 } from "@clipbuilder/contracts";
 import { MediaFailure } from "./media.failure.js";
+import {
+  assertDecodedAudio,
+  DECODED_AUDIO_MAX_BYTES,
+} from "./decoded-audio.js";
 import { runOwnedProcess } from "./process-runner.js";
 const streamSchema = z.object({
   codec_type: z.string(),
@@ -146,7 +150,7 @@ export async function validateOutput(
   assertOutputProbe(probe, info.size, durationMs);
   const samples = [0, durationMs / 2, Math.max(0, durationMs - 1000 / 30)],
     files = samples.map((_, index) => `${path}.frame-${index}.png`),
-    audioPath = `${path}.audio.pcm`;
+    audioPath = `${path}.audio.wav`;
   try {
     for (const [index, time] of samples.entries()) {
       const file = files[index]!;
@@ -215,18 +219,15 @@ export async function validateOutput(
         "-c:a",
         "pcm_s16le",
         "-f",
-        "s16le",
+        "wav",
         audioPath,
       ],
       signal,
     );
     const decoded = await stat(audioPath);
-    if (
-      decoded.size <= 0 ||
-      decoded.size % 2 !== 0 ||
-      Math.abs(decoded.size / 32 - durationMs) > 100
-    )
+    if (decoded.size < 44 || decoded.size > DECODED_AUDIO_MAX_BYTES)
       throw new MediaFailure("invalid");
+    assertDecodedAudio(await readFile(audioPath), durationMs);
   } finally {
     for (const file of [...files, audioPath]) await rm(file, { force: true });
   }
@@ -248,8 +249,8 @@ export function assertOutputProbe(
     !Number.isSafeInteger(bytes) ||
     bytes <= 0 ||
     bytes > PUBLIC_LIMITS.maxOutputBytes ||
-    durationMs < 10000 ||
-    durationMs > 60000 ||
+    durationMs < PUBLIC_LIMITS.minClipSeconds * 1000 ||
+    durationMs > PUBLIC_LIMITS.maxClipSeconds * 1000 ||
     !Number.isFinite(durationMs) ||
     !probe.format.format_name.split(",").includes("mp4") ||
     video?.codec_name !== "h264" ||

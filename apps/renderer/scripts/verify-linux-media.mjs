@@ -231,9 +231,11 @@ async function verify() {
     }, 100);
     stage = "render";
     await pipeline.render(input, output, manifest, directory, signal);
+    stage = "output-validation";
     const validated = await validateOutput(
       output,
       tools.ffprobe,
+      tools.ffmpeg,
       10000,
       signal,
     );
