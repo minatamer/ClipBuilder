@@ -12,6 +12,126 @@ final export. `FAKE_MODE=true` with no keys supplies synthetic fixture and
 injected zero-network results; CL-006 separately proved real media processing
 with fake AI. Genuine understanding requires Gemini; no local AI model is used.
 
+## Priority backend diagnostics — 2026-10-04
+
+The owner requested existing-log diagnosis first and explicitly allowed logging
+implementation if those logs were insufficient. A content-safe scan of all 30
+saved backend stdout/stderr files found no `ANALYSIS_PROVIDER_FAILED`, model or
+cleanup error code, or fixed Google failure rule. The current run's backend logs
+were 42 bytes stdout and 147 bytes stderr before edits. Code inspection confirmed
+that startup/shutdown were logged, while analysis errors were only sent in safe
+response JSON. The ignored local supervisor also redacted unrecognized output,
+so new records would have been discarded without updating the capture path.
+The same backend-owned strict validator now permits only structural diagnostic
+JSON through that filter; every other unknown line stays redacted. The exact
+cause of the owner's historical failed attempt cannot
+be recovered from these logs. No speculative provider/configuration diagnosis
+or processing fix is claimed.
+
+The condition was satisfied, so only meaningful diagnostics were implemented.
+Normal executable startup now enables bounded JSON stderr records for fixed
+analysis actions and stages, with opaque request correlation, elapsed time,
+safe codes/rules and distinct application/upstream statuses. First failed-phase
+records are emitted before cleanup runs, with separate cleanup failures afterward.
+There is no raw exception, SDK payload/message/stack, media, prompt, transcript,
+private file/session ID, URL, credential or capability in those records. Direct
+composition/tests stay silent unless a fake sink is injected. Logger failures
+do not change outcomes; processing response semantics and every other planned
+fix remain unchanged.
+
+The owning [CL-007 follow-up](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#priority-backend-diagnostic-follow-up--2026-10-04)
+lists exact file ownership, implemented scope and the next diagnosis/fix-plan
+sequence. Once the owner triggers a new attempt, correlate the response's safe
+request ID with the earliest failed phase, classify its status/rule, reproduce
+with fake transport data, then document the proven processing remedy before
+implementing it. No agent-triggered paid attempt or historical success is implied.
+
+### Diagnostic logging verification and activation
+
+All five settled root checks passed: `corepack pnpm format:check`, `lint`,
+`typecheck`, `test:unit` and `build`. The unit suites passed **785 tests in 76
+files**, including **276 backend tests**. New coverage checks strict log-record
+validation, privacy/bounds, failing sinks, concurrent request isolation, safe HTTP
+correlation and a first generation failure followed by cleanup failures, with
+exact fake provider counts. Ordinary checks hardcode fake/paid-off before imports,
+load no env file and reject external network access. Next's generated type imports
+were restored to the dev paths after build; frontend typecheck then passed again.
+The local frontend artifact inventory passes with nine routes, but its 26 external
+package links still leave strict target-platform release acceptance unverified.
+
+An isolated synthetic emitter exercised the new launcher's exact capture filter
+and shared backend validator; only its launch command was replaced for this check.
+Four valid records survived, including a synthetic generation HTTP 429 and distinct
+application 500. An additional record containing a payload field was rejected,
+and its private sentinel did not appear in the captured log. This is **fake
+capture evidence, not the owner's failure diagnosis**. It made zero provider calls,
+opened no listener and exited with both foreground processes complete. Ignored
+evidence is in `artifacts/local-run/qa-analysis-diagnostics/`; it remains excluded
+from release inputs and subject to the existing deployment artifacts checkpoint.
+
+The restart skill verified 20 old owned process identities, stopped frontend
+before backend, and proved zero survivors and zero listeners on ports 3000/4000
+through a three-second stabilization check. Replacement startup used normal
+owner configuration outside the sandbox, backend before frontend. Backend
+supervisor **23612** / listener **12820** owns port **4000**; frontend supervisor
+**14984** / listener **24780** owns port **3000**. Health, `/start` and public
+sample configuration returned 200. No processing request was made. Healthy
+instances remain running at `http://localhost:3000/start`.
+
+The new validated capture path is
+`artifacts/local-run/restart-20261004-analysis-logs/`, outside Git. The first failed
+phase in [backend stderr](C:/Users/minat/Work/ClipBuilder/artifacts/local-run/restart-20261004-analysis-logs/backend.stderr.log)
+will be the primary diagnosis source for the next owner-triggered attempt.
+Other logs: [backend stdout](C:/Users/minat/Work/ClipBuilder/artifacts/local-run/restart-20261004-analysis-logs/backend.stdout.log),
+[frontend stdout](C:/Users/minat/Work/ClipBuilder/artifacts/local-run/restart-20261004-analysis-logs/frontend.stdout.log),
+[frontend stderr](C:/Users/minat/Work/ClipBuilder/artifacts/local-run/restart-20261004-analysis-logs/frontend.stderr.log).
+Lifecycle records preserve supervisor/listener creation identities; old records
+were marked stopped after verified shutdown. No environment/runtime configuration,
+retained master, cloud resource or Git state was changed.
+
+The exact historical cause and the processing remedy are still pending. Request
+or cleanup response semantics, prompt/model/budget, message rotation, CSP and
+Turnstile loading are unchanged by this diagnostic implementation. After a new
+manual attempt, classify the earliest safe failure record, reproduce it in fake
+mode and document a proven processing fix before implementation. No agent-paid
+attempt, live-success/quality claim or real-deletion proof was produced.
+
+Fake/no-key analysis and injected diagnostic checks are available; real Gemini
+quality and actual cloud/provider deletion remain owner-run checks with keys,
+enabled live/paid capabilities, storage/renderer access and recorded approvals.
+No local AI model/runtime/weights are used. Preserve both retained masters.
+
+## Latest owner manual attempt and planned corrections — 2026-10-04
+
+After the Exit restart, the owner reported another retained-sample Find moments
+attempt: messages began rotating only after roughly two minutes, then analysis
+failed with the safe `ANALYSIS_PROVIDER_FAILED` message and HTTP 500 from
+`/api/analysis/run`. The reported console also contained blocked inline styles,
+duplicate Turnstile SDK loading and an unused CSS preload warning. The exact
+provider phase/status has not been recovered; an application 500 does not prove
+Google returned 500. Do not treat console style/preload warnings as its cause.
+
+The owner requested **planning and documentation first**. The ordered file-level
+plan, confirmed code defects, uncertainties, official references and unchecked
+acceptance criteria belong to
+[CL-007's analysis failure and console follow-up](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-requested-analysis-failure-and-console-fix-plan--2026-10-04).
+The initial documentation-only pass prioritized safe failure diagnosis, rotation from the accepted action,
+development/production style policy, shared Turnstile loading and remaining
+preload attribution. In that initial pass no application code or local configuration changed and no
+restart, provider/cloud request, paid attempt or Git mutation occurred in this
+planning pass. Existing logs were filtered for fixed diagnostic codes only;
+they supplied no detailed Google failure rule. The owner was asked for the
+existing response's safe `code` and `ruleId` only.
+
+The earlier 778-test and five-gate record below remains historical evidence for
+the pre-plan code. That planning pass added no application test or live-success evidence;
+the priority diagnostic follow-up above adds only logging and synthetic regression coverage.
+Fake/no-key verification can cover all proposed regressions with injected
+transports; genuine analysis still needs the configured keys, live/paid
+capabilities, storage/renderer access and recorded approvals. Both real input
+paths and physical cloud/provider deletion remain owner-run checks. No local AI
+model/runtime/weights are used. Preserve both retained masters and quiet Exit.
+
 ## Owner-reported Gemini setup — 2026-10-04
 
 - [x] Owner created a Gemini API key for the existing project and manually
@@ -128,11 +248,30 @@ Owner manual sequence: Use sample → Find moments → inspect results → Clear
 confirm cleanup. Restart the backend after verified Clear before testing the
 upload path; the current two admitted-action cap covers one input/analysis flow
 per backend process. The private renderer cap covers two analysis proxy jobs.
-Source rights/Google transfer acknowledgement and genuine widget validation
-remain application prerequisites for each manual flow. Gemini access/quality,
+The owner removed the separate preview notice/checkbox on 2026-10-04;
+**Find moments** is the explicit per-flow initiation. Source rights, operator
+Google-transfer approval and genuine widget validation remain prerequisites.
+Gemini access/quality,
 real-media deletion and final assembly/export remain unchecked. Agent Gemini
 and real-media processing dispatches were zero; image compute used the approved
 cloud resources. Fake mode still needs no keys and supplies synthetic results.
+
+## Owner manual failure and local correction — 2026-10-04
+
+The owner's sample attempt returned `STORAGE_FAILED` before analysis. Existing
+private renderer request statuses showed upload admission 200 followed by
+successful cancellation. A credential-free loopback check reproduced the
+underlying Fetch rejection of Google's HTTP 308 chunk acknowledgement. The
+backend now receives those acknowledgements in manual redirect mode, validates
+their exact Range and rejects any Location header. It never follows a redirect.
+No new sample-copy, proxy or Gemini operation was performed by the agent.
+
+The verification widget now runs in interaction-only mode and opens a centered
+dialog for required interaction or failure. Retry repeats only verification;
+cancel ends the pending attempt. Synthetic callback/lifecycle tests and an
+isolated mock-widget browser check cover this behavior. Actual widget and media
+acceptance remain the owner's manual checks. The renderer image, operating
+switches, credentials and retained master were not changed.
 
 ## Proposed bounded execution
 
@@ -188,14 +327,103 @@ the agent must not trigger paid media tests.
    success and verify **zero new upload/preparation/AI calls**. Review read-only
    playback/transcript/notes at phone/tablet/laptop/short heights, keyboard/zoom/
    reduced motion. No editor or manual range path.
-6. Delete the Google file and verify GET 404; release the exact analysis proxy
+6. Delete the Google file and verify absence by GET 404, or by a complete
+   authorized Files list when Google returns 403 for the missing private file;
+   a denied/incomplete list or a still-present file cannot confirm deletion.
+   Release the exact analysis proxy
    before publication. Clear and verify source-generation absence. Failed Google
    deletion blocks intake and retains a process-local obligation; explicit Clear
    can retry deletion without AI. The owner plans two manual input-path tests:
    retained sample and upload of the same source. Each requires its own browser
    confirmation; neither authorizes agent dispatch or automatic retries.
 
+## Current owner Exit behavior — 2026-10-04
+
+**Exit** resets the browser workflow and app cookies, returns home, and starts
+quiet bounded cleanup. The visitor never retries deletion. Its 204 response is
+session-reset evidence only. A valid backend session is canceled/revoked before
+deleting disposable copies; a stale cookie after restart cannot reconstruct old
+bindings, so private expiry and separate Google Files expiry remain fallbacks.
+Local upload deletion continues across navigation under the workspace lease;
+failed deletion keeps a private clearing tombstone for next-entry retry. Streaming
+sample selection never invokes uploaded-file deletion. Both retained masters stay
+protected. The old blocking cleanup/retry statements below are superseded by this
+owner decision; their historical evidence remains.
+
+Next's [after-response lifecycle](https://nextjs.org/docs/app/api-reference/functions/after)
+owns the frontend handoff. Current local routing remains pinned to the control API;
+hosted routing and shutdown/expiry acceptance remain CL-015 gates. Fake/no-key tests
+exercise failure and pending cleanup without real media or credentials. They do not
+prove physical cloud deletion. Real sample/upload checks and paid AI quality remain
+owner-only; agent automation never triggers analysis or another paid media operation.
+
 ## Evidence and limits
+
+### Owner manual failure and metadata-only diagnosis — 2026-10-04
+
+The owner's later manual attempt passed source upload, proxy preparation and
+proxy access (existing private renderer request statuses all 200). Cancellation
+also returned 200. Its analysis result was then replaced by the old provider
+cleanup error, displayed as feature unavailable. The cleanup screen always
+called this a local deletion failure even when only remote deletion failed.
+
+The owner explicitly authorized a metadata-only Google diagnostic. Files list
+returned 200 with a complete empty result; a GET for a randomly named nonexistent
+file returned 403. The old adapter accepted only GET 404 as proof of deletion,
+leaving an already absent file pending. This confirms the cleanup failure;
+the original generation outcome was discarded and cannot be reconstructed from
+that error. No upload, generation, deletion or retained-master access occurred
+during the diagnostic. No Google file remained under the configured key at that
+check. Metadata/status alone does not prove transcript or candidate quality.
+
+The corrected adapter checks an authorized complete list after GET 403, within
+the existing cleanup deadline and a fixed three-page bound. Denied access,
+incomplete pagination or a matching file keeps cleanup pending. Empty DELETE
+responses are accepted without SDK JSON parsing. Definite upload-start rejection
+does not create a phantom cleanup obligation. Safe phase/status rule codes retain
+the original analysis failure alongside cleanup failure; raw provider payloads
+and file identifiers are never exposed. Explicit cleanup retries do not rerun AI.
+
+The owner also requires rotating analysis wait messages, local-only sample CTA,
+and sample selection cleanup without uploaded-file OPFS deletion. Both retained
+masters stay protected; disposable processing copies and genuine uploads retain
+normal cleanup. A control restart invalidates old sessions, so a stale browser
+cleanup fence must not be bypassed by treating an invalid cookie as deletion.
+Live quality and the owner's next sample/upload/Clear trials remain unchecked.
+
+All five root gates passed after the correction: format, lint, typecheck,
+761 synthetic tests across 72 files, and build. The Next development references
+were restored and frontend typecheck passed again. Local non-metered health,
+`/start` and public config returned 200. Backend listener PID 5464 / supervisor
+14956 serves 4000; frontend listener PID 20804 / supervisor 21820 serves 3000.
+Both supervisor creation times and owned trees were checked; no app was launched
+or stopped. Content-free process records and separate stdout/stderr remain in
+ignored `artifacts/local-run/restart-20261004-renderer-connected/`. The diagnostic
+helper exited with no listener. The owner's Chrome tab is not connected to the
+available browser tool, so its current cleanup screen was not directly reset or
+verified. No new real upload/analysis, cloud mutation, deployment or Git action.
+
+### Explicit full local restart after cleanup correction — 2026-10-04
+
+The owner requested the restart skill after the correction. Its kill/run sequence
+stopped frontend before backend, captured 20 creation-time-bound process identities
+and verified zero survivors and zero listeners on 3000/4000 after a three-second
+stabilization check. Fresh normal-config launches started backend before frontend.
+Backend health, `/start` and `/api/sample/config` returned 200. Final ownership
+checks again found zero old survivors. No secrets/configuration were inspected or
+changed, and no paid/provider/media action was triggered. Public flags retain
+live analysis and protected local sample availability; assembly/render stay off.
+Automated fake/key-free evidence above remains separate from owner live testing.
+
+Backend listener PID 8012 / supervisor 25284 serves 4000; frontend listener PID
+7308 / supervisor 21096 serves 3000. Content-free runtime identities and separate
+`backend.stdout.log`, `backend.stderr.log`, `frontend.stdout.log` and
+`frontend.stderr.log` are under ignored
+`artifacts/local-run/restart-20261004-cleanup-fix/`. Old runtime records are marked
+stopped and their logs retained. The healthy apps remain running at
+`http://localhost:3000/start`. Existing browser sessions predate this control epoch;
+the owner's disconnected Chrome tab and next live sample/upload/Clear trials
+remain manually verified items. No tests were rerun solely for process restart.
 
 Record only model/config revision, image digest, counts, bytes, phase durations,
 tokens when available, authorized operation limits, safe rule codes and
@@ -219,3 +447,57 @@ References: [Files](https://ai.google.dev/gemini-api/docs/files),
 [paid-service terms](https://ai.google.dev/gemini-api/terms),
 [Turnstile configuration](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/),
 [private renderer setup](CLOUD_RUN_RENDERER_SETUP.md).
+
+### Exit follow-up settled local verification — 2026-10-04
+
+All five root gates passed: `corepack pnpm format:check`, `lint` (zero warnings),
+`typecheck`, `test:unit` (778 synthetic tests across 75 files), and `build`.
+The new Exit route is explicitly included in the nine-route release inventory;
+the first inventory attempt rejected the extra route, then passed after that
+allowlist and its negative-fixture expectations were updated. Local output still
+has the previously deferred 26 external package links; no hosted release is proven.
+Development type references were restored after build and root typecheck passed.
+
+An isolated fake UI harness rendered the actual SampleExperience with synthetic
+configuration and mocked navigation/cookie transport. Exit reached its landing
+view with exactly one cookie-reset request; Get Started then showed empty intake
+with the Exit CTA. No real file, OPFS source, ADC, provider or paid request was used.
+The test tab was closed and its two creation-time-bound helper identities and
+listener were confirmed absent. Screenshot evidence is ignored under
+`artifacts/qa/session-exit-20261004/fresh-intake.png`.
+
+The restart skill stopped frontend before backend, captured the owned process trees (20 identities in the initial restart,
+21 observed through the final restart),
+and verified zero descendants/listeners through three-second stabilization.
+Fresh normal-config launches followed backend-before-frontend readiness; no
+secrets or runtime settings were read or changed. Final identities and readiness
+are recorded below after their explicit checks. The owner's separate Chrome tab
+remains outside the browser tool; its prior session and real deletion require
+owner observation. No agent paid test, cloud mutation, deployment or Git action.
+
+Final restart verification is recorded after the last instance checks below.
+The final route accepts Next's non-null empty POST stream, rejects content and
+bounds a stalled body at two seconds while releasing its reader. Cookie-response
+bodies are canceled; storage write denial still permits independent workflow
+projection removal. Both regressions have synthetic coverage. A startup review
+initially did not recognize shutdown evidence; a fresh read-only ownership/port
+check confirmed zero survivors and listeners, and the same launch was accepted.
+
+Final healthy stack: backend supervisor **15972**, listener **23472** on **4000**;
+frontend supervisor **8864**, listener **6632** on **3000**. Both creation times
+and full ten-process trees were verified. Backend health, `/start` and
+`/api/sample/config` all returned **200**. Healthy apps remain running at
+`http://localhost:3000/start`. Old records are marked stopped; final records and
+content-safe logs are in ignored `artifacts/local-run/restart-20261004-exit-final/`.
+
+Logs: [backend stdout](C:/Users/minat/Work/ClipBuilder/artifacts/local-run/restart-20261004-exit-final/backend.stdout.log),
+[backend stderr](C:/Users/minat/Work/ClipBuilder/artifacts/local-run/restart-20261004-exit-final/backend.stderr.log),
+[frontend stdout](C:/Users/minat/Work/ClipBuilder/artifacts/local-run/restart-20261004-exit-final/frontend.stdout.log),
+[frontend stderr](C:/Users/minat/Work/ClipBuilder/artifacts/local-run/restart-20261004-exit-final/frontend.stderr.log).
+
+Changed Exit responsibilities: frontend `session.exit.ts`, workflow/header and
+privacy copy, session persistence/provider and workspace lifetime; frontend and
+backend session-exit routes; control admission and source cleanup orchestration;
+release route inventory; matching synthetic tests and the source of truth,
+service guides, CL-007 and CL-015. Previous pending playback/challenge/Gemini
+corrections were preserved. No changes were staged or committed.

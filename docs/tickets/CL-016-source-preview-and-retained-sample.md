@@ -16,6 +16,33 @@ Earlier CL-013 feedback changes were uncommitted at that baseline. The owner's
 2026-10-03 handoff now authorizes their sequential staging and commits together
 with this follow-up; preserve all whole-file changes in the documented plan.
 
+## Owner loading indicator follow-up — 2026-10-04
+
+The owner requested a centered spinner in the blank video area while the source
+loads. The shared native player now shows a spinner and accessible **Loading
+video…** status until a current frame is available, and during buffering/seeking.
+Metadata alone does not dismiss it. Media errors stop the indicator; Clear,
+source replacement and unmount remove every added listener. Source, candidate
+and final native-video surfaces use the same indicator; simulated source
+placeholders remain explicitly labelled. Source metadata preload, protected
+streaming and explicit **Find moments** initiation retain their existing behavior.
+No new provider/media dispatch, dependency, timer or capability is introduced.
+
+Synthetic event checks cover metadata-before-frame, resumed playback, seeking
+without a frame, media errors and listener cleanup. Static markup checks cover
+initial streamed loading and the key-free simulated placeholder. Actual media
+loading/buffering appearance and device behavior remain manual checks. Real
+Step 1 playback requires its approved storage access but no Gemini key; paid AI
+requires keys/live approvals and remains exclusively owner-tested.
+
+Verification: 33 focused frontend tests passed, followed by all five root gates
+(`format:check`, `lint`, `typecheck`, `test:unit`: 734 synthetic tests across 71
+files, and `build`). Backend health, `/start` and public sample config returned
+200; no real-media or provider request was triggered. The build's generated Next
+type references were returned to the existing development paths. The Windows
+production inventory still reports 26 external package links; this local UI
+check does not close the independent public-release gate.
+
 ## Owner handoff — 2026-10-03
 
 The owner paused further UI/UX feedback until the next session, planned for

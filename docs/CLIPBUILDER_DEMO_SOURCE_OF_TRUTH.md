@@ -4,13 +4,52 @@
 
 Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 721 synthetic tests in 70 files pass, including the CL-016 MP4-only and sample-streaming follow-ups. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**
 
+### Owner Exit and background cleanup decision — 2026-10-04
+
+Rename **Clear media** to **Exit**. Its primary result is returning to the landing
+page, forgetting the browser workflow and expiring app session cookies for a fresh
+start. Cleanup runs quietly; deletion failure never asks the visitor to retry or
+blocks navigation. Exit acknowledges the session reset, not physical deletion.
+It is available independently of paid-feature readiness. An unusable pre-restart
+cookie is also expired; it cannot prove deletion of old processing copies.
+
+The frontend returns the cookie-expiry response independently of backend cleanup
+and schedules one bounded cleanup handoff after the response. A reachable control
+session cancels work and revokes its grant before private deletion settles.
+Backend/provider restart or failed deletion relies on independent private expiry;
+Google Files expiry is separate. Uploaded local files are deleted best-effort,
+with a clearing tombstone retried on the next entry; new intake never restores an
+abandoned source. The exclusive workspace lease drains before another upload
+can start. Sample selection never invokes uploaded-file deletion, and both
+retained masters remain excluded. There is no durable queue or deletion guarantee.
+This supersedes the older cleanup-only screen, intake fence and visitor retry
+requirements. Existing media/access/spend/rights bounds remain.
+
+Fake/no-key checks cover failed and pending deletion, cookie expiry, stale sessions,
+unmount, sample preservation and fresh intake with injected transports. They do
+not prove actual cloud/provider deletion or live AI quality. Paid manual tests
+remain owner-only and still require keys, live capabilities and recorded approvals;
+no local AI runtime or weights are used.
+
+### Owner analysis action decision — 2026-10-04
+
+Remove the technical transfer notice and separate rights/paid-analysis checkbox
+from the Step 1 preview. **Find moments** is the explicit action that initiates
+analysis; it no longer requires a second checkbox. The existing privacy panel,
+source-rights requirement, operator approvals, live eligibility, Turnstile and
+bounded admission remain. Preview alone never dispatches analysis. This decision
+supersedes earlier requirements for a separate browser consent control.
+Fake mode remains synthetic and needs no keys; real analysis still needs the
+configured credentials, live capabilities and operator approvals. Paid tests
+remain owner-only.
+
 ### Owner sample streaming decision — 2026-10-04
 
 **Use sample** opens protected same-origin, generation-pinned Step 1 playback.
 Selecting or restoring it journals only the selection; it does not download,
 hash or persist the full sample in the browser. Native video requests the ranges
 needed for playback and seeking. Normal file intake still uses its local file.
-Only explicit **Find moments**, consent and existing live admission gates prepare
+Only explicit **Find moments** and existing live admission gates prepare
 a separate disposable processing copy on the server. The fixed read-only master
 is fingerprinted and transferred in bounded chunks through the renderer's
 existing temporary upload capability; the renderer then validates the copy and
@@ -20,6 +59,26 @@ sample-download/OPFS preparation path, not retention, rights or spend gates.
 Fake mode remains the labelled keys-free fixture journey. Real streaming needs
 ADC/storage access but no Gemini key; real analysis retains keys/live flags and
 rights/provider/cloud/spend approval. No local AI weights/runtime are used.
+
+### Owner analysis wait and local sample decision — 2026-10-04
+
+While finding moments, rotate brief messages every five seconds and loop them
+until the request ends. Owner clarification: start with the accepted **Find
+moments** action and include verification, sample-copy/upload and proxy preparation;
+do not wait for the AI request or select rotation by a technical phase label.
+Keep one elapsed-time and message-loop lifetime across those phases. The current
+late-start defect and related analysis/console fixes are planned in
+[CL-007](tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-requested-analysis-failure-and-console-fix-plan--2026-10-04)
+and remain unimplemented in that follow-up. These describe the analysis task; they do not claim
+measured stage completion or a percentage. Keep elapsed time and cancellation.
+**Use sample** appears only when the local backend enables that capability;
+preview and production expose neither the CTA nor retained/fixture sample routes.
+Clearing a streamed sample releases its selection and session journal without
+running uploaded-file OPFS deletion. Both retained masters remain excluded from
+cleanup. Separate disposable processing/proxy/provider copies still follow their
+existing deletion rules. Uploads retain verified physical local deletion.
+Fake checks need no keys and prove these boundaries through synthetic transports;
+genuine analysis quality and real upload cleanup remain owner-run checks.
 
 ### Owner MP4-only intake decision — 2026-10-04
 

@@ -48,6 +48,43 @@ Git actions retain separate gates. Usage polling and independent review remain s
 - [ ] Complete the owner-requested Google Search favicon/crawlability checkpoint below before freezing the public deployment build; retain its post-release indexing follow-up.
 - [ ] Build acceptable immutable target-platform images; verify actual deployment, negative URL probes, bounded live quality/cost, kill switch/rollback and remaining rights/AI/cloud/license/device gates after approval.
 
+### Analysis and browser-console release checkpoint — 2026-10-04
+
+The owner's latest manual sample attempt failed. Remediation is planned under
+[CL-007](CL-007-deliver-live-analysis-vertical-slice.md#owner-requested-analysis-failure-and-console-fix-plan--2026-10-04);
+this release packet links to that owning plan instead of duplicating implementation.
+Earlier successful fake gates do not establish live analysis acceptance.
+
+- [ ] Close CL-007's safe failure diagnosis and fake regression checks; rotation
+      must begin with the accepted Find moments action, including preparation.
+- [ ] On the acceptable target-platform production artifact, verify CSP/style
+      behavior through direct load and client navigation, one shared Turnstile
+      SDK load, intended challenge dialog behavior and no unresolved blocking
+      browser-console errors. Preserve production nonce/script restrictions.
+- [ ] Attribute remaining CSS preload warnings and correct owned causes or
+      document reproduced development-only behavior with production evidence.
+- [ ] Record the owner's real sample and uploaded-copy outcomes/cleanup before
+      claiming live readiness. Samples remain local-only, retained masters are
+      protected and deletion failure never blocks Exit.
+
+These checks are pending. Fake/no-key checks use synthetic data and injected
+transports; real provider/Turnstile quality and physical deletion require the
+owner's enabled live setup and approvals. This adds no deployment authorization,
+agent-paid test, credentials requirement for ordinary tests or local AI runtime.
+
+### Owner-requested local sample exclusion — 2026-10-04
+
+The owner requires **Use sample** only locally. The frontend omits the CTA when
+the public backend configuration disables samples. Synthetic preview/production
+configuration checks prove both sample flags false and both fixture-start and
+retained-video routes return 404. This is local fake-mode evidence, not an actual
+deployment check or live AI result. Both retained masters remain private and
+outside cleanup/build inputs; temporary processing copies retain normal cleanup.
+
+- [x] Local fake-mode negative checks for preview and production sample capability/routes.
+- [ ] Before public deployment acceptance, verify the actual intake has no sample CTA,
+      sample flags are false, and fixture/retained sample endpoints return 404.
+
 ### Owner-requested Google Search favicon checkpoint — 2026-10-04
 
 The owner requested checking the ScreenPilot search-icon issue and recording
@@ -994,3 +1031,15 @@ owner/external blocker. Never include a secret or content-bearing identifier.
 </details>
 
 </details>
+
+## Exit release acceptance follow-up — 2026-10-04
+
+CL-007's owner-approved Exit endpoint is in the production route inventory.
+Before public deployment, verify same-origin cookie expiry and the Next
+`after` handoff on the target host, connect its server-only control origin, and
+confirm private expiry/shutdown behavior. Cleanup failure must never block
+navigation or require a visitor retry. The current Windows artifact still has
+26 external package links, so target-platform immutable release acceptance
+remains unchecked. Preserve retained masters and exclude QA/process artifacts.
+Fake/no-key failure tests and a synthetic browser check pass locally; genuine
+cloud/provider deletion and the owner's paid input-path tests remain unverified.

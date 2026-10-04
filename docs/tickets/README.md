@@ -1,5 +1,22 @@
 # ClipBuilder canonical ticket index
 
+Owner commit handoff (2026-10-04): the owner authorized committing all current
+work using the [59-file plan](CL-007-016-WORKFLOW-COMMIT_PLAN.md). Further
+implementation of the analysis/console fixes is deferred to another day; this
+handoff does not close their acceptance or authorize paid tests/deployment.
+
+Latest owner manual-analysis follow-up (2026-10-04):
+[CL-007's analysis failure and console fix plan](CL-007-deliver-live-analysis-vertical-slice.md#owner-requested-analysis-failure-and-console-fix-plan--2026-10-04)
+records rotation from the beginning, safe failure diagnosis, CSP, shared Turnstile
+loading and preload attribution. The owner subsequently authorized
+[backend diagnostic logging](CL-007-deliver-live-analysis-vertical-slice.md#priority-backend-diagnostic-follow-up--2026-10-04)
+because all saved backend logs lacked the failure detail. **Logging is implemented;
+the historical cause, processing/console fixes and acceptance remain open.**
+Fake/no-key diagnostic regression coverage is available; live Gemini success and
+real deletion remain owner-run checks with keys, live flags and approvals.
+CL-015 links the production release acceptance checkpoint. No local AI runtime,
+provider/cloud action, deployment or Git mutation accompanies this follow-up.
+
 Status: Local code through CL-014 and CL-015 release preparation has recorded audit evidence; later CL-013/CL-016 local follow-ups have no actionable validation findings. The final settled local state passes all five root gates and 721 synthetic tests in 70 files, including the CL-016 MP4-only and sample-streaming follow-ups. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
 
 The owner's 2026-10-04 [MP4-only intake follow-up](CL-016-source-preview-and-retained-sample.md#owner-mp4-only-intake-follow-up--2026-10-04)

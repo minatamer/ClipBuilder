@@ -16,6 +16,252 @@ Dependencies follow the numbered migration sequence. After documentation approva
 - [x] Verify the actual `FAKE_MODE=true`, API-key-free browser workflow and clean up its temporary services.
 - [ ] Controlled live analysis checkpoint: explicitly deferred by the owner; do not infer authorization from fake results or earlier CL-006 permission.
 
+## Owner-requested analysis failure and console fix plan — 2026-10-04
+
+Status: **investigated and planned; diagnostic logging implemented in the
+priority follow-up below; processing fixes and remaining acceptance stay open**.
+The owner requested documenting the fixes before changing application code.
+This follow-up stays in CL-007. It does not authorize a new paid attempt, cloud
+change, deployment, Git mutation or restart during an owner-run attempt.
+
+### Priority backend diagnostic follow-up — 2026-10-04
+
+The owner prioritized checking existing backend logs and authorized implementation
+of meaningful logging **only if the existing logs could not diagnose the failure**.
+A fixed-code scan of all 30 saved backend stdout/stderr logs found no analysis
+failure code or Google failure rule. The current run's backend stdout/stderr
+were only 42/147 bytes before instrumentation. The executable server logged
+startup/shutdown; the error handler returned safe diagnostics without emitting
+them. The ignored local supervisor also reduced unknown output to generic
+redacted categories. The historical provider cause therefore remains unavailable,
+not resolved.
+
+Implemented only that conditional diagnostic scope:
+`analysis/analysis.diagnostics.ts` owns an injected sink, bounded request context
+and safe stage records; explicit `server.ts` composition enables stderr output.
+`app.ts` attaches opaque request correlation to the four fixed analysis actions
+and records application errors/completion. `composition.ts` and
+`analysis.composition.ts` pass the same diagnostic instance to source orchestration
+and Gemini. `analysis.usecase.ts` and `gemini.adapter.ts` record source/proxy,
+provider and cleanup phases before subsequent failures can overwrite the returned
+error. No model/prompt/schema/budget/status mapping, retry, operating flag,
+frontend behavior or cleanup response semantics changed.
+
+Records contain fixed action/phase/outcome, bounded timings, opaque request ID,
+application HTTP status, separate upstream status when known, allowlisted error
+class/network code and source-controlled error code/rules. There are at most 48
+records per request. Raw exceptions/messages/stacks, content, inputs/outputs,
+private/provider/session identifiers, credentials and capabilities are excluded.
+No provider call or durable storage is added. Sink/unsafe diagnostic-property
+failure cannot change processing. The original failure survives **in the log**;
+the planned change to prevent cleanup masking it in the response remains open.
+The same backend-owned strict validator checks both emission and the new ignored
+launcher capture. It rejects unknown fields, arbitrary values and oversized lines;
+the launcher retains valid diagnostic JSON and continues redacting every other
+unrecognized line. No raw-output logging bypass is enabled.
+
+Synthetic verification covers strict shared record validation, concurrent request isolation, privacy, record
+limits, failing sinks, exact one-generation-call behavior and original generation
+failure followed by provider/proxy/source cleanup failures. The diagnostics and
+additional regression tests run under the hardcoded fake/paid-off/no-key network
+guard. Final root checks and local activation are recorded in the
+[priority backend diagnostics record](../operations/GROUNDED_ANALYSIS_CHECK.md#priority-backend-diagnostics--2026-10-04).
+All five root gates pass with 785 synthetic tests in 76 files. The isolated
+launcher-capture check retains safe records and rejects a payload-bearing record.
+Verified restart leaves healthy backend/frontend instances with the new capture
+path; genuine provider success and the historical failure cause remain unproved.
+
+Next diagnosis/fix plan: use the next **owner-triggered** attempt's request ID to
+find the earliest failed phase, its safe rule/upstream status and elapsed time.
+Reproduce that exact failure with an injected transport, document its cause and
+file-level remedy, and leave that processing remedy unimplemented until the
+owner asks for it. If the saved failed response becomes available sooner, use
+its safe rule without a new attempt. Keep response-error preservation and each
+console/rotation fix separate and pending. No agent-paid test is permitted.
+
+### Evidence and uncertainty
+
+The latest owner-run sample attempt started rotating its wait messages only
+after roughly two minutes, then showed **The analysis service could not finish
+the request**. The owner reported `/api/analysis/run` returning HTTP 500,
+blocked inline styles, a duplicate Turnstile SDK warning and an unused CSS
+preload warning. Do not commit the screenshot or full console output.
+
+| Observation | Code evidence | Conclusion |
+| --- | --- | --- |
+| Rotation starts late | `sample.experience.tsx` enables `findingMoments` only when `analysisLabel` equals `Reading your video and finding moments`; `source-analysis.flow.ts` sets that label after grant, first verification, sample copy/upload and second verification. | Confirmed UI gating bug. Start the loop with the accepted Find moments action and keep it through preparation. |
+| Analysis HTTP 500 | The displayed message belongs to `ANALYSIS_PROVIDER_FAILED`. `gemini.adapter.ts` uses that code for upload/generation failures, while `errorMapper.ts` defaults it to 500. The frontend bridge preserves upstream status and safe error JSON. | This is an application error status, not proof Google returned 500. Its exact phase/status remains unknown until the safe `error.ruleId` is recovered. |
+| Inline style CSP errors | `proxy.ts` always requires a nonce for style elements, including development. The installed Next.js package contains the reported dev-overlay `font-styles` module; the installed style-loader injects style elements. | Confirmed development policy incompatibility. The individual blocked React style element still needs attribution; do not assume it belongs to Remotion. |
+| Turnstile already loaded | `processing-challenge.ts` inserts its own script whenever `window.turnstile` is absent and removes it on unmount. There is no shared in-flight load. Next.js Strict Mode is enabled. | Confirmed loader race vulnerability; Strict Mode/remounts are a plausible trigger, not runtime proof of this warning's exact trigger. |
+| Unused token CSS preload | The console names a Next.js-generated CSS chunk. | Performance warning with an unconfirmed cause. Check after fixing style loading; it is not evidence of the server analysis failure. |
+
+The initial planning pass found that the existing safe error envelope includes `code`, `requestId` and an
+optional `ruleId`. A filtered inspection of the current ignored runtime logs
+found no detailed Google failure rule. At that point the backend error handler
+did not emit one; the priority follow-up above now adds structural logging.
+No secret, real media, provider payload or live response was read, and no
+provider request was issued during this planning pass. The owner was asked for
+only `error.code` and `error.ruleId` from the existing failed response; the plan
+does not depend on another paid attempt.
+
+### Ordered implementation plan and file ownership
+
+1. **Identify and fix the analysis failure.** First recover the existing safe
+   response rule if available. Otherwise add a bounded, content-free diagnostic
+   at the existing error boundary: allowlisted phase, error code, integer HTTP
+   status, elapsed duration and opaque request correlation only. Do not log raw
+   exceptions, SDK messages/stacks, bodies, prompts, transcripts, file names,
+   provider IDs, session/grant IDs, URLs, headers or credentials. Inspect the
+   exact pinned SDK request and reproduce the identified path with injected
+   transports. Separate upload-start/finalize, file processing, generation,
+   output validation and cleanup failures. Check model/API/request-schema
+   compatibility only when the diagnostic points there; change no model,
+   timeout, prompt, token budget or operating flags merely to hide a failure.
+   Keep the primary failure when proxy release or source cancellation also
+   fails: current `finally`/`catch` cleanup awaits can overwrite it. Record
+   cleanup separately and preserve quiet Exit. Map safe statuses deliberately;
+   a local 500 must never be presented as a confirmed upstream status.
+   Preserve the one-generation-call policy, consumed-action fence, aborts and
+   deadlines. Never add automatic generation retry or repair calls.
+   Primary files: backend `analysis/gemini.adapter.ts`,
+   `analysis/analysis.usecase.ts`, `http/errorMapper.ts`, `app.ts` and their
+   tests. Add a named analysis diagnostic module only if it has a real caller.
+   Frontend `source-analysis.api.ts` and `api/analysis/[action]/route.ts` change
+   only if evidence shows safe details are lost at that boundary. Shared
+   `errors.schema.ts` changes only for a necessary cross-boundary contract.
+
+2. **Rotate from the beginning.** Give the accepted Find moments action one
+   stable wait lifetime. Show the first friendly message immediately, advance
+   every five seconds, wrap and continue during grant/verification, sample copy
+   or upload, proxy preparation and AI analysis. Remove the label-string gate;
+   internal phase labels must not select whether the loop runs. Preserve elapsed
+   time across phase changes and stop the timer on success, failure, cancellation
+   or Exit. Friendly copy describes the task, not measured completion or an ETA.
+   Planned copy: “Finding your standout moments…”, “Looking for hooks that grab
+   attention…”, “Searching for stories worth sharing…”, “Looking for clear ideas
+   and memorable reactions…”, “Finding moments that work as standalone clips…”
+   and “Looking for a strong setup and payoff…”. Primary files:
+   `sample/sample.experience.tsx`, `sample/processing-status.tsx`,
+   `source-analysis/source-analysis.flow.ts` if needed for the start boundary,
+   and focused frontend tests. Keep replay/persistence and double-click fences.
+
+3. **Correct style loading and verify production security.** Follow Next.js's
+   documented development policy: allow inline style elements only in
+   development; keep nonce-restricted style elements in production. Do not
+   combine a development style nonce with `unsafe-inline` and assume both work.
+   Keep the existing script nonce/strict-dynamic policy and the intentional
+   style-attribute allowance for fixed React/Remotion geometry. Trace each
+   remaining blocked style element in a synthetic browser run. If an owned
+   production injector exists, pass the request nonce at its supported boundary
+   or use owned external CSS; do not globally weaken production CSP or monkey
+   patch DOM insertion. Never confuse Remotion's internal numeric render nonce
+   with a CSP nonce. Primary files: `src/proxy.ts`, `src/proxy.test.ts`,
+   `src/app/layout.tsx` and the actually identified style owner only if needed.
+
+4. **Load Turnstile once per document.** Separate document-wide SDK loading
+   from per-widget lifetime. Share one in-flight load/readiness outcome, reuse
+   an already loaded or loading script, and pass the current document CSP nonce.
+   Unmount removes only the owned widget and its callbacks, not a successfully
+   loaded shared SDK. Failed loading can be retried without duplicate scripts;
+   handle Strict Mode setup/cleanup/setup, simultaneous consumers, HMR and late
+   callbacks. Retain interaction-only appearance, centered verification dialog,
+   one token per action, cancel/timeout handling and verification-only retry.
+   An SDK/UI retry must never redispatch upload or generation. Primary files:
+   `source-analysis/processing-challenge.ts`, `analysis-challenge.tsx` and
+   `processing-challenge.test.tsx`; create a focused script-loader module only
+   if separating that responsibility improves ownership.
+
+5. **Resolve any remaining preload warning.** Inspect generated document/link
+   headers in both development and a synthetic production build: destination
+   `as=style`, CSS URL reuse, actual stylesheet application, CSP, navigation and
+   HMR behavior. Fix an owned duplicate/incorrect preload if reproduced. If the
+   warning is limited to the pinned Next.js dev runtime, document exact evidence
+   and verify production absence rather than suppress console warnings or add
+   arbitrary package/config changes. Primary files: `src/app/layout.tsx`,
+   `next.config.ts` or stylesheet imports only if attribution requires them.
+
+### Acceptance and test plan — not yet executed
+
+- [ ] Classify the current failure from its safe rule, or explicitly record
+      that the historical cause was unavailable. Prove a reproduced application
+      defect and its fix with synthetic transport data before calling it resolved.
+- [ ] Adapter/use-case tests cover the identified failure, 400/403/429/5xx,
+      abort/deadline, processing failure, invalid/truncated output and concurrent
+      cleanup failure. Exact fake upload/generation/delete call counts prove no
+      retry or extra paid boundary; cleanup cannot erase the primary diagnosis.
+- [ ] Deferred journal/grant, sample-copy and upload tests show the first
+      friendly message immediately, multiple rotations before preparation ends,
+      wraparound, stable elapsed time and no timer after every terminal state.
+- [ ] Shared-loader tests cover repeated/sequential/concurrent mounts, loading
+      unmount, Strict Mode remount, loaded reuse, failure/retry, correct nonce,
+      widget removal, late callbacks and zero workflow redispatches.
+- [ ] Synthetic browser checks cover direct load and client navigation, dev HMR
+      and production rendering, correct styles, clean relevant console output,
+      interaction-only verification and modal fallback. No real media or live
+      Turnstile/provider endpoint is used in automated verification.
+- [ ] Run the active packet's settled five root gates after implementation:
+      `corepack pnpm format:check`, `lint`, `typecheck`, `test:unit`, `build`;
+      then inspect boundaries/content safety, `git diff --check` and resource
+      cleanup. Every automated check hardcodes fake/paid-off before imports,
+      disables env-file loading and rejects unexpected external network access.
+- [ ] After settled code, perform the previously authorized verified local
+      restart outside the sandbox, with owned-tree shutdown and no stales.
+      Readiness GETs do not dispatch analysis or prove live provider readiness.
+- [ ] Owner alone verifies the retained-sample paid path and separately the
+      uploaded-copy paid path. Record real outcome/timing and independent cleanup
+      evidence without content. Keep both retained masters protected, samples
+      local-only and Exit immediate even if deletion fails. Genuine AI quality,
+      cloud deletion and deployment remain unproved by fake checks.
+
+### Research supporting the plan — checked 2026-10-04
+
+- [Next.js CSP guidance](https://nextjs.org/docs/app/guides/content-security-policy#development-vs-production-considerations)
+  distinguishes development inline styles from production nonces. This is the
+  documented basis for the development-policy fix, not permission to relax
+  production policy.
+- [Cloudflare explicit rendering](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicit-rendering)
+  covers SPA widget lifetime; [Cloudflare CSP guidance](https://developers.cloudflare.com/turnstile/reference/content-security-policy/)
+  documents script nonces and strict-dynamic compatibility. Shared in-flight
+  loading is our implementation remedy for the confirmed local loader race.
+- [Google troubleshooting](https://ai.google.dev/gemini-api/docs/troubleshooting)
+  distinguishes SDK/service failures and request/model compatibility;
+  [structured output limitations](https://ai.google.dev/gemini-api/docs/structured-output#limitations)
+  describe unsupported schema features/complexity. These are diagnostic branches,
+  not evidence that the owner's failure was caused by schema or model selection.
+  Google's general retry guidance does not override this demo's no-generation-retry
+  policy.
+- [MDN preload guidance](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/rel/preload)
+  explains resource destination and later consumption. It does not identify the
+  cause of this specific Next.js warning.
+
+This planning pass changes documentation only. Fake mode and no API keys already
+support the synthetic workflow and injected failure checks; they do not prove
+live Gemini quality. Genuine analysis requires the configured provider key,
+enabled live/paid capabilities, storage/renderer access and recorded approvals,
+with paid testing owner-only. No local AI model/runtime/weights are used.
+
+## Owner Exit follow-up — 2026-10-04
+
+The latest owner decision replaces Clear media and blocking cleanup recovery with
+**Exit**: return to the landing page, forget workflow state, expire app cookies,
+and quietly attempt local/provider/renderer deletion. Failures never require a
+visitor retry. This changes cleanup UX and access reset, not retained-master
+protection, physical deletion evidence or paid-operation limits.
+
+Implemented under this packet: unconditional same-origin cookie-expiry route,
+after-response bounded backend handoff, valid-grant cancellation/revocation,
+stale-cookie exit, local cleanup across unmount under the exclusive lease,
+private clearing-tombstone retry without source restore, migration of the old
+cleanup screen and updated privacy copy. No durable queue or cloud change.
+
+Synthetic tests cover pending/failed cleanup with successful exit, offline backend
+cookie expiry, bad origins/bodies, paid-disabled composition, immediate grant
+revocation, storage denial, lease draining and sample preservation. All run with
+fake/paid-off settings and no keys/network. Full settled gates and restart evidence
+are recorded after verification in the controlled-check record.
+Real deletion, genuine analysis quality and the owner's two paid input-path tests
+remain unchecked. No agent-paid test, deployment or Git action is part of this work.
+
 ## Authorized private renderer update follow-up — 2026-10-04
 
 The owner authorized updating the existing private renderer and local connection
@@ -97,6 +343,122 @@ limited private rollout does not satisfy the unchecked live acceptance above.
 Deviation: the first build failed before publishing; one corrected build retry
 was required. One service update completed; no new resources, public deployment,
 account usage polling or agent-run paid media test occurred.
+
+## Owner preview notice removal — 2026-10-04
+
+The owner explicitly removed the Step 1 technical transfer notice and separate
+rights/paid-analysis checkbox. **Find moments** is now the sole browser action
+initiating analysis, with no consent state disabling it. The existing privacy
+panel, backend rights/transfer request validation, operator approvals, live flags,
+Turnstile and admission bounds remain. The source of truth records this owner
+decision; earlier references to a separate browser confirmation control are
+superseded. No provider call or real-media test is authorized by this UI change.
+Fake mode remains key-free and synthetic; genuine analysis stays owner-tested.
+
+Verification: all five root gates passed (`format:check`, `lint`, `typecheck`,
+`test:unit`: 732 synthetic tests across 71 files, and `build`). The running local
+backend health, `/start` and public sample config returned 200. Existing flow
+checks preserve preview-before-analysis and exact injected transport calls;
+no provider/media processing was dispatched. Live visual confirmation and
+Gemini quality/cleanup remain owner-only. The build's generated Next type
+references were returned to the existing development paths.
+
+## Owner sample-copy and verification follow-up — 2026-10-04
+
+The owner's manual **Find moments** attempt failed while copying the retained
+sample, before Gemini analysis. Content-free existing renderer request logs show
+upload admission returned 200 and subsequent cancellation returned 200; no new
+media request was dispatched by the agent. An isolated fake/loopback reproduction
+confirmed Node Fetch rejects an HTTP 308 response with `redirect: error`, even
+without a Location header. Google uses 308 for incomplete chunk acknowledgement.
+The backend now uses `redirect: manual`, validates the exact acknowledged Range,
+and rejects every Location header. It never follows an alternate destination.
+Synthetic regressions cover chunk completion, malformed acknowledgement and
+redirect rejection. The retained master and existing temporary cleanup remain.
+See [Google's resumable protocol](https://docs.cloud.google.com/storage/docs/performing-resumable-uploads).
+
+Turnstile uses its supported `interaction-only` appearance. The existing iframe
+stays mounted as a native modal opens only for required interaction or a failure.
+Errors offer explicit verification-only retry or cancellation; neither repeats
+upload/AI work. Late callbacks and duplicate tokens cannot resolve another flow.
+SDK widgets, owned script listeners and modal state are removed on completion,
+cancel/unmount. Action/session/hostname and server verification remain unchanged.
+See [Cloudflare configuration](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/).
+
+The isolated mock-widget browser check verified a centered modal, background
+appearance, keyboard cancellation, manual retry and one-token completion, without
+real Turnstile or media/provider requests. Source/backend and browser tests are
+hardcoded fake, paid-off and credential-free. Genuine sample-copy/AI quality and
+widget behavior remain exclusively owner-tested; these local corrections need
+no private renderer image change.
+
+Final verification passed `corepack pnpm format:check`, `corepack pnpm lint`,
+`corepack pnpm typecheck`, `corepack pnpm test:unit` (744 tests across 72 files),
+and `corepack pnpm build`. The build's generated Next references were returned
+to the existing development paths. The mock dialog also fit a 320-by-640 viewport
+without overflow. Its helper process and listener were removed and checked again
+after stabilization. The normal local backend reloaded the correction; backend
+health, `/start` and `/api/sample/config` each returned 200. No paid processing
+was initiated by these checks; real sample-copy, Turnstile and Gemini acceptance
+remain the owner's manual checks.
+
+## Owner analysis wait and cleanup correction — 2026-10-04
+
+The later owner-run attempt reached source upload, preparation and proxy access;
+existing renderer request statuses were 200, including cancellation. The owner
+authorized a metadata-only Google Files diagnostic with the configured key.
+A complete Files list returned 200 and zero files; a randomly named nonexistent
+file returned 403. Zero uploads, generation calls, deletes or retained-master
+access occurred in the diagnostic. The old cleanup confirmation accepted only
+404 and replaced any prior analysis outcome with feature unavailable. Its UI
+also falsely described a remote failure as local deletion failure. The original
+generation result was discarded, so successful AI analysis is not claimed.
+
+Cleanup now accepts empty DELETE responses and independently verifies absence:
+GET 404, or a successful complete authorized list after GET 403. The same deadline
+and fixed three-page limit apply; denied/incomplete lists and present files fail.
+Definite upload-start rejection removes its never-created obligation. Safe
+phase/status codes preserve analysis and cleanup reasons without file IDs,
+provider messages or content. Cleanup retries make zero additional AI calls.
+The shared contracts own provider-failed and cleanup-pending error codes once.
+The frontend parses those errors on Clear and distinguishes local completion
+from pending remote cleanup.
+
+Finding moments rotates five brief messages every five seconds, wraps during
+the wait and stops at terminal state, retaining elapsed time and cancellation.
+The owner requires **Use sample** only locally; preview/production flags and
+sample endpoints stay disabled. Streamed sample Clear removes selection/journal
+without uploaded-file OPFS deletion. Both retained masters stay outside cleanup;
+disposable processing/provider copies retain their deletion rules. Uploaded
+workspace physical deletion and cleanup fences remain covered by synthetic tests.
+See the [diagnostic record](../operations/GROUNDED_ANALYSIS_CHECK.md#owner-manual-failure-and-metadata-only-diagnosis--2026-10-04)
+and [deployment exclusion checkpoint](CL-015-deploy-validate-measure-and-rollback.md#owner-requested-local-sample-exclusion--2026-10-04).
+
+The owner retains the next live sample/upload analysis and Clear trials. Ordinary
+tests remain hardcoded fake, paid-off, credential-free and network-blocked; they
+prove neither real Gemini quality nor deployed capability exclusion. No private
+renderer update, public deployment or Git action is needed by these corrections.
+
+Verification: `corepack pnpm format:check`, `corepack pnpm lint`,
+`corepack pnpm typecheck`, `corepack pnpm test:unit` (761 synthetic tests across
+72 files) and `corepack pnpm build` all passed. Frontend typecheck passed again
+after returning generated Next references to their development paths.
+`git diff --check` passed. Local health, `/start` and `/api/sample/config` returned
+200; existing supervisor creation times and both listener trees were verified
+without stopping/starting apps. The normal backend watcher loaded the correction.
+An ignored diagnostic helper's empty catch initially failed lint; a content-safe
+comment resolved it and lint passed. No automated live media/provider test ran.
+
+Changed ownership: backend Gemini transport/use case and regressions; shared
+safe error contracts; frontend analysis transport/clear result, workspace cleanup
+boundary/schema and regressions, sample CTA/wait messages and rendering tests;
+frontend guide, source of truth, this packet, controlled-check record and the
+CL-015 sample exclusion checkpoint. Earlier spinner/Turnstile/chunk-upload changes
+remain in the same unstaged work. Actual deployed exclusion, genuine widget/AI
+quality and the next owner sample/upload/Clear trials remain unchecked. The
+owner's Chrome tab is not connected to the browser tool; its current cleanup
+screen was not independently recovered. An old session after watcher reload
+cannot itself prove deletion or bypass the normal cleanup fence.
 
 ## Owner Gemini setup follow-up — 2026-10-04
 The owner reports creating the Gemini key and manually saving it in ignored
