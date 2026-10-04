@@ -149,7 +149,7 @@ describe("development cancellation and repeated restart", () => {
         dispatch({ type: "CLEAR_SUCCEEDED", availability });
         const localSource =
           cycle === 2
-            ? developmentInput({ size: 16384, type: "video/webm" })
+            ? developmentInput({ size: 16384, type: "video/mp4" })
             : developmentInput();
         dispatch({ type: "FILE_SELECTED", localSource });
         expect(state).toMatchObject({

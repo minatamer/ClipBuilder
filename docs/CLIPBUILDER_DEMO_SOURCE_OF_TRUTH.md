@@ -2,7 +2,78 @@
 
 ## Current owner revision — Gemini and private Cloud Run rendering (2026-10-02)
 
-Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 665 synthetic tests in 66 files pass. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**
+Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 721 synthetic tests in 70 files pass, including the CL-016 MP4-only and sample-streaming follow-ups. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**
+
+### Owner sample streaming decision — 2026-10-04
+
+**Use sample** opens protected same-origin, generation-pinned Step 1 playback.
+Selecting or restoring it journals only the selection; it does not download,
+hash or persist the full sample in the browser. Native video requests the ranges
+needed for playback and seeking. Normal file intake still uses its local file.
+Only explicit **Find moments**, consent and existing live admission gates prepare
+a separate disposable processing copy on the server. The fixed read-only master
+is fingerprinted and transferred in bounded chunks through the renderer's
+existing temporary upload capability; the renderer then validates the copy and
+prepares the analysis proxy. No cloud-to-browser-to-cloud transfer is required.
+Retained masters stay outside visitor cleanup. This supersedes the earlier
+sample-download/OPFS preparation path, not retention, rights or spend gates.
+Fake mode remains the labelled keys-free fixture journey. Real streaming needs
+ADC/storage access but no Gemini key; real analysis retains keys/live flags and
+rights/provider/cloud/spend approval. No local AI weights/runtime are used.
+
+### Owner MP4-only intake decision — 2026-10-04
+
+Accept one owned/licensed MP4 source. WebM video intake is removed from the
+picker, fake metadata validation, shared upload/source contracts, browser demuxing
+and authoritative media inspection. Actual container, track, codec and limit
+checks still apply; a filename or declared MIME type cannot authorize a source.
+This supersedes earlier MP4/WebM intake decisions. Internal Opus/WebM audio
+transport remains available, and legacy temporary WebM records remain readable
+for cleanup only. The retained MP4 master and preview flow are preserved.
+Fake mode remains synthetic and keys-free. Real Step 1 preview needs storage
+access but no Gemini key; full processing retains its separate keys, live
+capabilities and rights/provider/cloud/spend approval gates.
+
+### Owner app-local configuration decision — 2026-10-04
+
+Local environment files and their committed examples belong inside the frontend
+and backend apps, with no root environment file. They contain credentials and
+at most the backend `FAKE_MODE` and `PAID_DEMO_ENABLED` operating switches.
+The frontend currently needs no entries and derives mode from the backend.
+Numerical limits, rate/capacity bounds, timeouts, model and retry policy are fixed
+in code. The processing-grant active key label is likewise fixed to `v1` in
+backend code; only the plain secret belongs in `PROCESSING_GRANT_KEY`.
+No JSON or key label is required. The old JSON entry is readable during migration
+when the new entry is absent; an explicit new entry takes precedence.
+The obsolete active-label environment selector is ignored. This supersedes the
+older runtime-limit/environment and grant-map inventory below.
+Private connections, retained-sample metadata and independent recorded approvals
+belong in ignored backend runtime configuration. An approved validation stage
+derives the live capabilities and bounded dispatch allowance; paid-off disables
+them all. Configuration never substitutes for rights/spend/provider authorization.
+The owner's local restart follow-up separates app availability from optional
+paid-feature readiness. Incomplete local Gemini, grant/Turnstile, renderer or
+validation-stage setup leaves paid routes unmounted and dispatches at zero,
+while health and real local intake remain available. Approved retained playback
+remains available independently of AI. The selected real/fake mode and paid
+switch are preserved; there is no fixture fallback or automatic approval.
+Malformed structural configuration, conflicting modes and public/test paid
+composition still reject. Startup diagnostics contain fixed requirement codes
+only. Real processing still requires the complete keys, stage and approvals.
+No hosted routing, service authentication, public paid processing or deployment
+is completed by this local layout change.
+
+The owner authorized secret-free local setup and separately approved one private
+retained cloud sample and read-only ADC playback preparation on 2026-10-04.
+Storage/upload/access verification and real Step 1 playback/seeking are recorded
+in CL-016; the owner reported it working. The later streaming follow-up verifies
+preview Clear/reselect/reload. Detailed perceptual audio sync and the real
+processing-copy/AI flow remain unverified. Preserve both the local master
+and its retained cloud counterpart; processing copies keep normal cleanup rules.
+This supersedes the earlier statement that no retained cloud object was selected.
+Default fake mode and ordinary tests need no keys and prove synthetic behavior;
+real preview needs ADC/storage access, while Gemini quality and the paid flow
+retain their separate approval and evidence gates.
 
 The owner selected Google Gemini for understanding/transcription/candidates/
 speaking-face association and our private Google Cloud Run Remotion Node/Docker
@@ -583,7 +654,7 @@ implementation or approval to contact providers.
 
 #### Current pipeline and boundaries
 
-1. Choose an owned/licensed MP4 or WebM. Retain the `File` in a runtime owner
+1. Choose an owned/licensed MP4. Retain the `File` in a runtime owner
    for immediate local playback, inspect locally, and perform capability/quota
    preflight before paid work. Preserve the 15-second minimum, independent
    20-minute/500-MiB public ceilings and 10-60-second selected-clip bound.
@@ -932,7 +1003,7 @@ Forbidden:
 - one purpose-recorded sample source with deterministic precomputed analysis
   and first-cut assembly;
 - optionally one bounded public upload after the product/provider gates;
-- MP4 or WebM spoken-video intake within explicit limits;
+- MP4 spoken-video intake within explicit limits;
 - local advisory validation and server-authoritative media inspection;
 - private direct resumable upload to temporary Cloud Storage;
 - speech transcription with word timestamps and speaker labels when available;
@@ -1442,7 +1513,7 @@ temporary-storage contract.
 
 - exactly one file;
 - non-empty filename for local display only;
-- declared type `video/mp4` or `video/webm`;
+- declared type `video/mp4`;
 - declared bytes no greater than 500 MiB;
 - browser-readable duration from 15 seconds through 20 minutes;
 - at least one browser-readable audio track when the browser exposes it;
@@ -2876,7 +2947,7 @@ fixed prefix, maximum 64 characters:
 type MediaDescriptor = {
   mediaId: string;
   objectGeneration: string;
-  container: "mp4" | "webm";
+  container: "mp4";
   videoCodec: "h264" | "vp8" | "vp9";
   audioCodec: "aac" | "opus" | "vorbis";
   durationMs: number;
@@ -3377,7 +3448,7 @@ Request:
 ```ts
 {
   declaredBytes: number;
-  declaredContentType: "video/mp4" | "video/webm";
+  declaredContentType: "video/mp4";
   turnstileToken: string;
 }
 ```

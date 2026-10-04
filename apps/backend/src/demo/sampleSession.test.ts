@@ -211,13 +211,13 @@ describe("CL-004 local sample control", () => {
       .set("Origin", origin)
       .send({ unknown: "x".repeat(9_000) })
       .expect(413);
-    const production = composeBackend(
-      createSafeTestEnvironment({
-        APP_ENV: "production",
-        NODE_ENV: "production",
-        APP_REVISION: "synthetic-production-check",
-      }),
-    ).application;
+    const production = composeBackend({
+      APP_ENV: "production",
+      NODE_ENV: "production",
+      APP_REVISION: "synthetic-production-check",
+      FAKE_MODE: "true",
+      PAID_DEMO_ENABLED: "false",
+    }).application;
     await request(production)
       .post("/v1/sample/sessions")
       .set("Origin", origin)

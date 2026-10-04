@@ -160,8 +160,8 @@ describe("complete frontend development flow", () => {
       validation: { status: "accepted" },
     });
     expect(
-      developmentInput({ size: 1, type: "video/webm" }).validation.status,
-    ).toBe("accepted");
+      developmentInput({ size: 1, type: "video/webm" }).validation,
+    ).toEqual({ status: "rejected", reasonCode: "type" });
     for (const size of [0, 524288001, NaN, 0.5])
       expect(developmentInput({ size, type: "video/mp4" }).validation).toEqual({
         status: "rejected",

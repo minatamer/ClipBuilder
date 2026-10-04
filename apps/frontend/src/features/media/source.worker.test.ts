@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BlobSource, Input, WEBM } from "mediabunny";
 import type { SourceCommand, SourceMessage } from "./source.protocol";
 
 const messages: SourceMessage[] = [];
@@ -31,6 +32,37 @@ beforeEach(async () => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("cloud-flow intake capability probe", () => {
+  it("rejects WebM bytes even when the file is named and declared as MP4", async () => {
+    // Synthetic EBML header with WebM DocType; no real media or decoder needed.
+    const file = new File(
+      [
+        new Uint8Array([
+          0x1a, 0x45, 0xdf, 0xa3, 0x9f, 0x42, 0x86, 0x81, 0x01, 0x42, 0xf7,
+          0x81, 0x01, 0x42, 0xf2, 0x81, 0x04, 0x42, 0xf3, 0x81, 0x08, 0x42,
+          0x82, 0x84, 0x77, 0x65, 0x62, 0x6d, 0x42, 0x87, 0x81, 0x02, 0x42,
+          0x85, 0x81, 0x02,
+        ]),
+      ],
+      "synthetic.mp4",
+      { type: "video/mp4" },
+    );
+    const detector = new Input({
+      source: new BlobSource(file),
+      formats: [WEBM],
+    });
+    try {
+      expect((await detector.getFormat()).mimeType).toBe("video/webm");
+    } finally {
+      detector.dispose();
+    }
+    await receive({ action: "inspect", jobId: "webm", file });
+    expect(messages).toEqual([
+      { type: "failed", jobId: "webm", code: "unsupported" },
+      { type: "stopped", jobId: "webm" },
+    ]);
+    expect(getDirectory).not.toHaveBeenCalled();
+  });
+
   it("accepts accessible storage without browser output encoders or canvas", async () => {
     await receive({ action: "probe", jobId: "probe" });
     expect(getDirectory).toHaveBeenCalledOnce();

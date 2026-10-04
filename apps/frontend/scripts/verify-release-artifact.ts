@@ -143,7 +143,7 @@ export async function verifyReleaseArtifact(
         child = label + "/" + item.name;
       const firstParty = !child.includes("/node_modules/");
       if (
-        /^\.env(?:\.|$)|\.(?:pem|key|p12|pfx|mp4|mov|webm|mkv|avi|wav|mp3|m4a|aac|srt|vtt|ass|onnx|pt|pth)$/i.test(
+        /^\.env(?:\.|$)|^runtime\.local\.json$|\.(?:pem|key|p12|pfx|mp4|mov|webm|mkv|avi|wav|mp3|m4a|aac|srt|vtt|ass|onnx|pt|pth)$/i.test(
           item.name,
         ) ||
         (firstParty &&

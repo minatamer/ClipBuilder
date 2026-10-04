@@ -1,6 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import {
+  createLiveValidationEnvironment,
+  createLiveValidationSettings,
+} from "../../test/environment.fixture.js";
 import { composeBackend } from "../composition.js";
 import {
   ProcessingAdmission,
@@ -284,13 +288,9 @@ describe("process-lifetime protected admission", () => {
   it("does not compose protected routes or paid ports by default, and rejects insecure enabled requests", async () => {
     const off = composeBackend({ FAKE_MODE: "true" }).application;
     await request(off).post("/v1/admission/grant").send({}).expect(404);
-    const enabled = composeBackend({
-      FAKE_MODE: "false",
-      PROCESSING_GRANTS_ENABLED: "true",
-      PROCESSING_GRANT_ACTIVE_KEY_ID: "test",
-      PROCESSING_GRANT_KEYS_JSON: JSON.stringify(keys),
-      FRONTEND_ORIGIN: origin,
-      CSRF_ALLOWED_ORIGINS: origin,
+    const enabled = composeBackend(createLiveValidationEnvironment(), {
+      ...createLiveValidationSettings(),
+      frontendOrigin: origin,
     }).application;
     await request(enabled)
       .post("/v1/admission/grant")

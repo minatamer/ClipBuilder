@@ -17,6 +17,7 @@ import {
   safeErrorSchema,
   sessionResponseSchema,
   transcriptBundleSchema,
+  uploadAuthorizeRequestSchema,
 } from "./index.js";
 
 const opaqueId = (prefix: string) => `${prefix}_${"a".repeat(22)}`;
@@ -104,6 +105,26 @@ describe("compiled limits", () => {
 });
 
 describe("strict boundary schemas", () => {
+  it("accepts MP4 and rejects WebM descriptors and upload declarations", () => {
+    expect(mediaDescriptorSchema.safeParse(validMedia).success).toBe(true);
+    expect(
+      mediaDescriptorSchema.safeParse({ ...validMedia, container: "webm" })
+        .success,
+    ).toBe(false);
+    const upload = {
+      declaredBytes: 8192,
+      declaredContentType: "video/mp4",
+      turnstileToken: "local-synthetic-fixture",
+    };
+    expect(uploadAuthorizeRequestSchema.safeParse(upload).success).toBe(true);
+    expect(
+      uploadAuthorizeRequestSchema.safeParse({
+        ...upload,
+        declaredContentType: "video/webm",
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects unknown keys, non-finite values, and inconsistent orientation", () => {
     expect(
       mediaDescriptorSchema.safeParse({ ...validMedia, unexpected: true })

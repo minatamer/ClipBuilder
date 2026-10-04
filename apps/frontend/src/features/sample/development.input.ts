@@ -5,12 +5,9 @@ import type { LocalSourceSummary } from "../session/session.types";
 export function developmentInput(
   file?: Pick<File, "size" | "type">,
 ): LocalSourceSummary {
-  const contentType = file?.type === "video/webm" ? "video/webm" : "video/mp4";
   const declaredBytes = file?.size ?? 8 * 1024 * 1024;
   const reason =
-    file !== undefined &&
-    file.type !== "video/mp4" &&
-    file.type !== "video/webm"
+    file !== undefined && file.type !== "video/mp4"
       ? "type"
       : !Number.isSafeInteger(declaredBytes) ||
           declaredBytes <= 0 ||
@@ -20,7 +17,7 @@ export function developmentInput(
   return {
     sourceId: "development-input",
     declaredBytes,
-    contentType,
+    contentType: "video/mp4",
     validation:
       reason === null
         ? { status: "accepted" }

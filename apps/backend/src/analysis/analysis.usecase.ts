@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID, randomBytes } from "node:crypto";
 import {
   groundedAnalysisResultSchema,
   sourceAnalysisRequestSchema,
@@ -15,6 +15,9 @@ import {
   type SourceAnalysisUpload,
   type SourceAnalysisRequest,
   type GroundedAnalysisResult,
+  retainedSampleAnalysisRequestSchema,
+  retainedSampleAnalysisResponseSchema,
+  type RetainedSampleAnalysisRequest,
 } from "@clipbuilder/contracts";
 import type {
   ProcessingAdmission,
@@ -39,10 +42,17 @@ export interface AnalysisMediaPort {
 }
 type SourceRecord = {
   binding: MediaBinding;
-  media: SourceAnalysisUpload["media"];
+  media: SourceAnalysisUpload["media"] | null;
+  mediaId: string;
+  bytes: number;
   expiresAtMs: number;
   cleared: boolean;
 };
+export interface RetainedSampleProcessingPort {
+  readonly bytes: number;
+  fingerprint(signal: AbortSignal): Promise<string>;
+  transfer(uploadUrl: string, signal: AbortSignal): Promise<string>;
+}
 export function resultDigest(result: Omit<GroundedAnalysisResult, "receipt">) {
   return createHash("sha256").update(JSON.stringify(result)).digest("hex");
 }
@@ -54,6 +64,7 @@ export class SourceAnalysis {
     private readonly provider: AnalysisProvider,
     private readonly providerName: "fake" | "google-gemini",
     private readonly now = () => Date.now(),
+    private readonly sample: RetainedSampleProcessingPort | null = null,
   ) {}
   private cleanupSignal() {
     return AbortSignal.timeout(GROUNDED_ANALYSIS_LIMITS.cleanupMs);
@@ -83,6 +94,8 @@ export class SourceAnalysis {
             fingerprint: request.fingerprint,
           },
           media: request.media,
+          mediaId: request.media.mediaId,
+          bytes: request.media.bytes,
           expiresAtMs: grant.expiresAtMs,
           cleared: false,
         };
@@ -93,10 +106,7 @@ export class SourceAnalysis {
               {
                 binding: source.binding,
                 bytes: request.media.bytes,
-                contentType:
-                  request.media.container === "mp4"
-                    ? "video/mp4"
-                    : "video/webm",
+                contentType: "video/mp4",
                 rightsAcknowledged: true,
                 dataTransferAcknowledged: true,
               },
@@ -107,6 +117,67 @@ export class SourceAnalysis {
           source.cleared = true;
           await this.media.cancel(source.binding, this.cleanupSignal());
           throw new ApplicationError({ code: "INVALID_REQUEST" });
+        }
+      },
+    );
+  }
+  async prepareSample(
+    context: AdmissionContext,
+    input: RetainedSampleAnalysisRequest,
+  ) {
+    const request = retainedSampleAnalysisRequestSchema.parse(input);
+    const sample = this.sample;
+    if (!sample) throw new ApplicationError({ code: "FEATURE_DISABLED" });
+    const grant = this.admission.session(context);
+    for (const [id, source] of this.sources)
+      if (source.expiresAtMs <= this.now()) this.sources.delete(id);
+    return this.admission.run(
+      context,
+      {
+        bytes: Buffer.from(JSON.stringify(request)),
+        contentType: "application/json",
+        allowedContentTypes: ["application/json"],
+        maxBytes: GROUNDED_ANALYSIS_LIMITS.requestBytes,
+        turnstileToken: request.turnstileToken,
+        action: "transcription",
+      },
+      () => {},
+      async (signal) => {
+        const fingerprint = await sample.fingerprint(signal);
+        signal.throwIfAborted();
+        const source: SourceRecord = {
+          binding: {
+            sessionId: grant.sessionId,
+            sourceRevision: `rev_${randomBytes(16).toString("base64url")}`,
+            fingerprint,
+          },
+          media: null,
+          mediaId: `med_${randomBytes(16).toString("base64url")}`,
+          bytes: sample.bytes,
+          expiresAtMs: grant.expiresAtMs,
+          cleared: false,
+        };
+        this.sources.set(grant.sessionId, source);
+        try {
+          const upload = mediaUploadResponseSchema.parse(
+            await this.media.upload(
+              {
+                binding: source.binding,
+                bytes: source.bytes,
+                contentType: "video/mp4",
+                rightsAcknowledged: true,
+                dataTransferAcknowledged: true,
+              },
+              signal,
+            ),
+          );
+          const generation = await sample.transfer(upload.uploadUrl, signal);
+          signal.throwIfAborted();
+          return retainedSampleAnalysisResponseSchema.parse({ generation });
+        } catch {
+          source.cleared = true;
+          await this.media.cancel(source.binding, this.cleanupSignal());
+          throw new ApplicationError({ code: "STORAGE_FAILED" });
         }
       },
     );
@@ -150,28 +221,54 @@ export class SourceAnalysis {
             ),
           );
           const expectedWidth =
-            source.media.rotationDegrees % 180
+            source.media &&
+            (source.media.rotationDegrees % 180
               ? source.media.height
-              : source.media.width;
+              : source.media.width);
           const expectedHeight =
-            source.media.rotationDegrees % 180
+            source.media &&
+            (source.media.rotationDegrees % 180
               ? source.media.width
-              : source.media.height;
+              : source.media.height);
           const profile = prepared.source.profile;
           if (
             !profile ||
-            profile.container !== source.media.container ||
-            profile.videoCodec !== source.media.videoCodec ||
-            profile.audioCodec !== source.media.audioCodec ||
-            profile.rotationDegrees !== source.media.rotationDegrees ||
+            (source.media &&
+              (profile.container !== source.media.container ||
+                profile.videoCodec !== source.media.videoCodec ||
+                profile.audioCodec !== source.media.audioCodec ||
+                profile.rotationDegrees !== source.media.rotationDegrees ||
+                prepared.source.width !== expectedWidth ||
+                prepared.source.height !== expectedHeight)) ||
             prepared.source.fingerprint !== source.binding.fingerprint ||
-            prepared.source.bytes !== source.media.bytes ||
-            prepared.source.width !== expectedWidth ||
-            prepared.source.height !== expectedHeight
+            prepared.source.bytes !== source.bytes
           )
             throw new Error();
           const authoritativeMedia = mediaDescriptorSchema.parse({
-            ...source.media,
+            ...(source.media ?? {
+              mediaId: source.mediaId,
+              sourceRevision: source.binding.sourceRevision,
+              container: profile.container,
+              videoCodec: profile.videoCodec,
+              audioCodec: profile.audioCodec,
+              rotationDegrees: profile.rotationDegrees,
+              hasAudio: true,
+              bytes: source.bytes,
+              width:
+                profile.rotationDegrees % 180
+                  ? prepared.source.height
+                  : prepared.source.width,
+              height:
+                profile.rotationDegrees % 180
+                  ? prepared.source.width
+                  : prepared.source.height,
+              orientation:
+                prepared.source.width === prepared.source.height
+                  ? "square"
+                  : prepared.source.width > prepared.source.height
+                    ? "landscape"
+                    : "portrait",
+            }),
             durationMs: prepared.source.durationMs,
             averageFrameRate: profile.averageFrameRate,
           });

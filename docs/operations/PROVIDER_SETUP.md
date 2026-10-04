@@ -16,13 +16,158 @@ Fake/live describes AI; local/cloud describes compute independently. Fake offlin
 
 Confirm Google paid-project data terms/retention, owned media rights/transfer, call/token budget, Remotion SSR licensing/telemetry, exact project ID/region and named identities privately at setup. Do not assume the ClipBuilder display name is the ID. Final render/proxy preparation use our standard Node/Docker Cloud Run service, not phone encoding or the alpha package.
 
+## Current Gemini setup — 2026-10-04
+
+The owner reports completing key creation, a USD 5 Gemini API prepayment and a
+USD 5 monthly project spend cap. The key was manually placed in ignored
+`apps/backend/.env.local`. This is owner-reported setup evidence; no credential
+file or private runtime configuration was read, and no account identifier,
+dashboard export or provider response was saved.
+See the [dated checkpoint](GROUNDED_ANALYSIS_CHECK.md#owner-reported-gemini-setup--2026-10-04).
+
+For repeat setup:
+
+1. Sign in to [Google AI Studio](https://aistudio.google.com/) with access to the
+   existing project. Use Dashboard → Projects → Import projects if it is absent.
+2. Check the selected project's paid tier and active billing. Complete the
+   required Prepay setup if offered; the current minimum purchase is USD 5.
+   Use the existing billing account and keep automatic reload off.
+3. Open Dashboard → API Keys → Create API key in that project. Keep its default
+   Generative Language API restriction. The key identifies its project; Gemini
+   needs no additional project-name/number entry in the application. ADC remains
+   separate storage/private-renderer authentication.
+4. Manually populate only `GEMINI_API_KEY` in the backend's ignored `.env.local`.
+   The frontend and renderer receive no Gemini key. Real-media preview uses
+   `FAKE_MODE=false` with `PAID_DEMO_ENABLED=false` during preparation.
+5. Open [Spend](https://aistudio.google.com/spend), select the matching project,
+   then Monthly spend cap → Edit spend cap. The owner's selected cap is USD 5
+   per month. Keep automatic reload disabled in Billing. Verify the saved state.
+
+The cap and prepaid balance can be exceeded during Google's roughly ten-minute
+billing/enforcement delay; neither promises an exact dollar cutoff. Prepaid
+credits cover Gemini API usage only, expire after one year and are generally
+non-refundable. Storage, builds and Cloud Run compute have separate charges.
+Funding and a monthly cap do not authorize a media transfer or a paid test.
+
+Official references reviewed 2026-10-04: [API keys](https://ai.google.dev/gemini-api/docs/api-key),
+[billing and spend caps](https://ai.google.dev/gemini-api/docs/billing),
+[paid-service data terms](https://ai.google.dev/gemini-api/terms), and
+[pricing](https://ai.google.dev/gemini-api/docs/pricing).
+Paid-service terms exclude submitted content/responses from product improvement,
+but limited safety/abuse logging still applies. The pinned `gemini-3.8-flash`
+standard rates are USD 0.75 per million input tokens and USD 3.75 per million
+output tokens, including thinking, through 2026-12-31. A ten-minute source at
+1fps plus the entire 65,536-token output allowance is roughly USD 0.30–0.40
+depending on media resolution; this is an estimate, not measured usage.
+See [video token accounting](https://ai.google.dev/gemini-api/docs/video-understanding).
+
+Application limits remain fixed in code: one source generation per analysis,
+no automatic generation retries, one concurrent analysis, 65,536 maximum output
+tokens, a 24-MiB analysis proxy and bounded deadlines. Process-local admission
+is not a distributed monetary cap. Do not add numerical limits to `.env.local`.
+
+## Local Turnstile setup — next prerequisite
+
+Turnstile issues a browser challenge token and the backend validates it before
+upload/analysis admission. The integration exists; a genuine widget/Siteverify
+round trip has not yet been verified. The free plan is sufficient for this
+local widget; no Cloudflare DNS migration or paid plan is needed.
+
+1. Sign in to the [Cloudflare dashboard](https://dash.cloudflare.com/) and open
+   Turnstile → Add widget.
+2. Name the widget `ClipBuilder`. The dashboard label does not affect validation.
+3. Initially add `localhost` as the allowed hostname for the canonical
+   `http://localhost:3000/start` origin. Enter no scheme, port or path.
+4. Select Managed mode, leave Pre-clearance disabled, and create the widget.
+5. Manually fill `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` in ignored
+   `apps/backend/.env.local`. Although the sitekey is public, keep its committed
+   example blank. The existing browser flow obtains it from the backend; no
+   frontend environment entry is needed. Never share the secret key in chat.
+6. In the existing ignored `apps/backend/runtime.local.json`, set only
+   `turnstileHostname` to `localhost`, preserving the retained-sample reference,
+   other connections and approval records. Keep paid processing disabled.
+
+Use a genuine local widget for the approved protected live test. Dummy keys
+only prove simulated challenge behavior and do not prove abuse protection.
+The owner's 2026-10-04 follow-up selects one widget for the local-to-deployed
+transition. During separately authorized deployment, add the actual frontend
+hostname to this widget and use the same sitekey/secret pair in protected
+deployment configuration. Configure the deployed backend's expected hostname
+to match that frontend hostname, verify genuine validation there, then remove
+`localhost` from the widget's allowed list. Cloudflare recommends excluding
+local hostnames from production widgets; a separate widget is optional for
+independent ongoing real local testing. Backend verification continues to check
+the exact environment-specific hostname, action and session binding and redeems
+tokens only once. Removing `localhost` ends genuine local challenges with this
+widget; keys-free fake development remains available. No production hostname,
+deployment configuration or actual widget verification is completed by this guide.
+
+Official references reviewed 2026-10-04:
+[widget creation](https://developers.cloudflare.com/turnstile/get-started/widget-management/dashboard/),
+[hostname format](https://developers.cloudflare.com/turnstile/additional-configuration/hostname-management/),
+[local domains and test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/),
+and [plans](https://developers.cloudflare.com/turnstile/plans/).
+
+The owner reports manually saving the Turnstile sitekey and secret in the
+backend's ignored `.env.local`. The expected hostname and genuine widget/
+Siteverify round trip have not been independently verified. Processing-grant
+keys are the next credential prerequisite.
+
+## Processing-grant key setup
+
+The backend issues an expiring processing grant in an authenticated encrypted
+cookie. Its AES-256-GCM key lets the backend protect and validate the grant's
+session, expiry, CSRF value and per-action nonces. Clients cannot edit those
+values into a valid grant. Turnstile checks and the server's single-use action,
+origin, expiry and dispatch controls still apply independently; possession of
+an encryption key is not a cloud credential or spend authorization.
+
+- The active key label is fixed to `v1` in backend code. It is not an environment
+  setting or a secret.
+- `PROCESSING_GRANT_KEY` contains the key directly: 32 cryptographically random
+  bytes encoded as canonical base64url (43 characters). No JSON or label is
+  needed in the environment file.
+
+Run this in the owner's private CMD terminal, not through an agent tool that
+would return the secret in chat. It prints just the key to paste:
+
+```cmd
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+```
+
+Manually fill the blank `PROCESSING_GRANT_KEY` entry in
+`apps/backend/.env.local` with that private output:
+
+```dotenv
+PROCESSING_GRANT_KEY=PASTE_GENERATED_VALUE
+```
+
+Generate the secret once and keep it across launches. If a key is already saved,
+reuse that value instead of generating another. The old
+`PROCESSING_GRANT_KEYS_JSON` entry remains readable during migration: its `v1`
+value, or a plain key pasted under that old name, is accepted when the new entry
+is absent. An explicitly supplied `PROCESSING_GRANT_KEY` takes precedence,
+including a blank entry. Rename the local entry and paste only its key value;
+the obsolete active-label selector is ignored. Keep the key backend-only and
+out of Git/chat/logs. No provider account, purchase or cloud setup is needed to
+generate it. The committed example remains blank; no actual secret was generated
+or inspected here.
+
+The current private renderer revision, rights/Google transfer approval and a
+numerical AI/cloud/build test allowance still remain after grant-key setup.
+Follow the controlled-check plan before selecting the analysis stage, enabling
+paid processing and restarting the backend.
+`FAKE_MODE=true` remains the keys-free synthetic workflow; real Step 1 sample
+playback needs storage/ADC but no Gemini key. No local AI model is used, and
+neither account setup nor fake results prove genuine analysis quality.
+
 <details><summary>Earlier provider setup, retained as history — do not follow superseded provider instructions</summary>
 
 # Non-GCloud provider setup
 
 ## Current Google migration setup — 2026-10-02
 
-The [migration contract](../architecture/GEMINI_REMOTION_MIGRATION.md) supersedes OpenAI/Deepgram setup below. Populate only the blank GEMINI_API_KEY in owner-managed secret storage. Exact model gemini-3.8-flash and time/token/call caps are in .env.example; leave all paid/live/transfer/paid-project gates off until applicable approvals. No image/ASR model is selected. Do not read or copy .env.local for diagnosis. Fake mode needs no keys and proves fixtures only. Live transfer/retention, rights/spend and actual model quality remain unchecked.
+The [migration contract](../architecture/GEMINI_REMOTION_MIGRATION.md) supersedes OpenAI/Deepgram setup below. Populate only the blank GEMINI_API_KEY in owner-managed secret storage. Exact model gemini-3.8-flash and time/token/call caps are fixed in backend code. App-local `.env.example` contains only credentials and the fake/paid switches; private runtime configuration records connections, validation stage and independent approvals. Keep paid processing disabled until applicable approvals. No image/ASR model is selected. Do not read or copy .env.local for diagnosis. Fake mode needs no keys and proves fixtures only. Live transfer/retention, rights/spend and actual model quality remain unchecked.
 
 Earlier provider/model records below are historical where superseded.
 
@@ -258,8 +403,11 @@ production readiness or allow dummy credentials in production. See
 
 ## Local Environment Mapping
 
-Use the repository-root `.env.example` as the public variable-name authority;
-never overwrite an existing ignored root `.env.local`. The backend entry point
+Use `apps/backend/.env.example` as the credential/switch authority and
+`apps/backend/runtime.example.json` for private connection/approval shape.
+The old mapping below is historical; numerical policy and live capabilities
+are now derived in code. Never overwrite an existing ignored app-local file
+without owner authorization. The backend entry point
 owns local loading; application imports/tests must not load it. Normal shell
 overrides can take precedence, so troubleshoot by variable names and safe mode
 status, not by dumping env values. See

@@ -43,6 +43,13 @@ export function retainedSampleReader(
 export function composeRetainedSample(
   config: BackendConfig,
 ): RetainedSample | null {
+  const reader = composeRetainedSampleReader(config);
+  return reader ? new RetainedSample(reader) : null;
+}
+
+export function composeRetainedSampleReader(
+  config: BackendConfig,
+): RetainedSampleReader | null {
   const reference = config.retainedSample;
   if (!reference.enabled) return null;
   if (
@@ -59,19 +66,17 @@ export function composeRetainedSample(
     scopes: ["https://www.googleapis.com/auth/devstorage.read_only"],
     clientOptions: { transporterOptions: { timeout: 10_000, retry: false } },
   });
-  return new RetainedSample(
-    retainedSampleReader(
-      {
-        bucket: reference.bucket,
-        object: reference.object,
-        generation: reference.generation,
-        bytes: reference.bytes,
-      },
-      async () => {
-        const token = await auth.getAccessToken();
-        if (!token) throw new Error("retained_sample_unavailable");
-        return `Bearer ${token}`;
-      },
-    ),
+  return retainedSampleReader(
+    {
+      bucket: reference.bucket,
+      object: reference.object,
+      generation: reference.generation,
+      bytes: reference.bytes,
+    },
+    async () => {
+      const token = await auth.getAccessToken();
+      if (!token) throw new Error("retained_sample_unavailable");
+      return `Bearer ${token}`;
+    },
   );
 }

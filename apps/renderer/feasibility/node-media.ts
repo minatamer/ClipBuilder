@@ -1,3 +1,4 @@
+import "../../../test/deterministic.environment.js";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { mkdtemp, readFile, rm, stat, mkdir } from "node:fs/promises";

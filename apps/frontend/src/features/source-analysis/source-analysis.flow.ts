@@ -12,7 +12,10 @@ export async function runSourceAnalysis(input: {
     BrowserWorkspace,
     "snapshot" | "sourceFile" | "markCloudAnalysis" | "storeGroundedAnalysis"
   >;
-  api: Pick<SourceAnalysisApi, "grant" | "upload" | "transfer" | "analyze">;
+  api: Pick<
+    SourceAnalysisApi,
+    "grant" | "upload" | "transfer" | "sample" | "analyze"
+  >;
   challenge(
     sessionId: string,
     action: "transcription" | "candidate-analysis",
@@ -25,7 +28,8 @@ export async function runSourceAnalysis(input: {
   const { workspace, api } = input,
     source = workspace.snapshot?.source,
     file = workspace.sourceFile;
-  if (!source || !file || workspace.snapshot?.cloudAnalysis)
+  const sample = workspace.snapshot?.retainedSample;
+  if ((!sample && (!source || !file)) || workspace.snapshot?.cloudAnalysis)
     throw new Error("source-analysis-unavailable");
   const controller = new AbortController(),
     abort = () => controller.abort();
@@ -68,26 +72,38 @@ export async function runSourceAnalysis(input: {
       "transcription",
       signal,
     );
-    input.label("Uploading video to temporary private storage");
-    const admitted = await api.upload(
-      {
-        media: source.media,
-        fingerprint: source.fingerprint,
-        rightsAcknowledged: true,
-        dataTransferAcknowledged: true,
-        turnstileToken: uploadToken,
-      },
-      signal,
-    );
-    const generation = await api.transfer(
-      admitted.uploadUrl,
-      file.slice(
-        0,
-        file.size,
-        source.media.container === "mp4" ? "video/mp4" : "video/webm",
-      ),
-      signal,
-    );
+    let generation: string;
+    if (sample) {
+      input.label("Preparing a private sample copy for analysis");
+      generation = (
+        await api.sample(
+          {
+            rightsAcknowledged: true,
+            dataTransferAcknowledged: true,
+            turnstileToken: uploadToken,
+          },
+          signal,
+        )
+      ).generation;
+    } else {
+      if (!source || !file) throw new Error("source-analysis-unavailable");
+      input.label("Uploading video to temporary private storage");
+      const admitted = await api.upload(
+        {
+          media: source.media,
+          fingerprint: source.fingerprint,
+          rightsAcknowledged: true,
+          dataTransferAcknowledged: true,
+          turnstileToken: uploadToken,
+        },
+        signal,
+      );
+      generation = await api.transfer(
+        admitted.uploadUrl,
+        file.slice(0, file.size, "video/mp4"),
+        signal,
+      );
+    }
     const token = await input.challenge(
       grant.sessionId,
       "candidate-analysis",

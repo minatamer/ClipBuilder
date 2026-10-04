@@ -114,6 +114,8 @@ export class MediaSessions {
     const record = await this.store.getIntent(binding.sessionId);
     if (!record || !sameBinding(record.intent.binding, binding))
       throw new MediaFailure("conflict");
+    if (record.intent.contentType !== "video/mp4")
+      throw new MediaFailure("invalid");
     if (record.intent.expiresAtMs <= this.now())
       throw new MediaFailure("expired");
     if (record.intent.phase === "terminal") throw new MediaFailure("canceled");

@@ -37,6 +37,22 @@ export const sourceAnalysisRequestSchema = z
     turnstileToken: z.string().min(1).max(2048),
   })
   .strict();
+export const retainedSampleAnalysisRequestSchema = z
+  .object({
+    rightsAcknowledged: sourceAnalysisUploadSchema.shape.rightsAcknowledged,
+    dataTransferAcknowledged:
+      sourceAnalysisUploadSchema.shape.dataTransferAcknowledged,
+    turnstileToken: sourceAnalysisUploadSchema.shape.turnstileToken,
+  })
+  .strict();
+export const retainedSampleAnalysisResponseSchema = z
+  .object({
+    generation: objectGenerationSchema,
+  })
+  .strict();
+export type RetainedSampleAnalysisRequest = z.infer<
+  typeof retainedSampleAnalysisRequestSchema
+>;
 export const groundedAnalysisResultSchema = z
   .object({
     binding: mediaBindingSchema,

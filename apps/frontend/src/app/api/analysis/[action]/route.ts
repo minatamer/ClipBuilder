@@ -29,6 +29,7 @@ async function proxy(
       "grant",
       "session",
       "upload",
+      "sample",
       "run",
       "clear",
       "assemble",

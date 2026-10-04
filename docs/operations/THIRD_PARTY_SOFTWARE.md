@@ -290,7 +290,8 @@ tab and media derivatives were cleaned. Independent review remains stopped.
 Keep fake/off defaults and feature-specific fail-closed gates. CL-005 migrates
 schema/example/tests/public capability meanings together. The initial planning
 pass made no code changes; the subsequent local foundation now implements that
-migration. Read `.env.example` only;
+migration. Read the owning app's `.env.example` and the blank backend runtime
+example only;
 the owner populates valid matching blanks manually after implementation.
 
 Worker URLs/WASM/model assets/fonts must have exact origin/cache/integrity/CSP

@@ -4,6 +4,7 @@ import {
   PUBLIC_LIMITS,
 } from "@clipbuilder/contracts";
 import { z } from "zod";
+import { ACTIVE_PROCESSING_GRANT_KEY_ID } from "../admission/processing.grant.js";
 
 function optionalString(maximum = 4_096) {
   return z.preprocess(
@@ -51,7 +52,7 @@ const commaSeparatedOriginsSchema = z
   .transform((value) => value.split(",").map((origin) => origin.trim()))
   .pipe(z.array(exactOriginSchema).min(1).max(10));
 
-export const environmentShape = {
+const environmentShape = {
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -83,8 +84,7 @@ export const environmentShape = {
 
   SESSION_COOKIE_NAME: z.string().default("__Host-clipping_session"),
   SESSION_ACCESS_TTL_SECONDS: integerValue(7_200, 900, 7_200),
-  PROCESSING_GRANT_ACTIVE_KEY_ID: optionalString(80),
-  PROCESSING_GRANT_KEYS_JSON: optionalString(16_384),
+  PROCESSING_GRANT_KEY: optionalString(1_024),
   CSRF_ALLOWED_ORIGINS: commaSeparatedOriginsSchema,
   PROCESSING_GRANTS_ENABLED: booleanValue(false),
   ADMISSION_MAX_RECORDS: integerValue(256, 1, 1024),
@@ -157,8 +157,24 @@ export const environmentShape = {
 const rawEnvironmentSchema = z.object(environmentShape).strict();
 
 export const ENVIRONMENT_KEYS = Object.freeze([
-  ...rawEnvironmentSchema.keyof().options,
-]);
+  "FAKE_MODE",
+  "PAID_DEMO_ENABLED",
+  "GEMINI_API_KEY",
+  "TURNSTILE_SITE_KEY",
+  "TURNSTILE_SECRET_KEY",
+  "PROCESSING_GRANT_KEY",
+] as const);
+
+// All other values are composed from private connection metadata and code policy.
+export const RETIRED_ENVIRONMENT_KEYS = Object.freeze(
+  rawEnvironmentSchema
+    .keyof()
+    .options.filter(
+      (key) =>
+        !ENVIRONMENT_KEYS.some((environmentKey) => environmentKey === key) &&
+        !["NODE_ENV", "PORT", "APP_ENV", "APP_REVISION"].includes(key),
+    ),
+);
 
 export const environmentSchema = rawEnvironmentSchema
   .superRefine((environment, context) => {
@@ -210,7 +226,7 @@ export const environmentSchema = rawEnvironmentSchema
       if (
         hasValue(environment.GEMINI_API_KEY) ||
         hasValue(environment.TURNSTILE_SECRET_KEY) ||
-        hasValue(environment.PROCESSING_GRANT_KEYS_JSON)
+        hasValue(environment.PROCESSING_GRANT_KEY)
       ) {
         issue(
           "Test configuration must not contain credentials.",
@@ -221,8 +237,12 @@ export const environmentSchema = rawEnvironmentSchema
 
     if (environment.CLOUD_RENDER_ENVIRONMENT === "cloud") {
       const origin = environment.PRIVATE_RENDERER_ORIGIN;
+      if (!environment.CLOUD_SPEND_APPROVED)
+        issue(
+          "Cloud compute requires approved spend and an exact private renderer origin.",
+          "CLOUD_SPEND_APPROVED",
+        );
       if (
-        !environment.CLOUD_SPEND_APPROVED ||
         !origin ||
         !exactOriginSchema.safeParse(origin).success ||
         !new URL(origin).hostname.endsWith(".run.app") ||
@@ -276,17 +296,20 @@ export const environmentSchema = rawEnvironmentSchema
       );
     }
 
-    if (
-      anyLiveFeature &&
-      (!hasValue(environment.GEMINI_API_KEY) ||
-        !environment.GEMINI_TRANSFER_APPROVED ||
-        !environment.GEMINI_PAID_PROJECT_CONFIRMED)
-    ) {
-      issue(
-        "Live Google features require credentials and approved paid-project media transfer.",
-        "GEMINI_API_KEY",
-      );
-    }
+    if (anyLiveFeature)
+      for (const [key, ready] of [
+        ["GEMINI_API_KEY", hasValue(environment.GEMINI_API_KEY)],
+        ["GEMINI_TRANSFER_APPROVED", environment.GEMINI_TRANSFER_APPROVED],
+        [
+          "GEMINI_PAID_PROJECT_CONFIRMED",
+          environment.GEMINI_PAID_PROJECT_CONFIRMED,
+        ],
+      ] as const)
+        if (!ready)
+          issue(
+            "Live Google features require credentials and approved paid-project media transfer.",
+            key,
+          );
     if (environment.LIVE_IMAGE_GENERATION_ENABLED) {
       issue(
         "Raster generation has no approved Google image model; use fixed templates.",
@@ -295,19 +318,17 @@ export const environmentSchema = rawEnvironmentSchema
     }
 
     if (anyLiveFeature) {
-      const commonLiveValues = [
-        environment.PROCESSING_GRANT_ACTIVE_KEY_ID,
-        environment.PROCESSING_GRANT_KEYS_JSON,
-        environment.TURNSTILE_SITE_KEY,
-        environment.TURNSTILE_SECRET_KEY,
-        environment.TURNSTILE_EXPECTED_HOSTNAME,
-      ];
-      if (!commonLiveValues.every(hasValue)) {
-        issue(
-          "Live features require complete grant and abuse configuration.",
-          "PROCESSING_GRANT_KEYS_JSON",
-        );
-      }
+      for (const key of [
+        "PROCESSING_GRANT_KEY",
+        "TURNSTILE_SITE_KEY",
+        "TURNSTILE_SECRET_KEY",
+        "TURNSTILE_EXPECTED_HOSTNAME",
+      ] as const)
+        if (!hasValue(environment[key]))
+          issue(
+            "Live features require complete grant and abuse configuration.",
+            key,
+          );
     }
     if (
       environment.LIVE_ANALYSIS_ENABLED &&
@@ -338,12 +359,10 @@ export const environmentSchema = rawEnvironmentSchema
 
     if (
       environment.PROCESSING_GRANTS_ENABLED &&
-      (environment.FAKE_MODE ||
-        !hasValue(environment.PROCESSING_GRANT_ACTIVE_KEY_ID) ||
-        !hasValue(environment.PROCESSING_GRANT_KEYS_JSON))
+      (environment.FAKE_MODE || !hasValue(environment.PROCESSING_GRANT_KEY))
     )
       issue(
-        "Processing grants require real mode and explicit signing configuration.",
+        "Processing grants require real mode and explicit encryption keys.",
         "PROCESSING_GRANTS_ENABLED",
       );
     if (
@@ -464,9 +483,8 @@ export const environmentSchema = rawEnvironmentSchema
     session: {
       cookieName: environment.SESSION_COOKIE_NAME,
       accessTtlSeconds: environment.SESSION_ACCESS_TTL_SECONDS,
-      processingGrantActiveKeyId:
-        environment.PROCESSING_GRANT_ACTIVE_KEY_ID ?? null,
-      processingGrantKeysJson: environment.PROCESSING_GRANT_KEYS_JSON ?? null,
+      processingGrantActiveKeyId: ACTIVE_PROCESSING_GRANT_KEY_ID,
+      processingGrantKey: environment.PROCESSING_GRANT_KEY ?? null,
       csrfAllowedOrigins: environment.CSRF_ALLOWED_ORIGINS,
     },
     turnstile: {

@@ -1,6 +1,11 @@
 # CL-007 controlled analysis check
 
-Status: **explicitly deferred by the owner; not authorized or performed**.
+Status: **Gemini account/key/spend setup reported complete on 2026-10-04;
+the owner requested a paid-flow check, but the numerical allowance, Google
+transfer confirmation and controlled renderer rollout remain pending;
+live analysis is unperformed**. The owner subsequently reserved all paid-flow
+testing for their own manual actions. Agents may run fake-mode automated checks;
+they must not trigger the paid analysis described below.
 The local fake browser workflow passed without keys/external calls; continuing
 dependency-ready local tickets is authorized. This checkpoint
 authorizes no Git action, new resources, public release, assembly, images or
@@ -8,7 +13,93 @@ final export. `FAKE_MODE=true` with no keys supplies synthetic fixture and
 injected zero-network results; CL-006 separately proved real media processing
 with fake AI. Genuine understanding requires Gemini; no local AI model is used.
 
+## Owner-reported Gemini setup — 2026-10-04
+
+- [x] Owner created a Gemini API key for the existing project and manually
+  populated `GEMINI_API_KEY` in ignored `apps/backend/.env.local`.
+- [x] Owner completed a USD 5 Gemini API prepayment.
+- [x] Owner reported saving a USD 5 monthly project spending cap after following
+  the Spend → Monthly spend cap → Edit spend cap instructions.
+- [ ] Independently verify key/model access and paid-project readiness in the
+  separately authorized live checkpoint; no credentialed request was made.
+- [x] Owner reports manually saving the Turnstile sitekey and secret in the
+  backend's ignored `.env.local`.
+- [ ] Confirm the expected hostname and verify genuine Turnstile validation.
+- [x] Normal local startup validates the configured grant key format, without
+  inspecting or printing the secret. `PROCESSING_GRANT_KEY` accepts the key
+  directly; `v1` stays in code and the old entry remains readable for migration.
+  Random generation and private storage remain owner-managed.
+- [ ] Approve the incremental renderer build/revision update, Google audiovisual
+  transfer and numerical AI/cloud/build test allowance before dispatch.
+
+Automatic reload was disabled in the owner's prepayment view and the setup
+instructions keep it off; no final dashboard inspection or account usage polling
+was performed. Google documents an approximately ten-minute enforcement delay,
+so neither the monthly cap nor the prepaid balance is an exact dollar cutoff.
+Gemini credits do not pay storage/build/Cloud Run charges. Funding and a monthly
+cap are not a test-spend or media-transfer authorization.
+
+The [current provider guide](PROVIDER_SETUP.md#current-gemini-setup--2026-10-04)
+records the key/billing/limit steps and next local Turnstile setup. Private keys
+and `.env.local` contents were not read, copied or logged; account identifiers
+were not recorded. No
+application restart, renderer rollout, provider call or live-quality verification
+was performed in this setup/documentation pass. Keep paid processing disabled
+while completing prerequisites; existing fake results remain synthetic only.
+
+## Local restart preflight — 2026-10-04
+
+The owner requested a full local restart and reports selecting `FAKE_MODE=false`
+and `PAID_DEMO_ENABLED=true`. Those switches select real mode and permit paid
+capabilities, but do not supply the approved runtime validation stage. Normal
+backend startup reported `configuration_validation_stage_missing` and never
+opened port 4000. This is startup evidence, not inspection of a private file.
+
+The old frontend supervisor 12240 and backend supervisor 7904 were verified
+against creation times, repository/service commands, descendants and listeners.
+Shutdown removed all 10 frontend and nine backend identities and released ports
+3000/4000 through stabilization. The replacement backend supervisor 23504 failed
+readiness; its nine owned identities were then removed, with zero survivors and
+zero listeners through stabilization. The frontend replacement was not launched
+because its backend prerequisite failed. Both local apps are stopped.
+
+The ignored supervisor records only a fixed category for this startup error.
+Content-safe logs remain under
+`artifacts/local-run/protected-sample-20261004/backend.stdout.log` and
+`backend.stderr.log`; no raw startup/configuration values were logged. No private
+environment/runtime file was read or changed, and no provider request, cloud
+update, sample transfer or paid dispatch occurred. The `PROCESSING_GRANT_KEY` secret, expected
+Turnstile hostname and genuine provider readiness remain owner/live checks.
+
+The existing Gemini system policy was inspected without changing it. It already
+requires source-clock word timing, anonymous turns, quoted evidence and zero to
+four complete 10–60-second moments, rejects source instructions and invention,
+and forbids tools/search. A first authorized analysis provides the baseline for
+any later owner-directed prompt revision. Fake mode remains key-free and
+synthetic; real understanding requires the configured Gemini provider, not a
+local model.
+
+## Successful local startup follow-up — 2026-10-04
+
+The subsequent local configuration correction supersedes the stopped-app state
+in the historical preflight above. Health, `/start` and `/api/sample/config`
+return 200 after verified shutdown and normal startup. The fixed requirement
+codes report Google transfer approval, paid-project confirmation, Turnstile
+hostname and renderer connection as remaining processing prerequisites, with
+no missing/invalid grant-key code. Paid routes remain unavailable and dispatches
+remain zero. This diagnosis comes from content-safe startup categories, not
+reading ignored configuration. No provider, storage or processing request was
+made; the apps remain running. All five fake-only root gates pass, including
+721 synthetic tests. These checks prove no genuine AI or widget quality.
+
 ## Proposed bounded execution
+
+This is an owner-only manual paid-check plan. The agent may prepare and verify
+fake-mode code, and separately authorized private renderer build/revision work,
+but does not dispatch the media admission, Google upload or Gemini generation.
+The prior combined agent-run update/paid-test proposal is withdrawn. A cloud
+update still needs its own bounded build/compute allowance; it is independent
+of Gemini funding and owner-only manual processing.
 
 1. Owner confirms one English, owned/licensed 15-second–20-minute source within
    500 MiB, consent to **Google AI** audiovisual transfer, paid-project data terms,
@@ -21,12 +112,14 @@ with fake AI. Genuine understanding requires Gemini; no local AI model is used.
    public deployment. The old image lacks the new proxy read/release routes and
    inspection profile; analysis rejects it before Gemini. Record image digest
    and content-free health/authentication checks.
-3. Owner manually fills the matching blank `.env.example` entries in ignored
-   configuration: Gemini key, grant keys/active ID, Turnstile site/secret/hostname,
-   private renderer origin. Never inspect/print `.env.local`; the entry point loads
-   it. Fake off and live analysis require paid/transfer/paid-project/grants/cloud-
-   spend approval, cloud compute and process-dispatch budget **2**. Assembly/image
-   flags stay off. Follow AGENTS.md for normal verified local startup.
+3. Owner fills the blank credential entries from `apps/backend/.env.example`
+   in that app's ignored `.env.local`: Gemini key, `PROCESSING_GRANT_KEY` secret and
+   Turnstile site/secret. Ignored `runtime.local.json` supplies the private renderer
+   origin, Turnstile hostname and independent cloud/transfer/paid-project approval
+   records. Only after authorization, select `paidValidationStage=analysis`,
+   `FAKE_MODE=false` and `PAID_DEMO_ENABLED=true`. Composition fixes the dispatch
+   allowance at **2**, with assembly/render/image capabilities disabled. Never
+   inspect/print private values. Follow AGENTS.md for verified local startup.
 4. One browser confirmation permits **one upload admission**, **one private proxy
    preparation**, **one Google Files upload** (start/finalize each once), at most
    **90** readiness GETs at one-second intervals, and **one `gemini-3.8-flash`
@@ -34,6 +127,11 @@ with fake AI. Genuine understanding requires Gemini; no local AI model is used.
    No generation retry/tools/search/raster calls or final render. Two single-use
    Turnstile checks bind hostname/action/session. Browser/control work is bounded
    at 840 seconds; Google work at the configured 180 seconds.
+   For the fixed retained sample, the upload admission instead fingerprints the
+   generation-pinned master and transfers bounded chunks server-to-storage into
+   one disposable processing copy. The browser does not download and reupload
+   it; the same inspection, proxy, Google and two-action limits apply. The
+   retained master never enters the processing cleanup binding.
 5. Compare normalized transcript/anonymous turns/timing with the source; inspect
    complete 10–60s boundaries and honest zero-to-four candidates. Refresh committed
    success and verify **zero new upload/preparation/AI calls**. Review read-only

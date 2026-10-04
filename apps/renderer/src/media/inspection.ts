@@ -33,6 +33,7 @@ export const probeSchema = z.object({
     duration: z.coerce.number().finite().positive(),
     start_time: z.coerce.number().finite().optional(),
     format_name: z.string(),
+    tags: z.object({ major_brand: z.string().optional() }).optional(),
   }),
 });
 export async function probeMedia(
@@ -51,7 +52,7 @@ export async function probeMedia(
             "-protocol_whitelist",
             "file,pipe",
             "-format_whitelist",
-            "mov,mp4,matroska,webm",
+            "mov,mp4",
             "-show_streams",
             "-show_format",
             "-of",
@@ -97,7 +98,8 @@ export async function inspectSource(
     (audio.channels ?? 0) < 1 ||
     (audio.channels ?? 0) > 2 ||
     (audio.sample_rate ?? 0) > 48_000 ||
-    !/^(mov,mp4|matroska,webm)/.test(probe.format.format_name)
+    !probe.format.format_name.split(",").includes("mp4") ||
+    probe.format.tags?.major_brand === "qt  "
   )
     throw new MediaFailure("invalid");
   const [numerator, denominator] = (video.avg_frame_rate ?? "0/0")
@@ -124,9 +126,7 @@ export async function inspectSource(
       ((audio.start_time ?? 0) - (video.start_time ?? 0)) * 1000,
     ),
     profile: {
-      container: probe.format.format_name.startsWith("mov,mp4")
-        ? "mp4"
-        : "webm",
+      container: "mp4",
       videoCodec: video.codec_name,
       audioCodec: audio.codec_name,
       averageFrameRate: fps,

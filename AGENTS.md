@@ -48,8 +48,12 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   is `fake`; a legacy `PROVIDER_MODE=fake` assertion cannot override it),
   `PAID_DEMO_ENABLED=false`, and every `LIVE_*` flag false. Ordinary tests and
   CI must be unable to contact providers or consume credits.
+- Owner decision (2026-10-04): paid-flow testing is performed manually by the
+  owner only. Agents may run automated fake-mode checks, never trigger a live
+  paid flow. A private renderer update retains its separate cloud/build approval
+  and cannot be bundled with permission for an agent-run paid test.
 - Never read an ignored `.env.local` or secret file to answer a configuration
-  question. Inspect `.env.example`; tell the owner which matching blank entries
+  question. Inspect the owning app's `.env.example`; tell the owner which matching blank entries
   to populate manually.
 - Never create or mutate provider/cloud resources, use credentials, make paid
   calls, deploy, purchase, or launch unless the user explicitly authorizes that
@@ -133,6 +137,13 @@ application code.
 - The shared Vitest setup installs those values and network interception at
   module top level. A `beforeAll` hook is too late because Vitest imports test
   modules before suite hooks run.
+- All six Vitest configurations disable environment-file loading with
+  `envDir: false`. The shared test environment replaces inherited operating
+  flags, removes provider/credential-file variables and stays fake/paid-off
+  through worker teardown. Socket interception survives test mock restoration.
+- All opt-in synthetic media harnesses install the same hardcoded fake/paid-off
+  environment before their other modules load. These local harness commands are
+  separate from the default unit suite; they cannot authorize cloud/live tests.
 - Tests never load `.env`, `.env.local`, Secret Manager, shell-profile secrets,
   or a shared cloud resource. Unexpected non-loopback network access is a test
   failure.
@@ -192,12 +203,26 @@ corepack pnpm build
   isolated fake/paid-disabled setup; a local run is not approval for providers,
   paid calls, cloud changes, or deployment.
 - Use normal owner-managed configuration. On explicit non-test local startup,
-  `apps/backend/src/server.ts` loads the ignored root `.env.local` if present;
+  `apps/backend/src/server.ts` loads ignored `apps/backend/.env.local` and
+  `apps/backend/runtime.local.json` if present; Next.js owns
+  `apps/frontend/.env.local`. There is no root environment file;
   existing process-environment values take precedence. Let the entry point
   load it, without reading, printing, copying, or overwriting its contents.
   Do not force fake/test flags for a requested normal run, create a second
   frontend mode setting, or bypass feature gates. Missing setup is described
-  using the blank entries in `.env.example`; never inspect secrets to diagnose it.
+  using the blank entries in the owning app's `.env.example`; never inspect
+  secrets to diagnose it. Local environment files contain credentials and only
+  the backend `FAKE_MODE`/`PAID_DEMO_ENABLED` switches. Private connection
+  metadata and recorded approvals belong in ignored runtime configuration.
+  Numerical limits, timeouts, model selection and retry policy are fixed in code,
+  not environment overrides. Secret-free setup/migration is allowed when the
+  owner explicitly authorizes it; do not print values.
+- In normal local real mode, incomplete optional paid-feature prerequisites
+  leave paid routes unavailable with zero dispatches while the app can start.
+  Preserve the operating switches and independent retained-playback approval;
+  never enable paid routes, substitute fixture results or record approvals to
+  make a restart pass. Structural errors, conflicting modes and public/test paid
+  composition still reject. Fixed startup requirement codes contain no values.
 - Before launching, inspect the intended ports and establish process ownership.
   Reuse a healthy matching instance for `run`. Stop a verified stale matching
   instance first, including its watcher and children. Never kill an unrelated

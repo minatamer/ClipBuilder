@@ -48,6 +48,7 @@ export function PortraitPlayer({
   toggleMute,
   aspectRatio,
   source = false,
+  durationKnown = true,
 }: {
   label: string;
   range: { startMs: number; endMs: number };
@@ -67,6 +68,7 @@ export function PortraitPlayer({
   toggleMute?: () => void;
   aspectRatio?: number;
   source?: boolean;
+  durationKnown?: boolean;
 }) {
   const controlsId = useId();
   const [awake, setAwake] = useState(true);
@@ -180,7 +182,7 @@ export function PortraitPlayer({
             icon={playing ? Pause : Play}
             label={`${playing ? "Pause" : "Play"} ${moment ? `moment ${moment.rank} preview` : source ? "source video" : "clip preview"}`}
             {...(moment ? { id: `moment-play-${moment.rank}` } : {})}
-            disabled={busy}
+            disabled={busy || !durationKnown}
             onClick={toggle}
             {...(onKeyDown ? { onKeyDown } : {})}
           />
@@ -198,7 +200,7 @@ export function PortraitPlayer({
           )}
           <output data-playback-time aria-live="off" aria-label="Playback time">
             {timecode(currentMs - range.startMs)} /{" "}
-            {timecode(range.endMs - range.startMs)}
+            {durationKnown ? timecode(range.endMs - range.startMs) : "--:--"}
           </output>
         </div>
         <input
@@ -214,8 +216,12 @@ export function PortraitPlayer({
           max={range.endMs}
           step={1}
           value={Math.round(currentMs)}
-          aria-valuetext={`${timecode(currentMs - range.startMs)} of ${timecode(range.endMs - range.startMs)}`}
-          disabled={busy}
+          aria-valuetext={
+            durationKnown
+              ? `${timecode(currentMs - range.startMs)} of ${timecode(range.endMs - range.startMs)}`
+              : "Loading video duration"
+          }
+          disabled={busy || !durationKnown}
           onFocus={() => setSeekingFocused(true)}
           onBlur={() => setSeekingFocused(false)}
           onChange={(event) => {

@@ -4,6 +4,10 @@ import {
   mediaUploadResponseSchema,
   mediaPrepareRequestSchema,
 } from "./cloud-media.schema.js";
+import {
+  retainedSampleAnalysisRequestSchema,
+  retainedSampleAnalysisResponseSchema,
+} from "./grounded-analysis.schema.js";
 const binding = {
   sessionId: "ses_" + "a".repeat(22),
   sourceRevision: "rev_" + "b".repeat(22),
@@ -17,6 +21,40 @@ const request = {
   dataTransferAcknowledged: true,
 };
 describe("private media transport boundaries", () => {
+  it("accepts only sample consents and challenge, and returns only an exact generation", () => {
+    const input = {
+      rightsAcknowledged: true,
+      dataTransferAcknowledged: true,
+      turnstileToken: "synthetic",
+    };
+    expect(retainedSampleAnalysisRequestSchema.safeParse(input).success).toBe(
+      true,
+    );
+    for (const extra of [
+      { bucket: "untrusted" },
+      { object: "source" },
+      { sourceUrl: "https://untrusted.invalid" },
+      { rightsAcknowledged: false },
+      { dataTransferAcknowledged: false },
+      { turnstileToken: "" },
+    ])
+      expect(
+        retainedSampleAnalysisRequestSchema.safeParse({ ...input, ...extra })
+          .success,
+      ).toBe(false);
+    expect(
+      retainedSampleAnalysisResponseSchema.safeParse({ generation: "12" })
+        .success,
+    ).toBe(true);
+    for (const value of [
+      { generation: "0" },
+      { generation: "12/elsewhere" },
+      { generation: "12", bucket: "synthetic" },
+    ])
+      expect(
+        retainedSampleAnalysisResponseSchema.safeParse(value).success,
+      ).toBe(false);
+  });
   it("rejects arbitrary bucket/path/URL inputs and missing rights/transfer acknowledgements", () => {
     expect(mediaUploadRequestSchema.safeParse(request).success).toBe(true);
     for (const extra of [
@@ -24,6 +62,7 @@ describe("private media transport boundaries", () => {
       { object: "../source" },
       { sourceUrl: "https://untrusted.invalid" },
       { bytes: 524288001 },
+      { contentType: "video/webm" },
       { rightsAcknowledged: false },
       { dataTransferAcknowledged: false },
     ])

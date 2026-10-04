@@ -7,6 +7,7 @@ import {
 import { MediaSessions } from "./media-sessions.js";
 import { UploadCapabilityCipher } from "./upload-capability.js";
 import { MemoryMediaStore } from "../../test/memory-store.js";
+import { temporaryIntentSchema } from "./temporary-intent.js";
 
 const binding: MediaBinding = {
   sessionId: "ses_" + "a".repeat(22),
@@ -39,6 +40,58 @@ function fixture() {
   };
 }
 describe("temporary media admission and independent cleanup", () => {
+  it.each(["uploading", "prepared"] as const)(
+    "cleans legacy WebM %s records while refusing further processing",
+    async (phase) => {
+      const f = fixture();
+      await f.admit();
+      const record = (await f.store.getIntent(binding.sessionId))!;
+      const intent = temporaryIntentSchema.parse({
+        ...record.intent,
+        contentType: "video/webm",
+        phase,
+        source:
+          phase === "uploading"
+            ? null
+            : {
+                fingerprint: binding.fingerprint,
+                bytes: 1024,
+                durationMs: 15_000,
+                width: 1280,
+                height: 720,
+                audioStartMs: 0,
+                profile: {
+                  container: "webm",
+                  videoCodec: "vp9",
+                  audioCodec: "opus",
+                  averageFrameRate: 30,
+                  rotationDegrees: 0,
+                },
+              },
+      });
+      expect(intent.source).toBeNull();
+      await f.store.saveIntent(intent, record.generation);
+      f.store.objects.set(binding.sessionId, [
+        { artifactId: intent.sourceId, generation: "12", bytes: 1024 },
+      ]);
+      await expect(
+        f.service.claimPrepare({ binding, generation: "12", nonce }),
+      ).rejects.toMatchObject({ code: "invalid" });
+      await f.service.terminate(binding);
+      expect(await f.store.listArtifacts(binding.sessionId)).toEqual([]);
+      expect(f.store.calls).toEqual({
+        begin: 1,
+        cancel: 1,
+        delete: 1,
+        upload: 0,
+        download: 0,
+      });
+      f.advance(7_200_001);
+      expect(await f.service.sweep()).toEqual({ sessions: 1, unresolved: 0 });
+      expect(await f.store.getIntent(binding.sessionId)).toBeNull();
+    },
+  );
+
   it("removes expired late/orphan generations without depending on an intent", async () => {
     const f = fixture();
     f.store.objects.set(binding.sessionId, [

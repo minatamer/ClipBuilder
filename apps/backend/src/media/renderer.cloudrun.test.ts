@@ -23,27 +23,32 @@ describe("independent private cloud renderer boundary", () => {
       "disabled",
     );
     expect(() =>
-      loadConfig({
-        NODE_ENV: "test",
-        CLOUD_RENDER_ENVIRONMENT: "cloud",
-        CLOUD_SPEND_APPROVED: "true",
-        PRIVATE_RENDERER_ORIGIN: "https://synthetic.run.app",
-      }),
+      loadConfig(
+        { NODE_ENV: "test" },
+        {
+          rendererOrigin: "https://synthetic.run.app",
+          approvals: { cloudSpend: true },
+        },
+      ),
     ).toThrow();
-    const config = loadConfig({
-      CLOUD_RENDER_ENVIRONMENT: "cloud",
-      CLOUD_SPEND_APPROVED: "true",
-      PRIVATE_RENDERER_ORIGIN: "https://synthetic.run.app",
-    });
+    const config = loadConfig(
+      {},
+      {
+        rendererOrigin: "https://synthetic.run.app",
+        approvals: { cloudSpend: true },
+      },
+    );
     expect(config.providerMode).toBe("fake");
     expect(config.paidDemoEnabled).toBe(false);
   });
   it("uses exact private paths, validates replies and sends both identity headers once", async () => {
-    const config = loadConfig({
-      CLOUD_RENDER_ENVIRONMENT: "cloud",
-      CLOUD_SPEND_APPROVED: "true",
-      PRIVATE_RENDERER_ORIGIN: "https://synthetic.run.app",
-    });
+    const config = loadConfig(
+      {},
+      {
+        rendererOrigin: "https://synthetic.run.app",
+        approvals: { cloudSpend: true },
+      },
+    );
     let identities = 0,
       requests = 0;
     const client = new CloudRendererClient(
@@ -78,11 +83,13 @@ describe("independent private cloud renderer boundary", () => {
     expect({ identities, requests }).toEqual({ identities: 1, requests: 1 });
   });
   it("redacts malformed/private provider responses", async () => {
-    const config = loadConfig({
-      CLOUD_RENDER_ENVIRONMENT: "cloud",
-      CLOUD_SPEND_APPROVED: "true",
-      PRIVATE_RENDERER_ORIGIN: "https://synthetic.run.app",
-    });
+    const config = loadConfig(
+      {},
+      {
+        rendererOrigin: "https://synthetic.run.app",
+        approvals: { cloudSpend: true },
+      },
+    );
     const client = new CloudRendererClient(
       config,
       {

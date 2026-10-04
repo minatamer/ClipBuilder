@@ -13,24 +13,46 @@ export const geminiWireSchema = z
     words: z
       .array(
         z.tuple([
-          transcriptWordSchema.shape.punctuatedText,
-          transcriptWordSchema.shape.startMs,
-          transcriptWordSchema.shape.endMs,
-          transcriptWordSchema.shape.speakerId,
+          transcriptWordSchema.shape.punctuatedText.describe(
+            "One audible English word with attached punctuation; preserve source wording, at most 80 characters.",
+          ),
+          transcriptWordSchema.shape.startMs.describe(
+            "Audible word onset in integer milliseconds from full-source start, including leading silence.",
+          ),
+          transcriptWordSchema.shape.endMs.describe(
+            "Audible word end in full-source milliseconds, greater than startMs and within source duration.",
+          ),
+          transcriptWordSchema.shape.speakerId.describe(
+            "Stable anonymous audible-voice label spk_0 through spk_15, or null when uncertain.",
+          ),
         ]),
       )
       .min(1)
-      .max(PUBLIC_LIMITS.maxTranscriptWords),
+      .max(PUBLIC_LIMITS.maxTranscriptWords)
+      .describe(
+        "Full-source transcript in onset order; tuples [punctuatedText, startMs, endMs, speakerId]. Ordinal IDs w_000001 onward derive from array position.",
+      ),
     turns: z
       .array(
         z.tuple([
-          transcriptUtteranceSchema.shape.startWordId,
-          transcriptUtteranceSchema.shape.endWordId,
-          transcriptUtteranceSchema.shape.speakerId,
+          transcriptUtteranceSchema.shape.startWordId.describe(
+            "Inclusive first ordinal word reference in this turn.",
+          ),
+          transcriptUtteranceSchema.shape.endWordId.describe(
+            "Inclusive last ordinal word reference in this turn.",
+          ),
+          transcriptUtteranceSchema.shape.speakerId.describe(
+            "Same anonymous label or null as every word in this turn.",
+          ),
         ]),
       )
-      .max(10_000),
-    candidates: geminiAnalysisSchema.shape.candidates,
+      .max(10_000)
+      .describe(
+        "Ordered complete partition of transcript words as [startWordId, endWordId, speakerId], or [] if every word has null speakerId and diarization is unavailable.",
+      ),
+    candidates: geminiAnalysisSchema.shape.candidates.describe(
+      "Strongest recommendation first, 0 to 4 distinct contiguous 10–60 second source-word ranges; exact source quotations in public copy. Empty when none qualifies. Never output IDs, ranks or timestamps here.",
+    ),
   })
   .strict();
 export function normalizeGeminiAnalysis(value: unknown) {

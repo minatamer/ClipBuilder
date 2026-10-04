@@ -156,7 +156,8 @@ export async function confirmDevelopmentAnalysis(
   dispatch: (event: ClippingSessionEvent) => void,
   signal: AbortSignal,
 ) {
-  if (state.stage !== "analysis-confirmation" || signal.aborted) return;
+  if (state.stage !== "analysis-confirmation" || !state.media || signal.aborted)
+    return;
   const operation = await api.analyze(state.media.mediaId, signal);
   if (!signal.aborted) dispatch({ type: "ANALYZE_CONFIRMED", operation });
 }

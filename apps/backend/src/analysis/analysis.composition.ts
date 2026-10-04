@@ -14,6 +14,8 @@ import { SelectedAssembly } from "../assembly/selected-assembly.usecase.js";
 import { PreviewPlayback } from "../media/preview-playback.js";
 import { FinalRender } from "../render/final-render.usecase.js";
 import { OutputDelivery } from "../media/output-delivery.js";
+import { composeRetainedSampleReader } from "../media/retained-sample.gcs.js";
+import { RetainedSampleProcessing } from "../media/retained-sample.processing.js";
 export function composeAnalysis(
   config: BackendConfig,
   admission: ProcessingAdmission | null,
@@ -36,7 +38,15 @@ export function composeAnalysis(
     composeGeminiTransport(config),
     config.gemini.timeoutMs,
   );
-  const analysis = new SourceAnalysis(admission, media, files, "google-gemini");
+  const sampleReader = composeRetainedSampleReader(config);
+  const analysis = new SourceAnalysis(
+    admission,
+    media,
+    files,
+    "google-gemini",
+    Date.now,
+    sampleReader ? new RetainedSampleProcessing(sampleReader) : null,
+  );
   const planner = composeSelectedPlanProvider(config, files);
   const assembly = planner
     ? new SelectedAssembly(admission, analysis, media, planner, "google-gemini")

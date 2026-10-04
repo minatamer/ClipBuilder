@@ -7,7 +7,10 @@ analysis no longer starts automatically. In fake mode, **Use sample** starts
 that existing fixture journey without choosing a file or reading real media.
 Real local preview uses native source
 dimensions/playback in the existing disposable workspace and needs no Gemini key.
-The fixed cloud sample uses a bounded same-origin read into that workspace;
+The fixed cloud sample streams through the same-origin video endpoint. Selecting
+or restoring it journals only the selection, with no full download, checksum or
+OPFS source copy. Explicit **Find moments** prepares its separate temporary
+processing copy on the server through the existing protected admission;
 in real-media mode its button remains disabled until the retained-source
 checkpoint is configured. Live mode never falls back to fixtures.
 The landing **Get Started** action opens intake; **Use sample** is offered there
@@ -148,7 +151,7 @@ server-only configuration to browser code.
 ## Current responsibility
 
 **CL-005 local foundation (2026-10-01):** real local composition now retains one
-File, checks secure OPFS access, inspects actual supported MP4/WebM tracks and
+File, checks secure OPFS access, inspects actual supported MP4 tracks and
 bounds in a worker, and incrementally copies the
 source into OPFS. A bounded versioned IndexedDB journal commits only on
 transaction completion. An exclusive Web Lock, advisory content-free
@@ -384,9 +387,10 @@ corepack pnpm start:frontend
 
 Rebuild contracts after changes to `packages/contracts` before restarting
 either app. Normal startup keeps the owner's backend configuration: its entry
-point loads the root `.env.local` as described in the backend guide. This
-frontend has no provider credential or separate mode setting to populate; do
-not create a frontend `.env.local` to override backend mode or expose secrets.
+point loads its app-local files as described in the backend guide. Copy
+[`.env.example`](.env.example) to `apps/frontend/.env.local` for initial setup;
+Next.js loads that file automatically. It currently contains comments only,
+because this frontend needs no secrets. Mode comes from the backend.
 
 For a manual stop, use Ctrl+C in the owning terminal and confirm no frontend
 watcher/child or listener remains on `3000`. Restart means stop and verify
@@ -476,11 +480,18 @@ preferences per the owner; this exception is not an accessibility-compliance cla
 
 Browser code receives schema-validated safe mode/availability via the local
 `/api/sample/config` bridge. Backend `FAKE_MODE` is the only mode authority;
-real/unavailable mode never falls back to the development adapter. Do not create
-a frontend `.env.local` or expose a second mode variable. `BACKEND_ORIGIN`,
+real/unavailable mode never falls back to the development adapter. The frontend
+`.env.local` is ignored and currently needs no entries; do not add a second mode
+variable. Production upstream routing and service-identity authentication remain
+unimplemented CL-015 work. The local bridge still pins port 4000. `BACKEND_ORIGIN`,
 `BACKEND_AUDIENCE`, bucket names,
 provider configuration, credentials, grants, and signed capabilities are
 server-only and must never use `NEXT_PUBLIC_*`.
 
 Tests use the shared deterministic setup, force fake/paid-disabled flags, and
 reject non-loopback network access.
+Vitest disables environment-file loading, and inherited credentials are removed
+before test imports. The opt-in `test:media` harness also installs hardcoded fake,
+paid-disabled settings; its Node command uses explicit TypeScript stripping for
+the shared test-only environment module. Neither command uses the app's local
+environment file or authorizes a live flow. The owner runs paid checks manually.

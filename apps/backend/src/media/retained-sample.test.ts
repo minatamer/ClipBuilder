@@ -27,49 +27,43 @@ const full = () =>
   });
 
 describe("retained master read boundary", () => {
-  it("defaults off and cannot enable cloud reads in test, fake or incomplete composition", () => {
-    const config = loadConfig({ NODE_ENV: "test" });
-    expect(config.retainedSample.enabled).toBe(false);
-    expect(composeRetainedSample(config)).toBeNull();
-    for (const values of [
-      { NODE_ENV: "test", FAKE_MODE: "false" },
-      { NODE_ENV: "development", FAKE_MODE: "true" },
-      {
-        NODE_ENV: "development",
-        FAKE_MODE: "false",
-        RETAINED_SAMPLE_GENERATION: "",
+  it("keeps fake reads off and requires approved, complete, non-test real composition", () => {
+    const settings = {
+      retainedSample: {
+        bucket: "synthetic-retained",
+        object: "synthetic.mp4",
+        generation: "123",
+        bytes: 10,
       },
-      {
-        NODE_ENV: "development",
-        FAKE_MODE: "false",
-        CLOUD_SPEND_APPROVED: "false",
-      },
-    ])
-      expect(() =>
-        loadConfig({
-          APP_ENV: "local",
-          CLOUD_SPEND_APPROVED: "true",
-          RETAINED_SAMPLE_ENABLED: "true",
-          RETAINED_SAMPLE_BUCKET: "synthetic-retained",
-          RETAINED_SAMPLE_OBJECT: "synthetic.mp4",
-          RETAINED_SAMPLE_GENERATION: "123",
-          RETAINED_SAMPLE_BYTES: "10",
-          ...values,
-        }),
-      ).toThrow();
-    expect(
-      loadConfig({
-        NODE_ENV: "development",
-        APP_ENV: "local",
-        FAKE_MODE: "false",
-        CLOUD_SPEND_APPROVED: "true",
-        RETAINED_SAMPLE_ENABLED: "true",
-        RETAINED_SAMPLE_BUCKET: "synthetic-retained",
-        RETAINED_SAMPLE_OBJECT: "synthetic.mp4",
-        RETAINED_SAMPLE_GENERATION: "123",
-        RETAINED_SAMPLE_BYTES: "10",
-      }).gemini.apiKey,
-    ).toBeNull();
+      approvals: { cloudSpend: true },
+    };
+    expect(composeRetainedSample(loadConfig({ NODE_ENV: "test" }))).toBeNull();
+    expect(loadConfig({}, settings).retainedSample.enabled).toBe(false);
+    expect(() =>
+      loadConfig({ NODE_ENV: "test", FAKE_MODE: "false" }, settings),
+    ).toThrow();
+    expect(() =>
+      loadConfig(
+        { FAKE_MODE: "false" },
+        { ...settings, approvals: { cloudSpend: false } },
+      ),
+    ).toThrow();
+    expect(() =>
+      loadConfig(
+        { FAKE_MODE: "false" },
+        {
+          ...settings,
+          retainedSample: { ...settings.retainedSample, generation: "" },
+        },
+      ),
+    ).toThrow();
+    expect(() =>
+      loadConfig({ FAKE_MODE: "false", APP_ENV: "preview" }, settings),
+    ).toThrow();
+    const config = loadConfig({ FAKE_MODE: "false" }, settings);
+    expect(config.retainedSample.enabled).toBe(true);
+    expect(config.gemini.apiKey).toBeNull();
+    expect(config.paidDemoEnabled).toBe(false);
   });
   it("pins the owner object generation, forwards only a read and stops before auth on abort", async () => {
     const auth = vi.fn(async () => "Bearer synthetic");

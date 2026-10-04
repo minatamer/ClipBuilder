@@ -39,7 +39,7 @@ function cleanupWorkspace() {
   };
 }
 
-function fixture() {
+function fixture(sample = false) {
   let record: WorkspaceRecord = parseWorkspaceRecord({
     version: 1,
     sessionId: identity.sessionId,
@@ -67,11 +67,18 @@ function fixture() {
     assembly: null,
     selectedId: null,
   });
+  if (sample)
+    record = parseWorkspaceRecord({
+      ...record,
+      retainedSample: true,
+      source: null,
+      artifacts: [],
+    });
   const result = {
     binding: {
       sessionId: "ses_" + "c".repeat(22),
       sourceRevision: media.sourceRevision,
-      fingerprint: record.source!.fingerprint,
+      fingerprint: record.source?.fingerprint ?? "a".repeat(64),
     },
     generation: "12",
     analysis,
@@ -86,7 +93,9 @@ function fixture() {
     get snapshot() {
       return record;
     },
-    sourceFile: new Blob([new Uint8Array([1])], { type: "video/mp4" }),
+    sourceFile: sample
+      ? null
+      : new Blob([new Uint8Array([1])], { type: "video/mp4" }),
     markCloudAnalysis: vi.fn(async (status, cleanupRequired = true) => {
       record = parseWorkspaceRecord({
         ...record,
@@ -113,6 +122,7 @@ function fixture() {
       expiresAtMs: 7201000,
     })),
     transfer: vi.fn(async () => "12"),
+    sample: vi.fn(async () => ({ generation: "12" })),
     analyze: vi.fn(async () => result),
     clear: vi.fn(async () => {}),
   };
@@ -141,6 +151,46 @@ function fixture() {
   };
 }
 describe("confirmed browser source analysis", () => {
+  it("uses the server sample copy only after confirmation, without browser download or upload", async () => {
+    const f = fixture(true);
+    expect(f.state()).toMatchObject({
+      stage: "analysis-confirmation",
+      media: null,
+      identity: { mode: "sample" },
+    });
+    expect(f.workspace.sourceFile).toBeNull();
+    expect(f.api.grant).not.toHaveBeenCalled();
+    expect(f.api.sample).not.toHaveBeenCalled();
+    await runSourceAnalysis(f.input);
+    expect(f.state().stage).toBe("candidates");
+    expect(f.api.grant).toHaveBeenCalledOnce();
+    expect(f.api.sample).toHaveBeenCalledExactlyOnceWith(
+      {
+        rightsAcknowledged: true,
+        dataTransferAcknowledged: true,
+        turnstileToken: "synthetic",
+      },
+      expect.any(AbortSignal),
+    );
+    expect(f.api.upload).not.toHaveBeenCalled();
+    expect(f.api.transfer).not.toHaveBeenCalled();
+    expect(f.api.analyze).toHaveBeenCalledOnce();
+    expect(restoreLocalWorkspace(f.record()).stage).toBe("candidates");
+    await expect(runSourceAnalysis(f.input)).rejects.toThrow("unavailable");
+    expect(f.api.sample).toHaveBeenCalledOnce();
+  });
+
+  it("fences a failed sample copy across refresh without starting analysis or retrying", async () => {
+    const f = fixture(true);
+    f.api.sample.mockRejectedValueOnce(new Error("synthetic-copy-failure"));
+    await runSourceAnalysis(f.input);
+    expect(f.state().stage).toBe("analysis-failed");
+    expect(restoreLocalWorkspace(f.record()).stage).toBe("analysis-failed");
+    expect(f.api.sample).toHaveBeenCalledOnce();
+    expect(f.api.analyze).not.toHaveBeenCalled();
+    await expect(runSourceAnalysis(f.input)).rejects.toThrow("unavailable");
+  });
+
   it("saves the result before advancing the existing reducer, and committed refresh makes zero new calls", async () => {
     const f = fixture();
     await runSourceAnalysis(f.input);

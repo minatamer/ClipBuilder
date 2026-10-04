@@ -42,7 +42,8 @@ editorial preference and later ordered internal-cut revision are unchanged.
 
 Public source limits remain 15 seconds through 20 minutes AND at most 500 MiB;
 the existing owner-validation ceiling is not permission to increase public
-bounds. MP4/WebM acceptance still needs supported codec/profile evidence.
+bounds. MP4-only intake follows the 2026-10-04 owner decision; acceptance still
+needs supported codec/profile evidence. Internal Opus/WebM audio is separate.
 1080x1920 H.264/AAC is the target, not a promise already proved for all devices.
 Unsupported-device handling is explicit, not a silent lower-quality product or
 remote upload fallback. Any narrower release support claim needs owner approval.

@@ -165,6 +165,133 @@ function fixture() {
 }
 
 describe("local audio workspace ownership", () => {
+  it("previews and restores the retained stream without inspecting, hashing or copying source bytes", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    f.run.mockClear();
+    const record = await f.owner.prepareRetainedSample();
+    expect(record).toMatchObject({
+      retainedSample: true,
+      artifacts: [],
+      source: null,
+    });
+    expect(f.owner.sourceUrl).toBe("/api/analysis/sample-source");
+    expect(f.owner.sourceFile).toBeNull();
+    expect(f.run).not.toHaveBeenCalled();
+    expect(f.ports.createUrl).not.toHaveBeenCalled();
+    expect(restoreLocalWorkspace(record)).toMatchObject({
+      stage: "analysis-confirmation",
+      media: null,
+    });
+    await f.owner.dispose();
+    const reopened = new BrowserWorkspace(f.ports);
+    try {
+      expect(await reopened.initialize()).toEqual(record);
+      expect(reopened.sourceUrl).toBe("/api/analysis/sample-source");
+      expect(f.run).not.toHaveBeenCalled();
+      await reopened.clear();
+      expect(f.stored()).toBeNull();
+      expect(reopened.sourceUrl).toBeNull();
+      expect(f.ports.revokeUrl).not.toHaveBeenCalled();
+    } finally {
+      await reopened.dispose();
+    }
+  });
+
+  it("cancels a pending sample journal commit and releases the preview without leaving a ready record", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    const gate = drainGate();
+    const write = f.ports.journal.write;
+    f.ports.journal.write = async (record) => {
+      await gate.pending;
+      await write(record);
+    };
+    const controller = new AbortController();
+    const pending = f.owner.prepareRetainedSample(controller.signal);
+    const rejected = expect(pending).rejects.toThrow();
+    controller.abort();
+    gate.finish();
+    await rejected;
+    expect(f.stored()).toBeNull();
+    expect(f.owner.sourceUrl).toBeNull();
+    expect(f.remoteCleanup()).toBeNull();
+    await f.owner.dispose();
+  });
+
+  it("expires a sample selection and rejects local or unreceipted analysis evidence", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    const record = await f.owner.prepareRetainedSample();
+    expect(() => parseWorkspaceRecord({ ...record, analysis })).toThrow();
+    expect(() =>
+      parseWorkspaceRecord({
+        ...record,
+        source: {
+          artifact: {
+            artifactId: `loc_${"a".repeat(22)}`,
+            sourceRevision: media.sourceRevision,
+            bytes: media.bytes,
+          },
+          media,
+          fingerprint: "a".repeat(64),
+        },
+      }),
+    ).toThrow();
+    await f.owner.dispose();
+    f.setTime(record.expiresAtMs);
+    const restored = new BrowserWorkspace(f.ports);
+    try {
+      expect(await restored.initialize()).toBeNull();
+      expect(f.stored()).toBeNull();
+      expect(restored.sourceUrl).toBeNull();
+      expect(f.remoteCleanup()).toBeNull();
+    } finally {
+      await restored.dispose();
+    }
+  });
+
+  it("clears a legacy WebM journal without reopening media or losing remote cleanup", async () => {
+    const f = fixture();
+    await f.owner.initialize();
+    await f.owner.prepare(f.file, () => {}).completion;
+    await f.owner.rememberRemoteCleanup(false);
+    const record = f.stored()!;
+    await f.owner.dispose();
+    f.run.mockClear();
+    f.ports.journal.read = vi.fn(async () => {
+      try {
+        return parseWorkspaceRecord({
+          ...record,
+          source: {
+            ...record.source,
+            media: { ...record.source!.media, container: "webm" },
+          },
+        });
+      } catch {
+        throw new LocalMediaError("corrupt");
+      }
+    });
+    const reopened = new BrowserWorkspace(f.ports);
+    try {
+      expect(await reopened.initialize()).toBeNull();
+      expect(f.run.mock.calls.map(([command]) => command.action)).toContain(
+        "delete",
+      );
+      expect(f.run.mock.calls.map(([command]) => command.action)).not.toContain(
+        "reopen",
+      );
+      expect(f.stored()).toBeNull();
+      expect(f.remoteCleanup()).toEqual({
+        version: 1,
+        status: "pending",
+        allowMissingSession: false,
+      });
+    } finally {
+      await reopened.dispose();
+    }
+  });
+
   it("drains remote cleanup journal commits before releasing workspace ownership", async () => {
     const f = fixture(),
       release = vi.fn(),

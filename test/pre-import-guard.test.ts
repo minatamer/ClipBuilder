@@ -1,12 +1,32 @@
-import { describe, expect, it } from "vitest";
+import net from "node:net";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   environmentObservedDuringImport,
+  credentialKeysObservedDuringImport,
   fetchFailureObservedDuringImport,
 } from "./pre-import-guard.fixture.js";
 import { connectionHost } from "./no-network.setup.js";
 
 describe("pre-import deterministic safety", () => {
+  it("removes inherited credentials before test modules load", () => {
+    expect(credentialKeysObservedDuringImport).toEqual([]);
+  });
+
+  it("keeps the socket guard installed when a test restores mocks", () => {
+    const guardedConnect = net.Socket.prototype.connect;
+    vi.restoreAllMocks();
+    expect(net.Socket.prototype.connect).toBe(guardedConnect);
+    const socket = new net.Socket();
+    try {
+      expect(() =>
+        socket.connect({ host: "pre-import-network-guard.invalid", port: 443 }),
+      ).toThrow("Unexpected network access");
+    } finally {
+      socket.destroy();
+    }
+  });
+
   it("recognizes Node-normalized socket destinations without opening a socket", () => {
     const host = "network-must-not-be-contacted.invalid";
     expect(connectionHost([[{ host, port: 443 }, () => {}]])).toBe(host);

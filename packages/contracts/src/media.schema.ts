@@ -7,7 +7,8 @@ import {
   localArtifactIdSchema,
 } from "./ids.schema.js";
 
-export const mediaContainerSchema = z.enum(["mp4", "webm"]);
+export const mediaContainerSchema = z.literal("mp4");
+export const sourceContentTypeSchema = z.literal("video/mp4");
 export const videoCodecSchema = z.enum(["h264", "vp8", "vp9"]);
 export const audioCodecSchema = z.enum(["aac", "opus", "vorbis"]);
 export const mediaOrientationSchema = z.enum([

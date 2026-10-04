@@ -10,7 +10,10 @@ import {
   compositionManifestV2Schema,
   selectedMediaRangeSchema,
 } from "./edit-plan.schema.js";
-import { mediaDescriptorSchema } from "./media.schema.js";
+import {
+  mediaDescriptorSchema,
+  sourceContentTypeSchema,
+} from "./media.schema.js";
 
 export const TEMPORARY_MEDIA_LIMITS = {
   sessionTtlMs: 7_200_000,
@@ -44,7 +47,7 @@ export const mediaUploadRequestSchema = z
   .object({
     binding: mediaBindingSchema,
     bytes: z.number().int().positive().max(PUBLIC_LIMITS.maxSourceBytes),
-    contentType: z.enum(["video/mp4", "video/webm"]),
+    contentType: sourceContentTypeSchema,
     rightsAcknowledged: z.literal(true),
     dataTransferAcknowledged: z.literal(true),
   })

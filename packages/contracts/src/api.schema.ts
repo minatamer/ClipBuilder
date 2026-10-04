@@ -19,7 +19,10 @@ import {
   uploadIdSchema,
   wordIdSchema,
 } from "./ids.schema.js";
-import { mediaDescriptorSchema } from "./media.schema.js";
+import {
+  mediaDescriptorSchema,
+  sourceContentTypeSchema,
+} from "./media.schema.js";
 import { operationStatusSchema } from "./operation.schema.js";
 import {
   boundedPlainTextSchema,
@@ -238,7 +241,7 @@ export const uploadAuthorizeRequestSchema = z
       .int()
       .min(1)
       .max(OWNER_VALIDATION_LIMITS.maxSourceBytes),
-    declaredContentType: z.enum(["video/mp4", "video/webm"]),
+    declaredContentType: sourceContentTypeSchema,
     turnstileToken: turnstileTokenSchema,
   })
   .strict();

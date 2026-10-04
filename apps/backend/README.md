@@ -9,6 +9,12 @@ Its read-only port has no master-delete capability and is separate from renderer
 visitor cleanup. Public config exposes availability only. Defaults/tests disable
 it and cannot obtain ADC or call storage. Preview needs no Gemini key; analysis
 and rendering retain their separate approvals and feature gates.
+`POST /v1/analysis/sample` accepts only rights/transfer acknowledgements and the
+challenge token. After the existing processing grant, it fingerprints the fixed
+master and copies bounded server chunks through the renderer's existing temporary
+upload capability, returning only the disposable object's generation. Renderer
+inspection/proxy preparation and Gemini run in the normal analysis action.
+This path needs all analysis gates; preview selection cannot allocate that copy.
 See [retained sample setup](../../docs/operations/RETAINED_SAMPLE_SETUP.md) for
 blank owner configuration, the required private bucket policy and actual ADC/
 upload checkpoint. Local synthetic checks do not prove that cloud setup.
@@ -26,7 +32,7 @@ streams. Completed-output restore and download retries dispatch zero new jobs/AI
 See [fixed output profile](../../docs/operations/RENDER_PROFILE.md).
 With `FAKE_MODE=true` and no keys, fixture UI cannot download; injected synthetic
 ports prove lifecycle and rejection behavior, not a real MP4. Real source/assembly
-and final rendering require keys/live flags (including `LIVE_RENDER_ENABLED`),
+and final rendering require keys and the approved render validation stage,
 paid/data/rights gates and independent private cloud/compute approval. Actual
 native pixels/audio/performance, devices, rights/licenses and rollout remain
 unchecked; no local AI model or weights are used.
@@ -163,9 +169,9 @@ process-local protected admission. The migration now adds a typed server-only
 renderer client with ADC audience identity and both identity headers. Gemini
 orchestration and protected local source upload/analysis are implemented in CL-007;
 preview/download integration remains later packet work. Final export belongs to cloud compute. No editor or assistant endpoint
-belongs in the demo API. Root `.env.example` now defines the disabled server-only
-CLOUD_RENDER_ENVIRONMENT/CLOUD_SPEND_APPROVED/PRIVATE_RENDERER_ORIGIN fields;
-they require separate cloud authorization even with fake AI. Renderer service
+belongs in the demo API. The ignored backend runtime configuration owns the private renderer origin
+and recorded cloud-spend approval; these require separate cloud authorization
+even with fake AI. Renderer service
 config belongs to `apps/renderer/.env.example`; no browser config exposes it.
 Retired server upload/render feature flags cannot be enabled. In local real
 mode, the public config permits browser intake without credentials; remote
@@ -185,7 +191,7 @@ only. Timed-out/disconnected actions cannot be automatically retried/refunded.
 Normalized-result receipt contracts bind a completed action and request/result
 digests; they do not prove browser metadata or unseen video content.
 
-Default `PROCESSING_GRANTS_ENABLED=false` exposes no grant/clear route.
+Default paid-off composition exposes no grant/clear route.
 The explicit local foundation composition requires validated owner-populated
 blank grant key entries. It refuses paid dispatch unless CL-007 live analysis,
 paid and cloud-spend gates are enabled. `/v1/admission/grant` and `/clear` require actual secure
@@ -215,7 +221,8 @@ corepack pnpm dev:backend
 
 This runs `tsx watch src/server.ts`: it launches the API and reloads it after
 source changes, rather than only compiling TypeScript. On explicit non-test
-local startup, the server loads the ignored root `.env.local` if present.
+local startup, the server loads ignored `apps/backend/.env.local` and
+`apps/backend/runtime.local.json` if present.
 Existing process-environment values take precedence. No environment flags need
 to be copied into the command. Defaults without local overrides are fake and
 paid-disabled; normal startup does not force a mode over the owner's settings.
@@ -234,6 +241,16 @@ pins upstream port `4000`; an intentional backend `PORT` override must not be
 mistaken for a working default full stack. Do not change ports or origins to
 hide a conflict.
 
+Local app availability is independent of unfinished paid-feature setup. With
+real mode selected, missing Gemini/Turnstile/grant/renderer prerequisites or an
+unapproved stage leave paid routes unavailable and dispatches at zero; health
+and local intake can still start. Independently approved retained-sample playback
+stays available. Startup prints fixed requirement codes without private values.
+The operating switches remain authoritative, and completing setup still needs
+the applicable owner approvals. Conflicting modes, malformed structural settings
+and public/test paid composition continue to reject. No fake results substitute
+for an unavailable real operation.
+
 For a requested production-like local run, stop the backend instance first,
 then run from the repository root:
 
@@ -242,7 +259,7 @@ corepack pnpm build:backend
 corepack pnpm start:backend
 ```
 
-The explicit executable entry point loads the same root local configuration
+The explicit executable entry point loads the same app-local configuration
 when eligible; imports and tests do not. Rebuild contracts after changes to
 `packages/contracts`. After owner-managed environment changes, restart the
 whole backend watcher/launcher to load fresh settings; a source reload alone
@@ -281,19 +298,53 @@ These checks are separate from the normal local app launch.
 
 ## Configuration and secrets
 
-The committed schema is [`.env.example`](../../.env.example). `FAKE_MODE=true`
-is the authoritative default; internal provider mode is derived. Legacy
-`PROVIDER_MODE`, when supplied, must match and cannot override the boolean.
-Paid/live flags remain independent admission gates, not alternative mode knobs.
-False selects real mode without fallback; browser-local intake is available
-only in local composition, while remote processing adapters are unavailable.
-Credentials and owner-owned identifiers remain blank.
+The app's [`.env.example`](.env.example) contains only `FAKE_MODE`,
+`PAID_DEMO_ENABLED` and blank credential entries. Copy it to `.env.local` in
+this directory for initial setup. The frontend has its own empty example;
+there is no root environment file. Backend `FAKE_MODE` is the sole mode authority.
+Legacy `PROVIDER_MODE`, when supplied, must match the derived mode.
 
-An ignored root `.env.local` was created from the safe blank example because
-none existed. The owner populates matching entries manually. Never inspect or
-overwrite an existing secret file. Only `server.ts` loads it on explicit local,
-non-test startup; process-environment values take precedence. Imports, unit
-tests and CI never load it. Restart the backend after owner configuration changes.
+Private connections and recorded approvals belong in ignored
+`apps/backend/runtime.local.json`, shaped by [runtime.example.json](runtime.example.json).
+This file is server-only and must never enter a build image, Git or browser config.
+Only the executable entry point reads it during explicit local startup; imports,
+unit tests and CI never load either local file. Existing process environment
+wins for credentials/switches; platform `NODE_ENV`, `PORT`, `APP_ENV` and
+`APP_REVISION` remain injectable. Restart the full backend watcher after changes.
+
+Numerical policy is fixed in code: shared public/assembly limits come from
+`@clipbuilder/contracts`; server rate, capacity, timeout and retry defaults live
+in `src/config/env.schema.ts`. Old `MAX_*`, `RATE_*`, timeout and live-feature
+environment overrides reject at startup. They are not tuning knobs.
+The processing-grant active label is also code policy: `v1`, defined in
+`src/admission/processing.grant.ts`. Paste the 43-character base64url secret
+directly into `PROCESSING_GRANT_KEY`; no JSON or label is needed. The former
+`PROCESSING_GRANT_KEYS_JSON` entry is accepted during migration only when the
+new entry is absent. Reuse its existing `v1` key when renaming the entry.
+An explicit new entry takes precedence, including a blank value. The obsolete
+`PROCESSING_GRANT_ACTIVE_KEY_ID` selector is ignored. The active label cannot be
+selected through environment configuration.
+`paidValidationStage` selects only the separately authorized analysis, assembly
+or render checkpoint; composition derives live features, protected admission
+and its fixed two/three/four dispatch allowance. Raster generation stays disabled.
+Turning `PAID_DEMO_ENABLED=false` disables all paid features and admission,
+even if a validation stage was previously recorded. The stage and approval
+record are prerequisites, never authorization by themselves.
+
+`FAKE_MODE=true` with no keys supports the synthetic journey without providers.
+`FAKE_MODE=false` with paid processing off supports local video intake/playback.
+A complete `retainedSample` reference plus recorded storage-spend approval
+adds generation-pinned private sample reads through ADC; it needs no Gemini key
+or AI model. Keep its bucket/object/generation/byte metadata private. Paid AI
+requires the credential entries, Turnstile hostname, renderer origin, separate
+cloud/transfer/paid-project approvals and an approved validation stage. Public
+paid processing and hosted authenticated routing remain gated under CL-015.
 
 Tests set their complete environment before composition, reject live/paid flags,
-and block non-loopback network access.
+and block non-loopback network access. Never read local configuration to answer
+setup questions or expose secrets/private connection settings through `NEXT_PUBLIC_*`.
+Vitest also disables environment-file loading and removes inherited provider
+credentials. Test mock cleanup cannot remove the worker's socket guard or
+restore paid settings. Synthetic live-shaped configuration inputs exercise
+validation and injected ports only; they do not change the test process mode.
+Paid-flow checks are performed manually by the owner.

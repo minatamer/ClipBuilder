@@ -325,6 +325,18 @@ export function clippingSessionReducer(
 
     case "intake":
       if (
+        event.type === "RETAINED_SAMPLE_READY" &&
+        state.availability.sample &&
+        event.identity.authority === "local" &&
+        event.identity.mode === "sample"
+      )
+        return accept({
+          stage: "analysis-confirmation",
+          identity: event.identity,
+          media: null,
+          diagnosticCode: null,
+        });
+      if (
         event.type === "LOCAL_PREPARATION_STARTED" &&
         state.availability.upload &&
         event.identity.authority === "local" &&
@@ -552,9 +564,10 @@ export function clippingSessionReducer(
           ) ||
           !parsed.success ||
           !resultRevisionMatches(state.operation, parsed.data.revision) ||
-          parsed.data.media.mediaId !== state.lastKnown.media.mediaId ||
-          parsed.data.media.sourceRevision !==
-            state.lastKnown.media.sourceRevision
+          (state.lastKnown.media &&
+            (parsed.data.media.mediaId !== state.lastKnown.media.mediaId ||
+              parsed.data.media.sourceRevision !==
+                state.lastKnown.media.sourceRevision))
         ) {
           return reject(state);
         }
@@ -591,7 +604,9 @@ export function clippingSessionReducer(
           stage: "analysis-failed",
           identity: { ...state.identity, remaining: event.remaining },
           failure: event.failure,
-          recovery: state.lastKnown,
+          recovery: state.lastKnown.media
+            ? { media: state.lastKnown.media }
+            : null,
           diagnosticCode: null,
         });
       }

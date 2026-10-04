@@ -17,3 +17,27 @@ export function createSafeTestEnvironment(
 ): NodeJS.ProcessEnv {
   return { ...safeTestEnvironment, ...overrides };
 }
+
+// Synthetic composition only; shared network interception still applies.
+export function createLiveValidationEnvironment(): NodeJS.ProcessEnv {
+  return {
+    NODE_ENV: "development",
+    FAKE_MODE: "false",
+    PAID_DEMO_ENABLED: "true",
+    GEMINI_API_KEY: "synthetic-key",
+    TURNSTILE_SITE_KEY: "synthetic-site",
+    TURNSTILE_SECRET_KEY: "synthetic-secret",
+    PROCESSING_GRANT_KEY: Buffer.alloc(32, 7).toString("base64url"),
+  };
+}
+
+export function createLiveValidationSettings(
+  stage: "analysis" | "assembly" | "render" = "analysis",
+) {
+  return {
+    paidValidationStage: stage,
+    rendererOrigin: "https://synthetic.run.app",
+    turnstileHostname: "localhost",
+    approvals: { cloudSpend: true, geminiTransfer: true, paidProject: true },
+  };
+}

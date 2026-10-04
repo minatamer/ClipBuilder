@@ -37,6 +37,7 @@ export const workspaceRecordSchema = z
     admittedAtMs: z.number().int().nonnegative(),
     expiresAtMs: z.number().int().positive(),
     status: z.enum(["pending", "ready", "clearing"]),
+    retainedSample: z.literal(true).optional(),
     artifacts: z
       .array(localArtifactReferenceSchema)
       .max(LOCAL_WORKSPACE_LIMITS.maxArtifacts),
@@ -95,7 +96,23 @@ export const workspaceRecordSchema = z
       record.artifacts.length
     )
       issue();
-    if (record.status === "ready" && record.source === null) issue();
+    if (
+      record.status === "ready" &&
+      record.source === null &&
+      !record.retainedSample
+    )
+      issue();
+    if (
+      record.retainedSample &&
+      (record.source || record.artifacts.length !== 0)
+    )
+      issue();
+    if (
+      record.retainedSample &&
+      record.analysis &&
+      record.cloudAnalysis?.status !== "complete"
+    )
+      issue();
     if (
       record.source &&
       (!record.artifacts.some(
@@ -111,6 +128,7 @@ export const workspaceRecordSchema = z
       issue();
     if (
       record.analysis &&
+      !record.retainedSample &&
       (!record.source ||
         !(record.cloudAnalysis
           ? hasSameMediaIdentity(record.analysis.media, record.source.media)
@@ -122,10 +140,12 @@ export const workspaceRecordSchema = z
       const result = record.cloudAnalysis.result;
       if (
         !result ||
-        !record.source ||
         JSON.stringify(result.analysis) !== JSON.stringify(record.analysis) ||
-        result.binding.fingerprint !== record.source.fingerprint ||
-        result.binding.sourceRevision !== record.source.media.sourceRevision
+        (!record.retainedSample &&
+          (!record.source ||
+            result.binding.fingerprint !== record.source.fingerprint ||
+            result.binding.sourceRevision !==
+              record.source.media.sourceRevision))
       )
         issue();
     } else if (
@@ -193,6 +213,7 @@ export const workspaceRecordSchema = z
     if (
       record.status !== "ready" &&
       (record.source ||
+        record.retainedSample ||
         record.analysis ||
         record.assembly ||
         record.selectedId ||
@@ -220,6 +241,7 @@ export function cleanupRecord(record: WorkspaceRecord): WorkspaceRecord {
     ...record,
     status: "clearing",
     source: null,
+    retainedSample: undefined,
     analysis: null,
     assembly: null,
     selectedId: null,

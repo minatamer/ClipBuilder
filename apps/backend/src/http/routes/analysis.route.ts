@@ -8,6 +8,7 @@ import {
   sourceAnalysisRequestSchema,
   selectedAssemblyRequestSchema,
   finalRenderRequestSchema,
+  retainedSampleAnalysisRequestSchema,
 } from "@clipbuilder/contracts";
 import type {
   ProcessingAdmission,
@@ -148,6 +149,16 @@ export function createAnalysisRouter(
       response,
       201,
       await analysis.upload(context(request, response), parsed.data),
+    );
+  });
+  router.post("/sample", async (request, response) => {
+    const parsed = retainedSampleAnalysisRequestSchema.safeParse(request.body);
+    if (!parsed.success)
+      throw new ApplicationError({ code: "INVALID_REQUEST" });
+    sendNoStoreJson(
+      response,
+      201,
+      await analysis.prepareSample(context(request, response), parsed.data),
     );
   });
   router.post("/session", (request, response) => {

@@ -1,3 +1,4 @@
+import "../../../test/deterministic.environment.js";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";

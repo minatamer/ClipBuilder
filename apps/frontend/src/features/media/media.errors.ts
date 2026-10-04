@@ -18,8 +18,7 @@ export type LocalMediaCode =
 const messages: Record<LocalMediaCode, string> = {
   unavailable: "This browser cannot safely prepare this video locally.",
   unsupported: "This video has unsupported or unreadable tracks.",
-  limits:
-    "Choose one MP4 or WebM between 15 seconds and 20 minutes, up to 500 MiB.",
+  limits: "Choose one MP4 between 15 seconds and 20 minutes, up to 500 MiB.",
   storage:
     "Local storage is unavailable or full. Cleanup may need another attempt.",
   busy: "This workspace is open in another tab. Close that tab and retry.",

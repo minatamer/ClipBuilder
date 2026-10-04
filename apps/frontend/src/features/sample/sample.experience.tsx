@@ -53,7 +53,6 @@ import styles from "./sample.module.css";
 import { localMediaFailure } from "../media/media.errors";
 import { localSessionIdentity } from "../media/workspace.restore";
 import { SourcePreview } from "./source-preview";
-import { loadRetainedSample } from "./retained-sample.input";
 import { createSourceAnalysisApi } from "../source-analysis/source-analysis.api";
 import { AnalysisChallenge } from "../source-analysis/analysis-challenge";
 import {
@@ -432,8 +431,8 @@ function SampleScreen({
       !consent ||
       !config.liveAnalysisEnabled ||
       !config.processingSiteKey ||
-      !workspace.snapshot?.source ||
-      !workspace.sourceFile ||
+      ((!workspace.snapshot?.source || !workspace.sourceFile) &&
+        !workspace.snapshot?.retainedSample) ||
       workspace.snapshot.cloudAnalysis
     )
       return;
@@ -565,9 +564,12 @@ function SampleScreen({
     }
     if (!workspace) return;
     void run(async (signal) => {
-      const file = await loadRetainedSample(signal, config.limits.sourceBytes);
+      const record = await workspace.prepareRetainedSample(signal);
       signal.throwIfAborted();
-      selectInput(file);
+      dispatch({
+        type: "RETAINED_SAMPLE_READY",
+        identity: localSessionIdentity(record),
+      });
     });
   };
   const startRequestedSample = useEffectEvent(selectSample);
@@ -995,15 +997,17 @@ function SampleScreen({
               {...(workspace?.sourceUrl
                 ? { sourceUrl: workspace.sourceUrl }
                 : {})}
-              durationMs={state.media.durationMs}
+              {...(state.media ? { durationMs: state.media.durationMs } : {})}
             />
-            <p className={styles.modeNote}>
-              {!localMode
-                ? "This is a simulated source preview. Selected video bytes are not read or uploaded; Find moments continues the fixture journey."
-                : config.liveAnalysisEnabled
-                  ? "Your video will be uploaded to temporary private storage. A smaller video and audio proxy is sent for AI analysis. Source access expires after two hours; cleanup is best effort and provider retention is separate."
-                  : "Video prepared locally. Moment analysis requires enabled processing gates."}
-            </p>
+            {(!localMode || config.liveAnalysisEnabled) && (
+              <p className={styles.modeNote}>
+                {!localMode
+                  ? "This is a simulated source preview. Selected video bytes are not read or uploaded; Find moments continues the fixture journey."
+                  : workspace?.snapshot?.retainedSample
+                    ? "After your consent, a separate sample copy is prepared in temporary private storage. A smaller video and audio proxy is sent for AI analysis. Source access expires after two hours; cleanup is best effort and provider retention is separate."
+                    : "Your video will be uploaded to temporary private storage. A smaller video and audio proxy is sent for AI analysis. Source access expires after two hours; cleanup is best effort and provider retention is separate."}
+              </p>
+            )}
             {config.liveAnalysisEnabled && (
               <label>
                 <input
@@ -1043,13 +1047,13 @@ function SampleScreen({
                 else
                   setFailure({
                     ...sampleFailure(),
-                    message: "Choose exactly one MP4 or WebM video.",
+                    message: "Choose exactly one MP4 video.",
                   });
               }}
             >
               <Upload aria-hidden="true" />
               <h2>Drop your conversation here</h2>
-              <p>MP4 or WebM · 15 seconds to 20 minutes</p>
+              <p>MP4 · 15 seconds to 20 minutes</p>
               <input
                 ref={fileInput}
                 className={styles.screenReaderText}
@@ -1058,7 +1062,7 @@ function SampleScreen({
                 aria-label={
                   localMode ? "Local input video" : "Development input video"
                 }
-                accept="video/mp4,video/webm"
+                accept="video/mp4"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   event.target.value = "";
@@ -1101,7 +1105,7 @@ function SampleScreen({
               )}
               {busy && (
                 <div role="status" className={styles.sampleLoading}>
-                  <Progress label="Preparing sample video" />
+                  <Progress label="Opening sample video" />
                   <Button variant="quiet" onClick={clear}>
                     Cancel sample
                   </Button>
@@ -1127,7 +1131,7 @@ function SampleScreen({
               <p className={styles.rights}>
                 {config.liveAnalysisEnabled
                   ? "Video is kept in one temporary device workspace for up to two hours. After your consent, the original is uploaded to private temporary storage; bounded audiovisual proxies go to Google AI. Provider retention is separate. Clear requests server cleanup and attempts device deletion. Closing the tab does not guarantee deletion; independent server expiry and device cleanup on the next visit apply."
-                  : "Video stays on this device in one temporary workspace for up to two hours. Clear media attempts to remove it. Closing the tab does not guarantee deletion; expired files are cleaned while open or on the next visit. Browser storage may be removed sooner."}
+                  : `Chosen files stay on this device in one temporary workspace for up to two hours. Clear media attempts to remove them. Closing the tab does not guarantee deletion; expired files are cleaned while open or on the next visit. Browser storage may be removed sooner.${config.retainedSampleEnabled ? " The sample streams from private storage." : ""}`}
               </p>
             )}
           </section>
@@ -1136,7 +1140,7 @@ function SampleScreen({
           <section className={styles.empty}>
             <h2>This input is not supported.</h2>
             <p>
-              Choose one nonempty MP4 or WebM under 500 MiB. No file was read or
+              Choose one nonempty MP4 under 500 MiB. No file was read or
               uploaded.
             </p>
           </section>

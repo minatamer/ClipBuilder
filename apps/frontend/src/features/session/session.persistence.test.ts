@@ -210,7 +210,7 @@ describe("allow-listed session projection", () => {
         localSource: {
           sourceId: "replacement-input",
           declaredBytes: 10,
-          contentType: "video/webm",
+          contentType: "video/mp4",
           validation: { status: "accepted" },
         },
       });

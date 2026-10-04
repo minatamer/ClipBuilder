@@ -44,14 +44,21 @@ remain open.
    configuration unlocks this preview without a Gemini key; keep AI/paid gates
    disabled for the preview-only check. Continue only on explicit Find moments.
 3. **Set up one bounded Gemini test.** The owner manually fills the matching blank
-   entries from `.env.example` in ignored local configuration. Check the existing
+   credentials from `apps/backend/.env.example` in ignored
+   `apps/backend/.env.local`; private references and recorded approvals use
+   `apps/backend/runtime.local.json` from its blank runtime example. Limits
+   are fixed in code. Check the existing
    source rights/provider-transfer consent and live prerequisites, agree the
    model and estimated test allowance, and approve the applicable provider and
-   cloud/render spend before dispatch. The Gemini monthly spending ceiling is
-   still deferred to paid testing; budget alerts are not enforceable hard caps.
+   cloud/render spend before dispatch. On 2026-10-04 the owner reported saving
+   the Gemini key, funding USD 5 and setting a USD 5 monthly project cap;
+   see the [setup record](GROUNDED_ANALYSIS_CHECK.md#owner-reported-gemini-setup--2026-10-04).
+   The owner also reports saving Turnstile keys; grant keys are next, with
+   expected-hostname/genuine widget validation still unchecked. Google's cap/prepaid
+   cutoff can lag; budget alerts are not enforceable hard caps.
    Supplying a key alone does not complete these independent gates.
-4. **Test the ordinary real flow and record the evidence.** Enable only the
-   necessary approved live flags, then run Find moments → choose exactly one
+4. **Test the ordinary real flow and record the evidence.** Select only the
+   approved validation stage with real mode and the paid switch enabled, then run Find moments → choose exactly one
    candidate → automatic review → Confirm export → real MP4 download. Check
    grounding, complete ideas, multiple-speaker framing, captions, visuals, A/V
    sync, failures, Clear/expiry and permanent-master protection. Record actual
@@ -61,7 +68,10 @@ remain open.
 
 Today’s keys-free `FAKE_MODE=true` flow uses synthetic previews/results and cannot
 produce a downloadable MP4. No local AI weights/runtime are available or verified.
-Real sample/ADC playback, Gemini/provider quality and real cloud rendering remain
+The 2026-10-04 CL-016 checkpoint now verifies retained storage/ADC and actual
+Step 1 playback/seek, with the owner reporting it working. The later streaming
+follow-up verifies preview Clear/reselect/reload. Detailed perceptual
+sync, real processing-copy/AI behavior, Gemini/provider quality and final rendering remain
 unverified. This checklist does not authorize deployment or public paid enablement.
 
 ## Retained owner demonstration source
@@ -188,9 +198,10 @@ provider/platform docs and obtain the applicable owner approval first.
    work. Public sample/film rights remain unresolved. Paid-project policy intent
    is accepted, but actual provider settings/privacy copy and transfer evidence
    remain unverified. USD 10 project/USD 5 Cloud Run alert targets are confirmed;
-   the latter still needs verification. Gemini's numerical monthly limit and a
-   fresh bounded test allowance are deferred to paid testing: estimate and agree
-   the allowance before dispatch, then measure actual cost. Resolve enforceable
+   the latter still needs verification. The owner reported a USD 5 Gemini monthly
+   project cap on 2026-10-04; its live enforcement remains unverified. A fresh
+   bounded AI/cloud/build test allowance still needs estimation and agreement
+   before dispatch, followed by actual cost measurement. Resolve enforceable
    monetary controls, remaining license/rights notices, saved bucket/IAM/expiry
    policy and current source/device/quality/visual/film evidence before acceptance.
 2. Build target-platform artifacts from the exact audited source and unchanged

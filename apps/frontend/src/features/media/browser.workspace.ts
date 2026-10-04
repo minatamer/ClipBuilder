@@ -126,7 +126,7 @@ export class BrowserWorkspace {
     const generation = this.generation;
     this.check(generation);
     if (
-      !this.record?.source ||
+      (!this.record?.source && !this.record?.retainedSample) ||
       this.record.analysis ||
       this.record.cloudAnalysis?.status === "complete"
     )
@@ -141,7 +141,10 @@ export class BrowserWorkspace {
   async storeGroundedAnalysis(result: GroundedAnalysisResult) {
     const generation = this.generation;
     this.check(generation);
-    if (!this.record?.source || this.record.cloudAnalysis?.status !== "pending")
+    if (
+      (!this.record?.source && !this.record?.retainedSample) ||
+      this.record.cloudAnalysis?.status !== "pending"
+    )
       throw new LocalMediaError("missing");
     const record = parseWorkspaceRecord({
       ...this.record,
@@ -306,7 +309,7 @@ export class BrowserWorkspace {
 
   private releaseMedia(): void {
     this.ports.releaseConsumers();
-    if (this.url) this.ports.revokeUrl(this.url);
+    if (this.url?.startsWith("blob:")) this.ports.revokeUrl(this.url);
     this.url = null;
     this.file = null;
   }
@@ -362,7 +365,7 @@ export class BrowserWorkspace {
       this.ports.cleanupRequired() ||
       !record ||
       record.status !== "ready" ||
-      !record.source ||
+      (!record.source && !record.retainedSample) ||
       this.ports.now() < record.admittedAtMs ||
       this.ports.now() >= record.expiresAtMs
     ) {
@@ -374,6 +377,12 @@ export class BrowserWorkspace {
         await this.assertAssemblyIntegrity(record.cloudAssembly.result);
         this.check(generation);
       }
+      if (record.retainedSample) {
+        this.url = "/api/analysis/sample-source";
+        this.armExpiry();
+        return record;
+      }
+      if (!record.source) throw new LocalMediaError("missing");
       await this.ports.processor.run(
         { action: "clear-audio" },
         this.lifetime.signal,
@@ -408,6 +417,46 @@ export class BrowserWorkspace {
       throw error instanceof LocalMediaError
         ? error
         : new LocalMediaError("missing");
+    }
+  }
+
+  async prepareRetainedSample(signal?: AbortSignal): Promise<WorkspaceRecord> {
+    if (!this.lease || this.disposed) throw new LocalMediaError("unavailable");
+    if (this.record || this.work || this.clearing || this.remoteObligation)
+      throw new LocalMediaError("busy");
+    const generation = this.generation;
+    signal?.throwIfAborted();
+    const admittedAtMs = this.ports.now();
+    const ready = parseWorkspaceRecord({
+      version: 1,
+      sessionId: opaque("ses"),
+      epoch: crypto.randomUUID(),
+      admittedAtMs,
+      expiresAtMs: admittedAtMs + LOCAL_WORKSPACE_LIMITS.ttlMs,
+      status: "ready",
+      retainedSample: true,
+      artifacts: [],
+      source: null,
+      analysis: null,
+      assembly: null,
+      selectedId: null,
+    });
+    this.record = ready;
+    const work = this.write(ready, generation).then(() => {
+      this.check(generation);
+      signal?.throwIfAborted();
+      this.url = "/api/analysis/sample-source";
+      this.armExpiry();
+      return ready;
+    });
+    this.work = work;
+    try {
+      return await work;
+    } catch (error) {
+      if (generation === this.generation && !this.disposed) await this.clear();
+      throw error;
+    } finally {
+      if (generation === this.generation) this.work = null;
     }
   }
 

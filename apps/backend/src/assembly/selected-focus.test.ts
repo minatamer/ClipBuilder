@@ -21,6 +21,10 @@ import {
   composeSelectedPlanProvider,
   SELECTED_PLAN_POLICY,
 } from "./gemini-selected-plan.js";
+import {
+  createLiveValidationEnvironment,
+  createLiveValidationSettings,
+} from "../../test/environment.fixture.js";
 import { loadConfig } from "../config/loadConfig.js";
 import { selectedAssemblyPlanSchema } from "@clipbuilder/contracts";
 import { selectedAssemblyResultSchema } from "@clipbuilder/contracts";
@@ -676,27 +680,10 @@ describe("selected speaker action and provenance", () => {
     expect(transport.upload).toHaveBeenCalledTimes(0);
   });
   it("serializes explicit video sampling and fixed schema through the pinned SDK once", async () => {
-    const config = loadConfig({
-      FAKE_MODE: "false",
-      PAID_DEMO_ENABLED: "true",
-      LIVE_ANALYSIS_ENABLED: "true",
-      LIVE_ASSEMBLY_ENABLED: "true",
-      ADMISSION_MAX_PROCESS_DISPATCHES: "3",
-      PROCESSING_GRANTS_ENABLED: "true",
-      CLOUD_RENDER_ENVIRONMENT: "cloud",
-      CLOUD_SPEND_APPROVED: "true",
-      PRIVATE_RENDERER_ORIGIN: "https://synthetic.run.app",
-      GEMINI_API_KEY: "synthetic",
-      GEMINI_TRANSFER_APPROVED: "true",
-      GEMINI_PAID_PROJECT_CONFIRMED: "true",
-      TURNSTILE_SITE_KEY: "synthetic",
-      TURNSTILE_SECRET_KEY: "synthetic",
-      TURNSTILE_EXPECTED_HOSTNAME: "localhost",
-      PROCESSING_GRANT_ACTIVE_KEY_ID: "test",
-      PROCESSING_GRANT_KEYS_JSON: JSON.stringify({
-        test: Buffer.alloc(32, 7).toString("base64url"),
-      }),
-    });
+    const config = loadConfig(
+      createLiveValidationEnvironment(),
+      createLiveValidationSettings("assembly"),
+    );
     const request = vi.fn<typeof fetch>(async (_url, options) => {
       const body: unknown = JSON.parse(String(options?.body));
       expect(body).toMatchObject({

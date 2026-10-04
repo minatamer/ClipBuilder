@@ -11,7 +11,6 @@ import {
   BlobSource,
   Input,
   MP4,
-  WEBM,
   VideoSampleSink,
 } from "mediabunny";
 import { LocalMediaError } from "./media.errors";
@@ -53,7 +52,7 @@ async function inspect(
     source: new BlobSource(file, {
       maxCacheSize: 4 * LOCAL_WORKSPACE_LIMITS.ioChunkBytes,
     }),
-    formats: [MP4, WEBM],
+    formats: [MP4],
   });
   try {
     const tracks = await input.getTracks();
@@ -87,12 +86,7 @@ async function inspect(
     const media = mediaDescriptorSchema.safeParse({
       mediaId: command.mediaId,
       sourceRevision: command.sourceRevision,
-      container:
-        format.mimeType === "video/mp4"
-          ? "mp4"
-          : format.mimeType === "video/webm"
-            ? "webm"
-            : null,
+      container: format.mimeType === "video/mp4" ? "mp4" : null,
       videoCodec: videoCodec === "avc" ? "h264" : videoCodec,
       audioCodec: await audio.getCodec(),
       durationMs,

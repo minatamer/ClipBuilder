@@ -3,14 +3,22 @@ import express from "express";
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import {
+  createLiveValidationEnvironment,
+  createLiveValidationSettings,
+} from "../../test/environment.fixture.js";
 import { loadConfig } from "../config/loadConfig.js";
 import { type MediaDescriptor } from "@clipbuilder/contracts";
 import { ProcessingAdmission } from "../admission/processing.admission.js";
 import { ProcessingGrantCodec } from "../admission/processing.grant.js";
 import { mapError } from "../http/errorMapper.js";
 import { createAnalysisRouter } from "../http/routes/analysis.route.js";
-import { SourceAnalysis } from "./analysis.usecase.js";
+import {
+  SourceAnalysis,
+  type RetainedSampleProcessingPort,
+} from "./analysis.usecase.js";
 import { reconcileAnalysis } from "./analysis.reconciliation.js";
+import { ANALYSIS_POLICY, ANALYSIS_REQUEST } from "./analysis.prompt.js";
 import {
   GeminiAnalysisProvider,
   composeGeminiTransport,
@@ -85,7 +93,10 @@ function wireOutput() {
     candidates: normalized.candidates,
   };
 }
-function fixture(paidEnabled = true) {
+function fixture(
+  paidEnabled = true,
+  sample: RetainedSampleProcessingPort | null = null,
+) {
   let now = 1000;
   const origin = "http://localhost:3000",
     clock = () => now;
@@ -159,7 +170,14 @@ function fixture(paidEnabled = true) {
     cancel: vi.fn(async () => ({ deleted: true })),
   };
   const provider = { analyze: vi.fn(async (): Promise<unknown> => output()) };
-  const service = new SourceAnalysis(admission, port, provider, "fake", clock);
+  const service = new SourceAnalysis(
+    admission,
+    port,
+    provider,
+    "fake",
+    clock,
+    sample,
+  );
   const upload = {
     media,
     fingerprint: "a".repeat(64),
@@ -183,6 +201,234 @@ function fixture(paidEnabled = true) {
     },
   };
 }
+describe("protected retained sample analysis", () => {
+  it("prepares one server sample copy after admission, then validates and analyzes it once", async () => {
+    const sample = {
+      bytes: 1024,
+      fingerprint: vi.fn(async () => "a".repeat(64)),
+      transfer: vi.fn(async () => "1"),
+    };
+    const f = fixture(true, sample);
+    const input = {
+      rightsAcknowledged: true as const,
+      dataTransferAcknowledged: true as const,
+      turnstileToken: "synthetic",
+    };
+    expect(sample.fingerprint).not.toHaveBeenCalled();
+    const copied = await f.service.prepareSample(f.context, input);
+    expect(copied).toEqual({ generation: "1" });
+    await expect(
+      f.service.prepareSample(f.context, input),
+    ).rejects.toMatchObject({ code: "ACTION_IN_PROGRESS" });
+    expect(sample.fingerprint).toHaveBeenCalledOnce();
+    expect(sample.transfer).toHaveBeenCalledOnce();
+    expect(f.port.upload).toHaveBeenCalledOnce();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+    const result = await f.service.analyze(f.context, f.analyze);
+    expect(result.analysis.media).toMatchObject({
+      container: "mp4",
+      bytes: 1024,
+      width: 1920,
+      height: 1080,
+    });
+    expect(result.analysis.media.sourceRevision).toBe(
+      result.binding.sourceRevision,
+    );
+    expect(f.port.prepare).toHaveBeenCalledOnce();
+    expect(f.provider.analyze).toHaveBeenCalledOnce();
+    await expect(f.service.analyze(f.context, f.analyze)).rejects.toMatchObject(
+      { code: "ACTION_IN_PROGRESS" },
+    );
+    expect(f.provider.analyze).toHaveBeenCalledOnce();
+    await f.service.clear(f.context);
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+  });
+
+  it("cleans a failed server sample copy and makes no provider call or second allocation", async () => {
+    const sample = {
+      bytes: 1024,
+      fingerprint: vi.fn(async () => "a".repeat(64)),
+      transfer: vi.fn(async (): Promise<string> => {
+        throw new Error("private-synthetic-detail");
+      }),
+    };
+    const f = fixture(true, sample);
+    const input = {
+      rightsAcknowledged: true as const,
+      dataTransferAcknowledged: true as const,
+      turnstileToken: "synthetic",
+    };
+    await expect(
+      f.service.prepareSample(f.context, input),
+    ).rejects.toMatchObject({ code: "STORAGE_FAILED" });
+    expect(f.port.upload).toHaveBeenCalledOnce();
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+    await expect(f.service.prepareSample(f.context, input)).rejects.toThrow();
+    expect(sample.transfer).toHaveBeenCalledOnce();
+    expect(f.port.upload).toHaveBeenCalledOnce();
+  });
+
+  it("rejects absent sample capability and missing consent before reading or allocating media", async () => {
+    const sample = {
+      bytes: 1024,
+      fingerprint: vi.fn(async () => "a".repeat(64)),
+      transfer: vi.fn(async () => "1"),
+    };
+    const input = {
+      rightsAcknowledged: true as const,
+      dataTransferAcknowledged: true as const,
+      turnstileToken: "synthetic",
+    };
+    const disabled = fixture();
+    await expect(
+      disabled.service.prepareSample(disabled.context, input),
+    ).rejects.toThrow();
+    const f = fixture(true, sample);
+    const app = express();
+    app.use(
+      "/v1/analysis",
+      createAnalysisRouter(f.admission, f.service, [f.context.origin]),
+    );
+    app.use(
+      (
+        error: unknown,
+        _req: express.Request,
+        res: express.Response,
+        _next: express.NextFunction,
+      ) => {
+        void _next;
+        const mapped = mapError(error, `req_${"a".repeat(32)}`);
+        res.status(mapped.status).json({ error: mapped.error });
+      },
+    );
+    const headers = {
+      Origin: f.context.origin,
+      "Sec-Fetch-Site": "same-origin",
+      Cookie: `__Host-clipping_session=${f.issued.cookie}`,
+      "X-CSRF-Token": f.context.csrf,
+    };
+    for (const extra of [
+      { rightsAcknowledged: false },
+      { dataTransferAcknowledged: false },
+      { sourceUrl: "https://untrusted.invalid" },
+    ]) {
+      await request(app)
+        .post("/v1/analysis/sample")
+        .set(headers)
+        .send({ ...input, ...extra })
+        .expect(400);
+    }
+    await request(app)
+      .post("/v1/analysis/sample")
+      .set({ ...headers, "X-CSRF-Token": "invalid" })
+      .send(input)
+      .expect(403);
+    expect(sample.fingerprint).not.toHaveBeenCalled();
+    expect(sample.transfer).not.toHaveBeenCalled();
+    expect(f.port.upload).not.toHaveBeenCalled();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+    await request(app)
+      .post("/v1/analysis/sample")
+      .set(headers)
+      .send(input)
+      .expect(201);
+    expect(sample.fingerprint).toHaveBeenCalledOnce();
+    expect(sample.transfer).toHaveBeenCalledOnce();
+    expect(f.port.upload).toHaveBeenCalledOnce();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+  });
+
+  it("keeps paid-off composition from reading or copying the retained source", async () => {
+    const sample = {
+      bytes: 1024,
+      fingerprint: vi.fn(async () => "a".repeat(64)),
+      transfer: vi.fn(async () => "1"),
+    };
+    const f = fixture(false, sample);
+    await expect(
+      f.service.prepareSample(f.context, {
+        rightsAcknowledged: true,
+        dataTransferAcknowledged: true,
+        turnstileToken: "synthetic",
+      }),
+    ).rejects.toMatchObject({ code: "PAID_DEMO_DISABLED" });
+    expect(sample.fingerprint).not.toHaveBeenCalled();
+    expect(sample.transfer).not.toHaveBeenCalled();
+    expect(f.port.upload).not.toHaveBeenCalled();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+  });
+
+  it("rejects a sample processing copy whose inspected bytes disagree before calling AI", async () => {
+    const sample = {
+      bytes: 1024,
+      fingerprint: vi.fn(async () => "b".repeat(64)),
+      transfer: vi.fn(async () => "1"),
+    };
+    const f = fixture(true, sample);
+    await f.service.prepareSample(f.context, {
+      rightsAcknowledged: true,
+      dataTransferAcknowledged: true,
+      turnstileToken: "synthetic",
+    });
+    await expect(f.service.analyze(f.context, f.analyze)).rejects.toMatchObject(
+      { code: "MODEL_OUTPUT_REJECTED" },
+    );
+    expect(f.port.prepare).toHaveBeenCalledOnce();
+    expect(f.port.proxy).not.toHaveBeenCalled();
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+  });
+
+  it("aborts a running server copy on Clear and deletes only its disposable binding", async () => {
+    let copying = () => {};
+    const ready = new Promise<void>((resolve) => {
+      copying = resolve;
+    });
+    const sample = {
+      bytes: 1024,
+      fingerprint: vi.fn(async () => "a".repeat(64)),
+      transfer: vi.fn(
+        async (_url: string, signal: AbortSignal): Promise<string> => {
+          copying();
+          return new Promise((_resolve, reject) => {
+            signal.addEventListener(
+              "abort",
+              () => reject(new Error("canceled")),
+              { once: true },
+            );
+          });
+        },
+      ),
+    };
+    const f = fixture(true, sample);
+    const work = f.service.prepareSample(f.context, {
+      rightsAcknowledged: true,
+      dataTransferAcknowledged: true,
+      turnstileToken: "synthetic",
+    });
+    const failed = expect(work).rejects.toThrow();
+    await ready;
+    const binding = f.port.upload.mock.calls[0];
+    await f.service.clear(f.context);
+    await failed;
+    expect(binding).toBeDefined();
+    expect(f.port.cancel).toHaveBeenCalled();
+    expect(f.port.cancel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: f.issued.grant.sessionId,
+        fingerprint: "a".repeat(64),
+      }),
+      expect.any(AbortSignal),
+    );
+    expect(sample.transfer).toHaveBeenCalledOnce();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+    await expect(f.service.analyze(f.context, f.analyze)).rejects.toMatchObject(
+      { code: "SESSION_INVALID" },
+    );
+  });
+});
+
 describe("source quotation token boundaries", () => {
   it.each(
     ["title", "hook", "evidence", "rationale", "caveat"].flatMap((field) =>
@@ -573,26 +819,10 @@ describe("bounded Google Files adapter", () => {
         );
       throw new Error("unexpected-synthetic-request");
     };
-    const config = loadConfig({
-      FAKE_MODE: "false",
-      PAID_DEMO_ENABLED: "true",
-      LIVE_ANALYSIS_ENABLED: "true",
-      PROCESSING_GRANTS_ENABLED: "true",
-      ADMISSION_MAX_PROCESS_DISPATCHES: "2",
-      CLOUD_RENDER_ENVIRONMENT: "cloud",
-      CLOUD_SPEND_APPROVED: "true",
-      PRIVATE_RENDERER_ORIGIN: "https://synthetic.run.app",
-      GEMINI_API_KEY: "synthetic-key",
-      GEMINI_TRANSFER_APPROVED: "true",
-      GEMINI_PAID_PROJECT_CONFIRMED: "true",
-      TURNSTILE_SITE_KEY: "synthetic",
-      TURNSTILE_SECRET_KEY: "synthetic",
-      TURNSTILE_EXPECTED_HOSTNAME: "localhost",
-      PROCESSING_GRANT_ACTIVE_KEY_ID: "test",
-      PROCESSING_GRANT_KEYS_JSON: JSON.stringify({
-        test: Buffer.alloc(32, 7).toString("base64url"),
-      }),
-    });
+    const config = loadConfig(
+      createLiveValidationEnvironment(),
+      createLiveValidationSettings("analysis"),
+    );
     const provider = new GeminiAnalysisProvider(
       composeGeminiTransport(config, transport),
       1000,
@@ -607,13 +837,56 @@ describe("bounded Google Files adapter", () => {
       r.url.includes(":generateContent"),
     )!;
     expect(generation.body).toMatchObject({
+      systemInstruction: { parts: [{ text: ANALYSIS_POLICY }] },
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              fileData: {
+                fileUri: `https://generativelanguage.googleapis.com/v1beta/${fileName}`,
+                mimeType: "video/mp4",
+              },
+            },
+            { text: ANALYSIS_REQUEST },
+          ],
+        },
+      ],
       generationConfig: {
         responseMimeType: "application/json",
         candidateCount: 1,
         maxOutputTokens: 65536,
       },
     });
-    expect(JSON.stringify(generation.body)).toContain("responseJsonSchema");
+    const sent = z
+      .object({ generationConfig: z.record(z.string(), z.unknown()) })
+      .parse(generation.body);
+    for (const parameter of ["temperature", "topP", "topK"])
+      expect(sent.generationConfig).not.toHaveProperty(parameter);
+    expect(sent.generationConfig.responseJsonSchema).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      required: ["words", "turns", "candidates"],
+      properties: {
+        words: {
+          type: "array",
+          minItems: 1,
+          maxItems: 12000,
+          description: expect.stringContaining("Full-source transcript"),
+          items: {
+            type: "array",
+            prefixItems: [
+              expect.objectContaining({ type: "string" }),
+              expect.objectContaining({ type: "integer" }),
+              expect.objectContaining({ type: "integer" }),
+              expect.any(Object),
+            ],
+          },
+        },
+        turns: { type: "array", maxItems: 10000 },
+        candidates: { type: "array", maxItems: 4 },
+      },
+    });
     expect(
       requests.filter((r) => r.url.includes(":generateContent")),
     ).toHaveLength(1);

@@ -11,7 +11,7 @@ import { SAFE_ERROR_MESSAGES } from "@clipbuilder/contracts";
 export function localSessionIdentity(record: WorkspaceRecord): SessionIdentity {
   return {
     sessionId: record.sessionId,
-    mode: "upload",
+    mode: record.retainedSample ? "sample" : "upload",
     authority: "local",
     expiresAt: new Date(record.expiresAtMs).toISOString(),
     remaining: { analysisRetries: 0, renderAttempts: 0 },
@@ -29,7 +29,11 @@ export function restoreLocalWorkspace(
       cleanup: { status: "requesting" },
       diagnosticCode: null,
     };
-  if (!record || record.status !== "ready" || !record.source)
+  if (
+    !record ||
+    record.status !== "ready" ||
+    (!record.source && !record.retainedSample)
+  )
     throw new Error("local-source-not-ready");
   const identity = localSessionIdentity(record);
   if (record.cloudAnalysis && record.cloudAnalysis.status !== "complete")
@@ -42,7 +46,7 @@ export function restoreLocalWorkspace(
         retryable: false,
         requestId: `req_${"0".repeat(32)}`,
       },
-      recovery: { media: record.source.media },
+      recovery: record.source ? { media: record.source.media } : null,
       diagnosticCode: null,
     };
   if (record.analysis)
@@ -124,7 +128,7 @@ export function restoreLocalWorkspace(
   return {
     stage: "analysis-confirmation",
     identity,
-    media: record.source.media,
+    media: record.source?.media ?? null,
     diagnosticCode: null,
   };
 }

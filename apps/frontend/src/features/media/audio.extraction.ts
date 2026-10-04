@@ -87,7 +87,7 @@ export async function extractLocalAudio(
     source: new BlobSource(file, {
       maxCacheSize: 4 * LOCAL_WORKSPACE_LIMITS.ioChunkBytes,
     }),
-    formats: [MP4, WEBM],
+    formats: [MP4],
   });
   let access: SyncFileAccess | undefined;
   let output: Output | undefined;

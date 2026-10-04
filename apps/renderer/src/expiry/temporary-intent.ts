@@ -7,12 +7,29 @@ import {
   objectGenerationSchema,
   selectedMediaRangeSchema,
 } from "@clipbuilder/contracts";
+
+// Previous WebM records remain readable for deletion only. Discard their source
+// profile so it cannot become processing authority under the MP4-only contract.
+const legacyWebmSourceSchema = z
+  .object({
+    ...inspectedSourceSchema.shape,
+    profile: z
+      .object({
+        ...inspectedSourceSchema.shape.profile.unwrap().shape,
+        container: z.literal("webm"),
+      })
+      .strict(),
+  })
+  .strict()
+  .transform(() => null);
+
 export const temporaryIntentSchema = z
   .object({
     version: z.literal(1),
     binding: mediaBindingSchema,
     expiresAtMs: z.number().int().positive(),
     expectedBytes: z.number().int().positive(),
+    // Legacy MIME types are cleanup data, never new upload authorization.
     contentType: z.enum(["video/mp4", "video/webm"]),
     sourceId: uuidV4Schema,
     phase: z.enum([
@@ -31,7 +48,7 @@ export const temporaryIntentSchema = z
       .string()
       .regex(/^[a-f0-9]{64}$/)
       .nullable(),
-    source: inspectedSourceSchema.nullable(),
+    source: z.union([inspectedSourceSchema, legacyWebmSourceSchema]).nullable(),
     sourceGeneration: objectGenerationSchema.nullable(),
     analysisProxy: artifactReferenceSchema.nullable(),
     selectedRange: selectedMediaRangeSchema.nullable().default(null),

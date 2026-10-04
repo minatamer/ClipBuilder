@@ -5,7 +5,7 @@ import {
   type OperationStatusV1,
 } from "@clipbuilder/contracts";
 import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { composeBackend } from "../composition.js";
 import { SampleSession } from "./sampleSession.js";
 import { FakeClock } from "./fakeClock.js";
@@ -28,6 +28,32 @@ async function finish(
 }
 
 describe("CL-004 complete development preview", () => {
+  it("rejects a WebM upload before allocating or processing media", async () => {
+    const authorize = vi.spyOn(SampleSession.prototype, "authorize");
+    try {
+      const composed = composeBackend({ FAKE_MODE: "true" });
+      const agent = request.agent(composed.application);
+      const origin = "http://localhost:3000";
+      await agent
+        .post("/v1/sample/sessions")
+        .set("Origin", origin)
+        .send({ mode: "upload" })
+        .expect(201);
+      await agent
+        .post("/v1/sample/upload/authorize")
+        .set("Origin", origin)
+        .send({
+          declaredBytes: 8192,
+          declaredContentType: "video/webm",
+          turnstileToken: "local-synthetic-fixture",
+        })
+        .expect(400);
+      expect(authorize).not.toHaveBeenCalled();
+    } finally {
+      authorize.mockRestore();
+    }
+  });
+
   it.each(["missing", "expired"] as const)(
     "clears %s sessions idempotently before replacement input",
     (condition) => {
@@ -53,7 +79,7 @@ describe("CL-004 complete development preview", () => {
       expect(() =>
         sample.authorize(replacement.token, {
           declaredBytes: 16384,
-          declaredContentType: "video/webm",
+          declaredContentType: "video/mp4",
           turnstileToken: "local-synthetic-fixture",
         }),
       ).not.toThrow();
@@ -70,7 +96,7 @@ describe("CL-004 complete development preview", () => {
   it.each([
     { declaredBytes: 8192, declaredContentType: "video/mp4" },
     { declaredBytes: 16384, declaredContentType: "video/mp4" },
-    { declaredBytes: 8192, declaredContentType: "video/webm" },
+    { declaredBytes: 32768, declaredContentType: "video/mp4" },
   ] as const)(
     "restarts with $declaredBytes / $declaredContentType while rejecting prior upload capabilities",
     (replacement) => {
@@ -156,7 +182,7 @@ describe("CL-004 complete development preview", () => {
     const replacement = {
       ...original,
       declaredBytes: 16384,
-      declaredContentType: "video/webm",
+      declaredContentType: "video/mp4",
     };
     await agent
       .post("/v1/sample/upload/authorize")

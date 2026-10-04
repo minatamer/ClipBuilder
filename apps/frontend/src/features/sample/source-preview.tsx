@@ -49,6 +49,9 @@ export function SourcePreview({
         label={sourceUrl ? "Source video" : "Simulated source preview"}
         range={range}
         {...playback}
+        durationKnown={
+          !sourceUrl || durationMs !== undefined || actualDuration !== undefined
+        }
         source
         aspectRatio={aspectRatio}
         {...(!sourceUrl

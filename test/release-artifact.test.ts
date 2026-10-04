@@ -80,6 +80,8 @@ describe("production-only artifact inspection", () => {
     "public/main.mjs",
     "public/feasibility/browser-media/index.html",
     ".next/standalone/apps/frontend/.env.local",
+    ".next/standalone/apps/frontend/runtime.local.json",
+    "public/runtime.local.json",
     ".next/standalone/apps/frontend/src/example.test.ts",
   ])("rejects forbidden artifact %s", async (path) => {
     const f = await fixture();

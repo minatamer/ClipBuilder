@@ -12,8 +12,10 @@ import {
 import { z } from "zod";
 import { ApplicationError } from "../http/errorMapper.js";
 
+export const ACTIVE_PROCESSING_GRANT_KEY_ID = "v1";
+
 const tokenPart = z.string().regex(/^[A-Za-z0-9_-]+$/u);
-export const grantKeysSchema = z
+const grantKeysSchema = z
   .record(
     z.string().regex(/^[A-Za-z0-9_-]{1,80}$/u),
     z.string().regex(/^[A-Za-z0-9_-]{43}$/u),
@@ -34,6 +36,17 @@ const grantSchema = z
   .strict();
 export type ProcessingGrant = z.infer<typeof grantSchema>;
 
+export function readGrantKey(value: string): string {
+  if (
+    !/^[A-Za-z0-9_-]{43}$/u.test(value) ||
+    Buffer.from(value, "base64url").length !== 32 ||
+    Buffer.from(value, "base64url").toString("base64url") !== value
+  )
+    throw new Error("Invalid processing grant key configuration.");
+  return value;
+}
+
+// Migration only: normal secret configuration is one plain key.
 export function readGrantKeys(
   json: string,
   activeId: string,
@@ -44,15 +57,9 @@ export function readGrantKeys(
   } catch {
     throw new Error("Invalid processing grant key configuration.");
   }
-  if (
-    !keys[activeId] ||
-    Object.values(keys).some(
-      (key) =>
-        Buffer.from(key, "base64url").length !== 32 ||
-        Buffer.from(key, "base64url").toString("base64url") !== key,
-    )
-  )
+  if (!keys[activeId])
     throw new Error("Invalid processing grant key configuration.");
+  Object.values(keys).forEach(readGrantKey);
   return keys;
 }
 

@@ -30,7 +30,7 @@ export type SessionIdentity = {
 export type LocalSourceSummary = {
   sourceId: string;
   declaredBytes: number;
-  contentType: "video/mp4" | "video/webm";
+  contentType: "video/mp4";
   validation:
     | { status: "pending" }
     | { status: "accepted" }
@@ -153,14 +153,14 @@ type SessionStage =
   | {
       stage: "analysis-confirmation";
       identity: SessionIdentity;
-      media: MediaDescriptor;
+      media: MediaDescriptor | null;
     }
   | {
       stage: "analyzing";
       identity: SessionIdentity;
       operation: OperationStatusV1;
       cancelRequested?: true;
-      lastKnown: { media: MediaDescriptor };
+      lastKnown: { media: MediaDescriptor | null };
     }
   | {
       stage: "analysis-failed";
@@ -258,6 +258,7 @@ export type ClippingSessionState = SessionStage & {
 };
 
 export type ClippingSessionEvent =
+  | { type: "RETAINED_SAMPLE_READY"; identity: SessionIdentity }
   | { type: "CLOUD_RENDER_STARTED" }
   | { type: "CLOUD_RENDER_COMPLETED"; result: FinalRenderResult }
   | { type: "CLOUD_RENDER_FAILED"; failure: SafeError }

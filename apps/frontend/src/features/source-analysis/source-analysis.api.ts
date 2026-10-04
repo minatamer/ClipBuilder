@@ -16,6 +16,9 @@ import {
   finalRenderResultSchema,
   type FinalRenderRequest,
   type FinalRenderResult,
+  retainedSampleAnalysisRequestSchema,
+  retainedSampleAnalysisResponseSchema,
+  type RetainedSampleAnalysisRequest,
 } from "@clipbuilder/contracts";
 import { SampleApiFailure, sampleFailure } from "../sample/sample.api";
 
@@ -147,6 +150,13 @@ export function createSourceAnalysisApi(
         signal,
       );
     },
+    sample: (input: RetainedSampleAnalysisRequest, signal: AbortSignal) =>
+      call(
+        "sample",
+        retainedSampleAnalysisRequestSchema.parse(input),
+        retainedSampleAnalysisResponseSchema,
+        signal,
+      ),
     async transfer(url: string, file: Blob, signal: AbortSignal) {
       mediaUploadResponseSchema.parse({ uploadUrl: url, expiresAtMs: 1 });
       const response = await transport(url, {

@@ -80,6 +80,10 @@ corepack pnpm --filter @clipbuilder/renderer bundle
 
 Unit tests use synthetic injected ports, fake AI, paid/cloud-disabled composition
 and import-time external-network interception. They never use ADC or a bucket.
+Vitest disables local environment-file loading. Both native synthetic proofs
+install the shared hardcoded fake/paid-off environment before other imports and
+remove inherited provider/credential-file variables; they use local binaries and
+synthetic media only. Paid-flow verification is performed manually by the owner.
 
 The opt-in synthetic Node proof also needs an explicitly prepared Chromium:
 `corepack pnpm --filter @clipbuilder/renderer prepare:browser`. This downloads
