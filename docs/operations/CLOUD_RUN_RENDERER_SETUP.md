@@ -11,10 +11,11 @@ question. The existing 20-minute build timeout and service resource/operation
 caps bound this update; do not invent a numerical approved amount or repeat the
 historical bootstrap budget prompt. Paid media tests remain owner-only. The
 initial image build failed its synthetic proof without changing the service;
-the corrected image receives one build retry after local native verification.
-The
-[CL-007 controlled check](GROUNDED_ANALYSIS_CHECK.md#proposed-bounded-execution)
-owns this follow-up.
+the corrected build then passed in 130.972 seconds and the private revision
+update passed digest, unchanged settings/IAM and authenticated health checks.
+The [CL-007 handoff](GROUNDED_ANALYSIS_CHECK.md#verified-private-rollout-and-local-handoff--2026-10-04)
+owns current evidence and local analysis readiness. Real media/Gemini tests
+remain exclusively the owner's manual actions.
 
 The existing project's ID, billing, europe-west1 region and exact private resource
 names were verified privately. The owner approved build/private setup, ADC,

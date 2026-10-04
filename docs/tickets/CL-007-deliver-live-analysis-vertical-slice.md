@@ -69,6 +69,35 @@ The isolated native worker receives hardcoded fake AI and disabled paid/live/clo
 settings, with `NODE_ENV=test` during synthetic proof. Its minimal environment
 contains no parent credentials. Genuine AI/source quality remains owner-only.
 
+## Verified private rollout and local handoff — 2026-10-04
+
+The corrected image from `4c0f510` passed Linux Cloud Build in 130.972 seconds,
+including synthetic output/decode/cancellation and runtime import/tool checks.
+Verified immutable digest:
+`sha256:3f404f3c5daa620f501558bf4103cbe04862e0b061b2d67834a0ff09e4d69377`.
+One private revision update preserved service IAM, attached identity, environment,
+secret mounts and all resource/operation caps. Serving traffic targets the Ready
+revision; anonymous health returned 403 and ADC-authenticated health 200.
+No renderer media endpoint or Gemini call was dispatched by the agent.
+
+Local connection/approval metadata was configured without reading or editing
+secret files; `FAKE_MODE`/`PAID_DEMO_ENABLED` retain their priority. The approved
+stage stays `analysis`. Verified full restart removed 21 old identities with
+zero survivors/listeners, then healthy replacements returned 200 for backend
+health, `/start` and public config. Live analysis is enabled; assembly/render
+remain off. Three owned temporary build contexts and synthetic media were
+cleaned up. Retained local/cloud masters were untouched. The
+[handoff record](../operations/GROUNDED_ANALYSIS_CHECK.md#verified-private-rollout-and-local-handoff--2026-10-04)
+owns PIDs, log location and the owner-only sample/upload/Clear sequence.
+
+Remaining: genuine widget/model access, source rights/Google-transfer confirmation
+per browser flow, transcript/candidate quality and measured real-source/provider
+cleanup; later assembly/export/full-envelope/device/public release gates. This
+limited private rollout does not satisfy the unchecked live acceptance above.
+Deviation: the first build failed before publishing; one corrected build retry
+was required. One service update completed; no new resources, public deployment,
+account usage polling or agent-run paid media test occurred.
+
 ## Owner Gemini setup follow-up — 2026-10-04
 The owner reports creating the Gemini key and manually saving it in ignored
 `apps/backend/.env.local`, completing a USD 5 API prepayment and saving a USD 5

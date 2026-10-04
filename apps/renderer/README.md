@@ -1,5 +1,14 @@
 # Private media renderer
 
+Current private update (2026-10-04): the image from `4c0f510` passed Linux
+synthetic render/decode/cancel and runtime checks, then replaced the existing
+private revision with IAM/resource settings preserved. Local control is connected
+for owner-only analysis testing; assembly/final export remain disabled at the
+approved stage. See the [current handoff](../../docs/operations/GROUNDED_ANALYSIS_CHECK.md#verified-private-rollout-and-local-handoff--2026-10-04).
+Fake mode still needs no provider keys and supplies synthetic results; actual
+source understanding requires the owner's keys/live setup and browser approvals.
+The synthetic native proof does not verify Gemini or real-source quality/cleanup.
+
 CL-012 adds locally tested privacy headers, strict request/stream bounds and
 canonical private caller-purpose routes. Browser documents use fresh CSP nonces;
 Trusted Types remains report-only pending real compatibility checks. Storage

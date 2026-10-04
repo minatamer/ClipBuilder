@@ -2,7 +2,7 @@
 
 Status: **Gemini account/key/spend setup reported complete on 2026-10-04;
 one existing private renderer image build/revision update and local setup are
-authorized; rollout is in progress and live analysis is unperformed**. The owner reserved all paid-flow
+complete; local analysis is enabled and live analysis is unperformed**. The owner reserved all paid-flow
 testing for their own manual actions. Agents may run fake-mode automated checks;
 they must not trigger the paid analysis described below.
 The local fake browser workflow passed without keys/external calls; continuing
@@ -94,6 +94,45 @@ remain zero. This diagnosis comes from content-safe startup categories, not
 reading ignored configuration. No provider, storage or processing request was
 made; the apps remain running. All five fake-only root gates pass, including
 721 synthetic tests. These checks prove no genuine AI or widget quality.
+
+## Verified private rollout and local handoff — 2026-10-04
+
+The corrected allowlisted image from `4c0f510` passed Cloud Build in 130.972
+seconds, including Linux synthetic render, frame/audio decode, scratch/cancel
+checks and production import/binary verification. Artifact Registry agreed with
+the immutable digest:
+`sha256:3f404f3c5daa620f501558bf4103cbe04862e0b061b2d67834a0ff09e4d69377`.
+The existing private service was updated by that digest. Ready revision and
+serving traffic match; IAM, attached identity, environment, secret mounts,
+4 CPU/8 GiB, min zero/max one, concurrency two, timeout and two-operation cap
+were preserved. Anonymous health returned 403; ADC-authenticated health returned
+200 with the exact content-free response. No processing endpoint was invoked.
+
+The ignored backend runtime now connects that renderer, records `localhost`
+and the owner-authorized cloud/Google-transfer/reported paid-project setup, and
+keeps `paidValidationStage=analysis`. Secret files and environment switches were
+not inspected or changed. The switches still determine fake/paid eligibility.
+Verified shutdown removed 21 owned process identities, with no survivors and
+no listeners on 3000/4000 through three-second stabilization. Normal startup
+then verified backend health, `/start` and `/api/sample/config` at 200.
+Public flags report live mode, local media/sample/widget configured and analysis
+enabled; assembly/render remain disabled. All three owned temporary build
+contexts and synthetic media were removed; retained masters were untouched.
+
+Current local ownership: backend supervisor 14956/listener 18136 on 4000;
+frontend supervisor 21820/listener 20804 on 3000. Creation times and listener
+ownership were reverified. Content-safe stdout/stderr and ownership records are
+under `artifacts/local-run/restart-20261004-renderer-connected/` outside Git.
+
+Owner manual sequence: Use sample → Find moments → inspect results → Clear and
+confirm cleanup. Restart the backend after verified Clear before testing the
+upload path; the current two admitted-action cap covers one input/analysis flow
+per backend process. The private renderer cap covers two analysis proxy jobs.
+Source rights/Google transfer acknowledgement and genuine widget validation
+remain application prerequisites for each manual flow. Gemini access/quality,
+real-media deletion and final assembly/export remain unchecked. Agent Gemini
+and real-media processing dispatches were zero; image compute used the approved
+cloud resources. Fake mode still needs no keys and supplies synthetic results.
 
 ## Proposed bounded execution
 
