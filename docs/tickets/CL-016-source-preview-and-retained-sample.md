@@ -1,10 +1,13 @@
 # CL-016 — Preview the source before finding moments
 
-Status: local implementation and validation complete; private cloud upload/ADC,
-actual sample playback and media-driven owner acceptance remain unchecked. The
+Status: local implementation and validation complete; owner-authorized private
+cloud upload, impersonated ADC and actual Step 1 playback/seeking verified on
+2026-10-04; the owner reported it working. The later streaming follow-up verifies
+Clear/reselect/reload and seek playback; detailed perceptual A/V-sync,
+real server-copy/AI processing and media-driven quality acceptance remain unchecked. The
 owner finished the current UI/UX feedback round for now and authorized the
 combined [whole-file commit plan](CL-013-016-UI-COMMIT_PLAN.md) on 2026-10-03.
-No public paid enablement or external sample/AI test has occurred.
+No public paid enablement or external AI test has occurred.
 
 Dependencies: implemented CL-005 workspace, CL-007 source-analysis flow,
 CL-012 protected media transport and the completed local CL-013 redesign.
@@ -46,7 +49,8 @@ supersedes the earlier landing sample CTA requirement and browser evidence below
 - Keep the authorized local master permanently. The proposed cloud master uses
   a separate private retained-media bucket with no visitor expiry/lifecycle/
   sweeper; final destination and IAM approval remain at the owner checkpoint.
-  Browser preparation and subsequent cloud upload use disposable copies only.
+  The later streaming follow-up below removes the full browser sample copy;
+  server processing still uses a separate disposable copy.
 
 ## Architecture and gates
 
@@ -88,8 +92,10 @@ their independent grants, consent, keys, challenge and spend gates.
       actual cloud retention/IAM verification remains at the owner checkpoint.
 - [x] Root format/lint/typecheck/unit/build and diff checks pass.
 - [x] Read-only validation has no actionable local findings.
-- [ ] Owner completes ADC/object setup and approves concrete cloud operation.
-- [ ] Actual sample preview/seek and normal analysis verified (not fake quality).
+- [x] Owner completes ADC/object setup and approves concrete cloud operation.
+- [x] Actual sample preview/playback/seek verified; owner reported it working.
+- [x] Real preview Clear/reselect/reload preservation verified for the protected stream.
+- [ ] Detailed perceptual A/V sync and normal analysis verified (not fake quality).
 - [ ] Final owner UI feedback and live rights/provider/spend gates recorded.
 
 No deployment, public paid enablement, new accounts/history/editor or film work
@@ -177,7 +183,8 @@ prefix could technically coexist, but the separate bucket is proposed to isolate
 the permanent sample from the renderer's bucket-wide delete permission. The owner
 has not chosen the final retained destination. No cloud policy was inspected or
 changed, and no new resource/upload was performed. MP4 alone is not a security or
-retention guarantee; current intake also permits WebM and validates actual media.
+retention guarantee; intake at that checkpoint also permitted WebM and validated
+actual media. The 2026-10-04 MP4-only follow-up below supersedes that format policy.
 
 ## Later owner fake-sample correction — 2026-10-03
 
@@ -275,3 +282,233 @@ actual retained reads still need ADC/cloud setup, and Gemini still requires
 keys, enabled live flags and existing approvals. Media/device/owner/film/release
 gates remain open. No cloud/provider, credential, real media, local AI runtime/
 weights or Git action occurred.
+
+## Protected sample storage checkpoint — 2026-10-04
+
+The owner explicitly requested protected real-sample setup and Step 1 playback
+verification. This authorizes the separate retained-storage setup, read-only
+caller access and one create-only upload in the existing approved project/region;
+it does not authorize Gemini processing, rendering, deployment or Git mutation.
+The owner's service-account impersonated ADC acquired an access token and matched
+the existing local caller. No credential contents or tokens were displayed.
+
+Verified one separate private Standard regional bucket, uniform bucket access,
+enforced public access prevention, no lifecycle deletion rules and no renderer
+bucket grant. Project/ancestor policies contained no direct inherited local-caller,
+renderer or public-principal grants. Granted only bucket-scoped Storage Object
+Viewer to the existing local caller. Its effective permission probe permits
+object read/list and denies object create/update/delete, bucket deletion/update
+and IAM changes. Anonymous object access was rejected.
+
+One create-only upload used generation-match zero, MP4 content type and no-store
+cache control. Uploaded byte count and MD5 match the preserved local master;
+the local SHA-256 is unchanged. A generation-pinned authenticated one-byte media
+read returned the exact range, type and length. Actual identifiers, generations
+and hashes are kept only in ignored owner runtime/configuration records.
+No existing visitor storage or renderer resource was changed.
+
+The owner subsequently authorized secret-free app-local setup under the
+[CL-015 configuration follow-up](CL-015-deploy-validate-measure-and-rollback.md#owner-app-local-configuration-follow-up--2026-10-04). The backend now loads
+its ignored `.env.local` and private runtime sample reference. Real mode is on,
+paid processing is off and no Gemini key is needed. Normal local backend health,
+frontend `/start` and safe config GETs returned 200; retained sample availability
+is true while analysis/assembly/render availability is false.
+
+Use sample fetched the actual retained object into the disposable browser
+workspace and reached Step 1 full-source preview. The video reports duration
+461 seconds, decoded dimensions 1280×720, ready state 4 and no media error.
+Playback time advanced beyond 11 seconds; a slider seek reached exactly 02:00.
+Audio is unmuted, and the owner reported “its working”. No screenshots or media
+content were captured; no Find moments request, Gemini call or renderer job ran.
+The working preview is left open and local apps remain running. Detailed
+perceptual sync checks and an actual Clear/reload preservation cycle remain
+unverified; this evidence is not live AI or final output quality acceptance.
+Fake-mode fixtures remain keys-free and cannot produce a real downloadable MP4.
+The real preview uses authenticated storage, with paid/live AI and rendering off;
+it requires no Gemini key or local AI weights/runtime. Full real processing and
+quality still require separate keys/live/rights/provider/cloud/spend approvals.
+
+## Owner MP4-only intake follow-up — 2026-10-04
+
+The owner requested limiting the demo to MP4 after seeing the MP4/WebM intake
+copy. This supersedes the earlier format policy in completed packets; it changes
+video intake, not the independent retained-master boundary or audio transport.
+
+Changed files and behavior:
+
+- Contracts `media.schema.ts`, `api.schema.ts` and `cloud-media.schema.ts` accept
+  only MP4 source descriptors and one shared `video/mp4` upload MIME schema.
+  Corresponding contract tests reject WebM at both upload boundaries.
+- Frontend `sample.experience.tsx`, `development.input.ts`, `session.types.ts`
+  and `media.errors.ts` restrict the picker, copy and fake metadata intake.
+  `source.worker.ts` and the source side of `audio.extraction.ts` use only the
+  MP4 demuxer; `source-analysis.flow.ts` transfers the validated source as MP4.
+  Internal Opus/WebM audio output/validation remains supported. Development,
+  session persistence and lifecycle fixtures now use MP4 replacement inputs.
+- Backend `analysis.usecase.ts` declares MP4 to the private media service.
+  `developmentPreview.test.ts` proves a WebM API request returns 400 without
+  calling upload authorization, and retains replacement/idempotency coverage.
+- Renderer `inspection.ts` removes Matroska/WebM from the native demuxer allowlist,
+  rejects detected WebM and QuickTime's `qt  ` brand, and preserves existing
+  track, codec, dimension, rotation, rate, size and duration validation.
+  New `source-inspection.test.ts` uses synthetic files and injected probe payloads;
+  it does not claim native full-file decoding or real quality acceptance.
+- Renderer `temporary-intent.ts` keeps legacy WebM metadata readable for cleanup,
+  discarding its obsolete source profile. `media-sessions.ts` blocks further
+  processing of those records; cleanup tests prove upload cancellation, object
+  deletion and eventual intent expiry. Browser worker tests recognize a synthetic
+  WebM header before proving that MP4-labelled bytes are rejected. Browser workspace
+  tests prove old WebM journals clear without reopening media or losing the
+  separate remote cleanup obligation.
+- Frontend README, current source-of-truth policy, browser-media architecture,
+  retained-sample guide and this ticket/index reflect the owner decision.
+
+Settled verification: `corepack pnpm build:contracts`, `corepack pnpm format:check`,
+`corepack pnpm lint`, `corepack pnpm typecheck`, `corepack pnpm test:unit` and
+`corepack pnpm build` passed. The unit gate contains 692 synthetic tests in 70
+files. Focused format, API, worker, persistence, recovery and cleanup checks
+passed before the final root gates. `git diff --check` passed and the index stayed
+empty. The three non-metered local GETs (backend health, `/start` and safe sample
+config) returned 200; existing healthy apps remain running. No fresh visual or
+perceptual playback acceptance is claimed for this format-only follow-up.
+
+The local frontend artifact inventory passes with 1277 files, eight app routes
+and 26 external package links; the immutable release limitation is unchanged.
+Formatting used the installed pinned Prettier CLI directly for the edited files
+because the pnpm exec shim could not resolve its executable; normal root gates
+ran through the pinned package manager. No dependency or configuration change
+was needed for that tooling issue.
+
+Read-only validation of the unstaged MP4 follow-up against HEAD
+`22631c54e159c62363fde83302225c12fdf3a68d`: **Meets ticket; no actionable
+findings.** Inspected the owner requirement, contracts, real worker/native
+inspection path, transfer integration, legacy deletion compatibility, regression
+coverage and documentation. Pre-existing app-local environment/runtime changes
+are preserved and excluded from this follow-up verdict. No index, Git history,
+provider/cloud resource, credential, retained master or paid processing mutation
+occurred. Synthetic test resources drain/close and temporary files are removed.
+
+Fake mode remains keys-free and simulated, with no real final download. Real
+Step 1 preview needs ADC/storage access but no Gemini key or local AI runtime.
+Detailed A/V sync, real Clear/reload preservation, native full-source quality,
+device/visual/film acceptance and all unfinished Gemini/rights/provider/cloud/
+spend/deployment gates remain unchecked. This format restriction does not complete
+or authorize those gates.
+
+## Owner sample streaming follow-up — 2026-10-04
+
+The owner requested removing full-file preparation from **Use sample** after
+observing its download/hash/OPFS delay. The authorized local correction opens
+protected Step 1 streaming immediately and moves processing-copy preparation
+to explicit **Find moments** on the server. The existing retained-storage/ADC
+preview authorization covers read-only playback verification; it does not
+authorize a new cloud resource, processing upload, Gemini call or deployment.
+
+Implementation:
+
+- Contracts `grounded-analysis.schema.ts` defines strict sample consent/challenge
+  input and generation-only output, reusing existing field schemas. Browser
+  input cannot choose a bucket, object, URL, generation or source descriptor.
+- Backend `retained-sample.processing.ts` fingerprints the fixed generation in
+  bounded reads, then transfers 4-MiB chunks through the existing renderer upload
+  capability. It validates exact source ranges/length/MIME, resumable
+  acknowledgements and bounded final metadata, and cancels/releases response
+  readers. This uses two read passes rather than Storage rewrite or broader IAM.
+  The generation-pinned read adapter remains read-only; no renderer master grant
+  or master cleanup reference is introduced.
+- `analysis.usecase.ts` adds single-use sample preparation behind the existing
+  transcription admission, consent and challenge. Normal candidate analysis
+  verifies the copied fingerprint/bytes and constructs the descriptor from
+  authoritative renderer inspection. Existing upload comparison remains for
+  chosen files. Failed/interrupted copies use disposable-binding cleanup;
+  completed, failed and uncertain actions cannot replay. Analysis composition
+  and the `/v1/analysis/sample` route connect this path only under live gates.
+- Frontend `browser.workspace.ts`, workspace schema/restore and session
+  types/reducer journal only the retained-sample selection. No raw source file,
+  artifact, fingerprint or private master identifier is stored for preview.
+  Reload derives the same fixed stream endpoint; Clear/expiry remove selection
+  and preserve independent processing-cleanup obligations. Source analysis API,
+  flow and the Next POST allowlist use server sample preparation at confirmation;
+  tests assert zero browser upload/transfer calls for that branch.
+- `sample.experience.tsx` selects the stream without waiting for source bytes.
+  `source-preview.tsx`/`portrait-player.tsx` show unknown duration and disable
+  playback/seek until native metadata arrives, then use the actual duration. Intake
+  distinguishes chosen local files from the privately streamed sample. The
+  obsolete browser full-download module and its seven tests are removed.
+  Source of truth, service guides and retained/analysis operations own the new
+  behavior; older dated browser-copy evidence above remains historical.
+
+Synthetic regressions cover selection without source-worker/hash/copy work,
+reload, Clear, expiry, a canceled journal commit, invalid local/unreceipted
+sample evidence, single-use admitted copy, paid-off/consent/CSRF gates, malformed
+source ranges and byte counts, bounded chunk transfer/metadata, stalled response
+cancellation, copied-byte mismatch before AI, and Clear during transfer. Fake
+mode remains fixture-only and keys-free, with no real final download; tests
+inject storage/renderer/provider ports without network, ADC or paid calls.
+
+Real preview verification used the existing approved storage read path:
+cleared the old disposable browser source, selected the sample and reached Step
+1 in approximately 414 ms (entry timing, not first-frame or throughput SLA).
+The video source is the fixed same-origin stream endpoint; native metadata
+reports 461 seconds, 1280×720, ready state 4 and no media error. Refresh restores
+that stream; playback advances, an exact two-minute seek works and audio is
+unmuted. The preview is left paused around 02:05 with Find moments disabled.
+A one-byte protected relay read returned 206 and one byte. No screenshots/media
+content, master mutation, processing copy, renderer job or AI call occurred.
+This verifies Clear/reselect/reload playback preservation, not perceptual sync,
+source rights, native maximum-envelope quality or a real server-copy/AI flow.
+
+Final settled verification: `corepack pnpm build:contracts`, `corepack pnpm
+format:check`, `corepack pnpm lint`, `corepack pnpm typecheck`, `corepack pnpm
+test:unit` and `corepack pnpm build` passed, with **714 synthetic tests in 70
+files** (root 31, contracts 60, composition 3, backend 243, frontend 316,
+renderer 61). The earlier parallel check hit the existing boundary-lint test
+timeout; it passed unchanged in the isolated full unit run. The first loading
+control assertion assumed HTML attribute order; correcting the assertion left
+the implementation unchanged. No timeout weakening or dependency change was
+made. `git diff --check` passed; the index remains empty.
+
+The local frontend artifact inventory passes with 1277 files, eight app routes,
+26 external package links and 21,969,300 bytes, SHA-256
+`7d7b3f022eb78b53ce5e9bb9ccb9057408aa29ee230ebc93e80c5760881f8e7e`.
+Its Windows output remains non-self-contained. Existing local health, start and
+sample-config GETs returned 200 and the apps remain running. No new app process
+or cloud resource was launched. Formatting used the installed pinned Prettier
+CLI as in the prior follow-up; final gates used the pinned package manager.
+
+Read-only validation against HEAD
+`22631c54e159c62363fde83302225c12fdf3a68d`, current unstaged streaming changes and
+the two new backend processing modules: **Meets ticket with concerns; no
+remaining actionable local findings.** The first pass found that Play could
+start before metadata then reset when duration changed. Execution disabled Play
+as well as seek until metadata, and revalidation confirmed the resolved guard,
+unknown-duration display and regression assertions. Reviewed contracts,
+composition, protected routes/relay, fixed reader and bounded transfer, copied
+source binding/inspection, single-use admission and cleanup, workspace/reducer/
+restore, normal file intake, fake branch and documentation. Coverage is complete
+for the local fix and real preview; server-copy/cloud/AI and perceptual quality
+remain unverified. Pre-existing MP4-only and app-local configuration changes are
+preserved and excluded from this follow-up verdict. Tests close synthetic
+readers, streams, listeners and work; no media scratch or new browser tab was
+created. No credential files were inspected, and no Git/index action occurred.
+
+The Windows release artifact's external-package-link limitation and all live
+provider/rights/spend/device/film/deployment gates remain open. Real preview
+needs ADC/storage access but no Gemini key or local AI weights/runtime.
+
+## Owner preview-note removal — 2026-10-04
+
+Removed the disabled-analysis processing-gates sentence and its paragraph from
+local Step 1 in `sample.experience.tsx`, as explicitly requested. Fake-mode
+simulation notice and enabled-live transfer/consent copy remain. No processing
+availability, authorization, master retention or workflow behavior changed.
+
+Verification: 29 existing frontend tests in the sample, development-flow and
+source-preview suites passed, along with focused formatting and diff checks.
+Browser text inspection confirms the sentence is absent; refresh restores the
+protected source-video preview with Find moments still disabled. No real media
+screenshots were taken. Full root gates/build were not repeated for this copy
+change; their dated streaming-fix evidence above remains historical. Nothing
+was staged or committed. Fake mode still works without keys using fixtures;
+real analysis needs its existing keys/live/rights/provider/cloud/spend gates,
+and perceptual sync, live processing and release acceptance remain unchecked.

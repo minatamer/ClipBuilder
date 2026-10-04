@@ -44,7 +44,306 @@ Git actions retain separate gates. Usage polling and independent review remain s
 - [x] Early private cloud media/expiry-deletion validation: rights-confirmed 2:45 private test passed under CL-006; fake AI, verified Linux image, cancellation and accelerated independent deletion.
 - [x] Implement locally buildable production-output exclusion and release/rollback preparation; external phases remain unchecked.
 - [x] Complete local validation, five root gates and exact build/input evidence; this is not complete deployment acceptance.
+- [ ] Complete the owner-requested `artifacts/` cleanup checkpoint below before freezing the deployment build.
+- [ ] Complete the owner-requested Google Search favicon/crawlability checkpoint below before freezing the public deployment build; retain its post-release indexing follow-up.
 - [ ] Build acceptable immutable target-platform images; verify actual deployment, negative URL probes, bounded live quality/cost, kill switch/rollback and remaining rights/AI/cloud/license/device gates after approval.
+
+### Owner-requested Google Search favicon checkpoint — 2026-10-04
+
+The owner requested checking the ScreenPilot search-icon issue and recording
+its prevention as required pre-deployment work. Read the referenced chat
+“Find why Google icon is missing”: it reported an SVG-only homepage declaration,
+then a stable 96×96 PNG fix and an owner Search Console recrawl request. That
+other application's deployed result was not independently retested here.
+
+ClipBuilder has the same SVG-only readiness gap: `src/app/icon.svg` is a square
+32×32 icon, with no committed PNG/ICO favicon or explicit raster icon metadata
+in `src/app/layout.tsx`. The proxy's `favicon.ico` matcher exception does not
+create an asset. In addition, `src/app/robots.ts` currently disallows `/` for all
+crawlers, including the homepage and icon. This is the current unreleased-site
+policy; release must deliberately allow the public landing page and favicon.
+No claim is made about an existing ClipBuilder Google result or live HTTP status.
+
+[Google's current favicon guidance](https://developers.google.com/search/docs/appearance/favicon-in-search)
+lists PNG/ICO and other raster formats, requires a square representative icon,
+stable URL and crawlable homepage/icon, and recommends a size above 48×48.
+SVG is not in its current listed formats, so SVG alone is not the release plan.
+Meeting eligibility does not guarantee display; recrawling can take days to weeks.
+
+Required before the public deployment build is frozen:
+
+- [ ] Export the existing approved brand icon as a square **96×96 PNG**, served
+      at a stable `/favicon.png` URL. Preserve the approved visual identity.
+- [ ] Explicitly declare that raster icon in the homepage's generated `<head>`
+      with the correct type/size. Verify actual emitted markup, including Next's
+      file-based icon metadata, rather than assuming a metadata edit wins.
+- [ ] Change the release crawl policy so Googlebot can fetch the public `/`
+      homepage and Googlebot-Image can fetch the favicon. Preserve local/preview
+      crawl restrictions and keep workspace, API and private-media boundaries
+      protected; robots rules are not an access-control mechanism.
+- [ ] Keep proxy asset matching, image packaging, release route/asset inventory
+      and focused tests consistent with the chosen icon implementation. Verify
+      the asset is included in the exact immutable frontend image.
+- [ ] Check unauthenticated homepage/icon responses, raster dimensions, MIME
+      type, stable icon link, redirects and absence of blocking robots/header
+      directives for the chosen public hostname. Record build/synthetic checks
+      separately from later deployed HTTP evidence.
+
+Post-release follow-up, after the separately approved deployment:
+
+- [ ] Verify the same homepage/icon checks on the actual public hostname and any
+      approved alternate hostname; confirm redirects and canonical host policy.
+- [ ] Complete owner Search Console verification and request inspection/indexing
+      of the canonical homepage. Record the request and later observed favicon
+      state separately; do not promise immediate display or wait for Google's
+      appearance update as a pre-deployment acceptance condition.
+
+This follow-up changes documentation only. Static checks and public-icon tests
+need no Gemini key and work with `FAKE_MODE=true`; they prove no live AI quality.
+Real processing still needs provider keys, live gates and applicable approvals.
+No icon asset, runtime/robots configuration, app process, cloud resource, provider
+request, deployment or Git state was changed. The prior testing/startup blocker
+remains unchanged. `git diff --check` is the documentation whitespace check;
+no application test suite is claimed as rerun.
+
+### Owner app-local configuration follow-up — 2026-10-04
+
+The owner authorized moving frontend/backend `.env.local` files and examples
+inside their apps, creating the secret-free local files, and fixing numerical
+policy in code. This is a local configuration follow-up, not hosted transport
+or public release authorization.
+
+Backend examples contain only `FAKE_MODE`, `PAID_DEMO_ENABLED` and blank
+credentials. The frontend example is comments only: no secrets are needed yet
+and backend mode is authoritative. Ignored backend `runtime.local.json` holds
+private connections, generation-pinned sample metadata and recorded independent
+approvals; its committed example has blank/null private references and false
+approvals. The executable entry point loads app-local files only during explicit
+non-test local startup. The obsolete root environment file/example are removed.
+
+Composition derives analysis/assembly/render capabilities and the fixed 2/3/4
+dispatch allowance from the approved validation stage. Paid-off disables every
+paid capability and grant. Old limits/rates/timeouts/live-feature environment
+overrides reject; shared product ceilings and server policy remain in code.
+No dependency or lockfile changes. The release inventory rejects private runtime
+files alongside environment files. Current owner configuration enables only
+the separately approved real sample preview with paid processing disabled.
+
+- [x] Owner authorized secret-free app-local setup and the fixed-policy change.
+- [x] Both local environment files and backend private runtime metadata are ignored.
+- [x] Focused configuration/admission/media/provider tests: 119 synthetic tests in 6 files; no real credentials, network or provider calls.
+- [x] Settled `corepack pnpm format:check`, `lint`, `typecheck`, `test:unit` and `build` pass; 683 synthetic tests in 69 files. `git diff --check` passes.
+- [x] Read-only validation of the final configuration/test/build-exclusion changes has no actionable local findings for this follow-up. Complete public deployment acceptance remains open.
+- [x] Normal app-local startup: backend health, frontend `/start` and safe config return 200. Real sample playback advances and seeks to 02:00; owner reported it working. No AI or render dispatch.
+- [ ] Detailed perceptual sync and real Clear/reload preservation; live Gemini quality, public authenticated routing, target-platform release artifact, deployment, device/rights/spend and rollback evidence remain separate gates.
+
+Validation covered app-local loading in source/compiled entrypoints, default/test
+isolation, strict private-runtime shape, code-fixed numerical policy, the paid
+kill switch, unchanged cloud/provider approval gates, dependency directions,
+blank/ignored examples, release exclusion and synthetic regression coverage.
+The prior CL-016 protected-storage documentation was preserved and updated only
+with actual runtime evidence. No dependency/lockfile change or Git mutation.
+No media/credential content was captured. The direct optional Markdown formatter
+reported style warnings in repository-ignored Markdown; broad formatting was
+not applied. Both code formatting and diff checks pass. A test fixture retained
+old disabled flags in its synthetic production case and was corrected; lint
+also found a console statement in the earlier ignored storage probe, corrected
+to the allowed content-safe warning output. Final gates pass after both fixes.
+
+The local frontend artifact has 1,277 files, eight app routes and 26 external
+package links: `selfContained=false`, SHA-256
+`615735c359e5fb563b43d8fe1b7b587e680cecd57d8a94978cd5eea18fd1ba86`.
+This passes local inventory, not strict target-platform release acceptance.
+
+Apps are left healthy for the owner: backend listener PID 5356 / supervisor
+7904 on 4000; frontend listener PID 18080 / supervisor 12240 on 3000. The working
+URL is `http://localhost:3000/start`. Creation-time-bound process-tree records
+and separate redacted stdout/stderr logs are ignored under
+`artifacts/local-run/protected-sample-20261004/`; keep them while apps run.
+Source master paths/configuration and both retained masters were preserved.
+
+### Owner local restart follow-up — 2026-10-04
+
+The owner requested resolving the repeated restart failure before preparing
+and executing a file-level commit plan. The standard kill/run sequence was
+verified; the normal backend command failed before listening because optional
+paid-feature prerequisites were treated as fatal application configuration.
+This local correction separates app startup from paid-feature availability.
+
+For local real mode only, recognized incomplete Gemini, grant/Turnstile,
+renderer, retained-read or validation-stage prerequisites disable the affected
+optional capability. All paid capabilities/grants and dispatch allowance are
+disabled together when processing setup is incomplete. Health and local intake
+remain available; independently approved retained playback is preserved.
+The owner's operating switches, secret entries, private connection metadata
+and approval records are not changed. Fixed requirement codes are logged,
+without values, and are not added to the public configuration response.
+Malformed structural settings, conflicting modes, public/test paid composition
+and retired overrides remain fatal. Completed approved stages retain the fixed
+2/3/4 dispatch budgets and existing rights/admission/provider controls.
+
+The new synthetic HTTP regression first reproduced the same startup rejection.
+After correction it verifies health/config 200, real mode without fixture
+fallback, absent paid routes, zero dispatches and exactly zero Google transport,
+renderer identity and Turnstile verifier compositions. Focused configuration,
+admission and development-preview checks pass 54 tests in three files after
+the plain-key migration follow-up.
+Additional regressions cover each missing secret/approval, unapproved stage,
+invalid grant ring, malformed/contradictory settings, nonlocal rejection and
+independent retained-playback availability. Tests keep the hardcoded fake/off
+process environment, synthetic inputs and network guard; no private files,
+credentials or actual provider/cloud calls are used.
+
+All five root gates pass with 721 synthetic tests in 70 files (root 33/4,
+contracts 60/5, composition 3/1, backend 248/16, frontend 316/32, renderer 61/12).
+The stopped stack's 23 captured identities are absent and both ports are free
+through a three-second stabilization check. Normal backend/frontend startup
+then passes health, `/start` and `/api/sample/config` GET checks with 200.
+The content-safe record/logs are in ignored
+`artifacts/local-run/restart-20261004-plain-key/`; requested apps remain running.
+Startup reports no missing/invalid grant key. The remaining fixed codes identify
+Google transfer approval, paid-project confirmation, Turnstile hostname and
+renderer connection; no private file was inspected to obtain that diagnosis.
+No sample read, processing request, provider request or cloud update was made.
+The [whole-file commit plan](CL-015-016-LOCAL-COMMIT_PLAN.md) records the
+owner-authorized integration and evidence groups. This correction
+does not update the private renderer, authorize paid testing or complete public
+deployment. Fake mode remains key-free and synthetic; real processing still
+requires the complete keys, approved stage and applicable approvals.
+
+### Owner code-fixed grant label follow-up — 2026-10-04
+
+The subsequent plain grant key follow-up below supersedes this entry's JSON
+setup; the code-fixed `v1` label remains current.
+
+The owner reaffirmed that `.env.local` should contain secrets and the two
+operating switches, and requested keeping the nonsecret grant key label in code.
+`ACTIVE_PROCESSING_GRANT_KEY_ID` is now `v1` in the owning grant module. Backend
+composition derives its selected encryption key from this constant; the active
+label is removed from environment parsing, examples and synthetic composition.
+Only `PROCESSING_GRANT_KEYS_JSON` is required, and it must contain a valid `v1`
+entry. Additional ring entries retain their existing rotation/decryption role.
+An obsolete `PROCESSING_GRANT_ACTIVE_KEY_ID` environment value is ignored,
+allowing manual removal without changing the existing secret or breaking setup.
+
+The regression first failed because an environment selector changed the issued
+key label. It now passes and issues a grant with the code-selected `v1` label,
+even when a legacy selector and legacy ring entry are supplied. Missing `v1`,
+malformed/empty keys, fake/test isolation, paid-off, rights/transfer/cloud gates
+and actual admission behavior retain their existing checks. Focused configuration
+and admission verification passes 38 tests in two files, using synthetic keys
+and zero external requests.
+
+The backend guide, provider setup/generator, controlled-check prerequisites and
+current owner configuration authority reflect this removal. No dependency,
+lockfile or cross-boundary schema change, ignored local file read/write, app
+launch/restart, provider/cloud action or Git mutation is included.
+Fake mode continues to work without keys and supplies synthetic results. Genuine
+Turnstile/Gemini, updated private renderer, real media/quality/cleanup, approved
+AI/cloud/build allowance and deployment/release remain unchecked.
+
+### Owner plain grant key follow-up — 2026-10-04
+
+The owner requested pasting the generated key directly into environment
+configuration. `PROCESSING_GRANT_KEY` now holds one canonical 32-byte base64url
+secret; the `v1` label and internal codec map remain in backend code.
+Examples stay blank, and the private CMD generator prints only the key.
+Normal composition validates the plain value before mounting admission.
+The former JSON entry (or a plain key saved under its old name) remains readable
+only when the new entry is absent. An explicit new entry, including blank,
+takes precedence. No ignored file or credential is read, rewritten or generated.
+
+Synthetic regressions cover actual grant issuance with the fixed label,
+legacy migration, new-entry precedence, missing/malformed/noncanonical keys,
+disabled paid routes and pre-import removal of both old and new secret variables.
+Fake mode remains credential-free. Real processing still needs the complete
+provider/Turnstile setup, renderer revision, approved stage and applicable
+rights/transfer/spend approvals; this change authorizes no paid call or rollout.
+The focused run passes 54 tests in three files, and settled full verification
+passes all five root gates and 721 tests in 70 files. The read-only local
+validation pass finds no actionable issue in this follow-up; real provider,
+widget, renderer, media-quality, cleanup and deployment evidence remains open.
+An additional five-test pre-import run starts with synthetic plain/legacy grant
+entries and paid/live-shaped inherited switches; setup removes both secrets
+and forces fake/paid-off configuration before test modules load.
+
+Final local gates passed: `corepack pnpm format:check`, `corepack pnpm lint`,
+`corepack pnpm typecheck`, `corepack pnpm test:unit` (714 tests in 70 files),
+`corepack pnpm build`, and `git diff --check`. The root format check covers source;
+Markdown is excluded by `.prettierignore`, and its whitespace was checked by
+`git diff --check`. The local frontend artifact inventory still reports 26
+external package links and `selfContained=false`; a successful local build does
+not satisfy the strict release-artifact gate or authorize deployment.
+
+### Owner fake-only automated verification follow-up — 2026-10-04
+
+The owner reserves paid-flow testing for their own manual actions and permits
+agents to run only fake-mode automated checks. All automated verification must
+be hardcoded fake/paid-off before any renderer revision update. This follow-up
+prepares and verifies that boundary locally; it performs no deployment, provider
+call, credentialed probe, media transfer or manual paid flow. Private renderer
+build/compute approval remains separate from owner-only paid processing.
+
+All six Vitest configurations now use `envDir: false`, preventing local
+environment-file loading. One shared test-only initializer overwrites operating
+flags with `NODE_ENV=test`, `FAKE_MODE=true`, derived mode `fake`, paid/cloud/live
+capabilities off and zero dispatches. It removes inherited Gemini, Turnstile,
+plain/legacy grant secrets and explicit ADC/Cloud SDK credential variables before test imports.
+Both frontend/renderer media commands and the selected-proxy native proof import
+this initializer before their other modules. The frontend harness uses explicit
+Node TypeScript stripping; its allowlisted delivery remains local-only.
+
+The worker-lifetime socket guard is independent of Vitest mocks, so
+`vi.restoreAllMocks()` cannot remove it. Test cleanup leaves network interception
+and fake/paid-off settings installed; it no longer restores inherited live flags.
+Unexpected external fetch/socket attempts fail checks; deliberate guard probes
+are blocked and asserted. Configuration tests may supply synthetic live-shaped
+objects to exercise rejection/composition and injected adapters, without changing
+the real test process or enabling actual provider/cloud work.
+
+Two regressions first failed under synthetic inherited paid settings/credential
+variables: credentials were visible during test imports, and mock restoration
+removed the socket guard. After correction, the focused pre-import run passes
+five tests and proves a guarded socket cannot connect after mock restoration.
+The frontend bridge/harness run passes 19 tests in three files. A direct Node
+TypeScript-strip import of the frontend harness confirms fake/paid-off/test mode
+without launching its server. No agent inspected private local files or
+credential content, and test environment-file loading is disabled. No dependency,
+lockfile, application policy,
+shared contract or retained-master change is included.
+
+Final local gates passed: `corepack pnpm format:check`, `corepack pnpm lint`,
+`corepack pnpm typecheck`, `corepack pnpm test:unit` and `corepack pnpm build`.
+The full unit run passed 716 tests in 70 files: root 33/4, contracts 60/5,
+composition 3/1, backend 243/16, frontend 316/32 and renderer 61/12. All suites
+used the shared hardcoded fake/paid-off environment and network guard. The root
+format gate covers source; Markdown is excluded by `.prettierignore`, and
+`git diff --check` verifies whitespace. The local frontend artifact still has
+26 external package links and `selfContained=false`, so its local build does
+not satisfy strict immutable release-artifact acceptance. The full native media
+proofs are opt-in and are not claimed as rerun by unit checks.
+Genuine Gemini/Turnstile, renderer revision, real output quality/cleanup, rights,
+cloud/build allowance, devices and deployment acceptance remain unchecked.
+
+### Owner-requested artifacts cleanup — 2026-10-04
+
+The owner requested a reminder to clean `artifacts/` during this deployment
+ticket. Perform this checkpoint during release preparation; this reminder does
+not authorize immediate deletion or deployment.
+
+- [ ] Inventory old QA captures, temporary setup scripts and logs. Preserve useful
+      release evidence in concise, content-free documentation before removing
+      obsolete files; keep evidence references truthful.
+- [ ] Move genuinely reusable operational tooling into its owning maintained
+      module, with private values supplied through configuration.
+- [ ] Preserve process ownership records and needed logs while their apps are
+      running. Verify shutdown before removing obsolete runtime records; retain
+      sample-reference metadata until its permanent configuration is verified.
+- [ ] Verify every resolved deletion target is inside this repository's
+      `artifacts/` directory. Preserve `.env.local`, credentials and both retained
+      sample masters, including `private/retained-demo-source/`.
+- [ ] Verify ignored artifacts, private media and credentials are excluded from
+      deployment inputs/images, then record the cleanup scope and result here.
 
 ## Local execution - 2026-10-03
 

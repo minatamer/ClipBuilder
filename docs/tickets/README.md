@@ -1,16 +1,64 @@
 # ClipBuilder canonical ticket index
 
-Status: Local code through CL-014 and CL-015 release preparation has recorded audit evidence; later CL-013/CL-016 local follow-ups have no actionable validation findings. The final settled local state passes all five root gates and 680 synthetic tests in 69 files. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
+Status: Local code through CL-014 and CL-015 release preparation has recorded audit evidence; later CL-013/CL-016 local follow-ups have no actionable validation findings. The final settled local state passes all five root gates and 721 synthetic tests in 70 files, including the CL-016 MP4-only and sample-streaming follow-ups. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
+
+The owner's 2026-10-04 [MP4-only intake follow-up](CL-016-source-preview-and-retained-sample.md#owner-mp4-only-intake-follow-up--2026-10-04)
+is implemented and locally validated. WebM video is rejected at intake, upload
+and actual inspection; internal audio and legacy temporary cleanup are preserved.
+
+The owner's [sample-streaming follow-up](CL-016-source-preview-and-retained-sample.md#owner-sample-streaming-follow-up--2026-10-04)
+opens Step 1 without a full browser download/hash/copy. Explicit Find moments
+prepares a disposable processing copy on the server behind existing live gates.
+Real streaming/playback/seek and preview Clear/reselect/reload are verified;
+real server-copy/AI processing and detailed perceptual sync remain unverified.
 
 Current authority: [migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md),
 [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md),
 [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
+The [CL-015 Google Search favicon checkpoint](CL-015-deploy-validate-measure-and-rollback.md#owner-requested-google-search-favicon-checkpoint--2026-10-04)
+is required before the public deployment build is frozen: add and declare a
+stable raster brand icon, verify packaging/HTTP metadata, and deliberately make
+the landing page/icon crawlable. ClipBuilder currently has only an SVG icon and
+blanket crawl disallow. Actual deployed checks and the owner's Search Console
+recrawl request remain post-release follow-ups; no icon implementation or
+indexing/deployment action is claimed by this documentation.
+
+The owner's 2026-10-04 [Gemini setup follow-up](CL-007-deliver-live-analysis-vertical-slice.md#owner-gemini-setup-follow-up--2026-10-04)
+records manual backend key setup, USD 5 prepayment and a USD 5 monthly project
+spend cap as owner-reported completion. The owner also reports saving the
+Turnstile keys. Normal startup validates the configured processing-grant key;
+expected-hostname and genuine widget validation remain unchecked.
+The [CL-015 grant-label follow-up](CL-015-deploy-validate-measure-and-rollback.md#owner-code-fixed-grant-label-follow-up--2026-10-04)
+moves the nonsecret `v1` selection into backend code; only its plain `PROCESSING_GRANT_KEY` secret
+remains in environment configuration. Legacy selectors cannot override it.
+Key/model readiness, the renderer revision update, Google transfer approval and
+the separate bounded AI/cloud/build test allowance remain unverified/open; no
+live analysis or public paid enablement is completed by funding the account.
+
+The owner subsequently reserves paid checks for their own manual actions.
+The [CL-015 fake-only verification follow-up](CL-015-deploy-validate-measure-and-rollback.md#owner-fake-only-automated-verification-follow-up--2026-10-04)
+owns hardcoded fake/paid-off test entry points, disabled environment-file loading,
+credential removal and persistent network guards before a renderer update.
+No agent-run paid flow or deployment is authorized by this verification.
+
+The [CL-007 Gemini prompt review](CL-007-deliver-live-analysis-vertical-slice.md#owner-requested-gemini-prompt-review--2026-10-04)
+revises source analysis against the product rubric, response contracts and current
+official Google guidance. It clarifies full-source timing, anonymous turns,
+ranked distinct moments, exact quotation/evidence rules and source-instruction
+isolation; the shared transport now uses default sampling settings. The review
+and synthetic checks provide no live transcript, timing or editorial-quality
+evidence. Paid checks remain owner-only manual actions.
+
 Current owner UI follow-ups: CL-013 workflow redesign is locally implemented and
 validated; [CL-016 source preview and retained sample](CL-016-source-preview-and-retained-sample.md)
 locally implements and validates the explicit Step 1 preview checkpoint and fixed
-private sample transport. ADC/cloud upload and real playback/AI evidence remain
-at the documented checkpoint. The owner finished this UI/UX feedback round for
+private sample transport. The 2026-10-04 checkpoint verifies protected retained storage/upload/ADC and
+real Step 1 playback/seeking; the owner reported it working. Detailed perceptual
+sync and live AI evidence remain open. The later streaming follow-up verifies
+preview Clear/reselect/reload. App-local
+secret-free configuration and fixed numerical policy are implemented under
+[CL-015](CL-015-deploy-validate-measure-and-rollback.md#owner-app-local-configuration-follow-up--2026-10-04), with all five root gates and 683 synthetic tests in 69 files passing. The owner finished this UI/UX feedback round for
 now on 2026-10-03 and explicitly authorized all pending whole files to be staged
 and committed sequentially using the [three-commit plan](CL-013-016-UI-COMMIT_PLAN.md).
 The [next-session checklist](../operations/LOCAL_RELEASE_PREPARATION.md#owner-next-session-checklist--planned-2026-10-04)

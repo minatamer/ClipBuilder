@@ -16,6 +16,167 @@ Dependencies follow the numbered migration sequence. After documentation approva
 - [x] Verify the actual `FAKE_MODE=true`, API-key-free browser workflow and clean up its temporary services.
 - [ ] Controlled live analysis checkpoint: explicitly deferred by the owner; do not infer authorization from fake results or earlier CL-006 permission.
 
+## Owner Gemini setup follow-up — 2026-10-04
+
+The owner reports creating the Gemini key and manually saving it in ignored
+`apps/backend/.env.local`, completing a USD 5 API prepayment and saving a USD 5
+monthly project spend cap. Automatic reload was disabled in the prepayment view
+and remains instructed off; no final dashboard state or credentialed readiness
+probe was independently checked. No key or provider payload was read, and no
+account identifier was recorded. These account controls can exceed their target during
+Google's enforcement delay and do not authorize a paid source test.
+
+The [controlled-check record](../operations/GROUNDED_ANALYSIS_CHECK.md#owner-reported-gemini-setup--2026-10-04)
+owns sanitized setup evidence; the [current provider guide](../operations/PROVIDER_SETUP.md#local-turnstile-setup--next-prerequisite)
+owns the next genuine local Turnstile steps. Grant keys, the new private renderer
+revision, rights/Google audiovisual-transfer approval and a numerical incremental
+AI/cloud/build test allowance remain open. The renderer/live checkpoint above
+stays unchecked. No live Gemini/Turnstile request, cloud change, restart or Git
+mutation was performed. Fake mode still needs no keys and proves synthetic
+results only; no local AI model is used.
+
+Turnstile setup clarification: use one widget named `ClipBuilder`, initially
+allowing `localhost`. At the separately authorized deployment checkpoint, add
+the real frontend hostname, configure its exact backend hostname check, verify
+the deployed challenge/validation, then remove `localhost`. The same keys can be
+used through this transition. This replaces the guide's earlier separate-widget
+recommendation; it authorizes no deployment, paid call or weaker validation.
+
+The owner subsequently reports copying the Turnstile sitekey and secret into
+the backend's ignored `.env.local`. The private file was not inspected; expected
+hostname and genuine validation remain unchecked. The provider guide now
+explains the existing processing-grant AES-256-GCM key map, matching active label
+and private 32-byte base64url generation command. Grant-key creation/storage is
+not yet confirmed. No secret was generated, provider contacted or app restarted.
+
+This setup follow-up changed documentation only; it added no application test
+or live-quality evidence and did not extend earlier root-gate results. Both
+commands below returned exit 0. Subsequent CL-015 inspection confirmed Markdown
+is excluded by `.prettierignore`, so the first command did not validate Markdown
+style; `git diff --check` did verify whitespace. The normal `pnpm exec prettier`
+shim was unavailable in that pass, so its existing pinned entry point was used
+through pnpm; no dependency installation or version change was made. The later
+code-fixed grant-label implementation and code checks belong to CL-015.
+
+```text
+corepack pnpm exec node node_modules/prettier/bin/prettier.cjs --check docs/operations/PROVIDER_SETUP.md docs/operations/GROUNDED_ANALYSIS_CHECK.md docs/operations/LOCAL_RELEASE_PREPARATION.md docs/tickets/CL-007-deliver-live-analysis-vertical-slice.md docs/tickets/README.md
+git diff --check
+```
+
+## Owner-requested Gemini prompt review — 2026-10-04
+
+The owner requested a thorough researched revision before their manual paid
+check. This follow-up owns the source-analysis / Find moments prompt under
+CL-007. The separate selected-clip speaker/card policy was inspected to verify
+the responsibility boundary; it was not merged into source analysis or rewritten.
+
+Reviewed the current migration, source-of-truth shareability rubric, compact
+provider schema, transcript/candidate contracts, reconciliation and actual SDK
+request. The old prompt stated the broad task but omitted substantial required
+semantics. Its global prohibition on names/instructions also needed clarification
+so faithful transcription would not be confused with identity inference or obeying
+source instructions.
+
+| Area | Revision |
+| --- | --- |
+| Source fidelity | Full-source audible English speech, including unselected passages, fillers, repetitions, negation and spoken names; no polishing, translation, subtitles substituted for audio or invented inaudible words |
+| Timing and references | Full-source millisecond clock including leading silence, actual audible word boundaries, ordinal IDs, chronological order and the existing 250ms overlap limit; no fabricated timing to pass validation |
+| Speakers | Stable anonymous audible-voice labels, explicit null uncertainty, complete inclusive turn partition, and the all-null/empty-turn fallback |
+| Editorial selection | Eight existing rubric signals defined, strongest first, distinct ideas across the source, natural complete boundaries, preserved qualifications/context, actual 10–60s ranges, 35% overlap bound and no count/duration padding |
+| Public grounding | Field meanings and lengths, distinct ordered evidence references, exact contiguous candidate quotations, fixed editorial notes and bounded truthful caveats; instruction/performance claims excluded from public copy |
+| Trust/output | Spoken instructions remain source speech; never obey them. JSON only, no tools/search/extra fields or source-analysis framing/card plan |
+
+The reviewable policy and final user task now live in
+[`analysis.prompt.ts`](../../apps/backend/src/analysis/analysis.prompt.ts).
+The adapter imports them and places the specific anchored task after the video.
+Descriptions on the existing wire schema explain the positional word/turn tuples
+and candidate semantics without defining new cross-boundary schemas. The schema
+and application rejection rules remain authoritative; prose is not a security
+boundary or proof of model obedience.
+
+Official Google guidance checked on 2026-10-04:
+
+- [Current Gemini 3.x guidance](https://ai.google.dev/gemini-api/docs/whats-new-gemini-3.5#prompting-best-practices): direct instructions and an anchored task after long source context. The earlier Gemini 3 guide now directs readers to this page. No forced chain-of-thought or additional model call was added.
+- [Sampling parameter guidance](https://ai.google.dev/gemini-api/docs/whats-new-gemini-3.5#sampling-parameters-no-longer-recommended): remove temperature/top-p/top-k overrides for Gemini 3.x. Removed the existing `temperature: 0` from the shared transport, so both source and selected-plan generation use model defaults. Model, thinking configuration, maximum output, call/retry limits and gates were not changed.
+- [Structured outputs](https://ai.google.dev/gemini-api/docs/structured-output#best-practices): descriptive fields, strong types and application semantic validation. The documented subset explicitly supports `prefixItems`; compact tuples need no speculative format replacement.
+- [Video understanding](https://ai.google.dev/gemini-api/docs/video-understanding#extract-detailed-insights-from-video): default visual sampling can miss fast details. This documentation and a millisecond output type do not establish word-alignment or speaking-face accuracy. No video sampling change was made in this packet.
+
+The injected SDK regression first failed because it still sent the old policy
+and generic task. It now verifies the actual system instruction, video-before-task
+ordering, descriptive positional JSON schema, absent sampling overrides and
+unchanged one-generation/deletion call counts. Focused source-analysis verification
+passes **55 synthetic tests in one file**. The initial filtered script invocation
+forwarded an extra `--` and ran all 243 backend tests instead; it had the same
+single expected regression failure. The corrected focused command is
+`corepack pnpm --filter @clipbuilder/backend test:unit src/analysis/analysis.test.ts`.
+The executable Prettier shim was unavailable, so the existing pinned Node entry
+point formatted the four changed code files; no dependency install occurred.
+
+Settled verification after code edits (all exit 0):
+
+```text
+corepack pnpm format:check
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm test:unit
+corepack pnpm build
+git diff --check
+```
+
+The full suite passed **716 synthetic tests in 70 files**: root 33/4,
+contracts 60/5, composition 3/1, backend 243/16, frontend 316/32 and renderer
+61/12. Test configuration remains hardcoded fake/paid-off, credential-free and
+guarded against external networking. Root formatting checks code; Markdown is
+excluded by `.prettierignore`. The local frontend build inventory passes with
+1,277 files, 26 external package links and `selfContained: false`; it provides
+no new immutable release/deployment acceptance. All tool processes finished;
+no application listener, new cleanup obligation or temporary provider file was
+created. Diff review found no new cross-app dependencies, duplicate boundary
+schemas, unsafe casts, secret/media content, logging, environment readers,
+listeners or timers in the prompt/schema changes.
+
+Remaining quality limits: quotes are checked against the model's own transcript,
+not independently against audio. A plausible but wrong transcript/timestamp or
+weak editorial recommendation can therefore require human rejection. Silent or
+unusable speech cannot produce the required nonempty valid transcript; never
+invent speech to fill it. Real overlapping dialogue may exceed the existing
+250ms reconciliation limit and fail. The 12,000-word schema limit does not prove
+every allowed 20-minute source fits the existing 65,536-token response allowance.
+Incomplete/refused/unusable output still fails without an automatic repair call.
+No alternate ASR/aligner or local AI model/weights were introduced or verified.
+
+With `FAKE_MODE=true` and no keys, deterministic fixtures, request-shape and
+rejection/cleanup checks work; they generate no real Gemini output and prove no
+live transcription, ranking or timing quality. Live analysis still requires the
+owner's key, enabled live/paid gates, renderer readiness, rights/provider-transfer
+and applicable spend approvals, and is reserved for their manual action. No
+ignored environment/private configuration, real media or credentials were read.
+No provider request, cloud mutation, deployment, app launch or Git mutation was
+performed. Live acceptance above remains unchecked.
+
+## Owner-requested live preflight — 2026-10-04
+
+The owner requested restarting the local stack to try a paid flow and review
+the Gemini prompt. The owner reports choosing real/paid switches. Verified
+shutdown cleared both existing supervisors, all captured descendants and ports
+3000/4000. Normal backend replacement failed before listening with the fixed
+`configuration_validation_stage_missing` category. Its entire nine-process tree
+was removed and both ports remained clear through stabilization. The frontend
+replacement was not started because backend readiness failed; both apps are
+stopped. Content-safe logs and exact identities are in the
+[controlled-check preflight](../operations/GROUNDED_ANALYSIS_CHECK.md#local-restart-preflight--2026-10-04).
+
+No secret/private runtime file was inspected or modified. The ignored runtime
+supervisor received one fixed startup-error category, without raw diagnostic
+output. The current grounded Gemini policy was inspected and left unchanged.
+No application implementation or provider/cloud action occurred; no new root
+gate or live-quality evidence is claimed. The owner requested paid testing,
+but the numerical AI/cloud/build allowance, Google audiovisual transfer consent
+and renderer revision update still require the documented checkpoint before
+dispatch. Fake mode remains credential-free and synthetic. Live Turnstile,
+model/account access, actual transcript/candidates, cleanup and full export stay
+unchecked. This evidence does not satisfy live acceptance or authorize Git.
+
 ## Local execution evidence — 2026-10-03
 
 Dependencies: clean worktree at `db58981`; CL-006 committed local/Linux/private
