@@ -1,3 +1,4 @@
+import { AnalysisDiagnostics } from "../analysis/analysis.diagnostics.js";
 import { createHash, randomUUID } from "node:crypto";
 import {
   GROUNDED_ANALYSIS_LIMITS,
@@ -57,169 +58,278 @@ export class SelectedAssembly {
     private readonly media: SelectedAssemblyMedia,
     private readonly provider: SelectedAssemblyProvider,
     private readonly providerName: "fake" | "google-gemini",
+    private readonly diagnostics = new AnalysisDiagnostics(),
   ) {}
   async run(
     context: AdmissionContext,
     input: SelectedAssemblyRequest,
   ): Promise<SelectedAssemblyResult> {
-    const request = selectedAssemblyRequestSchema.parse(input),
-      result = this.source.verify(context, request.analysis);
-    const candidate = result.analysis.candidates.find(
-      (item) => item.id === request.candidateId,
-    );
-    if (!candidate) throw new ApplicationError({ code: "INVALID_REQUEST" });
-    const allWords = result.analysis.transcript.words,
-      first = allWords.findIndex((word) => word.id === candidate.startWordId),
-      last = allWords.findIndex((word) => word.id === candidate.endWordId);
-    if (first < 0 || last <= first)
-      throw new ApplicationError({ code: "INVALID_REQUEST" });
-    const range = {
-        startMs: allWords[first]!.startMs,
-        endMs: allWords[last]!.endMs,
-      },
-      words = allWords.filter(
-        (word) => word.startMs < range.endMs && word.endMs > range.startMs,
+    const request = this.diagnostics.check("assembly_input", () =>
+        selectedAssemblyRequestSchema.parse(input),
+      ),
+      result = this.diagnostics.check("assembly_evidence", () =>
+        this.source.verify(context, request.analysis),
       );
-    if (
-      words.length > FIXED_COMPOSITION_POLICY.maxSelectedWords ||
-      Buffer.byteLength(JSON.stringify(words)) >
-        FIXED_COMPOSITION_POLICY.selectedContextBytes
-    )
-      throw new ApplicationError({ code: "INVALID_REQUEST" });
-    let captions;
+    let selection;
     try {
-      captions = compileFixedCaptions({ range, words });
+      selection = this.diagnostics.check("assembly_range", () => {
+        const candidate = result.analysis.candidates.find(
+          (item) => item.id === request.candidateId,
+        );
+        if (!candidate) throw new Error("assembly_candidate_missing");
+        const allWords = result.analysis.transcript.words,
+          first = allWords.findIndex(
+            (word) => word.id === candidate.startWordId,
+          ),
+          last = allWords.findIndex((word) => word.id === candidate.endWordId);
+        if (first < 0 || last <= first)
+          throw new Error("assembly_word_range_invalid");
+        const range = {
+            startMs: allWords[first]!.startMs,
+            endMs: allWords[last]!.endMs,
+          },
+          words = allWords.filter(
+            (word) => word.startMs < range.endMs && word.endMs > range.startMs,
+          ),
+          contextBytes = Buffer.byteLength(JSON.stringify(words));
+        this.diagnostics.assembly("assembly_range", {
+          selectedWords: words.length,
+          contextBytes,
+          durationMs: range.endMs - range.startMs,
+        });
+        if (
+          words.length > FIXED_COMPOSITION_POLICY.maxSelectedWords ||
+          contextBytes > FIXED_COMPOSITION_POLICY.selectedContextBytes
+        )
+          throw new Error("assembly_context_limit");
+        return { candidate, range, words };
+      });
     } catch {
       throw new ApplicationError({ code: "INVALID_REQUEST" });
     }
-    const payload = await this.admission.run(
-      context,
-      {
-        bytes: Buffer.from(
-          JSON.stringify({
-            source: result.binding,
-            generation: result.generation,
-            analysisRevision: result.analysis.revision,
-            candidateId: candidate.id,
-            range,
-            analysisDigest: digest(result),
-          }),
-        ),
-        contentType: "application/json",
-        allowedContentTypes: ["application/json"],
-        maxBytes: GROUNDED_ANALYSIS_LIMITS.requestBytes,
-        turnstileToken: request.turnstileToken,
-        action: "visual-plan",
-      },
-      () => {},
-      async (signal) => {
-        try {
-          const prepared = mediaSelectResponseSchema.parse(
-            await this.media.select(
-              {
-                binding: result.binding,
-                generation: result.generation,
-                nonce: randomUUID(),
-                range,
-              },
-              signal,
-            ),
-          );
-          const media = result.analysis.media;
-          if (
-            JSON.stringify(prepared.range) !== JSON.stringify(range) ||
-            prepared.source.fingerprint !== result.binding.fingerprint ||
-            prepared.source.bytes !== media.bytes ||
-            prepared.source.durationMs !== media.durationMs ||
-            prepared.source.width !==
-              (media.rotationDegrees % 180 ? media.height : media.width) ||
-            prepared.source.height !==
-              (media.rotationDegrees % 180 ? media.width : media.height)
-          )
-            throw new Error();
-          let raw: unknown;
-          try {
-            const proxy = await this.media.proxy(result.binding, signal);
-            if (
-              proxy.size !== prepared.analysisProxy.bytes ||
-              proxy.size > TEMPORARY_MEDIA_LIMITS.proxyBytes ||
-              createHash("sha256")
-                .update(Buffer.from(await proxy.arrayBuffer()))
-                .digest("hex") !== prepared.analysisProxy.checksum
-            )
-              throw new Error();
-            raw = await this.provider.plan(
-              proxy,
-              { range, words },
-              signal,
-              result.binding.sessionId,
-            );
-          } finally {
-            await this.media.releaseProxy(
-              result.binding,
-              AbortSignal.timeout(GROUNDED_ANALYSIS_LIMITS.cleanupMs),
-            );
-          }
-          const compiled = compileFixedAssembly(
-            raw,
-            result,
-            { range, words },
-            captions,
-          );
-          signal.throwIfAborted();
-          const { receipt: _receipt, ...validated } =
-            selectedAssemblyResultSchema.parse({
-              version: 1 as const,
-              binding: result.binding,
+    const { candidate, range, words } = selection;
+    let captions;
+    try {
+      captions = this.diagnostics.check("assembly_captions", () =>
+        compileFixedCaptions({ range, words }),
+      );
+      this.diagnostics.assembly("assembly_captions", {
+        captionGroups: captions.length,
+      });
+    } catch {
+      throw new ApplicationError({ code: "INVALID_REQUEST" });
+    }
+    this.diagnostics.privateStageOutput("assembly_selected_context", {
+      range,
+      words,
+      captions,
+    });
+    const payload = await this.diagnostics.step("assembly_admission", () =>
+      this.admission.run(
+        context,
+        {
+          bytes: Buffer.from(
+            JSON.stringify({
+              source: result.binding,
               generation: result.generation,
               analysisRevision: result.analysis.revision,
               candidateId: candidate.id,
-              provider: this.providerName,
-              ...compiled,
-              receipt: "pending",
+              range,
+              analysisDigest: digest(result),
+            }),
+          ),
+          contentType: "application/json",
+          allowedContentTypes: ["application/json"],
+          maxBytes: GROUNDED_ANALYSIS_LIMITS.requestBytes,
+          turnstileToken: request.turnstileToken,
+          action: "visual-plan",
+        },
+        () => {},
+        async (signal) => {
+          try {
+            const prepared = await this.diagnostics.step(
+              "assembly_media_prepare",
+              async () =>
+                mediaSelectResponseSchema.parse(
+                  await this.media.select(
+                    {
+                      binding: result.binding,
+                      generation: result.generation,
+                      nonce: randomUUID(),
+                      range,
+                    },
+                    signal,
+                  ),
+                ),
+            );
+            const media = result.analysis.media;
+            this.diagnostics.check("assembly_source_validation", () => {
+              const sourceMatched = !(
+                JSON.stringify(prepared.range) !== JSON.stringify(range) ||
+                prepared.source.fingerprint !== result.binding.fingerprint ||
+                prepared.source.bytes !== media.bytes ||
+                prepared.source.durationMs !== media.durationMs ||
+                prepared.source.width !==
+                  (media.rotationDegrees % 180 ? media.height : media.width) ||
+                prepared.source.height !==
+                  (media.rotationDegrees % 180 ? media.width : media.height)
+              );
+              this.diagnostics.assembly("assembly_source_validation", {
+                sourceMatched,
+              });
+              if (!sourceMatched) throw new Error("assembly_source_mismatch");
             });
-          void _receipt;
-          const preview = mediaPreviewResponseSchema.parse(
-            await this.media.preview(
+            let raw: unknown;
+            let proxyCleanupFailure: ApplicationError | undefined;
+            try {
+              const proxy = await this.diagnostics.step(
+                "assembly_proxy_fetch",
+                () => this.media.proxy(result.binding, signal),
+              );
+              await this.diagnostics.step(
+                "assembly_proxy_validation",
+                async () => {
+                  const bytesMatched =
+                      proxy.size === prepared.analysisProxy.bytes &&
+                      proxy.size <= TEMPORARY_MEDIA_LIMITS.proxyBytes,
+                    checksumMatched =
+                      bytesMatched &&
+                      createHash("sha256")
+                        .update(Buffer.from(await proxy.arrayBuffer()))
+                        .digest("hex") === prepared.analysisProxy.checksum;
+                  this.diagnostics.assembly("assembly_proxy_validation", {
+                    proxyBytes: proxy.size,
+                    bytesMatched,
+                    checksumMatched,
+                  });
+                  if (!bytesMatched || !checksumMatched)
+                    throw new Error("assembly_proxy_mismatch");
+                },
+              );
+              raw = await this.diagnostics.step("selected_planning", () =>
+                this.provider.plan(
+                  proxy,
+                  { range, words },
+                  signal,
+                  result.binding.sessionId,
+                ),
+              );
+            } finally {
+              try {
+                await this.diagnostics.step("proxy_cleanup", () =>
+                  this.media.releaseProxy(
+                    result.binding,
+                    AbortSignal.timeout(GROUNDED_ANALYSIS_LIMITS.cleanupMs),
+                  ),
+                );
+              } catch {
+                proxyCleanupFailure = new ApplicationError({
+                  code: "CLEANUP_PENDING",
+                });
+                this.diagnostics.failure("proxy_cleanup", proxyCleanupFailure);
+              }
+            }
+            if (proxyCleanupFailure) throw proxyCleanupFailure;
+            this.diagnostics.privateStageOutput(
+              "assembly_reconciliation_input",
               {
-                binding: result.binding,
-                generation: result.generation,
-                nonce: randomUUID(),
+                raw,
                 range,
-                manifestHash: validated.manifestHash,
+                words,
+                captions,
               },
-              signal,
-            ),
-          );
-          if (
-            preview.manifestHash !== validated.manifestHash ||
-            JSON.stringify(preview.binding) !==
-              JSON.stringify(result.binding) ||
-            JSON.stringify(preview.range) !== JSON.stringify(range)
-          )
-            throw new Error();
-          signal.throwIfAborted();
-          return validated;
-        } catch (error) {
-          await this.media.cancel(
-            result.binding,
-            AbortSignal.timeout(GROUNDED_ANALYSIS_LIMITS.cleanupMs),
-          );
-          throw error instanceof ApplicationError
-            ? error
-            : new ApplicationError({ code: "MODEL_OUTPUT_REJECTED" });
-        }
-      },
-    );
-    return selectedAssemblyResultSchema.parse({
-      ...payload,
-      receipt: this.admission.completedReceipt(
-        context,
-        "visual-plan",
-        result.binding.sourceRevision,
-        digest(payload),
+            );
+            const compiled = this.diagnostics.check("assembly_validation", () =>
+              compileFixedAssembly(
+                raw,
+                result,
+                { range, words },
+                captions,
+                this.diagnostics,
+              ),
+            );
+            this.diagnostics.privateStageOutput(
+              "assembly_reconciliation_result",
+              compiled,
+            );
+            signal.throwIfAborted();
+            const { receipt: _receipt, ...validated } = this.diagnostics.check(
+              "assembly_result",
+              () =>
+                selectedAssemblyResultSchema.parse({
+                  version: 1 as const,
+                  binding: result.binding,
+                  generation: result.generation,
+                  analysisRevision: result.analysis.revision,
+                  candidateId: candidate.id,
+                  provider: this.providerName,
+                  ...compiled,
+                  receipt: "pending",
+                }),
+            );
+            void _receipt;
+            const preview = await this.diagnostics.step(
+              "assembly_preview",
+              async () =>
+                mediaPreviewResponseSchema.parse(
+                  await this.media.preview(
+                    {
+                      binding: result.binding,
+                      generation: result.generation,
+                      nonce: randomUUID(),
+                      range,
+                      manifestHash: validated.manifestHash,
+                    },
+                    signal,
+                  ),
+                ),
+            );
+            this.diagnostics.check("assembly_preview_validation", () => {
+              const previewMatched = !(
+                preview.manifestHash !== validated.manifestHash ||
+                JSON.stringify(preview.binding) !==
+                  JSON.stringify(result.binding) ||
+                JSON.stringify(preview.range) !== JSON.stringify(range)
+              );
+              this.diagnostics.assembly("assembly_preview_validation", {
+                previewMatched,
+              });
+              if (!previewMatched) throw new Error("assembly_preview_mismatch");
+            });
+            signal.throwIfAborted();
+            return validated;
+          } catch (error) {
+            await this.diagnostics
+              .step("source_cleanup", () =>
+                this.media.cancel(
+                  result.binding,
+                  AbortSignal.timeout(GROUNDED_ANALYSIS_LIMITS.cleanupMs),
+                ),
+              )
+              .catch(() => {
+                this.diagnostics.failure(
+                  "source_cleanup",
+                  new ApplicationError({ code: "CLEANUP_PENDING" }),
+                );
+              });
+            throw error instanceof ApplicationError
+              ? error
+              : new ApplicationError({ code: "MODEL_OUTPUT_REJECTED" });
+          }
+        },
       ),
-    });
+    );
+    return this.diagnostics.check("assembly_signing", () =>
+      selectedAssemblyResultSchema.parse({
+        ...payload,
+        receipt: this.admission.completedReceipt(
+          context,
+          "visual-plan",
+          result.binding.sourceRevision,
+          digest(payload),
+        ),
+      }),
+    );
   }
   verify(context: AdmissionContext, value: unknown) {
     const result = selectedAssemblyResultSchema.parse(value),

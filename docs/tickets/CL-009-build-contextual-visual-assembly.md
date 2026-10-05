@@ -1,5 +1,73 @@
 # CL-009 — Fixed contextual composition assembly
 
+Current owner-requested follow-up (2026-10-05):
+[assembly request and diagnostic coverage](CL-009-assembly-request-and-diagnostics.md).
+The selected proxy upload succeeded, but generation returned HTTP 400 before
+plan compilation or preview. This follow-up adopts JSON-only generation with
+schema prompt guidance and expands stage diagnostics. Local verification and
+the owner's paid acceptance are recorded separately in that packet.
+
+## Owner local assembly-stage enablement — 2026-10-05
+
+Status: **approved, enabled and local restart/readiness verified; owner paid UI
+acceptance pending**.
+The owner explicitly approved enabling assembly after CL-007 diagnosed disabled
+Proceed. Source analysis, selected assembly and CL-010 preview integration are
+already implemented; the matching private renderer image is already deployed.
+This dependency-ready packet enables that existing local path, with no pipeline
+or model change, new deployment, renderer setting change or Git action.
+
+1. Validate the existing ignored runtime settings internally and change only
+   `paidValidationStage` from `analysis` to `assembly`. Preserve all existing
+   private metadata, approvals, credentials, operating switches and diagnostics.
+   Do not read or modify environment files. Rendering stays disabled.
+2. Restart only the backend with its normal entrypoint. Capture and verify the
+   old supervisor, watcher, descendants/orphans and creation identities; stop
+   them fully, check stabilization and launch the new hidden owned tree.
+   Preserve the healthy frontend and existing logs/captures.
+3. Verify non-metered health, /start and public configuration: live analysis and
+   assembly available, render unavailable, challenge configured. Confirm private
+   output capture is armed and safe backend diagnostics remain ready. Report
+   content-free process/log evidence and no stale backend listener.
+4. Record the session consequence: a new backend boot epoch invalidates previous
+   signed analysis/admission. The owner starts over and runs Find moments again
+   before testing Proceed; do not weaken session provenance to reuse old output.
+
+This is approval for the local assembly stage and its manual owner test. Agents
+do not run a paid processing request. Real assembly quality and preview remain
+unchecked until that test. Final render/export is a separate stage. Existing
+fake/no-key tests prove bounded orchestration/layout/cleanup, not live quality;
+no local AI model or weights are used. The settled five root gates immediately
+preceding this configuration-only packet pass with 983 tests in 84 files.
+
+### Verified handoff
+
+Only the ignored `apps/backend/runtime.local.json` stage changed: `analysis`
+to `assembly`. Schema validation and deep comparison prove all other fields
+were preserved. No environment file was read/changed, approval invented,
+render capability enabled, provider/cloud dispatch or Git mutation performed.
+
+Verified shutdown captured eight owned processes under supervisor 20672,
+including the watcher and current API child, and confirmed their absence and
+released port 4000 through stabilization. One initial replacement was cleaned
+after its final readiness check failed; its eight identities also remain absent.
+The final normal hidden launch is supervisor **11188**, API listener **18720**
+on `127.0.0.1:4000`; frontend **20712** remains the same verified instance on
+`127.0.0.1:3000`. Health, /start and /api/sample/config return **200**. Public
+config confirms live analysis/assembly true, render false and challenge present.
+Analysis, renderer, reconciliation and candidate-decoding diagnostics are ready;
+complete private Gemini response capture remains armed under the existing permit.
+
+Content-free process/shutdown/verification records and separate stdout/stderr
+logs remain in the ignored OS-temp `clipbuilder-runtime` area; the final launch
+directory is `restart-backend-assembly-20261005-180915`. Earlier logs and capture
+files are preserved. No processing POST was sent; agent paid dispatch count is
+zero. Config-only validation: **Meets this local enablement packet**; no code,
+dependency/schema/model change requires repeating the already settled root gates.
+The owner must start over, run fresh Find moments and then test Proceed because
+the backend boot epoch changed. Real framing/cards/captions/preview quality,
+actual provider success and final render/export acceptance remain unchecked.
+
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
 Status: local implementation/verification complete; validation pass 2 has no actionable local findings. External evidence remains deferred.

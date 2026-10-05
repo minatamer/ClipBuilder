@@ -1,3 +1,4 @@
+import { ApplicationError } from "../http/errorMapper.js";
 import { createHash, randomUUID } from "node:crypto";
 import express from "express";
 import request from "supertest";
@@ -34,8 +35,15 @@ import { PreviewPlayback } from "../media/preview-playback.js";
 import { Writable } from "node:stream";
 import { FinalRender } from "../render/final-render.usecase.js";
 import { OutputDelivery } from "../media/output-delivery.js";
+import {
+  AnalysisDiagnostics,
+  parseAnalysisDiagnosticLine,
+} from "../analysis/analysis.diagnostics.js";
+import { z } from "zod";
 
 async function fixture() {
+  const lines: string[] = [],
+    diagnostics = new AnalysisDiagnostics((line) => lines.push(line));
   const origin = "http://localhost:3000",
     clock = () => 1000;
   const codec = new ProcessingGrantCodec(
@@ -190,6 +198,7 @@ async function fixture() {
     port,
     provider,
     "fake",
+    diagnostics,
   );
   const input = {
     analysis,
@@ -207,6 +216,8 @@ async function fixture() {
     admission,
     context,
     controller,
+    diagnostics,
+    lines,
   };
 }
 
@@ -568,6 +579,159 @@ describe("frozen assembly preview access", () => {
   });
 });
 describe("selected speaker action and provenance", () => {
+  async function diagnosedRun(f: Awaited<ReturnType<typeof fixture>>) {
+    return new Promise<import("@clipbuilder/contracts").SelectedAssemblyResult>(
+      (resolve, reject) => {
+        f.diagnostics.request(`req_${"d".repeat(32)}`, "assemble", (finish) => {
+          f.service.run(f.context, f.input).then(
+            (result) => {
+              finish("completed", 200);
+              resolve(result);
+            },
+            (error: unknown) => {
+              finish("completed", 500);
+              reject(error);
+            },
+          );
+        });
+      },
+    );
+  }
+  it("records the complete assembly path with structural facts and private outputs", async () => {
+    const f = await fixture(),
+      captures: unknown[] = [];
+    f.diagnostics.enablePrivateCapture({
+      open: () => (event) => {
+        captures.push(event);
+      },
+    });
+    const result = await diagnosedRun(f);
+    const records = f.lines.map((line) => JSON.parse(line));
+    for (const phase of [
+      "assembly_input",
+      "assembly_evidence",
+      "assembly_range",
+      "assembly_captions",
+      "assembly_admission",
+      "assembly_media_prepare",
+      "assembly_source_validation",
+      "assembly_proxy_fetch",
+      "assembly_proxy_validation",
+      "selected_planning",
+      "proxy_cleanup",
+      "assembly_plan_parse",
+      "assembly_cards",
+      "assembly_focus",
+      "assembly_manifest",
+      "assembly_validation",
+      "assembly_result",
+      "assembly_preview",
+      "assembly_preview_validation",
+      "assembly_signing",
+    ]) {
+      expect(records).toContainEqual(
+        expect.objectContaining({
+          phase,
+          outcome: "succeeded",
+          message: expect.stringContaining(": succeeded"),
+        }),
+      );
+    }
+    expect(records).toContainEqual(
+      expect.objectContaining({
+        assembly: {
+          proxyBytes: 3,
+          bytesMatched: true,
+          checksumMatched: true,
+        },
+      }),
+    );
+    expect(records.at(-1)).toMatchObject({
+      phase: "request",
+      outcome: "completed",
+      applicationHttpStatus: 200,
+    });
+    expect(captures).toContainEqual(
+      expect.objectContaining({
+        kind: "stage_output",
+        stage: "assembly_selected_context",
+        output: {
+          range: result.manifest.range,
+          words: result.words,
+          captions: result.manifest.captions,
+        },
+      }),
+    );
+    expect(captures).toContainEqual(
+      expect.objectContaining({
+        kind: "stage_output",
+        stage: "assembly_reconciliation_result",
+      }),
+    );
+    for (const line of f.lines)
+      expect(parseAnalysisDiagnosticLine(line)).not.toBeNull();
+    const log = f.lines.join("\n");
+    expect(log).not.toContain(result.receipt);
+    expect(log).not.toContain(result.binding.fingerprint);
+    for (const word of result.words)
+      if (word.punctuatedText.length > 3)
+        expect(log).not.toContain(`"${word.punctuatedText}"`);
+  });
+  it("preserves a provider failure while recording both proxy and source cleanup failures", async () => {
+    const f = await fixture(),
+      primary = new ApplicationError({
+        code: "ANALYSIS_PROVIDER_FAILED",
+        ruleId: "google_generation_http_400",
+      });
+    f.provider.plan.mockRejectedValue(primary);
+    f.port.releaseProxy.mockRejectedValue(
+      new Error("synthetic-private-cleanup"),
+    );
+    f.port.cancel.mockRejectedValue(new Error("synthetic-private-cancel"));
+    await expect(diagnosedRun(f)).rejects.toBe(primary);
+    const records = f.lines.map((line) => JSON.parse(line));
+    for (const phase of [
+      "selected_planning",
+      "proxy_cleanup",
+      "source_cleanup",
+      "assembly_admission",
+    ])
+      expect(records).toContainEqual(
+        expect.objectContaining({ phase, outcome: "failed" }),
+      );
+    expect(f.provider.plan).toHaveBeenCalledOnce();
+    expect(f.port.preview).not.toHaveBeenCalled();
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+    expect(f.lines.join("\n")).not.toContain("synthetic-private");
+  });
+  it("identifies local plan schema rejection before any preview call", async () => {
+    const f = await fixture();
+    f.provider.plan.mockResolvedValue({
+      version: 1,
+      speaker: {
+        version: 1,
+        durationMs: 1,
+        coordinateSpace: "source-normalized",
+        shots: [],
+      },
+      cards: [],
+    });
+    await expect(diagnosedRun(f)).rejects.toMatchObject({
+      code: "MODEL_OUTPUT_REJECTED",
+    });
+    expect(f.lines.map((line) => JSON.parse(line))).toContainEqual(
+      expect.objectContaining({
+        phase: "assembly_plan_parse",
+        outcome: "failed",
+        validation: expect.objectContaining({
+          reason: "schema_invalid",
+          issueCount: expect.any(Number),
+        }),
+      }),
+    );
+    expect(f.port.preview).not.toHaveBeenCalled();
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+  });
   it("rejects unsupported caption input before either media or AI dispatch", async () => {
     const f = await fixture();
     const candidate = f.input.analysis.analysis.candidates[0]!;
@@ -679,7 +843,7 @@ describe("selected speaker action and provenance", () => {
     ).toBeNull();
     expect(transport.upload).toHaveBeenCalledTimes(0);
   });
-  it("serializes explicit video sampling and fixed schema through the pinned SDK once", async () => {
+  it("serializes JSON-only selected video sampling with schema prompt guidance once", async () => {
     const config = loadConfig(
       createLiveValidationEnvironment(),
       createLiveValidationSettings("assembly"),
@@ -694,7 +858,9 @@ describe("selected speaker action and provenance", () => {
                 fileData: { mimeType: "video/mp4" },
                 videoMetadata: { fps: 5 },
               },
-              { text: "synthetic-context" },
+              {
+                text: `synthetic-context\nExpected JSON response schema (guidance; return only the JSON object):\n${JSON.stringify(z.toJSONSchema(selectedAssemblyPlanSchema, { io: "input" }))}`,
+              },
             ],
           },
         ],
@@ -703,6 +869,11 @@ describe("selected speaker action and provenance", () => {
           candidateCount: 1,
         },
       });
+      const sent = z
+        .object({ generationConfig: z.record(z.string(), z.unknown()) })
+        .parse(body);
+      expect(sent.generationConfig).not.toHaveProperty("responseJsonSchema");
+      expect(sent.generationConfig).not.toHaveProperty("responseSchema");
       return Response.json({
         candidates: [
           {
@@ -773,6 +944,18 @@ describe("selected speaker action and provenance", () => {
       expect(f.provider.plan).toHaveBeenCalledTimes(0);
     },
   );
+  it("preserves the primary selected-provider failure when both cleanup steps fail", async () => {
+    const f = await fixture();
+    const primary = new ApplicationError({ code: "ANALYSIS_PROVIDER_FAILED" });
+    f.provider.plan.mockRejectedValue(primary);
+    f.port.releaseProxy.mockRejectedValue(new Error("synthetic-proxy-cleanup"));
+    f.port.cancel.mockRejectedValue(new Error("synthetic-source-cleanup"));
+    await expect(f.service.run(f.context, f.input)).rejects.toBe(primary);
+    expect(f.provider.plan).toHaveBeenCalledOnce();
+    expect(f.port.releaseProxy).toHaveBeenCalledOnce();
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+    expect(f.port.preview).not.toHaveBeenCalled();
+  });
   it("releases the proxy and cancels the source on malformed model output", async () => {
     const f = await fixture();
     f.provider.plan.mockResolvedValue({ command: "synthetic" });
@@ -799,7 +982,7 @@ describe("selected speaker action and provenance", () => {
     const f = await fixture();
     f.port.releaseProxy.mockRejectedValue(new Error("synthetic"));
     await expect(f.service.run(f.context, f.input)).rejects.toMatchObject({
-      code: "MODEL_OUTPUT_REJECTED",
+      code: "CLEANUP_PENDING",
     });
     expect(f.provider.plan).toHaveBeenCalledTimes(1);
     expect(f.port.cancel).toHaveBeenCalledTimes(1);
