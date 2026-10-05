@@ -1,5 +1,13 @@
 # ClipBuilder canonical ticket index
 
+**First TODO for 2026-10-06:**
+[CL-009 owner edit-quality feedback](CL-009-build-contextual-visual-assembly.md#first-task-tomorrow--owner-edit-quality-feedback-2026-10-06).
+Documented only: large white captions without a full background panel,
+contrasting active-word highlighting, excessive cuts/repeated spans/stuttering,
+and a minimum of one grounded contextual visual. Investigation and fixes are
+deferred to the next working session; no cause or implementation is claimed.
+Fake/no-key checks and owner real-media acceptance remain separate.
+
 Current CL-010 owner UI follow-up (2026-10-05):
 [playback volume levels](CL-010-playback-volume-controls.md).
 Every workflow player opens a 0–100% level slider from its speaker button; the

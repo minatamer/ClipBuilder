@@ -1,5 +1,46 @@
 # CL-009 — Fixed contextual composition assembly
 
+## First task tomorrow — owner edit-quality feedback, 2026-10-06
+
+Status: **queued; feedback documented only on 2026-10-05**. This is the first
+TODO for the next working session. The owner requested no investigation or
+implementation today. These are observations from the first owner-reviewed
+edit, not independently reproduced defects or confirmed causes.
+
+- [ ] **Replace the caption styling with one fixed preset.** Use large white
+  text without a background panel behind the whole caption. Highlight the
+  currently spoken word throughout playback using a contrasting word-level
+  background, with purple as the suggested color. Keep the text readable and
+  the highlight synchronized to speech. Do not add caption-style choices or
+  customization controls.
+- [ ] **Fix excessive cuts, repeated segments and stuttering.** The owner
+  reports too many cuts and seeing the same source interval twice in succession,
+  including brief repeated fragments. The illustrative examples were roughly
+  seconds 7–10 replaying and seconds 7–8 stuttering/repeating. Playback should
+  progress through the selected conversation once, without unintended rewinds,
+  duplicated spans or abrupt unnecessary cuts. Whether this originates in the
+  preview, prepared media or final output has not been established. Coordinate
+  any eventual correction with CL-010/CL-011 after diagnosis; do not assume an
+  assembly or rendering cause from this report alone.
+- [ ] **Require at least one contextual visual in every edit.** The owner saw
+  no added visual in the first edit and requests a minimum of one, even when
+  the current planner would otherwise choose none. Keep it grounded in the
+  selected conversation. This is a requested change to the older zero-card
+  allowance below, not behavior implemented by this documentation update.
+
+Tomorrow's first work is to assess these three items and prepare the bounded
+implementation packet, including the relevant source-of-truth updates for the
+fixed caption preset and minimum visual. Preserve all backend diagnostics and
+private output capture support during any later correction.
+
+No logs, media, provider output or implementation were inspected for this
+feedback entry. No code/configuration change, test run, paid request or
+deployment was performed. Existing fake-mode/no-key checks can verify layout
+and timing logic; actual playback continuity, caption readability and contextual
+visual quality remain unverified and require the owner's real-media review.
+Real AI/renderer processing retains its provider keys, live flags and separate
+paid/cloud approvals.
+
 Current owner-requested follow-up (2026-10-05):
 [assembly request and diagnostic coverage](CL-009-assembly-request-and-diagnostics.md).
 The selected proxy upload succeeded, but generation returned HTTP 400 before
