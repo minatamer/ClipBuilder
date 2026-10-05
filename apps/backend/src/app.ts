@@ -49,13 +49,26 @@ export function createApplication(
   application.use("/v1", createHealthRouter(config.appRevision));
   application.use("/v1/analysis", (request, response, next) => {
     const action = request.path.slice(1);
-    if (
-      request.method !== "POST" ||
-      (action !== "upload" &&
-        action !== "sample" &&
-        action !== "run" &&
-        action !== "clear")
-    )
+    if (!(
+      (request.method === "GET" &&
+        (action === "preview" ||
+          action === "output" ||
+          action === "download")) ||
+      (request.method === "POST" &&
+        (action === "upload" ||
+          action === "sample" ||
+          action === "sample-replay" ||
+          action === "sample-replay-options" ||
+          action === "run" ||
+          action === "clear" ||
+          action === "assemble" ||
+          action === "preview" ||
+          action === "render" ||
+          action === "render-result" ||
+          action === "output" ||
+          action === "session" ||
+          action === "grant"))
+    ))
       return next();
     diagnostics.request(String(response.locals.requestId), action, (finish) => {
       response.once("finish", () => finish("completed", response.statusCode));
@@ -64,7 +77,29 @@ export function createApplication(
     });
   });
   const admission = composeAdmission(config);
+  application.use("/v1/session", (request, response, next) => {
+    if (request.method !== "POST" || request.path !== "/exit") return next();
+    diagnostics.request(String(response.locals.requestId), "exit", (finish) => {
+      response.once("finish", () => finish("completed", response.statusCode));
+      response.once("close", () => finish("disconnected", response.statusCode));
+      next();
+    });
+  });
   const retainedSample = composeRetainedSample(config);
+  application.use("/v1/retained-sample", (request, response, next) => {
+    if (request.method !== "GET" || request.path !== "/video") return next();
+    diagnostics.request(
+      String(response.locals.requestId),
+      "retained-video",
+      (finish) => {
+        response.once("finish", () => finish("completed", response.statusCode));
+        response.once("close", () =>
+          finish("disconnected", response.statusCode),
+        );
+        next();
+      },
+    );
+  });
   if (retainedSample)
     application.use(
       "/v1/retained-sample",
@@ -120,6 +155,9 @@ export function createApplication(
         mode: config.providerMode,
         sampleEnabled: developmentPreview,
         retainedSampleEnabled: retainedSample !== null,
+        ...(analysis?.sampleReplayAvailable
+          ? { sampleReplayEnabled: true }
+          : {}),
         localMediaEnabled:
           config.providerMode === "live" && config.appEnv === "local",
         liveAnalysisEnabled: analysis !== null,
@@ -178,12 +216,12 @@ export function createApplication(
       _next: express.NextFunction,
     ) => {
       void _next;
+      const mapped = mapError(error, String(response.locals.requestId));
+      diagnostics.failure("request", error, mapped.status);
       if (response.headersSent) {
         response.destroy();
         return;
       }
-      const mapped = mapError(error, String(response.locals.requestId));
-      diagnostics.failure("request", error, mapped.status);
       sendNoStoreJson(
         response,
         mapped.status,

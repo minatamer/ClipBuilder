@@ -12,7 +12,6 @@ const expectedEnvironment = {
   CLOUD_RENDER_ENVIRONMENT: "disabled",
   CLOUD_SPEND_APPROVED: "false",
   RENDERER_ENABLED: "false",
-  RENDERER_MAX_OPERATIONS: "0",
 } as const;
 
 export const environmentObservedDuringImport = Object.fromEntries(
@@ -20,6 +19,7 @@ export const environmentObservedDuringImport = Object.fromEntries(
 );
 
 export const credentialKeysObservedDuringImport = [
+  "RENDERER_MAX_OPERATIONS",
   "GEMINI_API_KEY",
   "TURNSTILE_SITE_KEY",
   "TURNSTILE_SECRET_KEY",

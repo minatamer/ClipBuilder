@@ -21,12 +21,45 @@ export const TEMPORARY_MEDIA_LIMITS = {
   maxSessions: 16,
   maxObjects: 256,
   maxObjectsPerSession: 8,
+  maxOperationsPerSession: 4,
   proxyBytes: 24 * 1024 * 1024,
   descriptorBytes: 128 * 1024,
   workDeadlineMs: 840_000,
   sweepDeadlineMs: 180_000,
   scratchBytes: 2 * 1024 * 1024 * 1024,
 } as const;
+export const rendererFailureCodeSchema = z.enum([
+  "invalid",
+  "unauthorized",
+  "busy",
+  "expired",
+  "conflict",
+  "budget",
+  "canceled",
+  "cleanup_pending",
+  "media_failed",
+]);
+export const rendererFailureStageSchema = z.enum([
+  "claim",
+  "scratch",
+  "download",
+  "inspect",
+  "audio_extract",
+  "proxy_encode",
+  "render",
+  "artifact_upload",
+  "intent_commit",
+  "cleanup",
+]);
+export type RendererFailureStage = z.infer<typeof rendererFailureStageSchema>;
+export const rendererFailureResponseSchema = z
+  .object({
+    code: rendererFailureCodeSchema,
+    stage: rendererFailureStageSchema.optional(),
+    underlyingCode: rendererFailureCodeSchema.optional(),
+  })
+  .strict();
+export type RendererFailureCode = z.infer<typeof rendererFailureCodeSchema>;
 export const mediaBindingSchema = z
   .object({
     sessionId: sessionIdSchema,
@@ -108,17 +141,36 @@ export const mediaUploadResponseSchema = z
     expiresAtMs: z.number().int().positive(),
   })
   .strict();
+export const ANALYSIS_AUDIO_PROFILE = {
+  contentType: "audio/m4a",
+  codec: "aac",
+  sampleRate: 16000,
+  channels: 1,
+} as const;
+const analysisArtifactSchema = artifactReferenceSchema.extend({
+  bytes: z.number().int().positive().max(TEMPORARY_MEDIA_LIMITS.proxyBytes),
+});
 export const mediaPrepareResponseSchema = z
   .object({
     source: inspectedSourceSchema,
-    analysisProxy: artifactReferenceSchema.extend({
-      bytes: z.number().int().positive().max(TEMPORARY_MEDIA_LIMITS.proxyBytes),
-    }),
+    analysisAudio: analysisArtifactSchema,
+    audioProfile: z
+      .object({
+        contentType: z.literal(ANALYSIS_AUDIO_PROFILE.contentType),
+        codec: z.literal(ANALYSIS_AUDIO_PROFILE.codec),
+        sampleRate: z.literal(ANALYSIS_AUDIO_PROFILE.sampleRate),
+        channels: z.literal(ANALYSIS_AUDIO_PROFILE.channels),
+      })
+      .strict(),
   })
   .strict();
-export const mediaSelectResponseSchema = mediaPrepareResponseSchema.extend({
-  range: selectedMediaRangeSchema,
-});
+export const mediaSelectResponseSchema = z
+  .object({
+    source: inspectedSourceSchema,
+    analysisProxy: analysisArtifactSchema,
+    range: selectedMediaRangeSchema,
+  })
+  .strict();
 export const mediaRenderResponseSchema = z
   .object({
     manifestHash: sha256DigestSchema,

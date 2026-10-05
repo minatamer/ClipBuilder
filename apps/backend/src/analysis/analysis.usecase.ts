@@ -7,6 +7,7 @@ import {
   mediaDescriptorSchema,
   mediaUploadResponseSchema,
   GROUNDED_ANALYSIS_LIMITS,
+  ANALYSIS_AUDIO_PROFILE,
   TEMPORARY_MEDIA_LIMITS,
   type MediaBinding,
   type MediaPrepareRequest,
@@ -17,6 +18,9 @@ import {
   type GroundedAnalysisResult,
   retainedSampleAnalysisRequestSchema,
   retainedSampleAnalysisResponseSchema,
+  analysisBundleSchema,
+  sampleReplayRequestSchema,
+  type AnalysisBundleV1,
   type RetainedSampleAnalysisRequest,
 } from "@clipbuilder/contracts";
 import type {
@@ -27,6 +31,7 @@ import { ApplicationError } from "../http/errorMapper.js";
 import { reconcileAnalysis } from "./analysis.reconciliation.js";
 import type { AnalysisProvider } from "./gemini.adapter.js";
 import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
+import type { LocalSampleReplay } from "./sample-replay.js";
 
 export interface AnalysisMediaPort {
   upload(
@@ -37,7 +42,7 @@ export interface AnalysisMediaPort {
     request: MediaPrepareRequest,
     signal: AbortSignal,
   ): Promise<MediaPrepareResponse>;
-  proxy(binding: MediaBinding, signal: AbortSignal): Promise<Blob>;
+  audio(binding: MediaBinding, signal: AbortSignal): Promise<Blob>;
   releaseProxy(binding: MediaBinding, signal: AbortSignal): Promise<void>;
   cancel(binding: MediaBinding, signal: AbortSignal): Promise<unknown>;
 }
@@ -48,6 +53,7 @@ type SourceRecord = {
   bytes: number;
   expiresAtMs: number;
   cleared: boolean;
+  retainedSample?: true;
 };
 export interface RetainedSampleProcessingPort {
   readonly bytes: number;
@@ -67,7 +73,35 @@ export class SourceAnalysis {
     private readonly now = () => Date.now(),
     private readonly sample: RetainedSampleProcessingPort | null = null,
     private readonly diagnostics = new AnalysisDiagnostics(),
+    private readonly sampleReplay: LocalSampleReplay | null = null,
   ) {}
+  get sampleReplayAvailable() {
+    return this.sampleReplay?.available() ?? false;
+  }
+  sampleReplayOptions() {
+    if (!this.sampleReplay)
+      throw new ApplicationError({ code: "FEATURE_DISABLED" });
+    const result = this.sampleReplay.options();
+    this.diagnostics.sampleReplay(
+      result.transcript.words.length,
+      result.candidates.length,
+    );
+    return result;
+  }
+  async replaySample(context: AdmissionContext, value: unknown) {
+    if (!this.sampleReplay)
+      throw new ApplicationError({ code: "FEATURE_DISABLED" });
+    const request = sampleReplayRequestSchema.parse(value);
+    const cached = this.sampleReplay.options(request.analysisRevision);
+    return this.produceAnalysis(
+      context,
+      {
+        generation: request.generation,
+        turnstileToken: request.turnstileToken,
+      },
+      cached,
+    );
+  }
   private cleanupSignal() {
     return AbortSignal.timeout(GROUNDED_ANALYSIS_LIMITS.cleanupMs);
   }
@@ -117,10 +151,16 @@ export class SourceAnalysis {
               ),
             ),
           );
-        } catch {
+        } catch (error) {
           source.cleared = true;
-          await this.media.cancel(source.binding, this.cleanupSignal());
-          throw new ApplicationError({ code: "INVALID_REQUEST" });
+          await this.diagnostics
+            .step("source_cleanup", () =>
+              this.media.cancel(source.binding, this.cleanupSignal()),
+            )
+            .catch(() => undefined);
+          throw error instanceof ApplicationError
+            ? error
+            : new ApplicationError({ code: "INVALID_REQUEST" });
         }
       },
     );
@@ -159,6 +199,7 @@ export class SourceAnalysis {
             fingerprint,
           },
           media: null,
+          retainedSample: true,
           mediaId: `med_${randomBytes(16).toString("base64url")}`,
           bytes: sample.bytes,
           expiresAtMs: grant.expiresAtMs,
@@ -186,22 +227,32 @@ export class SourceAnalysis {
           );
           signal.throwIfAborted();
           return retainedSampleAnalysisResponseSchema.parse({ generation });
-        } catch {
+        } catch (error) {
           source.cleared = true;
-          await this.media.cancel(source.binding, this.cleanupSignal());
-          throw new ApplicationError({ code: "STORAGE_FAILED" });
+          await this.diagnostics
+            .step("source_cleanup", () =>
+              this.media.cancel(source.binding, this.cleanupSignal()),
+            )
+            .catch(() => undefined);
+          throw error instanceof ApplicationError
+            ? error
+            : new ApplicationError({ code: "STORAGE_FAILED" });
         }
       },
     );
   }
-  async analyze(
+  analyze(context: AdmissionContext, input: SourceAnalysisRequest) {
+    return this.produceAnalysis(context, input);
+  }
+  private async produceAnalysis(
     context: AdmissionContext,
     input: SourceAnalysisRequest,
+    replay?: AnalysisBundleV1,
   ): Promise<GroundedAnalysisResult> {
     const request = sourceAnalysisRequestSchema.parse(input),
       grant = this.admission.session(context);
     const source = this.sources.get(grant.sessionId);
-    if (!source || source.cleared)
+    if (!source || source.cleared || (replay && !source.retainedSample))
       throw new ApplicationError({ code: "SESSION_INVALID" });
     const bytes = Buffer.from(
       JSON.stringify({
@@ -293,31 +344,95 @@ export class SourceAnalysis {
           );
           signal.throwIfAborted();
           let raw: unknown;
+          let proxyFailed = false;
           try {
-            const proxy = await this.diagnostics.step("proxy_fetch", () =>
-              this.media.proxy(source.binding, signal),
-            );
-            await this.diagnostics.step("proxy_validation", async () => {
-              if (
-                proxy.size !== prepared.analysisProxy.bytes ||
-                proxy.size > TEMPORARY_MEDIA_LIMITS.proxyBytes ||
-                createHash("sha256")
-                  .update(Buffer.from(await proxy.arrayBuffer()))
-                  .digest("hex") !== prepared.analysisProxy.checksum
-              )
-                throw new Error();
-            });
-            raw = await this.diagnostics.step("analysis_provider", () =>
-              this.provider.analyze(proxy, signal, grant.sessionId),
-            );
+            if (replay) {
+              this.sampleReplay?.options(replay.revision);
+              this.diagnostics.check("sample_replay", () => {
+                const {
+                  mediaId: _cachedId,
+                  sourceRevision: _cachedRevision,
+                  ...cachedMedia
+                } = replay.media;
+                const {
+                  mediaId: _currentId,
+                  sourceRevision: _currentRevision,
+                  ...currentMedia
+                } = authoritativeMedia;
+                void _cachedId;
+                void _cachedRevision;
+                void _currentId;
+                void _currentRevision;
+                if (
+                  JSON.stringify(cachedMedia) !== JSON.stringify(currentMedia)
+                )
+                  throw new ApplicationError({ code: "INVALID_REQUEST" });
+              });
+              raw = replay;
+            } else {
+              const proxy = await this.diagnostics.step("proxy_fetch", () =>
+                this.media.audio(source.binding, signal),
+              );
+              await this.diagnostics.step("proxy_validation", async () => {
+                if (
+                  proxy.type !== ANALYSIS_AUDIO_PROFILE.contentType ||
+                  proxy.size !== prepared.analysisAudio.bytes ||
+                  proxy.size > TEMPORARY_MEDIA_LIMITS.proxyBytes ||
+                  createHash("sha256")
+                    .update(Buffer.from(await proxy.arrayBuffer()))
+                    .digest("hex") !== prepared.analysisAudio.checksum
+                )
+                  throw new Error();
+              });
+              raw = await this.diagnostics.step("analysis_provider", () =>
+                this.provider.analyze(
+                  proxy,
+                  signal,
+                  grant.sessionId,
+                  authoritativeMedia,
+                ),
+              );
+            }
+          } catch (error) {
+            proxyFailed = true;
+            throw error;
           } finally {
-            await this.diagnostics.step("proxy_cleanup", () =>
-              this.media.releaseProxy(source.binding, this.cleanupSignal()),
-            );
+            await this.diagnostics
+              .step("proxy_cleanup", () =>
+                this.media.releaseProxy(source.binding, this.cleanupSignal()),
+              )
+              .catch(() => {
+                if (!proxyFailed)
+                  throw new ApplicationError({
+                    code: "CLEANUP_PENDING",
+                    ruleId: "temporary_media_cleanup_failed",
+                  });
+              });
           }
-          const analysis = this.diagnostics.check("reconciliation", () =>
-            reconcileAnalysis(raw, authoritativeMedia, this.providerName),
+          this.diagnostics.privateReconciliationInput(
+            raw,
+            authoritativeMedia.durationMs,
           );
+          const analysis = this.diagnostics.check("reconciliation", () =>
+            replay
+              ? analysisBundleSchema.parse({
+                  ...replay,
+                  media: authoritativeMedia,
+                })
+              : reconcileAnalysis(
+                  raw,
+                  authoritativeMedia,
+                  this.providerName,
+                  this.diagnostics,
+                ),
+          );
+          if (replay)
+            this.diagnostics.sampleReplay(
+              analysis.transcript.words.length,
+              analysis.candidates.length,
+            );
+          if (replay)
+            this.diagnostics.privateStageOutput("replayed_analysis", analysis);
           signal.throwIfAborted();
           if (source.cleared) throw new Error();
           return {
@@ -328,9 +443,11 @@ export class SourceAnalysis {
         } catch (error) {
           this.diagnostics.failure("analysis_result", error);
           source.cleared = true;
-          await this.diagnostics.step("source_cleanup", () =>
-            this.media.cancel(source.binding, this.cleanupSignal()),
-          );
+          await this.diagnostics
+            .step("source_cleanup", () =>
+              this.media.cancel(source.binding, this.cleanupSignal()),
+            )
+            .catch(() => undefined);
           throw error instanceof ApplicationError
             ? error
             : new ApplicationError({ code: "MODEL_OUTPUT_REJECTED" });

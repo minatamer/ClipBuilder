@@ -25,6 +25,12 @@ const HTTP_STATUS_BY_ERROR_CODE: Readonly<Partial<Record<ErrorCode, number>>> =
     PAID_DEMO_DISABLED: 403,
     RATE_LIMITED: 429,
     PROVIDER_BUDGET_EXHAUSTED: 429,
+    LIMIT_REACHED: 429,
+    RENDER_LIMIT_REACHED: 429,
+    STORAGE_FAILED: 503,
+    CLEANUP_PENDING: 503,
+    JOB_START_FAILED: 502,
+    OPERATION_TIMEOUT: 504,
   };
 
 export class ApplicationError extends Error {

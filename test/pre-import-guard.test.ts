@@ -52,7 +52,6 @@ describe("pre-import deterministic safety", () => {
       CLOUD_RENDER_ENVIRONMENT: "disabled",
       CLOUD_SPEND_APPROVED: "false",
       RENDERER_ENABLED: "false",
-      RENDERER_MAX_OPERATIONS: "0",
     });
   });
 

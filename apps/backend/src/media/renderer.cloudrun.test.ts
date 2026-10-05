@@ -78,7 +78,7 @@ describe("independent private cloud renderer boundary", () => {
     const canceled = new AbortController();
     canceled.abort();
     await expect(client.upload(input, canceled.signal)).rejects.toThrow(
-      "unavailable",
+      "CLIENT_ABORTED",
     );
     expect({ identities, requests }).toEqual({ identities: 1, requests: 1 });
   });
@@ -101,6 +101,6 @@ describe("independent private cloud renderer boundary", () => {
     );
     await expect(
       client.upload(input, new AbortController().signal),
-    ).rejects.toThrow("renderer_unavailable");
+    ).rejects.toThrow("STORAGE_FAILED");
   });
 });

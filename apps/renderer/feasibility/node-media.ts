@@ -35,7 +35,7 @@ const signal = AbortSignal.timeout(180_000),
   started = performance.now();
 try {
   const input = join(directory, "source.mp4"),
-    proxy = join(directory, "proxy.mp4"),
+    proxy = join(directory, "analysis.m4a"),
     output = join(directory, "output.mp4");
   const raw = join(directory, "pattern.rgb"),
     stream = createWriteStream(raw);
@@ -96,7 +96,7 @@ try {
   assert.equal(source.width, 320);
   assert.equal(source.height, 180);
   assert.ok(Math.abs(source.audioStartMs - 1200) < 100);
-  await pipeline.proxy(input, proxy, signal);
+  await pipeline.audio(input, proxy, signal);
   const manifest = compositionManifestV2Schema.parse({
     version: 2,
     source: {
@@ -177,7 +177,7 @@ try {
   assert.ok(Math.abs(sourceOnset - proxyOnset) <= 100);
   assert.ok(Math.abs(outputOnset - (sourceOnset - 1000)) <= 150);
   const vorbis = join(directory, "vorbis.webm"),
-    vorbisProxy = join(directory, "vorbis-proxy.mp4");
+    vorbisProxy = join(directory, "vorbis-analysis.m4a");
   await runOwnedProcess(
     fixtureFfmpeg,
     [
@@ -212,7 +212,7 @@ try {
     "vorbis",
   );
   await pipeline.inspect(vorbis, signal);
-  await pipeline.proxy(vorbis, vorbisProxy, signal);
+  await pipeline.audio(vorbis, vorbisProxy, signal);
   const vorbisOnset = await onset(vorbis, "vorbis"),
     vorbisProxyOnset = await onset(vorbisProxy, "vorbis-proxy");
   assert.ok(Math.abs(vorbisOnset - vorbisProxyOnset) <= 100);

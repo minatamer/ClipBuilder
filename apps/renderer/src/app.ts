@@ -10,6 +10,7 @@ import {
   mediaSelectRequestSchema,
   mediaPreviewRequestSchema,
   mediaPreviewAccessSchema,
+  rendererFailureResponseSchema,
 } from "@clipbuilder/contracts";
 import type { CallerVerifier } from "./auth/caller-verifier.js";
 import { MediaFailure } from "./media/media.failure.js";
@@ -59,15 +60,25 @@ export function createRendererApplication(
     sweeping = false;
   app.post("/internal/upload", async (request, response) => {
     operations.assertIntakeReady();
-    if (admitting) throw new MediaFailure("busy");
+    if (admitting || sweeping) throw new MediaFailure("busy");
     const input = mediaUploadRequestSchema.parse(request.body);
     admitting = true;
+    const owned = requestSignal(response);
     try {
+      const signal = AbortSignal.any([
+        owned.signal,
+        AbortSignal.timeout(TEMPORARY_MEDIA_LIMITS.sweepDeadlineMs),
+      ]);
       response.json(
-        mediaUploadResponseSchema.parse(await operations.sessions.admit(input)),
+        mediaUploadResponseSchema.parse(
+          await operations.sessions.store.withSignal(signal, () =>
+            operations.sessions.admit(input, signal),
+          ),
+        ),
       );
     } finally {
       admitting = false;
+      owned.dispose();
     }
   });
   function requestSignal(response: express.Response) {
@@ -177,13 +188,25 @@ export function createRendererApplication(
       owned.dispose();
     }
   });
+  app.post("/internal/analysis-audio", async (request, response) => {
+    const { binding } = mediaCancelRequestSchema.parse(request.body),
+      owned = requestSignal(response);
+    try {
+      response.setHeader("Content-Type", "audio/m4a");
+      response.send(
+        await operations.analysisProxy(binding, owned.signal, "audio"),
+      );
+    } finally {
+      owned.dispose();
+    }
+  });
   app.post("/internal/analysis-proxy", async (request, response) => {
     const { binding } = mediaCancelRequestSchema.parse(request.body),
       owned = requestSignal(response);
     try {
       response
         .type("video/mp4")
-        .send(await operations.analysisProxy(binding, owned.signal));
+        .send(await operations.analysisProxy(binding, owned.signal, "video"));
     } finally {
       owned.dispose();
     }
@@ -204,7 +227,7 @@ export function createRendererApplication(
     response.json({ deleted: true });
   });
   app.post("/internal/expiry", async (request, response) => {
-    if (sweeping) throw new MediaFailure("busy");
+    if (sweeping || admitting) throw new MediaFailure("busy");
     if (
       request.body !== undefined &&
       (typeof request.body !== "object" ||
@@ -262,7 +285,17 @@ export function createRendererApplication(
                 : code === "media_failed"
                   ? 422
                   : 409;
-      response.status(status).json({ code });
+      response.status(status).json(
+        rendererFailureResponseSchema.parse({
+          code,
+          ...(error instanceof MediaFailure && error.stage
+            ? { stage: error.stage }
+            : {}),
+          ...(error instanceof MediaFailure && error.underlyingCode
+            ? { underlyingCode: error.underlyingCode }
+            : {}),
+        }),
+      );
     },
   );
   return app;

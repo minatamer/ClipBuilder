@@ -15,7 +15,8 @@
     "bundle": "tsx scripts/build-bundle.ts",
     "prepare:browser": "tsx scripts/prepare-browser.ts",
     "test:media": "tsx feasibility/node-media.ts",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test:audio": "tsx feasibility/audio-transcription.ts"
   },
   "dependencies": {
     "@clipbuilder/contracts": "workspace:*",

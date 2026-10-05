@@ -14,9 +14,9 @@ export function installTestEnvironment(): void {
     CLOUD_RENDER_ENVIRONMENT: "disabled",
     CLOUD_SPEND_APPROVED: "false",
     RENDERER_ENABLED: "false",
-    RENDERER_MAX_OPERATIONS: "0",
   });
   for (const key of [
+    "RENDERER_MAX_OPERATIONS",
     "GEMINI_API_KEY",
     "TURNSTILE_SITE_KEY",
     "TURNSTILE_SECRET_KEY",

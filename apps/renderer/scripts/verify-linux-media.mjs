@@ -7,8 +7,9 @@ import {
   readdir,
   lstat,
   symlink,
+  stat,
 } from "node:fs/promises";
-import { join, resolve, dirname } from "node:path";
+import { join, resolve, dirname, basename } from "node:path";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
@@ -24,14 +25,17 @@ const { NodeMediaPipeline } = await import(
 const { runOwnedProcess } = await import(
   pathToFileURL(join(renderer, "dist/media/process-runner.js"))
 );
-const { validateOutput } = await import(
+const { validateOutput, probeMedia } = await import(
   pathToFileURL(join(renderer, "dist/media/inspection.js"))
+);
+const { assertDecodedAudio } = await import(
+  pathToFileURL(join(renderer, "dist/media/decoded-audio.js"))
 );
 const { measureScratchBytes } = await import(
   pathToFileURL(join(renderer, "dist/media/scratch-usage.js"))
 );
-const directory = await mkdtemp(join(tmpdir(), "clipbuilder-linux-proof-"));
 const require = createRequire(join(renderer, "package.json"));
+const { TEMPORARY_MEDIA_LIMITS } = await import("@clipbuilder/contracts");
 const localCompositor =
   process.platform === "win32"
     ? dirname(
@@ -53,6 +57,7 @@ const signal = AbortSignal.timeout(120000),
     chromium: "/opt/clipbuilder/chromium/chrome-headless-shell",
     bundle: join(renderer, "bundle"),
   };
+const directory = await mkdtemp(join(tmpdir(), "clipbuilder-linux-proof-"));
 let monitor,
   pending,
   monitoringFailure,
@@ -93,6 +98,52 @@ async function ownedProcessCount() {
     }
   }
   return count;
+}
+
+async function audioOnset(input, name, durationMs) {
+  const decoded = join(directory, name + ".wav");
+  await runOwnedProcess(
+    tools.ffmpeg,
+    [
+      "-nostdin",
+      "-v",
+      "error",
+      "-i",
+      input,
+      "-map",
+      "0:a:0",
+      "-vn",
+      "-af",
+      "aresample=async=1:first_pts=0",
+      "-c:a",
+      "pcm_s16le",
+      "-ac",
+      "1",
+      "-ar",
+      "16000",
+      "-f",
+      "wav",
+      decoded,
+    ],
+    signal,
+  );
+  const bytes = await readFile(decoded);
+  assertDecodedAudio(bytes, durationMs);
+  let offset = 12;
+  while (offset < bytes.length) {
+    const size = bytes.readUInt32LE(offset + 4),
+      start = offset + 8;
+    if (bytes.toString("latin1", offset, offset + 4) === "data") {
+      for (let frame = 0; frame + 640 <= size; frame += 640) {
+        let energy = 0;
+        for (let sample = frame; sample < frame + 640; sample += 2)
+          energy += (bytes.readInt16LE(start + sample) / 32768) ** 2;
+        if (Math.sqrt(energy / 320) > 0.01) return frame / 32;
+      }
+    }
+    offset = start + size + (size % 2);
+  }
+  throw new Error("synthetic_tone_missing");
 }
 
 let stage = "fixture";
@@ -189,9 +240,42 @@ async function verify() {
     const pipeline = new NodeMediaPipeline(tools),
       source = await pipeline.inspect(input, signal);
     assert.equal(source.durationMs, 15000);
+    stage = "audio-extraction";
+    const audio = join(directory, "analysis.m4a"),
+      audioStarted = performance.now();
+    await pipeline.audio(input, audio, signal);
+    const audioExtractionMs = Math.round(performance.now() - audioStarted),
+      audioProfile = await probeMedia(audio, tools.ffprobe, signal, "audio"),
+      audioBytes = (await stat(audio)).size;
+    assert.equal(audioProfile.streams.length, 1);
+    assert.equal(audioProfile.streams[0].codec_type, "audio");
+    assert.ok(
+      audioBytes > 0 && audioBytes <= TEMPORARY_MEDIA_LIMITS.proxyBytes,
+    );
+    const sourceOnsetMs = await audioOnset(
+        input,
+        "source-decoded",
+        source.durationMs,
+      ),
+      audioOnsetMs = await audioOnset(
+        audio,
+        "audio-decoded",
+        source.durationMs,
+      );
+    assert.ok(Math.abs(sourceOnsetMs - 1200) <= 100);
+    assert.ok(Math.abs(sourceOnsetMs - audioOnsetMs) <= 100);
     if (fixtureOnly) {
       process.stdout.write(
-        "Synthetic fixture generation and inspection verified.\n",
+        JSON.stringify({
+          synthetic: true,
+          sourceDurationMs: source.durationMs,
+          audioBytes,
+          audioExtractionMs,
+          sourceOnsetMs,
+          audioOnsetMs,
+          audioOnly: true,
+          aiCalls: 0,
+        }) + "\n",
       );
       return;
     }
@@ -272,6 +356,13 @@ async function verify() {
       "/tmp/clipbuilder-linux-media-proof.json",
       JSON.stringify({
         synthetic: true,
+        sourceDurationMs: source.durationMs,
+        audioDurationMs: Math.round(audioProfile.format.duration * 1000),
+        audioBytes,
+        audioExtractionMs,
+        sourceOnsetMs,
+        audioOnsetMs,
+        audioOnly: true,
         outputDurationMs: validated.durationMs,
         outputBytes: validated.bytes,
         linuxSpecialEntryObserved,
@@ -287,6 +378,8 @@ async function verify() {
   } finally {
     if (monitor) clearInterval(monitor);
     await pending;
+    assert.equal(dirname(resolve(directory)), resolve(tmpdir()));
+    assert.ok(basename(directory).startsWith("clipbuilder-linux-proof-"));
     await rm(directory, {
       recursive: true,
       force: true,

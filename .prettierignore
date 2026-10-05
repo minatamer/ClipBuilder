@@ -5,3 +5,5 @@ coverage/
 dist/
 node_modules/
 apps/renderer/bundle/
+**/runtime.local.json
+private/

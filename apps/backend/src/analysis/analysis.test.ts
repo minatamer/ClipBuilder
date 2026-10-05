@@ -8,20 +8,35 @@ import {
   createLiveValidationSettings,
 } from "../../test/environment.fixture.js";
 import { loadConfig } from "../config/loadConfig.js";
-import { type MediaDescriptor } from "@clipbuilder/contracts";
+import {
+  SHAREABILITY_SIGNALS,
+  type MediaDescriptor,
+} from "@clipbuilder/contracts";
 import { ProcessingAdmission } from "../admission/processing.admission.js";
 import { ProcessingGrantCodec } from "../admission/processing.grant.js";
 import { ApplicationError, mapError } from "../http/errorMapper.js";
 import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
+import {
+  LocalSampleReplay,
+  LOCAL_SAMPLE_REPLAY_WORKSPACE,
+  SAMPLE_REPLAY_WINDOW_MS,
+} from "./sample-replay.js";
 import { createAnalysisRouter } from "../http/routes/analysis.route.js";
 import {
   SourceAnalysis,
   type RetainedSampleProcessingPort,
 } from "./analysis.usecase.js";
-import { reconcileAnalysis } from "./analysis.reconciliation.js";
-import { ANALYSIS_POLICY, ANALYSIS_REQUEST } from "./analysis.prompt.js";
 import {
-  GeminiAnalysisProvider,
+  reconcileAnalysis,
+  normalizedAnalysisSchema,
+} from "./analysis.reconciliation.js";
+import type { PrivateGeminiCaptureEvent } from "./gemini.local-capture.js";
+import {
+  TestGeminiFiles,
+  syntheticVideoTask,
+} from "../../test/gemini-file.fixture.js";
+
+import {
   composeGeminiTransport,
   type GeminiTransport,
 } from "./gemini.adapter.js";
@@ -77,27 +92,11 @@ function output() {
     ],
   };
 }
-function wireOutput() {
-  const normalized = output();
-  return {
-    words: normalized.words.map((w) => [
-      w.punctuatedText,
-      w.startMs,
-      w.endMs,
-      w.speakerId,
-    ]),
-    turns: normalized.turns.map((t) => [
-      t.startWordId,
-      t.endWordId,
-      t.speakerId,
-    ]),
-    candidates: normalized.candidates,
-  };
-}
 function fixture(
   paidEnabled = true,
   sample: RetainedSampleProcessingPort | null = null,
   diagnostics = new AnalysisDiagnostics(),
+  replay: LocalSampleReplay | null = null,
 ) {
   let now = 1000;
   const origin = "http://localhost:3000",
@@ -135,7 +134,7 @@ function fixture(
     csrf: issued.grant.csrf,
     signal: controller.signal,
   };
-  const proxy = new Blob([new Uint8Array([1, 2, 3])], { type: "video/mp4" });
+  const proxy = new Blob([new Uint8Array([1, 2, 3])], { type: "audio/m4a" });
   const port = {
     upload: vi.fn(async () => ({
       uploadUrl:
@@ -158,7 +157,13 @@ function fixture(
           rotationDegrees: media.rotationDegrees,
         },
       },
-      analysisProxy: {
+      audioProfile: {
+        contentType: "audio/m4a" as const,
+        codec: "aac" as const,
+        sampleRate: 16000 as const,
+        channels: 1 as const,
+      },
+      analysisAudio: {
         artifactId: randomUUID(),
         generation: "2",
         bytes: proxy.size,
@@ -167,7 +172,7 @@ function fixture(
           .digest("hex"),
       },
     })),
-    proxy: vi.fn(async () => proxy),
+    audio: vi.fn(async () => proxy),
     releaseProxy: vi.fn(async () => {}),
     cancel: vi.fn(async () => ({ deleted: true })),
   };
@@ -180,6 +185,7 @@ function fixture(
     clock,
     sample,
     diagnostics,
+    replay,
   );
   const upload = {
     media,
@@ -204,7 +210,177 @@ function fixture(
     },
   };
 }
+describe("owner-local saved sample analysis", () => {
+  function cached() {
+    const analysis = reconcileAnalysis(output(), media, "fake");
+    analysis.candidates = [1, 2, 3].map((rank) => ({
+      ...analysis.candidates[0]!,
+      id: `cand_${String(rank).repeat(22)}`,
+      rank,
+    }));
+    const replay = new LocalSampleReplay(
+      {
+        version: 1,
+        workspace: LOCAL_SAMPLE_REPLAY_WORKSPACE,
+        createdAtMs: 1000,
+        expiresAtMs: 1000 + SAMPLE_REPLAY_WINDOW_MS,
+        retainedSampleIdentity: "a".repeat(64),
+        analysis,
+      },
+      "a".repeat(64),
+      () => 1000,
+    );
+    const sample = {
+      bytes: media.bytes,
+      fingerprint: vi.fn(async () => "a".repeat(64)),
+      transfer: vi.fn(async () => "1"),
+    };
+    const f = fixture(true, sample, new AnalysisDiagnostics(), replay);
+    return {
+      ...f,
+      cached: analysis,
+      sample,
+      input: { ...f.analyze, analysisRevision: analysis.revision },
+    };
+  }
+  it("returns three saved options with zero source, media or AI dispatches", () => {
+    const f = cached();
+    expect(f.service.sampleReplayOptions()).toEqual(f.cached);
+    expect(f.port.upload).not.toHaveBeenCalled();
+    expect(f.port.prepare).not.toHaveBeenCalled();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+    expect(f.sample.fingerprint).not.toHaveBeenCalled();
+  });
+  it("signs a fresh inspected result without analysis calls, then fences replay", async () => {
+    const f = cached();
+    await f.service.prepareSample(f.context, {
+      rightsAcknowledged: true,
+      dataTransferAcknowledged: true,
+      turnstileToken: "synthetic",
+    });
+    const result = await f.service.replaySample(f.context, f.input);
+    expect(result.analysis.candidates).toEqual(f.cached.candidates);
+    expect(result.analysis.transcript).toEqual(f.cached.transcript);
+    expect(result.binding.sessionId).toBe(f.issued.grant.sessionId);
+    expect(result.analysis.media.sourceRevision).toBe(
+      result.binding.sourceRevision,
+    );
+    expect(f.service.verify(f.context, result)).toEqual(result);
+    expect(f.port.prepare).toHaveBeenCalledOnce();
+    expect(f.port.releaseProxy).toHaveBeenCalledOnce();
+    expect(f.port.audio).not.toHaveBeenCalled();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+    await expect(
+      f.service.replaySample(f.context, f.input),
+    ).rejects.toBeInstanceOf(ApplicationError);
+    expect(f.port.prepare).toHaveBeenCalledOnce();
+  });
+  it("refuses uploaded sources and mismatched revisions before preparing media", async () => {
+    const f = cached();
+    await f.service.upload(f.context, f.upload);
+    await expect(
+      f.service.replaySample(f.context, f.input),
+    ).rejects.toMatchObject({ code: "SESSION_INVALID" });
+    await expect(
+      f.service.replaySample(f.context, {
+        ...f.input,
+        analysisRevision: "rev_" + "x".repeat(22),
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
+    expect(f.port.prepare).not.toHaveBeenCalled();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+  });
+  it("rejects changed physical sample evidence and cancels the disposable copy", async () => {
+    const f = cached();
+    await f.service.prepareSample(f.context, {
+      rightsAcknowledged: true,
+      dataTransferAcknowledged: true,
+      turnstileToken: "synthetic",
+    });
+    const prepare = f.port.prepare.getMockImplementation()!;
+    f.port.prepare.mockImplementationOnce(async () => {
+      const value = await prepare();
+      return {
+        ...value,
+        source: { ...value.source, durationMs: media.durationMs + 1000 },
+      };
+    });
+    await expect(
+      f.service.replaySample(f.context, f.input),
+    ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
+    expect(f.port.releaseProxy).toHaveBeenCalledOnce();
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+  });
+  it("keeps endpoints absent without an explicit injected local cache", async () => {
+    const f = fixture();
+    const app = express().use(
+      "/v1/analysis",
+      createAnalysisRouter(f.admission, f.service, [f.context.origin]),
+    );
+    const result = await request(app)
+      .post("/v1/analysis/sample-replay-options")
+      .set("Origin", f.context.origin)
+      .set("Sec-Fetch-Site", "same-origin")
+      .send({});
+    expect(result.status).toBe(404);
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+  });
+});
+
 describe("protected retained sample analysis", () => {
+  it.each([400, 403, 429, 500, 503])(
+    "preserves an upstream %s failure through both media cleanup failures",
+    async (status) => {
+      const f = fixture();
+      await f.service.upload(f.context, f.upload);
+      const primary = new ApplicationError({
+        code: "ANALYSIS_PROVIDER_FAILED",
+        ruleId: `google_generation_http_${status}`,
+      });
+      f.provider.analyze.mockRejectedValueOnce(primary);
+      f.port.releaseProxy.mockRejectedValueOnce(
+        new Error("synthetic-proxy-cleanup"),
+      );
+      f.port.cancel.mockRejectedValueOnce(
+        new Error("synthetic-source-cleanup"),
+      );
+      await expect(f.service.analyze(f.context, f.analyze)).rejects.toBe(
+        primary,
+      );
+      expect(f.provider.analyze).toHaveBeenCalledOnce();
+      expect(f.port.releaseProxy).toHaveBeenCalledOnce();
+      expect(f.port.cancel).toHaveBeenCalledOnce();
+    },
+  );
+  it("reports cleanup pending after successful generation without accepting a result or calling AI again", async () => {
+    const f = fixture();
+    await f.service.upload(f.context, f.upload);
+    f.port.releaseProxy.mockRejectedValueOnce(
+      new Error("synthetic-proxy-cleanup"),
+    );
+    f.port.cancel.mockRejectedValueOnce(new Error("synthetic-source-cleanup"));
+    await expect(f.service.analyze(f.context, f.analyze)).rejects.toMatchObject(
+      { code: "CLEANUP_PENDING", ruleId: "temporary_media_cleanup_failed" },
+    );
+    expect(f.provider.analyze).toHaveBeenCalledOnce();
+    expect(f.port.releaseProxy).toHaveBeenCalledOnce();
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+    await expect(f.service.analyze(f.context, f.analyze)).rejects.toMatchObject(
+      { code: "SESSION_INVALID" },
+    );
+    expect(f.provider.analyze).toHaveBeenCalledOnce();
+  });
+  it("keeps an upload-admission failure when source cancellation fails", async () => {
+    const f = fixture();
+    const primary = new ApplicationError({ code: "STORAGE_FAILED" });
+    f.port.upload.mockRejectedValueOnce(primary);
+    f.port.cancel.mockRejectedValueOnce(new Error("synthetic-cancel"));
+    await expect(f.service.upload(f.context, f.upload)).rejects.toBe(primary);
+    expect(f.port.upload).toHaveBeenCalledOnce();
+    expect(f.port.cancel).toHaveBeenCalledOnce();
+    expect(f.provider.analyze).not.toHaveBeenCalled();
+  });
   it("logs the primary provider failure before proxy and source cleanup failures without changing dispatches", async () => {
     const lines: string[] = [];
     const diagnostics = new AnalysisDiagnostics((line) => lines.push(line));
@@ -231,8 +407,10 @@ describe("protected retained sample analysis", () => {
           });
       });
     });
-    // Existing response semantics remain unchanged; this task adds diagnostics only.
-    await expect(result).rejects.toBe(terminal);
+    await expect(result).rejects.toMatchObject({
+      code: "ANALYSIS_PROVIDER_FAILED",
+      ruleId: "google_generation_http_400",
+    });
     const records = lines.map((line) => JSON.parse(line));
     const primary = records.findIndex(
       (record) =>
@@ -259,7 +437,7 @@ describe("protected retained sample analysis", () => {
     );
     expect(f.provider.analyze).toHaveBeenCalledOnce();
     expect(f.port.prepare).toHaveBeenCalledOnce();
-    expect(f.port.proxy).toHaveBeenCalledOnce();
+    expect(f.port.audio).toHaveBeenCalledOnce();
     expect(f.port.releaseProxy).toHaveBeenCalledOnce();
     expect(f.port.cancel).toHaveBeenCalledOnce();
   });
@@ -459,7 +637,7 @@ describe("protected retained sample analysis", () => {
       { code: "MODEL_OUTPUT_REJECTED" },
     );
     expect(f.port.prepare).toHaveBeenCalledOnce();
-    expect(f.port.proxy).not.toHaveBeenCalled();
+    expect(f.port.audio).not.toHaveBeenCalled();
     expect(f.port.cancel).toHaveBeenCalledOnce();
     expect(f.provider.analyze).not.toHaveBeenCalled();
   });
@@ -519,7 +697,7 @@ describe("source quotation token boundaries", () => {
       ["ord0", "word", "..."].map((copy) => ({ field, copy })),
     ),
   )(
-    "rejects $copy in $field instead of accepting a substring or empty tokens",
+    "accepts $copy in $field without enforcing quotation quality",
     ({ field, copy }) => {
       const raw = output();
       const candidate = {
@@ -538,27 +716,23 @@ describe("source quotation token boundaries", () => {
             media,
             provider,
           ),
-        ).toThrow("MODEL_OUTPUT_REJECTED");
+        ).not.toThrow();
     },
   );
 
-  it("rejects an empty quoted span inside otherwise grounded text", () => {
+  it("accepts an empty quoted span inside otherwise grounded text", () => {
     const raw = output();
     raw.candidates[0]!.title = 'word0 "..." word1';
-    expect(() => reconcileAnalysis(raw, media, "fake")).toThrow(
-      "MODEL_OUTPUT_REJECTED",
-    );
+    expect(() => reconcileAnalysis(raw, media, "fake")).not.toThrow();
   });
 
   it.each(["title", "rationale"])(
-    "rejects noncontiguous %s tokens",
+    "accepts noncontiguous %s tokens",
     (field) => {
       const raw = output();
       if (field === "title") raw.candidates[0]!.title = "word0 word2";
       else raw.candidates[0]!.rationale = "word0 word2";
-      expect(() => reconcileAnalysis(raw, media, "fake")).toThrow(
-        "MODEL_OUTPUT_REJECTED",
-      );
+      expect(() => reconcileAnalysis(raw, media, "fake")).not.toThrow();
     },
   );
 
@@ -601,6 +775,163 @@ describe("source quotation token boundaries", () => {
 });
 
 describe("grounded source analysis", () => {
+  it.each([
+    "word_id_sequence",
+    "word_outside_media",
+    "word_overlap",
+    "turn_id_sequence",
+    "turn_word_reference",
+    "turn_range_order",
+    "turn_partition_gap",
+    "turn_speaker_mismatch",
+    "turn_partition_incomplete",
+    "missing_diarization",
+    "evidence_reference_order",
+    "candidate_title_quote",
+    "candidate_hook_quote",
+    "candidate_evidence_quote",
+    "forbidden_copy",
+    "candidate_rationale_grounding",
+    "candidate_caveat_grounding",
+    "transcript_character_limit",
+  ])("accepts former %s quality rejection", (rule) => {
+    const raw: z.infer<typeof normalizedAnalysisSchema> = output();
+    const candidate = raw.candidates[0]!;
+    if (rule === "word_id_sequence") raw.words[0]!.id = "w_000099";
+    if (rule === "word_outside_media") raw.words[29]!.endMs = 15251;
+    if (rule === "word_overlap") raw.words[0]!.endMs = 751;
+    if (rule === "turn_id_sequence") raw.turns[0]!.id = "utt_000002";
+    if (rule === "turn_word_reference") raw.turns[0]!.endWordId = "w_999999";
+    if (rule === "turn_range_order") {
+      raw.turns[0]!.startWordId = "w_000030";
+      raw.turns[0]!.endWordId = "w_000001";
+    }
+    if (rule === "turn_partition_gap") raw.turns[0]!.startWordId = "w_000002";
+    if (rule === "turn_speaker_mismatch") raw.turns[0]!.speakerId = "spk_1";
+    if (rule === "turn_partition_incomplete")
+      raw.turns[0]!.endWordId = "w_000029";
+    if (rule === "missing_diarization") raw.turns = [];
+    if (rule === "evidence_reference_order")
+      candidate.evidence[0]!.wordIds = ["w_000002", "w_000001"];
+    if (rule === "candidate_title_quote") candidate.title = "synthetic-private";
+    if (rule === "candidate_hook_quote") candidate.hook = "synthetic-private";
+    if (rule === "candidate_evidence_quote")
+      candidate.evidence[0]!.note = "synthetic-private";
+    if (rule === "forbidden_copy")
+      candidate.rationale = "guaranteed million views";
+    if (rule === "candidate_rationale_grounding")
+      candidate.rationale = "synthetic-private";
+    if (rule === "candidate_caveat_grounding")
+      candidate.caveats = [
+        { code: "needs-earlier-context", note: "synthetic-private" },
+      ];
+    if (rule === "transcript_character_limit")
+      raw.words = Array.from({ length: 2501 }, () => ({
+        ...raw.words[0]!,
+        text: "a".repeat(80),
+        punctuatedText: "a".repeat(80),
+      }));
+    const result = reconcileAnalysis(raw, media, "google-gemini");
+    expect(result.transcript.words).toEqual(raw.words);
+    expect(result.candidates).toHaveLength(raw.candidates.length);
+  });
+  it.each([
+    ["reference", "candidate_word_reference"],
+    ["duration", "candidate_duration"],
+    ["overlap", "candidate_overlap"],
+    ["evidence_range", "evidence_inside_candidate"],
+    ["duplicate_signal", "evidence_signals_unique"],
+  ])("accepts the former bundle %s constraint", (kind) => {
+    const raw = output();
+    const candidate = raw.candidates[0]!;
+    if (kind === "reference") candidate.startWordId = "w_999999";
+    if (kind === "duration") {
+      candidate.endWordId = "w_000019";
+      candidate.evidence[1]!.wordIds = ["w_000002"];
+    }
+    if (kind === "overlap") raw.candidates.push(structuredClone(candidate));
+    if (kind === "evidence_range") {
+      candidate.startWordId = "w_000010";
+    }
+    if (kind === "duplicate_signal")
+      candidate.evidence[1]!.signal = candidate.evidence[0]!.signal;
+    expect(() => reconcileAnalysis(raw, media, "google-gemini")).not.toThrow();
+  });
+  it.each(["word_overlap", "word_outside_media"] as const)(
+    "preserves %s raw values without a quality rejection or extra AI dispatch",
+    async (rule) => {
+      const lines: string[] = [];
+      const privateEvents: PrivateGeminiCaptureEvent[] = [];
+      const diagnostics = new AnalysisDiagnostics((line) => lines.push(line));
+      diagnostics.enablePrivateCapture({
+        open: () => (event) => {
+          privateEvents.push(event);
+        },
+      });
+      const f = fixture(true, null, diagnostics);
+      const raw = output();
+      if (rule === "word_overlap") raw.words[0]!.endMs = 751;
+      else raw.words[29]!.endMs = 15251;
+      f.provider.analyze.mockResolvedValueOnce(raw);
+      await f.service.upload(f.context, f.upload);
+      const run = new Promise((resolve, reject) =>
+        diagnostics.request("req_" + "a".repeat(32), "run", (finish) => {
+          f.service.analyze(f.context, f.analyze).then(
+            (value) => {
+              finish("completed", 200);
+              resolve(value);
+            },
+            (error) => {
+              finish("completed", 500);
+              reject(error);
+            },
+          );
+        }),
+      );
+      await expect(run).resolves.toMatchObject({
+        analysis: { transcript: { words: raw.words } },
+      });
+      expect(lines.map((line) => JSON.parse(line))).toContainEqual(
+        expect.objectContaining({
+          phase: "reconciliation",
+          outcome: "succeeded",
+        }),
+      );
+      expect(f.provider.analyze).toHaveBeenCalledOnce();
+      expect(f.port.releaseProxy).toHaveBeenCalledOnce();
+      expect(f.port.cancel).not.toHaveBeenCalled();
+      expect(privateEvents).toContainEqual(
+        expect.objectContaining({
+          kind: "reconciliation_input",
+          mediaDurationMs: 15000,
+          normalizedOutput: raw,
+        }),
+      );
+      expect(
+        privateEvents.some((event) => event.kind === "reconciliation_failure"),
+      ).toBe(false);
+      if (rule === "word_outside_media")
+        expect(privateEvents).toContainEqual(
+          expect.objectContaining({
+            kind: "reconciliation_input",
+            timing: expect.objectContaining({
+              outsideWords: [
+                {
+                  index: 29,
+                  ordinal: 30,
+                  startMs: 14500,
+                  endMs: 15251,
+                  overrunMs: 251,
+                },
+              ],
+            }),
+          }),
+        );
+      expect(lines.join("\n")).not.toMatch(
+        /word0|w_000001|751|speakerId.*spk_0/,
+      );
+    },
+  );
   it("uses authoritative decoded duration/frame rate despite browser sampling and rounding", async () => {
     const f = fixture();
     const prepared = await f.port.prepare();
@@ -620,7 +951,7 @@ describe("grounded source analysis", () => {
     expect(f.provider.analyze).toHaveBeenCalledOnce();
   });
   it.each(["rationale", "caveat"])(
-    "rejects reordered source assertions in %s",
+    "accepts reordered source assertions in %s",
     (field) => {
       const raw = output();
       ["Earth", "is", "larger", "than", "Moon"].forEach((text, i) => {
@@ -643,7 +974,7 @@ describe("grounded source analysis", () => {
       };
       expect(() =>
         reconcileAnalysis({ ...raw, candidates: [candidate] }, media, "fake"),
-      ).toThrow("MODEL_OUTPUT_REJECTED");
+      ).not.toThrow();
     },
   );
   it("makes one upload/preparation/AI call, deletes the proxy, signs the full source/result, and rejects replay", async () => {
@@ -655,7 +986,7 @@ describe("grounded source analysis", () => {
     expect(f.service.verify(f.context, result)).toEqual(result);
     expect(f.port.upload).toHaveBeenCalledOnce();
     expect(f.port.prepare).toHaveBeenCalledOnce();
-    expect(f.port.proxy).toHaveBeenCalledOnce();
+    expect(f.port.audio).toHaveBeenCalledOnce();
     expect(f.provider.analyze).toHaveBeenCalledOnce();
     expect(f.port.releaseProxy).toHaveBeenCalledOnce();
     expect(f.port.cancel).toHaveBeenCalledTimes(0);
@@ -759,7 +1090,7 @@ describe("grounded source analysis", () => {
     "timing",
     "quote",
     "range",
-  ])("rejects malicious %s without repair calls", async (kind) => {
+  ])("does not quality-reject %s or make repair calls", async (kind) => {
     const f = fixture(),
       raw = output();
     if (kind === "reference")
@@ -775,14 +1106,13 @@ describe("grounded source analysis", () => {
     if (kind === "range") raw.candidates[0]!.endWordId = "w_000010";
     f.provider.analyze.mockResolvedValueOnce(raw);
     await f.service.upload(f.context, f.upload);
-    await expect(f.service.analyze(f.context, f.analyze)).rejects.toMatchObject(
-      { code: "MODEL_OUTPUT_REJECTED" },
-    );
+    const result = await f.service.analyze(f.context, f.analyze);
+    expect(f.service.verify(f.context, result)).toEqual(result);
     expect(f.provider.analyze).toHaveBeenCalledOnce();
     expect(f.port.releaseProxy).toHaveBeenCalledOnce();
-    expect(f.port.cancel).toHaveBeenCalledOnce();
+    expect(f.port.cancel).not.toHaveBeenCalled();
   });
-  it("accepts exactly 250ms word overlap and rejects 251ms for both provider labels", () => {
+  it("accepts overlap beyond the former tolerance for both provider labels", () => {
     const raw = output();
     raw.words[0]!.endMs = 750;
     for (const provider of ["fake", "google-gemini"] as const)
@@ -791,7 +1121,7 @@ describe("grounded source analysis", () => {
       );
     raw.words[0]!.endMs = 751;
     for (const provider of ["fake", "google-gemini"] as const)
-      expect(() => reconcileAnalysis(raw, media, provider)).toThrow();
+      expect(() => reconcileAnalysis(raw, media, provider)).not.toThrow();
   });
   it("bounds real JSON ingress and maps content-free errors on the API route", async () => {
     const f = fixture(),
@@ -859,7 +1189,7 @@ describe("bounded Google Files adapter", () => {
       const gateway = composeGeminiTransport(
         loadConfig(
           createLiveValidationEnvironment(),
-          createLiveValidationSettings("analysis"),
+          createLiveValidationSettings("assembly"),
         ),
         transport,
       );
@@ -893,7 +1223,7 @@ describe("bounded Google Files adapter", () => {
       const gateway = composeGeminiTransport(
         loadConfig(
           createLiveValidationEnvironment(),
-          createLiveValidationSettings("analysis"),
+          createLiveValidationSettings("assembly"),
         ),
         transport,
       );
@@ -916,7 +1246,7 @@ describe("bounded Google Files adapter", () => {
       const gateway = composeGeminiTransport(
         loadConfig(
           createLiveValidationEnvironment(),
-          createLiveValidationSettings("analysis"),
+          createLiveValidationSettings("assembly"),
         ),
         transport,
       );
@@ -952,7 +1282,7 @@ describe("bounded Google Files adapter", () => {
       const gateway = composeGeminiTransport(
         loadConfig(
           createLiveValidationEnvironment(),
-          createLiveValidationSettings("analysis"),
+          createLiveValidationSettings("assembly"),
         ),
         transport,
       );
@@ -985,7 +1315,7 @@ describe("bounded Google Files adapter", () => {
     const gateway = composeGeminiTransport(
       loadConfig(
         createLiveValidationEnvironment(),
-        createLiveValidationSettings("analysis"),
+        createLiveValidationSettings("assembly"),
       ),
       transport,
     );
@@ -1002,11 +1332,11 @@ describe("bounded Google Files adapter", () => {
         { status: 403 },
       ),
     );
-    const provider = new GeminiAnalysisProvider(
+    const provider = new TestGeminiFiles(
       composeGeminiTransport(
         loadConfig(
           createLiveValidationEnvironment(),
-          createLiveValidationSettings("analysis"),
+          createLiveValidationSettings("assembly"),
         ),
         transport,
       ),
@@ -1064,7 +1394,7 @@ describe("bounded Google Files adapter", () => {
               finishReason: "STOP",
               content: {
                 role: "model",
-                parts: [{ text: JSON.stringify(wireOutput()) }],
+                parts: [{ text: JSON.stringify(output()) }],
               },
             },
           ],
@@ -1082,9 +1412,9 @@ describe("bounded Google Files adapter", () => {
     };
     const config = loadConfig(
       createLiveValidationEnvironment(),
-      createLiveValidationSettings("analysis"),
+      createLiveValidationSettings("assembly"),
     );
-    const provider = new GeminiAnalysisProvider(
+    const provider = new TestGeminiFiles(
       composeGeminiTransport(config, transport),
       1000,
     );
@@ -1098,7 +1428,7 @@ describe("bounded Google Files adapter", () => {
       r.url.includes(":generateContent"),
     )!;
     expect(generation.body).toMatchObject({
-      systemInstruction: { parts: [{ text: ANALYSIS_POLICY }] },
+      systemInstruction: { parts: [{ text: syntheticVideoTask.policy }] },
       contents: [
         {
           role: "user",
@@ -1109,7 +1439,9 @@ describe("bounded Google Files adapter", () => {
                 mimeType: "video/mp4",
               },
             },
-            { text: ANALYSIS_REQUEST },
+            {
+              text: `${syntheticVideoTask.prompt}\nExpected JSON response schema (guidance; return only the JSON object):\n${JSON.stringify(z.toJSONSchema(syntheticVideoTask.schema, { io: "input" }))}`,
+            },
           ],
         },
       ],
@@ -1124,30 +1456,8 @@ describe("bounded Google Files adapter", () => {
       .parse(generation.body);
     for (const parameter of ["temperature", "topP", "topK"])
       expect(sent.generationConfig).not.toHaveProperty(parameter);
-    expect(sent.generationConfig.responseJsonSchema).toMatchObject({
-      type: "object",
-      additionalProperties: false,
-      required: ["words", "turns", "candidates"],
-      properties: {
-        words: {
-          type: "array",
-          minItems: 1,
-          maxItems: 12000,
-          description: expect.stringContaining("Full-source transcript"),
-          items: {
-            type: "array",
-            prefixItems: [
-              expect.objectContaining({ type: "string" }),
-              expect.objectContaining({ type: "integer" }),
-              expect.objectContaining({ type: "integer" }),
-              expect.any(Object),
-            ],
-          },
-        },
-        turns: { type: "array", maxItems: 10000 },
-        candidates: { type: "array", maxItems: 4 },
-      },
-    });
+    expect(sent.generationConfig).not.toHaveProperty("responseJsonSchema");
+    expect(sent.generationConfig).not.toHaveProperty("responseSchema");
     expect(
       requests.filter((r) => r.url.includes(":generateContent")),
     ).toHaveLength(1);
@@ -1166,6 +1476,7 @@ describe("bounded Google Files adapter", () => {
       gateway.generate(
         "https://generativelanguage.googleapis.com/v1beta/files/synthetic",
         new AbortController().signal,
+        syntheticVideoTask,
       ),
     ).rejects.toThrow();
     expect(requests).toHaveLength(1);
@@ -1189,13 +1500,15 @@ describe("bounded Google Files adapter", () => {
         mimeType: "video/mp4",
       })),
       generate: vi.fn(async () => ({
-        text: JSON.stringify(wireOutput()),
+        text: JSON.stringify(output()),
         finished: true,
       })),
+      transcribe: vi.fn(),
+      candidates: vi.fn(),
       delete: vi.fn(async () => {}),
     };
     const wait = vi.fn(async () => {}),
-      provider = new GeminiAnalysisProvider(transport, 1000, wait);
+      provider = new TestGeminiFiles(transport, 1000, wait);
     const proxy = new Blob([new Uint8Array([1])], { type: "video/mp4" });
     return { transport, provider, proxy, wait };
   }
@@ -1209,6 +1522,102 @@ describe("bounded Google Files adapter", () => {
     expect(f.transport.generate).toHaveBeenCalledOnce();
     expect(f.transport.delete).toHaveBeenCalledOnce();
   });
+  it.each([
+    { field: "words", limit: 12000 },
+    { field: "turns", limit: 10000 },
+  ] as const)(
+    "enforces the local $field cap after generation and cleans up without retry",
+    async ({ field, limit }) => {
+      const f = gateway();
+      const payload = output();
+      const entries = Array.from({ length: limit }, () => payload[field][0]);
+      expect(
+        normalizedAnalysisSchema.safeParse({ ...payload, [field]: entries })
+          .success,
+      ).toBe(true);
+      entries.push(payload[field][0]);
+      vi.mocked(f.transport.generate).mockResolvedValue({
+        text: JSON.stringify({ ...payload, [field]: entries }),
+        finished: true,
+      });
+      await expect(
+        f.provider.analyze(f.proxy, new AbortController().signal),
+      ).rejects.toMatchObject({
+        code: "MODEL_OUTPUT_REJECTED",
+        ruleId: "google_validation_failed",
+      });
+      expect(f.transport.generate).toHaveBeenCalledOnce();
+      expect(f.transport.delete).toHaveBeenCalledOnce();
+    },
+  );
+  it.each([8, 9])(
+    "enforces the local eight-evidence cap for %i entries",
+    async (count) => {
+      const f = gateway();
+      const payload = output();
+      const candidate = payload.candidates[0]!;
+      candidate.evidence = SHAREABILITY_SIGNALS.map((signal) => ({
+        signal,
+        wordIds: ["w_000001"],
+        note: "word0",
+      }));
+      if (count === 9) candidate.evidence.push(candidate.evidence[0]!);
+      const parsed = normalizedAnalysisSchema.safeParse(payload);
+      if (count === 9) {
+        expect(parsed.success).toBe(false);
+        if (parsed.success) throw new Error("oversized_evidence_accepted");
+        expect(parsed.error.issues).toContainEqual(
+          expect.objectContaining({
+            code: "too_big",
+            origin: "array",
+            maximum: 8,
+            path: ["candidates", 0, "evidence"],
+          }),
+        );
+      } else expect(parsed.success).toBe(true);
+      vi.mocked(f.transport.generate).mockResolvedValue({
+        text: JSON.stringify(payload),
+        finished: true,
+      });
+      const run = f.provider.analyze(f.proxy, new AbortController().signal);
+      if (count === 9)
+        await expect(run).rejects.toMatchObject({
+          code: "MODEL_OUTPUT_REJECTED",
+          ruleId: "google_validation_failed",
+        });
+      else expect(await run).toMatchObject({ candidates: [candidate] });
+      expect(f.transport.generate).toHaveBeenCalledOnce();
+      expect(f.transport.delete).toHaveBeenCalledOnce();
+    },
+  );
+  it.each(["word_extra_field", "turn_extra_field", "candidates"])(
+    "retains strict local %s limits and cleanup after generation",
+    async (kind) => {
+      const f = gateway();
+      const payload = output();
+      if (kind === "word_extra_field")
+        Object.assign(payload.words[0]!, { unexpected: "unexpected" });
+      if (kind === "turn_extra_field")
+        Object.assign(payload.turns[0]!, { unexpected: "unexpected" });
+      if (kind === "candidates")
+        payload.candidates = Array.from(
+          { length: 5 },
+          () => payload.candidates[0]!,
+        );
+      vi.mocked(f.transport.generate).mockResolvedValue({
+        text: JSON.stringify(payload),
+        finished: true,
+      });
+      await expect(
+        f.provider.analyze(f.proxy, new AbortController().signal),
+      ).rejects.toMatchObject({
+        code: "MODEL_OUTPUT_REJECTED",
+        ruleId: "google_validation_failed",
+      });
+      expect(f.transport.generate).toHaveBeenCalledOnce();
+      expect(f.transport.delete).toHaveBeenCalledOnce();
+    },
+  );
   it("stops at exactly 90 readiness checks with zero generation calls", async () => {
     const f = gateway();
     vi.mocked(f.transport.get).mockImplementation(async (name) => ({
@@ -1253,8 +1662,8 @@ describe("bounded Google Files adapter", () => {
       .analyze(f.proxy, new AbortController().signal)
       .catch((error: unknown) => error);
     expect(failed).toMatchObject({
-      code: "CLEANUP_PENDING",
-      ruleId: "google_generation_http_429;google_files_cleanup_failed",
+      code: "ANALYSIS_PROVIDER_FAILED",
+      ruleId: "google_generation_http_429",
     });
     expect(JSON.stringify(failed)).not.toContain("synthetic-private-content");
     expect(f.transport.generate).toHaveBeenCalledOnce();
@@ -1266,7 +1675,7 @@ describe("bounded Google Files adapter", () => {
     vi.mocked(f.transport.generate).mockImplementation(async (_uri, signal) => {
       expect(signal.aborted).toBe(false);
       controller.abort();
-      return { text: JSON.stringify(wireOutput()), finished: true };
+      return { text: JSON.stringify(output()), finished: true };
     });
     await expect(
       f.provider.analyze(f.proxy, controller.signal),

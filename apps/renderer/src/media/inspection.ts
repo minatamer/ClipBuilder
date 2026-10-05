@@ -44,9 +44,14 @@ export async function probeMedia(
   path: string,
   ffprobe: string,
   signal: AbortSignal,
+  kind: "video" | "audio" = "video",
 ) {
   try {
-    return probeSchema.parse(
+    return (
+      kind === "audio"
+        ? probeSchema.extend({ streams: z.array(streamSchema).length(1) })
+        : probeSchema
+    ).parse(
       JSON.parse(
         await runOwnedProcess(
           ffprobe,

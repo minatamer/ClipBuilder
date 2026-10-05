@@ -402,6 +402,7 @@ export class GcsMediaStore implements TemporaryMediaStore {
     source: string,
     expiresAtMs: number,
     signal: AbortSignal,
+    contentType: "video/mp4" | "audio/m4a" = "video/mp4",
   ) {
     const info = await stat(source);
     if (
@@ -429,7 +430,7 @@ export class GcsMediaStore implements TemporaryMediaStore {
         validation: "crc32c",
         preconditionOpts: { ifGenerationMatch: 0 },
         metadata: {
-          contentType: "video/mp4",
+          contentType,
           cacheControl: "no-store",
           metadata: { expiresAtMs: String(expiresAtMs) },
         },

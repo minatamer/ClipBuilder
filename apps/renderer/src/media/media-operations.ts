@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import type { Writable } from "node:stream";
 import {
   TEMPORARY_MEDIA_LIMITS,
+  ANALYSIS_AUDIO_PROFILE,
   type MediaBinding,
   type MediaPrepareRequest,
   type MediaRenderRequest,
@@ -16,8 +17,10 @@ import {
   mediaPreviewResponseSchema,
   type MediaPreviewAccess,
   mediaByteRange,
+  type RendererFailureStage,
 } from "@clipbuilder/contracts";
 import { MediaSessions } from "../expiry/media-sessions.js";
+import type { IntentRecord } from "../expiry/temporary-intent.js";
 import { MediaFailure } from "./media.failure.js";
 import type { MediaPipeline } from "./node-pipeline.js";
 import { measureScratchBytes } from "./scratch-usage.js";
@@ -39,7 +42,6 @@ export class MediaOperations {
   constructor(
     readonly sessions: MediaSessions,
     private readonly pipeline: MediaPipeline,
-    private readonly maxDispatches: number,
     private readonly now: () => number,
     private readonly removeScratch: (directory: string) => Promise<void> = (
       directory,
@@ -55,40 +57,49 @@ export class MediaOperations {
     return { media: this.dispatches, ai: 0 };
   }
   async preview(request: MediaPreviewRequest, signal: AbortSignal) {
-    return this.owned(request.binding, signal, async (directory, owned) => {
-      const record = await this.sessions.claimPreview(request),
-        intent = record.intent,
-        input = join(directory, "source"),
-        output = join(directory, "preview.mp4");
-      await this.sessions.store.download(
-        request.binding.sessionId,
-        intent.sourceId,
-        request.generation,
-        input,
-        owned,
-      );
-      const source = await this.pipeline.inspect(input, owned);
-      if (JSON.stringify(source) !== JSON.stringify(intent.source))
-        throw new MediaFailure("invalid");
-      await this.pipeline.proxy(input, output, owned, request.range);
-      const artifact = await this.sessions.store.upload(
-        request.binding.sessionId,
-        randomUUID(),
-        output,
-        intent.expiresAtMs,
-        owned,
-      );
-      const result = mediaPreviewResponseSchema.parse({
-        binding: request.binding,
-        manifestHash: request.manifestHash,
-        range: request.range,
-        artifact,
-        expiresAtMs: intent.expiresAtMs,
-      });
-      owned.throwIfAborted();
-      await this.sessions.previewed(request, result);
-      return result;
-    });
+    return this.owned(
+      request.binding,
+      signal,
+      async (directory, owned, record, stage) => {
+        const intent = record.intent,
+          input = join(directory, "source"),
+          output = join(directory, "preview.mp4");
+        stage("download");
+        await this.sessions.store.download(
+          request.binding.sessionId,
+          intent.sourceId,
+          request.generation,
+          input,
+          owned,
+        );
+        stage("inspect");
+        const source = await this.pipeline.inspect(input, owned);
+        if (JSON.stringify(source) !== JSON.stringify(intent.source))
+          throw new MediaFailure("invalid");
+        stage("proxy_encode");
+        await this.pipeline.proxy(input, output, owned, request.range);
+        stage("artifact_upload");
+        const artifact = await this.sessions.store.upload(
+          request.binding.sessionId,
+          randomUUID(),
+          output,
+          intent.expiresAtMs,
+          owned,
+        );
+        const result = mediaPreviewResponseSchema.parse({
+          binding: request.binding,
+          manifestHash: request.manifestHash,
+          range: request.range,
+          artifact,
+          expiresAtMs: intent.expiresAtMs,
+        });
+        owned.throwIfAborted();
+        stage("intent_commit");
+        await this.sessions.previewed(request, result);
+        return result;
+      },
+      () => this.sessions.claimPreview(request),
+    );
   }
   previewContent(
     input: MediaPreviewAccess,
@@ -235,7 +246,7 @@ export class MediaOperations {
           () => this.sessions.terminate(binding),
         )
         .catch(() => undefined);
-      throw new MediaFailure("cleanup_pending");
+      throw new MediaFailure("cleanup_pending", "cleanup");
     }
   }
   async shutdown() {
@@ -258,20 +269,22 @@ export class MediaOperations {
   private async owned<T>(
     binding: MediaBinding,
     signal: AbortSignal,
-    work: (directory: string, signal: AbortSignal) => Promise<T>,
-    metered = true,
+    work: (
+      directory: string,
+      signal: AbortSignal,
+      record: IntentRecord,
+      stage: (value: RendererFailureStage) => void,
+    ) => Promise<T>,
+    claim?: () => Promise<IntentRecord>,
   ): Promise<T> {
     this.assertIntakeReady();
     if (this.active) throw new MediaFailure("busy");
-    if (
-      (metered && this.dispatches >= this.maxDispatches) ||
-      this.sessions.blocked
-    )
-      throw new MediaFailure("budget");
+    if (this.sessions.blocked) throw new MediaFailure("cleanup_pending");
     const controller = new AbortController();
     const externalAbort = () => controller.abort();
     signal.addEventListener("abort", externalAbort, { once: true });
     if (signal.aborted) controller.abort();
+    let stage: RendererFailureStage = "claim";
     let directory: string | undefined,
       timer: ReturnType<typeof setTimeout> | undefined,
       monitor: ReturnType<typeof setInterval> | undefined;
@@ -279,7 +292,9 @@ export class MediaOperations {
     const promise = this.sessions.store.withSignal(
       controller.signal,
       async () => {
-        const record = await this.sessions.store.getIntent(binding.sessionId);
+        const record = claim
+          ? await claim()
+          : await this.sessions.store.getIntent(binding.sessionId);
         if (!record) throw new MediaFailure("conflict");
         timer = setTimeout(
           () => controller.abort(),
@@ -291,30 +306,35 @@ export class MediaOperations {
             ),
           ),
         );
-        directory = await mkdtemp(join(tmpdir(), "clipbuilder-media-"));
-        monitor = setInterval(() => {
-          if (check || !directory) return;
-          check = measureScratchBytes(directory)
-            .then((bytes) => {
-              if (bytes > TEMPORARY_MEDIA_LIMITS.scratchBytes)
-                controller.abort();
-            })
-            .catch(() => controller.abort())
-            .finally(() => {
-              check = undefined;
-            });
-        }, 250);
-        if (metered) this.dispatches++;
+        if (claim) this.dispatches++;
         try {
+          stage = "scratch";
           controller.signal.throwIfAborted();
-          return await work(directory, controller.signal);
-        } catch {
+          directory = await mkdtemp(join(tmpdir(), "clipbuilder-media-"));
+          monitor = setInterval(() => {
+            if (check || !directory) return;
+            check = measureScratchBytes(directory)
+              .then((bytes) => {
+                if (bytes > TEMPORARY_MEDIA_LIMITS.scratchBytes)
+                  controller.abort();
+              })
+              .catch(() => controller.abort())
+              .finally(() => {
+                check = undefined;
+              });
+          }, 250);
+          return await work(directory, controller.signal, record, (value) => {
+            stage = value;
+          });
+        } catch (error) {
           await this.sessions.store.withSignal(
             AbortSignal.timeout(TEMPORARY_MEDIA_LIMITS.sweepDeadlineMs),
             () => this.sessions.terminate(binding),
           );
           throw new MediaFailure(
             controller.signal.aborted ? "canceled" : "media_failed",
+            stage,
+            error instanceof MediaFailure ? error.code : undefined,
           );
         }
       },
@@ -322,6 +342,11 @@ export class MediaOperations {
     this.active = { binding, controller, done: promise };
     try {
       return await promise;
+    } catch (error) {
+      if (error instanceof MediaFailure && !error.stage)
+        throw new MediaFailure(error.code, stage, error.underlyingCode);
+      if (error instanceof MediaFailure) throw error;
+      throw new MediaFailure("media_failed", stage);
     } finally {
       if (timer) clearTimeout(timer);
       if (monitor) clearInterval(monitor);
@@ -338,10 +363,10 @@ export class MediaOperations {
     return this.owned(
       request.binding,
       signal,
-      async (directory, innerSignal) => {
-        const record = await this.sessions.claimPrepare(request),
-          input = join(directory, "source"),
-          proxy = join(directory, "proxy.mp4");
+      async (directory, innerSignal, record, stage) => {
+        const input = join(directory, "source"),
+          proxy = join(directory, "analysis.m4a");
+        stage("download");
         await this.sessions.store.download(
           request.binding.sessionId,
           record.intent.sourceId,
@@ -349,39 +374,52 @@ export class MediaOperations {
           input,
           innerSignal,
         );
+        stage("inspect");
         const source = await this.pipeline.inspect(input, innerSignal);
         if (
           source.fingerprint !== request.binding.fingerprint ||
           source.bytes !== record.intent.expectedBytes
         )
           throw new MediaFailure("invalid");
-        await this.pipeline.proxy(input, proxy, innerSignal);
+        stage("audio_extract");
+        await this.pipeline.audio(input, proxy, innerSignal);
+        stage("artifact_upload");
         const analysisProxy = await this.sessions.store.upload(
           request.binding.sessionId,
           randomUUID(),
           proxy,
           record.intent.expiresAtMs,
           innerSignal,
+          ANALYSIS_AUDIO_PROFILE.contentType,
         );
         const result = mediaPrepareResponseSchema.parse({
           source,
-          analysisProxy,
+          analysisAudio: analysisProxy,
+          audioProfile: ANALYSIS_AUDIO_PROFILE,
         });
         innerSignal.throwIfAborted();
+        stage("intent_commit");
         await this.sessions.prepared(request.binding, request.nonce, result);
         return result;
       },
+      () => this.sessions.claimPrepare(request),
     );
   }
-  analysisProxy(binding: MediaBinding, signal: AbortSignal) {
+  analysisProxy(
+    binding: MediaBinding,
+    signal: AbortSignal,
+    kind: "audio" | "video",
+  ) {
     return this.owned(
       binding,
       signal,
-      async (directory, innerSignal) => {
-        const reference = await this.sessions.analysisProxy(binding);
+      async (directory, innerSignal, _record, stage) => {
+        stage("claim");
+        const reference = await this.sessions.analysisProxy(binding, kind);
         if (reference.bytes > TEMPORARY_MEDIA_LIMITS.proxyBytes)
           throw new MediaFailure("invalid");
         const path = join(directory, "analysis.mp4");
+        stage("download");
         await this.sessions.store.download(
           binding.sessionId,
           reference.artifactId,
@@ -389,6 +427,7 @@ export class MediaOperations {
           path,
           innerSignal,
         );
+        stage("inspect");
         if (
           (await stat(path)).size !== reference.bytes ||
           (await fileChecksum(path, innerSignal)) !== reference.checksum
@@ -396,17 +435,16 @@ export class MediaOperations {
           throw new MediaFailure("invalid");
         return readFile(path, { signal: innerSignal });
       },
-      false,
     );
   }
   select(request: MediaSelectRequest, signal: AbortSignal) {
     return this.owned(
       request.binding,
       signal,
-      async (directory, innerSignal) => {
-        const record = await this.sessions.claimSelected(request),
-          input = join(directory, "source"),
+      async (directory, innerSignal, record, stage) => {
+        const input = join(directory, "source"),
           proxy = join(directory, "selected-proxy.mp4");
+        stage("download");
         await this.sessions.store.download(
           request.binding.sessionId,
           record.intent.sourceId,
@@ -414,10 +452,13 @@ export class MediaOperations {
           input,
           innerSignal,
         );
+        stage("inspect");
         const source = await this.pipeline.inspect(input, innerSignal);
         if (JSON.stringify(source) !== JSON.stringify(record.intent.source))
           throw new MediaFailure("invalid");
+        stage("proxy_encode");
         await this.pipeline.proxy(input, proxy, innerSignal, request.range);
+        stage("artifact_upload");
         const analysisProxy = await this.sessions.store.upload(
           request.binding.sessionId,
           randomUUID(),
@@ -431,9 +472,11 @@ export class MediaOperations {
           range: request.range,
         });
         innerSignal.throwIfAborted();
+        stage("intent_commit");
         await this.sessions.selected(request.binding, request.nonce, result);
         return result;
       },
+      () => this.sessions.claimSelected(request),
     );
   }
   releaseAnalysisProxy(binding: MediaBinding, signal: AbortSignal) {
@@ -445,10 +488,10 @@ export class MediaOperations {
     return this.owned(
       request.binding,
       signal,
-      async (directory, innerSignal) => {
-        const record = await this.sessions.claimRender(request),
-          input = join(directory, "source"),
+      async (directory, innerSignal, record, stage) => {
+        const input = join(directory, "source"),
           output = join(directory, "output.mp4");
+        stage("download");
         await this.sessions.store.download(
           request.binding.sessionId,
           record.intent.sourceId,
@@ -456,9 +499,11 @@ export class MediaOperations {
           input,
           innerSignal,
         );
+        stage("inspect");
         const source = await this.pipeline.inspect(input, innerSignal);
         if (source.fingerprint !== request.binding.fingerprint)
           throw new MediaFailure("invalid");
+        stage("render");
         await this.pipeline.render(
           input,
           output,
@@ -470,6 +515,7 @@ export class MediaOperations {
           record.intent.expiresAtMs,
           this.now() + TEMPORARY_MEDIA_LIMITS.outputTtlMs,
         );
+        stage("artifact_upload");
         const artifact = await this.sessions.store.upload(
           request.binding.sessionId,
           randomUUID(),
@@ -483,9 +529,11 @@ export class MediaOperations {
           expiresAtMs,
         });
         innerSignal.throwIfAborted();
+        stage("intent_commit");
         await this.sessions.publish(request.binding, request.nonce, result);
         return result;
       },
+      () => this.sessions.claimRender(request),
     );
   }
   async cancel(binding: MediaBinding) {

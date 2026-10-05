@@ -5,7 +5,7 @@ import { createRendererApplication } from "./app.js";
 import { MediaFailure } from "./media/media.failure.js";
 import { binding, nonce, mediaFixture } from "../test/media-fixture.js";
 function fixture(removeScratch?: (directory: string) => Promise<void>) {
-  const f = mediaFixture(undefined, 2, removeScratch);
+  const f = mediaFixture(undefined, removeScratch);
   const app = createRendererApplication(f.operations, {
     async verify(header) {
       if (header === "Bearer control") return "control";
@@ -16,6 +16,191 @@ function fixture(removeScratch?: (directory: string) => Promise<void>) {
   return { ...f, app };
 }
 describe("private renderer routes", () => {
+  it("rejects overlapping uploads and scheduled cleanup while admission owns the journal", async () => {
+    const f = fixture();
+    let entered!: () => void, release!: () => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.spyOn(f.store, "listIntents").mockImplementationOnce(async () => {
+      entered();
+      await held;
+      return [];
+    });
+    const sweep = vi.spyOn(f.operations, "sweep");
+    const input = {
+      binding,
+      bytes: 1024,
+      contentType: "video/mp4",
+      rightsAcknowledged: true,
+      dataTransferAcknowledged: true,
+    };
+    const first = request(f.app)
+      .post("/internal/upload")
+      .set("Authorization", "Bearer control")
+      .send(input)
+      .then((response) => response);
+    try {
+      await started;
+      const overlapping = await request(f.app)
+        .post("/internal/upload")
+        .set("Authorization", "Bearer control")
+        .send(input);
+      const expiry = await request(f.app)
+        .post("/internal/expiry")
+        .set("Authorization", "Bearer expiry")
+        .send({});
+      expect(overlapping.status).toBe(409);
+      expect(expiry.status).toBe(409);
+      expect(expiry.body).toEqual({ code: "busy" });
+      expect(sweep).toHaveBeenCalledTimes(0);
+      expect(f.store.calls.begin).toBe(0);
+    } finally {
+      release();
+    }
+    expect((await first).status).toBe(200);
+    expect(f.store.calls.begin).toBe(1);
+    expect(f.operations.counts).toEqual({ media: 0, ai: 0 });
+  });
+  it("rejects upload during scheduled cleanup and releases the guard after failure", async () => {
+    const f = fixture();
+    let entered!: () => void, release!: () => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.spyOn(f.operations, "sweep").mockImplementationOnce(async () => {
+      entered();
+      await held;
+      throw new MediaFailure("cleanup_pending");
+    });
+    const admit = vi.spyOn(f.sessions, "admit");
+    const expiry = request(f.app)
+      .post("/internal/expiry")
+      .set("Authorization", "Bearer expiry")
+      .send({})
+      .then((response) => response);
+    const input = {
+      binding,
+      bytes: 1024,
+      contentType: "video/mp4",
+      rightsAcknowledged: true,
+      dataTransferAcknowledged: true,
+    };
+    try {
+      await started;
+      expect(
+        (
+          await request(f.app)
+            .post("/internal/upload")
+            .set("Authorization", "Bearer control")
+            .send(input)
+        ).status,
+      ).toBe(409);
+      expect(admit).toHaveBeenCalledTimes(0);
+    } finally {
+      release();
+    }
+    expect((await expiry).status).toBe(503);
+    expect(
+      (
+        await request(f.app)
+          .post("/internal/upload")
+          .set("Authorization", "Bearer control")
+          .send(input)
+      ).status,
+    ).toBe(200);
+    expect(admit).toHaveBeenCalledTimes(1);
+    expect(f.operations.counts).toEqual({ media: 0, ai: 0 });
+  });
+  it("cancels disconnected admission before allocation and releases its intake guard", async () => {
+    const f = fixture(),
+      server = f.app.listen(0, "127.0.0.1");
+    let entered!: () => void,
+      release!: () => void,
+      finished!: () => void,
+      observe!: (signal: AbortSignal) => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const settled = new Promise<void>((resolve) => {
+      finished = resolve;
+    });
+    const observed = new Promise<AbortSignal>((resolve) => {
+      observe = resolve;
+    });
+    const withSignal = f.store.withSignal.bind(f.store);
+    vi.spyOn(f.store, "withSignal").mockImplementation((signal, work) => {
+      observe(signal);
+      return withSignal(signal, work);
+    });
+    const admit = f.sessions.admit.bind(f.sessions);
+    vi.spyOn(f.sessions, "admit").mockImplementation(async (...args) => {
+      try {
+        return await admit(...args);
+      } finally {
+        finished();
+      }
+    });
+    vi.spyOn(f.store, "listIntents").mockImplementationOnce(async () => {
+      entered();
+      await held;
+      return [];
+    });
+    const input = {
+      binding,
+      bytes: 1024,
+      contentType: "video/mp4",
+      rightsAcknowledged: true,
+      dataTransferAcknowledged: true,
+    };
+    const pending = request(server)
+      .post("/internal/upload")
+      .set("Authorization", "Bearer control")
+      .send(input);
+    const ended = pending.then(
+      () => undefined,
+      () => undefined,
+    );
+    try {
+      await started;
+      const signal = await observed;
+      const aborted = new Promise<void>((resolve) =>
+        signal.addEventListener("abort", () => resolve(), { once: true }),
+      );
+      pending.abort();
+      await aborted;
+      release();
+      await settled;
+      await ended;
+      expect(f.store.calls.begin).toBe(0);
+      expect(
+        (
+          await request(server)
+            .post("/internal/upload")
+            .set("Authorization", "Bearer control")
+            .send(input)
+        ).status,
+      ).toBe(200);
+      expect(f.store.calls.begin).toBe(1);
+      expect(f.operations.counts).toEqual({ media: 0, ai: 0 });
+    } finally {
+      release();
+      pending.abort();
+      await f.operations.shutdown();
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      );
+    }
+  });
   it.each(["expiry/", "Expiry"])(
     "refuses control caller access through noncanonical %s",
     async (path) => {

@@ -165,7 +165,7 @@ describe("strict boundary schemas", () => {
     ).toBe(false);
   });
 
-  it("rejects transcript references outside the normalized word set", () => {
+  it("accepts transcript references outside the normalized word set", () => {
     const result = transcriptBundleSchema.safeParse({
       version: 1,
       revision: opaqueId("rev"),
@@ -197,10 +197,10 @@ describe("strict boundary schemas", () => {
       },
     });
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
-  it("rejects candidate ranges or evidence outside the transcript", () => {
+  it("accepts candidate ranges or evidence outside the transcript", () => {
     const transcript = {
       version: 1,
       revision: opaqueId("rev"),
@@ -269,17 +269,7 @@ describe("strict boundary schemas", () => {
       warnings: [],
     });
 
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            message:
-              "Candidate ranges and evidence must reference transcript words.",
-          }),
-        ]),
-      );
-    }
+    expect(result.success).toBe(true);
   });
 
   it("exposes zero-to-four candidate limits and accepts only hash-bound automatic renders", () => {

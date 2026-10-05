@@ -5,6 +5,7 @@ import { createRendererApplication } from "./app.js";
 import { GcsMediaStore } from "./expiry/gcs-media-store.js";
 import { UploadCapabilityCipher } from "./expiry/upload-capability.js";
 import { MediaSessions } from "./expiry/media-sessions.js";
+import { CleanupDiagnostics } from "./expiry/cleanup-diagnostics.js";
 import { MediaOperations } from "./media/media-operations.js";
 import { NodeMediaPipeline } from "./media/node-pipeline.js";
 import { GoogleCallerVerifier } from "./auth/caller-verifier.js";
@@ -27,7 +28,14 @@ export async function startRenderer(environment: NodeJS.ProcessEnv) {
     config.FRONTEND_ORIGIN,
   );
   await store.assertDisposable();
-  const sessions = new MediaSessions(store, cipher, Date.now);
+  const sessions = new MediaSessions(
+    store,
+    cipher,
+    Date.now,
+    new CleanupDiagnostics((record) => {
+      process.stderr.write(JSON.stringify(record) + "\n");
+    }),
+  );
   const operations = new MediaOperations(
     sessions,
     new NodeMediaPipeline({
@@ -36,7 +44,6 @@ export async function startRenderer(environment: NodeJS.ProcessEnv) {
       chromium: config.CHROMIUM_PATH!,
       bundle: config.REMOTION_BUNDLE_PATH!,
     }),
-    config.RENDERER_MAX_OPERATIONS,
     Date.now,
   );
   const app = createRendererApplication(

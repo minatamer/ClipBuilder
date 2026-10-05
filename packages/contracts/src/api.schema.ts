@@ -44,6 +44,7 @@ export const publicConfigResponseSchema = z
     mode: z.enum(["fake", "live"]),
     sampleEnabled: z.boolean(),
     retainedSampleEnabled: z.boolean().optional(),
+    sampleReplayEnabled: z.boolean().optional(),
     localMediaEnabled: z.boolean(),
     liveAnalysisEnabled: z.boolean(),
     liveAssemblyEnabled: z.boolean(),
@@ -312,6 +313,7 @@ export const analysisBundleSchema = z
   })
   .strict()
   .superRefine((bundle, context) => {
+    // Server-owned envelope consistency, independent of model output quality.
     if ((bundle.outcome === "candidates") !== bundle.candidates.length > 0) {
       context.addIssue({
         code: "custom",
@@ -332,131 +334,13 @@ export const analysisBundleSchema = z
         path: ["candidates"],
       });
     }
-
-    const expectedRanks = bundle.candidates.map(
-      (_candidate, index) => index + 1,
-    );
     if (
-      [...ranks]
-        .sort((left, right) => left - right)
-        .some((rank, index) => rank !== expectedRanks[index])
+      [...ranks].sort((a, b) => a - b).some((rank, index) => rank !== index + 1)
     ) {
       context.addIssue({
         code: "custom",
         message: "Analysis candidate ranks must be contiguous from one.",
         path: ["candidates"],
-      });
-    }
-
-    const wordIndexes = new Map(
-      bundle.transcript.words.map((word, index) => [word.id, index]),
-    );
-    const resolvedCandidateRanges: Array<{
-      candidateIndex: number;
-      startMs: number;
-      endMs: number;
-    }> = [];
-    bundle.candidates.forEach((candidate, candidateIndex) => {
-      const startIndex = wordIndexes.get(candidate.startWordId);
-      const endIndex = wordIndexes.get(candidate.endWordId);
-      const evidenceIndexes = candidate.evidence.flatMap((evidence) =>
-        evidence.wordIds.map((wordId) => wordIndexes.get(wordId)),
-      );
-      const hasMissingReference =
-        startIndex === undefined ||
-        endIndex === undefined ||
-        evidenceIndexes.some((index) => index === undefined);
-
-      if (
-        hasMissingReference ||
-        startIndex === undefined ||
-        endIndex === undefined
-      ) {
-        context.addIssue({
-          code: "custom",
-          message:
-            "Candidate ranges and evidence must reference transcript words.",
-          path: ["candidates", candidateIndex],
-        });
-        return;
-      }
-
-      if (startIndex >= endIndex) {
-        context.addIssue({
-          code: "custom",
-          message: "Candidate transcript range must be ordered.",
-          path: ["candidates", candidateIndex, "endWordId"],
-        });
-        return;
-      }
-
-      if (
-        evidenceIndexes.some(
-          (index) =>
-            index === undefined || index < startIndex || index > endIndex,
-        )
-      ) {
-        context.addIssue({
-          code: "custom",
-          message: "Candidate evidence must remain inside its candidate range.",
-          path: ["candidates", candidateIndex, "evidence"],
-        });
-      }
-
-      const startWord = bundle.transcript.words[startIndex];
-      const endWord = bundle.transcript.words[endIndex];
-      if (startWord === undefined || endWord === undefined) {
-        return;
-      }
-
-      const durationMs = endWord.endMs - startWord.startMs;
-      if (
-        durationMs < PUBLIC_LIMITS.minClipSeconds * 1_000 ||
-        durationMs > PUBLIC_LIMITS.maxClipSeconds * 1_000
-      ) {
-        context.addIssue({
-          code: "custom",
-          message: "Candidate duration must remain within 10 to 60 seconds.",
-          path: ["candidates", candidateIndex],
-        });
-      }
-
-      resolvedCandidateRanges.push({
-        candidateIndex,
-        startMs: startWord.startMs,
-        endMs: endWord.endMs,
-      });
-    });
-
-    resolvedCandidateRanges.forEach((candidate, index) => {
-      resolvedCandidateRanges.slice(index + 1).forEach((otherCandidate) => {
-        const overlapMs = Math.max(
-          0,
-          Math.min(candidate.endMs, otherCandidate.endMs) -
-            Math.max(candidate.startMs, otherCandidate.startMs),
-        );
-        const shorterDurationMs = Math.min(
-          candidate.endMs - candidate.startMs,
-          otherCandidate.endMs - otherCandidate.startMs,
-        );
-        if (overlapMs * 100 > shorterDurationMs * 35) {
-          context.addIssue({
-            code: "custom",
-            message:
-              "Candidate overlap cannot exceed 35 percent of the shorter range.",
-            path: ["candidates", otherCandidate.candidateIndex],
-          });
-        }
-      });
-    });
-
-    if (
-      Math.abs(bundle.media.durationMs - bundle.transcript.durationMs) > 250
-    ) {
-      context.addIssue({
-        code: "custom",
-        message: "Media and transcript durations exceed the allowed tolerance.",
-        path: ["transcript", "durationMs"],
       });
     }
   });

@@ -9,13 +9,16 @@ const toggle = z
   .default("false")
   .transform((v) => v === "true");
 export function parseRendererConfig(environment: NodeJS.ProcessEnv) {
+  if (environment.RENDERER_MAX_OPERATIONS !== undefined)
+    throw new Error(
+      "RENDERER_MAX_OPERATIONS is retired; operation allowance is session-owned.",
+    );
   const schema = z.object({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
     RENDERER_ENABLED: toggle,
     CLOUD_SPEND_APPROVED: toggle,
-    RENDERER_MAX_OPERATIONS: z.coerce.number().int().min(0).max(4).default(0),
     PORT: z.coerce.number().int().min(1).max(65535).default(8080),
     RENDERER_BUCKET: blankString,
     RENDERER_AUDIENCE: blankString,
@@ -34,7 +37,6 @@ export function parseRendererConfig(environment: NodeJS.ProcessEnv) {
     result.NODE_ENV === "test" &&
     (result.RENDERER_ENABLED ||
       result.CLOUD_SPEND_APPROVED ||
-      result.RENDERER_MAX_OPERATIONS !== 0 ||
       result.RENDERER_CLEANUP_KEY_FILE)
   )
     throw new Error("Test cloud composition is prohibited.");
@@ -42,7 +44,6 @@ export function parseRendererConfig(environment: NodeJS.ProcessEnv) {
     if (
       !result.CLOUD_SPEND_APPROVED ||
       !result.REMOTION_LICENSE_CONFIRMED ||
-      result.RENDERER_MAX_OPERATIONS < 1 ||
       !result.RENDERER_BUCKET ||
       !result.RENDERER_AUDIENCE ||
       !result.RENDERER_CALLER_EMAIL ||

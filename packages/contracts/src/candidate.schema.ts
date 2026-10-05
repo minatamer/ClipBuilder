@@ -20,13 +20,7 @@ export const shareabilitySignalSchema = z.enum(SHAREABILITY_SIGNALS);
 export const candidateEvidenceSchema = z
   .object({
     signal: shareabilitySignalSchema,
-    wordIds: z
-      .array(wordIdSchema)
-      .min(1)
-      .max(8)
-      .refine((wordIds) => new Set(wordIds).size === wordIds.length, {
-        message: "Evidence word references must be unique.",
-      }),
+    wordIds: z.array(wordIdSchema).min(1).max(8),
     note: boundedPlainTextSchema(160),
   })
   .strict();
@@ -59,37 +53,10 @@ export const clipCandidateSchema = z
     title: boundedPlainTextSchema(80),
     hook: boundedPlainTextSchema(140),
     rationale: boundedPlainTextSchema(320),
-    evidence: z.array(candidateEvidenceSchema).min(2).max(8),
+    evidence: z.array(candidateEvidenceSchema).max(8),
     caveats: z.array(candidateCaveatSchema).max(3),
   })
-  .strict()
-  .superRefine((candidate, context) => {
-    if (candidate.startWordId === candidate.endWordId) {
-      context.addIssue({
-        code: "custom",
-        message: "Candidate range must contain more than one word boundary.",
-        path: ["endWordId"],
-      });
-    }
-
-    const evidenceSignals = candidate.evidence.map((item) => item.signal);
-    if (new Set(evidenceSignals).size !== evidenceSignals.length) {
-      context.addIssue({
-        code: "custom",
-        message: "Candidate evidence signals must be distinct.",
-        path: ["evidence"],
-      });
-    }
-
-    const caveatCodes = candidate.caveats.map((item) => item.code);
-    if (new Set(caveatCodes).size !== caveatCodes.length) {
-      context.addIssue({
-        code: "custom",
-        message: "Candidate caveats must be distinct.",
-        path: ["caveats"],
-      });
-    }
-  });
+  .strict();
 
 export type ShareabilitySignal = z.infer<typeof shareabilitySignalSchema>;
 export type CandidateEvidence = z.infer<typeof candidateEvidenceSchema>;

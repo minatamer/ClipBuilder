@@ -201,10 +201,10 @@ describe("session response branches", () => {
 describe("candidate reconciliation boundaries", () => {
   it.each([
     { name: "exactly 10 seconds", endMs: 10_000, expected: true },
-    { name: "one millisecond under 10 seconds", endMs: 9_999, expected: false },
+    { name: "one millisecond under 10 seconds", endMs: 9_999, expected: true },
     { name: "exactly 60 seconds", endMs: 60_000, expected: true },
-    { name: "one millisecond over 60 seconds", endMs: 60_001, expected: false },
-  ])("enforces $name", ({ endMs, expected }) => {
+    { name: "one millisecond over 60 seconds", endMs: 60_001, expected: true },
+  ])("accepts $name as guidance", ({ endMs, expected }) => {
     const timings = [
       [0, 100],
       [endMs - 100, endMs],
@@ -218,7 +218,7 @@ describe("candidate reconciliation boundaries", () => {
 
   it.each([
     { name: "exactly 35 percent", secondStartMs: 13_000, expected: true },
-    { name: "just over 35 percent", secondStartMs: 12_999, expected: false },
+    { name: "just over 35 percent", secondStartMs: 12_999, expected: true },
   ])("handles pair overlap at $name of the shorter candidate", (testCase) => {
     const timings = [
       [0, 100],
@@ -236,7 +236,7 @@ describe("candidate reconciliation boundaries", () => {
     );
   });
 
-  it("rejects evidence that exists in the transcript but falls outside its candidate", () => {
+  it("accepts evidence that exists in the transcript but falls outside its candidate", () => {
     const timings = [
       [0, 100],
       [1_000, 1_100],
@@ -247,17 +247,7 @@ describe("candidate reconciliation boundaries", () => {
     ]);
     const result = analysisBundleSchema.safeParse(bundle);
 
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            message:
-              "Candidate evidence must remain inside its candidate range.",
-          }),
-        ]),
-      );
-    }
+    expect(result.success).toBe(true);
   });
 });
 
@@ -322,12 +312,12 @@ describe("bounded arrays and transcript ordering", () => {
     },
   );
 
-  it("rejects decreasing transcript word starts and malformed speaker IDs", () => {
+  it("accepts decreasing transcript starts while rejecting malformed speaker ID primitives", () => {
     const transcript = createTranscript([
       [100, 200],
       [50, 150],
     ]);
-    expect(transcriptBundleSchema.safeParse(transcript).success).toBe(false);
+    expect(transcriptBundleSchema.safeParse(transcript).success).toBe(true);
     expect(
       transcriptBundleSchema.safeParse({
         ...createTranscript([[0, 100]]),

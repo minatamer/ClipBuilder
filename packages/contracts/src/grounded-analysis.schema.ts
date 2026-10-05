@@ -7,11 +7,11 @@ import {
 } from "./cloud-media.schema.js";
 import { sha256DigestSchema } from "./boundary-primitives.schema.js";
 import { PUBLIC_LIMITS } from "./constants.js";
+import { revisionIdSchema } from "./ids.schema.js";
 
 export const GROUNDED_ANALYSIS_LIMITS = {
   requestBytes: 8192,
   responseBytes: 4 * 1024 * 1024,
-  wordOverlapMs: 250,
   maxFilePolls: 90,
   filePollMs: 1000,
   cleanupMs: 30_000,
@@ -35,6 +35,11 @@ export const sourceAnalysisRequestSchema = z
   .object({
     generation: objectGenerationSchema,
     turnstileToken: z.string().min(1).max(2048),
+  })
+  .strict();
+export const sampleReplayRequestSchema = sourceAnalysisRequestSchema
+  .extend({
+    analysisRevision: revisionIdSchema,
   })
   .strict();
 export const retainedSampleAnalysisRequestSchema = z

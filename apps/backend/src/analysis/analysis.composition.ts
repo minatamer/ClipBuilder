@@ -1,3 +1,4 @@
+import { TranscribedAnalysisProvider } from "./transcribed-analysis.provider.js";
 import type { BackendConfig } from "../config/env.schema.js";
 import type { ProcessingAdmission } from "../admission/processing.admission.js";
 import {
@@ -17,6 +18,7 @@ import { OutputDelivery } from "../media/output-delivery.js";
 import { composeRetainedSampleReader } from "../media/retained-sample.gcs.js";
 import { RetainedSampleProcessing } from "../media/retained-sample.processing.js";
 import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
+import { composeLocalSampleReplay } from "./sample-replay.js";
 export function composeAnalysis(
   config: BackendConfig,
   admission: ProcessingAdmission | null,
@@ -35,9 +37,11 @@ export function composeAnalysis(
   const media = new CloudRendererClient(
     config,
     rendererIdentity(config.renderer.origin),
+    undefined,
+    diagnostics,
   );
   const files = new GeminiAnalysisProvider(
-    composeGeminiTransport(config),
+    composeGeminiTransport(config, undefined, diagnostics),
     config.gemini.timeoutMs,
     undefined,
     diagnostics,
@@ -46,15 +50,23 @@ export function composeAnalysis(
   const analysis = new SourceAnalysis(
     admission,
     media,
-    files,
+    new TranscribedAnalysisProvider(files, diagnostics),
     "google-gemini",
     Date.now,
     sampleReader ? new RetainedSampleProcessing(sampleReader) : null,
     diagnostics,
+    composeLocalSampleReplay(config),
   );
   const planner = composeSelectedPlanProvider(config, files);
   const assembly = planner
-    ? new SelectedAssembly(admission, analysis, media, planner, "google-gemini")
+    ? new SelectedAssembly(
+        admission,
+        analysis,
+        media,
+        planner,
+        "google-gemini",
+        diagnostics,
+      )
     : null;
   // Clear and either AI phase share exactly the same provider-file and media ownership.
   const render =

@@ -6,6 +6,7 @@ import {
   uuidV4Schema,
   objectGenerationSchema,
   selectedMediaRangeSchema,
+  TEMPORARY_MEDIA_LIMITS,
 } from "@clipbuilder/contracts";
 
 // Previous WebM records remain readable for deletion only. Discard their source
@@ -58,8 +59,30 @@ export const temporaryIntentSchema = z
     cleanupPending: z.boolean(),
     cleanupAttempts: z.number().int().min(0).max(1_000_000),
     nextCleanupAtMs: z.number().int().nonnegative(),
+    mediaOperationsUsed: z
+      .number()
+      .int()
+      .min(0)
+      .max(TEMPORARY_MEDIA_LIMITS.maxOperationsPerSession)
+      .optional(),
   })
-  .strict();
+  .strict()
+  .transform((intent) => ({
+    ...intent,
+    // Old intents predate the counter; irreversible phases/artifacts establish
+    // a conservative consumed allowance without changing deletion authority.
+    mediaOperationsUsed:
+      intent.mediaOperationsUsed ??
+      (intent.phase === "uploading"
+        ? 0
+        : ["rendering", "complete", "terminal"].includes(intent.phase)
+          ? TEMPORARY_MEDIA_LIMITS.maxOperationsPerSession
+          : intent.phase === "previewing" || intent.preview
+            ? 3
+            : intent.phase === "selecting" || intent.selectedRange
+              ? 2
+              : 1),
+  }));
 export type TemporaryIntent = z.infer<typeof temporaryIntentSchema>;
 export type IntentRecord = { intent: TemporaryIntent; generation: string };
 
@@ -114,5 +137,6 @@ export interface TemporaryMediaStore {
     source: string,
     expiresAtMs: number,
     signal: AbortSignal,
+    contentType?: "video/mp4" | "audio/m4a",
   ): Promise<import("@clipbuilder/contracts").ArtifactReference>;
 }

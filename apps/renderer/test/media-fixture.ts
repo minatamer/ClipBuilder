@@ -12,7 +12,6 @@ export const binding = {
 export const nonce = "00000000-0000-4000-8000-000000000001";
 export function mediaFixture(
   pipeline?: MediaPipeline,
-  budget = 2,
   removeScratch?: (directory: string) => Promise<void>,
   now: () => number = () => 1_000_000,
 ) {
@@ -22,7 +21,7 @@ export function mediaFixture(
     new UploadCapabilityCipher(Buffer.alloc(32, 7)),
     now,
   );
-  const calls = { inspect: 0, proxy: 0, render: 0 };
+  const calls = { inspect: 0, audio: 0, proxy: 0, render: 0 };
   const operations = new MediaOperations(
     sessions,
     pipeline ?? {
@@ -37,6 +36,9 @@ export function mediaFixture(
           audioStartMs: 0,
         });
       },
+      async audio() {
+        calls.audio++;
+      },
       async proxy() {
         calls.proxy++;
       },
@@ -44,20 +46,19 @@ export function mediaFixture(
         calls.render++;
       },
     },
-    budget,
     now,
     removeScratch,
   );
-  async function admit() {
+  async function admit(sessionBinding = binding) {
     const response = await sessions.admit({
-      binding,
+      binding: sessionBinding,
       bytes: 1024,
       contentType: "video/mp4",
       rightsAcknowledged: true,
       dataTransferAcknowledged: true,
     });
-    const record = await store.getIntent(binding.sessionId);
-    store.objects.set(binding.sessionId, [
+    const record = await store.getIntent(sessionBinding.sessionId);
+    store.objects.set(sessionBinding.sessionId, [
       { artifactId: record!.intent.sourceId, generation: "12", bytes: 1024 },
     ]);
     return response;

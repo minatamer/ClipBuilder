@@ -6,7 +6,7 @@ import { binding, nonce, mediaFixture } from "../../test/media-fixture.js";
 import { MediaFailure } from "./media.failure.js";
 describe("owned media dispatch", () => {
   it("physically proxies only the validated selected range once, then removes that proxy", async () => {
-    const f = mediaFixture(undefined, 4),
+    const f = mediaFixture(),
       ranges: unknown[] = [];
     await f.admit();
     const signal = new AbortController().signal;
@@ -16,6 +16,9 @@ describe("owned media dispatch", () => {
     const pipeline = {
       async inspect() {
         return (await f.store.getIntent(binding.sessionId))!.intent.source!;
+      },
+      async audio() {
+        throw new Error("not source work");
       },
       async proxy(
         _path: string,
@@ -33,7 +36,6 @@ describe("owned media dispatch", () => {
     const operations = new MediaOperations(
       f.sessions,
       pipeline,
-      3,
       () => 1_000_000,
     );
     const request = {
@@ -48,15 +50,15 @@ describe("owned media dispatch", () => {
     await operations.releaseAnalysisProxy(binding, signal);
     expect(await f.store.listArtifacts(binding.sessionId)).toHaveLength(1);
     await expect(operations.select(request, signal)).rejects.toMatchObject({
-      code: "media_failed",
+      code: "conflict",
     });
     expect(ranges).toHaveLength(1);
-    expect(operations.counts).toEqual({ media: 2, ai: 0 });
+    expect(operations.counts).toEqual({ media: 1, ai: 0 });
   });
   it.each(["generation", "bounds", "unreleased"])(
     "rejects selected %s before cutting",
     async (kind) => {
-      const f = mediaFixture(undefined, 4),
+      const f = mediaFixture(),
         signal = new AbortController().signal;
       await f.admit();
       await f.operations.prepare({ binding, nonce, generation: "12" }, signal);
@@ -72,9 +74,11 @@ describe("owned media dispatch", () => {
           },
           signal,
         ),
-      ).rejects.toMatchObject({ code: "media_failed" });
-      expect(f.calls).toEqual({ inspect: 1, proxy: 1, render: 0 });
-      expect(await f.store.listArtifacts(binding.sessionId)).toEqual([]);
+      ).rejects.toMatchObject({ code: "conflict" });
+      expect(f.calls).toEqual({ inspect: 1, audio: 1, proxy: 0, render: 0 });
+      expect(await f.store.listArtifacts(binding.sessionId)).toHaveLength(
+        kind === "unreleased" ? 2 : 1,
+      );
     },
   );
   it("reads only the admitted proxy generation, verifies bytes, removes scratch and deletes only the consumed proxy", async () => {
@@ -99,6 +103,7 @@ describe("owned media dispatch", () => {
     const bytes = await f.operations.analysisProxy(
       binding,
       new AbortController().signal,
+      "audio",
     );
     expect(bytes.byteLength).toBe(1024);
     await expect(access(scratch)).rejects.toMatchObject({ code: "ENOENT" });
@@ -109,7 +114,7 @@ describe("owned media dispatch", () => {
     );
     expect(
       (await f.store.listArtifacts(binding.sessionId)).some(
-        (a) => a.artifactId === prepared.analysisProxy.artifactId,
+        (a) => a.artifactId === prepared.analysisAudio.artifactId,
       ),
     ).toBe(false);
     expect(await f.store.listArtifacts(binding.sessionId)).toHaveLength(1);
@@ -120,7 +125,7 @@ describe("owned media dispatch", () => {
   });
   it("a failed analysis-proxy deletion fences the session and is recovered by the independent sweep", async () => {
     let now = 1_000_000;
-    const f = mediaFixture(undefined, 2, undefined, () => now);
+    const f = mediaFixture(undefined, undefined, () => now);
     await f.admit();
     await f.operations.prepare(
       { binding, nonce, generation: "12" },
@@ -144,7 +149,7 @@ describe("owned media dispatch", () => {
   it("retains failed scratch deletion, blocks further work, and retries via independent expiry", async () => {
     let fail = true,
       directory = "";
-    const f = mediaFixture(undefined, 3, async (path) => {
+    const f = mediaFixture(undefined, async (path) => {
       directory = path;
       if (fail) throw new Error("synthetic filesystem failure");
       await rm(path, { recursive: true, force: true });
@@ -194,16 +199,16 @@ describe("owned media dispatch", () => {
         { binding, nonce, generation: "12" },
         new AbortController().signal,
       ),
-    ).rejects.toMatchObject({ code: "media_failed" });
-    expect(f.calls).toEqual({ inspect: 1, proxy: 1, render: 0 });
+    ).rejects.toMatchObject({ code: "conflict" });
+    expect(f.calls).toEqual({ inspect: 1, audio: 1, proxy: 0, render: 0 });
     expect(f.store.calls).toMatchObject({ download: 1, upload: 1 });
-    expect(f.operations.counts).toEqual({ media: 2, ai: 0 });
+    expect(f.operations.counts).toEqual({ media: 1, ai: 0 });
     await expect(
       f.operations.prepare(
         { binding, nonce, generation: "12" },
         new AbortController().signal,
       ),
-    ).rejects.toMatchObject({ code: "budget" });
+    ).rejects.toMatchObject({ code: "conflict" });
   });
   it("refuses concurrent dispatch, fences cancellation, and removes owned scratch", async () => {
     let entered!: () => void,
@@ -223,6 +228,9 @@ describe("owned media dispatch", () => {
           ),
         );
         throw new Error("unreachable");
+      },
+      async audio() {
+        throw new Error("not source work");
       },
       async proxy() {
         throw new Error("unreachable");

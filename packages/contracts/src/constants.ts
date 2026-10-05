@@ -83,3 +83,5 @@ export function isSourceWithinLimitProfile(
     source.durationMs <= limits.maxSourceSeconds * 1_000
   );
 }
+
+export const MEDIA_END_TOLERANCE_MS = 250;

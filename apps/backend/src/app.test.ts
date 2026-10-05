@@ -37,6 +37,38 @@ describe("backend application", () => {
     await request(application).get("/v1/health").expect(200);
     expect(lines).toHaveLength(2);
   });
+  it.each(["preview", "output", "download"])(
+    "correlates the %s stream without recording capabilities or headers",
+    async (action) => {
+      const lines: string[] = [];
+      const { application } = composeBackend(
+        createSafeTestEnvironment(),
+        {},
+        new AnalysisDiagnostics((line) => lines.push(line)),
+      );
+      const response = await request(application)
+        .get(`/v1/analysis/${action}?private=synthetic-capability`)
+        .set("Cookie", "synthetic-private-cookie")
+        .set("Range", "bytes=0-15")
+        .expect(404);
+      expect(lines.map((line) => JSON.parse(line))).toEqual([
+        expect.objectContaining({
+          action,
+          requestId: response.headers["x-request-id"],
+          phase: "request",
+          outcome: "started",
+        }),
+        expect.objectContaining({
+          action,
+          phase: "request",
+          outcome: "completed",
+          applicationHttpStatus: 404,
+        }),
+      ]);
+      expect(lines.join("\n")).not.toMatch(/synthetic|private|Cookie|bytes=/);
+    },
+  );
+
   it("allows Exit with paid processing disabled and no credentials", async () => {
     const { application } = composeBackend(createSafeTestEnvironment());
     const response = await request(application)

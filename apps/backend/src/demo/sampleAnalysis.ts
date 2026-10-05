@@ -1,7 +1,6 @@
 import {
   analysisBundleSchema,
   assemblyBundleSchema,
-  type AnalysisBundleV1,
 } from "@clipbuilder/contracts";
 
 const opaqueId = (prefix: string, character: string) =>
@@ -417,131 +416,6 @@ export const SAMPLE_ASSEMBLY = assemblyBundleSchema.parse({
   manifestHash: IDS.manifestHash,
   compositionManifest,
 });
-
-export type FixtureRuleEvidence = { ruleId: string; path: string };
-export type FixtureValidation =
-  | { success: true; analysis: AnalysisBundleV1 }
-  | { success: false; evidence: FixtureRuleEvidence[] };
-
-function transcriptText(analysis: AnalysisBundleV1): string {
-  return analysis.transcript.words.map((word) => word.text).join(" ");
-}
-
-const GROUNDING_STOP_WORDS = new Set([
-  "a",
-  "an",
-  "and",
-  "for",
-  "in",
-  "of",
-  "the",
-  "to",
-  "with",
-]);
-
-function significantTokens(text: string): string[] {
-  return text
-    .toLocaleLowerCase()
-    .normalize("NFKC")
-    .split(/[^\p{L}\p{N}]+/u)
-    .filter((token) => token.length > 1 && !GROUNDING_STOP_WORDS.has(token));
-}
-
-function isCandidateCopyGrounded(
-  copy: string,
-  candidate: AnalysisBundleV1["candidates"][number],
-  analysis: AnalysisBundleV1,
-): boolean {
-  const wordIndexes = new Map(
-    analysis.transcript.words.map((word, index) => [word.id, index]),
-  );
-  const startIndex = wordIndexes.get(candidate.startWordId);
-  const endIndex = wordIndexes.get(candidate.endWordId);
-  if (startIndex === undefined || endIndex === undefined) return false;
-  const sourceTokens = new Set(
-    significantTokens(
-      analysis.transcript.words
-        .slice(startIndex, endIndex + 1)
-        .map((word) => word.text)
-        .join(" "),
-    ),
-  );
-  const copyTokens = significantTokens(copy);
-  if (copyTokens.length === 0) return false;
-  const groundedCount = copyTokens.filter((token) =>
-    sourceTokens.has(token),
-  ).length;
-  return groundedCount / copyTokens.length >= 0.6;
-}
-
-export function validateCandidateFixture(value: unknown): FixtureValidation {
-  const parsed = analysisBundleSchema.safeParse(value);
-  if (!parsed.success) {
-    return {
-      success: false,
-      evidence: parsed.error.issues.map((issue) => ({
-        ruleId: issue.message.includes("reference")
-          ? "candidate.reference"
-          : issue.message.includes("overlap") ||
-              issue.message.includes("distinct")
-            ? "candidate.distinct-range"
-            : "candidate.contract",
-        path: issue.path.join(".") || "analysis",
-      })),
-    };
-  }
-
-  const evidence: FixtureRuleEvidence[] = [];
-  const fullTranscript = transcriptText(parsed.data).toLocaleLowerCase();
-  if (
-    /ignore (?:all|any|previous)|system prompt|candidate analyzer/iu.test(
-      fullTranscript,
-    )
-  ) {
-    evidence.push({
-      ruleId: "candidate.instruction-content",
-      path: "transcript",
-    });
-  }
-  parsed.data.candidates.forEach((candidate, index) => {
-    const publicCopy = `${candidate.title} ${candidate.hook} ${candidate.rationale}`;
-    const performanceCopy = [
-      publicCopy,
-      ...candidate.evidence.map((item) => item.note),
-      ...candidate.caveats.map((item) => item.note),
-    ].join(" ");
-    if (
-      /guaranteed|go viral|million views|viral score/iu.test(performanceCopy)
-    ) {
-      evidence.push({
-        ruleId: "candidate.performance-claim",
-        path: `candidates.${index}`,
-      });
-    }
-    const quoted = publicCopy.match(/[“"]([^”"]+)[”"]/u)?.[1];
-    if (
-      quoted !== undefined &&
-      !fullTranscript.includes(quoted.toLocaleLowerCase())
-    ) {
-      evidence.push({
-        ruleId: "candidate.invented-quote",
-        path: `candidates.${index}`,
-      });
-    }
-    for (const field of ["title", "hook"] as const) {
-      if (!isCandidateCopyGrounded(candidate[field], candidate, parsed.data)) {
-        evidence.push({
-          ruleId: "candidate.invented-claim",
-          path: `candidates.${index}.${field}`,
-        });
-      }
-    }
-  });
-
-  return evidence.length === 0
-    ? { success: true, analysis: parsed.data }
-    : { success: false, evidence };
-}
 
 export const SAMPLE_FIXTURE_REVISIONS = Object.freeze({
   transcript: SAMPLE_ANALYSIS.transcript.revision,

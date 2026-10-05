@@ -7,7 +7,7 @@ import { MediaFailure } from "./media.failure.js";
 const hash = "c".repeat(64),
   range = { startMs: 1000, endMs: 11000 };
 async function fixture() {
-  const f = mediaFixture(undefined, 4),
+  const f = mediaFixture(),
     signal = new AbortController().signal;
   await f.admit();
   await f.operations.prepare({ binding, nonce, generation: "12" }, signal);
@@ -94,7 +94,7 @@ describe("selected preview ownership", () => {
   });
   it("prepares a separate bounded proxy once and restores/streams without processing", async () => {
     const f = await fixture();
-    expect(f.calls).toEqual({ inspect: 3, proxy: 3, render: 0 });
+    expect(f.calls).toEqual({ inspect: 3, audio: 1, proxy: 2, render: 0 });
     expect(await f.store.listArtifacts(binding.sessionId)).toHaveLength(2);
     expect(await f.sessions.previewArtifact(f.access)).toEqual(f.result);
     const content = await request(f.app)

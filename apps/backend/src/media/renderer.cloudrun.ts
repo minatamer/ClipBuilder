@@ -22,8 +22,17 @@ import {
   type MediaPreviewRequest,
   type MediaPreviewAccess,
   mediaOutputResponseSchema,
+  rendererFailureResponseSchema,
 } from "@clipbuilder/contracts";
 import type { BackendConfig } from "../config/env.schema.js";
+import { AnalysisDiagnostics } from "../analysis/analysis.diagnostics.js";
+import {
+  RendererRequestFailure,
+  rendererDiagnosticSchema,
+  rendererSchemaIssues,
+  type RendererDiagnostic,
+  type RendererOperation,
+} from "./renderer.diagnostics.js";
 export interface RendererIdentity {
   authorization(): Promise<string>;
 }
@@ -45,6 +54,7 @@ export class CloudRendererClient {
     private readonly config: BackendConfig,
     private readonly identity: RendererIdentity,
     private readonly transport: typeof fetch = fetch,
+    private readonly diagnostics = new AnalysisDiagnostics(),
   ) {
     if (
       config.nodeEnv === "test" ||
@@ -54,12 +64,23 @@ export class CloudRendererClient {
     )
       throw new Error("renderer_disabled");
   }
-  private async call<T>(
-    path: string,
+  private async exchange<T>(
+    operation: RendererOperation,
     input: object,
-    schema: z.ZodType<T>,
     signal: AbortSignal,
+    consume: (response: Response, detail: RendererDiagnostic) => Promise<T>,
+    range?: string,
+    handoff = false,
   ): Promise<T> {
+    const started = performance.now();
+    const detail: RendererDiagnostic = {
+      operation,
+      attempt: 1,
+      phase: "authorization",
+      elapsedMs: 0,
+      responseBytes: 0,
+      responseComplete: false,
+    };
     const deadline = AbortSignal.any([
       signal,
       AbortSignal.timeout(TEMPORARY_MEDIA_LIMITS.workDeadlineMs),
@@ -69,42 +90,155 @@ export class CloudRendererClient {
       deadline.throwIfAborted();
       const authorization = await this.identity.authorization();
       deadline.throwIfAborted();
-      response = await this.transport(this.config.renderer.origin + path, {
-        method: "POST",
-        headers: {
-          Authorization: authorization,
-          "X-Serverless-Authorization": authorization,
-          "Content-Type": "application/json",
+      detail.phase = "transport";
+      response = await this.transport(
+        this.config.renderer.origin + "/internal/" + operation,
+        {
+          method: "POST",
+          headers: {
+            Authorization: authorization,
+            "X-Serverless-Authorization": authorization,
+            "Content-Type": "application/json",
+            ...(range ? { Range: range } : {}),
+          },
+          body: JSON.stringify(input),
+          signal: deadline,
+          redirect: "error",
         },
-        body: JSON.stringify(input),
-        signal: deadline,
-        redirect: "error",
-      });
-      if (!response.ok || !response.body)
-        throw new Error("renderer_unavailable");
-      const reader = response.body.getReader(),
-        chunks: Uint8Array[] = [];
-      let size = 0;
-      try {
-        for (;;) {
-          const chunk = await reader.read();
-          if (chunk.done) break;
-          size += chunk.value.byteLength;
-          if (size > TEMPORARY_MEDIA_LIMITS.descriptorBytes)
-            throw new Error("renderer_unavailable");
-          chunks.push(chunk.value);
+      );
+      detail.httpStatus = response.status;
+      detail.phase = "http";
+      if (!response.ok) {
+        detail.failure = "http_rejected";
+        if (response.body) {
+          const body = await this.readBody(
+            response,
+            detail,
+            TEMPORARY_MEDIA_LIMITS.descriptorBytes,
+          );
+          try {
+            const parsed = rendererFailureResponseSchema.safeParse(
+              JSON.parse(body.toString("utf8")),
+            );
+            if (parsed.success) {
+              detail.rendererCode = parsed.data.code;
+              detail.rendererStage = parsed.data.stage;
+              detail.rendererUnderlyingCode = parsed.data.underlyingCode;
+            }
+          } catch {
+            /* Keep status even when an upstream error is not JSON. */
+          }
         }
-      } finally {
-        await reader.cancel();
-        reader.releaseLock();
+        throw new Error("renderer_http_rejected");
       }
-      return schema.parse(JSON.parse(Buffer.concat(chunks).toString("utf8")));
-    } catch {
-      throw new Error("renderer_unavailable");
+      const value = await consume(response, detail);
+      detail.phase = handoff ? "headers" : "completed";
+      detail.elapsedMs = Math.round(performance.now() - started);
+      this.diagnostics.rendererRequest(detail);
+      return value;
+    } catch (error) {
+      detail.elapsedMs = Math.round(performance.now() - started);
+      if (deadline.aborted)
+        detail.failure =
+          signal.aborted &&
+          !(
+            signal.reason instanceof Error &&
+            signal.reason.name === "TimeoutError"
+          )
+            ? "canceled"
+            : "timeout";
+      detail.failure ??=
+        detail.phase === "authorization"
+          ? "authorization_failed"
+          : detail.phase === "transport"
+            ? "transport_failed"
+            : detail.phase === "json"
+              ? "json_invalid"
+              : detail.phase === "schema"
+                ? "schema_invalid"
+                : "body_read_failed";
+      if (error instanceof z.ZodError)
+        detail.schemaIssues = rendererSchemaIssues(error);
+      if (error instanceof Error) {
+        const errorClass = rendererDiagnosticSchema.shape.errorClass
+          .unwrap()
+          .safeParse(error.name);
+        detail.errorClass = errorClass.success ? errorClass.data : "Error";
+        if (detail.phase === "authorization") {
+          const authorizationError = z
+            .object({
+              response: z.object({
+                status: z.number().int().min(400).max(599),
+              }),
+            })
+            .safeParse(error);
+          if (authorizationError.success)
+            detail.authorizationHttpStatus =
+              authorizationError.data.response.status;
+        }
+      }
+      const failure = new RendererRequestFailure(detail, error);
+      this.diagnostics.rendererRequest(detail, failure);
+      throw failure;
     } finally {
-      if (response?.body && !response.body.locked)
+      if (
+        (!handoff || detail.failure) &&
+        response?.body &&
+        !response.body.locked
+      )
         await response.body.cancel().catch(() => undefined);
     }
+  }
+  private async readBody(
+    response: Response,
+    detail: RendererDiagnostic,
+    maxBytes: number,
+  ) {
+    if (!response.body) {
+      detail.failure = "body_missing";
+      throw new Error("renderer_body_missing");
+    }
+    const reader = response.body.getReader(),
+      chunks: Uint8Array[] = [];
+    try {
+      for (;;) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        detail.responseBytes += chunk.value.byteLength;
+        if (detail.responseBytes > maxBytes) {
+          detail.failure = "body_limit";
+          throw new Error("renderer_body_limit");
+        }
+        chunks.push(chunk.value);
+      }
+      detail.responseComplete = true;
+      return Buffer.concat(chunks);
+    } finally {
+      await reader.cancel().catch(() => undefined);
+      reader.releaseLock();
+    }
+  }
+  private call<T>(
+    path: string,
+    input: object,
+    schema: z.ZodType<T>,
+    signal: AbortSignal,
+  ): Promise<T> {
+    const operation = rendererDiagnosticSchema.shape.operation.parse(
+      path.slice("/internal/".length),
+    );
+    return this.exchange(operation, input, signal, async (response, detail) => {
+      detail.phase = "body";
+      const body = await this.readBody(
+        response,
+        detail,
+        TEMPORARY_MEDIA_LIMITS.descriptorBytes,
+      );
+      detail.phase = "json";
+      const value: unknown = JSON.parse(body.toString("utf8"));
+      detail.phase = "schema";
+      return schema.parse(value);
+    });
   }
   upload(input: MediaUploadRequest, signal: AbortSignal) {
     return this.call(
@@ -182,22 +316,13 @@ export class CloudRendererClient {
     range: string | undefined,
     signal: AbortSignal,
   ) {
-    const authorization = await this.identity.authorization();
-    signal.throwIfAborted();
-    return this.transport(
-      this.config.renderer.origin + `/internal/${kind}-content`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: authorization,
-          "X-Serverless-Authorization": authorization,
-          "Content-Type": "application/json",
-          ...(range ? { Range: range } : {}),
-        },
-        body: JSON.stringify(mediaPreviewAccessSchema.parse(input)),
-        signal,
-        redirect: "error",
-      },
+    return this.exchange(
+      `${kind}-content`,
+      mediaPreviewAccessSchema.parse(input),
+      signal,
+      async (response) => response,
+      range,
+      true,
     );
   }
   cancel(binding: MediaBinding, signal: AbortSignal) {
@@ -208,55 +333,39 @@ export class CloudRendererClient {
       signal,
     );
   }
-  async proxy(binding: MediaBinding, signal: AbortSignal): Promise<Blob> {
+  audio(binding: MediaBinding, signal: AbortSignal): Promise<Blob> {
+    return this.analysisContent(binding, signal, "audio/m4a");
+  }
+  proxy(binding: MediaBinding, signal: AbortSignal): Promise<Blob> {
+    return this.analysisContent(binding, signal, "video/mp4");
+  }
+  private async analysisContent(
+    binding: MediaBinding,
+    signal: AbortSignal,
+    contentType: "video/mp4" | "audio/m4a",
+  ): Promise<Blob> {
     const body = mediaCancelRequestSchema.parse({ binding });
     const deadline = AbortSignal.any([signal, AbortSignal.timeout(30_000)]);
-    let response: Response | undefined;
-    try {
-      const authorization = await this.identity.authorization();
-      deadline.throwIfAborted();
-      response = await this.transport(
-        this.config.renderer.origin + "/internal/analysis-proxy",
-        {
-          method: "POST",
-          body: JSON.stringify(body),
-          signal: deadline,
-          redirect: "error",
-          headers: {
-            Authorization: authorization,
-            "X-Serverless-Authorization": authorization,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      if (
-        !response.ok ||
-        response.headers.get("content-type")?.split(";")[0] !== "video/mp4" ||
-        !response.body
-      )
-        throw new Error();
-      const reader = response.body.getReader(),
-        chunks: Uint8Array[] = [];
-      let size = 0;
-      try {
-        for (;;) {
-          const chunk = await reader.read();
-          if (chunk.done) break;
-          size += chunk.value.byteLength;
-          if (size > TEMPORARY_MEDIA_LIMITS.proxyBytes) throw new Error();
-          chunks.push(chunk.value);
+    return this.exchange(
+      contentType === "audio/m4a" ? "analysis-audio" : "analysis-proxy",
+      body,
+      deadline,
+      async (response, detail) => {
+        if (
+          response.headers.get("content-type")?.split(";")[0] !== contentType
+        ) {
+          detail.failure = "content_type_invalid";
+          throw new Error("renderer_content_type_invalid");
         }
-      } finally {
-        await reader.cancel();
-        reader.releaseLock();
-      }
-      return new Blob([Buffer.concat(chunks)], { type: "video/mp4" });
-    } catch {
-      throw new Error("renderer_unavailable");
-    } finally {
-      if (response?.body && !response.body.locked)
-        await response.body.cancel().catch(() => undefined);
-    }
+        detail.phase = "body";
+        const bytes = await this.readBody(
+          response,
+          detail,
+          TEMPORARY_MEDIA_LIMITS.proxyBytes,
+        );
+        return new Blob([bytes], { type: contentType });
+      },
+    );
   }
   async releaseProxy(
     binding: MediaBinding,

@@ -1,6 +1,8 @@
+import { normalizedAnalysisSchema } from "./analysis.reconciliation.js";
+import { CANDIDATE_SELECTION_POLICY } from "./analysis.prompt.js";
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type GenerateContentConfig } from "@google/genai";
 import { z } from "zod";
 import {
   GROUNDED_ANALYSIS_LIMITS,
@@ -8,15 +10,22 @@ import {
 } from "@clipbuilder/contracts";
 import type { BackendConfig } from "../config/env.schema.js";
 import { ApplicationError } from "../http/errorMapper.js";
-import {
-  geminiWireSchema,
-  normalizeGeminiAnalysis,
-} from "./analysis.provider-shape.js";
-import { ANALYSIS_POLICY, ANALYSIS_REQUEST } from "./analysis.prompt.js";
 import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
+import { googleOperation } from "./gemini.diagnostics.js";
+import {
+  TRANSCRIBE_MODEL,
+  normalizeTranscription,
+} from "./transcribe.normalization.js";
+import { CANDIDATE_GENERATION_SCHEMA_POLICY } from "./analysis.provider-shape.js";
+import type { MediaDescriptor } from "@clipbuilder/contracts";
 
 export interface AnalysisProvider {
-  analyze(proxy: Blob, signal: AbortSignal, scope?: string): Promise<unknown>;
+  analyze(
+    audio: Blob,
+    signal: AbortSignal,
+    scope: string,
+    media: MediaDescriptor,
+  ): Promise<unknown>;
   cleanup?(signal: AbortSignal, scope?: string): Promise<void>;
 }
 export interface GeminiTransport {
@@ -25,7 +34,12 @@ export interface GeminiTransport {
   generate(
     uri: string,
     signal: AbortSignal,
-    task?: GeminiTask,
+    task: GeminiTask,
+  ): Promise<{ text: string | undefined; finished: boolean }>;
+  transcribe(uri: string, signal: AbortSignal): Promise<unknown>;
+  candidates(
+    prompt: string,
+    signal: AbortSignal,
   ): Promise<{ text: string | undefined; finished: boolean }>;
   delete(name: string, signal: AbortSignal): Promise<void>;
 }
@@ -38,14 +52,18 @@ export type GeminiTask = {
 const fileSchema = z.object({
   name: z.string(),
   uri: z.string().optional(),
-  mimeType: z.literal("video/mp4").optional(),
+  mimeType: z.enum(["video/mp4", "audio/m4a"]).optional(),
   state: z.enum(["PROCESSING", "ACTIVE", "FAILED"]),
 });
 
 class GoogleFilesFailure extends Error {
   constructor(
     readonly phase:
-      "upload_start" | "upload_finalize" | "delete" | "delete_confirm",
+      | "upload_start"
+      | "upload_finalize"
+      | "delete"
+      | "delete_confirm"
+      | "transcription",
     readonly status: number,
     readonly neverCreated = false,
   ) {
@@ -55,10 +73,11 @@ class GoogleFilesFailure extends Error {
     return `google_files_${this.phase}_http_${this.status}`;
   }
 }
-export function composeGeminiTransport(
+function composeGoogleClient(
   config: BackendConfig,
   transport?: typeof fetch,
-): GeminiTransport {
+  diagnostics = new AnalysisDiagnostics(),
+) {
   if (
     config.nodeEnv === "test" ||
     config.providerMode !== "live" ||
@@ -71,27 +90,82 @@ export function composeGeminiTransport(
     throw new ApplicationError({ code: "FEATURE_DISABLED" });
   const rawFetch = transport ?? fetch;
   const boundedFetch: typeof fetch = async (url, options) => {
-    const response = await rawFetch(url, { ...options, redirect: "error" });
-    if (!response.body) return response;
-    const reader = response.body.getReader(),
-      chunks: Uint8Array[] = [];
-    let size = 0;
+    const started = performance.now();
+    const operation = googleOperation(url, options?.method);
     try {
-      for (;;) {
-        const chunk = await reader.read();
-        if (chunk.done) break;
-        size += chunk.value.byteLength;
-        if (size > GROUNDED_ANALYSIS_LIMITS.responseBytes)
-          throw new Error("provider_response_rejected");
-        chunks.push(chunk.value);
+      const response = await rawFetch(url, { ...options, redirect: "error" });
+      if (!response.body) {
+        diagnostics.googleHttpResponse(
+          operation,
+          response.status,
+          performance.now() - started,
+          undefined,
+          response.headers,
+        );
+        return response;
       }
-      return new Response(Buffer.concat(chunks), {
-        status: response.status,
-        headers: response.headers,
-      });
-    } finally {
-      await reader.cancel();
-      reader.releaseLock();
+      const reader = response.body.getReader(),
+        chunks: Uint8Array[] = [];
+      let size = 0,
+        incompleteCaptured = false;
+      try {
+        for (;;) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          size += chunk.value.byteLength;
+          if (size > GROUNDED_ANALYSIS_LIMITS.responseBytes) {
+            incompleteCaptured = true;
+            diagnostics.privateGoogleResponse(
+              operation,
+              response.status,
+              () =>
+                Buffer.concat(
+                  [...chunks, chunk.value],
+                  GROUNDED_ANALYSIS_LIMITS.responseBytes,
+                ),
+              response.headers,
+              false,
+              size,
+            );
+            throw new Error("provider_response_rejected");
+          }
+          chunks.push(chunk.value);
+        }
+        const body = Buffer.concat(chunks);
+        const bounded = new Response(body, {
+          status: response.status,
+          headers: response.headers,
+        });
+        diagnostics.googleHttpResponse(
+          operation,
+          response.status,
+          performance.now() - started,
+          body,
+          response.headers,
+        );
+        return bounded;
+      } catch (error) {
+        if (!incompleteCaptured)
+          diagnostics.privateGoogleResponse(
+            operation,
+            response.status,
+            () => Buffer.concat(chunks),
+            response.headers,
+            false,
+            size,
+          );
+        throw error;
+      } finally {
+        await reader.cancel().catch(() => undefined);
+        reader.releaseLock();
+      }
+    } catch (error) {
+      diagnostics.googleHttpFailure(
+        operation,
+        performance.now() - started,
+        error,
+      );
+      throw error;
     }
   };
   const ai = new GoogleGenAI({
@@ -102,6 +176,34 @@ export function composeGeminiTransport(
       fetch: boundedFetch,
     },
   });
+  return { ai, boundedFetch };
+}
+
+function generationConfig(
+  config: BackendConfig,
+  abortSignal: AbortSignal,
+  policy: string,
+): GenerateContentConfig {
+  return {
+    abortSignal,
+    systemInstruction: policy,
+    responseMimeType: "application/json",
+    maxOutputTokens: config.gemini.maxOutputTokens,
+    candidateCount: 1,
+    tools: [],
+  };
+}
+
+export function composeGeminiTransport(
+  config: BackendConfig,
+  transport?: typeof fetch,
+  diagnostics = new AnalysisDiagnostics(),
+): GeminiTransport {
+  const { ai, boundedFetch } = composeGoogleClient(
+    config,
+    transport,
+    diagnostics,
+  );
   return {
     async upload(name, file, signal) {
       // SDK 2.25.0's uploader has independent chunk retries and does not forward
@@ -119,7 +221,7 @@ export function composeGeminiTransport(
               "X-Goog-Upload-Protocol": "resumable",
               "X-Goog-Upload-Command": "start",
               "X-Goog-Upload-Header-Content-Length": String(file.size),
-              "X-Goog-Upload-Header-Content-Type": "video/mp4",
+              "X-Goog-Upload-Header-Content-Type": file.type,
             },
             body: JSON.stringify({ file: { name } }),
           },
@@ -148,7 +250,7 @@ export function composeGeminiTransport(
           headers: {
             "X-Goog-Upload-Offset": "0",
             "X-Goog-Upload-Command": "upload, finalize",
-            "Content-Type": "video/mp4",
+            "Content-Type": file.type,
           },
         });
         if (!final.ok)
@@ -164,8 +266,18 @@ export function composeGeminiTransport(
     },
     get: (name, abortSignal) => ai.files.get({ name, config: { abortSignal } }),
     async generate(uri, abortSignal, task) {
-      if (task && !config.features.liveAssembly)
+      if (!config.features.liveAssembly)
         throw new ApplicationError({ code: "FEATURE_DISABLED" });
+      const responseJsonSchema = z.toJSONSchema(task.schema, { io: "input" });
+      diagnostics.generationRequest({
+        purpose: "selected_plan",
+        schemaPolicy: "json_only",
+        schemaLocation: "prompt",
+        model: config.gemini.model,
+        maxOutputTokens: config.gemini.maxOutputTokens,
+        timeoutMs: config.gemini.timeoutMs,
+        schema: responseJsonSchema,
+      });
       const response = await ai.models.generateContent({
         model: config.gemini.model,
         contents: [
@@ -174,25 +286,81 @@ export function composeGeminiTransport(
             parts: [
               {
                 fileData: { fileUri: uri, mimeType: "video/mp4" },
-                ...(task ? { videoMetadata: { fps: task.videoFps } } : {}),
+                videoMetadata: { fps: task.videoFps },
               },
               {
-                text: task?.prompt ?? ANALYSIS_REQUEST,
+                text: `${task.prompt}\nExpected JSON response schema (guidance; return only the JSON object):\n${JSON.stringify(responseJsonSchema)}`,
               },
             ],
           },
         ],
-        config: {
-          abortSignal,
-          systemInstruction: task?.policy ?? ANALYSIS_POLICY,
-          responseMimeType: "application/json",
-          responseJsonSchema: z.toJSONSchema(task?.schema ?? geminiWireSchema, {
-            io: "input",
+        config: generationConfig(config, abortSignal, task.policy),
+      });
+      const candidate = response.candidates?.[0];
+      return {
+        text: response.text,
+        finished:
+          response.candidates?.length === 1 &&
+          candidate?.finishReason === "STOP" &&
+          !candidate.content?.parts?.some(
+            (part) =>
+              part.functionCall ||
+              part.executableCode ||
+              part.codeExecutionResult,
+          ),
+      };
+    },
+    async transcribe(uri, signal) {
+      diagnostics.transcriptionRequest(config.gemini.timeoutMs);
+      const response = await boundedFetch(
+        "https://generativelanguage.googleapis.com/v1beta/interactions",
+        {
+          method: "POST",
+          signal,
+          headers: {
+            "x-goog-api-key": config.gemini.apiKey!,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: TRANSCRIBE_MODEL,
+            store: false,
+            background: false,
+            stream: false,
+            input: [{ type: "audio", uri, mime_type: "audio/m4a" }],
+            generation_config: {
+              transcription_config: {
+                language_codes: ["en-US"],
+                mode: {
+                  type: "verbatim",
+                  diarization_mode: "speaker",
+                  timestamp_granularities: ["word"],
+                },
+              },
+            },
           }),
-          maxOutputTokens: config.gemini.maxOutputTokens,
-          candidateCount: 1,
-          tools: [],
         },
+      );
+      if (!response.ok)
+        throw new GoogleFilesFailure("transcription", response.status);
+      return response.json();
+    },
+    async candidates(prompt, abortSignal) {
+      diagnostics.generationRequest({
+        purpose: "candidate_selection",
+        schemaPolicy: CANDIDATE_GENERATION_SCHEMA_POLICY,
+        model: config.gemini.model,
+        maxOutputTokens: config.gemini.maxOutputTokens,
+        timeoutMs: config.gemini.timeoutMs,
+        schema: undefined,
+      });
+      const response = await ai.models.generateContent({
+        model: config.gemini.model,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: generationConfig(
+          config,
+          abortSignal,
+          CANDIDATE_SELECTION_POLICY,
+        ),
       });
       const candidate = response.candidates?.[0];
       return {
@@ -280,7 +448,7 @@ type PendingGoogleFile = {
   deletion: Promise<void> | null;
   neverCreated: boolean;
 };
-export class GeminiAnalysisProvider implements AnalysisProvider {
+export class GeminiAnalysisProvider {
   private pendingFiles = new Map<string, PendingGoogleFile>();
   constructor(
     private readonly transport: GeminiTransport,
@@ -293,16 +461,74 @@ export class GeminiAnalysisProvider implements AnalysisProvider {
     },
     private readonly diagnostics = new AnalysisDiagnostics(),
   ) {}
-  async analyze(
+  analyze(
     proxy: Blob,
     signal: AbortSignal,
-    scope = "local",
+    scope: string,
+    task: GeminiTask,
+  ): Promise<unknown> {
+    return this.executeFile(proxy, signal, scope, task);
+  }
+  async transcribe(audio: Blob, signal: AbortSignal, scope: string) {
+    return normalizedAnalysisSchema
+      .omit({ candidates: true })
+      .parse(await this.executeFile(audio, signal, scope));
+  }
+  async candidates(prompt: string, signal: AbortSignal) {
+    if (this.pendingFiles.size)
+      throw new ApplicationError({ code: "CLEANUP_PENDING" });
+    const deadline = AbortSignal.any([
+      signal,
+      AbortSignal.timeout(this.timeoutMs),
+    ]);
+    let phase: "generation" | "validation" = "generation";
+    try {
+      deadline.throwIfAborted();
+      const result = await this.diagnostics.step("candidate_generation", () =>
+        this.transport.candidates(prompt, deadline),
+      );
+      this.diagnostics.privateGenerationResult(result);
+      deadline.throwIfAborted();
+      phase = "validation";
+      return this.diagnostics.check("candidate_validation", () => {
+        const text = result.text ?? "";
+        if (Buffer.byteLength(text) > GROUNDED_ANALYSIS_LIMITS.responseBytes)
+          throw new Error("candidate_response_limit");
+        try {
+          const decoded: unknown = JSON.parse(text);
+          this.diagnostics.candidateJsonDecoded(true);
+          return decoded;
+        } catch {
+          this.diagnostics.candidateJsonDecoded(false);
+          this.diagnostics.privateStageOutput("candidate_decoding", {
+            reason: "json_unavailable",
+          });
+          return null;
+        }
+      });
+    } catch (error) {
+      if (error instanceof ApplicationError) throw error;
+      throw new ApplicationError({
+        code: deadline.aborted
+          ? signal.aborted
+            ? "CLIENT_ABORTED"
+            : "OPERATION_TIMEOUT"
+          : phase === "validation"
+            ? "MODEL_OUTPUT_REJECTED"
+            : "ANALYSIS_PROVIDER_FAILED",
+      });
+    }
+  }
+  private async executeFile(
+    proxy: Blob,
+    signal: AbortSignal,
+    scope: string,
     task?: GeminiTask,
   ): Promise<unknown> {
     if (this.pendingFiles.size)
       throw new ApplicationError({ code: "CLEANUP_PENDING" });
     if (
-      proxy.type !== "video/mp4" ||
+      proxy.type !== (task ? "video/mp4" : "audio/m4a") ||
       proxy.size <= 0 ||
       proxy.size > TEMPORARY_MEDIA_LIMITS.proxyBytes
     )
@@ -348,7 +574,11 @@ export class GeminiAnalysisProvider implements AnalysisProvider {
       phase = "processing";
       const uri = await this.diagnostics.step("gemini_processing", async () => {
         for (let polls = 0; file.state === "PROCESSING"; polls++) {
-          if (file.name !== name) throw new Error();
+          if (
+            file.name !== name ||
+            (file.mimeType !== undefined && file.mimeType !== proxy.type)
+          )
+            throw new Error();
           if (polls >= GROUNDED_ANALYSIS_LIMITS.maxFilePolls) throw new Error();
           await this.wait(GROUNDED_ANALYSIS_LIMITS.filePollMs, deadline);
           file = fileSchema.parse(await this.transport.get(name, deadline));
@@ -356,6 +586,7 @@ export class GeminiAnalysisProvider implements AnalysisProvider {
         if (
           file.name !== name ||
           file.state !== "ACTIVE" ||
+          (file.mimeType !== undefined && file.mimeType !== proxy.type) ||
           file.uri !==
             `https://generativelanguage.googleapis.com/v1beta/${name}`
         )
@@ -364,23 +595,48 @@ export class GeminiAnalysisProvider implements AnalysisProvider {
       });
       deadline.throwIfAborted();
       phase = "generation";
-      const result = await this.diagnostics.step("gemini_generation", () =>
-        this.transport.generate(uri, deadline, task),
+      const result = await this.diagnostics.step(
+        task ? "gemini_generation" : "transcription_generation",
+        () =>
+          task
+            ? this.transport.generate(uri, deadline, task)
+            : this.transport.transcribe(uri, deadline),
+      );
+      this.diagnostics.privateStageOutput(
+        task ? "selected_plan_raw" : "transcription_raw",
+        result,
       );
       deadline.throwIfAborted();
       phase = "validation";
-      value = this.diagnostics.check("gemini_validation", () => {
-        if (
-          !result.finished ||
-          !result.text ||
-          new TextEncoder().encode(result.text).length >
-            GROUNDED_ANALYSIS_LIMITS.responseBytes
-        )
-          throw new Error();
-        return task
-          ? task.schema.parse(JSON.parse(result.text))
-          : normalizeGeminiAnalysis(JSON.parse(result.text));
-      });
+      value = this.diagnostics.check(
+        task ? "gemini_validation" : "transcription_normalization",
+        () => {
+          if (!task) {
+            const normalized = normalizeTranscription(result, this.diagnostics);
+            this.diagnostics.privateStageOutput(
+              "transcription_normalized",
+              normalized,
+            );
+            return normalizedAnalysisSchema
+              .omit({ candidates: true })
+              .parse(normalized);
+          }
+          const generated = z
+            .object({ text: z.string().min(1), finished: z.literal(true) })
+            .parse(result);
+          this.diagnostics.privateGenerationResult(generated);
+          const decoded: unknown = JSON.parse(generated.text);
+          this.diagnostics.privateStageOutput(
+            "selected_plan_json_decoded",
+            decoded,
+          );
+          return task.schema.parse(decoded);
+        },
+      );
+      this.diagnostics.privateStageOutput(
+        task ? "selected_plan_normalized" : "transcription_normalized",
+        value,
+      );
     } catch (error) {
       const status =
         error instanceof Error &&
@@ -410,7 +666,9 @@ export class GeminiAnalysisProvider implements AnalysisProvider {
           : phase === "processing"
             ? "gemini_processing"
             : phase === "generation"
-              ? "gemini_generation"
+              ? task
+                ? "gemini_generation"
+                : "transcription_generation"
               : "gemini_validation",
         failure,
       );
@@ -425,16 +683,18 @@ export class GeminiAnalysisProvider implements AnalysisProvider {
           ),
         );
       } catch (error) {
-        // Keep the analysis reason alongside the cleanup reason. Neither code
-        // includes provider payloads, file IDs, capabilities or credentials.
+        // Cleanup has its own diagnostics and retained deletion obligation.
+        // Never replace the primary analysis failure in the response.
         const cleanupRule =
           error instanceof GoogleFilesFailure
             ? error.ruleId
             : "google_files_cleanup_failed";
-        failure = new ApplicationError({
+        const cleanupFailure = new ApplicationError({
           code: "CLEANUP_PENDING",
-          ruleId: `${failure?.ruleId ?? "analysis_complete"};${cleanupRule}`,
+          ruleId: cleanupRule,
         });
+        this.diagnostics.failure("gemini_cleanup", cleanupFailure);
+        failure ??= cleanupFailure;
       }
     }
     if (failure) throw failure;

@@ -9,6 +9,7 @@ import {
   selectedAssemblyRequestSchema,
   finalRenderRequestSchema,
   retainedSampleAnalysisRequestSchema,
+  sampleReplayRequestSchema,
 } from "@clipbuilder/contracts";
 import type {
   ProcessingAdmission,
@@ -187,6 +188,29 @@ export function createAnalysisRouter(
       await analysis.analyze(context(request, response), parsed.data),
     );
   });
+  // Explicit local replay availability is independent of any old session receipt.
+  if (analysis.sampleReplayAvailable) {
+    router.post("/sample-replay-options", (request, response) => {
+      if (
+        !request.body ||
+        typeof request.body !== "object" ||
+        Array.isArray(request.body) ||
+        Object.keys(request.body).length !== 0
+      )
+        throw new ApplicationError({ code: "INVALID_REQUEST" });
+      sendNoStoreJson(response, 200, analysis.sampleReplayOptions());
+    });
+    router.post("/sample-replay", async (request, response) => {
+      const parsed = sampleReplayRequestSchema.safeParse(request.body);
+      if (!parsed.success)
+        throw new ApplicationError({ code: "INVALID_REQUEST" });
+      sendNoStoreJson(
+        response,
+        200,
+        await analysis.replaySample(context(request, response), parsed.data),
+      );
+    });
+  }
   router.post("/clear", async (request, response) => {
     preview?.clear(context(request, response));
     output?.clear(context(request, response));

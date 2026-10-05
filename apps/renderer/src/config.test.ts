@@ -5,7 +5,6 @@ describe("renderer composition gates", () => {
     expect(parseRendererConfig({ NODE_ENV: "test" })).toMatchObject({
       RENDERER_ENABLED: false,
       CLOUD_SPEND_APPROVED: false,
-      RENDERER_MAX_OPERATIONS: 0,
     });
     for (const override of [
       { RENDERER_ENABLED: "true" },
@@ -16,6 +15,12 @@ describe("renderer composition gates", () => {
       expect(() =>
         parseRendererConfig({ NODE_ENV: "test", ...override }),
       ).toThrow();
+  });
+  it("rejects the retired lifetime cap instead of silently applying it", () => {
+    for (const value of ["0", "2", "4"])
+      expect(() =>
+        parseRendererConfig({ RENDERER_MAX_OPERATIONS: value }),
+      ).toThrow("retired");
   });
   it("requires complete private runtime gates even when AI is fake", () => {
     expect(() =>

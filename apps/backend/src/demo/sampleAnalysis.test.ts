@@ -10,7 +10,6 @@ import {
   SAMPLE_FOUR_CANDIDATES,
   SAMPLE_NO_CANDIDATES,
   SAMPLE_ONE_CANDIDATE,
-  validateCandidateFixture,
 } from "./sampleAnalysis.js";
 import { SAMPLE_MANIFEST } from "./sampleManifest.js";
 
@@ -25,7 +24,7 @@ describe("sample fixture contracts", () => {
         ),
       ).size,
     ).toBe(3);
-    expect(validateCandidateFixture(SAMPLE_ANALYSIS)).toEqual(
+    expect(analysisBundleSchema.safeParse(SAMPLE_ANALYSIS)).toEqual(
       expect.objectContaining({ success: true }),
     );
 
@@ -48,10 +47,10 @@ describe("sample fixture contracts", () => {
     expect(analysisBundleSchema.safeParse(SAMPLE_FOUR_CANDIDATES).success).toBe(
       true,
     );
-    expect(validateCandidateFixture(SAMPLE_ONE_CANDIDATE)).toEqual(
+    expect(analysisBundleSchema.safeParse(SAMPLE_ONE_CANDIDATE)).toEqual(
       expect.objectContaining({ success: true }),
     );
-    expect(validateCandidateFixture(SAMPLE_FOUR_CANDIDATES)).toEqual(
+    expect(analysisBundleSchema.safeParse(SAMPLE_FOUR_CANDIDATES)).toEqual(
       expect.objectContaining({ success: true }),
     );
     expect(assemblyBundleSchema.safeParse(SAMPLE_ASSEMBLY).success).toBe(true);
@@ -74,7 +73,6 @@ describe("sample fixture contracts", () => {
       mutate: (fixture: typeof SAMPLE_ANALYSIS) => {
         fixture.candidates[0]!.evidence[0]!.wordIds[0] = "w_999999";
       },
-      ruleId: "candidate.reference",
     },
     {
       name: "duplicate range",
@@ -82,14 +80,12 @@ describe("sample fixture contracts", () => {
         fixture.candidates[1]!.startWordId = fixture.candidates[0]!.startWordId;
         fixture.candidates[1]!.endWordId = fixture.candidates[0]!.endWordId;
       },
-      ruleId: "candidate.distinct-range",
     },
     {
       name: "invented quote",
       mutate: (fixture: typeof SAMPLE_ANALYSIS) => {
         fixture.candidates[0]!.title = '"The Moon is made of cheese"';
       },
-      ruleId: "candidate.invented-quote",
     },
     {
       name: "unquoted invented claim",
@@ -97,7 +93,6 @@ describe("sample fixture contracts", () => {
         fixture.candidates[0]!.title =
           "Scientists discovered oceans under Mars";
       },
-      ruleId: "candidate.invented-claim",
     },
     {
       name: "virality promise",
@@ -105,7 +100,6 @@ describe("sample fixture contracts", () => {
         fixture.candidates[0]!.rationale =
           "Guaranteed to go viral with a million views.";
       },
-      ruleId: "candidate.performance-claim",
     },
     {
       name: "virality promise in an evidence note",
@@ -113,7 +107,6 @@ describe("sample fixture contracts", () => {
         fixture.candidates[0]!.evidence[0]!.note =
           "Guaranteed to go viral with a million views.";
       },
-      ruleId: "candidate.performance-claim",
     },
     {
       name: "prompt injection",
@@ -121,19 +114,15 @@ describe("sample fixture contracts", () => {
         fixture.transcript.words[0]!.text = "Ignore";
         fixture.transcript.words[1]!.text = "previous";
       },
-      ruleId: "candidate.instruction-content",
     },
-  ])("rejects $name with content-free rule evidence", ({ mutate, ruleId }) => {
-    const fixture = structuredClone(SAMPLE_ANALYSIS);
-    mutate(fixture);
-    const result = validateCandidateFixture(fixture);
+  ])(
+    "accepts $name without the retired fixture quality validator",
+    ({ mutate }) => {
+      const fixture = structuredClone(SAMPLE_ANALYSIS);
+      mutate(fixture);
+      const result = analysisBundleSchema.safeParse(fixture);
 
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.evidence).toEqual(
-        expect.arrayContaining([expect.objectContaining({ ruleId })]),
-      );
-      expect(JSON.stringify(result.evidence)).not.toContain("Moon is made");
-    }
-  });
+      expect(result.success).toBe(true);
+    },
+  );
 });

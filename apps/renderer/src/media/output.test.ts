@@ -6,7 +6,7 @@ import { binding, nonce, mediaFixture } from "../../test/media-fixture.js";
 import { createRendererApplication } from "../app.js";
 import { MediaFailure } from "./media.failure.js";
 async function fixture() {
-  const f = mediaFixture(undefined, 4),
+  const f = mediaFixture(),
     signal = new AbortController().signal;
   await f.admit();
   await f.operations.prepare({ binding, nonce, generation: "12" }, signal);
@@ -57,6 +57,9 @@ describe("validated final output ownership", () => {
     const f = await fixture();
     await expect(f.sessions.outputArtifact(f.access)).rejects.toThrow();
     const result = await f.operations.render(f.input, f.signal);
+    expect(
+      (await f.store.getIntent(binding.sessionId))?.intent.mediaOperationsUsed,
+    ).toBe(4);
     expect(await f.store.listArtifacts(binding.sessionId)).toEqual([
       expect.objectContaining({ artifactId: result.output.artifactId }),
     ]);
@@ -73,7 +76,7 @@ describe("validated final output ownership", () => {
       expect(response.status).toBe(206);
       expect(response.body.length).toBe(100);
     }
-    expect(f.calls).toEqual({ inspect: 4, proxy: 3, render: 1 });
+    expect(f.calls).toEqual({ inspect: 4, audio: 1, proxy: 2, render: 1 });
     expect(f.operations.counts).toEqual({ media: 4, ai: 0 });
     await f.operations.cancel(binding);
     await expect(f.sessions.outputArtifact(f.access)).rejects.toThrow();
