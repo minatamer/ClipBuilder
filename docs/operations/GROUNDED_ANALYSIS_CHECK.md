@@ -1,16 +1,334 @@
 # CL-007 controlled analysis check
 
+## Current candidate envelope fix and owner retest — 2026-10-05
+
+The latest owner test passed renderer preparation, Transcribe and JSON-only Flash
+at HTTP 200. Flash returned three candidate objects in a top-level array, but
+object-only normalization published an empty result and displayed a hardcoded
+editorial claim. The
+[approved envelope fix](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-candidate-envelope-decoding-fix--2026-10-05)
+now accepts both formats, states the JSON envelope in the prompt, emits safe
+decode/count/drop-reason diagnostics and uses neutral empty UI copy. Every raw/
+normalized private capture remains preserved, and quality rejection gates were
+not reintroduced.
+
+All five root gates, **969 synthetic tests in 82 files**, final local review and
+unchanged saved-response replay pass: returned/accepted 3, dropped 0. Backend
+watcher hot reload, three readiness GETs and armed full capture pass. There were
+zero new provider calls, cloud actions or configuration changes for this fix.
+Start over and manually retry Find moments using the existing owner credentials,
+live flags and approvals. Fake/no-key and offline replay prove decoding only;
+paid UI behavior and quality after the fix remain owner acceptance. Earlier
+sections below describe their respective preceding revisions.
+
+## Current session allowance fix and owner retest — 2026-10-05
+
+The latest manual failure occurred in renderer preparation before Gemini: the
+old two-operation process-lifetime cap was exhausted. The
+[authorized session allowance packet](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-session-renderer-allowance-and-operational-diagnostics--2026-10-05)
+replaces it with four atomically persisted operations per session, preserving
+replay, capacity, admission/spend, authentication and cleanup. The backend now
+records renderer HTTP status/reason/sub-stage, timing, body/decoding failures,
+bytes/completeness and cancellation; media availability/limit failures retain
+their actual safe UI category instead of model-output rejection.
+
+Implementation, final read-only validation, all five gates and **959 synthetic
+tests in 82 files** pass. The matching immutable private image passed Linux
+audio/render/cancellation/runtime checks and is Ready with 100% latest traffic.
+The retired cap entry is removed; other runtime settings and private IAM match.
+Anonymous/authenticated health returns 403/200; invalid audio input returns 400
+before processing. Exact owned staged source and local context were removed.
+Backend hot reload, all three local GET checks and armed private Gemini capture
+are verified. All agent live media/Gemini dispatches were zero.
+
+Start over in the local UI and manually retry Find moments using the existing
+owner credentials/live flags and approvals. Raw/normalized Transcribe and Flash
+output capture is preserved; ordinary logs remain safe and request-correlated.
+Fake/no-key checks prove local behavior only. Google acceptance of the JSON-only
+Flash request, real speech/editorial quality and paid end-to-end cleanup still
+need the owner's manual test. Earlier rollout/status sections below are history.
+
+Latest request isolation (2026-10-05): the next owner run passed Transcribe and
+local transcript packaging, then Google rejected Flash candidate generation with
+generic HTTP 400 `INVALID_ARGUMENT`. No Flash candidate output existed. The
+[authorized JSON-only change](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-flash-json-only-request-isolation--2026-10-05)
+removes only `responseJsonSchema` from that request, preserving JSON MIME mode,
+prompt/model/settings, permissive decoding and complete private capture. All five
+root gates, 922 synthetic tests in 80 files and local watcher/readiness checks
+pass with capture armed. Fake/no-key checks prove local serialization only; the
+owner manually retries Find moments with existing credentials/live gates to
+check Google acceptance. The rejected parameter remains unproven; no paid call,
+retry, cloud/configuration change or Git mutation was made for this isolation.
+
+Latest owner override (2026-10-05): the first Transcribe UI attempt returned HTTP
+200 but 22 equal start/end offsets caused local schema rejection before Flash.
+The [current removal packet](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-removal-of-find-moments-quality-rejection-gates--2026-10-05)
+removes all Find moments transcript/candidate quality rejection gates, preserves
+returned values and full private capture, and decodes usable items independently.
+Basic bounds, authentication/admission/source binding and deletion remain.
+Earlier rejection/tolerance descriptions below are historical. Local fake/no-key
+checks and offline replay pass: all five gates and 922 synthetic tests in 80
+files; all 1,168 captured words and 22 equal timestamp pairs are accepted without
+changing the saved normalized output. Backend watcher loading and all three
+readiness GETs pass with capture armed. No paid call occurred. Live acceptance
+remains the owner's manual UI test with existing credentials, capabilities and
+approvals.
+
+## Current audio transcription migration — 2026-10-05
+
+The current [CL-007 packet](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-transcribe-and-text-only-selection-migration--2026-10-05)
+replaces combined-video source analysis with source-aligned renderer audio,
+Gemini 3.5 Transcribe and text-only Gemini 3.8 Flash selection. It preserves full
+private capture and safe diagnostic v2 log parsing, extends capture to selected
+video planning/assembly and adds bounded timing/cosmetic tolerance. All isolation
+CLI execution paths are retired; commands below are historical evidence only.
+Existing captures and cleanup obligations remain preserved.
+
+Local implementation, native synthetic extraction and all five root gates pass:
+912 fake/no-key unit tests in 80 files. The image verifier also checks audio-only
+profile, actual bytes and decoded source/audio onset; its packaged Windows
+fixture-only stage passes. Actual Linux image proof and private service update
+were separately approved and passed: one 136.453-second build, matching registry
+digest, Ready/100% latest traffic, identical runtime spec apart from image and
+unchanged private IAM. Anonymous health is 403, configured-audience ADC health
+200, and the new audio route rejects empty input at 400 before any media work.
+The exact staged source generation and local context were removed. All provider/
+real-media test dispatches were zero. Historical statuses below describe earlier revisions.
+
+The owner may now start over and manually run Find moments against the matching
+private revision. Analysis is enabled; assembly/render remains disabled at the
+existing approved stage. Keep normal owner
+credentials/live switches and independent approvals; no extra key is needed.
+With an armed six-hour local permit, the owner test records complete accepted raw
+HTTP responses (including unknown fields), raw/normalized Transcribe words and
+Flash candidates, actual timestamps/adjustments and selected-plan outputs in
+private OS-temp JSONL. Normal logs stay content-free. Capture oversize/disconnection
+is explicit; preserve evidence on expiry. Fake/no-key tests do not prove speech,
+candidate or speaker quality, real provider cleanup, latency or spend.
+
+
 Status: **Gemini account/key/spend setup reported complete on 2026-10-04;
 one existing private renderer image build/revision update and local setup are
-complete; local analysis is enabled and live analysis is unperformed**. The owner reserved all paid-flow
-testing for their own manual actions. Agents may run fake-mode automated checks;
-they must not trigger the paid analysis described below.
+complete; local analysis is enabled; the owner's latest 2026-10-05 manual attempt
+passed Gemini HTTP 200 and JSON/schema validation, then failed reconciliation.
+Grounding acceptance/quality remains unverified**. The owner reserved all paid-flow
+testing for their own manual actions, with later explicit exceptions for the
+text-only diagnostic investigation recorded below. The identified schema fix is
+now applied; the next genuine video retest remains the owner's manual UI action.
+Agents may run fake-mode checks; no agent-run paid video analysis is authorized.
 The local fake browser workflow passed without keys/external calls; continuing
 dependency-ready local tickets is authorized. This checkpoint
 authorizes no new resources, public release, assembly, images or
 final export. `FAKE_MODE=true` with no keys supplies synthetic fixture and
 injected zero-network results; CL-006 separately proved real media processing
 with fake AI. Genuine understanding requires Gemini; no local AI model is used.
+
+## Owner-local full Gemini output capture — 2026-10-05
+
+The latest manual run identifies `word_outside_media` at `words[1080].endMs`
+(ordinal 1081), with generation HTTP 200 and JSON/schema success. It has 36 safe
+records and zero drops; generation took 142,485 ms, the whole run 198,660 ms.
+The full response/actual timestamps were not retained. The owner subsequently
+authorized the [CL-007 private capture packet](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-local-full-gemini-capture--2026-10-05).
+
+The next manual UI run captures complete bounded Gemini response bodies and
+metadata before SDK parsing, normalized transcript/candidates, actual decoded
+duration and word overrun values. They are private request-scoped JSONL files
+outside Git in OS Temp's `clipbuilder-runtime/private-gemini-capture/`; normal
+stdout/stderr remain content-free. A workspace-bound six-hour permit activates
+local real/paid analysis only. Fake/test/preview/production composition remains
+off. Existing validation/call counts/cleanup and the four-MiB response bound
+remain unchanged; oversize captured prefixes are explicitly incomplete.
+Synthetic tests use no keys/provider calls or local AI runtime/weights. No
+actual timestamp verdict is possible until the owner manual retest. Captures
+remain local until removed after diagnosis; activation expiry is not deletion.
+
+All five root gates pass with 916 fake/no-key tests in 80 files; scoped read-only
+review found no actionable issue. Backend capture is armed until
+2026-10-05 20:06:58 UTC, app PID 9028 is stable on port 4000, frontend PID 20712
+is stable on port 3000, and all three non-metered readiness GETs return 200.
+No new provider request was triggered; the owner's next manual run supplies
+the first real full response and exact overrun evidence.
+
+## Reconciliation rejection diagnosis — 2026-10-05
+
+The owner manual run captured 36 safe records with zero drops: media preparation,
+proxy/Google upload, file readiness, generation HTTP 200, local JSON/schema
+validation and cleanup succeeded. Reconciliation rejected in 6 ms. The analysis
+request took 188,504 ms; generation took 131,930 ms and preparation 30,420 ms.
+The safe capture is
+`C:/Users/minat/AppData/Local/Temp/clipbuilder-runtime/restart-backend-adc-20261005-125537/ui-validation-req_e7ba54213766453fbea5d0b25623abf0.jsonl`.
+The old generic catch does not expose the specific rule, and no raw response was
+retained. There is no retrospective verdict on whether rejection was justified.
+
+The owner authorized [CL-007 reconciliation diagnostics](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#reconciliation-rejection-diagnostics--2026-10-05):
+static guard/contract reason codes, bounded field/index paths and issue counts,
+with no text, timestamps, media/provider IDs, message/input payloads or public
+response changes. Acceptance conditions, settings, one-call behavior and cleanup
+remain fixed. All five root gates pass with 902 fake/no-key tests in 79 files;
+scoped read-only review found no actionable issue. The final compiled parser
+accepts the preceding 36-record UI capture without drops. The new reconciliation
+marker, stable backend/frontend app PIDs 5424/20712 and all three readiness GETs
+(200) are verified; detailed evidence is recorded in the packet. Fake mode with
+no keys validates instrumentation and synthetic boundaries; the next
+genuine test is owner manual with existing keys/live flags/approvals. No local AI
+runtime/weights, new paid request, cloud change or configuration edit is involved.
+
+## Controlled text/schema comparison — 2026-10-05
+
+Current applied state: the owner authorized the
+[evidence-array transport fix](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#applied-evidence-array-transport-fix--2026-10-05)
+and reserved the next real UI test for themselves. Production now sends the
+accepted fingerprint with policy `analysis_local_evidence_cap`, omitting only
+the identified evidence maximum in addition to the earlier transcript transport
+caps. Canonical/local evidence max eight and all other validation remain strict.
+Focused 150 fake/no-key checks and all five final root gates pass, including
+870 unit tests in 79 files. Scoped review found no actionable issue; the final
+compiled parser accepts all 66 safe records from ten historical logs. The new
+schema policy is active in backend app PID 14680; frontend PID 20712 and all three
+non-metered readiness GETs pass. The obsolete component commands are retired;
+their old safe logs remain parseable. No additional paid
+request or owner configuration/cloud/retained-media/Git change is made. Genuine
+video/transcript/candidate acceptance and quality await the owner's UI retest.
+
+Historical diagnostic result before the applied fix: the owner explicitly authorized agent-run diagnostics until the
+issue was pinpointed. Nine subsequent requests plus the earlier approved control
+isolate the evidence array's provider-side `maxItems: 8`: full original schema
+400, exactly that key omitted 200, restored original 400. See
+[confirmed CL-007 evidence](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#confirmed-evidence-array-schema-rejection--2026-10-05)
+for the ten single-generation outcomes, safe proof logs, fingerprints and current
+checks. All probes are text-only, use existing keys/live flags/approvals, have no
+upload/retry and discard output. At that checkpoint the proposed processing fix
+was not applied; the current implementation is recorded above. Real
+video/transcript/candidate acceptance and quality remain unverified. Fake/no-key
+checks verify the diagnostic tooling; no local AI weights/runtime are used.
+All five settled gates pass with 874 tests in 79 files and no actionable
+read-only-review findings. Backend/frontend 6880/20712 pass readiness/ownership;
+both services remain running. No secret file was inspected or environment,
+approval, retained-media, cloud or Git state changed. Exact token usage/cost is
+not recorded; the packet explicitly leaves that evidence unchecked.
+The notes below preserve the earlier investigation state before this result.
+
+The owner's updated-schema video test still failed: 33 safe run records, zero
+drops, expected policy/fingerprint and generic generation HTTP 400 after
+4,127 ms. The full run took 61,517 ms. Source/proxy/upload/readiness passed;
+cleanup reported success. The two-bound reduction was insufficient, and the
+exact cause remains unconfirmed.
+
+The owner authorized preparing two controlled text-only probes. The
+[CL-007 isolation follow-up](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-run-text-and-schema-isolation--2026-10-05)
+owns scope/gates/evidence; the
+[backend guide](../../apps/backend/README.md#owner-run-gemini-request-isolation)
+owns exact owner commands and interpretation. First test JSON-only text without
+a schema. Only if that returns HTTP 200, test the same text with the exact failed
+video schema. One explicit owner command makes at most one generation call;
+there is no upload, automatic sequence/fallback/retry or app workflow change.
+The later video/schema-component comparison depends on these results.
+
+The initial 139 focused checks passed, with a further verified timeout/cancellation
+regression added after review. Fake/no-key dry-run requires no owner
+configuration/network. Actual probes still require the owner's keys, real/paid
+live configuration and existing approvals, with manual owner invocation. Strict
+safe diagnostic logs are separate under temporary `clipbuilder-runtime/schema-isolation/`.
+No local AI assets/runtime are used and no retained master is read. All five
+settled root gates pass with **860
+tests in 79 files**; both executable dry-runs pass with zero requests. Final
+read-only review reports no actionable finding after the timeout-classification
+correction. Healthy backend/frontend app PIDs are 10524/20712 on 4000/3000;
+owned identities were refreshed after stabilization and all readiness GETs pass.
+The owner's later explicit instruction authorized the agent to run the displayed
+paid text control once as an exception to the earlier manual-only rule. The
+normal entry point loaded existing configuration without secret inspection or
+setting/approval edits. The result was HTTP 200, SDK completed, six safe records
+with zero drops, 27,846 ms total; one generation and no media upload/retry.
+Generated content was discarded. This proves baseline text-only request
+acceptance for the configured model/settings, not schema/video acceptance or
+quality. The schema probe remains unrun and requires owner execution or another
+explicit authorization; exact root cause is still unconfirmed. The packet owns
+the safe log path and the latest UI generation-400 evidence.
+
+## Isolated schema remedy for the next owner test — 2026-10-05
+
+The owner manually reran with diagnostic v2. Its 33 safe run records had zero
+drops: upload/file readiness passed, then one generation returned HTTP 400 in
+4,191 ms with generic `INVALID_ARGUMENT` and no recognized specific reason or
+parameter. The run took 59,388 ms; cleanup reported success. Failure precedes
+output validation/reconciliation. Exact cause and physical deletion remain unknown.
+
+The owner authorized a narrow remedy and hot reload. The
+[CL-007 isolated-schema follow-up](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#isolated-generation-schema-remedy--2026-10-05)
+records research, scope, checks and verified activation. Only two large outer
+`maxItems` hints are omitted from Google's source-analysis request; strict local
+caps and other inputs/settings remain. The actual SDK request is checked for
+exactly that difference. Five new synthetic checks prove oversized/invalid output
+rejection and cleanup without retry. All 124 focused checks pass with
+fake/paid-off/no-key and denied external network.
+
+The next run logs `schemaPolicy: "analysis_local_array_caps"`, actual schema
+fingerprint and largest remaining array bound 8. There is no automatic live
+probe, fallback or extra generation. This hypothesis remains unconfirmed until
+the owner repeats Find moments with existing keys, live flags and approvals.
+Fake results do not prove real acceptance/quality. No local AI runtime/weights
+are used; both retained masters remain protected.
+
+All five settled root gates pass with **844 fake/no-key tests in 78 files**.
+Final read-only review found no actionable issue in this remedy. Backend hot
+reload is confirmed by its new schema-policy marker and app PID 20572 under
+supervisor 18636 on 4000; frontend PID 20712 under supervisor 10900 stays on
+3000. Owned runtime records were refreshed after stabilization. Health, `/start`
+and `/api/sample/config` return 200, with live analysis enabled and assembly/render
+disabled. The compiled outgoing schema fingerprint begins `de4a25b670fd98f7`
+and its maximum array bound is 8. Logs remain in the runtime directory below.
+No paid request, cloud/environment/approval edit, process launch/kill or Git
+mutation was performed; live acceptance remains exclusively the owner's test.
+
+## Owner manual failure and expanded diagnostics — 2026-10-05
+
+The owner's normal local launch reports live analysis enabled, with assembly and
+render still unavailable. Their manual retained-sample attempt produced 35 safe
+diagnostic records. Preparation/upload/file readiness succeeded; one Gemini
+generation was rejected with HTTP 400 after 3,491 ms. The application mapped it
+to HTTP 500; all three cleanup phases reported success. The exact Google
+rejection reason was discarded and cannot be recovered from the existing logs.
+Reported cleanup success is not independent proof of all cloud/provider deletion.
+
+The owner subsequently authorized expanded backend logging only. The
+[CL-007 diagnostic-v2 follow-up](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#expanded-rejection-diagnostics--2026-10-05)
+owns implementation, verification and activation evidence. The new format
+retains bounded fixed rejection classifications and static request/schema
+context before error mapping; it stores no raw provider message/body or content.
+No processing remedy, configuration/provider resource change or additional live
+request is part of this work. Automated checks stay fake/paid-off/no-key and
+network-denied. The next real test remains exclusively the owner's action.
+
+At the diagnostic-v2 handoff, all five root gates passed with 839 fake/no-key
+tests in 78 files. Its startup marker confirmed diagnostics v2;
+backend health, `/start` and `/api/sample/config` return 200. The backend watcher
+reloaded the code, with verified app PID 14632 on 4000; frontend PID 20712 stays
+healthy on 3000. Tracked process identities were updated. Separate runtime logs
+remain under `C:/Users/minat/AppData/Local/Temp/clipbuilder-runtime/run-20261005-120045/`;
+safe backend diagnostic JSON goes to `backend.stderr.log`. No paid request,
+environment/provider resource change, additional service or Git mutation was
+performed. Readiness and fake results do not establish the remedy for HTTP 400.
+
+## Local analysis and console fixes — 2026-10-05
+
+The owner authorized implementing and validating the five planned local fixes.
+[CL-007](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#local-implementation-and-validation--2026-10-05)
+owns the current implementation, synthetic browser states, exact checks and
+remaining gates. Primary-error preservation, immediate/stable wait rotation,
+development/production CSP and shared Turnstile loading are implemented.
+Preload checks found no owned duplicate and no warning in the checked dev/
+production paths; the original trigger remains unconfirmed. A fresh strict scan
+of 17 backend stderr files found zero valid analysis diagnostics, so the
+historical provider cause remains unknown. Prior 2026-10-04 logging-only and
+implementation-deferral statements below describe their historical scope.
+
+Only injected fake/no-key checks and temporary synthetic browser servers ran;
+the owner app stack was not restarted. Neither real input path, genuine AI
+quality nor provider/cloud deletion is proved. Paid verification remains
+owner-only with keys, enabled live capabilities and recorded approvals. No
+local AI runtime/weights, cloud change, deployment or Git action occurred.
 
 ## Priority backend diagnostics — 2026-10-04
 

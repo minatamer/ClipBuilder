@@ -1,5 +1,17 @@
 # Full repository migration file inventory
 
+CL-007 owner amendment (2026-10-05): the source path now owns
+`apps/backend/src/analysis/transcribe.normalization.ts` and
+`transcribed-analysis.provider.ts`, a rewritten candidate-only prompt/schema,
+renderer `NodeMediaPipeline.audio`, the audio artifact/profile contract and the
+synthetic `apps/renderer/feasibility/audio-transcription.ts` harness. Remove the
+combined source wire/prompt/default generation branch and old isolation CLI.
+Preserve Files cleanup, safe diagnostic parsing and the owner-private complete
+capture modules; add source/selection/selected-assembly capture coverage. The
+selected-video path and old intent deletion compatibility remain. See the
+[current packet](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-transcribe-and-text-only-selection-migration--2026-10-05).
+
+
 Status: Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 665 synthetic tests in 66 files pass. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.
 
 Read-only Git state, repository file inventory, provider/model/cloud/privacy references, package/config/composition/admission/contracts/worker/workflow/test ownership were inspected. This is a structural correction map, not an independent code audit. No secret/private media files were opened. Owner AGENTS.md and pre-existing CL-015 changes are preserved.

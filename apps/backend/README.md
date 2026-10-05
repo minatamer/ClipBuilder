@@ -1,5 +1,37 @@
 # ClipBuilder backend
 
+CL-009 selected assembly now uses the same JSON-only generation transport as
+candidate selection. Its canonical schema is prompt guidance, rather than a
+GenerateContent response-schema parameter; local plan compilation still owns
+acceptance. This targets the owner's HTTP 400 after successful video upload.
+Google did not name the rejected field, so live acceptance requires the owner's
+next manual paid test. See [the request/diagnostics follow-up](../../docs/tickets/CL-009-assembly-request-and-diagnostics.md).
+
+Candidate decoding (CL-007, 2026-10-05): Flash JSON-only selection explicitly
+requests `{ "candidates": [...] }`; decoding accepts both that object and a
+top-level array. Existing per-item tolerance and candidate bounds remain. Normal
+request logs distinguish JSON decoding failure, unsupported shape, model-empty
+output and all-dropped output, with returned/considered/accepted/dropped counts,
+static drop reasons and adjustment count. Full raw/normalized private capture
+remains intact. Fake/no-key tests verify both formats without provider calls;
+real output quality remains the owner's manual live UI test.
+
+Renderer diagnostics (CL-007, 2026-10-05): every private media call emits a
+request-correlated `renderer_request` record with operation, one attempt, elapsed
+time, upstream HTTP status, safe renderer code/sub-stage, response byte count and
+completeness. Authorization, transport, body/size, JSON, schema, cancellation and
+timeout failures remain distinct; schema issues retain bounded known field paths.
+The same details accompany the failed owning phase. Raw bodies, auth headers,
+URLs/resource/account IDs and exception messages never enter normal logs.
+Budget, busy, expiry, cleanup and availability map to their actual generic UI
+categories instead of model rejection. Full private Gemini capture is unchanged.
+Request correlation also covers preview/output/download streams and session exit;
+post-header stream failures are logged before the connection is closed. Stream
+handoff records mark headers received with `responseComplete=false`; they do not
+claim the full browser transfer completed. Local hot reload/readiness is verified.
+Fake/no-key injected tests exercise these failures without cloud calls. Real
+provider quality remains an owner-run test with keys/live flags and approvals.
+
 **Session Exit (CL-007 owner decision, 2026-10-04):** same-origin
 `POST /v1/session/exit` expires application cookies and returns 204 independently
 of cleanup. It is composed even when paid analysis is disabled. A valid session
@@ -9,6 +41,16 @@ The browser never receives a deletion-failure recovery requirement. This respons
 is access reset, not deletion evidence. Default fake/no-key tests use only injected
 ports; real deletion remains an owner-run check requiring configured storage/provider
 access and recorded approvals.
+
+Analysis failures preserve the primary safe code/rule even when provider,
+proxy or source cleanup also fails. Cleanup has separate bounded diagnostics;
+successful generation with failed cleanup still rejects publication as
+`CLEANUP_PENDING`. Deletion obligations and consumed-action fences remain.
+The safe application HTTP status does not establish the upstream status.
+See [CL-007's local fix evidence](../../docs/tickets/CL-007-deliver-live-analysis-vertical-slice.md#local-implementation-and-validation--2026-10-05).
+Fake/no-key regressions prove these response and call-count boundaries; actual
+provider diagnosis, AI quality and deletion remain owner-run checks with live
+credentials, enabled capabilities and approvals.
 
 
 CL-016 adds a fixed, generation-pinned retained-sample read using server ADC.
@@ -70,6 +112,29 @@ AI model or new provider dependency is used.
 
 ## CL-009 fixed selected assembly — local implementation
 
+Temporary owner-local sample replay (2026-10-05): explicit development/local/live
+composition with enabled assembly may load one workspace/source-bound validated
+analysis from OS-temp `clipbuilder-runtime/private-sample-replay/sample.json`.
+Six-hour expiry/corrupt metadata/source changes disable it. Fake/test/preview/
+production cannot read the cache. Saved options cause zero media/AI dispatches;
+manual Proceed uses normal protected grant/sample upload/challenges, physical
+inspection, cleanup and current-epoch signing with zero Transcribe/selection
+calls. Normal assembly receipt verification and selected-video AI remain.
+Replayed analysis has full private capture and safe count/zero-call diagnostics;
+retained playback errors now log request-correlated HTTP/code details. Existing
+raw Gemini logs/captures remain. See the
+[temporary packet](../../docs/tickets/CL-007-local-sample-replay-and-thumbnails.md).
+Fake/no-key tests use synthetic injected data; real assembly is owner-run.
+
+Owner local enablement (2026-10-05): the approved private runtime validation
+stage is now `assembly`, exposing Proceed and selected preview. Final render
+remains disabled. Only that stage changed; existing operating switches,
+credentials, metadata and approvals were preserved. Verified backend restart
+changes its session epoch: start over and run fresh Find moments before Proceed.
+Readiness/config and armed full-output capture are verified without a processing
+request. Real assembly success/quality remains the owner's manual UI test; the
+fake/no-key suite proves bounded local orchestration, not provider acceptance.
+
 `src/assembly/selected-assembly.usecase.ts` consumes a verified CL-007 source result
 and one immutable candidate. It reserves `visual-plan` once, requests a physical
 selected proxy, obtains one combined speaker/card plan and signs the frozen
@@ -100,10 +165,26 @@ and transcript-driven segmentation retains the fixed public geometry limit.
 corepack pnpm --filter @clipbuilder/backend test:unit src/assembly
 ```
 
+## Current Transcribe migration — local implementation
+
+The new backend requires the matching renderer audio profile/endpoint; the old
+private renderer revision cannot serve it. The matching owner-approved image is
+now deployed, with Linux/audio/runtime proof, unchanged private settings/IAM and
+the new audio route verified without media dispatch. The owner paid UI quality
+test remains open; see the [current handoff](../../docs/tickets/CL-007-deliver-live-analysis-vertical-slice.md#approved-private-deployment-and-final-handoff--2026-10-05).
+Fake/no-key checks use synthetic providers and verify code only.
+Complete accepted provider responses, actual timestamps, normalized results and
+adjustments are captured in the existing owner-local OS-temp JSONL when its
+six-hour permit is armed. Capture includes Transcribe, Flash selection and the
+separate `/v1/analysis/assemble` selected-video task. The 4 MiB response limit is
+unchanged; incomplete/oversized responses explicitly record `complete:false`.
+Existing evidence is preserved; credentials/request auth never enter capture.
+
 ## CL-007 protected source analysis — local implementation
 
 `/v1/analysis/{grant,session,upload,run,clear}` connects protected local admission,
-private upload and one Gemini source analysis. Live execution remains gated by
+private upload, one Gemini 3.5 Transcribe audio call and one Gemini 3.8 Flash
+text-only candidate call. Live execution remains gated by
 the [controlled-check plan](../../docs/operations/GROUNDED_ANALYSIS_CHECK.md).
 Public/hosted paid composition remains rejected. `FAKE_MODE=true` with no keys
 keeps the fixture journey and injected zero-network tests; it proves no AI quality.
@@ -111,26 +192,41 @@ Real processing needs keys/live flags, rights/transfer/paid-project approval,
 Turnstile, grant signing, ADC and separate cloud/AI spend permission.
 
 Two atomic actions are reserved: the legacy `transcription` nonce now owns upload
-admission; `candidate-analysis` owns proxy preparation and one source call. There
-is no separate transcription/candidate retry under the migration's one-call
-budget. Origin/CSRF/epoch/expiry/rate/capacity precede dispatch. The dedicated
+admission; `candidate-analysis` owns audio preparation and the sequential transcription/
+selection calls. No decodable words or unresolved file cleanup prevents the
+selection call. There is no automatic paid retry. Origin/CSRF/epoch/expiry/rate/capacity precede dispatch. The dedicated
 bridge is fixed at localhost:3000 to loopback:4000. HTTP is accepted only on that
 loopback local origin; cookies retain Secure/HttpOnly/host-only attributes. No
 proxy-header trust. Turnstile checks exact hostname/action/session cdata once.
 
-Files uses bounded REST start/finalize because pinned `@google/genai@2.25.0` has
-independent uploader retries and incomplete upload abort propagation. Its SDK
-handles generateContent/get/delete with one attempt, deadlines and response-byte
-interception. Fixed schema/policy, one response, zero tools/search and no
-interaction/history storage. Compact word/turn tuples become ordinal IDs and
-unknown confidence. Titles/hooks/evidence are extractive; reconciliation checks
-references/order, sentence/turn starts, sentence endings, 10–60s duration,
-distinct evidence/overlap/claims/quotes. Word overlap tolerance is **250ms**.
+Files uses bounded REST start/finalize and verified delete/absence because the
+pinned SDK uploader has independent retries and incomplete abort propagation.
+Transcribe uses bounded Interactions REST with `store:false`, `background:false`,
+`stream:false`, English hint, verbatim mode, word timestamps and diarization.
+The same key serves both models. Flash candidate input contains only decoded
+word IDs/times/text and turns. The backend derives anonymous labels/complete turns,
+cut times and extractive quotations. The separate selected-video planning call
+remains for visual speaker association and cards.
+Source candidate Flash currently uses JSON MIME mode with no `responseJsonSchema`
+or `responseSchema` argument. This owner-authorized one-argument isolation keeps
+the prompt/model/token/deadline settings and all capture unchanged; Google request
+acceptance remains an owner-run live check. Safe request/startup policy is `json_only`.
 
-Proxy bytes/checksum and source codec/rotation/dimension identity must match
+The owner removed all Find moments transcript/candidate quality rejection gates
+on 2026-10-05. Returned zero-length, inverted, out-of-order, overlapping and
+out-of-media timings remain unchanged; quotation, evidence, duplicate, duration
+and overlap quality checks cannot reject the request. Shared browser contracts
+apply the same policy. Usable items are decoded independently, unavailable ranges
+are omitted and unavailable quote references are skipped, with private adjustment
+records. Empty usable output produces no candidates. Bounded data, primitive
+decoding, source/session/receipt/authentication, spend and cleanup controls remain.
+No missing-time inference, fake substitution or additional repair call is used.
+All full raw and normalized private capture remains available under its permit.
+
+Audio profile/bytes/checksum and source codec/rotation/dimension identity must match
 before AI. Decoded duration/fps are authoritative; browser estimates may differ. Missing
 new image inspection fields fail closed. Success deletes/verifies the Google
-file and releases the analysis proxy, then signs session/epoch/source revision/
+file and releases the analysis audio, then signs session/epoch/source revision/
 request/result digests and expiry. The backend retains no transcript. Conflicting
 replay, uncertainty, abort and refresh never redispatch. Failed Google deletion
 waits for upload settlement, shares deletion with analysis finalization, and
@@ -298,10 +394,118 @@ Source-controlled error codes/rules, allowlisted error classes and structural
 network codes help classify failures. Original failed-phase records are emitted
 before later cleanup, so cleanup cannot erase them from the logs.
 
+Diagnostic format **v2** adds `requestElapsedMs` and `timingScope`, so a stage
+duration is distinguishable from the total request duration. Startup prints the
+content-free marker `ClipBuilder analysis diagnostics v2 ready`. Candidate-selection
+schema activation also prints
+`ClipBuilder Gemini analysis schema policy candidate_local_evidence_cap ready`.
+Reconciliation diagnostics activation prints
+`ClipBuilder reconciliation diagnostics ready`.
+`gemini_request` records the fixed model/API version, candidate-selection or selected-
+plan purpose, output-token limit, timeout, one SDK attempt, one candidate and zero
+tools. Both current Flash purposes use `schemaPolicy: json_only`. Selected plans
+retain their static schema summary with `schemaLocation: prompt`; transport
+schema parameters are absent. Historical policies/records remain parseable.
+Its code-owned response-schema summary contains a SHA-256 fingerprint,
+byte/node/depth counts, tuple/boolean-items/reference counts, largest array bound
+and recognized schema keywords. It never contains schema descriptions or input
+content; the fingerprint is of the static output schema, not the source media.
+
+### Temporary owner-local full Gemini capture
+
+Every current phase also emits a fixed descriptive `message`, phase duration,
+request duration and request ID. Assembly has separate markers for request and
+signed evidence checks, range/context and captions, admission, selected window,
+source verification, proxy transfer/integrity, generation, plan parsing, cards,
+speaker focus, manifest, preview creation/binding, result parsing/signing and
+cleanup. `assembly` facts include bounded word/caption/card/focus counts, duration,
+context/proxy bytes and integrity booleans. `validation` records fixed rejection
+reasons and at most six structural schema issue locations/codes; unknown field
+names are redacted. The original failure survives secondary cleanup failures.
+Existing Google/renderer/reconciliation diagnostics remain. Full selected word
+and caption context, decoded/parsed plan, compiled cards/focus and final compiled
+result join the existing full provider response capture below; no signed receipt
+or playback authorization is added to the private stage outputs.
+
+The owner explicitly authorized full returned-response logging for the current
+local timestamp investigation. Normal stdout/stderr remain content-free. The
+separate private capture records all returned HTTP bodies/headers before SDK
+parsing, complete generation content and provider metadata, SDK-derived text,
+normalized output, actual decoded duration and every out-of-media word's
+start/end/overrun in milliseconds. Response-size, validation, dispatch and
+cleanup behavior are unchanged. Responses above the existing four-MiB bound
+still fail; any captured bounded prefix is marked `complete: false`.
+
+This defaults off and requires local live/paid-analysis composition plus a
+versioned workspace-bound permit in OS Temp's
+`clipbuilder-runtime/private-gemini-capture/permit.json`, expiring within six
+hours. Fake/test/preview/production composition cannot enable it. Each UI run
+writes a separate opaque-request-ID `.jsonl` file in that private directory.
+`ClipBuilder private Gemini response capture armed` confirms activation at
+startup; a fixed unavailable warning reports filesystem failure without values.
+The files can contain complete private transcript/provider data. Keep them
+outside Git/fixtures/screenshots and remove after diagnosis. Activation expiry
+stops new captures; it does not delete evidence. Requests/authentication,
+environment values, ADC files and configured prompts are not serialized.
+The implementation and exact checks are owned by the
+[CL-007 capture packet](../../docs/tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-local-full-gemini-capture--2026-10-05).
+Synthetic fake/no-key tests verify this instrumentation; real content requires
+the owner's manual UI test with existing keys/live flags/approvals. No local AI
+runtime/weights or agent-run paid test are used.
+
+Reconciliation failures carry private `reconciliation` metadata through the
+failed phase/result/request records. `rule` identifies the first failed explicit
+guard: transcript length/timing/IDs, turn partition/speaker consistency, candidate
+boundaries, evidence ordering, source quotation or prohibited/unsupported copy.
+`provider_schema` and `analysis_bundle_schema` include up to four structural
+`issues`, each with an allowlisted issue `code`, static contract `constraint`
+and field/index `path`. `issueCount` and `truncated` flag omitted issues; unknown
+contract messages classify as `unclassified`. Unknown path segments become
+`unrecognized`; paths are bounded and numeric locations are zero-based indexes.
+They contain no actual word IDs, text, timestamp values, source duration or raw
+Zod messages/inputs. Unexpected non-schema exceptions use `unexpected_error`.
+Public error code/message, all acceptance conditions/limits and dispatch/cleanup
+remain unchanged. These reasons identify a check; they do not certify that the
+check is correct or that a rejected response was poor quality. See
+[CL-007 reconciliation diagnostics](../../docs/tickets/CL-007-deliver-live-analysis-vertical-slice.md#reconciliation-rejection-diagnostics--2026-10-05).
+
+Source-analysis requests omit the outer `words.maxItems`, `turns.maxItems` and
+candidate `evidence.maxItems` transport hints. Controlled requests isolated the
+evidence maximum: original full schema 400, only that hint omitted 200, original
+restored 400. The production schema now matches the accepted fingerprint
+`e48e4e70308c0f0b3fd9f8384d7166e234a6e8f933f7923719dcee004f6b860e`.
+Canonical backend validators still reject more than 12,000 words, 10,000 turns
+or eight evidence entries per candidate. Evidence minimum two, its word-ID cap,
+all other array/tuple bounds and response/media caps remain intact. The outgoing
+schema's largest array bound is still 8. Fake/no-key injected SDK checks prove
+the precise transport change and local rejection/cleanup. The subsequent owner
+video run returned generation HTTP 200 and passed JSON/schema validation, then
+failed reconciliation. Genuine grounding acceptance/quality still requires the
+owner's manual UI retest with the reason diagnostics under their
+existing live setup and approvals. See
+[the CL-007 remedy record](../../docs/tickets/CL-007-deliver-live-analysis-vertical-slice.md#isolated-generation-schema-remedy--2026-10-05).
+
+`google_http` records a fixed operation name, HTTP status and transport duration
+for uploads/generation/deletion and non-2xx polling/listing. Successful polls are
+covered by the enclosing lifecycle timing. A completed HTTP exchange is not
+proof of successful processing: deletion confirmation can intentionally receive
+403/404; use the enclosing cleanup outcome. URLs/headers/bodies are not retained.
+Error responses are classified before the pinned SDK or manual Files adapter
+maps the error. `google` records recognized gRPC status and ErrorInfo reason
+codes, fixed rejection categories, known parameter names, recognized schema
+tokens, detail types and bounded violation/unknown-detail counts. Structured
+field names take priority over message-derived parameter matches. Sources are
+explicit (`status`, `error_info`, `field_violation`, `message`); message-derived
+categories are diagnostic clues, not verified root causes. Unknown field names
+become `unrecognized`. Generic, absent, malformed and oversized responses remain
+explicit; truncation is flagged. Unknown text/reason codes are never printed.
+
 No request/response body, SDK message or stack, URL, filename, source/provider
 identifier, transcript, prompt, cookie, key or account value is logged. Records
-are capped at 48 per request, with no database, queue, extra provider request or
-retry. Logging failures cannot change the work's result. `createApplication` and
+are capped at 256 per request, with no database, queue, extra provider request or
+retry. Ordinary records stop at 239, reserving sixteen slots for errors/non-2xx
+responses and one for completion with `droppedRecords`. Lines remain capped at
+2,048 characters. Logging failures cannot change the work's result. `createApplication` and
 `composeBackend` default to a silent injected sink; only explicit server startup
 enables stderr output. Ordinary tests use injected sinks and fake transports
 with no keys or external network. They do not prove a successful Gemini response
@@ -317,77 +521,10 @@ An application 500 alone does not identify Google's status. Do not enable raw SD
 debug output or retry a paid request merely to collect logs. See the
 [current diagnosis record](../../docs/operations/GROUNDED_ANALYSIS_CHECK.md#priority-backend-diagnostics--2026-10-04).
 
-## Verification commands
+## Retired Gemini isolation command
 
-Run from the repository root:
-
-```powershell
-corepack pnpm --filter @clipbuilder/backend typecheck
-corepack pnpm --filter @clipbuilder/backend test:unit
-```
-
-For the complete deterministic workspace baseline:
-
-```powershell
-corepack pnpm format:check
-corepack pnpm lint
-corepack pnpm typecheck
-corepack pnpm test:unit
-corepack pnpm build
-```
-
-Tests own their fake/paid-disabled environment and never load `.env.local`.
-These checks are separate from the normal local app launch.
-
-## Configuration and secrets
-
-The app's [`.env.example`](.env.example) contains only `FAKE_MODE`,
-`PAID_DEMO_ENABLED` and blank credential entries. Copy it to `.env.local` in
-this directory for initial setup. The frontend has its own empty example;
-there is no root environment file. Backend `FAKE_MODE` is the sole mode authority.
-Legacy `PROVIDER_MODE`, when supplied, must match the derived mode.
-
-Private connections and recorded approvals belong in ignored
-`apps/backend/runtime.local.json`, shaped by [runtime.example.json](runtime.example.json).
-This file is server-only and must never enter a build image, Git or browser config.
-Only the executable entry point reads it during explicit local startup; imports,
-unit tests and CI never load either local file. Existing process environment
-wins for credentials/switches; platform `NODE_ENV`, `PORT`, `APP_ENV` and
-`APP_REVISION` remain injectable. Restart the full backend watcher after changes.
-
-Numerical policy is fixed in code: shared public/assembly limits come from
-`@clipbuilder/contracts`; server rate, capacity, timeout and retry defaults live
-in `src/config/env.schema.ts`. Old `MAX_*`, `RATE_*`, timeout and live-feature
-environment overrides reject at startup. They are not tuning knobs.
-The processing-grant active label is also code policy: `v1`, defined in
-`src/admission/processing.grant.ts`. Paste the 43-character base64url secret
-directly into `PROCESSING_GRANT_KEY`; no JSON or label is needed. The former
-`PROCESSING_GRANT_KEYS_JSON` entry is accepted during migration only when the
-new entry is absent. Reuse its existing `v1` key when renaming the entry.
-An explicit new entry takes precedence, including a blank value. The obsolete
-`PROCESSING_GRANT_ACTIVE_KEY_ID` selector is ignored. The active label cannot be
-selected through environment configuration.
-`paidValidationStage` selects only the separately authorized analysis, assembly
-or render checkpoint; composition derives live features, protected admission
-and its fixed two/three/four dispatch allowance. Raster generation stays disabled.
-Turning `PAID_DEMO_ENABLED=false` disables all paid features and admission,
-even if a validation stage was previously recorded. The stage and approval
-record are prerequisites, never authorization by themselves.
-
-`FAKE_MODE=true` with no keys supports the synthetic journey without providers.
-`FAKE_MODE=false` with paid processing off supports local video intake/playback.
-A complete `retainedSample` reference plus recorded storage-spend approval
-adds generation-pinned private sample reads through ADC; it needs no Gemini key
-or AI model. Keep its bucket/object/generation/byte metadata private. Paid AI
-requires the credential entries, Turnstile hostname, renderer origin, separate
-cloud/transfer/paid-project approvals and an approved validation stage. Public
-paid processing and hosted authenticated routing remain gated under CL-015.
-
-Tests set their complete environment before composition, reject live/paid flags,
-and block non-loopback network access. Never read local configuration to answer
-setup questions or expose secrets/private connection settings through `NEXT_PUBLIC_*`.
-Vitest also disables environment-file loading and removes inherited provider
-credentials. Test mock cleanup cannot remove the worker's socket guard or
-restore paid settings. Synthetic live-shaped configuration inputs exercise
-validation and injected ports only; they do not change the test process mode.
-Paid-flow checks are performed manually by the owner.
+The combined-video source schema and its isolation CLI were removed in the
+2026-10-05 Transcribe migration. Existing saved diagnostic v2 purposes/policies
+remain parseable. No retired probe is executable and no fallback uses the old
+source pipeline. Use the normal owner UI flow and private output capture after
+an approved matching renderer rollout; see the current CL-007 packet.

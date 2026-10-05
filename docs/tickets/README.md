@@ -1,8 +1,230 @@
 # ClipBuilder canonical ticket index
 
+Current CL-010 owner UI follow-up (2026-10-05):
+[playback volume levels](CL-010-playback-volume-controls.md).
+Every workflow player opens a 0–100% level slider from its speaker button; the
+owner's highlighted export explanation is removed. The five root gates and
+1,039 synthetic tests / 88 files pass. Native and Remotion browser audio levels
+and dismissal are verified with synthetic content, without paid dispatches.
+Actual devices/final MP4 listening remain owner-tested; backend logs are intact.
+
+Current CL-006 owner correction (2026-10-05):
+[cleanup-aware upload admission](CL-006-cleanup-aware-upload-admission.md)
+addresses an expired session blocking a fresh upload between scheduled sweeps.
+Cleanup before allocation and content-free renderer diagnostics are implemented.
+All five root gates and 1,039 synthetic tests / 88 files pass. One verified Linux
+image is deployed privately with runtime/IAM unchanged and authenticated health
+200; owned build source/context are removed. Owner paid UI retest remains pending.
+
+Current CL-009 follow-up (2026-10-05):
+[selected assembly request and diagnostic coverage](CL-009-assembly-request-and-diagnostics.md).
+JSON-only selected-plan transport, canonical prompt guidance, detailed backend
+stages/private outputs and correct remote UI error mapping are implemented.
+All five settled root gates and 1,025 synthetic tests in 87 files pass; scoped
+validation and local reload/readiness/process ownership are verified. Full
+capture is armed. The owner's paid replay/Proceed test remains required for
+provider acceptance and real assembly quality.
+The next attempt's earlier renderer cleanup blocker is addressed in the CL-006
+follow-up above; it did not exercise Gemini or settle CL-009 paid acceptance.
+
+Current CL-007 owner temporary testing packet (2026-10-05):
+[local saved-sample replay and thumbnails](CL-007-local-sample-replay-and-thumbnails.md).
+Validated transcript and three choices are saved privately outside Git. The
+development-only sample CTA, fresh protected Proceed binding and serial decoded
+thumbnails are implemented; all five root gates pass with **1,013 synthetic tests
+in 86 files**. Browser checks reproduce the old capacity failure and verify the
+new frames/side rail. All logs/captures remain. Fake/no-key checks prove local
+wiring; real retained thumbnails and paid/cloud assembly await the owner's
+manual test.
+
+Current CL-009 owner approval (2026-10-05): enable the existing
+[local assembly stage](CL-009-build-contextual-visual-assembly.md#owner-local-assembly-stage-enablement--2026-10-05)
+so Proceed can prepare a selected moment and preview. The one-field ignored
+configuration change and backend-only restart are verified: all three readiness
+GETs return 200; analysis/assembly are available, render stays disabled and full
+private output capture remains armed. No old backend processes remain.
+The new boot requires a fresh protected source binding; the temporary saved
+sample path above supplies one without repeating analysis. Paid UI testing remains owner-only;
+fake/no-key checks do not prove real assembly quality.
+
+Current CL-007 UI follow-up (2026-10-05): owner requests
+[source-shaped candidate review](CL-007-deliver-live-analysis-vertical-slice.md#owner-source-shaped-candidate-review--2026-10-05):
+source aspect/rotation, responsive horizontal slides, decoded candidate-start
+thumbnails and disabled-Proceed diagnosis. Implementation, scoped validation and
+all five root gates pass: **983 synthetic tests in 84 files**. Synthetic browser
+checks cover laptop/tablet/phone/short-screen layouts, actual decoded frames,
+swipes, keyboard focus and cleanup. Owner real-media appearance remains pending.
+The owner manual run now displays three candidates with zero dropped, closing
+the envelope fix's candidate-display acceptance. Diagnosis found assembly/render
+unavailable; the later CL-009 packet above enables assembly separately. Fake
+checks use no keys; real frames/paid editing remain owner-only UI acceptance.
+
+Current CL-007 fix (2026-10-05): the owner approved the
+[candidate envelope decoding packet](CL-007-deliver-live-analysis-vertical-slice.md#owner-candidate-envelope-decoding-fix--2026-10-05).
+The real request passed both model calls but its three top-level array candidates
+were silently lost by object-only decoding. Accept both shapes, make the prompt
+envelope explicit, add safe counts/reasons and use neutral empty UI copy. Local
+implementation and all five gates pass: **969 synthetic tests in 82 files**;
+unchanged private saved-response replay accepts all three moments directly.
+Hot reload/readiness and armed private capture are verified. Owner UI acceptance
+after the fix passed: the owner now sees three candidates, with zero dropped.
+No renderer update is needed. Fake/no-key checks do not prove live quality;
+the owner performs the manual retest with existing credentials/live gates.
+
+Current CL-007 follow-up (2026-10-05): the owner authorized the
+[session renderer allowance and operational diagnostics packet](CL-007-deliver-live-analysis-vertical-slice.md#owner-session-renderer-allowance-and-operational-diagnostics--2026-10-05),
+including deployment after local verification. Replace the lifetime cap with four
+persisted operations per session; preserve replay, concurrency, spend and cleanup
+controls; retain safe renderer HTTP/reason/sub-stage/decoding logs and accurate
+generic UI errors. Implementation, validation, all five gates, **959 synthetic
+tests in 82 files**, matching private image rollout/health and local reload pass.
+The retired setting is removed; other runtime settings and private IAM match.
+Full private Gemini capture is armed. Owner live acceptance remains unchecked;
+fake/no-key tests do not prove live
+quality, and deployment permission does not authorize agent-run paid tests.
+
+Latest CL-007 request isolation (2026-10-05): the owner's next UI test passed
+Transcribe and local packaging, then Flash returned generic HTTP 400
+`INVALID_ARGUMENT` before producing candidate output. The owner authorized
+[JSON-only candidate generation](CL-007-deliver-live-analysis-vertical-slice.md#owner-flash-json-only-request-isolation--2026-10-05):
+omit only `responseJsonSchema`, preserve JSON MIME mode, prompt/settings and full
+diagnostics. All five root gates, 922 synthetic tests in 80 files and local
+hot-reload/readiness checks pass; private capture remains armed. Fake/no-key tests
+prove local request serialization. Google acceptance and the exact rejected
+argument await the owner's manual UI test with existing credentials/live gates.
+No paid/cloud/Git action occurred.
+
+Latest CL-007 owner override (2026-10-05): remove all Find moments transcript and
+candidate quality rejection gates, including repeated shared browser checks;
+preserve raw output, timings and diagnostics. Basic decoding, bounded data,
+authentication/admission/source/receipt and cleanup controls remain. See the
+[current removal packet](CL-007-deliver-live-analysis-vertical-slice.md#owner-removal-of-find-moments-quality-rejection-gates--2026-10-05).
+Implementation, all five root gates, 922 synthetic tests in 80 files, unchanged
+saved-response replay and local watcher/readiness verification pass. Older
+acceptance policies below are historical. Fake/no-key checks do not prove live
+quality; the owner retests the real path manually with existing credentials,
+flags and approvals. No new paid/cloud/Git action was performed.
+
+Current CL-007 execution (2026-10-05): owner-authorized Transcribe audio and
+text-only Flash selection migration, old pipeline cleanup, complete private
+provider output capture and bounded reconciliation tolerance. The detailed plan
+and implementation/verification checklist are in
+[the current packet](CL-007-deliver-live-analysis-vertical-slice.md#owner-transcribe-and-text-only-selection-migration--2026-10-05).
+Older capture-only and combined-video descriptions below are historical. Local
+implementation, native audio proof and all five root gates pass with 912 synthetic
+tests in 80 files. The image verifier now includes source/audio tone alignment;
+its Windows fixture-only stage passes, while Linux proof remains gated. Complete
+captures and practical bounded tolerance are implemented. Fake/no-key checks do
+not authorize renderer cloud rollout or prove paid quality. The existing cloud
+renderer now serves the owner-approved matching image: one 136.453-second build,
+verified Linux/native/runtime proof and digest, image-only update with unchanged
+settings/IAM, health and the new audio route verified, owned build source/context
+removed. Paid UI testing remains owner-only; analysis is enabled and later
+assembly/render stays disabled at the existing stage.
+
+
+Owner-local full Gemini capture (2026-10-05): the owner explicitly authorized
+private returned-response and actual timestamp capture to judge the identified
+`word_outside_media` failure.
+[CL-007's current local capture packet](CL-007-deliver-live-analysis-vertical-slice.md#owner-local-full-gemini-capture--2026-10-05)
+preserves acceptance, transport and call/cleanup behavior. Capture defaults off
+and requires a workspace-bound six-hour local permit; fake/test/preview/production
+composition cannot enable it. All five gates pass with 916 synthetic no-key
+tests in 80 files; scoped review found no actionable issue. Backend capture is
+armed until 2026-10-05 20:06:58 UTC, stable backend/frontend app PIDs 9028/20712
+are verified and all three readiness GETs return 200. Actual overrun/grounding acceptance
+await the owner's manual real test. No new paid/cloud/Git action or local AI
+runtime/weights are included.
+
+Reconciliation diagnostic follow-up (2026-10-05): the owner's manual video test
+returned Gemini HTTP 200 and passed JSON/schema validation, then failed
+reconciliation; cleanup succeeded, 36 safe records and zero drops.
+[CL-007's authorized diagnostic-only follow-up](CL-007-deliver-live-analysis-vertical-slice.md#reconciliation-rejection-diagnostics--2026-10-05)
+preserves validation/public responses and adds private static reason/constraint
+codes and bounded structural locations. All five root gates pass with 902
+fake/no-key tests in 79 files; scoped read-only review found no actionable issue.
+The new marker and stable backend/frontend app PIDs 5424/20712 are verified;
+all three non-metered readiness GETs return 200. No paid call, provider payload
+capture, credential/configuration/cloud change or Git mutation is bundled.
+The exact live rejecting condition and whether the rule is justified await
+the owner's manual retest; no local AI runtime/weights are used.
+
+Applied fix follow-up (2026-10-05): the owner authorized
+[CL-007's evidence-array transport fix](CL-007-deliver-live-analysis-vertical-slice.md#applied-evidence-array-transport-fix--2026-10-05)
+and will manually retest through the UI. Production now omits the identified
+evidence `maxItems` hint, retains all canonical/local limits and sends the exact
+previously accepted fingerprint. Obsolete component commands are retired while
+their safe logs remain readable. Focused 150 fake/no-key checks and all five final
+root gates pass, including 870 tests in 79 files. Scoped read-only review found
+no actionable issue. The new policy marker and stable owned backend/frontend
+14680/20712 are verified; all three non-metered readiness GETs return 200.
+No paid request, private configuration/media change, cloud or Git mutation
+accompanies this fix; real video acceptance/quality remain owner-unverified.
+
+Historical diagnostic result before the applied fix (2026-10-05): under the owner's explicit approval
+to continue paid diagnostics, [CL-007 isolated evidence-array schema rejection](CL-007-deliver-live-analysis-vertical-slice.md#confirmed-evidence-array-schema-rejection--2026-10-05).
+Full original schema returns 400; omitting only evidence `maxItems: 8` returns
+200; restoring it returns 400 again. Ten observed generations including the
+earlier control, no upload/retry, safe logs with zero drops. This establishes
+the specific transport-schema trigger without video. At that checkpoint the
+proposed fix was not applied; the current implementation is recorded above.
+Genuine video/output quality remains unverified. The diagnostic allowlist was
+extended with injected fake/no-key
+checks; settled root gates/runtime verification are recorded in the packet.
+All five final gates pass with 874 fake/no-key tests in 79 files; final read-only
+review found no actionable diagnostic-scope findings. Both apps remain healthy
+after watcher reload (backend 6880, frontend 20712).
+
+Owner controlled-isolation follow-up (2026-10-05): the updated-schema video test
+still returned generic generation HTTP 400, so the two-bound remedy was
+insufficient. [CL-007's text/schema isolation](CL-007-deliver-live-analysis-vertical-slice.md#owner-run-text-and-schema-isolation--2026-10-05)
+prepares two fixed, single-request owner CLI cases with safe separate logs and
+no media upload. All five root gates pass with 860 fake/no-key tests in 79 files;
+both executable dry-runs and runtime health/ownership pass. Final review found
+no actionable issue after correcting timeout classification. The owner's later
+explicit instruction authorized one agent-executed paid text control as an
+exception to manual-only execution: HTTP 200, SDK completed, six safe records
+with zero drops, 27,846 ms. The schema case remains unrun and requires owner
+execution or explicit authorization. Its result determines the next comparison.
+No local AI runtime/weights are used; schema/video acceptance, grounded output
+quality and exact root cause remain unverified.
+
+Owner processing-remedy follow-up (2026-10-05): the diagnostic-v2 manual test
+still failed at one Gemini generation with generic HTTP 400 `INVALID_ARGUMENT`.
+[CL-007's isolated schema remedy](CL-007-deliver-live-analysis-vertical-slice.md#isolated-generation-schema-remedy--2026-10-05)
+omits two large outer array bounds from Google's request, retaining strict local
+validation/cleanup. All 124 focused checks and five settled root gates pass,
+including 844 fake/no-key tests in 78 files. Final read-only review found no
+actionable issue; watcher activation and non-metered readiness are verified.
+Logs identify the actual request
+policy/fingerprint. This is a candidate remedy, not a proven root cause. The next
+paid test is owner-only with their existing keys/live flags/approvals; fake/no-key
+checks need no provider access. No local AI runtime/weights are used.
+
+Owner diagnostic-only follow-up (2026-10-05): the latest owner manual attempt
+pinpoints a Gemini generation HTTP 400; its exact rejection reason remains
+unknown. [CL-007 diagnostic v2](CL-007-deliver-live-analysis-vertical-slice.md#expanded-rejection-diagnostics--2026-10-05)
+adds bounded Google rejection classifications and static generation/schema
+context before error mapping, with privacy, request-count and log-failure
+regressions. No processing fix, automatic/agent-paid retry, cloud change,
+environment edit, deployment or Git mutation accompanies this follow-up.
+All five root gates pass with 839 fake/no-key tests in 78 files; read-only
+validation found no actionable diagnostic-scope finding. The existing backend
+reports v2 readiness and both local services pass non-metered readiness GETs.
+The next paid attempt remains owner-only; its cause and live acceptance are open.
+
+Owner local-fix follow-up (2026-10-05): the owner authorized implementing and
+validating the five CL-007 analysis/console fixes. Local implementation and
+synthetic browser evidence are recorded in
+[CL-007](CL-007-deliver-live-analysis-vertical-slice.md#local-implementation-and-validation--2026-10-05).
+The historical provider cause and genuine owner-only paid acceptance remain open;
+the earlier implementation deferral is superseded. No Git action or deployment
+is authorized by this follow-up. All five root gates pass with 802 synthetic
+tests in 77 files; final read-only validation found no actionable local finding.
+
 Owner commit handoff (2026-10-04): the owner authorized committing all current
-work using the [59-file plan](CL-007-016-WORKFLOW-COMMIT_PLAN.md). Further
-implementation of the analysis/console fixes is deferred to another day; this
+work using the [59-file plan](CL-007-016-WORKFLOW-COMMIT_PLAN.md). At that time,
+implementation of the analysis/console fixes was deferred to another day; this
 handoff does not close their acceptance or authorize paid tests/deployment.
 
 Latest owner manual-analysis follow-up (2026-10-04):
@@ -10,8 +232,9 @@ Latest owner manual-analysis follow-up (2026-10-04):
 records rotation from the beginning, safe failure diagnosis, CSP, shared Turnstile
 loading and preload attribution. The owner subsequently authorized
 [backend diagnostic logging](CL-007-deliver-live-analysis-vertical-slice.md#priority-backend-diagnostic-follow-up--2026-10-04)
-because all saved backend logs lacked the failure detail. **Logging is implemented;
-the historical cause, processing/console fixes and acceptance remain open.**
+because all saved backend logs lacked the failure detail. **Logging and local
+error-preservation/rotation/CSP/SDK fixes are implemented; preload checks found
+no owned defect. The historical cause and live acceptance remain open.**
 Fake/no-key diagnostic regression coverage is available; live Gemini success and
 real deletion remain owner-run checks with keys, live flags and approvals.
 CL-015 links the production release acceptance checkpoint. No local AI runtime,

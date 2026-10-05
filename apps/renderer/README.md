@@ -1,5 +1,45 @@
 # Private media renderer
 
+Session allowance (CL-007, 2026-10-05): each disposable session has four media
+operations, consumed atomically in its existing expiring intent by valid
+prepare/select/preview/render claims. Restart preserves consumption; replay or
+invalid claims dispatch zero work. Failed claimed work stays consumed; new
+sessions have independent allowances on the same instance. Reads, release,
+cancel and expiry are unmetered. `RENDERER_MAX_OPERATIONS` is retired and rejected;
+remove it from service configuration when deploying this revision. One active
+operation and all private admission/resource/cleanup controls remain. Private
+failures expose only safe code/sub-stage for backend logging. Fake/no-key tests
+use injected ports; live media/AI quality remains the owner's manual test.
+
+The matching private image rollout is verified: Ready/latest traffic, retired
+entry removed, other runtime settings/private IAM preserved, Linux synthetic
+audio/render/runtime proof and non-metered health/invalid-input checks passed.
+See the [current allowance handoff](../../docs/tickets/CL-007-deliver-live-analysis-vertical-slice.md#verified-session-allowance-deployment-and-handoff).
+
+Current local CL-007 migration (2026-10-05): `/internal/prepare` now extracts
+source-aligned mono 16 kHz AAC at 64 kbit/s in M4A rather than encoding a full
+source video. Its strict response includes `analysisAudio` and the fixed
+`audioProfile`; `/internal/analysis-audio` streams only this source artifact.
+The separate `/internal/select` and `/internal/analysis-proxy` remain video-only
+for the selected clip. The legacy intent artifact field remains deletion
+compatible; it is not an old processing fallback. The matching image was separately
+approved and deployed: Linux/audio/runtime proof, Ready/latest traffic, unchanged
+private settings/IAM and the new audio endpoint passed. See the [handoff](../../docs/tickets/CL-007-deliver-live-analysis-vertical-slice.md#approved-private-deployment-and-final-handoff--2026-10-05).
+No paid AI or real media test was run by the agent. Fake/no-key checks use
+synthetic ports; real speech/timing quality and Gemini acceptance need the owner
+test. Full provider output logging
+is owned by the backend's private local capture, never renderer/GCS logs.
+
+
+The isolated native audio proof is `corepack pnpm --filter @clipbuilder/renderer
+test:audio` after contracts/renderer builds, with an existing approved full
+`FIXTURE_FFMPEG_PATH` for synthetic creation/decode only. It needs no Chromium,
+weights, keys, ADC or cloud; its entry forces fake/paid-off and removes all OS-temp
+RGB/tone/MP4/M4A/PCM scratch. Production extraction uses the packaged binaries.
+The current Windows proof covers AAC, Opus, Vorbis, leading silence and a
+1,199.587-second source within the 24 MiB output bound. It does not prove real
+speech accuracy, a full 500 MiB input, cloud Linux behavior or paid API quality.
+
 Current private update (2026-10-04): the image from `4c0f510` passed Linux
 synthetic render/decode/cancel and runtime checks, then replaced the existing
 private revision with IAM/resource settings preserved. Local control is connected
@@ -39,7 +79,7 @@ No source/manifest text is stored in the cleanup intent.
 
 This adds one compute operation: source proxy + selected AI proxy + selected
 preview = three before export, four including the later confirmed final render.
-`RENDERER_MAX_OPERATIONS` remains default zero and maximum four. Injected
+The fixed session allowance is four operations. Injected
 fake/off tests use no keys/ADC/storage/network. The image has not been rebuilt
 or deployed; actual proxy audio/clocks, Player/native-output parity and real
 device checks require the separately deferred cloud/media/AI/rights gates.
@@ -131,6 +171,26 @@ one retry yield healthy targets of 2h33m raw /43m output; outages can extend
 physical retention. The opaque unfinished-upload capability is encrypted with
 a separately mounted 32-byte base64url key, never stored as plaintext.
 
+Upload admission inventories the bounded journal. When a session/output is
+expired, cleanup is pending, or the process has a prior cleanup block, admission
+runs one existing generation-fenced sweep and re-reads the journal before
+allocating an upload. It no longer rejects solely because expiry fell between
+scheduled sweeps. Actual deletion failures and deferred retry deadlines still
+block intake with zero new allocation. Active sessions and unexpired output are
+preserved. Upload admission and scheduled sweep are mutually exclusive;
+admission storage work is tied to client disconnect and the 180-second sweep
+deadline. Failure compensation has its own bounded cleanup signal.
+
+Production composition emits structured `renderer_cleanup_diagnostic` records
+to stderr, correlating admission/sweep/cleanup with a fresh diagnostic ID.
+Inventory counts, expired/pending/output classifications, retry delay, fixed
+stage messages, elapsed time, storage HTTP/fixed failure codes and cleanup fences
+are logged; journal bodies, object/session/account identifiers, media, paths,
+credentials and capabilities are omitted. Backend diagnostics and owner-local
+Gemini output captures remain separate and unchanged. Injected fake/no-key
+tests cover recovery, failure, concurrency and privacy; real cloud cleanup and
+paid assembly acceptance require the owner UI retest.
+
 Work has an 840-second deadline and a monitored 2-GiB scratch ceiling; sweep
 has a 180-second deadline. Dispatch cap 0–4 is per process lifetime and is not a
 global billing quota. Restart does not grant permission for more tests. Every
@@ -154,11 +214,15 @@ source tests, private media, feasibility pages and env files are excluded.
 Workspace dependencies are injected and synchronized after build; standard
 `pnpm deploy --prod` assembles a self-contained production dependency graph.
 Before publication, the build runs scripts/verify-linux-media.mjs as node:
-Node-generated PNG/PCM fixture, fixed portrait render, scratch accounting with
+Node-generated PNG/PCM fixture, source-aligned audio-only extraction with decoded
+tone-onset/profile/byte checks, fixed portrait render, scratch accounting with
 special entries, native cancellation and zero surviving owned processes. It uses
 packaged tools, needs no full FFmpeg and removes fixtures in finally. The Linux
 compositor supports PNG/image2/PCM input; BMP/rawvideo fixture paths are unsupported.
-Only aggregate proof JSON reaches the runtime. The final image checks production
+Only aggregate proof JSON (including audio duration/bytes/extraction time and
+before/after tone onset) reaches the runtime. The new audio stage passed locally
+with packaged Windows tools; Linux execution remains the separate image-build gate.
+The final image checks production
 imports, bundle, tool hashes and executable versions as the unprivileged runtime user.
 Both image checks preload `test/deterministic.environment.ts`, forcing fake AI,
 paid/live/cloud flags off and removing inherited credentials before application
@@ -204,6 +268,6 @@ transfer approval. Resources and the enabled cleanup schedule are retained. Foll
 [bounded cloud setup guide](../../docs/operations/CLOUD_RUN_RENDERER_SETUP.md).
 Populate only the matching blank identity/bucket/key-mount entries from this
 package's `.env.example` in owner-managed service configuration. Enable
-RENDERER_ENABLED, CLOUD_SPEND_APPROVED, REMOTION_LICENSE_CONFIRMED and a bounded
-RENDERER_MAX_OPERATIONS only after the setup gate. No service startup reads the
+RENDERER_ENABLED, CLOUD_SPEND_APPROVED and REMOTION_LICENSE_CONFIRMED only after
+the setup gate. The session operation allowance is fixed in code. No startup reads the
 root `.env.local`; attached Cloud Run identity supplies Storage credentials.

@@ -4,6 +4,105 @@
 
 Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 721 synthetic tests in 70 files pass, including the CL-016 MP4-only and sample-streaming follow-ups. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**
 
+### Owner audio transcription and text-only selection decision — 2026-10-05
+
+Owner selected assembly request/diagnostics follow-up (2026-10-05): use JSON-only
+Flash transport for the selected video plan as already used for candidate
+selection; provide the canonical plan schema as text guidance and retain local
+compilation. The owner-triggered request reached successful video upload, then
+HTTP 400 with no field details. This change is an evidence-supported transport
+correction; live acceptance remains an owner manual gate. Preserve all private
+provider captures and add explicit bounded stage messages, timings, structural
+facts and safe schema failure locations across assembly and cleanup. Canonical
+remote UI errors must retain their original category. See the
+[CL-009 follow-up](tickets/CL-009-assembly-request-and-diagnostics.md). This changes
+no model, sampling, retry/spend policy, cloud resources or public controls.
+
+Candidate decoding correction (2026-10-05): a successful live Flash response
+returned three candidate objects as a JSON array; object-only decoding incorrectly
+published an empty result. The approved CL-007 fix accepts both the array and
+`{ candidates: [...] }`, states the envelope in the JSON-only prompt and retains
+safe decoding counts/reasons plus full private capture. Empty UI copy is neutral;
+it cannot claim an editorial judgment when decoding was the cause. Existing
+quality tolerance, bounds, provider-call count and cleanup controls remain.
+
+Owner renderer allowance decision (2026-10-05): replace the process-lifetime
+media-operation cap with a fixed four-operation allowance for each disposable
+demo session (prepare, selected proxy, preview, final render). Consumption is
+stored and atomically claimed in the existing expiring media intent, survives
+renderer restart and cannot be reset by replay. New sessions receive a fresh
+allowance; failures retain consumed work. Existing backend spend/admission,
+private authentication, bounded capacity/media/runtime and cleanup controls
+remain. Retire the old operation environment setting. Backend renderer logs
+must retain safe status/reason/stage/timing/structural details; UI messages remain
+generic. The owner approved implementation and the matching private renderer
+deployment after verification under the current CL-007 packet. This authorizes
+no public release or agent-run paid-media/AI test.
+
+Implementation and the matching private rollout are verified: 959 fake/no-key
+tests, all five local gates, Linux synthetic audio/render/runtime proof, unchanged
+other settings/private IAM and non-metered private health checks pass. Local
+hot reload/readiness and armed private capture pass. Real provider acceptance
+and paid quality still require the owner's manual UI test. See the current
+CL-007 allowance handoff; earlier deployment statements below retain their date.
+
+Latest owner override (2026-10-05): **Find moments does not reject model output
+for transcript or candidate quality rules.** Timing/order/overlap/media-tail,
+turn consistency, quotation/claim/evidence, candidate duration/overlap and
+duplicate checks are removed from source analysis and its shared browser
+contracts. Preserve returned timings and all diagnostics. Decode usable items
+independently without inventing timings; unusable items or empty output produce
+a reduced/no-candidate result instead of rejecting the request. Basic decoding,
+bounded data, authentication/source binding, admission/spend, media inspection
+and cleanup controls remain. Duration/grounding/editorial goals remain prompt
+guidance, not output acceptance gates. This supersedes the rejection policy in
+this section and historical section 12.6. Selected assembly/rendering retain
+their separate execution and resource boundaries. See the current CL-007 packet.
+
+Replace the combined full-video transcription/selection call with renderer-owned,
+source-aligned audio extraction, one `gemini-3.5-transcribe` verbatim/word-timestamp/
+diarization call and one `gemini-3.8-flash` text-only candidate selection call.
+The backend derives stable word IDs, complete turns, cut times and public
+quotations. The separately admitted short selected-video Flash planning call
+remains for visual speaker association and contextual cards. No old processing
+fallback, automatic paid retry or editor is introduced. The source action budget
+is now two sequential AI calls, with zero selection calls after transcript failure.
+Use Interactions with storage/background/streaming explicitly disabled.
+
+The owner also authorizes practical reconciliation tolerance: at most 250 ms end
+overshoot can be clamped to decoded duration with positive word length; larger
+drift and invalid references remain rejected. Missing sentence punctuation alone
+does not reject an otherwise grounded candidate. Distinct known speakers may
+overlap; same-speaker or uncertain-attribution overlap retains its 250 ms bound.
+Capture raw and normalized
+values plus adjustments privately before guards. Preserve every existing safe
+diagnostic and extend complete bounded private capture to Transcribe, Flash
+selection, selected-video planning and derived results. The current execution
+plan and exact test/rollout gates are in the
+[CL-007 migration packet](tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-transcribe-and-text-only-selection-migration--2026-10-05).
+This approves local implementation; renderer cloud updates and owner-run paid
+quality tests remain separate. Fake/no-key checks prove only synthetic behavior.
+
+### Owner local Gemini diagnostic capture decision — 2026-10-05
+
+For the current owner-local investigation, the owner explicitly authorized
+complete Gemini response bodies/headers, normalized output and actual transcript
+timestamps with decoded media duration and overrun comparisons. Store these in
+private OS-temporary files outside Git, scoped by opaque request IDs and an
+explicit workspace permit with a six-hour activation window. Normal application
+logs/public responses stay content-free; test, fake, preview and production
+composition cannot activate this capture. Never serialize request authentication,
+environment values or credential files. Existing validation, provider settings,
+call counts and disposable-media cleanup remain unchanged. This is a local
+diagnostic retention exception, not a public/cloud logging feature. Captures
+remain owner-local for diagnosis until removed; activation expiry stops new
+captures but does not delete evidence. See the
+[CL-007 packet](tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-local-full-gemini-capture--2026-10-05).
+Fake/no-key tests use synthetic responses and isolated temporary directories;
+real output requires the owner's manual UI test with existing credentials/live
+flags/approvals. No new agent-run paid test, cloud action or local AI weights
+are authorized or required.
+
 ### Owner Exit and background cleanup decision — 2026-10-04
 
 Rename **Clear media** to **Exit**. Its primary result is returning to the landing
@@ -66,10 +165,11 @@ While finding moments, rotate brief messages every five seconds and loop them
 until the request ends. Owner clarification: start with the accepted **Find
 moments** action and include verification, sample-copy/upload and proxy preparation;
 do not wait for the AI request or select rotation by a technical phase label.
-Keep one elapsed-time and message-loop lifetime across those phases. The current
-late-start defect and related analysis/console fixes are planned in
+Keep one elapsed-time and message-loop lifetime across those phases. The
+late-start defect and related local analysis/console fixes are implemented in
 [CL-007](tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-requested-analysis-failure-and-console-fix-plan--2026-10-04)
-and remain unimplemented in that follow-up. These describe the analysis task; they do not claim
+the 2026-10-05 follow-up; the historical provider cause remains unconfirmed.
+These describe the analysis task; they do not claim
 measured stage completion or a percentage. Keep elapsed time and cancellation.
 **Use sample** appears only when the local backend enables that capability;
 preview and production expose neither the CTA nor retained/fixture sample routes.
@@ -187,6 +287,15 @@ raw and 43m output, including scheduled retry and sweep execution. Outages can e
 shutdown/incident cleanup; no unconditional permanent-deletion SLA is claimed.
 Lifecycle alone is an eventual backstop. Google provider retention is separate.
 
+Owner cleanup correction (2026-10-05): new upload admission attempts one bounded
+existing sweep when expired/pending sessions or a process cleanup block are
+found, then verifies the journal again before allocation. Scheduled expiry
+remains independent; actual deletion failures/backoff still block intake. This
+closes the between-sweeps admission gap without weakening generation fences,
+retention, privacy or spend controls. Content-free renderer diagnostics identify
+the cleanup stages and reason counts. See the
+[CL-006 cleanup follow-up](tickets/CL-006-cleanup-aware-upload-admission.md).
+
 The owner separately authorized retention of one prepared local demonstration
 master on 2026-10-03. It stays ignored in `private/retained-demo-source/`, outside
 application session storage, scratch, build/public assets and automated cleanup.
@@ -260,6 +369,35 @@ in section 18.4; content and controls remain responsive within the shared shell.
 The workflow footer appears only when it contains a CTA, including disabled
 actions with visible prerequisites. Screens without footer actions have no
 footer strip or divider; availability-only notices stay in the card content.
+
+Owner candidate preview correction (2026-10-05): before editing, candidate
+frames use the inspected source's displayed aspect ratio, including rotation;
+horizontal sources are shown horizontally. Horizontal galleries use a scrolling
+row, snapping to one full card on phones/tablets. Their selected review uses the
+existing Video / Agentic Notes / Transcript swipeable slide pattern with dots
+and one mounted player on all screen sizes. Horizontal source playback controls
+sit below the picture, within the available slide. Other choices remain reachable in
+a side rail on wide screens and a compact horizontal rail on smaller screens.
+Candidate thumbnails decode the source at each moment's start; loading and
+decode failure are explicit. These source previews do not change the final
+vertical composition. This supersedes the earlier universal portrait candidate
+gallery and left-rail/detail-card direction for horizontal sources only.
+
+Owner temporary local sample replay decision (2026-10-05): save the latest
+successful retained-sample transcript and three choices privately outside Git,
+then expose **Simulate find moments for sample** beside Use sample only in the
+explicit local development composition while the six-hour saved-data permit is
+valid. Show the saved real choices immediately and label their replay status.
+On Proceed, establish a fresh protected session/disposable copy and inspect the
+sample before signing the saved analysis and running ordinary assembly. This
+skips Transcribe and selection calls; it does not bypass source identity,
+admission, rights/transfer, cloud/provider spend, receipt or cleanup boundaries.
+No arbitrary replay upload, automatic paid test, durable project or hosted/debug
+feature is added. Synthetic fake tests use no keys; real assembly is owner-run.
+Thumbnail frame decoding is serialized and retained only in browser memory for
+this review; release source decoders and frames on replacement/exit. The owning
+[temporary packet](tickets/CL-007-local-sample-replay-and-thumbnails.md) defines
+expiry, cleanup and verification.
 
 Candidate cards and detail panels stay inside the workflow content during
 selection, switching and closing. They cannot draw over the heading/action

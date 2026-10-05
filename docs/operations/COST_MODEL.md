@@ -1,5 +1,39 @@
 # Google AI and private media-compute cost plan
 
+## Session media allowance owner decision — 2026-10-05
+
+The owner approved replacing the renderer's two-operation process-lifetime cap
+with four media operations per disposable session, persisted with atomic claims
+in its existing expiring intent. Those cover prepare, selected proxy, preview
+and final render. Failed work retains consumption; new sessions are independent.
+Reads/cleanup dispatch zero media operations. Backend admission, bounded capacity,
+one active operation, resource/deadline/storage controls and private IAM remain.
+This is not a dollar ceiling or cross-session monthly spend ledger. Retire the
+old environment cap instead of increasing it. The owner authorized one matching
+private image build/update after local checks, preserving other existing settings
+and removing only that obsolete entry. AI/real-media testing remains owner-only.
+Fake/no-key tests prove session isolation and counter/CAS/replay behavior; billed
+cost and actual paid quality remain unchecked. See the current CL-007 packet.
+
+## Current CL-007 source call budget — 2026-10-05
+
+The owner approved local replacement of combined video analysis with exactly one
+`gemini-3.5-transcribe` audio request and at most one `gemini-3.8-flash` text-only
+candidate request. The existing consumed source action covers both; transcript
+failure or unresolved Files deletion prevents candidate dispatch. The separate
+selected short-video Flash plan remains at most one call. Zero raster calls,
+zero automatic paid retries, zero extra AI calls during export. Each provider
+phase retains a 180-second deadline and 4 MiB response bound; the control action
+retains its 840-second deadline. Audio extraction is bounded by the current
+renderer operation budget and 24 MiB artifact cap. Interactions request storage,
+background execution and streaming are explicitly disabled. This amendment
+supersedes older one-source-call descriptions below.
+
+No new paid/cloud/build expenditure is authorized by implementing this packet.
+Fake/no-key tests are synthetic; real latency, token usage, accuracy and billed
+cost require the separately approved renderer update and owner's UI test. See
+[CL-007](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-transcribe-and-text-only-selection-migration--2026-10-05).
+
 ## Owner budget decisions — 2026-10-03
 
 The owner confirmed the USD 10 ClipBuilder project and USD 5 Cloud Run alert

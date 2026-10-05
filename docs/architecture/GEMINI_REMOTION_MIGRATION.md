@@ -35,7 +35,8 @@ database, general queue, arbitrary jobs, batch workflow or direct publishing.
 | --- | --- | --- |
 | Next.js browser | Source selection, rights/transfer disclosure, bounded direct upload, candidate/source preview, fixed read-only clip preview, confirmation/download/cancel | Final encoding, phone model inference, credentials or arbitrary renderer requests |
 | Lightweight Express control API | Admission/call budgets, immutable session/source/object-generation bindings, Google orchestration, result/manifest validation, private renderer invocation and range-aware output delivery | Chromium/FFmpeg rendering, durable transcript store or a jobs queue |
-| Gemini `gemini-3.8-flash` | Grounded words/anonymous speaker turns, candidate selection; selected-range audible-speaker/visible-person association and bounded visual/edit plan | Physical video cutting/encoding, executable JSX/code/URLs or identity/sensitive inference |
+| Gemini `gemini-3.5-transcribe` | Verbatim audio words, word timestamps and anonymous diarization; backend assigns stable IDs/complete turns | Video understanding, editorial selection, visual identity or rendering |
+| Gemini `gemini-3.8-flash` | Text-only candidate references from validated words; separately selected-range audible-speaker/visible-person association and bounded visual/edit plan | Retranscription/retiming, physical video cutting/encoding, executable JSX/code/URLs or identity/sensitive inference |
 | Private Remotion Node/Docker media service on Cloud Run | Validate original media; create analysis/selected preview proxies; physically cut the chosen range, apply fixed crop/caption/template animation, encode and validate final MP4 | AI key/provider calls, public editor or client-chosen command/composition/URL |
 | Private temporary Cloud Storage | Immutable admitted source, bounded proxy/preview/assets and validated output during one expiring session | Public bucket, database, permanent library or history |
 | Mediabunny | Retain useful browser intake/inspection and existing offset/codec/storage correctness tests where justified | Required final export stack; do not move WebCodecs/web-renderer unchanged to the server |
@@ -46,8 +47,9 @@ validated range. Only deterministic code controls the physical cut and render.
 Flash returns text/structured plans, not raster images. Useful fixed cards and
 diagrams are the initial contextual visuals with **zero image calls**. If later
 evidence requires rasters, CL-009 must pin a Google Nano Banana model under the
-same provider/key with explicit call/asset/cost limits. A dedicated Google ASR
-model is conditional on failed caption/diarization evidence, not a default.
+same provider/key with explicit call/asset/cost limits. The owner selected the
+dedicated Transcribe model on 2026-10-05 after the recorded timing/reference
+failures; it is now the source transcription path.
 
 ## AI mode and compute environment are independent
 
@@ -146,12 +148,12 @@ Bucket CORS permits only approved local/hosted origins and needed upload headers
 no wildcard/public object access. A cloud object name never embeds the filename.
 
 The media service reads only the admitted exact generation through its runtime
-identity. It creates a 24-MiB-maximum, at-most-640×640 analysis AVC/AAC proxy,
-preserving the full source audio clock; a 20-minute quality/size pass is required.
-Google Files transport receives that proxy through the server-only SDK. One
-source analysis obtains grounded words/turns/candidates. After selection, use
-one bounded selected-range proxy for a second, more detailed audiovisual plan
-with explicit sampling. No repeated whole-source analysis is allowed.
+identity. It creates a 24-MiB-maximum source-aligned AAC/M4A audio artifact,
+with mono 16 kHz/64 kbit/s encoding and no full-source video encode. Google Files
+receives the verified audio for one Transcribe request; backend-normalized words,
+turns and times then go to one text-only Flash candidate request. After selection,
+one bounded selected-range AVC/AAC video proxy serves the separate detailed
+visual plan with explicit sampling. No repeated whole-source analysis is allowed.
 
 Create a lower-resolution selected-range preview proxy on the media service.
 The browser's fixed Remotion Player performs ordinary playback/layout only,
@@ -168,7 +170,8 @@ The owner explicitly approved private temporary GCS media storage on 2026-10-02.
 This is architecture approval, not provisioning, credential use or paid-test
 permission. The prior browser-only original/output policy is deliberately replaced. The
 uploaded original, proxy, preview and output exist temporarily in our private
-GCS bucket; Gemini receives a bounded audiovisual proxy. Disclose both transfers
+GCS bucket; Gemini receives source audio, validated transcript text and then a
+bounded selected audiovisual proxy. Disclose these transfers
 and separate their retention. Retain no durable transcript/prompts/provider
 payloads in our cloud: validated results/manifest stay in the temporary browser
 journal, server only holds bounded active descriptors and checks signed receipts.
@@ -245,7 +248,16 @@ but include limited abuse-processing retention. Paid-project status, rights,
 region/data policy, media transfer and exact call budget must be approved before
 private reference upload. No unpaid-quota privacy-equivalence assumption.
 
-Initial AI budget: one source analysis and one selected-range plan, zero raster
+Current owner amendment (2026-10-05): source analysis now extracts aligned audio
+and makes one Gemini 3.5 Transcribe call followed by one text-only Gemini 3.8 Flash
+candidate call. Backend-derived IDs/turns/quotations replace combined video
+transcription/selection. Keep the separate short selected-video planning call.
+See the current [CL-007 migration packet](../tickets/CL-007-deliver-live-analysis-vertical-slice.md#owner-transcribe-and-text-only-selection-migration--2026-10-05)
+for tolerances, complete private diagnostics, cleanup and rollout gates. Older
+combined-video descriptions in this migration document are superseded for source
+analysis; selected-video rendering and disposal policy remain applicable.
+
+Initial AI budget: one audio transcription, one text candidate selection and one selected-range plan, zero raster
 calls, no tools/search, no background interaction storage, no automatic paid
 retry. One final render, one bounded proxy-preparation action per required phase,
 one active expensive operation. Export retry reuses the same manifest/assets and

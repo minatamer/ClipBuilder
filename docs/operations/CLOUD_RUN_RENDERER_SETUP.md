@@ -1,5 +1,22 @@
 # Cloud Run renderer setup at the first cloud-dependent local test
 
+Current allowance update (2026-10-05): the owner approved the CL-007 session
+allowance/logging fix and matching existing private renderer deployment after
+verification. The fixed four-operation allowance is persisted per session;
+`RENDERER_MAX_OPERATIONS` is retired. Remove only that entry when updating the
+image, preserving other runtime/resource/identity/IAM settings. Older process-cap
+setup/evidence below is historical. Keep the existing bounded build workflow;
+do not create another service/project or enable paid features. Fake/no-key tests
+use injected ports; real-media/Gemini acceptance remains owner-only.
+
+The matching update passed in 124.689 seconds with Linux synthetic audio,
+render/cancellation and runtime proof; Ready/100% latest traffic, unchanged other
+runtime settings/private IAM, anonymous/authenticated health 403/200 and invalid
+audio input 400. Exact owned staged source and local context were removed;
+media/Gemini dispatches were zero. See the current CL-007 handoff for digest and
+local readiness. This private rollout does not establish public release or paid
+flow acceptance.
+
 Status: **Private setup, authentication, verified Linux image and the rights-confirmed
 2:45 upload/proxy/render/audio/cancellation/independent expiry proof passed. CL-006
 is complete.** This guide itself authorizes no cloud, credential, paid or Git action.
@@ -25,9 +42,10 @@ media dispatches were recorded; Gemini stayed off. Exact digest, timings, output
 profile, cancellation and 404 deletion evidence are in
 [CL-006](../tickets/CL-006-build-media-job-and-speaker-feasibility.md#completed-private-cloud-foundation--2026-10-02).
 
-The renderer retains 4 CPU/8 GiB, min zero/max one, concurrency two, a single
-media slot, 900-second request timeout, 840-second work deadline and two-operation
-per-process cap. Independent accelerated expiry passed without changing production
+The earlier foundation retained 4 CPU/8 GiB, min zero/max one, concurrency two, a single
+media slot, 900-second request timeout, 840-second work deadline and a historical
+two-operation per-process cap, superseded by the session allowance above.
+Independent accelerated expiry passed without changing production
 TTLs. Original owner input was preserved; test media and owned temporary build
 contexts were removed. Resources and the enabled expiry schedule remain retained;
 ancillary storage/scheduler/secret charges can continue. Alerts are advisory.

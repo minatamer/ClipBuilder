@@ -1,5 +1,17 @@
 # ClipBuilder frontend
 
+Selected assembly failures preserve the backend's validated SafeError code,
+message, request ID and retry evidence. A provider rejection therefore displays
+the provider error rather than being mislabeled as temporary storage failure.
+Actual local storage errors retain their storage mapping. Fake/no-key regression
+checks cover this mapping; real assembly acceptance needs the owner's paid test.
+See [the CL-009 diagnostics follow-up](../../docs/tickets/CL-009-assembly-request-and-diagnostics.md).
+
+The Find moments empty state uses neutral "No moments available" copy: it does
+not attribute an editorial judgment to Gemini when decoding yielded no usable
+items. The existing state/recovery flow is unchanged. Fake/no-key fixtures prove
+local rendering only; actual candidate quality requires the owner's live test.
+
 CL-016 places **Use sample** beside **Choose a video** and keeps prepared sources
 in Step 1 for playback before explicit **Find moments**. Fake intake reads only
 declared type/size and shows a labelled simulated source preview; the fixture
@@ -25,7 +37,9 @@ for ADC/storage configuration and [CL-016](../../docs/tickets/CL-016-source-prev
 for checks and outstanding real-media evidence. Existing keys/live/grant/
 spend gates still protect AI; no local AI weights/runtime are used.
 
-Finding moments loops brief task messages every five seconds while retaining
+The accepted **Find moments** click starts the wait before journaling, grant,
+verification or source preparation. It loops six task messages every five
+seconds across preparation and analysis, while retaining
 elapsed time and cancellation. The messages do not report measured stages or
 a percentage. **Exit** returns home, forgets the workflow and expires app cookies.
 Temporary media deletion runs quietly and never asks visitors to retry. The
@@ -48,7 +62,18 @@ Remotion review. See [quality evidence and pending runtime matrix](../../docs/op
 Fake/no-key checks are synthetic; actual media/device/UI/film approvals remain open.
 
 CL-012 adds locally tested privacy headers, strict request/stream bounds and
-canonical private caller-purpose routes. Browser documents use fresh CSP nonces;
+canonical private caller-purpose routes. Browser documents use fresh CSP nonces.
+Development permits inline style elements without a conflicting style nonce;
+production permits the document nonce and only the pinned Player's exact
+stylesheet hash. A regression checks that hash against Remotion's producer on
+upgrades. Player's fixed silent-audio pool also needs `data:` media permission.
+The browser startup hook enables Zod's interpreter before schemas are constructed,
+avoiding runtime code-generation probes under the strict production script policy.
+The Turnstile SDK belongs to the document; widgets share its nonce-bearing load
+and remove only their own instance/subscription. Failed loads support explicit
+verification retry without redispatching processing.
+See [local CSP and preload evidence](../../docs/tickets/CL-007-deliver-live-analysis-vertical-slice.md#local-implementation-and-validation--2026-10-05).
+
 Trusted Types remains report-only pending real compatibility checks. Storage
 policy and cleanup controls are code-tested, not proof of saved cloud settings.
 See [current safeguard evidence](../../docs/operations/SECURITY_PRIVACY_CONTROLS.md).
@@ -73,13 +98,20 @@ opens the existing notes/portrait/transcript layout. A separate cloud review
 state cannot become a legacy fixture assembly. Refresh hydrates a complete
 result; pending/uncertain work restores as failure without another AI/job call.
 Remotion Player uses `@clipbuilder/composition`, the prepared selected proxy,
-the manifest's 30fps clock and source start zero. Playback, mute and bounded
+the manifest's 30fps clock and source start zero. Playback, volume and bounded
 timestamp seeks are ordinary read-only controls. Notes describe the actual
 continuous cut, source speech, captions, focus and extractive cards. Confirm
 export is connected by CL-011 to one admitted render. Signed final metadata is
 restored without redispatch; a decoded portrait frame and duration gate Download
 MP4. Retry access/download makes zero AI calls and uses existing output only.
 Download requested does not mean saved. See the [fixed render profile](../../docs/operations/RENDER_PROFILE.md).
+
+Every workflow player shares a speaker button that opens a 0–100% playback
+volume slider: source, selected moment, edited preview and final output. Zero
+is silent; Escape or clicking outside closes the slider. This changes browser
+listening only, without changing exported audio or starting processing. Fake
+players expose the same controls with synthetic placeholders and no real audio.
+See the [owner follow-up](../../docs/tickets/CL-010-playback-volume-controls.md).
 
 Playback media uses the fixed same-origin `/api/analysis/preview` URL, protected
 cookie and validated byte streaming. No playback capabilities enter the journal
@@ -245,6 +277,37 @@ mounted into the landing prototype. CL-004 now mounts it into the locally
 single-workspace development preview. The owner approved brand foundations as
 an interim baseline, then directed this core-flow redesign; final visual review
 is not claimed.
+
+CL-007's owner source-preview correction (2026-10-05) applies before editing:
+candidate thumbnails and the selected player use inspected source dimensions
+with rotation. Landscape galleries scroll horizontally and snap to one card on
+phones/tablets; landscape selected review reuses the Video / Agentic Notes /
+Transcript swipeable slides and keyboard-accessible dots at all sizes. Other
+moments remain reachable in a side rail or compact horizontal rail. Portrait
+and square candidate previews keep their source proportions. The edited clip
+review/export remains vertical. Paused thumbnails preload frame data, seek to
+candidate start and report loading/decode failure. One decoder handles the
+choices serially, copies bounded frames to in-memory canvases and releases each
+native source before the next load. Gallery/side-rail switching reuses those
+frames; exit releases listeners, pending decoding and canvas memory. No frame
+file, server thumbnail job or provider call is added.
+Fake/no-key checks verify synthetic layout/lifecycle, while real frame quality
+and paid editing require the owner's manual UI test with credentials and enabled
+live stages. Proceed requires public `liveAssemblyEnabled` and the processing
+challenge; successful analysis alone does not enable editing/rendering.
+
+Temporary local sample replay (2026-10-05): **Simulate find moments for sample**
+appears beside Use sample only while the development backend's owner-local saved
+analysis permit is active. It immediately opens three saved real choices and
+their transcript, with an explicit saved-analysis notice. It calls neither AI
+analysis stage nor cloud preparation. Manual Proceed creates a fresh protected
+session/disposable sample copy and signs inspected saved analysis before the
+normal paid assembly/preview. Source uploads cannot use replay. Saved content is
+outside Git/build/public assets and activation lasts six hours; normal browser
+workspace expiry/Clear applies. Development guards and production composition
+exclude the CTA/transport. Fake/no-key injected checks prove local wiring only;
+actual provider/framing/preview success remains owner-tested with live assembly,
+credentials and existing rights/transfer/cloud/spend approvals.
 
 CL-004 owns `/start`: one changing card with intake/limits, three prepared
 58-second conversation choices, single selection, vertical placeholder gallery,

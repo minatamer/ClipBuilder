@@ -36,6 +36,24 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   generated assets, output videos, signed capabilities, account identifiers, and
   credentials out of Git, fixtures, logs, errors, URLs, screenshots, and
   documentation.
+- Owner diagnostic exception (2026-10-05): for this local Gemini investigation,
+  full returned response bodies/headers, normalized output and actual timing
+  comparisons may be captured in private OS-temporary files outside Git. A
+  workspace-bound permit expires after six hours; capture is unavailable in
+  test, fake, preview and production composition. Normal stdout/stderr, browser
+  responses, fixtures and committed documentation remain content-free. Do not
+  serialize request authentication, environment values or credential files.
+  Captures remain owner-local until removed after diagnosis; activation expiry
+  does not imply file deletion. This exception changes no validation, dispatch,
+  media cleanup, cloud or paid-testing gate. See the CL-007 local capture packet.
+- Owner sample-replay exception (2026-10-05): the owner authorizes one temporary
+  OS-temp saved copy of the successful retained-sample analysis for the local
+  development replay CTA. It is workspace/source-bound and expires activation
+  after six hours; preserve the original capture. Fake/test/preview/production
+  cannot load it. Replayed choices are labelled and Proceed obtains fresh normal
+  protected source/session evidence. No receipt/credential copy, Git fixture,
+  hosted replay, provider retry or agent-paid test is authorized. See
+  `docs/tickets/CL-007-local-sample-replay-and-thumbnails.md`.
 - Owner retention decision (2026-10-03): `private/retained-demo-source/` holds
   the ignored, owner-managed local demonstration master and its private metadata.
   Preserve it during session cleanup, expiry, cancellation, repository housekeeping,
