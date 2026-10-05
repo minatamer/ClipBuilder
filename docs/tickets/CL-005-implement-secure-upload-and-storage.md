@@ -2,7 +2,7 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: **Temporary-media prerequisite and isolated private GCS/upload/cancel/expiry proof verified under CL-006. Browser product integration and public release remain later gates.**
+Status: **Temporary-media prerequisite and isolated private GCS/upload/cancel/expiry proof verified under CL-006. Browser source transfer is connected under CL-007; chunked browser uploads and measured cloud-upload progress remain pending. Public release remains a later gate.**
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -14,6 +14,7 @@ Dependencies follow the numbered migration sequence. After documentation approva
 - [x] Implement strict generation-bound admission/prepare/render/cancel schemas and bounded encrypted cleanup journal.
 - [x] Verify synthetic cleanup/retry/restart/orphan/late-publication behavior through injected ports.
 - [x] Verify real GCS resumable upload/cancellation, IAM, bucket settings and independent accelerated scheduled expiry under CL-006's separately authorized private checkpoint.
+- [ ] Implement the owner-requested chunked browser-to-GCS upload and cloud-acknowledged progress checkpoint below; existing resumable capabilities alone do not satisfy it.
 
 Current implementation: `packages/contracts/src/cloud-media.schema.ts` and
 `apps/renderer/src/expiry/{temporary-intent,upload-capability,media-sessions,gcs-media-store}.ts`.
@@ -32,7 +33,74 @@ records the owner-approved private upload/proxy/render, partial-upload cancel,
 generation deletion and separately authenticated scheduler proof. Production
 package/schema boundaries and fake operation counts are executable. No Gemini
 calls occurred; ordinary tests remain credential-free and zero-network.
-Actual browser/control source transfer remains later integration work.
+Browser/control source transfer is now connected under CL-007. Its current
+chunking and cloud-progress gap is recorded below; connection alone does not
+establish real browser/cloud acceptance.
+
+## Owner-requested chunked cloud upload and truthful progress — 2026-10-05
+
+The owner wants **chunk uploading so that the progress bar resembles the true
+progress of upload to Google Cloud Storage**. Status: **partially implemented;
+browser chunk transfer and measured cloud-upload progress are pending**. This
+section records the current code inspection and required future work only.
+
+Current evidence:
+
+- The renderer creates a GCS resumable upload capability in
+  [`gcs-media-store.ts`](../../apps/renderer/src/expiry/gcs-media-store.ts).
+  [`source-analysis.api.ts`](../../apps/frontend/src/features/source-analysis/source-analysis.api.ts)
+  nevertheless sends the entire browser source Blob in one PUT, with no chunk
+  loop or upload-progress callback. The live analysis flow awaits that transfer
+  before analysis and exposes labels, not acknowledged byte counts.
+- The separate retained-sample backend path in
+  [`retained-sample.processing.ts`](../../apps/backend/src/media/retained-sample.processing.ts)
+  already copies 4-MiB chunks and checks GCS acknowledgements, but does not expose
+  per-chunk progress to the browser. This does not prove uploaded-file chunking.
+- [`processing-status.tsx`](../../apps/frontend/src/features/sample/processing-status.tsx)
+  uses an elapsed-time activity animation for unfinished real processing, not
+  storage byte progress. Fixture upload percentages are simulated. Local OPFS
+  copy/checksum progress measures device work, not cloud transfer.
+
+Required implementation and acceptance:
+
+- [ ] Send browser uploads through the existing admitted resumable capability in
+      bounded, protocol-compatible chunks. Retain private origin restrictions,
+      byte/type limits, session/generation binding, expiry and cancellation;
+      avoid full-source buffering and duplicate upload allocation.
+- [ ] Track acknowledged bytes against the exact source size. Advance the
+      determinate upload bar from GCS-confirmed offsets, not a timer or bytes
+      merely queued by the browser. Keep it monotonic and do not double-count
+      retransmitted bytes. Show completion only after final storage success and
+      a valid generation response; keep subsequent verification/analysis clearly
+      separate from upload progress.
+- [ ] Wire measured progress into the live flow and shared progress UI, including
+      accessible percentage/state announcements. Preserve an indeterminate
+      indicator for phases whose completion cannot be measured. If the local
+      retained-sample copy displays upload percentages, provide server-confirmed
+      copy counts; otherwise keep that phase explicitly indeterminate.
+- [ ] Verify browser-visible GCS acknowledgement/status and CORS behavior,
+      including intermediate 308 responses and exposed acknowledgement headers;
+      do not assume the server transfer adapter can be copied into browser code.
+      Handle partial or ambiguous acceptance using the existing bounded policy,
+      without following unexpected redirects, blindly resending data or creating
+      another processing attempt.
+- [ ] Preserve approved diagnostics and add useful content-free transfer records:
+      chunk index, acknowledged/total bytes, duration, status and safe failure
+      codes. Keep upload capabilities, credentials, filenames and media outside
+      ordinary logs, UI errors and tracked evidence.
+- [ ] Add synthetic regressions for multiple chunks, final short chunk, correct
+      acknowledgement/progress, failure/stall, ambiguous or malformed responses,
+      cancellation and late callbacks. Prove progress stops on failure/cancel,
+      partial media follows existing cleanup, and no AI provider is dispatched
+      before successful upload completion. Run focused checks and settled root
+      gates after implementation; record actual browser/cloud evidence separately.
+
+Fake-mode verification can use synthetic files and injected storage responses
+without keys, network or credits; it does not establish real GCS browser behavior.
+Actual cloud verification requires configured storage credentials/IAM/CORS and
+the applicable cloud approval. Storage transfer itself does not require a Gemini
+key; later live transcription/analysis does. No new implementation, automated
+paid flow or cloud action is authorized by this documentation update.
 
 ## Cross-ticket audit correction — 2026-10-03
 

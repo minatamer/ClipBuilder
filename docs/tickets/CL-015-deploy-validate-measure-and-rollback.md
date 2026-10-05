@@ -47,6 +47,7 @@ Git actions retain separate gates. Usage polling and independent review remain s
 - [ ] Complete the owner-requested `artifacts/` cleanup checkpoint below before freezing the deployment build.
 - [ ] Complete the owner-requested Google Search favicon/crawlability checkpoint below before freezing the public deployment build; retain its post-release indexing follow-up.
 - [ ] Complete the owner-requested whole-codebase audit, STRIDE security analysis and final-revision validation checkpoint below before public deployment.
+- [ ] Close [CL-005's chunked cloud-upload and truthful progress checkpoint](CL-005-implement-secure-upload-and-storage.md#owner-requested-chunked-cloud-upload-and-truthful-progress--2026-10-05); resumable capability support and simulated/activity bars do not establish measured browser-to-GCS progress.
 - [ ] Build acceptable immutable target-platform images; verify actual deployment, negative URL probes, bounded live quality/cost, kill switch/rollback and remaining rights/AI/cloud/license/device gates after approval.
 
 ### Owner-required comprehensive pre-deployment audit — 2026-10-05
