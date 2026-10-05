@@ -46,7 +46,73 @@ Git actions retain separate gates. Usage polling and independent review remain s
 - [x] Complete local validation, five root gates and exact build/input evidence; this is not complete deployment acceptance.
 - [ ] Complete the owner-requested `artifacts/` cleanup checkpoint below before freezing the deployment build.
 - [ ] Complete the owner-requested Google Search favicon/crawlability checkpoint below before freezing the public deployment build; retain its post-release indexing follow-up.
+- [ ] Complete the owner-requested whole-codebase audit, STRIDE security analysis and final-revision validation checkpoint below before public deployment.
 - [ ] Build acceptable immutable target-platform images; verify actual deployment, negative URL probes, bounded live quality/cost, kill switch/rollback and remaining rights/AI/cloud/license/device gates after approval.
+
+### Owner-required comprehensive pre-deployment audit — 2026-10-05
+
+The owner requires a thorough audit of **code efficiency, code quality and code
+structure**, a **STRIDE security analysis**, and **code validation and
+verification before public deployment**. This is a mandatory release checkpoint,
+not a claim that earlier audit evidence covers the current pipeline. CL-014 owns
+the audit and findings; CL-012 owns security controls and their corrections;
+CL-015 must verify their current evidence before releasing the exact candidate.
+The detailed requirements below apply to the current cloud-render pipeline,
+regardless of the older checklists retained as history in those packets.
+
+Status: **documented and pending; no new audit or implementation performed**.
+
+- [ ] Audit the complete first-party codebase: frontend, backend, renderer,
+      contracts, shared composition, tests, configuration and build/release
+      scripts. Reconcile earlier ticket acceptance and owner feedback with the
+      actual implementation; identify incomplete or obsolete pipeline code.
+- [ ] Review code quality and structure: dependency direction, responsibility
+      boundaries, contract ownership, duplicate schemas/constants/logic,
+      readability, oversized modules, unsafe casts, error handling, stale flags,
+      dead code and unused dependencies. Record concrete findings and evidence.
+- [ ] Review efficiency: repeated provider requests and retries, repeated media
+      downloads/uploads/decodes/renders, transcript parsing, browser bundle size,
+      unnecessary UI work, memory/resource use, concurrency and cleanup across
+      success, failure, cancellation, timeout and expiry. Measure relevant hot
+      paths where feasible; preserve accepted behavior and avoid speculative
+      optimizations.
+- [ ] Produce an explicit STRIDE threat model covering **Spoofing, Tampering,
+      Repudiation, Information disclosure, Denial of service and Elevation of
+      privilege**. Map assets, data flows and trust boundaries across browser,
+      frontend, control API, private renderer, temporary storage and providers.
+      For each applicable threat, record the attack scenario, existing control,
+      code/configuration evidence, verification, residual risk and disposition;
+      justify any category marked not applicable. Include authentication and
+      authorization, capability replay, request/render input integrity, origin
+      restrictions, storage access/deletion, log privacy and bounded compute/AI
+      spend.
+- [ ] Preserve and review approved backend diagnostics and private provider-output
+      capture. Verify useful stage-specific failures and lifecycle evidence
+      without leaking credentials, capabilities or private content into public
+      responses, tracked files or ordinary logs. Generic messages belong in the
+      UI; backend diagnostics must remain actionable.
+- [ ] Correct reproduced findings in the owning dependency-ready packet, add
+      meaningful focused regressions and verify the correction. Every material
+      unresolved finding remains an explicit deployment blocker. Record finding
+      ID, severity, affected files/ticket, evidence, correction and disposition
+      in the [release audit ledger](../operations/RELEASE_CANDIDATE_AUDIT.md).
+- [ ] Validate the final settled revision with all five root gates: formatting,
+      lint, typecheck, unit tests and production build. Run applicable existing
+      integration/fake-E2E checks and review dependency vulnerabilities,
+      architecture, duplicate/dead code, secrets/content, licenses, container and
+      release-artifact inputs. Record actual commands, results and limitations;
+      do not claim checks or coverage that were not run.
+- [ ] Record the exact audited Git revision and immutable release-image/build
+      inputs. Material changes after the audit require the relevant re-audit and
+      verification before deployment. Carry forward all unresolved manual,
+      visual, rights, provider, cloud and spend gates explicitly.
+
+Automated local checks work with `FAKE_MODE=true`, no API keys, paid/live flags
+off, synthetic inputs and injected ports. They do not prove real transcript,
+edit quality or deployed security. Real provider verification needs API keys,
+enabled live flags and the applicable approval; cloud/IAM/storage verification
+has its independent credentials and approval gate. This documentation request
+authorizes no audit execution, paid flow, cloud change or deployment.
 
 ### Analysis and browser-console release checkpoint — 2026-10-04
 
