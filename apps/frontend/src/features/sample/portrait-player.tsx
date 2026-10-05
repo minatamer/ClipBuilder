@@ -23,14 +23,31 @@ import { IconButton } from "../../shared/ui/button";
 import { timecode } from "./candidate.evidence";
 import styles from "./sample.module.css";
 
-export function PortraitPlaceholder({ children }: { children?: ReactNode }) {
+export function PortraitPlaceholder({
+  children,
+  dimensions = { width: 1080, height: 1920 },
+}: {
+  children?: ReactNode;
+  dimensions?: { width: number; height: number };
+}) {
+  const ratio = dimensions.width / dimensions.height;
   return (
     <div className={styles.momentSurface}>
       <div className={styles.placeholderContent}>
         <Film size={28} aria-hidden="true" />
-        <span className={styles.resolution}>9:16</span>
+        <span className={styles.resolution}>
+          {ratio === 9 / 16
+            ? "9:16"
+            : ratio > 1
+              ? "Landscape"
+              : ratio === 1
+                ? "1:1"
+                : "Portrait"}
+        </span>
         <span className={styles.placeholderLabel}>Video placeholder</span>
-        <span className={styles.placeholderResolution}>1080 x 1920</span>
+        <span className={styles.placeholderResolution}>
+          {dimensions.width} x {dimensions.height}
+        </span>
       </div>
       {children}
     </div>
@@ -53,8 +70,8 @@ export function PortraitPlayer({
   videoRef,
   surface,
   videoPreload = "metadata",
-  muted = false,
-  toggleMute,
+  volume = 1,
+  setVolume,
   aspectRatio,
   source = false,
   durationKnown = true,
@@ -74,13 +91,17 @@ export function PortraitPlayer({
   videoRef?: RefObject<HTMLVideoElement | null>;
   surface?: ReactNode;
   videoPreload?: "metadata" | "auto";
-  muted?: boolean;
-  toggleMute?: () => void;
+  volume?: number;
+  setVolume?: (volume: number) => void;
   aspectRatio?: number;
   source?: boolean;
   durationKnown?: boolean;
 }) {
   const controlsId = useId();
+  const volumeId = useId();
+  const volumeControl = useRef<HTMLDivElement>(null);
+  const volumeInput = useRef<HTMLInputElement>(null);
+  const [volumeOpen, setVolumeOpen] = useState(false);
   const [awake, setAwake] = useState(true);
   const [keyboardFocused, setKeyboardFocused] = useState(false);
   const [seekingFocused, setSeekingFocused] = useState(false);
@@ -91,22 +112,57 @@ export function PortraitPlayer({
   }, []);
   const scheduleHide = useCallback(() => {
     stopHide();
-    if (source || !playing || busy || keyboardFocused || seekingFocused) return;
+    if (
+      source ||
+      !playing ||
+      busy ||
+      keyboardFocused ||
+      seekingFocused ||
+      volumeOpen
+    )
+      return;
     idleTimer.current = setTimeout(() => {
       idleTimer.current = null;
       setAwake(false);
     }, 2200);
-  }, [source, playing, busy, keyboardFocused, seekingFocused, stopHide]);
+  }, [
+    source,
+    playing,
+    busy,
+    keyboardFocused,
+    seekingFocused,
+    volumeOpen,
+    stopHide,
+  ]);
   useEffect(() => {
     scheduleHide();
     return stopHide;
   }, [scheduleHide, stopHide]);
+  useEffect(() => {
+    if (!volumeOpen) return;
+    volumeInput.current?.focus({ preventScroll: true });
+    const closeOutside = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !volumeControl.current?.contains(event.target)
+      )
+        setVolumeOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [volumeOpen]);
   const reveal = () => {
     setAwake(true);
     scheduleHide();
   };
   const controlsVisible =
-    source || !playing || busy || awake || keyboardFocused || seekingFocused;
+    source ||
+    !playing ||
+    busy ||
+    awake ||
+    keyboardFocused ||
+    seekingFocused ||
+    volumeOpen;
   const videoSurface =
     surface ??
     (videoRef ? (
@@ -115,7 +171,7 @@ export function PortraitPlayer({
         className={styles.localVideo}
         playsInline
         preload={videoPreload}
-        muted={muted}
+        muted={volume === 0}
         aria-label={label}
       />
     ) : (
@@ -135,7 +191,11 @@ export function PortraitPlayer({
       data-moment-surface={moment?.id}
       style={{
         ...(source && aspectRatio
-          ? { width: `min(100%, calc(40dvh * ${aspectRatio}))` }
+          ? {
+              width: moment
+                ? `min(100%, calc((100cqh - 6.5rem) * ${aspectRatio}))`
+                : `min(100%, calc(40dvh * ${aspectRatio}))`,
+            }
           : aspectRatio
             ? { aspectRatio, width: `min(100%, calc(100cqh * ${aspectRatio}))` }
             : {}),
@@ -206,17 +266,54 @@ export function PortraitPlayer({
             onClick={toggle}
             {...(onKeyDown ? { onKeyDown } : {})}
           />
-          {toggleMute && (
-            <IconButton
-              icon={muted ? VolumeX : Volume2}
-              label={
-                muted
-                  ? `Unmute ${source ? "source" : "clip"} audio`
-                  : `Mute ${source ? "source" : "clip"} audio`
-              }
-              disabled={busy}
-              onClick={toggleMute}
-            />
+          {setVolume && (
+            <div
+              ref={volumeControl}
+              className={styles.volumeControl}
+              onBlur={(event) => {
+                if (
+                  !(event.relatedTarget instanceof Node) ||
+                  !event.currentTarget.contains(event.relatedTarget)
+                )
+                  setVolumeOpen(false);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape" || !volumeOpen) return;
+                event.stopPropagation();
+                setVolumeOpen(false);
+                volumeControl.current?.querySelector("button")?.focus();
+              }}
+            >
+              <IconButton
+                icon={volume === 0 ? VolumeX : Volume2}
+                label={`Adjust ${source ? "source" : "clip"} volume`}
+                aria-expanded={volumeOpen}
+                aria-controls={volumeId}
+                disabled={busy}
+                onClick={() => setVolumeOpen((open) => !open)}
+              />
+              {volumeOpen && (
+                <div id={volumeId} className={styles.volumePanel}>
+                  <label htmlFor={`${volumeId}-level`}>Volume</label>
+                  <output aria-live="off">{Math.round(volume * 100)}%</output>
+                  <input
+                    ref={volumeInput}
+                    id={`${volumeId}-level`}
+                    aria-label={`${source ? "Source" : "Clip"} volume`}
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={Math.round(volume * 100)}
+                    aria-valuetext={`${Math.round(volume * 100)} percent`}
+                    disabled={busy}
+                    onChange={(event) =>
+                      setVolume(Number(event.target.value) / 100)
+                    }
+                  />
+                </div>
+              )}
+            </div>
           )}
           <output data-playback-time aria-live="off" aria-label="Playback time">
             {timecode(currentMs - range.startMs)} /{" "}

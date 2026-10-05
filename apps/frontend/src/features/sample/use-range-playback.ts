@@ -20,12 +20,25 @@ export function useRangePlayback(
   const [currentMs, setCurrentMs] = useState(initial);
   const [playing, setPlaying] = useState(command.play);
   const [loading, setLoading] = useState(Boolean(sourceUrl));
-  const [muted, setMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
   const videoRef = useRef<HTMLVideoElement>(null);
   const effects = useSessionEffects();
   const reportPosition = useEffectEvent((sourceMs: number) =>
     onPosition?.(Math.round(sourceMs - range.startMs)),
   );
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!sourceUrl || !video) return;
+    video.volume = volume;
+    video.muted = volume === 0;
+  }, [sourceUrl, volume]);
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!sourceUrl || !video) return;
+    const changed = () => setVolume(video.muted ? 0 : video.volume);
+    video.addEventListener("volumechange", changed);
+    return () => video.removeEventListener("volumechange", changed);
+  }, [sourceUrl]);
   useEffect(() => {
     if (!playing || sourceUrl) return;
     let last = performance.now();
@@ -90,8 +103,8 @@ export function useRangePlayback(
     currentMs,
     playing,
     loading: Boolean(sourceUrl) && loading,
-    muted,
-    toggleMute: () => setMuted((value) => !value),
+    volume,
+    setVolume,
     seek,
     toggle,
     videoRef,

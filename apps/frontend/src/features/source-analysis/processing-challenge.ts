@@ -24,9 +24,79 @@ export type Turnstile = {
   remove(id: string): void;
 };
 
+type ChallengeDocument = Pick<
+  Document,
+  "createElement" | "head" | "querySelector"
+>;
+const sdkUrl =
+  "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+type SdkLoad = {
+  state: "loading" | "ready" | "failed";
+  subscribers: Set<{ ready(): void; failed(): void }>;
+};
+const sdkLoads = new WeakMap<ChallengeDocument, SdkLoad>();
+
+// SDK ownership lasts for the document. Widgets own only their subscription.
+function subscribeSdk(
+  document: ChallengeDocument,
+  api: () => Turnstile | undefined,
+  subscriber: { ready(): void; failed(): void },
+) {
+  let load = sdkLoads.get(document);
+  if (!load || load.state === "failed") {
+    const existing = document.querySelector<HTMLScriptElement>(
+      `script[src="${sdkUrl}"]`,
+    );
+    const failed = existing?.dataset.clipbuilderTurnstile === "failed";
+    if (failed) existing.remove();
+    const script =
+      !failed && existing ? existing : document.createElement("script");
+    load = { state: "loading", subscribers: new Set() };
+    sdkLoads.set(document, load);
+    const current = load;
+    const finish = (state: "ready" | "failed") => {
+      if (current.state !== "loading") return;
+      current.state = state;
+      script.dataset.clipbuilderTurnstile = state;
+      script.removeEventListener("load", ready);
+      script.removeEventListener("error", fail);
+      const subscribers = [...current.subscribers];
+      current.subscribers.clear();
+      for (const item of subscribers) {
+        if (state === "ready") item.ready();
+        else item.failed();
+      }
+    };
+    const ready = () => finish(api() ? "ready" : "failed");
+    const fail = () => finish("failed");
+    if (script.dataset.clipbuilderTurnstile === "ready") {
+      current.state = api() ? "ready" : "failed";
+      script.dataset.clipbuilderTurnstile = current.state;
+    } else {
+      script.addEventListener("load", ready);
+      script.addEventListener("error", fail);
+    }
+    if (!existing || failed) {
+      script.src = sdkUrl;
+      script.async = true;
+      script.nonce =
+        document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+      script.dataset.clipbuilderTurnstile = "loading";
+      // Subscribe before insertion so even a synchronous load is observed.
+      current.subscribers.add(subscriber);
+      document.head.append(script);
+    }
+  }
+  if (load.state === "ready") subscriber.ready();
+  else if (load.state === "failed") subscriber.failed();
+  else load.subscribers.add(subscriber);
+  const current = load;
+  return () => current.subscribers.delete(subscriber);
+}
+
 export function mountProcessingChallenge(input: {
   host: HTMLElement;
-  document: Pick<Document, "createElement" | "head">;
+  document: ChallengeDocument;
   api(): Turnstile | undefined;
   siteKey: string;
   action: string;
@@ -40,10 +110,9 @@ export function mountProcessingChallenge(input: {
     settled = false,
     failed = false,
     widget: string | undefined,
-    widgetApi: Turnstile | undefined,
-    script: HTMLScriptElement | undefined;
+    widgetApi: Turnstile | undefined;
   const fail = () => {
-    if (active && !settled) {
+    if (active && !settled && !failed) {
       failed = true;
       input.onError();
     }
@@ -65,14 +134,13 @@ export function mountProcessingChallenge(input: {
         "refresh-timeout": "never",
         "response-field": false,
         callback: (token) => {
-          if (!active || settled) return;
+          if (!active || settled || failed) return;
           settled = true;
           input.onFinished();
           input.onToken(token);
         },
         "before-interactive-callback": () => {
-          if (active && !settled) {
-            failed = false;
+          if (active && !settled && !failed) {
             input.onInteractive();
           }
         },
@@ -88,22 +156,17 @@ export function mountProcessingChallenge(input: {
       fail();
     }
   };
+  let unsubscribe = () => {};
   if (input.api()) mount();
-  else {
-    script = input.document.createElement("script");
-    script.src =
-      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-    script.async = true;
-    script.addEventListener("load", mount);
-    script.addEventListener("error", fail);
-    input.document.head.append(script);
-  }
+  else
+    unsubscribe = subscribeSdk(input.document, input.api, {
+      ready: mount,
+      failed: fail,
+    });
   return () => {
     if (!active) return;
     active = false;
     if (widget !== undefined) widgetApi?.remove(widget);
-    script?.removeEventListener("load", mount);
-    script?.removeEventListener("error", fail);
-    script?.remove();
+    unsubscribe();
   };
 }

@@ -242,11 +242,17 @@
 .choicePortrait {
   position: relative;
   width: 100%;
-  aspect-ratio: 9 / 16;
+  aspect-ratio: var(--moment-aspect, 0.5625);
   margin-bottom: 0.4rem;
+  border-radius: var(--cb-radius);
+  overflow: hidden;
+}
+.choicePortrait .localVideo {
+  position: absolute;
+  inset: 0;
 }
 .galleryMode .choicePortrait {
-  width: min(100%, calc((100dvh - 22rem) * 0.5625));
+  width: min(100%, calc((100dvh - 22rem) * var(--moment-aspect, 0.5625)));
   min-width: 6rem;
   margin-inline: auto;
 }
@@ -494,6 +500,25 @@
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+.volumeControl {
+  display: flex;
+}
+.volumePanel {
+  position: absolute;
+  inset: auto 0 calc(100% + 0.5rem);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--cb-glass-border);
+  border-radius: var(--cb-radius);
+  background: var(--cb-glass-fallback);
+  font-size: var(--cb-text-small);
+}
+.volumePanel input {
+  grid-column: 1 / -1;
 }
 .inlinePlayback input {
   display: block;
@@ -1013,32 +1038,6 @@
     align-items: center;
     gap: 0.25rem;
   }
-  .reviewDots button {
-    width: var(--cb-target);
-    height: var(--cb-target);
-    display: grid;
-    place-items: center;
-    border: 0;
-    border-radius: 999px;
-    padding: 0;
-    background: transparent;
-    cursor: pointer;
-  }
-  .reviewDots span {
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-    background: var(--cb-ink-soft);
-    opacity: 0.55;
-    transition:
-      width var(--cb-motion-hover),
-      opacity var(--cb-motion-hover);
-  }
-  .reviewDots button[aria-current="true"] span {
-    width: 22px;
-    background: var(--cb-brand);
-    opacity: 1;
-  }
   .workspace {
     --cb-mobile-detail-size: clamp(0.875rem, 3.9vw, 1rem);
     --cb-mobile-nav-size: clamp(2rem, 8.2vw, 2.375rem);
@@ -1246,7 +1245,8 @@
     border-color: CanvasText;
   }
   .playerBack,
-  .inlinePlayback {
+  .inlinePlayback,
+  .volumePanel {
     border-color: CanvasText;
     background: Canvas;
     color: CanvasText;
@@ -1309,6 +1309,145 @@
   object-fit: contain;
   background: #161b24;
   border-radius: inherit;
+}
+
+.thumbnailStatus {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  color: white;
+  font-size: var(--cb-text-small);
+  text-align: center;
+  pointer-events: none;
+}
+.review[data-source-shape="landscape"].galleryMode .momentChoices {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  justify-content: start;
+}
+.review[data-source-shape="landscape"].galleryMode .momentChoice {
+  flex: 0 0 max(20rem, calc((100% - 4rem) / 3));
+  width: auto;
+  scroll-snap-align: start;
+}
+.review[data-source-shape="landscape"].galleryMode .choicePortrait {
+  width: 100%;
+}
+.review[data-source-shape="landscape"].previewMode {
+  grid-template-columns: 12rem minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+.sourceReviewShell {
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+.sourceReviewShell .clipReview {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.sourceReviewShell .clipReview::-webkit-scrollbar {
+  display: none;
+}
+.sourceReviewShell .reviewSlide {
+  box-sizing: border-box;
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  padding: 3px;
+}
+.sourceReviewShell .activeMoment {
+  grid-column: auto;
+  grid-row: auto;
+  min-height: 15rem;
+}
+.sourceReviewShell .reviewSlide[data-review-slide="0"] {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.sourceReviewShell .reviewDots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25rem;
+}
+.reviewDots button {
+  width: var(--cb-target);
+  height: var(--cb-target);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.reviewDots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cb-ink-soft);
+  opacity: 0.55;
+  transition:
+    width var(--cb-motion-hover),
+    opacity var(--cb-motion-hover);
+}
+.reviewDots button[aria-current="true"] span {
+  width: 22px;
+  background: var(--cb-brand);
+  opacity: 1;
+}
+@media (max-width: 1099px) {
+  .review[data-source-shape="landscape"].galleryMode .momentChoice {
+    flex-basis: 100%;
+  }
+  .review[data-source-shape="landscape"].previewMode {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+    container-type: normal;
+  }
+  .review[data-source-shape="landscape"].previewMode .momentChoices {
+    grid-column: 1;
+    grid-row: 1;
+    flex-direction: row;
+    height: auto;
+    max-height: none;
+    gap: 1rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    position: static;
+  }
+  .review[data-source-shape="landscape"].previewMode .momentChoice {
+    display: grid;
+    grid-template-columns: 5rem minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    column-gap: 0.5rem;
+    flex: 0 0 min(100%, 16rem);
+    width: auto;
+  }
+  .review[data-source-shape="landscape"].previewMode .choicePortrait {
+    grid-column: 1;
+    grid-row: 1 / 4;
+    align-self: center;
+    margin: 0;
+  }
+  .review[data-source-shape="landscape"].previewMode .sourceReviewShell {
+    grid-column: 1;
+    grid-row: 2;
+  }
 }
 
 .sourcePreview {

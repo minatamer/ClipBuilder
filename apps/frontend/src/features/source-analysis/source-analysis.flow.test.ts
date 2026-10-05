@@ -151,6 +151,47 @@ function fixture(sample = false) {
   };
 }
 describe("confirmed browser source analysis", () => {
+  it.each(["grant", "transfer"] as const)(
+    "keeps one analysis lifetime while %s is deferred and never dispatches AI early",
+    async (phase) => {
+      const f = fixture();
+      let release = () => {};
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      if (phase === "grant")
+        f.api.grant.mockImplementationOnce(async () => {
+          await held;
+          return {
+            sessionId: f.result.binding.sessionId,
+            csrfToken: "c".repeat(43),
+            expiresAtMs: 7201000,
+          };
+        });
+      else
+        f.api.transfer.mockImplementationOnce(async () => {
+          await held;
+          return "12";
+        });
+      const pending = runSourceAnalysis(f.input);
+      await vi.waitFor(() => expect(f.api[phase]).toHaveBeenCalledOnce());
+      expect(f.state().stage).toBe("analyzing");
+      expect(
+        f.events.filter((event) => event.type === "ANALYZE_CONFIRMED"),
+      ).toHaveLength(1);
+      expect(f.api.analyze).not.toHaveBeenCalled();
+      release();
+      await pending;
+      expect(f.api.grant).toHaveBeenCalledOnce();
+      expect(f.api.upload).toHaveBeenCalledOnce();
+      expect(f.api.transfer).toHaveBeenCalledOnce();
+      expect(f.api.analyze).toHaveBeenCalledOnce();
+      expect(f.state().stage).toBe("candidates");
+      expect(
+        f.events.filter((event) => event.type === "ANALYZE_CONFIRMED"),
+      ).toHaveLength(1);
+    },
+  );
   it("uses the server sample copy only after confirmation, without browser download or upload", async () => {
     const f = fixture(true);
     expect(f.state()).toMatchObject({

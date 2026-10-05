@@ -1,5 +1,6 @@
 import { env } from "node:process";
 import { NextResponse, type NextRequest } from "next/server";
+import { browserSecurityPolicy } from "./browser-security-policy";
 
 // A fresh server nonce is forwarded to Next's dynamic document renderer.
 export function proxy(request: NextRequest) {
@@ -7,23 +8,7 @@ export function proxy(request: NextRequest) {
       String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))),
     ),
     development = env.NODE_ENV === "development";
-  const policy = [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com${development ? " 'unsafe-eval'" : ""}`,
-    `style-src 'self' 'nonce-${nonce}'`,
-    // React/Remotion's fixed geometry is expressed as style attributes, not code.
-    "style-src-attr 'unsafe-inline'",
-    "img-src 'self' blob: data:",
-    "font-src 'self'",
-    "media-src 'self' blob:",
-    "worker-src 'self' blob:",
-    `connect-src 'self' https://storage.googleapis.com https://challenges.cloudflare.com${development ? " ws://localhost:3000" : ""}`,
-    "frame-src https://challenges.cloudflare.com",
-    "frame-ancestors 'none'",
-    "object-src 'none'",
-    "base-uri 'none'",
-    "form-action 'self'",
-  ].join("; ");
+  const policy = browserSecurityPolicy(nonce, development);
   const headers = new Headers(request.headers);
   headers.set("x-nonce", nonce);
   headers.set("Content-Security-Policy", policy);

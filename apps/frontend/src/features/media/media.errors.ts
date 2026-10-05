@@ -1,8 +1,10 @@
 import {
   SAFE_ERROR_MESSAGES,
+  safeErrorSchema,
   type ErrorCode,
   type SafeError,
 } from "@clipbuilder/contracts";
+import { SampleApiFailure } from "../sample/sample.api";
 
 export type LocalMediaCode =
   | "unavailable"
@@ -37,6 +39,10 @@ export class LocalMediaError extends Error {
 }
 
 export function localMediaFailure(error: unknown): SafeError {
+  if (error instanceof SampleApiFailure) {
+    const remote = safeErrorSchema.safeParse(error.failure);
+    if (remote.success) return remote.data;
+  }
   const failure =
     error instanceof LocalMediaError ? error : new LocalMediaError("storage");
   const codes: Record<LocalMediaCode, ErrorCode> = {

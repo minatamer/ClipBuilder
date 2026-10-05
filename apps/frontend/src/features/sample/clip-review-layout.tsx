@@ -9,10 +9,14 @@ export function ClipReviewLayout({
   video,
   notes,
   transcript,
+  carousel = false,
+  label = "Read-only clip preview",
 }: {
   video: ReactNode;
   notes: ReactNode;
   transcript: ReactNode;
+  carousel?: boolean;
+  label?: string;
 }) {
   const track = useRef<HTMLDivElement>(null);
   const [phone, setPhone] = useState(false);
@@ -80,8 +84,8 @@ export function ClipReviewLayout({
 
   return (
     <section
-      className={styles.clipReviewShell}
-      aria-label="Read-only clip preview"
+      className={`${styles.clipReviewShell} ${carousel ? styles.sourceReviewShell : ""}`}
+      aria-label={label}
       aria-roledescription={phone ? "carousel" : undefined}
     >
       <div

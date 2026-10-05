@@ -8,11 +8,12 @@ import { timecode } from "./candidate.evidence";
 import styles from "./sample.module.css";
 
 export const FINDING_MOMENTS_MESSAGES = [
-  "Finding the strongest moments for your clip",
-  "Looking for ideas that stand on their own",
-  "Checking the context around each moment",
-  "Looking for clear openings and complete endings",
-  "Keeping each moment grounded in your conversation",
+  "Finding your standout moments…",
+  "Looking for hooks that grab attention…",
+  "Searching for stories worth sharing…",
+  "Looking for clear ideas and memorable reactions…",
+  "Finding moments that work as standalone clips…",
+  "Looking for a strong setup and payoff…",
 ] as const;
 
 // An activity cue, not work completeness or a finish-time estimate.
@@ -29,6 +30,7 @@ export function ProcessingStatus({
   mode,
   active = true,
   findingMoments = false,
+  startedAtMs,
 }: {
   label: string;
   operation?: OperationStatusV1;
@@ -36,6 +38,7 @@ export function ProcessingStatus({
   mode: "fake" | "real";
   active?: boolean;
   findingMoments?: boolean;
+  startedAtMs?: number;
 }) {
   const [initialTime] = useState(() => Date.now());
   const [now, setNow] = useState(initialTime);
@@ -49,9 +52,9 @@ export function ProcessingStatus({
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [running]);
-  const startMs = operation?.startedAt
-    ? Date.parse(operation.startedAt)
-    : initialTime;
+  const startMs =
+    startedAtMs ??
+    (operation?.startedAt ? Date.parse(operation.startedAt) : initialTime);
   const endMs = operation?.completedAt
     ? Date.parse(operation.completedAt)
     : now;

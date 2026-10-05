@@ -16,6 +16,15 @@ function input(action: string, body = "{}", origin = "http://localhost:3000") {
   });
 }
 describe("bounded same-origin analysis bridge", () => {
+  it.each(["sample-replay-options", "sample-replay"])(
+    "keeps local %s inaccessible outside development with zero upstream work",
+    async (action) => {
+      const transport = vi.fn();
+      vi.stubGlobal("fetch", transport);
+      expect((await POST(input(action), context(action))).status).toBe(404);
+      expect(transport).not.toHaveBeenCalled();
+    },
+  );
   it("rejects non-JSON/compressed requests before upstream work", async () => {
     const transport = vi.fn();
     vi.stubGlobal("fetch", transport);

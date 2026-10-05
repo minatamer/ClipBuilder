@@ -104,8 +104,8 @@ export function CloudResult({
             seek={playback.seek}
             videoRef={playback.videoRef}
             videoPreload="auto"
-            muted={playback.muted}
-            toggleMute={playback.toggleMute}
+            volume={playback.volume}
+            setVolume={playback.setVolume}
             busy={!access || !decoded || failed}
           />
         </div>

@@ -30,7 +30,7 @@ export function CloudClipReview({
   const [attempt, setAttempt] = useState(0),
     [playing, setPlaying] = useState(false);
   const [frame, setFrame] = useState(0),
-    [muted, setMuted] = useState(false);
+    [volume, setVolume] = useState(1);
   const [highlighted, setHighlighted] = useState<readonly string[]>([]);
   const range = result.manifest.range,
     duration = range.endMs - range.startMs;
@@ -67,6 +67,8 @@ export function CloudClipReview({
       setFrame(event.detail.frame);
     const play = () => setPlaying(true),
       pause = () => setPlaying(false);
+    const volumeChanged = () =>
+      setVolume(current.isMuted() ? 0 : current.getVolume());
     const error = () => {
       current.pause();
       setFailed(true);
@@ -77,6 +79,8 @@ export function CloudClipReview({
     current.addEventListener("pause", pause);
     current.addEventListener("ended", pause);
     current.addEventListener("error", error);
+    current.addEventListener("volumechange", volumeChanged);
+    current.addEventListener("mutechange", volumeChanged);
     return () => {
       current.pause();
       current.removeEventListener("frameupdate", position);
@@ -84,6 +88,8 @@ export function CloudClipReview({
       current.removeEventListener("pause", pause);
       current.removeEventListener("ended", pause);
       current.removeEventListener("error", error);
+      current.removeEventListener("volumechange", volumeChanged);
+      current.removeEventListener("mutechange", volumeChanged);
     };
   }, [ready]);
   const seek = (sourceMs: number) => {
@@ -139,11 +145,12 @@ export function CloudClipReview({
                 Math.min(duration, Math.round((frame * 1000) / 30))
               }
               playing={playing}
-              muted={muted}
-              toggleMute={() => {
-                if (muted) player.current?.unmute();
-                else player.current?.mute();
-                setMuted(!muted);
+              volume={volume}
+              setVolume={(level) => {
+                player.current?.setVolume(level);
+                if (level === 0) player.current?.mute();
+                else player.current?.unmute();
+                setVolume(level);
               }}
               toggle={() =>
                 playing ? player.current?.pause() : player.current?.play()
@@ -166,6 +173,7 @@ export function CloudClipReview({
                   compositionWidth={1080}
                   compositionHeight={1920}
                   controls={false}
+                  initialVolume={volume}
                   clickToPlay={false}
                   doubleClickToFullscreen={false}
                   spaceKeyToPlayOrPause={false}
@@ -191,7 +199,6 @@ export function CloudClipReview({
                 setReady(false);
                 setPlaying(false);
                 setFrame(0);
-                setMuted(false);
                 setAttempt((value) => value + 1);
               }}
             >

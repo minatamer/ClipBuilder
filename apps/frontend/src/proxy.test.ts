@@ -1,6 +1,12 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 import { proxy } from "./proxy";
+import {
+  browserSecurityPolicy,
+  REMOTION_PLAYER_STYLE_HASH,
+} from "./browser-security-policy";
+import { createHash } from "node:crypto";
+import { Internals } from "remotion";
 describe("request-scoped browser security", () => {
   it("replaces an untrusted nonce, forwards it to rendering and never caches a document", () => {
     const request = new NextRequest("http://localhost:3000/start", {
@@ -47,5 +53,30 @@ describe("request-scoped browser security", () => {
     expect(response.headers.get("Content-Security-Policy")).not.toContain(
       "require-trusted-types",
     );
+  });
+  it("permits development style injection without combining an inline allowance with a style nonce", () => {
+    const policy = browserSecurityPolicy("synthetic-nonce", true);
+    expect(
+      policy.split("; ").find((part) => part.startsWith("style-src ")),
+    ).toBe("style-src 'self' 'unsafe-inline'");
+    expect(policy).toContain("'unsafe-eval'");
+    expect(policy).toContain("'strict-dynamic'");
+    expect(
+      policy.split("; ").find((part) => part.startsWith("script-src ")),
+    ).toMatch(/'nonce-[^']+'/);
+    const production = browserSecurityPolicy("synthetic-nonce", false);
+    expect(
+      production.split("; ").find((part) => part.startsWith("style-src ")),
+    ).toMatch(/^style-src 'self' 'nonce-[^']+' 'sha256-[^']+'$/);
+    expect(production).not.toContain("unsafe-eval");
+  });
+  it("allows only the pinned Player stylesheet without permitting arbitrary production inline styles", () => {
+    const expected = `sha256-${createHash("sha256").update(Internals.CSSUtils.makeDefaultPreviewCSS(".__remotion-player", "#fff")).digest("base64")}`;
+    expect(REMOTION_PLAYER_STYLE_HASH).toBe(expected);
+    const production = browserSecurityPolicy("synthetic-nonce", false);
+    expect(
+      production.split("; ").find((part) => part.startsWith("style-src ")),
+    ).toBe(`style-src 'self' 'nonce-synthetic-nonce' '${expected}'`);
+    expect(production).toContain("media-src 'self' blob: data:");
   });
 });

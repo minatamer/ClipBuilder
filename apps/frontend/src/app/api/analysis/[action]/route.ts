@@ -5,6 +5,7 @@ import {
   PUBLIC_LIMITS,
   mediaByteRange,
 } from "@clipbuilder/contracts";
+import { env } from "node:process";
 
 async function proxy(
   request: Request,
@@ -25,11 +26,18 @@ async function proxy(
     );
   const origin = new URL(request.url).origin;
   if (
+    (action === "sample-replay" || action === "sample-replay-options") &&
+    env.NODE_ENV !== "development"
+  )
+    return fail(404);
+  if (
     ![
       "grant",
       "session",
       "upload",
       "sample",
+      "sample-replay",
+      "sample-replay-options",
       "run",
       "clear",
       "assemble",

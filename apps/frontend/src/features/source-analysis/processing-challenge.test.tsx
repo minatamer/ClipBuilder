@@ -7,16 +7,37 @@ import {
 } from "./processing-challenge";
 
 function fixture(loaded = true) {
-  const script = Object.assign(new EventTarget(), {
-    src: "",
-    async: false,
-    remove: vi.fn(),
+  const createScript = () =>
+    Object.assign(new EventTarget(), {
+      src: "",
+      async: false,
+      nonce: "",
+      dataset: {} as Record<string, string>,
+      remove: vi.fn(),
+    });
+  let script = createScript();
+  let created = false;
+  let appended: typeof script | undefined;
+  const append = vi.fn((value: typeof script) => {
+    appended = value;
   });
-  const append = vi.fn();
   const document = {
-    createElement: vi.fn(() => script),
+    createElement: vi.fn(() => {
+      if (created) script = createScript();
+      created = true;
+      const current = script;
+      current.remove.mockImplementation(() => {
+        if (appended === current) appended = undefined;
+      });
+      return script;
+    }),
+    querySelector: vi.fn((selector: string) =>
+      selector === "script[nonce]"
+        ? { nonce: "synthetic-document-nonce" }
+        : appended,
+    ),
     head: { append },
-  } as unknown as Pick<Document, "createElement" | "head">;
+  } as unknown as Pick<Document, "createElement" | "head" | "querySelector">;
   const sdk: Turnstile = {
     render: vi.fn(() => "synthetic-widget"),
     remove: vi.fn(),
@@ -38,7 +59,9 @@ function fixture(loaded = true) {
     input,
     sdk,
     append,
-    script,
+    get script() {
+      return script;
+    },
     load: () => {
       api = sdk;
       script.dispatchEvent(new Event("load"));
@@ -111,7 +134,7 @@ describe("background processing verification", () => {
     f.options()["after-interactive-callback"]();
     f.options()["error-callback"]();
     expect(f.sdk.render).toHaveBeenCalledOnce();
-    expect(f.script.remove).toHaveBeenCalledOnce();
+    expect(f.script.remove).not.toHaveBeenCalled();
     expect(f.input.onError).not.toHaveBeenCalled();
     expect(f.input.onToken).not.toHaveBeenCalled();
     expect(f.input.onInteractive).not.toHaveBeenCalled();
@@ -131,6 +154,78 @@ describe("background processing verification", () => {
     f.options().callback("retry-token");
     expect(f.input.onToken).toHaveBeenCalledExactlyOnceWith("retry-token");
     stopRetry();
+  });
+
+  it("shares one nonce-bearing SDK load across Strict Mode remounts and concurrent widgets", () => {
+    const f = fixture(false);
+    const stale = mountProcessingChallenge(f.input);
+    stale();
+    const stop = mountProcessingChallenge(f.input);
+    const other = { ...f.input, onToken: vi.fn(), onError: vi.fn() };
+    const stopOther = mountProcessingChallenge(other);
+    expect(f.append).toHaveBeenCalledOnce();
+    expect(f.script.nonce).toBe("synthetic-document-nonce");
+    expect(f.script.remove).not.toHaveBeenCalled();
+    f.load();
+    expect(f.sdk.render).toHaveBeenCalledTimes(2);
+    const options = vi.mocked(f.sdk.render).mock.calls.map((call) => call[1]);
+    options[0]!.callback("first-token");
+    options[1]!.callback("second-token");
+    expect(f.input.onToken).toHaveBeenCalledExactlyOnceWith("first-token");
+    expect(other.onToken).toHaveBeenCalledExactlyOnceWith("second-token");
+    stop();
+    stopOther();
+    const stopSequential = mountProcessingChallenge(f.input);
+    expect(f.sdk.render).toHaveBeenCalledTimes(3);
+    expect(f.append).toHaveBeenCalledOnce();
+    stopSequential();
+    expect(f.sdk.remove).toHaveBeenCalledTimes(3);
+  });
+
+  it("reuses an existing SDK script across another module's loading lifetime", () => {
+    const f = fixture(false);
+    f.script.src =
+      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    f.append(f.script);
+    const stop = mountProcessingChallenge(f.input);
+    expect(f.append).toHaveBeenCalledOnce();
+    f.load();
+    expect(f.sdk.render).toHaveBeenCalledOnce();
+    stop();
+    expect(f.script.remove).not.toHaveBeenCalled();
+  });
+
+  it("retries a failed shared load once and rejects old load/error/widget callbacks", () => {
+    const f = fixture(false);
+    const stop = mountProcessingChallenge(f.input);
+    const old = f.script;
+    old.dispatchEvent(new Event("error"));
+    old.dispatchEvent(new Event("error"));
+    expect(f.input.onError).toHaveBeenCalledOnce();
+    stop();
+    const stopRetry = mountProcessingChallenge(f.input);
+    expect(f.append).toHaveBeenCalledTimes(2);
+    expect(old.remove).toHaveBeenCalledOnce();
+    old.dispatchEvent(new Event("load"));
+    expect(f.sdk.render).not.toHaveBeenCalled();
+    f.load();
+    f.options()["error-callback"]();
+    f.options().callback("late-after-error");
+    expect(f.input.onToken).not.toHaveBeenCalled();
+    stopRetry();
+  });
+
+  it("treats a load without the SDK as failed so verification can retry", () => {
+    const f = fixture(false);
+    const stop = mountProcessingChallenge(f.input);
+    f.script.dispatchEvent(new Event("load"));
+    expect(f.input.onError).toHaveBeenCalledOnce();
+    stop();
+    const retry = mountProcessingChallenge(f.input);
+    expect(f.append).toHaveBeenCalledTimes(2);
+    f.load();
+    expect(f.sdk.render).toHaveBeenCalledOnce();
+    retry();
   });
 
   it("starts with a closed accessible dialog and no initial visible verification copy", () => {

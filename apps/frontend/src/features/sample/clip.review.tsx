@@ -46,11 +46,12 @@ function SelectedClipReview({
 }: ClipReviewProps & { selected: ClipCandidateV1 }) {
   const downloadNoticeId = useId();
   const range = candidateRange(analysis, selected);
-  const { currentMs, playing, seek, toggle, pause } = useRangePlayback(
-    range,
-    { timeMs: range.startMs + playbackTimeMs, play: false, ordinal: 0 },
-    onPosition,
-  );
+  const { currentMs, playing, seek, toggle, pause, volume, setVolume } =
+    useRangePlayback(
+      range,
+      { timeMs: range.startMs + playbackTimeMs, play: false, ordinal: 0 },
+      onPosition,
+    );
   const [highlighted, setHighlighted] = useState<readonly string[]>([]);
   const words = analysis.transcript.words.filter(
     (word) => word.startMs >= range.startMs && word.endMs <= range.endMs,
@@ -81,6 +82,8 @@ function SelectedClipReview({
       range={range}
       currentMs={currentMs}
       playing={playing}
+      volume={volume}
+      setVolume={setVolume}
       toggle={toggle}
       seek={(timeMs) => {
         setHighlighted([]);

@@ -2,13 +2,13 @@
 
 import {
   useLayoutEffect,
-  useEffect,
   useRef,
   useState,
   useId,
   type KeyboardEvent,
+  type CSSProperties,
 } from "react";
-import { Play } from "lucide-react";
+import { LoaderCircle, Play } from "lucide-react";
 import type { AnalysisBundleV1, ClipCandidateV1 } from "@clipbuilder/contracts";
 
 import { candidateRange, timecode } from "./candidate.evidence";
@@ -17,7 +17,8 @@ import { PortraitPlaceholder, PortraitPlayer } from "./portrait-player";
 import { ReviewTranscript } from "./review-transcript";
 import { useRangePlayback } from "./use-range-playback";
 import { useMomentLayout } from "./use-moment-layout";
-import { useSessionEffects } from "../session/session.provider";
+import { ClipReviewLayout } from "./clip-review-layout";
+import { useMomentThumbnails, type MomentFrame } from "./use-moment-thumbnails";
 import styles from "./sample.module.css";
 
 function MomentChoice({
@@ -27,12 +28,16 @@ function MomentChoice({
   choose,
   move,
   sourceUrl,
+  dimensions,
+  frame,
 }: {
   analysis: AnalysisBundleV1;
   candidate: ClipCandidateV1;
   busy: boolean;
   sourceUrl?: string;
-  choose: (item: ClipCandidateV1) => void;
+  dimensions: { width: number; height: number };
+  frame: MomentFrame | undefined;
+  choose: (item: ClipCandidateV1, keyboard?: boolean) => void;
   move: (
     event: KeyboardEvent<HTMLButtonElement>,
     item: ClipCandidateV1,
@@ -46,14 +51,14 @@ function MomentChoice({
       id={`moment-choice-${candidate.rank}`}
       aria-label={`Play moment ${candidate.rank}: ${candidate.title}`}
       disabled={busy}
-      onClick={() => choose(candidate)}
+      onClick={(event) => choose(candidate, event.detail === 0)}
       onKeyDown={(event) => move(event, candidate)}
     >
       <div className={styles.choicePortrait} data-moment-surface={candidate.id}>
         {sourceUrl ? (
-          <MomentThumbnail sourceUrl={sourceUrl} startMs={range.startMs} />
+          <MomentThumbnail frame={frame} />
         ) : (
-          <PortraitPlaceholder />
+          <PortraitPlaceholder dimensions={dimensions} />
         )}
         <span className={styles.choicePlay}>
           <Play size={14} aria-hidden="true" />
@@ -71,43 +76,47 @@ function MomentChoice({
   );
 }
 
-function MomentThumbnail({
-  sourceUrl,
-  startMs,
-}: {
-  sourceUrl: string;
-  startMs: number;
-}) {
-  const video = useRef<HTMLVideoElement>(null);
-  const effects = useSessionEffects();
-  useEffect(() => {
-    const element = video.current;
-    if (!element) return;
-    const ready = () => {
-      element.currentTime = startMs / 1000;
+function MomentThumbnail({ frame }: { frame: MomentFrame | undefined }) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const state =
+    frame === "unavailable" ? "unavailable" : frame ? "ready" : "loading";
+  useLayoutEffect(() => {
+    const surface = canvas.current;
+    if (!surface || !frame || frame === "unavailable") return;
+    surface.width = frame.width;
+    surface.height = frame.height;
+    surface.getContext("2d")?.drawImage(frame, 0, 0);
+    return () => {
+      surface.width = 0;
+      surface.height = 0;
     };
-    element.addEventListener("loadedmetadata", ready);
-    let stopped = false;
-    const cleanup = () => {
-      if (stopped) return;
-      stopped = true;
-      element.removeEventListener("loadedmetadata", ready);
-      element.pause();
-      element.removeAttribute("src");
-      element.load();
-    };
-    return effects ? effects.registerStopper(cleanup) : cleanup;
-  }, [sourceUrl, startMs, effects]);
+  }, [frame]);
   return (
-    <video
-      ref={video}
-      src={sourceUrl}
-      className={styles.localVideo}
-      muted
-      playsInline
-      preload="metadata"
-      aria-hidden="true"
-    />
+    <>
+      <canvas
+        ref={canvas}
+        className={styles.localVideo}
+        aria-hidden="true"
+        data-thumbnail-state={state}
+      />
+      {state !== "ready" && (
+        <span className={styles.thumbnailStatus} role="status">
+          {state === "loading" ? (
+            <>
+              <LoaderCircle
+                className={styles.playerSpinner}
+                aria-hidden="true"
+              />
+              <span className={styles.screenReaderText}>
+                Loading preview frame
+              </span>
+            </>
+          ) : (
+            "Preview unavailable"
+          )}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -121,6 +130,7 @@ function MomentPreview({
   tab,
   setTab,
   sourceUrl,
+  dimensions,
 }: {
   analysis: AnalysisBundleV1;
   candidate: ClipCandidateV1;
@@ -134,6 +144,7 @@ function MomentPreview({
   tab: "transcript" | "notes";
   setTab: (value: "transcript" | "notes") => void;
   sourceUrl?: string;
+  dimensions: { width: number; height: number };
 }) {
   const range = candidateRange(analysis, candidate);
   const {
@@ -144,8 +155,8 @@ function MomentPreview({
     toggle,
     pause,
     videoRef,
-    muted,
-    toggleMute,
+    volume,
+    setVolume,
   } = useRangePlayback(
     range,
     {
@@ -201,30 +212,98 @@ function MomentPreview({
     seek(timeMs);
     setHighlighted(wordIds);
   };
+  const video = (
+    <section
+      className={styles.activeMoment}
+      aria-label={`Selected moment ${candidate.rank}`}
+    >
+      <PortraitPlayer
+        label={candidate.title}
+        moment={candidate}
+        range={range}
+        currentMs={currentMs}
+        playing={playing}
+        loading={loading}
+        aspectRatio={dimensions.width / dimensions.height}
+        source={dimensions.width > dimensions.height}
+        videoPreload="auto"
+        {...(!sourceUrl
+          ? { surface: <PortraitPlaceholder dimensions={dimensions} /> }
+          : {})}
+        {...(sourceUrl ? { videoRef } : {})}
+        volume={volume}
+        setVolume={setVolume}
+        toggle={toggle}
+        seek={(timeMs) => {
+          setHighlighted([]);
+          seek(timeMs);
+        }}
+        busy={busy}
+        onClose={close}
+        onKeyDown={(event) => move(event, candidate)}
+      />
+    </section>
+  );
+  const transcript = (
+    <ReviewTranscript
+      analysis={analysis}
+      range={range}
+      currentMs={currentMs}
+      highlighted={highlighted}
+    />
+  );
+  const notes = (
+    <div
+      className={styles.notesScroll}
+      tabIndex={0}
+      aria-label="Scrollable agentic notes"
+    >
+      <h3>{candidate.title}</h3>
+      <p className={styles.rationale}>{candidate.rationale}</p>
+      <AgenticNotes
+        notes={candidateNotes(analysis, candidate)}
+        rangeStartMs={range.startMs}
+        onSeek={jump}
+        busy={busy}
+      />
+      {candidate.caveats.length > 0 && (
+        <ul className={styles.caveats}>
+          {candidate.caveats.map((item) => (
+            <li key={item.code}>{item.note}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+  if (dimensions.width > dimensions.height)
+    return (
+      <ClipReviewLayout
+        carousel
+        label={`Selected moment ${candidate.rank} review`}
+        video={video}
+        notes={
+          <section
+            className={styles.editNotes}
+            aria-label="Selected moment agentic notes"
+          >
+            <h2>Agentic Notes</h2>
+            {notes}
+          </section>
+        }
+        transcript={
+          <section
+            className={styles.momentTranscript}
+            aria-label="Selected moment transcript"
+          >
+            <h2>Transcript</h2>
+            {transcript}
+          </section>
+        }
+      />
+    );
   return (
     <>
-      <section
-        className={styles.activeMoment}
-        aria-label={`Selected moment ${candidate.rank}`}
-      >
-        <PortraitPlayer
-          label={candidate.title}
-          moment={candidate}
-          range={range}
-          currentMs={currentMs}
-          playing={playing}
-          loading={loading}
-          {...(sourceUrl ? { videoRef, muted, toggleMute } : {})}
-          toggle={toggle}
-          seek={(timeMs) => {
-            setHighlighted([]);
-            seek(timeMs);
-          }}
-          busy={busy}
-          onClose={close}
-          onKeyDown={(event) => move(event, candidate)}
-        />
-      </section>
+      {video}
       <div
         ref={details}
         className={styles.momentDetails}
@@ -282,14 +361,7 @@ function MomentPreview({
           <h2 id={`${tabsId}-transcript-heading`} hidden={!splitDetails}>
             Transcript
           </h2>
-          {(splitDetails || tab === "transcript") && (
-            <ReviewTranscript
-              analysis={analysis}
-              range={range}
-              currentMs={currentMs}
-              highlighted={highlighted}
-            />
-          )}
+          {(splitDetails || tab === "transcript") && transcript}
         </section>
         <section
           id={`${tabsId}-notes-panel`}
@@ -303,29 +375,7 @@ function MomentPreview({
           <h2 id={`${tabsId}-notes-heading`} hidden={!splitDetails}>
             Agentic Notes
           </h2>
-          {(splitDetails || tab === "notes") && (
-            <div
-              className={styles.notesScroll}
-              tabIndex={0}
-              aria-label="Scrollable agentic notes"
-            >
-              <h3>{candidate.title}</h3>
-              <p className={styles.rationale}>{candidate.rationale}</p>
-              <AgenticNotes
-                notes={candidateNotes(analysis, candidate)}
-                rangeStartMs={range.startMs}
-                onSeek={jump}
-                busy={busy}
-              />
-              {candidate.caveats.length > 0 && (
-                <ul className={styles.caveats}>
-                  {candidate.caveats.map((item) => (
-                    <li key={item.code}>{item.note}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
+          {(splitDetails || tab === "notes") && notes}
         </section>
       </div>
     </>
@@ -349,9 +399,18 @@ export function CandidateReview({
 }) {
   const root = useRef<HTMLDivElement>(null);
   const keyboardFocus = useRef<number | null>(null);
+  const revealKeyboardFocus = useRef(false);
   const [playedId, setPlayedId] = useState<string | null>(null);
+  const frames = useMomentThumbnails(analysis, sourceUrl);
   const [tab, setTab] = useState<"transcript" | "notes">("transcript");
   const transition = useMomentLayout(root, selectedId);
+  const swapsAxes =
+    analysis.media.rotationDegrees === 90 ||
+    analysis.media.rotationDegrees === 270;
+  const dimensions = {
+    width: swapsAxes ? analysis.media.height : analysis.media.width,
+    height: swapsAxes ? analysis.media.width : analysis.media.height,
+  };
   const selected = analysis.candidates.find((item) => item.id === selectedId);
   useLayoutEffect(() => {
     if (keyboardFocus.current === null) return;
@@ -359,13 +418,15 @@ export function CandidateReview({
       .getElementById(
         `moment-${selectedId === null ? "choice" : "play"}-${keyboardFocus.current}`,
       )
-      ?.focus({ preventScroll: true });
+      ?.focus({ preventScroll: !revealKeyboardFocus.current });
     keyboardFocus.current = null;
+    revealKeyboardFocus.current = false;
   }, [selectedId]);
-  function choose(item: ClipCandidateV1) {
+  function choose(item: ClipCandidateV1, keyboard = false) {
     if (busy) return;
     transition(() => {
       keyboardFocus.current = item.rank;
+      revealKeyboardFocus.current = keyboard;
       setPlayedId(item.id);
       onSelect(item.id);
     });
@@ -393,7 +454,7 @@ export function CandidateReview({
     const next = analysis.candidates[ordinal];
     if (next === undefined || busy || next.id === selectedId) return;
     keyboardFocus.current = next.rank;
-    choose(next);
+    choose(next, true);
   }
   if (analysis.candidates.length === 0) return null;
   return (
@@ -401,6 +462,12 @@ export function CandidateReview({
       ref={root}
       className={`${styles.review} ${selected ? styles.previewMode : styles.galleryMode}`}
       data-moment-layout={selected ? "preview" : "gallery"}
+      data-source-shape={analysis.media.orientation}
+      style={
+        {
+          "--moment-aspect": dimensions.width / dimensions.height,
+        } as CSSProperties
+      }
     >
       <div
         className={styles.momentChoices}
@@ -417,6 +484,8 @@ export function CandidateReview({
               busy={busy}
               choose={choose}
               move={move}
+              dimensions={dimensions}
+              frame={frames[item.id]}
               {...(sourceUrl ? { sourceUrl } : {})}
             />
           ))}
@@ -432,12 +501,14 @@ export function CandidateReview({
           close={() =>
             transition(() => {
               keyboardFocus.current = selected.rank;
+              revealKeyboardFocus.current = true;
               setPlayedId(null);
               onClose();
             })
           }
           tab={tab}
           setTab={setTab}
+          dimensions={dimensions}
           {...(sourceUrl ? { sourceUrl } : {})}
         />
       )}

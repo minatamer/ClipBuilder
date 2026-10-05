@@ -39,6 +39,6 @@ describe("full-source preview checkpoint", () => {
     expect(markup).not.toContain("autoplay");
     expect(markup).toContain('min="0"');
     expect(markup).toContain('max="180000"');
-    expect(markup).toContain('aria-label="Mute source audio"');
+    expect(markup).toContain('aria-label="Adjust source volume"');
   });
 });

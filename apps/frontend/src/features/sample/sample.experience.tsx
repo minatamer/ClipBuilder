@@ -60,6 +60,10 @@ import { SourcePreview } from "./source-preview";
 import { createSourceAnalysisApi } from "../source-analysis/source-analysis.api";
 import { AnalysisChallenge } from "../source-analysis/analysis-challenge";
 import { runSourceAnalysis } from "../source-analysis/source-analysis.flow";
+import {
+  openSampleReplay,
+  prepareSampleReplay,
+} from "../source-analysis/sample-replay.flow";
 
 const CloudClipReview = dynamic(
   () => import("./cloud-clip.review").then((module) => module.CloudClipReview),
@@ -265,6 +269,9 @@ function SampleScreen({
     setChallenge(null);
   }, []);
   const [busy, setBusy] = useState(false);
+  const [analysisStartedAt, setAnalysisStartedAt] = useState<number | null>(
+    null,
+  );
   const [failure, setFailure] = useState<SafeError | null>(null);
   const router = useRouter();
   const exiting = useRef(false);
@@ -280,6 +287,11 @@ function SampleScreen({
   const fileInput = useRef<HTMLInputElement>(null);
   const sampleEntryHandled = useRef(false);
   const actions = selectAvailableActions(state);
+  const analysisWaitStartedAt =
+    state.stage === "analyzing" ||
+    (busy && state.stage === "analysis-confirmation")
+      ? analysisStartedAt
+      : null;
   const identity = "identity" in state ? state.identity : null;
   const snapshot = "analysis" in state ? state.analysis : null;
   const review =
@@ -420,16 +432,21 @@ function SampleScreen({
       workspace.snapshot.cloudAnalysis
     )
       return;
-    void run((signal) =>
-      runSourceAnalysis({
-        workspace,
-        api: cloudApi,
-        signal,
-        challenge: requestChallenge,
-        event: dispatch,
-        label: setAnalysisLabel,
-      }),
-    );
+    void run(async (signal) => {
+      setAnalysisStartedAt(Date.now());
+      try {
+        await runSourceAnalysis({
+          workspace,
+          api: cloudApi,
+          signal,
+          challenge: requestChallenge,
+          event: dispatch,
+          label: setAnalysisLabel,
+        });
+      } finally {
+        setAnalysisStartedAt(null);
+      }
+    });
   };
 
   async function run(action: (signal: AbortSignal) => Promise<void>) {
@@ -478,6 +495,7 @@ function SampleScreen({
   const clear = () => {
     if (exiting.current) return;
     exiting.current = true;
+    setAnalysisStartedAt(null);
     let storage: Storage | null = null;
     try {
       storage = window.sessionStorage;
@@ -572,6 +590,30 @@ function SampleScreen({
     });
   };
   const startRequestedSample = useEffectEvent(selectSample);
+  const simulateSample = () => {
+    if (
+      !workspace ||
+      state.stage !== "intake" ||
+      !availability.sample ||
+      !config.sampleReplayEnabled ||
+      pending.current
+    )
+      return;
+    void run(async (signal) => {
+      const record = await openSampleReplay({
+        workspace,
+        api: cloudApi,
+        signal,
+      });
+      signal.throwIfAborted();
+      if (!record.analysis) throw new Error("sample-replay-unavailable");
+      dispatch({
+        type: "SAMPLE_SELECTED",
+        identity: localSessionIdentity(record),
+        analysis: record.analysis,
+      });
+    });
+  };
   useEffect(() => {
     if (
       !sampleRequested ||
@@ -585,10 +627,11 @@ function SampleScreen({
 
   const findMoments = () => {
     if (localMode) analyzeSource();
-    else
-      void run((signal) =>
-        confirmDevelopmentAnalysis(state, api, dispatch, signal),
-      );
+    else if (state.stage === "analysis-confirmation")
+      void run(async (signal) => {
+        setAnalysisStartedAt(Date.now());
+        await confirmDevelopmentAnalysis(state, api, dispatch, signal);
+      });
   };
   const build = () => {
     if (
@@ -603,6 +646,18 @@ function SampleScreen({
       void run(async (signal) => {
         dispatch({ type: "CLOUD_ASSEMBLY_STARTED", candidateId });
         try {
+          if (
+            workspace.snapshot?.sampleReplayRevision &&
+            !workspace.snapshot.cloudAnalysis
+          ) {
+            await prepareSampleReplay({
+              workspace,
+              api: cloudApi,
+              signal,
+              challenge: requestChallenge,
+              label: setAnalysisLabel,
+            });
+          }
           const result = await runSelectedAssembly({
             workspace,
             candidateId,
@@ -739,6 +794,7 @@ function SampleScreen({
     (snapshot !== null &&
       (snapshot.bundle === null || (review !== null && assembly === null)));
   const processing =
+    analysisWaitStartedAt !== null ||
     state.stage === "uploading" ||
     state.stage === "upload-authorizing" ||
     state.stage === "media-inspecting" ||
@@ -791,7 +847,9 @@ function SampleScreen({
           state.stage === "intake"
             ? "One conversation. One finished clip."
             : state.stage === "candidates"
-              ? "Choose the conversation you want to keep."
+              ? workspace?.snapshot?.sampleReplayRevision
+                ? "Saved sample moments. No new analysis calls; Proceed runs paid assembly."
+                : "Choose the conversation you want to keep."
               : undefined
         }
         step={
@@ -954,7 +1012,11 @@ function SampleScreen({
         {processing && !loading && (
           <ProcessingStatus
             key={
-              "operation" in state ? state.operation.operationId : state.stage
+              analysisWaitStartedAt !== null
+                ? "source-analysis"
+                : "operation" in state
+                  ? state.operation.operationId
+                  : state.stage
             }
             label={
               localMode && state.stage === "analyzing"
@@ -962,12 +1024,13 @@ function SampleScreen({
                 : processingLabel
             }
             mode={localMode ? "real" : "fake"}
-            active={failure === null}
+            active={failure === null && !exiting.current}
             findingMoments={
-              state.stage === "analyzing" &&
-              (!localMode ||
-                analysisLabel === "Reading your video and finding moments")
+              analysisWaitStartedAt !== null || state.stage === "analyzing"
             }
+            {...(analysisWaitStartedAt === null
+              ? {}
+              : { startedAtMs: analysisWaitStartedAt })}
             {...("operation" in state ? { operation: state.operation } : {})}
             {...(processingFraction === undefined
               ? {}
@@ -985,22 +1048,24 @@ function SampleScreen({
             )}
           </section>
         )}
-        {state.stage === "analysis-confirmation" && (
-          <>
-            <SourcePreview
-              {...(workspace?.sourceUrl
-                ? { sourceUrl: workspace.sourceUrl }
-                : {})}
-              {...(state.media ? { durationMs: state.media.durationMs } : {})}
-            />
-            {!localMode && (
-              <p className={styles.modeNote}>
-                This is a simulated source preview. Selected video bytes are not
-                read or uploaded; Find moments continues the fixture journey.
-              </p>
-            )}
-          </>
-        )}
+        {state.stage === "analysis-confirmation" &&
+          analysisWaitStartedAt === null && (
+            <>
+              <SourcePreview
+                {...(workspace?.sourceUrl
+                  ? { sourceUrl: workspace.sourceUrl }
+                  : {})}
+                {...(state.media ? { durationMs: state.media.durationMs } : {})}
+              />
+              {!localMode && (
+                <p className={styles.modeNote}>
+                  This is a simulated source preview. Selected video bytes are
+                  not read or uploaded; Find moments continues the fixture
+                  journey.
+                </p>
+              )}
+            </>
+          )}
         {challenge && config.processingSiteKey && (
           <AnalysisChallenge
             key={`${challenge.sessionId}:${challenge.action}`}
@@ -1070,6 +1135,15 @@ function SampleScreen({
                     Use sample
                   </Button>
                 )}
+                {availability.sample && config.sampleReplayEnabled && (
+                  <Button
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={simulateSample}
+                  >
+                    Simulate find moments for sample
+                  </Button>
+                )}
               </div>
               {config.mode === "fake" && (
                 <p id="sample-preview-note" className={styles.sampleNotice}>
@@ -1132,10 +1206,10 @@ function SampleScreen({
         )}
         {state.stage === "no-candidates" && (
           <section className={styles.empty}>
-            <h2>No complete moment stood out.</h2>
+            <h2>No moments available.</h2>
             <p>
-              A strong opening, context and clear payoff must fit within 10-60
-              seconds. No weak choices were added to fill a quota.
+              The analysis did not return usable moments. Start over to try
+              again.
             </p>
           </section>
         )}
@@ -1162,15 +1236,6 @@ function SampleScreen({
             result={state.result}
             api={cloudApi}
           />
-        )}
-        {state.stage === "cloud-review" && (
-          <p className={styles.rights}>
-            Confirm one final 1080 � 1920, 30 fps H.264/AAC MP4 export. This
-            uses private cloud compute, makes zero AI calls, and deletes
-            temporary server source and preview copies after validated
-            publication. The output remains available for ten minutes or until
-            session expiry, whichever comes first.
-          </p>
         )}
         {state.stage === "cloud-render-failed" && (
           <section className={styles.empty}>

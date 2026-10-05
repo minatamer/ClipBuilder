@@ -54,7 +54,7 @@ describe("immutable cloud review", () => {
     );
     expect(html).toContain('aria-label="Final clip transcript"');
     expect(html).toContain(assembly.words[0]!.punctuatedText);
-    expect(html).toContain('aria-label="Mute clip audio"');
+    expect(html).toContain('aria-label="Adjust clip volume"');
     expect(html).toMatch(/<button[^>]+disabled=""[^>]*>.*?Download MP4/);
     expect(html).not.toContain("autoplay");
     expect(api.session).not.toHaveBeenCalled();
@@ -67,15 +67,16 @@ describe("immutable cloud review", () => {
         range={{ startMs: 10_000, endMs: 25_000 }}
         currentMs={15_000}
         playing={false}
-        muted
-        toggleMute={() => {}}
+        volume={0}
+        setVolume={() => {}}
         seek={() => {}}
         toggle={() => {}}
       />,
     );
     expect(html).toContain('aria-valuetext="00:05 of 00:15"');
     expect(html).toContain('aria-live="off"');
-    expect(html).toContain('aria-label="Unmute clip audio"');
+    expect(html).toContain('aria-label="Adjust clip volume"');
+    expect(html).toContain('aria-expanded="false"');
   });
   it("opens only the selected frozen revision and rejects late publication after Clear", async () => {
     const result = await selectedAssemblyFixture();

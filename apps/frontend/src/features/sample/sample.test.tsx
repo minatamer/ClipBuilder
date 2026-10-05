@@ -70,7 +70,7 @@ const evidence = sessionResponseSchema.parse({
 });
 
 describe("CL-004 sample browser boundary", () => {
-  it("uses locally owned video portraits without exposing transcript before selection", () => {
+  it("uses local source frames without exposing transcript before selection", () => {
     const bundle = choices(3);
     const gallery = renderToStaticMarkup(
       <CandidateReview
@@ -82,7 +82,8 @@ describe("CL-004 sample browser boundary", () => {
         sourceUrl="blob:synthetic-local"
       />,
     );
-    expect(gallery.match(/<video/g)).toHaveLength(3);
+    expect(gallery.match(/<canvas/g)).toHaveLength(3);
+    expect(gallery).not.toContain("<video");
     expect(gallery).not.toContain('aria-label="Selected moment transcript"');
     expect(gallery).not.toContain("Transcript</button>");
     const preview = renderToStaticMarkup(
@@ -95,7 +96,8 @@ describe("CL-004 sample browser boundary", () => {
         sourceUrl="blob:synthetic-local"
       />,
     );
-    expect(preview.match(/<video/g)).toHaveLength(3);
+    expect(preview.match(/<video/g)).toHaveLength(1);
+    expect(preview.match(/<canvas/g)).toHaveLength(2);
     expect(preview).toContain('aria-label="Selected moment transcript"');
     expect(preview).toContain('value="15000"');
   });
@@ -232,7 +234,7 @@ describe("CL-004 sample browser boundary", () => {
   });
 
   it.each([1, 2, 3, 4])(
-    "renders %i initial portraits without mounting transcript or playback effects",
+    "renders %i source-shaped placeholders without mounting transcript or playback effects",
     (count) => {
       const markup = renderToStaticMarkup(
         <CandidateReview
@@ -246,7 +248,8 @@ describe("CL-004 sample browser boundary", () => {
       expect(markup).toContain('data-moment-layout="gallery"');
       expect(markup.match(/data-moment-surface=/g)).toHaveLength(count);
       expect(markup.match(/aria-label="Play moment \d:/g)).toHaveLength(count);
-      expect(markup).toContain("9:16");
+      expect(markup).toContain("Landscape");
+      expect(markup).toContain("1920 x 1080");
       expect(markup).not.toContain("Candidate transcript");
       expect(markup).not.toContain("Why this moment");
       expect(markup).not.toContain('type="range"');

@@ -281,7 +281,9 @@ describe("video-first review revision", () => {
             findingMoments
           />,
         );
-        expect(markup).toContain(FINDING_MOMENTS_MESSAGES[tick % 5]);
+        expect(markup).toContain(
+          FINDING_MOMENTS_MESSAGES[tick % FINDING_MOMENTS_MESSAGES.length],
+        );
         expect(markup).not.toContain("aria-valuenow");
         expect(markup).not.toContain("%");
       }
@@ -295,6 +297,47 @@ describe("video-first review revision", () => {
       );
       expect(stopped).toContain("Analysis stopped");
       expect(stopped).not.toContain(FINDING_MOMENTS_MESSAGES[0]);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+  it("uses the accepted action clock before an operation exists and keeps it through later preparation phases", () => {
+    const start = Date.parse("2026-01-01T00:00:00Z");
+    const clock = vi.spyOn(Date, "now").mockReturnValue(start + 15_000);
+    try {
+      const preparing = renderToStaticMarkup(
+        <ProcessingStatus
+          mode="real"
+          label="Preparing a copy"
+          startedAtMs={start}
+          findingMoments
+        />,
+      );
+      const analyzing = renderToStaticMarkup(
+        <ProcessingStatus
+          mode="real"
+          label="Reading your video"
+          startedAtMs={start}
+          findingMoments
+          operation={{
+            operationId: "op_synthetic",
+            kind: "analysis",
+            state: "running",
+            stageCode: "analysis.reading-descriptor",
+            startedAt: new Date(start + 10_000).toISOString(),
+            updatedAt: new Date(start + 10_000).toISOString(),
+            completedAt: null,
+            pollAfterMs: 1000,
+            resultRevision: null,
+            error: null,
+          }}
+        />,
+      );
+      for (const markup of [preparing, analyzing]) {
+        expect(markup).toContain(FINDING_MOMENTS_MESSAGES[3]);
+        expect(markup).toContain("00:15");
+        expect(markup).not.toContain("aria-valuenow");
+      }
     } finally {
       clock.mockRestore();
     }

@@ -15,6 +15,7 @@ import {
   hasSameAssemblySource,
   finalRenderResultSchema,
   hasSameRenderedAssembly,
+  revisionIdSchema,
 } from "@clipbuilder/contracts";
 
 // Separate from media/result deletion; contains no session, capability or content.
@@ -38,6 +39,7 @@ export const workspaceRecordSchema = z
     expiresAtMs: z.number().int().positive(),
     status: z.enum(["pending", "ready", "clearing"]),
     retainedSample: z.literal(true).optional(),
+    sampleReplayRevision: revisionIdSchema.optional(),
     artifacts: z
       .array(localArtifactReferenceSchema)
       .max(LOCAL_WORKSPACE_LIMITS.maxArtifacts),
@@ -110,7 +112,15 @@ export const workspaceRecordSchema = z
     if (
       record.retainedSample &&
       record.analysis &&
-      record.cloudAnalysis?.status !== "complete"
+      record.cloudAnalysis?.status !== "complete" &&
+      record.sampleReplayRevision !== record.analysis.revision
+    )
+      issue();
+    if (
+      record.sampleReplayRevision &&
+      (!record.retainedSample ||
+        !record.analysis ||
+        record.sampleReplayRevision !== record.analysis.revision)
     )
       issue();
     if (
@@ -242,6 +252,7 @@ export function cleanupRecord(record: WorkspaceRecord): WorkspaceRecord {
     status: "clearing",
     source: null,
     retainedSample: record.retainedSample,
+    sampleReplayRevision: undefined,
     analysis: null,
     assembly: null,
     selectedId: null,
