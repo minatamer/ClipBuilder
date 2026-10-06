@@ -743,6 +743,9 @@
 .reviewDots {
   display: none;
 }
+.clipReviewShell .reviewArrow {
+  display: none;
+}
 .captionPreview {
   position: absolute;
   bottom: 6.75rem;
@@ -1382,6 +1385,34 @@
   align-items: center;
   gap: 0.25rem;
 }
+@media (min-width: 600px) {
+  .sourceReviewShell {
+    grid-template-columns: var(--cb-target) minmax(0, 1fr) var(--cb-target);
+    column-gap: var(--cb-space-3);
+  }
+  .sourceReviewShell .clipReview {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .sourceReviewShell .reviewArrow {
+    display: inline-flex;
+    align-self: center;
+    width: var(--cb-target);
+    height: var(--cb-target);
+    padding: 0;
+    grid-row: 1;
+  }
+  .sourceReviewShell .reviewPrevious {
+    grid-column: 1;
+  }
+  .sourceReviewShell .reviewNext {
+    grid-column: 3;
+  }
+  .sourceReviewShell .reviewDots {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
 .reviewDots button {
   width: var(--cb-target);
   height: var(--cb-target);
@@ -1461,7 +1492,7 @@
 .sourcePlayer {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0;
   aspect-ratio: auto;
   max-height: none;
 }
@@ -1476,7 +1507,6 @@
   inset: 0;
 }
 .sourcePlayer .inlinePlayback {
-  position: relative;
-  inset: auto;
-  width: 100%;
+  position: absolute;
+  inset: auto 0.5rem 0.5rem;
 }

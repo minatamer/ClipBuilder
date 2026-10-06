@@ -118,6 +118,14 @@ export function PrivacyDialog({
                 Real AI processing sends a short audio/video copy to Google
                 Gemini. Google’s retention rules are separate.
               </p>
+              {cloudMedia && (
+                <p>
+                  Contextual pictures may use short scene descriptions from the
+                  selected clip to search Wikimedia Commons. Your video is not
+                  sent to Wikimedia. If no usable picture is found, Gemini may
+                  create an illustrative image from a short scene description.
+                </p>
+              )}
             </section>
           </div>
         </div>

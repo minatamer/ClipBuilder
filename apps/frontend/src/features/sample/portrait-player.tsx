@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
   useId,
   useRef,
@@ -21,6 +20,7 @@ import {
 } from "lucide-react";
 import { IconButton } from "../../shared/ui/button";
 import { timecode } from "./candidate.evidence";
+import { PlaybackControls } from "./playback-controls";
 import styles from "./sample.module.css";
 
 export function PortraitPlaceholder({
@@ -102,42 +102,30 @@ export function PortraitPlayer({
   const volumeControl = useRef<HTMLDivElement>(null);
   const volumeInput = useRef<HTMLInputElement>(null);
   const [volumeOpen, setVolumeOpen] = useState(false);
-  const [awake, setAwake] = useState(true);
+  const [controlsVisible, setControlsVisible] = useState(true);
   const [keyboardFocused, setKeyboardFocused] = useState(false);
   const [seekingFocused, setSeekingFocused] = useState(false);
-  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stopHide = useCallback(() => {
-    if (idleTimer.current !== null) clearTimeout(idleTimer.current);
-    idleTimer.current = null;
-  }, []);
-  const scheduleHide = useCallback(() => {
-    stopHide();
-    if (
-      source ||
-      !playing ||
-      busy ||
-      keyboardFocused ||
-      seekingFocused ||
-      volumeOpen
-    )
-      return;
-    idleTimer.current = setTimeout(() => {
-      idleTimer.current = null;
-      setAwake(false);
-    }, 2200);
-  }, [
-    source,
-    playing,
-    busy,
-    keyboardFocused,
-    seekingFocused,
-    volumeOpen,
-    stopHide,
-  ]);
+  const controls = useRef<PlaybackControls | null>(null);
   useEffect(() => {
-    scheduleHide();
-    return stopHide;
-  }, [scheduleHide, stopHide]);
+    const controller = new PlaybackControls(setControlsVisible);
+    controls.current = controller;
+    const hover = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const configure = () => controller.update({ mouse: hover.matches });
+    configure();
+    hover.addEventListener("change", configure);
+    return () => {
+      hover.removeEventListener("change", configure);
+      controller.dispose();
+      controls.current = null;
+    };
+  }, []);
+  useEffect(() => {
+    controls.current?.update({
+      playing,
+      busy,
+      locked: keyboardFocused || seekingFocused || volumeOpen,
+    });
+  }, [playing, busy, keyboardFocused, seekingFocused, volumeOpen]);
   useEffect(() => {
     if (!volumeOpen) return;
     volumeInput.current?.focus({ preventScroll: true });
@@ -152,17 +140,8 @@ export function PortraitPlayer({
     return () => document.removeEventListener("pointerdown", closeOutside);
   }, [volumeOpen]);
   const reveal = () => {
-    setAwake(true);
-    scheduleHide();
+    controls.current?.interact();
   };
-  const controlsVisible =
-    source ||
-    !playing ||
-    busy ||
-    awake ||
-    keyboardFocused ||
-    seekingFocused ||
-    volumeOpen;
   const videoSurface =
     surface ??
     (videoRef ? (
@@ -200,17 +179,16 @@ export function PortraitPlayer({
             ? { aspectRatio, width: `min(100%, calc(100cqh * ${aspectRatio}))` }
             : {}),
       }}
-      onPointerEnter={reveal}
-      onPointerMove={reveal}
-      onPointerDownCapture={() => {
+      onPointerEnter={(event) => controls.current?.enter(event.pointerType)}
+      onPointerMove={(event) => {
+        if (event.pointerType === "mouse") controls.current?.enter("mouse");
+      }}
+      onPointerDownCapture={(event) => {
         setKeyboardFocused(false);
+        controls.current?.update({ mouse: event.pointerType === "mouse" });
         reveal();
       }}
-      onPointerLeave={(event) => {
-        if (event.pointerType !== "mouse") return;
-        stopHide();
-        setAwake(false);
-      }}
+      onPointerLeave={(event) => controls.current?.leave(event.pointerType)}
       onFocusCapture={(event) => {
         setKeyboardFocused(event.target.matches(":focus-visible"));
         reveal();

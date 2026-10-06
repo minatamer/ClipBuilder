@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
 import { ClipComposition } from "@clipbuilder/composition";
 import type {
@@ -8,12 +8,17 @@ import type {
 } from "@clipbuilder/contracts";
 import type { SourceAnalysisApi } from "../source-analysis/source-analysis.api";
 import { PortraitPlayer } from "./portrait-player";
-import { AgenticNotes, candidateNotes } from "./agentic-notes";
+import { AgenticNotes } from "./agentic-notes";
 import { ReviewTranscript } from "./review-transcript";
 import { ClipReviewLayout } from "./clip-review-layout";
-import { fixedReviewNotes, previewFrame } from "./fixed-review";
+import {
+  fixedReviewNotes,
+  previewFrame,
+  reviewInterestNotes,
+} from "./fixed-review";
 import { Button } from "../../shared/ui/button";
 import styles from "./sample.module.css";
+import { PreviewPlaybackTrace } from "./preview-playback.diagnostics";
 
 export function CloudClipReview({
   analysis,
@@ -25,6 +30,9 @@ export function CloudClipReview({
   api: Pick<SourceAnalysisApi, "session" | "preview">;
 }) {
   const player = useRef<PlayerRef>(null);
+  const mediaHost = useRef<HTMLDivElement>(null);
+  const trace = useRef<PreviewPlaybackTrace | null>(null);
+  const [buffering, setBuffering] = useState(false);
   const [ready, setReady] = useState(false),
     [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0),
@@ -34,6 +42,10 @@ export function CloudClipReview({
   const [highlighted, setHighlighted] = useState<readonly string[]>([]);
   const range = result.manifest.range,
     duration = range.endMs - range.startMs;
+  const inputProps = useMemo(
+    () => ({ manifest: result.manifest, sourceUrl: "/api/analysis/preview" }),
+    [result.manifest],
+  );
   const selected = analysis.candidates.find(
     (candidate) => candidate.id === result.candidateId,
   );
@@ -63,13 +75,83 @@ export function CloudClipReview({
   useEffect(() => {
     const current = player.current;
     if (!ready || !current) return;
+    const diagnostics = new PreviewPlaybackTrace(
+      crypto.randomUUID(),
+      {
+        captions: result.manifest.captions.length,
+        cards:
+          result.manifest.cards.length +
+          (result.manifest.pictures?.length ?? 0),
+        matched: result.manifest.focus.filter((s) => s.mode === "speaker")
+          .length,
+        held: result.manifest.focus.filter((s) => s.mode === "held").length,
+        wide: result.manifest.focus.filter((s) => s.mode === "wide").length,
+      },
+      (record) => {
+        // eslint-disable-next-line no-console -- Bounded content-free playback counters.
+        console.info("clip-preview", record);
+      },
+    );
+    trace.current = diagnostics;
+    const waiting = () => {
+      setBuffering(true);
+      diagnostics.event("buffering");
+    };
+    const resume = () => {
+      setBuffering(false);
+      diagnostics.event("resumed");
+    };
+    const host = mediaHost.current;
+    let observed: HTMLVideoElement | null = null,
+      callback: number | undefined,
+      presentedMs: number | undefined;
+    const decoded = (_now: number, metadata: VideoFrameCallbackMetadata) => {
+      presentedMs = metadata.mediaTime * 1000;
+      callback = observed?.requestVideoFrameCallback(decoded);
+    };
+    const seeking = () => diagnostics.seeking();
+    host?.addEventListener("seeking", seeking, true);
+    const sample = setInterval(() => {
+      const video = host?.querySelector("video");
+      if (video !== observed) {
+        if (callback !== undefined)
+          observed?.cancelVideoFrameCallback(callback);
+        observed = video ?? null;
+        presentedMs = undefined;
+        callback = observed?.requestVideoFrameCallback?.(decoded);
+      }
+      if (video && current.isPlaying())
+        diagnostics.sample(
+          current.getCurrentFrame(),
+          presentedMs ?? video.currentTime * 1000,
+          result.manifest.output.fps,
+        );
+      const clockMs =
+        (current.getCurrentFrame() * 1000) / result.manifest.output.fps;
+      const visual = [
+        ...result.manifest.cards,
+        ...(result.manifest.pictures ?? []),
+      ].findIndex((card) => card.startMs <= clockMs && clockMs < card.endMs);
+      if (visual >= 0 && host?.querySelector('[role="img"], img'))
+        diagnostics.visualShown(visual);
+    }, 250);
+    const traceExpiry = setTimeout(() => {
+      clearInterval(sample);
+      if (callback !== undefined) observed?.cancelVideoFrameCallback(callback);
+      diagnostics.close();
+    }, 120_000);
     const position = (event: { detail: { frame: number } }) =>
       setFrame(event.detail.frame);
     const play = () => setPlaying(true),
       pause = () => setPlaying(false);
+    const ended = () => {
+      pause();
+      diagnostics.event("ended");
+    };
     const volumeChanged = () =>
       setVolume(current.isMuted() ? 0 : current.getVolume());
     const error = () => {
+      diagnostics.event("failed");
       current.pause();
       setFailed(true);
       setReady(false);
@@ -77,22 +159,33 @@ export function CloudClipReview({
     current.addEventListener("frameupdate", position);
     current.addEventListener("play", play);
     current.addEventListener("pause", pause);
-    current.addEventListener("ended", pause);
+    current.addEventListener("ended", ended);
     current.addEventListener("error", error);
     current.addEventListener("volumechange", volumeChanged);
     current.addEventListener("mutechange", volumeChanged);
+    current.addEventListener("waiting", waiting);
+    current.addEventListener("resume", resume);
     return () => {
       current.pause();
       current.removeEventListener("frameupdate", position);
       current.removeEventListener("play", play);
       current.removeEventListener("pause", pause);
-      current.removeEventListener("ended", pause);
+      current.removeEventListener("ended", ended);
       current.removeEventListener("error", error);
       current.removeEventListener("volumechange", volumeChanged);
       current.removeEventListener("mutechange", volumeChanged);
+      current.removeEventListener("waiting", waiting);
+      current.removeEventListener("resume", resume);
+      host?.removeEventListener("seeking", seeking, true);
+      clearInterval(sample);
+      clearTimeout(traceExpiry);
+      if (callback !== undefined) observed?.cancelVideoFrameCallback(callback);
+      diagnostics.close();
+      trace.current = null;
     };
-  }, [ready]);
+  }, [ready, result]);
   const seek = (sourceMs: number) => {
+    trace.current?.userSeek();
     player.current?.pause();
     const value = previewFrame(sourceMs, result);
     player.current?.seekTo(value);
@@ -123,7 +216,7 @@ export function CloudClipReview({
             />
             <h3>Interest points</h3>
             <AgenticNotes
-              notes={candidateNotes(analysis, selected)}
+              notes={reviewInterestNotes(analysis, selected)}
               rangeStartMs={range.startMs}
               busy={!ready}
               onSeek={(ms, ids) => {
@@ -135,7 +228,7 @@ export function CloudClipReview({
         </section>
       }
       video={
-        <div className={styles.reviewVideo}>
+        <div className={styles.reviewVideo} ref={mediaHost}>
           {ready ? (
             <PortraitPlayer
               label={selected.title}
@@ -145,6 +238,7 @@ export function CloudClipReview({
                 Math.min(duration, Math.round((frame * 1000) / 30))
               }
               playing={playing}
+              loading={buffering}
               volume={volume}
               setVolume={(level) => {
                 player.current?.setVolume(level);
@@ -152,9 +246,19 @@ export function CloudClipReview({
                 else player.current?.unmute();
                 setVolume(level);
               }}
-              toggle={() =>
-                playing ? player.current?.pause() : player.current?.play()
-              }
+              toggle={() => {
+                if (playing) player.current?.pause();
+                else {
+                  if (
+                    player.current?.getCurrentFrame() ===
+                    Math.ceil((duration * 30) / 1000) - 1
+                  ) {
+                    trace.current?.userSeek();
+                    player.current.seekTo(0);
+                  }
+                  player.current?.play();
+                }
+              }}
               seek={(ms) => {
                 setHighlighted([]);
                 seek(ms);
@@ -163,16 +267,13 @@ export function CloudClipReview({
                 <Player
                   ref={player}
                   component={ClipComposition}
-                  inputProps={{
-                    manifest: result.manifest,
-                    sourceUrl: "/api/analysis/preview",
-                    sourceStartMs: 0,
-                  }}
+                  inputProps={inputProps}
                   durationInFrames={Math.ceil((duration * 30) / 1000)}
                   fps={30}
                   compositionWidth={1080}
                   compositionHeight={1920}
                   controls={false}
+                  moveToBeginningWhenEnded={false}
                   initialVolume={volume}
                   clickToPlay={false}
                   doubleClickToFullscreen={false}

@@ -1,6 +1,14 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "../../shared/ui/button";
 import styles from "./sample.module.css";
 
 const names = ["Video", "Agentic Notes", "Transcript"] as const;
@@ -19,6 +27,7 @@ export function ClipReviewLayout({
   label?: string;
 }) {
   const track = useRef<HTMLDivElement>(null);
+  const trackId = useId();
   const [phone, setPhone] = useState(false);
   const [active, setActive] = useState(0);
   const activeIndex = useRef(0);
@@ -79,7 +88,12 @@ export function ClipReviewLayout({
   const show = (index: number) => {
     const panel = slides()[index];
     if (panel)
-      track.current?.scrollTo({ left: panel.offsetLeft, behavior: "smooth" });
+      track.current?.scrollTo({
+        left: panel.offsetLeft,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+      });
   };
 
   return (
@@ -90,6 +104,7 @@ export function ClipReviewLayout({
     >
       <div
         ref={track}
+        id={trackId}
         className={styles.clipReview}
         data-review-layout={phone ? "carousel" : "cards"}
         onScroll={(event) => {
@@ -129,6 +144,30 @@ export function ClipReviewLayout({
           </div>
         ))}
       </div>
+      {carousel && (
+        <>
+          <Button
+            variant="secondary"
+            className={`${styles.reviewArrow} ${styles.reviewPrevious}`}
+            icon={ChevronLeft}
+            aria-label="Previous review slide"
+            aria-controls={trackId}
+            title="Previous review slide"
+            disabled={!phone || active === 0}
+            onClick={() => show(active - 1)}
+          />
+          <Button
+            variant="secondary"
+            className={`${styles.reviewArrow} ${styles.reviewNext}`}
+            icon={ChevronRight}
+            aria-label="Next review slide"
+            aria-controls={trackId}
+            title="Next review slide"
+            disabled={!phone || active === names.length - 1}
+            onClick={() => show(active + 1)}
+          />
+        </>
+      )}
       <div
         className={styles.reviewDots}
         role="group"

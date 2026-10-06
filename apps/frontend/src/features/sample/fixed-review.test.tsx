@@ -6,7 +6,11 @@ import {
 } from "../assembly/selected-assembly.test-fixtures";
 import { clippingSessionReducer } from "../session/session.reducer";
 import type { ClippingSessionState } from "../session/session.types";
-import { fixedReviewNotes, previewFrame } from "./fixed-review";
+import {
+  fixedReviewNotes,
+  previewFrame,
+  reviewInterestNotes,
+} from "./fixed-review";
 import { CloudClipReview } from "./cloud-clip.review";
 import { CloudResult } from "./cloud-result";
 import { PortraitPlayer } from "./portrait-player";
@@ -33,6 +37,120 @@ function candidates(): ClippingSessionState {
   };
 }
 describe("immutable cloud review", () => {
+  it.each([false, true])(
+    "summarizes forty tracking state changes and counts only actual camera cuts (view change: %s)",
+    async (changeView) => {
+      const result = await selectedAssemblyFixture();
+      const duration =
+        result.manifest.range.endMs - result.manifest.range.startMs;
+      result.manifest.focus = Array.from({ length: 40 }, (_, index) => {
+        const box = {
+          x: changeView && index >= 20 ? 0.7 : 0.15,
+          y: 0.1,
+          width: 0.2,
+          height: 0.4,
+        };
+        const clock = {
+          startMs: Math.floor((index * duration) / 40),
+          endMs: Math.floor(((index + 1) * duration) / 40),
+        };
+        return index % 2
+          ? { ...clock, mode: "held", reason: "pause", box }
+          : { ...clock, mode: "speaker", box, speaker: "spk_0", confidence: 1 };
+      });
+      const notes = fixedReviewNotes(result);
+      const camera = notes.filter((note) => note.title === "Camera treatment");
+      expect(camera).toHaveLength(1);
+      expect(camera[0]!.body).toContain(
+        changeView ? "1 immediate camera cut" : "one close portrait view",
+      );
+      expect(camera[0]!.body).toContain("Held the current crop");
+      expect(camera[0]!.timeMs).toBe(
+        result.manifest.range.startMs +
+          (changeView ? Math.floor(duration / 2) : 0),
+      );
+      expect(notes).toHaveLength(5);
+      expect(notes.some((note) => note.title === "Framing")).toBe(false);
+    },
+  );
+  it.each(["commons", "generated", "legacy"])(
+    "describes the retained %s picture with its actual source, scene and grounded phrase",
+    async (origin) => {
+      const result = await selectedAssemblyFixture();
+      const words = result.words
+        .filter((word) => word.startMs - result.manifest.range.startMs >= 2000)
+        .slice(0, 2);
+      const raster = {
+        width: 1,
+        height: 1,
+        sha256: "a".repeat(64),
+        dataUri: "data:image/jpeg;base64,/9j/2Q==",
+      };
+      const anchor = words[0]!;
+      result.manifest.pictures = [
+        {
+          startMs: anchor.startMs - result.manifest.range.startMs,
+          endMs: anchor.startMs - result.manifest.range.startMs + 3800,
+          anchorWordId: anchor.id,
+          subjectWordIds: words.map((word) => word.id),
+          asset:
+            origin === "generated"
+              ? {
+                  ...raster,
+                  repository: "google-gemini",
+                  model: "gemini-3.1-flash-image",
+                  policy: "contextual-generated-v1",
+                }
+              : {
+                  ...raster,
+                  repository: "wikimedia-commons",
+                  license: "CC0",
+                  pageId: 1,
+                  title: "Synthetic woodland photograph",
+                },
+        },
+      ];
+      if (origin !== "legacy")
+        result.pictureNotes = [
+          {
+            anchorWordId: anchor.id,
+            scene:
+              "A woodland scene illustrates the synthetic discussion of nature.",
+          },
+        ];
+      const visuals = fixedReviewNotes(result).filter((note) =>
+        note.title.startsWith("Visual "),
+      );
+      expect(visuals).toHaveLength(1);
+      expect(visuals[0]!.body).toContain(
+        origin === "generated"
+          ? "Generated illustration"
+          : "Synthetic woodland photograph",
+      );
+      if (origin !== "legacy")
+        expect(visuals[0]!.body).toContain(result.pictureNotes![0]!.scene);
+      expect(visuals[0]!.body).toContain("3.8 seconds");
+      expect(visuals[0]!.quote).toBe(
+        words.map((word) => word.punctuatedText).join(" "),
+      );
+      expect(visuals[0]!.wordIds).toEqual(words.map((word) => word.id));
+      expect(visuals[0]!.timeMs).toBe(anchor.startMs);
+    },
+  );
+  it("explains a highlight's editorial role instead of repeating its quoted evidence and preserves meaningful model notes", () => {
+    const candidate = structuredClone(analysis.candidates[0]!);
+    const quote = analysis.transcript.words.find(
+      (word) => word.id === candidate.evidence[0]!.wordIds[0],
+    )!.punctuatedText;
+    candidate.evidence[0]!.note = quote;
+    candidate.evidence[1]!.note =
+      "The synthetic conclusion resolves the earlier question.";
+    const notes = reviewInterestNotes(analysis, candidate);
+    expect(notes[0]!.body).toContain("reason to keep watching");
+    expect(notes[0]!.body).not.toBe(quote);
+    expect(notes[0]!.quote).toBe(quote);
+    expect(notes[1]!.body).toBe(candidate.evidence[1]!.note);
+  });
   it("keeps final transcript and ordinary audio controls available without starting work on render", async () => {
     const assembly = await selectedAssemblyFixture(),
       api = { session: vi.fn(), output: vi.fn() };
