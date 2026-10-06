@@ -73,11 +73,13 @@ export class CloudRendererClient {
     handoff = false,
   ): Promise<T> {
     const started = performance.now();
+    const body = JSON.stringify(input);
     const detail: RendererDiagnostic = {
       operation,
       attempt: 1,
       phase: "authorization",
       elapsedMs: 0,
+      requestBytes: Buffer.byteLength(body),
       responseBytes: 0,
       responseComplete: false,
     };
@@ -101,7 +103,7 @@ export class CloudRendererClient {
             "Content-Type": "application/json",
             ...(range ? { Range: range } : {}),
           },
-          body: JSON.stringify(input),
+          body,
           signal: deadline,
           redirect: "error",
         },

@@ -113,6 +113,13 @@ restored without redispatch; a decoded portrait frame and duration gate Download
 MP4. Retry access/download makes zero AI calls and uses existing output only.
 Download requested does not mean saved. See the [fixed render profile](../../docs/operations/RENDER_PROFILE.md).
 
+The finished result shows the portrait clip beside the social-sharing Soon
+panel, stacked on phones, with Download MP4 and Start over in the footer.
+Transcript and editorial notes belong to the preceding review. The delivery
+screen omits expiry/storage copy, media specifications and visible playback
+success text; download announcements remain available to screen readers.
+Playback verification, expiry enforcement and failure/retry messages still apply.
+
 Every workflow player shares a speaker button that opens a 0–100% playback
 volume slider: source, selected moment, edited preview and final output. Zero
 is silent; Escape or clicking outside closes the slider. This changes browser

@@ -151,7 +151,7 @@ describe("immutable cloud review", () => {
     expect(notes[0]!.quote).toBe(quote);
     expect(notes[1]!.body).toBe(candidate.evidence[1]!.note);
   });
-  it("keeps final transcript and ordinary audio controls available without starting work on render", async () => {
+  it("delivers only the clip and social panel with ordinary controls and gated download, without starting work on render", async () => {
     const assembly = await selectedAssemblyFixture(),
       api = { session: vi.fn(), output: vi.fn() };
     const result = finalRenderResultSchema.parse({
@@ -170,8 +170,14 @@ describe("immutable cloud review", () => {
     const html = renderToStaticMarkup(
       <CloudResult result={result} assembly={assembly} api={api} />,
     );
-    expect(html).toContain('aria-label="Final clip transcript"');
-    expect(html).toContain(assembly.words[0]!.punctuatedText);
+    expect(html).toContain('aria-label="Final MP4"');
+    expect(html).toContain("Share on social media");
+    expect(html).not.toContain("Transcript");
+    expect(html).not.toContain(assembly.words[0]!.punctuatedText);
+    expect(html).not.toContain("Available until");
+    expect(html).not.toContain("temporary server storage");
+    expect(html).not.toContain("H.264/AAC MP4");
+    expect(html).not.toContain("Playback verified");
     expect(html).toContain('aria-label="Adjust clip volume"');
     expect(html).toMatch(/<button[^>]+disabled=""[^>]*>.*?Download MP4/);
     expect(html).not.toContain("autoplay");

@@ -38,6 +38,7 @@ export const rendererDiagnosticSchema = z
     attempt: z.literal(1),
     phase: phaseSchema,
     elapsedMs: z.number().int().min(0).max(86_400_000),
+    requestBytes: z.number().int().min(0).max(16_777_216).optional(),
     httpStatus: z.number().int().min(100).max(599).optional(),
     responseBytes: z.number().int().min(0).max(600_000_000),
     responseComplete: z.boolean(),
@@ -178,9 +179,14 @@ export class RendererRequestFailure extends ApplicationError {
           ? "CLIENT_ABORTED"
           : renderer.failure === "timeout"
             ? "OPERATION_TIMEOUT"
-            : renderer.rendererCode
-              ? (mapping[renderer.rendererCode] ?? "STORAGE_FAILED")
-              : "STORAGE_FAILED",
+            : renderer.httpStatus === 413
+              ? "REQUEST_TOO_LARGE"
+              : renderer.operation === "output-info" &&
+                  renderer.rendererCode === "canceled"
+                ? "RESULT_NOT_FOUND"
+                : renderer.rendererCode
+                  ? (mapping[renderer.rendererCode] ?? "STORAGE_FAILED")
+                  : "STORAGE_FAILED",
     });
     this.cause = cause;
   }

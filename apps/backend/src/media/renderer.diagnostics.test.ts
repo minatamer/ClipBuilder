@@ -149,6 +149,7 @@ describe("safe actionable renderer boundary diagnostics", () => {
     ["expired", 410, "SESSION_EXPIRED", 410],
     ["conflict", 409, "STALE_REVISION", 409],
     ["invalid", 400, "INVALID_REQUEST", 400],
+    ["invalid", 413, "REQUEST_TOO_LARGE", 413],
     ["cleanup_pending", 503, "CLEANUP_PENDING", 503],
     ["media_failed", 422, "JOB_START_FAILED", 502],
     ["unauthorized", 403, "STORAGE_FAILED", 503],
@@ -185,6 +186,7 @@ describe("safe actionable renderer boundary diagnostics", () => {
         rendererStage: "claim",
         failure: "http_rejected",
         responseComplete: true,
+        requestBytes: Buffer.byteLength(JSON.stringify(input)),
       });
       expect(
         f.records().find((record) => record.phase === "media_prepare")?.renderer
@@ -198,6 +200,31 @@ describe("safe actionable renderer boundary diagnostics", () => {
       expect(f.lines.join("\n")).not.toContain(input.binding.sessionId);
     },
   );
+  it("reports no completed output for a cleaned-up session without dispatching render", async () => {
+    let calls = 0;
+    const f = fixture(async () => {
+      calls++;
+      return Response.json({ code: "canceled" }, { status: 409 });
+    });
+    await expect(
+      f.scope(() =>
+        f.client.outputInfo(
+          { binding: input.binding, manifestHash: "a".repeat(64) },
+          new AbortController().signal,
+        ),
+      ),
+    ).rejects.toMatchObject({ code: "RESULT_NOT_FOUND" });
+    expect(calls).toBe(1);
+    expect(
+      f.records().find((record) => record.phase === "renderer_request")
+        ?.renderer,
+    ).toMatchObject({
+      operation: "output-info",
+      rendererCode: "canceled",
+      httpStatus: 409,
+    });
+    expect(f.lines.join("\n")).not.toContain(input.binding.sessionId);
+  });
   it.each([
     ["json", () => new Response("private-sentinel"), "json_invalid"],
     [

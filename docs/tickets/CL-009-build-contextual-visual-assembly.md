@@ -125,9 +125,13 @@ Execution and verification:
   provider access, latency and charged cost in a manual flow. Fake results prove
   orchestration only; two pictures are a target, not a reason to abort a usable
   clip if both retrieval and generation fail. No local AI runtime/weights are added.
-- [ ] Independently approve and deploy the matching private renderer before live
-  final MP4 generation with the new asset provenance; actual exported pixels,
-  live cancellation cleanup and generated-content rights remain owner acceptance.
+- [x] Independently approve and deploy the matching private renderer before live
+  final MP4 generation with the new asset provenance. The 2026-10-07
+  [CL-011 deployment](CL-011-render-and-deliver-final-clip.md#verified-private-image-deployment--2026-10-07)
+  verifies native synthetic v3/picture rendering, Ready/latest traffic, unchanged
+  private settings/IAM and zero-dispatch authenticated descriptor probes.
+- [ ] Actual owner-exported pixels, live cancellation cleanup and generated-content
+  rights remain owner acceptance; synthetic image proof does not establish them.
 
 Files touched by this fallback revision (some contain earlier owner revisions):
 

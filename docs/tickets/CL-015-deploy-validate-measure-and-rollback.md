@@ -1,5 +1,52 @@
 # CL-015 — Bounded renderer setup and later public deployment
 
+## Owner fixed final-export capability
+
+The owner requests hardcoded final-render availability and a complete backend
+restart after finding Confirm export disabled. This supersedes the earlier
+assembly-stage hold below. Real paid mode enables analysis, assembly and final
+rendering directly in code once credentials, connection, admission and approval
+prerequisites are complete. Remove `PAID_VALIDATION_STAGE` from the schema and
+example; ignore any remaining local entry without reading or changing private
+configuration. Paid-off precedence, fake/test isolation, public composition
+rejection, one final render and existing renderer compatibility checks remain.
+
+The fixed dispatch allowance is seven with image generation approved (four media
+operations plus at most three image calls), four without images and zero with
+paid off or incomplete setup. No agent paid flow or cloud deployment is authorized.
+Fake/no-key checks verify configuration, capability exposure and existing injected
+render/download behavior; actual MP4 quality and cloud compatibility remain
+owner-only live checks.
+
+Verify the obsolete stage cannot hide export, paid-off disables every capability,
+missing setup dispatches nothing, and safe config advertises final rendering with
+complete synthetic setup. Run the settled root gates without the validate workflow,
+then restart only the backend through verified process-tree cleanup and normal
+configuration. Verify health, frontend and safe capability GETs; preserve logs,
+captures, retained source and the frontend. Record only evidence actually produced.
+
+Execution evidence: stage selection is removed from production configuration and
+the example. Existing legacy stage entries, including assembly/disabled, cannot
+disable final rendering. Paid-off and incomplete setup retain zero dispatches;
+image-off retains final rendering with four bounded actions. Focused synthetic
+configuration/image/renderer-boundary checks pass (63 tests in four files).
+All five settled root gates pass: format, lint, typecheck, 1,205 unit tests in
+96 files and build. No validate workflow or live paid request was run.
+
+The full backend restart verified ten captured old process identities absent and
+port 4000 clear through stabilization. The replacement's owned listener and
+stable health return 200; frontend `/start` and safe configuration return 200,
+with analysis, assembly and final-render availability true. The original frontend
+process remains running; prior logs, private captures and retained media are
+preserved. Private configuration was not read or edited. The build-generated
+frontend type references were restored to their original development paths.
+
+This proves local export availability, not a successful real MP4. Matching private
+renderer deployment, actual export/download/cleanup and owner quality/rights
+acceptance remain unchecked. The Windows frontend build still reports 26 external
+package links; immutable public deployment acceptance remains separate. Changes
+are unstaged and uncommitted.
+
 ## Owner environment-only configuration — 2026-10-06
 
 The owner requires removal of backend runtime JSON and its loading/API, with

@@ -1,5 +1,180 @@
 # CL-011 — Private cloud final rendering and download
 
+## Owner minimal final result — 2026-10-07
+
+The owner requests only the final clip and the existing social-sharing Soon
+panel in the result body. Remove the final transcript, expiry/storage paragraph,
+media specifications and visible playback-success text. Keep Download MP4 and
+Start over in the footer. The preceding review retains its transcript/notes;
+this presentation change does not alter retention or add direct publishing.
+
+`cloud-result.tsx` uses the same bounded portrait/social layout as the simulated
+result, removing the separate tall output grid and unused transcript styles.
+Desktop keeps the sharing panel beside the clip; phones retain the stacked
+layout. Playback verification, protected access, output expiry, actionable
+errors/retry and downloaded-copy behavior remain. Download status announcements
+use the existing screen-reader-only style.
+
+Verification: 24 focused synthetic delivery/playback/review tests pass. All five
+settled root gates (`format:check`, `lint`, `typecheck`, `test:unit`, `build`)
+and `git diff --check` pass; 1,212 tests across 96 files. The running frontend
+returns 200 for `/start`. Generated development type references are restored
+after build. Existing Windows external-package-link release limitations remain.
+No browser visual acceptance or live processing/export test was run for this
+change. Fake mode needs no keys and proves rendering/control orchestration only;
+real clip processing still requires the existing keys, enabled live flags and
+approvals, with paid-flow acceptance owner-run. No local AI runtime is added.
+
+## Owner export failure investigation — 2026-10-07
+
+Status: local correction and the matching private renderer build/deployment are
+verified; owner real MP4 acceptance remains pending.
+The owner explicitly approved the prepared private image build/deployment on
+2026-10-07. Reuse the existing build identity/staging bucket/service, preserve
+IAM and runtime/resource settings, and make only zero-dispatch readiness probes.
+This approval does not authorize an agent-run paid editing/export flow.
+This packet follows the existing CL-009 v3/picture implementation and CL-015
+local export enablement without changing allowances or retry policy.
+
+The owner reported Export needs attention and requested log inspection/fixes.
+Existing backend logs show one final-render request rejected with HTTP 422
+`media_failed`, followed by successful terminal cancellation. The catch replaced
+that failure with `MODEL_OUTPUT_REJECTED`. A subsequent completed-output lookup
+received HTTP 409 `canceled` and displayed `CLIENT_ABORTED` ("request was stopped").
+No browser abort or expired ADC is established by this sequence.
+
+Read-only Cloud Logging confirms the final-render HTTP request was approximately
+175 KB and rejected in 4.8 ms. Its serving private revision was created on
+2026-10-05. That revision predates the 2026-10-06 authenticated 1 MiB render
+descriptor and manifest v3/Commons/generated-image contract. The earlier source
+has a 128 KiB parser on every internal route and maps parser errors to the exact
+generic 422 response observed. This supports the deployment mismatch as the
+original rejection; the old revision has no parser-substage log. Reducing or
+dropping accepted visuals would not resolve its other stale contract/composition
+semantics. No provider request or cloud resource mutation was made during diagnosis.
+
+Local correction:
+
+- `apps/backend/src/render/final-render.usecase.ts` preserves typed renderer
+  failures, separates dispatch/output lookup/output verification logs and keeps
+  bounded cleanup failure from masking the primary cause. Unknown media failures
+  use `JOB_START_FAILED`, not an AI-output rejection. Existing integrity/expiry
+  checks and terminal cleanup remain enforced; no automatic retry is added.
+- `analysis.composition.ts` shares the request diagnostics with final rendering;
+  `analysis.diagnostics.ts` names the three safe phases. Renderer transport logs
+  add only serialized request byte count. `renderer.diagnostics.ts` maps a 413 to
+  `REQUEST_TOO_LARGE`, and an already canceled output lookup to `RESULT_NOT_FOUND`
+  while retaining the private status/code diagnostics. Actual client aborts keep
+  their cancellation classification.
+- `apps/renderer/src/app.ts` returns safe 413/400 `invalid` responses for
+  oversized/malformed JSON, with the shared `request_parse` stage added in
+  `packages/contracts/src/cloud-media.schema.ts`. Parsing remains authenticated,
+  1 MiB for final render and 128 KiB elsewhere. No body/error text is logged.
+- Synthetic regressions cover the combined Commons/generated-picture descriptor,
+  over-limit/malformed JSON with zero media work, exact request bytes, canceled
+  output lookup with zero render dispatch and preservation of the original export
+  failure even when cancellation fails. Frozen evidence, one-use admission,
+  invalid-output publication checks and zero repeated AI work remain covered.
+
+Targeted verification: 78 backend tests across selected assembly/final delivery,
+renderer diagnostics and request diagnostics; 12 renderer route tests pass.
+These use `FAKE_MODE=true`, paid-off, injected provider/media ports, no keys/ADC
+or external sockets. They prove orchestration and request boundaries, not a live
+MP4 or AI quality. No local AI runtime/weights are added.
+
+Settled final gates pass: `corepack pnpm format:check`, `lint`, `typecheck`,
+`test:unit` and `build`, plus the fixed local renderer `bundle` and
+`git diff --check`. The suite has **1,212 synthetic tests in 96 files** (root
+35/4, contracts 73/5, composition 5/1, backend 546/26, renderer 109/16,
+frontend 444/44). The Windows frontend artifact still has 26 external package
+links; local build success does not establish an immutable public release.
+Generated frontend development type references are restored after build.
+No validate workflow, native media harness, live AI/export, deployment or Git
+mutation was run.
+
+Local backend restart is verified with the restart/kill/run lifecycle: all ten
+captured old owned identities stopped, port 4000 released through stabilization,
+then a new normal hidden supervisor/watcher/listener tree started. Existing logs
+are preserved; the new safe parser captures the new request-size/stage fields.
+Backend health, frontend `/start` and `/api/sample/config` return 200; analysis,
+assembly and render availability remain enabled. The existing frontend process
+is preserved. These GET checks do not prove the old cloud image can export.
+
+The approved image build also updates
+`apps/renderer/scripts/verify-linux-media.mjs`: its prior v2 descriptor is
+incompatible with the current render worker. The synthetic Linux fixture now
+uses v3, initial held framing followed by a direct speaker cut, spoken-word cues
+and two inline JPEGs exercising Commons and generated provenance. It makes zero
+image/provider calls, validates the native MP4/audio and preserves bounded
+process-cancel/scratch cleanup. Syntax and the 13 fake-mode build-context/route
+regressions pass. Native Linux image proof is required before deployment.
+
+Approved private rollout plan:
+
+1. Build the current contracts/shared composition/private renderer together,
+   including the fixed bundle and packaged binaries. Run the documented bounded
+   Linux synthetic renderer checks before using the immutable candidate image.
+2. Update only the existing private media service to that exact verified image;
+   preserve private caller IAM, bucket/runtime identity, concurrency, instance/
+   CPU/RAM/timeout bounds and independent expiry configuration. Verify Ready and
+   traffic, authenticated health and content-free invalid/oversized requests that
+   dispatch zero media operations. Do not run owner media or a paid AI flow.
+3. Restart local control with preserved logs and normal environment loading, then
+   have the owner start a fresh disposable session. The previously canceled
+   session cannot produce an output. Owner verifies real MP4 playback/download,
+   preview parity, pictures, native cuts/captions/audio and source/output cleanup.
+
+Actual owner export/download/media/rights/cost evidence and public release remain
+unchecked. The existing CL-015 configuration changes
+are preserved separately; no staging, commit or validate workflow was requested.
+
+### Verified private image deployment — 2026-10-07
+
+The owner-approved renderer-only cloud build passed in **155.922 seconds**.
+Its 62-file/551,264-byte allowlisted context contains no environment, credentials,
+private media, frontend/backend source or Git metadata. The Linux build rendered
+and decoded the v3 synthetic clip with spoken-word captions, two inline picture
+provenances and a direct speaker cut; verified source-aligned audio/onset,
+scratch bounds, canceled-process cleanup, unprivileged runtime imports, fixed
+bundle and packaged binary hashes/versions. All five local root gates pass after
+the verifier update, with the same 1,212 fake-mode tests; no validate workflow ran.
+
+Build and registry agree on immutable image
+`sha256:0e86d772841a3b9634fccf48cd1e99891ef0c594d44fca100123af0d25ed067c`.
+That exact image now serves the existing private renderer, Ready and **100% latest
+revision traffic**. Pre-update drift checks and the post-update comparison verify
+all other runtime, environment, service identity, resource, volume, timeout,
+instance/concurrency and traffic settings unchanged; private IAM is identical.
+No frontend/backend deployment, IAM change or new cloud service was made.
+
+Configured-audience/caller ADC matches. Anonymous health returns 403;
+authenticated health returns 200. A **175,023-byte** invalid final descriptor
+reaches schema validation and returns 400, proving the old 128 KiB parser no
+longer blocks it. A body over 1 MiB returns 413 `invalid`/`request_parse`;
+malformed JSON returns 400 with that same safe stage. These probes dispatch
+**zero media operations and zero Gemini calls**. Native image-build rendering
+uses synthetic data, with no AI keys or calls; it does not prove real-media
+quality, Gemini acceptance or the owner's export/download path.
+
+The exact owned build-source generation was deleted and confirmed absent at 404;
+the allowlisted local context was removed after absolute-path ownership checks.
+Private snapshots, rollback-image metadata, build and backend diagnostic logs are
+preserved outside Git. No configuration file, activation flag, retained owner
+master or private capture is altered.
+
+The existing local backend/frontend remain healthy: backend health, `/start`
+and `/api/sample/config` return 200, and analysis/assembly/render availability
+remains enabled. Backend supervisor **22296**, active listener **12448** and all
+ten live owned identities are verified; the frontend remains PID **1932** on
+port 3000. The normal watcher loaded the settled contract build; its runtime
+ownership record was refreshed. No additional launcher, backend configuration
+change or frontend restart was needed. Logs remain preserved outside Git.
+
+The private rollout approval/compatibility gate is now closed. Owner real export,
+native picture/cut/caption/audio parity, download/device playback, live cleanup,
+rights, billed cost/performance and public release remain unchecked. Start a fresh
+disposable owner flow; the canceled failed-export session has no final output.
+
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
 Status: locally complete; validate pass 2 has no actionable local findings. All five settled root gates and 592 synthetic tests in 60 files pass. Real-media, provider, cloud and owner gates remain deferred.

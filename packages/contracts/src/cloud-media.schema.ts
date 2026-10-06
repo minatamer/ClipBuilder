@@ -41,6 +41,7 @@ export const rendererFailureCodeSchema = z.enum([
   "media_failed",
 ]);
 export const rendererFailureStageSchema = z.enum([
+  "request_parse",
   "claim",
   "scratch",
   "download",

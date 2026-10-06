@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import {
   compositionManifestV3Schema,
   TEMPORARY_MEDIA_LIMITS,
+  GENERATED_PICTURE_MODEL,
 } from "@clipbuilder/contracts";
 function fixture(removeScratch?: (directory: string) => Promise<void>) {
   const f = mediaFixture(undefined, removeScratch);
@@ -56,6 +57,21 @@ describe("private renderer routes", () => {
           subjectWordIds: ["w_000001"],
           asset,
         },
+        {
+          startMs: 6000,
+          endMs: 8000,
+          anchorWordId: "w_000002",
+          subjectWordIds: ["w_000002"],
+          asset: {
+            repository: "google-gemini",
+            model: GENERATED_PICTURE_MODEL,
+            policy: "contextual-generated-v1",
+            width: asset.width,
+            height: asset.height,
+            dataUri: asset.dataUri,
+            sha256: asset.sha256,
+          },
+        },
       ],
     });
     const input = {
@@ -68,6 +84,9 @@ describe("private renderer routes", () => {
     };
     expect(Buffer.byteLength(JSON.stringify(input))).toBeGreaterThan(
       TEMPORARY_MEDIA_LIMITS.descriptorBytes,
+    );
+    expect(Buffer.byteLength(JSON.stringify(input))).toBeLessThan(
+      TEMPORARY_MEDIA_LIMITS.renderDescriptorBytes,
     );
     const render = vi
       .spyOn(f.operations, "render")
@@ -87,8 +106,35 @@ describe("private renderer routes", () => {
       .post("/internal/cancel")
       .set("Authorization", "Bearer control")
       .send(input);
-    expect(ordinary.status).toBe(422);
+    expect(ordinary.status).toBe(413);
+    expect(ordinary.body).toEqual({ code: "invalid", stage: "request_parse" });
+    expect(render).toHaveBeenCalledOnce();
   });
+  it.each(["oversized", "malformed"])(
+    "classifies %s render JSON before any media dispatch without exposing content",
+    async (kind) => {
+      const f = fixture();
+      const render = vi.spyOn(f.operations, "render");
+      const result = await request(f.app)
+        .post("/internal/render")
+        .set("Authorization", "Bearer control")
+        .set("Content-Type", "application/json")
+        .send(
+          kind === "oversized"
+            ? JSON.stringify({
+                private: "x".repeat(
+                  TEMPORARY_MEDIA_LIMITS.renderDescriptorBytes,
+                ),
+              })
+            : '{"private":"synthetic-private"',
+        );
+      expect(result.status).toBe(kind === "oversized" ? 413 : 400);
+      expect(result.body).toEqual({ code: "invalid", stage: "request_parse" });
+      expect(render).not.toHaveBeenCalled();
+      expect(f.operations.counts).toEqual({ media: 0, ai: 0 });
+      expect(JSON.stringify(result.body)).not.toContain("synthetic-private");
+    },
+  );
   it("rejects overlapping uploads and scheduled cleanup while admission owns the journal", async () => {
     const f = fixture();
     let entered!: () => void, release!: () => void;

@@ -70,6 +70,10 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   overrides cloud spend, Gemini transfer, image generation and paid-project
   approvals to false and disables cloud/sample reads, live routes, grants and
   dispatch allowance. Missing optional local prerequisites keep routes unavailable.
+  Owner export follow-up: real paid mode enables analysis, assembly and final
+  rendering directly in code; the obsolete `PAID_VALIDATION_STAGE` setting is
+  ignored. This permits local export availability, not an agent-run paid flow
+  or a private renderer deployment.
   Tests/CI/harnesses explicitly force fake mode, paid-off and every live/approval
   flag false before imports, with no credentials or external provider access.
 - Owner decision (2026-10-04): paid-flow testing is performed manually by the
@@ -236,7 +240,7 @@ corepack pnpm build
   frontend mode setting, or bypass feature gates. Missing setup is described
   using the blank entries in the owning app's `.env.example`; never inspect
   secrets to diagnose it. The backend environment contains credentials, operating
-  switches, private connection/sample references, processing stage and four
+  switches, private connection/sample references and four
   approval flags. No runtime JSON is loaded or required. Deployment injects the
   same environment keys without relying on a local file.
   Numerical limits, timeouts, model selection and retry policy are fixed in code,

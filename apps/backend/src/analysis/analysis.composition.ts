@@ -80,7 +80,7 @@ export function composeAnalysis(
   // Clear and either AI phase share exactly the same provider-file and media ownership.
   const render =
     assembly && config.features.liveRender
-      ? new FinalRender(admission, assembly, media)
+      ? new FinalRender(admission, assembly, media, Date.now, diagnostics)
       : null;
   return {
     analysis,

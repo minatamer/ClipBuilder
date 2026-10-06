@@ -21,6 +21,7 @@ import type {
 } from "../admission/processing.admission.js";
 import type { SelectedAssembly } from "../assembly/selected-assembly.usecase.js";
 import { ApplicationError } from "../http/errorMapper.js";
+import { AnalysisDiagnostics } from "../analysis/analysis.diagnostics.js";
 export interface FinalRenderMedia {
   render(
     input: MediaRenderRequest,
@@ -41,6 +42,7 @@ export class FinalRender {
     private readonly assembly: Pick<SelectedAssembly, "verify">,
     private readonly media: FinalRenderMedia,
     private readonly now = Date.now,
+    private readonly diagnostics = new AnalysisDiagnostics(),
   ) {}
   private payload(assembly: SelectedAssemblyResult, value: unknown) {
     const output = mediaOutputResponseSchema.parse(value),
@@ -100,41 +102,69 @@ export class FinalRender {
       () => {},
       async (signal) => {
         try {
-          const rendered = mediaRenderResponseSchema.parse(
-            await this.media.render(
-              {
-                binding: assembly.binding,
-                nonce: randomUUID(),
-                manifestHash: assembly.manifestHash,
-                manifest: assembly.manifest,
-              },
-              signal,
-            ),
+          const rendered = await this.diagnostics.step(
+            "render_dispatch",
+            async () =>
+              mediaRenderResponseSchema.parse(
+                await this.media.render(
+                  {
+                    binding: assembly.binding,
+                    nonce: randomUUID(),
+                    manifestHash: assembly.manifestHash,
+                    manifest: assembly.manifest,
+                  },
+                  signal,
+                ),
+              ),
           );
-          const published = mediaOutputResponseSchema.parse(
-            await this.media.outputInfo(
-              {
-                binding: assembly.binding,
-                manifestHash: assembly.manifestHash,
-              },
-              signal,
-            ),
+          const published = await this.diagnostics.step(
+            "render_output_lookup",
+            async () =>
+              mediaOutputResponseSchema.parse(
+                await this.media.outputInfo(
+                  {
+                    binding: assembly.binding,
+                    manifestHash: assembly.manifestHash,
+                  },
+                  signal,
+                ),
+              ),
           );
-          if (
-            JSON.stringify(rendered.output) !==
-              JSON.stringify(published.output) ||
-            rendered.manifestHash !== published.manifestHash ||
-            rendered.expiresAtMs !== published.expiresAtMs
-          )
-            throw new Error();
-          signal.throwIfAborted();
-          return this.payload(assembly, published);
-        } catch {
-          await this.media.cancel(
-            assembly.binding,
-            AbortSignal.timeout(TEMPORARY_MEDIA_LIMITS.sweepDeadlineMs),
-          );
-          throw new ApplicationError({ code: "MODEL_OUTPUT_REJECTED" });
+          return this.diagnostics.check("render_output_validation", () => {
+            if (
+              JSON.stringify(rendered.output) !==
+                JSON.stringify(published.output) ||
+              rendered.manifestHash !== published.manifestHash ||
+              rendered.expiresAtMs !== published.expiresAtMs
+            )
+              throw new ApplicationError({ code: "JOB_START_FAILED" });
+            signal.throwIfAborted();
+            return this.payload(assembly, published);
+          });
+        } catch (error) {
+          await this.diagnostics
+            .step("source_cleanup", () =>
+              this.media.cancel(
+                assembly.binding,
+                AbortSignal.timeout(TEMPORARY_MEDIA_LIMITS.sweepDeadlineMs),
+              ),
+            )
+            .catch(() => {
+              this.diagnostics.failure(
+                "source_cleanup",
+                new ApplicationError({ code: "CLEANUP_PENDING" }),
+              );
+            });
+          throw error instanceof ApplicationError
+            ? error
+            : new ApplicationError({
+                code: signal.aborted
+                  ? signal.reason instanceof Error &&
+                    signal.reason.name === "TimeoutError"
+                    ? "OPERATION_TIMEOUT"
+                    : "CLIENT_ABORTED"
+                  : "JOB_START_FAILED",
+              });
         }
       },
     );
@@ -142,9 +172,11 @@ export class FinalRender {
   }
   async restore(context: AdmissionContext, input: unknown) {
     const assembly = this.assembly.verify(context, input);
-    const output = await this.media.outputInfo(
-      { binding: assembly.binding, manifestHash: assembly.manifestHash },
-      context.signal,
+    const output = await this.diagnostics.step("render_output_lookup", () =>
+      this.media.outputInfo(
+        { binding: assembly.binding, manifestHash: assembly.manifestHash },
+        context.signal,
+      ),
     );
     context.signal.throwIfAborted();
     return this.sign(context, this.payload(assembly, output));

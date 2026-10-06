@@ -73,9 +73,6 @@ const environmentShape = {
 
   FAKE_MODE: booleanValue(false),
   PAID_DEMO_ENABLED: booleanValue(true),
-  PAID_VALIDATION_STAGE: z
-    .enum(["disabled", "analysis", "assembly", "render"])
-    .default("assembly"),
   GEMINI_IMAGE_GENERATION_APPROVED: booleanValue(true),
   LIVE_ANALYSIS_ENABLED: booleanValue(false),
   LIVE_ASSEMBLY_ENABLED: booleanValue(false),
@@ -178,7 +175,6 @@ export const ENVIRONMENT_KEYS = Object.freeze([
   "RETAINED_SAMPLE_OBJECT",
   "RETAINED_SAMPLE_GENERATION",
   "RETAINED_SAMPLE_BYTES",
-  "PAID_VALIDATION_STAGE",
   "CLOUD_SPEND_APPROVED",
   "GEMINI_TRANSFER_APPROVED",
   "GEMINI_IMAGE_GENERATION_APPROVED",

@@ -34,6 +34,7 @@ import { mapError } from "../http/errorMapper.js";
 import { PreviewPlayback } from "../media/preview-playback.js";
 import { Writable } from "node:stream";
 import { FinalRender } from "../render/final-render.usecase.js";
+import { RendererRequestFailure } from "../media/renderer.diagnostics.js";
 import { OutputDelivery } from "../media/output-delivery.js";
 import {
   AnalysisDiagnostics,
@@ -258,7 +259,13 @@ describe("final render and delivery", () => {
           }),
       ),
     };
-    const render = new FinalRender(f.admission, f.service, media, () => 1000),
+    const render = new FinalRender(
+        f.admission,
+        f.service,
+        media,
+        () => 1000,
+        f.diagnostics,
+      ),
       delivery = new OutputDelivery(f.admission, render, media, () => 1000);
     return {
       ...f,
@@ -386,6 +393,84 @@ describe("final render and delivery", () => {
       }),
     ).rejects.toThrow();
     expect(f.media.render).toHaveBeenCalledTimes(0);
+  });
+  it.each([false, true])(
+    "preserves the renderer failure when cleanup fails=%s without retrying paid work",
+    async (cleanupFails) => {
+      const f = await finalFixture();
+      const primary = new RendererRequestFailure(
+        {
+          operation: "render",
+          attempt: 1,
+          phase: "http",
+          elapsedMs: 5,
+          requestBytes: 175000,
+          httpStatus: 422,
+          responseBytes: 23,
+          responseComplete: true,
+          rendererCode: "media_failed",
+          failure: "http_rejected",
+        },
+        new Error("synthetic-private"),
+      );
+      f.media.render.mockRejectedValue(primary);
+      if (cleanupFails)
+        f.media.cancel.mockRejectedValue(
+          new Error("synthetic-private-cleanup"),
+        );
+      const pending = new Promise((resolve, reject) => {
+        f.diagnostics.request(`req_${"d".repeat(32)}`, "render", (finish) => {
+          f.render.run(f.context, f.request).then(resolve, (error: unknown) => {
+            finish(
+              "completed",
+              mapError(error, `req_${"d".repeat(32)}`).status,
+            );
+            reject(error);
+          });
+        });
+      });
+      await expect(pending).rejects.toBe(primary);
+      await expect(f.render.run(f.context, f.request)).rejects.toThrow();
+      expect(f.media.render).toHaveBeenCalledOnce();
+      expect(f.media.cancel).toHaveBeenCalledOnce();
+      expect(f.media.outputInfo).not.toHaveBeenCalled();
+      expect(f.provider.plan).toHaveBeenCalledOnce();
+      expect(f.sourceProvider.analyze).not.toHaveBeenCalled();
+      expect(mapError(primary, `req_${"d".repeat(32)}`)).toMatchObject({
+        status: 502,
+        error: { code: "JOB_START_FAILED" },
+      });
+      const records = f.lines.map((line) =>
+        JSON.parse(parseAnalysisDiagnosticLine(line) ?? "{}"),
+      );
+      expect(records).toContainEqual(
+        expect.objectContaining({
+          phase: "render_dispatch",
+          outcome: "failed",
+          code: "JOB_START_FAILED",
+          renderer: primary.renderer,
+        }),
+      );
+      if (cleanupFails)
+        expect(records).toContainEqual(
+          expect.objectContaining({
+            phase: "source_cleanup",
+            code: "CLEANUP_PENDING",
+          }),
+        );
+      expect(f.lines.join("\n")).not.toContain("synthetic-private");
+      expect(f.lines.join("\n")).not.toContain(f.assembly.binding.sessionId);
+    },
+  );
+  it("classifies an unknown render failure without blaming AI output", async () => {
+    const f = await finalFixture();
+    f.media.render.mockRejectedValue(new Error("synthetic-private"));
+    await expect(f.render.run(f.context, f.request)).rejects.toMatchObject({
+      code: "JOB_START_FAILED",
+    });
+    expect(f.media.render).toHaveBeenCalledOnce();
+    expect(f.media.cancel).toHaveBeenCalledOnce();
+    expect(f.media.outputInfo).not.toHaveBeenCalled();
   });
 });
 

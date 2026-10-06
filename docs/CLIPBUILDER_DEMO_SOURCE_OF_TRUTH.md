@@ -4,6 +4,17 @@
 
 Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 721 synthetic tests in 70 files pass, including the CL-016 MP4-only and sample-streaming follow-ups. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**
 
+### Owner minimal final result — 2026-10-07
+
+Show only the finished portrait clip and the existing social-sharing Soon panel
+in the result body, with Download MP4 and Start over in the footer. Remove the
+final transcript, expiry/storage explanation, media specifications and visible
+playback-success copy. The preceding review retains its transcript and notes;
+download verification, expiry, cleanup and actionable failure/retry messages
+remain enforced. Use the existing desktop columns and phone stack. This replaces
+earlier final-result transcript/disclosure presentation requirements without
+adding direct publishing or changing retention. See the [CL-011 follow-up](tickets/CL-011-render-and-deliver-final-clip.md#owner-minimal-final-result--2026-10-07).
+
 ### Owner environment-only configuration — 2026-10-06
 
 The latest owner decision removes backend runtime JSON and all application usage.
@@ -13,8 +24,12 @@ environment keys. Normal defaults are `FAKE_MODE=false`, `PAID_DEMO_ENABLED=true
 and cloud spend, Gemini transfer, image generation and paid-project approval true.
 `PAID_DEMO_ENABLED=false` has precedence and forces all four approvals false,
 disabling cloud/sample reads, live routes, grants and dispatch allowance.
-The processing stage defaults to assembly; final render retains its independent
-matching-renderer rollout gate. Missing optional local prerequisites leave paid
+The owner's later export instruction enables analysis, assembly and final
+rendering directly in real paid mode. `PAID_VALIDATION_STAGE` is obsolete and
+ignored, so existing assembly entries do not disable Confirm export. The
+deployed renderer still needs the matching composition/image contract for a
+successful real MP4; no rollout or live export is proved by enabling the control.
+Missing optional local prerequisites leave paid
 routes unavailable without preventing health/local intake. This supersedes all
 earlier runtime-JSON/default-fake or default-off-image configuration decisions
 below. Tests/CI/synthetic harnesses remain explicitly fake, paid-off and

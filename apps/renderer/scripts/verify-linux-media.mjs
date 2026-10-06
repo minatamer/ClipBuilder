@@ -14,6 +14,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { deflateSync } from "node:zlib";
+import { createHash } from "node:crypto";
 
 const fixtureOnly = process.argv.includes("--fixture-only");
 if (!fixtureOnly) assert.equal(process.platform, "linux");
@@ -35,7 +36,11 @@ const { measureScratchBytes } = await import(
   pathToFileURL(join(renderer, "dist/media/scratch-usage.js"))
 );
 const require = createRequire(join(renderer, "package.json"));
-const { TEMPORARY_MEDIA_LIMITS } = await import("@clipbuilder/contracts");
+const {
+  TEMPORARY_MEDIA_LIMITS,
+  compositionManifestV3Schema,
+  GENERATED_PICTURE_MODEL,
+} = await import("@clipbuilder/contracts");
 const localCompositor =
   process.platform === "win32"
     ? dirname(
@@ -280,8 +285,37 @@ async function verify() {
       return;
     }
     await symlink("synthetic-host-1234", join(directory, "SingletonLock"));
-    const manifest = {
-      version: 2,
+    stage = "picture-fixture";
+    const picturePath = join(directory, "picture.jpg");
+    await runOwnedProcess(
+      tools.ffmpeg,
+      [
+        "-nostdin",
+        "-v",
+        "error",
+        "-i",
+        rgb,
+        "-frames:v",
+        "1",
+        "-c:v",
+        "mjpeg",
+        "-q:v",
+        "2",
+        "-threads",
+        "2",
+        picturePath,
+      ],
+      signal,
+    );
+    const pictureBytes = await readFile(picturePath);
+    const raster = {
+      width: 320,
+      height: 180,
+      dataUri: `data:image/jpeg;base64,${pictureBytes.toString("base64")}`,
+      sha256: createHash("sha256").update(pictureBytes).digest("hex"),
+    };
+    const manifest = compositionManifestV3Schema.parse({
+      version: 3,
       source: {
         fingerprint: source.fingerprint,
         width: source.width,
@@ -290,12 +324,71 @@ async function verify() {
       },
       range: { startMs: 1000, endMs: 11000 },
       output: { width: 1080, height: 1920, fps: 30 },
-      focus: [{ mode: "wide", startMs: 0, endMs: 10000 }],
+      focus: [
+        {
+          mode: "held",
+          reason: "opening-default",
+          box: { x: 0.1, y: 0.1, width: 0.3, height: 0.65 },
+          startMs: 0,
+          endMs: 5000,
+        },
+        {
+          mode: "speaker",
+          speaker: "Synthetic",
+          confidence: 1,
+          box: { x: 0.6, y: 0.1, width: 0.3, height: 0.65 },
+          startMs: 5000,
+          endMs: 10000,
+        },
+      ],
       captions: [
-        { startMs: 0, endMs: 10000, text: "Synthetic Linux verification" },
+        {
+          startMs: 0,
+          endMs: 10000,
+          text: "Synthetic Linux verification",
+          lines: ["Synthetic Linux", "verification"],
+          wordIds: ["w_000001", "w_000002", "w_000003"],
+          wordCues: [
+            { wordId: "w_000001", text: "Synthetic", startMs: 0, endMs: 2000 },
+            { wordId: "w_000002", text: "Linux", startMs: 2000, endMs: 6000 },
+            {
+              wordId: "w_000003",
+              text: "verification",
+              startMs: 6000,
+              endMs: 10000,
+            },
+          ],
+        },
       ],
       cards: [],
-    };
+      pictures: [
+        {
+          startMs: 2000,
+          endMs: 4000,
+          anchorWordId: "w_000002",
+          subjectWordIds: ["w_000002"],
+          asset: {
+            ...raster,
+            repository: "wikimedia-commons",
+            license: "CC0",
+            pageId: 1,
+            title: "Synthetic build picture",
+          },
+        },
+        {
+          startMs: 6000,
+          endMs: 8000,
+          anchorWordId: "w_000003",
+          subjectWordIds: ["w_000003"],
+          asset: {
+            ...raster,
+            repository: "google-gemini",
+            model: GENERATED_PICTURE_MODEL,
+            policy: "contextual-generated-v1",
+          },
+        },
+      ],
+    });
     monitor = setInterval(() => {
       if (pending) return;
       pending = Promise.all([
@@ -356,6 +449,13 @@ async function verify() {
       "/tmp/clipbuilder-linux-media-proof.json",
       JSON.stringify({
         synthetic: true,
+        manifestVersion: manifest.version,
+        inlinePictures: manifest.pictures.length,
+        generatedProvenancePictures: manifest.pictures.filter(
+          (picture) => picture.asset.repository === "google-gemini",
+        ).length,
+        spokenWordCues: manifest.captions[0].wordCues.length,
+        instantFocusCuts: manifest.focus.length - 1,
         sourceDurationMs: source.durationMs,
         audioDurationMs: Math.round(audioProfile.format.duration * 1000),
         audioBytes,

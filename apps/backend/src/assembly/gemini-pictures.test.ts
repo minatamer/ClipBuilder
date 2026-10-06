@@ -178,7 +178,7 @@ describe("bounded ungrounded Gemini picture generation", () => {
       GEMINI_IMAGE_GENERATION_APPROVED: "false",
     });
     expect(normal.features.liveImageGeneration).toBe(false);
-    expect(approved.admission.maxProcessDispatches).toBe(6);
+    expect(approved.admission.maxProcessDispatches).toBe(7);
     expect(
       composeGeminiPictureGenerator(approved, new AnalysisDiagnostics()),
     ).toBeInstanceOf(GeminiPictureGenerator);

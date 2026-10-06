@@ -85,7 +85,7 @@ streams. Completed-output restore and download retries dispatch zero new jobs/AI
 See [fixed output profile](../../docs/operations/RENDER_PROFILE.md).
 With `FAKE_MODE=true` and no keys, fixture UI cannot download; injected synthetic
 ports prove lifecycle and rejection behavior, not a real MP4. Real source/assembly
-and final rendering require keys and the approved render validation stage,
+and final rendering require keys and enabled real paid processing,
 paid/data/rights gates and independent private cloud/compute approval. Actual
 native pixels/audio/performance, devices, rights/licenses and rollout remain
 unchecked; no local AI model or weights are used.
@@ -140,9 +140,10 @@ raw Gemini logs/captures remain. See the
 [temporary packet](../../docs/tickets/CL-007-local-sample-replay-and-thumbnails.md).
 Fake/no-key tests use synthetic injected data; real assembly is owner-run.
 
-Owner local enablement (2026-10-05): the approved private runtime validation
-stage is now `assembly`, exposing Proceed and selected preview. Final render
-remains disabled. Only that stage changed; existing operating switches,
+Earlier owner local enablement (2026-10-05) exposed Proceed and selected preview
+while holding final rendering at the assembly stage. The later fixed-export
+instruction supersedes that hold; see Configuration and secrets below.
+During the earlier enablement, only the stage changed; existing operating switches,
 credentials, metadata and approvals were preserved. Verified backend restart
 changes its session epoch: start over and run fresh Find moments before Proceed.
 Readiness/config and armed full-output capture are verified without a processing
@@ -182,13 +183,13 @@ excluded from private output captures as well as ordinary logs.
 Generation approval defaults on under the 2026-10-06 owner configuration decision.
 `GEMINI_IMAGE_GENERATION_APPROVED=false` disables it independently;
 `PAID_DEMO_ENABLED=false` forces all four approvals and live capabilities off.
-Real generation requires assembly stage, the existing paid/transfer/project
+Real generation requires live assembly, the existing paid/transfer/project
 prerequisites and backend `GEMINI_API_KEY`; no extra key is required. The derived live-image flag
 cannot be enabled with an environment override. Fake/test/preview/production
 composition remains unable to dispatch. Enabling images reserves a process
-allowance of six for assembly or seven for render, rather than three/four.
-These are bounded action/image attempts, not a monthly dollar ledger. Keep the
-stage at assembly until the private renderer contains the generated provenance
+allowance of seven, rather than four with images disabled.
+These are bounded action/image attempts, not a monthly dollar ledger. Successful
+final export requires a private renderer with the matching generated provenance
 schema. No cloud rollout is included. Fake/no-key tests prove local orchestration; actual generation quality,
 access, cost and latency remain owner-manual.
 
@@ -420,9 +421,13 @@ cloud/sample reads, live processing, grants and dispatch allowance. Individual
 approval flags can also disable their capability while paid remains on.
 
 Private connections and retained-sample references use the matching environment
-entries in the example. `PAID_VALIDATION_STAGE` selects `disabled`, `analysis`,
-`assembly` (default) or `render`; limits, models, deadlines and retries stay
-fixed in code. Assembly retains the current separate renderer-rollout gate.
+entries in the example. Real paid mode enables analysis, assembly and final
+rendering in code once their prerequisites are complete. The obsolete
+`PAID_VALIDATION_STAGE` setting is ignored, including existing local entries.
+The fixed allowance covers four media operations and at most three image calls;
+image approval off leaves four, and paid off leaves zero. Limits, models,
+deadlines and retries stay fixed in code. The deployed renderer must support
+the current composition and image contract before a successful live export.
 Credentials and private identifiers remain blank in Git and browser responses.
 Tests and synthetic harnesses force fake/paid-off/approval-off before imports,
 remove inherited private setup and intercept network access. With fake mode and
@@ -468,8 +473,8 @@ mistaken for a working default full stack. Do not change ports or origins to
 hide a conflict.
 
 Local app availability is independent of unfinished paid-feature setup. With
-real mode selected, missing Gemini/Turnstile/grant/renderer prerequisites or an
-unapproved stage leave paid routes unavailable and dispatches at zero; health
+real mode selected, missing Gemini/Turnstile/grant/renderer prerequisites or
+required approvals leave paid routes unavailable and dispatches at zero; health
 and local intake can still start. Retained-sample playback requires the paid
 master on and complete local sample/ADC prerequisites. Startup prints fixed requirement codes without private values.
 The operating switches remain authoritative, and completing setup still needs

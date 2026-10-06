@@ -92,7 +92,7 @@ export function CloudResult({
       aria-label="Clip delivery"
       tabIndex={0}
     >
-      <div className={styles.exportVideo} data-output-delivery="true">
+      <div className={styles.exportVideo}>
         <div className={styles.exportVideoFrame}>
           <PortraitPlayer
             label="Final MP4"
@@ -109,15 +109,6 @@ export function CloudResult({
             busy={!access || !decoded || failed}
           />
         </div>
-        <p>
-          {durationMs / 1000} seconds · 1080 × 1920 · 30 fps · H.264/AAC MP4
-        </p>
-        <p>
-          Available until {new Date(result.expiresAtMs).toLocaleTimeString()}.
-          Source and preview copies have been deleted from temporary server
-          storage. Clear media also removes this output; it cannot delete your
-          downloaded copy.
-        </p>
         {failed && (
           <p role="alert">
             {expired
@@ -162,7 +153,7 @@ export function CloudResult({
             Download MP4
           </Button>
         </ClipDeliveryActions>
-        <p role="status">
+        <p role="status" className={styles.screenReaderText}>
           {expired
             ? "Output access has expired."
             : failed
@@ -170,18 +161,9 @@ export function CloudResult({
               : requested
                 ? "Download requested. Check your browser for progress or failure; you can retry while the output is available."
                 : decoded
-                  ? "Playback verified. Your MP4 is ready to download."
+                  ? "Download available."
                   : "Verifying output playback before download."}
         </p>
-        <section
-          className={styles.outputTranscript}
-          aria-label="Final clip transcript"
-        >
-          <h2>Transcript</h2>
-          <p dir="auto">
-            {assembly.words.map((word) => word.punctuatedText).join(" ")}
-          </p>
-        </section>
       </div>
       <SocialDestinations />
     </section>

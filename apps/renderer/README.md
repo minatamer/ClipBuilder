@@ -9,6 +9,16 @@ final export of generated pictures. Local fake/no-key tests verify parsing and
 byte integrity, not cloud deployment or real generated quality; those gates
 remain separately approved and owner-tested.
 
+CL-011 export update (2026-10-07): the owner-approved matching v3/picture image is
+deployed, Ready with 100% latest traffic; other runtime settings and private IAM
+are unchanged. The Linux image proof renders synthetic held/speaker framing,
+spoken-word cues and both inline picture provenances, with no AI calls.
+Authenticated probes verify a 175 KB descriptor reaches schema validation;
+body-limit/malformed-body failures return safe 413/400 `invalid` with
+`request_parse`, without body text or media dispatch. Actual owner MP4 quality
+and download remain unverified. See the
+[verified deployment](../../docs/tickets/CL-011-render-and-deliver-final-clip.md#verified-private-image-deployment--2026-10-07).
+
 Session allowance (CL-007, 2026-10-05): each disposable session has four media
 operations, consumed atomically in its existing expiring intent by valid
 prepare/select/preview/render claims. Restart preserves consumption; replay or

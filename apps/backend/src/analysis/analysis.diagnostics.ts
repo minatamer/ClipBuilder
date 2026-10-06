@@ -90,6 +90,9 @@ const phases = [
   "selected_planning",
   "assembly_validation",
   "renderer_request",
+  "render_dispatch",
+  "render_output_lookup",
+  "render_output_validation",
   "assembly_input",
   "assembly_evidence",
   "assembly_range",
@@ -144,6 +147,11 @@ const phaseMessages: Record<AnalysisPhase, string> = {
     "Selected clip speaker framing and contextual card generation",
   assembly_validation: "Local selected plan compilation",
   renderer_request: "Private renderer request and response classification",
+  render_dispatch: "Final MP4 render dispatch and response validation",
+  render_output_lookup:
+    "Existing final MP4 metadata lookup; no render dispatch",
+  render_output_validation:
+    "Final MP4 binding, metadata and expiry verification",
   assembly_input: "Selected assembly request schema parsing",
   assembly_evidence: "Signed analysis and session evidence verification",
   assembly_range: "Chosen candidate word range and bounded context resolution",

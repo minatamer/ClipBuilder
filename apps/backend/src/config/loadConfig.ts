@@ -119,13 +119,9 @@ export function loadConfig(
 
   const fakeMode = environment.FAKE_MODE === "true";
   const paid = environment.PAID_DEMO_ENABLED !== "false";
-  const stage = paid
-    ? environment.PAID_VALIDATION_STAGE || "assembly"
-    : "disabled";
+  const processingEnabled = !fakeMode && paid;
   const imagesEnabled =
-    !fakeMode &&
-    paid &&
-    (stage === "assembly" || stage === "render") &&
+    processingEnabled &&
     environment.GEMINI_IMAGE_GENERATION_APPROVED !== "false";
   const allowUnavailableLocalCapabilities =
     environment.NODE_ENV !== "test" &&
@@ -133,12 +129,6 @@ export function loadConfig(
     !fakeMode &&
     paid;
   const processingUnavailableReasons: string[] = [];
-  if (paid && stage === "disabled" && !allowUnavailableLocalCapabilities)
-    throw new Error(
-      "Paid processing requires an explicitly approved validation stage.",
-    );
-  if (paid && stage === "disabled")
-    processingUnavailableReasons.push("validation_stage_unapproved");
 
   const selected = Object.fromEntries(
     [...ENVIRONMENT_KEYS, "NODE_ENV", "PORT"].flatMap((key) => {
@@ -166,21 +156,14 @@ export function loadConfig(
           environment.RETAINED_SAMPLE_BYTES,
         ].some(Boolean),
     ),
-    LIVE_ANALYSIS_ENABLED: String(!fakeMode && stage !== "disabled"),
-    LIVE_ASSEMBLY_ENABLED: String(
-      !fakeMode && (stage === "assembly" || stage === "render"),
-    ),
-    LIVE_RENDER_ENABLED: String(!fakeMode && stage === "render"),
+    LIVE_ANALYSIS_ENABLED: String(processingEnabled),
+    LIVE_ASSEMBLY_ENABLED: String(processingEnabled),
+    LIVE_RENDER_ENABLED: String(processingEnabled),
     LIVE_IMAGE_GENERATION_ENABLED: String(imagesEnabled),
-    PROCESSING_GRANTS_ENABLED: String(!fakeMode && stage !== "disabled"),
-    ADMISSION_MAX_PROCESS_DISPATCHES:
-      stage === "render"
-        ? 4 + (imagesEnabled ? ASSEMBLY_LIMITS.maxGeneratedImageCalls : 0)
-        : stage === "assembly"
-          ? 3 + (imagesEnabled ? ASSEMBLY_LIMITS.maxGeneratedImageCalls : 0)
-          : stage === "analysis"
-            ? 2
-            : 0,
+    PROCESSING_GRANTS_ENABLED: String(processingEnabled),
+    ADMISSION_MAX_PROCESS_DISPATCHES: processingEnabled
+      ? 4 + (imagesEnabled ? ASSEMBLY_LIMITS.maxGeneratedImageCalls : 0)
+      : 0,
   };
   const result = environmentSchema.safeParse(values);
   let config: BackendConfig;

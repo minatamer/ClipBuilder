@@ -277,27 +277,38 @@ export function createRendererApplication(
         response.destroy();
         return;
       }
+      const parserFailure =
+        typeof error === "object" && error !== null && "type" in error
+          ? error.type === "entity.too.large"
+            ? "too_large"
+            : error.type === "entity.parse.failed"
+              ? "invalid_json"
+              : undefined
+          : undefined;
       const code =
         error instanceof MediaFailure
           ? error.code
-          : error instanceof ZodError
+          : error instanceof ZodError || parserFailure
             ? "invalid"
             : "media_failed";
       const status =
-        code === "unauthorized"
-          ? 403
-          : code === "invalid"
-            ? 400
-            : code === "expired"
-              ? 410
-              : code === "cleanup_pending"
-                ? 503
-                : code === "media_failed"
-                  ? 422
-                  : 409;
+        parserFailure === "too_large"
+          ? 413
+          : code === "unauthorized"
+            ? 403
+            : code === "invalid"
+              ? 400
+              : code === "expired"
+                ? 410
+                : code === "cleanup_pending"
+                  ? 503
+                  : code === "media_failed"
+                    ? 422
+                    : 409;
       response.status(status).json(
         rendererFailureResponseSchema.parse({
           code,
+          ...(parserFailure ? { stage: "request_parse" } : {}),
           ...(error instanceof MediaFailure && error.stage
             ? { stage: error.stage }
             : {}),

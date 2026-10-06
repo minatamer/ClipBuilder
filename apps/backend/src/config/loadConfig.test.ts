@@ -75,41 +75,46 @@ describe("backend environment configuration", () => {
     }
   });
 
-  it.each([
-    ["analysis", 2, false, false, false],
-    ["assembly", 6, true, false, true],
-    ["render", 7, true, true, true],
-  ] as const)(
-    "derives fixed dispatch bounds for %s",
-    (stage, budget, assembly, render, images) => {
+  it.each([undefined, "disabled", "analysis", "assembly", "render", "unknown"])(
+    "enables the full paid flow regardless of the obsolete stage (%s)",
+    (stage) => {
       const config = loadConfig({
         ...createLiveValidationEnvironment(),
         PAID_VALIDATION_STAGE: stage,
       });
       expect(config.features).toMatchObject({
         liveAnalysis: true,
-        liveAssembly: assembly,
-        liveRender: render,
-        liveImageGeneration: images,
+        liveAssembly: true,
+        liveRender: true,
+        liveImageGeneration: true,
       });
       expect(config.admission).toMatchObject({
         grantsEnabled: true,
-        maxProcessDispatches: budget,
+        maxProcessDispatches: 7,
       });
     },
   );
 
-  it("uses assembly as the normal stage without requiring a runtime file", () => {
+  it("advertises final export with complete synthetic setup and no stage setting", async () => {
     const environment = createLiveValidationEnvironment();
     delete environment.PAID_VALIDATION_STAGE;
     const config = loadConfig(environment);
     expect(config.features).toMatchObject({
       liveAnalysis: true,
       liveAssembly: true,
-      liveRender: false,
+      liveRender: true,
       liveImageGeneration: true,
     });
     expect(config.processingUnavailableReasons).toEqual([]);
+    const { application } = composeBackend(environment);
+    const response = await request(application)
+      .get("/v1/sample/config")
+      .expect(200);
+    expect(response.body).toMatchObject({
+      liveAnalysisEnabled: true,
+      liveAssemblyEnabled: true,
+      liveRenderEnabled: true,
+    });
   });
 
   it.each([undefined, "false", "true"])(
@@ -171,19 +176,9 @@ describe("backend environment configuration", () => {
       liveAssembly: true,
       liveImageGeneration: false,
     });
-    expect(config.admission.maxProcessDispatches).toBe(3);
+    expect(config.features.liveRender).toBe(true);
+    expect(config.admission.maxProcessDispatches).toBe(4);
     expect(config.gemini.imageGenerationApproved).toBe(false);
-  });
-
-  it("keeps an explicit disabled stage unavailable", () => {
-    const config = loadConfig({
-      ...createLiveValidationEnvironment(),
-      PAID_VALIDATION_STAGE: "disabled",
-    });
-    expect(config.processingUnavailableReasons).toContain(
-      "validation_stage_unapproved",
-    );
-    expect(config.admission.maxProcessDispatches).toBe(0);
   });
 
   it.each([
@@ -251,7 +246,6 @@ describe("backend environment configuration", () => {
       { PORT: "0" },
       { NODE_ENV: "test" },
       { FRONTEND_ORIGIN: "invalid" },
-      { PAID_VALIDATION_STAGE: "unknown" },
       { GEMINI_IMAGE_GENERATION_APPROVED: "maybe" },
       { APP_ENV: "preview" },
     ])
@@ -319,7 +313,6 @@ describe("backend environment configuration", () => {
     expect(values).toMatchObject({
       FAKE_MODE: "false",
       PAID_DEMO_ENABLED: "true",
-      PAID_VALIDATION_STAGE: "assembly",
     });
     expect(Object.keys(values).sort()).toEqual([...ENVIRONMENT_KEYS].sort());
     for (const key of approvals) expect(values[key]).toBe("true");

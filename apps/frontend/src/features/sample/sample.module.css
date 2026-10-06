@@ -788,6 +788,7 @@
   min-height: 0;
   display: grid;
   grid-template-rows: minmax(18rem, 1fr);
+  grid-auto-rows: max-content;
   gap: 1rem;
   justify-items: center;
 }
@@ -798,26 +799,6 @@
   display: grid;
   place-items: center;
   container-type: size;
-}
-.exportVideo[data-output-delivery="true"] {
-  grid-template-rows: auto;
-  align-content: start;
-  overflow-wrap: anywhere;
-}
-.exportVideo[data-output-delivery="true"] .exportVideoFrame {
-  height: clamp(18rem, 100cqh, 42rem);
-}
-.outputTranscript {
-  width: 100%;
-  text-align: start;
-  line-height: 1.8;
-  background: var(--cb-frame-fill);
-  border: 1px solid var(--cb-border);
-  border-radius: var(--cb-radius-card);
-  padding: 1rem;
-}
-.outputTranscript h2 {
-  font-size: 1rem;
 }
 .socialDestinations {
   min-width: 0;
