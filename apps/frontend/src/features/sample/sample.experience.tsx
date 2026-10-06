@@ -60,6 +60,7 @@ import { SourcePreview } from "./source-preview";
 import { createSourceAnalysisApi } from "../source-analysis/source-analysis.api";
 import { AnalysisChallenge } from "../source-analysis/analysis-challenge";
 import { runSourceAnalysis } from "../source-analysis/source-analysis.flow";
+import type { CloudUploadProgress } from "../source-analysis/cloud-upload";
 import {
   openSampleReplay,
   prepareSampleReplay,
@@ -252,6 +253,8 @@ function SampleScreen({
   const localMode = workspace !== null;
   const cloudApi = useMemo(() => createSourceAnalysisApi(), []);
   const [analysisLabel, setAnalysisLabel] = useState("Preparing analysis");
+  const [uploadProgress, setUploadProgress] =
+    useState<CloudUploadProgress | null>(null);
   const [challenge, setChallenge] = useState<{
     sessionId: string;
     action: "transcription" | "candidate-analysis" | "visual-plan" | "render";
@@ -442,9 +445,15 @@ function SampleScreen({
           challenge: requestChallenge,
           event: dispatch,
           label: setAnalysisLabel,
+          uploadProgress: (value) => {
+            if (!signal.aborted && !exiting.current) setUploadProgress(value);
+          },
         });
       } finally {
-        setAnalysisStartedAt(null);
+        if (!signal.aborted && !exiting.current) {
+          setAnalysisStartedAt(null);
+          setUploadProgress(null);
+        }
       }
     });
   };
@@ -496,6 +505,7 @@ function SampleScreen({
     if (exiting.current) return;
     exiting.current = true;
     setAnalysisStartedAt(null);
+    setUploadProgress(null);
     let storage: Storage | null = null;
     try {
       storage = window.sessionStorage;
@@ -1025,6 +1035,7 @@ function SampleScreen({
             }
             mode={localMode ? "real" : "fake"}
             active={failure === null && !exiting.current}
+            {...(uploadProgress === null ? {} : { uploadProgress })}
             findingMoments={
               analysisWaitStartedAt !== null || state.stage === "analyzing"
             }

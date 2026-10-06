@@ -154,6 +154,28 @@ cancel or unmount. Privacy copy discloses both original and AI proxy transfer.
 Verification normally runs in the background. Required interaction or a failure
 opens a centered dialog with cancellation and explicit verification-only retry.
 
+Browser cloud transfer uses sequential 4-MiB Blob slices through that one
+capability. The bar advances from validated storage acknowledgements, shows
+percentage and confirmed/total size, and reaches 100% only after exact size and
+generation validation. Unknown analysis/sample-copy phases retain activity
+indicators. Ambiguous replies get one status query and at most one resend per
+chunk, within 60-second request and existing flow/expiry bounds. Cancel/Exit
+abort transfer and discard late progress; remote deletion remains the existing
+independent cleanup obligation. Content-free `cloud-upload` browser records
+correlate the validated opaque operation ID and include byte counts, ordinal,
+duration, status and bounded query/resend counts.
+
+The [CL-005 execution record](../../docs/tickets/CL-005-implement-secure-upload-and-storage.md#upload-implementation-and-verification--2026-10-06)
+contains 98 focused synthetic checks and 11 native browser protocol checks.
+They require no keys and do not prove actual GCS acknowledgements/deletion.
+The normal fake journey remains simulated. Private storage acceptance needs the
+existing storage setup, cloud allowance and protected challenge/session; normal
+subsequent Gemini analysis remains an owner-run paid check with keys/live flags.
+
+```text
+corepack pnpm --filter @clipbuilder/frontend test:unit -- src/features/source-analysis src/features/sample/review-revision.test.tsx src/features/session/session.exit.test.ts
+```
+
 The browser marks pending before remote work and atomically journals validated
 source-bound analysis plus integrity receipt before advancing the existing
 candidate/transcript/notes UI. Committed refresh makes zero new calls. Pending/

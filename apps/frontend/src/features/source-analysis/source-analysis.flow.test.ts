@@ -7,7 +7,12 @@ import type {
 } from "../session/session.types";
 import type { BrowserWorkspace } from "../media/browser.workspace";
 import { clearAnalysisMedia, runSourceAnalysis } from "./source-analysis.flow";
-import { createSourceAnalysisApi } from "./source-analysis.api";
+import {
+  createSourceAnalysisApi,
+  type SourceAnalysisApi,
+} from "./source-analysis.api";
+import { exitClippingSession } from "../session/session.exit";
+import type { CloudUploadProgress } from "./cloud-upload";
 import type {
   WorkspaceRecord,
   RemoteCleanupObligation,
@@ -95,7 +100,7 @@ function fixture(sample = false) {
     },
     sourceFile: sample
       ? null
-      : new Blob([new Uint8Array([1])], { type: "video/mp4" }),
+      : new Blob([new Uint8Array(media.bytes)], { type: "video/mp4" }),
     markCloudAnalysis: vi.fn(async (status, cleanupRequired = true) => {
       record = parseWorkspaceRecord({
         ...record,
@@ -121,7 +126,7 @@ function fixture(sample = false) {
         "https://storage.googleapis.com/upload/storage/v1/b/synthetic/o?upload_id=synthetic",
       expiresAtMs: 7201000,
     })),
-    transfer: vi.fn(async () => "12"),
+    transfer: vi.fn<SourceAnalysisApi["transfer"]>(async () => "12"),
     sample: vi.fn(async () => ({ generation: "12" })),
     analyze: vi.fn(async () => result),
     clear: vi.fn(async () => {}),
@@ -151,6 +156,137 @@ function fixture(sample = false) {
   };
 }
 describe("confirmed browser source analysis", () => {
+  it("a real transfer with invalid completion metadata dispatches no analysis and retains cleanup", async () => {
+    const f = fixture();
+    f.api.upload.mockResolvedValueOnce({
+      uploadUrl:
+        "https://storage.googleapis.com/upload/storage/v1/b/synthetic/o?upload_id=synthetic",
+      expiresAtMs: Date.now() + 600_000,
+    });
+    const transport = vi.fn<typeof fetch>(async () =>
+      Response.json({ generation: "12", size: String(media.bytes + 1) }),
+    );
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      await runSourceAnalysis({
+        ...f.input,
+        api: {
+          ...f.api,
+          transfer: createSourceAnalysisApi(transport).transfer,
+        },
+      });
+      expect(transport).toHaveBeenCalledOnce();
+      expect(f.api.analyze).toHaveBeenCalledTimes(0);
+      expect(f.state().stage).toBe("analysis-failed");
+      expect(f.record().cloudAnalysis).toMatchObject({
+        status: "uncertain",
+        cleanupRequired: true,
+      });
+    } finally {
+      log.mockRestore();
+    }
+  });
+  it("does not dispatch analysis if verification returns late after upload cancellation", async () => {
+    const f = fixture();
+    f.input.challenge.mockImplementationOnce(async () => "synthetic");
+    f.input.challenge.mockImplementationOnce(async () => {
+      f.controller.abort();
+      return "synthetic";
+    });
+    await runSourceAnalysis(f.input);
+    expect(f.api.transfer).toHaveBeenCalledOnce();
+    expect(f.api.transfer.mock.calls[0]?.[4]).toMatch(/^op_[A-Za-z0-9_-]{22}$/);
+    expect(f.api.analyze).toHaveBeenCalledTimes(0);
+    expect(f.workspace.storeGroundedAnalysis).toHaveBeenCalledTimes(0);
+  });
+  it("ends the measured upload phase before analysis and fences late progress", async () => {
+    const f = fixture();
+    const uploadProgress = vi.fn();
+    let lateProgress: ((value: CloudUploadProgress) => void) | undefined;
+    f.api.transfer.mockImplementationOnce(
+      async (admitted, file, _signal, progress) => {
+        expect(admitted).toEqual(await f.api.upload.mock.results[0]?.value);
+        lateProgress = progress;
+        progress?.({ confirmedBytes: 0, totalBytes: file.size });
+        progress?.({ confirmedBytes: file.size, totalBytes: file.size });
+        expect(f.api.analyze).toHaveBeenCalledTimes(0);
+        return "12";
+      },
+    );
+    f.api.analyze.mockImplementationOnce(async () => {
+      expect(uploadProgress.mock.calls.at(-1)?.[0]).toBeNull();
+      return f.result;
+    });
+    await runSourceAnalysis({ ...f.input, uploadProgress });
+    const count = uploadProgress.mock.calls.length;
+    lateProgress?.({ confirmedBytes: 1, totalBytes: 1 });
+    expect(uploadProgress).toHaveBeenCalledTimes(count);
+    expect(f.api.upload).toHaveBeenCalledOnce();
+    expect(f.api.transfer).toHaveBeenCalledOnce();
+    expect(f.api.analyze).toHaveBeenCalledOnce();
+    expect(JSON.stringify(f.record())).not.toContain("confirmedBytes");
+  });
+  it.each(["partial", "complete"])(
+    "Exit at the %s upload boundary stops analysis and preserves deletion recovery",
+    async (phase) => {
+      const f = fixture();
+      const local = cleanupWorkspace();
+      const navigate = vi.fn();
+      f.api.clear.mockRejectedValueOnce(new Error("pending-deletion"));
+      const cleanup = () =>
+        clearAnalysisMedia({
+          workspace: local,
+          api: f.api,
+          cloudPending: true,
+          signal: new AbortController().signal,
+        });
+      let exit: Promise<void> | undefined;
+      const uploadProgress = vi.fn((value: CloudUploadProgress | null) => {
+        if (value && value.confirmedBytes > 0) {
+          exit = exitClippingSession({
+            storage: null,
+            stop: () => f.controller.abort(),
+            cleanup: async () => {
+              await cleanup();
+            },
+            navigate,
+            transport: vi.fn(async () => new Response(null, { status: 204 })),
+          });
+        }
+      });
+      f.api.transfer.mockImplementationOnce(
+        async (_admitted, file, _signal, progress) => {
+          progress?.({
+            confirmedBytes:
+              phase === "partial"
+                ? Math.max(1, Math.floor(file.size / 2))
+                : file.size,
+            totalBytes: file.size,
+          });
+          progress?.({ confirmedBytes: file.size, totalBytes: file.size });
+          return "12";
+        },
+      );
+      await runSourceAnalysis({ ...f.input, uploadProgress });
+      await exit;
+      await vi.waitFor(() =>
+        expect(local.remoteCleanup?.status).toBe("pending"),
+      );
+      expect(navigate).toHaveBeenCalledOnce();
+      expect(f.api.analyze).toHaveBeenCalledTimes(0);
+      expect(f.input.challenge).toHaveBeenCalledTimes(1);
+      expect(f.workspace.storeGroundedAnalysis).toHaveBeenCalledTimes(0);
+      expect(uploadProgress).toHaveBeenCalledOnce();
+      expect(f.record().cloudAnalysis?.cleanupRequired).toBe(true);
+      expect(await cleanup()).toEqual({
+        complete: true,
+        cloudPending: false,
+        localComplete: true,
+      });
+      expect(f.api.clear).toHaveBeenCalledTimes(2);
+      expect(local.remoteCleanup).toBeNull();
+    },
+  );
   it.each(["grant", "transfer"] as const)(
     "keeps one analysis lifetime while %s is deferred and never dispatches AI early",
     async (phase) => {

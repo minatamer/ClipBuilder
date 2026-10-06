@@ -255,6 +255,66 @@ describe("video-first review revision", () => {
     expect(fake).toContain('aria-valuenow="75"');
     expect(fake).toContain("75%");
   });
+  it("shows measured real upload progress with byte sizes, without timer activity or finding copy", () => {
+    for (const confirmedBytes of [
+      0,
+      4 * 1048576,
+      8 * 1048576 - 1,
+      8 * 1048576,
+    ]) {
+      const markup = renderToStaticMarkup(
+        <ProcessingStatus
+          mode="real"
+          label="Uploading video to temporary private storage"
+          findingMoments
+          startedAtMs={Date.now() - 300_000}
+          uploadProgress={{ confirmedBytes, totalBytes: 8 * 1048576 }}
+        />,
+      );
+      const percent = Math.floor((confirmedBytes / (8 * 1048576)) * 100);
+      expect(markup).toContain(`aria-valuenow="${percent}"`);
+      expect(markup).toContain(`${percent}%`);
+      expect(markup).toContain("aria-valuetext=");
+      expect(markup).toContain("MiB uploaded");
+      expect(markup).toContain('data-activity="false"');
+      expect(markup).not.toContain(FINDING_MOMENTS_MESSAGES[0]);
+    }
+    const failed = renderToStaticMarkup(
+      <ProcessingStatus
+        mode="real"
+        label="Upload stopped"
+        active={false}
+        uploadProgress={{ confirmedBytes: 4, totalBytes: 8 }}
+      />,
+    );
+    expect(failed).toContain('aria-valuenow="50"');
+    expect(failed).toContain('data-active="false"');
+  });
+  it("rejects invalid upload measurements and returns to unknown completion for analysis", () => {
+    for (const uploadProgress of [
+      { confirmedBytes: 0, totalBytes: 0 },
+      { confirmedBytes: -1, totalBytes: 10 },
+      { confirmedBytes: 11, totalBytes: 10 },
+      { confirmedBytes: NaN, totalBytes: 10 },
+      { confirmedBytes: 1.5, totalBytes: 10 },
+    ]) {
+      const markup = renderToStaticMarkup(
+        <ProcessingStatus
+          mode="real"
+          label="Waiting"
+          uploadProgress={uploadProgress}
+        />,
+      );
+      expect(markup).not.toContain("aria-valuenow");
+      expect(markup).not.toContain("%");
+    }
+    const analyzing = renderToStaticMarkup(
+      <ProcessingStatus mode="real" label="Reading video" findingMoments />,
+    );
+    expect(analyzing).not.toContain("aria-valuenow");
+    expect(analyzing).not.toContain("MiB uploaded");
+    expect(analyzing).toContain(FINDING_MOMENTS_MESSAGES[0]);
+  });
   it("cycles finding-moments copy, wraps without claiming progress, and stops at terminal states", () => {
     const start = Date.parse("2026-01-01T00:00:00Z");
     const operation = {

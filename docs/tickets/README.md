@@ -1,5 +1,15 @@
 # ClipBuilder canonical ticket index
 
+**CL-005 upload verification — 2026-10-06:**
+CL-005's sequential 4-MiB transfer and confirmed-byte progress are implemented:
+98 focused synthetic tests and 11 native Chrome protocol checks pass. All five
+settled root gates and 1,084 tests in 89 files pass; scoped validation has no
+remaining actionable local findings. Two protected actual browser/GCS sample
+attempts now verify complete chunk upload/progress and partial Exit cleanup;
+both renderer cancellation responses passed deletion-result validation. See
+CL-005's actual browser/storage record. Owner-only paid continuation remains
+unchecked.
+
 **First TODO for 2026-10-06:**
 [CL-009 owner edit-quality feedback](CL-009-build-contextual-visual-assembly.md#first-task-tomorrow--owner-edit-quality-feedback-2026-10-06).
 Documented only: large white captions without a full background panel,

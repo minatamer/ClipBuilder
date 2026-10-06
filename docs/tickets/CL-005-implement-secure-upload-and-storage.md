@@ -2,7 +2,7 @@
 
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: **Temporary-media prerequisite and isolated private GCS/upload/cancel/expiry proof verified under CL-006. Browser source transfer is connected under CL-007; chunked browser uploads and measured cloud-upload progress remain pending. Public release remains a later gate.**
+Status: **Chunked browser upload and confirmed-byte progress are implemented and verified with synthetic checks and two protected actual GCS sample attempts. Completed and partial uploads passed normal Exit cleanup with validated renderer cancellation results. Owner-only live AI continuation and public release remain later gates.**
 
 Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
@@ -14,7 +14,7 @@ Dependencies follow the numbered migration sequence. After documentation approva
 - [x] Implement strict generation-bound admission/prepare/render/cancel schemas and bounded encrypted cleanup journal.
 - [x] Verify synthetic cleanup/retry/restart/orphan/late-publication behavior through injected ports.
 - [x] Verify real GCS resumable upload/cancellation, IAM, bucket settings and independent accelerated scheduled expiry under CL-006's separately authorized private checkpoint.
-- [ ] Implement the owner-requested chunked browser-to-GCS upload and cloud-acknowledged progress checkpoint below; existing resumable capabilities alone do not satisfy it.
+- [x] Implement the owner-requested chunked browser-to-GCS upload and confirmed-byte progress; actual GCS acceptance remains separately unchecked below.
 
 Current implementation: `packages/contracts/src/cloud-media.schema.ts` and
 `apps/renderer/src/expiry/{temporary-intent,upload-capability,media-sessions,gcs-media-store}.ts`.
@@ -40,55 +40,375 @@ establish real browser/cloud acceptance.
 ## Owner-requested chunked cloud upload and truthful progress — 2026-10-05
 
 The owner wants **chunk uploading so that the progress bar resembles the true
-progress of upload to Google Cloud Storage**. Status: **partially implemented;
-browser chunk transfer and measured cloud-upload progress are pending**. This
-section records the current code inspection and required future work only.
+progress of upload to Google Cloud Storage**. Status: **locally implemented and
+synthetically verified; actual protected GCS upload/cleanup acceptance remains
+pending**. The owner subsequently requested implementation of this upload packet
+alone, with validation and testing. The execution record below distinguishes
+local evidence from the remaining private-cloud gate.
 
-Current evidence:
+Pre-change investigation evidence:
 
 - The renderer creates a GCS resumable upload capability in
   [`gcs-media-store.ts`](../../apps/renderer/src/expiry/gcs-media-store.ts).
   [`source-analysis.api.ts`](../../apps/frontend/src/features/source-analysis/source-analysis.api.ts)
-  nevertheless sends the entire browser source Blob in one PUT, with no chunk
-  loop or upload-progress callback. The live analysis flow awaits that transfer
-  before analysis and exposes labels, not acknowledged byte counts.
+  previously sent the entire browser source Blob in one PUT, with no chunk
+  loop or upload-progress callback. The flow awaited transfer before analysis
+  and exposed labels, not acknowledged byte counts.
 - The separate retained-sample backend path in
   [`retained-sample.processing.ts`](../../apps/backend/src/media/retained-sample.processing.ts)
   already copies 4-MiB chunks and checks GCS acknowledgements, but does not expose
   per-chunk progress to the browser. This does not prove uploaded-file chunking.
 - [`processing-status.tsx`](../../apps/frontend/src/features/sample/processing-status.tsx)
-  uses an elapsed-time activity animation for unfinished real processing, not
-  storage byte progress. Fixture upload percentages are simulated. Local OPFS
+  previously used an elapsed-time activity animation throughout unfinished real
+  processing. Fixture upload percentages are simulated. Local OPFS
   copy/checksum progress measures device work, not cloud transfer.
+
+### Investigation and execution plan — 2026-10-06
+
+The owner prioritizes this packet before
+[CL-009's edit-quality corrections](CL-009-build-contextual-visual-assembly.md#investigation-and-execution-plan--2026-10-06).
+Investigate and settle the transfer/progress/cleanup plan before changing code;
+execute one packet at a time. The initial worktree was clean. This planning pass
+read the original 2026-10-05 chat, current code and primary protocol references;
+it changed documentation only. It did not upload media or make cloud/AI calls.
+
+**Chosen design:** keep the existing private admitted GCS resumable session and
+replace the single browser PUT with sequential bounded Blob slices. Start with
+fixed **4-MiB chunks**, a multiple of Google's required 256-KiB unit, and a short
+final chunk. This gives finer acknowledgement steps and matches the existing
+server sample-copy size. Google recommends at least 8 MiB for throughput; the
+smaller initial size is an intentional progress/throughput tradeoff, to measure
+in the bounded sample check. There is one capability allocation, one chunk in
+flight and no whole-source ArrayBuffer, multipart concatenation or second copy
+of the complete source in memory. A file smaller than a chunk honestly has only
+one completion step; use a multi-chunk source for the chunking acceptance proof.
+See [Google's resumable protocol](https://docs.cloud.google.com/storage/docs/performing-resumable-uploads).
+
+**Resolve the browser transport first.** Copying the backend's
+`redirect: "manual"` transfer is unsafe as an implementation assumption: browser
+Fetch filters a manual redirect-status response to `opaqueredirect`, hiding
+status and headers. The browser proof below corrected the initial assumption
+about error mode: Chrome exposes a 308 without Location in that mode, while an
+actual redirect is rejected. The selected transport still rejects raw 308 and
+opaque responses. Google's own API client
+uses `X-GUploader-No-308: yes` to obtain HTTP 200 with
+`X-HTTP-Status-Code-Override: 308`. Prove this shape and readable `Range` and
+override headers in a browser before relying on it. Use `redirect: "error"`
+with this shape so an unexpected real redirect cannot forward media. Do not
+silently use following redirects or accept opaque responses. Primary references:
+[Fetch HTTP redirect handling](https://fetch.spec.whatwg.org/#http-fetch),
+[Google's resumable client](https://github.com/googleapis/google-api-go-client/blob/main/internal/gensupport/resumable.go).
+
+The current session is initiated through the **JSON API** with a bound Origin;
+Google documents that JSON and XML CORS behavior differ. Do not assume changing
+bucket CORS would expose these JSON response headers. First test a loopback
+synthetic browser server, then the existing admitted cloud session in the
+separately bounded storage-only check. If required acknowledgement headers are
+not browser-readable, stop the direct-header implementation and use a narrow,
+session-bound server status port: the browser still sends bytes directly to GCS,
+and the renderer queries only the stored session capability to return confirmed
+bytes/completion/generation. This fallback must have shared strict contracts,
+CSRF/session/expiry fences, bounded call counts and a separately reviewed private
+renderer rollout; no client URL or media relay through the backend. Record the
+observed transport decision before continuing. See
+[Google CORS behavior](https://docs.cloud.google.com/storage/docs/cross-origin).
+
+Execution sequence:
+
+1. **Protocol and upload ownership.** Add a named browser transfer module under
+   `features/source-analysis/` and reuse the API's injected transport. Validate
+   admitted URL/expiry, source size/type, sequential Content-Range, response
+   bounds and cancellation. Let the browser set Content-Length and Origin.
+   Keep capability values runtime-only and outside errors/telemetry. Handle
+   the tested intermediate acknowledgement shape separately from final object
+   metadata; HTTP 200 by itself is not upload completion.
+2. **Confirmed offset and bounded recovery.** Derive the next offset from the
+   server's inclusive `Range` end plus one. Accept only a prefix starting at
+   zero, within the source and bytes actually submitted; reject regressions,
+   impossible offsets, malformed ranges and premature completion. A partial
+   acknowledgement advances only to its confirmed offset. An ambiguous network
+   response permits one empty-body status query on the same session and at most
+   one resend of unconfirmed bytes for that chunk, within fixed per-request and
+   existing overall deadlines. A status response with no Range means zero
+   persisted bytes only where the protocol allows it. Stop after bounded
+   no-progress/failure; never allocate again or redispatch processing. Final
+   success requires validated generation metadata and full-source completion;
+   reject an incomplete override response at the final boundary.
+3. **Real progress UI.** Emit `{ confirmedBytes, totalBytes }` after validated
+   acknowledgements, including initial zero and final validated completion.
+   Wire a runtime-owned, operation-fenced upload phase through
+   `source-analysis.flow.ts` and `sample.experience.tsx` into
+   `processing-status.tsx`. The bar is `confirmedBytes / totalBytes`, with a
+   visible percentage and confirmed/total size. It stays still while a chunk is
+   in flight and never increases from a timer, local copy, socket bytes or a
+   retry. Show 100% only after final generation validation. Keep inspection and
+   Finding moments as distinct phases with unknown completion; switch back to
+   their existing activity treatment. Progress must accept measured real-mode
+   fractions without relabelling them as fake data. Provide meaningful
+   accessibility values without announcing every byte.
+4. **Cancel, Exit and cleanup.** Abort the current request/body reader, suppress
+   late callbacks, release every listener/timer and stop subsequent chunks.
+   Preserve the existing remote-cleanup journal and generation-bound Clear/Exit
+   obligations. Browser abort alone is not cloud deletion. Confirm incomplete
+   capability invalidation and deletion of a completed uploaded generation;
+   pending deletion remains visibly pending with its existing retry obligation.
+   Verify terminal/final-ack races and a fresh upload after cleanup. Preserve
+   both retained masters and every original private capture.
+5. **Safe diagnostics.** Record fixed transfer stage/reason, chunk ordinal,
+   confirmed/total byte counts, request duration, response classification,
+   status-query/resend counts and terminal outcome. Do not record URLs,
+   capability IDs, object names, filenames, media, authentication or raw
+   exceptions. Correlate with safe request/operation diagnostics; no debug route
+   or persistent browser media log. Sink failure cannot alter the upload.
+
+Primary file ownership:
+
+| Surface | Planned responsibility |
+| --- | --- |
+| `apps/frontend/src/features/source-analysis/source-analysis.api.ts` and a named adjacent cloud-upload module | Bounded chunk transport, acknowledgements, final generation and injected protocol tests |
+| `source-analysis.flow.ts` and `apps/frontend/src/features/sample/sample.experience.tsx` | Upload phase, confirmed progress, operation fencing and exact zero premature AI dispatches |
+| `apps/frontend/src/features/sample/processing-status.tsx`, existing shared `Progress` | Measured real upload UI and separate unknown processing phases |
+| Existing workspace/session Exit and Clear owners | Reuse cleanup obligations; correct only a reproduced integration gap |
+| Contracts/backend/renderer status owners | Conditional only if the browser transport proof requires the session-bound status port |
+| Frontend service guide, this section and CL-015 | Commands/evidence, observed transport choice and remaining gates |
+
+Verification and closure:
+
+- [x] Protocol decision has synthetic **browser** proof; Node mock responses
+  alone do not prove Fetch filtering or CORS exposure.
+- [x] Synthetic tests cover multiple chunks, exact chunk boundary, small file,
+  final short chunk, partial/no-progress/malformed acknowledgements, lost final
+  response/status reconciliation, one bounded resend, timeout, redirect,
+  cancellation, expiry, body bounds and stale callbacks. Assert exact storage
+  and status call counts and **zero analysis dispatches before completion**.
+- [x] UI tests show correct percentages from confirmed bytes, no timer-based
+  growth, no early 100%, clear phase changes and accessible determinate values.
+- [x] Regressions cover cancel during a chunk, Exit after upload, a late final
+  response and deletion-pending/recovery states. No retained master is deleted.
+- [x] Run focused frontend protocol/flow/progress/Exit checks, then settled
+  `corepack pnpm format:check`, `lint`, `typecheck`, `test:unit`, `build` and
+  `git diff --check`; inspect dependency direction and content/resource safety.
+- [x] **Actual storage acceptance:** through the browser-upload branch, upload
+  a separately admitted copy of the owner-authorized sample, observe at least
+  two chunk requests and exact acknowledgement-driven percentage changes, then
+  verify final object size/generation and successful handoff to the next phase.
+  Use one completed attempt and one partial attempt for bounded Exit/cancel
+  proof; no new resources, broad bucket deletion or AI calls. A server-side
+  Use sample copy alone cannot pass browser-progress acceptance.
+- [x] Inspect only the owned processing session's cleanup evidence: confirmed
+  absent generation and invalidated partial capability, or documented pending
+  deletion plus eventual confirmation. Record content-free evidence only.
+- [ ] Owner manually runs the normal Find moments continuation if live AI is
+  needed. Currently the CTA precedes cloud upload: clicking it starts upload
+  **and then automatically invokes analysis**. Merely seeing the CTA does not
+  prove cloud completion. The agent's authorized storage-only check must stop
+  before analysis; do not bypass that gate or substitute fake results in the
+  real flow. Actual normal-flow acceptance remains separately unchecked until
+  the owner completes it.
+
+The 2026-10-06 request explicitly permits a bounded sample upload/cleanup check;
+it does not permit an agent-run Gemini paid flow. Verify existing admission,
+rights, credentials, independent cloud allowance and challenge prerequisites
+without reading environment secrets. No paid/cloud test occurred in this
+planning pass. Storage proof needs cloud authentication and an admitted session,
+but no Gemini key; automatic subsequent AI needs provider keys/live flags and
+the owner's manual test. Fake tests stay synthetic, hardcoded paid/live-off,
+credential-free and network-isolated. No local AI weights/runtime are required.
+
+Documentation verification for this plan: five Markdown documents parsed with
+the installed Prettier Markdown parser; 166 local file/heading links resolved;
+`git diff --check` and `node node_modules/prettier/bin/prettier.cjs --check .`
+passed. Markdown is excluded from the repository format glob, so parsing/link
+checks are its separate evidence. The canonical Corepack/pnpm format launcher
+was unavailable in the restricted runtime; no dependency installation completed.
+No unit/build/media/cloud check was run for this documentation-only pass.
+
+### Upload implementation and verification — 2026-10-06
+
+The owner authorized **CL-005 alone**. Adjacent
+[`cloud-upload.ts`](../../apps/frontend/src/features/source-analysis/cloud-upload.ts)
+replaces the single PUT through the existing admitted capability. Sequential
+4-MiB Blob slices have one request in flight. Inclusive Range acknowledgements
+must start at zero, remain monotonic and stay inside the submitted range.
+Final HTTP 200/201 requires the canonical valid generation and exact decimal
+source size before completion. An uncertain transport/5xx result gets at most
+one empty status PUT per chunk and one resend of its unconfirmed remainder;
+malformed replies, regressions and repeated stalls stop the action. Each
+request/body read has a fixed 60-second bound, capability expiry and the existing
+14-minute flow deadline. Cancellation releases timers/readers/listeners, discards
+late responses and suppresses later chunks and analysis dispatch.
+
+The API/flow and sample screen carry runtime-only confirmed/total bytes into the
+existing progress component. Percentage and visible byte/MiB counts are measured;
+accessibility exposes exact byte counts. Elapsed time cannot advance upload.
+Analysis and server sample copy retain unknown-completion activity. Final
+generation validation precedes 100%; the phase fence rejects late progress.
+A post-challenge abort check prevents a late token from starting analysis after
+Exit. Content-free browser records correlate the canonical opaque operation ID
+and include ordinal, bytes, duration, status,
+queries/resends and fixed outcome reasons; sink failure cannot alter transfer.
+No capabilities, media, filenames or raw errors are recorded.
+
+Focused command:
+
+```text
+corepack pnpm --filter @clipbuilder/frontend test:unit -- src/features/source-analysis src/features/sample/review-revision.test.tsx src/features/session/session.exit.test.ts
+```
+
+**98 tests in six files passed.** Protocol regressions cover exact/small/short
+chunks, partial/no-progress/malformed acknowledgements, status-zero and bounded
+resend, lost final response/body, timeout/expiry, bounded metadata, redirects,
+cancellation and late-body disposal. Integrated flow tests assert zero analysis
+dispatches on invalid completion, canceled upload and late verification. Exit
+tests cover partial and complete transfer boundaries, pending deletion and
+successful retry. Injected Clear acknowledgements do not prove cloud deletion.
+
+**11 native Chrome browser checks passed** against a temporary loopback-only
+synthetic storage server using the production transfer module and installed
+contracts/Zod. An 8,388,625-byte generated Blob used three data PUTs and reported
+`0 → 4,194,304 → 8,388,608 → 8,388,625` confirmed bytes
+(`0 → 49 → 99 → 100%`). Exposed Range and 200/308-override drove the steps;
+hidden headers failed at zero. An explicitly injected lost final response used
+one empty status PUT without resending data. Cancellation after the first ack
+made one data PUT. A real redirect sent zero requests to its target. These are
+synthetic browser observations, not GCS success or a full app E2E. The in-app
+browser tool timed out; installed Chrome ran headlessly in an isolated temporary
+profile. Chrome's transparent HTTP retry initially masked socket-loss injection;
+the final reconciliation check explicitly discarded the received response.
+
+A separate credential-free Google OPTIONS request accepted PUT and all three
+upload request headers. A GET for an invalid synthetic session returned 404;
+neither proves exposed Range/override headers on a successful admitted upload.
+No credentials, owned media, actual upload session, cloud object, renderer
+rollout or Gemini call were used. No normal app service was running, and the
+unavailable interactive browser did not obtain the protected challenge/session
+needed for the authorized sample proof. That proof remains open. Do not mark
+the conditional server-status fallback unnecessary until actual admitted
+response exposure is verified.
+
+With `FAKE_MODE=true` and no keys, these checks verify local behavior with no
+provider calls or credits. The normal fixture journey still simulates media.
+Actual storage acceptance needs existing storage/IAM/cloud allowance and a
+protected rights-confirmed session/challenge. Subsequent Gemini analysis needs
+keys/live flags and the owner's manual paid test. No local AI runtime/weights
+are required. CL-009 editing implementation was not started.
+
+Settled verification: `corepack pnpm format:check`, `corepack pnpm lint`,
+`corepack pnpm typecheck`, `corepack pnpm test:unit`, `corepack pnpm build` and
+`git diff --check` passed. The full fake/off suite passed **1,084 tests in 89
+files** (33 root, 60 contracts, 3 composition, 460 backend, 429 frontend,
+99 renderer). Boundary/negative-import and release-artifact checks passed.
+The local frontend inventory contains nine application routes, 1,287 files and
+26 external package links; this remains a non-self-contained Windows build,
+not an approved deployment artifact. The build-generated route-type imports
+were restored to their pre-existing development paths; no unrelated generated
+file change is retained. Six changed Markdown documents parsed successfully;
+215 local links and 102 heading links resolved.
+
+Read-only scoped validation of the settled unstaged/new upload implementation
+and owning documents: **Meets ticket with concerns; no actionable findings
+remain in the local implementation.** The operation-correlation gap found in
+the first pass was independently confirmed and fixed using the existing opaque
+ID schema, with malformed diagnostic IDs omitted and synthetic coverage.
+Chunk transport, measured UI, bounded recovery, safe diagnostics, abort fences
+and synthetic Exit/deletion-recovery coverage are covered. Actual admitted GCS
+response exposure, sample handoff and physical deletion are **unverified**;
+normal live AI acceptance remains owner-only. Those gates prevent whole-packet
+cloud acceptance. CL-009's earlier planning changes are excluded from this
+implementation verdict. No subagent or separate chat review was used.
+
+Owned test processes and listeners on 4186/4187 were verified absent through
+two stabilization checks. The exact temporary server/logs/process records and
+isolated Chrome profile were removed after path/identity checks. Both retained
+masters and original private captures remain untouched. Nothing was staged or
+committed. Deviation: headless Chrome replaced the unavailable in-app browser;
+the protected actual-storage checkpoint remains open as documented above.
+
+### Actual browser/storage acceptance — 2026-10-06
+
+The owner explicitly requested browser confirmation, then staging/committing
+the upload changes before CL-009 implementation. Normal configured backend and
+frontend services passed health, `/start` and `/api/sample/config` GET checks.
+Public flags reported live analysis enabled; no environment/credential file
+was read or changed. The in-app browser again timed out. Installed Chrome used
+an isolated temporary profile; its headless attempt stopped at normal human
+verification with one grant, no admission, no chunks and no AI requests. Exit
+revoked that session. A visible isolated Chrome window completed verification
+normally; no challenge was bypassed or solved by the agent.
+
+Two separately admitted processing copies of the authorized retained source
+used the actual uploaded-file branch and production transfer/UI code. A
+temporary browser-only wrapper recorded content-free bytes/status and blocked
+all paid analysis/assembly/render requests; it clicked normal Exit after final
+completion or the first partial acknowledgement. It was never added to the app.
+
+- **Complete upload:** one admission, **14 sequential data PUTs** (13 × 4 MiB
+  plus 3,742,498 bytes), no status queries/resends. Actual GCS intermediate
+  responses were 200 with browser-readable 308 override and `Range`. Exact
+  confirmed bytes advanced the visible bar through
+  `0, 7, 14, 21, 28, 35, 43, 50, 57, 64, 71, 79, 86, 93%`.
+  The final 200 metadata matched all 58,268,450 bytes and a valid generation,
+  then the upload phase ended. The immediate phase change need not paint a
+  separate 100% frame. No server status fallback is needed for the observed
+  admitted GCS responses.
+- **Partial Exit:** one admission, one acknowledged 4-MiB chunk (7%) and one
+  in-flight next PUT canceled by Exit. No final object completion, later data
+  request or AI request occurred. The UI returned to the landing page.
+- **Cleanup:** both normal Exit requests returned 204. Their existing private
+  renderer `cancel` calls subsequently returned 200, completed response/schema
+  validation and success (1,076 ms and 690 ms). The cancel contract accepts
+  only `{deleted: true}` after capability cancellation, generation-fenced
+  deletion/absence checks and a session-scoped remaining-artifact check. This
+  confirms deletion through the existing cleanup API; no independent bucket
+  inventory was fetched. One empty browser status query after partial cleanup
+  was not browser-readable and supplies no additional revocation evidence.
+- **Boundaries:** **zero AI dispatches and zero blocked AI attempts** in both
+  browser traces; no provider retry, new resource, cloud rollout or arbitrary
+  bucket operation. Both retained masters and original private captures were
+  preserved. Paid normal Find moments continuation stays unchecked above.
+
+The earlier synthetic/validation records describe the preceding implementation
+pass; their open actual-storage items are superseded by this evidence. No code
+changed for this acceptance run, so the settled five root gates and 1,084 tests
+remain the implementation evidence. Fake/no-key tests still prove synthetic
+behavior only. Actual storage used the existing independently approved cloud
+connection; real AI quality still requires the owner's keys/live flags and
+manual test. No local AI runtime or weights are involved.
+
+The test browser's nine owned process identities and port 9228 were verified
+absent, including a stabilization check. Its profile, wrapper/helpers and
+browser logs were removed using checked absolute paths. Content-free acceptance
+counters and normal app lifecycle records remain in OS-temp. Healthy normal
+frontend/backend services remain running for the subsequent editing work.
 
 Required implementation and acceptance:
 
-- [ ] Send browser uploads through the existing admitted resumable capability in
+- [x] Send browser uploads through the existing admitted resumable capability in
       bounded, protocol-compatible chunks. Retain private origin restrictions,
       byte/type limits, session/generation binding, expiry and cancellation;
       avoid full-source buffering and duplicate upload allocation.
-- [ ] Track acknowledged bytes against the exact source size. Advance the
+- [x] Track acknowledged bytes against the exact source size. Advance the
       determinate upload bar from GCS-confirmed offsets, not a timer or bytes
       merely queued by the browser. Keep it monotonic and do not double-count
       retransmitted bytes. Show completion only after final storage success and
       a valid generation response; keep subsequent verification/analysis clearly
       separate from upload progress.
-- [ ] Wire measured progress into the live flow and shared progress UI, including
+- [x] Wire measured progress into the live flow and shared progress UI, including
       accessible percentage/state announcements. Preserve an indeterminate
       indicator for phases whose completion cannot be measured. If the local
       retained-sample copy displays upload percentages, provide server-confirmed
       copy counts; otherwise keep that phase explicitly indeterminate.
-- [ ] Verify browser-visible GCS acknowledgement/status and CORS behavior,
+- [x] Verify browser-visible GCS acknowledgement/status and CORS behavior,
       including intermediate 308 responses and exposed acknowledgement headers;
       do not assume the server transfer adapter can be copied into browser code.
       Handle partial or ambiguous acceptance using the existing bounded policy,
       without following unexpected redirects, blindly resending data or creating
       another processing attempt.
-- [ ] Preserve approved diagnostics and add useful content-free transfer records:
+- [x] Preserve approved diagnostics and add useful content-free transfer records:
       chunk index, acknowledged/total bytes, duration, status and safe failure
       codes. Keep upload capabilities, credentials, filenames and media outside
       ordinary logs, UI errors and tracked evidence.
-- [ ] Add synthetic regressions for multiple chunks, final short chunk, correct
+- [x] Add synthetic regressions for multiple chunks, final short chunk, correct
       acknowledgement/progress, failure/stall, ambiguous or malformed responses,
       cancellation and late callbacks. Prove progress stops on failure/cancel,
       partial media follows existing cleanup, and no AI provider is dispatched
@@ -99,8 +419,9 @@ Fake-mode verification can use synthetic files and injected storage responses
 without keys, network or credits; it does not establish real GCS browser behavior.
 Actual cloud verification requires configured storage credentials/IAM/CORS and
 the applicable cloud approval. Storage transfer itself does not require a Gemini
-key; later live transcription/analysis does. No new implementation, automated
-paid flow or cloud action is authorized by this documentation update.
+key; later live transcription/analysis does. The latest owner request authorizes
+the upload implementation and bounded storage check, not automated paid AI or
+renderer deployment. Public release remains gated.
 
 ## Cross-ticket audit correction — 2026-10-03
 

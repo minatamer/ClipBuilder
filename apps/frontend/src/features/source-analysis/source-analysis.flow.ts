@@ -6,6 +6,7 @@ import type { BrowserWorkspace } from "../media/browser.workspace";
 import type { ClippingSessionEvent } from "../session/session.types";
 import { SampleApiFailure, sampleFailure } from "../sample/sample.api";
 import type { SourceAnalysisApi } from "./source-analysis.api";
+import type { CloudUploadProgress } from "./cloud-upload";
 
 export async function runSourceAnalysis(input: {
   workspace: Pick<
@@ -24,6 +25,7 @@ export async function runSourceAnalysis(input: {
   signal: AbortSignal;
   event(event: ClippingSessionEvent): void;
   label(value: string): void;
+  uploadProgress?(value: CloudUploadProgress | null): void;
 }) {
   const { workspace, api } = input,
     source = workspace.snapshot?.source,
@@ -58,6 +60,7 @@ export async function runSourceAnalysis(input: {
   };
   let started = false;
   let cleanupRequired = false;
+  let uploadActive = false;
   try {
     signal.throwIfAborted();
     await workspace.markCloudAnalysis("pending", false);
@@ -98,17 +101,27 @@ export async function runSourceAnalysis(input: {
         },
         signal,
       );
+      uploadActive = true;
       generation = await api.transfer(
-        admitted.uploadUrl,
+        admitted,
         file.slice(0, file.size, "video/mp4"),
         signal,
+        (value) => {
+          if (uploadActive && !signal.aborted) input.uploadProgress?.(value);
+        },
+        operationId,
       );
+      uploadActive = false;
+      signal.throwIfAborted();
+      input.uploadProgress?.(null);
     }
+    signal.throwIfAborted();
     const token = await input.challenge(
       grant.sessionId,
       "candidate-analysis",
       signal,
     );
+    signal.throwIfAborted();
     input.label("Reading your video and finding moments");
     const result = await api.analyze(generation, token, signal);
     signal.throwIfAborted();
@@ -161,8 +174,10 @@ export async function runSourceAnalysis(input: {
       });
     }
   } finally {
+    uploadActive = false;
     clearTimeout(timer);
     input.signal.removeEventListener("abort", abort);
+    if (!input.signal.aborted) input.uploadProgress?.(null);
   }
 }
 

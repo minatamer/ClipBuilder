@@ -4,6 +4,18 @@
 
 Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 721 synthetic tests in 70 files pass, including the CL-016 MP4-only and sample-streaming follow-ups. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**
 
+### Owner chunked upload acceptance — 2026-10-06
+
+Prioritize [CL-005 chunked upload and confirmed cloud progress](tickets/CL-005-implement-secure-upload-and-storage.md#investigation-and-execution-plan--2026-10-06).
+Cloud upload percentages come from persisted chunk acknowledgements, with final
+generation validation before 100%; local copy and unknown AI work are separate.
+The owner permits a bounded sample upload/cancel/Exit cleanup check; normal live
+AI processing tests remain owner-run with their existing keys/flags/approvals.
+The [CL-005 execution record](tickets/CL-005-implement-secure-upload-and-storage.md#actual-browserstorage-acceptance--2026-10-06)
+covers implemented chunk progress, synthetic verification and two protected
+actual browser/GCS upload/Exit checks with validated cleanup results. Normal
+paid continuation remains owner-only.
+
 ### Owner audio transcription and text-only selection decision — 2026-10-05
 
 Owner selected assembly request/diagnostics follow-up (2026-10-05): use JSON-only

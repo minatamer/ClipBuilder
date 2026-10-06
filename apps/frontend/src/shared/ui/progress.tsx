@@ -5,11 +5,13 @@ export function Progress({
   fraction,
   activityFraction,
   active = true,
+  valueText,
 }: {
   label: string;
   fraction?: number;
   activityFraction?: number;
   active?: boolean;
+  valueText?: string;
 }) {
   const value =
     fraction === undefined || !Number.isFinite(fraction)
@@ -38,6 +40,7 @@ export function Progress({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percentage}
+        aria-valuetext={value === undefined ? undefined : valueText}
         data-determinate={value !== undefined}
         data-activity={value === undefined && activity !== undefined}
       >

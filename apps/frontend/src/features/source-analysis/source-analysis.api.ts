@@ -21,8 +21,14 @@ import {
   type RetainedSampleAnalysisRequest,
   analysisBundleSchema,
   sampleReplayRequestSchema,
+  type OperationId,
 } from "@clipbuilder/contracts";
 import { SampleApiFailure, sampleFailure } from "../sample/sample.api";
+import {
+  transferCloudUpload,
+  type CloudUploadAdmission,
+  type CloudUploadProgress,
+} from "./cloud-upload";
 
 export function createSourceAnalysisApi(
   transport: typeof fetch = (...args) => fetch(...args),
@@ -178,37 +184,28 @@ export function createSourceAnalysisApi(
         retainedSampleAnalysisResponseSchema,
         signal,
       ),
-    async transfer(url: string, file: Blob, signal: AbortSignal) {
-      mediaUploadResponseSchema.parse({ uploadUrl: url, expiresAtMs: 1 });
-      const response = await transport(url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-        credentials: "omit",
-        signal,
-        redirect: "error",
-      });
-      if (!response.ok || !response.body)
-        throw new SampleApiFailure(sampleFailure());
-      const reader = response.body.getReader();
-      let size = 0;
-      const chunks: ArrayBuffer[] = [];
+    async transfer(
+      admitted: CloudUploadAdmission,
+      file: Blob,
+      signal: AbortSignal,
+      progress?: (value: CloudUploadProgress) => void,
+      operationId?: OperationId,
+    ) {
       try {
-        for (;;) {
-          const chunk = await reader.read();
-          if (chunk.done) break;
-          size += chunk.value.byteLength;
-          if (size > 8192) throw new Error();
-          chunks.push(new Uint8Array(chunk.value).buffer);
-        }
-        return z
-          .object({ generation: sourceAnalysisRequestSchema.shape.generation })
-          .parse(JSON.parse(await new Blob(chunks).text())).generation;
+        return await transferCloudUpload({
+          admitted,
+          file,
+          signal,
+          transport,
+          ...(progress ? { progress } : {}),
+          ...(operationId ? { operationId } : {}),
+          diagnostic: (value) => {
+            // eslint-disable-next-line no-console -- Bounded content-free transfer records.
+            console.info("cloud-upload", value);
+          },
+        });
       } catch {
         throw new SampleApiFailure(sampleFailure());
-      } finally {
-        await reader.cancel();
-        reader.releaseLock();
       }
     },
     analyze: (
