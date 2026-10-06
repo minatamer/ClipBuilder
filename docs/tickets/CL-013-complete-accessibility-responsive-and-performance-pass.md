@@ -559,6 +559,439 @@ change would need a separate explicit source-of-truth decision and ticket.
 - [ ] Owner signs off the final film and landing placement; every unfinished
   capture, rights, render, accessibility or integration gate remains unchecked.
 
+### Research and proposed production plan — 2026-10-06
+
+Status: research and documentation only. The owner requested a cinematic
+walkthrough of the app from different angles, checked the newly installed
+Remotion plugin, and asked whether fake mode and generic people footage are
+enough. This addendum records findings and a proposed experiment; it does not
+mark the capture baseline, storyboard, film, rights or landing integration
+approved. The finalized-UI and production gates above still apply.
+
+#### Evidence from official documentation and community reports
+
+- Remotion's [official Codex plugin guide](https://www.remotion.dev/docs/ai/codex-plugin)
+  confirms that the desktop plugin supplies project creation and agent skills.
+  The local plugin is installed and its twelve skills are available to this
+  chat at version 4.0.530. The repository already pins Remotion 4.0.532; the
+  plugin's guidance version is not a replacement for those package versions.
+  Installation was checked, but no promotional composition or render was run.
+- The [official AI workflow](https://www.remotion.dev/docs/ai) supports coding
+  agents authoring Remotion code. It does not establish that the plugin alone
+  creates photorealistic moving people. Keep the owner-designated gpt-6.1-sol
+  authoring choice. The sources reviewed are examples across different models
+  and environments, not a controlled GPT-6.1 Sol/Windows quality comparison.
+- A [March 2026 Codex product-launch report](https://www.reddit.com/r/codex/comments/1rmuty1/made_a_simple_product_launch_video_in_just_a_few/)
+  explicitly separates the creator's screen recordings from the phone mockup
+  authored by Codex. This supports supplying accurate source assets rather
+  than expecting the model to infer the application and its moving media.
+- A [February 2026 Codex editing report](https://www.reddit.com/r/codex/comments/1r06baw/i_edited_this_video_100_with_codex_part_2/)
+  describes a rough storyboard, iterative previews and review of selected
+  rendered frames. Its person-cutout effects also depended on separate
+  segmentation/matting tools. Those tools are not prerequisites for this UI
+  film and have not been installed or verified here.
+- A [July 2026 launch-video creator's report](https://www.reddit.com/r/SaaS/comments/1uw6qop/i_built_my_apps_launch_video_entirely_in_code/)
+  recommends studying reference pacing and concrete motion beats after finding
+  unconstrained prompts produced generic results. This is a creator's opinion,
+  not a benchmark or permission to copy another film's assets.
+- Remotion's creator-attributed social showcase includes a
+  [product demo](https://www.remotion.dev/prompts/product-demo-for-presscut)
+  and a [launch video on X](https://www.remotion.dev/prompts/launch-video-on-x).
+  Their published prompts illustrate specifying scenes, duration, frame rate,
+  brand treatment and interactions. These pages were read as reference briefs;
+  they do not prove the quality of our proposed film or its Windows render.
+
+Recommendation inferred from these sources: an explicit shot list, approved
+UI assets, an editable frame-driven composition and repeated visual review are
+the useful setup. Avoid adopting public templates or extra plugins solely from
+showcase claims. No third-party kit was installed, copied or licensed during
+this research.
+
+#### Fake mode, real playback and result evidence
+
+The promotional composition's timing and camera motion are independent of
+ClipBuilder's FAKE_MODE. Live processing is not needed to author cursor travel,
+titles, zooms, angled screens, transitions or a storyboard.
+
+| Capability | Current fake mode, no keys | Real local intake with paid processing disabled | Full actual product processing |
+| --- | --- | --- | --- |
+| Select source | Checks declared size/type; selected file bytes are not read. | Local inspection and native source playback are implemented. | Uses the protected source/session flow. |
+| Analysis and choices | Scripted stages; three synthetic 58-second candidates by default. | Analysis is unavailable rather than substituted with fixtures. | Requires provider keys, enabled live capabilities and applicable approvals. |
+| Build and review | Scripted assembly, a playback clock, captions/highlights and a video placeholder; no actual people or audio. | Does not supply an assembled result. | Requires real assembly/provider and private media prerequisites. |
+| Render and download | Scripted render states; no MP4, and Download MP4 is disabled. | Export is unavailable. | Requires actual private render/output evidence and independent cloud/spend approval. |
+
+Implementation evidence: [fake intake](../../apps/frontend/src/features/sample/development.input.ts),
+[source preview](../../apps/frontend/src/features/sample/source-preview.tsx),
+[scripted session](../../apps/backend/src/demo/sampleSession.ts),
+[default conversation fixture](../../apps/backend/src/demo/conversationSample.ts),
+[review/download](../../apps/frontend/src/features/sample/clip.review.tsx),
+and the [local-intake guide](../../apps/frontend/README.md).
+
+Existing injected test fixtures cover other candidate counts, empty results
+and failures. There is no general scenario picker in the normal fake interface.
+Additional film beats can be staged in the authoring composition without
+expanding the application into an editor or changing its processing transport.
+Fake progress is illustrative pacing, not a measurement of provider latency.
+Saved retained-sample analysis replay is a separate gated local real-mode
+capability; it is not required to animate the film and does not authorize a new
+paid build. No private replay data was inspected for this research.
+
+API-free local playback does not perform AI analysis. No local AI model, weights
+or runtime are used or verified here. Real AI and private media compute retain
+their separate provider/live/rights/data/spend/cloud requirements, and paid-flow
+testing remains owner-only.
+
+#### Proposed visual setup and asset handoff
+
+Use the existing brand typography, blue lighting and surfaces. Compose straight
+UI captures as screen planes, add depth and controlled perspective, and return
+to front-facing holds whenever choices, captions or results must be read.
+The cursor and titles should be independent replaceable layers. Start with
+frame-driven React transforms; assess actual Three.js camera work only if the
+short test needs it. Remotion documents [Three.js integration and video textures](https://www.remotion.dev/docs/three).
+Browser preview, headless rendering, GPU behavior and local media decoding must
+be checked on this Windows machine before claiming the authoring runtime works.
+
+The capture package should contain the finalized intake, preparation, analysis,
+choices, selected state, build, read-only review, render confirmation/progress
+and result states. Use consistent desktop dimensions plus a phone reference,
+state labels, click coordinates and selected-candidate continuity. Captures
+should be straight-on: the composition supplies the cinematic angles. Codex
+can collect approved sanitized captures from the accessible app; manual owner
+uploads of every screenshot are not inherently necessary.
+
+Screenshots supply exact interface geometry and text, but not moving playback.
+Use approved screen recordings where the actual interaction or playback needs
+to be visible, and keep moving media separately replaceable. Store captures,
+filled prompts and exports outside Git. Preserve development disclosures and
+the existing privacy restrictions; no private retained-source content is a
+capture asset by default.
+
+| People/result option | What it enables | What remains necessary |
+| --- | --- | --- |
+| Owned/licensed generic conversation footage | Actual moving people, suitable for placing into screen and vertical-result planes; no retained sample is needed. | An approved asset and usage rights; a staged edit must remain identified as illustrative. |
+| Stylized drawn or 3D people | Authored character movement and a fully synthetic visual test. | Character assets/rigging and visual review; this is not proof of speaking-face processing. |
+| Generated still person | A still portrait with camera moves or layered motion. | Image approval; pan/zoom does not create natural talking or body movement. |
+| Newly generated photorealistic video | Potential natural-looking fictional people in motion. | A separately selected video model/service, verified access and cost/rights approval. The Remotion plugin alone is insufficient; no such model was run. |
+
+Remotion's [video component](https://www.remotion.dev/docs/media/video) can use
+prepared footage, trim it and control its timing and presentation. Generic
+footage is therefore a practical draft option. For a genuine ClipBuilder
+result reveal, use an approved existing output from that same source and
+selected moment. An illustrative composition is not evidence that ClipBuilder
+produced it. No fresh paid run is needed solely to create film references.
+
+#### Proposed experiment and full-film sequence
+
+First establish the approved sanitized UI baseline and a short shot brief.
+Then author a 6-10 second local style test: an angled workspace settles into a
+readable candidate view, the cursor selects one moment, and the vertical result
+gets a deliberate reveal. Use a clearly identified illustrative media layer
+until an approved genuine result exists. Review still frames and moving playback
+for sharp UI text, perspective, click alignment, continuity and pacing. Render
+locally to prove the Windows workflow; do not route this promotional test through
+the product's paid/private renderer. This experiment is proposed, not performed.
+
+After the style test, build the animatic around the existing nine-beat storyboard
+above. A working timing proposal is approximately 52 seconds, adjustable within
+the existing 40-60 second brief:
+
+| Time | Planned shot |
+| --- | --- |
+| 0-3s | Product identity and a clean workspace reveal. |
+| 3-8s | Cursor-led import and local preparation. |
+| 8-14s | Analysis stages, with a controlled push toward the useful information. |
+| 14-21s | Choices, a reading hold and exactly-one selection. |
+| 21-28s | Automatic build: speaker framing, fixed captions and contextual visuals. |
+| 28-35s | Read-only review, then the actual render confirmation. |
+| 35-44s | Result reveal and download, using truthful approved output evidence. |
+| 44-49s | Clearly separate illustrative external sharing, subject to existing platform/brand approval. |
+| 49-52s | Return to ClipBuilder identity and an approved invitation. |
+
+Provisional authoring target: a 1920x1080, 30fps landscape master, with smaller
+local draft previews, a web rendition and static poster. Confirm the hero frame,
+phone legibility, codec/file-size budget and playback behavior before final
+export. Begin with a silent readable edit; add music or sound only with approved
+rights. Review the animatic before polishing every shot, then verify frame
+samples plus full playback, A/V timing if present, responsive landing framing,
+controls, loading/failure behavior and measured landing performance. Preserve
+the latest owner app-motion decision when resolving integration behavior.
+
+#### Verification and outstanding evidence
+
+The research ran these existing focused checks under the shared fake/no-key,
+paid-off environment and external-network interception:
+
+```text
+corepack pnpm --filter @clipbuilder/backend test:unit src/demo/sampleSession.test.ts src/demo/fakeFixtures.test.ts
+corepack pnpm --filter @clipbuilder/frontend test:unit src/features/sample/source-preview.test.tsx src/features/sample/development.progress.test.tsx src/features/sample/sample.test.tsx
+```
+
+Results: backend 27 tests in two files, frontend 29 tests in three files;
+56 tests passed. These establish synthetic behavior, not actual AI/media quality.
+
+The owner's subsequent backend-only restart used corepack pnpm dev:backend
+after corepack pnpm build:contracts. Ten prior owned process identities were
+captured, and port 4000 was released. A later precision-preserving identity audit
+caught two old shell/console processes missed by the initial timestamp conversion;
+they were removed, and all ten old identities were absent through two final
+stabilization checks. A Windows file-URL correction was also needed for the
+temporary log supervisor; the failed launcher left no process/listener before
+retry. The replacement's
+owned listener and GET /v1/health returned 200; the existing frontend /start and
+/api/sample/config also returned 200. Public capability metadata reported fake
+mode, local media disabled and live analysis/assembly/render disabled. The
+existing frontend was preserved. Content-safe logs and PID creation identities
+are recorded in OS-temporary runtime storage. No environment file was inspected
+or edited, no processing request was sent, and no film code or media was created.
+
+Still unchecked: final UI/capture baseline, footage/result/music/font/brand
+rights, approved title and social ending, storyboard/animatic approval, local
+Remotion preview/render proof, actual people/output assets, final format/weight
+budget, owner film approval and landing integration/performance/device evidence.
+The restart proves local reachability only. Existing provider/cloud/paid/release
+gates remain unchanged; no Git staging, commit or deployment occurred.
+
+### Local motion authoring and owner iteration — 2026-10-06
+
+The owner's subsequent **implement it** instruction authorized a concrete local
+animatic. This moves beyond the research-only status above without treating
+the earlier UI capture, rights, final film or release gates as approved. The
+implementation initially used `/motion-preview` for review. The latest owner
+instruction explicitly places the film in the actual landing hero at `/` and
+removes that temporary route. The duplicate page wrapper and old placeholder
+markup/styles were removed. This approves local landing integration, while final
+media delivery, rights and public-release evidence remain separate. No separate chat
+or agent was dispatched. The requested model preference remains
+`gpt-6.1-sol`; this record does not independently attest the chat's model setting.
+
+The editable frontend authoring source is `src/features/product-film/`:
+
+- A 50-second landscape walkthrough and a separate eight-second Studio motion
+  test, both 1920×1080 at 30fps. Pacing/capture references, camera keyframes,
+  original vector speakers, frame-driven scenes and the browser preview are
+  separate modules. The fixed caption/card layers come from the existing
+  shared composition package; production backend/renderer behavior is unchanged.
+- Ten sanitized 1440×1000 captures from the actual fake-mode workflow, with a
+  state/cursor coordinate index. They remain in ignored
+  `apps/frontend/public/generated/product-film/`, outside Git. The reproducible
+  `film:capture` command verifies fake capability metadata before selecting the
+  synthetic sample and Moment 1. It preserves disabled Download and exits its
+  own isolated session. No source bytes, private sample/capture/replay cache,
+  provider key, paid dispatch or actual processed MP4 was used.
+- Original animated illustrations demonstrate mouth/gesture/blink motion,
+  speaker-aware camera framing, fixed captions and a contextual card. They are
+  illustrative artwork; actual processing and final-result acceptance remain
+  separate. The master preserves simulated UI placeholders and disabled download.
+  The sharing vignette explicitly occurs outside ClipBuilder and performs no
+  publishing action. Audio, music, generated voices and external logos are absent.
+- The owner preferred the 52-second version, requested stronger cinematic
+  angles/close-ups, then removed the film's draft HUD, slide markers, duration
+  picker and production notes below it. A later owner correction requires one
+  stable analysis angle during seconds 9–13. The owner then rejected the static
+  hold: the final revision keeps that angle while continuously pushing in, with
+  a moving glass reflection, through the analysis shot. A regression checks
+  uninterrupted movement and a constant angle after its entrance. The next
+  owner correction shortened this beat by two seconds: analysis now occupies
+  seconds 8–12 and the full cut lasts 50 seconds. The briefly
+  requested rounded landing-graphic border and contextual header/footer were
+  removed again at the owner's next checkpoint.
+  The latest direction rounds only the video's own clipped edges to match the
+  site, with no border, frame, padding or extra metadata.
+  A laptop-layout trial centered a larger headline above the film
+  and moves the description below it. One semantic tree uses responsive grid
+  areas; phones keep the compact heading/description/video arrangement. Film
+  fills the space left after naturally sized headline and description rows
+  inside a viewport-height hero. Responsive type, gaps and padding preserve
+  space for the sticky header and keep the whole laptop hero visible at once,
+  at 16:9. It has no fixed laptop pixel dimensions or JavaScript resize authority.
+  The owner then briefly removed the duplicate hero ClipBuilder/logo row, reallocating
+  that space to the larger responsive headline and a meaningful gap before the
+  video. The navigation brand remains. The proposed three-column trial was
+  cancelled before implementation. The latest owner instruction restores the
+  original two-column hero, including the brand/headline/description on the left
+  and rounded film on the right. Original responsive type, gaps and breakpoints
+  were restored; the single-column trial and hero-brand removal are superseded.
+  A subsequent phone correction removes the full-screen hero minimum height and
+  expanding grid row, allowing the copy and video to flow at natural heights.
+  The copy-to-player gap and following process padding now scale with width;
+  this removes the stretched blank areas while preserving laptop layout.
+  The next wide-laptop refinement expands the hero beyond the original 80rem
+  content cap, adds a fluid horizontal gap and uses equal flexible columns.
+  Container-aware headline sizing keeps the longest rotating treatment inside
+  its copy column while both text and player can grow. This rule follows the
+  short-viewport rule so that compact-height spacing cannot collapse the wide
+  column gap. Compact laptop and phone breakpoints remain separate.
+  The owner then identified 1366px as a compact laptop: the expansion threshold
+  moved from 1280px to 1536px, restoring original horizontal density below it.
+  The next local hero trial reserves a compact bottom row for the owner's
+  proposed five-step flow, moving the two-column content closer to the navbar.
+  Original vector icons, a sequential glow and traveling connector light depict
+  upload → grounded moments → one choice → captions/visuals → share-ready cut.
+  A semantic list stays readable without JavaScript; phone layout is a compact
+  vertical sequence. Decorative motion pauses offscreen/when hidden, and its
+  observer/listener are removed on teardown. No workflow or publishing capability
+  was added; final visual acceptance remains open.
+- The preview lazily loads its Player/composition only near the viewport, checks
+  capture availability through bounded abortable HEAD requests, plays silently,
+  pauses offscreen/when hidden, preserves an intentional pause and removes its
+  observers/listeners/requests on teardown. Missing/blocked assets retain a
+  readable fallback and the normal product navigation. The removed frame's
+  metadata, Player event listener and styles were deleted together.
+  The owner reported a mismatched loading frame and focused pause button during
+  refresh. The new poster is the actual illustrated opening at frame 25,
+  reproduced by `film:poster` without an MP4 export. Player import no longer waits
+  for ten HEAD checks; validation continues in parallel and retains its bounded
+  failure fallback. Installed Player source showed its Space shortcut explicitly
+  focuses the play button on every playing-state change. That shortcut is disabled;
+  native focused-button Space activation remains, and controls are initially
+  hidden but appear on hover, pause or keyboard focus. A restored `pageshow`
+  remounts the film for a fresh visit, with its listener removed on teardown.
+  The latest owner revision then removes all player controls, fullscreen and
+  click-to-pause interaction. The film is a silent, looping hero animation;
+  visibility/offscreen changes pause and resume it. This supersedes the
+  control/intentional-pause observations above and leaves formal accessible-motion
+  acceptance open under the existing owner exception.
+  The owner subsequently accepted the design and requested code cleanup.
+  Cleanup unifies the three identical error fallbacks, replaces the unused
+  pending/ready asset state with a failure flag, removes control/pause-tracking
+  leftovers, and formats the settled source. Browser QA exposed a 1280×600
+  overflow of the bottom flow; a height-limited compact row corrects that case
+  while preserving the accepted regular-height layout.
+  The loading still was reduced from 1,644,179-byte PNG to a 36,637-byte
+  960×540 JPEG of the same opening frame. The poster command reads the shared
+  frame/path constants, requires a provided existing browser, and exports one
+  local still only. Capture failure now aborts all outstanding HEAD requests
+  immediately, preserving the eight-second upper bound after a partial failure.
+
+Matching `@remotion/cli` and authoring-only `@remotion/renderer` 4.0.532 dependencies
+were added; existing Remotion/React/app-contract versions were preserved. The
+installed Remotion license supports individual use/evaluation. Studio warns
+about the existing Zod 4.6.5 versus its optional integration's 4.5.4 expectation;
+this composition has no Zod integration and its types/preview/still rendering
+work without changing the app's contracts. The initially missing CLI was a real
+local preview prerequisite, rather than a new production service.
+
+Fake/no-key authoring and fixture UI are implemented and locally verified. This
+does not verify live AI quality or a genuine final clip. Actual AI/output needs
+real provider keys, live flags and the applicable rights/data/spend/cloud gates;
+the owner alone performs paid-flow testing. No local AI model/weights or native
+photorealistic video-generation pipeline was introduced. Strict release artifact
+verification rejects the local capture directory; local-build verification
+explicitly permits it. Both artifact modes reject the removed draft route. The
+new synthetic rejection tests preserve this release boundary.
+
+Settled verification and delivery evidence:
+
+- `corepack pnpm install --frozen-lockfile`, `corepack pnpm format:check`,
+  `corepack pnpm lint`, `corepack pnpm typecheck`, `corepack pnpm test:unit`
+  and `corepack pnpm build` passed. Unit coverage is **1,203 synthetic tests in
+  96 files**, including uninterrupted analysis camera movement, the readable
+  candidate click framing and both release-boundary regressions. The first
+  concurrent verification run timed out two unrelated infrastructure checks;
+  running the unit gate by itself passed, with no timeout or test-setting change.
+- The final local artifact contains **nine app routes** and no draft route.
+  The Windows build still has 26 external dependency junctions and is not a
+  self-contained release artifact. Strict release acceptance remains unchecked.
+- The reproducible fake-only capture command completed ten screenshots and a
+  state index, preserving disabled Download and exiting its disposable session.
+  Git ignore checks confirm that this local capture package stays outside Git.
+  No MP4 or audio was exported. Original artwork needs no model weights or API.
+- Studio and still rendering confirm a 1,500-frame walkthrough and a 240-frame
+  motion test at 30fps/1920×1080. Seventeen representative stills cover identity,
+  intake, analysis, selection close-up, build, review, result, sharing and close.
+  Inspection included the shortened analysis shot, the actual choice cursor and
+  shared caption/card fit. These are animatic observations, not real-media proof.
+- Browser observations on the actual landing: 1440×900, 1280×600 and 390×844
+  show no horizontal overflow. Silent autoplay reports `0:50`; Space pauses;
+  a user pause survives leaving/returning; offscreen playback pauses and resumes
+  only when previously playing. Visible phone Player buttons meet 44px bounds.
+  Blocking the local capture package produces a readable fallback with Get
+  Started reachable. The removed route returns 404. Health, landing, `/start`,
+  public config and Studio non-metered GETs return 200. Public capability
+  metadata reports fake mode with all three live processing flags false.
+- A headless tab-switch attempt kept `visibilityState` visible; it does not
+  verify actual background-tab/device behavior. The visibility listener exists,
+  but physical browser/device checks remain open. Full zoom, assistive technology,
+  contrast/performance budgets, final UI/film/editorial/rights/license approval,
+  actual provider/cloud/media/A/V/output acceptance, poster/web renditions and
+  deployment remain unchecked. No live processing or paid test was run.
+
+Owner Git checkpoint — 2026-10-06: after accepting the design and cleanup, the
+owner explicitly authorized a file-level commit plan followed by staging and
+commits. The [motion hero plan](CL-013-MOTION-HERO-COMMIT_PLAN.md) groups all
+26 source/tooling/documentation files into two whole-file commits. Earlier
+no-Git-mutation statements describe the prior implementation checkpoints.
+Screenshots, poster, Desktop copies, private media/configuration and QA runtime
+artifacts remain outside Git. No push, deployment, paid test or final release
+approval is included.
+The authoring/release-guard commit `0d8d3e6` contains exactly the first 17-file
+group. The remaining nine landing/documentation files follow as the second
+planned commit; the final identifiers and clean-tree result are recorded in
+Git history and the owner handoff.
+
+Final owner-approved hero cleanup evidence:
+
+- Browser checks cover 320×568, 375×667, 390×844, 744×1133, 1024×768,
+  1280×600, 1366×680, 1440×900, 1536×864, 1920×1080 and 2560×1440. All
+  retain 16:9 film framing without horizontal overflow. Phones use natural
+  content height; copy-to-film gaps are 20–32px. The full bottom flow fits the
+  checked laptop viewports, including the corrected 1280×600 short-height case.
+  At 1920px the film is about 838×472px with a 115px column gap. The 1366px
+  laptop retains the compact 10.4px grid gap and original typography, avoiding
+  the rejected wide-screen treatment at that size.
+- Three cache-disabled visits animate automatically with no Player buttons and
+  focus remaining on the page body. Clicking the film does not stop playback.
+  Offscreen film frames stop changing and the decorative flow pauses; both resume
+  on return. Actual browser history navigation from `/start` back to the landing
+  resumes animation. A synthetic persisted `pageshow` event also exercises the
+  fresh-visit remount; it does not prove physical BFCache/device support.
+  Blocking local captures produces the readable fallback with product navigation.
+- The poster command renders the shared opening frame successfully with an
+  existing local Chromium executable. The 36,637-byte JPEG is ignored, and the
+  superseded agent-created PNG was removed. There is no MP4 export, provider
+  access, mode/configuration change or private-media read.
+- The settled unit gate passes **1,203 tests in 96 files** with package execution
+  scheduled serially using the per-command pnpm workspace-concurrency setting.
+  Its preceding default parallel run hit three existing five-second infrastructure
+  timeouts (browser-contract instrumentation, renderer build context and native
+  process runner). No test timeout, safety configuration or application code was
+  changed to make that rerun pass.
+- Source review found no unused local selectors in the landing, film or flow
+  modules. The discarded route, frame/HUD/control listeners/styles and unused
+  asset-state transitions are absent. Shared fallback, playback effect, request
+  aborts and observer/event teardown remain owned by the film feature. Nothing
+  was staged or committed. This records the owner's current design acceptance,
+  while final editorial/media/rights/license/device/performance/public-release
+  gates remain separate and unchecked.
+- Final formatting, lint, root typecheck, serial-package synthetic unit and build
+  gates pass. The build retains nine routes and 26 external package junctions;
+  strict release remains unavailable. Generated `next-env.d.ts` was restored to
+  its existing development references and the frontend typecheck passes again.
+  The final JPEG-specific browser entry/fallback check also passes. Frontend,
+  `/start`, public config, backend health and Studio return 200; the removed route
+  returns 404. Public config stays fake with all live processing flags false.
+  No disposable test/QA browser process remains. The backend watcher identity
+  was verified and its content-free runtime record refreshed for listener PID
+  22616 on port 4000; frontend PID 1932 on 3000 and Studio PID 14940 on 3002
+  remain healthy. No service restart or environment change was needed for cleanup.
+
+QA scripts, stills and browser reports are owner-local under the OS-temporary
+`clipbuilder-motion-authoring-714d624fb8814a8d8d67b7611bbd2ff7` directory. They
+were moved out of the repository before linting so compiled QA bundles are not
+application source. Temporary QA browsers closed after each run. Source review
+confirmed dependency direction, shared contracts/composition reuse, no private
+media/env/credential reads, no removed frame listener/styles, bounded request
+and observer cleanup, and no new paid/provider boundary. No Git mutation occurred.
+
+The existing frontend remains on `127.0.0.1:3000` (listener PID 1932). Studio
+remains on port 3002 (listener PID 14940, launcher PID 19124) with its verified
+creation-time process tree saved in `%TEMP%\clipbuilder-runtime\motion-studio-72974668855440e18968ec323b8b8940\studio.runtime.json`.
+Its separate content-safe stdout/stderr logs are in that same directory. The
+backend restart record/logs remain in the earlier restart directory above;
+its watcher can replace the listening worker after shared contract builds.
+Requested healthy services were left running.
+
 ## Standalone implementation context
 
 - The later 2026-10-01 owner revision requires CL-004's single dynamic

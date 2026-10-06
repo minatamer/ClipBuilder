@@ -33,6 +33,46 @@ covers implemented chunk progress, synthetic verification and two protected
 actual browser/GCS upload/Exit checks with validated cleanup results. Normal
 paid continuation remains owner-only.
 
+### Owner landing motion decision — 2026-10-06
+
+The owner explicitly replaces the landing hero placeholder with the locally
+authored 50-second cinematic walkthrough and removes the temporary
+`/motion-preview` route. The video itself has rounded corners matching the site,
+with no outer frame or draft-information strip. Its analysis shot lasts four
+seconds with a continuous push at one angle.
+The latest owner decision restores the original laptop two-column layout:
+ClipBuilder, headline and description on the left, video on the right. Original
+responsive sizing, spacing and smaller-screen breakpoints apply. The centered
+layout trial and hero-brand removal were reversed; the film's rounded edges and
+pacing remain. Phones retain their compact, naturally scrolling layout.
+The latest phone correction removes viewport-filling hero minimum heights and
+the expanding player row. Copy and video flow at natural height with responsive
+gaps; tighter process-section padding avoids surplus space after the video.
+At 1536px and wider, laptops grow the split hero and its column gap; text scales within the
+available copy column and the video grows with its own column. Compact laptop
+and phone breakpoints retain their existing layouts.
+The owner corrected the initial threshold because it expanded a 1366px laptop;
+the larger-column rule now applies only to the wider-screen tier. The next
+local layout trial moves the main hero closer to the navbar and adds a compact
+animated flow below: upload a video, find complete moments, choose one, automatic
+captions/visuals, and a vertical cut ready to share externally. Phones use natural
+height with a compact vertical flow. This is presentation, with no new workflow
+controls, editing capability or direct publishing.
+The owner also requests seamless entry playback. The loading poster matches the
+opening film frame; dynamic player loading runs alongside asset verification,
+and muted autoplay does not move keyboard focus to the pause button. Refresh and
+restored back/forward visits start the film again. The owner's latest revision
+removes all player controls and click-to-pause interaction; the film plays as a
+silent hero animation. Offscreen/hidden playback pauses and resumes on return.
+The owner accepted this design and requested code cleanup. A compact flow row
+at laptop heights of 640px or less keeps the bottom sequence visible without
+altering the accepted regular-height layout. No accessible-motion acceptance
+is claimed from this owner-directed controls exception.
+The [CL-013 authoring record](tickets/CL-013-complete-accessibility-responsive-and-performance-pass.md#local-motion-authoring-and-owner-iteration--2026-10-06)
+owns implementation and verification evidence. Synthetic UI captures and original
+vector artwork need no provider keys; actual processing, delivery exports,
+rights and public-release acceptance keep their separate existing gates.
+
 ### Owner editing quality decision — 2026-10-06
 
 Latest [meaningful edit notes](tickets/CL-010-deliver-automatic-clip-review.md#owner-meaningful-edit-notes--2026-10-06):

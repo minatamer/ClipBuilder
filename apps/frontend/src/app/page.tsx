@@ -1,9 +1,11 @@
 import styles from "./page.module.css";
 import { HeroHeadline } from "./hero-headline";
+import { HeroFlow } from "./hero-flow";
 import { PrivacyDialog } from "./privacy-dialog";
 import { ProcessNarrative } from "./process-narrative";
 import { SmoothScrollLink } from "./smooth-scroll-link";
 import { BrandMark } from "../shared/ui/brand-mark";
+import { ProductFilmHero } from "../features/product-film/product-film-hero";
 
 const clippingPlatforms = [
   { name: "whop", detail: "Content Rewards", brand: "whop" },
@@ -72,48 +74,9 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className={styles.heroMedia} aria-hidden="true">
-              <div className={styles.heroMediaTopbar}>
-                <div className={styles.windowControls}>
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <p>Product motion preview</p>
-                <span>00:24</span>
-              </div>
-
-              <div className={styles.heroMediaCanvas}>
-                <div className={styles.heroMediaTranscript}>
-                  <span />
-                  <span />
-                  <strong />
-                  <span />
-                </div>
-
-                <div className={styles.heroMediaFocus}>
-                  <div className={styles.heroPlayMark}>
-                    <span />
-                    <span />
-                  </div>
-                  <p>Reserved for the product motion story</p>
-                </div>
-
-                <div className={styles.heroMediaPhone}>
-                  <div className={styles.heroPhoneLight} />
-                  <div className={styles.heroPhoneSubject} />
-                  <span />
-                  <strong />
-                </div>
-              </div>
-
-              <div className={styles.heroMediaFooter}>
-                <span>Source</span>
-                <span>Grounded moment</span>
-                <span>Vertical cut</span>
-              </div>
-            </div>
+            <ProductFilmHero />
           </div>
+          <HeroFlow />
         </section>
 
         <ProcessNarrative />

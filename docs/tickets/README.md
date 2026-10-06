@@ -1,5 +1,18 @@
 # ClipBuilder canonical ticket index
 
+**CL-013 motion hero — 2026-10-06:**
+The owner accepted the local 50-second cinematic hero, original responsive
+two-column layout, animated five-step flow and seamless control-free playback,
+then authorized a file-level plan and staging/commits. Follow the
+[two-commit whole-file plan](CL-013-MOTION-HERO-COMMIT_PLAN.md).
+The [authoring record](CL-013-complete-accessibility-responsive-and-performance-pass.md#local-motion-authoring-and-owner-iteration--2026-10-06)
+contains research, iteration and cleanup evidence. All five settled root gates
+and 1,203 synthetic tests in 96 files pass; browser checks verify responsive fit,
+entry/back autoplay, offscreen pause/resume and fallback. Captures/poster remain
+ignored and outside these commits. Synthetic authoring needs no API keys; actual
+processing keeps its keys/live/approval gates. Final media, rights/license,
+device/accessibility/performance and strict release acceptance remain unchecked.
+
 **CL-009 timing / CL-010 review follow-up — 2026-10-06:**
 The [bounded visual window](CL-009-build-contextual-visual-assembly.md#owner-bounded-visual-window--2026-10-06)
 keeps longer supporting phrases as context while signing an in-window excerpt.

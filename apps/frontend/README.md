@@ -461,6 +461,91 @@ read-only preview and render confirmation → result/download. The frontend will
 not expose an editor, chatbot, manual trim, caption or visual controls, an
 editable timeline, proposals, or undo/redo.
 
+## Product film authoring (CL-013)
+
+The editable cinematic walkthrough lives in `src/features/product-film/`.
+Open `http://localhost:3000/` to review it directly in the landing hero.
+It plays the 50-second, 1920×1080, 30fps composition silently, with no player
+controls or click-to-pause interaction. It pauses offscreen and when the document is
+hidden. The eight-second motion test remains available in Studio. The owner
+requested the clean 52-second presentation with stronger angles and close-ups;
+the preview has no duration picker, slide markers or production notes underneath.
+The owner then removed the outer frame and its header/footer; the video itself
+has rounded, clipped corners matching the site, with no extra border. During
+seconds 8–12 the analysis shot uses one continuous camera push with a moving
+light reflection, keeping the angle steady after its entrance without a static
+hold or extra cuts.
+The owner shortened this beat by two seconds from the original 52-second cut.
+The owner restored the original laptop two-column layout: ClipBuilder,
+headline and description on the left, film on the right. Original responsive
+type, spacing and compact-screen breakpoints are restored. At 1536px and wider, laptops expand
+the hero and its column gap; the headline scales against both viewport and
+column width, so it stays inside the copy column as the video grows. Phones keep their
+compact copy-above-video layout with content-sized rows and a natural hero
+height, eliminating the former stretched empty area around the player. The
+following process section uses tighter responsive phone spacing. The film
+retains its rounded edges and pacing. A compact animated five-step flow beneath
+the columns summarizes upload, grounded moments, one choice, automatic captions
+and visuals, and a share-ready cut. Allocating this row brings the main hero
+closer to the navbar; phones use a compact vertical sequence with natural height.
+The flow pauses its decorative animation offscreen and when the document is hidden.
+At laptop heights of 640px or less, its compact row keeps the sequence within the hero.
+
+The loading image is the exact opening frame, so it keeps the same artwork and
+layout as playback. The Player starts loading alongside capture validation and
+autoplays silently on visits, refreshes and restored back/forward visits. The
+owner removed all controls, so the film acts as an uninterrupted hero animation
+and autoplay does not steal keyboard focus. Playback resumes when it returns onscreen.
+
+From the repository root:
+
+```text
+corepack pnpm --filter @clipbuilder/frontend film:capture <absolute-existing-chromium-executable>
+corepack pnpm --filter @clipbuilder/frontend film:poster --browser-executable=<absolute-existing-chromium-executable>
+corepack pnpm --filter @clipbuilder/frontend film:studio
+```
+
+The capture command first verifies the local frontend exposes fake mode with
+live capabilities off. It uses an isolated browser, chooses the synthetic
+sample and Moment 1, preserves the disabled download, and exits that disposable
+session. It does not read environment files, real media or credentials, change
+operating flags, call providers, download Chromium, or trigger a paid flow.
+The existing cached headless-shell executable can be used. The normal frontend
+and backend must already be running; follow the startup guides below.
+
+Ten 1440×1000 PNG captures and a cursor/state index are written to the ignored
+`public/generated/product-film/` directory. The poster command renders only a
+local 960×540 JPEG at the Player's shared opening frame, into that same ignored
+directory; regenerate it after changing the opening. Its command requires an
+existing browser and cannot download one. It does not export an MP4. Studio runs at
+`http://localhost:3002` without opening an external browser. Select
+`ClipBuilderWalkthrough` or `ClipBuilderMotionTest`; both use the same scene
+source. All motion follows the Remotion frame clock. Camera paths live in
+`film-camera.ts`, pacing/capture references in `film-timeline.ts`, and original
+vector speakers in `illustrated-conversation.tsx`. The portrait illustration
+reuses the actual shared fixed caption/card components. No local AI model or
+provider video-generation implementation is involved.
+
+This is a local animatic using synthetic UI and original artwork. With
+`FAKE_MODE=true` and no keys it can be authored and reviewed; it is not an
+actual processed or downloadable ClipBuilder result. Authoring playback itself
+does not contact the backend and can reuse this capture package in other modes.
+Actual AI/output acceptance still requires provider keys, live flags, applicable
+rights/data/spend/cloud approvals and the owner's manual paid test. The retained
+sample and private renderer pipeline are not used by this authoring project.
+
+The owner approved replacing the landing placeholder with this film and removing
+the temporary `/motion-preview` route. The shared preview-page wrapper and old
+placeholder styles were removed. Strict release verification still rejects the
+local capture folder; only the local-build gate permits it. Replace those local
+authoring assets with approved delivery assets at the film release checkpoint.
+No MP4, audio, final poster, rendition budget or
+delivery export is approved by these commands. Remotion 4.0.532 is pinned;
+its installed license permits individual use/evaluation. Studio currently warns
+that the repository's Zod 4.6.5 differs from its optional Zod integration's 4.5.4
+expectation. This film has no Zod schema integration; existing app contracts
+remain pinned and unchanged.
+
 ## Run locally
 
 Use Node.js `^22.13.0` or `^24.0.0` and the pinned pnpm `11.19.0`.
