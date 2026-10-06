@@ -4,6 +4,23 @@
 
 Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 721 synthetic tests in 70 files pass, including the CL-016 MP4-only and sample-streaming follow-ups. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**
 
+### Owner environment-only configuration — 2026-10-06
+
+The latest owner decision removes backend runtime JSON and all application usage.
+Tracked backend code owns schema/defaults; ignored `.env.local` supplies local
+credentials and private connection/sample references. Deployment uses the same
+environment keys. Normal defaults are `FAKE_MODE=false`, `PAID_DEMO_ENABLED=true`
+and cloud spend, Gemini transfer, image generation and paid-project approval true.
+`PAID_DEMO_ENABLED=false` has precedence and forces all four approvals false,
+disabling cloud/sample reads, live routes, grants and dispatch allowance.
+The processing stage defaults to assembly; final render retains its independent
+matching-renderer rollout gate. Missing optional local prerequisites leave paid
+routes unavailable without preventing health/local intake. This supersedes all
+earlier runtime-JSON/default-fake or default-off-image configuration decisions
+below. Tests/CI/synthetic harnesses remain explicitly fake, paid-off and
+credential-free with pre-import network interception. No agent paid flow, public
+paid deployment or cloud change is authorized. See the [CL-015 packet](tickets/CL-015-deploy-validate-measure-and-rollback.md#owner-environment-only-configuration--2026-10-06).
+
 ### Owner chunked upload acceptance — 2026-10-06
 
 Prioritize [CL-005 chunked upload and confirmed cloud progress](tickets/CL-005-implement-secure-upload-and-storage.md#investigation-and-execution-plan--2026-10-06).
@@ -15,6 +32,130 @@ The [CL-005 execution record](tickets/CL-005-implement-secure-upload-and-storage
 covers implemented chunk progress, synthetic verification and two protected
 actual browser/GCS upload/Exit checks with validated cleanup results. Normal
 paid continuation remains owner-only.
+
+### Owner editing quality decision — 2026-10-06
+
+Latest [meaningful edit notes](tickets/CL-010-deliver-automatic-clip-review.md#owner-meaningful-edit-notes--2026-10-06):
+the final review explains the actual conversation cut, captions/audio treatment,
+camera cuts and held framing in a concise account. Do not list every tracking
+state. Describe only retained visuals, using their existing bounded scene briefs,
+asset source, hold and grounded phrase. Count camera cuts from rendered crop
+geometry. Highlight notes explain the selected evidence's editorial role rather
+than duplicating its quotation. Retained scene metadata belongs in the signed
+control result, outside the renderer manifest; old results remain readable and
+there is no extra model call. Existing read-only, privacy, spend and owner-manual
+live acceptance gates remain.
+
+Latest [Commons-first generated fallback](tickets/CL-009-build-contextual-visual-assembly.md#owner-commons-first-generated-fallback--2026-10-06):
+retain Commons, search essential concepts and rank with the complete contextual
+brief. When no usable image remains, permit one ungrounded Gemini Flash Image
+generation attempt per validated visual, at most three per protected assembly.
+Use generic illustrative scenes, fixed art direction, normalized signed JPEG
+overlays and explicit generated provenance. No search grounding, retries, new
+planning call or source likeness. Reserve image spend before dispatch and retain
+nonfatal image failures plus cancellation/cleanup. This replaces the earlier
+zero-image-call constraint. Fake/test/public generation stays off; normal
+image approval follows the later environment-only decision above. Live
+activation requires existing key/transfer/paid-project and assembly gates. Paid
+tests remain owner-manual and matching private renderer rollout is separate.
+
+Latest [bounded visual window](tickets/CL-009-build-contextual-visual-assembly.md#owner-bounded-visual-window--2026-10-06):
+recover timing from exact supplied word clocks instead of discarding usable
+picture plans. Supporting phrases may contain up to 24 words; move a later
+anchor to the phrase's first word and fit the display within the 2–4.5-second
+and clip limits. The full phrase supplies context, while only a contiguous
+prefix of complete words inside the display is signed as evidence. A following
+readable visual beat may shorten the hold. Tell Gemini that only one picture appears at a time for at
+least two seconds, so it should space anchors by their full hold and choose
+naturally separated ideas. Preserve opening, overlap, count, coverage, rights
+and signing limits; impossible windows remain nonfatal with no paid retry.
+Safe diagnostics include retimed-plan counts. Fake/no-key checks prove local
+timing behavior; actual creative/retrieved picture quality remains owner-manual
+with existing keys, enabled live flags and approvals. The full supporting phrase
+does not need to remain entirely onscreen; signed manifests keep the in-window
+supporting excerpt within the existing seven-word evidence bound for renderer compatibility.
+
+Latest [general creative visual rules](tickets/CL-009-build-contextual-visual-assembly.md#owner-general-creative-visual-rules--2026-10-06):
+remove topic/age examples and visual recipes from the Gemini instruction. Let it
+interpret the whole conversation and choose varied, broadly searchable generic
+scenes that convey the meaning. Specific depicted entities/ages are unnecessary;
+generic people may illustrate supported activities/relationships without source
+identity or sensitive inference. Plan at least two distinct useful pictures,
+with the existing maximum of three. Each holds for 2–4.5 seconds according to
+the relevant thought; keep the opening beat and 45-percent coverage cap. Adjacent
+pictures require no group IDs or artificial gap, and duplicates cannot satisfy
+the two-picture target. Unavailable images/quality critiques remain nonfatal;
+record proposed/validated/retained counts and shortfalls. Existing one-call,
+rights/privacy/resource and cloud gates remain. This supersedes the earlier
+one-picture target, age-specific planning/evidence and short grouped holds.
+
+Earlier [contextual relevance/hard-cut revision](tickets/CL-009-build-contextual-visual-assembly.md#owner-contextual-relevance-and-hard-cut-revision--2026-10-06):
+accepted improved tracking/cuts must remain. All camera transitions are immediate
+cuts, with provisional portrait framing from the opening rather than waiting in
+an all-wide view. Hold the latest same-shot crop during uncertainty. Gemini must
+plan contextually useful scene briefs, and bounded image retrieval must rank and
+reject irrelevant results rather than accepting the first licensed noun match.
+Permit adjacent grouped visuals and generic illustrations of explicitly spoken
+ages, without inferring a participant's age/identity or reproducing their likeness.
+At least one relevant visual remains the goal; unavailable/poor assets warn and
+preserve the usable edit. Existing one-call, rights/privacy/resource and cloud
+gates remain, with no extra paid AI call.
+
+Earlier [tracking/picture revision](tickets/CL-009-build-contextual-visual-assembly.md#owner-visual-and-tracking-revision--2026-10-06):
+retain accepted captions and stutter-free playback. Preserve valid individual
+speaker observations and hold the last confirmed same-shot face crop through
+uncertainty until a new confirmed crop; no time-based widening. Replace automatic
+text-excerpt graphics with grounded contextual picture overlays behind captions,
+without a full-frame background. The owner requests fetched generic images;
+implement bounded public-domain/CC0 Commons retrieval with normalized, signed
+inline raster bytes and no renderer external URL input or additional paid AI call.
+Missing images/quality critiques remain nonfatal. Shared workflow player controls
+hide off-hover on desktop, reveal on keyboard focus, and reveal/idle on touch.
+Rights, source/session integrity, cancellation and cloud rollout gates remain.
+
+Later owner correction on 2026-10-06: AI-output quality critiques are nonfatal
+backend diagnostics. Preserve usable captions/framing/cards and use bounded local
+fallbacks without another paid call. At least one grounded visual remains the
+goal; when none can safely fit, warn and continue rather than aborting the edit.
+Preserve returned words/clocks, including instantaneous words with no invented
+highlight duration. Authentication, source/hash/receipt integrity, media resource
+bounds, cancellation and cleanup remain enforced. This supersedes the older
+quality-rejection and mandatory-visual acceptance statements below. See the
+[CL-009 correction](tickets/CL-009-build-contextual-visual-assembly.md#owner-correction--nonfatal-ai-output-critiques-2026-10-06).
+
+After upload, implement [CL-009 editing quality](tickets/CL-009-build-contextual-visual-assembly.md#investigation-and-execution-plan--2026-10-06).
+
+Successful edits must play the selected contiguous conversation once without
+unintended rewinds, repeated spans or gratuitous framing switches. Use one fixed
+large white caption preset, no whole-caption background panel, and a contrasting
+animated background on the spoken word using grounded word clocks. Require at
+least one grounded contextual graphic actually included in a successful edit;
+this supersedes the older zero-card allowance. Keep existing audio, safe areas,
+cue count/duration/coverage and no-editor controls. Plan stable same-shot framing
+through pauses and uncertainty by holding previously validated geometry without
+claiming a confident speaker match; reset at real shot cuts or invalid geometry.
+The ticket owns proposed bounded hold/switch details and their acceptance.
+
+The local CL-009 implementation uses manifest v3, grounded per-word captions,
+same-shot held framing and grounded contextual picture overlays. Synthetic
+native Chrome reproduces/corrects buffering-driven preview stutter; local
+production Remotion export contains the new captions and graphic. This is no-key,
+API-free/AI-free evidence, with no real AI model. Owner real-media/AI quality and
+the matching private renderer rollout remain unchecked. See the ticket's local
+execution record; do not enable final render against an older manifest image.
+
+Preserve existing stage diagnostics and private owner-local returned/normalized
+output capture; extend them to distinguish planner, compiler, prepared media and
+player timing. Private output capture retains its separate six-hour activation
+and privacy/composition restrictions; replay follows the cleanup decision below.
+The owner permits exploring rights-cleared fetched visuals as an alternative to
+new image generation; that requires a bounded backend asset/search policy and
+validated private artifacts, never arbitrary renderer URLs. It does not select
+a paid search/image model, authorize extra paid calls, expand renderer inputs or
+waive rights/privacy/spend/cloud gates. The later picture revision implements
+this bounded Commons path with no paid image generation. No local AI model/weights
+are required. These are owner behavior decisions. New real tracking/picture-quality
+acceptance remains owner-tested under CL-009.
 
 ### Owner audio transcription and text-only selection decision — 2026-10-05
 
@@ -395,11 +536,14 @@ decode failure are explicit. These source previews do not change the final
 vertical composition. This supersedes the earlier universal portrait candidate
 gallery and left-rail/detail-card direction for horizontal sources only.
 
-Owner temporary local sample replay decision (2026-10-05): save the latest
+Owner temporary local sample replay decision (updated 2026-10-06): save the latest
 successful retained-sample transcript and three choices privately outside Git,
 then expose **Simulate find moments for sample** beside Use sample only in the
-explicit local development composition while the six-hour saved-data permit is
-valid. Show the saved real choices immediately and label their replay status.
+explicit local development composition with no time-based activation expiry.
+Keep the button until explicit cleanup before deployment; remove the replay CTA,
+transport, cache loading and private saved copy at that checkpoint. Show the
+saved real choices immediately and label their replay status. The independent
+private output-capture permit retains its existing lifetime.
 On Proceed, establish a fresh protected session/disposable copy and inspect the
 sample before signing the saved analysis and running ordinary assembly. This
 skips Transcribe and selection calls; it does not bypass source identity,
@@ -409,7 +553,7 @@ feature is added. Synthetic fake tests use no keys; real assembly is owner-run.
 Thumbnail frame decoding is serialized and retained only in browser memory for
 this review; release source decoders and frames on replacement/exit. The owning
 [temporary packet](tickets/CL-007-local-sample-replay-and-thumbnails.md) defines
-expiry, cleanup and verification.
+normal session expiry, pre-deployment cleanup and verification.
 
 Candidate cards and detail panels stay inside the workflow content during
 selection, switching and closing. They cannot draw over the heading/action
@@ -1074,8 +1218,8 @@ only on proven success. This exception supersedes older no-fake-percentage
 wording only inside this local development preview. Real processing
 retains named stages/indeterminate progress until measurable totals exist.
 
-`FAKE_MODE=true` is the one authoritative server mode selection, defaulting to
-true. Internal `providerMode` is derived; legacy `PROVIDER_MODE` may only assert
+`FAKE_MODE` is the one authoritative server mode selection, defaulting to
+false under the 2026-10-06 owner decision. Internal `providerMode` is derived; legacy `PROVIDER_MODE` may only assert
 the same value, never override it. `.env.local` is ignored and owner-managed,
 with matching example entries and blank credentials/identifiers. Only explicit
 server startup loads that file; tests/CI never load it. The browser receives

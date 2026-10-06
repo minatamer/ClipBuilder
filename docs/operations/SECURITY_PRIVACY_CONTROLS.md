@@ -1,5 +1,24 @@
 # Current local safeguard evidence
 
+CL-009 generated fallback (2026-10-06): the owner chooses Commons first and
+separately gated Gemini Flash Image generation on a missing/unusable picture.
+Only a bounded, validated contextual scene brief reaches the image model; no
+source video/full transcript, identity, filename, capability or reference image.
+Ungrounded 1K/16:9 generation has one attempt per valid window, maximum three;
+running assembly admission reserves each image attempt before dispatch and
+consumes uncertain failures. Fixed-host POST, no redirects/tools/retry, response/
+decoded-byte/pixel limits and canonical normalized JPEGs contain provider output.
+Generated assets carry explicit model/policy provenance, never a CC0 license
+claim. Safe logs expose counts/status only; generated response bodies, prompts
+and raster bytes are absent from private captures as well. Browser signed
+session-owned assets retain normal Exit/expiry cleanup; no image bucket or
+durable backend store is added. Image approval now defaults true; the paid-off
+master forces all four approvals false. Live activation needs existing
+key/live/paid/transfer gates; fake/test/public cannot
+dispatch. Actual image quality/cost and matching private renderer rollout remain
+owner-only/separately approved. This supersedes the earlier zero-paid-image
+constraint below, preserving Commons public-domain/CC0 filtering.
+
 CL-012 audits the implemented cloud/Google path after CL-011. No account,
 provider, cloud or credential was inspected or changed. Public paid use stays
 disabled. `FAKE_MODE=true` with no keys supports fixture UI and synthetic injected
@@ -7,6 +26,25 @@ admission/job/storage/stream checks; fixture outputs are not real MP4/AI quality
 Real source/selected analysis requires keys, live/data/paid/rights approvals;
 private rendering requires independent cloud compute/IAM/storage approval.
 No local AI model or weights are used.
+
+CL-009 owner picture revision (2026-10-06): short scene descriptions grounded in
+selected words may be
+sent to the fixed Wikimedia Commons metadata API; video/full transcripts and
+credentials are never sent there. Up to three searches/downloads have fixed
+hosts, redirects disabled, deadlines and byte/pixel bounds. Only public-domain
+or CC0 raster assets qualify. Backend Sharp normalization produces bounded
+JPEG bytes/provenance in the signed session manifest, with no renderer external
+URL input, durable image store or additional paid AI call. Exit/expiry clears the
+existing browser/session state; missing pictures remain nonfatal. Fake/no-key
+tests inject this port and cannot contact Commons. The privacy dialog discloses
+scene-description lookup for real cloud processing. Generic person illustrations
+may depict a contextually supported activity/relationship without a numeric-age
+mention or any claim of participant identity, age, traits or likeness. New plans
+carry no age/group fields. Two distinct pictures are the target; shortfalls and
+duplicates warn without aborting or retrying paid work. Contextual ranking uses
+only bounded metadata, never a new
+paid image critique. This supersedes the older zero
+search statement below only for this bounded non-AI picture path.
 
 | Boundary | Implemented local control | Remaining evidence |
 | --- | --- | --- |

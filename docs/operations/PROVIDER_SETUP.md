@@ -1,5 +1,17 @@
 # Google AI and cloud readiness
 
+CL-009 Commons-first image fallback (2026-10-06) reuses the backend's existing
+`GEMINI_API_KEY` for ungrounded `gemini-3.1-flash-image` generation; there is no
+new credential or search API. Image approval now defaults on via
+`GEMINI_IMAGE_GENERATION_APPROVED`; live assembly still requires existing
+paid-project/transfer/master gates. See the [backend activation guide](../../apps/backend/README.md)
+and [dated call/cost policy](COST_MODEL.md#commons-first-image-fallback--2026-10-06).
+Only the owner runs paid validation. Do not enable final render before its
+separately approved matching renderer rollout. Fake/no-key tests cover injected
+generation and do not prove real images, access or cost. No local AI weights or
+runtime were added. The later CL-015 environment-only migration moved private
+connection settings without printing their values and removed backend runtime JSON.
+
 Current authority: [cloud migration](../architecture/GEMINI_REMOTION_MIGRATION.md) and [setup guide](CLOUD_RUN_RENDERER_SETUP.md). The owner approved local implementation on 2026-10-02; CL-006 separately records its authorized private resource/test checkpoint. CL-007's renderer revision update and Google AI transfer/paid test need new explicit authorization.
 
 CL-007 implements Gemini 3.8 Flash with pinned `@google/genai@2.25.0`, bounded
@@ -37,7 +49,7 @@ For repeat setup:
    needs no additional project-name/number entry in the application. ADC remains
    separate storage/private-renderer authentication.
 4. Manually populate only `GEMINI_API_KEY` in the backend's ignored `.env.local`.
-   The frontend and renderer receive no Gemini key. Real-media preview uses
+   The frontend and renderer receive no Gemini key. Local-media preview uses
    `FAKE_MODE=false` with `PAID_DEMO_ENABLED=false` during preparation.
 5. Open [Spend](https://aistudio.google.com/spend), select the matching project,
    then Monthly spend cap → Edit spend cap. The owner's selected cap is USD 5
@@ -83,9 +95,9 @@ local widget; no Cloudflare DNS migration or paid plan is needed.
    `apps/backend/.env.local`. Although the sitekey is public, keep its committed
    example blank. The existing browser flow obtains it from the backend; no
    frontend environment entry is needed. Never share the secret key in chat.
-6. In the existing ignored `apps/backend/runtime.local.json`, set only
-   `turnstileHostname` to `localhost`, preserving the retained-sample reference,
-   other connections and approval records. Keep paid processing disabled.
+6. Set `TURNSTILE_EXPECTED_HOSTNAME=localhost` in the existing ignored backend
+   `.env.local`, preserving other settings. Keep paid processing disabled
+   during preparation.
 
 Use a genuine local widget for the approved protected live test. Dummy keys
 only prove simulated challenge behavior and do not prove abuse protection.
@@ -403,8 +415,10 @@ production readiness or allow dummy credentials in production. See
 
 ## Local Environment Mapping
 
-Use `apps/backend/.env.example` as the credential/switch authority and
-`apps/backend/runtime.example.json` for private connection/approval shape.
+Use `apps/backend/.env.example` for all credential, switch, approval, connection
+and retained-sample entries. No runtime JSON is used. Normal defaults are
+real/paid-on and four approvals on; paid-off forces every approval/capability
+off, including retained cloud reads. Set the master off during preparation.
 The old mapping below is historical; numerical policy and live capabilities
 are now derived in code. Never overwrite an existing ignored app-local file
 without owner authorization. The backend entry point

@@ -109,20 +109,18 @@ Failure must not delete the local master or retry against another destination.
 
 ## Owner configuration and verification
 
-The owner-approved app-local layout uses `apps/backend/.env.local` for
-`FAKE_MODE=false`, `PAID_DEMO_ENABLED=false` and blank credentials from
-`apps/backend/.env.example`. The private fixed sample reference belongs in
-ignored `apps/backend/runtime.local.json`: `retainedSample` contains bucket,
-object, generation and observed bytes; `approvals.cloudSpend` records the
-separately approved storage action. The backend runtime example leaves the
-reference null and all approvals false. Do not commit or print private values.
-The 2026-10-04 setup populated these secret-free local files after explicit
-owner authorization and removed the obsolete root environment file.
+The 2026-10-06 owner decision uses only `apps/backend/.env.local`, with matching
+blank entries in `.env.example`. Set `RETAINED_SAMPLE_BUCKET`,
+`RETAINED_SAMPLE_OBJECT`, `RETAINED_SAMPLE_GENERATION` and `RETAINED_SAMPLE_BYTES`
+to the privately verified fixed master reference. Runtime JSON is removed.
+Never commit or print private values. Normal real/paid defaults and four approvals
+are on; explicit paid-off disables retained reads as well as processing.
 
 A complete reference enables sample reads only in local real mode. This path
 needs impersonated ADC, no Gemini key and no local AI runtime or model.
-`paidValidationStage` remains disabled; paid processing stays off. Default
-`FAKE_MODE=true` supplies only the synthetic journey and disables retained
+For preview-only setup keep `PAID_DEMO_ENABLED=true` and select
+`PAID_VALIDATION_STAGE=disabled` to keep processing unavailable.
+Explicit `FAKE_MODE=true` with `PAID_DEMO_ENABLED=false` supplies only the synthetic journey and disables retained
 reads, even when private sample metadata exists. Ordinary tests never load the
 local files and retain fake/paid-disabled, credential-free composition.
 Public hosting remains gated under CL-015.

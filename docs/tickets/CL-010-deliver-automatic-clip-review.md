@@ -1,5 +1,63 @@
 # CL-010 — Read-only automatic cloud clip preview
 
+## Owner meaningful edit notes — 2026-10-06
+
+After the locally verified CL-009 bounded timing fix, the owner requests a clear
+editorial account before the backend restart. Replace the per-focus-state event
+list with a concise summary of the actual conversation cut, captions, audio and
+camera cuts/held framing. Describe each retained picture using the existing
+validated scene brief and grounded phrase; identify fetched versus generated
+assets without claiming an uncreated/rejected picture was added. Summarize
+interesting beats from the selected candidate's existing evidence, avoiding a
+duplicate paraphrase/quote when the note merely repeats the transcript.
+
+Plan: retain bounded picture scene descriptions in the signed control result,
+outside the renderer manifest, paired one-to-one with accepted pictures. Keep
+older results readable when this optional metadata is absent. Derive camera
+cuts from actual crop geometry, not speaker/held state flips. Preserve timestamp
+jumps, word highlighting and the shared read-only layout. No extra model call,
+new editor, renderer format change, live paid test or Git action is authorized.
+Fake/no-key synthetic checks cover grounding, retained-only notes, actual camera
+changes and non-repetitive highlights; real quality remains owner-manual with
+the existing provider keys/live flags/approvals. No local AI model is used.
+
+Implementation evidence: the signed control result has optional bounded
+`pictureNotes`, paired with accepted picture anchors and covered by the existing
+receipt. Changed descriptions or mismatched notes are rejected; older results
+without notes still parse. The renderer manifest is unchanged. Review notes
+count real geometry changes through the shared layout function, summarize the
+conversation/caption/audio/camera treatment, describe each accepted visual and
+retain timestamp/evidence navigation. Quote-only highlight notes get an editorial
+role explanation; meaningful existing model explanations are preserved.
+
+Focused checks pass: 91 backend tests in three assembly files and 35 frontend
+tests in three review/flow files. Settled format, lint, typecheck and unit checks
+pass; the full unit suite has 1,199 synthetic tests in 95 files. No provider calls,
+paid test, browser virtualization, validate workflow, local AI weights or Git
+action ran. The settled local build passes; its existing Windows artifact still
+has 26 external package links, so strict deployment acceptance remains open.
+Frontend development references were restored and scoped typecheck passes.
+
+After the notes fix completed, the requested complete backend restart succeeded:
+ten old keeper/launcher/watcher/child identities are absent and port 4000 remained
+free through a stabilization check before replacement. The new backend has ten
+tracked identities and owns the intended listener. Health, frontend `/start` and
+sample configuration return 200; live analysis/assembly are available and final
+render stays off. The original frontend identity is unchanged. Original private
+captures and logs remain intact, including the prior verified snapshot and fresh
+copies of the stopped backend logs. Those copies hash-match the stopped originals;
+retained sample and replay remain
+available. The earlier approval-review rejection occurred
+while the notes fix was pending; restart was approved after it completed. Normal
+configuration loaded without inspecting credentials or running a paid flow.
+Actual live visual quality and physical-device review remain owner-manual.
+
+Changed surfaces: contracts selected-assembly control schema, backend picture
+compiler/use case and assembly tests, frontend fixed-review notes/cloud-review
+integration and tests, owning READMEs/source of truth and ticket records. No
+renderer manifest/composition, paid call budget or provider prompt for notes was
+added. The CL-009 generic prompt contains only its separate timing clarification.
+
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
 Status: locally complete; validation pass 2 has no actionable local findings after three independently reproduced/fixed findings. All five settled root gates and 558 synthetic tests in 57 files pass. External gates remain deferred by the owner's 2026-10-03 instruction.
@@ -13,6 +71,46 @@ Dependencies follow the numbered migration sequence. After documentation approva
 - [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
 - [x] Implement and verify the locally buildable current packet.
 - [x] Record exact local tests/manual states, cleanup and all remaining rights/AI/cloud/license/device gates.
+
+## Owner laptop source-review navigation follow-up — 2026-10-06
+
+The owner requests visible arrows when laptop landscape-source selection uses
+the Video / Agentic Notes / Transcript carousel. Reuse the shared secondary
+button, Lucide chevrons and 44px target token. Place bounded previous/next buttons
+beside the carousel, leaving the media and evidence unobstructed, preserving dots,
+native scrolling, the selected candidate and one mounted player. Disable the
+unavailable direction at each end; expose accessible names/track association
+and honor reduced-motion scrolling. Phones keep their swipe/dot layout; the
+ordinary desktop edited-review cards receive no arrows.
+
+Verify actual click and keyboard navigation, end states, direct dot navigation,
+resizing, containment, reduced motion and phone/card exclusion with synthetic
+content. Fake/no-key processing remains the existing labelled fixture journey;
+this layout navigation needs no provider keys or local AI runtime and makes no
+processing calls. Real analysis/assembly still needs keys, live flags and the
+existing rights/cloud/spend approvals. Preserve unrelated editing/replay changes,
+all retained media and privacy boundaries. No Git or external action is requested.
+
+Implemented in `clip-review-layout.tsx` and `sample.module.css`. Both arrows use
+the existing native horizontal slide track with smooth scrolling, so navigation
+moves between the same panels as phone swipes. Reduced-motion preference selects
+instant scrolling. No second player, animation runtime or processing request was
+introduced.
+
+Verification: the focused frontend checks passed 51 tests across four files;
+root format, lint, typecheck and unit checks passed (1,098 tests across 90 files).
+An isolated synthetic browser check passed click navigation through all three
+panels and back, disabled end states, dot navigation, native Enter/Space activation,
+reduced-motion instant scrolling, and containment at 1152×583, 1152×650, 1024×768,
+800×650, 600×700 and 390×844. Laptop arrows use 44px targets; phone arrows are
+hidden and ordinary desktop review cards contain no arrows. No external/provider
+requests were made. Temporary browser/server/profile resources were cleaned up.
+
+The owner stopped further browser simulation because it was taking too long.
+Additional frame-by-frame animation sampling was not completed, and the production
+build was not rerun for this narrow follow-up. Smooth motion is implemented;
+physical-device motion and real media/AI quality remain unverified by this check.
+Nothing was staged or committed.
 
 ## Local execution evidence — 2026-10-03
 

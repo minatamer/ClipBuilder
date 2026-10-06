@@ -41,12 +41,14 @@ remain open.
    must never delete either permanent master.
 2. **Play the sample before processing.** Select Use sample and verify actual
    full-source playback, seeking and audio/video sync in Step 1. ADC/storage
-   configuration unlocks this preview without a Gemini key; keep AI/paid gates
-   disabled for the preview-only check. Continue only on explicit Find moments.
+   configuration unlocks this preview without a Gemini key; under the later
+   environment-only policy keep paid on and select `PAID_VALIDATION_STAGE=disabled`
+   for preview-only checking. Continue only on explicit Find moments.
 3. **Set up one bounded Gemini test.** The owner manually fills the matching blank
    credentials from `apps/backend/.env.example` in ignored
-   `apps/backend/.env.local`; private references and recorded approvals use
-   `apps/backend/runtime.local.json` from its blank runtime example. Limits
+   `apps/backend/.env.local`, including private references and approval flags.
+   Runtime JSON is removed. Normal defaults are real/paid-on with four approvals
+   true; explicit paid-off overrides them all. Limits
    are fixed in code. Check the existing
    source rights/provider-transfer consent and live prerequisites, agree the
    model and estimated test allowance, and approve the applicable provider and

@@ -622,9 +622,10 @@ the agent must not trigger paid media tests.
    and content-free health/authentication checks.
 3. Owner fills the blank credential entries from `apps/backend/.env.example`
    in that app's ignored `.env.local`: Gemini key, `PROCESSING_GRANT_KEY` secret and
-   Turnstile site/secret. Ignored `runtime.local.json` supplies the private renderer
-   origin, Turnstile hostname and independent cloud/transfer/paid-project approval
-   records. Only after authorization, select `paidValidationStage=analysis`,
+   Turnstile site/secret. The same ignored `.env.local` supplies
+   `PRIVATE_RENDERER_ORIGIN`, `TURNSTILE_EXPECTED_HOSTNAME` and approval flags;
+   runtime JSON is removed. Normal real/paid defaults and four approvals are on;
+   paid-off overrides them all. Only after authorization select `PAID_VALIDATION_STAGE=analysis`,
    `FAKE_MODE=false` and `PAID_DEMO_ENABLED=true`. Composition fixes the dispatch
    allowance at **2**, with assembly/render/image capabilities disabled. Never
    inspect/print private values. Follow AGENTS.md for verified local startup.

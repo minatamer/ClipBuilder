@@ -1,5 +1,22 @@
 # ClipBuilder canonical ticket index
 
+**CL-009 timing / CL-010 review follow-up — 2026-10-06:**
+The [bounded visual window](CL-009-build-contextual-visual-assembly.md#owner-bounded-visual-window--2026-10-06)
+keeps longer supporting phrases as context while signing an in-window excerpt.
+The subsequent [meaningful edit notes](CL-010-deliver-automatic-clip-review.md#owner-meaningful-edit-notes--2026-10-06)
+summarize actual edits and describe retained visuals using the existing plan,
+without another model call. Fake/paid-off regressions pass; actual live quality
+remains owner-manual. Both corrections are complete with all five root gates and
+1,199 synthetic tests in 95 files passing. The full backend restart completed
+after the notes fix, with old-tree cleanup, health/config/page 200 and the original
+frontend preserved. All prior visual diagnostics remain intact. No validate workflow ran.
+
+**Current CL-015 configuration priority — 2026-10-06:**
+The owner requires environment-only backend configuration, removal of runtime
+JSON and normal real/paid-on/four-approvals-on defaults. Paid-off overrides all
+four approvals and capabilities. Tests stay explicit fake/paid-off and guarded.
+See the [CL-015 configuration packet](CL-015-deploy-validate-measure-and-rollback.md#owner-environment-only-configuration--2026-10-06).
+
 **CL-005 upload verification — 2026-10-06:**
 CL-005's sequential 4-MiB transfer and confirmed-byte progress are implemented:
 98 focused synthetic tests and 11 native Chrome protocol checks pass. All five
@@ -10,13 +27,98 @@ both renderer cancellation responses passed deletion-result validation. See
 CL-005's actual browser/storage record. Owner-only paid continuation remains
 unchecked.
 
-**First TODO for 2026-10-06:**
-[CL-009 owner edit-quality feedback](CL-009-build-contextual-visual-assembly.md#first-task-tomorrow--owner-edit-quality-feedback-2026-10-06).
-Documented only: large white captions without a full background panel,
-contrasting active-word highlighting, excessive cuts/repeated spans/stuttering,
-and a minimum of one grounded contextual visual. Investigation and fixes are
-deferred to the next working session; no cause or implementation is claimed.
-Fake/no-key checks and owner real-media acceptance remain separate.
+**Next owner priority:**
+[CL-009 Commons-first generated fallback](CL-009-build-contextual-visual-assembly.md#owner-commons-first-generated-fallback--2026-10-06).
+Commons searches essential concepts and uses the full brief to rank results.
+When a validated picture has no usable distinct retrieved asset, separately
+enabled Gemini Flash Image generation can make one attempt, maximum three per
+assembly. Failures remain nonfatal, consume their allowance and never retry;
+export reuses signed pictures without new AI. All five root gates, the local
+renderer bundle and **1,188 fake/paid-off tests in 95 files** pass; scoped review
+has no actionable local findings. The later CL-015 configuration decision makes
+image approval default true under the paid master; existing real key/live/paid/transfer prerequisites remain.
+Owner-manual real imagery/cost/latency, generated-content rights and matching
+private renderer rollout remain unchecked. No owner settings, cloud resources,
+paid flow or Git history were changed by this revision. The packet owns the plan
+and settled evidence.
+
+Later owner-authorized activation: the ignored backend image approval is now
+enabled and a clean backend-only restart is verified. Health, `/start` and sample
+configuration return 200; live assembly/local replay remain available. Ten old
+owned process identities are gone and the frontend is preserved. The owner must
+start a fresh session for the real generation test. No paid/provider/cloud call
+ran; actual image quality/cost/latency and renderer rollout remain unchecked.
+
+Earlier verified revision:
+[CL-009 visual timing normalization](CL-009-build-contextual-visual-assembly.md#owner-visual-timing-normalization--2026-10-06).
+Recover valid phrase timing from supplied word clocks, including longer bounded
+phrases and anchors inside phrases, with readable 2–4.5-second holds. Tell Gemini
+to space suggestions by their full hold. **124 focused fake tests** pass;
+offline recompilation accepts all three formerly rejected owner plans using
+injected synthetic assets. All five root gates, the local renderer bundle and
+**1,162 fake/paid-off tests in 94 files** pass; scoped review has no actionable
+local findings. Real image retrieval/quality remains owner-manual with
+keys/live flags/approvals, and impossible windows remain nonfatal without retries.
+The existing seven-word signed evidence bound/renderer wire format is preserved;
+full supporting phrases still control timing. Actual MP4 acceptance remains
+owner-only; earlier private renderer rollout requirements remain separately gated.
+The packet owns settled verification. No cloud rollout or Git action is added.
+
+Earlier verified revision:
+[CL-009 general creative visual rules](CL-009-build-contextual-visual-assembly.md#owner-general-creative-visual-rules--2026-10-06).
+Remove topic/age prompt recipes, plan two to three varied generic contextual
+pictures, use 2–4.5-second holds and allow adjacent pictures without group IDs.
+Unavailable/duplicate images remain nonfatal and count shortfalls are logged.
+All five root gates, the local renderer bundle and **1,155 fake/paid-off tests in
+94 files** pass, including two-picture signed preview/fake-export identity with
+one planner call. Scoped validation has no actionable local findings. Actual
+Gemini creativity and two useful retrieved pictures remain owner checks with
+existing keys/live approvals. The packet owns settled verification. No paid call,
+rights expansion or cloud rollout is added.
+
+Earlier verified revision:
+[CL-009 contextual relevance and hard cuts](CL-009-build-contextual-visual-assembly.md#owner-contextual-relevance-and-hard-cut-revision--2026-10-06).
+The owner accepts improved tracking/cuts but rejects unrelated imagery, crop pans
+and the initial all-wide frame. The current refinement adds contextual Gemini
+scene briefs, bounded candidate relevance ranking, adjacent explicit-age visual
+sequences, immediate camera cuts and provisional opening framing. All five root
+gates, the local renderer bundle and **1,149 fake/paid-off tests in 94 files**
+pass; scoped validation has no actionable local findings. A generic free lookup
+retrieved a contextual person-at-computer photo; other scene queries found no
+qualifying image under current licenses. Actual Gemini relevance, at least one
+useful picture, face containment and final MP4 acceptance remain owner checks
+recorded in that packet. No additional paid call or cloud rollout is introduced.
+
+Earlier verified revision:
+[CL-009 tracking, pictures and player feedback](CL-009-build-contextual-visual-assembly.md#owner-visual-and-tracking-revision--2026-10-06).
+CL-009 preserves accepted captions/stutter behavior and now retains valid face
+evidence, holds the last confirmed same-shot crop without expiry, and zooms tight
+face boxes into the portrait frame. Grounded public-domain/CC0 Commons pictures
+replace automatic text fallback, as compact signed inline overlays behind captions.
+All shared player controls hide off-hover on desktop and idle during touch playback.
+The five root gates, local renderer bundle and **1,143 fake/paid-off tests in
+94 files** pass; scoped validation has no actionable local findings. One generic
+free image lookup succeeds; read-only owner-plan recompilation retains 16 matched
+and 16 held segments rather than rejecting the entire track. Real AI/picture/face
+quality, actual devices and matching private renderer rollout remain owner gates.
+No new browser/media virtualization harness or agent paid flow ran. A fresh
+saved-moments flow is required after backend reload.
+
+Earlier editing evidence: buffering-aware continuous preview, larger spoken-word
+captions and grounded graphics under manifest v3.
+The later [nonfatal-output correction](CL-009-build-contextual-visual-assembly.md#owner-correction--nonfatal-ai-output-critiques-2026-10-06)
+preserves instantaneous caption words and converts AI quality rejections into
+bounded backend warnings/local fallbacks without another paid call. Missing
+usable visual/framing/caption sections cannot abort the edit; usable sections
+continue. Authentication/source integrity, resource and cleanup boundaries remain.
+Earlier native Chrome verification reproduces the old buffering stall and verifies
+its correction; the production local media pipeline exports a synthetic MP4 with
+the caption and graphic present. The settled nonfatal-output correction passes all
+five local gates and **1,106 fake/paid-off tests in 90 files**; scoped validation has
+no actionable local findings. The private saved captions reconcile for all three
+candidates without provider calls. No-key evidence is separate from the owner's
+exact repeated interval, real AI/face/visual quality and matching private renderer
+rollout. A fresh saved-moments flow is required after backend reload.
 
 Current CL-010 owner UI follow-up (2026-10-05):
 [playback volume levels](CL-010-playback-volume-controls.md).
@@ -48,9 +150,13 @@ follow-up above; it did not exercise Gemini or settle CL-009 paid acceptance.
 Current CL-007 owner temporary testing packet (2026-10-05):
 [local saved-sample replay and thumbnails](CL-007-local-sample-replay-and-thumbnails.md).
 Validated transcript and three choices are saved privately outside Git. The
-development-only sample CTA, fresh protected Proceed binding and serial decoded
-thumbnails are implemented; all five root gates pass with **1,013 synthetic tests
-in 86 files**. Browser checks reproduce the old capacity failure and verify the
+development-only sample CTA stays until explicit owner cleanup before deployment,
+without a replay activation deadline (2026-10-06 owner revision). Private
+output capture retains its independent permit. Fresh protected Proceed binding
+and serial decoded thumbnails are implemented. The settled no-deadline revision
+passes all five root gates and **1,098 synthetic tests in 90 files**. Browser
+verification confirms the enabled CTA and three saved options without processing.
+Earlier browser checks reproduce the old capacity failure and verify the
 new frames/side rail. All logs/captures remain. Fake/no-key checks prove local
 wiring; real retained thumbnails and paid/cloud assembly await the owner's
 manual test.

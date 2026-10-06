@@ -313,11 +313,11 @@ owner-managed env YAML and update the same service with all approved gates.
 Do not report readiness until IAM/token/health and bucket checks pass. A failed
 disabled revision is expected bootstrap evidence, not a working deployment.
 
-For separately authorized local control tests, the backend ignored
-`runtime.local.json` supplies `rendererOrigin` and records
-`approvals.cloudSpend=true`. App-local `.env.local` keeps `FAKE_MODE=true`
-and `PAID_DEMO_ENABLED=false`; live AI capabilities remain disabled. The backend adapter is an isolated typed port;
-the browser product still uses fixtures until its owning integration tickets.
+For separately authorized local control tests, backend `.env.local` supplies
+`PRIVATE_RENDERER_ORIGIN` and `CLOUD_SPEND_APPROVED`. Runtime JSON is removed.
+Normal defaults are real/paid-on; paid-off forces cloud approval and all live
+capabilities off. Synthetic fake/paid-off tests inject the renderer port and
+never use ADC or cloud. The backend adapter is an isolated typed port.
 Never enable a removed LIVE_RENDER_ENABLED/LIVE_UPLOAD_ENABLED flag. Use ADC
 impersonation after the exact Token Creator grant above; no JSON key is needed.
 

@@ -1,5 +1,28 @@
 # Google AI and private media-compute cost plan
 
+## Commons-first image fallback — 2026-10-06
+
+The [latest CL-009 owner decision](../tickets/CL-009-build-contextual-visual-assembly.md#owner-commons-first-generated-fallback--2026-10-06)
+retains Commons and permits at most one ungrounded Gemini Flash Image request
+per missing validated picture, maximum three per assembly. Successful Commons
+retrieval costs zero image calls; invalid windows, disabled generation and
+cancellation before dispatch also cost zero. Reserve attempts before dispatch;
+failure/uncertainty consumes them, with no retry or extra planning call. Export
+reuses the signed assets with zero new AI calls. Source call counts are unchanged.
+
+Fixed model is `gemini-3.1-flash-image`, 1K/16:9, 4,096 maximum output tokens,
+60 seconds/call, maximum three requests. [Published standard Developer API pricing](https://ai.google.dev/gemini-api/docs/pricing)
+checked on 2026-10-06 lists USD 0.067 per 1K image, USD 0.50/million input tokens
+and USD 3/million text/thinking output tokens. Three standard 1K image outputs
+are approximately USD 0.201 plus text/input; this is an estimate, not a hard
+dollar ceiling or measured invoice. No search grounding or paid quality retry
+is enabled. Action budget is six process dispatches at assembly stage, seven
+with render, when image generation is enabled. Image approval defaults true
+under the later environment-only owner decision; paid-off overrides it. This
+does not authorize public paid processing or persist budgets across restart.
+Fake/no-key checks are unmetered; actual generation/access/latency/cost remains
+owner-manual. Matching private renderer rollout remains separately approved.
+
 ## Session media allowance owner decision — 2026-10-05
 
 The owner approved replacing the renderer's two-operation process-lifetime cap

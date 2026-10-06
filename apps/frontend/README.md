@@ -100,7 +100,14 @@ result; pending/uncertain work restores as failure without another AI/job call.
 Remotion Player uses `@clipbuilder/composition`, the prepared selected proxy,
 the manifest's 30fps clock and source start zero. Playback, volume and bounded
 timestamp seeks are ordinary read-only controls. Notes describe the actual
-continuous cut, source speech, captions, focus and extractive cards. Confirm
+conversation cut, caption/audio treatment and camera cuts counted from rendered
+views, rather than repeating every tracking-state change. Each retained picture
+gets its bounded scene brief, fetched/generated source, display duration and
+grounded transcript connection. Rejected pictures are absent. Existing model
+highlight explanations are preserved; a quote-only note becomes an explanation
+of that beat's editorial role with its evidence quoted once. Older signed results
+without scene metadata remain readable. Notes and seeking start no provider call.
+Confirm
 export is connected by CL-011 to one admitted render. Signed final metadata is
 restored without redispatch; a decoded portrait frame and duration gate Download
 MP4. Retry access/download makes zero AI calls and uses existing output only.
@@ -318,14 +325,15 @@ and paid editing require the owner's manual UI test with credentials and enabled
 live stages. Proceed requires public `liveAssemblyEnabled` and the processing
 challenge; successful analysis alone does not enable editing/rendering.
 
-Temporary local sample replay (2026-10-05): **Simulate find moments for sample**
-appears beside Use sample only while the development backend's owner-local saved
-analysis permit is active. It immediately opens three saved real choices and
+Temporary local sample replay (updated 2026-10-06): **Simulate find moments for sample**
+appears beside Use sample when the development backend's owner-local saved
+analysis is valid. It immediately opens three saved real choices and
 their transcript, with an explicit saved-analysis notice. It calls neither AI
 analysis stage nor cloud preparation. Manual Proceed creates a fresh protected
 session/disposable sample copy and signs inspected saved analysis before the
 normal paid assembly/preview. Source uploads cannot use replay. Saved content is
-outside Git/build/public assets and activation lasts six hours; normal browser
+outside Git/build/public assets. Replay has no activation deadline and stays
+until explicit cleanup before deployment; normal browser
 workspace expiry/Clear applies. Development guards and production composition
 exclude the CTA/transport. Fake/no-key injected checks prove local wiring only;
 actual provider/framing/preview success remains owner-tested with live assembly,
@@ -417,10 +425,11 @@ resets standard width/color to auto so they cannot override custom rendering.
 The dark privacy dialog overrides only thumb colors.
 Candidate thumbnail play circles are 28px decorative cues inside the
 whole-card button; actual player controls retain their 44px targets.
-The shared portrait player uses floating controls inside the frame. Pointer
-entry/movement and tap reveal them; playback inactivity fades them after 2.2
-seconds or on mouse exit. Paused/busy states, keyboard focus and focused seek
-interaction keep them visible. A full-frame named button reveals controls
+Every shared workflow player, including source video, uses floating controls
+inside the frame. Desktop mouse hover shows them; leaving hides them even when
+paused. Touch/pen taps reveal controls and playing idles them after 2.2 seconds;
+paused touch controls remain visible. Busy states, keyboard focus and volume/seek
+interaction pin controls. A full-frame named button reveals controls
 without changing playback; faded actions remain keyboard reachable. The idle
 timeout is owned and cancelled on state changes and unmount.
 Back and playback overlays share the landing navbar's token-backed blue glass,
@@ -579,6 +588,27 @@ pass. App animations intentionally remain enabled under OS reduced-motion
 preferences per the owner; this exception is not an accessibility-compliance claim.
 
 ## Configuration boundary
+
+The opt-in CL-009 playback proof runs with
+`corepack pnpm --filter @clipbuilder/frontend exec node --experimental-strip-types feasibility/edit-playback/run.mjs --assert-buffer-fix`
+after shared package builds. It uses already installed Windows Chrome (or an
+explicit existing `CHROMIUM_PATH`), WebCodecs/Mediabunny synthetic numbered frames
+and tones, and an isolated loopback server. It compares old buffering behavior
+with the production composition, checking natural completion, media identity,
+spoken-word/silence cues and an inserted graphic. It forces fake/paid-off before
+imports, blocks non-loopback browser requests and removes its profile/server/media
+scratch. It installs nothing and makes zero AI/cloud calls. Optional
+`--proof-directory=<existing directory>` saves synthetic screenshots;
+`--synthetic-media=<new synthetic-edit-input.mp4 path>` saves only the generated
+fixture for the renderer proof. Remove that fixture after the paired proof.
+
+The selected edit now uses manifest v3 and a fixed spoken-word caption preset.
+Its browser trace lasts at most two minutes and emits bounded counts,
+buffering/seeking summaries, drift buckets and observed visual count. It contains
+no transcript, source URL or exact media clock. Real Gemini planning requires the
+owner's key/live/paid approvals and manual UI action; synthetic checks prove no
+real AI quality. Unsupported saved manifests require normal recovery and a fresh
+owner action, never an automatic paid retry.
 
 Browser code receives schema-validated safe mode/availability via the local
 `/api/sample/config` bridge. Backend `FAKE_MODE` is the only mode authority;

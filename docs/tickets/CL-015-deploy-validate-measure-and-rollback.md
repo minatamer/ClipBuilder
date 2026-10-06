@@ -1,5 +1,61 @@
 # CL-015 — Bounded renderer setup and later public deployment
 
+## Owner environment-only configuration — 2026-10-06
+
+The owner requires removal of backend runtime JSON and its loading/API, with
+normal defaults `FAKE_MODE=false`, `PAID_DEMO_ENABLED=true` and all four approval
+flags true. The paid master has priority: false must force cloud spend, Gemini
+transfer, image generation and paid-project confirmation false, with no paid
+capability/grant/dispatch. This supersedes the earlier local-runtime/default-fake
+configuration decision. Tests and synthetic harnesses remain explicitly fake,
+paid-off and intercepted before application imports.
+
+Implement environment-only private connections and processing stage, tracked
+schema/defaults/example, and removal of runtime reader/schema/template/composition
+arguments. Migrate existing private connection/sample/stage values into the
+ignored backend environment without printing/copying credentials or private
+values; delete the obsolete local JSON afterward. Preserve stage=assembly until
+the independently approved renderer rollout; no cloud deployment or paid flow
+is authorized. Missing optional local prerequisites still disable paid routes
+with content-free reason codes and zero provider dispatches.
+
+Verify defaults, explicit paid-off precedence over every approval/live setting,
+mode conflicts, optional missing setup, environment-only composition, retained
+sample isolation and test pre-import protections. Run focused tests and settled
+five root gates, then perform a complete backend restart with verified process
+ownership, watcher/child/orphan cleanup, released port, normal configuration and
+non-metered health/frontend/config GETs. Preserve the frontend, retained master,
+captures and unrelated editing changes. No Git action is authorized.
+
+Local implementation evidence: runtime reader/schema/template and composition
+arguments are removed; source and compiled backend contain no runtime JSON
+configuration usage. Private connection/sample/stage settings were migrated into
+the ignored backend environment without displaying values or changing credentials
+and operating switches. Four approvals default true; paid-off dominates them and
+disables cloud/sample reads, live capabilities, grants and dispatch allowance.
+Optional local setup and code-fixed limits remain protected. Configuration callers,
+examples, test setup and owning operational guidance are updated.
+
+Settled `corepack pnpm format:check`, `lint`, `typecheck`, `test:unit` and `build`
+pass: 1,190 synthetic tests in 95 files. An additional five-test pre-import check
+passes with inherited synthetic real/paid/approval settings, proving replacement
+before imports. No provider, cloud or agent-paid flow ran. The local Windows
+frontend inventory still has 26 external package links and is not strict immutable
+deployment acceptance. No Git action was performed.
+
+The owner temporarily withheld backend restart and asked that visual logs be
+preserved. The later CL-009 timing and CL-010 meaningful-notes corrections completed
+before restart. Ten old backend process identities were verified absent, port 4000
+stabilized free, and a new normal-config backend reached health 200. Frontend
+`/start` and sample configuration return 200 with its original process preserved;
+live analysis/assembly are available and final render remains off. No live paid
+flow was run. See the [CL-010 completion record](CL-010-deliver-automatic-clip-review.md#owner-meaningful-edit-notes--2026-10-06).
+All 28 private diagnostic captures
+and four current/previous backend logs retain their originals plus a hash-verified
+private OS-temp snapshot. The owner requires no validate workflow unless explicitly
+requested. Real imagery/quality, generated-image failure diagnosis, matching private
+renderer rollout and public provider/cloud/rights/deployment acceptance remain open.
+
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
 Status: local release preparation complete; validation has no actionable local findings and all five root gates pass. Strict release verification rejects the current Windows artifact; actual target-platform deployment acceptance remains unchecked. Early private resources/authentication/Linux media/expiry-deletion evidence remains under CL-006. Complete public deployment remains gated and unperformed.
@@ -45,9 +101,11 @@ Git actions retain separate gates. Usage polling and independent review remain s
 - [x] Implement locally buildable production-output exclusion and release/rollback preparation; external phases remain unchecked.
 - [x] Complete local validation, five root gates and exact build/input evidence; this is not complete deployment acceptance.
 - [ ] Complete the owner-requested `artifacts/` cleanup checkpoint below before freezing the deployment build.
+- [ ] Remove CL-007's owner-local saved-sample replay CTA, replay transport/cache loading and private saved copy before deployment. The 2026-10-06 owner decision keeps the localhost button available without a deadline until this explicit cleanup; preserve the original diagnostic capture. See the [owning replay packet](CL-007-local-sample-replay-and-thumbnails.md).
 - [ ] Complete the owner-requested Google Search favicon/crawlability checkpoint below before freezing the public deployment build; retain its post-release indexing follow-up.
 - [ ] Complete the owner-requested whole-codebase audit, STRIDE security analysis and final-revision validation checkpoint below before public deployment.
 - [x] Close [CL-005's chunked cloud-upload and truthful progress checkpoint](CL-005-implement-secure-upload-and-storage.md#owner-requested-chunked-cloud-upload-and-truthful-progress--2026-10-05); synthetic checks and two protected actual browser/GCS sample attempts verify chunk progress, completion and Exit cleanup via validated renderer cancellation. Owner-only paid continuation and broader deployment acceptance remain separate.
+- [ ] Close [CL-009's owner editing-quality and diagnostic checkpoint](CL-009-build-contextual-visual-assembly.md#local-execution-and-verification--2026-10-06): local v3 implementation, synthetic browser buffering correction and actual synthetic MP4 caption/graphic inclusion are verified. The owner's exact repeated interval, real face/caption/visual/A/V quality, matching private renderer rollout and owner paid acceptance remain unchecked.
 - [ ] Build acceptable immutable target-platform images; verify actual deployment, negative URL probes, bounded live quality/cost, kill switch/rollback and remaining rights/AI/cloud/license/device gates after approval.
 
 ### Owner-required comprehensive pre-deployment audit — 2026-10-05
