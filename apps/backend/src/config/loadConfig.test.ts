@@ -5,32 +5,47 @@ import { PUBLIC_LIMITS } from "@clipbuilder/contracts";
 import {
   createSafeTestEnvironment,
   createLiveValidationEnvironment,
-  createLiveValidationSettings,
 } from "../../test/environment.fixture.js";
-import { ENVIRONMENT_KEYS } from "./env.schema.js";
 import { loadConfig } from "./loadConfig.js";
+import { ENVIRONMENT_KEYS } from "./env.schema.js";
 import { composeAdmission } from "../admission/admission.composition.js";
 import { composeBackend } from "../composition.js";
 import * as gemini from "../analysis/gemini.adapter.js";
 import * as renderer from "../media/renderer.cloudrun.js";
 import * as turnstile from "../admission/turnstile.verifier.js";
 
-describe("backend configuration", () => {
-  it("starts the local real-mode app with incomplete paid setup and zero metered boundaries", async () => {
+const approvals = [
+  "CLOUD_SPEND_APPROVED",
+  "GEMINI_TRANSFER_APPROVED",
+  "GEMINI_IMAGE_GENERATION_APPROVED",
+  "GEMINI_PAID_PROJECT_CONFIRMED",
+] as const;
+const retained = {
+  RETAINED_SAMPLE_BUCKET: "synthetic-retained",
+  RETAINED_SAMPLE_OBJECT: "source/input.mp4",
+  RETAINED_SAMPLE_GENERATION: "1",
+  RETAINED_SAMPLE_BYTES: "8192",
+};
+
+describe("backend environment configuration", () => {
+  it("defaults to real mode, paid enabled and four approvals without dispatching incomplete setup", async () => {
     const google = vi.spyOn(gemini, "composeGeminiTransport");
     const media = vi.spyOn(renderer, "rendererIdentity");
     const challenge = vi.spyOn(turnstile, "composeAbuseVerifier");
     try {
-      const { application, config } = composeBackend(
-        {
-          NODE_ENV: "development",
-          FAKE_MODE: "false",
-          PAID_DEMO_ENABLED: "true",
+      const { application, config } = composeBackend({
+        NODE_ENV: "development",
+      });
+      expect(config).toMatchObject({
+        providerMode: "live",
+        paidDemoEnabled: true,
+        renderer: { spendApproved: true },
+        gemini: {
+          transferApproved: true,
+          paidProjectConfirmed: true,
+          imageGenerationApproved: true,
         },
-        { paidValidationStage: "analysis" },
-      );
-      expect(config.providerMode).toBe("live");
-      expect(config.paidDemoEnabled).toBe(true);
+      });
       expect(config.features.liveAnalysis).toBe(false);
       expect(config.admission.maxProcessDispatches).toBe(0);
       await request(application).get("/v1/health").expect(200);
@@ -39,8 +54,6 @@ describe("backend configuration", () => {
         .expect(200);
       expect(response.body).toMatchObject({
         mode: "live",
-        sampleEnabled: false,
-        localMediaEnabled: true,
         liveAnalysisEnabled: false,
         liveAssemblyEnabled: false,
         liveRenderEnabled: false,
@@ -62,162 +75,166 @@ describe("backend configuration", () => {
     }
   });
 
-  it("issues grants with the code-selected key despite an obsolete environment selector", () => {
-    const config = loadConfig(
-      {
-        ...createLiveValidationEnvironment(),
-        PROCESSING_GRANT_ACTIVE_KEY_ID: "legacy",
-        PROCESSING_GRANT_KEY: Buffer.alloc(32, 9).toString("base64url"),
-      },
-      createLiveValidationSettings(),
-    );
-    expect(config.session.processingGrantActiveKeyId).toBe("v1");
-    const admission = composeAdmission(config);
-    expect(admission).not.toBeNull();
-    const issued = admission!.issue("http://localhost:3000", "same-origin");
-    expect(issued.cookie.split(".")[0]).toBe("v1");
-  });
-
-  it("migrates the existing grant entry and prefers an explicit plain key", () => {
-    const existingKey = Buffer.alloc(32, 9).toString("base64url");
-    for (const legacy of [JSON.stringify({ v1: existingKey }), existingKey]) {
-      const environment = createLiveValidationEnvironment();
-      delete environment.PROCESSING_GRANT_KEY;
-      environment.PROCESSING_GRANT_KEYS_JSON = legacy;
-      const config = loadConfig(environment, createLiveValidationSettings());
-      expect(config.session.processingGrantKey).toBe(existingKey);
-      expect(config.processingUnavailableReasons).toEqual([]);
-      const admission = composeAdmission(config)!;
-      const issued = admission.issue("http://localhost:3000", "same-origin");
-      expect(issued.cookie.split(".")[0]).toBe("v1");
-    }
-    const environment = createLiveValidationEnvironment();
-    environment.PROCESSING_GRANT_KEYS_JSON = "invalid-obsolete-entry";
-    expect(
-      loadConfig(environment, createLiveValidationSettings()).session
-        .processingGrantKey,
-    ).toBe(environment.PROCESSING_GRANT_KEY);
-    environment.PROCESSING_GRANT_KEY = "";
-    expect(
-      loadConfig(environment, createLiveValidationSettings()).features
-        .liveAnalysis,
-    ).toBe(false);
-  });
-
   it.each([
-    ["analysis", 2, false, false],
-    ["assembly", 3, true, false],
-    ["render", 4, true, true],
+    ["analysis", 2, false, false, false],
+    ["assembly", 6, true, false, true],
+    ["render", 7, true, true, true],
   ] as const)(
-    "derives bounded capabilities for approved %s validation",
-    (stage, dispatches, assembly, render) => {
-      const config = loadConfig(
-        createLiveValidationEnvironment(),
-        createLiveValidationSettings(stage),
-      );
+    "derives fixed dispatch bounds for %s",
+    (stage, budget, assembly, render, images) => {
+      const config = loadConfig({
+        ...createLiveValidationEnvironment(),
+        PAID_VALIDATION_STAGE: stage,
+      });
       expect(config.features).toMatchObject({
         liveAnalysis: true,
         liveAssembly: assembly,
         liveRender: render,
-        liveImageGeneration: false,
+        liveImageGeneration: images,
       });
       expect(config.admission).toMatchObject({
         grantsEnabled: true,
-        maxProcessDispatches: dispatches,
+        maxProcessDispatches: budget,
       });
     },
   );
 
-  it("keeps the paid kill switch authoritative over a recorded validation stage", () => {
-    const config = loadConfig(
-      { FAKE_MODE: "false", PAID_DEMO_ENABLED: "false" },
-      createLiveValidationSettings("render"),
-    );
+  it("uses assembly as the normal stage without requiring a runtime file", () => {
+    const environment = createLiveValidationEnvironment();
+    delete environment.PAID_VALIDATION_STAGE;
+    const config = loadConfig(environment);
     expect(config.features).toMatchObject({
-      liveAnalysis: false,
-      liveAssembly: false,
+      liveAnalysis: true,
+      liveAssembly: true,
       liveRender: false,
+      liveImageGeneration: true,
     });
-    expect(config.admission).toMatchObject({
-      grantsEnabled: false,
-      maxProcessDispatches: 0,
-    });
-    const unapproved = loadConfig(createLiveValidationEnvironment());
-    expect(unapproved.features.liveAnalysis).toBe(false);
-    expect(unapproved.admission.maxProcessDispatches).toBe(0);
-    expect(unapproved.processingUnavailableReasons).toContain(
-      "validation_stage_unapproved",
-    );
+    expect(config.processingUnavailableReasons).toEqual([]);
   });
 
-  it.each(["cloudSpend", "geminiTransfer", "paidProject"] as const)(
-    "requires independent %s approval",
-    (approval) => {
-      const settings = createLiveValidationSettings();
-      settings.approvals[approval] = false;
-      const config = loadConfig(createLiveValidationEnvironment(), settings);
-      expect(config.providerMode).toBe("live");
-      expect(config.paidDemoEnabled).toBe(true);
+  it.each([undefined, "false", "true"])(
+    "makes paid-off dominate every approval value (%s), connection and stage",
+    (value) => {
+      const config = loadConfig({
+        ...createLiveValidationEnvironment(),
+        ...retained,
+        PAID_DEMO_ENABLED: "false",
+        PAID_VALIDATION_STAGE: "render",
+        ...Object.fromEntries(approvals.map((key) => [key, value])),
+      });
+      expect(config).toMatchObject({
+        providerMode: "live",
+        paidDemoEnabled: false,
+        renderer: { spendApproved: false, environment: "disabled" },
+        gemini: {
+          transferApproved: false,
+          paidProjectConfirmed: false,
+          imageGenerationApproved: false,
+        },
+        retainedSample: { enabled: false },
+      });
       expect(config.features).toMatchObject({
         liveAnalysis: false,
         liveAssembly: false,
         liveRender: false,
+        liveImageGeneration: false,
       });
-      expect(config.admission.maxProcessDispatches).toBe(0);
+      expect(config.admission).toMatchObject({
+        grantsEnabled: false,
+        maxProcessDispatches: 0,
+      });
       expect(composeAdmission(config)).toBeNull();
     },
   );
+
+  it.each([
+    "CLOUD_SPEND_APPROVED",
+    "GEMINI_TRANSFER_APPROVED",
+    "GEMINI_PAID_PROJECT_CONFIRMED",
+  ])("honors an explicit %s=false", (key) => {
+    const config = loadConfig({
+      ...createLiveValidationEnvironment(),
+      [key]: "false",
+    });
+    expect(config.features.liveAnalysis).toBe(false);
+    expect(config.admission.maxProcessDispatches).toBe(0);
+    expect(composeAdmission(config)).toBeNull();
+  });
+
+  it("lets image approval disable generation while retaining assembly", () => {
+    const config = loadConfig({
+      ...createLiveValidationEnvironment(),
+      PAID_VALIDATION_STAGE: "assembly",
+      GEMINI_IMAGE_GENERATION_APPROVED: "false",
+    });
+    expect(config.features).toMatchObject({
+      liveAssembly: true,
+      liveImageGeneration: false,
+    });
+    expect(config.admission.maxProcessDispatches).toBe(3);
+    expect(config.gemini.imageGenerationApproved).toBe(false);
+  });
+
+  it("keeps an explicit disabled stage unavailable", () => {
+    const config = loadConfig({
+      ...createLiveValidationEnvironment(),
+      PAID_VALIDATION_STAGE: "disabled",
+    });
+    expect(config.processingUnavailableReasons).toContain(
+      "validation_stage_unapproved",
+    );
+    expect(config.admission.maxProcessDispatches).toBe(0);
+  });
 
   it.each([
     "GEMINI_API_KEY",
     "PROCESSING_GRANT_KEY",
     "TURNSTILE_SITE_KEY",
     "TURNSTILE_SECRET_KEY",
-  ])("rejects enabled processing without %s", (key) => {
+    "PRIVATE_RENDERER_ORIGIN",
+    "TURNSTILE_EXPECTED_HOSTNAME",
+  ])("leaves local processing unavailable without %s", (key) => {
     const environment = createLiveValidationEnvironment();
     delete environment[key];
-    const config = loadConfig(environment, createLiveValidationSettings());
+    const config = loadConfig(environment);
     expect(config.features.liveAnalysis).toBe(false);
     expect(config.admission.maxProcessDispatches).toBe(0);
     expect(composeAdmission(config)).toBeNull();
   });
 
-  it("requires renderer, abuse hostname, valid grant keys and local scope", () => {
-    for (const overrides of [
-      { rendererOrigin: "" },
-      { turnstileHostname: "" },
-      { rendererOrigin: "https://invalid.example.test" },
-    ]) {
-      const config = loadConfig(createLiveValidationEnvironment(), {
-        ...createLiveValidationSettings(),
-        ...overrides,
-      });
-      expect(config.features.liveAnalysis).toBe(false);
-      expect(composeAdmission(config)).toBeNull();
+  it("keeps retained playback when only AI prerequisites are missing and paid is on", () => {
+    const config = loadConfig(retained);
+    expect(config.retainedSample.enabled).toBe(true);
+    expect(config.features.liveAnalysis).toBe(false);
+    expect(config.admission.maxProcessDispatches).toBe(0);
+  });
+
+  it("selects the fixed grant key ID and migrates the legacy key without exposing it", () => {
+    const existingKey = Buffer.alloc(32, 9).toString("base64url");
+    for (const legacy of [JSON.stringify({ v1: existingKey }), existingKey]) {
+      const environment = createLiveValidationEnvironment();
+      delete environment.PROCESSING_GRANT_KEY;
+      environment.PROCESSING_GRANT_KEYS_JSON = legacy;
+      environment.PROCESSING_GRANT_ACTIVE_KEY_ID = "obsolete";
+      const config = loadConfig(environment);
+      expect(config.session.processingGrantKey).toBe(existingKey);
+      expect(
+        composeAdmission(config)!
+          .issue("http://localhost:3000", "same-origin")
+          .cookie.split(".")[0],
+      ).toBe("v1");
     }
-    expect(() =>
-      loadConfig(createLiveValidationEnvironment(), {
-        ...createLiveValidationSettings(),
-        appEnvironment: "preview",
-      }),
-    ).toThrow();
-    for (const overrides of [
-      { PROCESSING_GRANT_KEY: "not-a-key" },
-      { PROCESSING_GRANT_KEY: "A".repeat(42) + "B" },
-      { PROCESSING_GRANT_KEY: JSON.stringify({ v1: "not-a-key" }) },
-      { PROCESSING_GRANT_KEY: undefined, PROCESSING_GRANT_KEYS_JSON: "{}" },
-      {
-        PROCESSING_GRANT_KEY: undefined,
-        PROCESSING_GRANT_KEYS_JSON: JSON.stringify({
-          legacy: Buffer.alloc(32, 7).toString("base64url"),
-        }),
-      },
+    const environment = createLiveValidationEnvironment();
+    environment.PROCESSING_GRANT_KEYS_JSON = "invalid-obsolete-entry";
+    expect(loadConfig(environment).session.processingGrantKey).toBe(
+      environment.PROCESSING_GRANT_KEY,
+    );
+    for (const key of [
+      "not-a-key",
+      "A".repeat(42) + "B",
+      JSON.stringify({ v1: "not-a-key" }),
     ]) {
-      const config = loadConfig(
-        { ...createLiveValidationEnvironment(), ...overrides },
-        createLiveValidationSettings(),
-      );
-      expect(config.features.liveAnalysis).toBe(false);
+      const config = loadConfig({ ...environment, PROCESSING_GRANT_KEY: key });
       expect(config.processingUnavailableReasons).toContain(
         "grant_key_invalid",
       );
@@ -225,125 +242,23 @@ describe("backend configuration", () => {
     }
   });
 
-  it("keeps structural and conflicting configurations fatal during local startup", () => {
+  it("rejects structural errors, conflicting modes and public live composition", () => {
     for (const overrides of [
       { FAKE_MODE: "true" },
       { PAID_DEMO_ENABLED: "invalid" },
+      { FAKE_MODE: "invalid" },
       { GEMINI_API_KEY: "x".repeat(1025) },
       { PORT: "0" },
       { NODE_ENV: "test" },
+      { FRONTEND_ORIGIN: "invalid" },
+      { PAID_VALIDATION_STAGE: "unknown" },
+      { GEMINI_IMAGE_GENERATION_APPROVED: "maybe" },
+      { APP_ENV: "preview" },
     ])
       expect(() =>
-        loadConfig(
-          { ...createLiveValidationEnvironment(), ...overrides },
-          createLiveValidationSettings(),
-        ),
+        loadConfig({ ...createLiveValidationEnvironment(), ...overrides }),
       ).toThrow();
-    expect(() =>
-      loadConfig(createLiveValidationEnvironment(), {
-        ...createLiveValidationSettings(),
-        frontendOrigin: "invalid",
-      }),
-    ).toThrow();
-  });
-
-  it("preserves approved retained playback when only AI processing is unavailable", () => {
-    const config = loadConfig(
-      {
-        NODE_ENV: "development",
-        FAKE_MODE: "false",
-        PAID_DEMO_ENABLED: "true",
-      },
-      {
-        paidValidationStage: "analysis",
-        approvals: { cloudSpend: true },
-        retainedSample: {
-          bucket: "synthetic-retained-bucket",
-          object: "source/input.mp4",
-          generation: "1",
-          bytes: 8192,
-        },
-      },
-    );
-    expect(config.retainedSample.enabled).toBe(true);
-    expect(config.features.liveAnalysis).toBe(false);
-    expect(config.admission.maxProcessDispatches).toBe(0);
-  });
-
-  it("distinguishes filled secrets from missing runtime approvals and connections", () => {
-    const config = loadConfig(createLiveValidationEnvironment(), {
-      paidValidationStage: "analysis",
-      approvals: { cloudSpend: true },
-    });
-    expect(config.processingUnavailableReasons).toEqual([
-      "gemini_transfer_unapproved",
-      "gemini_paid_project_unconfirmed",
-      "turnstile_hostname_missing",
-      "renderer_connection_missing",
-    ]);
-    expect(config.features.liveAnalysis).toBe(false);
-    expect(composeAdmission(config)).toBeNull();
-  });
-
-  it("uses one mode authority with no live fallback", () => {
-    expect(loadConfig({}).providerMode).toBe("fake");
-    expect(loadConfig({ FAKE_MODE: "false" })).toMatchObject({
-      providerMode: "live",
-      paidDemoEnabled: false,
-    });
-    expect(() => loadConfig({ FAKE_MODE: "maybe" })).toThrow();
-    expect(() =>
-      loadConfig({ FAKE_MODE: "false", PROVIDER_MODE: "fake" }),
-    ).toThrow();
-    expect(() => loadConfig({ LIVE_UPLOAD_ENABLED: "true" })).toThrow();
-    expect(() => loadConfig({ LIVE_RENDER_ENABLED: "true" })).toThrow();
-    expect(() => loadConfig({ RETAINED_SAMPLE_ENABLED: "true" })).toThrow();
-  });
-
-  it("uses fake, paid-disabled, credential-free deterministic composition", () => {
-    const config = loadConfig(createSafeTestEnvironment());
-    expect(config.providerMode).toBe("fake");
-    expect(config.paidDemoEnabled).toBe(false);
-    expect(Object.values(config.features).filter(Boolean)).toEqual([true]);
-    expect(config.gemini.apiKey).toBeNull();
-    for (const overrides of [
-      { PROVIDER_MODE: "live" },
-      { PAID_DEMO_ENABLED: "true" },
-      { LIVE_ANALYSIS_ENABLED: "true" },
-      { GEMINI_API_KEY: "synthetic-key" },
-      { PROCESSING_GRANT_KEY: Buffer.alloc(32, 7).toString("base64url") },
-      {
-        PROCESSING_GRANT_KEYS_JSON: JSON.stringify({
-          v1: Buffer.alloc(32, 7).toString("base64url"),
-        }),
-      },
-      {
-        PROCESSING_GRANT_KEY: "",
-        PROCESSING_GRANT_KEYS_JSON: "unused-legacy-secret",
-      },
-    ])
-      expect(() => loadConfig(createSafeTestEnvironment(overrides))).toThrow();
-    expect(() =>
-      loadConfig(createSafeTestEnvironment(), createLiveValidationSettings()),
-    ).toThrow();
-  });
-
-  it("fixes policy in code and rejects both lower and higher environment overrides", () => {
-    const config = loadConfig({});
-    expect(config.limits.sourceBytes).toBe(PUBLIC_LIMITS.maxSourceBytes);
-    expect(config.limits.sourceSeconds).toBe(PUBLIC_LIMITS.maxSourceSeconds);
-    for (const overrides of [
-      { MAX_SOURCE_BYTES: "1" },
-      { MAX_SOURCE_BYTES: "524288001" },
-      { MAX_SOURCE_SECONDS: "1201" },
-      { RATE_GRANT_MAX: "0" },
-      { GEMINI_TIMEOUT_MS: "1000" },
-    ])
-      expect(() => loadConfig(overrides)).toThrow("Limits are fixed in code");
-    expect(() => loadConfig({}, JSON.parse('{"maxSourceBytes":1}'))).toThrow();
-  });
-
-  it("fails closed for incomplete production configuration", () => {
+    expect(() => loadConfig({ PROVIDER_MODE: "fake" })).toThrow();
     expect(() =>
       loadConfig({ NODE_ENV: "production", APP_ENV: "production" }),
     ).toThrow();
@@ -356,32 +271,68 @@ describe("backend configuration", () => {
     ).toThrow("Unknown ClipBuilder-prefixed");
   });
 
-  it("keeps the app example limited to two switches and blank credentials", () => {
-    const definitions = readFileSync(
-      new URL("../../.env.example", import.meta.url),
-      "utf8",
-    )
-      .split(/\r?\n/u)
-      .filter((line) => /^[A-Z0-9_]+=/.test(line))
-      .map((line) => {
-        const separator = line.indexOf("=");
-        return [line.slice(0, separator), line.slice(separator + 1)];
-      });
-    expect(definitions.map(([key]) => key).sort()).toEqual(
-      [...ENVIRONMENT_KEYS].sort(),
+  it("keeps tests explicit, fake, paid-off and credential-free", () => {
+    const config = loadConfig(createSafeTestEnvironment());
+    expect(config).toMatchObject({
+      providerMode: "fake",
+      paidDemoEnabled: false,
+      gemini: { apiKey: null, imageGenerationApproved: false },
+    });
+    expect(Object.values(config.features).filter(Boolean)).toEqual([true]);
+    for (const overrides of [
+      { PROVIDER_MODE: "live" },
+      { PAID_DEMO_ENABLED: "true" },
+      { LIVE_ANALYSIS_ENABLED: "true" },
+      { GEMINI_API_KEY: "synthetic-key" },
+      { PROCESSING_GRANT_KEY: Buffer.alloc(32, 7).toString("base64url") },
+      { PROCESSING_GRANT_KEYS_JSON: "unused-legacy-secret" },
+    ])
+      expect(() => loadConfig(createSafeTestEnvironment(overrides))).toThrow();
+  });
+
+  it("retains fixed limits and rejects capability and numerical overrides", () => {
+    const config = loadConfig({});
+    expect(config.limits.sourceBytes).toBe(PUBLIC_LIMITS.maxSourceBytes);
+    expect(config.limits.sourceSeconds).toBe(PUBLIC_LIMITS.maxSourceSeconds);
+    for (const overrides of [
+      { MAX_SOURCE_BYTES: "1" },
+      { MAX_SOURCE_BYTES: "524288001" },
+      { RATE_GRANT_MAX: "0" },
+      { GEMINI_TIMEOUT_MS: "1000" },
+      { LIVE_UPLOAD_ENABLED: "true" },
+      { LIVE_RENDER_ENABLED: "true" },
+      { RETAINED_SAMPLE_ENABLED: "true" },
+    ])
+      expect(() => loadConfig(overrides)).toThrow();
+  });
+
+  it("documents real defaults and leaves every credential and private identifier blank", () => {
+    const values = Object.fromEntries(
+      readFileSync(new URL("../../.env.example", import.meta.url), "utf8")
+        .split(/\r?\n/u)
+        .filter((line) => /^[A-Z0-9_]+=/.test(line))
+        .map((line) => [
+          line.slice(0, line.indexOf("=")),
+          line.slice(line.indexOf("=") + 1),
+        ]),
     );
-    const values = Object.fromEntries(definitions);
-    expect(values.FAKE_MODE).toBe("true");
-    expect(values.PAID_DEMO_ENABLED).toBe("false");
-    ENVIRONMENT_KEYS.filter(
-      (key) => !["FAKE_MODE", "PAID_DEMO_ENABLED"].includes(key),
-    ).forEach((key) => expect(values[key]).toBe(""));
-    const settings = JSON.parse(
-      readFileSync(
-        new URL("../../runtime.example.json", import.meta.url),
-        "utf8",
-      ),
-    );
-    expect(loadConfig({}, settings)).toEqual(loadConfig({}));
+    expect(values).toMatchObject({
+      FAKE_MODE: "false",
+      PAID_DEMO_ENABLED: "true",
+      PAID_VALIDATION_STAGE: "assembly",
+    });
+    expect(Object.keys(values).sort()).toEqual([...ENVIRONMENT_KEYS].sort());
+    for (const key of approvals) expect(values[key]).toBe("true");
+    for (const key of [
+      "BACKEND_AUDIENCE",
+      "PRIVATE_RENDERER_ORIGIN",
+      "TURNSTILE_EXPECTED_HOSTNAME",
+      ...Object.keys(retained),
+      "GEMINI_API_KEY",
+      "TURNSTILE_SITE_KEY",
+      "TURNSTILE_SECRET_KEY",
+      "PROCESSING_GRANT_KEY",
+    ])
+      expect(values[key]).toBe("");
   });
 });

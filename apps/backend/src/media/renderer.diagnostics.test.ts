@@ -37,13 +37,10 @@ function fixture(
   const diagnostics = new AnalysisDiagnostics(
     write ?? ((line) => lines.push(line)),
   );
-  const config = loadConfig(
-    {},
-    {
-      rendererOrigin: "https://private-sentinel.run.app",
-      approvals: { cloudSpend: true },
-    },
-  );
+  const config = loadConfig({
+    PRIVATE_RENDERER_ORIGIN: "https://private-sentinel.run.app",
+    PAID_VALIDATION_STAGE: "disabled",
+  });
   const client = new CloudRendererClient(
     config,
     identity,

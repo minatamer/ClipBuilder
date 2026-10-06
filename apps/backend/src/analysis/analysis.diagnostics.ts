@@ -101,6 +101,8 @@ const phases = [
   "assembly_proxy_validation",
   "assembly_plan_parse",
   "assembly_cards",
+  "assembly_pictures",
+  "assembly_picture_generation",
   "assembly_focus",
   "assembly_manifest",
   "assembly_preview",
@@ -155,6 +157,9 @@ const phaseMessages: Record<AnalysisPhase, string> = {
     "Selected video proxy byte count and checksum verification",
   assembly_plan_parse: "Returned speaker and card plan schema parsing",
   assembly_cards: "Contextual card word evidence and safety compilation",
+  assembly_pictures: "Grounded contextual picture retrieval and validation",
+  assembly_picture_generation:
+    "Missing contextual picture generation and raster validation",
   assembly_focus: "Speaker evidence and framing track compilation",
   assembly_manifest: "Fixed composition manifest validation and hashing",
   assembly_preview: "Selected clip preview authorization creation",
@@ -182,7 +187,38 @@ const assemblyDiagnosticSchema = z
     durationMs: z.number().int().min(0).max(1_200_000).optional(),
     contextBytes: z.number().int().min(0).max(16_777_216).optional(),
     captionGroups: z.number().int().min(0).max(12000).optional(),
+    captionCues: z.number().int().min(0).max(12000).optional(),
+    captionZeroDurationCues: z.number().int().min(0).max(12000).optional(),
+    captionOmittedWords: z.number().int().min(0).max(12000).optional(),
+    qualityWarnings: z.number().int().min(0).max(12000).optional(),
+    geometryTransitions: z.number().int().min(0).max(12000).optional(),
     cards: z.number().int().min(0).max(120).optional(),
+    pictures: z.number().int().min(0).max(3).optional(),
+    plannedPictures: z.number().int().min(0).max(3).optional(),
+    validatedPictures: z.number().int().min(0).max(3).optional(),
+    retimedPicturePlans: z.number().int().min(0).max(3).optional(),
+    pictureSearches: z.number().int().min(0).max(3).optional(),
+    pictureGenerationCalls: z.number().int().min(0).max(3).optional(),
+    generatedPictures: z.number().int().min(0).max(3).optional(),
+    retrievedPictures: z.number().int().min(0).max(3).optional(),
+    imageProviderStatus: z.number().int().min(100).max(599).optional(),
+    pictureCandidates: z.number().int().min(0).max(24).optional(),
+    relevanceRejected: z.number().int().min(0).max(24).optional(),
+    rightsRejected: z.number().int().min(0).max(24).optional(),
+    provisionalSegments: z.number().int().min(0).max(12000).optional(),
+    pictureBytes: z
+      .number()
+      .int()
+      .min(0)
+      .max(3 * 96 * 1024)
+      .optional(),
+    plannedCards: z.number().int().min(0).max(120).optional(),
+    fallbackCards: z.number().int().min(0).max(120).optional(),
+    matchedSegments: z.number().int().min(0).max(12000).optional(),
+    heldSegments: z.number().int().min(0).max(12000).optional(),
+    wideSegments: z.number().int().min(0).max(12000).optional(),
+    holdExpiredSegments: z.number().int().min(0).max(12000).optional(),
+    shotResetSegments: z.number().int().min(0).max(12000).optional(),
     focusSegments: z.number().int().min(0).max(12000).optional(),
     proxyBytes: z.number().int().min(0).max(1_073_741_824).optional(),
     bytesMatched: z.boolean().optional(),
@@ -460,6 +496,11 @@ export class AnalysisDiagnostics {
   ) {
     this.emit(phase, "completed", undefined, undefined, undefined, () => ({
       assembly: assemblyDiagnosticSchema.parse(detail),
+    }));
+  }
+  critique(phase: AnalysisPhase, error: unknown) {
+    this.emit(phase, "completed", undefined, error, undefined, () => ({
+      assembly: { qualityWarnings: 1 },
     }));
   }
   rendererRequest(detail: RendererDiagnostic, error?: unknown) {

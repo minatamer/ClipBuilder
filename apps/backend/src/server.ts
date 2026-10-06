@@ -1,7 +1,6 @@
 import { composeBackend } from "./composition.js";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { readLocalRuntimeSettings } from "./config/runtime.local.js";
 import {
   ANALYSIS_DIAGNOSTIC_VERSION,
   AnalysisDiagnostics,
@@ -20,19 +19,8 @@ if (
 )
   process.loadEnvFile(localEnvironment);
 
-const runtime =
-  process.env.NODE_ENV !== "test" &&
-  (process.env.APP_ENV === undefined || process.env.APP_ENV === "local")
-    ? readLocalRuntimeSettings(
-        new URL("../runtime.local.json", import.meta.url),
-      )
-    : {};
 const diagnostics = new AnalysisDiagnostics((line) => console.warn(line));
-const { application, config } = composeBackend(
-  process.env,
-  runtime,
-  diagnostics,
-);
+const { application, config } = composeBackend(process.env, diagnostics);
 const privateCapture = composeLocalGeminiCapture(
   config,
   undefined,

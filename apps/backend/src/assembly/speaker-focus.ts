@@ -1,23 +1,23 @@
 import {
   SELECTED_FOCUS_POLICY,
-  ASSEMBLY_LIMITS,
+  FIXED_COMPOSITION_POLICY,
   speakerPlanSchema,
-  type CompositionManifestV2,
+  type CompositionManifestV3,
   type SelectedMediaRange,
   type TranscriptWord,
 } from "@clipbuilder/contracts";
-type Focus = CompositionManifestV2["focus"][number];
-type Box = Extract<Focus, { mode: "speaker" }>["box"];
+type Focus = CompositionManifestV3["focus"][number];
+type Crop = Exclude<Focus, { mode: "wide" }>;
 export type SpeakerPlanContext = {
   range: SelectedMediaRange;
   words: TranscriptWord[];
+  source?: { width: number; height: number };
 };
 type SpeechSpan = {
   startMs: number;
   endMs: number;
   speakerId: TranscriptWord["speakerId"];
   ambiguous: boolean;
-  turnSpeechMs: number;
 };
 function speechCoverage(context: SpeakerPlanContext): SpeechSpan[] {
   const duration = context.range.endMs - context.range.startMs;
@@ -44,19 +44,12 @@ function speechCoverage(context: SpeakerPlanContext): SpeechSpan[] {
       previous = spans.at(-1);
     if (previous?.speakerId === speakerId && previous.ambiguous === ambiguous)
       previous.endMs = endMs;
-    else
-      spans.push({
-        startMs: cursor,
-        endMs,
-        speakerId,
-        ambiguous,
-        turnSpeechMs: 0,
-      });
+    else spans.push({ startMs: cursor, endMs, speakerId, ambiguous });
     cursor = endMs;
   }
   for (let index = 0; index < events.length;) {
+    append(events[index]!.timeMs);
     const timeMs = events[index]!.timeMs;
-    append(timeMs);
     while (index < events.length && events[index]!.timeMs === timeMs) {
       const event = events[index++]!,
         count = (active.get(event.speakerId) ?? 0) + event.delta;
@@ -65,128 +58,199 @@ function speechCoverage(context: SpeakerPlanContext): SpeechSpan[] {
     }
   }
   append(duration);
-  // A turn can span word pauses, but silence contributes no time to the hold.
-  // Overlap/unknown speech or another speaker ends the unambiguous turn.
-  let turn: SpeechSpan[] = [];
-  function finishTurn() {
-    const speechMs = turn.reduce(
-      (total, span) => total + span.endMs - span.startMs,
-      0,
-    );
-    for (const span of turn) span.turnSpeechMs = speechMs;
-    turn = [];
-  }
-  for (const span of spans) {
-    if (
-      span.ambiguous ||
-      (span.speakerId && turn.length && span.speakerId !== turn[0]!.speakerId)
-    )
-      finishTurn();
-    if (span.speakerId) turn.push(span);
-  }
-  finishTurn();
   return spans;
 }
-function center(box: Box) {
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-}
-function approach(from: Box, to: Box, durationMs: number): Box {
-  const a = center(from),
-    b = center(to),
-    distance = Math.hypot(a.x - b.x, a.y - b.y);
-  const fraction = distance
-    ? Math.min(
-        1,
-        (SELECTED_FOCUS_POLICY.maxCenterVelocityPerSecond * durationMs) /
-          1000 /
-          distance,
-      )
-    : 1;
-  const width = from.width + (to.width - from.width) * fraction,
-    height = from.height + (to.height - from.height) * fraction;
+export function provisionalOpeningFocus(context: SpeakerPlanContext): Crop {
+  const landscape =
+    !context.source || context.source.width > context.source.height;
   return {
-    x: Math.min(1 - width, from.x + (to.x - from.x) * fraction),
-    y: Math.min(1 - height, from.y + (to.y - from.y) * fraction),
-    width,
-    height,
+    startMs: 0,
+    endMs: context.range.endMs - context.range.startMs,
+    mode: "held",
+    reason: "opening-default",
+    box: { x: landscape ? 0.13 : 0.38, y: 0.25, width: 0.24, height: 0.35 },
   };
 }
 export function compileSpeakerFocus(
   raw: unknown,
   context: SpeakerPlanContext,
-): CompositionManifestV2["focus"] {
+  critique?: (reason: "speaker_evidence_rejected") => void,
+): CompositionManifestV3["focus"] {
   const plan = speakerPlanSchema.parse(raw),
     duration = context.range.endMs - context.range.startMs;
   if (plan.durationMs !== duration) throw new Error("speaker_plan_rejected");
   const byId = new Map(context.words.map((word) => [word.id, word])),
     speech = speechCoverage(context);
-  const result: Focus[] = [];
-  for (const shot of plan.shots) {
-    let cursor = shot.startMs,
-      previous: Extract<Focus, { mode: "speaker" }> | null = null;
+  let rejectedEvidence = false;
+  for (const shot of plan.shots)
     for (const item of shot.observations) {
-      if (item.startMs > cursor) {
-        result.push({ startMs: cursor, endMs: item.startMs, mode: "wide" });
-        previous = null;
-      }
-      const start = context.range.startMs + item.startMs,
-        end = context.range.startMs + item.endMs;
-      for (const id of item.evidenceWordIds) {
+      item.evidenceWordIds = item.evidenceWordIds.filter((id) => {
         const word = byId.get(id);
         if (
           !word ||
-          word.startMs >= end ||
-          word.endMs <= start ||
+          word.startMs >= context.range.startMs + item.endMs ||
+          word.endMs <= context.range.startMs + item.startMs ||
           (item.association === "matched" && word.speakerId !== item.speakerId)
-        )
-          throw new Error("speaker_evidence_rejected");
-      }
-      const associated =
-        item.association === "matched" &&
-        item.box &&
-        item.speakerId &&
-        item.confidence >= SELECTED_FOCUS_POLICY.minimumConfidence;
-      for (const span of speech) {
-        const startMs = Math.max(item.startMs, span.startMs),
-          endMs = Math.min(item.endMs, span.endMs);
-        if (startMs >= endMs) continue;
-        if (
-          associated &&
-          item.box &&
-          item.speakerId &&
-          span.speakerId === item.speakerId &&
-          span.turnSpeechMs >= SELECTED_FOCUS_POLICY.switchHoldMs
         ) {
-          const focus: Extract<Focus, { mode: "speaker" }> = {
-            startMs,
-            endMs,
-            mode: "speaker",
-            speaker: item.speakerId,
-            confidence: item.confidence,
-            box: item.box,
-          };
-          if (previous) {
-            focus.fromBox = previous.box;
-            focus.box = approach(previous.box, item.box, endMs - startMs);
-          }
-          result.push(focus);
-          previous = focus;
-        } else {
-          result.push({ startMs, endMs, mode: "wide" });
-          previous = null;
+          rejectedEvidence = true;
+          return false;
         }
-      }
-      cursor = item.endMs;
+        return true;
+      });
     }
-    if (cursor < shot.endMs)
-      result.push({ startMs: cursor, endMs: shot.endMs, mode: "wide" });
+  if (rejectedEvidence) critique?.("speaker_evidence_rejected");
+  const result: Focus[] = [];
+  function append(focus: Focus) {
+    const previous = result.at(-1);
+    if (
+      previous &&
+      previous.endMs === focus.startMs &&
+      JSON.stringify({ ...previous, startMs: 0, endMs: 0 }) ===
+        JSON.stringify({ ...focus, startMs: 0, endMs: 0 })
+    )
+      previous.endMs = focus.endMs;
+    else result.push(focus);
+    if (result.length > FIXED_COMPOSITION_POLICY.maxFocusSegments)
+      throw new Error("focus_track_too_complex");
   }
-  // Bounded public geometry even when every provider observation has an uncovered gap.
-  return result.length <= ASSEMBLY_LIMITS.maxFocusSegments
-    ? result
-    : plan.shots.map((shot) => ({
+  for (const shot of plan.shots) {
+    // A crop never survives a real shot boundary or confirmed absence/offscreen.
+    const first = shot.observations.find(
+      (item) => item.startMs === shot.startMs,
+    );
+    const opening =
+      shot.openingFace &&
+      shot.openingFace.confidence >= SELECTED_FOCUS_POLICY.minimumConfidence
+        ? shot.openingFace.box
+        : first?.box &&
+            first.visiblePeople > 0 &&
+            first.confidence >= SELECTED_FOCUS_POLICY.minimumConfidence
+          ? first.box
+          : null;
+    let crop: Crop | null = {
+        ...provisionalOpeningFocus(context),
         startMs: shot.startMs,
         endMs: shot.endMs,
-        mode: "wide" as const,
-      }));
+        ...(opening ? { box: opening, reason: "visible-face" as const } : {}),
+      },
+      currentSpeaker: string | null = null,
+      candidate: string | null = null,
+      voicedMs = 0,
+      candidateEnd = shot.startMs;
+    let wideReason: Extract<Focus, { mode: "wide" }>["reason"] = shot.startMs
+      ? "shot-reset"
+      : "initial";
+    const boundaries = [
+      ...new Set([
+        shot.startMs,
+        shot.endMs,
+        ...shot.observations.flatMap((o) => [o.startMs, o.endMs]),
+        ...speech
+          .flatMap((s) => [s.startMs, s.endMs])
+          .filter((t) => t > shot.startMs && t < shot.endMs),
+      ]),
+    ].sort((a, b) => a - b);
+    function hold(
+      startMs: number,
+      endMs: number,
+      reason: Extract<Focus, { mode: "held" }>["reason"],
+    ) {
+      if (crop) {
+        append({
+          startMs,
+          endMs,
+          mode: "held",
+          reason:
+            currentSpeaker === null && crop.mode === "held"
+              ? crop.reason
+              : reason,
+          box: crop.box,
+        });
+        return;
+      }
+      append({ startMs, endMs, mode: "wide", reason: wideReason });
+    }
+    for (let index = 0; index < boundaries.length - 1; index++) {
+      let startMs = boundaries[index]!;
+      const endMs = boundaries[index + 1]!,
+        item = shot.observations.find(
+          (o) => o.startMs <= startMs && o.endMs > startMs,
+        ),
+        span = speech.find((s) => s.startMs <= startMs && s.endMs > startMs);
+      if (
+        (item?.association === "absent" || item?.association === "offscreen") &&
+        item.visiblePeople === 0 &&
+        item.confidence >= SELECTED_FOCUS_POLICY.minimumConfidence
+      ) {
+        crop = null;
+        currentSpeaker = null;
+        candidate = null;
+        voicedMs = 0;
+        wideReason = item.association;
+        append({ startMs, endMs, mode: "wide", reason: wideReason });
+        continue;
+      }
+      const matched =
+        item?.association === "matched" &&
+        item.box &&
+        item.speakerId &&
+        item.evidenceWordIds.length > 0 &&
+        item.confidence >= SELECTED_FOCUS_POLICY.minimumConfidence &&
+        span?.speakerId === item.speakerId;
+      if (!matched || !item?.box || !item.speakerId) {
+        if (
+          span?.ambiguous ||
+          (span?.speakerId && span.speakerId !== candidate) ||
+          startMs - candidateEnd > SELECTED_FOCUS_POLICY.maximumEvidenceGapMs
+        ) {
+          candidate = null;
+          voicedMs = 0;
+        }
+        hold(
+          startMs,
+          endMs,
+          !item
+            ? "observation-gap"
+            : item.association === "matched" &&
+                item.confidence >= SELECTED_FOCUS_POLICY.minimumConfidence &&
+                !span?.speakerId &&
+                !span?.ambiguous
+              ? "pause"
+              : "uncertain",
+        );
+        continue;
+      }
+      if (!crop || currentSpeaker !== item.speakerId) {
+        if (
+          candidate !== item.speakerId ||
+          startMs - candidateEnd > SELECTED_FOCUS_POLICY.maximumEvidenceGapMs
+        ) {
+          candidate = item.speakerId;
+          voicedMs = 0;
+        }
+        const waiting = Math.min(
+          endMs - startMs,
+          SELECTED_FOCUS_POLICY.switchHoldMs - voicedMs,
+        );
+        if (waiting > 0) hold(startMs, startMs + waiting, "switch-pending");
+        voicedMs += waiting;
+        candidateEnd = endMs;
+        startMs += waiting;
+        if (voicedMs < SELECTED_FOCUS_POLICY.switchHoldMs) continue;
+      }
+      crop = {
+        startMs,
+        endMs,
+        mode: "speaker",
+        speaker: item.speakerId,
+        confidence: item.confidence,
+        box: item.box,
+      };
+      currentSpeaker = item.speakerId;
+      candidate = null;
+      voicedMs = 0;
+      if (startMs < endMs) append(crop);
+    }
+  }
+  return result;
 }

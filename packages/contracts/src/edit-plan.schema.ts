@@ -2,8 +2,12 @@ import { z } from "zod";
 import { ASSEMBLY_LIMITS, PUBLIC_LIMITS } from "./constants.js";
 import { boundedPlainTextSchema } from "./text.schema.js";
 import { wordIdSchema } from "./ids.schema.js";
+import {
+  contextualPictureSchema,
+  CONTEXTUAL_PICTURE_POLICY,
+} from "./contextual-picture.schema.js";
 
-export const FIXED_COMPOSITION_POLICY = {
+const LEGACY_FIXED_COMPOSITION_POLICY = {
   version: "fixed-composition-v1",
   captionProfile: "clean-emphasis",
   captionWords: 7,
@@ -15,6 +19,19 @@ export const FIXED_COMPOSITION_POLICY = {
   rasterCalls: 0,
   maxSelectedWords: 2000,
   selectedContextBytes: 256 * 1024,
+} as const;
+export const FIXED_COMPOSITION_POLICY = {
+  ...LEGACY_FIXED_COMPOSITION_POLICY,
+  version: "fixed-composition-v2",
+  captionProfile: "spoken-word-v1",
+  captionWords: 5,
+  captionLineCharacters: 24,
+  captionGroupMs: 2200,
+  captionFontSize: 64,
+  maxCaptionGroups: 500,
+  spokenWordOnsetMs: 80,
+  maxFocusSegments: 600,
+  maxTransitionMs: 6000,
 } as const;
 
 export const normalizedBoxSchema = z
@@ -85,14 +102,14 @@ export const compositionManifestV2Schema = z
             wordIds: z
               .array(wordIdSchema)
               .min(1)
-              .max(FIXED_COMPOSITION_POLICY.captionWords)
+              .max(LEGACY_FIXED_COMPOSITION_POLICY.captionWords)
               .optional(),
             lines: z.array(boundedPlainTextSchema(80)).min(1).max(2).optional(),
             emphasisWordIndex: z
               .number()
               .int()
               .min(0)
-              .max(FIXED_COMPOSITION_POLICY.captionWords - 1)
+              .max(LEGACY_FIXED_COMPOSITION_POLICY.captionWords - 1)
               .optional(),
           })
           .strict(),
@@ -188,3 +205,227 @@ export const compositionManifestV2Schema = z
       });
   });
 export type CompositionManifestV2 = z.infer<typeof compositionManifestV2Schema>;
+
+export const heldFramingReasonSchema = z.enum([
+  "visible-face",
+  "opening-default",
+  "pause",
+  "uncertain",
+  "switch-pending",
+  "observation-gap",
+]);
+export const wideFramingReasonSchema = z.enum([
+  "initial",
+  "shot-reset",
+  "hold-expired",
+  "absent",
+  "offscreen",
+]);
+export const contextualCardOriginSchema = z.enum([
+  "planner",
+  "transcript-fallback",
+]);
+const motionClock = {
+  fromBox: normalizedBoxSchema.optional(),
+  transitionStartMs: z.number().int().nonnegative().optional(),
+  transitionMs: z
+    .number()
+    .int()
+    .positive()
+    .max(FIXED_COMPOSITION_POLICY.maxTransitionMs)
+    .optional(),
+};
+export const focusSegmentV3Schema = z.discriminatedUnion("mode", [
+  focusSegmentSchema.options[0].extend({ reason: wideFramingReasonSchema }),
+  focusSegmentSchema.options[1].extend(motionClock),
+  z
+    .object({
+      ...timeRange,
+      ...motionClock,
+      mode: z.literal("held"),
+      box: normalizedBoxSchema,
+      reason: heldFramingReasonSchema,
+    })
+    .strict(),
+]);
+export const captionWordCueSchema = z
+  .object({
+    ...timeRange,
+    endMs: z.number().int().nonnegative(),
+    wordId: wordIdSchema,
+    text: boundedPlainTextSchema(80),
+  })
+  .strict();
+/** New frozen policy; v2 remains unchanged for explicit stale-result rejection. */
+export const compositionManifestV3Schema = z
+  .object({
+    ...compositionManifestV2Schema.shape,
+    version: z.literal(3),
+    pictures: z
+      .array(contextualPictureSchema)
+      .max(CONTEXTUAL_PICTURE_POLICY.maxPictures)
+      .optional(),
+    focus: z
+      .array(focusSegmentV3Schema)
+      .min(1)
+      .max(FIXED_COMPOSITION_POLICY.maxFocusSegments),
+    captions: z
+      .array(
+        compositionManifestV2Schema.shape.captions.element
+          .omit({ emphasisWordIndex: true })
+          .extend({
+            wordIds: z
+              .array(wordIdSchema)
+              .min(1)
+              .max(FIXED_COMPOSITION_POLICY.captionWords),
+            lines: z.array(boundedPlainTextSchema(80)).min(1).max(2),
+            wordCues: z
+              .array(captionWordCueSchema)
+              .min(1)
+              .max(FIXED_COMPOSITION_POLICY.captionWords),
+          }),
+      )
+      .max(FIXED_COMPOSITION_POLICY.maxCaptionGroups),
+    cards: z
+      .array(
+        compositionManifestV2Schema.shape.cards.element.extend({
+          origin: contextualCardOriginSchema,
+        }),
+      )
+      .max(ASSEMBLY_LIMITS.maxVisualCues),
+  })
+  .strict()
+  .superRefine((plan, ctx) => {
+    // Reuse the original immutable source/coverage/text/clock rules. New metadata
+    // is projected away, and held geometry has already passed its strict schema.
+    const { pictures: _pictures, ...legacyPlan } = plan;
+    void _pictures;
+    const clockCheck = compositionManifestV2Schema.safeParse({
+      ...legacyPlan,
+      version: 2,
+      focus: [
+        {
+          startMs: 0,
+          endMs: plan.range.endMs - plan.range.startMs,
+          mode: "wide",
+        },
+      ],
+      captions: plan.captions.map((caption) => ({
+        startMs: caption.startMs,
+        endMs: caption.endMs,
+        text: caption.text,
+        wordIds: caption.wordIds,
+        lines: caption.lines,
+      })),
+      cards: plan.cards.map((card) => ({
+        startMs: card.startMs,
+        endMs: card.endMs,
+        kind: card.kind,
+        title: card.title,
+        lines: card.lines,
+      })),
+    });
+    if (!clockCheck.success)
+      ctx.addIssue({
+        code: "custom",
+        message: "Composition clocks or source bounds are invalid.",
+      });
+    const visuals = [...plan.cards, ...(plan.pictures ?? [])].sort(
+      (a, b) => a.startMs - b.startMs,
+    );
+    if (
+      visuals.length > ASSEMBLY_LIMITS.maxVisualCues ||
+      visuals.reduce((sum, item) => sum + item.endMs - item.startMs, 0) * 100 >
+        (plan.range.endMs - plan.range.startMs) *
+          ASSEMBLY_LIMITS.maxVisualCoveragePercent ||
+      visuals.some((item, index) => {
+        const previous = visuals[index - 1];
+        const adjacentPictures =
+          previous && "asset" in previous && "asset" in item;
+        return (
+          item.startMs < FIXED_COMPOSITION_POLICY.openingBeatMs ||
+          item.endMs > plan.range.endMs - plan.range.startMs ||
+          item.endMs - item.startMs <
+            ("asset" in item
+              ? CONTEXTUAL_PICTURE_POLICY.minDurationMs
+              : ASSEMBLY_LIMITS.minVisualCueMilliseconds) ||
+          item.endMs - item.startMs >
+            ASSEMBLY_LIMITS.maxVisualCueMilliseconds ||
+          (previous &&
+            item.startMs <
+              previous.endMs +
+                (adjacentPictures
+                  ? 0
+                  : FIXED_COMPOSITION_POLICY.cardSeparationMs))
+        );
+      })
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Contextual visual windows are invalid.",
+      });
+    let cursor = 0;
+    for (const focus of plan.focus) {
+      if (
+        focus.startMs !== cursor ||
+        focus.endMs <= cursor ||
+        focus.endMs > plan.range.endMs - plan.range.startMs
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Focus coverage has a gap, overlap or invalid clock.",
+        });
+      cursor = focus.endMs;
+    }
+    if (cursor !== plan.range.endMs - plan.range.startMs)
+      ctx.addIssue({
+        code: "custom",
+        message: "Focus does not cover the clip.",
+      });
+    for (const caption of plan.captions) {
+      if (
+        caption.wordCues.map((cue) => cue.text).join(" ") !== caption.text ||
+        JSON.stringify(caption.wordIds) !==
+          JSON.stringify(caption.wordCues.map((cue) => cue.wordId))
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Caption word cues do not preserve its text and IDs.",
+        });
+      let previous = caption.startMs;
+      for (const cue of caption.wordCues) {
+        if (
+          cue.startMs < previous ||
+          cue.endMs < cue.startMs ||
+          cue.endMs > caption.endMs
+        )
+          ctx.addIssue({
+            code: "custom",
+            message: "Caption word cue is outside its display clock.",
+          });
+        previous = cue.startMs;
+      }
+    }
+    for (const focus of plan.focus)
+      if (focus.mode !== "wide") {
+        const fields = [
+          focus.fromBox,
+          focus.transitionMs,
+          focus.transitionStartMs,
+        ];
+        if (
+          (fields.some((field) => field !== undefined) &&
+            fields.some((field) => field === undefined)) ||
+          (focus.transitionStartMs !== undefined &&
+            focus.transitionStartMs > focus.startMs) ||
+          (focus.mode === "held" &&
+            focus.reason !== "pause" &&
+            focus.fromBox !== undefined)
+        )
+          ctx.addIssue({
+            code: "custom",
+            message: "Framing transition clock is invalid.",
+          });
+      }
+  });
+export type CompositionManifestV3 = z.infer<typeof compositionManifestV3Schema>;

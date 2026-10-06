@@ -11,7 +11,6 @@ import {
 import type { BackendConfig } from "../config/env.schema.js";
 import { ApplicationError } from "../http/errorMapper.js";
 
-export const SAMPLE_REPLAY_WINDOW_MS = 6 * 60 * 60 * 1000;
 export const LOCAL_SAMPLE_REPLAY_WORKSPACE = fileURLToPath(
   new URL("../../../../", import.meta.url),
 );
@@ -23,10 +22,9 @@ export const SAMPLE_REPLAY_PATH = join(
 );
 export const sampleReplayCacheSchema = z
   .object({
-    version: z.literal(1),
+    version: z.literal(2),
     workspace: z.string(),
     createdAtMs: z.number().int().nonnegative(),
-    expiresAtMs: z.number().int().positive(),
     retainedSampleIdentity: z.string().regex(/^[a-f0-9]{64}$/),
     analysis: analysisBundleSchema,
   })
@@ -59,18 +57,13 @@ export class LocalSampleReplay {
       resolve(this.cache.workspace) !==
         resolve(LOCAL_SAMPLE_REPLAY_WORKSPACE) ||
       this.cache.retainedSampleIdentity !== identity ||
-      this.cache.expiresAtMs - this.cache.createdAtMs !==
-        SAMPLE_REPLAY_WINDOW_MS ||
       this.cache.analysis.candidates.length !== 3
     )
       throw new Error("invalid-local-sample-replay");
     this.options();
   }
   available() {
-    return (
-      this.cache.createdAtMs <= this.now() &&
-      this.cache.expiresAtMs > this.now()
-    );
+    return this.cache.createdAtMs <= this.now();
   }
   options(revision?: string) {
     if (!this.available())

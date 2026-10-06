@@ -289,3 +289,23 @@ export function reviewState(): Extract<
     diagnosticCode: null,
   };
 }
+
+// Selected-assembly tests need a literal excerpt that fits the card clock.
+export const assemblyAnalysis = analysisBundleSchema.parse({
+  ...analysis,
+  transcript: {
+    ...analysis.transcript,
+    words: [
+      ...analysis.transcript.words.slice(0, 2),
+      ...["synthetic", "context"].map((text, index) => ({
+        ...analysis.transcript.words[1]!,
+        id: `w_00000${index + 3}`,
+        text,
+        punctuatedText: text,
+        startMs: 6200 + index * 500,
+        endMs: 6600 + index * 500,
+      })),
+      ...analysis.transcript.words.slice(2),
+    ],
+  },
+});

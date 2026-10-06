@@ -22,7 +22,7 @@ import type { PrivateGeminiCaptureEvent } from "./gemini.local-capture.js";
 import { loadConfig } from "../config/loadConfig.js";
 import {
   createLiveValidationEnvironment,
-  createLiveValidationSettings,
+  createLiveValidationConnections,
 } from "../../test/environment.fixture.js";
 
 const media: MediaDescriptor = {
@@ -681,10 +681,10 @@ describe("audio transcription and text-only selection", () => {
       });
     });
     const f = fixture(),
-      config = loadConfig(
-        createLiveValidationEnvironment(),
-        createLiveValidationSettings("analysis"),
-      );
+      config = loadConfig({
+        ...createLiveValidationEnvironment(),
+        ...createLiveValidationConnections("analysis"),
+      });
     const transport = composeGeminiTransport(config, http, f.diagnostics);
     await new Promise<void>((resolve, reject) =>
       f.diagnostics.request("req_" + "b".repeat(32), "run", (finish) => {

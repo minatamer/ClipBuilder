@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import {
+  ASSEMBLY_LIMITS,
   integrityReceiptClaimsSchema,
   processingActionSchema,
   type IntegrityReceiptClaims,
@@ -26,6 +27,7 @@ type ActionRecord = {
 };
 type GrantRecord = {
   grant: ProcessingGrant;
+  imageCalls: number;
   actions: Record<ProcessingAction, ActionRecord>;
 };
 export type AdmissionPolicy = {
@@ -143,6 +145,7 @@ export class ProcessingAdmission {
     );
     this.records.set(grant.sessionId, {
       grant,
+      imageCalls: 0,
       actions: {
         transcription: actions.transcription!,
         "candidate-analysis": actions["candidate-analysis"]!,
@@ -278,6 +281,26 @@ export class ProcessingAdmission {
       uncertain();
       throw error;
     }
+  }
+
+  reserveImageCall(context: AdmissionContext): void {
+    const record = this.current(context),
+      action = record.actions["visual-plan"];
+    if (
+      !this.policy.paidEnabled ||
+      action.state !== "running" ||
+      !action.controller ||
+      action.controller.signal.aborted
+    )
+      this.reject("FEATURE_DISABLED");
+    if (
+      record.imageCalls >= ASSEMBLY_LIMITS.maxGeneratedImageCalls ||
+      this.dispatches >= this.policy.maxDispatches
+    )
+      this.reject("PROVIDER_BUDGET_EXHAUSTED");
+    // A failed/uncertain provider attempt is consumed before its first await.
+    record.imageCalls++;
+    this.dispatches++;
   }
 
   session(context: AdmissionContext): ProcessingGrant {

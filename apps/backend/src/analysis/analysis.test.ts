@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   createLiveValidationEnvironment,
-  createLiveValidationSettings,
+  createLiveValidationConnections,
 } from "../../test/environment.fixture.js";
 import { loadConfig } from "../config/loadConfig.js";
 import {
@@ -19,7 +19,6 @@ import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
 import {
   LocalSampleReplay,
   LOCAL_SAMPLE_REPLAY_WORKSPACE,
-  SAMPLE_REPLAY_WINDOW_MS,
 } from "./sample-replay.js";
 import { createAnalysisRouter } from "../http/routes/analysis.route.js";
 import {
@@ -220,10 +219,9 @@ describe("owner-local saved sample analysis", () => {
     }));
     const replay = new LocalSampleReplay(
       {
-        version: 1,
+        version: 2,
         workspace: LOCAL_SAMPLE_REPLAY_WORKSPACE,
         createdAtMs: 1000,
-        expiresAtMs: 1000 + SAMPLE_REPLAY_WINDOW_MS,
         retainedSampleIdentity: "a".repeat(64),
         analysis,
       },
@@ -1187,10 +1185,10 @@ describe("bounded Google Files adapter", () => {
           }),
       );
       const gateway = composeGeminiTransport(
-        loadConfig(
-          createLiveValidationEnvironment(),
-          createLiveValidationSettings("assembly"),
-        ),
+        loadConfig({
+          ...createLiveValidationEnvironment(),
+          ...createLiveValidationConnections("assembly"),
+        }),
         transport,
       );
       await gateway.delete(
@@ -1221,10 +1219,10 @@ describe("bounded Google Files adapter", () => {
           }),
       );
       const gateway = composeGeminiTransport(
-        loadConfig(
-          createLiveValidationEnvironment(),
-          createLiveValidationSettings("assembly"),
-        ),
+        loadConfig({
+          ...createLiveValidationEnvironment(),
+          ...createLiveValidationConnections("assembly"),
+        }),
         transport,
       );
       await expect(
@@ -1244,10 +1242,10 @@ describe("bounded Google Files adapter", () => {
         });
       });
       const gateway = composeGeminiTransport(
-        loadConfig(
-          createLiveValidationEnvironment(),
-          createLiveValidationSettings("assembly"),
-        ),
+        loadConfig({
+          ...createLiveValidationEnvironment(),
+          ...createLiveValidationConnections("assembly"),
+        }),
         transport,
       );
       await gateway.delete(
@@ -1280,10 +1278,10 @@ describe("bounded Google Files adapter", () => {
         });
       });
       const gateway = composeGeminiTransport(
-        loadConfig(
-          createLiveValidationEnvironment(),
-          createLiveValidationSettings("assembly"),
-        ),
+        loadConfig({
+          ...createLiveValidationEnvironment(),
+          ...createLiveValidationConnections("assembly"),
+        }),
         transport,
       );
       await expect(
@@ -1313,10 +1311,10 @@ describe("bounded Google Files adapter", () => {
       });
     });
     const gateway = composeGeminiTransport(
-      loadConfig(
-        createLiveValidationEnvironment(),
-        createLiveValidationSettings("assembly"),
-      ),
+      loadConfig({
+        ...createLiveValidationEnvironment(),
+        ...createLiveValidationConnections("assembly"),
+      }),
       transport,
     );
     await gateway.delete("files/synthetic-file", new AbortController().signal);
@@ -1334,10 +1332,10 @@ describe("bounded Google Files adapter", () => {
     );
     const provider = new TestGeminiFiles(
       composeGeminiTransport(
-        loadConfig(
-          createLiveValidationEnvironment(),
-          createLiveValidationSettings("assembly"),
-        ),
+        loadConfig({
+          ...createLiveValidationEnvironment(),
+          ...createLiveValidationConnections("assembly"),
+        }),
         transport,
       ),
       1000,
@@ -1410,10 +1408,10 @@ describe("bounded Google Files adapter", () => {
         );
       throw new Error("unexpected-synthetic-request");
     };
-    const config = loadConfig(
-      createLiveValidationEnvironment(),
-      createLiveValidationSettings("assembly"),
-    );
+    const config = loadConfig({
+      ...createLiveValidationEnvironment(),
+      ...createLiveValidationConnections("assembly"),
+    });
     const provider = new TestGeminiFiles(
       composeGeminiTransport(config, transport),
       1000,
@@ -1526,7 +1524,7 @@ describe("bounded Google Files adapter", () => {
     { field: "words", limit: 12000 },
     { field: "turns", limit: 10000 },
   ] as const)(
-    "enforces the local $field cap after generation and cleans up without retry",
+    "retains the normalized $field bound and passes decoding to reconciliation without retry",
     async ({ field, limit }) => {
       const f = gateway();
       const payload = output();
@@ -1541,11 +1539,12 @@ describe("bounded Google Files adapter", () => {
         finished: true,
       });
       await expect(
-        f.provider.analyze(f.proxy, new AbortController().signal),
-      ).rejects.toMatchObject({
-        code: "MODEL_OUTPUT_REJECTED",
-        ruleId: "google_validation_failed",
-      });
+        f.provider
+          .analyze(f.proxy, new AbortController().signal)
+          .then(
+            (decoded) => normalizedAnalysisSchema.safeParse(decoded).success,
+          ),
+      ).resolves.toBe(false);
       expect(f.transport.generate).toHaveBeenCalledOnce();
       expect(f.transport.delete).toHaveBeenCalledOnce();
     },
@@ -1580,18 +1579,13 @@ describe("bounded Google Files adapter", () => {
         finished: true,
       });
       const run = f.provider.analyze(f.proxy, new AbortController().signal);
-      if (count === 9)
-        await expect(run).rejects.toMatchObject({
-          code: "MODEL_OUTPUT_REJECTED",
-          ruleId: "google_validation_failed",
-        });
-      else expect(await run).toMatchObject({ candidates: [candidate] });
+      expect(await run).toMatchObject({ candidates: [candidate] });
       expect(f.transport.generate).toHaveBeenCalledOnce();
       expect(f.transport.delete).toHaveBeenCalledOnce();
     },
   );
   it.each(["word_extra_field", "turn_extra_field", "candidates"])(
-    "retains strict local %s limits and cleanup after generation",
+    "retains bounded %s contracts without aborting proposal decoding",
     async (kind) => {
       const f = gateway();
       const payload = output();
@@ -1609,11 +1603,12 @@ describe("bounded Google Files adapter", () => {
         finished: true,
       });
       await expect(
-        f.provider.analyze(f.proxy, new AbortController().signal),
-      ).rejects.toMatchObject({
-        code: "MODEL_OUTPUT_REJECTED",
-        ruleId: "google_validation_failed",
-      });
+        f.provider
+          .analyze(f.proxy, new AbortController().signal)
+          .then(
+            (decoded) => normalizedAnalysisSchema.safeParse(decoded).success,
+          ),
+      ).resolves.toBe(false);
       expect(f.transport.generate).toHaveBeenCalledOnce();
       expect(f.transport.delete).toHaveBeenCalledOnce();
     },
@@ -1727,7 +1722,7 @@ describe("bounded Google Files adapter", () => {
     expect(f.transport.generate).toHaveBeenCalledTimes(0);
   });
   it.each(["refusal", "malformed", "upload", "processing", "delete"])(
-    "fails closed on %s with no automatic AI retry",
+    "settles %s without automatic AI retry or lost cleanup",
     async (kind) => {
       const f = gateway();
       if (kind === "refusal")
@@ -1753,11 +1748,13 @@ describe("bounded Google Files adapter", () => {
         vi.mocked(f.transport.delete).mockRejectedValue(
           new Error("synthetic-private"),
         );
-      await expect(
-        f.provider.analyze(f.proxy, new AbortController().signal),
-      ).rejects.toThrow(
-        /MODEL_OUTPUT_REJECTED|ANALYSIS_PROVIDER_FAILED|CLEANUP_PENDING/u,
-      );
+      const run = f.provider.analyze(f.proxy, new AbortController().signal);
+      if (kind === "refusal" || kind === "malformed")
+        await expect(run).resolves.toBeNull();
+      else
+        await expect(run).rejects.toThrow(
+          /MODEL_OUTPUT_REJECTED|ANALYSIS_PROVIDER_FAILED|CLEANUP_PENDING/u,
+        );
       expect(f.transport.upload).toHaveBeenCalledOnce();
       expect(f.transport.delete).toHaveBeenCalledOnce();
       expect(f.transport.generate).toHaveBeenCalledTimes(

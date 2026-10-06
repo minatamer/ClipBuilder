@@ -25,6 +25,8 @@ import { ApplicationError } from "../http/errorMapper.js";
 import { type SpeakerPlanContext } from "./speaker-focus.js";
 import { compileFixedAssembly, manifestDigest } from "./fixed-assembly.js";
 import { compileFixedCaptions } from "./fixed-captions.js";
+import { compileContextualPictures } from "./contextual-pictures.js";
+import type { ContextualPictureSource } from "./commons-pictures.js";
 
 export interface SelectedAssemblyMedia {
   preview(
@@ -59,6 +61,8 @@ export class SelectedAssembly {
     private readonly provider: SelectedAssemblyProvider,
     private readonly providerName: "fake" | "google-gemini",
     private readonly diagnostics = new AnalysisDiagnostics(),
+    private readonly pictures?: ContextualPictureSource,
+    private readonly generatedPictures?: ContextualPictureSource,
   ) {}
   async run(
     context: AdmissionContext,
@@ -111,10 +115,28 @@ export class SelectedAssembly {
     let captions;
     try {
       captions = this.diagnostics.check("assembly_captions", () =>
-        compileFixedCaptions({ range, words }),
+        compileFixedCaptions({ range, words }, (reason) =>
+          this.diagnostics.critique("assembly_captions", new Error(reason)),
+        ),
       );
       this.diagnostics.assembly("assembly_captions", {
         captionGroups: captions.length,
+        captionCues: captions.reduce(
+          (count, caption) => count + caption.wordCues.length,
+          0,
+        ),
+        captionZeroDurationCues: captions.reduce(
+          (count, caption) =>
+            count +
+            caption.wordCues.filter((cue) => cue.startMs === cue.endMs).length,
+          0,
+        ),
+        captionOmittedWords:
+          words.length -
+          captions.reduce(
+            (count, caption) => count + caption.wordCues.length,
+            0,
+          ),
       });
     } catch {
       throw new ApplicationError({ code: "INVALID_REQUEST" });
@@ -248,22 +270,51 @@ export class SelectedAssembly {
                 this.diagnostics,
               ),
             );
+            const compiledPictures = await compileContextualPictures(
+              raw,
+              { range, words },
+              compiled.manifest,
+              this.pictures,
+              signal,
+              this.diagnostics,
+              this.generatedPictures
+                ? {
+                    source: this.generatedPictures,
+                    reserve: () => this.admission.reserveImageCall(context),
+                  }
+                : undefined,
+            );
+            compiled.manifest = compiledPictures.manifest;
+            compiled.manifestHash = manifestDigest(compiled.manifest);
             this.diagnostics.privateStageOutput(
               "assembly_reconciliation_result",
-              compiled,
+              {
+                ...compiled,
+                manifest: {
+                  ...compiled.manifest,
+                  pictures: compiled.manifest.pictures?.map((picture) => {
+                    if (picture.asset.repository !== "google-gemini")
+                      return picture;
+                    const { dataUri: _dataUri, ...metadata } = picture.asset;
+                    void _dataUri;
+                    return { ...picture, asset: metadata };
+                  }),
+                },
+              },
             );
             signal.throwIfAborted();
             const { receipt: _receipt, ...validated } = this.diagnostics.check(
               "assembly_result",
               () =>
                 selectedAssemblyResultSchema.parse({
-                  version: 1 as const,
+                  version: 2 as const,
                   binding: result.binding,
                   generation: result.generation,
                   analysisRevision: result.analysis.revision,
                   candidateId: candidate.id,
                   provider: this.providerName,
                   ...compiled,
+                  pictureNotes: compiledPictures.pictureNotes,
                   receipt: "pending",
                 }),
             );

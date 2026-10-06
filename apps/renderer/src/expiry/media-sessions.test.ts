@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
-  compositionManifestV2Schema,
+  compositionManifestV3Schema,
   type MediaBinding,
 } from "@clipbuilder/contracts";
 import { MediaSessions } from "./media-sessions.js";
@@ -526,8 +526,8 @@ describe("temporary media admission and independent cleanup", () => {
         checksum: "b".repeat(64),
       },
     });
-    const manifest = compositionManifestV2Schema.parse({
-      version: 2,
+    const manifest = compositionManifestV3Schema.parse({
+      version: 3,
       source: {
         fingerprint: source.fingerprint,
         width: source.width,
@@ -536,9 +536,18 @@ describe("temporary media admission and independent cleanup", () => {
       },
       range: { startMs: 0, endMs: 10_000 },
       output: { width: 1080, height: 1920, fps: 30 },
-      focus: [{ mode: "wide", startMs: 0, endMs: 10_000 }],
+      focus: [{ mode: "wide", reason: "initial", startMs: 0, endMs: 10_000 }],
       captions: [],
-      cards: [],
+      cards: [
+        {
+          origin: "planner",
+          startMs: 2000,
+          endMs: 3500,
+          kind: "statement",
+          title: "Synthetic context",
+          lines: ["Synthetic excerpt"],
+        },
+      ],
     });
     const manifestHash = createHash("sha256")
       .update(JSON.stringify(manifest))

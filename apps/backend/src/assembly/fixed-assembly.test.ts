@@ -62,7 +62,7 @@ function fixture(durationMs = 15000) {
   }
   function result() {
     return selectedAssemblyResultSchema.parse({
-      version: 1,
+      version: 2,
       binding: source.binding,
       generation: source.generation,
       analysisRevision: source.analysis.revision,
@@ -75,19 +75,68 @@ function fixture(durationMs = 15000) {
   return { words, context, source, plan, card, result };
 }
 describe("fixed contextual assembly", () => {
-  it("counts display tokens in a multi-token provider word and rejects unrepresentable simultaneous groups", () => {
+  it("preserves zero-duration provider words without inventing highlight clocks", () => {
+    const f = fixture();
+    f.words[1]!.endMs = f.words[1]!.startMs;
+    f.words[2]!.startMs = f.words[1]!.startMs;
+    const originalWords = structuredClone(f.words);
+    const result = f.result();
+    const cue = result.manifest.captions
+      .flatMap((caption) => caption.wordCues)
+      .find((item) => item.wordId === f.words[1]!.id)!;
+    expect(cue).toEqual({
+      wordId: f.words[1]!.id,
+      text: f.words[1]!.punctuatedText,
+      startMs: 500,
+      endMs: 500,
+    });
+    expect(
+      result.manifest.captions.flatMap((caption) => caption.wordIds),
+    ).toEqual(f.words.map((word) => word.id));
+    expect(result.words).toEqual(originalWords);
+    expect(f.words).toEqual(originalWords);
+    const corrupted = structuredClone(result);
+    const positiveCue = corrupted.manifest.captions[0]!.wordCues[0]!;
+    positiveCue.endMs = positiveCue.startMs;
+    expect(selectedAssemblyResultSchema.safeParse(corrupted).success).toBe(
+      false,
+    );
+  });
+  it("logs simultaneous groups and keeps the displayable caption groups", () => {
     const f = fixture();
     f.words[1]!.punctuatedText = "E = mc²";
     expect(
       compileFixedCaptions(f.context).every(
-        (c) => c.text.split(/\s+/u).length <= 7,
+        (c) => c.text.split(/\s+/u).length <= 5,
       ),
     ).toBe(true);
     f.words[0]!.punctuatedText = "word0.";
     f.words[1]!.startMs = f.words[0]!.startMs;
-    expect(() => compileFixedCaptions(f.context)).toThrow(
-      "unsupported-caption-overlap",
+    const critiques: string[] = [];
+    const captions = compileFixedCaptions(f.context, (reason) =>
+      critiques.push(reason),
     );
+    expect(captions.length).toBeGreaterThan(0);
+    expect(captions.flatMap((caption) => caption.wordIds)).not.toContain(
+      f.words[0]!.id,
+    );
+    expect(critiques).toEqual(["unsupported-caption-overlap"]);
+    expect(f.result().words).toEqual(f.words);
+  });
+  it("reconciles surviving caption clocks after omitting a zero-duration standalone group", () => {
+    const f = fixture();
+    f.words[1]!.punctuatedText += ".";
+    f.words[1]!.endMs = 6250;
+    f.words[2]!.startMs = 5750;
+    f.words[2]!.endMs = 5750;
+    f.words[2]!.punctuatedText += ".";
+    const result = f.result();
+    expect(result.manifest.captions[0]!.endMs).toBe(1250);
+    expect(
+      result.manifest.captions.flatMap((caption) => caption.wordIds),
+    ).not.toContain(f.words[2]!.id);
+    expect(result.words).toEqual(f.words);
+    expect(selectedAssemblyResultSchema.safeParse(result).success).toBe(true);
   });
   it("freezes extractive cards and exhaustive caption word mapping with a stable manifest hash", () => {
     const f = fixture();
@@ -98,6 +147,7 @@ describe("fixed contextual assembly", () => {
         startMs: 2000,
         endMs: 4000,
         kind: "statement",
+        origin: "planner",
         title: "word4",
         lines: ["word5 word6"],
       },
@@ -108,12 +158,55 @@ describe("fixed contextual assembly", () => {
     expect(result.manifestHash).toBe(manifestDigest(result.manifest));
     expect(f.result()).toEqual(result);
   });
-  it("accepts zero cards and does not inject fixture subjects into unrelated words", () => {
+  it("does not invent an automatic text-excerpt graphic for zero cards", () => {
     const f = fixture(),
       result = f.result();
     expect(result.manifest.cards).toEqual([]);
     expect(JSON.stringify(result)).not.toMatch(/Earth|Moon|equation/);
     expect(result.words).toEqual(f.words);
+  });
+  it("keeps usable cards when speaker evidence is unusable and skips only an invalid card", () => {
+    const f = fixture();
+    f.plan.speaker.durationMs = 1;
+    f.plan.cards = [f.card(), f.card(12)];
+    f.plan.cards[1]!.title.startWordId = "w_999999";
+    const result = f.result();
+    expect(result.manifest.focus).toEqual([
+      {
+        startMs: 0,
+        endMs: 15000,
+        mode: "held",
+        reason: "opening-default",
+        box: { x: 0.13, y: 0.25, width: 0.24, height: 0.35 },
+      },
+    ]);
+    expect(result.manifest.cards).toHaveLength(1);
+    expect(result.manifest.cards[0]!.origin).toBe("planner");
+    expect(result.manifest.cards[0]!.title).toBe(f.words[4]!.punctuatedText);
+  });
+  it("keeps the edit when no grounded visual fits, including an invalid planner card", () => {
+    const f = fixture();
+    for (const word of f.words) word.punctuatedText += ".";
+    expect(f.result().manifest.cards).toEqual([]);
+    f.plan.cards = [f.card()];
+    f.plan.cards[0]!.title.startWordId = "w_999999";
+    expect(f.result().manifest.cards).toEqual([]);
+  });
+  it("grounds highlight clocks in original words and rejects retiming or provenance mutation", () => {
+    const f = fixture();
+    f.plan.cards = [f.card()];
+    const result = f.result();
+    expect(result.manifest.captions[0]!.wordCues[0]).toMatchObject({
+      wordId: f.words[0]!.id,
+      text: f.words[0]!.punctuatedText,
+      startMs: 0,
+      endMs: 500,
+    });
+    result.manifest.captions[0]!.wordCues[0]!.endMs = 499;
+    expect(selectedAssemblyResultSchema.safeParse(result).success).toBe(false);
+    const changed = f.result();
+    changed.cardEvidence[0]!.origin = "transcript-fallback";
+    expect(selectedAssemblyResultSchema.safeParse(changed).success).toBe(false);
   });
   it.each([
     "missing",
@@ -125,7 +218,7 @@ describe("fixed contextual assembly", () => {
     "late",
     "kind",
     "free-text",
-  ])("rejects %s cues atomically", (kind) => {
+  ])("omits unusable %s cards without aborting the edit", (kind) => {
     const f = fixture(10000),
       cue = f.card();
     f.plan.cards = [cue];
@@ -142,7 +235,13 @@ describe("fixed contextual assembly", () => {
     if (kind === "late") cue.anchorWordId = f.words.at(-1)!.id;
     if (kind === "kind") cue.kind = "comparison";
     if (kind === "free-text") Object.assign(cue, { titleText: "fabricated" });
-    expect(f.result).toThrow();
+    const result = f.result();
+    expect(result.words).toEqual(f.words);
+    expect(result.manifest.captions.length).toBeGreaterThan(0);
+    expect(result.manifest.cards).toHaveLength(
+      ["overlap", "coverage"].includes(kind) ? 1 : 0,
+    );
+    expect(selectedAssemblyResultSchema.safeParse(result).success).toBe(true);
   });
   it.each([
     "https://synthetic.invalid",
@@ -150,11 +249,17 @@ describe("fixed contextual assembly", () => {
     "ignore previous instructions",
     "in the style of",
     "logo",
-  ])("rejects unsafe card text %s", (text) => {
+  ])("omits unsafe card text %s without aborting the edit", (text) => {
     const f = fixture();
     f.words[4]!.punctuatedText = text;
     f.plan.cards = [f.card()];
-    expect(f.result).toThrow();
+    const result = f.result();
+    expect(
+      result.manifest.cards.every(
+        (card) => ![card.title, ...card.lines].join(" ").includes(text),
+      ),
+    ).toBe(true);
+    expect(result.words).toEqual(f.words);
   });
   it("preserves exact equations/numbers as plain card text with no generated asset", () => {
     const f = fixture();

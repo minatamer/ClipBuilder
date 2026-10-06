@@ -21,7 +21,7 @@ import {
 import { loadConfig } from "../config/loadConfig.js";
 import {
   createLiveValidationEnvironment,
-  createLiveValidationSettings,
+  createLiveValidationConnections,
 } from "../../test/environment.fixture.js";
 
 const requestId = `req_${"a".repeat(32)}`;
@@ -677,10 +677,10 @@ describe("bounded content-free analysis diagnostics", () => {
         { status: 404 },
       );
     };
-    const config = loadConfig(
-      createLiveValidationEnvironment(),
-      createLiveValidationSettings("assembly"),
-    );
+    const config = loadConfig({
+      ...createLiveValidationEnvironment(),
+      ...createLiveValidationConnections("assembly"),
+    });
     const provider = new TestGeminiFiles(
       composeGeminiTransport(config, transport, f.diagnostics),
       1000,
@@ -791,10 +791,10 @@ describe("bounded content-free analysis diagnostics", () => {
         { status: 403 },
       ),
     );
-    const config = loadConfig(
-      createLiveValidationEnvironment(),
-      createLiveValidationSettings("assembly"),
-    );
+    const config = loadConfig({
+      ...createLiveValidationEnvironment(),
+      ...createLiveValidationConnections("assembly"),
+    });
     const provider = new TestGeminiFiles(
       composeGeminiTransport(config, transport, f.diagnostics),
       1000,

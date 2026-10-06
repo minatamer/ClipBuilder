@@ -3,7 +3,7 @@ import { loadConfig } from "../config/loadConfig.js";
 import { composeAbuseVerifier } from "./turnstile.verifier.js";
 describe("bounded processing abuse verification", () => {
   it("checks hostname, action and session binding with one call, rejecting malformed responses without retry", async () => {
-    const base = loadConfig({}),
+    const base = loadConfig({ FAKE_MODE: "true", PAID_DEMO_ENABLED: "false" }),
       config = {
         ...base,
         turnstile: {

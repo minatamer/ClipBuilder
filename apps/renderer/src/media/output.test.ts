@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { compositionManifestV2Schema } from "@clipbuilder/contracts";
+import { compositionManifestV3Schema } from "@clipbuilder/contracts";
 import { binding, nonce, mediaFixture } from "../../test/media-fixture.js";
 import { createRendererApplication } from "../app.js";
 import { MediaFailure } from "./media.failure.js";
@@ -17,8 +17,8 @@ async function fixture() {
     signal,
   );
   await f.operations.releaseAnalysisProxy(binding, signal);
-  const manifest = compositionManifestV2Schema.parse({
-    version: 2,
+  const manifest = compositionManifestV3Schema.parse({
+    version: 3,
     source: {
       fingerprint: binding.fingerprint,
       durationMs: 15000,
@@ -27,9 +27,18 @@ async function fixture() {
     },
     range,
     output: { width: 1080, height: 1920, fps: 30 },
-    focus: [{ mode: "wide", startMs: 0, endMs: 10000 }],
+    focus: [{ mode: "wide", reason: "initial", startMs: 0, endMs: 10000 }],
     captions: [],
-    cards: [],
+    cards: [
+      {
+        origin: "planner",
+        startMs: 2000,
+        endMs: 3500,
+        kind: "statement",
+        title: "Synthetic context",
+        lines: ["Synthetic excerpt"],
+      },
+    ],
   });
   const manifestHash = createHash("sha256")
     .update(JSON.stringify(manifest))

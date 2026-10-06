@@ -9,11 +9,8 @@ import {
   readGrantKey,
   readGrantKeys,
 } from "../admission/processing.grant.js";
-import {
-  runtimeSettingsSchema,
-  type RuntimeSettings,
-} from "./runtime.schema.js";
 import type { ZodError } from "zod";
+import { ASSEMBLY_LIMITS } from "@clipbuilder/contracts";
 
 const localCapabilityRequirements = new Map<string, string>([
   ["GEMINI_API_KEY", "gemini_key_missing"],
@@ -82,7 +79,6 @@ function configuredGrantKey(
 
 export function loadConfig(
   environment: NodeJS.ProcessEnv,
-  settings: RuntimeSettings = {},
 ): BackendConfig & { processingUnavailableReasons: readonly string[] } {
   if (environment.NODE_ENV === "test" && environment.PROCESSING_GRANT_KEYS_JSON)
     throw new Error("Test configuration must not contain credentials.");
@@ -113,25 +109,27 @@ export function loadConfig(
       environment.NODE_ENV === "test" &&
       ((key.endsWith("_ENABLED") && value === "false") ||
         (key === "ADMISSION_MAX_PROCESS_DISPATCHES" && value === "0") ||
-        (key === "CLOUD_RENDER_ENVIRONMENT" && value === "disabled") ||
-        (key === "CLOUD_SPEND_APPROVED" && value === "false"))
+        (key === "CLOUD_RENDER_ENVIRONMENT" && value === "disabled"))
     )
       continue;
     throw new Error(
-      `Retired environment setting ${key}; use runtime configuration for connections and approvals. Limits are fixed in code.`,
+      `Retired environment setting ${key}; capabilities and limits are fixed in code.`,
     );
   }
 
-  const runtime = runtimeSettingsSchema.parse(settings);
-  const fakeMode =
-    environment.FAKE_MODE === undefined ||
-    environment.FAKE_MODE === "" ||
-    environment.FAKE_MODE === "true";
-  const paid = environment.PAID_DEMO_ENABLED === "true";
-  const stage = paid ? runtime.paidValidationStage : "disabled";
+  const fakeMode = environment.FAKE_MODE === "true";
+  const paid = environment.PAID_DEMO_ENABLED !== "false";
+  const stage = paid
+    ? environment.PAID_VALIDATION_STAGE || "assembly"
+    : "disabled";
+  const imagesEnabled =
+    !fakeMode &&
+    paid &&
+    (stage === "assembly" || stage === "render") &&
+    environment.GEMINI_IMAGE_GENERATION_APPROVED !== "false";
   const allowUnavailableLocalCapabilities =
     environment.NODE_ENV !== "test" &&
-    (environment.APP_ENV ?? runtime.appEnvironment) === "local" &&
+    (environment.APP_ENV ?? "local") === "local" &&
     !fakeMode &&
     paid;
   const processingUnavailableReasons: string[] = [];
@@ -151,38 +149,38 @@ export function loadConfig(
   const grantKey = configuredGrantKey(environment);
   if (grantKey !== undefined) selected.PROCESSING_GRANT_KEY = grantKey;
 
-  const sample = runtime.retainedSample;
   let values: Record<string, unknown> = {
     ...selected,
-    APP_ENV: environment.APP_ENV ?? runtime.appEnvironment,
-    APP_REVISION: environment.APP_REVISION ?? runtime.revision,
-    FRONTEND_ORIGIN: runtime.frontendOrigin,
-    BACKEND_ORIGIN: runtime.backendOrigin,
-    BACKEND_AUDIENCE: runtime.backendAudience,
-    CSRF_ALLOWED_ORIGINS: runtime.frontendOrigin,
-    CLOUD_RENDER_ENVIRONMENT: runtime.rendererOrigin ? "cloud" : "disabled",
-    CLOUD_SPEND_APPROVED: String(runtime.approvals.cloudSpend),
-    PRIVATE_RENDERER_ORIGIN: runtime.rendererOrigin,
-    RETAINED_SAMPLE_ENABLED: String(!fakeMode && sample !== null),
-    RETAINED_SAMPLE_BUCKET: sample?.bucket,
-    RETAINED_SAMPLE_OBJECT: sample?.object,
-    RETAINED_SAMPLE_GENERATION: sample?.generation,
-    RETAINED_SAMPLE_BYTES: sample?.bytes,
-    LIVE_ANALYSIS_ENABLED: String(stage !== "disabled"),
-    LIVE_ASSEMBLY_ENABLED: String(stage === "assembly" || stage === "render"),
-    LIVE_RENDER_ENABLED: String(stage === "render"),
-    PROCESSING_GRANTS_ENABLED: String(stage !== "disabled"),
+    APP_ENV: environment.APP_ENV || "local",
+    CSRF_ALLOWED_ORIGINS:
+      environment.FRONTEND_ORIGIN || "http://localhost:3000",
+    CLOUD_RENDER_ENVIRONMENT:
+      paid && environment.PRIVATE_RENDERER_ORIGIN ? "cloud" : "disabled",
+    RETAINED_SAMPLE_ENABLED: String(
+      !fakeMode &&
+        paid &&
+        [
+          environment.RETAINED_SAMPLE_BUCKET,
+          environment.RETAINED_SAMPLE_OBJECT,
+          environment.RETAINED_SAMPLE_GENERATION,
+          environment.RETAINED_SAMPLE_BYTES,
+        ].some(Boolean),
+    ),
+    LIVE_ANALYSIS_ENABLED: String(!fakeMode && stage !== "disabled"),
+    LIVE_ASSEMBLY_ENABLED: String(
+      !fakeMode && (stage === "assembly" || stage === "render"),
+    ),
+    LIVE_RENDER_ENABLED: String(!fakeMode && stage === "render"),
+    LIVE_IMAGE_GENERATION_ENABLED: String(imagesEnabled),
+    PROCESSING_GRANTS_ENABLED: String(!fakeMode && stage !== "disabled"),
     ADMISSION_MAX_PROCESS_DISPATCHES:
       stage === "render"
-        ? 4
+        ? 4 + (imagesEnabled ? ASSEMBLY_LIMITS.maxGeneratedImageCalls : 0)
         : stage === "assembly"
-          ? 3
+          ? 3 + (imagesEnabled ? ASSEMBLY_LIMITS.maxGeneratedImageCalls : 0)
           : stage === "analysis"
             ? 2
             : 0,
-    GEMINI_TRANSFER_APPROVED: String(runtime.approvals.geminiTransfer),
-    GEMINI_PAID_PROJECT_CONFIRMED: String(runtime.approvals.paidProject),
-    TURNSTILE_EXPECTED_HOSTNAME: runtime.turnstileHostname,
   };
   const result = environmentSchema.safeParse(values);
   let config: BackendConfig;

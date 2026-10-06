@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import {
   createLiveValidationEnvironment,
-  createLiveValidationSettings,
+  createLiveValidationConnections,
 } from "../../test/environment.fixture.js";
 import { composeBackend } from "../composition.js";
 import {
@@ -86,6 +86,70 @@ function fixture(overrides: Partial<AdmissionPolicy> = {}) {
 }
 afterEach(() => vi.useRealTimers());
 describe("process-lifetime protected admission", () => {
+  it("reserves at most three image attempts only inside the running assembly and consumes the process budget", async () => {
+    const f = fixture({ maxDispatches: 4 });
+    expect(() => f.admission.reserveImageCall(f.context)).toThrow();
+    await f.admission.run(
+      f.context,
+      { ...input, action: "visual-plan" },
+      () => {},
+      async () => {
+        for (let index = 0; index < 3; index++) {
+          f.admission.reserveImageCall(f.context);
+          f.calls.image();
+        }
+        expect(() => f.admission.reserveImageCall(f.context)).toThrow();
+        return "done";
+      },
+    );
+    expect(f.calls.image).toHaveBeenCalledTimes(3);
+    expect(() => f.admission.reserveImageCall(f.context)).toThrow();
+    await expect(
+      f.admission.run(f.context, input, () => {}, f.calls.text),
+    ).rejects.toThrow();
+    expect(f.calls.text).not.toHaveBeenCalled();
+  });
+  it("does not reclaim uncertain image spend or dispatch another image after cancellation", async () => {
+    const f = fixture({ maxDispatches: 2 });
+    await f.admission.run(
+      f.context,
+      { ...input, action: "visual-plan" },
+      () => {},
+      async () => {
+        f.admission.reserveImageCall(f.context);
+        try {
+          throw new Error("uncertain provider response");
+        } catch {
+          /* consumed */
+        }
+        expect(() => f.admission.reserveImageCall(f.context)).toThrow();
+      },
+    );
+    const replay = vi.fn();
+    await expect(
+      f.admission.run(
+        f.context,
+        { ...input, action: "visual-plan" },
+        () => {},
+        replay,
+      ),
+    ).rejects.toThrow();
+    expect(replay).not.toHaveBeenCalled();
+    const canceled = fixture({ maxDispatches: 4 });
+    await expect(
+      canceled.admission.run(
+        canceled.context,
+        { ...input, action: "visual-plan" },
+        () => {},
+        async () => {
+          canceled.controller.abort();
+          expect(() =>
+            canceled.admission.reserveImageCall(canceled.context),
+          ).toThrow();
+        },
+      ),
+    ).rejects.toThrow();
+  });
   it("refuses spend if the clock moves behind admission while abuse verification is pending", async () => {
     const f = fixture();
     f.abuse.verify.mockImplementation(async () => {
@@ -286,11 +350,15 @@ describe("process-lifetime protected admission", () => {
     expect(() => f.admission.verifyReceipt(receipt)).toThrow();
   });
   it("does not compose protected routes or paid ports by default, and rejects insecure enabled requests", async () => {
-    const off = composeBackend({ FAKE_MODE: "true" }).application;
+    const off = composeBackend({
+      FAKE_MODE: "true",
+      PAID_DEMO_ENABLED: "false",
+    }).application;
     await request(off).post("/v1/admission/grant").send({}).expect(404);
-    const enabled = composeBackend(createLiveValidationEnvironment(), {
-      ...createLiveValidationSettings(),
-      frontendOrigin: origin,
+    const enabled = composeBackend({
+      ...createLiveValidationEnvironment(),
+      ...createLiveValidationConnections(),
+      FRONTEND_ORIGIN: origin,
     }).application;
     await request(enabled)
       .post("/v1/admission/grant")

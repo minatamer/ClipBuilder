@@ -7,7 +7,7 @@ import {
 } from "./ids.schema.js";
 import { sha256DigestSchema } from "./boundary-primitives.schema.js";
 import {
-  compositionManifestV2Schema,
+  compositionManifestV3Schema,
   selectedMediaRangeSchema,
 } from "./edit-plan.schema.js";
 import {
@@ -24,6 +24,7 @@ export const TEMPORARY_MEDIA_LIMITS = {
   maxOperationsPerSession: 4,
   proxyBytes: 24 * 1024 * 1024,
   descriptorBytes: 128 * 1024,
+  renderDescriptorBytes: 1024 * 1024,
   workDeadlineMs: 840_000,
   sweepDeadlineMs: 180_000,
   scratchBytes: 2 * 1024 * 1024 * 1024,
@@ -125,7 +126,7 @@ export const mediaRenderRequestSchema = z
     binding: mediaBindingSchema,
     nonce: uuidV4Schema,
     manifestHash: sha256DigestSchema,
-    manifest: compositionManifestV2Schema,
+    manifest: compositionManifestV3Schema,
   })
   .strict();
 export const mediaCancelRequestSchema = z

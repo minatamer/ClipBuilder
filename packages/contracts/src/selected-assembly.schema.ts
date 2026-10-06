@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { ASSEMBLY_LIMITS } from "./constants.js";
 import {
-  compositionManifestV2Schema,
+  compositionManifestV3Schema,
+  contextualCardOriginSchema,
   FIXED_COMPOSITION_POLICY,
 } from "./edit-plan.schema.js";
 import {
@@ -17,16 +18,21 @@ import {
   revisionIdSchema,
   wordIdSchema,
 } from "./ids.schema.js";
-import { transcriptWordSchema } from "./transcript.schema.js";
+import {
+  transcriptWordSchema,
+  transcriptWordSpanSchema as wordSpanSchema,
+} from "./transcript.schema.js";
+import {
+  CONTEXTUAL_PICTURE_POLICY,
+  contextualPictureBriefSchema,
+  contextualPicturePlanSchema,
+} from "./contextual-picture.schema.js";
 import { sha256DigestSchema } from "./boundary-primitives.schema.js";
 import type { GroundedAnalysisResult } from "./grounded-analysis.schema.js";
 
-const wordSpanSchema = z
-  .object({ startWordId: wordIdSchema, endWordId: wordIdSchema })
-  .strict();
 export const contextualCardPlanSchema = z
   .object({
-    kind: compositionManifestV2Schema.shape.cards.element.shape.kind,
+    kind: compositionManifestV3Schema.shape.cards.element.shape.kind,
     anchorWordId: wordIdSchema,
     durationMs: z
       .number()
@@ -39,17 +45,23 @@ export const contextualCardPlanSchema = z
   .strict()
   .refine((card) => card.kind !== "comparison" || card.lines.length === 2)
   .refine((card) => card.kind !== "steps" || card.lines.length >= 2);
-// One selected-range audiovisual response. No free-form visible text or raster brief.
+// One selected-range audiovisual response with bounded non-executable scene briefs.
 export const selectedAssemblyPlanSchema = z
   .object({
     version: z.literal(1),
     speaker: speakerPlanSchema,
     cards: z.array(contextualCardPlanSchema).max(ASSEMBLY_LIMITS.maxVisualCues),
+    pictures: z
+      .array(contextualPicturePlanSchema)
+      .min(CONTEXTUAL_PICTURE_POLICY.minPictures)
+      .max(ASSEMBLY_LIMITS.maxVisualCues)
+      .optional(),
   })
   .strict();
 export const selectedAssemblyRequestSchema = selectedFocusRequestSchema;
 const cardEvidenceSchema = z
   .object({
+    origin: contextualCardOriginSchema,
     anchorWordId: wordIdSchema,
     titleWordIds: z.array(wordIdSchema).min(1).max(7),
     lineWordIds: z.array(z.array(wordIdSchema).min(1).max(14)).min(1).max(3),
@@ -57,7 +69,7 @@ const cardEvidenceSchema = z
   .strict();
 export const selectedAssemblyResultSchema = z
   .object({
-    version: z.literal(1),
+    version: z.literal(2),
     binding: mediaBindingSchema,
     generation: objectGenerationSchema,
     analysisRevision: revisionIdSchema,
@@ -71,7 +83,18 @@ export const selectedAssemblyResultSchema = z
     cardEvidence: z
       .array(cardEvidenceSchema)
       .max(ASSEMBLY_LIMITS.maxVisualCues),
-    manifest: compositionManifestV2Schema,
+    pictureNotes: z
+      .array(
+        z
+          .object({
+            anchorWordId: wordIdSchema,
+            scene: contextualPictureBriefSchema.shape.scene,
+          })
+          .strict(),
+      )
+      .max(CONTEXTUAL_PICTURE_POLICY.maxPictures)
+      .optional(),
+    manifest: compositionManifestV3Schema,
     manifestHash: sha256DigestSchema,
     receipt: z.string().min(1).max(4096),
   })
@@ -86,18 +109,19 @@ export const selectedAssemblyResultSchema = z
       { range } = manifest;
     if (
       result.binding.fingerprint !== manifest.source.fingerprint ||
-      result.cardEvidence.length !== manifest.cards.length
+      result.cardEvidence.length !== manifest.cards.length ||
+      (result.pictureNotes !== undefined &&
+        (result.pictureNotes.length !== (manifest.pictures?.length ?? 0) ||
+          result.pictureNotes.some(
+            (note, index) =>
+              note.anchorWordId !== manifest.pictures?.[index]?.anchorWordId,
+          )))
     )
       issue();
     const indexes = new Map(words.map((w, i) => [w.id, i]));
     if (
       indexes.size !== words.length ||
-      words.some(
-        (w, i) =>
-          w.startMs >= range.endMs ||
-          w.endMs <= range.startMs ||
-          (i > 0 && w.startMs < words[i - 1]!.startMs),
-      )
+      words.some((w) => w.startMs >= range.endMs || w.endMs <= range.startMs)
     )
       issue();
     function resolve(ids: string[]) {
@@ -112,7 +136,17 @@ export const selectedAssemblyResultSchema = z
       return words.slice(first, first + ids.length);
     }
     const captionIds = manifest.captions.flatMap((c) => c.wordIds ?? []);
-    if (JSON.stringify(captionIds) !== JSON.stringify(words.map((w) => w.id)))
+    if (
+      captionIds.some((id, index) => {
+        const position = indexes.get(id);
+        const previous = index ? indexes.get(captionIds[index - 1]!) : -1;
+        return (
+          position === undefined ||
+          previous === undefined ||
+          position <= previous
+        );
+      })
+    )
       issue();
     manifest.captions.forEach((caption, i) => {
       const group = resolve(caption.wordIds ?? []);
@@ -129,6 +163,18 @@ export const selectedAssemblyResultSchema = z
         !caption.lines
       )
         issue();
+      caption.wordCues.forEach((cue, index) => {
+        const word = group[index];
+        if (
+          !word ||
+          cue.wordId !== word.id ||
+          cue.text !== word.punctuatedText ||
+          cue.startMs !==
+            Math.max(caption.startMs, word.startMs - range.startMs) ||
+          cue.endMs !== Math.min(caption.endMs, word.endMs - range.startMs)
+        )
+          issue();
+      });
     });
     let previous =
       FIXED_COMPOSITION_POLICY.openingBeatMs -
@@ -159,6 +205,7 @@ export const selectedAssemblyResultSchema = z
       }
       if (
         !anchor ||
+        card.origin !== evidence.origin ||
         card.startMs !== anchor.startMs - range.startMs ||
         card.startMs < previous + FIXED_COMPOSITION_POLICY.cardSeparationMs ||
         card.title !== texts[0] ||
@@ -169,6 +216,21 @@ export const selectedAssemblyResultSchema = z
         issue();
       previous = card.endMs;
     });
+    for (const picture of manifest.pictures ?? []) {
+      const anchor = words[indexes.get(picture.anchorWordId) ?? -1];
+      const subject = resolve(picture.subjectWordIds);
+      if (
+        !anchor ||
+        !subject.length ||
+        picture.startMs !== anchor.startMs - range.startMs ||
+        subject.some(
+          (word) =>
+            word.startMs - range.startMs < picture.startMs ||
+            word.endMs - range.startMs > picture.endMs,
+        )
+      )
+        issue();
+    }
   });
 export type SelectedAssemblyPlan = z.infer<typeof selectedAssemblyPlanSchema>;
 export type SelectedAssemblyRequest = z.infer<

@@ -13,42 +13,43 @@ const input = {
   dataTransferAcknowledged: true as const,
 };
 describe("independent private cloud renderer boundary", () => {
-  it("keeps tests/defaults disabled and allows approved cloud compute with fake AI", () => {
+  it("keeps fake and paid-off cloud boundaries disabled even with approval true", () => {
     const identity = {
       async authorization() {
         throw Error("must not run");
       },
     };
-    expect(() => new CloudRendererClient(loadConfig({}), identity)).toThrow(
-      "disabled",
-    );
-    expect(() =>
-      loadConfig(
-        { NODE_ENV: "test" },
-        {
-          rendererOrigin: "https://synthetic.run.app",
-          approvals: { cloudSpend: true },
-        },
-      ),
-    ).toThrow();
-    const config = loadConfig(
-      {},
-      {
-        rendererOrigin: "https://synthetic.run.app",
-        approvals: { cloudSpend: true },
-      },
-    );
+    expect(
+      () =>
+        new CloudRendererClient(
+          loadConfig({ FAKE_MODE: "true", PAID_DEMO_ENABLED: "false" }),
+          identity,
+        ),
+    ).toThrow("disabled");
+    expect(
+      loadConfig({
+        NODE_ENV: "test",
+        PRIVATE_RENDERER_ORIGIN: "https://synthetic.run.app",
+        CLOUD_SPEND_APPROVED: "true",
+        FAKE_MODE: "true",
+        PAID_DEMO_ENABLED: "false",
+      }).renderer.spendApproved,
+    ).toBe(false);
+    const config = loadConfig({
+      PRIVATE_RENDERER_ORIGIN: "https://synthetic.run.app",
+      CLOUD_SPEND_APPROVED: "true",
+      FAKE_MODE: "true",
+      PAID_DEMO_ENABLED: "false",
+    });
     expect(config.providerMode).toBe("fake");
     expect(config.paidDemoEnabled).toBe(false);
+    expect(() => new CloudRendererClient(config, identity)).toThrow("disabled");
   });
   it("uses exact private paths, validates replies and sends both identity headers once", async () => {
-    const config = loadConfig(
-      {},
-      {
-        rendererOrigin: "https://synthetic.run.app",
-        approvals: { cloudSpend: true },
-      },
-    );
+    const config = loadConfig({
+      PRIVATE_RENDERER_ORIGIN: "https://synthetic.run.app",
+      PAID_VALIDATION_STAGE: "disabled",
+    });
     let identities = 0,
       requests = 0;
     const client = new CloudRendererClient(
@@ -83,13 +84,10 @@ describe("independent private cloud renderer boundary", () => {
     expect({ identities, requests }).toEqual({ identities: 1, requests: 1 });
   });
   it("redacts malformed/private provider responses", async () => {
-    const config = loadConfig(
-      {},
-      {
-        rendererOrigin: "https://synthetic.run.app",
-        approvals: { cloudSpend: true },
-      },
-    );
+    const config = loadConfig({
+      PRIVATE_RENDERER_ORIGIN: "https://synthetic.run.app",
+      PAID_VALIDATION_STAGE: "disabled",
+    });
     const client = new CloudRendererClient(
       config,
       {

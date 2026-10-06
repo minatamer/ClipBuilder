@@ -4,6 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import { createRendererApplication } from "./app.js";
 import { MediaFailure } from "./media/media.failure.js";
 import { binding, nonce, mediaFixture } from "../test/media-fixture.js";
+import { createHash } from "node:crypto";
+import {
+  compositionManifestV3Schema,
+  TEMPORARY_MEDIA_LIMITS,
+} from "@clipbuilder/contracts";
 function fixture(removeScratch?: (directory: string) => Promise<void>) {
   const f = mediaFixture(undefined, removeScratch);
   const app = createRendererApplication(f.operations, {
@@ -16,6 +21,74 @@ function fixture(removeScratch?: (directory: string) => Promise<void>) {
   return { ...f, app };
 }
 describe("private renderer routes", () => {
+  it("accepts bounded inline picture descriptors only on the authenticated render route", async () => {
+    const f = fixture();
+    const bytes = Buffer.alloc(96 * 1024, 1);
+    bytes.set([0xff, 0xd8, 0xff]);
+    const asset = {
+      repository: "wikimedia-commons",
+      license: "CC0",
+      pageId: 1,
+      title: "Synthetic",
+      width: 20,
+      height: 10,
+      dataUri: `data:image/jpeg;base64,${bytes.toString("base64")}`,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    };
+    const manifest = compositionManifestV3Schema.parse({
+      version: 3,
+      source: {
+        fingerprint: binding.fingerprint,
+        durationMs: 15000,
+        width: 1920,
+        height: 1080,
+      },
+      range: { startMs: 0, endMs: 10000 },
+      output: { width: 1080, height: 1920, fps: 30 },
+      focus: [{ startMs: 0, endMs: 10000, mode: "wide", reason: "initial" }],
+      captions: [],
+      cards: [],
+      pictures: [
+        {
+          startMs: 2000,
+          endMs: 4000,
+          anchorWordId: "w_000001",
+          subjectWordIds: ["w_000001"],
+          asset,
+        },
+      ],
+    });
+    const input = {
+      binding,
+      nonce,
+      manifest,
+      manifestHash: createHash("sha256")
+        .update(JSON.stringify(manifest))
+        .digest("hex"),
+    };
+    expect(Buffer.byteLength(JSON.stringify(input))).toBeGreaterThan(
+      TEMPORARY_MEDIA_LIMITS.descriptorBytes,
+    );
+    const render = vi
+      .spyOn(f.operations, "render")
+      .mockRejectedValue(new MediaFailure("conflict"));
+    const result = await request(f.app)
+      .post("/internal/render")
+      .set("Authorization", "Bearer control")
+      .send(input);
+    expect(result.status).toBe(409);
+    expect(render).toHaveBeenCalledOnce();
+    const unauthorized = await request(f.app)
+      .post("/internal/render")
+      .send(input);
+    expect(unauthorized.status).toBe(403);
+    expect(render).toHaveBeenCalledOnce();
+    const ordinary = await request(f.app)
+      .post("/internal/cancel")
+      .set("Authorization", "Bearer control")
+      .send(input);
+    expect(ordinary.status).toBe(422);
+  });
   it("rejects overlapping uploads and scheduled cleanup while admission owns the journal", async () => {
     const f = fixture();
     let entered!: () => void, release!: () => void;

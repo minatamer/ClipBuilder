@@ -31,7 +31,10 @@ describe("CL-004 complete development preview", () => {
   it("rejects a WebM upload before allocating or processing media", async () => {
     const authorize = vi.spyOn(SampleSession.prototype, "authorize");
     try {
-      const composed = composeBackend({ FAKE_MODE: "true" });
+      const composed = composeBackend({
+        FAKE_MODE: "true",
+        PAID_DEMO_ENABLED: "false",
+      });
       const agent = request.agent(composed.application);
       const origin = "http://localhost:3000";
       await agent
@@ -155,7 +158,8 @@ describe("CL-004 complete development preview", () => {
   );
   it("clears retained upload authorization through the cookie-scoped API before replacement", async () => {
     const agent = request.agent(
-      composeBackend({ FAKE_MODE: "true" }).application,
+      composeBackend({ FAKE_MODE: "true", PAID_DEMO_ENABLED: "false" })
+        .application,
     );
     const origin = "http://localhost:3000";
     await agent
@@ -322,6 +326,7 @@ describe("CL-004 complete development preview", () => {
       {
         FAKE_MODE: "true",
         NODE_ENV: "production",
+        PAID_DEMO_ENABLED: "false",
         APP_ENV: "production",
         APP_REVISION: "fixture-revision",
       },

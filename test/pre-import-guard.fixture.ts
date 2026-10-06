@@ -1,5 +1,6 @@
 const expectedEnvironment = {
   NODE_ENV: "test",
+  APP_ENV: "local",
   FAKE_MODE: "true",
   PROVIDER_MODE: "fake",
   PAID_DEMO_ENABLED: "false",
@@ -11,6 +12,9 @@ const expectedEnvironment = {
   LIVE_IMAGE_GENERATION_ENABLED: "false",
   CLOUD_RENDER_ENVIRONMENT: "disabled",
   CLOUD_SPEND_APPROVED: "false",
+  GEMINI_TRANSFER_APPROVED: "false",
+  GEMINI_IMAGE_GENERATION_APPROVED: "false",
+  GEMINI_PAID_PROJECT_CONFIRMED: "false",
   RENDERER_ENABLED: "false",
 } as const;
 

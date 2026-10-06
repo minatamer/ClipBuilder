@@ -630,7 +630,7 @@ export class GeminiAnalysisProvider {
             "selected_plan_json_decoded",
             decoded,
           );
-          return task.schema.parse(decoded);
+          return decoded;
         },
       );
       this.diagnostics.privateStageOutput(
@@ -647,31 +647,36 @@ export class GeminiAnalysisProvider {
         error.status <= 599
           ? error.status
           : undefined;
-      failure = new ApplicationError({
-        code: deadline.aborted
-          ? signal.aborted
-            ? "CLIENT_ABORTED"
-            : "OPERATION_TIMEOUT"
-          : phase === "validation" || phase === "processing"
-            ? "MODEL_OUTPUT_REJECTED"
-            : "ANALYSIS_PROVIDER_FAILED",
-        ruleId:
-          error instanceof GoogleFilesFailure
-            ? error.ruleId
-            : `google_${phase}_${status === undefined ? "failed" : `http_${status}`}`,
-      });
-      this.diagnostics.failure(
-        phase === "upload"
-          ? "gemini_upload"
-          : phase === "processing"
-            ? "gemini_processing"
-            : phase === "generation"
-              ? task
-                ? "gemini_generation"
-                : "transcription_generation"
-              : "gemini_validation",
-        failure,
-      );
+      if (task && phase === "validation" && !deadline.aborted) {
+        this.diagnostics.critique("gemini_validation", error);
+        value = null;
+      } else {
+        failure = new ApplicationError({
+          code: deadline.aborted
+            ? signal.aborted
+              ? "CLIENT_ABORTED"
+              : "OPERATION_TIMEOUT"
+            : phase === "validation" || phase === "processing"
+              ? "MODEL_OUTPUT_REJECTED"
+              : "ANALYSIS_PROVIDER_FAILED",
+          ruleId:
+            error instanceof GoogleFilesFailure
+              ? error.ruleId
+              : `google_${phase}_${status === undefined ? "failed" : `http_${status}`}`,
+        });
+        this.diagnostics.failure(
+          phase === "upload"
+            ? "gemini_upload"
+            : phase === "processing"
+              ? "gemini_processing"
+              : phase === "generation"
+                ? task
+                  ? "gemini_generation"
+                  : "transcription_generation"
+                : "gemini_validation",
+          failure,
+        );
+      }
     }
     if (registered) {
       try {

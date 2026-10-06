@@ -12,6 +12,8 @@ import {
 } from "./gemini.adapter.js";
 import { composeSelectedPlanProvider } from "../assembly/gemini-selected-plan.js";
 import { SelectedAssembly } from "../assembly/selected-assembly.usecase.js";
+import { CommonsPictureSource } from "../assembly/commons-pictures.js";
+import { composeGeminiPictureGenerator } from "../assembly/gemini-pictures.js";
 import { PreviewPlayback } from "../media/preview-playback.js";
 import { FinalRender } from "../render/final-render.usecase.js";
 import { OutputDelivery } from "../media/output-delivery.js";
@@ -66,6 +68,13 @@ export function composeAnalysis(
         planner,
         "google-gemini",
         diagnostics,
+        new CommonsPictureSource(
+          undefined,
+          undefined,
+          (error) => diagnostics.critique("assembly_pictures", error),
+          (facts) => diagnostics.assembly("assembly_pictures", facts),
+        ),
+        composeGeminiPictureGenerator(config, diagnostics),
       )
     : null;
   // Clear and either AI phase share exactly the same provider-file and media ownership.

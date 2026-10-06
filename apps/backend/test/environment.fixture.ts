@@ -21,6 +21,7 @@ export function createSafeTestEnvironment(
 // Synthetic composition only; shared network interception still applies.
 export function createLiveValidationEnvironment(): NodeJS.ProcessEnv {
   return {
+    ...createLiveValidationConnections(),
     NODE_ENV: "development",
     FAKE_MODE: "false",
     PAID_DEMO_ENABLED: "true",
@@ -31,13 +32,12 @@ export function createLiveValidationEnvironment(): NodeJS.ProcessEnv {
   };
 }
 
-export function createLiveValidationSettings(
+export function createLiveValidationConnections(
   stage: "analysis" | "assembly" | "render" = "analysis",
 ) {
   return {
-    paidValidationStage: stage,
-    rendererOrigin: "https://synthetic.run.app",
-    turnstileHostname: "localhost",
-    approvals: { cloudSpend: true, geminiTransfer: true, paidProject: true },
+    PAID_VALIDATION_STAGE: stage,
+    PRIVATE_RENDERER_ORIGIN: "https://synthetic.run.app",
+    TURNSTILE_EXPECTED_HOSTNAME: "localhost",
   };
 }

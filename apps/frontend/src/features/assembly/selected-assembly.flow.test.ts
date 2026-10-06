@@ -61,6 +61,24 @@ async function fixture() {
   return { input, result, controller };
 }
 describe("atomic selected assembly browser preparation", () => {
+  it("rejects an unsupported frozen policy without redispatching a paid plan", async () => {
+    const result = await selectedAssemblyFixture();
+    Object.assign(result, { version: 1, policy: "fixed-composition-v1" });
+    Object.assign(result.manifest, { version: 2 });
+    const request = vi.fn(async () => Response.json(result));
+    const api = createSourceAnalysisApi(request);
+    await expect(
+      api.assemble(
+        {
+          analysis: groundedFixture(),
+          candidateId: result.candidateId,
+          turnstileToken: "synthetic",
+        },
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow();
+    expect(request).toHaveBeenCalledTimes(1);
+  });
   it("publishes one prepared result and blocks refresh/replay without another plan", async () => {
     const f = await fixture();
     expect(await runSelectedAssembly(f.input)).toEqual(f.result);
@@ -159,6 +177,7 @@ describe("atomic selected assembly browser preparation", () => {
   });
   it("escapes literal card/caption content and keeps their fixed safe zones separate", () => {
     const card = {
+      origin: "planner" as const,
       kind: "comparison" as const,
       startMs: 2000,
       endMs: 4000,
@@ -172,40 +191,74 @@ describe("atomic selected assembly browser preparation", () => {
     expect(html).toContain("flex-direction:row");
     const captions = renderToStaticMarkup(
       createElement(FixedCaption, {
+        ms: 600,
         caption: {
           startMs: 0,
           endMs: 1000,
           text: "One Two",
           lines: ["One Two"],
-          emphasisWordIndex: 1,
+          wordIds: ["w_000001", "w_000002"],
+          wordCues: [
+            { wordId: "w_000001", text: "One", startMs: 0, endMs: 400 },
+            { wordId: "w_000002", text: "Two", startMs: 500, endMs: 1000 },
+          ],
         },
       }),
     );
-    expect(captions).toContain("#8de5c5");
+    expect(captions).toContain("#7652d8");
+    expect(captions).toContain("font-size:64px");
+    expect(captions).toContain("opacity:1");
+    expect(captions).toContain("color:#ffffff");
     const wide = renderToStaticMarkup(
       createElement(FixedCaption, {
+        ms: 0,
         caption: {
           startMs: 0,
           endMs: 1000,
           text: "W".repeat(80),
           lines: ["W".repeat(80)],
+          wordIds: ["w_000001"],
+          wordCues: [
+            {
+              wordId: "w_000001",
+              text: "W".repeat(80),
+              startMs: 0,
+              endMs: 1000,
+            },
+          ],
         },
       }),
     );
-    expect(wide).toContain("font-size:24px");
+    expect(wide).toContain("font-size:12px");
     const two = renderToStaticMarkup(
       createElement(FixedCaption, {
+        ms: 600,
         caption: {
           startMs: 0,
           endMs: 1000,
           text: `${"W".repeat(31)} ${"W".repeat(31)}`,
           lines: ["W".repeat(31), "W".repeat(31)],
+          wordIds: ["w_000001", "w_000002"],
+          wordCues: [
+            {
+              wordId: "w_000001",
+              text: "W".repeat(31),
+              startMs: 0,
+              endMs: 400,
+            },
+            {
+              wordId: "w_000002",
+              text: "W".repeat(31),
+              startMs: 500,
+              endMs: 1000,
+            },
+          ],
         },
       }),
     );
-    expect(two).toContain("font-size:30px");
+    expect(two).toContain("font-size:29px");
     expect(
-      FIXED_LAYER_GEOMETRY.card.top + FIXED_LAYER_GEOMETRY.card.height,
+      FIXED_LAYER_GEOMETRY.card.top + FIXED_LAYER_GEOMETRY.card.maxHeight,
     ).toBeLessThan(
       1920 -
         FIXED_LAYER_GEOMETRY.caption.bottom -

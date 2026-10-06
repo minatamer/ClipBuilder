@@ -43,6 +43,12 @@ export function createRendererApplication(
     response.locals.purpose = purpose;
     next();
   });
+  const parseDescriptor = express.json({
+    limit: TEMPORARY_MEDIA_LIMITS.descriptorBytes,
+  });
+  const parseRenderDescriptor = express.json({
+    limit: TEMPORARY_MEDIA_LIMITS.renderDescriptorBytes,
+  });
   app.use(
     "/internal",
     (request, _response, next) => {
@@ -54,7 +60,11 @@ export function createRendererApplication(
         throw new MediaFailure("invalid");
       next();
     },
-    express.json({ limit: TEMPORARY_MEDIA_LIMITS.descriptorBytes }),
+    (request, response, next) => {
+      const parse =
+        request.path === "/render" ? parseRenderDescriptor : parseDescriptor;
+      parse(request, response, next);
+    },
   );
   let admitting = false,
     sweeping = false;

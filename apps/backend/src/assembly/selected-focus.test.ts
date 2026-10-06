@@ -24,7 +24,7 @@ import {
 } from "./gemini-selected-plan.js";
 import {
   createLiveValidationEnvironment,
-  createLiveValidationSettings,
+  createLiveValidationConnections,
 } from "../../test/environment.fixture.js";
 import { loadConfig } from "../config/loadConfig.js";
 import { selectedAssemblyPlanSchema } from "@clipbuilder/contracts";
@@ -40,8 +40,10 @@ import {
   parseAnalysisDiagnosticLine,
 } from "../analysis/analysis.diagnostics.js";
 import { z } from "zod";
+import sharp from "sharp";
+import { normalizePicture } from "./picture-raster.js";
 
-async function fixture() {
+async function fixture(maxDispatches = 4) {
   const lines: string[] = [],
     diagnostics = new AnalysisDiagnostics((line) => lines.push(line));
   const origin = "http://localhost:3000",
@@ -59,7 +61,7 @@ async function fixture() {
       ttlMs: 7200000,
       maxRecords: 16,
       maxConcurrent: 1,
-      maxDispatches: 4,
+      maxDispatches,
       rateWindowMs: 300000,
       maxGrantsPerWindow: 3,
       allowedOrigins: [origin],
@@ -579,6 +581,223 @@ describe("frozen assembly preview access", () => {
   });
 });
 describe("selected speaker action and provenance", () => {
+  it.each(["commons", "generated"])(
+    "signs two %s pictures into preview/export with one planner call and rejects a changed image without more provider work",
+    async (origin) => {
+      const f = await fixture(origin === "generated" ? 6 : 4);
+      f.provider.plan.mockImplementation(async (_proxy, context) => {
+        const anchor = context.words.find(
+          (word) => word.startMs - context.range.startMs >= 2000,
+        )!;
+        const secondAnchor = context.words.find(
+          (word) => word.startMs >= anchor.startMs + 4500,
+        )!;
+        const durationMs = context.range.endMs - context.range.startMs;
+        return {
+          version: 1,
+          cards: [],
+          speaker: {
+            version: 1,
+            coordinateSpace: "upright-display",
+            durationMs,
+            shots: [{ startMs: 0, endMs: durationMs, observations: [] }],
+          },
+          pictures: [anchor, secondAnchor].map((word, index) => {
+            const first = context.words.findIndex(
+              (candidate) => candidate.id === word.id,
+            );
+            const phrase = context.words.slice(
+              first,
+              first + (index === 0 ? 9 : 5),
+            );
+            return {
+              kind: "object",
+              brief: {
+                scene: "A contextual synthetic object",
+                searchQuery: "synthetic object photograph",
+                requiredTerms: ["object"],
+                avoidTerms: [],
+              },
+              anchorWordId: phrase[2]!.id,
+              durationMs: 2000,
+              subject: {
+                startWordId: phrase[0]!.id,
+                endWordId: phrase.at(-1)!.id,
+              },
+            };
+          }),
+        };
+      });
+      const assets = await Promise.all(
+        ["#2345aa", "#aa4523"].map(async (background, index) => {
+          const png = await sharp({
+            create: { width: 20, height: 10, channels: 3, background },
+          })
+            .png()
+            .toBuffer();
+          const raster = await normalizePicture(png);
+          return {
+            repository: "wikimedia-commons" as const,
+            license: "CC0" as const,
+            pageId: index + 1,
+            title: "Synthetic subject",
+            width: raster.width,
+            height: raster.height,
+            sha256: createHash("sha256").update(raster.bytes).digest("hex"),
+            dataUri: `data:image/jpeg;base64,${raster.bytes.toString("base64")}`,
+          };
+        }),
+      );
+      const generated = assets.map((asset) => {
+        const {
+          pageId: _id,
+          title: _title,
+          license: _license,
+          ...raster
+        } = asset;
+        void _id;
+        void _title;
+        void _license;
+        return {
+          ...raster,
+          repository: "google-gemini" as const,
+          model: "gemini-3.1-flash-image" as const,
+          policy: "contextual-generated-v1" as const,
+        };
+      });
+      const generate = vi
+        .fn()
+        .mockResolvedValueOnce(generated[0])
+        .mockResolvedValueOnce(generated[1]);
+      const find = vi
+        .fn()
+        .mockResolvedValueOnce(assets[0])
+        .mockResolvedValueOnce(assets[1]);
+      if (origin === "generated") find.mockReset().mockResolvedValue(null);
+      f.service = new SelectedAssembly(
+        f.admission,
+        f.source,
+        f.port,
+        f.provider,
+        "fake",
+        f.diagnostics,
+        { find },
+        origin === "generated" ? { find: generate } : undefined,
+      );
+      const privateCapture = vi.spyOn(f.diagnostics, "privateStageOutput");
+      const result = await diagnosedRun(f);
+      expect(f.service.verify(f.context, result)).toEqual(result);
+      expect(result.manifest.pictures).toHaveLength(2);
+      expect(result.pictureNotes).toEqual(
+        result.manifest.pictures!.map((picture) => ({
+          anchorWordId: picture.anchorWordId,
+          scene: "A contextual synthetic object",
+        })),
+      );
+      const changedNotes = structuredClone(result);
+      changedNotes.pictureNotes![0]!.scene = "A different synthetic scene";
+      expect(() => f.service.verify(f.context, changedNotes)).toThrow();
+      expect(
+        selectedAssemblyResultSchema.safeParse({ ...result, pictureNotes: [] })
+          .success,
+      ).toBe(false);
+      expect(
+        selectedAssemblyResultSchema.safeParse({
+          ...result,
+          pictureNotes: result.pictureNotes!.map((note) => ({
+            ...note,
+            anchorWordId: "w_999999",
+          })),
+        }).success,
+      ).toBe(false);
+      expect(f.lines.join("\n")).not.toContain("A contextual synthetic object");
+      if (origin === "generated") {
+        const captured = privateCapture.mock.calls.find(
+          ([stage]) => stage === "assembly_reconciliation_result",
+        );
+        expect(JSON.stringify(captured?.[1])).not.toContain(
+          result.manifest.pictures![0]!.asset.dataUri,
+        );
+      }
+      expect(generate).toHaveBeenCalledTimes(origin === "generated" ? 2 : 0);
+      expect(
+        result.manifest.pictures!.map((picture) => picture.asset.repository),
+      ).toEqual([
+        origin === "generated" ? "google-gemini" : "wikimedia-commons",
+        origin === "generated" ? "google-gemini" : "wikimedia-commons",
+      ]);
+      const proposed = await f.provider.plan.mock.results[0]!.value;
+      expect(result.manifest.pictures![0]!.subjectWordIds).toHaveLength(7);
+      result.manifest.pictures!.forEach((item, index) => {
+        expect(item.anchorWordId).toBe(
+          proposed.pictures![index]!.subject.startWordId,
+        );
+        expect(item.anchorWordId).not.toBe(
+          proposed.pictures![index]!.anchorWordId,
+        );
+        const phraseEnd =
+          result.words.find(
+            (word) => word.id === proposed.pictures![index]!.subject.endWordId,
+          )!.endMs - result.manifest.range.startMs;
+        expect(item.endMs).toBeGreaterThanOrEqual(phraseEnd);
+      });
+      expect(f.port.preview.mock.calls[0]![0].manifestHash).toBe(
+        result.manifestHash,
+      );
+      const output = {
+        binding: result.binding,
+        manifestHash: result.manifestHash,
+        output: {
+          artifactId: randomUUID(),
+          generation: "4",
+          bytes: 1024,
+          checksum: "c".repeat(64),
+        },
+        expiresAtMs: 601000,
+      };
+      const media = {
+        render: vi.fn(
+          async (
+            input: import("@clipbuilder/contracts").MediaRenderRequest,
+          ) => {
+            expect(input.manifest).toEqual(result.manifest);
+            const { binding: _binding, ...response } = output;
+            void _binding;
+            return response;
+          },
+        ),
+        outputInfo: vi.fn(async () => output),
+        cancel: vi.fn(async () => {}),
+      };
+      const rendered = await new FinalRender(
+        f.admission,
+        f.service,
+        media,
+        () => 1000,
+      ).run(f.context, { assembly: result, turnstileToken: "synthetic" });
+      expect(rendered.manifestHash).toBe(result.manifestHash);
+      expect(media.render).toHaveBeenCalledOnce();
+      const signed = structuredClone(result);
+      signed.manifest.pictures![0]!.asset.sha256 = "e".repeat(64);
+      expect(() => f.service.verify(f.context, signed)).toThrow();
+      const ungrounded = structuredClone(result);
+      ungrounded.manifest.pictures![0]!.subjectWordIds = ["w_999999"];
+      expect(selectedAssemblyResultSchema.safeParse(ungrounded).success).toBe(
+        false,
+      );
+      expect(find).toHaveBeenCalledTimes(2);
+      expect(generate).toHaveBeenCalledTimes(origin === "generated" ? 2 : 0);
+      expect(f.provider.plan).toHaveBeenCalledOnce();
+      expect(f.port.releaseProxy).toHaveBeenCalledOnce();
+      expect(f.port.preview).toHaveBeenCalledOnce();
+      expect(f.port.cancel).not.toHaveBeenCalled();
+      expect(f.sourceProvider.analyze).not.toHaveBeenCalled();
+      const serialized = f.lines.join("\n");
+      expect(serialized).not.toContain(
+        result.manifest.pictures![0]!.asset.dataUri,
+      );
+    },
+  );
   async function diagnosedRun(f: Awaited<ReturnType<typeof fixture>>) {
     return new Promise<import("@clipbuilder/contracts").SelectedAssemblyResult>(
       (resolve, reject) => {
@@ -620,7 +839,6 @@ describe("selected speaker action and provenance", () => {
       "selected_planning",
       "proxy_cleanup",
       "assembly_plan_parse",
-      "assembly_cards",
       "assembly_focus",
       "assembly_manifest",
       "assembly_validation",
@@ -637,6 +855,19 @@ describe("selected speaker action and provenance", () => {
         }),
       );
     }
+    expect(records).toContainEqual(
+      expect.objectContaining({
+        phase: "assembly_cards",
+        outcome: "completed",
+        assembly: { cards: 0, plannedCards: 0, fallbackCards: 0 },
+      }),
+    );
+    expect(records).toContainEqual(
+      expect.objectContaining({
+        phase: "assembly_pictures",
+        outcome: "completed",
+      }),
+    );
     expect(records).toContainEqual(
       expect.objectContaining({
         assembly: {
@@ -704,7 +935,7 @@ describe("selected speaker action and provenance", () => {
     expect(f.port.cancel).toHaveBeenCalledOnce();
     expect(f.lines.join("\n")).not.toContain("synthetic-private");
   });
-  it("identifies local plan schema rejection before any preview call", async () => {
+  it("logs local plan schema critique and reaches preview with safe fallback", async () => {
     const f = await fixture();
     f.provider.plan.mockResolvedValue({
       version: 1,
@@ -716,23 +947,66 @@ describe("selected speaker action and provenance", () => {
       },
       cards: [],
     });
-    await expect(diagnosedRun(f)).rejects.toMatchObject({
-      code: "MODEL_OUTPUT_REJECTED",
+    const result = await diagnosedRun(f);
+    expect(result.manifest.focus[0]).toMatchObject({
+      mode: "held",
+      reason: "opening-default",
     });
     expect(f.lines.map((line) => JSON.parse(line))).toContainEqual(
       expect.objectContaining({
         phase: "assembly_plan_parse",
-        outcome: "failed",
+        outcome: "completed",
+        assembly: { qualityWarnings: 1 },
         validation: expect.objectContaining({
           reason: "schema_invalid",
           issueCount: expect.any(Number),
         }),
       }),
     );
-    expect(f.port.preview).not.toHaveBeenCalled();
-    expect(f.port.cancel).toHaveBeenCalledOnce();
+    expect(f.port.preview).toHaveBeenCalledOnce();
+    expect(f.port.cancel).not.toHaveBeenCalled();
+    expect(f.provider.plan).toHaveBeenCalledOnce();
   });
-  it("rejects unsupported caption input before either media or AI dispatch", async () => {
+  it("assembles signed analysis containing zero-duration words with one planner dispatch", async () => {
+    const f = await fixture();
+    const transcript = f.input.analysis.analysis.transcript.words;
+    const candidate = f.input.analysis.analysis.candidates[0]!;
+    const first = transcript.findIndex(
+      (word) => word.id === candidate.startWordId,
+    );
+    const instantaneous = transcript[first + 1]!;
+    instantaneous.endMs = instantaneous.startMs;
+    const { receipt: _old, ...payload } = f.input.analysis;
+    void _old;
+    f.input.analysis.receipt = f.admission.completedReceipt(
+      f.context,
+      "candidate-analysis",
+      payload.binding.sourceRevision,
+      resultDigest(payload),
+    );
+    const result = await diagnosedRun(f);
+    const cue = result.manifest.captions
+      .flatMap((caption) => caption.wordCues)
+      .find((item) => item.wordId === instantaneous.id)!;
+    expect(cue.startMs).toBe(cue.endMs);
+    expect(result.words.find((word) => word.id === instantaneous.id)).toEqual(
+      instantaneous,
+    );
+    expect(f.port.select).toHaveBeenCalledOnce();
+    expect(f.provider.plan).toHaveBeenCalledOnce();
+    expect(f.port.preview).toHaveBeenCalledOnce();
+    expect(f.port.releaseProxy).toHaveBeenCalledOnce();
+    expect(f.port.cancel).not.toHaveBeenCalled();
+    expect(f.sourceProvider.analyze).not.toHaveBeenCalled();
+    expect(f.lines.map((line) => JSON.parse(line))).toContainEqual(
+      expect.objectContaining({
+        phase: "assembly_captions",
+        outcome: "completed",
+        assembly: expect.objectContaining({ captionZeroDurationCues: 1 }),
+      }),
+    );
+  });
+  it("logs an oversized caption word and continues with its literal text", async () => {
     const f = await fixture();
     const candidate = f.input.analysis.analysis.candidates[0]!;
     f.input.analysis.analysis.transcript.words.find(
@@ -746,11 +1020,22 @@ describe("selected speaker action and provenance", () => {
       payload.binding.sourceRevision,
       resultDigest(payload),
     );
-    await expect(f.service.run(f.context, f.input)).rejects.toMatchObject({
-      code: "INVALID_REQUEST",
-    });
-    expect(f.port.select).toHaveBeenCalledTimes(0);
-    expect(f.provider.plan).toHaveBeenCalledTimes(0);
+    const result = await diagnosedRun(f);
+    expect(result.manifest.captions[0]!.text).toBe(
+      "one two three four five six seven eight nine",
+    );
+    expect(f.port.select).toHaveBeenCalledOnce();
+    expect(f.provider.plan).toHaveBeenCalledOnce();
+    expect(f.port.preview).toHaveBeenCalledOnce();
+    expect(f.lines.map((line) => JSON.parse(line))).toContainEqual(
+      expect.objectContaining({
+        phase: "assembly_captions",
+        assembly: { qualityWarnings: 1 },
+        validation: expect.objectContaining({
+          reason: "unsupported-caption-word",
+        }),
+      }),
+    );
   });
   it("connects protected assembly HTTP to the combined action and rejects replay and CSRF before new calls", async () => {
     const f = await fixture(),
@@ -790,12 +1075,12 @@ describe("selected speaker action and provenance", () => {
     const response = await send();
     expect(response.status).toBe(200);
     expect(response.headers["cache-control"]).toContain("no-store");
-    expect(f.service.verify(f.context, response.body).manifest.version).toBe(2);
+    expect(f.service.verify(f.context, response.body).manifest.version).toBe(3);
     expect((await send()).status).toBe(409);
     expect(f.provider.plan).toHaveBeenCalledTimes(1);
     expect(f.port.select).toHaveBeenCalledTimes(1);
   });
-  it("an invalid contextual plan releases and terminally cancels without publishing or retrying", async () => {
+  it("an invalid contextual card is omitted and preview continues without inventing a text fallback", async () => {
     const f = await fixture();
     f.provider.plan.mockImplementation(async (_proxy, input) => ({
       version: 1,
@@ -821,11 +1106,11 @@ describe("selected speaker action and provenance", () => {
         },
       ],
     }));
-    await expect(f.service.run(f.context, f.input)).rejects.toMatchObject({
-      code: "MODEL_OUTPUT_REJECTED",
-    });
+    const result = await f.service.run(f.context, f.input);
+    expect(result.manifest.cards).toEqual([]);
     expect(f.port.releaseProxy).toHaveBeenCalledTimes(1);
-    expect(f.port.cancel).toHaveBeenCalledTimes(1);
+    expect(f.port.cancel).toHaveBeenCalledTimes(0);
+    expect(f.port.preview).toHaveBeenCalledOnce();
     await expect(f.service.run(f.context, f.input)).rejects.toThrow();
     expect(f.provider.plan).toHaveBeenCalledTimes(1);
   });
@@ -837,17 +1122,29 @@ describe("selected speaker action and provenance", () => {
       delete: vi.fn(),
     };
     const files = new GeminiAnalysisProvider(transport, 1000);
-    expect(composeSelectedPlanProvider(loadConfig({}), files)).toBeNull();
     expect(
-      composeSelectedPlanProvider(loadConfig({ NODE_ENV: "test" }), files),
+      composeSelectedPlanProvider(
+        loadConfig({ FAKE_MODE: "true", PAID_DEMO_ENABLED: "false" }),
+        files,
+      ),
+    ).toBeNull();
+    expect(
+      composeSelectedPlanProvider(
+        loadConfig({
+          NODE_ENV: "test",
+          FAKE_MODE: "true",
+          PAID_DEMO_ENABLED: "false",
+        }),
+        files,
+      ),
     ).toBeNull();
     expect(transport.upload).toHaveBeenCalledTimes(0);
   });
   it("serializes JSON-only selected video sampling with schema prompt guidance once", async () => {
-    const config = loadConfig(
-      createLiveValidationEnvironment(),
-      createLiveValidationSettings("assembly"),
-    );
+    const config = loadConfig({
+      ...createLiveValidationEnvironment(),
+      ...createLiveValidationConnections("assembly"),
+    });
     const request = vi.fn<typeof fetch>(async (_url, options) => {
       const body: unknown = JSON.parse(String(options?.body));
       expect(body).toMatchObject({
@@ -903,7 +1200,9 @@ describe("selected speaker action and provenance", () => {
       {
         startMs: 0,
         endMs: result.manifest.range.endMs - result.manifest.range.startMs,
-        mode: "wide",
+        mode: "held",
+        reason: "opening-default",
+        box: { x: 0.13, y: 0.25, width: 0.24, height: 0.35 },
       },
     ]);
     expect(f.port.select).toHaveBeenCalledTimes(1);
@@ -956,16 +1255,70 @@ describe("selected speaker action and provenance", () => {
     expect(f.port.cancel).toHaveBeenCalledOnce();
     expect(f.port.preview).not.toHaveBeenCalled();
   });
-  it("releases the proxy and cancels the source on malformed model output", async () => {
+  it("releases the proxy and preserves the edit without text graphics on malformed model output", async () => {
     const f = await fixture();
     f.provider.plan.mockResolvedValue({ command: "synthetic" });
-    await expect(f.service.run(f.context, f.input)).rejects.toMatchObject({
-      code: "MODEL_OUTPUT_REJECTED",
+    const result = await f.service.run(f.context, f.input);
+    expect(result.manifest.focus[0]).toMatchObject({
+      mode: "held",
+      reason: "opening-default",
     });
+    expect(result.manifest.cards).toEqual([]);
     expect(f.provider.plan).toHaveBeenCalledTimes(1);
     expect(f.port.releaseProxy).toHaveBeenCalledTimes(1);
-    expect(f.port.cancel).toHaveBeenCalledTimes(1);
+    expect(f.port.cancel).toHaveBeenCalledTimes(0);
+    expect(f.port.preview).toHaveBeenCalledOnce();
   });
+  it.each(["malformed", "unfinished", "unusable-sections"])(
+    "reaches preview after %s selected Gemini output with one call and full cleanup",
+    async (kind) => {
+      const f = await fixture();
+      const transport: GeminiTransport = {
+        upload: vi.fn(async (name) => ({
+          name,
+          state: "ACTIVE",
+          mimeType: "video/mp4",
+          uri: `https://generativelanguage.googleapis.com/v1beta/${name}`,
+        })),
+        get: vi.fn(),
+        generate: vi.fn(async () => ({
+          finished: kind !== "unfinished",
+          text:
+            kind === "unusable-sections"
+              ? JSON.stringify({
+                  speaker: "synthetic-private-invalid",
+                  cards: [{ kind: "unknown" }],
+                })
+              : "synthetic-private-not-json",
+        })),
+        delete: vi.fn(async () => {}),
+      };
+      f.service = new SelectedAssembly(
+        f.admission,
+        f.source,
+        f.port,
+        new GeminiSelectedPlanProvider(
+          new GeminiAnalysisProvider(transport, 1000, undefined, f.diagnostics),
+        ),
+        "fake",
+        f.diagnostics,
+      );
+      const result = await diagnosedRun(f);
+      expect(f.service.verify(f.context, result)).toEqual(result);
+      expect(result.manifest.cards).toEqual([]);
+      expect(transport.upload).toHaveBeenCalledOnce();
+      expect(transport.generate).toHaveBeenCalledOnce();
+      expect(transport.delete).toHaveBeenCalledOnce();
+      expect(f.port.preview).toHaveBeenCalledOnce();
+      expect(f.port.releaseProxy).toHaveBeenCalledOnce();
+      expect(f.port.cancel).not.toHaveBeenCalled();
+      expect(f.sourceProvider.analyze).not.toHaveBeenCalled();
+      expect(f.lines.join("\n")).not.toContain("synthetic-private");
+      expect(f.lines.map((line) => JSON.parse(line))).toContainEqual(
+        expect.objectContaining({ assembly: { qualityWarnings: 1 } }),
+      );
+    },
+  );
   it("rejects wrong selected proxy bytes before AI and still releases/cancels", async () => {
     const f = await fixture();
     f.port.proxy.mockResolvedValue(

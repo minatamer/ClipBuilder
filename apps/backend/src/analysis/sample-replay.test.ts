@@ -4,7 +4,6 @@ import { loadConfig } from "../config/loadConfig.js";
 import {
   LocalSampleReplay,
   LOCAL_SAMPLE_REPLAY_WORKSPACE,
-  SAMPLE_REPLAY_WINDOW_MS,
   composeLocalSampleReplay,
   retainedSampleIdentity,
 } from "./sample-replay.js";
@@ -17,25 +16,29 @@ const sample = {
   bytes: SAMPLE_ANALYSIS.media.bytes,
 };
 const value = () => ({
-  version: 1,
+  version: 2,
   workspace: LOCAL_SAMPLE_REPLAY_WORKSPACE,
   createdAtMs: 1000,
-  expiresAtMs: 1000 + SAMPLE_REPLAY_WINDOW_MS,
   retainedSampleIdentity: retainedSampleIdentity(sample),
   analysis: structuredClone(SAMPLE_ANALYSIS),
 });
 
-describe("private sample replay composition and expiry", () => {
+describe("private sample replay composition and owner cleanup", () => {
   it.each([
     "fake",
     "test",
     "preview",
     "production",
+    "hosted",
     "paid-off",
     "assembly-off",
   ])("never reads saved content in %s composition", (mode) => {
     const config = {
-      ...loadConfig({ NODE_ENV: "test" }),
+      ...loadConfig({
+        NODE_ENV: "test",
+        FAKE_MODE: "true",
+        PAID_DEMO_ENABLED: "false",
+      }),
       nodeEnv: "development" as const,
       appEnv: "local" as const,
       providerMode: "live" as const,
@@ -56,19 +59,21 @@ describe("private sample replay composition and expiry", () => {
             ? { ...config, appEnv: "preview" as const }
             : mode === "production"
               ? { ...config, nodeEnv: "production" as const }
-              : mode === "paid-off"
-                ? { ...config, paidDemoEnabled: false }
-                : {
-                    ...config,
-                    features: { ...config.features, liveAssembly: false },
-                  };
+              : mode === "hosted"
+                ? { ...config, appEnv: "production" as const }
+                : mode === "paid-off"
+                  ? { ...config, paidDemoEnabled: false }
+                  : {
+                      ...config,
+                      features: { ...config.features, liveAssembly: false },
+                    };
     const read = vi.fn(() => {
       throw new Error("private file should not be read");
     });
     expect(composeLocalSampleReplay(adjusted, read)).toBeNull();
     expect(read).not.toHaveBeenCalled();
   });
-  it("returns independent copies and rejects expiry and changed revision", () => {
+  it("keeps independent saved choices available after six hours and thirty days", () => {
     let now = 1000;
     const replay = new LocalSampleReplay(
       value(),
@@ -79,22 +84,30 @@ describe("private sample replay composition and expiry", () => {
     result.candidates.length = 0;
     expect(replay.options().candidates).toHaveLength(3);
     expect(() => replay.options("rev_" + "x".repeat(22))).toThrow();
-    now += SAMPLE_REPLAY_WINDOW_MS;
-    expect(replay.available()).toBe(false);
-    expect(() => replay.options()).toThrow();
+    for (const elapsed of [6 * 60 * 60 * 1000, 30 * 24 * 60 * 60 * 1000]) {
+      now = 1000 + elapsed;
+      expect(replay.available()).toBe(true);
+      expect(replay.options().candidates).toHaveLength(3);
+    }
   });
-  it.each(["source", "workspace", "window", "count", "future"])(
+  it("rejects the superseded deadline-bearing cache format", () => {
+    expect(
+      () =>
+        new LocalSampleReplay(
+          { ...value(), version: 1, expiresAtMs: 1000 + 6 * 60 * 60 * 1000 },
+          retainedSampleIdentity(sample),
+          () => 1000,
+        ),
+    ).toThrow();
+  });
+  it.each(["source", "workspace", "count", "future"])(
     "rejects invalid %s cache metadata",
     (kind) => {
       const record = value();
       if (kind === "source") record.retainedSampleIdentity = "b".repeat(64);
       if (kind === "workspace") record.workspace += "-different";
-      if (kind === "window") record.expiresAtMs++;
       if (kind === "count") record.analysis.candidates.pop();
-      if (kind === "future") {
-        record.createdAtMs++;
-        record.expiresAtMs++;
-      }
+      if (kind === "future") record.createdAtMs++;
       expect(
         () =>
           new LocalSampleReplay(

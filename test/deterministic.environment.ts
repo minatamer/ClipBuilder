@@ -2,6 +2,7 @@
 export function installTestEnvironment(): void {
   Object.assign(process.env, {
     NODE_ENV: "test",
+    APP_ENV: "local",
     FAKE_MODE: "true",
     PROVIDER_MODE: "fake",
     PAID_DEMO_ENABLED: "false",
@@ -13,9 +14,23 @@ export function installTestEnvironment(): void {
     LIVE_IMAGE_GENERATION_ENABLED: "false",
     CLOUD_RENDER_ENVIRONMENT: "disabled",
     CLOUD_SPEND_APPROVED: "false",
+    GEMINI_TRANSFER_APPROVED: "false",
+    GEMINI_IMAGE_GENERATION_APPROVED: "false",
+    GEMINI_PAID_PROJECT_CONFIRMED: "false",
     RENDERER_ENABLED: "false",
   });
   for (const key of [
+    "PAID_VALIDATION_STAGE",
+    "APP_REVISION",
+    "FRONTEND_ORIGIN",
+    "BACKEND_ORIGIN",
+    "BACKEND_AUDIENCE",
+    "PRIVATE_RENDERER_ORIGIN",
+    "TURNSTILE_EXPECTED_HOSTNAME",
+    "RETAINED_SAMPLE_BUCKET",
+    "RETAINED_SAMPLE_OBJECT",
+    "RETAINED_SAMPLE_GENERATION",
+    "RETAINED_SAMPLE_BYTES",
     "RENDERER_MAX_OPERATIONS",
     "GEMINI_API_KEY",
     "TURNSTILE_SITE_KEY",

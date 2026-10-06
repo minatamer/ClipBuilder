@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   speakerPlanSchema,
-  compositionManifestV2Schema,
+  focusSegmentV3Schema,
   type SpeakerPlan,
   type TranscriptWord,
 } from "@clipbuilder/contracts";
@@ -42,11 +42,68 @@ function plan(): SpeakerPlan {
     ],
   };
 }
+function timeline(raw: SpeakerPlan, sourceWords = words) {
+  return compileSpeakerFocus(raw, { ...context, words: sourceWords });
+}
 describe("selected-range anonymous speaker focus", () => {
-  it("grounds clip-relative matches in selected source words", () => {
-    expect(compileSpeakerFocus(plan(), context)).toEqual([
+  it("uses a first-frame visible-face fallback without speaker confidence and never borrows a later face", () => {
+    const input = plan();
+    const item = input.shots[0]!.observations[0]!;
+    const opening = { ...box, x: 0.65 };
+    input.shots[0]!.openingFace = { box: opening, confidence: 0.95 };
+    input.shots[0]!.observations = [
       {
-        startMs: 0,
+        ...item,
+        endMs: 2000,
+        association: "ambiguous",
+        box: null,
+        evidenceWordIds: [],
+      },
+      { ...item, startMs: 2000, evidenceWordIds: [words[4]!.id] },
+    ];
+    const focus = timeline(input);
+    expect(focus[0]).toMatchObject({
+      startMs: 0,
+      endMs: 3000,
+      mode: "held",
+      reason: "visible-face",
+      box: opening,
+    });
+    expect(focus[0]).not.toHaveProperty("speaker");
+    expect(focus[0]).not.toHaveProperty("confidence");
+    expect(focus.at(-1)).toMatchObject({ mode: "speaker", box });
+    delete input.shots[0]!.openingFace;
+    const fallback = timeline(input);
+    expect(fallback[0]).toMatchObject({
+      mode: "held",
+      reason: "opening-default",
+    });
+    expect(fallback[0]).not.toMatchObject({ box });
+    expect(fallback[0]).not.toHaveProperty("speaker");
+  });
+  it("fails an unrepresentable focus track atomically instead of widening the entire shot", () => {
+    const input = plan();
+    input.durationMs = 20000;
+    input.shots[0]!.endMs = 20000;
+    input.shots[0]!.observations[0]!.endMs = 20000;
+    const dense = Array.from({ length: 1000 }, (_, index) => ({
+      ...words[0]!,
+      id: `w_${String(index + 1).padStart(6, "0")}`,
+      startMs: 5000 + index * 20,
+      endMs: 5010 + index * 20,
+    }));
+    expect(() =>
+      compileSpeakerFocus(input, {
+        range: { startMs: 5000, endMs: 25000 },
+        words: dense,
+      }),
+    ).toThrow("focus_track_too_complex");
+  });
+  it("opens on visible geometry immediately while waiting to claim a speaking-person match", () => {
+    expect(timeline(plan())).toEqual([
+      { startMs: 0, endMs: 1000, mode: "held", reason: "visible-face", box },
+      {
+        startMs: 1000,
         endMs: 10000,
         mode: "speaker",
         speaker: "spk_0",
@@ -55,313 +112,307 @@ describe("selected-range anonymous speaker focus", () => {
       },
     ]);
   });
-  it("uses actual speech duration for a brief turn padded by provider silence", () => {
-    const sourceWords = [
-      { ...words[0]!, startMs: 5000, endMs: 7000 },
-      { ...words[1]!, startMs: 7000, endMs: 7500, speakerId: "spk_1" },
-      { ...words[2]!, startMs: 14000, endMs: 15000 },
-    ];
+  it("holds the last confirmed face through long uncertainty without claiming a speaker match", () => {
+    const focus = timeline(plan(), [
+      { ...words[0]!, endMs: 7000 },
+      { ...words[1]!, startMs: 7500, endMs: 8500 },
+    ]);
+    expect(
+      focus.map(({ startMs, endMs, mode }) => ({ startMs, endMs, mode })),
+    ).toEqual([
+      { startMs: 0, endMs: 1000, mode: "held" },
+      { startMs: 1000, endMs: 2000, mode: "speaker" },
+      { startMs: 2000, endMs: 2500, mode: "held" },
+      { startMs: 2500, endMs: 3500, mode: "speaker" },
+      { startMs: 3500, endMs: 10000, mode: "held" },
+    ]);
+    for (const held of focus.filter((s) => s.mode === "held")) {
+      expect(held.box).toEqual(box);
+      expect(held).not.toHaveProperty("speaker");
+      expect(held).not.toHaveProperty("confidence");
+    }
+    expect(focus.at(-1)).toMatchObject({ reason: "pause", mode: "held" });
+  });
+  it("keeps a short interjection on the prior crop; silence never makes a switch qualify", () => {
     const input = plan(),
       item = input.shots[0]!.observations[0]!;
     input.shots[0]!.observations = [
-      {
-        ...item,
-        startMs: 0,
-        endMs: 2000,
-        evidenceWordIds: [sourceWords[0]!.id],
-      },
+      { ...item, endMs: 2000 },
       {
         ...item,
         startMs: 2000,
         endMs: 9000,
         speakerId: "spk_1",
-        evidenceWordIds: [sourceWords[1]!.id],
+        evidenceWordIds: [words[4]!.id],
+        box: { ...box, x: 0.7 },
       },
-      {
-        ...item,
-        startMs: 9000,
-        endMs: 10000,
-        evidenceWordIds: [sourceWords[2]!.id],
-      },
+      { ...item, startMs: 9000, evidenceWordIds: [words[18]!.id] },
     ];
-    const focus = compileSpeakerFocus(input, {
-      ...context,
-      words: sourceWords,
-    });
-    expect(
-      focus
-        .filter((segment) => segment.mode === "speaker")
-        .map((segment) => ({
-          startMs: segment.startMs,
-          endMs: segment.endMs,
-          speaker: segment.speaker,
-        })),
-    ).toEqual([
-      { startMs: 0, endMs: 2000, speaker: "spk_0" },
-      { startMs: 9000, endMs: 10000, speaker: "spk_0" },
+    const focus = timeline(input, [
+      { ...words[0]!, endMs: 7000 },
+      { ...words[4]!, endMs: 7500, speakerId: "spk_1" },
+      { ...words[18]!, endMs: 15000 },
     ]);
     expect(
-      focus
-        .filter((segment) => segment.startMs >= 2000 && segment.endMs <= 9000)
-        .every((segment) => segment.mode === "wide"),
-    ).toBe(true);
+      focus.some((s) => s.mode === "speaker" && s.speaker === "spk_1"),
+    ).toBe(false);
+    expect(focus.find((s) => s.startMs === 2000)).toMatchObject({
+      mode: "held",
+      reason: "switch-pending",
+      box,
+    });
   });
-  it.each(["overlap", "offscreen", "absent", "ambiguous"] as const)(
-    "uses wide for %s",
+  it("counts union coverage once, clips range edges, and excludes long silent gaps from hysteresis", () => {
+    expect(
+      timeline(plan(), [
+        { ...words[0]!, endMs: 5700 },
+        { ...words[1]!, startMs: 5200, endMs: 5900 },
+      ]).every((s) => s.mode !== "speaker"),
+    ).toBe(true);
+    expect(
+      timeline(plan(), [
+        { ...words[0]!, endMs: 5500 },
+        { ...words[1]!, startMs: 10000, endMs: 10500 },
+      ]).every((s) => s.mode !== "speaker"),
+    ).toBe(true);
+    expect(
+      timeline(plan(), [{ ...words[0]!, startMs: 4000, endMs: 16000 }]).at(-1),
+    ).toMatchObject({ mode: "speaker", endMs: 10000 });
+  });
+  it.each(["overlap", "ambiguous"] as const)(
+    "freezes validated geometry during %s and reacquires without going wide",
     (association) => {
-      const input = plan();
-      input.shots[0]!.observations[0]!.association = association;
-      input.shots[0]!.observations[0]!.box = null;
-      expect(compileSpeakerFocus(input, context)[0]!.mode).toBe("wide");
+      const input = plan(),
+        item = input.shots[0]!.observations[0]!;
+      input.shots[0]!.observations = [
+        { ...item, endMs: 2000 },
+        {
+          ...item,
+          startMs: 2000,
+          endMs: 2500,
+          box: null,
+          association,
+          evidenceWordIds: [],
+        },
+        { ...item, startMs: 2500, evidenceWordIds: [words[5]!.id] },
+      ];
+      const focus = timeline(input);
+      expect(focus.find((s) => s.startMs === 2000)).toEqual({
+        startMs: 2000,
+        endMs: 2500,
+        mode: "held",
+        reason: "uncertain",
+        box,
+      });
+      expect(focus.find((s) => s.startMs === 2500)).toMatchObject({
+        mode: "speaker",
+      });
     },
   );
-  it("uses wide for low confidence, unknown speech, or audible overlap", () => {
-    const input = plan();
-    input.shots[0]!.observations[0]!.confidence = 0.84;
-    expect(compileSpeakerFocus(input, context)[0]!.mode).toBe("wide");
-    for (const speakerId of [null, "spk_1"]) {
-      expect(
-        compileSpeakerFocus(plan(), {
-          ...context,
-          words: [...words, { ...words[1]!, id: "w_999999", speakerId }],
-        })[0]!.mode,
-      ).toBe("wide");
-    }
-  });
-  it("fills silence/gaps with wide and suppresses a short interjection", () => {
+  it.each(["absent", "offscreen"] as const)(
+    "immediately resets on confirmed %s",
+    (association) => {
+      const input = plan(),
+        item = input.shots[0]!.observations[0]!;
+      input.shots[0]!.observations = [
+        { ...item, endMs: 2000 },
+        {
+          ...item,
+          startMs: 2000,
+          box: null,
+          association,
+          visiblePeople: 0,
+          evidenceWordIds: [],
+        },
+      ];
+      expect(timeline(input).at(-1)).toMatchObject({
+        startMs: 2000,
+        mode: "wide",
+        reason: association,
+      });
+    },
+  );
+  it("keeps a visible face when the speaking person is offscreen rather than widening", () => {
     const input = plan(),
       item = input.shots[0]!.observations[0]!;
-    item.startMs = 1000;
-    item.endMs = 1500;
-    item.evidenceWordIds = [words[2]!.id];
-    expect(
-      compileSpeakerFocus(input, { ...context, words: [words[2]!] }),
-    ).toEqual([
-      { startMs: 0, endMs: 1000, mode: "wide" },
-      { startMs: 1000, endMs: 1500, mode: "wide" },
-      { startMs: 1500, endMs: 10000, mode: "wide" },
-    ]);
-    expect(
-      compileSpeakerFocus(
-        { ...input, shots: [{ startMs: 0, endMs: 10000, observations: [] }] },
-        context,
-      ),
-    ).toEqual([{ startMs: 0, endMs: 10000, mode: "wide" }]);
-  });
-  it("emits wide for internal and trailing silence and resets motion after the gap", () => {
-    const sourceWords = [
-      { ...words[0]!, startMs: 5000, endMs: 7000 },
-      { ...words[1]!, startMs: 9000, endMs: 11000 },
+    input.shots[0]!.observations = [
+      { ...item, endMs: 2000 },
+      {
+        ...item,
+        startMs: 2000,
+        association: "offscreen",
+        box: null,
+        evidenceWordIds: [],
+        visiblePeople: 1,
+      },
     ];
-    const focus = compileSpeakerFocus(plan(), {
-      ...context,
-      words: sourceWords,
+    expect(timeline(input).at(-1)).toMatchObject({
+      mode: "held",
+      reason: "uncertain",
+      box,
     });
-    expect(focus).toEqual([
+    input.shots[0]!.openingFace = { box, confidence: 0.95 };
+    input.shots[0]!.observations = [
+      {
+        ...item,
+        association: "offscreen",
+        box: null,
+        evidenceWordIds: [],
+        visiblePeople: 1,
+      },
+    ];
+    expect(timeline(input)[0]).toMatchObject({
+      startMs: 0,
+      mode: "held",
+      reason: "visible-face",
+      box,
+    });
+  });
+  it("holds observation gaps, low confidence and overlapping transcript evidence without invented matches", () => {
+    const input = plan(),
+      item = input.shots[0]!.observations[0]!;
+    input.shots[0]!.observations = [
+      { ...item, endMs: 2000 },
+      {
+        ...item,
+        startMs: 2500,
+        endMs: 3000,
+        confidence: 0.84,
+        evidenceWordIds: [words[5]!.id],
+      },
+      { ...item, startMs: 3000, evidenceWordIds: [words[6]!.id] },
+    ];
+    const focus = timeline(input, [
+      ...words,
+      { ...words[7]!, id: "w_999999", speakerId: null },
+    ]);
+    expect(focus.find((s) => s.startMs === 2000)).toMatchObject({
+      mode: "held",
+      reason: "observation-gap",
+    });
+    expect(focus.find((s) => s.startMs === 2500)).toMatchObject({
+      mode: "held",
+      reason: "uncertain",
+    });
+    expect(focus.find((s) => s.startMs === 3500)).toMatchObject({
+      mode: "held",
+      reason: "uncertain",
+    });
+  });
+  it("cuts immediately to each new crop without motion fields across pauses and real shot cuts", () => {
+    const input = plan(),
+      item = input.shots[0]!.observations[0]!;
+    input.shots[0]!.observations = [
+      { ...item, endMs: 2000 },
+      {
+        ...item,
+        startMs: 2000,
+        evidenceWordIds: [words[4]!.id],
+        box: { ...box, x: 0.7 },
+      },
+    ];
+    const sourceWords = words.map((word) => ({
+      ...word,
+      endMs: word.endMs - 100,
+    }));
+    const focus = timeline(input, sourceWords);
+    expect(focus.find((s) => s.startMs === 2000)).toMatchObject({
+      box: { ...box, x: 0.7 },
+    });
+    for (const segment of focus) {
+      expect(segment).not.toHaveProperty("fromBox");
+      expect(segment).not.toHaveProperty("transitionMs");
+      expect(segment).not.toHaveProperty("transitionStartMs");
+    }
+    input.shots = [
       {
         startMs: 0,
         endMs: 2000,
-        mode: "speaker",
-        speaker: "spk_0",
-        confidence: 0.95,
-        box,
+        observations: [input.shots[0]!.observations[0]!],
       },
-      { startMs: 2000, endMs: 4000, mode: "wide" },
       {
-        startMs: 4000,
-        endMs: 6000,
-        mode: "speaker",
-        speaker: "spk_0",
-        confidence: 0.95,
-        box,
-      },
-      { startMs: 6000, endMs: 10000, mode: "wide" },
-    ]);
-  });
-  it.each([999, 1000])(
-    "counts %i ms of voiced coverage without adding silent word pauses",
-    (speechMs) => {
-      const sourceWords = [
-        { ...words[0]!, startMs: 5000, endMs: 5500 },
-        { ...words[1]!, startMs: 10000, endMs: 10000 + speechMs - 500 },
-      ];
-      const focus = compileSpeakerFocus(plan(), {
-        ...context,
-        words: sourceWords,
-      });
-      const matched = focus.filter((segment) => segment.mode === "speaker");
-      expect(
-        matched.reduce(
-          (total, segment) => total + segment.endMs - segment.startMs,
-          0,
-        ),
-      ).toBe(speechMs === 1000 ? 1000 : 0);
-      expect(
-        focus.find(
-          (segment) => segment.startMs === 500 && segment.endMs === 5000,
-        )?.mode,
-      ).toBe("wide");
-    },
-  );
-  it("does not double-count overlapping word timestamps for the same speaker", () => {
-    const sourceWords = [
-      { ...words[0]!, startMs: 5000, endMs: 5700 },
-      { ...words[1]!, startMs: 5200, endMs: 5900 },
-    ];
-    expect(
-      compileSpeakerFocus(plan(), { ...context, words: sourceWords }).every(
-        (segment) => segment.mode === "wide",
-      ),
-    ).toBe(true);
-  });
-  it("keeps a sustained turn through provider subdivision with bounded pan, and resets at cuts", () => {
-    const input = plan(),
-      item = input.shots[0]!.observations[0]!;
-    input.shots[0]!.observations = words.map((word, index) => ({
-      ...item,
-      startMs: index * 500,
-      endMs: (index + 1) * 500,
-      evidenceWordIds: [word.id],
-      box: index === 0 ? box : { ...box, x: 0.7 },
-    }));
-    const focus = compileSpeakerFocus(input, context);
-    expect(focus).toHaveLength(20);
-    expect(focus.every((segment) => segment.mode === "speaker")).toBe(true);
-    for (const segment of focus.slice(1)) {
-      if (segment.mode !== "speaker" || !segment.fromBox)
-        throw new Error("missing-sustained-focus");
-      const from = segment.fromBox;
-      expect(
-        Math.hypot(
-          segment.box.x + segment.box.width / 2 - from.x - from.width / 2,
-          segment.box.y + segment.box.height / 2 - from.y - from.height / 2,
-        ),
-      ).toBeLessThanOrEqual(0.125 + Number.EPSILON);
-    }
-    input.shots = input.shots[0]!.observations.map((observation) => ({
-      startMs: observation.startMs,
-      endMs: observation.endMs,
-      observations: [observation],
-    }));
-    const cutFocus = compileSpeakerFocus(input, context);
-    expect(
-      cutFocus.every(
-        (segment) => segment.mode === "speaker" && !segment.fromBox,
-      ),
-    ).toBe(true);
-  });
-  it("localizes overlap and unknown speech to wide intervals instead of extending a crop through them", () => {
-    const sourceWords = [
-      { ...words[0]!, startMs: 5000, endMs: 15000 },
-      { ...words[1]!, startMs: 7000, endMs: 7500, speakerId: "spk_1" },
-      { ...words[2]!, startMs: 10000, endMs: 10500, speakerId: null },
-    ];
-    const focus = compileSpeakerFocus(plan(), {
-      ...context,
-      words: sourceWords,
-    });
-    expect(
-      focus.map(({ startMs, endMs, mode }) => ({ startMs, endMs, mode })),
-    ).toEqual([
-      { startMs: 0, endMs: 2000, mode: "speaker" },
-      { startMs: 2000, endMs: 2500, mode: "wide" },
-      { startMs: 2500, endMs: 5000, mode: "speaker" },
-      { startMs: 5000, endMs: 5500, mode: "wide" },
-      { startMs: 5500, endMs: 10000, mode: "speaker" },
-    ]);
-    for (const segment of focus) expect(segment).not.toHaveProperty("fromBox");
-  });
-  it("clips transcript coverage to the selected range and ignores speech outside it", () => {
-    const sourceWords = [
-      { ...words[1]!, startMs: 0, endMs: 5000, speakerId: "spk_1" },
-      { ...words[0]!, startMs: 4000, endMs: 16000 },
-      { ...words[2]!, startMs: 15000, endMs: 17000, speakerId: null },
-    ];
-    expect(
-      compileSpeakerFocus(plan(), { ...context, words: sourceWords }),
-    ).toEqual([
-      {
-        startMs: 0,
-        endMs: 10000,
-        mode: "speaker",
-        speaker: "spk_0",
-        confidence: 0.95,
-        box,
-      },
-    ]);
-  });
-  it("falls back to bounded complete wide coverage when transcript splits exceed the geometry limit", () => {
-    const sourceWords = Array.from({ length: 100 }, (_, index) => ({
-      ...words[0]!,
-      id: `w_${String(index + 1).padStart(6, "0")}`,
-      startMs: 5000 + index * 100,
-      endMs: 5050 + index * 100,
-    }));
-    const focus = compileSpeakerFocus(plan(), {
-      ...context,
-      words: sourceWords,
-    });
-    expect(focus).toEqual([{ startMs: 0, endMs: 10000, mode: "wide" }]);
-    expect(
-      compositionManifestV2Schema.shape.focus.safeParse(focus).success,
-    ).toBe(true);
-  });
-  it("limits continuous-shot pan velocity and resets at a camera cut", () => {
-    const input = plan(),
-      first = input.shots[0]!.observations[0]!;
-    first.endMs = 9000;
-    input.shots[0]!.observations.push({
-      ...first,
-      startMs: 9000,
-      endMs: 10000,
-      evidenceWordIds: [words[18]!.id],
-      box: { ...box, x: 0.7 },
-    });
-    const focus = compileSpeakerFocus(input, context),
-      second = focus[1]!;
-    expect(second.mode).toBe("speaker");
-    if (second.mode === "speaker") {
-      expect(second.fromBox).toEqual(box);
-      expect(second.box.x - box.x).toBeCloseTo(0.25);
-    }
-    input.shots = [
-      { startMs: 0, endMs: 9000, observations: [first] },
-      {
-        startMs: 9000,
+        startMs: 2000,
         endMs: 10000,
         observations: [input.shots[0]!.observations[1]!],
       },
     ];
-    expect(compileSpeakerFocus(input, context)[1]).not.toHaveProperty(
-      "fromBox",
-    );
+    const cut = timeline(input);
+    expect(cut.find((s) => s.startMs === 2000)).toMatchObject({
+      mode: "held",
+      reason: "visible-face",
+      box: { ...box, x: 0.7 },
+    });
+    expect(cut.every((s) => !("fromBox" in s))).toBe(true);
   });
-  it.each([
-    "duration",
-    "geometry",
-    "cut",
-    "rotation",
-    "unknown-word",
-    "wrong-speaker",
-    "outside-evidence",
-    "extra",
-  ])("rejects %s corruption", (kind) => {
+  it("does not collapse ordinary dense word pauses into a full-frame shot", () => {
+    const dense = Array.from({ length: 100 }, (_, i) => ({
+      ...words[0]!,
+      id: `w_${String(i + 1).padStart(6, "0")}`,
+      startMs: 5000 + i * 100,
+      endMs: 5050 + i * 100,
+    }));
+    const focus = timeline(plan(), dense);
+    expect(focus.length).toBeGreaterThan(120);
+    expect(focus.some((s) => s.mode === "speaker")).toBe(true);
+    for (const segment of focus)
+      expect(focusSegmentV3Schema.safeParse(segment).success).toBe(true);
+    expect(focus.at(-1)).toMatchObject({ mode: "held" });
+  });
+  it.each(["duration", "geometry", "cut", "rotation", "extra"])(
+    "rejects %s corruption",
+    (kind) => {
+      const input = plan(),
+        item = input.shots[0]!.observations[0]!;
+      if (kind === "duration") input.durationMs = 11000;
+      if (kind === "geometry") item.box = { ...box, x: 0.99 };
+      if (kind === "cut") input.shots[0]!.startMs = 1;
+      if (kind === "rotation")
+        Object.assign(input, { coordinateSpace: "raw-sensor" });
+      if (kind === "extra") Object.assign(input, { command: "synthetic" });
+      expect(() => timeline(input)).toThrow();
+    },
+  );
+  it.each(["unknown-word", "wrong-speaker", "outside-evidence"])(
+    "warns for %s and never invents a speaker match from provisional geometry",
+    (kind) => {
+      const input = plan(),
+        item = input.shots[0]!.observations[0]!;
+      if (kind === "unknown-word") item.evidenceWordIds = ["w_999999"];
+      if (kind === "wrong-speaker") item.speakerId = "spk_1";
+      if (kind === "outside-evidence") item.startMs = 1000;
+      const warnings: string[] = [];
+      const focus = compileSpeakerFocus(input, context, (reason) =>
+        warnings.push(reason),
+      );
+      expect(warnings).toEqual(["speaker_evidence_rejected"]);
+      expect(focus.every((segment) => segment.mode === "held")).toBe(true);
+    },
+  );
+  it("drops only a bad reference while preserving independently valid evidence and later observations", () => {
     const input = plan(),
       item = input.shots[0]!.observations[0]!;
-    if (kind === "duration") input.durationMs = 11000;
-    if (kind === "geometry") item.box = { ...box, x: 0.99 };
-    if (kind === "cut") input.shots[0]!.startMs = 1;
-    if (kind === "rotation")
-      Object.assign(input, { coordinateSpace: "raw-sensor" });
-    if (kind === "unknown-word") item.evidenceWordIds = ["w_999999"];
-    if (kind === "wrong-speaker") item.speakerId = "spk_1";
-    if (kind === "outside-evidence") {
-      item.startMs = 1000;
-    }
-    if (kind === "extra") Object.assign(input, { command: "synthetic" });
-    expect(() => compileSpeakerFocus(input, context)).toThrow();
+    input.shots[0]!.observations = [
+      { ...item, endMs: 2000, evidenceWordIds: [words[0]!.id, words[4]!.id] },
+      { ...item, startMs: 8000, evidenceWordIds: [words[16]!.id] },
+    ];
+    const warnings: string[] = [];
+    const focus = compileSpeakerFocus(input, context, (reason) =>
+      warnings.push(reason),
+    );
+    expect(warnings).toEqual(["speaker_evidence_rejected"]);
+    expect(focus.find((segment) => segment.startMs === 1000)).toMatchObject({
+      mode: "speaker",
+      box,
+    });
+    expect(focus.find((segment) => segment.startMs === 2000)).toMatchObject({
+      mode: "held",
+      endMs: 8000,
+      box,
+    });
+    expect(focus.at(-1)).toMatchObject({ mode: "speaker", box });
+    expect(input.shots[0]!.observations[0]!.evidenceWordIds).toHaveLength(2);
   });
-  it("bounds observations globally and refuses observations crossing cuts", () => {
+  it("bounds observations globally and rejects observations crossing cuts", () => {
     const input = plan();
     input.shots[0]!.observations[0]!.endMs = 10001;
     expect(speakerPlanSchema.safeParse(input).success).toBe(false);

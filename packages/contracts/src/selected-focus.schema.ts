@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  compositionManifestV2Schema,
+  compositionManifestV3Schema,
   normalizedBoxSchema,
   selectedMediaRangeSchema,
 } from "./edit-plan.schema.js";
@@ -17,10 +17,10 @@ import {
 } from "./cloud-media.schema.js";
 
 export const SELECTED_FOCUS_POLICY = {
-  version: "selected-focus-v1",
+  version: "selected-focus-v2",
   minimumConfidence: 0.85,
   switchHoldMs: 1000,
-  maxCenterVelocityPerSecond: 0.25,
+  maximumEvidenceGapMs: 2000,
   videoSamplingFps: 5,
   maxShots: 30,
   maxObservations: 120,
@@ -55,6 +55,13 @@ export const speakerPlanSchema = z
           .object({
             startMs: z.number().int().nonnegative(),
             endMs: z.number().int().positive(),
+            openingFace: z
+              .object({
+                box: normalizedBoxSchema,
+                confidence: z.number().finite().min(0).max(1),
+              })
+              .strict()
+              .optional(),
             observations: z
               .array(speakerObservationSchema)
               .max(SELECTED_FOCUS_POLICY.maxObservations),
@@ -139,7 +146,7 @@ export const selectedFocusResultSchema = z
     range: selectedMediaRangeSchema,
     policy: z.literal(SELECTED_FOCUS_POLICY.version),
     provider: z.enum(["fake", "google-gemini"]),
-    focus: compositionManifestV2Schema.shape.focus,
+    focus: compositionManifestV3Schema.shape.focus,
     receipt: z.string().min(1).max(4096),
   })
   .strict()

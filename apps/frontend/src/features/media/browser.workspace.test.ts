@@ -3,7 +3,10 @@ import {
   LOCAL_WORKSPACE_LIMITS,
   analysisBundleSchema,
 } from "@clipbuilder/contracts";
-import { analysis, media } from "../session/session.test-fixtures";
+import {
+  assemblyAnalysis as analysis,
+  media,
+} from "../session/session.test-fixtures";
 import { BrowserWorkspace, type WorkspacePorts } from "./browser.workspace";
 import { LocalMediaError } from "./media.errors";
 import type { SourceCommand, SourceResult } from "./source.protocol";
@@ -799,7 +802,7 @@ async function assemblyWorkspaceFixture() {
   const first = analysis.candidates[0]!;
   const extra = analysis.transcript.words.map((word, index) => ({
     ...word,
-    id: ["w_000031", "w_000032", "w_000060"][index]!,
+    id: `w_${String(31 + index).padStart(6, "0")}`,
     startMs: word.startMs + 20_000,
     endMs: word.endMs + 20_000,
   }));
@@ -1272,8 +1275,18 @@ describe("browser workspace publication and lifecycle", () => {
     const duration =
       assembled.manifest.range.endMs - assembled.manifest.range.startMs;
     changed.cloudAssembly!.result!.manifest.focus = [
-      { mode: "wide", startMs: 0, endMs: Math.floor(duration / 2) },
-      { mode: "wide", startMs: Math.floor(duration / 2), endMs: duration },
+      {
+        mode: "wide",
+        reason: "initial",
+        startMs: 0,
+        endMs: Math.floor(duration / 2),
+      },
+      {
+        mode: "wide",
+        reason: "initial",
+        startMs: Math.floor(duration / 2),
+        endMs: duration,
+      },
     ];
     f.setRecord(parseWorkspaceRecord(changed));
     const reopened = new BrowserWorkspace(f.ports);

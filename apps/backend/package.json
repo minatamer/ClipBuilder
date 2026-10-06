@@ -16,8 +16,9 @@
   "dependencies": {
     "@clipbuilder/contracts": "workspace:*",
     "@google/genai": "2.25.0",
-    "google-auth-library": "11.1.0",
     "express": "5.2.1",
+    "google-auth-library": "11.1.0",
+    "sharp": "0.35.5",
     "zod": "4.6.5"
   },
   "devDependencies": {

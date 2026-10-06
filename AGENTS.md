@@ -46,10 +46,12 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   Captures remain owner-local until removed after diagnosis; activation expiry
   does not imply file deletion. This exception changes no validation, dispatch,
   media cleanup, cloud or paid-testing gate. See the CL-007 local capture packet.
-- Owner sample-replay exception (2026-10-05): the owner authorizes one temporary
+- Owner sample-replay exception (updated 2026-10-06): the owner authorizes one temporary
   OS-temp saved copy of the successful retained-sample analysis for the local
-  development replay CTA. It is workspace/source-bound and expires activation
-  after six hours; preserve the original capture. Fake/test/preview/production
+  development replay CTA. It is workspace/source-bound with no activation deadline;
+  keep it available until explicit cleanup before deployment and preserve the
+  original capture. Remove the replay CTA/transport/cache loading and its private
+  saved copy at that release checkpoint. Fake/test/preview/production
   cannot load it. Replayed choices are labelled and Proceed obtains fresh normal
   protected source/session evidence. No receipt/credential copy, Git fixture,
   hosted replay, provider retry or agent-paid test is authorized. See
@@ -62,10 +64,14 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   owner instruction naming this retained asset. Processing uses a separate
   uploaded copy whose original/proxies/output retain the normal deletion rules.
   See [local source preparation](docs/operations/LOCAL_RELEASE_PREPARATION.md#retained-owner-demonstration-source).
-- Committed/default/test composition is `FAKE_MODE=true` (derived provider mode
-  is `fake`; a legacy `PROVIDER_MODE=fake` assertion cannot override it),
-  `PAID_DEMO_ENABLED=false`, and every `LIVE_*` flag false. Ordinary tests and
-  CI must be unable to contact providers or consume credits.
+- Owner configuration decision (2026-10-06): normal backend defaults are
+  `FAKE_MODE=false`, `PAID_DEMO_ENABLED=true` and all four approval flags true.
+  Backend configuration comes from environment only. `PAID_DEMO_ENABLED=false`
+  overrides cloud spend, Gemini transfer, image generation and paid-project
+  approvals to false and disables cloud/sample reads, live routes, grants and
+  dispatch allowance. Missing optional local prerequisites keep routes unavailable.
+  Tests/CI/harnesses explicitly force fake mode, paid-off and every live/approval
+  flag false before imports, with no credentials or external provider access.
 - Owner decision (2026-10-04): paid-flow testing is performed manually by the
   owner only. Agents may run automated fake-mode checks, never trigger a live
   paid flow. A private renderer update retains its separate cloud/build approval
@@ -221,23 +227,24 @@ corepack pnpm build
   isolated fake/paid-disabled setup; a local run is not approval for providers,
   paid calls, cloud changes, or deployment.
 - Use normal owner-managed configuration. On explicit non-test local startup,
-  `apps/backend/src/server.ts` loads ignored `apps/backend/.env.local` and
-  `apps/backend/runtime.local.json` if present; Next.js owns
+  `apps/backend/src/server.ts` loads ignored `apps/backend/.env.local` if present;
+  Next.js owns
   `apps/frontend/.env.local`. There is no root environment file;
   existing process-environment values take precedence. Let the entry point
   load it, without reading, printing, copying, or overwriting its contents.
   Do not force fake/test flags for a requested normal run, create a second
   frontend mode setting, or bypass feature gates. Missing setup is described
   using the blank entries in the owning app's `.env.example`; never inspect
-  secrets to diagnose it. Local environment files contain credentials and only
-  the backend `FAKE_MODE`/`PAID_DEMO_ENABLED` switches. Private connection
-  metadata and recorded approvals belong in ignored runtime configuration.
+  secrets to diagnose it. The backend environment contains credentials, operating
+  switches, private connection/sample references, processing stage and four
+  approval flags. No runtime JSON is loaded or required. Deployment injects the
+  same environment keys without relying on a local file.
   Numerical limits, timeouts, model selection and retry policy are fixed in code,
   not environment overrides. Secret-free setup/migration is allowed when the
   owner explicitly authorizes it; do not print values.
 - In normal local real mode, incomplete optional paid-feature prerequisites
   leave paid routes unavailable with zero dispatches while the app can start.
-  Preserve the operating switches and independent retained-playback approval;
+  Preserve the operating switches and paid-master precedence for retained playback;
   never enable paid routes, substitute fixture results or record approvals to
   make a restart pass. Structural errors, conflicting modes and public/test paid
   composition still reject. Fixed startup requirement codes contain no values.

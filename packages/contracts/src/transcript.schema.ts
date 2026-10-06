@@ -9,6 +9,10 @@ import {
 } from "./ids.schema.js";
 import { boundedPlainTextSchema } from "./text.schema.js";
 
+export const transcriptWordSpanSchema = z
+  .object({ startWordId: wordIdSchema, endWordId: wordIdSchema })
+  .strict();
+
 export const transcriptWordSchema = z
   .object({
     id: wordIdSchema,

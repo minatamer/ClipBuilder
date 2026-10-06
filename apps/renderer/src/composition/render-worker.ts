@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import {
-  compositionManifestV2Schema,
+  compositionManifestV3Schema,
   PUBLIC_LIMITS,
 } from "@clipbuilder/contracts";
 import {
@@ -12,9 +12,10 @@ import {
   selectComposition,
   renderMedia,
 } from "@remotion/renderer";
+import { verifyInlinePictures } from "./inline-pictures.js";
 const jobSchema = z
   .object({
-    manifest: compositionManifestV2Schema,
+    manifest: compositionManifestV3Schema,
     source: z.string(),
     output: z.string(),
     chromium: z.string(),
@@ -26,6 +27,7 @@ export async function renderWorker(jobPath: string) {
     size = (await stat(job.source)).size;
   if (size <= 0 || size > PUBLIC_LIMITS.maxSourceBytes)
     throw new Error("invalid");
+  verifyInlinePictures(job.manifest);
   const server = createServer((request, response) => {
     if (
       request.url !== "/source.mp4" ||
@@ -72,7 +74,6 @@ export async function renderWorker(jobPath: string) {
     const inputProps = {
       manifest: job.manifest,
       sourceUrl: `http://127.0.0.1:${address.port}/source.mp4`,
-      sourceStartMs: 0,
     };
     const composition = await selectComposition({
       serveUrl: job.bundle,

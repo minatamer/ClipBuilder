@@ -63,7 +63,7 @@ const environmentShape = {
   BACKEND_AUDIENCE: optionalString(500),
   PORT: integerValue(4_000, 1, 65_535),
   CLOUD_RENDER_ENVIRONMENT: z.enum(["disabled", "cloud"]).default("disabled"),
-  CLOUD_SPEND_APPROVED: booleanValue(false),
+  CLOUD_SPEND_APPROVED: booleanValue(true),
   PRIVATE_RENDERER_ORIGIN: optionalString(500),
   RETAINED_SAMPLE_ENABLED: booleanValue(false),
   RETAINED_SAMPLE_BUCKET: optionalString(223),
@@ -71,8 +71,12 @@ const environmentShape = {
   RETAINED_SAMPLE_GENERATION: optionalString(30),
   RETAINED_SAMPLE_BYTES: integerValue(0, 0, PUBLIC_LIMITS.maxSourceBytes),
 
-  FAKE_MODE: booleanValue(true),
-  PAID_DEMO_ENABLED: booleanValue(false),
+  FAKE_MODE: booleanValue(false),
+  PAID_DEMO_ENABLED: booleanValue(true),
+  PAID_VALIDATION_STAGE: z
+    .enum(["disabled", "analysis", "assembly", "render"])
+    .default("assembly"),
+  GEMINI_IMAGE_GENERATION_APPROVED: booleanValue(true),
   LIVE_ANALYSIS_ENABLED: booleanValue(false),
   LIVE_ASSEMBLY_ENABLED: booleanValue(false),
   LIVE_RENDER_ENABLED: booleanValue(false),
@@ -101,8 +105,8 @@ const environmentShape = {
   GEMINI_MAX_OUTPUT_TOKENS: integerValue(65_536, 1_024, 65_536),
   GEMINI_SDK_MAX_RETRIES: z.literal("0").default("0").transform(Number),
   GEMINI_MAX_CALLS: z.literal("2").default("2").transform(Number),
-  GEMINI_TRANSFER_APPROVED: booleanValue(false),
-  GEMINI_PAID_PROJECT_CONFIRMED: booleanValue(false),
+  GEMINI_TRANSFER_APPROVED: booleanValue(true),
+  GEMINI_PAID_PROJECT_CONFIRMED: booleanValue(true),
 
   MAX_SOURCE_BYTES: integerValue(
     PUBLIC_LIMITS.maxSourceBytes,
@@ -163,20 +167,55 @@ export const ENVIRONMENT_KEYS = Object.freeze([
   "TURNSTILE_SITE_KEY",
   "TURNSTILE_SECRET_KEY",
   "PROCESSING_GRANT_KEY",
+  "APP_ENV",
+  "APP_REVISION",
+  "FRONTEND_ORIGIN",
+  "BACKEND_ORIGIN",
+  "BACKEND_AUDIENCE",
+  "PRIVATE_RENDERER_ORIGIN",
+  "TURNSTILE_EXPECTED_HOSTNAME",
+  "RETAINED_SAMPLE_BUCKET",
+  "RETAINED_SAMPLE_OBJECT",
+  "RETAINED_SAMPLE_GENERATION",
+  "RETAINED_SAMPLE_BYTES",
+  "PAID_VALIDATION_STAGE",
+  "CLOUD_SPEND_APPROVED",
+  "GEMINI_TRANSFER_APPROVED",
+  "GEMINI_IMAGE_GENERATION_APPROVED",
+  "GEMINI_PAID_PROJECT_CONFIRMED",
 ] as const);
 
-// All other values are composed from private connection metadata and code policy.
+// Capabilities, limits, timeouts and retry policy are derived in code.
 export const RETIRED_ENVIRONMENT_KEYS = Object.freeze(
   rawEnvironmentSchema
     .keyof()
     .options.filter(
       (key) =>
         !ENVIRONMENT_KEYS.some((environmentKey) => environmentKey === key) &&
-        !["NODE_ENV", "PORT", "APP_ENV", "APP_REVISION"].includes(key),
+        !["NODE_ENV", "PORT"].includes(key),
     ),
 );
 
 export const environmentSchema = rawEnvironmentSchema
+  .transform((environment) =>
+    environment.PAID_DEMO_ENABLED
+      ? environment
+      : {
+          ...environment,
+          CLOUD_SPEND_APPROVED: false,
+          GEMINI_TRANSFER_APPROVED: false,
+          GEMINI_IMAGE_GENERATION_APPROVED: false,
+          GEMINI_PAID_PROJECT_CONFIRMED: false,
+          CLOUD_RENDER_ENVIRONMENT: "disabled" as const,
+          RETAINED_SAMPLE_ENABLED: false,
+          LIVE_ANALYSIS_ENABLED: false,
+          LIVE_ASSEMBLY_ENABLED: false,
+          LIVE_RENDER_ENABLED: false,
+          LIVE_IMAGE_GENERATION_ENABLED: false,
+          PROCESSING_GRANTS_ENABLED: false,
+          ADMISSION_MAX_PROCESS_DISPATCHES: 0,
+        },
+  )
   .superRefine((environment, context) => {
     const liveFlags = [
       environment.LIVE_ANALYSIS_ENABLED,
@@ -311,10 +350,15 @@ export const environmentSchema = rawEnvironmentSchema
             key,
           );
     if (environment.LIVE_IMAGE_GENERATION_ENABLED) {
-      issue(
-        "Raster generation has no approved Google image model; use fixed templates.",
-        "LIVE_IMAGE_GENERATION_ENABLED",
-      );
+      if (
+        environment.ADMISSION_MAX_PROCESS_DISPATCHES <
+        (environment.LIVE_RENDER_ENABLED ? 4 : 3) +
+          ASSEMBLY_LIMITS.maxGeneratedImageCalls
+      )
+        issue(
+          "Image fallback requires the bounded image dispatch allowance.",
+          "LIVE_IMAGE_GENERATION_ENABLED",
+        );
     }
 
     if (anyLiveFeature) {
@@ -502,6 +546,7 @@ export const environmentSchema = rawEnvironmentSchema
       maxCalls: environment.GEMINI_MAX_CALLS,
       transferApproved: environment.GEMINI_TRANSFER_APPROVED,
       paidProjectConfirmed: environment.GEMINI_PAID_PROJECT_CONFIRMED,
+      imageGenerationApproved: environment.GEMINI_IMAGE_GENERATION_APPROVED,
     },
     limits: {
       sourceBytes: environment.MAX_SOURCE_BYTES,

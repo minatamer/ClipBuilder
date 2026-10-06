@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  type CompositionManifestV2,
+  type CompositionManifestV3,
   ANALYSIS_AUDIO_PROFILE,
   type InspectedSource,
   type SelectedMediaRange,
@@ -23,7 +23,7 @@ export interface MediaPipeline {
   render(
     path: string,
     output: string,
-    manifest: CompositionManifestV2,
+    manifest: CompositionManifestV3,
     directory: string,
     signal: AbortSignal,
   ): Promise<void>;
@@ -174,7 +174,7 @@ export class NodeMediaPipeline implements MediaPipeline {
   async render(
     path: string,
     output: string,
-    manifest: CompositionManifestV2,
+    manifest: CompositionManifestV3,
     directory: string,
     signal: AbortSignal,
   ) {

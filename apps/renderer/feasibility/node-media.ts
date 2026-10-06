@@ -7,7 +7,7 @@ import { createWriteStream } from "node:fs";
 import { once } from "node:events";
 import { performance } from "node:perf_hooks";
 import assert from "node:assert/strict";
-import { compositionManifestV2Schema } from "@clipbuilder/contracts";
+import { compositionManifestV3Schema } from "@clipbuilder/contracts";
 import { NodeMediaPipeline } from "../dist/media/node-pipeline.js";
 import { runOwnedProcess } from "../dist/media/process-runner.js";
 import { validateOutput, probeMedia } from "../dist/media/inspection.js";
@@ -97,8 +97,8 @@ try {
   assert.equal(source.height, 180);
   assert.ok(Math.abs(source.audioStartMs - 1200) < 100);
   await pipeline.audio(input, proxy, signal);
-  const manifest = compositionManifestV2Schema.parse({
-    version: 2,
+  const manifest = compositionManifestV3Schema.parse({
+    version: 3,
     source: {
       fingerprint: source.fingerprint,
       width: source.width,
@@ -116,14 +116,27 @@ try {
         confidence: 1,
         box: { x: 0.75, y: 0.4, width: 0.15, height: 0.3 },
       },
-      { mode: "wide", startMs: 5000, endMs: 10_000 },
+      { mode: "wide", reason: "initial", startMs: 5000, endMs: 10_000 },
     ],
-    captions: [{ startMs: 0, endMs: 10_000, text: "Synthetic caption" }],
+    captions: [
+      {
+        startMs: 0,
+        endMs: 10_000,
+        text: "Synthetic caption",
+        lines: ["Synthetic caption"],
+        wordIds: ["w_000001", "w_000002"],
+        wordCues: [
+          { wordId: "w_000001", text: "Synthetic", startMs: 0, endMs: 5000 },
+          { wordId: "w_000002", text: "caption", startMs: 5000, endMs: 10000 },
+        ],
+      },
+    ],
     cards: [
       {
         startMs: 2000,
         endMs: 4000,
         kind: "statement",
+        origin: "planner",
         title: "Synthetic context",
         lines: ["Generated test pattern"],
       },

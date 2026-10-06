@@ -6,34 +6,41 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import type { CompositionManifestV2 } from "@clipbuilder/contracts";
+import type { CompositionManifestV3 } from "@clipbuilder/contracts";
 import { focusLayout } from "./focus-layout.js";
-import { ContextualCard, FixedCaption } from "./fixed-layers.js";
+import {
+  ContextualCard,
+  ContextualPicture,
+  FixedCaption,
+} from "./fixed-layers.js";
 export type ClipCompositionProps = {
-  manifest: CompositionManifestV2;
+  manifest: CompositionManifestV3;
   sourceUrl: string;
-  sourceStartMs: number;
 };
-export function ClipComposition({
-  manifest,
-  sourceUrl,
-  sourceStartMs,
-}: ClipCompositionProps) {
+export function ClipComposition({ manifest, sourceUrl }: ClipCompositionProps) {
   const frame = useCurrentFrame(),
     { fps, width, height } = useVideoConfig(),
     ms = (frame * 1000) / fps;
   const focus = manifest.focus.find((s) => s.startMs <= ms && ms < s.endMs) ?? {
     mode: "wide" as const,
+    reason: "initial" as const,
     startMs: 0,
     endMs: manifest.range.endMs - manifest.range.startMs,
   };
   const caption = manifest.captions.find(
       (s) => s.startMs <= ms && ms < s.endMs,
     ),
-    card = manifest.cards.find((s) => s.startMs <= ms && ms < s.endMs);
-  const Video = getRemotionEnvironment().isRendering
-    ? OffthreadVideo
-    : Html5Video;
+    card = manifest.cards.find((s) => s.startMs <= ms && ms < s.endMs),
+    picture = manifest.pictures?.find((s) => s.startMs <= ms && ms < s.endMs);
+  // Both inputs are already physically trimmed. Source range clocks are used
+  // only for grounding; the one mounted media element starts at clip zero.
+  const videoProps = {
+    src: sourceUrl,
+    style: {
+      position: "absolute" as const,
+      ...focusLayout(manifest.source, focus, width, height, ms),
+    },
+  };
   return (
     <AbsoluteFill
       style={{
@@ -43,16 +50,14 @@ export function ClipComposition({
         color: "white",
       }}
     >
-      <Video
-        src={sourceUrl}
-        trimBefore={Math.round((sourceStartMs * fps) / 1000)}
-        style={{
-          position: "absolute",
-          ...focusLayout(manifest.source, focus, width, height, ms),
-        }}
-      />
+      {getRemotionEnvironment().isRendering ? (
+        <OffthreadVideo {...videoProps} />
+      ) : (
+        <Html5Video {...videoProps} pauseWhenBuffering />
+      )}
       {card && <ContextualCard card={card} ms={ms} />}
-      {caption && <FixedCaption caption={caption} />}
+      {picture && <ContextualPicture picture={picture} ms={ms} />}
+      {caption && <FixedCaption caption={caption} ms={ms} />}
     </AbsoluteFill>
   );
 }

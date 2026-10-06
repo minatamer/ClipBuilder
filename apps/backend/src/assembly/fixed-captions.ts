@@ -1,8 +1,8 @@
 import {
   FIXED_COMPOSITION_POLICY as policy,
-  type CompositionManifestV2,
+  type CompositionManifestV3,
   type TranscriptWord,
-  compositionManifestV2Schema,
+  compositionManifestV3Schema,
 } from "@clipbuilder/contracts";
 import type { SpeakerPlanContext } from "./speaker-focus.js";
 
@@ -41,12 +41,16 @@ function lines(words: TranscriptWord[]): string[] {
 // Display grouping only; provider words and clocks are never rewritten.
 export function compileFixedCaptions(
   context: SpeakerPlanContext,
-): CompositionManifestV2["captions"] {
+  critique?: (
+    reason: "unsupported-caption-overlap" | "unsupported-caption-word",
+  ) => void,
+): CompositionManifestV3["captions"] {
   const groups: TranscriptWord[][] = [];
   const displayWords = (value: string) => value.split(/\s+/u).length;
+  let longWord = false;
   for (const word of context.words) {
     if (displayWords(word.punctuatedText) > policy.captionWords)
-      throw new Error("unsupported-caption-word");
+      longWord = true;
     const group = groups.at(-1),
       previous = group?.at(-1);
     if (
@@ -67,24 +71,74 @@ export function compileFixedCaptions(
   }
   const captions = groups.map((group, i) => {
     const text = group.map((w) => w.punctuatedText).join(" ");
-    const emphasis = text
-      .split(" ")
-      .findLastIndex((word) => /[\p{L}\p{N}]/u.test(word));
+    const startMs = Math.max(0, group[0]!.startMs - context.range.startMs);
+    const endMs =
+      Math.min(
+        Math.max(...group.map((w) => w.endMs)),
+        groups[i + 1]?.[0]?.startMs ?? context.range.endMs,
+        context.range.endMs,
+      ) - context.range.startMs;
     return {
-      startMs: Math.max(0, group[0]!.startMs - context.range.startMs),
-      endMs:
-        Math.min(
-          Math.max(...group.map((w) => w.endMs)),
-          groups[i + 1]?.[0]?.startMs ?? context.range.endMs,
-          context.range.endMs,
-        ) - context.range.startMs,
+      startMs,
+      endMs,
       text,
       wordIds: group.map((w) => w.id),
       lines: lines(group),
-      ...(emphasis < 0 ? {} : { emphasisWordIndex: emphasis }),
+      wordCues: group.map((word) => {
+        const cue = {
+          wordId: word.id,
+          text: word.punctuatedText,
+          startMs: Math.max(startMs, word.startMs - context.range.startMs),
+          endMs: Math.min(endMs, word.endMs - context.range.startMs),
+        };
+        // Zero-length cues never highlight; original provider clocks remain.
+        return cue;
+      }),
     };
   });
-  if (captions.some((caption) => caption.endMs <= caption.startMs))
-    throw new Error("unsupported-caption-overlap");
-  return compositionManifestV2Schema.shape.captions.parse(captions);
+  let previousEnd = 0;
+  const displayable = captions
+    .filter((caption) => {
+      let previousCue = caption.startMs;
+      const invalidCue = caption.wordCues.some((cue) => {
+        const invalid = cue.endMs < cue.startMs || cue.startMs < previousCue;
+        previousCue = cue.startMs;
+        return invalid;
+      });
+      if (
+        caption.endMs <= caption.startMs ||
+        caption.startMs < previousEnd ||
+        invalidCue
+      )
+        return false;
+      previousEnd = caption.endMs;
+      return true;
+    })
+    .slice(0, policy.maxCaptionGroups);
+  if (longWord) critique?.("unsupported-caption-word");
+  if (displayable.length !== captions.length)
+    critique?.("unsupported-caption-overlap");
+  const byId = new Map(context.words.map((word) => [word.id, word]));
+  // Removed groups cannot shorten a surviving caption's grounded display clock.
+  const retained = displayable.map((caption, index) => {
+    const endMs = Math.min(
+      Math.max(...caption.wordIds.map((id) => byId.get(id)!.endMs)) -
+        context.range.startMs,
+      displayable[index + 1]?.startMs ??
+        context.range.endMs - context.range.startMs,
+      context.range.endMs - context.range.startMs,
+    );
+    return {
+      ...caption,
+      endMs,
+      wordCues: caption.wordCues.map((cue) => ({
+        ...cue,
+        endMs: Math.min(
+          endMs,
+          byId.get(cue.wordId)!.endMs - context.range.startMs,
+        ),
+      })),
+    };
+  });
+  return compositionManifestV3Schema.shape.captions.parse(retained);
 }

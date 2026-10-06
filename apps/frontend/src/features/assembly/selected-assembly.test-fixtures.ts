@@ -1,10 +1,10 @@
 import {
-  compositionManifestV2Schema,
+  compositionManifestV3Schema,
   selectedAssemblyResultSchema,
   FIXED_COMPOSITION_POLICY,
   type GroundedAnalysisResult,
 } from "@clipbuilder/contracts";
-import { analysis } from "../session/session.test-fixtures";
+import { assemblyAnalysis as analysis } from "../session/session.test-fixtures";
 
 export function groundedFixture(): GroundedAnalysisResult {
   return {
@@ -33,8 +33,14 @@ export async function selectedAssemblyFixture(
   );
   const range = { startMs: words[0]!.startMs, endMs: words.at(-1)!.endMs };
   const media = source.analysis.media;
-  const manifest = compositionManifestV2Schema.parse({
-    version: 2,
+  const anchor = words.findIndex(
+    (word) => word.startMs - range.startMs >= 2000,
+  );
+  const excerpt = words.slice(anchor, anchor + 3);
+  if (anchor < 0 || excerpt.length < 3)
+    throw new Error("Synthetic visual evidence is missing.");
+  const manifest = compositionManifestV3Schema.parse({
+    version: 3,
     source: {
       fingerprint: source.binding.fingerprint,
       durationMs: media.durationMs,
@@ -43,15 +49,45 @@ export async function selectedAssemblyFixture(
     },
     range,
     output: { width: 1080, height: 1920, fps: 30 },
-    focus: [{ mode: "wide", startMs: 0, endMs: range.endMs - range.startMs }],
-    cards: [],
+    focus: [
+      {
+        mode: "wide",
+        reason: "initial",
+        startMs: 0,
+        endMs: range.endMs - range.startMs,
+      },
+    ],
+    cards: [
+      {
+        origin: "planner",
+        startMs: excerpt[0]!.startMs - range.startMs,
+        endMs:
+          Math.max(excerpt[0]!.startMs + 1500, excerpt[2]!.endMs) -
+          range.startMs,
+        kind: "statement",
+        title: excerpt[0]!.punctuatedText,
+        lines: [
+          excerpt
+            .slice(1)
+            .map((word) => word.punctuatedText)
+            .join(" "),
+        ],
+      },
+    ],
     captions: words.map((w) => ({
       startMs: w.startMs - range.startMs,
       endMs: w.endMs - range.startMs,
       text: w.punctuatedText,
       wordIds: [w.id],
       lines: [w.punctuatedText],
-      emphasisWordIndex: 0,
+      wordCues: [
+        {
+          wordId: w.id,
+          text: w.punctuatedText,
+          startMs: w.startMs - range.startMs,
+          endMs: w.endMs - range.startMs,
+        },
+      ],
     })),
   });
   const digest = await crypto.subtle.digest(
@@ -59,7 +95,7 @@ export async function selectedAssemblyFixture(
     new TextEncoder().encode(JSON.stringify(manifest)),
   );
   return selectedAssemblyResultSchema.parse({
-    version: 1,
+    version: 2,
     binding: source.binding,
     generation: source.generation,
     analysisRevision: source.analysis.revision,
@@ -67,7 +103,14 @@ export async function selectedAssemblyFixture(
     policy: FIXED_COMPOSITION_POLICY.version,
     provider: "fake",
     words,
-    cardEvidence: [],
+    cardEvidence: [
+      {
+        origin: "planner",
+        anchorWordId: excerpt[0]!.id,
+        titleWordIds: [excerpt[0]!.id],
+        lineWordIds: [excerpt.slice(1).map((word) => word.id)],
+      },
+    ],
     manifest,
     manifestHash: Array.from(new Uint8Array(digest))
       .map((byte) => byte.toString(16).padStart(2, "0"))

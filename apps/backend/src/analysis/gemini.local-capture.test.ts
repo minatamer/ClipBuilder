@@ -24,13 +24,16 @@ import {
 import { loadConfig } from "../config/loadConfig.js";
 import {
   createLiveValidationEnvironment,
-  createLiveValidationSettings,
+  createLiveValidationConnections,
 } from "../../test/environment.fixture.js";
 
 const requestId = "req_" + "a".repeat(32);
 const secondRequestId = "req_" + "b".repeat(32);
 const config = () =>
-  loadConfig(createLiveValidationEnvironment(), createLiveValidationSettings());
+  loadConfig({
+    ...createLiveValidationEnvironment(),
+    ...createLiveValidationConnections(),
+  });
 const now = 1_000_000;
 function withDirectory(work: (directory: string) => void) {
   const directory = mkdtempSync(
@@ -329,7 +332,7 @@ describe("owner-local full Gemini response capture", () => {
       }),
     );
   });
-  it("opens selected-assembly capture and preserves the real provider result before schema rejection", async () => {
+  it("opens selected-assembly capture and preserves provider output for nonfatal reconciliation", async () => {
     const f = memoryCapture(),
       raw = {
         text: JSON.stringify({
@@ -384,7 +387,7 @@ describe("owner-local full Gemini response capture", () => {
             );
         }),
       ),
-    ).rejects.toMatchObject({ code: "MODEL_OUTPUT_REJECTED" });
+    ).resolves.toEqual(JSON.parse(raw.text));
     expect(f.events).toContainEqual(
       expect.objectContaining({
         kind: "stage_output",
@@ -400,7 +403,7 @@ describe("owner-local full Gemini response capture", () => {
       expect.objectContaining({
         action: "assemble",
         outcome: "completed",
-        applicationHttpStatus: 502,
+        applicationHttpStatus: 200,
       }),
     );
     expect(f.lines.join("\n")).not.toContain(

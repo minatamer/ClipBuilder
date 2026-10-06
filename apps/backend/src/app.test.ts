@@ -11,8 +11,7 @@ describe("backend application", () => {
   it("correlates fixed analysis routes without logging request bodies, URLs or headers", async () => {
     const lines: string[] = [];
     const { application } = composeBackend(
-      createSafeTestEnvironment(),
-      {},
+      { ...createSafeTestEnvironment() },
       new AnalysisDiagnostics((line) => lines.push(line)),
     );
     const response = await request(application)
@@ -42,8 +41,7 @@ describe("backend application", () => {
     async (action) => {
       const lines: string[] = [];
       const { application } = composeBackend(
-        createSafeTestEnvironment(),
-        {},
+        { ...createSafeTestEnvironment() },
         new AnalysisDiagnostics((line) => lines.push(line)),
       );
       const response = await request(application)
