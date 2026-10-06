@@ -6,6 +6,9 @@
   "scripts": {
     "build": "next build && node --experimental-strip-types scripts/verify-release-artifact.ts --local-build",
     "dev": "next dev --hostname 127.0.0.1 --port 3000",
+    "film:capture": "node scripts/capture-product-film.mjs",
+    "film:poster": "node --experimental-strip-types scripts/render-product-film-poster.mjs",
+    "film:studio": "remotion studio src/features/product-film/studio.tsx --no-open --port=3002",
     "format": "prettier --check --ignore-path ../../.prettierignore .",
     "format:write": "prettier --write --ignore-path ../../.prettierignore .",
     "lint": "eslint .",
@@ -16,8 +19,8 @@
     "verify:release-artifact": "node --experimental-strip-types scripts/verify-release-artifact.ts"
   },
   "dependencies": {
-    "@clipbuilder/contracts": "workspace:*",
     "@clipbuilder/composition": "workspace:*",
+    "@clipbuilder/contracts": "workspace:*",
     "@remotion/player": "4.0.532",
     "lucide-react": "1.49.0",
     "mediabunny": "1.61.0",
@@ -28,6 +31,8 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@remotion/cli": "4.0.532",
+    "@remotion/renderer": "4.0.532",
     "@types/node": "24.19.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

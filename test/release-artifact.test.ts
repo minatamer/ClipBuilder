@@ -62,6 +62,45 @@ async function fixture() {
   };
 }
 describe("production-only artifact inspection", () => {
+  it("rejects the removed film draft route in local and release artifacts", async () => {
+    const f = await fixture();
+    try {
+      const entry = "app/motion-preview/page.js";
+      await f.put(
+        `.next/standalone/apps/frontend/.next/server/${entry}`,
+        "synthetic draft",
+      );
+      await f.put(
+        ".next/standalone/apps/frontend/.next/server/app-paths-manifest.json",
+        JSON.stringify({ ...f.entries, "/motion-preview/page": entry }),
+      );
+      await expect(
+        verifyReleaseArtifact(f.root, "local-build"),
+      ).rejects.toThrow("release_artifact_invalid");
+      await expect(verifyReleaseArtifact(f.root)).rejects.toThrow(
+        "release_artifact_invalid",
+      );
+    } finally {
+      await f.stop();
+    }
+  });
+  it("keeps local film captures outside release acceptance", async () => {
+    const f = await fixture();
+    try {
+      await f.put(
+        "public/generated/product-film/intake.png",
+        "synthetic pixels",
+      );
+      await expect(
+        verifyReleaseArtifact(f.root, "local-build"),
+      ).resolves.toMatchObject({ appRoutes: 9 });
+      await expect(verifyReleaseArtifact(f.root)).rejects.toThrow(
+        "release_artifact_invalid",
+      );
+    } finally {
+      await f.stop();
+    }
+  });
   it("inspects standalone and separately copied assets with a stable digest and no server", async () => {
     const f = await fixture();
     try {
