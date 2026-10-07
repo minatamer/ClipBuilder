@@ -1,5 +1,39 @@
 # CL-015 — Bounded renderer setup and later public deployment
 
+## Owner hosted paid walkthrough preparation — 2026-10-07
+
+The owner explicitly requests enabling deployed paid mode for one manual
+upload-to-export walkthrough. Use the existing managed frontend origin while
+custom-domain TLS is pending; do not switch the app away from the URL the owner
+is testing. The owner reports the apex and managed frontend hostnames added to
+the existing Turnstile widget; keep localhost. No agent paid flow is authorized.
+
+Close the reproduced upload-origin prerequisite first: the backend forwards
+its configured frontend origin through the standard Origin header on private
+upload calls, never a visitor-supplied value. The authenticated renderer accepts
+only its exact existing local origin and one explicitly configured hosted origin
+before allocating upload storage. Preserve legacy no-header local calls. Carry
+the selected origin into GCS resumable-session initiation without putting it in
+media intent metadata. Add focused injected rejection/header/provider regressions,
+verify the new backend/renderer images and preserve IAM, caps, cleanup and logs.
+Update only disposable-bucket CORS to include those exact local/hosted origins.
+Keep ignored local environment files and the retained masters intact.
+
+Only after the configuration, image, private identity, upload-origin and secret
+reference gates pass, activate the existing hosted paid approvals for the owner's
+manual test and verify non-processing GET capability flags. Real AI, media quality,
+cost and cleanup remain owner-only proof. This test authorization does not mark
+the previously paused general public traffic/direct-origin review complete or
+certify a global spend/DDoS bound. No local AI model/weights path is introduced.
+
+Local compatibility validation passes root format/lint/typecheck and the standard
+full unit command: 1,248 fake/no-key tests in 110 files. One unchanged browser
+instrumentation import exceeded its five-second timeout on the first full run;
+its isolated recheck and the repeated standard full command pass without any
+timeout or frontend code change. Both logs remain preserved. Focused backend/
+renderer tests also pass. The settled read-only review finds no actionable local
+issue; real local/hosted processing remains owner-only and unverified here.
+
 ## Owner domain attachment — 2026-10-07
 
 The owner requests domain attachment and explicitly confirms `tryclipbuilder.com`

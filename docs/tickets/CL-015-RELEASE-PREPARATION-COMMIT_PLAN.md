@@ -8,6 +8,41 @@ Stage and verify each exact whole-file group, commit in order, verify each commi
 
 ## File-level groups
 
+### Hosted paid walkthrough compatibility follow-up
+
+Continuing the owner deployment/commit instruction, stage only this group under
+`CL-015: preserve local uploads while admitting the configured hosted origin`:
+
+- `apps/backend/src/media/renderer.cloudrun.ts`
+- `apps/backend/src/media/renderer.cloudrun.test.ts`
+- `apps/renderer/.env.example`
+- `apps/renderer/README.md`
+- `apps/renderer/src/app.ts`
+- `apps/renderer/src/app.test.ts`
+- `apps/renderer/src/config.ts`
+- `apps/renderer/src/config.test.ts`
+- `apps/renderer/src/server.ts`
+- `apps/renderer/src/expiry/gcs-media-store.ts`
+- `apps/renderer/src/expiry/media-sessions.ts`
+- `apps/renderer/src/expiry/temporary-intent.ts`
+- `apps/renderer/src/expiry/upload-origin.test.ts`
+- `docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`
+- `docs/tickets/CL-015-deploy-validate-measure-and-rollback.md`
+- `docs/tickets/CL-015-RELEASE-PREPARATION-COMMIT_PLAN.md`
+
+Review exact-origin rejection before storage, private backend header ownership,
+local/no-header compatibility, provider origin binding and cleanup/dispatch
+preservation. Require the focused tests and settled root format/lint/type/unit
+gates before staging. Linux image, cloud CORS/identity and paid activation evidence
+belongs to a subsequent narrow documentation commit after that work is verified.
+
+The group passes format/lint/typecheck, focused backend/renderer tests and the
+standard full unit recheck (1,248 fake/no-key tests in 110 files). The first full
+run's unchanged browser import timeout and both passing rechecks are preserved
+without changing frontend code or timeout policy. A settled read-only review
+finds no actionable local issue. Verify the exact sixteen-file staged and
+committed inventory and identify this commit by its subject above.
+
 ### Domain attachment correction follow-up
 
 Under the continuing owner-authorized deployment/commit instruction, prepare

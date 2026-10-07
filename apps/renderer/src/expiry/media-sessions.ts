@@ -47,14 +47,21 @@ export class MediaSessions {
   get blocked() {
     return this.cleanupBlocked;
   }
-  async admit(input: MediaUploadRequest, signal?: AbortSignal) {
+  async admit(
+    input: MediaUploadRequest,
+    signal?: AbortSignal,
+    uploadOrigin?: string,
+  ) {
     const trace = this.diagnostics.trace("admission");
-    return trace.step("admission", () => this.admitReady(input, trace, signal));
+    return trace.step("admission", () =>
+      this.admitReady(input, trace, signal, uploadOrigin),
+    );
   }
   private async admitReady(
     input: MediaUploadRequest,
     trace: CleanupTrace,
     signal?: AbortSignal,
+    uploadOrigin?: string,
   ) {
     const request = mediaUploadRequestSchema.parse(input);
     signal?.throwIfAborted();
@@ -137,7 +144,7 @@ export class MediaSessions {
     try {
       signal?.throwIfAborted();
       url = await trace.step("upload_allocate", () =>
-        this.store.beginUpload(record.intent),
+        this.store.beginUpload(record.intent, uploadOrigin),
       );
       signal?.throwIfAborted();
       const capability = url;

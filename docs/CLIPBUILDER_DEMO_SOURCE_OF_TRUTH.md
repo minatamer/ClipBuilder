@@ -2,6 +2,14 @@
 
 ## Owner Cloud Run deployment instruction — 2026-10-07
 
+The owner separately requests hosted paid-mode activation for one manual
+walkthrough using the managed frontend URL while custom TLS is pending. Preserve
+local functionality by admitting the exact local origin plus one configured
+hosted origin at the private renderer, with matching disposable-bucket CORS and
+per-upload origin binding. Verify the matching images/configuration before
+activation; no agent processing is authorized. This does not mark the paused
+general public traffic/direct-origin review or owner paid acceptance complete.
+
 Domain attachment correction: the owner confirms the purchased and sole public
 hostname is `tryclipbuilder.com`. This supersedes the earlier `tryclipbuilding.com`
 spelling. Keep exact origin checks; the old spelling is not an alternate origin.

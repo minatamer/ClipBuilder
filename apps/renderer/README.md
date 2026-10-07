@@ -1,5 +1,17 @@
 # Private media renderer
 
+Hosted upload compatibility (CL-015, 2026-10-07): retain `FRONTEND_ORIGIN` for the
+existing local caller and optionally configure one exact HTTPS
+`HOSTED_FRONTEND_ORIGIN`. After private caller verification, `/internal/upload`
+accepts only these exact Origin values, rejecting other origins before storage
+admission. The backend sets this header from its own configuration. Each GCS
+resumable session is bound to that admitted origin; legacy no-header callers
+retain the primary origin. Configure disposable-bucket CORS for both exact
+origins. No wildcard or visitor-provided origin selection is introduced.
+Fake/no-key injected tests verify rejection and provider headers; the owner alone
+verifies a real local/hosted upload-to-export walkthrough after the matching
+private image/configuration is deployed.
+
 CL-015 public-hosting follow-up (2026-10-07): maintained Debian FFmpeg/FFprobe
 `7:5.1.9-0+deb12u1` handles original source inspection, audio, proxy and selection.
 The contract-owned H.264/VP8/VP9 and AAC/Opus/Vorbis codec boundary, two streams,

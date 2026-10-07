@@ -53,6 +53,10 @@ export async function startRenderer(environment: NodeJS.ProcessEnv) {
       config.RENDERER_CALLER_EMAIL!,
       config.RENDERER_EXPIRY_CALLER_EMAIL!,
     ),
+    [
+      config.FRONTEND_ORIGIN,
+      ...(config.HOSTED_FRONTEND_ORIGIN ? [config.HOSTED_FRONTEND_ORIGIN] : []),
+    ],
   );
   const server = await new Promise<import("node:http").Server>(
     (resolve, reject) => {

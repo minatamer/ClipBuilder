@@ -109,7 +109,7 @@ export interface TemporaryMediaStore {
     previousGeneration: string,
   ): Promise<IntentRecord>;
   deleteIntent(sessionId: string, generation: string): Promise<void>;
-  beginUpload(intent: TemporaryIntent): Promise<string>;
+  beginUpload(intent: TemporaryIntent, uploadOrigin?: string): Promise<string>;
   cancelUpload(url: string): Promise<void>;
   listArtifacts(
     sessionId: string,

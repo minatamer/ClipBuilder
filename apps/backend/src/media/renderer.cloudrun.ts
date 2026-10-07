@@ -101,6 +101,9 @@ export class CloudRendererClient {
             Authorization: authorization,
             "X-Serverless-Authorization": authorization,
             "Content-Type": "application/json",
+            ...(operation === "upload"
+              ? { Origin: this.config.frontendOrigin }
+              : {}),
             ...(range ? { Range: range } : {}),
           },
           body,

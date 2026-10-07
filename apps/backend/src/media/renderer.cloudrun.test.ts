@@ -13,6 +13,30 @@ const input = {
   dataTransferAcknowledged: true as const,
 };
 describe("independent private cloud renderer boundary", () => {
+  it("uses the configured hosted frontend origin for upload with exactly one private request", async () => {
+    const origin = "https://synthetic-frontend.run.app";
+    const config = loadConfig({
+      PRIVATE_RENDERER_ORIGIN: "https://synthetic-renderer.run.app",
+      FRONTEND_ORIGIN: origin,
+    });
+    let calls = 0;
+    const client = new CloudRendererClient(
+      config,
+      { authorization: async () => "Bearer synthetic" },
+      async (_url, options) => {
+        calls++;
+        expect(options?.headers).toMatchObject({ Origin: origin });
+        expect(JSON.parse(String(options?.body))).toEqual(input);
+        return Response.json({
+          uploadUrl:
+            "https://storage.googleapis.com/upload/storage/v1/b/synthetic/o?upload_id=synthetic",
+          expiresAtMs: 9_000_000,
+        });
+      },
+    );
+    await client.upload(input, new AbortController().signal);
+    expect(calls).toBe(1);
+  });
   it("keeps fake and paid-off cloud boundaries disabled even with approval true", () => {
     const identity = {
       async authorization() {
@@ -66,6 +90,7 @@ describe("independent private cloud renderer boundary", () => {
         expect(options?.headers).toMatchObject({
           Authorization: "Bearer synthetic-token",
           "X-Serverless-Authorization": "Bearer synthetic-token",
+          Origin: "http://localhost:3000",
         });
         return Response.json({
           uploadUrl:

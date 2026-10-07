@@ -10,18 +10,73 @@ import {
   TEMPORARY_MEDIA_LIMITS,
   GENERATED_PICTURE_MODEL,
 } from "@clipbuilder/contracts";
-function fixture(removeScratch?: (directory: string) => Promise<void>) {
+function fixture(
+  removeScratch?: (directory: string) => Promise<void>,
+  uploadOrigins?: readonly string[],
+) {
   const f = mediaFixture(undefined, removeScratch);
-  const app = createRendererApplication(f.operations, {
-    async verify(header) {
-      if (header === "Bearer control") return "control";
-      if (header === "Bearer expiry") return "expiry";
-      throw new MediaFailure("unauthorized");
+  const app = createRendererApplication(
+    f.operations,
+    {
+      async verify(header) {
+        if (header === "Bearer control") return "control";
+        if (header === "Bearer expiry") return "expiry";
+        throw new MediaFailure("unauthorized");
+      },
     },
-  });
+    uploadOrigins,
+  );
   return { ...f, app };
 }
 describe("private renderer routes", () => {
+  it("binds hosted and local uploads to the exact approved caller origin while preserving legacy admission", async () => {
+    const origins = [
+      "http://localhost:3000",
+      "https://synthetic-frontend.run.app",
+    ];
+    const input = {
+      binding,
+      bytes: 1024,
+      contentType: "video/mp4",
+      rightsAcknowledged: true,
+      dataTransferAcknowledged: true,
+    };
+    for (const origin of [undefined, ...origins]) {
+      const f = fixture(undefined, origins);
+      const begin = vi.spyOn(f.store, "beginUpload");
+      const call = request(f.app)
+        .post("/internal/upload")
+        .set("Authorization", "Bearer control");
+      if (origin) call.set("Origin", origin);
+      expect((await call.send(input)).status).toBe(200);
+      expect(begin).toHaveBeenCalledExactlyOnceWith(expect.any(Object), origin);
+      expect(
+        (await f.store.getIntent(binding.sessionId))?.intent,
+      ).not.toHaveProperty("uploadOrigin");
+      expect(f.store.calls.begin).toBe(1);
+    }
+    for (const origin of [
+      "null",
+      "https://other.run.app",
+      "https://synthetic-frontend.run.app/path",
+      "https://synthetic-frontend.run.app:8443",
+      "https://user@synthetic-frontend.run.app",
+      "http://synthetic-frontend.run.app",
+      "http://localhost:3001",
+    ]) {
+      const f = fixture(undefined, origins);
+      const list = vi.spyOn(f.store, "listIntents");
+      const result = await request(f.app)
+        .post("/internal/upload")
+        .set("Authorization", "Bearer control")
+        .set("Origin", origin)
+        .send(input);
+      expect(result.status).toBe(400);
+      expect(result.body.code).toBe("invalid");
+      expect(list).not.toHaveBeenCalled();
+      expect(f.store.calls.begin).toBe(0);
+    }
+  });
   it("accepts bounded inline picture descriptors only on the authenticated render route", async () => {
     const f = fixture();
     const bytes = Buffer.alloc(96 * 1024, 1);

@@ -18,6 +18,7 @@ import type { MediaOperations } from "./media/media-operations.js";
 export function createRendererApplication(
   operations: MediaOperations,
   verifier: CallerVerifier,
+  uploadOrigins: readonly string[] = ["http://localhost:3000"],
 ): express.Express {
   const app = express();
   app.disable("x-powered-by");
@@ -69,6 +70,9 @@ export function createRendererApplication(
   let admitting = false,
     sweeping = false;
   app.post("/internal/upload", async (request, response) => {
+    const uploadOrigin = request.get("Origin");
+    if (uploadOrigin !== undefined && !uploadOrigins.includes(uploadOrigin))
+      throw new MediaFailure("invalid");
     operations.assertIntakeReady();
     if (admitting || sweeping) throw new MediaFailure("busy");
     const input = mediaUploadRequestSchema.parse(request.body);
@@ -82,7 +86,7 @@ export function createRendererApplication(
       response.json(
         mediaUploadResponseSchema.parse(
           await operations.sessions.store.withSignal(signal, () =>
-            operations.sessions.admit(input, signal),
+            operations.sessions.admit(input, signal, uploadOrigin),
           ),
         ),
       );

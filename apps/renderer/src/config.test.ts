@@ -1,6 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { parseRendererConfig } from "./config.js";
 describe("renderer composition gates", () => {
+  it("accepts one exact hosted upload origin without replacing localhost", () => {
+    for (const origin of [
+      "https://synthetic-frontend.run.app",
+      "https://tryclipbuilder.com",
+    ])
+      expect(
+        parseRendererConfig({ HOSTED_FRONTEND_ORIGIN: origin }),
+      ).toMatchObject({
+        FRONTEND_ORIGIN: "http://localhost:3000",
+        HOSTED_FRONTEND_ORIGIN: origin,
+      });
+    for (const origin of [
+      "http://synthetic-frontend.run.app",
+      "https://other.example",
+      "https://tryclipbuilding.com",
+      "https://www.tryclipbuilder.com",
+      "https://tryclipbuilder.com:8443",
+      "https://user@synthetic-frontend.run.app",
+      "https://synthetic-frontend.run.app/path",
+      "https://synthetic-frontend.run.app:8443",
+    ])
+      expect(() =>
+        parseRendererConfig({ HOSTED_FRONTEND_ORIGIN: origin }),
+      ).toThrow();
+  });
   it("prevents production from routing uploaded media back through vendor tools", () => {
     const environment = {
       NODE_ENV: "production",

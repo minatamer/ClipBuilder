@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isAbsolute } from "node:path";
+import { PUBLIC_SITE_HOSTNAME } from "@clipbuilder/contracts";
 const blankString = z.preprocess(
   (v) => (v === "" ? undefined : v),
   z.string().max(4096).optional(),
@@ -31,8 +32,20 @@ export function parseRendererConfig(environment: NodeJS.ProcessEnv) {
     FFPROBE_PATH: blankString,
     REMOTION_BUNDLE_PATH: blankString,
     FRONTEND_ORIGIN: z.url().default("http://localhost:3000"),
+    HOSTED_FRONTEND_ORIGIN: blankString,
   });
   const result = schema.parse(environment);
+  if (result.HOSTED_FRONTEND_ORIGIN) {
+    const hosted = new URL(result.HOSTED_FRONTEND_ORIGIN);
+    if (
+      hosted.origin !== result.HOSTED_FRONTEND_ORIGIN ||
+      hosted.protocol !== "https:" ||
+      hosted.port ||
+      (!hosted.hostname.endsWith(".run.app") &&
+        hosted.origin !== `https://${PUBLIC_SITE_HOSTNAME}`)
+    )
+      throw new Error("Hosted upload origin must be an exact approved origin.");
+  }
   if (
     result.NODE_ENV === "test" &&
     (result.RENDERER_ENABLED ||

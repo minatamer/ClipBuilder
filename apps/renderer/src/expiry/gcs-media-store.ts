@@ -247,7 +247,7 @@ export class GcsMediaStore implements TemporaryMediaStore {
       "DELETE",
     );
   }
-  async beginUpload(intent: TemporaryIntent) {
+  async beginUpload(intent: TemporaryIntent, uploadOrigin?: string) {
     const response = await this.auth.request({
       url:
         "https://storage.googleapis.com/upload/storage/v1/b/" +
@@ -260,7 +260,7 @@ export class GcsMediaStore implements TemporaryMediaStore {
       headers: {
         "X-Upload-Content-Length": String(intent.expectedBytes),
         "X-Upload-Content-Type": intent.contentType,
-        Origin: this.uploadOrigin,
+        Origin: uploadOrigin ?? this.uploadOrigin,
       },
       data: {
         name: artifactKey(intent.binding.sessionId, intent.sourceId),
