@@ -8,6 +8,24 @@ Stage and verify each exact whole-file group, commit in order, verify each commi
 
 ## File-level groups
 
+### Hosted visual deployment receipts
+
+After the ten-file source correction and verified backend rollout, stage this
+exact four-file group as
+`CL-015: record verified hosted visuals rollout and fresh-test handoff`:
+
+- `docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md`
+- `docs/operations/HOSTED_VISUALS_CORRECTION_2026-10-07.json`
+- `docs/tickets/CL-015-deploy-validate-measure-and-rollback.md`
+- `docs/tickets/CL-015-RELEASE-PREPARATION-COMMIT_PLAN.md`
+
+Verify actual 97-file input hashes, source/image/scan/offline production-fallback
+receipts, live configuration GETs, preserved runtime/IAM/caps and private diagnostic
+counts. Preserve prior frozen evidence. Review secrets/private identifiers, links,
+diff/format and pending owner-only visual acceptance; then verify exact staged/
+committed inventory and a clean worktree. Remove only the owned new backend build
+context after its inventory/hashes are recorded. No push or agent paid test.
+
 ### Hosted visual functionality correction
 
 With the continuing owner deployment/commit approval, use this exact ten-file

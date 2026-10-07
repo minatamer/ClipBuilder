@@ -35,6 +35,14 @@ remain separate; this does not mark the full public release complete.
   per session are capacity/work bounds, not a global DDoS or cost guarantee.
   Process-local grants fail closed after restart; they do not survive rollout.
 
+The owner's first hosted preview/export had no pictures because a stale
+local-only factory guard blocked generated-picture fallback after three validated
+Commons searches supplied no usable assets. This is corrected in the current
+backend. The same bounded fallback now composes in explicitly approved production
+and local mode; safe configuration reports real framing/visual availability.
+No other disabled upload-to-export function was found in the runtime-gate review.
+Private diagnostics and the existing three-image-call bound remain unchanged.
+
 Use immutable scanned image digests. Freeze source/context inputs and inspect
 the exact Linux artifact and offline runtime proof before rollout. Keep the
 previous immutable revision/configuration for rollback. Cloud Run cold starts,
@@ -242,7 +250,37 @@ export into a running app. Do not run a root Next production build over the live
 development output. Hosted image builds use isolated allowlisted contexts and
 no env/private media. Keep the requested local apps running after handoff.
 
-## Hosted paid walkthrough receipts
+## Current hosted visual correction receipts
+
+The [source/image/configuration correction receipts](HOSTED_VISUALS_CORRECTION_2026-10-07.json)
+freeze 97 backend inputs at `727d940c76eb19c42f050a1d2fdf137f9a1de8ae` and the current
+backend image `sha256:51e78a090445048c4822cd8dd4cebe3767ebd359a2daf1dca8734b8034f49f39`.
+The previous frontend and renderer images remain unchanged; their evidence is
+retained in the initial hosted paid receipts below.
+
+Both new production regressions fail before the fix and pass afterward; 125
+focused tests and all 1,250 fake/no-key tests in 110 files pass. Format/lint/
+typecheck pass. Two unchanged frontend import timeouts from the first full run
+are preserved; isolated and standard full rechecks pass without source/timeout
+changes. The actual Linux backend build and offline nonroot probe pass, including
+approved production fallback construction and image/public approval rejection.
+The exact scan has zero fixable high/critical entries with its full unfixed
+ledger retained privately.
+
+Rollout is Ready with 100% latest traffic. Only the backend image and source
+revision changed; enabled paid/image flags, IAM/secrets, resource/ingress limits,
+origins, frontend/renderer/bucket and local env are preserved. Non-processing
+configuration GETs confirm upload/analysis/assembly/export, active-speaker framing
+and contextual visuals enabled, sample UI absent and localhost still live.
+Anonymous backend health stays 403. Agent AI calls/media sessions remain zero.
+
+Refresh the managed frontend and choose **Start over** for the owner-only fresh
+walkthrough. An already completed preview/export retains its original manifest;
+the update does not regenerate pictures or replay paid work automatically.
+Actual generated-image provider/quality/cost/deletion and broader owner release
+acceptance remain unchecked. The paused general public traffic review is separate.
+
+## Initial hosted paid walkthrough receipts
 
 Open [the managed frontend workspace](https://clipbuilder-frontend-obh7yniraa-ew.a.run.app/start)
 in a fresh tab/session. The owner reports the managed/apex hostnames added to
@@ -256,7 +294,7 @@ preserved configuration and the non-processing live-capability checks. Each
 target's compiled files match the manifest even though the frontend build was
 submitted before the backend/renderer-only compatibility change.
 
-| Target | Current image digest | Accepted proof |
+| Target | Initial paid-test image digest | Accepted proof |
 | --- | --- | --- |
 | Frontend | `sha256:59e5f0d16d9e29c70b9d3cc4c0ab4f1716a093f19acea38d2f33c704a8573ab7` | Linux standalone build, 1,320 artifact files/10 routes/zero external package links; offline runtime and deployed bridge |
 | Backend | `sha256:02f18bf9d4c1de1c78d3f79cae64ccae37acf5a1e8ed40c14f64114c5b1f5fb6` | Linux compile/imports/offline runtime; exact hosted Origin forwarding; private rollout and live capability GET |

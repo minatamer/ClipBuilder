@@ -54,7 +54,26 @@ it consumes validated inline assets from the same manifest as preview. Local
 capture/retained sample, preview fixtures and retired testing/replay boundaries
 retain their approved exclusions. No trends feature or local AI weights/runtime
 is implemented. The settled ten-file read-only review has no actionable finding;
-new Linux image/scan/rollout and owner fresh-assembly proof are still pending.
+new Linux image/scan/rollout were still pending at that source checkpoint.
+
+The corrected backend is now deployed from source revision
+`727d940c76eb19c42f050a1d2fdf137f9a1de8ae` and immutable image
+`sha256:51e78a090445048c4822cd8dd4cebe3767ebd359a2daf1dca8734b8034f49f39`.
+The actual Linux build and nonroot/network-isolated image probe pass, including
+approved production fallback construction and rejection of image/public approval
+failure. Its exact scan has zero fixable high/critical entries; complete unfixed
+entries remain available. All 97 compiled context inputs match the source.
+
+Ready/latest traffic is 100%. Only backend image and `APP_REVISION` changed;
+paid/image approvals, env/secret references, private IAM, origins, capacity,
+frontend/renderer/bucket and local setup are preserved. Non-processing hosted
+GETs return 200 with upload/analysis/assembly/export/framing/visuals enabled,
+while anonymous backend health remains 403. Local GETs confirm live capability
+availability and corrected framing/visual metadata. Agent paid calls and media
+sessions remain zero. Fresh owner assembly/preview/export quality is still
+unchecked; prior completed manifests are immutable and cannot gain pictures.
+See the [correction receipts](../operations/HOSTED_VISUALS_CORRECTION_2026-10-07.json).
+The general public traffic review and remaining owner acceptance stay open.
 
 ## Owner hosted paid walkthrough activation — 2026-10-07
 
