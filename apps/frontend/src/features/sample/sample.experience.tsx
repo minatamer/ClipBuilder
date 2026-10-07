@@ -1,4 +1,6 @@
 "use client";
+import { ConnectionFailureNotice, WorkflowRecovery } from "./workflow-recovery";
+import { reportBrowserDiagnostic } from "../diagnostics/browser.diagnostics";
 
 import {
   useEffect,
@@ -276,6 +278,17 @@ function SampleScreen({
     null,
   );
   const [failure, setFailure] = useState<SafeError | null>(null);
+  const visibleFailure = failure ?? ("failure" in state ? state.failure : null);
+  const failureCode = visibleFailure?.code;
+  const failureRequestId = visibleFailure?.requestId;
+  useEffect(() => {
+    if (failureCode && failureRequestId)
+      void reportBrowserDiagnostic({
+        kind: "workflow-failed",
+        code: failureCode,
+        sourceRequestId: failureRequestId,
+      });
+  }, [failureCode, failureRequestId]);
   const router = useRouter();
   const exiting = useRef(false);
   const [evidenceAttempt, setEvidenceAttempt] = useState(0);
@@ -989,23 +1002,15 @@ function SampleScreen({
         }
       >
         {failure !== null && (
-          <div role="alert" className={styles.error}>
-            <p>{failure.message}</p>
-            <Button
-              variant="quiet"
-              onClick={() => {
-                setFailure(null);
-                setEvidenceAttempt((value) => value + 1);
-              }}
-            >
-              Retry connection
-            </Button>
-            {failure.code === "ACTIVE_SESSION_EXISTS" && (
-              <Button variant="quiet" disabled={busy} onClick={clear}>
-                Clear existing preview
-              </Button>
-            )}
-          </div>
+          <ConnectionFailureNotice
+            failure={failure}
+            busy={busy}
+            onClear={clear}
+            onRetry={() => {
+              setFailure(null);
+              setEvidenceAttempt((value) => value + 1);
+            }}
+          />
         )}
         {loading && (
           <section className={styles.processing}>
@@ -1248,17 +1253,12 @@ function SampleScreen({
             api={cloudApi}
           />
         )}
-        {state.stage === "cloud-render-failed" && (
-          <section className={styles.empty}>
-            <p role="alert">
-              Export could not be confirmed. Checking for an existing output
-              will never start another render.
-            </p>
-            <Button onClick={restoreOutput} disabled={busy}>
-              Check completed export
-            </Button>
-          </section>
-        )}
+        <WorkflowRecovery
+          state={state}
+          localMode={localMode}
+          busy={busy}
+          onRestoreOutput={restoreOutput}
+        />
         {state.stage === "cloud-result" && (
           <CloudResult
             key={state.result.output.artifactId}
@@ -1274,32 +1274,6 @@ function SampleScreen({
             api={api}
             deliveryFooter={deliveryFooter}
           />
-        )}
-        {state.stage === "fatal" && (
-          <section className={styles.empty}>
-            <p role="alert">{state.failure.message}</p>
-            {localMode && state.failure.code === "ACTIVE_SESSION_EXISTS" && (
-              <p>Close the other workspace tab, then reconnect here.</p>
-            )}
-          </section>
-        )}
-        {state.stage === "expired" && (
-          <section className={styles.empty}>
-            <p>This temporary preview has expired. Start fresh.</p>
-          </section>
-        )}
-        {state.stage === "cleanup-partial" && (
-          <section className={styles.empty}>
-            <p role="status">Returning home...</p>
-          </section>
-        )}
-        {(state.stage === "analysis-failed" ||
-          state.stage === "assembly-failed" ||
-          state.stage === "cloud-assembly-failed" ||
-          state.stage === "render-failed") && (
-          <section className={styles.empty}>
-            <p role="alert">{state.failure.message}</p>
-          </section>
         )}
       </WorkflowFrame>
     </Workspace>

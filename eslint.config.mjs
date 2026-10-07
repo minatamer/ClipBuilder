@@ -69,9 +69,7 @@ export default defineConfig([
       "**/*.config.{js,mjs,ts}",
       "test/**/*.ts",
       "apps/backend/**/*.ts",
-      "apps/renderer/**/*.ts",
-      "apps/frontend/feasibility/browser-media/server.mjs",
-      "apps/frontend/feasibility/browser-media/server.test.mjs",
+      "apps/renderer/**/*.{ts,tsx}",
     ],
     languageOptions: {
       globals: {
@@ -103,6 +101,8 @@ export default defineConfig([
     },
     rules: {
       "no-restricted-globals": ["error", "process", "Buffer"],
+      // Explicit options reset the server's inherited error/warn exceptions.
+      "no-console": ["error", {}],
     },
   },
   {
@@ -182,7 +182,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["apps/renderer/**/*.ts"],
+    files: ["apps/renderer/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",

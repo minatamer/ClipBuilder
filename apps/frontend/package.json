@@ -13,7 +13,7 @@
     "format:write": "prettier --write --ignore-path ../../.prettierignore .",
     "lint": "eslint .",
     "start": "next start --hostname 127.0.0.1 --port 3000",
-    "test:media": "node --experimental-strip-types feasibility/browser-media/server.mjs",
+    "test:media": "vitest run feasibility/browser-audio feasibility/browser-media",
     "test:unit": "vitest run",
     "typecheck": "tsc --noEmit",
     "verify:release-artifact": "node --experimental-strip-types scripts/verify-release-artifact.ts"

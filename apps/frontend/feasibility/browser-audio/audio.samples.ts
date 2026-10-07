@@ -1,6 +1,6 @@
 import { LOCAL_WORKSPACE_LIMITS } from "@clipbuilder/contracts";
 import { AudioSample, type AudioSampleSource } from "mediabunny";
-import { LocalMediaError } from "./media.errors";
+import { LocalMediaError } from "../../src/features/media/media.errors";
 
 /** Keep both timestamped encoders and WAV from allocating a whole gap at once. */
 export async function padAudioGap(

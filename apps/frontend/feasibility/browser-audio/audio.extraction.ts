@@ -17,8 +17,11 @@ import {
   WavOutputFormat,
   WebMOutputFormat,
 } from "mediabunny";
-import { LocalMediaError } from "./media.errors";
-import { openSyncAccess, type SyncFileAccess } from "./opfs.access";
+import { LocalMediaError } from "../../src/features/media/media.errors";
+import {
+  openSyncAccess,
+  type SyncFileAccess,
+} from "../../src/features/media/opfs.access";
 import {
   AUDIO_LIFETIME,
   AUDIO_PROFILES,

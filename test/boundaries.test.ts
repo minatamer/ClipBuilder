@@ -106,6 +106,16 @@ describe("repository dependency boundaries", () => {
     );
   });
 
+  it("rejects browser console output, including warnings and errors", async () => {
+    const messages = await lintFixture(
+      "../apps/frontend/src/__console-negative__.ts",
+      'console.warn("synthetic detail");\nconsole.error("synthetic detail");',
+    );
+    expect(
+      messages.filter((message) => message.ruleId === "no-console"),
+    ).toHaveLength(2);
+  });
+
   it.each([
     {
       path: "../apps/frontend/src/__boundary-negative__.ts",
@@ -114,6 +124,14 @@ describe("repository dependency boundaries", () => {
     {
       path: "../apps/renderer/src/__boundary-negative__.ts",
       source: 'import "../../backend/src/app.js";',
+    },
+    {
+      path: "../apps/renderer/src/__boundary-negative__.tsx",
+      source: 'import "../../backend/src/app.js";',
+    },
+    {
+      path: "../apps/renderer/src/__boundary-negative__.tsx",
+      source: 'import "@clipbuilder/frontend";',
     },
     {
       path: "../packages/contracts/src/__boundary-negative__.ts",
@@ -150,6 +168,7 @@ describe("repository dependency boundaries", () => {
     "../apps/frontend/src/__boundary-valid__.ts",
     "../apps/backend/src/__boundary-valid__.ts",
     "../apps/renderer/src/__boundary-valid__.ts",
+    "../apps/renderer/src/__boundary-valid__.tsx",
     "../packages/composition/src/__boundary-valid__.tsx",
   ])(
     "allows applications to import published contracts from %s",
@@ -161,4 +180,12 @@ describe("repository dependency boundaries", () => {
       expect(messages.filter((message) => message.severity === 2)).toEqual([]);
     },
   );
+
+  it("allows the renderer TSX entry to use the shared composition", async () => {
+    const messages = await lintFixture(
+      "../apps/renderer/src/__composition-valid__.tsx",
+      'import { ClipComposition } from "@clipbuilder/composition";\nvoid ClipComposition;',
+    );
+    expect(messages.filter((message) => message.severity === 2)).toEqual([]);
+  });
 });

@@ -4,6 +4,7 @@ import {
   sourceAnalysisRequestSchema,
   operationIdSchema,
   type OperationId,
+  type CloudUploadDiagnostic,
 } from "@clipbuilder/contracts";
 
 export const CLOUD_UPLOAD_CHUNK_BYTES = 4 * 1024 * 1024;
@@ -17,28 +18,8 @@ export type CloudUploadProgress = {
 export type CloudUploadAdmission = ReturnType<
   typeof mediaUploadResponseSchema.parse
 >;
-type UploadReason =
-  | "invalid-input"
-  | "expired"
-  | "aborted"
-  | "timeout"
-  | "transport"
-  | "http"
-  | "acknowledgement"
-  | "metadata"
-  | "body-limit"
-  | "stalled";
-export type CloudUploadDiagnostic = CloudUploadProgress & {
-  operationId?: OperationId;
-  stage: "request" | "complete" | "failed";
-  chunk: number;
-  request: "chunk" | "status";
-  durationMs: number;
-  status: number;
-  statusQueries: number;
-  resends: number;
-  reason: UploadReason | null;
-};
+type UploadReason = NonNullable<CloudUploadDiagnostic["reason"]>;
+export type { CloudUploadDiagnostic } from "@clipbuilder/contracts";
 
 class UploadFailure extends Error {
   constructor(

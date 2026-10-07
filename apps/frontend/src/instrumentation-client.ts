@@ -1,5 +1,8 @@
-import { z } from "zod";
+import "./browser-contract-validation";
+import { installPrivateBrowserConsole } from "./features/diagnostics/browser-console";
+import { reportBrowserDiagnostic } from "./features/diagnostics/browser.diagnostics";
 
-// Configure before application modules construct schemas: even Zod's caught
-// code-generation probe violates the production script policy.
-z.config({ jitless: true });
+// Next runs this client-only entry before hydration and framework console binding.
+installPrivateBrowserConsole(window.console, window, (record) => {
+  void reportBrowserDiagnostic(record);
+});

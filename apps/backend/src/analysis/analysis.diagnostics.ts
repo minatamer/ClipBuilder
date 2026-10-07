@@ -3,6 +3,7 @@ import {
   errorCodeSchema,
   requestIdSchema,
   OWNER_VALIDATION_LIMITS,
+  browserDiagnosticSchema,
 } from "@clipbuilder/contracts";
 import { z } from "zod";
 import {
@@ -58,8 +59,10 @@ type AnalysisAction =
   | "download"
   | "session"
   | "grant"
-  | "exit";
+  | "exit"
+  | "diagnostics";
 const phases = [
+  "browser_diagnostic",
   "request",
   "sample_fingerprint",
   "sample_transfer",
@@ -115,6 +118,8 @@ const phases = [
 ] as const;
 export type AnalysisPhase = (typeof phases)[number];
 const phaseMessages: Record<AnalysisPhase, string> = {
+  browser_diagnostic:
+    "Untrusted browser diagnostic accepted by private backend",
   request: "Backend request lifecycle",
   sample_fingerprint: "Retained sample fingerprint verification",
   sample_transfer: "Retained sample copy transfer",
@@ -290,6 +295,7 @@ const diagnosticSchema = z
       "session",
       "grant",
       "exit",
+      "diagnostics",
     ]),
     phase: z.enum(phases),
     outcome: z.enum([
@@ -305,6 +311,7 @@ const diagnosticSchema = z
       .refine((value) => messages.has(value))
       .optional(),
     assembly: assemblyDiagnosticSchema.optional(),
+    browser: browserDiagnosticSchema.optional(),
     validation: validationDiagnosticSchema.optional(),
     elapsedMs: z.number().int().min(0).max(86_400_000),
     requestElapsedMs: z.number().int().min(0).max(86_400_000).optional(),
@@ -379,6 +386,20 @@ export class AnalysisDiagnostics {
   ) {}
   enablePrivateCapture(capture: PrivateGeminiCapture | null) {
     this.privateCapture = capture;
+  }
+  browser(record: unknown) {
+    const parsed = browserDiagnosticSchema.safeParse(record);
+    if (parsed.success)
+      this.emit(
+        "browser_diagnostic",
+        "succeeded",
+        undefined,
+        undefined,
+        undefined,
+        () => ({ browser: parsed.data }),
+        "phase",
+        true,
+      );
   }
   private capture(event: () => PrivateGeminiCaptureEvent) {
     const write = this.contexts.getStore()?.privateCapture;

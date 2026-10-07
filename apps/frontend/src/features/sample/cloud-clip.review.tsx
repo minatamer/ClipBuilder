@@ -19,6 +19,7 @@ import {
 import { Button } from "../../shared/ui/button";
 import styles from "./sample.module.css";
 import { PreviewPlaybackTrace } from "./preview-playback.diagnostics";
+import { reportBrowserDiagnostic } from "../diagnostics/browser.diagnostics";
 
 export function CloudClipReview({
   analysis,
@@ -48,6 +49,11 @@ export function CloudClipReview({
   );
   const selected = analysis.candidates.find(
     (candidate) => candidate.id === result.candidateId,
+  );
+  const editNotes = useMemo(() => fixedReviewNotes(result), [result]);
+  const interestNotes = useMemo(
+    () => (selected ? reviewInterestNotes(analysis, selected) : []),
+    [analysis, selected],
   );
   useEffect(() => {
     const controller = new AbortController();
@@ -88,8 +94,7 @@ export function CloudClipReview({
         wide: result.manifest.focus.filter((s) => s.mode === "wide").length,
       },
       (record) => {
-        // eslint-disable-next-line no-console -- Bounded content-free playback counters.
-        console.info("clip-preview", record);
+        void reportBrowserDiagnostic({ kind: "clip-preview", record });
       },
     );
     trace.current = diagnostics;
@@ -206,7 +211,7 @@ export function CloudClipReview({
             <p className={styles.rationale}>{selected.rationale}</p>
             <h3>Edit decisions</h3>
             <AgenticNotes
-              notes={fixedReviewNotes(result)}
+              notes={editNotes}
               rangeStartMs={range.startMs}
               busy={!ready}
               onSeek={(ms, ids) => {
@@ -216,7 +221,7 @@ export function CloudClipReview({
             />
             <h3>Interest points</h3>
             <AgenticNotes
-              notes={reviewInterestNotes(analysis, selected)}
+              notes={interestNotes}
               rangeStartMs={range.startMs}
               busy={!ready}
               onSeek={(ms, ids) => {

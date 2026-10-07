@@ -45,6 +45,7 @@ import {
 } from "../media/browser.workspace";
 import { restoreLocalWorkspace } from "../media/workspace.restore";
 import { localMediaFailure } from "../media/media.errors";
+import { reportBrowserDiagnostic } from "../diagnostics/browser.diagnostics";
 
 type SessionContextValue = {
   state: ClippingSessionState;
@@ -89,7 +90,12 @@ export function ClippingSessionProvider({
     clippingSessionReducer,
     initialClippingSessionState,
   );
-  const [effects] = useState(() => new SessionEffectRegistry());
+  const [effects] = useState(
+    () =>
+      new SessionEffectRegistry((resource) => {
+        void reportBrowserDiagnostic({ kind: "cleanup-failed", resource });
+      }),
+  );
   const [workspace, setWorkspace] = useState<BrowserWorkspace | null>(null);
   const disposal = useRef<Promise<void>>(Promise.resolve());
   const [restoreAttempt, setRestoreAttempt] = useState(0);
@@ -120,6 +126,9 @@ export function ClippingSessionProvider({
         owner = createBrowserWorkspace({
           onOtherRelease: () => otherReleased(),
           releaseConsumers: () => effects.clear(),
+          reportReleaseFailure: (resource) => {
+            void reportBrowserDiagnostic({ kind: "cleanup-failed", resource });
+          },
           cleanupRequired: () =>
             isSessionCleanupRequired(activeStorage) ||
             (!!owner?.snapshot &&

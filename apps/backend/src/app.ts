@@ -21,6 +21,7 @@ import { createAnalysisRouter } from "./http/routes/analysis.route.js";
 import { composeRetainedSample } from "./media/retained-sample.gcs.js";
 import { createRetainedSampleRouter } from "./http/routes/retained-sample.route.js";
 import { AnalysisDiagnostics } from "./analysis/analysis.diagnostics.js";
+import { createBrowserDiagnosticRouter } from "./http/routes/browser-diagnostic.route.js";
 
 export function createApplication(
   config: BackendConfig,
@@ -47,6 +48,13 @@ export function createApplication(
   });
 
   application.use("/v1", createHealthRouter(config.appRevision));
+  application.use(
+    "/v1/diagnostics",
+    createBrowserDiagnosticRouter(
+      config.session.csrfAllowedOrigins,
+      diagnostics,
+    ),
+  );
   application.use("/v1/analysis", (request, response, next) => {
     const action = request.path.slice(1);
     if (!(

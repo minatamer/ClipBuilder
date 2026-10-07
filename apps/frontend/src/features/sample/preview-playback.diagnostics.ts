@@ -1,24 +1,10 @@
-import { uuidV4Schema } from "@clipbuilder/contracts";
+import { uuidV4Schema, type PreviewDiagnostic } from "@clipbuilder/contracts";
 
-type PreviewSummary = {
-  captions: number;
-  cards: number;
-  matched: number;
-  held: number;
-  wide: number;
-};
-export type PreviewDiagnostic = PreviewSummary & {
-  traceId: string;
-  event: "started" | "buffering" | "resumed" | "ended" | "failed" | "closed";
-  samples: number;
-  bufferingEvents: number;
-  automaticSeeks: number;
-  userSeeks: number;
-  backwardsMediaJumps: number;
-  shownVisuals: number;
-  maxDriftMs: number;
-  elapsedMs: number;
-};
+type PreviewSummary = Pick<
+  PreviewDiagnostic,
+  "captions" | "cards" | "matched" | "held" | "wide"
+>;
+export type { PreviewDiagnostic } from "@clipbuilder/contracts";
 
 /** Aggregates clocks in memory; no source URL, transcript, or exact clocks escape. */
 export class PreviewPlaybackTrace {

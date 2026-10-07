@@ -11,6 +11,7 @@ const appRoutes = new Set([
   "/_not-found/page",
   "/_global-error/page",
   "/api/analysis/[action]/route",
+  "/api/diagnostics/route",
   "/api/sample/[...path]/route",
   "/api/session/exit/route",
   "/icon.svg/route",

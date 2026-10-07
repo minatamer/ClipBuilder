@@ -398,7 +398,7 @@ describe("bounded acknowledged browser upload", () => {
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     try {
       await expect(
-        createSourceAnalysisApi(f.transport).transfer(
+        createSourceAnalysisApi(f.transport, f.diagnostic).transfer(
           f.input.admitted,
           f.input.file,
           f.input.signal,

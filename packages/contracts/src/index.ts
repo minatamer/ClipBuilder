@@ -20,3 +20,4 @@ export * from "./selected-assembly.schema.js";
 export * from "./contextual-picture.schema.js";
 export * from "./media-preview.schema.js";
 export * from "./final-render.schema.js";
+export * from "./browser-diagnostic.schema.js";

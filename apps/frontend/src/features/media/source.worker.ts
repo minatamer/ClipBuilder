@@ -1,3 +1,4 @@
+import "../../browser-contract-validation";
 import {
   LOCAL_WORKSPACE_LIMITS,
   MEDIA_LIMITS,
@@ -16,11 +17,10 @@ import {
 import { LocalMediaError } from "./media.errors";
 import { copyLocalSource } from "./opfs.copy";
 import { sourceChecksum } from "./source.checksum";
-import { extractLocalAudio } from "./audio.extraction";
-import { audioRequestSchema } from "./audio.protocol";
-import { AUDIO_SCRATCH_FOLDER } from "./audio.profile";
+
 import {
   WORKSPACE_FOLDER,
+  LEGACY_AUDIO_SCRATCH_FOLDER,
   type SourceCommand,
   type SourceMessage,
 } from "./source.protocol";
@@ -160,28 +160,11 @@ onmessage = async ({
   try {
     let result = {};
     if (data.action === "probe") result = await probe(controller.signal);
-    else if (data.action === "extract-audio") {
-      const request = audioRequestSchema.safeParse(data);
-      if (!request.success) throw new LocalMediaError("unsupported");
-      const scratch = await (
-        await directory()
-      ).getDirectoryHandle(AUDIO_SCRATCH_FOLDER, { create: true });
-      result = {
-        audio: await extractLocalAudio(
-          request.data.file,
-          request.data.sourceDurationMs,
-          request.data.profile,
-          scratch,
-          controller.signal,
-          (progress) =>
-            send({ type: "audio-progress", jobId: data.jobId, progress }),
-        ),
-      };
-    } else if (data.action === "clear-audio") {
+    else if (data.action === "clear-audio") {
       try {
         await (
           await directory()
-        ).removeEntry(AUDIO_SCRATCH_FOLDER, { recursive: true });
+        ).removeEntry(LEGACY_AUDIO_SCRATCH_FOLDER, { recursive: true });
       } catch (error) {
         if (!(error instanceof DOMException) || error.name !== "NotFoundError")
           throw error;
@@ -200,13 +183,15 @@ onmessage = async ({
         await (await directory()).getFileHandle(artifactId)
       ).getFile();
       result = { ...(await inspect(file, data, controller.signal)), file };
-    } else {
+    } else if (data.action === "inspect" || data.action === "copy") {
       if (!(data.file instanceof Blob))
         throw new LocalMediaError("unsupported");
       result =
         data.action === "inspect"
           ? await inspect(data.file, data, controller.signal)
           : await copy(data.file, data, controller.signal);
+    } else {
+      throw new LocalMediaError("unsupported");
     }
     check(controller.signal);
     send({ type: "result", jobId: data.jobId, result });

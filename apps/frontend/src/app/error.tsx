@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { reportBrowserViewFailure } from "../features/diagnostics/browser.diagnostics";
 
 type ErrorPageProperties = {
   error: Error & { digest?: string };
@@ -9,10 +10,8 @@ type ErrorPageProperties = {
 
 export default function ErrorPage({ error, reset }: ErrorPageProperties) {
   useEffect(() => {
-    // The digest is framework-generated and content-free; never log the error.
-    if (error.digest) {
-      console.error(`ClipBuilder view failed (${error.digest})`);
-    }
+    // Preserve framework correlation privately; never transmit exception text.
+    void reportBrowserViewFailure(error.digest);
   }, [error.digest]);
 
   return (

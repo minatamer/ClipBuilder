@@ -22,6 +22,7 @@ import {
   analysisBundleSchema,
   sampleReplayRequestSchema,
   type OperationId,
+  type CloudUploadDiagnostic,
 } from "@clipbuilder/contracts";
 import { SampleApiFailure, sampleFailure } from "../sample/sample.api";
 import {
@@ -29,9 +30,13 @@ import {
   type CloudUploadAdmission,
   type CloudUploadProgress,
 } from "./cloud-upload";
+import { reportBrowserDiagnostic } from "../diagnostics/browser.diagnostics";
 
 export function createSourceAnalysisApi(
   transport: typeof fetch = (...args) => fetch(...args),
+  diagnostic: (value: CloudUploadDiagnostic) => void = (record) => {
+    void reportBrowserDiagnostic({ kind: "cloud-upload", record });
+  },
 ) {
   let csrf = "";
   async function call<T>(
@@ -199,10 +204,7 @@ export function createSourceAnalysisApi(
           transport,
           ...(progress ? { progress } : {}),
           ...(operationId ? { operationId } : {}),
-          diagnostic: (value) => {
-            // eslint-disable-next-line no-console -- Bounded content-free transfer records.
-            console.info("cloud-upload", value);
-          },
+          diagnostic,
         });
       } catch {
         throw new SampleApiFailure(sampleFailure());

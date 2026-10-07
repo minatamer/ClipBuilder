@@ -19,7 +19,7 @@ export const AUDIO_PROFILES = {
 } as const;
 
 export type AudioProfile = keyof typeof AUDIO_PROFILES;
-export const AUDIO_SCRATCH_FOLDER = "audio-scratch-v1";
+export { LEGACY_AUDIO_SCRATCH_FOLDER as AUDIO_SCRATCH_FOLDER } from "../../src/features/media/source.protocol";
 export const AUDIO_LIFETIME = {
   deadlineMs: 300_000,
   stallMs: 20_000,
