@@ -232,8 +232,9 @@ export function createApplication(
           renders: 1,
         },
         features: {
-          activeSpeakerFraming: developmentPreview,
-          contextualVisuals: false,
+          activeSpeakerFraming:
+            developmentPreview || Boolean(processing?.assembly),
+          contextualVisuals: Boolean(processing?.assembly),
           trendSignals: false,
           languages: ["en"],
         },

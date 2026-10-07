@@ -18,6 +18,7 @@ for (const path of [
 assert.notEqual(process.getuid(), 0);
 const target = process.argv[2];
 let server, child;
+let productionPictureFallbackVerified = false;
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function fetchLocal(path, options) {
   return fetch(
@@ -140,6 +141,53 @@ try {
     let application;
     if (target === "backend") {
       const { composeBackend } = await import("/app/dist/composition.js");
+      const { loadConfig } = await import("/app/dist/config/loadConfig.js");
+      const { composeGeminiPictureGenerator, GeminiPictureGenerator } =
+        await import("/app/dist/assembly/gemini-pictures.js");
+      const { AnalysisDiagnostics } =
+        await import("/app/dist/analysis/analysis.diagnostics.js");
+      // Pure synthetic composition; the process stays fake/paid-off and offline.
+      const productionEnvironment = {
+        NODE_ENV: "production",
+        APP_ENV: "production",
+        APP_REVISION: "synthetic-release",
+        FAKE_MODE: "false",
+        PAID_DEMO_ENABLED: "true",
+        PUBLIC_PAID_PROCESSING_APPROVED: "true",
+        FRONTEND_ORIGIN: "https://synthetic-frontend.run.app",
+        BACKEND_ORIGIN: "https://synthetic-backend.run.app",
+        BACKEND_AUDIENCE: "https://synthetic-backend.run.app",
+        FRONTEND_CALLER_EMAIL: "synthetic@synthetic.iam.gserviceaccount.com",
+        TURNSTILE_EXPECTED_HOSTNAME: "synthetic-frontend.run.app",
+        GEMINI_API_KEY: "synthetic-key",
+        TURNSTILE_SITE_KEY: "synthetic-site",
+        TURNSTILE_SECRET_KEY: "synthetic-secret",
+        PROCESSING_GRANT_KEY: Buffer.alloc(32, 7).toString("base64url"),
+        PRIVATE_RENDERER_ORIGIN: "https://synthetic-renderer.run.app",
+      };
+      assert.ok(
+        composeGeminiPictureGenerator(
+          loadConfig(productionEnvironment),
+          new AnalysisDiagnostics(),
+        ) instanceof GeminiPictureGenerator,
+      );
+      assert.equal(
+        composeGeminiPictureGenerator(
+          loadConfig({
+            ...productionEnvironment,
+            GEMINI_IMAGE_GENERATION_APPROVED: "false",
+          }),
+          new AnalysisDiagnostics(),
+        ),
+        undefined,
+      );
+      assert.throws(() =>
+        loadConfig({
+          ...productionEnvironment,
+          PUBLIC_PAID_PROCESSING_APPROVED: "false",
+        }),
+      );
+      productionPictureFallbackVerified = true;
       application = composeBackend({
         NODE_ENV: "test",
         APP_ENV: "preview",
@@ -236,6 +284,7 @@ try {
     JSON.stringify({
       target,
       runtimeVerified: true,
+      ...(target === "backend" ? { productionPictureFallbackVerified } : {}),
       nonRoot: true,
       externalNetwork: false,
       aiCalls: 0,

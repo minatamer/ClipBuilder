@@ -93,6 +93,11 @@ describe("backend application", () => {
       expect(config.body).toMatchObject({
         sampleEnabled: false,
         retainedSampleEnabled: false,
+        features: {
+          activeSpeakerFraming: false,
+          contextualVisuals: false,
+          trendSignals: false,
+        },
       });
       await request(application).get("/v1/retained-sample/video").expect(404);
       await request(application).post("/v1/sample/start").send({}).expect(404);

@@ -14,6 +14,14 @@ public traffic review remain separate. See the
 Fake/no-key tests are synthetic; real processing needs provider/cloud setup,
 live flags, applicable approvals and the owner's manual walkthrough.
 
+Hosted visual correction (CL-015, 2026-10-07): approved production composes the
+same bounded Gemini picture fallback used locally when Commons cannot provide a
+usable image. Preview/test/fake/paid-off and unapproved production retain their
+gates. The public configuration reports actual composed assembly/framing/visual
+availability; it does not certify pictures for an individual clip. Private
+picture counters/provider diagnostics remain intact. Synthetic production-shaped
+tests use no real keys or provider calls; actual image quality is owner-manual.
+
 Earlier CL-015 final local-test preparation (2026-10-07) preserves normal owner-managed
 `.env.local` startup and fixed local origins. Hosted preparation adds a private
 frontend caller verifier and an eight-request process bound that remains held

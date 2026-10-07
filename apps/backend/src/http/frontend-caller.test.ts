@@ -129,4 +129,39 @@ describe("private hosted frontend caller", () => {
     await request(application).get("/v1/sample/config").expect(200);
     expect(verify).toHaveBeenCalledTimes(2);
   });
+  it("advertises the composed production framing and visual capabilities only after private caller verification", async () => {
+    const config = loadConfig({
+      ...createLiveValidationEnvironment(),
+      NODE_ENV: "production",
+      APP_ENV: "production",
+      APP_REVISION: "synthetic-release",
+      FRONTEND_ORIGIN: frontend,
+      BACKEND_ORIGIN: audience,
+      BACKEND_AUDIENCE: audience,
+      FRONTEND_CALLER_EMAIL: email,
+      TURNSTILE_EXPECTED_HOSTNAME: new URL(frontend).hostname,
+      PUBLIC_PAID_PROCESSING_APPROVED: "true",
+    });
+    const verify = vi.fn(async () => false);
+    const application = createApplication(config, undefined, { verify });
+    await request(application).get("/v1/sample/config").expect(403);
+    verify.mockResolvedValueOnce(true);
+    const response = await request(application)
+      .get("/v1/sample/config")
+      .expect(200);
+    expect(response.body).toMatchObject({
+      mode: "live",
+      liveAnalysisEnabled: true,
+      liveAssemblyEnabled: true,
+      liveRenderEnabled: true,
+      sampleEnabled: false,
+      retainedSampleEnabled: false,
+      features: {
+        activeSpeakerFraming: true,
+        contextualVisuals: true,
+        trendSignals: false,
+      },
+    });
+    expect(verify).toHaveBeenCalledTimes(2);
+  });
 });

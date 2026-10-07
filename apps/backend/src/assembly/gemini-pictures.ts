@@ -166,7 +166,8 @@ export function composeGeminiPictureGenerator(
 ) {
   if (
     config.nodeEnv === "test" ||
-    config.appEnv !== "local" ||
+    config.appEnv === "preview" ||
+    (config.appEnv === "production" && !config.publicPaidProcessingApproved) ||
     config.providerMode !== "live" ||
     !config.paidDemoEnabled ||
     !config.features.liveAssembly ||

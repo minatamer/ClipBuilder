@@ -167,7 +167,7 @@ describe("bounded ungrounded Gemini picture generation", () => {
     expect(request).toHaveBeenCalledOnce();
     expect(normalize).not.toHaveBeenCalled();
   });
-  it("requires separate image approval and refuses fake/test/public composition", () => {
+  it("requires separate image approval and refuses fake/test/preview and unapproved production composition", () => {
     const approved = loadConfig({
       ...createLiveValidationEnvironment(),
       PAID_VALIDATION_STAGE: "assembly",
@@ -192,11 +192,52 @@ describe("bounded ungrounded Gemini picture generation", () => {
       }),
       loadConfig(createSafeTestEnvironment()),
       { ...approved, nodeEnv: "test" as const },
+      { ...approved, appEnv: "preview" as const },
       { ...approved, appEnv: "production" as const },
       { ...approved, paidDemoEnabled: false },
     ])
       expect(
         composeGeminiPictureGenerator(config, new AnalysisDiagnostics()),
       ).toBeUndefined();
+  });
+  it("composes the image fallback for explicitly approved protected production without making provider calls", () => {
+    const config = loadConfig({
+      ...createLiveValidationEnvironment(),
+      NODE_ENV: "production",
+      APP_ENV: "production",
+      APP_REVISION: "synthetic-release",
+      FRONTEND_ORIGIN: "https://synthetic-frontend.run.app",
+      BACKEND_ORIGIN: "https://synthetic-backend.run.app",
+      BACKEND_AUDIENCE: "https://synthetic-backend.run.app",
+      FRONTEND_CALLER_EMAIL: "synthetic@synthetic.iam.gserviceaccount.com",
+      TURNSTILE_EXPECTED_HOSTNAME: "synthetic-frontend.run.app",
+      PUBLIC_PAID_PROCESSING_APPROVED: "true",
+    });
+    const request = vi.spyOn(globalThis, "fetch");
+    try {
+      expect(config.features.liveImageGeneration).toBe(true);
+      expect(config.admission.maxProcessDispatches).toBe(7);
+      expect(
+        composeGeminiPictureGenerator(config, new AnalysisDiagnostics()),
+      ).toBeInstanceOf(GeminiPictureGenerator);
+      expect(
+        composeGeminiPictureGenerator(
+          { ...config, publicPaidProcessingApproved: false },
+          new AnalysisDiagnostics(),
+        ),
+      ).toBeUndefined();
+      expect(
+        composeGeminiPictureGenerator(
+          loadConfig({
+            ...createLiveValidationEnvironment(),
+            GEMINI_IMAGE_GENERATION_APPROVED: "false",
+          }),
+          new AnalysisDiagnostics(),
+        ),
+      ).toBeUndefined();
+      expect(request).not.toHaveBeenCalled();
+    } finally {
+      request.mockRestore();
+    }
   });
 });

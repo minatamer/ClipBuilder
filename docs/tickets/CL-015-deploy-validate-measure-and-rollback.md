@@ -1,5 +1,61 @@
 # CL-015 — Bounded renderer setup and later public deployment
 
+## Owner full hosted functionality correction — 2026-10-07
+
+The owner reports contextual pictures missing in both hosted preview and export
+and explicitly requires the complete existing upload-to-export functionality in
+production, enabling any remaining disabled product capability. Existing cloud
+deployment and CL-015 staging/commit approvals continue. Preserve local behavior,
+private diagnostics, exact-origin/caller/challenge/security/cleanup/cost bounds
+and the accepted product scope. Agent paid processing remains prohibited.
+
+Confirmed findings and narrow correction plan:
+
+1. `composeGeminiPictureGenerator` still rejects every nonlocal app environment,
+   so production cannot use the approved generated-picture fallback after Commons
+   cannot supply an acceptable image. Production metadata already has paid mode,
+   public processing and image approval enabled. Admit production only with its
+   explicit public approval and existing paid/live/image/key/transfer/project
+   gates; continue rejecting preview, test, fake and unapproved compositions.
+2. The safe configuration hardcodes contextual visuals false and reports active
+   speaker framing only for fake local preview. These fields are not consumed
+   by the frontend rendering path, but must accurately report available real
+   assembly capability. Derive both from composed assembly; keep trend signals
+   false because the approved product implements no trend-input feature.
+
+Review all remaining local/preview/production gates across frontend, backend and
+renderer for another disabled upload-to-export function. The existing private
+capture, retained-source sample, retired replay/testing UI and isolated renderer
+worker exclusions retain their documented purposes. Add synthetic production
+composition/configuration regressions before the fix and record their failure,
+then verify focused image/assembly/caller/config tests and settled root gates.
+Build/verify/scan one immutable backend correction and deploy only after those
+gates. Preserve its current env/secrets/IAM/caps, update only image/source revision
+and check non-processing configuration plus private diagnostics. Commit source
+and deployment receipts in exact file-level groups. Owner must start a fresh
+assembly after rollout; already completed previews/exports are immutable.
+Actual hosted generated-image quality/provider outcome remains owner-only.
+
+The safe private diagnostic counters confirm the owner's failed visual result:
+three planned/validated cues, three Commons searches, zero usable pictures and
+zero image-generation calls. No content, provider payload or secret was read.
+The two new production regressions fail before the correction and pass afterward;
+125 focused checks in six files pass. Settled format/lint/typecheck and the
+standard full unit recheck pass: 1,250 fake/no-key tests in 110 files. Two unchanged
+frontend import tests timed out in the first full run; isolated and standard
+full rechecks pass without source/timeout changes, with original logs preserved.
+
+The remaining runtime-gate review finds no other disabled upload-to-export
+function: configured upload/storage, protected grants, analysis, selected plan,
+framing/cards, Commons/generation, shared preview/export, delivery and Exit are
+connected. Production's existing public/paid/image approvals are already true.
+The isolated compositor's AI/cloud-disabled environment does not hide pictures;
+it consumes validated inline assets from the same manifest as preview. Local
+capture/retained sample, preview fixtures and retired testing/replay boundaries
+retain their approved exclusions. No trends feature or local AI weights/runtime
+is implemented. The settled ten-file read-only review has no actionable finding;
+new Linux image/scan/rollout and owner fresh-assembly proof are still pending.
+
 ## Owner hosted paid walkthrough activation — 2026-10-07
 
 The owner explicitly requests enabling deployed paid mode for one manual

@@ -8,6 +8,41 @@ Stage and verify each exact whole-file group, commit in order, verify each commi
 
 ## File-level groups
 
+### Hosted visual functionality correction
+
+With the continuing owner deployment/commit approval, use this exact ten-file
+source/documentation group as
+`CL-015: restore approved hosted picture generation and capability reporting`:
+
+- `apps/backend/src/app.ts`
+- `apps/backend/src/app.test.ts`
+- `apps/backend/src/assembly/gemini-pictures.ts`
+- `apps/backend/src/assembly/gemini-pictures.test.ts`
+- `apps/backend/src/http/frontend-caller.test.ts`
+- `scripts/verify-image-runtime.mjs`
+- `apps/backend/README.md`
+- `docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`
+- `docs/tickets/CL-015-deploy-validate-measure-and-rollback.md`
+- `docs/tickets/CL-015-RELEASE-PREPARATION-COMMIT_PLAN.md`
+
+Require production regressions failing before the correction, then passing
+focused picture/assembly/config/caller checks and settled format/lint/type/unit
+gates. Review remaining runtime gates, dispatch bounds and private diagnostics.
+Only this backend runtime source changes; verify its actual Linux image/runtime
+and exact scan before rollout. The Linux offline probe must assert approved
+production fallback construction and rejection of image/public approval failure,
+without provider calls or changing its process's fake/paid-off environment.
+Record cloud receipts in a separate narrow
+documentation group after deployment; preserve prior frozen evidence unchanged.
+
+Source-group evidence: both production regressions fail before the fix, then
+125 focused tests pass. Format/lint/typecheck and the repeated standard unit
+gate pass with 1,250 synthetic tests in 110 files. The two unchanged frontend
+import timeouts, isolated passing run and full passing recheck are retained
+without timeout/code changes. Remaining feature-gate/diff/privacy/cleanup review
+finds no actionable local issue. Linux corrected-image gates and real hosted
+visual outcome remain separate; do not claim them from this source commit.
+
 ### Hosted paid activation evidence follow-up
 
 Under the continuing explicit owner deployment/commit approval, stage this exact

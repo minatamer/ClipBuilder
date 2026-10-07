@@ -2,6 +2,16 @@
 
 ## Owner Cloud Run deployment instruction — 2026-10-07
 
+The owner reports hosted preview/export missing contextual pictures and requires
+the complete existing upload-to-export functionality in deployment. The approved
+Gemini image fallback must compose in protected, explicitly approved production,
+as it does locally; preview/test/fake/paid-off composition remains closed. Safe
+feature metadata must report available real assembly/framing/visual capabilities.
+Preserve the fixed call bounds, private logs, real challenge/caller/origin checks
+and normal local operation. This enables existing product behavior, not new
+features. Real paid testing remains owner-only. See the
+[CL-015 correction](tickets/CL-015-deploy-validate-measure-and-rollback.md#owner-full-hosted-functionality-correction--2026-10-07).
+
 The owner separately requests hosted paid-mode activation for one manual
 walkthrough using the managed frontend URL while custom TLS is pending. Preserve
 local functionality by admitting the exact local origin plus one configured
@@ -26,15 +36,17 @@ or read ignored local secrets. The owner's local walkthrough does not prove
 deployed challenge, cleanup, cost or rollback. Fake/no-key checks are synthetic;
 real operation needs provider/cloud configuration and applicable approvals.
 
-The authorized paid-off hosting checkpoint and owner-managed domain/Turnstile
+The initial paid-off hosting checkpoint, subsequent owner-authorized managed-URL
+paid activation and owner-managed domain/Turnstile
 cutover are recorded in the [deployment guide](operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md).
 Keep the public hostname exact. Next standalone resolves API origin from the
 configured public Host and HTTPS proxy marker, retaining browser Origin/CSRF
 checks. Maintained system tools enforce the existing source codec/container
 boundary before decoder opening; the compositor receives only the normalized
 selected copy. This is an exposure mitigation, not a claim that every vendor
-library is patched. Renderer upload origin remains local until the explicit
-hosted-origin/CORS cutover; do not claim simultaneous local/hosted paid upload.
+library is patched. The verified renderer now admits the exact local origin and
+one configured managed frontend origin with matching bucket CORS. Non-processing
+checks confirm capability availability; real hosted media acceptance is owner-only.
 
 
 ## Owner final local paid-test preparation — 2026-10-07
