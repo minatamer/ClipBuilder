@@ -1,35 +1,106 @@
 # CL-014 — Audit cloud migration release candidate
 
+## Code quality remediation — owner authorized, 2026-10-07
+
+The owner approved execution of the dated remediation plan, prioritizing
+unchanged functionality over LOC reduction. Preserve all existing private
+backend logs and the fields/events of existing browser diagnostics; route
+client/framework events to the private backend without raw
+exception/media/credential content. UI failures use generic/actionable
+source-controlled copy. The
+[execution report](../operations/CODE_QUALITY_REMEDIATION_2026-10-07.md) records
+all finding dispositions, 1,223 passing synthetic tests in 104 files, the five
+passing local gates and targeted synthetic browser checks. The owner-requested
+[validation walkthrough](../operations/CODE_QUALITY_VALIDATION_2026-10-07.md)
+reproduced and fixed two worker monitoring/interpreter gaps; the second pass has
+no new actionable local findings. Q-09/Q-10 are explicitly retained under the
+plan's conditional criteria. The old port 4185 testing UI is retired;
+replay/authoring release cleanup retains its owning gates. The initial
+documentation-only audit below is historical evidence. No Git action,
+provider/paid test, app-stack restart or deployment was authorized during
+implementation/validation. The owner subsequently approved staging and commits
+through the [CL-015-prefixed file plan](CL-015-CODE-QUALITY-COMMIT_PLAN.md);
+other external and runtime gates remain unchanged. Fake/no-key tests cover
+synthetic/injected behavior only. Real affected-flow acceptance stays
+owner-manual with the existing keys, live flags and approvals; no local AI
+runtime or weights are introduced.
+
+## Historical code quality audit — 2026-10-07, documentation only
+
+The owner requested a full code-quality audit and change plan, explicitly
+prohibiting implementation. The
+[dated report](../operations/CODE_QUALITY_AUDIT_2026-10-07.md) and
+[ordered remediation plan](../operations/CODE_QUALITY_REMEDIATION_PLAN_2026-10-07.md)
+cover current HEAD `452728c127ca123809df1a850ae6114256998537` with a
+[358-file input manifest](../operations/CODE_QUALITY_AUDIT_2026-10-07_INPUTS.json).
+Ten findings distinguish reproduced cleanup/deadline/guard gaps, static startup
+and obsolete-path evidence, and conditional structural/performance improvements.
+No application, test, configuration or dependency change was made. Findings
+remain open; earlier no-finding verdicts below concern their dated scopes.
+
+Fresh format/lint/typecheck and 1,212 synthetic tests in 96 files pass. Existing
+frontend output passes local inventory and fails strict release verification; no
+fresh production build was run in this audit. `FAKE_MODE=true` with no keys
+supports labelled fixtures and injected checks, with fixture Download disabled.
+The owner's real-flow/export success is recorded as owner evidence. Subsequent
+real acceptance remains owner-manual with keys/live capabilities and approvals;
+no local AI runtime, paid test, cloud action, app restart or Git mutation ran.
+
+- [x] Inspect current code and document evidence, limits and retained decisions.
+- [x] Document behavior-preserving remediation order and regression gates.
+- [x] Implement approved local corrections and update affected evidence;
+      conditional retained dispositions are documented in the execution report.
+- [ ] Complete STRIDE/supply-chain/manual/target-build/release gates in their
+      owning packets; this code audit does not mark them passed.
+
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
-Status: local candidate audit complete; validation has no actionable findings; all five gates pass; public release gates remain deferred.
+Status: local candidate audit complete; validation has no actionable findings;
+all five gates pass; public release gates remain deferred.
 
-Authority: [Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md); [file inventory](../architecture/MIGRATION_FILE_INVENTORY.md); [later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
+Authority:
+[Google/Cloud Run migration plan](../architecture/GEMINI_REMOTION_MIGRATION.md);
+[file inventory](../architecture/MIGRATION_FILE_INVENTORY.md);
+[later setup guide](../operations/CLOUD_RUN_RENDERER_SETUP.md).
 
-Audit current boundaries/schemas/dependencies/retention/private logging/network isolation/call budgets and all five root gates; record exact local/fake versus authorized cloud/AI evidence.
+Audit current boundaries/schemas/dependencies/retention/private logging/network
+isolation/call budgets and all five root gates; record exact local/fake versus
+authorized cloud/AI evidence.
 
-Dependencies follow the numbered migration sequence. After documentation approval, implement one dependency-ready packet at a time and run focused checks plus the required settled five root gates. Fake/live AI and local/cloud compute are independent; cloud render can incur cost with fake AI. Ordinary tests remain synthetic, credential-free, fake/off and zero-network through injected cloud/provider ports. No cloud provisioning, login, credential use, private upload, paid call, Git action, usage polling or new independent review is authorized now.
+Dependencies follow the numbered migration sequence. After documentation
+approval, implement one dependency-ready packet at a time and run focused checks
+plus the required settled five root gates. Fake/live AI and local/cloud compute
+are independent; cloud render can incur cost with fake AI. Ordinary tests remain
+synthetic, credential-free, fake/off and zero-network through injected
+cloud/provider ports. No cloud provisioning, login, credential use, private
+upload, paid call, Git action, usage polling or new independent review is
+authorized now.
 
-- [x] Owner explicitly approved documentation and local corrections on 2026-10-02.
-- [x] Audit local code/docs and correct reproduced findings; external acceptance remains unchecked.
-- [x] Record the evidence ledger, exact local inputs and remaining owner/runtime/provider/cloud gates.
+- [x] Owner explicitly approved documentation and local corrections on
+      2026-10-02.
+- [x] Audit local code/docs and correct reproduced findings; external acceptance
+      remains unchecked.
+- [x] Record the evidence ledger, exact local inputs and remaining
+      owner/runtime/provider/cloud gates.
 
 ## Local execution — 2026-10-03
 
 [Release audit ledger](../operations/RELEASE_CANDIDATE_AUDIT.md) contains the
 per-ticket classifications, exact input digest, A14-01/A14-02 reproduction and
 corrections, source/ignore/dependency/build-context checks and deferred gates.
-Dependency CL-013 is `4bdf5d5`; initial worktree was clean. Local Git actions are
-owner-authorized through CL-015. No new external action, real media or secret.
+Dependency CL-013 is `4bdf5d5`; initial worktree was clean. Local Git actions
+are owner-authorized through CL-015. No new external action, real media or
+secret.
 
 The normalized socket-argument regression failed independently before the fix
 without opening a socket; it and the expanded pre-import assertions now pass.
 README/docs public claims now match fixed cards and locally connected pipeline.
-Fake/no-key checks are synthetic; real AI needs keys/live/data/rights/paid approval
-and cloud compute/IAM/storage has independent approval. No local AI weights.
-The owner deferred actual media/device/manual tests; the required quality matrix
-and film approval remain unverified, not passed. Current release is not public /
-paid ready. Historical private checkpoint is separate from this local revision.
+Fake/no-key checks are synthetic; real AI needs keys/live/data/rights/paid
+approval and cloud compute/IAM/storage has independent approval. No local AI
+weights. The owner deferred actual media/device/manual tests; the required
+quality matrix and film approval remain unverified, not passed. Current release
+is not public / paid ready. Historical private checkpoint is separate from this
+local revision.
 
 Validation pass 1: **Meets ticket with concerns** in the local authorized scope;
 **no actionable findings**. Covered: evidence classifications/input identity,
@@ -43,20 +114,17 @@ No full suite or external action ran during the read-only validation phase.
 
 Settled root gate: format/lint/typecheck/unit/build plus `git diff --check` all
 pass; **624 synthetic tests in 64 files**. Offline frozen installation passed.
-No external/manual gate is inferred. [Whole-file commit plan](CL-014-COMMIT_PLAN.md)
-is authorized and executed sequentially before CL-015 local preparation.
+No external/manual gate is inferred.
+[Whole-file commit plan](CL-014-COMMIT_PLAN.md) is authorized and executed
+sequentially before CL-015 local preparation.
 
 <details>
 <summary>Earlier packet and evidence, retained as history where superseded</summary>
 
-
-Status: Planned<br>
-Milestone: M6 — public-demo hardening and audit<br>
-Last synchronized: 2026-10-01<br>
-Depends on: CL-013<br>
-Blocks: CL-015<br>
-Suggested commit: `CL-014: audit the ClipBuilder release candidate`<br>
-Parent plan: [`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)<br>
+Status: Planned<br> Milestone: M6 — public-demo hardening and audit<br> Last
+synchronized: 2026-10-01<br> Depends on: CL-013<br> Blocks: CL-015<br> Suggested
+commit: `CL-014: audit the ClipBuilder release candidate`<br> Parent plan:
+[`../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md)<br>
 Ticket index: [`README.md`](README.md)
 
 ---
@@ -65,22 +133,24 @@ Ticket index: [`README.md`](README.md)
 
 **Current audit contract (2026-10-01):** section 0.9 and
 [Browser-owned media](../architecture/BROWSER_OWNED_MEDIA.md) replace historical
-GCS/native-job/server-render deferrals below. Audit browser-owned source/results/
-assets/output, exact local codecs/model/parity/runtime proof, OPFS/IDB cleanup,
-protected request input/provenance/admission and process-lifetime-only guarantees.
-CL-015's remaining external gates are hosting/routing/transport/restart/rollout/
-hard-cap/provider/client evidence, not bucket lifecycle or cloud media jobs.
-Historical cloud-media checklist items are withdrawn, not passed. Public paid
-readiness remains blocked by unresolved owner safeguards/retention/quality
-decisions; do not infer it from repository gate success.
+GCS/native-job/server-render deferrals below. Audit browser-owned
+source/results/ assets/output, exact local codecs/model/parity/runtime proof,
+OPFS/IDB cleanup, protected request input/provenance/admission and
+process-lifetime-only guarantees. CL-015's remaining external gates are
+hosting/routing/transport/restart/rollout/ hard-cap/provider/client evidence,
+not bucket lifecycle or cloud media jobs. Historical cloud-media checklist items
+are withdrawn, not passed. Public paid readiness remains blocked by unresolved
+owner safeguards/retention/quality decisions; do not infer it from repository
+gate success.
 
-Owner setup ordering (2026-10-01): include CL-004A and its provider/cost/software
-guides in the audit. All GCloud setup and external cloud mechanism/runtime/
-render/operational proof remain explicitly deferred to final CL-015. These
-owner-approved deferrals do not prevent a repository-ready verdict; they do
-prevent any claim of public/live readiness. CL-015 must satisfy each deferred
-gate before enablement, and material corrections return for focused re-audit.
-Do not require already-deployed resources as a prerequisite for this audit.
+Owner setup ordering (2026-10-01): include CL-004A and its
+provider/cost/software guides in the audit. All GCloud setup and external cloud
+mechanism/runtime/ render/operational proof remain explicitly deferred to final
+CL-015. These owner-approved deferrals do not prevent a repository-ready
+verdict; they do prevent any claim of public/live readiness. CL-015 must satisfy
+each deferred gate before enablement, and material corrections return for
+focused re-audit. Do not require already-deployed resources as a prerequisite
+for this audit.
 
 Reconcile every required ticket against code, evidence, Git history, current
 documentation, and the source of truth; then perform one deliberate
@@ -88,8 +158,8 @@ behavior-preserving quality/efficiency pass across the entire first-party
 codebase and run the complete deterministic pre-deployment gate on the exact
 candidate revision.
 
-This is the final code-and-evidence audit, not another feature, product redesign,
-responsive matrix, provider smoke, or deployment attempt.
+This is the final code-and-evidence audit, not another feature, product
+redesign, responsive matrix, provider smoke, or deployment attempt.
 
 ## Portfolio value
 
@@ -107,8 +177,8 @@ checked as one system—not inferred from green commits or isolated feature test
   stays unchecked.
 - CL-013 owns the full UI/accessibility/performance matrix. Re-run only the
   smallest scenario required by an audit correction.
-- Refactoring preserves the CL-013-accepted behavior. A functional difference
-  is allowed only to fix a proven defect, with focused regression and updated
+- Refactoring preserves the CL-013-accepted behavior. A functional difference is
+  allowed only to fix a proven defect, with focused regression and updated
   authority/evidence.
 - CL-015 may deploy only the exact candidate/digests audited here. Any material
   post-audit change invalidates the affected evidence.
@@ -157,100 +227,104 @@ not proof by itself.
 ### 1. Ticket, docs, and Git reconciliation
 
 - [ ] Enumerate CL-001 through CL-013 plus any explicitly approved suffix
-  packets in dependency order and locate their code/docs/evidence/commits.
+      packets in dependency order and locate their code/docs/evidence/commits.
 - [ ] Compare every acceptance and focused-verification item with current code
-  and evidence; do not rely on checklist marks or commit subjects alone.
+      and evidence; do not rely on checklist marks or commit subjects alone.
 - [ ] Reconcile parent source, ticket index, individual packets, READMEs,
-  operations docs, environment examples, comments, and public claims.
+      operations docs, environment examples, comments, and public claims.
 - [ ] Produce one sanitized per-ticket ledger with status, evidence, checks,
-  supersession/deferral destination, blockers, and remaining limits.
+      supersession/deferral destination, blockers, and remaining limits.
 
 ### 2. Architecture and authority
 
 - [ ] Prove `frontend -> contracts <- backend`, browser-safe contracts, thin
-  routes/use cases/ports/adapters, explicit composition, and no import-time side
-  effects.
+      routes/use cases/ports/adapters, explicit composition, and no import-time
+      side effects.
 - [ ] Prove the canonical reducer/manifest are the sole workflow/edit authority
-  and persistence is an allow-listed projection.
+      and persistence is an allow-listed projection.
 - [ ] Prove no application database/cloud object store/general repository/
-  durable queue/history/hidden session exists; browser artifact journal and
-  process-local admission/tombstones match the declared limits.
+      durable queue/history/hidden session exists; browser artifact journal and
+      process-local admission/tombstones match the declared limits.
 - [ ] Reconcile shared contracts, HTTP routes, operation states, provider ports,
-  local worker stages, protected receipts, focus/visual tracks, local output
-  profile, and cleanup.
+      local worker stages, protected receipts, focus/visual tracks, local output
+      profile, and cleanup.
 
 ### 3. Whole-codebase quality and efficiency pass
 
 - [ ] Review every first-party source/test/config/script/style/doc area for real
-  duplication, oversized/mixed responsibility, unclear naming/data flow, wrong
-  abstraction, unsafe cast/assertion, swallowed error, unhandled promise,
-  stale flag/TODO, unused export/dependency/asset, dead/unreachable branch, and
-  obsolete fixture/compatibility layer.
+      duplication, oversized/mixed responsibility, unclear naming/data flow,
+      wrong abstraction, unsafe cast/assertion, swallowed error, unhandled
+      promise, stale flag/TODO, unused export/dependency/asset, dead/unreachable
+      branch, and obsolete fixture/compatibility layer.
 - [ ] Search for duplicate schemas/constants/components/styles/errors/loading/
-  provider calls/transitions/reconciliation/render policies; consolidate only
-  genuinely shared responsibilities.
+      provider calls/transitions/reconciliation/render policies; consolidate
+      only genuinely shared responsibilities.
 - [ ] Review bundle/media imports, context size, repeated parsing/serialization,
-  transcript/playback/render hot paths, and process/temp cleanup for structural
-  waste without speculative caching/memoization.
+      transcript/playback/render hot paths, and process/temp cleanup for
+      structural waste without speculative caching/memoization.
 - [ ] Preserve accepted product behavior; document rejected subjective churn.
 
 ### 4. Lifecycle, calls, privacy, and security
 
-- [ ] Trace listeners/timers/observers/URLs/media/request controllers/audio transfers,
-  grants/receipts, admission records/tombstones, workers/codecs/frames/audio/
-  OPFS handles/journal/assets/output
-  across success/failure/abort/timeout/cancel/refresh/clear/expiry.
+- [ ] Trace listeners/timers/observers/URLs/media/request controllers/audio
+      transfers, grants/receipts, admission records/tombstones,
+      workers/codecs/frames/audio/ OPFS handles/journal/assets/output across
+      success/failure/abort/timeout/cancel/refresh/clear/expiry.
 - [ ] Prove one user action makes at most the documented provider/local/image
-  operations; validation/auth/rate/budget/nonretryable failures never retry.
-- [ ] Scan tracked files/history/diffs/fixtures/logs/screenshots/docs for secrets,
-  content, signed URLs, account IDs, media/transcripts/prompts/outputs, raw paths,
-  provider payloads, face artifacts, or unlicensed assets.
+      operations; validation/auth/rate/budget/nonretryable failures never retry.
+- [ ] Scan tracked files/history/diffs/fixtures/logs/screenshots/docs for
+      secrets, content, signed URLs, account IDs,
+      media/transcripts/prompts/outputs, raw paths, provider payloads, face
+      artifacts, or unlicensed assets.
 - [ ] Reconcile origin/CSRF/grant/CSP/headers/proxy/Turnstile/admission/spend/
-  no-store/log allow-list and test isolation with actual code.
+      no-store/log allow-list and test isolation with actual code.
 
 ### 5. Findings and deterministic release gate
 
 - [ ] Maintain finding ID, severity, affected ticket/guardrail, evidence,
-  correction, focused regression, and disposition.
+      correction, focused regression, and disposition.
 - [ ] Fix every material finding or leave it as an explicit deployment blocker;
-  never weaken criteria to make the ledger green.
-- [ ] Run pinned install/format/lint/all typechecks/all unit+integration+fake E2E/
-  production builds on the exact final candidate.
+      never weaken criteria to make the ledger green.
+- [ ] Run pinned install/format/lint/all typechecks/all unit+integration+fake
+      E2E/ production builds on the exact final candidate.
 - [ ] Run dependency vulnerability, unused dependency, architecture, duplicate/
-  dead code, container/model license, tracked secret/media, ignore/example,
-  `git diff --check`, and final status reviews.
+      dead code, container/model license, tracked secret/media, ignore/example,
+      `git diff --check`, and final status reviews.
 - [ ] Prove the deterministic gate did not load ignored local env, contact live
-  providers/cloud, request hardware/media permission, or consume credits.
+      providers/cloud, request hardware/media permission, or consume credits.
 
 ## Acceptance criteria
 
 - [ ] Every prior ticket has an evidence-backed classification with no
-  unexplained unchecked acceptance item.
-- [ ] Architecture, state, contracts, browser-storage model, provider/local-worker
-  boundaries, preview/render parity, and cleanup match the source of truth.
+      unexplained unchecked acceptance item.
+- [ ] Architecture, state, contracts, browser-storage model,
+      provider/local-worker boundaries, preview/render parity, and cleanup match
+      the source of truth.
 - [ ] No known material dead/duplicate/obsolete code, unsafe diagnostic, content
-  leak, lifecycle leak, duplicate paid operation, stale dependency, unlicensed
-  artifact, or contradictory documentation remains.
+      leak, lifecycle leak, duplicate paid operation, stale dependency,
+      unlicensed artifact, or contradictory documentation remains.
 - [ ] Every concrete quality/efficiency finding is fixed with focused regression
-  or has an explicit evidence-based retained/blocking disposition.
+      or has an explicit evidence-based retained/blocking disposition.
 - [ ] The complete deterministic gate and supported scans pass on the exact
-  declared candidate with commands/versions/counts recorded.
+      declared candidate with commands/versions/counts recorded.
 - [ ] External rights/visual/provider/privacy/spend/cloud/manual items are
-  truthfully complete or unchecked; none is inferred.
+      truthfully complete or unchecked; none is inferred.
 - [ ] CL-015 receives an exact auditable revision/build-input identity and no
-  unresolved repository-owned release blocker.
+      unresolved repository-owned release blocker.
 
 ## Focused verification
 
 - [ ] Run the repository's pinned format, lint, typecheck, unit/integration,
-  fake E2E, and production build commands.
+      fake E2E, and production build commands.
 - [ ] Run production+development dependency audit, container scan, model/font/
-  asset license review, and record bounded exceptions rather than suppressing.
+      asset license review, and record bounded exceptions rather than
+      suppressing.
 - [ ] Run architecture/import, duplicate/dead/unused, provider-call/retry,
-  persistence/storage, log/content, secret/media, ignore/example, and test-
-  isolation validation.
+      persistence/storage, log/content, secret/media, ignore/example, and test-
+      isolation validation.
 - [ ] Inspect `git status`, candidate history, `git diff`, `git diff --check`,
-  tracked/ignored rules, and exact release diff without reading `.env.local`.
+      tracked/ignored rules, and exact release diff without reading
+      `.env.local`.
 - [ ] Re-run only manual scenarios directly affected by audit corrections.
 
 ## Documentation updates
@@ -260,8 +334,8 @@ not proof by itself.
   disposition.
 - Reconcile all public/agent/app/operations/ticket documentation with actual
   behavior.
-- Update the source of truth and every affected packet together for any
-  material behavior/architecture correction.
+- Update the source of truth and every affected packet together for any material
+  behavior/architecture correction.
 
 ## Owner gates and external blockers
 

@@ -30,8 +30,7 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   editor, chatbot/assistant, manual trim/range path, caption or visual controls,
   timeline, proposal flow, undo, or redo. Do not add accounts, durable projects,
   a database, a general queue, history, batch workflows, direct publishing,
-  remote-platform downloads, arbitrary renderer inputs, or sensitive
-  inference.
+  remote-platform downloads, arbitrary renderer inputs, or sensitive inference.
 - Keep real media, filenames, transcripts, captions, prompts, provider payloads,
   generated assets, output videos, signed capabilities, account identifiers, and
   credentials out of Git, fixtures, logs, errors, URLs, screenshots, and
@@ -45,44 +44,47 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   serialize request authentication, environment values or credential files.
   Captures remain owner-local until removed after diagnosis; activation expiry
   does not imply file deletion. This exception changes no validation, dispatch,
-  media cleanup, cloud or paid-testing gate. See the CL-007 local capture packet.
-- Owner sample-replay exception (updated 2026-10-06): the owner authorizes one temporary
-  OS-temp saved copy of the successful retained-sample analysis for the local
-  development replay CTA. It is workspace/source-bound with no activation deadline;
-  keep it available until explicit cleanup before deployment and preserve the
-  original capture. Remove the replay CTA/transport/cache loading and its private
-  saved copy at that release checkpoint. Fake/test/preview/production
-  cannot load it. Replayed choices are labelled and Proceed obtains fresh normal
-  protected source/session evidence. No receipt/credential copy, Git fixture,
-  hosted replay, provider retry or agent-paid test is authorized. See
+  media cleanup, cloud or paid-testing gate. See the CL-007 local capture
+  packet.
+- Owner sample-replay exception (updated 2026-10-06): the owner authorizes one
+  temporary OS-temp saved copy of the successful retained-sample analysis for
+  the local development replay CTA. It is workspace/source-bound with no
+  activation deadline; keep it available until explicit cleanup before
+  deployment and preserve the original capture. Remove the replay
+  CTA/transport/cache loading and its private saved copy at that release
+  checkpoint. Fake/test/preview/production cannot load it. Replayed choices are
+  labelled and Proceed obtains fresh normal protected source/session evidence.
+  No receipt/credential copy, Git fixture, hosted replay, provider retry or
+  agent-paid test is authorized. See
   `docs/tickets/CL-007-local-sample-replay-and-thumbnails.md`.
 - Owner retention decision (2026-10-03): `private/retained-demo-source/` holds
-  the ignored, owner-managed local demonstration master and its private metadata.
-  Preserve it during session cleanup, expiry, cancellation, repository housekeeping,
-  release preparation and `git clean`. Never use it as scratch, an ordinary test
-  fixture or a public/build asset. Replacement or deletion requires an explicit
-  owner instruction naming this retained asset. Processing uses a separate
-  uploaded copy whose original/proxies/output retain the normal deletion rules.
-  See [local source preparation](docs/operations/LOCAL_RELEASE_PREPARATION.md#retained-owner-demonstration-source).
+  the ignored, owner-managed local demonstration master and its private
+  metadata. Preserve it during session cleanup, expiry, cancellation, repository
+  housekeeping, release preparation and `git clean`. Never use it as scratch, an
+  ordinary test fixture or a public/build asset. Replacement or deletion
+  requires an explicit owner instruction naming this retained asset. Processing
+  uses a separate uploaded copy whose original/proxies/output retain the normal
+  deletion rules. See
+  [local source preparation](docs/operations/LOCAL_RELEASE_PREPARATION.md#retained-owner-demonstration-source).
 - Owner configuration decision (2026-10-06): normal backend defaults are
   `FAKE_MODE=false`, `PAID_DEMO_ENABLED=true` and all four approval flags true.
   Backend configuration comes from environment only. `PAID_DEMO_ENABLED=false`
   overrides cloud spend, Gemini transfer, image generation and paid-project
   approvals to false and disables cloud/sample reads, live routes, grants and
-  dispatch allowance. Missing optional local prerequisites keep routes unavailable.
-  Owner export follow-up: real paid mode enables analysis, assembly and final
-  rendering directly in code; the obsolete `PAID_VALIDATION_STAGE` setting is
-  ignored. This permits local export availability, not an agent-run paid flow
-  or a private renderer deployment.
-  Tests/CI/harnesses explicitly force fake mode, paid-off and every live/approval
-  flag false before imports, with no credentials or external provider access.
+  dispatch allowance. Missing optional local prerequisites keep routes
+  unavailable. Owner export follow-up: real paid mode enables analysis, assembly
+  and final rendering directly in code; the obsolete `PAID_VALIDATION_STAGE`
+  setting is ignored. This permits local export availability, not an agent-run
+  paid flow or a private renderer deployment. Tests/CI/harnesses explicitly
+  force fake mode, paid-off and every live/approval flag false before imports,
+  with no credentials or external provider access.
 - Owner decision (2026-10-04): paid-flow testing is performed manually by the
   owner only. Agents may run automated fake-mode checks, never trigger a live
   paid flow. A private renderer update retains its separate cloud/build approval
   and cannot be bundled with permission for an agent-run paid test.
 - Never read an ignored `.env.local` or secret file to answer a configuration
-  question. Inspect the owning app's `.env.example`; tell the owner which matching blank entries
-  to populate manually.
+  question. Inspect the owning app's `.env.example`; tell the owner which
+  matching blank entries to populate manually.
 - Never create or mutate provider/cloud resources, use credentials, make paid
   calls, deploy, purchase, or launch unless the user explicitly authorizes that
   external action and the active ticket's gate is satisfied.
@@ -105,9 +107,9 @@ The approved internal directions are
 `apps/frontend -> packages/composition <- apps/renderer`, and
 `packages/composition -> packages/contracts`. Applications never import each
 other; backend cannot import composition. Shared composition has no Node,
-environment, provider/cloud SDK or application dependency. `packages/contracts` cannot import React, Next.js, Express,
-Node-only APIs, provider/cloud SDKs, environment readers, fixtures, or
-application code.
+environment, provider/cloud SDK or application dependency. `packages/contracts`
+cannot import React, Next.js, Express, Node-only APIs, provider/cloud SDKs,
+environment readers, fixtures, or application code.
 
 - Create a directory only when its first real module arrives. Do not scaffold
   later feature trees with placeholders.
@@ -136,10 +138,11 @@ application code.
 - The renderer's explicit server composition owns listening on injected PORT,
   private caller verification and storage credentials; it has no Gemini key.
   Build its fixed bundle/binaries into the image. No runtime tool download or
-  arbitrary composition, command, path or remote asset input is permitted.
-  Cloud compute/spend gates are independent of fake/live AI. Renderer tests use
+  arbitrary composition, command, path or remote asset input is permitted. Cloud
+  compute/spend gates are independent of fake/live AI. Renderer tests use
   injected ports without ADC or network. Private test infrastructure has its own
-  approval checkpoint at the first cloud-dependent test, not after release audit.
+  approval checkpoint at the first cloud-dependent test, not after release
+  audit.
 
 ## Explain fake-mode and live capabilities
 
@@ -149,9 +152,9 @@ application code.
   enabled live flags, and the applicable approvals. Identify fixture/mock
   results separately from real processing; fake results do not prove live AI
   quality or readiness.
-- Distinguish API-free processing from AI-free processing. A real local AI
-  model may need approved weights and runtime tooling without needing provider
-  API keys. State whether those assets and the implementation are available,
+- Distinguish API-free processing from AI-free processing. A real local AI model
+  may need approved weights and runtime tooling without needing provider API
+  keys. State whether those assets and the implementation are available,
   verified, or still missing.
 - Before asking for media, credentials, or another prerequisite, explain which
   test or capability it unlocks and what else remains necessary. Separate
@@ -160,8 +163,9 @@ application code.
 
 ## Deterministic verification
 
-- Tests set `NODE_ENV=test`, `FAKE_MODE=true`, `PROVIDER_MODE=fake`, `PAID_DEMO_ENABLED=false`,
-  and every live flag false before application modules load.
+- Tests set `NODE_ENV=test`, `FAKE_MODE=true`, `PROVIDER_MODE=fake`,
+  `PAID_DEMO_ENABLED=false`, and every live flag false before application
+  modules load.
 - The shared Vitest setup installs those values and network interception at
   module top level. A `beforeAll` hook is too late because Vitest imports test
   modules before suite hooks run.
@@ -204,58 +208,60 @@ corepack pnpm build
 ## Canonical local app startup
 
 - An unqualified `run`, `run all`, `restart`, or `restart all` targets both the
-  frontend and backend. A named target operates only on that service. `kill`
-  or `kill all` stops this repository's app stack, not other repositories or
-  every Node process. Contracts are a build prerequisite, not another server;
-  the media feasibility harness is opt-in and is not part of the default stack.
+  frontend and backend. A named target operates only on that service. `kill` or
+  `kill all` stops this repository's app stack, not other repositories or every
+  Node process. Contracts are a build prerequisite, not another server; the
+  retained media feasibility proof runs offline tests and opens no service; its
+  former port 4185 testing UI is retired and is not part of the default stack.
 - Follow the [backend guide](apps/backend/README.md#run-locally) and
   [frontend guide](apps/frontend/README.md#run-locally). Use the pinned package
   manager from the repository root. Build contracts before first startup and
   after contract changes with `corepack pnpm build:contracts`. Normal local
-  launches use `corepack pnpm dev:backend` and `corepack pnpm dev:frontend`;
-  use the guides' build/start commands only for a requested production-like run.
+  launches use `corepack pnpm dev:backend` and `corepack pnpm dev:frontend`; use
+  the guides' build/start commands only for a requested production-like run.
 - For a full-stack start, launch the backend first and wait for content-free
-  `GET http://127.0.0.1:4000/v1/health` to return `200`, then start the frontend.
-  The frontend binds to `127.0.0.1:3000`; open `http://localhost:3000/start`
-  to match the origin policy. Check `/start` and `/api/sample/config` return
-  `200` before reporting the workflow reachable. These GET checks do not prove
-  provider readiness or authorize a processing request.
+  `GET http://127.0.0.1:4000/v1/health` to return `200`, then start the
+  frontend. The frontend binds to `127.0.0.1:3000`; open
+  `http://localhost:3000/start` to match the origin policy. Check `/start` and
+  `/api/sample/config` return `200` before reporting the workflow reachable.
+  These GET checks do not prove provider readiness or authorize a processing
+  request.
 - The backend defaults to `127.0.0.1:4000`, and the current frontend fixture
   bridge pins that upstream port. Do not silently choose different ports,
-  rewrite origins, or change the owner's environment to resolve a conflict.
-  If an intentional backend port override makes the bridge incompatible,
-  report the mismatch rather than claim the full stack works.
+  rewrite origins, or change the owner's environment to resolve a conflict. If
+  an intentional backend port override makes the bridge incompatible, report the
+  mismatch rather than claim the full stack works.
 - Launch long-lived local app processes outside the restricted sandbox through
   the tool's explicit escalation/approval mechanism. Do not change sandbox
   policy or bypass a denied operation. Deterministic tests and CI retain their
   isolated fake/paid-disabled setup; a local run is not approval for providers,
   paid calls, cloud changes, or deployment.
 - Use normal owner-managed configuration. On explicit non-test local startup,
-  `apps/backend/src/server.ts` loads ignored `apps/backend/.env.local` if present;
-  Next.js owns
-  `apps/frontend/.env.local`. There is no root environment file;
-  existing process-environment values take precedence. Let the entry point
-  load it, without reading, printing, copying, or overwriting its contents.
-  Do not force fake/test flags for a requested normal run, create a second
-  frontend mode setting, or bypass feature gates. Missing setup is described
-  using the blank entries in the owning app's `.env.example`; never inspect
-  secrets to diagnose it. The backend environment contains credentials, operating
-  switches, private connection/sample references and four
-  approval flags. No runtime JSON is loaded or required. Deployment injects the
-  same environment keys without relying on a local file.
-  Numerical limits, timeouts, model selection and retry policy are fixed in code,
-  not environment overrides. Secret-free setup/migration is allowed when the
-  owner explicitly authorizes it; do not print values.
+  `apps/backend/src/server.ts` loads ignored `apps/backend/.env.local` if
+  present; Next.js owns `apps/frontend/.env.local`. There is no root environment
+  file; existing process-environment values take precedence. Let the entry point
+  load it, without reading, printing, copying, or overwriting its contents. Do
+  not force fake/test flags for a requested normal run, create a second frontend
+  mode setting, or bypass feature gates. Missing setup is described using the
+  blank entries in the owning app's `.env.example`; never inspect secrets to
+  diagnose it. The backend environment contains credentials, operating switches,
+  private connection/sample references and four approval flags. No runtime JSON
+  is loaded or required. Deployment injects the same environment keys without
+  relying on a local file. Numerical limits, timeouts, model selection and retry
+  policy are fixed in code, not environment overrides. Secret-free
+  setup/migration is allowed when the owner explicitly authorizes it; do not
+  print values.
 - In normal local real mode, incomplete optional paid-feature prerequisites
   leave paid routes unavailable with zero dispatches while the app can start.
-  Preserve the operating switches and paid-master precedence for retained playback;
-  never enable paid routes, substitute fixture results or record approvals to
-  make a restart pass. Structural errors, conflicting modes and public/test paid
-  composition still reject. Fixed startup requirement codes contain no values.
+  Preserve the operating switches and paid-master precedence for retained
+  playback; never enable paid routes, substitute fixture results or record
+  approvals to make a restart pass. Structural errors, conflicting modes and
+  public/test paid composition still reject. Fixed startup requirement codes
+  contain no values.
 - Before launching, inspect the intended ports and establish process ownership.
   Reuse a healthy matching instance for `run`. Stop a verified stale matching
-  instance first, including its watcher and children. Never kill an unrelated
-  or unidentified port owner; report the conflict without a port fallback.
+  instance first, including its watcher and children. Never kill an unrelated or
+  unidentified port owner; report the conflict without a port fallback.
 - For `kill` and `restart`, capture the owned launcher/watcher tree and orphan
   identities before shutdown. Stop the supervisor so it cannot respawn workers,
   use graceful shutdown followed by bounded tree-aware forced cleanup when
