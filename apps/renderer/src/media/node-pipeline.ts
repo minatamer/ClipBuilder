@@ -8,7 +8,12 @@ import {
   type SelectedMediaRange,
   selectedMediaRangeSchema,
 } from "@clipbuilder/contracts";
-import { inspectSource, validateOutput, probeMedia } from "./inspection.js";
+import {
+  inspectSource,
+  validateOutput,
+  probeMedia,
+  SOURCE_INPUT_OPTIONS,
+} from "./inspection.js";
 import { runOwnedProcess } from "./process-runner.js";
 import { MediaFailure } from "./media.failure.js";
 export interface MediaPipeline {
@@ -53,8 +58,7 @@ export class NodeMediaPipeline implements MediaPipeline {
         "-nostdin",
         "-v",
         "error",
-        "-protocol_whitelist",
-        "file,pipe",
+        ...SOURCE_INPUT_OPTIONS,
         "-copyts",
         "-i",
         path,
@@ -119,8 +123,7 @@ export class NodeMediaPipeline implements MediaPipeline {
         "-nostdin",
         "-v",
         "error",
-        "-protocol_whitelist",
-        "file,pipe",
+        ...SOURCE_INPUT_OPTIONS,
         "-ss",
         String(selected.startMs / 1000),
         "-i",
@@ -186,8 +189,7 @@ export class NodeMediaPipeline implements MediaPipeline {
         "-nostdin",
         "-v",
         "error",
-        "-protocol_whitelist",
-        "file,pipe",
+        ...SOURCE_INPUT_OPTIONS,
         "-ss",
         String(manifest.range.startMs / 1000),
         "-i",

@@ -15,6 +15,27 @@ import {
   DECODED_AUDIO_MAX_BYTES,
 } from "./decoded-audio.js";
 import { runOwnedProcess } from "./process-runner.js";
+const sourceDecoders = {
+  h264: ["h264", "libopenh264"],
+  vp8: ["vp8", "libvpx"],
+  vp9: ["vp9", "libvpx-vp9"],
+  aac: ["aac", "libfdk_aac"],
+  opus: ["opus", "libopus"],
+  vorbis: ["vorbis", "libvorbis"],
+} as const;
+// Enforce the existing product codec/container boundary before probing decoders.
+export const SOURCE_INPUT_OPTIONS = [
+  "-protocol_whitelist",
+  "file,pipe",
+  "-format_whitelist",
+  "mov,mp4",
+  "-codec_whitelist",
+  [...videoCodecSchema.options, ...audioCodecSchema.options]
+    .flatMap((codec) => sourceDecoders[codec])
+    .join(","),
+  "-max_streams",
+  "2",
+] as const;
 const streamSchema = z.object({
   codec_type: z.string(),
   codec_name: z.string(),
@@ -58,10 +79,7 @@ export async function probeMedia(
           [
             "-v",
             "error",
-            "-protocol_whitelist",
-            "file,pipe",
-            "-format_whitelist",
-            "mov,mp4",
+            ...SOURCE_INPUT_OPTIONS,
             "-show_streams",
             "-show_format",
             "-of",
@@ -168,8 +186,7 @@ export async function validateOutput(
           "error",
           "-xerror",
           "-y",
-          "-protocol_whitelist",
-          "file,pipe",
+          ...SOURCE_INPUT_OPTIONS,
           "-ss",
           (time / 1000).toFixed(6),
           "-i",
@@ -210,8 +227,7 @@ export async function validateOutput(
         "error",
         "-xerror",
         "-y",
-        "-protocol_whitelist",
-        "file,pipe",
+        ...SOURCE_INPUT_OPTIONS,
         "-i",
         path,
         "-map",
