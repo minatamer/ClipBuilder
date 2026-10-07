@@ -72,15 +72,16 @@ describe("private hosted frontend caller", () => {
     const customDomain = {
       ...values,
       PUBLIC_PAID_PROCESSING_APPROVED: "true",
-      FRONTEND_ORIGIN: "https://tryclipbuilding.com",
-      TURNSTILE_EXPECTED_HOSTNAME: "tryclipbuilding.com",
+      FRONTEND_ORIGIN: "https://tryclipbuilder.com",
+      TURNSTILE_EXPECTED_HOSTNAME: "tryclipbuilder.com",
     };
     expect(loadConfig(customDomain).features.liveRender).toBe(true);
     for (const origin of [
-      "https://www.tryclipbuilding.com",
-      "https://tryclipbuilding.com.evil.example",
-      "https://tryclipbuilding.com:8443",
-      "http://tryclipbuilding.com",
+      "https://tryclipbuilding.com",
+      "https://www.tryclipbuilder.com",
+      "https://tryclipbuilder.com.evil.example",
+      "https://tryclipbuilder.com:8443",
+      "http://tryclipbuilder.com",
     ])
       expect(() =>
         loadConfig({

@@ -39,12 +39,12 @@ describe("private control transport", () => {
       { "X-Forwarded-Host": headers.Host, "X-Forwarded-Proto": "https" },
     ])
       expect(api.controlRequestOrigin(request(invalid))).toBeNull();
-    vi.stubEnv("FRONTEND_ORIGIN", "https://tryclipbuilding.com");
+    vi.stubEnv("FRONTEND_ORIGIN", "https://tryclipbuilder.com");
     expect(
       api.controlRequestOrigin(
-        request({ ...headers, Host: "tryclipbuilding.com" }),
+        request({ ...headers, Host: "tryclipbuilder.com" }),
       ),
-    ).toBe("https://tryclipbuilding.com");
+    ).toBe("https://tryclipbuilder.com");
     vi.stubEnv("APP_ENV", "local");
     expect(
       api.controlRequestOrigin(new Request("http://localhost:3000/start")),
@@ -55,7 +55,7 @@ describe("private control transport", () => {
     const api = await import("./control-api");
     const values = {
       APP_ENV: "production",
-      FRONTEND_ORIGIN: "https://tryclipbuilding.com",
+      FRONTEND_ORIGIN: "https://tryclipbuilder.com",
       PRIVATE_BACKEND_ORIGIN: backend,
       BACKEND_AUDIENCE: backend,
     };
@@ -63,11 +63,12 @@ describe("private control transport", () => {
       values.FRONTEND_ORIGIN,
     );
     for (const origin of [
-      "https://www.tryclipbuilding.com",
-      "https://tryclipbuilding.com.evil.example",
-      "https://tryclipbuilding.com:8443",
-      "http://tryclipbuilding.com",
-      "https://tryclipbuilding.com/path",
+      "https://tryclipbuilding.com",
+      "https://www.tryclipbuilder.com",
+      "https://tryclipbuilder.com.evil.example",
+      "https://tryclipbuilder.com:8443",
+      "http://tryclipbuilder.com",
+      "https://tryclipbuilder.com/path",
     ]) {
       expect(() =>
         api.readControlApiConfiguration({ ...values, FRONTEND_ORIGIN: origin }),

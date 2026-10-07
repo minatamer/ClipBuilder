@@ -74,9 +74,33 @@ testing/replay URLs absent; production CSP/no-store headers; exact image/Ready/
 traffic state, bounded capacity and private IAM. These GET/error checks create
 no media session and make no Gemini call. Keep the owner local stack running.
 
-## Attach tryclipbuilding.com
+## Attach tryclipbuilder.com
 
-Use `https://tryclipbuilding.com` as the single application origin. `www` can
+The owner confirmed this exact purchased hostname on 2026-10-07, correcting the
+earlier `tryclipbuilding.com` spelling. After the owner's Search Console TXT
+verification, Google CLI metadata confirms ownership. The owner-authorized
+mapping to the existing public frontend is now created; its TLS/Ready state is
+pending DNS. No service configuration, secret or paid flag was changed.
+Current deployed images still use the earlier allowlist; rebuild and verify
+frontend/backend images before switching their configured application origin.
+Local environment files and the renderer's local upload origin remain intact.
+
+Google returned these eight apex records. In Cloudflare DNS → Records, add each
+with **Name `@`, TTL Auto, Proxy status DNS only (gray cloud)**. Preserve the
+Google verification TXT record. No apex CNAME is needed for this mapping.
+
+| Type | Content |
+| --- | --- |
+| A | `216.239.32.21` |
+| A | `216.239.34.21` |
+| A | `216.239.36.21` |
+| A | `216.239.38.21` |
+| AAAA | `2001:4860:4802:32::15` |
+| AAAA | `2001:4860:4802:34::15` |
+| AAAA | `2001:4860:4802:36::15` |
+| AAAA | `2001:4860:4802:38::15` |
+
+Use `https://tryclipbuilder.com` as the single application origin. `www` can
 redirect to it; do not operate the paid app on both hosts. The application allows
 only this exact custom production origin or the configured managed Cloud Run
 origin. Private backend origin and token audience remain Cloud Run HTTPS.
@@ -89,7 +113,7 @@ portfolio demo, the direct mapping path avoids adding a load balancer; choose it
 with that documented tradeoff. This guide does not create DNS or a mapping.
 
 1. In Google Cloud Console → Cloud Run → frontend → Custom domains / Add custom
-   URL, select direct Cloud Run domain mapping for `tryclipbuilding.com`.
+   URL, select direct Cloud Run domain mapping for `tryclipbuilder.com`.
 2. Verify ownership of the base domain through Google Search Console when
    prompted. Add Google's exact verification TXT record in Cloudflare → domain
    → DNS → Records. Do not invent or copy another site's verification value.
@@ -119,15 +143,15 @@ anonymous paid launch. No extra paid Cloudflare plan is required by this guide.
 Do these with hosted paid processing disabled, then start a fresh browser session:
 
 1. Cloudflare dashboard → Turnstile → widget → Settings → Hostnames: add
-   `tryclipbuilding.com`, without protocol/path/port. Keep `localhost` if retaining
+   `tryclipbuilder.com`, without protocol/path/port. Keep `localhost` if retaining
    that same widget for development. Add the exact managed frontend hostname only
    if a managed-URL test is needed. Add `www` only if it will actually run the
    widget rather than redirect. Save. Never select unrestricted hostnames.
 2. Keep the four backend Secret Manager references paired with that widget/key.
    Backend `TURNSTILE_EXPECTED_HOSTNAME` must be the one active frontend hostname,
-   first managed host for that test, then `tryclipbuilding.com` at custom cutover.
+   first managed host for that test, then `tryclipbuilder.com` at custom cutover.
    Dashboard permission alone does not change the backend's hostname check.
-3. Frontend: `APP_ENV=production`, `FRONTEND_ORIGIN=https://tryclipbuilding.com`.
+3. Frontend: `APP_ENV=production`, `FRONTEND_ORIGIN=https://tryclipbuilder.com`.
    Keep `PRIVATE_BACKEND_ORIGIN` and `BACKEND_AUDIENCE` at the actual private
    backend Cloud Run URL.
 4. Backend: `APP_ENV=production`, exact same `FRONTEND_ORIGIN`, own Cloud Run

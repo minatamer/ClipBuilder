@@ -2,9 +2,13 @@
 
 ## Owner Cloud Run deployment instruction — 2026-10-07
 
+Domain attachment correction: the owner confirms the purchased and sole public
+hostname is `tryclipbuilder.com`. This supersedes the earlier `tryclipbuilding.com`
+spelling. Keep exact origin checks; the old spelling is not an alternate origin.
+
 The owner reports the complete local paid flow working, authorizes file-level
 CL-015-prefixed staging/commits and frontend/backend Cloud Run deployment, and
-requests an owner guide for the Cloudflare-owned `tryclipbuilding.com` domain,
+requests an owner guide for the Cloudflare-owned `tryclipbuilder.com` domain,
 Turnstile and post-deployment tasks. This supersedes the preparation-only hosting
 exclusion below. Start hosted verification paid-off; preserve private API/renderer,
 canonical local setup, all content-safe backend diagnostics and the existing

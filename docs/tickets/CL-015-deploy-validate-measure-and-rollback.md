@@ -1,5 +1,27 @@
 # CL-015 — Bounded renderer setup and later public deployment
 
+## Owner domain attachment — 2026-10-07
+
+The owner requests domain attachment and explicitly confirms `tryclipbuilder.com`
+as the main website hostname. This corrects the earlier `tryclipbuilding.com`
+spelling. Update the single contracts constant, frontend/backend origin tests,
+source of truth and current owner guide. Preserve exact host/protocol/port checks
+and reject the old spelling; canonical localhost behavior stays unchanged.
+
+Following owner-completed Search Console verification, Google CLI metadata
+confirms ownership. The requested mapping to the existing public frontend is
+created and returns eight apex A/AAAA records, listed in the deployment guide.
+DNS/TLS, immutable corrected app images and the application-origin cutover remain
+pending. No service configuration, secret, paid flag or renderer setting changed.
+The seven-file source correction passes contracts build, 16 focused fake/no-key
+origin regressions, root format/lint/typecheck and a settled read-only diff review
+with no actionable local finding. The full unit suite and Linux image gates from
+the previous checkpoint are not claimed rerun for this correction. Keep hosting
+fake/paid-off; synthetic checks need no API keys, while real processing still
+needs provider keys, live flags, approvals and owner acceptance. No agent-paid
+flow or local AI model/weights path is introduced. Preserve ignored local env,
+private identities, secret references and renderer upload configuration.
+
 ## Verified paid-off hosted checkpoint — 2026-10-07
 
 - [x] Commit the owner-approved whole-file groups with `CL-015:` subjects.

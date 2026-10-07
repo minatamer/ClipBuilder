@@ -8,6 +8,28 @@ Stage and verify each exact whole-file group, commit in order, verify each commi
 
 ## File-level groups
 
+### Domain attachment correction follow-up
+
+Under the continuing owner-authorized deployment/commit instruction, prepare
+`CL-015: correct the confirmed public domain and preserve exact origin checks`:
+
+- `packages/contracts/src/public-site.ts`
+- `apps/backend/src/http/frontend-caller.test.ts`
+- `apps/frontend/src/server/control-api.test.ts`
+- `docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`
+- `docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md`
+- `docs/tickets/CL-015-deploy-validate-measure-and-rollback.md`
+- `docs/tickets/CL-015-RELEASE-PREPARATION-COMMIT_PLAN.md`
+
+Verify the corrected exact host, rejection of the earlier spelling and other
+hosts/protocols/ports, and unchanged localhost behavior before staging. This
+source correction does not claim DNS/TLS or corrected image rollout complete.
+
+The group passes contracts build, 16 focused fake/no-key origin regressions and
+root format/lint/typecheck. A settled read-only review finds no actionable local
+issue. The exact seven-file inventory is committed under the subject above;
+Google's verified mapping and its pending DNS/TLS are recorded in the guide.
+
 ### 1. CL-015: prepare hosted identity transport and retire local analysis replay
 
 - `apps/backend/.env.example`
