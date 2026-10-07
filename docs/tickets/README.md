@@ -1,5 +1,17 @@
 # ClipBuilder canonical ticket index
 
+**CL-015 paid-off Cloud Run checkpoint — 2026-10-07:** The owner-approved
+whole-file commits and frontend/private-backend deployment are complete. Final
+Linux artifacts, immutable scans, private renderer correction, exact identities,
+four secret version references, capacity and unpaid hosted/local probes pass.
+Format/lint/typecheck and 1,244 fake/no-key tests pass. The native source/encoder
+exposure is mitigated; unfixed package entries and owner-only release gates remain
+explicit. Public paid processing is disabled. Domain/TLS, Turnstile/upload CORS,
+paused traffic review and owner hosted acceptance are next; no agent-paid flow.
+See the [domain/cutover guide](../operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md)
+and [whole-file plan](CL-015-RELEASE-PREPARATION-COMMIT_PLAN.md).
+This supersedes the earlier hosting exclusion and undeployed/native-blocker state.
+
 **CL-015 final local paid-test preparation — 2026-10-07:** Owner-authorized
 local walkthrough preparation is verified, including the existing private
 renderer rollout and normal paid-mode local restart, with frontend/backend

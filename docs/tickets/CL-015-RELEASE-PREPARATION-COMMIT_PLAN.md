@@ -106,3 +106,79 @@ Implementation commit identities are recorded before the final documentation com
 
 - `0f63ad27f59dafbe8ef48b842de1528a87418da7` — CL-015: prepare hosted identity transport and retire local analysis replay (36 files; exact inventory verified).
 - `27f47d70e8556f39b14fecc544debd6d3f1c31a1` — CL-015: package verified Linux images and landing delivery assets (32 files; exact inventory verified).
+- `669363f6d231f435aff73380d2f8c3f168837888` — CL-015: record release preparation and owner paid walkthrough (15 files; exact inventory verified).
+
+## Deployment follow-up whole-file groups
+
+These necessary hosted/domain/native corrections follow the owner deployment instruction. Format, lint, typecheck and 1,244 fake/off tests in 109 files pass. Linux build/runtime/scan evidence passes before rollout; the isolated Windows build cannot follow dependency junctions outside Turbopack root and is not claimed as passing.
+
+### 4. CL-015: allow the owner production domain with exact origin checks
+
+- `apps/backend/src/config/env.schema.ts`
+- `apps/backend/src/http/frontend-caller.test.ts`
+- `apps/frontend/.env.example`
+- `apps/frontend/src/server/control-api.test.ts`
+- `apps/frontend/src/server/control-api.ts`
+- `packages/contracts/src/index.ts`
+- `packages/contracts/src/public-site.ts`
+
+### 5. CL-015: isolate uploaded media from bundled native codec vulnerabilities
+
+- `apps/renderer/Dockerfile`
+- `apps/renderer/scripts/stage-tools.ts`
+- `apps/renderer/scripts/verify-linux-media.mjs`
+- `apps/renderer/src/composition/render-worker.ts`
+- `apps/renderer/src/composition/source-boundary.test.ts`
+- `apps/renderer/src/composition/source-boundary.ts`
+- `apps/renderer/src/config.test.ts`
+- `apps/renderer/src/config.ts`
+- `scripts/verify-image-runtime.mjs`
+
+### 6. CL-015: preserve exact public origin checks behind Cloud Run
+
+The first deployed configuration GET returned a generic 400 before backend dispatch. Next standalone constructs `request.url` using its container bind address. Resolve hosted origin from the exact configured public Host and HTTPS proxy marker; ignore forwarded-host substitutions and retain declared Origin/CSRF checks. Local request origins stay fixed. The Linux offline proof now exercises this production proxy case and rejects a foreign Host.
+
+- `apps/frontend/src/app/api/analysis/[action]/route.ts`
+- `apps/frontend/src/app/api/diagnostics/route.ts`
+- `apps/frontend/src/app/api/sample/[...path]/route.test.ts`
+- `apps/frontend/src/app/api/sample/[...path]/route.ts`
+- `apps/frontend/src/app/api/session/exit/route.ts`
+- `apps/frontend/src/server/control-api.test.ts`
+- `apps/frontend/src/server/control-api.ts`
+- `scripts/verify-image-runtime.mjs`
+
+### 7. CL-015: enforce supported codecs before native media probing
+
+Keep all existing supported video/audio codecs and the MP4-only, two-stream product boundary. Apply their single contract-owned allowlist to native probing and decode inputs before an unsupported decoder can open. Repeat the Linux synthetic audio/export/cancel proof and image scan; do not interpret unfixed scanner entries as patched binaries.
+
+- `apps/renderer/src/media/inspection.ts`
+- `apps/renderer/src/media/node-pipeline.ts`
+- `apps/renderer/src/media/source-inspection.test.ts`
+
+### 8. CL-015: send exact proxy host headers in the Linux runtime proof
+
+The first corrected frontend Linux build compiled but its offline acceptance failed because Node fetch rewrites the custom Host to the loopback URL authority. A short synthetic loopback check reproduced this. Use native HTTP for the two configuration checks so the valid/foreign Host cases reach Next with the intended headers. Keep the failed receipt; no failed image is deployed.
+
+- `scripts/verify-image-runtime.mjs`
+
+### 9. CL-015: document hosted deployment domain setup and release evidence
+
+- `apps/backend/README.md`
+- `apps/frontend/README.md`
+- `apps/renderer/README.md`
+- `docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`
+- `docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07_EVIDENCE.json`
+- `docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07_INPUTS.json`
+- `docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md`
+- `docs/operations/RELEASE_CANDIDATE_AUDIT.md`
+- `docs/tickets/CL-012-harden-security-privacy-abuse-and-spend.md`
+- `docs/tickets/CL-015-RELEASE-PREPARATION-COMMIT_PLAN.md`
+- `docs/tickets/CL-015-deploy-validate-measure-and-rollback.md`
+- `docs/tickets/README.md`
+
+Owning service guides, security/release ledger and structured source/image receipts are updated with actual results and listed exactly before this documentation commit. No private identifier, secret value or real content is staged.
+- `3dd7b32f0c385435fd63757f5b40d139853dd659` — CL-015: allow the owner production domain with exact origin checks (7 files; exact inventory verified).
+- `9f222c54ef462a5eb4fea5d278e5d3e7158659ec` — CL-015: isolate uploaded media from bundled native codec vulnerabilities (9 files; exact inventory verified).
+- `a36db6a66283008200f2fb72739aa004338c7fb0` — CL-015: preserve exact public origin checks behind Cloud Run (8 files; exact inventory verified).
+- `8a4b6f71e9776e2e91a710646db1db97bde936c8` — CL-015: enforce supported codecs before native media probing (3 files; exact inventory verified).
+- `08592e3325b9cc94c1e7f7e62ee6d75d1ad987ba` — CL-015: send exact proxy host headers in the Linux runtime proof (1 file; exact inventory verified).

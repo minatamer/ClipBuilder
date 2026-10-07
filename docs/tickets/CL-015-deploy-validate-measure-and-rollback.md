@@ -1,6 +1,65 @@
 # CL-015 — Bounded renderer setup and later public deployment
 
+## Verified paid-off hosted checkpoint — 2026-10-07
+
+- [x] Commit the owner-approved whole-file groups with `CL-015:` subjects.
+- [x] Build/verify/scan exact Linux frontend/backend and final private renderer.
+- [x] Deploy public frontend/private backend with narrow runtime identities,
+  four exact enabled secret references, actual origins, capacity and paid-off gates.
+- [x] Repeat the private image-only renderer rollout and non-processing auth/error
+  probes, preserving its operational settings, local upload origin and rollback.
+- [x] Fix the reproduced container-origin rejection and offline Host probe,
+  revalidate configuration/landing/workspace/assets/headers/crawl/retired routes.
+- [x] Verify localhost readiness/live capabilities with ignored env files untouched.
+- [x] Record source/image/cloud receipts and remove only owned temporary contexts.
+- [ ] Owner domain/TLS/redirect and Turnstile pairing/hostname cutover.
+- [ ] Renderer upload-origin/bucket CORS cutover preserving the local decision.
+- [ ] Previously paused public traffic/direct-origin review.
+- [ ] Owner hosted paid quality/key-project/cost/deletion/device/rights acceptance
+  and actual kill-switch/rollback exercise before public paid enablement.
+
+Evidence: [deployment guide](../operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md),
+[402-file source manifest](../operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07_INPUTS.json)
+and [structured receipts](../operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07_EVIDENCE.json).
+Format/lint/typecheck and 1,244 fake/no-key tests pass; actual Linux builds compile
+all workspaces. The isolated Windows root build is blocked by external junctions
+and is not claimed passing. Native exposure mitigation and zero fixable entries
+do not mean every library is patched. No agent paid/media processing runs; hosted
+paid capabilities stay off while normal owner-local live capabilities remain.
+No local AI model/weights implementation is introduced. Dated history below keeps
+its original scope; the full ticket/public-paid acceptance is not marked complete.
+
 ## Owner deployment and commit authorization — 2026-10-07
+
+Native decoder follow-up: apply the contracts' supported codecs and their software
+decoder aliases, MP4-only input and two-stream bound before native probing and
+all source/output decode operations. This closes the unsupported-decoder exposure
+without reducing the accepted product profile. Keep full unfixed scan reports,
+repeat Linux export/audio/cancel proof, and update the renderer image only.
+
+Hosted verification follow-up: the first paid-off deployment rejected its safe
+configuration GET before dispatch because Next standalone uses its container
+bind address in `request.url`. The shared frontend transport resolves hosted
+origin from the exact configured Host and HTTPS proxy marker, ignoring forwarded
+host substitutions. All four API bridges retain declared Origin/CSRF/body and
+capacity checks; local URL origins stay fixed. Add focused synthetic regressions
+and exercise production proxy headers in the Linux offline proof, then rebuild,
+scan and repeat the unpaid deployed probes. No paid processing is authorized.
+
+Execution follow-up: prepare the owner's exact custom production hostname while
+keeping private target origins on Cloud Run. Close the native input boundary by
+pinning Debian's security-maintained FFmpeg/FFprobe CLI for all original-media
+inspection, audio, proxy and selection work. Remotion retains its bundled ABI
+libraries and only receives the freshly encoded selected copy; its AAC codec maps
+to `libfdk_aac`, not the affected native AAC encoder. Assert the selected-copy job
+boundary, reject production overrides to old source tools and verify hashes,
+package provenance, Linux synthetic export/audio/cancel/scratch and exact scans.
+Do not waive the gate until this evidence passes. This is an existing-renderer
+image correction required for the authorized public deployment; preserve its
+IAM/origin/resource/expiry settings and the accepted output profile. No public
+paid flow, domain/DNS mutation or agent processing is included. The public
+guide records the still-required exact upload-origin cutover rather than silently
+breaking localhost. See [deployment guide](../operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md).
 
 The owner reports the complete local paid upload-to-export flow working and
 authorizes a file-level plan, staging and commits with meaningful `CL-015:`
@@ -71,10 +130,11 @@ high/critical package entries. Only the existing private renderer is deployed;
 normal local paid availability is verified after the owner updates their own
 environment and requests restart. No paid flow is run by the agent.
 
-- [ ] **Before public launch:** close the high-priority copied FFmpeg `n7.1`
-  patch-provenance/reachable AAC encoder finding with a compatible pinned
-  correction or exact nonexposure evidence, then repeat native/image verification.
-  The package scan and trusted local walkthrough do not close this native gate.
+- [x] **Native exposure follow-up:** maintained input tools, supported decoder/
+  format bounds and normalized compositor inputs mitigate the identified copied
+  FFmpeg/source/encoder exposure. Exact Linux audio/export/cancel/scan and private
+  rollout pass; see the latest deployment evidence. Vendor binaries are not
+  asserted fully patched; complete unfixed scan receipts remain explicit.
 
 User-only or post-public-deployment checks remain distinct: paid quality and
 cost, real Turnstile/device behavior, current Gemini key/project correspondence,

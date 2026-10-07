@@ -14,6 +14,16 @@ or read ignored local secrets. The owner's local walkthrough does not prove
 deployed challenge, cleanup, cost or rollback. Fake/no-key checks are synthetic;
 real operation needs provider/cloud configuration and applicable approvals.
 
+The authorized paid-off hosting checkpoint and owner-managed domain/Turnstile
+cutover are recorded in the [deployment guide](operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md).
+Keep the public hostname exact. Next standalone resolves API origin from the
+configured public Host and HTTPS proxy marker, retaining browser Origin/CSRF
+checks. Maintained system tools enforce the existing source codec/container
+boundary before decoder opening; the compositor receives only the normalized
+selected copy. This is an exposure mitigation, not a claim that every vendor
+library is patched. Renderer upload origin remains local until the explicit
+hosted-origin/CORS cutover; do not claim simultaneous local/hosted paid upload.
+
 
 ## Owner final local paid-test preparation — 2026-10-07
 

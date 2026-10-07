@@ -1,5 +1,15 @@
 # ClipBuilder backend
 
+CL-015 hosted checkpoint (2026-10-07): the backend is deployed privately with
+the four exact Secret Manager references, narrow frontend invocation and bounded
+capacity. Paid processing and every approval remain disabled. The public
+configuration GET is the unpaid frontend-to-backend identity acceptance check.
+Domain/challenge/renderer upload-origin cutover and owner paid acceptance remain
+separate. Local env/startup is preserved. See the
+[deployment and cutover guide](../../docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md).
+Fake/no-key tests are synthetic; real processing needs provider/cloud setup,
+live flags, applicable approvals and the owner's manual walkthrough.
+
 CL-015 final local-test preparation (2026-10-07) preserves normal owner-managed
 `.env.local` startup and fixed local origins. Hosted preparation adds a private
 frontend caller verifier and an eight-request process bound that remains held

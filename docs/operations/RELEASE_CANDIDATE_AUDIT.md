@@ -1,5 +1,34 @@
 # Local release candidate audit
 
+## Paid-off Cloud Run checkpoint — 2026-10-07
+
+The [deployment record](CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md) and
+[structured evidence](CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07_EVIDENCE.json)
+supersede the earlier undeployed/native-blocker state below. Public frontend and
+private backend are Ready on their exact scanned Linux digests; the final private
+renderer update preserves operational settings and IAM. Four exact enabled secret
+versions are mounted only to the backend. The signed frontend bridge's config GET
+passes with every hosted paid capability false. Landing/workspace/favicon/robots,
+production CSP/no-store, retired UI/transport and private anonymous denial pass.
+Local GETs still show normal live capabilities with env files untouched.
+
+Format, lint, typecheck and 1,244 fake/no-key tests in 109 files pass. All runtime
+applications compile in their actual Linux Docker builds. The isolated Windows
+root build was blocked by Turbopack's external dependency junctions; it is not
+reported as a passing root build. Its six junctions were detached before removing
+only the owned temporary copy. The first hosted origin failure and an offline
+probe Host-normalization failure were reproduced, corrected and revalidated; no
+failed image was deployed. Final relevant source review has no new actionable
+finding within the paid-off checkpoint.
+
+Native exposure is mitigated by maintained input tools, supported decoder/format
+bounds and normalized compositor inputs; all native libraries are not asserted
+patched. Complete scan receipts preserve unfixed entries. Paid enablement still
+requires domain/TLS, Turnstile/upload-origin/CORS, the paused traffic decision,
+actual owner paid quality/cost/deletion/device/rights and rollback acceptance.
+Fake results do not prove these gates. No agent live processing or local AI model
+is used. Older dated audits retain their original evidence scope.
+
 ## Final local paid-test preparation — 2026-10-07
 
 The [CL-015 preparation report](FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md)

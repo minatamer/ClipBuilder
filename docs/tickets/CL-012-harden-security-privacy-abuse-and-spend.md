@@ -2,19 +2,19 @@
 
 ## Native release evidence follow-up — 2026-10-07
 
-CL-015's owner-authorized preparation verifies Linux images and the private
-renderer rollout. Package scans report zero fixable high/critical entries after
-OS/tooling corrections. The independent native receipt identifies compositor
-FFmpeg/FFprobe as `n7.1`; OS/npm scanning does not cover its patch provenance.
-Applicable AAC encoder fixes require further exact-library/reachability evidence
-or a compatible pinned correction. This **high-priority public release blocker
-is open**; the earlier local SEC-04 result does not certify copied FFmpeg
-libraries. The detailed threat, cautious compatibility plan and native
-regression gates are in the
-[preparation report](../operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md#bundled-native-tool-follow-up-public-launch-blocked).
-Normal trusted-source owner-local testing is ready; public frontend/backend
-remain undeployed and paid public composition stays closed. No agent paid flow
-runs. Preserve the prior dated audit/validation evidence below.
+CL-015 closes the identified source/encoder exposure through maintained Debian
+FFmpeg/FFprobe, contract-derived input decoder/container limits, and a normalized
+selected-copy compositor boundary. The final Linux audio/export/cancel/scratch
+proof, immutable scan and image-only private rollout pass. Remotion AAC uses
+`libfdk_aac`; vendor ABI libraries remain `n7.1` and are not claimed fully patched.
+Full unfixed OS/native scan receipts remain available; zero fixable high/critical
+entries is not a zero-vulnerability statement. The original concern is preserved
+in the [preparation report](../operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md#bundled-native-tool-follow-up-public-launch-blocked)
+and its scoped mitigation in the [deployment guide](../operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md).
+Frontend/backend are now deployed with private backend IAM and all paid gates off.
+Domain/challenge/upload-origin, paused public traffic review, owner real quality,
+spend, deletion, rights/devices and rollback acceptance remain separate gates.
+No agent paid flow runs. Preserve prior dated audit/validation evidence below.
 
 ## Approved security remediation — 2026-10-07
 

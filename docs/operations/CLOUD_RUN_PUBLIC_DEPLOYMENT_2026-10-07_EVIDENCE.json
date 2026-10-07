@@ -1,0 +1,350 @@
+{
+  "date": "2026-10-07",
+  "ticket": "CL-015",
+  "checkpoint": "paid-off-hosting",
+  "source": {
+    "baseHead": "08592e3325b9cc94c1e7f7e62ee6d75d1ad987ba",
+    "fileCount": 402,
+    "sha256": "b70163eb4fdcaac32af1aca227597f26e33718491e6671f8700cfd8225bfb352"
+  },
+  "images": [
+    {
+      "target": "backend",
+      "sourceCommit": "9f222c54ef462a5eb4fea5d278e5d3e7158659ec",
+      "digest": "sha256:1ddec9cd863098cdb24ec13b91799fc90f1e4258f481cda1ab03e8e3d8e1745b",
+      "buildContext": {
+        "fileCount": 97,
+        "sha256": "9a17b2650c009eb75b530fe7d10be4aef33875540bc53db539f56ebdb427157f",
+        "runtimeSourcesMatchFinal": true,
+        "verificationOnlyDifferences": ["scripts/verify-image-runtime.mjs"]
+      },
+      "runtimeProof": [
+        {
+          "target": "backend",
+          "runtimeVerified": true,
+          "nonRoot": true,
+          "externalNetwork": false,
+          "aiCalls": 0,
+          "mediaSessions": 0
+        }
+      ],
+      "scan": {
+        "scanner": "Trivy 0.75.0",
+        "scannedAt": "2026-10-07T17:21:05.0247760Z",
+        "totalEntries": 222,
+        "fixableHighCritical": 0,
+        "severityCounts": {
+          "CRITICAL": 1,
+          "HIGH": 48,
+          "MEDIUM": 95,
+          "LOW": 77,
+          "UNKNOWN": 1
+        },
+        "allNativeComponentsPatched": false
+      }
+    },
+    {
+      "target": "renderer",
+      "sourceCommit": "8a4b6f71e9776e2e91a710646db1db97bde936c8",
+      "digest": "sha256:abe968869aa35ceff3555565663aa3ece5ab848d31e38d3ac928f97818daf7f4",
+      "buildContext": {
+        "fileCount": 67,
+        "sha256": "0be523dbe5a85ce01e9c92e2d5e1e70e26bc9b7f0862e0b370b51f0a43f72766",
+        "runtimeSourcesMatchFinal": true,
+        "verificationOnlyDifferences": ["scripts/verify-image-runtime.mjs"]
+      },
+      "runtimeProof": [
+        {
+          "nativeProof": {
+            "synthetic": true,
+            "manifestVersion": 3,
+            "inlinePictures": 2,
+            "generatedProvenancePictures": 1,
+            "spokenWordCues": 3,
+            "instantFocusCuts": 1,
+            "sourceDurationMs": 15000,
+            "audioDurationMs": 15000,
+            "audioBytes": 77558,
+            "audioExtractionMs": 458,
+            "sourceOnsetMs": 1200,
+            "audioOnsetMs": 1180,
+            "audioOnly": true,
+            "outputDurationMs": 10005,
+            "outputBytes": 291425,
+            "linuxSpecialEntryObserved": true,
+            "peakScratchBytes": 7527548,
+            "canceled": true,
+            "ownedProcessesRemaining": 0,
+            "aiCalls": 0
+          },
+          "runtimeTools": {
+            "remotion": "4.0.534",
+            "chromium": "155.0.8059.39",
+            "/compositor/ffmpeg": "461169f4f3286904fbfa18212873073869b03c29ebbe99f415c50fdc7dd41113",
+            "ffmpeg": "ffmpeg version n7.1 Copyright (c) 2000-2024 the FFmpeg developers",
+            "/compositor/ffprobe": "3bad619e6da4abbd8fc13f46b08e869c28f38852a8a4f168579eef23b96eae1d",
+            "ffprobe": "ffprobe version n7.1 Copyright (c) 2007-2024 the FFmpeg developers",
+            "/chromium/chrome-headless-shell": "d8f762c0153b944bc0cd747fa6ae2e0497d29d703049833e2942e15fc646b82b",
+            "sourceFfmpegPackage": "7:5.1.9-0+deb12u1",
+            "remotionAacEncoder": "libfdk_aac",
+            "/usr/bin/ffmpeg": "0dafc1360bb07743f76abeb1e4ae16b0aaa1331e9041a0e8d6a8524111dc0cbb",
+            "sourceffmpeg": "ffmpeg version 5.1.9-0+deb12u1 Copyright (c) 2000-2026 the FFmpeg developers",
+            "/usr/bin/ffprobe": "0e598fe6d247bfe63757f5c839dc145a166b3f876f2875ca88a306a5b8ec5a58",
+            "sourceffprobe": "ffprobe version 5.1.9-0+deb12u1 Copyright (c) 2007-2026 the FFmpeg developers"
+          }
+        },
+        {
+          "target": "renderer",
+          "runtimeVerified": true,
+          "nonRoot": true,
+          "externalNetwork": false,
+          "aiCalls": 0,
+          "mediaSessions": 0
+        }
+      ],
+      "scan": {
+        "scanner": "Trivy 0.75.0",
+        "scannedAt": "2026-10-07T17:42:25.7417300Z",
+        "totalEntries": 968,
+        "fixableHighCritical": 0,
+        "severityCounts": {
+          "CRITICAL": 8,
+          "HIGH": 240,
+          "MEDIUM": 444,
+          "LOW": 229,
+          "UNKNOWN": 47
+        },
+        "allNativeComponentsPatched": false
+      }
+    },
+    {
+      "target": "frontend",
+      "sourceCommit": "08592e3325b9cc94c1e7f7e62ee6d75d1ad987ba",
+      "digest": "sha256:cdc3e07701c73c655820c7333f70ae38154479820875219164c9c7c824d18ef1",
+      "buildContext": {
+        "fileCount": 162,
+        "sha256": "274941c4e9c1d8b2caa11ee6eb8b4fe2e5740211c096c44307335bcfd70dde8c",
+        "runtimeSourcesMatchFinal": true,
+        "verificationOnlyDifferences": []
+      },
+      "runtimeProof": [
+        {
+          "files": 1320,
+          "links": 29,
+          "bytes": 45103962,
+          "sha256": "f678aa06ab45b06d8799ece10b1a2ce750cc68562d0dfb3a9932a0e6093cca60",
+          "appRoutes": 10,
+          "externalPackageLinks": 0,
+          "selfContained": true
+        },
+        {
+          "target": "frontend",
+          "runtimeVerified": true,
+          "nonRoot": true,
+          "externalNetwork": false,
+          "aiCalls": 0,
+          "mediaSessions": 0
+        }
+      ],
+      "scan": {
+        "scanner": "Trivy 0.75.0",
+        "scannedAt": "2026-10-07T17:44:09.6924902Z",
+        "totalEntries": 222,
+        "fixableHighCritical": 0,
+        "severityCounts": {
+          "CRITICAL": 1,
+          "HIGH": 48,
+          "MEDIUM": 95,
+          "LOW": 77,
+          "UNKNOWN": 1
+        },
+        "allNativeComponentsPatched": false
+      }
+    }
+  ],
+  "checks": {
+    "format": "passed",
+    "lint": "passed",
+    "typecheck": "passed",
+    "unit": {
+      "passed": 1244,
+      "files": 109,
+      "synthetic": true,
+      "providerCalls": 0
+    },
+    "productionCompilation": "all five workspaces compiled through actual Linux image builds",
+    "isolatedWindowsRootBuild": "blocked by external dependency junctions; not a passing root build",
+    "finalProofOnlyChange": {
+      "lint": "passed",
+      "focusedPackagingTests": 15,
+      "sourceBehaviorUnchanged": true
+    }
+  },
+  "deploymentState": [
+    {
+      "target": "backend",
+      "ready": true,
+      "latestTraffic100": true,
+      "imageMatches": true,
+      "runtimeIdentityMatches": true,
+      "boundedCapacity": true,
+      "exactOrigins": true,
+      "paidProcessingDisabled": true,
+      "public": false,
+      "privateIam": true,
+      "secretReferenceKeys": [
+        "GEMINI_API_KEY",
+        "PROCESSING_GRANT_KEY",
+        "TURNSTILE_SECRET_KEY",
+        "TURNSTILE_SITE_KEY"
+      ]
+    },
+    {
+      "target": "frontend",
+      "ready": true,
+      "latestTraffic100": true,
+      "imageMatches": true,
+      "runtimeIdentityMatches": true,
+      "boundedCapacity": true,
+      "exactOrigins": true,
+      "paidProcessingDisabled": true,
+      "public": true,
+      "privateIam": false,
+      "secretReferenceKeys": []
+    }
+  ],
+  "hostedProbes": {
+    "statuses": {
+      "/": 200,
+      "/start": 200,
+      "/api/sample/config": 200,
+      "/favicon.png": 200,
+      "/robots.txt": 200,
+      "/motion-preview": 404,
+      "/feasibility/browser-media/index.html": 404,
+      "/main.mjs": 404,
+      "/api/analysis/sample-replay-options": 503
+    },
+    "frontendBackendIdentityBridge": true,
+    "paidProcessingDisabled": true,
+    "sampleUiAbsent": true,
+    "productionCsp": true,
+    "apiNoStore": true,
+    "robotsLandingAllowed": true,
+    "backendAnonymousHealth": 403,
+    "retiredReplayPost": 404,
+    "aiCalls": 0,
+    "mediaSessions": 0
+  },
+  "rendererRollout": {
+    "rendererUpdated": true,
+    "digest": "sha256:abe968869aa35ceff3555565663aa3ece5ab848d31e38d3ac928f97818daf7f4",
+    "rollbackDigest": "sha256:c540ab69dea1e5054689e073bb66afea08b1f82feed512620deacc47721b5f85",
+    "ready": true,
+    "latestTraffic100": true,
+    "operationalConfigurationUnchanged": true,
+    "changedAnnotationNames": [],
+    "iamUnchanged": true,
+    "privateIam": true,
+    "imageMatches": true,
+    "aiCalls": 0,
+    "mediaSessions": 0
+  },
+  "rendererProbes": {
+    "anonymousHealth": 403,
+    "authenticatedHealth": 200,
+    "invalidDescriptor": 400,
+    "configuredCallerAudienceVerified": true,
+    "aiCalls": 0,
+    "mediaDispatches": 0
+  },
+  "secretVersions": {
+    "exactSecretVersionsMounted": true,
+    "secretCount": 4,
+    "referenceCount": 4
+  },
+  "runtimeAccess": {
+    "frontendIdentityCreated": true,
+    "secretBindings": 4,
+    "accessScope": "individual app secrets",
+    "backendIdentityReused": true,
+    "projectWideRoleAdded": false,
+    "serviceAccountKeysCreated": 0,
+    "secretValuesRead": false
+  },
+  "localProbes": {
+    "responses": [
+      {
+        "path": "/v1/health",
+        "status": 200
+      },
+      {
+        "path": "/",
+        "status": 200
+      },
+      {
+        "path": "/start",
+        "status": 200
+      },
+      {
+        "path": "/api/sample/config",
+        "status": 200
+      }
+    ],
+    "mode": "live",
+    "localMediaEnabled": true,
+    "analysisEnabled": true,
+    "assemblyEnabled": true,
+    "renderEnabled": true,
+    "envFilesTouched": false,
+    "aiCalls": 0,
+    "mediaSessions": 0
+  },
+  "ownedTemporaryCleanup": {
+    "isolatedBuild": {
+      "isolatedBuildCopyRemoved": true,
+      "dependencyJunctionsDetached": 6,
+      "repositoryDependenciesPreserved": true,
+      "logsPreserved": true
+    },
+    "contexts": {
+      "contextsRemoved": 6,
+      "ownedContextsRemaining": 0,
+      "privateReceiptsPreserved": true,
+      "retainedMastersTouched": false,
+      "localAppProcessesTouched": false
+    }
+  },
+  "nativeMitigation": {
+    "sourceToolPackage": "7:5.1.9-0+deb12u1",
+    "originalInput": "MP4 with two supported streams, file/pipe protocols and contract-derived decoder allowlist",
+    "compositorInput": "server-generated selected.mp4 in the owned render job directory",
+    "compositorAacEncoder": "libfdk_aac",
+    "vendorAbiReplaced": false,
+    "unfixedScanEntriesPreserved": true
+  },
+  "iterations": [
+    "shared contracts rebuilt after local missing-export overlay",
+    "hosted container-origin rejection corrected and regression-tested",
+    "offline Host normalization reproduced; native HTTP proof corrected",
+    "shared scanner cache contention retried sequentially",
+    "retired replay verification corrected to its actual POST method"
+  ],
+  "unverifiedOwnerGates": [
+    "custom-domain DNS/TLS and redirect cutover",
+    "Turnstile widget pairing and active hostname",
+    "renderer upload-origin and bucket CORS cutover preserving local policy",
+    "paused traffic/direct-managed-URL decision",
+    "hosted paid quality, cost and exact key/project correspondence",
+    "real temporary-object deletion after Exit/expiry",
+    "real desktop/mobile and rights/license acceptance",
+    "actual kill-switch and rollback exercise"
+  ],
+  "agentPaidOrMediaProcessing": {
+    "aiCalls": 0,
+    "mediaSessions": 0,
+    "ownerMediaRead": false,
+    "envFilesReadOrEdited": false
+  },
+  "publicPaidReleaseAccepted": false
+}

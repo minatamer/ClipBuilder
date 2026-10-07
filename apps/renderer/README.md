@@ -1,5 +1,19 @@
 # Private media renderer
 
+CL-015 public-hosting follow-up (2026-10-07): maintained Debian FFmpeg/FFprobe
+`7:5.1.9-0+deb12u1` handles original source inspection, audio, proxy and selection.
+The contract-owned H.264/VP8/VP9 and AAC/Opus/Vorbis codec boundary, two streams,
+MP4 format and file/pipe protocols are enforced before decoder opening, including
+the software aliases for supported codecs. Remotion retains its bundled ABI
+libraries and only consumes the server-encoded, metadata-stripped selected copy;
+its AAC export uses `libfdk_aac`. This mitigates identified source/encoder exposure
+without asserting that vendor `n7.1` is fully patched. Repeated Linux synthetic
+proof, scan and image-only private rollout are recorded in the
+[deployment guide](../../docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md).
+The accepted portrait export and existing local upload origin are preserved.
+Hosted upload requires an explicit origin/CORS cutover; fake/no-key tests do not
+prove real media quality. Only the owner runs paid acceptance.
+
 CL-015 final local paid-test preparation (2026-10-07): the patched Linux image
 passed synthetic native and offline runtime checks and is deployed to the
 existing private renderer. IAM and all operational settings are preserved;
@@ -10,12 +24,11 @@ agent. The existing normal local configuration remains ready for the owner's
 manual live test. See the
 [preparation evidence](../../docs/operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md).
 
-The exact image's package scan has zero **fixable** high/critical findings;
-this does not mean every bundled native component is patched. Vendor FFmpeg
-reports `n7.1`, whose separate patch provenance/reachability review is a public
-launch blocker recorded in the preparation report. Do not infer public security
-acceptance from the trusted-source local test or swap compositor libraries
-without repeating the native compatibility proof.
+That earlier preparation image's package scan has zero **fixable** high/critical
+findings. Its vendor `n7.1` patch/reachability concern led to the maintained source
+tools and normalized compositor boundary above. Neither result means every native
+component is patched. Keep the complete unfixed-entry ledger and repeat native
+compatibility checks when tools change; trusted local quality alone is insufficient.
 
 Native security tooling (CL-012, 2026-10-07): all Remotion workspace packages
 are pinned to 4.0.534. Explicit browser preparation/image staging selects stable
@@ -155,7 +168,8 @@ with `FAKE_MODE=true`, no keys and injected storage; the new image is not deploy
 Live AI and rollout need [CL-007 check approval](../../docs/operations/GROUNDED_ANALYSIS_CHECK.md).
 
 Standard Remotion Node SSR, compiled fixed composition, baked Chromium and
-Remotion's matching FFmpeg/FFprobe. This isolated service has no Gemini key,
+Remotion's matching compositor libraries, plus maintained system source tools.
+This isolated service has no Gemini key,
 arbitrary input URL, public processing route or general job queue. The initial
 cloud foundation is wired through gated analysis/assembly/preview; final delivery
 is owned by CL-011.
@@ -288,7 +302,7 @@ Before publication, the build runs scripts/verify-linux-media.mjs as node:
 Node-generated PNG/PCM fixture, source-aligned audio-only extraction with decoded
 tone-onset/profile/byte checks, fixed portrait render, scratch accounting with
 special entries, native cancellation and zero surviving owned processes. It uses
-packaged tools, needs no full FFmpeg and removes fixtures in finally. The Linux
+packaged system tools and removes fixtures in finally. The Linux
 compositor supports PNG/image2/PCM input; BMP/rawvideo fixture paths are unsupported.
 Only aggregate proof JSON (including audio duration/bytes/extraction time and
 before/after tone onset) reaches the runtime. The new audio stage passed locally

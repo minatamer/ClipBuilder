@@ -1,5 +1,14 @@
 # ClipBuilder frontend
 
+CL-015 hosted checkpoint (2026-10-07): the public Linux standalone frontend is
+deployed against the private paid-disabled backend. API routes validate the exact
+public Host and HTTPS proxy marker because Next uses its container address in
+`request.url`; forwarded-host substitutions do not bypass Origin/CSRF checks.
+Local origin behavior is preserved. No hosted sample/testing/replay UI is enabled.
+See the [deployment and domain guide](../../docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md).
+Fake/no-key verification is synthetic. Real hosted export remains gated by
+provider/cloud configuration, live/approval settings and owner paid acceptance.
+
 CL-015 final local-test preparation (2026-10-07) preserves the existing ignored
 `.env.local`, fixed localhost origins and backend-owned processing mode. The
 server-only control adapter adds exact hosted origin/audience and Cloud Run
