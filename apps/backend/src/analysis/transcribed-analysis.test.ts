@@ -1,3 +1,4 @@
+import { candidateGenerationJsonSchema } from "../../test/candidate-schema.fixture.js";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { MediaDescriptor } from "@clipbuilder/contracts";
@@ -12,10 +13,7 @@ import {
 } from "./gemini.adapter.js";
 import { TranscribedAnalysisProvider } from "./transcribed-analysis.provider.js";
 import { normalizeTranscription } from "./transcribe.normalization.js";
-import {
-  normalizeCandidateSelection,
-  candidateGenerationJsonSchema,
-} from "./analysis.provider-shape.js";
+import { normalizeCandidateSelection } from "./analysis.provider-shape.js";
 import { reconcileAnalysis } from "./analysis.reconciliation.js";
 import { CANDIDATE_SELECTION_POLICY } from "./analysis.prompt.js";
 import type { PrivateGeminiCaptureEvent } from "./gemini.local-capture.js";

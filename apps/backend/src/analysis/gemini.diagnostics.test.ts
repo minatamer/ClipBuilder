@@ -8,7 +8,7 @@ import {
   googleOperation,
   googleRejectionSchema,
 } from "./gemini.diagnostics.js";
-import { candidateSelectionSchema } from "./analysis.provider-shape.js";
+import { candidateSelectionSchema } from "../../test/candidate-schema.fixture.js";
 
 const privateText =
   "synthetic-private-key private-account@example.invalid https://private.invalid/files/secret private-transcript";
