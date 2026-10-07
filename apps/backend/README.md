@@ -1,5 +1,23 @@
 # ClipBuilder backend
 
+Security controls (CL-012, 2026-10-07): both grant routes require a separate
+`session-start` Turnstile proof bound to a fresh browser nonce before consuming
+the existing three-grants/five-minute window. Pending verification is bounded
+at two requests with a five-second deadline; later proofs remain session/action
+bound. Paid actions and provider/media dispatch counts are unchanged.
+
+Preview, final-result restore, output playback and download share one fixed
+per-session delivery allowance: 2 GiB of reserved content, 1,024 content requests
+and 64 metadata lookups. Exact Range bytes are claimed before private I/O;
+failed/uncertain attempts remain consumed and reopening never refills allowance.
+Records expire with the grant and are bounded at 64. Seeking, refresh and repeat
+downloads remain supported; session/expiry checks run again before headers and
+chunks. Existing retained-master read controls and one-time processing-copy
+ownership are unchanged. All private diagnostics remain; visitors receive only
+generic source-controlled errors. Fake/no-key checks use injected ports; actual
+Turnstile/playback/native/paid acceptance stays owner-manual. Public HTTP traffic
+protection and dashboard verification remain paused/separately gated.
+
 CL-009 selected assembly now uses the same JSON-only generation transport as
 candidate selection. Its canonical schema is prompt guidance, rather than a
 GenerateContent response-schema parameter; local plan compilation still owns

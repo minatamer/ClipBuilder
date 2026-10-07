@@ -1,5 +1,24 @@
 # ClipBuilder canonical ticket index
 
+**CL-012 security remediation — 2026-10-07:** The owner approved local fixes
+after the STRIDE/practical review. The
+[execution report](../operations/STRIDE_SECURITY_REMEDIATION_2026-10-07.md),
+[PM HTML](../operations/STRIDE_SECURITY_REVIEW_2026-10-07.html) and
+[file-level plan](../operations/STRIDE_SECURITY_PLAN_2026-10-07.md) record verified
+starts, generous shared delivery allowance and patched fixed tooling/framework.
+Validation fixed a late-Exit stream race and missing build-context helper, then
+found no new actionable local
+issue. All five local gates and 1,240 fake/no-key tests in 106 files pass; private
+diagnostics remain. Crash provider expiry is owner-accepted; public traffic is
+paused. Later owner-authorized authenticated read-only CLI checks verify the
+app's configured USD 5 monthly Cloud Run spend cap and selected private
+IAM/capacity/expiry/disposable-bucket metadata. Current Gemini key/project
+correspondence, whole-flow spend, actual deletion, exact Linux image/native/rollout
+and owner real/CSP/device evidence remain open under CL-015. The owner also
+authorized the [security whole-file staging/commit plan](CL-015-SECURITY-COMMIT_PLAN.md)
+after clean validation, with `CL-015:` subjects. No cloud build/mutation/deploy,
+push or agent-paid testing is authorized. Original audit snapshots remain.
+
 **CL-015-prefixed commit checkpoint — 2026-10-07:** The owner authorized staging
 and commits for the completed CL-014 code-quality audit/remediation, with
 `CL-015:` on every commit subject. Follow the

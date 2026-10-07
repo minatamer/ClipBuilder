@@ -1,5 +1,39 @@
 # Current local safeguard evidence
 
+Current CL-012 remediation (2026-10-07): the owner approved the
+[local execution and validation](STRIDE_SECURITY_REMEDIATION_2026-10-07.md).
+Nonce-bound verified starts now precede scarce allocation; preview/output/result
+restore share a 2 GiB, 1,024-content-read, 64-metadata session allowance. Reopening
+cannot refill it; Clear/Exit revokes access, including late private responses.
+Next 16.3.8, matched Remotion 4.0.534 and fixed Chrome 155.0.8059.39 replace the
+original tooling baseline. All private content-safe diagnostics remain, visitor
+errors stay generic. The final local review is clean; all five local gates and
+1,240 fake/no-key tests in 106 files pass. Fixtures do not prove real AI/MP4 quality.
+Exact Linux/native artifact, actual Turnstile/CSP/device and current vendor
+enforcement remain external evidence; private rollout is separately gated.
+Owner accepts the up-to-48-hour Google Files crash fallback. Traffic protection
+is explicitly paused. Existing Gemini USD 5 cap evidence supersedes the older
+deferred-budget entry. Later owner-authorized read-only CLI checks verify the
+actual app's Cloud Run USD 5 monthly spend cap in configured state, private
+invoker IAM, enabled independent expiry and exact disposable-bucket metadata.
+They do not prove actual deletion, current Gemini key/project correspondence or
+whole-flow spend coverage. The owner separately authorized the
+[file-level staging/commits](../tickets/CL-015-SECURITY-COMMIT_PLAN.md) after clean
+local validation. No cloud mutation/build/deploy or agent-paid test ran.
+
+## Historical read-only snapshot
+
+Whole-repository review (2026-10-07): the owner requested audit/documentation
+only. The [STRIDE/practical report](STRIDE_SECURITY_AUDIT_2026-10-07.md),
+[ranked owner-review HTML](STRIDE_SECURITY_REVIEW_2026-10-07.html) and
+[careful file-level plan](STRIDE_SECURITY_PLAN_2026-10-07.md) provide current
+source/proof/advisory evidence and distinguish confirmed gaps from deployment
+gates. No security fix or risk acceptance has been applied. All 375 code-quality
+inputs remain unchanged; 1,223 fake/paid-off tests pass. Two public dependency
+feeds were checked and matched advisories were reachability-triaged; the older
+unverified registry statement below describes the previous review. Exact native
+image and actual account/hosting/rights/paid quality evidence remain unverified.
+
 CL-009 generated fallback (2026-10-06): the owner chooses Commons first and
 separately gated Gemini Flash Image generation on a missing/unusable picture.
 Only a bounded, validated contextual scene brief reaches the image model; no

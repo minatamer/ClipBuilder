@@ -1,5 +1,32 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Owner security decisions — 2026-10-07
+
+The owner approves local CL-012 security remediation while preserving the entire
+working flow, code structure and every private content-safe diagnostic. Visitor
+errors and browser-console output remain generic. Add verified session starts and
+a generous shared media-delivery allowance; prepare compatible fixed browser and
+framework patches. Cloud builds/updates, credentials, deployment, Git actions and
+agent-run paid tests are not authorized by this instruction.
+
+For hard backend loss, accept Google's up-to-48-hour Files expiry fallback;
+normal explicit deletion and deletion-before-next-phase fences stay enforced.
+No recovery database or orphan sweep is requested. Reconcile the existing
+owner-reported USD 5 Gemini monthly cap and Cloud Run decisions rather than
+choosing new budgets. Actual current account enforcement needs external evidence.
+Public traffic protection is explicitly paused until the owner checks the
+dashboard. The documented four-operation allowance means media operations per
+session, not four processes. See the [approved plan](operations/STRIDE_SECURITY_PLAN_2026-10-07.md)
+and [execution evidence](operations/STRIDE_SECURITY_REMEDIATION_2026-10-07.md).
+
+Later owner instructions authorize read-only authenticated gcloud inspection
+after local validation, and the [file-level staging/commit plan](tickets/CL-015-SECURITY-COMMIT_PLAN.md)
+after a clean review, with `CL-015:` on every subject. The inspection verifies
+the app's Cloud Run USD 5 monthly spend cap in configured state and selected
+private IAM/expiry/bucket settings; current Gemini key/project correspondence
+and complete release acceptance remain open. No cloud mutation, build, deploy,
+push or agent-paid testing is authorized by these follow-ups. Traffic stays paused.
+
 ## Current owner revision — Gemini and private Cloud Run rendering (2026-10-02)
 
 Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 721 synthetic tests in 70 files pass, including the CL-016 MP4-only and sample-streaming follow-ups. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**

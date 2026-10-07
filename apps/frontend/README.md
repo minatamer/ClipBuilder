@@ -1,8 +1,17 @@
 # ClipBuilder frontend
 
+CL-012 session-start protection (2026-10-07): real source analysis and protected
+local sample replay obtain a fresh `session-start` challenge before asking for
+a grant, then obtain the existing fresh session-bound upload/analysis proofs.
+Cancellation before grant dispatch creates no remote cleanup obligation. The
+fixture journey with `FAKE_MODE=true` and no keys remains API-free; real
+processing requires configured Turnstile/provider/live/approval gates. Actual
+widget/CSP/device acceptance remains owner-manual. Generic visitor errors and
+private diagnostic reporting are preserved. No additional paid action is added.
+
 Selected assembly failures preserve the backend's validated SafeError code,
 message, request ID and retry evidence. A provider rejection therefore displays
-the provider error rather than being mislabeled as temporary storage failure.
+the generic provider-failure message rather than a temporary-storage message.
 Actual local storage errors retain their storage mapping. Fake/no-key regression
 checks cover this mapping; real assembly acceptance needs the owner's paid test.
 See

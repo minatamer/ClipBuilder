@@ -1,5 +1,14 @@
 # Private media renderer
 
+Native security tooling (CL-012, 2026-10-07): all Remotion workspace packages
+are pinned to 4.0.534. Explicit browser preparation/image staging selects stable
+Chrome for Testing **155.0.8059.39**, then checks the actual executable version
+before returning/staging it. Runtime still uses only its baked explicit binary,
+with no browser download or auto-update. Unexpected cached versions fail closed;
+prepare a clean tooling cache before a matching image build. The exact Linux
+image, scan, synthetic native proof and private rollout remain separate gates.
+Fake/no-key unit checks prove pin/rejection behavior, not native media quality.
+
 CL-009 generated fallback (2026-10-06) extends the contextual asset provenance
 schema with `google-gemini`, the fixed image model and generation policy. Existing
 Commons assets remain valid; both sources use identical bounded inline JPEG

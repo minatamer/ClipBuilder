@@ -1,5 +1,92 @@
 # CL-012 — Cloud/Google safeguards and cleanup
 
+## Approved security remediation — 2026-10-07
+
+Status: **approved local execution complete; final local validation has no new
+actionable findings; external release evidence remains gated**.
+The owner's latest instruction approves SEC-02 (verified session starts), SEC-03
+(generous session delivery allowance), SEC-04 (compatible patched native tooling)
+and appropriate framework security maintenance. Preserve the complete current
+workflow, all private content-safe diagnostic coverage, generic visitor errors,
+receipts, deletion fences, four processing actions and dependency boundaries.
+No Git action, paid test, credential use or new cloud build/deployment is approved
+by this packet. CL-015 continues to own public release and external rollout gates.
+
+Owner dispositions: SEC-05 accepts Google Files' up-to-48-hour expiry fallback
+after a hard crash, with normal explicit deletion unchanged. SEC-06 traffic
+protection is paused until the owner checks the dashboard at home. SEC-01 is
+vendor evidence reconciliation: the October 4 provider guide already records an
+owner-reported USD 5 Gemini monthly cap and disabled auto-reload; the October 7
+owner believes Cloud Run caps are also set. Do not request new budget amounts or
+invent a distributed spending ledger. Later owner-authorized read-only CLI
+inspection verifies the actual app's Cloud Run USD 5 monthly spend cap as
+configured, plus selected private IAM/expiry/bucket metadata. Current Gemini
+key/project correspondence, whole-flow spend coverage and actual deletion remain
+external evidence; no vendor setting changed.
+
+Four means **media operations per disposable session**, not processes or
+concurrent jobs. Existing private renderer decisions record max-one instance,
+request concurrency two and one expensive media operation at a time. Those
+controls do not settle the paused public frontend/HTTP traffic question.
+
+Execution: update the [file-level plan](../operations/STRIDE_SECURITY_PLAN_2026-10-07.md),
+add independent synthetic regressions, implement narrow shared admission and
+delivery policies, verify compatible patched tooling, and preserve the original
+audit evidence as a historical snapshot. Validate the combined diff; independently
+confirm and fix actionable local findings, then repeat. Settled gates: format,
+lint, typecheck, full unit suite, build and boundary/diff checks. Record exact
+results and finding dispositions in a dated execution report and owner HTML.
+No claim of global vulnerability freedom or live functionality proof is permitted.
+
+Results: [execution and validation report](../operations/STRIDE_SECURITY_REMEDIATION_2026-10-07.md)
+with current machine evidence/input inventory and updated owner HTML. SEC-02 and
+SEC-03 are fixed locally; SEC-04 is patched locally, with exact Linux image/native
+acceptance and private rollout still separate. The final walkthrough fixed a
+late-Exit stream revocation race and a missing helper in the strict renderer build
+context, then found no further actionable local issue.
+All 1,240 tests in 106 files pass. All five local gates pass; the existing strict
+Windows packaging limitation and optional native fixture prerequisite remain
+external checks. Existing private diagnostics stay; visitor errors remain generic.
+The auxiliary Remotion version tool's Zod recommendation is recorded without an
+unrelated downgrade or a false passing result.
+
+The owner's separate follow-up permits the
+[whole-file staging/commit plan](CL-015-SECURITY-COMMIT_PLAN.md) after clean local
+validation, with deployment-ticket-prefixed subjects. Source commits preserve
+the validated code-input hashes. This does not authorize push, cloud build/update,
+public deployment or agent-paid testing.
+
+Fake/no-key tests use injected results and zero external providers. Real AI/native
+media quality and actual Turnstile/CSP/device behavior require owner-manual checks
+and their existing approvals. Cloud metadata reads are distinct from operational
+acceptance. No local AI runtime is available.
+
+## Original owner-requested read-only audit checkpoint — 2026-10-07
+
+Historical status at the original checkpoint: **audit/documentation complete;
+implementation not yet authorized**. The later approved section above supersedes
+its authorization and current finding dispositions.
+The owner requested STRIDE plus practical security/dependency/abuse review and a
+plain-language ranked report for individual fix/accept/defer decisions.
+
+See the [detailed audit](../operations/STRIDE_SECURITY_AUDIT_2026-10-07.md),
+[owner-review HTML](../operations/STRIDE_SECURITY_REVIEW_2026-10-07.html) and
+[file-level plan](../operations/STRIDE_SECURITY_PLAN_2026-10-07.md). Six material
+risks remain for review (one conditional public-release High, five Medium);
+minor items are excluded. Three synthetic probes and both public package feeds
+were checked; two feed advisories were triaged as no established vulnerable
+runtime call path. Native image/security and actual cloud settings remain separate
+release evidence. No item is marked fixed or accepted.
+
+All 1,223 tests in 104 files passed in fake/paid-off mode with no keys/providers;
+all 375 validated code-quality inputs and the lockfile remain unchanged. These
+checks support synthetic safeguards, not live AI/native export quality. Real
+processing needs keys/live/rights/data/paid approvals and separate renderer
+cloud/IAM/storage approval; no local AI runtime/weights path is available.
+No credential/private asset was inspected, app launched, paid/cloud flow run,
+dependency changed or Git action performed. CL-015 still owns public hosting,
+vendor/capacity/identity/deletion receipts and the release checkpoint.
+
 ## Current cloud-render packet — approved local execution, 2026-10-02
 
 Status: local controls complete; validation pass 2 clean; all five root gates pass; external evidence remains deferred.

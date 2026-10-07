@@ -1,5 +1,29 @@
 # Google AI and private media-compute cost plan
 
+## Security review reconciliation — 2026-10-07
+
+The owner believes Gemini and Cloud Run spending controls are already configured.
+The [October 4 provider checkpoint](PROVIDER_SETUP.md#current-gemini-setup--2026-10-04)
+records an owner-reported USD 5 Gemini monthly cap and auto-reload disabled; it
+supersedes the October 3 deferred Gemini amount below. After local validation,
+the owner authorized read-only authenticated gcloud checks. The actual app
+project's Cloud Run-only USD 5 monthly budget has
+`spendCap.outputState=CONFIGURED`, with 50/80/100 percent notifications. This
+supersedes the older unconfirmed/alerts-only Cloud Run descriptions below. The
+separate USD 10 service-filtered budget remains alerts-only; do not infer
+all-service coverage from its historical project-budget label.
+
+[Google spend-cap enforcement](https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps)
+can lag, permits in-flight work to finish and does not stop ongoing fixed resource
+charges. This is a configured spend control, not an exact invoice ceiling. Current
+Gemini key/project correspondence and whole-flow storage/build cost coverage were
+not verified. No new amount, API enablement, resource change, build or service
+invocation occurred. Content-free current cloud/capacity/cleanup receipts are in
+the [execution report](STRIDE_SECURITY_REMEDIATION_2026-10-07.md#post-validation-read-only-cloud-inspection).
+Traffic protection is explicitly paused pending the owner's dashboard review.
+Four media operations per session is not four processes or concurrent jobs.
+See the [approved local security plan](STRIDE_SECURITY_PLAN_2026-10-07.md).
+
 ## Commons-first image fallback — 2026-10-06
 
 The [latest CL-009 owner decision](../tickets/CL-009-build-contextual-visual-assembly.md#owner-commons-first-generated-fallback--2026-10-06)

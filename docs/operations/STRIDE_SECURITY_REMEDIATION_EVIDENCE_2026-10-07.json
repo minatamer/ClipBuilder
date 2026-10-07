@@ -1,0 +1,525 @@
+{
+  "date": "2026-10-07",
+  "recordedAt": "2026-10-07T14:46:48.072Z",
+  "revision": "5ef509fd2b027e9f085fb3e78739a7bc245aabd0",
+  "authority": "Owner approved local CL-012 remediation preserving functionality/private diagnostics; later authorized authenticated read-only gcloud checks after local validation and whole-file staging/commits after a clean review. No cloud mutation/build/update/deploy, push or agent-paid flow authorized.",
+  "reviewedInputs": {
+    "file": "STRIDE_SECURITY_REMEDIATION_INPUTS_2026-10-07.json",
+    "files": 380,
+    "inputSha256": "0c73b047963fbdf2a39f17320eb831bf5450f98eaf1edb5819d2f5bc769be7d4",
+    "changedPriorInputs": 31
+  },
+  "lockfileSha256": "476f9360b385fae0872cd24328490de463763353b5f9686e4aa471201040d9da",
+  "dispositions": [
+    {
+      "id": "SEC-01",
+      "status": "cloud-run-spend-cap-verified-other-release-evidence-pending",
+      "evidence": "Actual app project Cloud Run-only USD5 monthly spend cap outputState CONFIGURED; owner-reported October4 Gemini USD5 cap/auto-reload-off remains separate dated evidence. Current Gemini key/project correspondence and whole-flow coverage unverified."
+    },
+    {
+      "id": "SEC-02",
+      "status": "fixed-locally",
+      "policy": {
+        "pendingStarts": 2,
+        "verificationDeadlineMs": 5000,
+        "requestBytes": 3072,
+        "purpose": "session-start",
+        "binding": "fresh UUID v4 nonce"
+      },
+      "remaining": "Owner real Turnstile/CSP"
+    },
+    {
+      "id": "SEC-03",
+      "status": "fixed-locally",
+      "policy": {
+        "combinedSessionBytes": 2147483648,
+        "contentRequests": 1024,
+        "metadataRequests": 64,
+        "retainedSessions": 64,
+        "refillOnReopen": false,
+        "failedReservationsRefunded": false
+      },
+      "remaining": "Owner genuine device/network/output checks"
+    },
+    {
+      "id": "SEC-04",
+      "status": "patched-locally-native-release-evidence-pending",
+      "pins": {
+        "remotion": "4.0.534",
+        "next": "16.3.8",
+        "chromium": "155.0.8059.39"
+      },
+      "remaining": "Exact Linux image scan/native export and separately approved private rollout; strict upload context fixed and verified"
+    },
+    {
+      "id": "SEC-05",
+      "status": "owner-accepted",
+      "evidence": "Up-to-48-hour Google Files expiry fallback after hard backend loss; normal explicit cleanup unchanged"
+    },
+    {
+      "id": "SEC-06",
+      "status": "owner-paused",
+      "evidence": "Await owner dashboard review; no traffic-protection implementation"
+    }
+  ],
+  "gates": [
+    {
+      "gate": "format:check",
+      "startedAt": "2026-10-07T13:53:29.543Z",
+      "completedAt": "2026-10-07T13:53:46.416Z",
+      "elapsedMs": 16872,
+      "exitCode": 0
+    },
+    {
+      "gate": "lint",
+      "startedAt": "2026-10-07T13:53:46.599Z",
+      "completedAt": "2026-10-07T13:54:08.771Z",
+      "elapsedMs": 22171,
+      "exitCode": 0
+    },
+    {
+      "gate": "typecheck",
+      "startedAt": "2026-10-07T13:54:08.939Z",
+      "completedAt": "2026-10-07T13:54:33.950Z",
+      "elapsedMs": 25009,
+      "exitCode": 0
+    },
+    {
+      "gate": "test:unit",
+      "startedAt": "2026-10-07T13:54:34.141Z",
+      "completedAt": "2026-10-07T13:55:11.330Z",
+      "elapsedMs": 37187,
+      "exitCode": 0,
+      "groups": [
+        { "files": 4, "tests": 40 },
+        { "files": 6, "tests": 79 },
+        { "files": 1, "tests": 5 },
+        { "files": 29, "tests": 565 },
+        { "files": 17, "tests": 113 },
+        { "files": 49, "tests": 438 }
+      ],
+      "totalTests": 1240,
+      "totalFiles": 106
+    },
+    {
+      "gate": "build",
+      "startedAt": "2026-10-07T13:55:11.515Z",
+      "completedAt": "2026-10-07T13:55:56.489Z",
+      "elapsedMs": 44972,
+      "exitCode": 0
+    }
+  ],
+  "units": {
+    "tests": 1240,
+    "files": 106,
+    "byWorkspace": [
+      { "workspace": "root", "files": 4, "tests": 40 },
+      { "workspace": "contracts", "files": 6, "tests": 79 },
+      { "workspace": "composition", "files": 1, "tests": 5 },
+      { "workspace": "backend", "files": 29, "tests": 565 },
+      { "workspace": "renderer", "files": 17, "tests": 113 },
+      { "workspace": "frontend", "files": 49, "tests": 438 }
+    ],
+    "mode": "FAKE_MODE=true; paid off; no keys; zero unexpected external network"
+  },
+  "validation": {
+    "verdict": "Meets approved local packet; external release evidence and paused traffic remain open",
+    "finalActionableFindings": 0,
+    "confirmedFindings": [
+      {
+        "threat": "Private content arrives after Exit and headers were still published",
+        "independentRedProof": true,
+        "fixed": "Reauthorize before headers and after each read; cancel/unlock",
+        "regression": "No headers, one cancellation, exact existing plan/render counts"
+      },
+      {
+        "threat": "Fresh Linux build context omits imported browser helper",
+        "independentRedProof": true,
+        "fixed": "Include exactly browser-tooling.ts in strict upload allowlist",
+        "regression": "Helper present; tests/secrets/private assets/cross-app sources still excluded"
+      }
+    ],
+    "scope": "Complete combined source diff and five new code files against the CL-012 baseline; entry-point/port/schema composition, normal failure/abort/expiry/reopen/alias paths, dependency directions and lifecycle ownership. Docs-only post-validation cloud receipts do not change validated code."
+  },
+  "dependencyRecheck": {
+    "lockfileSha256": "476f9360b385fae0872cd24328490de463763353b5f9686e4aa471201040d9da",
+    "packageVersions": 844,
+    "packageNames": 773,
+    "npm": {
+      "url": "https://registry.npmjs.org/-/npm/v1/security/advisories/bulk",
+      "status": 200,
+      "checkedAt": "2026-10-07T13:04:02.920Z",
+      "matches": [
+        {
+          "package": "braces",
+          "id": "GHSA-vfj7-8cjw-p6xm",
+          "severity": "high",
+          "vulnerableVersions": "<=3.0.3",
+          "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+        },
+        {
+          "package": "uuid",
+          "id": "GHSA-w5hq-g745-h8pq",
+          "severity": "moderate",
+          "vulnerableVersions": "<11.1.1",
+          "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq"
+        }
+      ]
+    },
+    "osv": {
+      "url": "https://api.osv.dev/v1/querybatch",
+      "status": 200,
+      "checkedAt": "2026-10-07T13:04:04.696Z",
+      "matches": [
+        {
+          "package": "braces",
+          "version": "3.0.3",
+          "id": "GHSA-vfj7-8cjw-p6xm"
+        },
+        { "package": "uuid", "version": "9.0.1", "id": "GHSA-w5hq-g745-h8pq" }
+      ]
+    },
+    "reachability": "Same original matches: braces dev glob patterns and uuid affected v3/v5/v6 buffer APIs; no established vulnerable runtime call path; existing gaxios uses v4"
+  },
+  "lockReview": {
+    "baselineCount": 844,
+    "currentCount": 844,
+    "added": [
+      "@next/env@16.3.8",
+      "@next/eslint-plugin-next@16.3.8",
+      "@next/swc-darwin-arm64@16.3.8",
+      "@next/swc-darwin-x64@16.3.8",
+      "@next/swc-linux-arm64-gnu@16.3.8",
+      "@next/swc-linux-arm64-musl@16.3.8",
+      "@next/swc-linux-x64-gnu@16.3.8",
+      "@next/swc-linux-x64-musl@16.3.8",
+      "@next/swc-win32-arm64-msvc@16.3.8",
+      "@next/swc-win32-x64-msvc@16.3.8",
+      "@remotion/bundler@4.0.534",
+      "@remotion/captions@4.0.534",
+      "@remotion/cli@4.0.534",
+      "@remotion/codemods@4.0.534",
+      "@remotion/compositor-darwin-arm64@4.0.534",
+      "@remotion/compositor-darwin-x64@4.0.534",
+      "@remotion/compositor-linux-arm64-gnu@4.0.534",
+      "@remotion/compositor-linux-arm64-musl@4.0.534",
+      "@remotion/compositor-linux-x64-gnu@4.0.534",
+      "@remotion/compositor-linux-x64-musl@4.0.534",
+      "@remotion/compositor-win32-x64-msvc@4.0.534",
+      "@remotion/elevenlabs@4.0.534",
+      "@remotion/licensing@4.0.534",
+      "@remotion/media-parser@4.0.534",
+      "@remotion/media-utils@4.0.534",
+      "@remotion/media@4.0.534",
+      "@remotion/openai-whisper@4.0.534",
+      "@remotion/paths@4.0.534",
+      "@remotion/player@4.0.534",
+      "@remotion/renderer@4.0.534",
+      "@remotion/sdk@4.0.534",
+      "@remotion/streaming@4.0.534",
+      "@remotion/studio-protocol@4.0.534",
+      "@remotion/studio-server@4.0.534",
+      "@remotion/studio-shared@4.0.534",
+      "@remotion/studio@4.0.534",
+      "@remotion/timeline-utils@4.0.534",
+      "@remotion/web-renderer@4.0.534",
+      "@remotion/zod-types@4.0.534",
+      "eslint-config-next@16.3.8",
+      "next@16.3.8",
+      "remotion@4.0.534"
+    ],
+    "removed": [
+      "@next/env@16.3.7",
+      "@next/eslint-plugin-next@16.3.7",
+      "@next/swc-darwin-arm64@16.3.7",
+      "@next/swc-darwin-x64@16.3.7",
+      "@next/swc-linux-arm64-gnu@16.3.7",
+      "@next/swc-linux-arm64-musl@16.3.7",
+      "@next/swc-linux-x64-gnu@16.3.7",
+      "@next/swc-linux-x64-musl@16.3.7",
+      "@next/swc-win32-arm64-msvc@16.3.7",
+      "@next/swc-win32-x64-msvc@16.3.7",
+      "@remotion/bundler@4.0.532",
+      "@remotion/canvas@4.0.532",
+      "@remotion/captions@4.0.532",
+      "@remotion/cli@4.0.532",
+      "@remotion/codemods@4.0.532",
+      "@remotion/compositor-darwin-arm64@4.0.532",
+      "@remotion/compositor-darwin-x64@4.0.532",
+      "@remotion/compositor-linux-arm64-gnu@4.0.532",
+      "@remotion/compositor-linux-arm64-musl@4.0.532",
+      "@remotion/compositor-linux-x64-gnu@4.0.532",
+      "@remotion/compositor-linux-x64-musl@4.0.532",
+      "@remotion/compositor-win32-x64-msvc@4.0.532",
+      "@remotion/elevenlabs@4.0.532",
+      "@remotion/licensing@4.0.532",
+      "@remotion/media-parser@4.0.532",
+      "@remotion/media-utils@4.0.532",
+      "@remotion/media@4.0.532",
+      "@remotion/openai-whisper@4.0.532",
+      "@remotion/paths@4.0.532",
+      "@remotion/player@4.0.532",
+      "@remotion/renderer@4.0.532",
+      "@remotion/streaming@4.0.532",
+      "@remotion/studio-protocol@4.0.532",
+      "@remotion/studio-server@4.0.532",
+      "@remotion/studio-shared@4.0.532",
+      "@remotion/studio@4.0.532",
+      "@remotion/timeline-utils@4.0.532",
+      "@remotion/web-renderer@4.0.532",
+      "@remotion/zod-types@4.0.532",
+      "eslint-config-next@16.3.7",
+      "next@16.3.7",
+      "remotion@4.0.532"
+    ]
+  },
+  "tooling": {
+    "windowsBrowser": {
+      "version": "155.0.8059.39",
+      "prepared": true,
+      "actualExecutableVersionVerified": true
+    },
+    "remotionVersionCheck": {
+      "all25RemotionEntries": "4.0.534",
+      "exitCode": 1,
+      "reason": "Existing Zod4.6.5 versus recommended4.5.4",
+      "disposition": "Retain validated shared schema version; no unrelated downgrade; auxiliary check not green"
+    },
+    "optionalNativeHarness": {
+      "passed": false,
+      "stage": "Synthetic fixture creation",
+      "reason": "Bundled minimal FFmpeg lacks rawvideo demuxer; full FIXTURE_FFMPEG_PATH unavailable",
+      "independentNoMediaProbe": "Unknown input format rawvideo",
+      "realMediaUsed": false
+    },
+    "linux": {
+      "imageBuild": false,
+      "imageScan": false,
+      "nativeExport": false,
+      "rollout": false,
+      "reason": "Separate cloud/build approval and native tooling gate; Docker Linux daemon unavailable"
+    },
+    "explicitScriptTypecheck": {
+      "compiler": "strict TypeScript NodeNext",
+      "files": [
+        "browser-tooling.ts",
+        "prepare-browser.ts",
+        "stage-tools.ts",
+        "build-context.ts"
+      ],
+      "exitCode": 0,
+      "purpose": "Build tooling is outside application tsconfig"
+    }
+  },
+  "frontendArtifact": {
+    "localInventoryPassed": true,
+    "selfContained": false,
+    "externalPackageLinks": 26,
+    "strictTargetReleaseAccepted": false
+  },
+  "html": {
+    "checkedAt": "2026-10-07T14:47:19.525Z",
+    "structuralChecks": "One offline script; no resource/network loads; unique ids, labels and local document/heading links valid; 1 High/5 Medium cards",
+    "localLinks": 16,
+    "simulatedInteractions": [
+      "latest owner defaults with separate v2 storage key",
+      "decision/progress",
+      "plain-text notes",
+      "severity filters",
+      "JSON export and object-URL revocation",
+      "print control",
+      "saved-state restore",
+      "storage-unavailable fallback"
+    ],
+    "visual": "Not rendered: browser URL policy rejected local-file preview; no alternate browser/server used."
+  },
+  "verificationCorrections": [
+    {
+      "gate": "lint",
+      "initialPassed": false,
+      "correction": "Moved only verified temporary audit scripts/third-party source/logs to OS-temp; preserved lint rules and owner assets"
+    },
+    {
+      "gate": "test:unit",
+      "initialPassed": false,
+      "correction": "Cold boundary test timed out under parallel heavy gates; sequential check passes without deadline increase"
+    },
+    {
+      "gate": "test:unit",
+      "initialPassed": false,
+      "correction": "1,024 pipeline integration test exceeded deadline under suite load; full count remains in policy test, aliases tested through final two actual streams"
+    },
+    {
+      "gate": "test:unit",
+      "initialPassed": false,
+      "correction": "Existing context filesystem test timed out at five seconds under worker load; focused copies completed under 0.3 seconds. Bounded 15-second test-only deadline preserves all strict allowlist/exclusion assertions and runtime/security deadlines."
+    }
+  ],
+  "privacy": {
+    "privateLogCoveragePreserved": true,
+    "browserTechnicalLogsAdded": false,
+    "ignoredSecretsOrOwnerMediaRead": false,
+    "cloudResourcesChanged": false,
+    "gitIndexOrHistoryChanged": true,
+    "appServicesLaunched": false,
+    "aiProvidersCalled": false,
+    "authenticatedReadOnlyCloudInspection": true,
+    "gitChangesOwnerAuthorized": true
+  },
+  "remaining": [
+    "Current Gemini cap/key-project correspondence and whole-flow cost coverage; owner-paused public traffic dashboard review",
+    "Optional Windows full fixture FFmpeg; separately approved exact Linux image/native/security proof using existing generated fixture verifier",
+    "Separate private renderer rollout",
+    "Owner real Turnstile/CSP/media/device/live-flow quality",
+    "Strict target artifact and remaining CL-015 release acceptance"
+  ],
+  "localEvidenceRecordedAt": "2026-10-07T13:59:45.630Z",
+  "revisionKind": "Pre-remediation baseline; current source inputs are hashed separately",
+  "postLocalCloudInspection": {
+    "authority": "Later explicit owner gcloud read authorization; after all five settled local gates",
+    "services": {
+      "checkedAt": "2026-10-07T14:22:06.0286057Z",
+      "source": "Owner-authorized gcloud control-plane reads; scoped scalar descriptions and invoker policy",
+      "services": [
+        {
+          "role": "private-renderer",
+          "region": "europe-west1",
+          "concurrency": "2",
+          "timeoutSeconds": "900",
+          "cpu": "4",
+          "memory": "8Gi",
+          "minInstances": "",
+          "ingress": "all",
+          "invokerIamDisabled": null,
+          "iamRead": true,
+          "allowsUnauthenticated": false,
+          "allowsAllAuthenticated": false,
+          "invokerPrincipalCount": 2,
+          "revisionMaxInstances": "1",
+          "minimumScaleVerified": false
+        }
+      ],
+      "identifiersExcluded": true,
+      "runtimeEnvironmentValuesRead": false,
+      "resourcesChanged": false
+    },
+    "budgets": {
+      "checkedAt": "2026-10-07T14:41:09.6347128Z",
+      "source": "Owner-authorized read-only budget describe including spendCap",
+      "records": [
+        {
+          "inspection": "read",
+          "scope": "app-project",
+          "amount": { "currencyCode": "USD", "units": "5" },
+          "calendarPeriod": "MONTH",
+          "services": ["Cloud Run"],
+          "thresholds": [
+            { "spendBasis": "CURRENT_SPEND", "thresholdPercent": 0.5 },
+            { "spendBasis": "CURRENT_SPEND", "thresholdPercent": 0.8 },
+            { "spendBasis": "CURRENT_SPEND", "thresholdPercent": 1 }
+          ],
+          "spendCapPresent": true,
+          "spendCap": { "outputState": "CONFIGURED" },
+          "classification": "spend-cap-budget"
+        },
+        {
+          "inspection": "read",
+          "scope": "app-project",
+          "amount": { "currencyCode": "USD", "units": "10" },
+          "calendarPeriod": "MONTH",
+          "services": ["Other service"],
+          "thresholds": [
+            { "spendBasis": "CURRENT_SPEND", "thresholdPercent": 0.5 },
+            { "spendBasis": "CURRENT_SPEND", "thresholdPercent": 0.9 },
+            { "spendBasis": "CURRENT_SPEND", "thresholdPercent": 1 }
+          ],
+          "spendCapPresent": false,
+          "spendCap": null,
+          "classification": "alerts-only-budget"
+        }
+      ],
+      "mappingSource": "https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps"
+    },
+    "expiry": {
+      "checkedAt": "2026-10-07T14:29:57.0677704Z",
+      "schedules": [
+        {
+          "schedule": "*/15 * * * *",
+          "state": "ENABLED",
+          "httpMethod": "POST",
+          "oidcConfigured": true,
+          "audienceMatchesOrigin": true,
+          "attemptDeadline": "180s",
+          "retryConfig": {
+            "maxBackoffDuration": "900s",
+            "maxDoublings": 5,
+            "maxRetryDuration": "0s",
+            "minBackoffDuration": "900s",
+            "retryCount": 1
+          },
+          "lastStatusCode": null,
+          "lastAttemptTime": "2026-10-07T14:15:24.916983Z"
+        }
+      ],
+      "metadataProvesDeletion": false
+    },
+    "exactDisposableBucket": {
+      "checkedAt": "2026-10-07T14:34:17.4579673Z",
+      "source": "Exact current runtime bucket binding; SDK formats only the named nonsecret setting",
+      "records": [
+        {
+          "bindingInspection": "resolved-from-only-nonsecret-RENDERER_BUCKET",
+          "metadataInspection": "read",
+          "uniformAccess": true,
+          "publicAccessPrevention": "enforced",
+          "softDeleteSeconds": "0",
+          "versioning": false,
+          "retentionPolicyConfigured": false,
+          "defaultEventHold": false,
+          "lifecycleDeleteDays": [1]
+        }
+      ],
+      "accountBucketAndServiceIdentifiersExcluded": true,
+      "secretValuesRead": false,
+      "mediaObjectsRead": false,
+      "resourcesChanged": false
+    },
+    "interpretationCorrection": "Initial budget projection omitted spendCap; follow-up budget describe verifies configured enforcement. No Pub/Sub topic is needed to establish built-in spend-cap configuration.",
+    "identifiersOrSecretValuesCommitted": false,
+    "credentialFilesOrIgnoredEnvRead": false,
+    "mediaObjectsRead": false,
+    "serviceInvocations": false,
+    "apisEnabledByAgent": false,
+    "resourcesChanged": false,
+    "trafficImplementationStillPaused": true,
+    "remaining": [
+      "Current Gemini key/project correspondence",
+      "Complete flow cost coverage",
+      "Actual deletion and cleanup during a spend pause",
+      "Exact patched Linux image and separately approved rollout",
+      "Public traffic/hosting and owner-only release checks"
+    ]
+  },
+  "sourceCommits": [
+    {
+      "hash": "4ca9a5d33b38fcffeba9a19e890cc5e0b3187f64",
+      "subject": "CL-015: verify session starts before grant allocation",
+      "files": 15
+    },
+    {
+      "hash": "34f8246db954ca2f0fa5e7d8d1b2ae042a99191b",
+      "subject": "CL-015: bound media delivery and fence late session revocation",
+      "files": 9
+    },
+    {
+      "hash": "06dd2a28fb0b63ae982cc950ab913d9e0a15adb2",
+      "subject": "CL-015: pin patched browser tooling and compatible security updates",
+      "files": 12
+    }
+  ],
+  "documentationCommit": {
+    "subject": "CL-015: document security decisions validation and release gates",
+    "plan": "../tickets/CL-015-SECURITY-COMMIT_PLAN.md",
+    "identity": "See Git; a commit cannot include its own hash"
+  }
+}

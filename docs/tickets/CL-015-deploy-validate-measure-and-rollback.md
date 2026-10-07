@@ -1,5 +1,28 @@
 # CL-015 — Bounded renderer setup and later public deployment
 
+## Security remediation release handoff — 2026-10-07
+
+CL-012 owns the [local security execution](../operations/STRIDE_SECURITY_REMEDIATION_2026-10-07.md).
+Release must use matched Remotion 4.0.534/Chrome for Testing 155.0.8059.39 and
+Next 16.3.8 inputs. Exact Linux image/native scan and synthetic export proof,
+private immutable rollout, owner Turnstile/CSP/device/live-flow checks and strict
+target artifact packaging remain separate gates. The owner accepts Google's
+48-hour hard-crash fallback. Existing Gemini cap evidence was reconciled. Later
+owner-authorized read-only authenticated CLI checks verify the actual app's
+Cloud Run USD 5 monthly spend cap as configured, private invoker IAM, enabled
+expiry schedule and exact disposable-bucket metadata. Current Gemini key/project
+correspondence, whole-flow cost coverage and actual deletion are not certified.
+Public traffic protection stays paused pending the owner's dashboard review.
+No cloud build/update/deploy or agent-paid test is authorized by this handoff.
+
+The owner separately authorizes a
+[security file-level commit plan](CL-015-SECURITY-COMMIT_PLAN.md), staging and
+commits after clean local validation, with `CL-015:` on every subject. The plan
+records the exact source groups and completed implementation commit identities;
+the documentation commit is identified by its exact subject in Git. No push or
+branch/history rewrite is authorized. All five local gates and 1,240 fake/no-key
+tests pass; code hashes are checked again before the final documentation commit.
+
 ## Owner-authorized code-quality commit checkpoint — 2026-10-07
 
 After the CL-014 code-quality audit, implementation and follow-up validation,
