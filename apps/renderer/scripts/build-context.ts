@@ -38,6 +38,7 @@ export async function prepareBuildContext(root: string) {
       "apps/renderer/src",
       "apps/renderer/scripts/build-bundle.ts",
       "apps/renderer/scripts/stage-tools.ts",
+      "apps/renderer/scripts/browser-tooling.ts",
       "apps/renderer/scripts/verify-linux-media.mjs",
       "apps/renderer/Dockerfile",
       "apps/renderer/cloudbuild.yaml",

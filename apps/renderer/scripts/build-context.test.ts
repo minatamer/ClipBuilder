@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { prepareBuildContext } from "./build-context.js";
 describe("private renderer build upload", () => {
+  // Real filesystem copies compete with the full suite's workers on Windows.
   it("includes only the renderer/shared source and pinned build metadata", async () => {
     const directory = await prepareBuildContext(
       fileURLToPath(new URL("../../../", import.meta.url)),
@@ -21,6 +22,7 @@ describe("private renderer build upload", () => {
       await inventory(directory);
       expect(paths).toContain("apps/renderer/src/server.ts");
       expect(paths).toContain("apps/renderer/Dockerfile");
+      expect(paths).toContain("apps/renderer/scripts/browser-tooling.ts");
       expect(paths).toContain("test/deterministic.environment.ts");
       expect(
         paths.some((path) =>
@@ -37,5 +39,5 @@ describe("private renderer build upload", () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 });

@@ -21,17 +21,17 @@
   "dependencies": {
     "@clipbuilder/contracts": "workspace:*",
     "@clipbuilder/composition": "workspace:*",
-    "@remotion/renderer": "4.0.532",
+    "@remotion/renderer": "4.0.534",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "remotion": "4.0.532",
+    "remotion": "4.0.534",
     "@google-cloud/storage": "8.2.0",
     "google-auth-library": "11.1.0",
     "express": "5.2.1",
     "zod": "4.6.5"
   },
   "devDependencies": {
-    "@remotion/bundler": "4.0.532",
+    "@remotion/bundler": "4.0.534",
     "@types/react": "19.3.0",
     "@types/express": "5.0.6",
     "@types/node": "24.19.0",
