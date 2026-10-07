@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
+import type { ProcessingChallengeAction } from "@clipbuilder/contracts";
 import { Button } from "../../shared/ui/button";
 import {
   mountProcessingChallenge,
@@ -19,7 +20,7 @@ export function AnalysisChallenge({
   onFailure,
 }: {
   siteKey: string;
-  action: "transcription" | "candidate-analysis" | "visual-plan" | "render";
+  action: ProcessingChallengeAction;
   sessionId: string;
   onToken(token: string): void;
   onFailure(): void;

@@ -131,7 +131,9 @@ function fixture(sample = false) {
     analyze: vi.fn(async () => result),
     clear: vi.fn(async () => {}),
   };
-  const challenge = vi.fn(async () => "synthetic"),
+  const challenge = vi.fn<Parameters<typeof runSourceAnalysis>[0]["challenge"]>(
+      async () => "synthetic",
+    ),
     controller = new AbortController();
   const input = {
     workspace,
@@ -156,6 +158,39 @@ function fixture(sample = false) {
   };
 }
 describe("confirmed browser source analysis", () => {
+  it("verifies a fresh bootstrap nonce before allocating a grant and keeps later proofs session-bound", async () => {
+    const f = fixture();
+    await runSourceAnalysis(f.input);
+    const calls = f.input.challenge.mock.calls;
+    expect(calls.map((call) => call[1])).toEqual([
+      "session-start",
+      "transcription",
+      "candidate-analysis",
+    ]);
+    const nonce = calls[0]![0];
+    expect(nonce).toMatch(/^[a-f0-9-]{36}$/u);
+    expect(nonce).not.toBe("ses_" + "c".repeat(22));
+    expect(f.api.grant).toHaveBeenCalledExactlyOnceWith(
+      { startNonce: nonce, turnstileToken: "synthetic" },
+      expect.any(AbortSignal),
+    );
+    expect(calls[1]![0]).toBe("ses_" + "c".repeat(22));
+    expect(calls[2]![0]).toBe(calls[1]![0]);
+    expect(f.api.upload).toHaveBeenCalledOnce();
+    expect(f.api.analyze).toHaveBeenCalledOnce();
+  });
+  it("cancellation during bootstrap performs no grant, upload or analysis", async () => {
+    const f = fixture();
+    f.input.challenge.mockImplementationOnce(async () => {
+      f.controller.abort();
+      return "synthetic";
+    });
+    await runSourceAnalysis(f.input);
+    expect(f.api.grant).not.toHaveBeenCalled();
+    expect(f.api.upload).not.toHaveBeenCalled();
+    expect(f.api.analyze).not.toHaveBeenCalled();
+    expect(f.record().cloudAnalysis?.cleanupRequired).toBe(false);
+  });
   it("a real transfer with invalid completion metadata dispatches no analysis and retains cleanup", async () => {
     const f = fixture();
     f.api.upload.mockResolvedValueOnce({
@@ -188,6 +223,7 @@ describe("confirmed browser source analysis", () => {
   });
   it("does not dispatch analysis if verification returns late after upload cancellation", async () => {
     const f = fixture();
+    f.input.challenge.mockImplementationOnce(async () => "synthetic-start");
     f.input.challenge.mockImplementationOnce(async () => "synthetic");
     f.input.challenge.mockImplementationOnce(async () => {
       f.controller.abort();
@@ -274,7 +310,7 @@ describe("confirmed browser source analysis", () => {
       );
       expect(navigate).toHaveBeenCalledOnce();
       expect(f.api.analyze).toHaveBeenCalledTimes(0);
-      expect(f.input.challenge).toHaveBeenCalledTimes(1);
+      expect(f.input.challenge).toHaveBeenCalledTimes(2);
       expect(f.workspace.storeGroundedAnalysis).toHaveBeenCalledTimes(0);
       expect(uploadProgress).toHaveBeenCalledOnce();
       expect(f.record().cloudAnalysis?.cleanupRequired).toBe(true);
@@ -496,9 +532,12 @@ describe("confirmed browser source analysis", () => {
       ),
     );
     const api = createSourceAnalysisApi(transport);
-    await expect(api.grant(new AbortController().signal)).rejects.toThrow(
-      "ClipBuilder could not complete the request.",
-    );
+    await expect(
+      api.grant(
+        { startNonce: crypto.randomUUID(), turnstileToken: "synthetic" },
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow("ClipBuilder could not complete the request.");
     expect(transport).toHaveBeenCalledOnce();
     transport.mockResolvedValueOnce(
       Response.json({ ...fixture().result, analysis: { malicious: true } }),

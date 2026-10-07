@@ -49,7 +49,7 @@ function fixture() {
     challenge: vi.fn<
       (
         sessionId: string,
-        action: "transcription" | "candidate-analysis",
+        action: "session-start" | "transcription" | "candidate-analysis",
         signal: AbortSignal,
       ) => Promise<string>
     >(async () => "synthetic"),
@@ -76,7 +76,10 @@ describe("saved sample display and protected Proceed", () => {
     });
     const api = createSourceAnalysisApi(transport);
     expect(await api.sampleReplayOptions(f.signal)).toEqual(analysis);
-    await api.grant(f.signal);
+    await api.grant(
+      { startNonce: crypto.randomUUID(), turnstileToken: "synthetic" },
+      f.signal,
+    );
     await api.sampleReplay("1", analysis.revision, "synthetic", f.signal);
     expect(transport).toHaveBeenCalledTimes(3);
   });
@@ -103,6 +106,7 @@ describe("saved sample display and protected Proceed", () => {
       f.signal,
     );
     expect(f.challenge.mock.calls.map((call) => call[1])).toEqual([
+      "session-start",
       "transcription",
       "candidate-analysis",
     ]);

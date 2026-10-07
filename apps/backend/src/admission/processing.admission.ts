@@ -3,6 +3,9 @@ import {
   ASSEMBLY_LIMITS,
   integrityReceiptClaimsSchema,
   processingActionSchema,
+  sessionStartProofSchema,
+  type SessionStartProof,
+  type ProcessingChallengeAction,
   type IntegrityReceiptClaims,
   type ProcessingAction,
 } from "@clipbuilder/contracts";
@@ -59,7 +62,7 @@ export type ActionInput = {
 export interface AbuseVerifier {
   verify(input: {
     token: string;
-    action: ProcessingAction;
+    action: ProcessingChallengeAction;
     sessionId: string;
     signal: AbortSignal;
   }): Promise<boolean>;
@@ -70,6 +73,7 @@ export class ProcessingAdmission {
   private active = 0;
   private dispatches = 0;
   private grantTimes: number[] = [];
+  private pendingStarts = 0;
   constructor(
     private readonly codec: ProcessingGrantCodec,
     private readonly policy: AdmissionPolicy,
@@ -101,10 +105,7 @@ export class ProcessingAdmission {
     )
       this.reject("ABUSE_CHECK_FAILED");
   }
-  issue(
-    origin: string,
-    fetchSite: string,
-  ): { cookie: string; grant: ProcessingGrant } {
+  private canIssue(origin: string, fetchSite: string): void {
     this.origin(origin, fetchSite);
     this.sweep();
     if (
@@ -114,6 +115,47 @@ export class ProcessingAdmission {
       this.reject("CAPACITY_FULL");
     if (this.grantTimes.length >= this.policy.maxGrantsPerWindow)
       this.reject("RATE_LIMITED");
+  }
+  async start(
+    input: SessionStartProof & {
+      origin: string;
+      fetchSite: string;
+      signal: AbortSignal;
+    },
+  ): Promise<{ cookie: string; grant: ProcessingGrant }> {
+    this.canIssue(input.origin, input.fetchSite);
+    if (!this.policy.paidEnabled) this.reject("PAID_DEMO_DISABLED");
+    const proof = sessionStartProofSchema.safeParse({
+      startNonce: input.startNonce,
+      turnstileToken: input.turnstileToken,
+    });
+    if (!proof.success) this.reject("INVALID_REQUEST");
+    input.signal.throwIfAborted();
+    // Reserve before verification awaits; invalid proofs never consume grants.
+    if (this.pendingStarts >= 2) this.reject("CAPACITY_FULL");
+    this.pendingStarts++;
+    const signal = AbortSignal.any([input.signal, AbortSignal.timeout(5000)]);
+    try {
+      const verified = await this.abuse.verify({
+        token: proof.data.turnstileToken,
+        action: "session-start",
+        sessionId: proof.data.startNonce,
+        signal,
+      });
+      signal.throwIfAborted();
+      if (!verified) this.reject("ABUSE_CHECK_FAILED");
+      return this.issue(input.origin, input.fetchSite);
+    } finally {
+      // Hold the slot until the verifier settles even if its caller disconnects.
+      this.pendingStarts--;
+    }
+  }
+  // Internal allocation primitive; HTTP entry points must use verified start().
+  issue(
+    origin: string,
+    fetchSite: string,
+  ): { cookie: string; grant: ProcessingGrant } {
+    this.canIssue(origin, fetchSite);
     const issuedAtMs = this.now();
     const nonces = Object.fromEntries(
       processingActionSchema.options.map((action) => [action, randomUUID()]),

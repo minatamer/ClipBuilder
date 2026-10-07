@@ -7,6 +7,7 @@ import type { ClippingSessionEvent } from "../session/session.types";
 import { SampleApiFailure, sampleFailure } from "../sample/sample.api";
 import type { SourceAnalysisApi } from "./source-analysis.api";
 import type { CloudUploadProgress } from "./cloud-upload";
+import { startProcessingSession } from "./session-start";
 
 export async function runSourceAnalysis(input: {
   workspace: Pick<
@@ -19,7 +20,7 @@ export async function runSourceAnalysis(input: {
   >;
   challenge(
     sessionId: string,
-    action: "transcription" | "candidate-analysis",
+    action: "session-start" | "transcription" | "candidate-analysis",
     signal: AbortSignal,
   ): Promise<string>;
   signal: AbortSignal;
@@ -67,7 +68,11 @@ export async function runSourceAnalysis(input: {
     input.event({ type: "ANALYZE_CONFIRMED", operation });
     started = true;
     input.label("Verifying processing access");
-    const grant = await api.grant(signal);
+    const grant = await startProcessingSession({
+      api,
+      challenge: input.challenge,
+      signal,
+    });
     cleanupRequired = true;
     await workspace.markCloudAnalysis("pending", true);
     const uploadToken = await input.challenge(

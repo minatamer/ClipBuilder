@@ -4,6 +4,7 @@ import {
   TEMPORARY_MEDIA_LIMITS,
   processingGrantRequestSchema,
   processingGrantResponseSchema,
+  SESSION_START_REQUEST_BYTES,
   sourceAnalysisUploadSchema,
   sourceAnalysisRequestSchema,
   selectedAssemblyRequestSchema,
@@ -88,9 +89,12 @@ export function createAnalysisRouter(
       admission.session(context(request, response));
     }
     json({
-      limit: assembling
-        ? GROUNDED_ANALYSIS_LIMITS.responseBytes
-        : GROUNDED_ANALYSIS_LIMITS.requestBytes,
+      limit:
+        request.path === "/grant"
+          ? SESSION_START_REQUEST_BYTES
+          : assembling
+            ? GROUNDED_ANALYSIS_LIMITS.responseBytes
+            : GROUNDED_ANALYSIS_LIMITS.requestBytes,
       strict: true,
     })(request, response, next);
   });
@@ -120,15 +124,18 @@ export function createAnalysisRouter(
       signal: response.locals.analysisSignal,
     };
   }
-  router.post("/grant", (request, response) => {
-    if (!processingGrantRequestSchema.safeParse(request.body).success)
+  router.post("/grant", async (request, response) => {
+    const parsed = processingGrantRequestSchema.safeParse(request.body);
+    if (!parsed.success)
       throw new ApplicationError({ code: "INVALID_REQUEST" });
     if (request.get("Cookie")?.includes(`${cookieName}=`))
       throw new ApplicationError({ code: "ACTIVE_SESSION_EXISTS" });
-    const result = admission.issue(
-      request.get("Origin")!,
-      request.get("Sec-Fetch-Site")!,
-    );
+    const result = await admission.start({
+      ...parsed.data,
+      origin: request.get("Origin")!,
+      fetchSite: request.get("Sec-Fetch-Site")!,
+      signal: response.locals.analysisSignal,
+    });
     response.cookie(cookieName, result.cookie, {
       httpOnly: true,
       secure: true,

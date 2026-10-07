@@ -21,6 +21,7 @@ import {
 import {
   type PublicConfigResponse,
   type SafeError,
+  type ProcessingChallengeAction,
 } from "@clipbuilder/contracts";
 import { PrivacyDialog } from "../../app/privacy-dialog";
 import { Button } from "../../shared/ui/button";
@@ -259,7 +260,7 @@ function SampleScreen({
     useState<CloudUploadProgress | null>(null);
   const [challenge, setChallenge] = useState<{
     sessionId: string;
-    action: "transcription" | "candidate-analysis" | "visual-plan" | "render";
+    action: ProcessingChallengeAction;
   } | null>(null);
   const challengePromise = useRef<{
     resolve(token: string): void;
@@ -411,7 +412,7 @@ function SampleScreen({
 
   async function requestChallenge(
     sessionId: string,
-    action: "transcription" | "candidate-analysis" | "visual-plan" | "render",
+    action: ProcessingChallengeAction,
     signal: AbortSignal,
   ) {
     signal.throwIfAborted();

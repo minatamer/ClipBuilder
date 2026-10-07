@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
   processingGrantResponseSchema,
+  processingGrantRequestSchema,
+  type SessionStartProof,
   mediaUploadResponseSchema,
   groundedAnalysisResultSchema,
   GROUNDED_ANALYSIS_LIMITS,
@@ -164,10 +166,14 @@ export function createSourceAnalysisApi(
           .strict(),
         signal,
       ),
-    async grant(signal: AbortSignal) {
+    async grant(proof: SessionStartProof, signal: AbortSignal) {
       const result = await call(
         "grant",
-        { rightsAcknowledged: true, dataTransferAcknowledged: true },
+        processingGrantRequestSchema.parse({
+          ...proof,
+          rightsAcknowledged: true,
+          dataTransferAcknowledged: true,
+        }),
         processingGrantResponseSchema,
         signal,
       );

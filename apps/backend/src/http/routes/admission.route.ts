@@ -1,6 +1,7 @@
 import {
   processingGrantRequestSchema,
   processingGrantResponseSchema,
+  SESSION_START_REQUEST_BYTES,
 } from "@clipbuilder/contracts";
 import { Router, json } from "express";
 import type { ProcessingAdmission } from "../../admission/processing.admission.js";
@@ -38,16 +39,29 @@ export function createAdmissionRouter(
   });
   router.post(
     "/grant",
-    json({ limit: "1kb", strict: true }),
-    (request, response) => {
-      if (!processingGrantRequestSchema.safeParse(request.body).success)
+    json({ limit: SESSION_START_REQUEST_BYTES, strict: true, inflate: false }),
+    async (request, response) => {
+      const parsed = processingGrantRequestSchema.safeParse(request.body);
+      if (!parsed.success)
         throw new ApplicationError({ code: "INVALID_REQUEST" });
       if (request.get("Cookie")?.includes(`${cookieName}=`))
         throw new ApplicationError({ code: "ACTIVE_SESSION_EXISTS" });
-      const result = admission.issue(
-        request.get("Origin")!,
-        request.get("Sec-Fetch-Site")!,
-      );
+      const controller = new AbortController();
+      const abort = () => {
+        if (!response.writableEnded) controller.abort();
+      };
+      response.once("close", abort);
+      let result;
+      try {
+        result = await admission.start({
+          ...parsed.data,
+          origin: request.get("Origin")!,
+          fetchSite: request.get("Sec-Fetch-Site")!,
+          signal: controller.signal,
+        });
+      } finally {
+        response.off("close", abort);
+      }
       response.cookie(cookieName, result.cookie, {
         httpOnly: true,
         secure: true,

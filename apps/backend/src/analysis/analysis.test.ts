@@ -21,6 +21,7 @@ import {
   LOCAL_SAMPLE_REPLAY_WORKSPACE,
 } from "./sample-replay.js";
 import { createAnalysisRouter } from "../http/routes/analysis.route.js";
+import { createAdmissionRouter } from "../http/routes/admission.route.js";
 import {
   SourceAnalysis,
   type RetainedSampleProcessingPort,
@@ -107,6 +108,7 @@ function fixture(
     clock,
     7200000,
   );
+  const abuse = { verify: vi.fn(async () => true) };
   const admission = new ProcessingAdmission(
     codec,
     {
@@ -120,7 +122,7 @@ function fixture(
       paidEnabled,
       timeoutMs: 1000,
     },
-    { verify: vi.fn(async () => true) },
+    abuse,
     clock,
     new Uint8Array(32).fill(8),
   );
@@ -202,6 +204,7 @@ function fixture(
     issued,
     controller,
     admission,
+    abuse,
     upload,
     analyze,
     advance: (ms: number) => {
@@ -210,6 +213,79 @@ function fixture(
   };
 }
 describe("owner-local saved sample analysis", () => {
+  it.each(["analysis", "admission"])(
+    "protects the %s grant alias before allocation and returns generic errors",
+    async (path) => {
+      const f = fixture();
+      const app = express();
+      // Trust is test-local, with synthetic loopback requests and no public server.
+      app.set("trust proxy", "loopback");
+      app.use(
+        "/v1/analysis",
+        createAnalysisRouter(f.admission, f.service, [f.context.origin]),
+      );
+      app.use(
+        "/v1/admission",
+        createAdmissionRouter(f.admission, [f.context.origin]),
+      );
+      app.use(
+        (
+          error: unknown,
+          _req: express.Request,
+          res: express.Response,
+          _next: express.NextFunction,
+        ) => {
+          void _next;
+          const mapped = mapError(error, `req_${"a".repeat(32)}`);
+          res.status(mapped.status).json({ error: mapped.error });
+        },
+      );
+      const headers = {
+        Origin: f.context.origin,
+        "Sec-Fetch-Site": "same-origin",
+        "X-Forwarded-Proto": "https",
+      };
+      const body = {
+        rightsAcknowledged: true,
+        dataTransferAcknowledged: true,
+        startNonce: randomUUID(),
+        turnstileToken: "synthetic",
+      };
+      f.abuse.verify.mockResolvedValue(false);
+      for (let i = 0; i < 3; i++) {
+        const rejected = await request(app)
+          .post(`/v1/${path}/grant`)
+          .set(headers)
+          .send(body)
+          .expect(403);
+        expect(rejected.headers["set-cookie"]).toBeUndefined();
+        expect(rejected.body.error.message).not.toContain("ABUSE_CHECK_FAILED");
+      }
+      f.abuse.verify.mockResolvedValue(true);
+      await request(app)
+        .post(`/v1/${path}/grant`)
+        .set(headers)
+        .send(body)
+        .expect(201);
+      await request(app)
+        .post(`/v1/${path}/grant`)
+        .set(headers)
+        .send({ ...body, startNonce: "wrong" })
+        .expect(400);
+      await request(app)
+        .post(`/v1/${path}/grant`)
+        .set({
+          ...headers,
+          Cookie: `__Host-clipping_session=${f.issued.cookie}`,
+        })
+        .send(body)
+        .expect(409);
+      expect(f.abuse.verify).toHaveBeenCalledTimes(4);
+      expect(f.port.upload).not.toHaveBeenCalled();
+      expect(f.port.prepare).not.toHaveBeenCalled();
+      expect(f.provider.analyze).not.toHaveBeenCalled();
+    },
+  );
   function cached() {
     const analysis = reconcileAnalysis(output(), media, "fake");
     analysis.candidates = [1, 2, 3].map((rank) => ({

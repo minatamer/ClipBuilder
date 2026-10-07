@@ -86,6 +86,84 @@ function fixture(overrides: Partial<AdmissionPolicy> = {}) {
 }
 afterEach(() => vi.useRealTimers());
 describe("process-lifetime protected admission", () => {
+  const startInput = () => ({
+    origin,
+    fetchSite: "same-origin",
+    startNonce: randomUUID(),
+    turnstileToken: "synthetic-start",
+    rightsAcknowledged: true as const,
+    dataTransferAcknowledged: true as const,
+    signal: new AbortController().signal,
+  });
+  it("invalid bootstrap proofs consume no genuine grant slots or paid dispatches", async () => {
+    const f = fixture({ maxRecords: 32 });
+    f.abuse.verify.mockResolvedValue(false);
+    for (let i = 0; i < 3; i++)
+      await expect(f.admission.start(startInput())).rejects.toThrow(
+        "ABUSE_CHECK_FAILED",
+      );
+    f.abuse.verify.mockResolvedValue(true);
+    await f.admission.start(startInput());
+    await f.admission.start(startInput());
+    await expect(f.admission.start(startInput())).rejects.toThrow(
+      "RATE_LIMITED",
+    );
+    expect(f.abuse.verify).toHaveBeenCalledTimes(5);
+    for (const call of Object.values(f.calls))
+      expect(call).not.toHaveBeenCalled();
+  });
+  it("bounds pending bootstrap work and rechecks grant capacity after verification", async () => {
+    const f = fixture({ maxRecords: 32 });
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    f.abuse.verify.mockImplementation(async () => {
+      await gate;
+      return true;
+    });
+    const first = f.admission.start(startInput()),
+      second = f.admission.start(startInput());
+    await expect(f.admission.start(startInput())).rejects.toThrow(
+      "CAPACITY_FULL",
+    );
+    expect(f.abuse.verify).toHaveBeenCalledTimes(2);
+    f.admission.issue(origin, "same-origin");
+    release();
+    const settled = await Promise.allSettled([first, second]);
+    expect(
+      settled.filter((value) => value.status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(settled.filter((value) => value.status === "rejected")).toHaveLength(
+      1,
+    );
+    for (const call of Object.values(f.calls))
+      expect(call).not.toHaveBeenCalled();
+  });
+  it("cannot allocate a grant when verification finishes after cancellation", async () => {
+    const f = fixture({ maxRecords: 32 });
+    const controller = new AbortController();
+    f.abuse.verify.mockImplementationOnce(async () => {
+      controller.abort();
+      return true;
+    });
+    await expect(
+      f.admission.start({ ...startInput(), signal: controller.signal }),
+    ).rejects.toBeDefined();
+    await f.admission.start(startInput());
+    await f.admission.start(startInput());
+    expect(f.abuse.verify).toHaveBeenCalledTimes(3);
+  });
+  it("rejects malformed bootstrap binding and untrusted origin before outbound work", async () => {
+    const f = fixture({ maxRecords: 32 });
+    await expect(
+      f.admission.start({ ...startInput(), startNonce: "wrong" }),
+    ).rejects.toBeDefined();
+    await expect(
+      f.admission.start({ ...startInput(), origin: "https://other.test" }),
+    ).rejects.toThrow("ABUSE_CHECK_FAILED");
+    expect(f.abuse.verify).not.toHaveBeenCalled();
+  });
   it("reserves at most three image attempts only inside the running assembly and consumes the process budget", async () => {
     const f = fixture({ maxDispatches: 4 });
     expect(() => f.admission.reserveImageCall(f.context)).toThrow();

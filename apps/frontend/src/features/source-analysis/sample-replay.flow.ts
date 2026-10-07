@@ -1,5 +1,6 @@
 import type { BrowserWorkspace } from "../media/browser.workspace";
 import type { SourceAnalysisApi } from "./source-analysis.api";
+import { startProcessingSession } from "./session-start";
 
 export async function openSampleReplay(input: {
   workspace: Pick<
@@ -25,7 +26,7 @@ export async function prepareSampleReplay(input: {
   api: Pick<SourceAnalysisApi, "grant" | "sample" | "sampleReplay">;
   challenge(
     sessionId: string,
-    action: "transcription" | "candidate-analysis",
+    action: "session-start" | "transcription" | "candidate-analysis",
     signal: AbortSignal,
   ): Promise<string>;
   signal: AbortSignal;
@@ -43,7 +44,7 @@ export async function prepareSampleReplay(input: {
     input.signal.throwIfAborted();
     await input.workspace.markCloudAnalysis("pending", false);
     input.label("Preparing a fresh private sample copy for assembly");
-    const grant = await input.api.grant(input.signal);
+    const grant = await startProcessingSession(input);
     cleanupRequired = true;
     input.signal.throwIfAborted();
     await input.workspace.markCloudAnalysis("pending", true);

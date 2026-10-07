@@ -4,7 +4,10 @@ import {
   sessionIdSchema,
   uuidV4Schema,
 } from "./ids.schema.js";
-import { sha256DigestSchema } from "./boundary-primitives.schema.js";
+import {
+  sha256DigestSchema,
+  turnstileTokenSchema,
+} from "./boundary-primitives.schema.js";
 
 export const processingActionSchema = z.enum([
   "transcription",
@@ -13,8 +16,19 @@ export const processingActionSchema = z.enum([
   "render",
 ]);
 export type ProcessingAction = z.infer<typeof processingActionSchema>;
+// Bootstrap proof does not add a paid action to the four-action grant.
+export type ProcessingChallengeAction = ProcessingAction | "session-start";
+export const SESSION_START_REQUEST_BYTES = 3 * 1024;
+export const sessionStartProofSchema = z
+  .object({
+    startNonce: uuidV4Schema,
+    turnstileToken: turnstileTokenSchema,
+  })
+  .strict();
+export type SessionStartProof = z.infer<typeof sessionStartProofSchema>;
 export const processingGrantRequestSchema = z
   .object({
+    ...sessionStartProofSchema.shape,
     rightsAcknowledged: z.literal(true),
     dataTransferAcknowledged: z.literal(true),
   })

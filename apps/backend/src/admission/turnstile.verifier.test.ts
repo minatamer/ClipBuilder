@@ -40,5 +40,21 @@ describe("bounded processing abuse verification", () => {
     transport.mockRejectedValueOnce(new Error("synthetic-private"));
     expect(await verifier.verify(input)).toBe(false);
     expect(transport).toHaveBeenCalledTimes(6);
+    const bootstrap = {
+      ...input,
+      action: "session-start" as const,
+      sessionId: "00000000-0000-4000-8000-000000000001",
+    };
+    transport.mockResolvedValueOnce(
+      Response.json({
+        ...value,
+        action: "session-start",
+        cdata: bootstrap.sessionId,
+      }),
+    );
+    expect(await verifier.verify(bootstrap)).toBe(true);
+    transport.mockResolvedValueOnce(Response.json(value));
+    expect(await verifier.verify(bootstrap)).toBe(false);
+    expect(transport).toHaveBeenCalledTimes(8);
   });
 });
