@@ -158,12 +158,36 @@ describe("process-lifetime protected admission", () => {
     });
     await expect(
       f.admission.run(f.context, input, () => {}, f.calls.text),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ code: "SESSION_INVALID" });
     expect(f.calls.text).not.toHaveBeenCalled();
     expect(f.calls.transcription).not.toHaveBeenCalled();
     expect(f.calls.image).not.toHaveBeenCalled();
     expect(f.calls.job).not.toHaveBeenCalled();
     expect(f.calls.cloud).not.toHaveBeenCalled();
+  });
+  it("distinguishes session expiry before dispatch and after a consumed dispatch", async () => {
+    const before = fixture();
+    before.abuse.verify.mockImplementation(async () => {
+      before.setTime(before.issued.grant.expiresAtMs);
+      return true;
+    });
+    await expect(
+      before.admission.run(before.context, input, () => {}, before.calls.text),
+    ).rejects.toMatchObject({ code: "SESSION_EXPIRED" });
+    expect(before.calls.text).not.toHaveBeenCalled();
+    const after = fixture();
+    after.calls.text.mockImplementation(async () => {
+      after.setTime(after.issued.grant.expiresAtMs);
+      return "synthetic late result";
+    });
+    await expect(
+      after.admission.run(after.context, input, () => {}, after.calls.text),
+    ).rejects.toMatchObject({ code: "SESSION_EXPIRED" });
+    expect(after.calls.text).toHaveBeenCalledOnce();
+    await expect(
+      after.admission.run(after.context, input, () => {}, after.calls.text),
+    ).rejects.toThrow();
+    expect(after.calls.text).toHaveBeenCalledOnce();
   });
   it.each([
     "origin",
@@ -286,7 +310,9 @@ describe("process-lifetime protected admission", () => {
           }),
       );
       const result = f.admission.run(f.context, input, () => {}, f.calls.text);
-      const rejected = expect(result).rejects.toThrow();
+      const rejected = expect(result).rejects.toMatchObject({
+        code: kind === "timeout" ? "REQUEST_TIMEOUT" : "CLIENT_ABORTED",
+      });
       await Promise.resolve();
       await Promise.resolve();
       expect(f.calls.text).toHaveBeenCalledTimes(1);

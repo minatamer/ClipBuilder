@@ -220,19 +220,38 @@ export class ProcessingAdmission {
       if (action.state !== "canceled") action.state = "uncertain";
     };
     let rejectAbort: (reason: unknown) => void = () => {};
-    const abort = () =>
-      rejectAbort(new ApplicationError({ code: "CLIENT_ABORTED" }));
+    const abortError = () =>
+      new ApplicationError({
+        code:
+          controller.signal.reason instanceof DOMException &&
+          controller.signal.reason.name === "TimeoutError"
+            ? "REQUEST_TIMEOUT"
+            : "CLIENT_ABORTED",
+      });
+    const abort = () => rejectAbort(abortError());
     const aborted = new Promise<never>((_, reject) => {
       rejectAbort = reject;
       controller.signal.addEventListener("abort", abort, { once: true });
     });
-    const cancel = () => controller.abort();
+    const cancel = () => controller.abort(context.signal.reason);
     context.signal.addEventListener("abort", cancel, { once: true });
-    const timer = setTimeout(cancel, this.policy.timeoutMs);
+    const timer = setTimeout(
+      () =>
+        controller.abort(
+          new DOMException("Processing deadline elapsed", "TimeoutError"),
+        ),
+      this.policy.timeoutMs,
+    );
     if (context.signal.aborted) cancel();
+    const checkExecution = () => {
+      if (controller.signal.aborted) throw abortError();
+      const time = this.now();
+      if (time < record.grant.issuedAtMs) this.reject("SESSION_INVALID");
+      if (time >= record.grant.expiresAtMs) this.reject("SESSION_EXPIRED");
+    };
     const execution = (async () => {
       try {
-        if (controller.signal.aborted) this.reject("CLIENT_ABORTED");
+        if (controller.signal.aborted) throw abortError();
         if (
           !(await this.abuse.verify({
             token: input.turnstileToken,
@@ -242,12 +261,7 @@ export class ProcessingAdmission {
           }))
         )
           this.reject("ABUSE_CHECK_FAILED");
-        if (
-          controller.signal.aborted ||
-          record.grant.issuedAtMs > this.now() ||
-          record.grant.expiresAtMs <= this.now()
-        )
-          this.reject("CLIENT_ABORTED");
+        checkExecution();
         if (this.dispatches >= this.policy.maxDispatches)
           this.reject("PROVIDER_BUDGET_EXHAUSTED");
         action.state = "running";
@@ -256,12 +270,7 @@ export class ProcessingAdmission {
           maxCalls: 1,
           automaticRetries: 0,
         });
-        if (
-          controller.signal.aborted ||
-          record.grant.issuedAtMs > this.now() ||
-          record.grant.expiresAtMs <= this.now()
-        )
-          this.reject("CLIENT_ABORTED");
+        checkExecution();
         action.state = "completed";
         return result;
       } catch (error) {
