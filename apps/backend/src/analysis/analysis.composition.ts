@@ -21,6 +21,7 @@ import { composeRetainedSampleReader } from "../media/retained-sample.gcs.js";
 import { RetainedSampleProcessing } from "../media/retained-sample.processing.js";
 import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
 import { composeLocalSampleReplay } from "./sample-replay.js";
+import { MediaDeliveryAllowance } from "../media/delivery-allowance.js";
 export function composeAnalysis(
   config: BackendConfig,
   admission: ProcessingAdmission | null,
@@ -78,15 +79,39 @@ export function composeAnalysis(
       )
     : null;
   // Clear and either AI phase share exactly the same provider-file and media ownership.
+  const deliveryAllowance = new MediaDeliveryAllowance();
   const render =
     assembly && config.features.liveRender
-      ? new FinalRender(admission, assembly, media, Date.now, diagnostics)
+      ? new FinalRender(
+          admission,
+          assembly,
+          media,
+          Date.now,
+          diagnostics,
+          deliveryAllowance,
+        )
       : null;
   return {
     analysis,
     assembly,
-    preview: assembly ? new PreviewPlayback(admission, assembly, media) : null,
+    preview: assembly
+      ? new PreviewPlayback(
+          admission,
+          assembly,
+          media,
+          Date.now,
+          deliveryAllowance,
+        )
+      : null,
     render,
-    output: render ? new OutputDelivery(admission, render, media) : null,
+    output: render
+      ? new OutputDelivery(
+          admission,
+          render,
+          media,
+          Date.now,
+          deliveryAllowance,
+        )
+      : null,
   };
 }

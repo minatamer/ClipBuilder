@@ -13,6 +13,9 @@ export async function streamArtifact(input: {
   destination: Writable;
   fetch(signal: AbortSignal): Promise<Response>;
   headers(status: number, fields: Record<string, string>): void;
+  // Session-owned delivery adds its policy; retained-source paths own theirs.
+  reserve?(bytes: number): void;
+  authorize?(): void;
   attachment?: boolean;
 }) {
   let selected;
@@ -28,11 +31,13 @@ export async function streamArtifact(input: {
     ),
   ]);
   signal.throwIfAborted();
+  const length = selected.end - selected.start + 1;
+  input.reserve?.(length);
   const response = await input.fetch(signal),
-    length = selected.end - selected.start + 1,
     contentRange = `bytes ${selected.start}-${selected.end}/${input.bytes}`;
   try {
     signal.throwIfAborted();
+    input.authorize?.();
     if (
       response.status !== (selected.partial ? 206 : 200) ||
       !response.body ||
@@ -66,6 +71,7 @@ export async function streamArtifact(input: {
         for (;;) {
           const value = await reader.read();
           signal.throwIfAborted();
+          input.authorize?.();
           if (value.done) break;
           count += value.value.byteLength;
           if (count > length) throw new Error("invalid-media");

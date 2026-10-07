@@ -36,6 +36,7 @@ import { Writable } from "node:stream";
 import { FinalRender } from "../render/final-render.usecase.js";
 import { RendererRequestFailure } from "../media/renderer.diagnostics.js";
 import { OutputDelivery } from "../media/output-delivery.js";
+import { MediaDeliveryAllowance } from "../media/delivery-allowance.js";
 import {
   AnalysisDiagnostics,
   parseAnalysisDiagnosticLine,
@@ -259,18 +260,27 @@ describe("final render and delivery", () => {
           }),
       ),
     };
+    const allowance = new MediaDeliveryAllowance(() => 1000);
     const render = new FinalRender(
         f.admission,
         f.service,
         media,
         () => 1000,
         f.diagnostics,
+        allowance,
       ),
-      delivery = new OutputDelivery(f.admission, render, media, () => 1000);
+      delivery = new OutputDelivery(
+        f.admission,
+        render,
+        media,
+        () => 1000,
+        allowance,
+      );
     return {
       ...f,
       assembly,
       media,
+      allowance,
       render,
       delivery,
       request: { assembly, turnstileToken: "synthetic" },
@@ -358,6 +368,108 @@ describe("final render and delivery", () => {
     await expect(
       f.delivery.stream(f.context, undefined, new Writable(), () => {}),
     ).rejects.toThrow();
+  });
+  it("shares metadata allowance across result restore and output opens without further dispatch", async () => {
+    const f = await finalFixture();
+    const result = await f.render.run(f.context, f.request);
+    for (let i = 0; i < 32; i++) {
+      await f.render.restore(f.context, f.assembly);
+      await f.delivery.open(f.context, result);
+    }
+    const lookups = f.media.outputInfo.mock.calls.length;
+    await expect(f.delivery.open(f.context, result)).rejects.toThrow(
+      "RATE_LIMITED",
+    );
+    await expect(f.render.restore(f.context, f.assembly)).rejects.toThrow(
+      "RATE_LIMITED",
+    );
+    expect(f.media.outputInfo).toHaveBeenCalledTimes(lookups);
+    expect(f.media.render).toHaveBeenCalledOnce();
+    expect(f.provider.plan).toHaveBeenCalledOnce();
+  });
+  it("does not publish output headers after Exit while private content is still arriving", async () => {
+    const f = await finalFixture();
+    const result = await f.render.run(f.context, f.request);
+    await f.delivery.open(f.context, result);
+    let release = () => {},
+      entered = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const waiting = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const canceled = vi.fn();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(1024));
+      },
+      pull(controller) {
+        controller.close();
+      },
+      cancel: canceled,
+    });
+    f.media.outputContent.mockImplementationOnce(async () => {
+      entered();
+      await gate;
+      return new Response(body, {
+        headers: { "Content-Type": "video/mp4", "Content-Length": "1024" },
+      });
+    });
+    const headers = vi.fn();
+    const work = f.delivery.stream(
+      f.context,
+      undefined,
+      new Writable(),
+      headers,
+    );
+    const rejected = expect(work).rejects.toThrow();
+    await waiting;
+    f.delivery.clear(f.context);
+    f.admission.exit(f.context);
+    release();
+    await rejected;
+    expect(headers).not.toHaveBeenCalled();
+    expect(canceled).toHaveBeenCalledOnce();
+    expect(f.media.render).toHaveBeenCalledOnce();
+    expect(f.provider.plan).toHaveBeenCalledOnce();
+  });
+  it("bounds successive playback/download aliases before content I/O and reopening never resets it", async () => {
+    const f = await finalFixture();
+    const result = await f.render.run(f.context, f.request);
+    await f.delivery.open(f.context, result);
+    const target = () =>
+      new Writable({
+        write(_chunk, _encoding, callback) {
+          callback();
+        },
+      });
+    // The policy unit test exercises the whole allowance. Keep this integration
+    // check at its edge so suite concurrency cannot turn 1,024 pipelines flaky.
+    for (let i = 0; i < 1022; i++)
+      f.allowance.reserveContent(
+        f.admission.session(f.context).sessionId,
+        10,
+        f.context.signal,
+      );
+    for (let i = 0; i < 2; i++)
+      await f.delivery.stream(
+        f.context,
+        "bytes=0-9",
+        target(),
+        () => {},
+        i % 2 === 0,
+      );
+    await f.delivery.open(f.context, result);
+    await expect(
+      f.delivery.stream(f.context, "bytes=0-9", target(), () => {}, true),
+    ).rejects.toThrow("RATE_LIMITED");
+    await expect(
+      f.delivery.stream(f.context, undefined, target(), () => {}),
+    ).rejects.toThrow("RATE_LIMITED");
+    expect(f.media.outputContent).toHaveBeenCalledTimes(2);
+    expect(f.media.render).toHaveBeenCalledOnce();
+    expect(f.provider.plan).toHaveBeenCalledOnce();
   });
   it.each(["metadata", "expired", "failed"])(
     "never signs %s outputs and consumes the uncertain render",

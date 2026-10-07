@@ -13,6 +13,7 @@ import type { SelectedAssembly } from "../assembly/selected-assembly.usecase.js"
 import { ApplicationError } from "../http/errorMapper.js";
 
 import { streamArtifact } from "./artifact-stream.js";
+import { MediaDeliveryAllowance } from "./delivery-allowance.js";
 
 export interface PreviewMedia {
   previewInfo(
@@ -32,6 +33,7 @@ export class PreviewPlayback {
     private readonly assembly: Pick<SelectedAssembly, "verify">,
     private readonly media: PreviewMedia,
     private readonly now = Date.now,
+    private readonly allowance = new MediaDeliveryAllowance(now),
   ) {}
   private capacity(sessionId: string) {
     for (const [key, value] of this.references)
@@ -45,6 +47,11 @@ export class PreviewPlayback {
   async open(context: AdmissionContext, input: unknown) {
     const result = this.assembly.verify(context, input);
     this.capacity(result.binding.sessionId);
+    this.allowance.reserveMetadata(
+      result.binding.sessionId,
+      this.admission.session(context).expiresAtMs,
+      context.signal,
+    );
     const descriptor = mediaPreviewResponseSchema.parse(
       await this.media.previewInfo(
         {
@@ -89,6 +96,16 @@ export class PreviewPlayback {
       signal: context.signal,
       destination,
       headers,
+      reserve: (bytes) =>
+        this.allowance.reserveContent(session.sessionId, bytes, context.signal),
+      authorize: () => {
+        this.admission.restoreSession(context);
+        if (
+          !this.references.has(session.sessionId) ||
+          descriptor.expiresAtMs <= this.now()
+        )
+          throw new ApplicationError({ code: "SESSION_INVALID" });
+      },
       fetch: (signal) =>
         this.media.previewContent(
           {

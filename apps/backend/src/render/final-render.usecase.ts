@@ -22,6 +22,7 @@ import type {
 import type { SelectedAssembly } from "../assembly/selected-assembly.usecase.js";
 import { ApplicationError } from "../http/errorMapper.js";
 import { AnalysisDiagnostics } from "../analysis/analysis.diagnostics.js";
+import { MediaDeliveryAllowance } from "../media/delivery-allowance.js";
 export interface FinalRenderMedia {
   render(
     input: MediaRenderRequest,
@@ -43,6 +44,7 @@ export class FinalRender {
     private readonly media: FinalRenderMedia,
     private readonly now = Date.now,
     private readonly diagnostics = new AnalysisDiagnostics(),
+    private readonly allowance = new MediaDeliveryAllowance(now),
   ) {}
   private payload(assembly: SelectedAssemblyResult, value: unknown) {
     const output = mediaOutputResponseSchema.parse(value),
@@ -172,6 +174,11 @@ export class FinalRender {
   }
   async restore(context: AdmissionContext, input: unknown) {
     const assembly = this.assembly.verify(context, input);
+    this.allowance.reserveMetadata(
+      assembly.binding.sessionId,
+      this.admission.session(context).expiresAtMs,
+      context.signal,
+    );
     const output = await this.diagnostics.step("render_output_lookup", () =>
       this.media.outputInfo(
         { binding: assembly.binding, manifestHash: assembly.manifestHash },

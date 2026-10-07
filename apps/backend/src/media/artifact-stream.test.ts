@@ -19,6 +19,7 @@ describe("bounded private stream cleanup", () => {
         },
       }),
       headers,
+      reserve: () => {},
       fetch: async () =>
         new Response(body, {
           headers: { "Content-Type": "video/mp4", "Content-Length": "10" },
@@ -50,6 +51,7 @@ describe("bounded private stream cleanup", () => {
           signal: new AbortController().signal,
           destination: new Writable(),
           headers,
+          reserve: () => {},
           fetch: async () =>
             new Response(body, {
               headers: {
