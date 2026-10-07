@@ -20,6 +20,39 @@ const token = () =>
   ).replaceAll("=", "") +
   ".signature";
 describe("private control transport", () => {
+  it("accepts only the owner public hostname in production while keeping the private target on Cloud Run", async () => {
+    const api = await import("./control-api");
+    const values = {
+      APP_ENV: "production",
+      FRONTEND_ORIGIN: "https://tryclipbuilding.com",
+      PRIVATE_BACKEND_ORIGIN: backend,
+      BACKEND_AUDIENCE: backend,
+    };
+    expect(api.readControlApiConfiguration(values).frontendOrigin).toBe(
+      values.FRONTEND_ORIGIN,
+    );
+    for (const origin of [
+      "https://www.tryclipbuilding.com",
+      "https://tryclipbuilding.com.evil.example",
+      "https://tryclipbuilding.com:8443",
+      "http://tryclipbuilding.com",
+      "https://tryclipbuilding.com/path",
+    ]) {
+      expect(() =>
+        api.readControlApiConfiguration({ ...values, FRONTEND_ORIGIN: origin }),
+      ).toThrow();
+    }
+    expect(() =>
+      api.readControlApiConfiguration({ ...values, APP_ENV: "preview" }),
+    ).toThrow();
+    expect(() =>
+      api.readControlApiConfiguration({
+        ...values,
+        PRIVATE_BACKEND_ORIGIN: values.FRONTEND_ORIGIN,
+        BACKEND_AUDIENCE: values.FRONTEND_ORIGIN,
+      }),
+    ).toThrow();
+  });
   it("retains fixed localhost behavior without metadata or hosted configuration", async () => {
     const api = await import("./control-api");
     vi.stubEnv("PRIVATE_BACKEND_ORIGIN", "https://ignored.example");

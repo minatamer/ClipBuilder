@@ -69,6 +69,29 @@ describe("private hosted frontend caller", () => {
     });
     expect(config.features.liveRender).toBe(true);
     expect(config.retainedSample.enabled).toBe(false);
+    const customDomain = {
+      ...values,
+      PUBLIC_PAID_PROCESSING_APPROVED: "true",
+      FRONTEND_ORIGIN: "https://tryclipbuilding.com",
+      TURNSTILE_EXPECTED_HOSTNAME: "tryclipbuilding.com",
+    };
+    expect(loadConfig(customDomain).features.liveRender).toBe(true);
+    for (const origin of [
+      "https://www.tryclipbuilding.com",
+      "https://tryclipbuilding.com.evil.example",
+      "https://tryclipbuilding.com:8443",
+      "http://tryclipbuilding.com",
+    ])
+      expect(() =>
+        loadConfig({
+          ...customDomain,
+          FRONTEND_ORIGIN: origin,
+          TURNSTILE_EXPECTED_HOSTNAME: new URL(origin).hostname,
+        }),
+      ).toThrow();
+    expect(() =>
+      loadConfig({ ...customDomain, TURNSTILE_EXPECTED_HOSTNAME: "localhost" }),
+    ).toThrow();
     for (const changed of [
       { BACKEND_AUDIENCE: frontend },
       { FRONTEND_CALLER_EMAIL: "arbitrary@example.com" },

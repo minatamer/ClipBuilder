@@ -2,6 +2,7 @@ import {
   ASSEMBLY_LIMITS,
   OWNER_VALIDATION_LIMITS,
   PUBLIC_LIMITS,
+  PUBLIC_SITE_HOSTNAME,
 } from "@clipbuilder/contracts";
 import { z } from "zod";
 import { ACTIVE_PROCESSING_GRANT_KEY_ID } from "../admission/processing.grant.js";
@@ -438,7 +439,8 @@ export const environmentSchema = rawEnvironmentSchema
       if (
         environment.APP_ENV !== "production" ||
         frontend.protocol !== "https:" ||
-        !frontend.hostname.endsWith(".run.app") ||
+        (!frontend.hostname.endsWith(".run.app") &&
+          frontend.origin !== `https://${PUBLIC_SITE_HOSTNAME}`) ||
         backend.protocol !== "https:" ||
         !backend.hostname.endsWith(".run.app") ||
         environment.BACKEND_AUDIENCE !== environment.BACKEND_ORIGIN ||

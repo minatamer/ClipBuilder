@@ -1,4 +1,5 @@
 import { env } from "node:process";
+import { PUBLIC_SITE_HOSTNAME } from "@clipbuilder/contracts";
 
 type Configuration = {
   environment: "local" | "preview" | "production";
@@ -7,13 +8,17 @@ type Configuration = {
   audience: string;
 };
 const unavailable = () => new Error("control-api-unavailable");
-function cloudOrigin(value: string | undefined): string {
+function hostedOrigin(
+  value: string | undefined,
+  publicFrontend = false,
+): string {
   if (!value) throw unavailable();
   const url = new URL(value);
   if (
     url.origin !== value ||
     url.protocol !== "https:" ||
-    !url.hostname.endsWith(".run.app") ||
+    (!url.hostname.endsWith(".run.app") &&
+      !(publicFrontend && url.origin === `https://${PUBLIC_SITE_HOSTNAME}`)) ||
     url.username ||
     url.password
   )
@@ -32,11 +37,14 @@ export function readControlApiConfiguration(
       audience: "",
     };
   if (mode !== "preview" && mode !== "production") throw unavailable();
-  const backendOrigin = cloudOrigin(environment.PRIVATE_BACKEND_ORIGIN);
+  const backendOrigin = hostedOrigin(environment.PRIVATE_BACKEND_ORIGIN);
   if (environment.BACKEND_AUDIENCE !== backendOrigin) throw unavailable();
   return {
     environment: mode,
-    frontendOrigin: cloudOrigin(environment.FRONTEND_ORIGIN),
+    frontendOrigin: hostedOrigin(
+      environment.FRONTEND_ORIGIN,
+      mode === "production",
+    ),
     backendOrigin,
     audience: backendOrigin,
   };

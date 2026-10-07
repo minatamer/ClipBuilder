@@ -4,6 +4,7 @@ export * from "./boundary-primitives.schema.js";
 export * from "./candidate.schema.js";
 export * from "./composition-manifest.schema.js";
 export * from "./constants.js";
+export * from "./public-site.js";
 export * from "./errors.schema.js";
 export * from "./ids.schema.js";
 export * from "./media.schema.js";
