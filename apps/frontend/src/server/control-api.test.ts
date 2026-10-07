@@ -20,6 +20,37 @@ const token = () =>
   ).replaceAll("=", "") +
   ".signature";
 describe("private control transport", () => {
+  it("resolves a hosted request from the exact public host and HTTPS proxy marker rather than the container URL", async () => {
+    hosted();
+    const api = await import("./control-api");
+    const request = (headers: Record<string, string>) =>
+      new Request("https://0.0.0.0:8080/api/sample/config", { headers });
+    const headers = {
+      Host: "synthetic-frontend.run.app",
+      "X-Forwarded-Proto": "https",
+    };
+    expect(api.controlRequestOrigin(request(headers))).toBe(frontend);
+    for (const invalid of [
+      {},
+      { ...headers, Host: "other.run.app" },
+      { ...headers, Host: "synthetic-frontend.run.app:8080" },
+      { ...headers, "X-Forwarded-Proto": "http" },
+      { ...headers, "X-Forwarded-Proto": "https,http" },
+      { "X-Forwarded-Host": headers.Host, "X-Forwarded-Proto": "https" },
+    ])
+      expect(api.controlRequestOrigin(request(invalid))).toBeNull();
+    vi.stubEnv("FRONTEND_ORIGIN", "https://tryclipbuilding.com");
+    expect(
+      api.controlRequestOrigin(
+        request({ ...headers, Host: "tryclipbuilding.com" }),
+      ),
+    ).toBe("https://tryclipbuilding.com");
+    vi.stubEnv("APP_ENV", "local");
+    expect(
+      api.controlRequestOrigin(new Request("http://localhost:3000/start")),
+    ).toBe("http://localhost:3000");
+    expect(api.controlRequestOrigin(request(headers))).toBeNull();
+  });
   it("accepts only the owner public hostname in production while keeping the private target on Cloud Run", async () => {
     const api = await import("./control-api");
     const values = {

@@ -38,7 +38,10 @@ try {
       env: {
         ...process.env,
         NODE_ENV: "production",
-        APP_ENV: "local",
+        APP_ENV: "production",
+        FRONTEND_ORIGIN: "https://synthetic-frontend.run.app",
+        PRIVATE_BACKEND_ORIGIN: "https://synthetic-backend.run.app",
+        BACKEND_AUDIENCE: "https://synthetic-backend.run.app",
         PORT: "3000",
         HOSTNAME: "127.0.0.1",
         NEXT_TELEMETRY_DISABLED: "1",
@@ -95,14 +98,28 @@ try {
     ];
     for (const path of paths)
       assert.equal((await fetchLocal(path)).status, 404);
-    assert.match(
-      await (await fetchLocal("/robots.txt")).text(),
-      /Disallow: \/\s/,
-    );
-    const config = await fetchLocal("/api/sample/config");
+    assert.match(await (await fetchLocal("/robots.txt")).text(), /Allow: \/\s/);
+    const config = await fetchLocal("/api/sample/config", {
+      headers: {
+        Host: "synthetic-frontend.run.app",
+        "X-Forwarded-Proto": "https",
+      },
+    });
     assert.equal(config.status, 503); // No control API/network in this isolated image probe.
     const error = await config.json();
     assert.equal(error.error.code, "INTERNAL_ERROR");
+    assert.equal(
+      (
+        await fetchLocal("/api/sample/config", {
+          headers: {
+            Host: "other.run.app",
+            "X-Forwarded-Host": "synthetic-frontend.run.app",
+            "X-Forwarded-Proto": "https",
+          },
+        })
+      ).status,
+      400,
+    );
     assert.equal(
       (
         await fetchLocal("/api/analysis/sample-replay-options", {

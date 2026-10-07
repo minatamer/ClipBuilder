@@ -4,7 +4,7 @@ import {
 } from "@clipbuilder/contracts";
 import {
   acquireControlRequest,
-  controlFrontendOrigin,
+  controlRequestOrigin,
   fetchControlApi,
 } from "../../../server/control-api";
 
@@ -15,15 +15,14 @@ export async function POST(request: Request): Promise<Response> {
       status: 204,
       headers: { "Cache-Control": "no-store" },
     });
-  const origin = new URL(request.url).origin;
-  let expectedOrigin: string;
+  let origin: string | null;
   try {
-    expectedOrigin = controlFrontendOrigin();
+    origin = controlRequestOrigin(request);
   } catch {
     return acknowledge();
   }
   if (
-    origin !== expectedOrigin ||
+    origin === null ||
     request.headers.get("origin") !== origin ||
     request.headers.get("sec-fetch-site") !== "same-origin" ||
     request.headers.get("content-type")?.split(";")[0] !== "application/json" ||

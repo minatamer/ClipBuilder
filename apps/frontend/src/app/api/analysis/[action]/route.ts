@@ -8,7 +8,7 @@ import {
 } from "@clipbuilder/contracts";
 import {
   acquireControlRequest,
-  controlFrontendOrigin,
+  controlRequestOrigin,
   fetchControlApi,
 } from "../../../../server/control-api";
 
@@ -29,12 +29,11 @@ async function proxy(
       },
       { status, headers: { "Cache-Control": "no-store" } },
     );
-  const origin = new URL(request.url).origin;
   if (action === "sample-replay" || action === "sample-replay-options")
     return fail(404);
-  let expectedOrigin: string;
+  let origin: string | null;
   try {
-    expectedOrigin = controlFrontendOrigin();
+    origin = controlRequestOrigin(request);
   } catch {
     return fail(503);
   }
@@ -52,7 +51,7 @@ async function proxy(
       "render-result",
       "output",
     ].includes(action) ||
-    origin !== expectedOrigin ||
+    origin === null ||
     request.headers.get("origin") !== origin ||
     request.headers.get("content-type")?.split(";")[0] !== "application/json" ||
     (request.headers.get("content-encoding") ?? "identity") !== "identity" ||
@@ -196,13 +195,13 @@ export async function GET(
     });
   let expectedOrigin: string;
   try {
-    expectedOrigin = controlFrontendOrigin();
+    expectedOrigin = controlRequestOrigin(request) ?? "";
   } catch {
     return fail();
   }
   if (
     !["preview", "output", "download", "sample-source"].includes(action) ||
-    url.origin !== expectedOrigin ||
+    !expectedOrigin ||
     url.search ||
     request.headers.get("sec-fetch-site") !== "same-origin"
   )
@@ -245,7 +244,7 @@ export async function GET(
       {
         headers: {
           ...(action === "sample-source" ? {} : { Cookie: cookie[0]! }),
-          Origin: url.origin,
+          Origin: expectedOrigin,
           "Sec-Fetch-Site": "same-origin",
           ...(range ? { Range: range } : {}),
         },

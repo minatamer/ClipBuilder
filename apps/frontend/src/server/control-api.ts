@@ -64,6 +64,20 @@ function currentConfiguration() {
 export function controlFrontendOrigin() {
   return currentConfiguration().frontendOrigin;
 }
+/** Next standalone uses its bind address in request.url behind Cloud Run. */
+export function controlRequestOrigin(request: Request): string | null {
+  const target = currentConfiguration();
+  if (target.environment === "local")
+    return new URL(request.url).origin === target.frontendOrigin
+      ? target.frontendOrigin
+      : null;
+  const expected = new URL(target.frontendOrigin);
+  // Use the exact public Host and the TLS proxy marker; never trust a forwarded host.
+  return request.headers.get("host") === expected.host &&
+    request.headers.get("x-forwarded-proto") === "https"
+    ? target.frontendOrigin
+    : null;
+}
 export function controlIsLocal() {
   return currentConfiguration().environment === "local";
 }

@@ -5,11 +5,58 @@ import { GET, POST } from "./route";
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.useRealTimers();
 });
 const context = (path: string[]) => ({ params: Promise.resolve({ path }) });
 
 describe("local sample proxy", () => {
+  it("forwards hosted configuration through metadata identity using the public origin and denies foreign browser origins", async () => {
+    const origin = "https://synthetic-frontend.run.app";
+    const backend = "https://synthetic-backend.run.app";
+    vi.stubEnv("APP_ENV", "production");
+    vi.stubEnv("FRONTEND_ORIGIN", origin);
+    vi.stubEnv("PRIVATE_BACKEND_ORIGIN", backend);
+    vi.stubEnv("BACKEND_AUDIENCE", backend);
+    const token =
+      "synthetic." +
+      btoa(
+        JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 }),
+      ).replaceAll("=", "") +
+      ".signature";
+    const transport = vi.fn<typeof fetch>(async (url) =>
+      String(url).startsWith("http://metadata.")
+        ? new Response(token)
+        : Response.json({ sampleEnabled: false }),
+    );
+    vi.stubGlobal("fetch", transport);
+    const headers = {
+      Host: "synthetic-frontend.run.app",
+      "X-Forwarded-Proto": "https",
+    };
+    const request = (extra: Record<string, string> = {}) =>
+      new Request("https://0.0.0.0:8080/api/sample/config", {
+        headers: { ...headers, ...extra },
+      });
+    expect((await GET(request(), context(["config"]))).status).toBe(200);
+    expect(transport).toHaveBeenCalledTimes(2);
+    expect(transport.mock.calls[1]?.[0]).toBe(backend + "/v1/sample/config");
+    expect(
+      new Headers(transport.mock.calls[1]?.[1]?.headers).get("origin"),
+    ).toBe(origin);
+    expect(
+      new Headers(transport.mock.calls[1]?.[1]?.headers).get(
+        "X-Serverless-Authorization",
+      ),
+    ).toBe("Bearer " + token);
+    for (const extra of [
+      { Origin: "https://foreign.invalid" },
+      { "Sec-Fetch-Site": "cross-site" },
+      { Host: "foreign.invalid", "X-Forwarded-Host": headers.Host },
+    ])
+      expect((await GET(request(extra), context(["config"]))).status).toBe(400);
+    expect(transport).toHaveBeenCalledTimes(2);
+  });
   it("pins loopback, forwards only the fixture cookie and preserves no-store/clear", async () => {
     const transport = vi
       .fn<typeof fetch>()

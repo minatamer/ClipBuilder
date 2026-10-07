@@ -4,7 +4,7 @@ import {
 } from "@clipbuilder/contracts";
 import {
   acquireControlRequest,
-  controlFrontendOrigin,
+  controlRequestOrigin,
   controlIsLocal,
   fetchControlApi,
 } from "../../../../server/control-api";
@@ -50,9 +50,10 @@ async function proxy(
   if (destination === null) return fail(400, "INVALID_REQUEST");
   if (request.headers.get("sec-fetch-site") === "cross-site")
     return fail(400, "INVALID_REQUEST");
-  const origin = new URL(request.url).origin;
+  let origin: string | null;
   try {
-    if (origin !== controlFrontendOrigin()) return fail(400, "INVALID_REQUEST");
+    origin = controlRequestOrigin(request);
+    if (origin === null) return fail(400, "INVALID_REQUEST");
     if (!controlIsLocal() && destination !== "config")
       return fail(404, "INVALID_REQUEST");
   } catch {
