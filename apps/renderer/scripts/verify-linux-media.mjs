@@ -51,14 +51,14 @@ const localCompositor =
     : "/opt/clipbuilder/compositor";
 const signal = AbortSignal.timeout(120000),
   tools = {
-    ffmpeg: join(
-      localCompositor,
-      "ffmpeg" + (process.platform === "win32" ? ".exe" : ""),
-    ),
-    ffprobe: join(
-      localCompositor,
-      "ffprobe" + (process.platform === "win32" ? ".exe" : ""),
-    ),
+    ffmpeg:
+      process.platform === "linux"
+        ? "/usr/bin/ffmpeg"
+        : join(localCompositor, "ffmpeg.exe"),
+    ffprobe:
+      process.platform === "linux"
+        ? "/usr/bin/ffprobe"
+        : join(localCompositor, "ffprobe.exe"),
     chromium: "/opt/clipbuilder/chromium/chrome-headless-shell",
     bundle: join(renderer, "bundle"),
   };

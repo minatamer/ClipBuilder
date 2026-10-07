@@ -13,6 +13,7 @@ import {
   renderMedia,
 } from "@remotion/renderer";
 import { verifyInlinePictures } from "./inline-pictures.js";
+import { assertSelectedSource } from "./source-boundary.js";
 const jobSchema = z
   .object({
     manifest: compositionManifestV3Schema,
@@ -23,8 +24,9 @@ const jobSchema = z
   })
   .strict();
 export async function renderWorker(jobPath: string) {
-  const job = jobSchema.parse(JSON.parse(await readFile(jobPath, "utf8"))),
-    size = (await stat(job.source)).size;
+  const job = jobSchema.parse(JSON.parse(await readFile(jobPath, "utf8")));
+  assertSelectedSource(jobPath, job.source, job.output);
+  const size = (await stat(job.source)).size;
   if (size <= 0 || size > PUBLIC_LIMITS.maxSourceBytes)
     throw new Error("invalid");
   verifyInlinePictures(job.manifest);

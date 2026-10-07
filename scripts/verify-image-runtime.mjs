@@ -190,6 +190,18 @@ try {
       );
       assert.equal(tools.remotion, "4.0.534");
       assert.equal(tools.chromium, "155.0.8059.39");
+      assert.equal(tools.sourceFfmpegPackage, "7:5.1.9-0+deb12u1");
+      assert.equal(tools.remotionAacEncoder, "libfdk_aac");
+      for (const name of ["ffmpeg", "ffprobe"]) {
+        const path = `/usr/bin/${name}`;
+        assert.equal(
+          createHash("sha256")
+            .update(await readFile(path))
+            .digest("hex"),
+          tools[path],
+        );
+        assert.match(tools[`source${name}`], /5\.1\.9-0\+deb12u1/);
+      }
       process.stdout.write(
         JSON.stringify({ nativeProof: proof, runtimeTools: tools }) + "\n",
       );

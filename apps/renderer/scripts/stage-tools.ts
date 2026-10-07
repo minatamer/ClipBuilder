@@ -48,6 +48,43 @@ for (const path of [
     versions[name] = version;
   }
 }
+const sourcePackage = execFileSync(
+  "dpkg-query",
+  ["-W", "-f=${Version}", "ffmpeg"],
+  {
+    encoding: "utf8",
+    timeout: 10_000,
+  },
+).trim();
+if (sourcePackage !== "7:5.1.9-0+deb12u1")
+  throw new Error("Unapproved source-media package.");
+versions.sourceFfmpegPackage = sourcePackage;
+const codecMapping = require(
+  join(
+    dirname(require.resolve("@remotion/renderer")),
+    "options/audio-codec.js",
+  ),
+) as {
+  mapAudioCodecToFfmpegAudioCodecName(codec: string): string;
+};
+const remotionAacEncoder =
+  codecMapping.mapAudioCodecToFfmpegAudioCodecName("aac");
+if (remotionAacEncoder !== "libfdk_aac")
+  throw new Error("Unapproved composition AAC encoder.");
+versions.remotionAacEncoder = remotionAacEncoder;
+for (const name of ["ffmpeg", "ffprobe"]) {
+  const path = `/usr/bin/${name}`;
+  versions[path] = createHash("sha256")
+    .update(await readFile(path))
+    .digest("hex");
+  versions[`source${name}`] = execFileSync(path, ["-version"], {
+    encoding: "utf8",
+    timeout: 10_000,
+    maxBuffer: 64 * 1024,
+  })
+    .split("\n")[0]!
+    .trim();
+}
 await writeFile(
   join(destination, "runtime-tools.json"),
   JSON.stringify(versions, null, 2),

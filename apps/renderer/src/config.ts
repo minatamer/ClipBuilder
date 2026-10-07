@@ -56,6 +56,14 @@ export function parseRendererConfig(environment: NodeJS.ProcessEnv) {
       !result.REMOTION_BUNDLE_PATH
     )
       throw new Error("Private renderer composition gates are incomplete.");
+    if (
+      result.NODE_ENV === "production" &&
+      (result.FFMPEG_PATH !== "/usr/bin/ffmpeg" ||
+        result.FFPROBE_PATH !== "/usr/bin/ffprobe")
+    )
+      throw new Error(
+        "Production source media requires maintained system tools.",
+      );
     const origin = new URL(result.RENDERER_AUDIENCE);
     if (
       origin.protocol !== "https:" ||
