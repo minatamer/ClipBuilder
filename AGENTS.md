@@ -46,16 +46,13 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   does not imply file deletion. This exception changes no validation, dispatch,
   media cleanup, cloud or paid-testing gate. See the CL-007 local capture
   packet.
-- Owner sample-replay exception (updated 2026-10-06): the owner authorizes one
-  temporary OS-temp saved copy of the successful retained-sample analysis for
-  the local development replay CTA. It is workspace/source-bound with no
-  activation deadline; keep it available until explicit cleanup before
-  deployment and preserve the original capture. Remove the replay
-  CTA/transport/cache loading and its private saved copy at that release
-  checkpoint. Fake/test/preview/production cannot load it. Replayed choices are
-  labelled and Proceed obtains fresh normal protected source/session evidence.
-  No receipt/credential copy, Git fixture, hosted replay, provider retry or
-  agent-paid test is authorized. See
+- Owner sample-replay release checkpoint (2026-10-07): the temporary local
+  saved-analysis CTA, transport/cache reader and specifically authorized saved
+  copy are retired during CL-015 final local paid-test preparation. Preserve
+  original diagnostic captures, all private logs and both retained masters.
+  Normal retained-source playback and fresh protected analysis remain. Do not
+  restore a cache reader, Git fixture, hosted replay or provider retry. Paid
+  testing remains owner-only. Historical exception/retirement evidence is in
   `docs/tickets/CL-007-local-sample-replay-and-thumbnails.md`.
 - Owner retention decision (2026-10-03): `private/retained-demo-source/` holds
   the ignored, owner-managed local demonstration master and its private

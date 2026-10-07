@@ -1,5 +1,41 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Owner Cloud Run deployment instruction — 2026-10-07
+
+The owner reports the complete local paid flow working, authorizes file-level
+CL-015-prefixed staging/commits and frontend/backend Cloud Run deployment, and
+requests an owner guide for the Cloudflare-owned `tryclipbuilding.com` domain,
+Turnstile and post-deployment tasks. This supersedes the preparation-only hosting
+exclusion below. Start hosted verification paid-off; preserve private API/renderer,
+canonical local setup, all content-safe backend diagnostics and the existing
+functional flow. Public paid enablement still requires closure of the recorded
+native FFmpeg and hosted abuse/secret/origin gates. Agents never run a paid flow
+or read ignored local secrets. The owner's local walkthrough does not prove
+deployed challenge, cleanup, cost or rollback. Fake/no-key checks are synthetic;
+real operation needs provider/cloud configuration and applicable approvals.
+
+
+## Owner final local paid-test preparation — 2026-10-07
+
+The latest owner instruction authorizes completing CL-015 preparation and
+building/updating only the existing private renderer. Frontend/backend deployment,
+public paid launch and agent-run paid processing remain excluded. Preserve the
+owner's existing `.env.local` files and normal local defaults/startup. Prepare
+server-only hosted identity transport and strict Linux release images without
+changing local origins or exposing private configuration to the browser. Hosted
+paid processing remains closed until explicit public launch approval and exact
+production origin/caller/challenge configuration; process-local limits do not
+establish global atomicity across revisions. Remove the temporary saved-analysis
+replay at this release checkpoint, preserving both retained masters and original
+captures/private diagnostics. The accepted landing film keeps its existing motion
+and appearance using reviewed synthetic delivery images. See the
+[active preparation record](operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md).
+
+Fake/no-key checks remain synthetic/injected, with paid/approval flags disabled.
+The owner performs the final real paid walkthrough using their configured
+provider/live/rights/spend setup and the updated private renderer. No local AI
+weights/runtime or agent-paid flow are added.
+
 ## Owner security decisions — 2026-10-07
 
 The owner approves local CL-012 security remediation while preserving the entire

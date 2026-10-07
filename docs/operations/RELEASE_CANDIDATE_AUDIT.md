@@ -1,5 +1,24 @@
 # Local release candidate audit
 
+## Final local paid-test preparation — 2026-10-07
+
+The [CL-015 preparation report](FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md)
+records all five passing root gates (1,239 fake/injected tests in 108 files),
+corrected idle-stream cleanup, secret-free Linux image inputs, strict frontend
+packaging with zero external links, all three offline image proofs/scans,
+authorized private renderer rollout and normal live-mode local restart. The
+agent does not read/edit `.env.local` or run the paid walkthrough. Replay is
+retired and its authorized saved copy removed; masters/captures/logs remain.
+
+The latest local code validation has no new actionable finding. Exact
+[source inputs](FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07_INPUTS.json) and
+[evidence](FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07_EVIDENCE.json) are recorded.
+This is not a public release/security pass: copied vendor FFmpeg reports `n7.1`
+and applicable native patch provenance remains a high-priority public blocker.
+Owner paid quality/cost/deletion and hosted traffic/IAM/Turnstile/rights/rollback
+acceptance also remain unchecked. Frontend/backend are undeployed. Older dated
+audit records below retain their original scope.
+
 ## Current code-quality remediation — 2026-10-07
 
 The owner approved implementation after the audit-only baseline. The

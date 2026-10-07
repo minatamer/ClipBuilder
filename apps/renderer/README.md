@@ -1,5 +1,22 @@
 # Private media renderer
 
+CL-015 final local paid-test preparation (2026-10-07): the patched Linux image
+passed synthetic native and offline runtime checks and is deployed to the
+existing private renderer. IAM and all operational settings are preserved;
+the previous immutable image remains the rollback target. Health is 403 without
+identity and 200 with the configured caller/audience; an empty prepare descriptor
+returns 400 before media work. No owner media or AI processing was run by the
+agent. The existing normal local configuration remains ready for the owner's
+manual live test. See the
+[preparation evidence](../../docs/operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md).
+
+The exact image's package scan has zero **fixable** high/critical findings;
+this does not mean every bundled native component is patched. Vendor FFmpeg
+reports `n7.1`, whose separate patch provenance/reachability review is a public
+launch blocker recorded in the preparation report. Do not infer public security
+acceptance from the trusted-source local test or swap compositor libraries
+without repeating the native compatibility proof.
+
 Native security tooling (CL-012, 2026-10-07): all Remotion workspace packages
 are pinned to 4.0.534. Explicit browser preparation/image staging selects stable
 Chrome for Testing **155.0.8059.39**, then checks the actual executable version

@@ -1,5 +1,18 @@
 # CL-007 — Temporary local sample replay and decoded thumbnails
 
+## Release checkpoint — 2026-10-07
+
+The owner authorizes retirement under CL-015 final local paid-test preparation.
+The saved-analysis CTA/transport/cache reader and specifically authorized
+temporary saved copy are removed. The normal retained-source preview and fresh
+protected analysis remain. Original captures, historical diagnostic formats,
+private logs and both retained masters are preserved. See the
+[current record](../operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md).
+The original dated packet below is historical. Fake/no-key tests remain
+synthetic/injected; real processing and quality remain owner-run.
+
+
+
 Status: implementation and automated validation complete, 2026-10-05;
 owner real-sample thumbnail/paid-assembly retest pending.
 Current owner revision (2026-10-06): replay has no activation deadline and remains

@@ -1,5 +1,90 @@
 # CL-015 — Bounded renderer setup and later public deployment
 
+## Owner deployment and commit authorization — 2026-10-07
+
+The owner reports the complete local paid upload-to-export flow working and
+authorizes a file-level plan, staging and commits with meaningful `CL-015:`
+subjects, followed by frontend/backend deployment to Cloud Run. The owner owns
+`tryclipbuilding.com` in Cloudflare and requests a domain/Turnstile/post-deployment
+guide. This supersedes the preparation-only frontend/backend deployment exclusion.
+It does not authorize agent-run paid processing, reading ignored local secrets,
+pushes or branch/history changes. Preserve canonical local operation.
+
+Follow the [whole-file commit plan](CL-015-RELEASE-PREPARATION-COMMIT_PLAN.md).
+The local paid walkthrough is owner-reported success; hosted operation, custom
+domain, challenge, actual spend/cleanup and rollback remain distinct evidence.
+Deploy the immutable verified frontend and private backend initially paid-off,
+with least-privilege identities and bounded capacity. Close the documented copied
+FFmpeg public-processing gate and hosted prerequisites before enabling public
+paid processing. Domain/DNS/dashboard steps remain owner-managed unless separately
+requested. Fake/no-key automation proves synthetic behavior only; real processing
+requires provider/cloud setup, live flags and applicable rights/spend approvals.
+
+
+## Final local paid-test preparation — owner-authorized 2026-10-07
+
+The owner authorizes completing pre-deployment preparation and updating the
+existing private renderer for one final owner-run local paid test. Frontend and
+backend deployment are explicitly excluded. This supersedes the earlier
+renderer build/update deferral for this checkpoint, not the public launch gate.
+Preserve the accepted UI/film, processing functionality, all private content-safe
+diagnostics, existing cloud resources/settings and both retained masters.
+Agents do not run paid processing or inspect ignored secrets. No new Git action
+is requested for this packet; leave the changes reviewable.
+
+Work/checklist, updated only with produced evidence:
+
+- [x] Prepare hosted same-origin/private identity transport and bounded HTTP
+  controls, preserving localhost behavior and public paid-off default until
+  explicit launch approval. Do not deploy frontend/backend or create their
+  hosted resources to manufacture acceptance.
+- [x] Prepare strict Linux frontend/backend image contexts and verification;
+  preserve the landing film through reviewed delivery assets. Include raster
+  favicon and environment-specific crawl policy.
+- [x] Remove development saved-analysis replay and its authorized saved copy;
+  preserve original captures/logs/media. Inventory and safely clean obsolete
+  release artifacts, preserving runtime records while processes are running.
+- [x] Complete local focused checks, full root gates and settled read-only
+  local code validation; document corrective iterations and the public-native
+  concern/remaining owner-only gates without claiming public release acceptance.
+- [x] Build/verify the exact updated Linux renderer image using the existing
+  bounded cloud-build path, then update only the existing private renderer.
+  Preserve IAM, identities, resource/concurrency/capacity, bucket/expiry and
+  other runtime settings; keep the prior immutable image for rollback.
+- [x] Verify digest/Ready/private IAM, authenticated non-metered health and
+  invalid-input rejection without creating a session, reading media or running
+  paid AI/media processing. Record content-free cloud receipts.
+- [x] Restart the canonical local stack using normal owner-managed configuration,
+  verified process-tree cleanup and readiness/configuration GETs. Leave it ready
+  for the owner; do not run the paid walkthrough.
+- [x] Record final file/input/image identities, configuration/stop/rollback and
+  the owner's concise paid-test checklist in the release preparation report.
+
+Evidence: [preparation report](../operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md),
+[source manifest](../operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07_INPUTS.json)
+and [structured receipts](../operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07_EVIDENCE.json).
+All five root gates pass, with 1,239 fake/injected tests in 108 files. The idle
+media-stream capacity finding is corrected and regression-tested. Strict Linux
+frontend inspection proves zero external package links; all three images pass
+nonroot/no-network runtime probes and exact-digest scans with zero fixable
+high/critical package entries. Only the existing private renderer is deployed;
+normal local paid availability is verified after the owner updates their own
+environment and requests restart. No paid flow is run by the agent.
+
+- [ ] **Before public launch:** close the high-priority copied FFmpeg `n7.1`
+  patch-provenance/reachable AAC encoder finding with a compatible pinned
+  correction or exact nonexposure evidence, then repeat native/image verification.
+  The package scan and trusted local walkthrough do not close this native gate.
+
+User-only or post-public-deployment checks remain distinct: paid quality and
+cost, real Turnstile/device behavior, current Gemini key/project correspondence,
+public rights/privacy/license acceptance, actual public hostname/headers and
+deployed cleanup/kill-switch/rollback. Existing read-only Cloud Run USD 5 spend-cap
+and IAM/expiry/bucket receipts carry forward. No new budget amount is requested.
+`FAKE_MODE=true` needs no keys and verifies labelled synthetic/injected behavior;
+real processing needs provider keys/live setup and the applicable approvals.
+There is no local AI model or weights path.
+
 ## Security remediation release handoff — 2026-10-07
 
 CL-012 owns the [local security execution](../operations/STRIDE_SECURITY_REMEDIATION_2026-10-07.md).

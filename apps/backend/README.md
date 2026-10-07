@@ -1,5 +1,34 @@
 # ClipBuilder backend
 
+CL-015 final local-test preparation (2026-10-07) preserves normal owner-managed
+`.env.local` startup and fixed local origins. Hosted preparation adds a private
+frontend caller verifier and an eight-request process bound that remains held
+while authentication settles after disconnect. Only an exact signed audience,
+configured verified service identity and existing origin/CSRF/session proofs can
+admit hosted processing; forwarded protocol alone is insufficient. The hosted
+paid launch gate defaults false. No backend deployment or agent-paid test is
+part of this preparation. See the
+[current preparation record](../../docs/operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md).
+Fake/no-key checks remain fixture/injected and paid-off; real processing requires
+the owner's configured provider/live/approval setup and manual walkthrough.
+
+## Prepare a Linux image
+
+From the repository root, `node scripts/prepare-app-image.mjs backend` prints
+the path of an allowlisted OS-temp build context. Submit that context with
+`apps/backend/cloudbuild.yaml` and the existing approved `_IMAGE` destination,
+only after cloud-build authorization. Never submit the checkout. The recipe
+uses the frozen lockfile, compiled production files, patched OS packages and a
+nonroot runtime; its second step checks health/configuration with fake mode,
+paid off and no external network. It does not deploy a service.
+
+For later hosted runtime setup, populate the matching blank entries in
+`.env.example`: exact frontend/backend origins, backend audience and frontend
+caller service identity. Runtime injection owns provider secrets and approvals.
+Keep `PUBLIC_PAID_PROCESSING_APPROVED=false` until public launch is explicitly
+approved and the release gates pass. Local startup continues to load the
+existing `.env.local`; no hosted settings are needed for localhost.
+
 Security controls (CL-012, 2026-10-07): both grant routes require a separate
 `session-start` Turnstile proof bound to a fresh browser nonce before consuming
 the existing three-grants/five-minute window. Pending verification is bounded
@@ -143,20 +172,12 @@ Content-free diagnostics include `qualityWarnings`, `captionOmittedWords` and
 resource limits, transport/cancellation and cleanup remain enforced. Fake/no-key
 tests exercise these paths; real AI/media quality remains the owner's manual test.
 
-Temporary owner-local sample replay (updated 2026-10-06): explicit development/local/live
-composition with enabled assembly may load one workspace/source-bound validated
-analysis from OS-temp `clipbuilder-runtime/private-sample-replay/sample.json`.
-There is no replay activation deadline; keep it until explicit cleanup before
-deployment. Corrupt metadata/source changes disable it. Fake/test/preview/
-production cannot read the cache. Saved options cause zero media/AI dispatches;
-manual Proceed uses normal protected grant/sample upload/challenges, physical
-inspection, cleanup and current-epoch signing with zero Transcribe/selection
-calls. Normal assembly receipt verification and selected-video AI remain.
-Replayed analysis has full private capture and safe count/zero-call diagnostics;
-retained playback errors now log request-correlated HTTP/code details. Existing
-raw Gemini logs/captures remain. See the
-[temporary packet](../../docs/tickets/CL-007-local-sample-replay-and-thumbnails.md).
-Fake/no-key tests use synthetic injected data; real assembly is owner-run.
+The owner-local saved-analysis replay is retired at the authorized 2026-10-07
+release checkpoint. Its reader, transport and saved copy are removed; ordinary
+retained-source preview and fresh protected analysis remain. Historical
+diagnostic formats, original captures and all private logs remain intact. See
+the [original temporary packet](../../docs/tickets/CL-007-local-sample-replay-and-thumbnails.md)
+for historical behavior and the current preparation record for retirement.
 
 Earlier owner local enablement (2026-10-05) exposed Proceed and selected preview
 while holding final rendering at the assembly stage. The later fixed-export

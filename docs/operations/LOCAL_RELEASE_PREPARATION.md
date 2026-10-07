@@ -1,5 +1,17 @@
 # Local release preparation
 
+Latest checkpoint: the owner authorizes final local paid-test preparation and
+updating the existing private renderer on 2026-10-07, explicitly excluding
+frontend/backend deployment and agent-paid processing. Follow the
+[current execution record](FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md)
+and CL-015's current checklist. Existing `.env.local` files, retained masters,
+original captures and private logs are preserved. The local stack now reports
+live analysis/assembly/rendering available; the private renderer is updated and
+verified. Linux frontend/backend images are built/verified/scanned but undeployed.
+Public launch retains the report's native FFmpeg patch-provenance blocker and
+owner/public acceptance gates. Earlier dated restrictions
+below retain their original historical scope where superseded.
+
 CL-015, 2026-10-03. Local packaging preparation only. No public deployment,
 provider call, resource change, credential use or device/media test is
 authorized by this document. The owner approved fake-mode implementation and

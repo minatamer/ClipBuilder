@@ -1,7 +1,35 @@
 # ClipBuilder frontend
 
-CL-012 session-start protection (2026-10-07): real source analysis and protected
-local sample replay obtain a fresh `session-start` challenge before asking for
+CL-015 final local-test preparation (2026-10-07) preserves the existing ignored
+`.env.local`, fixed localhost origins and backend-owned processing mode. The
+server-only control adapter adds exact hosted origin/audience and Cloud Run
+metadata identity handling, with bounded HTTP work and generic platform failures.
+Hosted-only settings are blank in `.env.example`; local mode ignores them.
+No frontend/backend deployment or agent-paid test is performed. See the
+[current preparation record](../../docs/operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md).
+Fake/no-key checks remain labelled synthetic/injected with Download disabled;
+real processing and quality acceptance remain owner-manual with the configured
+provider/live/rights/spend setup and private renderer.
+
+## Prepare a Linux image
+
+From the repository root, `node scripts/prepare-app-image.mjs frontend` prints
+an allowlisted OS-temp context. With separate cloud-build approval, submit that
+context using `apps/frontend/cloudbuild.yaml` and the existing approved `_IMAGE`
+destination. Never submit the checkout. The recipe checks the actual Linux
+standalone artifact, rejects external source links, and includes only the twelve
+hash-approved public assets. Its offline nonroot runtime check verifies landing,
+assets, generic API failures and removal of the retired test UI. It does not
+deploy a service.
+
+Later hosted setup injects `APP_ENV`, exact `FRONTEND_ORIGIN`,
+`PRIVATE_BACKEND_ORIGIN` and matching `BACKEND_AUDIENCE` on the server. The
+runtime identity supplies the private API token. These are never browser public
+variables. Local mode fixes the existing localhost origins and ignores these
+optional hosted entries; preserve the owner-managed `.env.local`.
+
+CL-012 session-start protection (2026-10-07): real source analysis obtains a fresh
+`session-start` challenge before asking for
 a grant, then obtain the existing fresh session-bound upload/analysis proofs.
 Cancellation before grant dispatch creates no remote cleanup obligation. The
 fixture journey with `FAKE_MODE=true` and no keys remains API-free; real
@@ -618,8 +646,12 @@ the temporary `/motion-preview` route. The shared preview-page wrapper and old
 placeholder styles were removed. Strict release verification still rejects the
 local capture folder; only the local-build gate permits it. Replace those local
 authoring assets with approved delivery assets at the film release checkpoint.
-No MP4, audio, final poster, rendition budget or delivery export is approved by
-these commands. Remotion 4.0.532 is pinned; its installed license permits
+The current CL-015 checkpoint promotes ten approved synthetic PNGs and the
+existing opening poster into hash-allowlisted `public/product-film/` delivery.
+The accepted motion/layout remains unchanged; the capture index and authoring
+folder stay excluded from strict cloud contexts. Future recaptures/posters need
+deliberate review and an updated delivery hash manifest before release. No MP4
+or audio export is added. Remotion 4.0.534 is pinned; its installed license permits
 individual use/evaluation. Studio currently warns that the repository's Zod
 4.6.5 differs from its optional Zod integration's 4.5.4 expectation. This film
 has no Zod schema integration; existing app contracts remain pinned and
@@ -779,9 +811,12 @@ recovery and a fresh owner action, never an automatic paid retry.
 Browser code receives schema-validated safe mode/availability via the local
 `/api/sample/config` bridge. Backend `FAKE_MODE` is the only mode authority;
 real/unavailable mode never falls back to the development adapter. The frontend
-`.env.local` is ignored and currently needs no entries; do not add a second mode
-variable. Production upstream routing and service-identity authentication remain
-unimplemented CL-015 work. The local bridge still pins port 4000.
+`.env.local` is ignored and needs no hosted entries for local use; do not add a
+second processing-mode variable. Server-only hosted routing and service identity
+are prepared under CL-015, with actual deployed proof still pending. Local mode
+keeps the fixed port-4000 bridge. Set `APP_ENV=preview` or `production` and the
+matching blank exact-origin/audience entries only for an explicitly authorized
+hosted deployment; they do not replace local owner configuration.
 `BACKEND_ORIGIN`, `BACKEND_AUDIENCE`, bucket names, provider configuration,
 credentials, grants, and signed capabilities are server-only and must never use
 `NEXT_PUBLIC_*`.

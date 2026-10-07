@@ -1,5 +1,21 @@
 # CL-012 — Cloud/Google safeguards and cleanup
 
+## Native release evidence follow-up — 2026-10-07
+
+CL-015's owner-authorized preparation verifies Linux images and the private
+renderer rollout. Package scans report zero fixable high/critical entries after
+OS/tooling corrections. The independent native receipt identifies compositor
+FFmpeg/FFprobe as `n7.1`; OS/npm scanning does not cover its patch provenance.
+Applicable AAC encoder fixes require further exact-library/reachability evidence
+or a compatible pinned correction. This **high-priority public release blocker
+is open**; the earlier local SEC-04 result does not certify copied FFmpeg
+libraries. The detailed threat, cautious compatibility plan and native
+regression gates are in the
+[preparation report](../operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md#bundled-native-tool-follow-up-public-launch-blocked).
+Normal trusted-source owner-local testing is ready; public frontend/backend
+remain undeployed and paid public composition stays closed. No agent paid flow
+runs. Preserve the prior dated audit/validation evidence below.
+
 ## Approved security remediation — 2026-10-07
 
 Status: **approved local execution complete; final local validation has no new

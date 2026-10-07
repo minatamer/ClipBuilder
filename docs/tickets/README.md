@@ -1,5 +1,18 @@
 # ClipBuilder canonical ticket index
 
+**CL-015 final local paid-test preparation — 2026-10-07:** Owner-authorized
+local walkthrough preparation is verified, including the existing private
+renderer rollout and normal paid-mode local restart, with frontend/backend
+undeployed and no agent-paid flow. All five root gates and 1,239 fake/injected
+tests in 108 files pass; strict Linux packaging and all three offline image
+proofs/scans pass. Public launch still has a high-priority vendor FFmpeg patch
+provenance blocker plus owner/public acceptance. The
+[execution record](../operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md)
+tracks local behavior/configuration preservation, replay retirement, strict
+Linux packaging, curated film delivery, scan corrections, verification and the
+remaining owner-only/public checks. Earlier security restrictions below are
+superseded only within this explicitly authorized preparation scope.
+
 **CL-012 security remediation — 2026-10-07:** The owner approved local fixes
 after the STRIDE/practical review. The
 [execution report](../operations/STRIDE_SECURITY_REMEDIATION_2026-10-07.md),
