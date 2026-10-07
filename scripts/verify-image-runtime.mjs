@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { get } from "node:http";
 import process from "node:process";
 
 // Mounted into a network-isolated build probe; never copied into a runtime image.
@@ -29,6 +30,29 @@ async function fetchLocal(path, options) {
       redirect: "error",
     },
   );
+}
+// Node fetch normalizes Host to the URL authority; use HTTP for the proxy probe.
+async function hostedConfiguration(host) {
+  return new Promise((resolve, reject) => {
+    const request = get(
+      "http://127.0.0.1:3000/api/sample/config",
+      { headers: { Host: host, "X-Forwarded-Proto": "https" }, timeout: 5000 },
+      (response) => {
+        const chunks = [];
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.once("error", reject);
+        response.once("end", () =>
+          resolve(
+            new Response(Buffer.concat(chunks), {
+              status: response.statusCode,
+            }),
+          ),
+        );
+      },
+    );
+    request.once("timeout", () => request.destroy(new Error("probe_timeout")));
+    request.once("error", reject);
+  });
 }
 try {
   if (target === "frontend") {
@@ -99,27 +123,11 @@ try {
     for (const path of paths)
       assert.equal((await fetchLocal(path)).status, 404);
     assert.match(await (await fetchLocal("/robots.txt")).text(), /Allow: \/\s/);
-    const config = await fetchLocal("/api/sample/config", {
-      headers: {
-        Host: "synthetic-frontend.run.app",
-        "X-Forwarded-Proto": "https",
-      },
-    });
+    const config = await hostedConfiguration("synthetic-frontend.run.app");
     assert.equal(config.status, 503); // No control API/network in this isolated image probe.
     const error = await config.json();
     assert.equal(error.error.code, "INTERNAL_ERROR");
-    assert.equal(
-      (
-        await fetchLocal("/api/sample/config", {
-          headers: {
-            Host: "other.run.app",
-            "X-Forwarded-Host": "synthetic-frontend.run.app",
-            "X-Forwarded-Proto": "https",
-          },
-        })
-      ).status,
-      400,
-    );
+    assert.equal((await hostedConfiguration("other.run.app")).status, 400);
     assert.equal(
       (
         await fetchLocal("/api/analysis/sample-replay-options", {
