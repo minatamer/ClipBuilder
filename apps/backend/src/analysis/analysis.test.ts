@@ -16,10 +16,6 @@ import { ProcessingAdmission } from "../admission/processing.admission.js";
 import { ProcessingGrantCodec } from "../admission/processing.grant.js";
 import { ApplicationError, mapError } from "../http/errorMapper.js";
 import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
-import {
-  LocalSampleReplay,
-  LOCAL_SAMPLE_REPLAY_WORKSPACE,
-} from "./sample-replay.js";
 import { createAnalysisRouter } from "../http/routes/analysis.route.js";
 import { createAdmissionRouter } from "../http/routes/admission.route.js";
 import {
@@ -96,7 +92,6 @@ function fixture(
   paidEnabled = true,
   sample: RetainedSampleProcessingPort | null = null,
   diagnostics = new AnalysisDiagnostics(),
-  replay: LocalSampleReplay | null = null,
 ) {
   let now = 1000;
   const origin = "http://localhost:3000",
@@ -186,7 +181,6 @@ function fixture(
     clock,
     sample,
     diagnostics,
-    replay,
   );
   const upload = {
     media,
@@ -212,7 +206,7 @@ function fixture(
     },
   };
 }
-describe("owner-local saved sample analysis", () => {
+describe("protected processing HTTP admission", () => {
   it.each(["analysis", "admission"])(
     "protects the %s grant alias before allocation and returns generic errors",
     async (path) => {
@@ -286,107 +280,7 @@ describe("owner-local saved sample analysis", () => {
       expect(f.provider.analyze).not.toHaveBeenCalled();
     },
   );
-  function cached() {
-    const analysis = reconcileAnalysis(output(), media, "fake");
-    analysis.candidates = [1, 2, 3].map((rank) => ({
-      ...analysis.candidates[0]!,
-      id: `cand_${String(rank).repeat(22)}`,
-      rank,
-    }));
-    const replay = new LocalSampleReplay(
-      {
-        version: 2,
-        workspace: LOCAL_SAMPLE_REPLAY_WORKSPACE,
-        createdAtMs: 1000,
-        retainedSampleIdentity: "a".repeat(64),
-        analysis,
-      },
-      "a".repeat(64),
-      () => 1000,
-    );
-    const sample = {
-      bytes: media.bytes,
-      fingerprint: vi.fn(async () => "a".repeat(64)),
-      transfer: vi.fn(async () => "1"),
-    };
-    const f = fixture(true, sample, new AnalysisDiagnostics(), replay);
-    return {
-      ...f,
-      cached: analysis,
-      sample,
-      input: { ...f.analyze, analysisRevision: analysis.revision },
-    };
-  }
-  it("returns three saved options with zero source, media or AI dispatches", () => {
-    const f = cached();
-    expect(f.service.sampleReplayOptions()).toEqual(f.cached);
-    expect(f.port.upload).not.toHaveBeenCalled();
-    expect(f.port.prepare).not.toHaveBeenCalled();
-    expect(f.provider.analyze).not.toHaveBeenCalled();
-    expect(f.sample.fingerprint).not.toHaveBeenCalled();
-  });
-  it("signs a fresh inspected result without analysis calls, then fences replay", async () => {
-    const f = cached();
-    await f.service.prepareSample(f.context, {
-      rightsAcknowledged: true,
-      dataTransferAcknowledged: true,
-      turnstileToken: "synthetic",
-    });
-    const result = await f.service.replaySample(f.context, f.input);
-    expect(result.analysis.candidates).toEqual(f.cached.candidates);
-    expect(result.analysis.transcript).toEqual(f.cached.transcript);
-    expect(result.binding.sessionId).toBe(f.issued.grant.sessionId);
-    expect(result.analysis.media.sourceRevision).toBe(
-      result.binding.sourceRevision,
-    );
-    expect(f.service.verify(f.context, result)).toEqual(result);
-    expect(f.port.prepare).toHaveBeenCalledOnce();
-    expect(f.port.releaseProxy).toHaveBeenCalledOnce();
-    expect(f.port.audio).not.toHaveBeenCalled();
-    expect(f.provider.analyze).not.toHaveBeenCalled();
-    await expect(
-      f.service.replaySample(f.context, f.input),
-    ).rejects.toBeInstanceOf(ApplicationError);
-    expect(f.port.prepare).toHaveBeenCalledOnce();
-  });
-  it("refuses uploaded sources and mismatched revisions before preparing media", async () => {
-    const f = cached();
-    await f.service.upload(f.context, f.upload);
-    await expect(
-      f.service.replaySample(f.context, f.input),
-    ).rejects.toMatchObject({ code: "SESSION_INVALID" });
-    await expect(
-      f.service.replaySample(f.context, {
-        ...f.input,
-        analysisRevision: "rev_" + "x".repeat(22),
-      }),
-    ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
-    expect(f.port.prepare).not.toHaveBeenCalled();
-    expect(f.provider.analyze).not.toHaveBeenCalled();
-  });
-  it("rejects changed physical sample evidence and cancels the disposable copy", async () => {
-    const f = cached();
-    await f.service.prepareSample(f.context, {
-      rightsAcknowledged: true,
-      dataTransferAcknowledged: true,
-      turnstileToken: "synthetic",
-    });
-    const prepare = f.port.prepare.getMockImplementation()!;
-    f.port.prepare.mockImplementationOnce(async () => {
-      const value = await prepare();
-      return {
-        ...value,
-        source: { ...value.source, durationMs: media.durationMs + 1000 },
-      };
-    });
-    await expect(
-      f.service.replaySample(f.context, f.input),
-    ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
-    expect(f.port.releaseProxy).toHaveBeenCalledOnce();
-    expect(f.port.cancel).toHaveBeenCalledOnce();
-    expect(f.provider.analyze).not.toHaveBeenCalled();
-  });
-  it("keeps endpoints absent without an explicit injected local cache", async () => {
+  it("keeps retired replay endpoints absent", async () => {
     const f = fixture();
     const app = express().use(
       "/v1/analysis",

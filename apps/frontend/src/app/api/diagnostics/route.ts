@@ -2,6 +2,11 @@ import {
   browserDiagnosticSchema,
   BROWSER_DIAGNOSTIC_LIMITS,
 } from "@clipbuilder/contracts";
+import {
+  acquireControlRequest,
+  controlFrontendOrigin,
+  fetchControlApi,
+} from "../../../server/control-api";
 
 /** The browser receives an empty acknowledgement, never private diagnostic output. */
 export async function POST(request: Request): Promise<Response> {
@@ -11,8 +16,14 @@ export async function POST(request: Request): Promise<Response> {
       headers: { "Cache-Control": "no-store" },
     });
   const origin = new URL(request.url).origin;
+  let expectedOrigin: string;
+  try {
+    expectedOrigin = controlFrontendOrigin();
+  } catch {
+    return acknowledge();
+  }
   if (
-    origin !== "http://localhost:3000" ||
+    origin !== expectedOrigin ||
     request.headers.get("origin") !== origin ||
     request.headers.get("sec-fetch-site") !== "same-origin" ||
     request.headers.get("content-type")?.split(";")[0] !== "application/json" ||
@@ -30,7 +41,9 @@ export async function POST(request: Request): Promise<Response> {
   controller.signal.addEventListener("abort", cancel);
   if (request.signal.aborted) abort();
   let response: Response | undefined;
+  let release: (() => void) | undefined;
   try {
+    release = acquireControlRequest();
     if (!reader) return acknowledge();
     const chunks: Uint8Array<ArrayBuffer>[] = [];
     let size = 0,
@@ -50,7 +63,7 @@ export async function POST(request: Request): Promise<Response> {
     const value: unknown = JSON.parse(await new Blob(chunks).text());
     const record = browserDiagnosticSchema.safeParse(value);
     if (!record.success) return acknowledge();
-    response = await fetch("http://127.0.0.1:4000/v1/diagnostics", {
+    response = await fetchControlApi("/v1/diagnostics", {
       method: "POST",
       cache: "no-store",
       redirect: "error",
@@ -65,6 +78,7 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     // Reporting failure cannot expose a backend error or affect the visitor's flow.
   } finally {
+    release?.();
     clearTimeout(timer);
     request.signal.removeEventListener("abort", abort);
     controller.signal.removeEventListener("abort", cancel);

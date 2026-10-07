@@ -168,71 +168,18 @@ function fixture() {
 }
 
 describe("local source workspace ownership", () => {
-  it("restores saved sample choices, preserves selection on fresh signing, and clears its marker", async () => {
+  it("rejects retired replay journals instead of reusing stale analysis", async () => {
     const f = fixture();
     await f.owner.initialize();
-    await f.owner.prepareRetainedSample();
-    f.run.mockClear();
-    await f.owner.cacheSampleReplay(analysis);
-    expect(restoreLocalWorkspace(f.owner.snapshot!).stage).toBe("candidates");
-    const id = analysis.candidates[0]!.id;
-    await f.owner.select(id);
-    let ui = restoreLocalWorkspace(f.owner.snapshot!);
-    await f.owner.markCloudAnalysis("pending", false);
-    expect(restoreLocalWorkspace(f.owner.snapshot!).stage).toBe(
-      "analysis-failed",
-    );
-    const freshRevision = "rev_" + "n".repeat(22);
-    const grounded = {
-      binding: {
-        sessionId: "ses_" + "c".repeat(22),
-        sourceRevision: freshRevision,
-        fingerprint: "a".repeat(64),
-      },
-      generation: "1",
-      receipt: "synthetic",
-      analysis: {
-        ...analysis,
-        media: { ...analysis.media, sourceRevision: freshRevision },
-      },
-    };
-    await f.owner.storeGroundedAnalysis(grounded);
-    expect(f.owner.snapshot?.selectedId).toBe(id);
-    expect(restoreLocalWorkspace(f.owner.snapshot!).stage).toBe("candidates");
-    const result = await selectedAssemblyFixture(grounded, id);
-    const api = {
-      session: vi.fn(async () => ({
-        sessionId: grounded.binding.sessionId,
-        csrfToken: "c".repeat(43),
-        expiresAtMs: 7201000,
-      })),
-      assemble: vi.fn(async () => result),
-    };
-    ui = clippingSessionReducer(ui, {
-      type: "CLOUD_ASSEMBLY_STARTED",
-      candidateId: id,
-    });
-    const assembled = await runSelectedAssembly({
-      workspace: f.owner,
-      api,
-      candidateId: id,
-      challenge: async () => "synthetic",
-      signal: new AbortController().signal,
-      label: () => {},
-    });
-    expect(api.assemble).toHaveBeenCalledExactlyOnceWith(
-      { analysis: grounded, candidateId: id, turnstileToken: "synthetic" },
-      expect.any(AbortSignal),
-    );
-    ui = clippingSessionReducer(ui, {
-      type: "CLOUD_ASSEMBLY_COMPLETED",
-      result: assembled,
-    });
-    expect(ui.stage).toBe("cloud-review");
-    expect(restoreLocalWorkspace(f.owner.snapshot!).stage).toBe("cloud-review");
-    await f.owner.clear();
-    expect(f.owner.snapshot).toBeNull();
-    expect(f.run).not.toHaveBeenCalled();
+    const record = await f.owner.prepareRetainedSample();
+    expect(() =>
+      parseWorkspaceRecord({
+        ...record,
+        analysis,
+        sampleReplayRevision: analysis.revision,
+      }),
+    ).toThrow();
+    expect(() => parseWorkspaceRecord({ ...record, analysis })).toThrow();
     await f.owner.dispose();
   });
   it("previews and restores the retained stream without inspecting, hashing or copying source bytes", async () => {

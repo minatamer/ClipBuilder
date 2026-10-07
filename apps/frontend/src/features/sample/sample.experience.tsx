@@ -64,10 +64,6 @@ import { createSourceAnalysisApi } from "../source-analysis/source-analysis.api"
 import { AnalysisChallenge } from "../source-analysis/analysis-challenge";
 import { runSourceAnalysis } from "../source-analysis/source-analysis.flow";
 import type { CloudUploadProgress } from "../source-analysis/cloud-upload";
-import {
-  openSampleReplay,
-  prepareSampleReplay,
-} from "../source-analysis/sample-replay.flow";
 
 const CloudClipReview = dynamic(
   () => import("./cloud-clip.review").then((module) => module.CloudClipReview),
@@ -614,30 +610,6 @@ function SampleScreen({
     });
   };
   const startRequestedSample = useEffectEvent(selectSample);
-  const simulateSample = () => {
-    if (
-      !workspace ||
-      state.stage !== "intake" ||
-      !availability.sample ||
-      !config.sampleReplayEnabled ||
-      pending.current
-    )
-      return;
-    void run(async (signal) => {
-      const record = await openSampleReplay({
-        workspace,
-        api: cloudApi,
-        signal,
-      });
-      signal.throwIfAborted();
-      if (!record.analysis) throw new Error("sample-replay-unavailable");
-      dispatch({
-        type: "SAMPLE_SELECTED",
-        identity: localSessionIdentity(record),
-        analysis: record.analysis,
-      });
-    });
-  };
   useEffect(() => {
     if (
       !sampleRequested ||
@@ -670,18 +642,6 @@ function SampleScreen({
       void run(async (signal) => {
         dispatch({ type: "CLOUD_ASSEMBLY_STARTED", candidateId });
         try {
-          if (
-            workspace.snapshot?.sampleReplayRevision &&
-            !workspace.snapshot.cloudAnalysis
-          ) {
-            await prepareSampleReplay({
-              workspace,
-              api: cloudApi,
-              signal,
-              challenge: requestChallenge,
-              label: setAnalysisLabel,
-            });
-          }
           const result = await runSelectedAssembly({
             workspace,
             candidateId,
@@ -871,9 +831,7 @@ function SampleScreen({
           state.stage === "intake"
             ? "One conversation. One finished clip."
             : state.stage === "candidates"
-              ? workspace?.snapshot?.sampleReplayRevision
-                ? "Saved sample moments. No new analysis calls; Proceed runs paid assembly."
-                : "Choose the conversation you want to keep."
+              ? "Choose the conversation you want to keep."
               : undefined
         }
         step={
@@ -1150,15 +1108,6 @@ function SampleScreen({
                     }
                   >
                     Use sample
-                  </Button>
-                )}
-                {availability.sample && config.sampleReplayEnabled && (
-                  <Button
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={simulateSample}
-                  >
-                    Simulate find moments for sample
                   </Button>
                 )}
               </div>

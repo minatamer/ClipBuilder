@@ -44,7 +44,6 @@ export const publicConfigResponseSchema = z
     mode: z.enum(["fake", "live"]),
     sampleEnabled: z.boolean(),
     retainedSampleEnabled: z.boolean().optional(),
-    sampleReplayEnabled: z.boolean().optional(),
     localMediaEnabled: z.boolean(),
     liveAnalysisEnabled: z.boolean(),
     liveAssemblyEnabled: z.boolean(),

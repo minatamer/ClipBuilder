@@ -61,6 +61,8 @@ const environmentShape = {
   FRONTEND_ORIGIN: exactOriginSchema.default("http://localhost:3000"),
   BACKEND_ORIGIN: exactOriginSchema.default("http://localhost:4000"),
   BACKEND_AUDIENCE: optionalString(500),
+  FRONTEND_CALLER_EMAIL: optionalString(254),
+  PUBLIC_PAID_PROCESSING_APPROVED: booleanValue(false),
   PORT: integerValue(4_000, 1, 65_535),
   CLOUD_RENDER_ENVIRONMENT: z.enum(["disabled", "cloud"]).default("disabled"),
   CLOUD_SPEND_APPROVED: booleanValue(true),
@@ -169,6 +171,8 @@ export const ENVIRONMENT_KEYS = Object.freeze([
   "FRONTEND_ORIGIN",
   "BACKEND_ORIGIN",
   "BACKEND_AUDIENCE",
+  "FRONTEND_CALLER_EMAIL",
+  "PUBLIC_PAID_PROCESSING_APPROVED",
   "PRIVATE_RENDERER_ORIGIN",
   "TURNSTILE_EXPECTED_HOSTNAME",
   "RETAINED_SAMPLE_BUCKET",
@@ -287,7 +291,10 @@ export const environmentSchema = rawEnvironmentSchema
           "Cloud compute requires approved spend and an exact private renderer origin.",
           "PRIVATE_RENDERER_ORIGIN",
         );
-      if (environment.APP_ENV !== "local")
+      if (
+        environment.APP_ENV !== "local" &&
+        !environment.PUBLIC_PAID_PROCESSING_APPROVED
+      )
         issue(
           "Public cloud processing is not enabled by this test foundation.",
           "CLOUD_RENDER_ENVIRONMENT",
@@ -417,12 +424,34 @@ export const environmentSchema = rawEnvironmentSchema
       (environment.PROCESSING_GRANTS_ENABLED ||
         environment.PAID_DEMO_ENABLED ||
         anyLiveFeature) &&
-      environment.APP_ENV !== "local"
+      environment.APP_ENV !== "local" &&
+      !environment.PUBLIC_PAID_PROCESSING_APPROVED
     )
       issue(
         "Public protected/paid processing remains disabled pending deployment safeguards.",
         "PAID_DEMO_ENABLED",
       );
+
+    if (environment.PUBLIC_PAID_PROCESSING_APPROVED) {
+      const frontend = new URL(environment.FRONTEND_ORIGIN);
+      const backend = new URL(environment.BACKEND_ORIGIN);
+      if (
+        environment.APP_ENV !== "production" ||
+        frontend.protocol !== "https:" ||
+        !frontend.hostname.endsWith(".run.app") ||
+        backend.protocol !== "https:" ||
+        !backend.hostname.endsWith(".run.app") ||
+        environment.BACKEND_AUDIENCE !== environment.BACKEND_ORIGIN ||
+        !/^[a-z0-9._-]+@[a-z0-9.-]+\.iam\.gserviceaccount\.com$/.test(
+          environment.FRONTEND_CALLER_EMAIL ?? "",
+        ) ||
+        environment.TURNSTILE_EXPECTED_HOSTNAME !== frontend.hostname
+      )
+        issue(
+          "Public processing requires the approved private identity and exact production origins/hostname.",
+          "PUBLIC_PAID_PROCESSING_APPROVED",
+        );
+    }
 
     if (environment.APP_ENV === "production") {
       if (
@@ -495,6 +524,8 @@ export const environmentSchema = rawEnvironmentSchema
     frontendOrigin: environment.FRONTEND_ORIGIN,
     backendOrigin: environment.BACKEND_ORIGIN,
     backendAudience: environment.BACKEND_AUDIENCE ?? null,
+    frontendCallerEmail: environment.FRONTEND_CALLER_EMAIL ?? null,
+    publicPaidProcessingApproved: environment.PUBLIC_PAID_PROCESSING_APPROVED,
     port: environment.PORT,
     renderer: {
       environment: environment.CLOUD_RENDER_ENVIRONMENT,

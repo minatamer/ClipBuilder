@@ -1,7 +1,7 @@
 import type { SessionStartProof } from "@clipbuilder/contracts";
 import type { SourceAnalysisApi } from "./source-analysis.api";
 
-// Normal analysis and local sample replay share the same pre-grant protocol.
+// Normal analysis obtains verified session-start evidence before a grant.
 export async function startProcessingSession(input: {
   api: Pick<SourceAnalysisApi, "grant">;
   challenge(

@@ -21,8 +21,6 @@ import {
   retainedSampleAnalysisRequestSchema,
   retainedSampleAnalysisResponseSchema,
   type RetainedSampleAnalysisRequest,
-  analysisBundleSchema,
-  sampleReplayRequestSchema,
   type OperationId,
   type CloudUploadDiagnostic,
 } from "@clipbuilder/contracts";
@@ -93,24 +91,6 @@ export function createSourceAnalysisApi(
     }
   }
   return {
-    sampleReplayOptions: (signal: AbortSignal) =>
-      call("sample-replay-options", {}, analysisBundleSchema, signal),
-    sampleReplay: (
-      generation: string,
-      analysisRevision: string,
-      turnstileToken: string,
-      signal: AbortSignal,
-    ) =>
-      call(
-        "sample-replay",
-        sampleReplayRequestSchema.parse({
-          generation,
-          analysisRevision,
-          turnstileToken,
-        }),
-        groundedAnalysisResultSchema,
-        signal,
-      ),
     async session(signal: AbortSignal) {
       const grant = await call(
         "session",

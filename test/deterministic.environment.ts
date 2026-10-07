@@ -18,6 +18,7 @@ export function installTestEnvironment(): void {
     GEMINI_IMAGE_GENERATION_APPROVED: "false",
     GEMINI_PAID_PROJECT_CONFIRMED: "false",
     RENDERER_ENABLED: "false",
+    PUBLIC_PAID_PROCESSING_APPROVED: "false",
   });
   for (const key of [
     "PAID_VALIDATION_STAGE",
@@ -25,6 +26,8 @@ export function installTestEnvironment(): void {
     "FRONTEND_ORIGIN",
     "BACKEND_ORIGIN",
     "BACKEND_AUDIENCE",
+    "FRONTEND_CALLER_EMAIL",
+    "PRIVATE_BACKEND_ORIGIN",
     "PRIVATE_RENDERER_ORIGIN",
     "TURNSTILE_EXPECTED_HOSTNAME",
     "RETAINED_SAMPLE_BUCKET",

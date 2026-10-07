@@ -36,8 +36,9 @@ export function startBackend(environment: NodeJS.ProcessEnv) {
       `ClipBuilder paid processing unavailable: ${config.processingUnavailableReasons.join(", ")}`,
     );
 
-  const server = application.listen(config.port, "127.0.0.1", () => {
-    console.warn(`ClipBuilder backend listening on 127.0.0.1:${config.port}`);
+  const host = config.appEnv === "local" ? "127.0.0.1" : "0.0.0.0";
+  const server = application.listen(config.port, host, () => {
+    console.warn(`ClipBuilder backend listening on ${host}:${config.port}`);
     console.warn(
       "ClipBuilder analysis diagnostics v" +
         ANALYSIS_DIAGNOSTIC_VERSION +

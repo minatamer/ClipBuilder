@@ -16,6 +16,7 @@ const expectedEnvironment = {
   GEMINI_IMAGE_GENERATION_APPROVED: "false",
   GEMINI_PAID_PROJECT_CONFIRMED: "false",
   RENDERER_ENABLED: "false",
+  PUBLIC_PAID_PROCESSING_APPROVED: "false",
 } as const;
 
 export const environmentObservedDuringImport = Object.fromEntries(
@@ -32,6 +33,8 @@ export const credentialKeysObservedDuringImport = [
   "GOOGLE_APPLICATION_CREDENTIALS",
   "CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE",
   "CLOUDSDK_AUTH_ACCESS_TOKEN",
+  "PRIVATE_BACKEND_ORIGIN",
+  "FRONTEND_CALLER_EMAIL",
 ].filter((key) => Object.hasOwn(process.env, key));
 
 for (const [key, expectedValue] of Object.entries(expectedEnvironment)) {

@@ -148,6 +148,7 @@ export function loadConfig(
       paid && environment.PRIVATE_RENDERER_ORIGIN ? "cloud" : "disabled",
     RETAINED_SAMPLE_ENABLED: String(
       !fakeMode &&
+        (environment.APP_ENV ?? "local") === "local" &&
         paid &&
         [
           environment.RETAINED_SAMPLE_BUCKET,

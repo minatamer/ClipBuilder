@@ -130,7 +130,7 @@ export class BrowserWorkspace {
     this.check(generation);
     if (
       (!this.record?.source && !this.record?.retainedSample) ||
-      (this.record.analysis && !this.record.sampleReplayRevision) ||
+      this.record.analysis ||
       this.record.cloudAnalysis?.status === "complete"
     )
       throw new LocalMediaError("missing");
@@ -152,9 +152,7 @@ export class BrowserWorkspace {
     const record = parseWorkspaceRecord({
       ...this.record,
       analysis: result.analysis,
-      selectedId: this.record.sampleReplayRevision
-        ? this.record.selectedId
-        : null,
+      selectedId: null,
       assembly: null,
       cloudAnalysis: { status: "complete", result },
     });
@@ -584,28 +582,6 @@ export class BrowserWorkspace {
       assembly: null,
     });
     await this.write(record, generation);
-    this.record = record;
-    return record;
-  }
-  async cacheSampleReplay(
-    analysis: AnalysisBundleV1,
-  ): Promise<WorkspaceRecord> {
-    const generation = this.generation;
-    this.check(generation);
-    if (
-      !this.record?.retainedSample ||
-      this.record.analysis ||
-      this.record.cloudAnalysis
-    )
-      throw new LocalMediaError("missing");
-    const record = parseWorkspaceRecord({
-      ...this.record,
-      analysis,
-      sampleReplayRevision: analysis.revision,
-      selectedId: null,
-    });
-    await this.write(record, generation);
-    this.check(generation);
     this.record = record;
     return record;
   }

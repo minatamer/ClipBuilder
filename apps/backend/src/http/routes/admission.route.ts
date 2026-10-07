@@ -26,9 +26,9 @@ export function createAdmissionRouter(
   allowedOrigins: readonly string[],
 ): Router {
   const router = Router();
-  router.use((request, _response, next) => {
+  router.use((request, response, next) => {
     if (
-      !request.secure ||
+      (!request.secure && !response.locals.trustedFrontend) ||
       !allowedOrigins.includes(request.get("Origin") ?? "") ||
       !["same-origin", "same-site", "none"].includes(
         request.get("Sec-Fetch-Site") ?? "",

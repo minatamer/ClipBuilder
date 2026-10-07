@@ -1,8 +1,20 @@
 import { after } from "next/server";
+import {
+  acquireControlRequest,
+  controlFrontendOrigin,
+  fetchControlApi,
+} from "../../../../server/control-api";
 
 export async function POST(request: Request) {
   const origin = new URL(request.url).origin;
+  let expectedOrigin: string;
+  try {
+    expectedOrigin = controlFrontendOrigin();
+  } catch {
+    return new Response(null, { status: 403 });
+  }
   if (
+    origin !== expectedOrigin ||
     request.headers.get("origin") !== origin ||
     request.headers.get("sec-fetch-site") !== "same-origin"
   )
@@ -62,8 +74,10 @@ export async function POST(request: Request) {
   )
     after(async () => {
       let response: Response | undefined;
+      let release: (() => void) | undefined;
       try {
-        response = await fetch("http://127.0.0.1:4000/v1/session/exit", {
+        release = acquireControlRequest();
+        response = await fetchControlApi("/v1/session/exit", {
           method: "POST",
           cache: "no-store",
           redirect: "error",
@@ -86,6 +100,7 @@ export async function POST(request: Request) {
       } catch {
         // Private media expiry remains the fallback; visitors never retry cleanup.
       } finally {
+        release?.();
         await response?.body?.cancel().catch(() => undefined);
       }
     });

@@ -20,7 +20,6 @@ import { OutputDelivery } from "../media/output-delivery.js";
 import { composeRetainedSampleReader } from "../media/retained-sample.gcs.js";
 import { RetainedSampleProcessing } from "../media/retained-sample.processing.js";
 import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
-import { composeLocalSampleReplay } from "./sample-replay.js";
 import { MediaDeliveryAllowance } from "../media/delivery-allowance.js";
 export function composeAnalysis(
   config: BackendConfig,
@@ -58,7 +57,6 @@ export function composeAnalysis(
     Date.now,
     sampleReader ? new RetainedSampleProcessing(sampleReader) : null,
     diagnostics,
-    composeLocalSampleReplay(config),
   );
   const planner = composeSelectedPlanProvider(config, files);
   const assembly = planner

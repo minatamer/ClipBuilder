@@ -4,8 +4,13 @@ import {
   TEMPORARY_MEDIA_LIMITS,
   PUBLIC_LIMITS,
   mediaByteRange,
+  errorEnvelopeSchema,
 } from "@clipbuilder/contracts";
-import { env } from "node:process";
+import {
+  acquireControlRequest,
+  controlFrontendOrigin,
+  fetchControlApi,
+} from "../../../../server/control-api";
 
 async function proxy(
   request: Request,
@@ -25,19 +30,20 @@ async function proxy(
       { status, headers: { "Cache-Control": "no-store" } },
     );
   const origin = new URL(request.url).origin;
-  if (
-    (action === "sample-replay" || action === "sample-replay-options") &&
-    env.NODE_ENV !== "development"
-  )
+  if (action === "sample-replay" || action === "sample-replay-options")
     return fail(404);
+  let expectedOrigin: string;
+  try {
+    expectedOrigin = controlFrontendOrigin();
+  } catch {
+    return fail(503);
+  }
   if (
     ![
       "grant",
       "session",
       "upload",
       "sample",
-      "sample-replay",
-      "sample-replay-options",
       "run",
       "clear",
       "assemble",
@@ -46,7 +52,7 @@ async function proxy(
       "render-result",
       "output",
     ].includes(action) ||
-    origin !== "http://localhost:3000" ||
+    origin !== expectedOrigin ||
     request.headers.get("origin") !== origin ||
     request.headers.get("content-type")?.split(";")[0] !== "application/json" ||
     (request.headers.get("content-encoding") ?? "identity") !== "identity" ||
@@ -64,7 +70,9 @@ async function proxy(
   };
   controller.signal.addEventListener("abort", cancelBody);
   let upstream: Response | undefined;
+  let release: (() => void) | undefined;
   try {
+    release = acquireControlRequest();
     const chunks: ArrayBuffer[] = [];
     let size = 0;
     try {
@@ -108,7 +116,7 @@ async function proxy(
       return fail(400);
     const csrf = request.headers.get("x-csrf-token") ?? "";
     if (csrf.length > 64) return fail(400);
-    upstream = await fetch(`http://127.0.0.1:4000/v1/analysis/${action}`, {
+    upstream = await fetchControlApi(`/v1/analysis/${action}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -130,7 +138,11 @@ async function proxy(
       headers.append("Set-Cookie", cookie);
     if (upstream.status === 204)
       return new Response(null, { status: 204, headers });
-    if (!upstream.body) return fail(503);
+    if (
+      !upstream.body ||
+      upstream.headers.get("content-type")?.split(";")[0] !== "application/json"
+    )
+      return fail(503);
     reader = upstream.body.getReader();
     const output: ArrayBuffer[] = [];
     size = 0;
@@ -142,10 +154,22 @@ async function proxy(
       output.push(new Uint8Array(chunk.value).buffer);
     }
     controller.signal.throwIfAborted();
+    if (!upstream.ok) {
+      const error = errorEnvelopeSchema.safeParse(
+        JSON.parse(await new Blob(output).text()),
+      );
+      if (
+        !error.success ||
+        error.data.error.message !== SAFE_ERROR_MESSAGES[error.data.error.code]
+      )
+        return fail(503);
+      return Response.json(error.data, { status: upstream.status, headers });
+    }
     return new Response(new Blob(output), { status: upstream.status, headers });
   } catch {
     return fail(503);
   } finally {
+    release?.();
     clearTimeout(timer);
     controller.signal.removeEventListener("abort", cancelBody);
     request.signal.removeEventListener("abort", abort);
@@ -170,9 +194,15 @@ export async function GET(
       status: 503,
       headers: { "Cache-Control": "no-store" },
     });
+  let expectedOrigin: string;
+  try {
+    expectedOrigin = controlFrontendOrigin();
+  } catch {
+    return fail();
+  }
   if (
     !["preview", "output", "download", "sample-source"].includes(action) ||
-    url.origin !== "http://localhost:3000" ||
+    url.origin !== expectedOrigin ||
     url.search ||
     request.headers.get("sec-fetch-site") !== "same-origin"
   )
@@ -199,16 +229,19 @@ export async function GET(
   request.signal.addEventListener("abort", abort, { once: true });
   if (request.signal.aborted) abort();
   const timer = setTimeout(abort, 60_000);
+  let release: (() => void) | undefined;
   const dispose = () => {
+    release?.();
     clearTimeout(timer);
     request.signal.removeEventListener("abort", abort);
   };
   let upstream: Response | undefined;
   try {
-    upstream = await fetch(
+    release = acquireControlRequest();
+    upstream = await fetchControlApi(
       action === "sample-source"
-        ? "http://127.0.0.1:4000/v1/retained-sample/video"
-        : `http://127.0.0.1:4000/v1/analysis/${action}`,
+        ? "/v1/retained-sample/video"
+        : `/v1/analysis/${action}`,
       {
         headers: {
           ...(action === "sample-source" ? {} : { Cookie: cookie[0]! }),
@@ -274,7 +307,7 @@ export async function GET(
       dispose();
     }
     const cancelStream = () => {
-      void reader.cancel().catch(() => undefined);
+      void close();
     };
     controller.signal.addEventListener("abort", cancelStream, { once: true });
     const body = new ReadableStream<Uint8Array>({

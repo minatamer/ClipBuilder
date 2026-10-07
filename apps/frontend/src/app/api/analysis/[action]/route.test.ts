@@ -16,6 +16,84 @@ function input(action: string, body = "{}", origin = "http://localhost:3000") {
   });
 }
 describe("bounded same-origin analysis bridge", () => {
+  it("releases transport capacity when an unconsumed video stream times out", async () => {
+    vi.useFakeTimers();
+    try {
+      const cancel = vi.fn();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(
+          async () =>
+            new Response(new ReadableStream({ cancel }), {
+              headers: { "Content-Type": "video/mp4", "Content-Length": "10" },
+            }),
+        ),
+      );
+      const responses = [];
+      for (let count = 0; count < 8; count++)
+        responses.push(
+          await GET(
+            new Request("http://localhost:3000/api/analysis/preview", {
+              headers: {
+                "Sec-Fetch-Site": "same-origin",
+                Cookie: "__Host-clipping_session=synthetic",
+              },
+            }),
+            context("preview"),
+          ),
+        );
+      expect(responses.every((response) => response.status === 200)).toBe(true);
+      expect(
+        (
+          await GET(
+            new Request("http://localhost:3000/api/analysis/preview", {
+              headers: {
+                "Sec-Fetch-Site": "same-origin",
+                Cookie: "__Host-clipping_session=synthetic",
+              },
+            }),
+            context("preview"),
+          )
+        ).status,
+      ).toBe(503);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(cancel).toHaveBeenCalledTimes(8);
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => Response.json({ ok: true })),
+      );
+      expect((await POST(input("session"), context("session"))).status).toBe(
+        200,
+      );
+      await Promise.all(
+        responses.map((response) =>
+          response.body?.cancel().catch(() => undefined),
+        ),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it.each([
+    new Response("private platform identity detail", { status: 403 }),
+    Response.json(
+      {
+        error: {
+          code: "ABUSE_CHECK_FAILED",
+          message: "private technical detail",
+        },
+      },
+      { status: 403 },
+    ),
+  ])("hides malformed private platform failures", async (upstream) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => upstream),
+    );
+    const response = await POST(input("session"), context("session"));
+    expect(response.status).toBe(503);
+    expect(await response.text()).not.toContain("private");
+  });
   it.each(["sample-replay-options", "sample-replay"])(
     "keeps local %s inaccessible outside development with zero upstream work",
     async (action) => {

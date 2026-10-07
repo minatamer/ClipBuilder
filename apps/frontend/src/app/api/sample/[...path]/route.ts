@@ -1,4 +1,13 @@
-import { SAFE_ERROR_MESSAGES } from "@clipbuilder/contracts";
+import {
+  SAFE_ERROR_MESSAGES,
+  errorEnvelopeSchema,
+} from "@clipbuilder/contracts";
+import {
+  acquireControlRequest,
+  controlFrontendOrigin,
+  controlIsLocal,
+  fetchControlApi,
+} from "../../../../server/control-api";
 
 const allowed = new Map([
   ["GET config", "config"],
@@ -42,6 +51,13 @@ async function proxy(
   if (request.headers.get("sec-fetch-site") === "cross-site")
     return fail(400, "INVALID_REQUEST");
   const origin = new URL(request.url).origin;
+  try {
+    if (origin !== controlFrontendOrigin()) return fail(400, "INVALID_REQUEST");
+    if (!controlIsLocal() && destination !== "config")
+      return fail(404, "INVALID_REQUEST");
+  } catch {
+    return fail(503, "INTERNAL_ERROR");
+  }
   const declaredOrigin = request.headers.get("origin");
   if (declaredOrigin !== null && declaredOrigin !== origin)
     return fail(400, "INVALID_REQUEST");
@@ -55,7 +71,10 @@ async function proxy(
   };
   request.signal.addEventListener("abort", onAbort, { once: true });
   const timeout = setTimeout(onAbort, 5_000);
+  let release: (() => void) | undefined;
+  let upstream: Response | undefined;
   try {
+    release = acquireControlRequest();
     let body = request.method === "POST" ? "" : undefined;
     if (reader !== undefined) {
       const decoder = new TextDecoder();
@@ -79,38 +98,64 @@ async function proxy(
         .map((value) => value.trim())
         .find((value) => /^clipbuilder_fixture=[a-f0-9]{32}$/u.test(value)) ??
       "";
-    const upstream = await fetch(
-      `http://127.0.0.1:4000/v1/sample/${destination}`,
-      {
-        method: request.method,
-        headers: {
-          "Content-Type": "application/json",
-          Origin: origin,
-          Cookie: cookie,
-        },
-        ...(body === undefined ? {} : { body }),
-        signal: controller.signal,
-        cache: "no-store",
+    upstream = await fetchControlApi(`/v1/sample/${destination}`, {
+      method: request.method,
+      headers: {
+        "Content-Type": "application/json",
+        Origin: origin,
+        Cookie: cookie,
       },
-    );
+      ...(body === undefined ? {} : { body }),
+      signal: controller.signal,
+      cache: "no-store",
+    });
     const headers = new Headers({
       "Cache-Control": "no-store",
       "Content-Type": "application/json",
     });
     for (const cookie of upstream.headers.getSetCookie())
       headers.append("Set-Cookie", cookie);
-    const content = upstream.status === 204 ? null : await upstream.text();
+    let content: string | null = null;
+    if (upstream.status !== 204) {
+      if (!upstream.body) return fail(503, "INTERNAL_ERROR");
+      reader = upstream.body.getReader();
+      const chunks: ArrayBuffer[] = [];
+      let bytes = 0;
+      for (let reads = 0; ; reads++) {
+        const chunk = await reader.read();
+        controller.signal.throwIfAborted();
+        if (chunk.done) break;
+        bytes += chunk.value.byteLength;
+        if (bytes > 32768 || reads >= 1024) return fail(503, "INTERNAL_ERROR");
+        chunks.push(new Uint8Array(chunk.value).buffer);
+      }
+      content = await new Blob(chunks).text();
+    }
     if (controller.signal.aborted) return fail(503, "INTERNAL_ERROR");
+    if (!upstream.ok) {
+      const error = errorEnvelopeSchema.safeParse(
+        JSON.parse(content ?? "null"),
+      );
+      if (
+        !error.success ||
+        error.data.error.message !== SAFE_ERROR_MESSAGES[error.data.error.code]
+      )
+        return fail(503, "INTERNAL_ERROR");
+      content = JSON.stringify(error.data);
+    }
     return new Response(content, { status: upstream.status, headers });
   } catch {
     return fail(503, "INTERNAL_ERROR");
   } finally {
+    release?.();
     clearTimeout(timeout);
     request.signal.removeEventListener("abort", onAbort);
     if (reader !== undefined) {
       void reader.cancel().catch(() => {});
       reader.releaseLock();
     }
+    if (upstream?.body && !upstream.body.locked)
+      void upstream.body.cancel().catch(() => undefined);
   }
 }
 

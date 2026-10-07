@@ -10,14 +10,14 @@ export function createSessionExitRouter(
   const router = Router();
   router.post(
     "/exit",
-    (request, _response, next) => {
+    (request, response, next) => {
       const origin = request.get("Origin") ?? "";
       const local =
         ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(
           request.socket.remoteAddress ?? "",
         ) && origin === "http://localhost:3000";
       if (
-        (!request.secure && !local) ||
+        (!request.secure && !response.locals.trustedFrontend && !local) ||
         !origins.includes(origin) ||
         request.get("Sec-Fetch-Site") !== "same-origin"
       )

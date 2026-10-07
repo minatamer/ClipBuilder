@@ -22,10 +22,16 @@ import { composeRetainedSample } from "./media/retained-sample.gcs.js";
 import { createRetainedSampleRouter } from "./http/routes/retained-sample.route.js";
 import { AnalysisDiagnostics } from "./analysis/analysis.diagnostics.js";
 import { createBrowserDiagnosticRouter } from "./http/routes/browser-diagnostic.route.js";
+import {
+  GoogleFrontendCaller,
+  rejectFrontendCaller,
+  type FrontendCallerVerifier,
+} from "./http/frontend-caller.js";
 
 export function createApplication(
   config: BackendConfig,
   diagnostics = new AnalysisDiagnostics(),
+  injectedFrontendCaller?: FrontendCallerVerifier,
 ): Express {
   const application = express();
 
@@ -48,6 +54,52 @@ export function createApplication(
   });
 
   application.use("/v1", createHealthRouter(config.appRevision));
+  const frontendCaller =
+    injectedFrontendCaller ??
+    (config.appEnv !== "local" &&
+    config.frontendCallerEmail &&
+    config.backendAudience
+      ? new GoogleFrontendCaller(
+          config.backendAudience,
+          config.frontendCallerEmail,
+        )
+      : null);
+  let activeHttp = 0;
+  application.use("/v1", async (request, response, next) => {
+    if (activeHttp >= 8) throw new ApplicationError({ code: "CAPACITY_FULL" });
+    activeHttp++;
+    let released = false;
+    let authenticationSettled = false;
+    let responseEnded = false;
+    const release = () => {
+      responseEnded = true;
+      if (released || !authenticationSettled) return;
+      released = true;
+      activeHttp--;
+      response.removeListener("close", release);
+      response.removeListener("finish", release);
+    };
+    response.once("close", release);
+    response.once("finish", release);
+    try {
+      if (config.appEnv !== "local" && frontendCaller) {
+        if (
+          !(await frontendCaller.verify(
+            request.get("X-ClipBuilder-Frontend-Authorization"),
+          ))
+        )
+          throw rejectFrontendCaller();
+        if (response.destroyed) return;
+        response.locals.trustedFrontend = true;
+      } else if (config.appEnv !== "local" && config.paidDemoEnabled) {
+        throw rejectFrontendCaller();
+      }
+    } finally {
+      authenticationSettled = true;
+      if (responseEnded) release();
+    }
+    next();
+  });
   application.use(
     "/v1/diagnostics",
     createBrowserDiagnosticRouter(
@@ -65,8 +117,6 @@ export function createApplication(
       (request.method === "POST" &&
         (action === "upload" ||
           action === "sample" ||
-          action === "sample-replay" ||
-          action === "sample-replay-options" ||
           action === "run" ||
           action === "clear" ||
           action === "assemble" ||
@@ -163,11 +213,9 @@ export function createApplication(
         mode: config.providerMode,
         sampleEnabled: developmentPreview,
         retainedSampleEnabled: retainedSample !== null,
-        ...(analysis?.sampleReplayAvailable
-          ? { sampleReplayEnabled: true }
-          : {}),
         localMediaEnabled:
-          config.providerMode === "live" && config.appEnv === "local",
+          config.providerMode === "live" &&
+          (config.appEnv === "local" || config.publicPaidProcessingApproved),
         liveAnalysisEnabled: analysis !== null,
         ...(analysis ? { processingSiteKey: config.turnstile.siteKey } : {}),
         liveAssemblyEnabled:
