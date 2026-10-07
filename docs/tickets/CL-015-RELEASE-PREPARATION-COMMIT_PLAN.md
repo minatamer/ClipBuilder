@@ -8,6 +8,31 @@ Stage and verify each exact whole-file group, commit in order, verify each commi
 
 ## File-level groups
 
+### Hosted paid activation evidence follow-up
+
+Under the continuing explicit owner deployment/commit approval, stage this exact
+eight-file documentation group as
+`CL-015: record hosted paid activation and preserve local operation`:
+
+- `apps/frontend/README.md`
+- `apps/backend/README.md`
+- `apps/renderer/README.md`
+- `docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md`
+- `docs/operations/HOSTED_PAID_WALKTHROUGH_2026-10-07_INPUTS.json`
+- `docs/operations/HOSTED_PAID_WALKTHROUGH_2026-10-07_EVIDENCE.json`
+- `docs/tickets/CL-015-deploy-validate-measure-and-rollback.md`
+- `docs/tickets/CL-015-RELEASE-PREPARATION-COMMIT_PLAN.md`
+
+Require exact source/context/image/scan/runtime matching, verified local and
+hosted upload origins/CORS, preserved IAM/secrets/caps and non-processing paid
+capability GETs. Review documentation and receipts for secrets/content/private
+identifiers, stale current-state claims and distinctions between fake/no-key
+proof and owner-only live acceptance. Preserve the original paid-off receipts
+as dated history. Format/check only this settled documentation slice; the
+1,248-test and actual Linux build gates already passed for unchanged runtime
+source. Verify exact staged/committed inventory, clean index/worktree and removal
+of only owned temporary contexts. No push or owner paid flow is included.
+
 ### Hosted paid walkthrough compatibility follow-up
 
 Continuing the owner deployment/commit instruction, stage only this group under

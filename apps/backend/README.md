@@ -1,23 +1,27 @@
 # ClipBuilder backend
 
-CL-015 hosted checkpoint (2026-10-07): the backend is deployed privately with
+CL-015 hosted paid-walkthrough checkpoint (2026-10-07): the backend is deployed privately with
 the four exact Secret Manager references, narrow frontend invocation and bounded
-capacity. Paid processing and every approval remain disabled. The public
-configuration GET is the unpaid frontend-to-backend identity acceptance check.
-Domain/challenge/renderer upload-origin cutover and owner paid acceptance remain
-separate. Local env/startup is preserved. See the
+capacity. Paid processing and the existing approval flags are enabled for the
+owner's explicit manual walkthrough at the managed frontend origin. The public
+configuration GET verifies the frontend-to-backend identity bridge and live
+capabilities without creating a media session or calling Gemini. Private upload
+calls forward the configured frontend Origin; the renderer and bucket admit that
+exact hosted origin alongside localhost. Local env/startup is preserved.
+Custom-domain TLS/cutover, actual challenge/paid acceptance and the paused general
+public traffic review remain separate. See the
 [deployment and cutover guide](../../docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md).
 Fake/no-key tests are synthetic; real processing needs provider/cloud setup,
 live flags, applicable approvals and the owner's manual walkthrough.
 
-CL-015 final local-test preparation (2026-10-07) preserves normal owner-managed
+Earlier CL-015 final local-test preparation (2026-10-07) preserves normal owner-managed
 `.env.local` startup and fixed local origins. Hosted preparation adds a private
 frontend caller verifier and an eight-request process bound that remains held
 while authentication settles after disconnect. Only an exact signed audience,
 configured verified service identity and existing origin/CSRF/session proofs can
 admit hosted processing; forwarded protocol alone is insufficient. The hosted
-paid launch gate defaults false. No backend deployment or agent-paid test is
-part of this preparation. See the
+paid launch gate defaults false. No backend deployment or agent-paid test was
+part of that preparation. See the
 [current preparation record](../../docs/operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md).
 Fake/no-key checks remain fixture/injected and paid-off; real processing requires
 the owner's configured provider/live/approval setup and manual walkthrough.

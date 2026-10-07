@@ -4,8 +4,10 @@ CL-015 owns this checkpoint. The owner reports the local paid upload-to-export
 walkthrough working and authorizes frontend/backend Cloud Run deployment and
 ticket-prefixed commits. The owner manages Cloudflare DNS, Turnstile dashboard
 and secret values. Agents do not run paid processing or inspect local secrets.
-This guide records a paid-off hosting checkpoint. Public processing remains
-gated by exact hosted configuration, traffic review and owner acceptance.
+Paid mode is now enabled at the managed frontend for the owner's explicitly
+requested manual walkthrough. The initial paid-off checkpoint is retained below.
+Custom-domain TLS/cutover, general public traffic review and live owner acceptance
+remain separate; this does not mark the full public release complete.
 
 ## Current topology and settings
 
@@ -17,13 +19,18 @@ gated by exact hosted configuration, traffic review and owner acceptance.
 - Frontend/backend: one CPU, 512 MiB memory, minimum zero and maximum one instance,
   eight concurrent HTTP requests, 360-second request timeout. Existing renderer
   resource settings and expiry schedule are preserved.
-- Backend starts `FAKE_MODE=true`, `PAID_DEMO_ENABLED=false`, all four approvals
-  false and `PUBLIC_PAID_PROCESSING_APPROVED=false`. Hosted fixture/sample routes
-  remain unavailable. No-key fake checks prove synthetic behavior; a public
-  paid-off deployment does not provide a working real export.
-- Public paid processing needs real Gemini/Turnstile secrets, cloud/runtime
-  access, exact origin/challenge settings, applicable approvals and the final
-  owner-run hosted walkthrough. There is no local AI model/weights path.
+- Backend now uses `FAKE_MODE=false`, `PAID_DEMO_ENABLED=true`, all four existing
+  approvals true and `PUBLIC_PAID_PROCESSING_APPROVED=true` for the owner test.
+  The non-processing configuration GET confirms live upload, analysis, assembly
+  and export. Hosted fixture/sample routes remain unavailable. No-key fake checks
+  prove synthetic behavior; real quality and end-to-end success remain owner-only.
+- Four exact enabled Gemini/Turnstile/grant secret references, private runtime
+  identities, origin/challenge configuration and cloud access are installed.
+  Secret payloads were not read; widget pairing/key-project correspondence still
+  needs the owner's real test. There is no local AI model/weights path.
+- Renderer preserves `FRONTEND_ORIGIN=http://localhost:3000` and accepts the
+  exact managed frontend through `HOSTED_FRONTEND_ORIGIN`. Bucket CORS includes
+  both exact origins. No wildcard, private IAM or other bucket policy change.
 - Existing spend controls carry forward. One instance and four media operations
   per session are capacity/work bounds, not a global DDoS or cost guarantee.
   Process-local grants fail closed after restart; they do not survive rollout.
@@ -79,11 +86,13 @@ no media session and make no Gemini call. Keep the owner local stack running.
 The owner confirmed this exact purchased hostname on 2026-10-07, correcting the
 earlier `tryclipbuilding.com` spelling. After the owner's Search Console TXT
 verification, Google CLI metadata confirms ownership. The owner-authorized
-mapping to the existing public frontend is now created; its TLS/Ready state is
-pending DNS. No service configuration, secret or paid flag was changed.
-Current deployed images still use the earlier allowlist; rebuild and verify
-frontend/backend images before switching their configured application origin.
-Local environment files and the renderer's local upload origin remain intact.
+mapping to the existing public frontend is created. Google and Cloudflare public
+resolvers return all eight exact records. TLS is still pending at the latest
+recorded check; the managed frontend remains the active application origin.
+The corrected frontend/backend images are now verified and deployed. Do not
+switch to the custom origin until certificate/Ready checks pass and the owner
+finishes the managed-URL test. Local environment files and the renderer's local
+upload origin remain intact.
 
 Google returned these eight apex records. In Cloudflare DNS → Records, add each
 with **Name `@`, TTL Auto, Proxy status DNS only (gray cloud)**. Preserve the
@@ -100,7 +109,7 @@ Google verification TXT record. No apex CNAME is needed for this mapping.
 | AAAA | `2001:4860:4802:36::15` |
 | AAAA | `2001:4860:4802:38::15` |
 
-Use `https://tryclipbuilder.com` as the single application origin. `www` can
+After the planned cutover, use `https://tryclipbuilder.com` as the single application origin. `www` can
 redirect to it; do not operate the paid app on both hosts. The application allows
 only this exact custom production origin or the configured managed Cloud Run
 origin. Private backend origin and token audience remain Cloud Run HTTPS.
@@ -110,7 +119,8 @@ recommend an external Application Load Balancer. Native Cloud Run domain mapping
 is available in `europe-west1` but remains Preview and is not recommended by
 Google for production services because of latency limitations. For this small
 portfolio demo, the direct mapping path avoids adding a load balancer; choose it
-with that documented tradeoff. This guide does not create DNS or a mapping.
+with that documented tradeoff. The mapping and owner-entered DNS are recorded
+above; no load balancer or additional paid Cloudflare plan was added.
 
 1. In Google Cloud Console → Cloud Run → frontend → Custom domains / Add custom
    URL, select direct Cloud Run domain mapping for `tryclipbuilder.com`.
@@ -140,13 +150,15 @@ anonymous paid launch. No extra paid Cloudflare plan is required by this guide.
 
 ## Domain, Turnstile and upload cutover
 
-Do these with hosted paid processing disabled, then start a fresh browser session:
+Paid mode currently serves the managed frontend for the owner test. For the
+later custom-domain cutover, first disable hosted paid processing and finish or
+Exit existing sessions, then apply these settings and start a fresh session:
 
 1. Cloudflare dashboard → Turnstile → widget → Settings → Hostnames: add
    `tryclipbuilder.com`, without protocol/path/port. Keep `localhost` if retaining
    that same widget for development. Add the exact managed frontend hostname only
-   if a managed-URL test is needed. Add `www` only if it will actually run the
-   widget rather than redirect. Save. Never select unrestricted hostnames.
+   if a managed-URL test is needed. This setup keeps `www` as a future redirect
+   rather than another processing host. Save. Never select unrestricted hostnames.
 2. Keep the four backend Secret Manager references paired with that widget/key.
    Backend `TURNSTILE_EXPECTED_HOSTNAME` must be the one active frontend hostname,
    first managed host for that test, then `tryclipbuilder.com` at custom cutover.
@@ -157,13 +169,14 @@ Do these with hosted paid processing disabled, then start a fresh browser sessio
 4. Backend: `APP_ENV=production`, exact same `FRONTEND_ORIGIN`, own Cloud Run
    `BACKEND_ORIGIN`/`BACKEND_AUDIENCE`, frontend runtime caller email and recorded
    `APP_REVISION`. Origin/CSRF and caller checks stay enforced.
-5. Before a hosted upload, reconcile the renderer's exact `FRONTEND_ORIGIN` and
-   disposable bucket CORS with that active public origin. The current renderer
-   creates resumable upload capabilities for one configured origin; it is currently
-   the local origin. Do not silently change it and break local paid upload. A
-   reviewed cutover or a verified implementation supporting both exact approved
-   origins is required before claiming local and hosted paid upload coexist.
-   Retain private IAM, generation fencing, cleanup and the existing local env.
+5. Preserve renderer `FRONTEND_ORIGIN=http://localhost:3000`; replace its optional
+   `HOSTED_FRONTEND_ORIGIN` with the exact custom origin and replace the managed
+   origin in disposable-bucket CORS while keeping localhost. The verified backend
+   forwards only its configured origin, the authenticated renderer rejects all
+   other Origin values before storage and GCS binds each resumable capability to
+   its admitted origin. Retire the managed origin after sessions are finished;
+   do not add a second public processing origin. Retain private IAM, generation
+   fencing, cleanup and the existing local env.
 6. Confirm the recorded native input-boundary correction's final image, Linux
    audio/export/cancel proof and private rollout. Original media uses maintained
    FFmpeg with the existing codec/container allowlists enforced before decoder
@@ -229,7 +242,53 @@ export into a running app. Do not run a root Next production build over the live
 development output. Hosted image builds use isolated allowlisted contexts and
 no env/private media. Keep the requested local apps running after handoff.
 
-## Execution receipts
+## Hosted paid walkthrough receipts
+
+Open [the managed frontend workspace](https://clipbuilder-frontend-obh7yniraa-ew.a.run.app/start)
+in a fresh tab/session. The owner reports the managed/apex hostnames added to
+the existing Turnstile widget with localhost retained. Do not use the backend
+hostname in the widget. The actual challenge and paid flow are owner-only proof.
+
+The [326-entry compiled-input manifest](HOSTED_PAID_WALKTHROUGH_2026-10-07_INPUTS.json)
+and [structured activation receipts](HOSTED_PAID_WALKTHROUGH_2026-10-07_EVIDENCE.json)
+record source revision `051e5e9fbc50df1edaeff5a570d04029809756ab`, exact images,
+preserved configuration and the non-processing live-capability checks. Each
+target's compiled files match the manifest even though the frontend build was
+submitted before the backend/renderer-only compatibility change.
+
+| Target | Current image digest | Accepted proof |
+| --- | --- | --- |
+| Frontend | `sha256:59e5f0d16d9e29c70b9d3cc4c0ab4f1716a093f19acea38d2f33c704a8573ab7` | Linux standalone build, 1,320 artifact files/10 routes/zero external package links; offline runtime and deployed bridge |
+| Backend | `sha256:02f18bf9d4c1de1c78d3f79cae64ccae37acf5a1e8ed40c14f64114c5b1f5fb6` | Linux compile/imports/offline runtime; exact hosted Origin forwarding; private rollout and live capability GET |
+| Renderer | `sha256:89b88106adae8ce481a76d3fa915d298b0338551cb8a5358243a4b03cc022316` | Linux synthetic audio/export/cancel/scratch, no process leftovers/AI calls; private rollout and exact local/hosted upload origins |
+
+All three scans have zero fixable high/critical entries; the full unfixed ledgers
+are preserved privately. The standard format/lint/typecheck gates and 1,248
+fake/no-key tests in 110 files pass. An unchanged frontend instrumentation import
+timed out in the first full run; the isolated and repeated standard full checks
+pass without source/timeout changes. Both original and passing logs are retained.
+Actual Linux builds compile all workspaces. No Windows build was run over the
+owner's active Next development output.
+
+The image rollouts and subsequent seven-flag backend activation are Ready with
+100% latest traffic. Private IAM/secrets, service/revision caps, local env, other
+renderer settings and non-CORS bucket policies are preserved. Before activation,
+the unpaid bridge/assets/CSP/crawl/retired-route checks pass. After activation,
+landing, workspace and safe configuration return 200 with all four real
+capabilities enabled and sample UI absent; localhost retains its live flags.
+No agent upload, grant, Gemini call, rendering session or paid flow was run.
+Paid-off flags/configuration, prior images and content-safe private logs remain
+available. Only owned temporary image contexts are removed after source checks.
+
+Owner live acceptance and actual rollback/kill-switch exercise remain unchecked,
+as does the earlier paused general public traffic/direct-origin review. The
+custom-domain certificate is pending; do not infer full release readiness from
+safe GETs or synthetic export proof.
+
+## Initial paid-off execution receipts
+
+The remainder of this section preserves the earlier paid-off checkpoint. Its
+images and disabled flags are historical; the current activation is recorded above.
 
 The [402-file final input manifest](CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07_INPUTS.json)
 and [structured receipts](CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07_EVIDENCE.json)

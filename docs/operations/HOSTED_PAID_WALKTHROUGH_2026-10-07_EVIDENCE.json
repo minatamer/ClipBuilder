@@ -1,0 +1,320 @@
+{
+  "recordedAt": "2026-10-07T18:34:43.857Z",
+  "sourceRevision": "051e5e9fbc50df1edaeff5a570d04029809756ab",
+  "inputSha256": "34a946b98c4147360138c58b9aa68dcc7792c5081386b0eec90bf26b5e7214a7",
+  "activeOrigin": "https://clipbuilder-frontend-obh7yniraa-ew.a.run.app",
+  "localChecks": [
+    {
+      "check": "backend-upload",
+      "exitCode": 0
+    },
+    {
+      "check": "renderer-upload",
+      "exitCode": 0
+    },
+    {
+      "check": "format",
+      "exitCode": 0
+    },
+    {
+      "check": "lint",
+      "exitCode": 0
+    },
+    {
+      "check": "typecheck",
+      "exitCode": 0
+    },
+    {
+      "check": "unit",
+      "exitCode": 0,
+      "firstRunExitCode": 1,
+      "originalFailure": "unchanged_browser_instrumentation_import_timeout"
+    }
+  ],
+  "unitTests": {
+    "passed": 1248,
+    "files": 110,
+    "fakeMode": true,
+    "paidMode": false,
+    "apiKeys": false,
+    "originalUnchangedBrowserTimeoutPreserved": true,
+    "isolatedAndStandardFullRechecksPassed": true
+  },
+  "images": {
+    "frontend": {
+      "imageDigest": "sha256:59e5f0d16d9e29c70b9d3cc4c0ab4f1716a093f19acea38d2f33c704a8573ab7",
+      "runtimeVerified": true,
+      "nonRootAndNetworkIsolated": true,
+      "packageEntries": 222,
+      "fixableHighCriticalEntries": 0,
+      "unfixedHighCriticalEntries": 49,
+      "scanAt": "2026-10-07T18:08:20.4356515Z",
+      "artifact": {
+        "files": 1320,
+        "links": 29,
+        "bytes": 45103961,
+        "sha256": "b11f50f1d25151bd872908ca90a9a05c4ebffc2f37d06f88a39cd7c9ce64d74d",
+        "appRoutes": 10,
+        "externalPackageLinks": 0,
+        "selfContained": true
+      }
+    },
+    "backend": {
+      "imageDigest": "sha256:02f18bf9d4c1de1c78d3f79cae64ccae37acf5a1e8ed40c14f64114c5b1f5fb6",
+      "runtimeVerified": true,
+      "nonRootAndNetworkIsolated": true,
+      "packageEntries": 222,
+      "fixableHighCriticalEntries": 0,
+      "unfixedHighCriticalEntries": 49,
+      "scanAt": "2026-10-07T18:23:11.1320362Z"
+    },
+    "renderer": {
+      "imageDigest": "sha256:89b88106adae8ce481a76d3fa915d298b0338551cb8a5358243a4b03cc022316",
+      "runtimeVerified": true,
+      "nonRootAndNetworkIsolated": true,
+      "packageEntries": 968,
+      "fixableHighCriticalEntries": 0,
+      "unfixedHighCriticalEntries": 248,
+      "scanAt": "2026-10-07T18:28:26.1842916Z",
+      "nativeProof": {
+        "synthetic": true,
+        "manifestVersion": 3,
+        "inlinePictures": 2,
+        "generatedProvenancePictures": 1,
+        "spokenWordCues": 3,
+        "instantFocusCuts": 1,
+        "sourceDurationMs": 15000,
+        "audioDurationMs": 15000,
+        "audioBytes": 77558,
+        "audioExtractionMs": 447,
+        "sourceOnsetMs": 1200,
+        "audioOnsetMs": 1180,
+        "audioOnly": true,
+        "outputDurationMs": 10005,
+        "outputBytes": 291425,
+        "linuxSpecialEntryObserved": true,
+        "peakScratchBytes": 7527548,
+        "canceled": true,
+        "ownedProcessesRemaining": 0,
+        "aiCalls": 0
+      },
+      "runtimeTools": {
+        "remotion": "4.0.534",
+        "chromium": "155.0.8059.39",
+        "/compositor/ffmpeg": "461169f4f3286904fbfa18212873073869b03c29ebbe99f415c50fdc7dd41113",
+        "ffmpeg": "ffmpeg version n7.1 Copyright (c) 2000-2024 the FFmpeg developers",
+        "/compositor/ffprobe": "3bad619e6da4abbd8fc13f46b08e869c28f38852a8a4f168579eef23b96eae1d",
+        "ffprobe": "ffprobe version n7.1 Copyright (c) 2007-2024 the FFmpeg developers",
+        "/chromium/chrome-headless-shell": "d8f762c0153b944bc0cd747fa6ae2e0497d29d703049833e2942e15fc646b82b",
+        "sourceFfmpegPackage": "7:5.1.9-0+deb12u1",
+        "remotionAacEncoder": "libfdk_aac",
+        "/usr/bin/ffmpeg": "0dafc1360bb07743f76abeb1e4ae16b0aaa1331e9041a0e8d6a8524111dc0cbb",
+        "sourceffmpeg": "ffmpeg version 5.1.9-0+deb12u1 Copyright (c) 2000-2026 the FFmpeg developers",
+        "/usr/bin/ffprobe": "0e598fe6d247bfe63757f5c839dc145a166b3f876f2875ca88a306a5b8ec5a58",
+        "sourceffprobe": "ffprobe version 5.1.9-0+deb12u1 Copyright (c) 2007-2026 the FFmpeg developers"
+      }
+    }
+  },
+  "imageRollouts": {
+    "frontend": {
+      "target": "frontend",
+      "ready": true,
+      "latestTraffic100": true,
+      "imageDigest": "sha256:59e5f0d16d9e29c70b9d3cc4c0ab4f1716a093f19acea38d2f33c704a8573ab7",
+      "runtimeConfigurationPreserved": true,
+      "privateIdentityAndSecretsPreserved": true,
+      "sourceRevision": "051e5e9fbc50df1edaeff5a570d04029809756ab",
+      "paidFlagsStillOff": true
+    },
+    "backend": {
+      "target": "backend",
+      "ready": true,
+      "latestTraffic100": true,
+      "imageDigest": "sha256:02f18bf9d4c1de1c78d3f79cae64ccae37acf5a1e8ed40c14f64114c5b1f5fb6",
+      "runtimeConfigurationPreserved": true,
+      "privateIdentityAndSecretsPreserved": true,
+      "sourceRevision": "051e5e9fbc50df1edaeff5a570d04029809756ab",
+      "paidFlagsStillOff": true
+    }
+  },
+  "capacity": [
+    {
+      "target": "frontend",
+      "serviceAndRevisionCapacityPreserved": true,
+      "maximumInstances": 1,
+      "concurrency": 8,
+      "timeoutSeconds": 360
+    },
+    {
+      "target": "backend",
+      "serviceAndRevisionCapacityPreserved": true,
+      "maximumInstances": 1,
+      "concurrency": 8,
+      "timeoutSeconds": 360
+    },
+    {
+      "target": "renderer",
+      "serviceAndRevisionCapacityPreserved": true,
+      "maximumInstances": 1,
+      "concurrency": 2,
+      "timeoutSeconds": 900
+    }
+  ],
+  "paidOffBridgeBeforeActivation": {
+    "statuses": {
+      "/": 200,
+      "/start": 200,
+      "/api/sample/config": 200,
+      "/favicon.png": 200,
+      "/robots.txt": 200,
+      "/motion-preview": 404,
+      "/feasibility/browser-media/index.html": 404,
+      "/main.mjs": 404,
+      "/api/analysis/sample-replay-options": 503
+    },
+    "frontendBackendIdentityBridge": true,
+    "paidProcessingDisabled": true,
+    "sampleUiAbsent": true,
+    "productionCsp": true,
+    "apiNoStore": true,
+    "robotsLandingAllowed": true,
+    "backendAnonymousHealth": 403,
+    "retiredReplayPost": 404,
+    "aiCalls": 0,
+    "mediaSessions": 0
+  },
+  "activation": {
+    "paidModeEnabled": true,
+    "fakeMode": false,
+    "ready": true,
+    "latestTraffic100": true,
+    "activeOrigin": "https://clipbuilder-frontend-obh7yniraa-ew.a.run.app",
+    "expectedTurnstileHostnameMatches": true,
+    "capacityPreserved": true,
+    "otherRuntimeSettingsPreserved": true,
+    "privateIamAndSecretsPreserved": true,
+    "sourceRevision": "051e5e9fbc50df1edaeff5a570d04029809756ab",
+    "paidCalls": 0,
+    "mediaSessions": 0
+  },
+  "nonProcessingCapabilities": {
+    "/": 200,
+    "/start": 200,
+    "/api/sample/config": 200,
+    "mode": "live",
+    "uploadEnabled": true,
+    "analysisEnabled": true,
+    "assemblyEnabled": true,
+    "exportEnabled": true,
+    "publicSiteKeyPresent": true,
+    "sampleUiAbsent": true,
+    "localConfigurationPreserved": true,
+    "activeOrigin": "https://clipbuilder-frontend-obh7yniraa-ew.a.run.app",
+    "paidCalls": 0,
+    "mediaSessions": 0,
+    "ownerWalkthroughRequired": true
+  },
+  "rendererRollout": {
+    "ready": true,
+    "imageDigest": "sha256:89b88106adae8ce481a76d3fa915d298b0338551cb8a5358243a4b03cc022316",
+    "rollbackImageDigest": "sha256:abe968869aa35ceff3555565663aa3ece5ab848d31e38d3ac928f97818daf7f4",
+    "localOriginPreserved": true,
+    "hostedOrigin": "https://clipbuilder-frontend-obh7yniraa-ew.a.run.app",
+    "otherRuntimeConfigurationPreserved": true,
+    "privateIamPreserved": true,
+    "sourceRevision": "051e5e9fbc50df1edaeff5a570d04029809756ab",
+    "paidCalls": 0,
+    "mediaSessions": 0
+  },
+  "rendererHealth": {
+    "anonymousHealth": 403,
+    "authenticatedHealth": 200,
+    "invalidDescriptor": 400,
+    "configuredCallerAudienceVerified": true,
+    "aiCalls": 0,
+    "mediaDispatches": 0
+  },
+  "bucketCors": {
+    "exactLocalAndHostedOrigins": true,
+    "otherBucketSettingsPreserved": true,
+    "oldCorsRecorded": true,
+    "paidCalls": 0
+  },
+  "domainNetwork": {
+    "domain": "tryclipbuilder.com",
+    "checkedAt": "2026-10-07T18:31:30.870Z",
+    "dns": [
+      {
+        "provider": "google",
+        "type": "A",
+        "querySucceeded": true,
+        "records": [
+          "216.239.32.21",
+          "216.239.34.21",
+          "216.239.36.21",
+          "216.239.38.21"
+        ],
+        "exactMatch": true
+      },
+      {
+        "provider": "google",
+        "type": "AAAA",
+        "querySucceeded": true,
+        "records": [
+          "2001:4860:4802:32::15",
+          "2001:4860:4802:34::15",
+          "2001:4860:4802:36::15",
+          "2001:4860:4802:38::15"
+        ],
+        "exactMatch": true
+      },
+      {
+        "provider": "cloudflare",
+        "type": "A",
+        "querySucceeded": true,
+        "records": [
+          "216.239.32.21",
+          "216.239.34.21",
+          "216.239.36.21",
+          "216.239.38.21"
+        ],
+        "exactMatch": true
+      },
+      {
+        "provider": "cloudflare",
+        "type": "AAAA",
+        "querySucceeded": true,
+        "records": [
+          "2001:4860:4802:32::15",
+          "2001:4860:4802:34::15",
+          "2001:4860:4802:36::15",
+          "2001:4860:4802:38::15"
+        ],
+        "exactMatch": true
+      }
+    ],
+    "https": {
+      "validCertificate": false,
+      "status": null,
+      "failureCode": "ECONNRESET"
+    },
+    "paidCalls": 0,
+    "mediaSessions": 0
+  },
+  "ownerReportedTurnstileHostnamesAdded": true,
+  "ownerPaidWalkthrough": "pending",
+  "generalPublicTrafficReview": "still_paused",
+  "actualProviderKeyProjectQualityCostDeletionRightsDevicesRollback": "owner_only_unverified",
+  "agentPaidCalls": 0,
+  "agentMediaSessions": 0,
+  "secretPayloadsReadByAgent": false,
+  "ignoredLocalEnvironmentFilesTouched": false,
+  "contextCleanup": {
+    "ownedBuildContextsRemoved": 4,
+    "resolvedTargetsInsideExactTempDirectory": true,
+    "reparsePointsRejected": true,
+    "currentContextInventoriesAndHashesVerified": true,
+    "privateReceiptsLogsRetained": true,
+    "retainedMediaAndLocalProcessesUntouched": true
+  }
+}

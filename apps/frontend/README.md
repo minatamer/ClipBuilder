@@ -1,20 +1,24 @@
 # ClipBuilder frontend
 
-CL-015 hosted checkpoint (2026-10-07): the public Linux standalone frontend is
-deployed against the private paid-disabled backend. API routes validate the exact
+CL-015 hosted paid-walkthrough checkpoint (2026-10-07): the public Linux standalone
+frontend is deployed against the private backend with paid processing enabled
+for the owner's manual test at the managed frontend URL. API routes validate the exact
 public Host and HTTPS proxy marker because Next uses its container address in
 `request.url`; forwarded-host substitutions do not bypass Origin/CSRF checks.
 Local origin behavior is preserved. No hosted sample/testing/replay UI is enabled.
 See the [deployment and domain guide](../../docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md).
-Fake/no-key verification is synthetic. Real hosted export remains gated by
-provider/cloud configuration, live/approval settings and owner paid acceptance.
+The safe configuration GET confirms upload, analysis, assembly and export enabled;
+it does not prove a real processing flow. Fake/no-key verification is synthetic.
+Real processing uses provider/cloud credentials and live/approval settings;
+quality, cost, deletion and device acceptance remain owner-manual. Custom-domain
+TLS/cutover and the paused general public traffic review remain separate.
 
-CL-015 final local-test preparation (2026-10-07) preserves the existing ignored
+Earlier CL-015 final local-test preparation (2026-10-07) preserves the existing ignored
 `.env.local`, fixed localhost origins and backend-owned processing mode. The
 server-only control adapter adds exact hosted origin/audience and Cloud Run
 metadata identity handling, with bounded HTTP work and generic platform failures.
 Hosted-only settings are blank in `.env.example`; local mode ignores them.
-No frontend/backend deployment or agent-paid test is performed. See the
+No frontend/backend deployment or agent-paid test was part of that preparation. See the
 [current preparation record](../../docs/operations/FINAL_LOCAL_PAID_TEST_PREPARATION_2026-10-07.md).
 Fake/no-key checks remain labelled synthetic/injected with Download disabled;
 real processing and quality acceptance remain owner-manual with the configured

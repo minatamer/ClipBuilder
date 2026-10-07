@@ -8,9 +8,14 @@ admission. The backend sets this header from its own configuration. Each GCS
 resumable session is bound to that admitted origin; legacy no-header callers
 retain the primary origin. Configure disposable-bucket CORS for both exact
 origins. No wildcard or visitor-provided origin selection is introduced.
-Fake/no-key injected tests verify rejection and provider headers; the owner alone
-verifies a real local/hosted upload-to-export walkthrough after the matching
-private image/configuration is deployed.
+The matching private image is deployed, with the managed frontend as the optional
+hosted origin and both exact local/hosted origins in bucket CORS. Other runtime
+settings and private IAM are preserved. Configured caller health returns 200,
+anonymous health 403 and an empty prepare descriptor 400 before dispatch.
+Fake/no-key injected tests verify rejection and provider headers; Linux synthetic
+audio/export/cancellation checks pass. The owner alone verifies a real hosted
+upload-to-export walkthrough. See the
+[current deployment evidence](../../docs/operations/HOSTED_PAID_WALKTHROUGH_2026-10-07_EVIDENCE.json).
 
 CL-015 public-hosting follow-up (2026-10-07): maintained Debian FFmpeg/FFprobe
 `7:5.1.9-0+deb12u1` handles original source inspection, audio, proxy and selection.
@@ -23,8 +28,9 @@ without asserting that vendor `n7.1` is fully patched. Repeated Linux synthetic
 proof, scan and image-only private rollout are recorded in the
 [deployment guide](../../docs/operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10-07.md).
 The accepted portrait export and existing local upload origin are preserved.
-Hosted upload requires an explicit origin/CORS cutover; fake/no-key tests do not
-prove real media quality. Only the owner runs paid acceptance.
+Custom-domain upload still requires an exact hosted-origin/CORS cutover after TLS
+is ready; fake/no-key tests do not prove real media quality. Only the owner runs
+paid acceptance.
 
 CL-015 final local paid-test preparation (2026-10-07): the patched Linux image
 passed synthetic native and offline runtime checks and is deployed to the

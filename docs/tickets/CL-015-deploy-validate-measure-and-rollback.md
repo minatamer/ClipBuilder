@@ -1,6 +1,6 @@
 # CL-015 — Bounded renderer setup and later public deployment
 
-## Owner hosted paid walkthrough preparation — 2026-10-07
+## Owner hosted paid walkthrough activation — 2026-10-07
 
 The owner explicitly requests enabling deployed paid mode for one manual
 upload-to-export walkthrough. Use the existing managed frontend origin while
@@ -34,6 +34,39 @@ timeout or frontend code change. Both logs remain preserved. Focused backend/
 renderer tests also pass. The settled read-only review finds no actionable local
 issue; real local/hosted processing remains owner-only and unverified here.
 
+The three corrected immutable Linux images now pass build, offline nonroot
+runtime and exact-digest scans with zero fixable high/critical entries. Renderer
+synthetic audio/export/cancellation passes with zero AI calls and no owned process
+leftovers. The 326 compiled context inputs match source revision
+`051e5e9fbc50df1edaeff5a570d04029809756ab`; source and per-image receipts are in the
+[input manifest](../operations/HOSTED_PAID_WALKTHROUGH_2026-10-07_INPUTS.json) and
+[activation evidence](../operations/HOSTED_PAID_WALKTHROUGH_2026-10-07_EVIDENCE.json).
+Full unfixed scan ledgers remain available; this is not an all-libraries-patched claim.
+
+Verified rollout preserves private IAM, secret references, local upload Origin,
+one-instance service/revision caps, other runtime settings and bucket policies.
+Only image digests, backend source revision, the renderer's optional exact hosted
+Origin and bucket CORS changed during preparation. The paid-off public bridge,
+landing, workspace, assets, CSP, crawl policy and retired routes pass. Private
+renderer health is 403 anonymously and 200 with the configured caller/audience;
+an empty prepare descriptor is 400 with zero dispatches.
+
+After those gates, the seven existing backend mode/approval flags were updated
+for the authorized owner test. Latest traffic is 100% Ready. Non-processing public
+GETs confirm live upload/analysis/assembly/export, public site-key presence and
+no sample UI; localhost retains its live capabilities. Paid-off flag/configuration
+and immutable rollback targets are recorded privately. Agent paid calls/media
+sessions remain zero, ignored local env is untouched and all private logs remain.
+The initial approval review incorrectly applied the superseded preparation-only
+deployment exclusion; retrying the exact rollout with the later explicit owner
+authorization was approved. No rejected command was bypassed.
+
+Both public DNS resolvers return the exact eight apex records. Custom-domain TLS
+is still pending at the recorded check; keep the managed frontend as the only
+active origin for this test. Owner live quality/key-project/cost/deletion/rights/
+device/rollback acceptance and the paused general public traffic review remain
+unchecked. This activation does not mark the full ticket or public launch complete.
+
 ## Owner domain attachment — 2026-10-07
 
 The owner requests domain attachment and explicitly confirms `tryclipbuilder.com`
@@ -45,13 +78,15 @@ and reject the old spelling; canonical localhost behavior stays unchanged.
 Following owner-completed Search Console verification, Google CLI metadata
 confirms ownership. The requested mapping to the existing public frontend is
 created and returns eight apex A/AAAA records, listed in the deployment guide.
-DNS/TLS, immutable corrected app images and the application-origin cutover remain
-pending. No service configuration, secret, paid flag or renderer setting changed.
+At this domain-mapping checkpoint, DNS/TLS, immutable corrected app images and
+the application-origin cutover remained pending. No service configuration,
+secret, paid flag or renderer setting changed at that earlier checkpoint.
 The seven-file source correction passes contracts build, 16 focused fake/no-key
 origin regressions, root format/lint/typecheck and a settled read-only diff review
 with no actionable local finding. The full unit suite and Linux image gates from
-the previous checkpoint are not claimed rerun for this correction. Keep hosting
-fake/paid-off; synthetic checks need no API keys, while real processing still
+the previous checkpoint were not rerun for that correction alone. The hosted
+paid activation above supersedes that paid-off state. Synthetic checks need no
+API keys, while real processing still
 needs provider keys, live flags, approvals and owner acceptance. No agent-paid
 flow or local AI model/weights path is introduced. Preserve ignored local env,
 private identities, secret references and renderer upload configuration.
