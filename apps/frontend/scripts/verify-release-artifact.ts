@@ -4,6 +4,7 @@ import { lstat, readFile, readdir, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import DELIVERY_ASSETS from "./delivery-assets.json" with { type: "json" };
 
 const appRoutes = new Set([
   "/page",
@@ -189,7 +190,15 @@ export async function verifyReleaseArtifact(
       if (bytes > 1024 * 1024 * 1024) throw invalid();
       digest.update(chunk);
     }
-    hash.update(file.label + "\0").update(digest.digest());
+    const value = digest.digest();
+    if (
+      file.label.startsWith("public/") &&
+      !file.label.startsWith("public/generated/product-film/") &&
+      value.toString("hex") !==
+        DELIVERY_ASSETS[file.label.slice(7) as keyof typeof DELIVERY_ASSETS]
+    )
+      throw invalid();
+    hash.update(file.label + "\0").update(value);
   }
   for (const link of links.sort()) hash.update(link + "\0");
   return {

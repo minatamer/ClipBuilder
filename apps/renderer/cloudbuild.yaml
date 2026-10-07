@@ -9,6 +9,19 @@ steps:
         "--tag=${_IMAGE}",
         .,
       ]
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - run
+      - --rm
+      - --network=none
+      - --mount=type=bind,source=/workspace/scripts/verify-image-runtime.mjs,target=/tmp/verify-image-runtime.mjs,readonly
+      - --mount=type=bind,source=/workspace/test/deterministic.environment.ts,target=/tmp/deterministic.environment.ts,readonly
+      - --entrypoint=node
+      - "${_IMAGE}"
+      - --experimental-strip-types
+      - --import=/tmp/deterministic.environment.ts
+      - /tmp/verify-image-runtime.mjs
+      - renderer
 images: ["${_IMAGE}"]
 timeout: 1200s
 options:

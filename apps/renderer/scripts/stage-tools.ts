@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { cp, mkdir, readFile, writeFile, chmod } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import {
   preparePinnedBrowser,
   PINNED_CHROMIUM_VERSION,
@@ -33,6 +34,19 @@ for (const path of [
   versions[path.replace(destination, "")] = createHash("sha256")
     .update(await readFile(path))
     .digest("hex");
+  if (path.endsWith("/ffmpeg") || path.endsWith("/ffprobe")) {
+    const name = path.endsWith("/ffmpeg") ? "ffmpeg" : "ffprobe";
+    const version = execFileSync(path, ["-version"], {
+      timeout: 10_000,
+      encoding: "utf8",
+      maxBuffer: 64 * 1024,
+    })
+      .split("\n")[0]
+      ?.trim();
+    if (!version?.startsWith(name + " version ") || version.length > 2048)
+      throw new Error("Native tool version unavailable.");
+    versions[name] = version;
+  }
 }
 await writeFile(
   join(destination, "runtime-tools.json"),

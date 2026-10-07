@@ -1,8 +1,16 @@
-import { mkdtemp, mkdir, writeFile, rm, symlink } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  writeFile,
+  rm,
+  symlink,
+  copyFile,
+} from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 import { verifyReleaseArtifact } from "../apps/frontend/scripts/verify-release-artifact.js";
+import DELIVERY_ASSETS from "../apps/frontend/scripts/delivery-assets.json" with { type: "json" };
 
 async function fixture() {
   const temporary = await mkdtemp(join(tmpdir(), "clipbuilder-artifact-test-"));
@@ -63,6 +71,26 @@ async function fixture() {
   };
 }
 describe("production-only artifact inspection", () => {
+  it("accepts only the reviewed delivery assets and rejects replacements or additional captures", async () => {
+    const f = await fixture();
+    try {
+      for (const name of Object.keys(DELIVERY_ASSETS)) {
+        await mkdir(join(f.root, "public", name, ".."), { recursive: true });
+        await copyFile(
+          new URL("../apps/frontend/public/" + name, import.meta.url),
+          join(f.root, "public", name),
+        );
+      }
+      expect((await verifyReleaseArtifact(f.root)).selfContained).toBe(true);
+      await f.put(
+        "public/product-film/intake.png",
+        "synthetic unreviewed replacement",
+      );
+      await expect(verifyReleaseArtifact(f.root)).rejects.toThrow();
+    } finally {
+      await f.stop();
+    }
+  });
   it("rejects the removed film draft route in local and release artifacts", async () => {
     const f = await fixture();
     try {

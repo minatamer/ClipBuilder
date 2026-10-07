@@ -33,6 +33,7 @@ export async function prepareBuildContext(root: string) {
       "pnpm-workspace.yaml",
       "tsconfig.base.json",
       "test/deterministic.environment.ts",
+      "scripts/verify-image-runtime.mjs",
       "apps/renderer/package.json",
       "apps/renderer/tsconfig.json",
       "apps/renderer/src",

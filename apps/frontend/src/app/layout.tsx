@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "ClipBuilder — Grounded AI-assisted clipping",
   description:
     "Find grounded moments in owned conversations and keep control of the final vertical edit.",
+  icons: { icon: { url: "/favicon.png", type: "image/png", sizes: "96x96" } },
 };
 
 type RootLayoutProperties = Readonly<{

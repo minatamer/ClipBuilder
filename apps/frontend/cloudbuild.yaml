@@ -1,0 +1,29 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      [
+        build,
+        --platform=linux/amd64,
+        --file=apps/frontend/Dockerfile,
+        "--tag=${_IMAGE}",
+        .,
+      ]
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - run
+      - --rm
+      - --network=none
+      - --mount=type=bind,source=/workspace/scripts/verify-image-runtime.mjs,target=/tmp/verify-image-runtime.mjs,readonly
+      - --mount=type=bind,source=/workspace/test/deterministic.environment.ts,target=/tmp/deterministic.environment.ts,readonly
+      - --mount=type=bind,source=/workspace/apps/frontend/scripts/delivery-assets.json,target=/tmp/delivery-assets.json,readonly
+      - --entrypoint=node
+      - "${_IMAGE}"
+      - --experimental-strip-types
+      - --import=/tmp/deterministic.environment.ts
+      - /tmp/verify-image-runtime.mjs
+      - frontend
+images: ["${_IMAGE}"]
+timeout: 1200s
+options:
+  machineType: E2_HIGHCPU_8
+  logging: CLOUD_LOGGING_ONLY

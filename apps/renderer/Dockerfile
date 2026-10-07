@@ -1,6 +1,6 @@
 # Standard Remotion Node SSR. Linux image proof remains a separately gated step.
 FROM --platform=linux/amd64 node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c AS base
-RUN apt-get update && apt-get install -y --no-install-recommends libnss3 libdbus-1-3 libatk1.0-0 libgbm1 libasound2 libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 libxdamage1 libatk-bridge2.0-0 libpango-1.0-0 libcairo2 libcups2 fonts-liberation ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends libnss3 libdbus-1-3 libatk1.0-0 libgbm1 libasound2 libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 libxdamage1 libatk-bridge2.0-0 libpango-1.0-0 libcairo2 libcups2 fonts-liberation ca-certificates && rm -rf /var/lib/apt/lists/*
 
 FROM base AS build
 WORKDIR /workspace
@@ -16,6 +16,8 @@ USER root
 RUN corepack pnpm --filter @clipbuilder/renderer deploy --prod /runtime
 
 FROM base AS runtime
+# Runtime uses prebuilt artifacts/binaries only; package installers are unnecessary.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/pnpm /usr/local/bin/pnpx /usr/local/bin/yarn /usr/local/bin/yarnpkg
 WORKDIR /app
 COPY --from=build --chown=node:node /runtime /app
 COPY --from=build /opt/clipbuilder /opt/clipbuilder

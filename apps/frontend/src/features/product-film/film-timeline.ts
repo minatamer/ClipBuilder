@@ -1,6 +1,6 @@
 export const FILM_FORMAT = { width: 1920, height: 1080, fps: 30 } as const;
 export const FILM_OPENING_FRAME = 25;
-export const FILM_POSTER = "/generated/product-film/opening.jpg";
+export const FILM_POSTER = "/product-film/opening.jpg";
 export type FilmVariant = "walkthrough" | "style";
 export type FilmBeat =
   | "identity"
@@ -51,16 +51,16 @@ export function filmDuration(variant: FilmVariant) {
 }
 
 export const FILM_CAPTURES = {
-  intake: "/generated/product-film/intake.png",
-  preparation: "/generated/product-film/preparation.png",
-  source: "/generated/product-film/source.png",
-  analysis: "/generated/product-film/analysis.png",
-  candidates: "/generated/product-film/candidates.png",
-  selected: "/generated/product-film/selected.png",
-  build: "/generated/product-film/build.png",
-  review: "/generated/product-film/review.png",
-  render: "/generated/product-film/render.png",
-  result: "/generated/product-film/result.png",
+  intake: "/product-film/intake.png",
+  preparation: "/product-film/preparation.png",
+  source: "/product-film/source.png",
+  analysis: "/product-film/analysis.png",
+  candidates: "/product-film/candidates.png",
+  selected: "/product-film/selected.png",
+  build: "/product-film/build.png",
+  review: "/product-film/review.png",
+  render: "/product-film/render.png",
+  result: "/product-film/result.png",
 } as const;
 
 export const FILM_COPY: Record<FilmBeat, { title: string; detail: string }> = {
