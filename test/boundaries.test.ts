@@ -17,6 +17,42 @@ async function lintFixture(relativePath: string, source: string) {
 }
 
 describe("repository dependency boundaries", () => {
+  it.each([
+    "apps/frontend/src",
+    "apps/backend/src",
+    "apps/renderer/src",
+    "packages/contracts/src",
+    "packages/composition/src",
+  ])("rejects owner imports from public %s", async (path) => {
+    expect(
+      await lintFixture(
+        `../${path}/__owner-negative__.ts`,
+        'import "../owner/index.ts";',
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ruleId: "local-owner/public-import" }),
+      ]),
+    );
+  });
+  it("keeps owner contracts browser-safe and permits owner app contract imports", async () => {
+    expect(
+      await lintFixture(
+        "../packages/contracts/owner/__negative__.ts",
+        'import "node:fs"; void process;',
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ ruleId: "no-restricted-imports" }),
+        expect.objectContaining({ ruleId: "no-restricted-globals" }),
+      ]),
+    );
+    const messages = await lintFixture(
+      "../apps/frontend/owner/__valid__.ts",
+      'import { OWNER_LIMITS } from "../../../packages/contracts/owner/index.ts"; void OWNER_LIMITS;',
+    );
+    expect(messages.filter((message) => message.severity === 2)).toEqual([]);
+  });
   it("rejects Node globals and bare Node imports from contracts", async () => {
     const messages = await lintFixture(
       "../packages/contracts/src/__boundary-negative__.ts",

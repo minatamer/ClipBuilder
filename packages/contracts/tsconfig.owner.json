@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "owner",
+    "allowImportingTsExtensions": true
+  },
+  "include": ["owner/**/*.ts"],
+  "exclude": ["owner/**/*.test.ts"]
+}

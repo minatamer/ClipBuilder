@@ -68,6 +68,7 @@ export default defineConfig([
       "*.{js,mjs,ts}",
       "**/*.config.{js,mjs,ts}",
       "test/**/*.ts",
+      "scripts/**/*.{mjs,ts}",
       "apps/backend/**/*.ts",
       "apps/renderer/**/*.{ts,tsx}",
     ],
@@ -92,7 +93,7 @@ export default defineConfig([
     rules: applicationBoundaryRules,
   },
   {
-    files: ["apps/frontend/src/**/*.{ts,tsx}"],
+    files: ["apps/frontend/{src,owner}/**/*.{ts,tsx}"],
     languageOptions: {
       globals: {
         ...disabledNodeGlobals,
@@ -137,7 +138,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["packages/contracts/src/**/*.ts"],
+    files: ["packages/contracts/{src,owner}/**/*.ts"],
     languageOptions: {
       globals: {
         ...disabledNodeGlobals,
@@ -242,7 +243,48 @@ export default defineConfig([
       ],
     },
   },
+  {
+    files: ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}"],
+    plugins: {
+      "local-owner": {
+        rules: {
+          "public-import": {
+            meta: {
+              type: "problem",
+              schema: [],
+              messages: {
+                excluded: "Public source cannot import a local owner module.",
+              },
+            },
+            create(context) {
+              const check = (node) => {
+                if (
+                  typeof node.source?.value === "string" &&
+                  /(?:^|\/)owner(?:\/|$)/.test(node.source.value)
+                )
+                  context.report({ node, messageId: "excluded" });
+              };
+              return {
+                ImportDeclaration: check,
+                ExportNamedDeclaration: check,
+                ExportAllDeclaration: check,
+                ImportExpression(node) {
+                  if (
+                    node.source?.type === "Literal" &&
+                    /(?:^|\/)owner(?:\/|$)/.test(String(node.source.value))
+                  )
+                    context.report({ node, messageId: "excluded" });
+                },
+              };
+            },
+          },
+        },
+      },
+    },
+    rules: { "local-owner/public-import": "error" },
+  },
   globalIgnores([
+    ".owner-build/**",
     "private/**",
     "**/.next/**",
     "**/dist/**",

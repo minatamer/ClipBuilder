@@ -1,5 +1,112 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Owner AFK implementation authorization — 2026-10-22
+
+The owner adopts the complete recommended local limits, Save draft once followed
+by local autosave, and yt-dlp/FFmpeg design in the
+[decision set](research/LOCAL_OWNER_WORKFLOW_2026-10-22.md#proposed-decisions-for-owner-adoption--2026-10-22).
+Execute CL-017–CL-024 one dependency-ready packet at a time, implement/validate/
+fix/revalidate until no actionable findings remain, then stage and commit the
+ticket before continuing. Do not ask routine questions while the owner is AFK;
+choose the documented recommendation and record decisions/evidence. No push.
+
+All agent verification is fake/paid-off, synthetic and zero-spend. Do not read
+credentials, run provider/cloud/real YouTube processing, deploy or incur charges.
+Real/live activation and owner media/visual testing wait for the owner. Add
+CL-025 for that manual walkthrough and trial/fix/retest feedback. The local
+retained master exists and is readable without ADC; that readability check did
+not authorize using it as an automated fixture or changing it.
+
+Adopt one source up to 60 minutes/10 GiB, supported SDR up to 4K/60fps, ten manual
+1–300-second ranges, up to four independent AI suggestions, ten selected clips,
+one heavy media worker by default, one downloader/provider request, portrait
+1080×1920/30fps outputs up to 1 GiB, 20 GiB scratch and a 10 GiB free-disk reserve.
+Two native workers require a later resource proof. Saved-source storage warns at
+50 GiB and never automatically deletes completed sources. Native limits remain
+targets to verify, not evidence of achieved capacity or approved higher AI spend.
+
+Persistent local drafts may retain validated transcript/candidates, composition,
+edits and normalized pictures after the owner explicitly saves that draft; no raw
+provider responses, credentials or old capabilities. Source/draft/export areas
+are separate under OS Downloads/ClipBuilder, outside Git; scratch stays OS-temp.
+No automatic expiry of saved inputs/drafts/exports and no app cloud sync. This
+local exception does not widen public contracts, restore diagnostic replay,
+create accounts/database/history or authorize cloud media storage.
+
+Physical isolation uses separate `owner/` trees within the existing apps and
+packages, independent local build outputs, and a local frontend artifact served
+by the local backend on 4100; the private local media worker uses 4200. No cross-
+app imports. Public source/build/container graphs exclude these trees. See
+[local architecture ADR](architecture/LOCAL_OWNER_WORKFLOW.md).
+
+This authorization supersedes planning-only language in the records below solely
+for this local fake-tested implementation track. Current fake mode needs no
+keys/ADC and uses synthetic AI results; API-free local native encoding is a
+separate capability to verify. No offline AI model/weights are added.
+
+## Owner local workflow planning instruction — 2026-10-22
+
+The owner requests research and fresh tickets for personal local-only controls:
+multiple exact timestamp ranges in addition to independent AI discoveries;
+minimum/maximum AI clip duration, including exact-length requests, without
+overriding manual ranges; processing several selected clips from one source;
+post-edit caption style/position and picture replacement/placement controls;
+owner-supplied pictures; and agent access through the existing chat. The owner
+also requests research into using a YouTube link at the best available quality
+without manually downloading it. The owner's later clarification explicitly
+requests a background download inside the local app, defaulting to the highest
+accessible source resolution with a choice of offered resolutions. The normal
+flow requires no external downloader UI, manual merge or re-upload. Resolution
+choices must not silently downgrade. Existing applications and upstream adapter
+source establish a technical precedent; ClipBuilder compatibility and per-source
+availability remain untested. **This instruction authorizes planning only.
+Do not implement, launch, install tools or process media from these packets until
+the owner explicitly requests implementation.** Earlier execution authorizations
+do not authorize this new local extension.
+
+The [CL-017–CL-024 local track](tickets/README.md#local-owner-workflow-execution--2026-10-22)
+and [dated research](research/LOCAL_OWNER_WORKFLOW_2026-10-22.md) capture the plan.
+These owner requirements are a scoped local extension; the deployed visitor
+product retains one selected 10–60-second clip, fixed automatic presentation and
+one final download. Existing no-editor/no-batch/no-platform-download rules remain
+the public contract. No hidden public route, client flag or widening of public
+schemas may expose the proposed local controls.
+
+The owner further requests successful downloads be saved outside Git, preferably
+in Downloads, and reused rather than repeatedly downloaded. Plan the OS-resolved
+Downloads folder with a private ClipBuilder source subfolder as the default;
+Desktop is an optional explicitly chosen destination. Do not create either now.
+Saved source masters and minimal reuse metadata survive workspace close, app
+restart, expiry and repository cleanup until explicitly deleted by the owner.
+Processing scratch remains disposable. A repeated link/resolution uses a validated
+saved file first; missing/damaged files or an explicitly requested new quality
+have a separate acquisition action. Durable source retention does not authorize
+retaining transcripts/editor drafts, a database or hosted source storage.
+
+Planning review clarification: this owner track requires local native media
+processing/storage with no public-hosted API, Cloud Run renderer or cloud-storage
+fallback. Provider AI remains separately disclosed and gated; local-only does not
+claim an offline AI model. Saved-source lookup must precede online format checks
+and work without keys/paid/cloud readiness. A simple saved-source chooser and
+repeated links both reuse the validated local file; later AI/export failures do
+not force a download. The agent command path must also work with the browser UI
+closed. File-based acceptance alone cannot close the gated YouTube requirements.
+
+Local build isolation, editor-draft retention, native compute readiness, resource
+ceilings and the acquisition implementation remain proposed designs with explicit
+gates in CL-017/CL-022. A local UI currently still uses cloud media compute; genuine
+local encoding needs its own runtime proof. URL analysis does not supply a
+renderable master, and automated ingestion would still transfer media internally.
+No guaranteed original-quality/instant/transfer-free YouTube workflow is claimed.
+Do not restore retired sample replay or read diagnostic captures as input. Actual
+downloads, saved files and new runtime data wait for implementation authorization;
+today's change only records the owner's intended local retention behavior.
+
+Current fake mode needs no keys and uses synthetic results; it does not establish
+the new features or real MP4/AI quality. Real AI needs provider keys, enabled flags
+and rights/transfer/spend approvals, with paid testing owner-only. No local AI
+weights/runtime, paid test, cloud action, deployment or Git mutation is added.
+
 ## Owner Cloud Run deployment instruction — 2026-10-07
 
 The owner reports hosted preview/export missing contextual pictures and requires

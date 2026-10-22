@@ -1,5 +1,8 @@
 # Private media renderer
 
+The independent [local owner worker](owner/README.md) uses admitted local native
+tools and no cloud fallback; it is excluded from this deployed renderer build.
+
 Hosted upload compatibility (CL-015, 2026-10-07): retain `FRONTEND_ORIGIN` for the
 existing local caller and optionally configure one exact HTTPS
 `HOSTED_FRONTEND_ORIGIN`. After private caller verification, `/internal/upload`

@@ -1,5 +1,9 @@
 # ClipBuilder backend
 
+The separately launched personal workflow has its own
+[local owner guide](owner/README.md); its fake/paid-off host uses 4100 and is
+excluded from this app's deployed source and build.
+
 CL-015 hosted paid-walkthrough checkpoint (2026-10-07): the backend is deployed privately with
 the four exact Secret Manager references, narrow frontend invocation and bounded
 capacity. Paid processing and the existing approval flags are enabled for the

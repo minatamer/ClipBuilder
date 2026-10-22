@@ -1,5 +1,57 @@
 # ClipBuilder canonical ticket index
 
+## Local owner workflow execution — 2026-10-22
+
+The owner adopted all recommendations and authorized sequential implementation,
+execute/validate/fix loops and a commit per clean ticket. CL-017 is locally verified;
+later implementation remains queued. All agent checks are synthetic/fake,
+paid-off, credential-free and zero-spend. No push, real YouTube retrieval,
+provider/cloud calls or deployment is authorized. Read the
+[latest authorization](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#owner-afk-implementation-authorization--2026-10-22)
+and [research/design comparison](../research/LOCAL_OWNER_WORKFLOW_2026-10-22.md).
+[CL-025](CL-025-owner-manual-local-workflow-acceptance.md) records owner-only
+manual acceptance after implementation.
+
+| Order | Packet | Outcome | Dependencies / state |
+| --- | --- | --- | --- |
+| 1 | [CL-017](CL-017-isolate-local-owner-workspace.md) | Separate local workspace, source lifecycle, native media runtime and public build exclusion | Implemented; fake/native synthetic checks pass; owner real-media gates remain open |
+| 2 | [CL-018](CL-018-add-owner-ranges-and-ai-duration-controls.md) | Exact manual ranges alongside independent discovery; AI-only min/max and exact duration | CL-017; planned |
+| 3 | [CL-019](CL-019-process-multiple-local-clips.md) | Several selected clips, bounded concurrent work, per-clip review/export and source retention | CL-017–018; planned |
+| 4 | [CL-020](CL-020-add-minimal-local-caption-and-visual-editor.md) | Caption style/position, visual placement/replacement and personal pictures | CL-017, CL-019; planned |
+| 5 | [CL-021](CL-021-enable-agent-access-to-local-edits.md) | Existing chat agent edits through the same validated local use cases and CLI | CL-017, CL-019–020; planned |
+| Decision lane | [CL-022](CL-022-decide-youtube-source-feasibility.md) | Research background download, exact resolution choice and saved-source reuse | Existing implementations/source reviewed; method/runtime/access gates open |
+| Conditional | [CL-023](CL-023-import-approved-high-quality-linked-source.md) | Paste link, choose resolution/Best available, background download to Downloads and reuse saved source | CL-017, CL-022 go; not implementation-ready |
+| Final local gate | [CL-024](CL-024-verify-local-owner-workflow-and-build-exclusion.md) | Combined offline media/agent checks and public artifact exclusion | CL-017–021; CL-022 decision; CL-023 only if cleared/implemented |
+
+Execute one dependency-ready packet at a time under the latest authorization.
+CL-022's desk research can inform the design independently; the
+file-based editor does not wait for YouTube ingestion. This local track does not
+reorder or close outstanding CL-015 public-release/owner gates. Manual ranges are
+additional exact requests, not AI hints; AI duration settings never override
+them. The owner clarified background downloading at a chosen resolution: default
+Best available, no silent quality downgrade and no manual download/re-upload.
+Successful sources are retained outside the repo in the OS Downloads folder by
+default, with local reuse across later clips/restarts and no repeated acquisition
+for an intact saved copy. No files/directories are created during planning.
+Numerical local limits and persistent editor drafts are adopted decisions;
+the saved-source decision does not expand public schemas or hosted retention.
+
+The [planning coverage review](../research/LOCAL_OWNER_WORKFLOW_2026-10-22.md#planning-coverage-review--2026-10-22)
+maps every owner request to its packet and acceptance criteria. It strengthens
+mandatory local media compute/build exclusion, offline saved-source reuse before
+online metadata checks, preservation after processing failures and headless agent
+editing. File-based success cannot close the requested YouTube lane unless the
+owner explicitly defers it. Ticket records distinguish verified local work from
+the still-open owner acceptance.
+
+Current `FAKE_MODE=true` works with no API keys using synthetic workflow data;
+CL-017 now provides private local preview and deterministic native encoding;
+later editing/import features are queued. Actual AI needs real
+provider keys, enabled live flags and applicable rights/transfer/spend approvals;
+paid testing stays owner-only, and no live provider adapter is composed into this
+owner runtime yet. Verified synthetic encoding is API-free; no offline AI
+model/weights are provided.
+
 **CL-015 paid-off Cloud Run checkpoint — 2026-10-07:** The owner-approved
 whole-file commits and frontend/private-backend deployment are complete. Final
 Linux artifacts, immutable scans, private renderer correction, exact identities,

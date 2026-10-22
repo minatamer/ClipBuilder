@@ -1,0 +1,16 @@
+**/node_modules
+**/.next
+**/dist
+**/owner
+.owner-build
+scripts/owner-*
+test/owner-*
+tsconfig.owner.json
+.git
+private
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+test-results
+coverage

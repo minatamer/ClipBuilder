@@ -1,5 +1,8 @@
 # ClipBuilder frontend
 
+The separately launched personal workflow uses the
+[local owner UI](owner/README.md), outside Next routes and public builds.
+
 CL-015 hosted paid-walkthrough checkpoint (2026-10-07): the public Linux standalone
 frontend is deployed against the private backend with paid processing enabled
 for the owner's manual test at the managed frontend URL. API routes validate the exact

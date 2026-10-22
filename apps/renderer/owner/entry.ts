@@ -1,0 +1,59 @@
+import { readFile } from "node:fs/promises";
+import { z } from "zod";
+import { createOwnerWorker } from "./server.ts";
+
+async function main() {
+  if (
+    process.env.FAKE_MODE !== "true" ||
+    process.env.PAID_DEMO_ENABLED !== "false"
+  )
+    throw new Error("owner_fake_mode_required");
+  const file = process.env.CLIPBUILDER_OWNER_STATE;
+  if (!file) throw new Error("owner_state_missing");
+  const state = z
+    .object({
+      root: z.string().min(1),
+      workerToken: z.string().length(64),
+      tools: z.object({
+        ffmpeg: z.string().min(1),
+        ffprobe: z.string().min(1),
+      }),
+    })
+    .parse(JSON.parse(await readFile(file, "utf8")));
+  const worker = createOwnerWorker({
+    root: state.root,
+    token: state.workerToken,
+    tools: state.tools,
+  });
+  worker.server.listen(4200, "127.0.0.1");
+  let stopping: Promise<void> | undefined;
+  const close = () => {
+    stopping ??= worker
+      .close()
+      .then(() => {
+        if (process.connected) process.disconnect();
+      })
+      .catch(() => {
+        process.stderr.write("owner_cleanup_requires_recovery\n");
+        process.exitCode = 1;
+        if (process.connected) process.disconnect();
+      });
+    return stopping;
+  };
+  process.once("SIGINT", () => void close());
+  process.once("SIGTERM", () => void close());
+  process.once("disconnect", () => void close());
+  process.on("message", (message) => {
+    if (message === "stop") void close();
+  });
+  worker.server.once("error", () => {
+    process.stderr.write("owner_worker_unavailable\n");
+    process.exitCode = 1;
+    void close();
+  });
+}
+void main().catch(() => {
+  process.stderr.write("owner_worker_unavailable\n");
+  process.exitCode = 1;
+  if (process.connected) process.disconnect();
+});

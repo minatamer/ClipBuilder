@@ -1,4 +1,5 @@
 **/*.md
+.owner-build/
 **/next-env.d.ts
 .next/
 coverage/

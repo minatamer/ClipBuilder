@@ -23,6 +23,26 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Scope, privacy, and spend
 
+- Owner local-workflow authorization (2026-10-22): implement CL-017–CL-024
+  sequentially with execute/validate/fix loops and ticket-prefixed staging and
+  commits after clean validation. The adopted local decisions are in the source
+  of truth and local-owner ADR. This is a separate local-only composition;
+  public workflow restrictions below remain unchanged. All agent checks use
+  synthetic media, fake AI, paid-off and zero provider/cloud/real YouTube calls.
+  No push, cloud build/deploy or paid processing is authorized. Add CL-025 for
+  owner manual acceptance; do not mark its real-media checks passed. Preserve
+  all retained masters/captures/private logs. The retained local video was checked
+  for readability only; it is not an ordinary automated fixture.
+- Owner-local runtimes use explicit fake/paid-off composition without reading
+  ignored env files. UI/control bind to loopback port 4100 and the private local
+  worker to 4200; canonical public 3000/4000 startup remains unchanged. Never
+  fall back to another port or cloud processing. Inspect ownership before a
+  long-lived launch and use hidden detached processes with private runtime
+  records/logs outside Git. Synthetic short-lived harnesses own/drain their
+  processes, sockets and OS-temp scratch. Source masters, saved drafts and
+  exports live outside the repo under OS Downloads/ClipBuilder; deletion of one
+  draft does not delete its source or exports. Existing retained-demo-source
+  protection remains in force.
 - ClipBuilder is a disposable portfolio demo: one owned/licensed conversation,
   grounded candidate moments, one selected 10–60 second vertical edit, and one
   final download. The visitor chooses exactly one candidate, then receives an
@@ -166,7 +186,8 @@ environment readers, fixtures, or application code.
 - The shared Vitest setup installs those values and network interception at
   module top level. A `beforeAll` hook is too late because Vitest imports test
   modules before suite hooks run.
-- All six Vitest configurations disable environment-file loading with
+- Every Vitest configuration, including owner and native-proof configs,
+  disables environment-file loading with
   `envDir: false`. The shared test environment replaces inherited operating
   flags, removes provider/credential-file variables and stays fake/paid-off
   through worker teardown. Socket interception survives test mock restoration.

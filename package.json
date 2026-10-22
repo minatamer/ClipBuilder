@@ -19,14 +19,21 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
+    "owner:build": "node scripts/owner-build.mjs",
+    "owner:start": "node scripts/owner-run.mjs",
+    "owner:test": "vitest run --config scripts/owner-test.config.ts",
+    "owner:proof": "vitest run --config scripts/owner-proof.config.ts",
+    "owner:artifacts": "node scripts/owner-artifacts.mjs",
+    "owner:typecheck": "tsc --noEmit -p packages/contracts/tsconfig.owner.json && tsc --noEmit -p tsconfig.owner.json",
     "start:backend": "pnpm --filter @clipbuilder/backend start",
     "start:frontend": "pnpm --filter @clipbuilder/frontend start",
     "test:unit": "vitest run --config vitest.config.ts && pnpm -r --sort test:unit",
-    "typecheck": "pnpm --filter @clipbuilder/contracts build && pnpm --filter @clipbuilder/composition build && tsc --noEmit -p tsconfig.tests.json && pnpm --filter @clipbuilder/backend typecheck && pnpm --filter @clipbuilder/renderer typecheck && pnpm --filter @clipbuilder/frontend typecheck"
+    "typecheck": "pnpm --filter @clipbuilder/contracts build && pnpm --filter @clipbuilder/composition build && tsc --noEmit -p tsconfig.tests.json && pnpm --filter @clipbuilder/backend typecheck && pnpm --filter @clipbuilder/renderer typecheck && pnpm --filter @clipbuilder/frontend typecheck && pnpm owner:typecheck"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
     "@types/node": "24.19.0",
+    "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.8",
     "globals": "17.12.0",
