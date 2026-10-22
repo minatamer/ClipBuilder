@@ -18,6 +18,10 @@ import {
   assertOwnerFakeMode,
 } from "../apps/backend/owner/local-mode.ts";
 import { ownerProcessTree, forceOwnerTree } from "./owner-processes.mjs";
+import {
+  publishOwnerDiscovery,
+  clearOwnerDiscovery,
+} from "./owner-discovery.mjs";
 import { ownerNativeTools } from "../apps/renderer/owner/native-tools.ts";
 import { resolveOwnerStorage } from "../apps/backend/owner/owner-storage.ts";
 
@@ -69,6 +73,13 @@ const stopSafely = () => {
 async function stop() {
   if (stopping) return stopping;
   stopping = (async () => {
+    // Withdraw agent discovery before draining listeners or deleting capabilities.
+    let discoveryFailed = false;
+    try {
+      await clearOwnerDiscovery(runtime);
+    } catch {
+      discoveryFailed = true;
+    }
     // Stop host first. It cancels/drains worker RPCs before deleting scratch.
     for (const child of [...children].reverse()) {
       if (child.exitCode !== null || child.signalCode !== null) continue;
@@ -93,6 +104,7 @@ async function stop() {
       throw new Error("owner_cleanup_path_invalid");
     await rm(root, { recursive: true, force: true });
     await rm(stateFile, { force: true });
+    if (discoveryFailed) throw new Error("owner_cleanup_requires_recovery");
   })();
   return stopping;
 }
@@ -141,16 +153,23 @@ try {
     }
     if (!ready) throw new Error("owner_start_failed");
   }
+  const processTree = await ownerProcessTree(process.pid);
+  const supervisor = processTree.find((row) => row.pid === process.pid);
+  if (!supervisor) throw new Error("owner_process_identity_missing");
   await writeFile(
     join(runtime, "processes.json"),
     JSON.stringify({
       supervisor: process.pid,
       startedAt: new Date().toISOString(),
-      identities: await ownerProcessTree(process.pid),
+      identities: [
+        supervisor,
+        ...children.map((child) => identities.get(child.pid)),
+      ],
       ports: [4100, 4200],
     }),
-    { mode: 0o600 },
+    { flag: "wx", mode: 0o600 },
   );
+  await publishOwnerDiscovery(runtime);
   process.stdout.write(
     `Local owner: http://localhost:4100\nContent-safe runtime logs: ${runtime}\n`,
   );

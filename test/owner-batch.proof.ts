@@ -19,6 +19,11 @@ import { localWorkerPort } from "../apps/backend/owner/worker-port.ts";
 import { ownerClipMediaPath } from "../apps/renderer/owner/media.ts";
 import { OWNER_CAPTION_PRESETS } from "../packages/contracts/owner/editor.ts";
 import { ownerDraftStatusSchema } from "../packages/contracts/owner/drafts.ts";
+import {
+  executeOwnerAgentCommand,
+  type OwnerAgentPorts,
+} from "../apps/backend/owner/agent-client.ts";
+import type { OwnerAgentCommand } from "../packages/contracts/owner/agent.ts";
 
 it("makes three independent caption/picture MP4s locally, re-exports without AI and preserves their common source", async () => {
   const tools = await ownerNativeTools(resolve(".")),
@@ -60,7 +65,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     ui: directory,
     storageRoot: join(directory, "library"),
     port: 0,
-    token: "proof-host",
+    token: "a".repeat(64),
     analysis: fakeOwnerAnalysis,
     clipPreparation: fakeOwnerClipPreparation,
     media: async (job, requestSignal) => {
@@ -75,7 +80,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     },
   });
   const port = await listenOwner(host.server),
-    auth = { Authorization: "Bearer proof-host" },
+    auth = { Authorization: `Bearer ${"a".repeat(64)}` },
     json = { ...auth, "Content-Type": "application/json" };
   try {
     const input = join(directory, "synthetic.mp4");
@@ -456,6 +461,147 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       ).status,
     ).toBe(200);
     expect(nativeCalls).toBe(5);
+    const agentPorts: OwnerAgentPorts = {
+      discover: async () => ({ token: "a".repeat(64) }),
+      picture: async () => {
+        throw new Error("unexpected_picture_read");
+      },
+      transport: async (request) => {
+        const response = await ownerRequest(port, request.path, {
+          method: request.method,
+          headers: {
+            Authorization: `Bearer ${request.token}`,
+            ...(request.contentType
+              ? { "Content-Type": request.contentType }
+              : {}),
+          },
+          ...(request.body === undefined
+            ? {}
+            : {
+                body: Buffer.isBuffer(request.body)
+                  ? request.body
+                  : JSON.stringify(request.body),
+              }),
+        });
+        return {
+          status: response.status,
+          value:
+            response.status >= 200 && response.status < 300
+              ? JSON.parse(response.body.toString())
+              : null,
+        };
+      },
+    };
+    const agent = (command: OwnerAgentCommand) =>
+      executeOwnerAgentCommand(command, agentPorts, signal);
+    const target = { workspaceId: reopened.id, clipId: clip.id };
+    const inspection = await agent({ command: "inspect", ...target });
+    if (inspection.kind !== "clip") throw new Error("expected_agent_clip");
+    const proposed = {
+      operationId: crypto.randomUUID(),
+      expectedRevision: inspection.clip.revision,
+      baseHash: inspection.clip.baseHash!,
+      operations: [
+        {
+          kind: "caption" as const,
+          style: {
+            ...OWNER_CAPTION_PRESETS.classic,
+            box: { ...OWNER_CAPTION_PRESETS.classic.box, y: 0.3 },
+          },
+        },
+        {
+          kind: "visual-upsert" as const,
+          cue: {
+            ...cue,
+            assetId: asset.id,
+            startFrame: 0,
+            endFrame: 30,
+            box: { x: 0.55, y: 0.45, width: 0.3, height: 0.1 },
+          },
+        },
+      ],
+    };
+    const validation = await agent({
+      command: "validate",
+      ...target,
+      request: proposed,
+    });
+    if (validation.kind !== "validation")
+      throw new Error("expected_validation");
+    expect(nativeCalls).toBe(5);
+    const applied = await agent({
+      command: "apply",
+      ...target,
+      request: proposed,
+    });
+    if (applied.kind !== "clip") throw new Error("expected_agent_clip");
+    expect(applied.clip.revision).toBe(2);
+    expect(applied.clip.overlayHash).toBe(validation.validation.overlayHash);
+    expect(
+      await agent({ command: "apply", ...target, request: proposed }),
+    ).toEqual(applied);
+    const exportRequest = {
+      operationId: crypto.randomUUID(),
+      expectedRevision: 2,
+    };
+    await agent({ command: "render", ...target, request: exportRequest });
+    await agent({ command: "render", ...target, request: exportRequest });
+    const settledAgent = async () => {
+      for (let attempt = 0; attempt < 500; attempt++) {
+        signal.throwIfAborted();
+        const value = await agent({ command: "inspect", ...target });
+        if (value.kind !== "clip") throw new Error("expected_agent_clip");
+        if (
+          !["queued", "rendering", "canceling", "preparing"].includes(
+            value.clip.state,
+          )
+        )
+          return value.clip;
+        await new Promise((done) => setTimeout(done, 50));
+      }
+      throw new Error("agent_native_timeout");
+    };
+    const agentExport = await settledAgent();
+    expect(agentExport.state).toBe("ready");
+    expect(agentExport.outputs.map((output) => output.editRevision)).toEqual([
+      0, 1, 2,
+    ]);
+    expect(agentExport.calls).toEqual({ plan: 1, image: 1, render: 3 });
+    expect(nativeCalls).toBe(6);
+    const agentFile = await ownerClipMediaPath(root, reopened.id, clip.id, 2);
+    expect(
+      (await luma(agentFile, "eq(n,0)", "crop=8:8:700:900"))[0],
+    ).toBeGreaterThan(220);
+    expect(
+      (await luma(agentFile, "eq(n,0)", "crop=8:8:266:860"))[0],
+    ).toBeLessThan(100);
+    expect(
+      (
+        await ownerRequest(
+          port,
+          `${restoredEndpoint}/clips/${clip.id}/output/0`,
+          { headers: auth },
+        )
+      ).body,
+    ).toEqual(oldOutput);
+    await agent({
+      command: "render",
+      ...target,
+      request: { operationId: crypto.randomUUID(), expectedRevision: 2 },
+    });
+    await agent({ command: "cancel", ...target });
+    const canceled = await settledAgent();
+    expect(canceled.state).toBe("canceled");
+    expect(canceled.outputs).toEqual(agentExport.outputs);
+    expect(canceled.calls.plan).toBe(1);
+    expect(canceled.calls.image).toBe(1);
+    expect(
+      (
+        await ownerRequest(port, `${restoredEndpoint}/source`, {
+          headers: auth,
+        })
+      ).body,
+    ).toEqual(await readFile(input));
   } finally {
     await host.close();
     await worker.close();

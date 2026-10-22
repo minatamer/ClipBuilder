@@ -3,7 +3,7 @@
 ## Local owner workflow execution — 2026-10-22
 
 The owner adopted all recommendations and authorized sequential implementation,
-execute/validate/fix loops and a commit per clean ticket. CL-017–020 are locally verified;
+execute/validate/fix loops and a commit per clean ticket. CL-017–021 are locally verified;
 later implementation remains queued. All agent checks are synthetic/fake,
 paid-off, credential-free and zero-spend. No push, real YouTube retrieval,
 provider/cloud calls or deployment is authorized. Read the
@@ -18,7 +18,7 @@ manual acceptance after implementation.
 | 2 | [CL-018](CL-018-add-owner-ranges-and-ai-duration-controls.md) | Exact manual ranges alongside independent discovery; AI-only min/max and exact duration | Implemented; 34 owner tests, two native proofs, root gates and artifact exclusion pass; real AI/owner acceptance open |
 | 3 | [CL-019](CL-019-process-multiple-local-clips.md) | Several selected clips, bounded concurrent work, per-clip review/export and source retention | Implemented plus CL-017–019 compatibility fixes; 53 owner tests, three native proofs, root gates and public exclusion pass; real adapter readiness remains a separate CL-024 handoff requirement |
 | 4 | [CL-020](CL-020-add-minimal-local-caption-and-visual-editor.md) | Caption style/position, visual placement/replacement, personal pictures and saved drafts | Implemented; 98 owner tests, three native proofs, 1,454 root tests, five gates and 1,490-file public exclusion pass; owner real-media/live acceptance open |
-| 5 | [CL-021](CL-021-enable-agent-access-to-local-edits.md) | Existing chat agent edits through the same validated local use cases and CLI | CL-017, CL-019–020; planned |
+| 5 | [CL-021](CL-021-enable-agent-access-to-local-edits.md) | Existing chat agent edits through the same validated local use cases and CLI | Implemented; 146 owner tests, three native proofs, 1,502 root tests, five gates and 1,490-file public exclusion pass; headless CLI/native export/cancel and UI synchronization verified |
 | Decision lane | [CL-022](CL-022-decide-youtube-source-feasibility.md) | Research background download, exact resolution choice and saved-source reuse | Existing implementations/source reviewed; method/runtime/access gates open |
 | Conditional | [CL-023](CL-023-import-approved-high-quality-linked-source.md) | Paste link, choose resolution/Best available, background download to Downloads and reuse saved source | CL-017, CL-022 go; not implementation-ready |
 | Final local gate | [CL-024](CL-024-verify-local-owner-workflow-and-build-exclusion.md) | Combined offline media/agent checks and public artifact exclusion | CL-017–021; CL-022 decision; CL-023 only if cleared/implemented |
@@ -45,10 +45,11 @@ owner explicitly defers it. Ticket records distinguish verified local work from
 the still-open owner acceptance.
 
 Current `FAKE_MODE=true` works with no API keys using synthetic workflow data;
-CL-017–020 provide private local preview, manual ranges, independent simulated
+CL-017–021 provide private local preview, manual ranges, independent simulated
 discovery, serial multi-clip edits, review/cancel, caption/picture controls,
-personal pictures, opt-in saved/autosaved drafts and immutable native exports;
-agent CLI and linked imports are queued. Actual AI needs real
+personal pictures, opt-in saved/autosaved drafts, immutable native exports and
+headless agent commands through the same protected host;
+linked import feasibility/implementation is next. Actual AI needs real
 provider keys, enabled live flags and applicable rights/transfer/spend approvals;
 paid testing stays owner-only, and no live provider adapter is composed into this
 owner runtime yet. Verified synthetic encoding is API-free; no offline AI

@@ -45,6 +45,7 @@ await writeFile(
 );
 for (const [entry, name] of [
   ["apps/backend/owner/entry.ts", "server"],
+  ["apps/backend/owner/agent-cli.ts", "agent"],
   ["apps/renderer/owner/entry.ts", "worker"],
 ]) {
   await build({

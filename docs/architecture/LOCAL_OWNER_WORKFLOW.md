@@ -19,6 +19,33 @@ ephemeral ports. Exact Host/Origin checks and per-run capabilities protect the
 local services; browser capability is HttpOnly/SameSite and CLI credentials stay
 in private runtime state, never URLs, logs or process arguments. No LAN/tunnel.
 
+CL-021 implements the backend-owned thin agent CLI. One strict stdin command
+uses the same protected host and serialized clip edit/export use cases as the
+browser; it works without an open browser or a hosted service. The host remains
+the authoritative writer. Revision checks and operation receipts protect
+concurrent UI/CLI changes; validate is a pure dry run and never acknowledges a
+write or starts a render. Local reading/seeking/editing does not dispatch AI.
+See the [agent command guide](../../apps/backend/owner/AGENT_COMMANDS.md).
+
+The agent status/singular clip API projects an explicit metadata allowlist:
+opaque identities, revisions, layout/asset geometry, hashes, counters and output
+status. Dialogue, timed caption words, provider data, capabilities, paths and
+full edit documents remain absent. The agent namespace cannot invoke analysis
+or batch preparation or stream media. An explicitly chosen local picture is
+opened only after target/authentication checks, then passes the same bounded
+normalization as the browser.
+
+The launcher publishes a fixed private discovery pointer under OS temp only
+after both fixed listeners and their stable process ledger are ready. The
+pointer stores a runtime basename, supervisor identity and time, without a
+capability or arbitrary path. Discovery internally validates bounded state,
+non-link confinement, six-hour maximum age and exact current supervisor/child
+creation identities before sending the capability to fixed localhost:4100.
+There are no CLI host/token/runtime-path flags or env-file overrides. Shutdown
+withdraws only the matching pointer before listeners drain. Failed or expired
+discovery leaves saved files and running work untouched; it starts no fallback
+service or provider.
+
 Only explicit entrypoints listen, read operating configuration or choose local
 storage. Owner composition currently permits fake AI and paid-off only; tests
 force the shared pre-import environment/network guard. No ADC, cloud media
@@ -47,4 +74,10 @@ master, diagnostic capture/private log or saved source is cleanup scratch.
 
 Future genuine provider/download validation remains owner-gated. Fake AI data is
 synthetic; native synthetic MP4 checks are real local encoding with no AI keys.
-There is no offline transcription/AI model. CL-025 owns human acceptance.
+Prepared bundles can be reopened, edited and explicitly exported with no
+provider API even when automatic AI ports are unavailable. Real automatic
+analysis still needs implemented/composed owner provider adapters and input
+preparation, keys, enabled live flags and applicable approvals; keys/flags alone
+cannot enable it. There is no offline transcription/AI model or included
+weights. CLI functionality does not establish real-media/visual approval;
+CL-025 owns human acceptance.

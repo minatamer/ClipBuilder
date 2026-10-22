@@ -4,9 +4,9 @@ This independent owner runtime is excluded from public `src`, package outputs,
 Next routes and Docker contexts. CL-017–020 deliver one source preview,
 manual ranges alongside duration-controlled fake discovery, a bounded list of
 automatic clip edits, caption/picture adjustments, opt-in saved drafts, private
-loopback access and temporary workspace cleanup. AI is simulated; native video
-processing is real. CLI access and downloaded-source reuse follow in later
-tickets.
+loopback access and temporary workspace cleanup. CL-021 adds a protected local
+agent CLI using the same edit/export coordinator. AI is simulated; native video
+processing is real. Downloaded-source reuse follows in later tickets.
 
 From the repository root, prepare the free Windows x64 FFmpeg 9.0.2 portable
 tools once, then build:
@@ -240,6 +240,52 @@ draft's latest acknowledged state, and clears timers/owned scratch; it does not
 retry an unsuccessful first bulk save. These paths preserve every previously
 saved master/export/draft and private log. This is local file retention with no
 app cloud sync, not the retired diagnostic replay feature.
+
+## Local agent access
+
+The [agent command guide](AGENT_COMMANDS.md) documents `corepack pnpm owner:agent`,
+which reads one strict JSON command from stdin. It works with the private host
+running and the browser closed. Commands inspect safe status, validate/apply an
+edit, import one explicitly chosen local picture, render/cancel or save/reopen
+a draft. No command starts AI moment discovery, transcription, image generation
+or cloud processing. Real private frame inspection remains outside this interface.
+
+`GET /api/agent/status` returns workspace/clip identities, revisions, safe
+layout/asset metadata, counts and output status. A singular
+`GET /api/agent/workspace/{id}/clips/{clipId}` inspects that clip. The same
+singular path accepts `POST` suffixes `/validate`, `/edit`, `/picture`,
+`/render` and `/cancel`. These are allowlisted protected routes, with the same
+Host/Origin and per-run capability checks as the browser. They return safe
+projections, never dialogue, caption words, source filenames/paths,
+capabilities, provider payloads or full edit documents. Agent routes cannot
+serve media or run the normal analysis/batch APIs.
+
+Validation compiles a proposed overlay hash and safe layout without changing
+the revision, saving or rendering. Apply and export use the browser's existing
+contracts and serialized clip use cases. Expected revisions reject stale
+UI/CLI writes; matching acknowledged operation IDs do not repeat writes or
+rendering. The host owns all mutations; the CLI never rewrites live JSON.
+An applied CLI revision becomes visible through the browser's normal polling;
+unapplied local controls require an explicit reload after a revision conflict.
+
+Discovery reads a fixed private `clipbuilder-owner-active.json` under the OS
+temporary directory. Its bounded metadata contains only a runtime basename,
+supervisor identity and publication time. The CLI internally checks the
+confined non-link runtime/state files, exact current supervisor/child identities
+and a maximum six-hour age before using the capability for fixed localhost
+port 4100. There is no capability/runtime-path argument, environment-file
+override or arbitrary host. The launcher publishes discovery after both
+listeners are ready and their stable process ledger exists, then withdraws only
+its matching record before draining shutdown. Closed, expired or replaced
+identities fail safely before picture access or native work.
+
+Current CLI execution is fake/paid-off and needs no API keys or ADC. Manual
+editing and native export of prepared bundles are API-free even when their
+original AI provider is unavailable. Automatic real AI still needs the
+uncomposed owner provider/input-preparation adapters, keys, live flags and
+applicable owner approvals; keys/flags alone are insufficient. No offline AI
+model/weights are included. These interface descriptions do not establish
+manual UI acceptance or real-media quality.
 
 ## Verification
 

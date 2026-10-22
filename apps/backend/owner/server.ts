@@ -29,6 +29,12 @@ import {
 } from "../../../packages/contracts/owner/drafts.ts";
 import { ownerIdSchema } from "../../../packages/contracts/owner/policy.ts";
 import { OWNER_PICTURE_LIMITS } from "../../../packages/contracts/owner/assets.ts";
+import {
+  ownerAgentClipListSchema,
+  ownerAgentStatusSchema,
+} from "../../../packages/contracts/owner/agent.ts";
+import type { OwnerClipList } from "../../../packages/contracts/owner/clips.ts";
+import { ownerAgentClip } from "./agent-view.ts";
 
 export type OwnerHostOptions = {
   root: string;
@@ -219,6 +225,14 @@ export function createOwnerHost(options: OwnerHostOptions) {
       "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
     );
     const controller = new AbortController();
+    const agent = req.url?.startsWith("/api/agent/workspace/") ?? false;
+    const clipReply = (list: OwnerClipList) =>
+      agent
+        ? ownerAgentClipListSchema.parse({
+            ...list,
+            clips: list.clips.map(ownerAgentClip),
+          })
+        : list;
     controllers.add(controller);
     res.once("close", () => controller.abort());
     let newId: string | undefined;
@@ -283,6 +297,24 @@ export function createOwnerHost(options: OwnerHostOptions) {
         res
           .writeHead(200, { "Content-Type": "application/json" })
           .end(JSON.stringify(current ?? null));
+        return;
+      }
+      if (req.method === "GET" && req.url === "/api/agent/status") {
+        const workspace = [...workspaces.values()].find(
+          (value) => !closingWorkspaces.has(value.id),
+        );
+        const list = workspace
+          ? batches.get(workspace.id)?.snapshot()
+          : undefined;
+        res.writeHead(200, { "Content-Type": "application/json" }).end(
+          JSON.stringify(
+            ownerAgentStatusSchema.parse({
+              workspace: workspace ?? null,
+              active: list?.active ?? false,
+              clips: list?.clips.map(ownerAgentClip) ?? [],
+            }),
+          ),
+        );
         return;
       }
       if (req.method === "GET" && req.url === "/api/drafts") {
@@ -405,9 +437,28 @@ export function createOwnerHost(options: OwnerHostOptions) {
           uploading = false;
         }
       }
-      const route = req.url?.match(
-        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|cancel|output|source|edit|picture)(?:\/(\d+))?)?)?)?$/,
+      const route = (
+        agent
+          ? req.url?.replace("/api/agent/workspace/", "/api/workspace/")
+          : req.url
+      )?.match(
+        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|cancel|output|source|edit|picture|validate)(?:\/(\d+))?)?)?)?$/,
       );
+      if (
+        agent &&
+        (route?.[2] !== "clips" ||
+          !ownerIdSchema.safeParse(route[3]).success ||
+          route[5] ||
+          (req.method === "GET"
+            ? Boolean(route[4])
+            : req.method !== "POST" ||
+              !["edit", "picture", "render", "cancel", "validate"].includes(
+                route[4] ?? "",
+              )))
+      ) {
+        res.writeHead(404).end();
+        return;
+      }
       const workspace = route?.[1] ? workspaces.get(route[1]) : undefined;
       if (!workspace) {
         res.writeHead(404).end();
@@ -457,6 +508,21 @@ export function createOwnerHost(options: OwnerHostOptions) {
       }
       if (route?.[2] === "clips") {
         let batch = batches.get(workspace.id);
+        if (agent) {
+          const clip = batch
+            ?.snapshot()
+            .clips.find((value) => value.id === route[3]);
+          if (!clip) {
+            res.writeHead(404).end();
+            return;
+          }
+          if (req.method === "GET") {
+            res
+              .writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify(ownerAgentClip(clip)));
+            return;
+          }
+        }
         if (req.method === "GET" && !route[3]) {
           res
             .writeHead(200, { "Content-Type": "application/json" })
@@ -507,6 +573,30 @@ export function createOwnerHost(options: OwnerHostOptions) {
             const result = await batch.edit(route[3], await readOwnerJson(req));
             res
               .writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify(clipReply(result)));
+            return;
+          } finally {
+            busy.delete(workspace.id);
+          }
+        }
+        if (
+          req.method === "POST" &&
+          batch &&
+          route[3] &&
+          route[4] === "validate"
+        ) {
+          if (busy.has(workspace.id)) {
+            res.writeHead(409).end();
+            return;
+          }
+          busy.add(workspace.id);
+          try {
+            const result = await batch.validateEdit(
+              route[3],
+              await readOwnerJson(req),
+            );
+            res
+              .writeHead(200, { "Content-Type": "application/json" })
               .end(JSON.stringify(result));
             return;
           } finally {
@@ -551,7 +641,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             );
             res
               .writeHead(200, { "Content-Type": "application/json" })
-              .end(JSON.stringify(result));
+              .end(JSON.stringify(clipReply(result)));
             return;
           } finally {
             busy.delete(workspace.id);
@@ -566,7 +656,9 @@ export function createOwnerHost(options: OwnerHostOptions) {
             .writeHead(200, { "Content-Type": "application/json" })
             .end(
               JSON.stringify(
-                batch.cancel(route[3] === "cancel" ? undefined : route[3]),
+                clipReply(
+                  batch.cancel(route[3] === "cancel" ? undefined : route[3]),
+                ),
               ),
             );
           return;
@@ -589,7 +681,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             );
             res
               .writeHead(202, { "Content-Type": "application/json" })
-              .end(JSON.stringify(result));
+              .end(JSON.stringify(clipReply(result)));
             return;
           } finally {
             busy.delete(workspace.id);

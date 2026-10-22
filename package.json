@@ -24,6 +24,7 @@
     "owner:test": "vitest run --config scripts/owner-test.config.ts",
     "owner:proof": "vitest run --config scripts/owner-proof.config.ts",
     "owner:artifacts": "node scripts/owner-artifacts.mjs",
+    "owner:agent": "node .owner-build/agent.mjs",
     "owner:typecheck": "tsc --noEmit -p packages/contracts/tsconfig.owner.json && tsc --noEmit -p tsconfig.owner.json",
     "start:backend": "pnpm --filter @clipbuilder/backend start",
     "start:frontend": "pnpm --filter @clipbuilder/frontend start",

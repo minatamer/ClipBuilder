@@ -28,6 +28,7 @@ import {
 } from "../../../packages/contracts/owner/edit-overlay.ts";
 import { OWNER_PICTURE_LIMITS } from "../../../packages/contracts/owner/assets.ts";
 import { applyOwnerEdit } from "./edit-clip.ts";
+import { ownerAgentValidation } from "./agent-view.ts";
 import { normalizeOwnerPicture } from "./personal-picture.ts";
 import {
   ownerAnalysisSchema,
@@ -148,6 +149,13 @@ export class OwnerClipBatch {
       }
     }
     for (const clip of restored) this.clips.set(clip.id, clip);
+  }
+  async validateEdit(id: string, value: unknown) {
+    return this.serialize(async () => {
+      const clip = this.clips.get(id);
+      if (this.closing || !clip) throw new Error("workspace_closed");
+      return ownerAgentValidation(clip, applyOwnerEdit(clip, value));
+    });
   }
   async edit(id: string, value: unknown) {
     const request = ownerEditRequestSchema.parse(value);

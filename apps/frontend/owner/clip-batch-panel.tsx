@@ -58,7 +58,7 @@ export function OwnerClipBatchPanel({
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const refresh = async () => {
-      let repeat = true;
+      let delay = 1000;
       const atMutation = mutationRevision.current;
       try {
         const response = await fetch(endpoint, { signal: controller.signal });
@@ -69,15 +69,17 @@ export function OwnerClipBatchPanel({
           atMutation === mutationRevision.current
         )
           accept(result);
-        repeat = atMutation === mutationRevision.current ? result.active : true;
+        delay =
+          atMutation !== mutationRevision.current || result.active ? 750 : 1000;
       } catch {
         if (!controller.signal.aborted)
           setMessage(
             "Clip status is unavailable. The workspace retains acknowledged work; refreshing does not reprocess it.",
           );
       }
-      if (repeat && !controller.signal.aborted)
-        timer = setTimeout(() => void refresh(), 750);
+      // Another local client can edit an idle bundle; reads never dispatch work.
+      if (!controller.signal.aborted)
+        timer = setTimeout(() => void refresh(), delay);
     };
     void refresh();
     return () => {

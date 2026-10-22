@@ -65,7 +65,11 @@ invalid numeric input is reported and leaves the acknowledged preview visible.
 
 Controls first create unapplied local changes. **Apply changes to clip** submits
 an allowlisted patch with the expected revision and base hash. Acknowledged
-changes update preview without starting AI or an export. Polling preserves a
+changes update preview without starting AI or an export. The same protected
+host accepts the [local agent commands](../../backend/owner/AGENT_COMMANDS.md)
+with the browser closed. An open browser polls every second when idle and
+every 750 ms during native work, so agent edits/exports appear in this review.
+Polling preserves a
 dirty form; a conflicting revision requires an explicit reload, which discards
 unapplied controls. Apply or discard before switching review or exporting that
 clip. Edits acknowledged during an existing render create a newer revision

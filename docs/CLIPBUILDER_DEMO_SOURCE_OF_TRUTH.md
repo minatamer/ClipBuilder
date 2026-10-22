@@ -93,6 +93,21 @@ bundles can be edited and re-exported with every AI adapter absent. This adds no
 offline speech model or live automatic owner adapter. Actual provider-input
 preparation/composition and owner real-media acceptance remain separate gates.
 
+CL-021 local evidence: a separately bundled stdin-only agent CLI uses the same
+protected host and edit/export coordinator with the browser closed. Safe
+projections expose IDs, revisions, style/geometry, assets and status without
+dialogue, media paths, full edit documents or transport capabilities. Validation
+is a dry run of the same edit compiler; repeated operation IDs remain
+idempotent and concurrent revisions conflict. Explicit local pictures are
+authorized against a clip before bounded file access. The fixed private
+OS-temp discovery record is published only after both services are ready;
+path, age and current process identities are checked before resolving its
+capability. Shutdown withdraws discovery before draining/removing scratch.
+An open browser observes CLI changes, preserving dirty controls until explicit
+reload. Synthetic headless native export/cancellation and UI synchronization
+are verified with fake AI and no keys/ADC. Real frame inspection/quality and
+automatic real provider readiness remain owner-gated.
+
 ## Owner local workflow planning instruction — 2026-10-22
 
 The owner requests research and fresh tickets for personal local-only controls:
