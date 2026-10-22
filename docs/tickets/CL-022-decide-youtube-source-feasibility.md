@@ -1,10 +1,11 @@
 # CL-022 — Decide a truthful YouTube-link source workflow
 
-Status: background-download/resolution-selection feasibility supported by
-existing projects and upstream source. Owner adopted the recommended method
-2026-10-22 and authorized sequential fake-tested execution. This packet must
-still record its explicit tooling/design verdict. Real retrieval/access and
-per-source compatibility remain owner-only; no actual media download is authorized.
+Status: decision complete. Technical go for isolated CL-023 code/synthetic
+verification; real acquisition remains unavailable pending explicit owner
+source/method clearance, tool preparation and actual compatibility checks.
+The acquisition ADR records reviewed tool pins, quality/capacity/reuse policy
+and the Node-to-Deno challenge-runtime revision. No actionable findings in
+read-only documentation validation. No actual media download is authorized.
 Dependencies: CL-017 architecture/retention/capacity decisions before final
 design; desk research itself has no implementation dependency and is already
 recorded. This gate is independent of finishing the local editor; do not delay
@@ -127,9 +128,9 @@ or installation is incurred during this planning task.
       documented existing implementations and inspected upstream adapter source.
 - [x] Identify format enumeration/selection, merge and runtime prerequisites as
       a plausible implementation path, without claiming a local download proof.
-- [ ] Record the chosen method and actual rights/access basis, or explicit no-go
+- [x] Record the chosen method and actual rights/access basis, or explicit no-go
       with owner-master/creator-file fallback. Do not invent clearance.
-- [ ] Resolve quality tie-breaks, source bounds, scratch/saved-source separation
+- [x] Resolve quality tie-breaks, source bounds, scratch/saved-source separation
       and version/ tooling needs. Mark every unperformed compatibility/latency
       check honestly.
 - [x] Specify Best available, exact offered tiers, explicit unavailable-quality
@@ -140,17 +141,66 @@ or installation is incurred during this planning task.
 - [ ] If later authorized, produce bounded source-specific evidence privately
       and record only content-free findings. Provider-paid experiments remain
       owner-only; none is needed to finish desk research.
-- [ ] Write the ADR and synchronize CL-023 readiness plus index. A no-go may
+- [x] Write the ADR and synchronize CL-023 readiness plus index. A no-go may
       complete this decision gate while leaving the importer blocked by design.
 
 ## Capabilities, documentation and gates
 
-`FAKE_MODE=true` currently works without keys using synthetic local flow; there
-is no implemented YouTube importer or verified URL-analysis integration.
-Metadata/ ingestion mocks could be tested key-free later, but prove no real
-accessibility or quality. Gemini analysis needs configured API keys, enabled
-flags, approved rights/transfer/spend and an owner-run paid test; no offline AI
-weights/runtime are available. Any actual downloader/network action,
-installation, provider call, cloud change or Git mutation needs separate
-authorization; this packet grants none. Update research/source of truth/index
-only with evidence produced.
+`FAKE_MODE=true`/paid-off works without keys/ADC for the implemented local
+range/editor/agent flow. There is no YouTube importer yet. CL-023 may now
+implement the chosen ports/adapter and validate synthetic acquisition/reuse;
+that proves no real accessibility or quality. Real acquisition can be AI-key-free
+but needs prepared verified tools, source/method permission and a separately
+authorized owner action. Real AI additionally needs its uncomposed owner
+adapter/input preparation, keys, live flags and rights/transfer/spend approvals;
+paid acceptance is owner-only. No offline AI weights/runtime are supplied.
+The owner's AFK authorization permits this decision record and ticket commit,
+without push, installation, real retrieval, paid/provider/cloud calls or deployment.
+
+## Decision and validation record — 2026-10-22
+
+- [Acquisition ADR](../architecture/LOCAL_SOURCE_ACQUISITION.md): thin official
+  yt-dlp 2026.10.21 adapter, bundled EJS 0.8.0, pinned Deno v2.9.8 challenge child,
+  existing FFmpeg 9.0.2/FFprobe and separate local source library. Published
+  executable/archive digests were rechecked on official release assets; no
+  binaries were downloaded/locally hashed. No additional app runtime/SDK.
+- Fresh primary-source checks confirm MeTube/Open Video Downloader implement
+  the requested interaction but use ceilings/fallbacks. ClipBuilder instead
+  binds exact format IDs and validates source dimensions/FPS/audio/codec/HDR.
+  Highest offered unsupported quality stops visibly; no Best compatible
+  substitution, silent lower tier, AV1/HEVC expansion, lossy conversion or HDR
+  tone mapping. Native supported-component MP4 remux still needs proof.
+- The earlier Node-only challenge recommendation is explicitly revised:
+  Node 22/24's child permissions do not deny network, whereas the reviewed
+  Deno runner supplies no runtime network/filesystem grants. Keep a minimal
+  environment and owned cache, with no inherited permission-broker settings.
+  App Node is unchanged. This is runtime least privilege, not an OS sandbox.
+- Narrow canonical URLs, no ambient configs/plugins/cookies/update/exec,
+  exact stdin framing, native HTTPS downloading and a DNS/public-IP-pinning
+  authenticated loopback broker define the proposed boundary. Upstream
+  extractor filtering alone does not constrain redirects or downstream DNS.
+  Source review supports the design; actual executable/broker/EJS compliance
+  remains unverified until owner-only real testing.
+- Source/method clearance is absent, and real acquisition is explicitly no-go
+  until it is supplied. The owner has authorized implementation with synthetic
+  ports, so this does not prevent the fake-only CL-023 slice. The ADR compares
+  official export, creator file, URL analysis/playback and remote-stream paths
+  without claiming that content rights imply platform retrieval permission.
+- Offline local lookup comes first, even with downloader/provider/network
+  unavailable. Full-source immutable masters, versioned private sidecars,
+  actual Downloads/explicit Desktop roots, explicit refresh/reacquisition,
+  damage/move handling and preservation after later failures are specified.
+  Aggregate phased scratch and per-volume free space must include merge and
+  atomic publication; source envelope targets are not capacity measurements.
+- Read-only validation compares the full packet and ADR with current owner
+  source inspection/storage/native code, adopted requirements and primary
+  sources. No actionable findings remain. Relative document links and
+  `git diff --check` pass. No application code changed, so no unit/build/native
+  gate was rerun for this documentation-only decision.
+
+Unperformed owner checks remain open: source permission/access, actual offered
+quality and codecs/audio, binary/runtime/merge/browser compatibility, proxy
+coverage, bandwidth/latency, transferred bytes, maximal disk/CPU behavior,
+real AI and human quality. No installation, source-specific experiment or
+raw tool output capture occurred. Deviation: revised challenge runtime on new
+primary-source security evidence, recorded in the source of truth and ADR.

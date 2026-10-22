@@ -1,6 +1,11 @@
 # CL-023 — Download a YouTube source in the background at the chosen resolution
 
-Status: queued for fake/synthetic implementation after its design dependencies;
+Status: dependency-ready for fake/synthetic implementation after CL-022's
+recorded technical go; real acquisition remains unavailable. Follow the
+[acquisition ADR](../architecture/LOCAL_SOURCE_ACQUISITION.md), including exact
+formats, Deno challenge runtime, egress broker, MP4 boundary and offline reuse.
+Source-specific rights/method permission and actual tools/network remain
+owner-only checkpoints. The
 owner authorized the recommended design and sequential ticket commits 2026-10-22.
 Dependencies: CL-017 local workspace/native readiness; CL-022 recorded go
 decision, authorized acquisition path, supported source envelope and tooling
@@ -15,7 +20,8 @@ available → Import → automatic background download/merge/inspection → cont
 into the same local timestamp, AI-discovery and editing flow. No manual video
 download, external downloader, browser Save as, manual merge or re-upload is
 required. The owner explicitly clarified this desired behavior on 2026-10-22;
-only research and ticket edits are authorized today.
+the later AFK authorization permits isolated code and synthetic tests, with
+real retrieval, tool installation and provider/cloud work excluded for now.
 
 Best available defaults to the highest accessible source resolution. A numeric
 selection must keep that resolution; missing/inaccessible quality is a visible

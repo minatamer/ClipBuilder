@@ -108,6 +108,22 @@ reload. Synthetic headless native export/cancellation and UI synchronization
 are verified with fake AI and no keys/ADC. Real frame inspection/quality and
 automatic real provider readiness remain owner-gated.
 
+CL-022 decision: proceed with CL-023's fake/synthetic importer implementation
+using exact yt-dlp format identities, a constrained HTTPS broker, lossless
+supported-stream MP4 remux and durable local source sidecars. Real retrieval
+has no source-specific permission/access/tooling evidence and remains
+unavailable until the owner's later explicit cleared-source action. Best
+available ranks before compatibility filtering; unsupported higher quality
+stops instead of silently falling back. Offline saved-source validation/reuse
+precedes downloader readiness and every metadata/network/provider check.
+The [acquisition ADR](architecture/LOCAL_SOURCE_ACQUISITION.md) pins yt-dlp
+2026.10.21 and revises the earlier Node challenge-runtime recommendation to
+Deno v2.9.8: the reviewed Node 22/24 child lacks network denial, while the
+reviewed Deno child runs without network/filesystem grants. Application Node
+is unchanged. Published hashes are recorded, but no tools were downloaded,
+installed or executed. Broker/tool/runtime compliance, source/method rights,
+maximum capacity and actual quality/latency remain owner-only unverified gates.
+
 ## Owner local workflow planning instruction — 2026-10-22
 
 The owner requests research and fresh tickets for personal local-only controls:

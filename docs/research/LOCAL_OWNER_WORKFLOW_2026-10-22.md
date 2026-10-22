@@ -6,6 +6,23 @@ record implementation and synthetic/runtime checks. Sequential fake-tested
 execution permits zero paid/provider/cloud/real YouTube calls. This note supports
 [CL-017–CL-024](../tickets/README.md#local-owner-workflow-execution--2026-10-22).
 
+## CL-022 recorded decision — 2026-10-22
+
+The [acquisition ADR](../architecture/LOCAL_SOURCE_ACQUISITION.md) is the current
+design authority for the linked-source lane. Technical go covers isolated
+CL-023 code and synthetic tests; real source/method clearance, binaries and
+runtime behavior remain unverified and real acquisition is unavailable.
+Rechecked precedents use quality ceilings/fallbacks, so exact formats and
+post-download validation are required. Offline source reuse precedes online
+metadata. Best available is ranked before compatibility filtering, with an
+explicit stop/choice for unsupported codecs/HDR.
+
+The reviewed tools are yt-dlp 2026.10.21 and Deno v2.9.8, with published hashes
+and source links in the ADR. Deno replaces the earlier Node-only challenge
+recommendation because Node 22/24 lacks child network denial; the app keeps its
+existing Node. No tool was installed/executed or real video queried/downloaded.
+Earlier proposals below are retained as decision history where superseded.
+
 ## Proposed decisions for owner adoption — 2026-10-22
 
 The owner has adopted this complete set for implementation. It supersedes the
@@ -86,6 +103,10 @@ of truth and scoped local operating rules before implementation. The public
 product remains disposable and read-only.
 
 ### Downloader choice and maintenance
+
+The CL-022 decision above supersedes this subsection's Node-only runtime
+recommendation; its thin-adapter, pinned-tool and no-runtime-download direction
+remains adopted.
 
 Recommend a thin backend-owned process adapter around the official Windows
 `yt-dlp.exe`, explicit maintained FFmpeg/FFprobe paths, and the already present
