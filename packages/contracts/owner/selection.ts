@@ -37,12 +37,18 @@ export const ownerRangeSchema = z
       range.endMs - range.startMs <= OWNER_LIMITS.clipMs,
     { message: "Manual ranges must last 1–300 seconds with start before end." },
   );
+export const ownerAiCountSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(OWNER_LIMITS.suggestions);
 export const ownerAnalysisInputsSchema = z
   .object({
     sourceRevision: z.number().int().nonnegative(),
     policyRevision: z.number().int().nonnegative(),
     ranges: z.array(ownerRangeSchema).max(OWNER_LIMITS.ranges),
     aiDuration: ownerAiDurationSchema,
+    aiCount: ownerAiCountSchema.optional(),
     manualOnly: z.boolean(),
   })
   .strict()

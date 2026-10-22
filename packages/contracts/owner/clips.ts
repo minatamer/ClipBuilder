@@ -19,6 +19,7 @@ import {
   ownerAiModeSchema,
 } from "./policy.ts";
 import { ownerWordsSchema } from "./selection.ts";
+import { ownerVideoLookSchema } from "./video-look.ts";
 import { CONTEXTUAL_PICTURE_POLICY } from "../src/contextual-picture.schema.ts";
 
 export const OWNER_BATCH_POLICY = {
@@ -44,6 +45,7 @@ export const ownerOverlaySchema = z
       .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
     captions: compositionManifestV3Schema.shape.captions,
     captionStyle: ownerCaptionStyleSchema.optional(),
+    videoLook: ownerVideoLookSchema.optional(),
     visuals: z
       .array(ownerVisualSchema)
       .max(OWNER_BATCH_POLICY.imageAttemptsPerClip),

@@ -18,7 +18,8 @@ import {
   type OwnerMoment,
   type OwnerWord,
 } from "../../../packages/contracts/owner/selection.ts";
-import { candidateSelectionPolicy } from "../src/analysis/analysis.prompt.ts";
+import { ownerSelectionPolicy } from "./selection-policy.ts";
+import { OWNER_DEFAULT_AI_COUNT } from "../../../packages/contracts/owner/policy.ts";
 import type { OwnerAiMode } from "../../../packages/contracts/owner/policy.ts";
 
 /** Domain ports only; explicit owner composition supplies synthetic or provider AI. */
@@ -33,6 +34,7 @@ export type OwnerAnalysisPorts = {
     policy: OwnerAnalysisInputs["aiDuration"],
     signal: AbortSignal,
     instructions: string,
+    requestedCount?: number,
   ): Promise<OwnerAiEvidence[]>;
 };
 
@@ -101,6 +103,7 @@ export async function analyzeOwner(
   const workspace = ownerWorkspaceSchema.parse(currentWorkspace);
   if (workspace.mode !== ports.mode) throw new Error("analysis_mode_mismatch");
   const inputs = ownerAnalysisInputsSchema.parse(value);
+  const requestedCount = inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT;
   if (inputs.sourceRevision !== workspace.revision)
     throw new Error("stale_source_revision");
   const cuts = inputs.ranges.map((range) =>
@@ -156,18 +159,14 @@ export async function analyzeOwner(
   if (selected) {
     const proposals = z
       .array(ownerAiEvidenceSchema)
-      .max(OWNER_LIMITS.ranges + OWNER_LIMITS.suggestions)
+      .max(OWNER_LIMITS.ranges + requestedCount)
       .parse(
         await ports.select(
           words,
           inputs.aiDuration,
           signal,
-          candidateSelectionPolicy(
-            inputs.aiDuration,
-            OWNER_LIMITS.ranges + OWNER_LIMITS.suggestions,
-            OWNER_LIMITS.ranges + OWNER_LIMITS.suggestions,
-            true,
-          ),
+          ownerSelectionPolicy(inputs.aiDuration, requestedCount),
+          requestedCount,
         ),
       );
     signal.throwIfAborted();
@@ -216,7 +215,7 @@ export async function analyzeOwner(
         continue;
       }
       if (
-        suggestions.length >= OWNER_LIMITS.suggestions ||
+        suggestions.length >= requestedCount ||
         suggestions.some(
           (previous) =>
             Math.max(

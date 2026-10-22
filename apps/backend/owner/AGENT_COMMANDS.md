@@ -62,12 +62,21 @@ Never replay an unacknowledged write with a new ID automatically. Repeating an
 acknowledged operation ID with identical input does not repeat its side effect;
 changing input under that ID rejects. IDs are scoped to the running session.
 
-Caption operations accept the bundled presets, bounded font size, six-digit
+Caption operations accept the presets, 24–120px font size, optional local `font`
+(`Arial`, `Verdana`, `Georgia`, `Courier New`) and `animation` (`highlight`,
+`pop`, `fade`, `none`), six-digit
 colors, alignment and normalized safe-area box. Visual upsert/remove/reset
 operations use admitted asset IDs and clip-relative frame times. There is no
 caption rewriting, provider prompt, arbitrary CSS/JSX, shell command, file
 browser or remote asset URL. Inspect supplies safe current style/visual fields;
 the [editor guide](../../frontend/owner/README.md) describes the bounds.
+
+`{ "kind": "video-look", "look": { "preset": "warm", "strength": 60 } }`
+uses the same revision coordinator and native export as the UI. Presets are
+`original`, `vivid`, `warm`, `cool`, `mono`; strength is an integer 0–100.
+`{ "kind": "reset", "panel": "video" }` restores the original source look.
+Inspect/validate project the acknowledged video look without exposing media or
+dialogue. Caption/video edits and re-export need no AI key or live flags.
 
 ## Pictures and explicit exports
 

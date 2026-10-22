@@ -1,4 +1,5 @@
 import { OWNER_LIMITS } from "../../../packages/contracts/owner/index.ts";
+import { OWNER_DEFAULT_AI_COUNT } from "../../../packages/contracts/owner/policy.ts";
 import { normalizeCandidateSelection } from "../src/analysis/analysis.provider-shape.ts";
 import type { OwnerAnalysisPorts } from "./analysis.ts";
 
@@ -20,16 +21,18 @@ export const fakeOwnerAnalysis: OwnerAnalysisPorts = {
       }),
     );
   },
-  async select(words, policy, signal) {
+  async select(
+    words,
+    policy,
+    signal,
+    _instructions,
+    requestedCount = OWNER_DEFAULT_AI_COUNT,
+  ) {
     signal.throwIfAborted();
     const seconds =
       Math.max(policy.minMs, Math.min(30_000, policy.maxMs)) / 1000;
     const candidates = [];
-    for (
-      let index = 0;
-      index < OWNER_LIMITS.ranges + OWNER_LIMITS.suggestions;
-      index++
-    ) {
+    for (let index = 0; index < OWNER_LIMITS.ranges + requestedCount; index++) {
       const start = Math.ceil(index * seconds),
         end = Math.min(words.length - 1, Math.ceil((index + 1) * seconds) - 1);
       if (!words[start] || !words[end]) break;

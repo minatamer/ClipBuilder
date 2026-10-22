@@ -40,13 +40,18 @@ Node/Chrome processes; root AGENTS governs verified process-tree cleanup.
    The linked-source guide below distinguishes fake import from the dormant
    real downloader. Opening a source alone starts no AI work.
 2. Add the exact start/end ranges you already want. Separately choose AI
-   minimum/maximum duration and **Find moments**. Equal AI bounds request an
+   minimum/maximum duration, a count of 1–10 additional AI moments (default four),
+   and **Find moments**. Fewer qualifying moments produce an explicit shortfall.
+   Equal AI bounds request an
    exact duration; equal manual start/end is invalid. Manual cuts remain exact
    requests through empty AI results and duration changes.
 3. Select up to ten manual/AI moments and process them in one action. Native
    work is serial. Each clip has separate progress, cancellation and exports;
    review a prepared/completed clip while its siblings continue.
-4. Review captions and pictures, choose a caption preset, move/resize layers
+4. Review captions and pictures, choose caption preset/font/animation, font size
+   (24–120px), text/highlight colors and an optional adjustable video look.
+   Original, Vivid, Warm, Cool and Black and white affect source video only.
+   Move/resize layers
    with pointer/arrow keys or numeric fields, and import an owned JPEG/PNG.
    **Apply changes** acknowledges a revision; **Export again** creates a new
    MP4 of that revision. Older exports remain immutable. An active export keeps
@@ -73,7 +78,7 @@ Private media inspection is separate from permission to edit through the CLI.
 | --- | --- |
 | Source | One full SDR MP4, ≤60 minutes/10GiB, ≤4K/60fps in admitted codecs |
 | Manual ranges | Up to ten, each 1–300 seconds |
-| AI discovery | 10–60 seconds, including min=max; up to four additional suggestions |
+| AI discovery | 10–60 seconds, including min=max; request 1–10 additional suggestions, default four |
 | Selected clips | Up to ten; one heavy native job at a time |
 | Output | 1080×1920/30fps H.264/AAC, ≤1GiB and the admitted per-clip reservation |
 | Scratch / free space | ≤20GiB; preserve ≥10GiB on each touched volume |

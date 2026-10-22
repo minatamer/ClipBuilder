@@ -189,3 +189,27 @@ it("keeps drag and resize geometry identical at full and one-third portrait prev
     ownerBoxesOverlap(box, { x: 0.6, y: 0.1, width: 0.2, height: 0.2 }),
   ).toBe(true);
 });
+
+it("includes video looks in UI/CLI edit operations, compilation and reset without mutating a legacy base", () => {
+  const current = clip(),
+    original = initialOwnerEdit(current);
+  const legacy = JSON.stringify(current.base);
+  const draft = {
+    ...original,
+    videoLook: { preset: "warm" as const, strength: 60 },
+  };
+  expect(sameOwnerEdit(original, draft)).toBe(false);
+  expect(ownerEditOperations(original, draft, current)).toEqual([
+    { kind: "video-look", look: draft.videoLook },
+  ]);
+  expect(
+    compileOwnerOverlay(current.base!, draft, current.assets).videoLook,
+  ).toEqual(draft.videoLook);
+  expect(ownerEditOperations(draft, original, current)).toEqual([
+    { kind: "reset", panel: "video" },
+  ]);
+  expect(JSON.stringify(current.base)).toBe(legacy);
+  expect(
+    compileOwnerOverlay(current.base!, original, current.assets),
+  ).not.toHaveProperty("videoLook");
+});

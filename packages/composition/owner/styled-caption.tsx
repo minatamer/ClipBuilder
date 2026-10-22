@@ -12,19 +12,26 @@ const weights: Record<OwnerCaptionStyle["preset"], number> = {
   bold: 900,
 };
 
-/** Conservative Arial advances, without browser font measurement or reflow. */
-function lineUnits(line: string) {
-  return Array.from(line).reduce(
-    (total, char) =>
-      total +
-      (/[MWmw@%]/u.test(char) || (char.codePointAt(0) ?? 0) > 127
-        ? 1.1
-        : /[A-Z]/u.test(char)
-          ? 0.9
-          : /[ilj.,'!:; ]/u.test(char)
-            ? 0.4
-            : 0.7),
-    0,
+/** Conservative local-font advances, without browser measurement or reflow. */
+function lineUnits(line: string, font: OwnerCaptionStyle["font"]) {
+  if (font === "Courier New")
+    return Array.from(line).reduce(
+      (sum, char) => sum + ((char.codePointAt(0) ?? 0) > 127 ? 1.2 : 0.65),
+      0,
+    );
+  return (
+    Array.from(line).reduce(
+      (total, char) =>
+        total +
+        (/[MWmw@%]/u.test(char) || (char.codePointAt(0) ?? 0) > 127
+          ? 1.1
+          : /[A-Z]/u.test(char)
+            ? 0.9
+            : /[ilj.,'!:; ]/u.test(char)
+              ? 0.4
+              : 0.7),
+      0,
+    ) * (font && font !== "Arial" ? 1.15 : 1)
   );
 }
 
@@ -66,7 +73,7 @@ export function OwnerStyledCaption({
         ...caption.lines.map((line) =>
           Math.floor(
             (width - line.split(" ").length * wordPadding * 2) /
-              Math.max(1, lineUnits(line)),
+              Math.max(1, lineUnits(line, style.font)),
           ),
         ),
       ),
@@ -86,7 +93,11 @@ export function OwnerStyledCaption({
         flexDirection: "column",
         justifyContent: "flex-end",
         overflow: "hidden",
-        fontFamily: "Arial",
+        fontFamily: style.font ?? "Arial",
+        opacity:
+          style.animation === "fade"
+            ? Math.min(1, (ms - caption.startMs) / 120)
+            : undefined,
         color: style.color,
         textAlign: style.align,
         fontSize,
@@ -120,6 +131,10 @@ export function OwnerStyledCaption({
                   position: "relative",
                   display: "inline-block",
                   padding: `4px ${wordPadding}px`,
+                  transform:
+                    style.animation === "pop" && highlighted
+                      ? `scale(${0.88 + onset * 0.12})`
+                      : undefined,
                 }}
               >
                 {wordIndex ? " " : ""}
@@ -130,7 +145,13 @@ export function OwnerStyledCaption({
                     inset: 0,
                     borderRadius: 9,
                     backgroundColor: style.highlight,
-                    opacity: highlighted ? 0.55 + onset * 0.45 : 0,
+                    opacity:
+                      highlighted &&
+                      (style.animation === undefined ||
+                        style.animation === "highlight" ||
+                        style.animation === "pop")
+                        ? 0.55 + onset * 0.45
+                        : 0,
                     transform: `scale(${highlighted ? 0.92 + onset * 0.08 : 1})`,
                   }}
                 />

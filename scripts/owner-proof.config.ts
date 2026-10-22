@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     environment: "node",
     fileParallelism: false,
-    include: ["test/owner-*.proof.ts"],
+    include: ["test/owner-*.proof.ts", "apps/renderer/owner/*.proof.ts"],
     setupFiles: ["test/no-network.setup.ts"],
   },
 });

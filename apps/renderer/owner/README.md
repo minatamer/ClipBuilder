@@ -92,8 +92,14 @@ bytes/digests before rasterization; it never accepts a local picture filename
 or an external image URL.
 
 Preview and export share the pure React caption/picture tree and version-1
-owner overlay schema. Caption edits allow clean/classic/bold Arial presets,
-requested 32–80px size, fixed hex colors, alignment and a safe normalized box.
+owner overlay schema. Caption edits allow clean/classic/bold presets,
+requested 24–120px size, local Arial/Verdana/Georgia/Courier New, independent
+highlight/pop/fade/static animation, hex colors, alignment and a safe box.
+Video looks use fixed sRGB RGB coefficients shared
+with browser preview, applied to the normalized source before overlay muxing.
+Original/zero strength is identity; presets never tint captions or pictures.
+The raw cut cache, source masters and older exports remain immutable. Look,
+font and animation choices are part of the admitted render snapshot.
 The same line-fit rule can reduce the effective size in both paths without
 rewriting words or changing clocks. At most three picture cues use fixed
 contain/cover fit and in-canvas geometry; pictures draw in cue order below

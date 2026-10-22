@@ -3,11 +3,27 @@ import { normalizedBoxSchema } from "../src/edit-plan.schema.ts";
 import { ownerIdSchema } from "./policy.ts";
 import { ownerDigestSchema, ownerVisualEditSchema } from "./assets.ts";
 import { CONTEXTUAL_PICTURE_POLICY } from "../src/contextual-picture.schema.ts";
+import { ownerVideoLookSchema } from "./video-look.ts";
+
+export const OWNER_CAPTION_FONTS = [
+  "Arial",
+  "Verdana",
+  "Georgia",
+  "Courier New",
+] as const;
+export const OWNER_CAPTION_ANIMATIONS = [
+  "highlight",
+  "pop",
+  "fade",
+  "none",
+] as const;
 
 export const ownerCaptionStyleSchema = z
   .object({
     preset: z.enum(["clean", "classic", "bold"]),
-    fontSize: z.number().int().min(32).max(80),
+    fontSize: z.number().int().min(24).max(120),
+    font: z.enum(OWNER_CAPTION_FONTS).optional(),
+    animation: z.enum(OWNER_CAPTION_ANIMATIONS).optional(),
     color: z.string().regex(/^#[a-fA-F0-9]{6}$/),
     highlight: z.string().regex(/^#[a-fA-F0-9]{6}$/),
     align: z.enum(["left", "center", "right"]),
@@ -68,6 +84,7 @@ export const ownerEditDocumentSchema = z
     baseHash: ownerDigestSchema,
     revision: z.number().int().nonnegative(),
     captions: ownerCaptionStyleSchema.nullable(),
+    videoLook: ownerVideoLookSchema.optional(),
     visuals: z
       .array(ownerVisualEditSchema)
       .max(CONTEXTUAL_PICTURE_POLICY.maxPictures),
@@ -81,6 +98,9 @@ export const ownerEditDocumentSchema = z
 export type OwnerEditDocument = z.infer<typeof ownerEditDocumentSchema>;
 export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
   z
+    .object({ kind: z.literal("video-look"), look: ownerVideoLookSchema })
+    .strict(),
+  z
     .object({ kind: z.literal("caption"), style: ownerCaptionStyleSchema })
     .strict(),
   z
@@ -90,7 +110,7 @@ export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("reset"),
-      panel: z.enum(["captions", "visuals"]),
+      panel: z.enum(["captions", "visuals", "video"]),
     })
     .strict(),
 ]);

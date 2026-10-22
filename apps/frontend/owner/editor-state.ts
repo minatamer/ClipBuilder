@@ -39,6 +39,7 @@ export function sameOwnerEdit(
 ): boolean {
   return (
     JSON.stringify(left.captions) === JSON.stringify(right.captions) &&
+    JSON.stringify(left.videoLook) === JSON.stringify(right.videoLook) &&
     JSON.stringify(left.visuals) === JSON.stringify(right.visuals)
   );
 }
@@ -49,6 +50,12 @@ export function ownerEditOperations(
   clip: OwnerClip,
 ): OwnerEditRequest["operations"] {
   const operations: OwnerEditRequest["operations"] = [];
+  if (JSON.stringify(original.videoLook) !== JSON.stringify(draft.videoLook))
+    operations.push(
+      draft.videoLook
+        ? { kind: "video-look", look: draft.videoLook }
+        : { kind: "reset", panel: "video" },
+    );
   if (JSON.stringify(original.captions) !== JSON.stringify(draft.captions))
     operations.push(
       draft.captions

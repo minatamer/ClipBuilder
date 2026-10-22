@@ -69,6 +69,7 @@ export const ownerAgentClipSchema = ownerClipSchema
   })
   .extend({
     captions: ownerCaptionStyleSchema.nullable(),
+    videoLook: ownerOverlaySchema.shape.videoLook,
     visuals: ownerOverlaySchema.shape.visuals,
     overlayHash: ownerDigestSchema.nullable(),
   })
@@ -96,6 +97,7 @@ export const ownerAgentValidationSchema = z
     baseHash: ownerDigestSchema,
     overlayHash: ownerDigestSchema,
     captions: ownerCaptionStyleSchema.nullable(),
+    videoLook: ownerOverlaySchema.shape.videoLook,
     visuals: ownerOverlaySchema.shape.visuals,
   })
   .strict();

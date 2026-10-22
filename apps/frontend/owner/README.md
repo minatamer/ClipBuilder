@@ -35,7 +35,10 @@ deleting a draft preserves saved source masters. See the
 quality selection, capacity limits, repair rules and the dormant real downloader.
 
 CL-018 adds up to ten exact source-relative ranges (`HH:MM:SS.mmm`, 1–300
-seconds) alongside independent simulated discovery. Set AI minimum/maximum
+seconds) alongside independent discovery. Request 1–10 additional AI moments
+(default four), independently of manual ranges. A request for five at 30–60
+seconds is capped at five grounded suggestions; a shortfall is reported, never
+padded or automatically retried. Set AI minimum/maximum
 between 10 and 60 seconds; equal bounds request an exact duration. These settings
 never alter manual requests. Each manual row shows its actual 30fps cut before
 processing. Duplicate cuts share one processing identity and retain their row
@@ -65,12 +68,24 @@ are synthetic placeholders. CL-020 adds a small local presentation editor over
 each immutable automatic base; changing one clip does not change its siblings.
 
 Caption controls offer Clean, Classic and Bold presets, requested size from
-32–80 portrait pixels, text/highlight colors, alignment and a normalized box.
+24–120 portrait pixels, text/highlight colors, alignment and a normalized box.
+Choose local Arial, Verdana, Georgia or Courier New independently from
+spoken-word highlight, word pop, line fade or static animation. These use the
+same deterministic clip clock in preview and export; no fonts are downloaded.
+Increasing font size expands the box within the safe area when needed.
 Captions keep their existing words and timing. The caption box needs 5% portrait
 margins, width at least 0.6 and height for two lines at the requested size.
 Exceptionally long words or wide lines shrink deterministically to fit; the
 requested size is a maximum, not a guaranteed rendered minimum. **Reset
 captions to automatic** restores the original fixed appearance.
+
+Video looks offer Original, Vivid, Warm, Cool and Black and white with 0–100%
+strength. They affect only source video; caption/picture colors stay separate.
+The source master and previous exports remain unchanged. Apply and explicitly
+export a new revision; Save/autosave retains acknowledged settings in drafts.
+Reset video restores the original look. Preview uses a fixed sRGB SVG matrix;
+native export uses the same coefficients before compositing pictures/captions.
+Real-media filter taste and font readability remain owner acceptance checks.
 
 Picture controls select an existing cue, replace its registered asset, remove
 it, or add a cue up to the three-picture limit. Set clip-relative start and

@@ -2,6 +2,14 @@
 
 ## Local owner workflow execution — 2026-10-22
 
+Current owner extension: [CL-026](CL-026-expand-local-discovery-and-presentation-controls.md)
+adds requested AI count, caption fonts/animation/size and restrained video looks.
+Implemented and verified with 1,627 unit tests, three relevant native proofs,
+actual built UI controls, all five gates and public exclusion. The owner then
+authorized staging and a ticket commit; push, live calls and real YouTube
+activation remain excluded. CL-025 remains the
+owner walkthrough, including these additional controls.
+
 The owner adopted all recommendations and authorized sequential implementation,
 execute/validate/fix loops and a commit per clean ticket. CL-017–024 have local
 implementation/decision/acceptance evidence, including the required real-mode
@@ -23,6 +31,7 @@ manual acceptance after implementation.
 | Decision lane | [CL-022](CL-022-decide-youtube-source-feasibility.md) | Research background download, exact resolution choice and saved-source reuse | Decision complete; technical go for fake-only CL-023; yt-dlp/Deno pins and exact/offline design recorded; real source/method/tool/access gates open |
 | Conditional | [CL-023](CL-023-import-approved-high-quality-linked-source.md) | Paste link, choose resolution/Best available, background download to Downloads and reuse saved source | Implemented in fake lane; exact native synthetic sources/offline reuse, five native proofs, 1,564 root tests, five gates and 1,490-file exclusion pass; real acquisition/tools/source gates open |
 | Final local gate | [CL-024](CL-024-verify-local-owner-workflow-and-build-exclusion.md) | Combined offline media/agent checks and public artifact exclusion | Implemented/validated in synthetic lane; 1,607 unit tests, eight native proofs, full gates, actual fake browser/headless CLI and 1,490-file exclusion pass; real owner/provider/YouTube gates remain open in CL-025 |
+| Additional controls | [CL-026](CL-026-expand-local-discovery-and-presentation-controls.md) | Requested AI count, caption font/animation/size and adjustable video looks | Implemented/validated locally; 1,627 unit tests, three relevant native proofs including actual built UI, full gates and 1,490-file exclusion pass; owner real/visual acceptance remains CL-025 |
 
 Execute one dependency-ready packet at a time under the latest authorization.
 CL-022's desk research can inform the design independently; the

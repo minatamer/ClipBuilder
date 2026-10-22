@@ -52,6 +52,52 @@ const ports = () => ({
 const signal = () => new AbortController().signal;
 
 describe("owner manual ranges and independent discovery", () => {
+  it.each([1, 5, 10])(
+    "requests %i grounded suggestions without changing manual cuts or repeating calls",
+    async (count) => {
+      const provider = ports();
+      const request = { ...input(), aiCount: count };
+      const result = await analyzeOwner(
+        workspace(600_000),
+        request,
+        provider,
+        signal(),
+      );
+      expect(result.suggestions).toHaveLength(count);
+      expect(result.manual.map((moment) => moment.cut)).toEqual(
+        request.ranges.map((row) => ownerCut(row, 600_000)),
+      );
+      expect(result.inputs.aiCount).toBe(count);
+      expect(provider.select.mock.calls[0]?.[3]).toContain(
+        `owner requests ${count} independent final AI moments`,
+      );
+      expect(provider.select.mock.calls[0]?.[4]).toBe(count);
+      expect(result.calls).toEqual({ transcription: 1, selection: 1 });
+    },
+  );
+  it.each([0, -1, 11, 2.5, NaN, Infinity])(
+    "rejects invalid count %s before any work",
+    async (aiCount) => {
+      const provider = ports();
+      await expect(
+        analyzeOwner(workspace(), { ...input(), aiCount }, provider, signal()),
+      ).rejects.toThrow();
+      expect(provider.transcribe).not.toHaveBeenCalled();
+      expect(provider.select).not.toHaveBeenCalled();
+    },
+  );
+  it("returns an honest shortfall without automatic retries or discarding manual cuts", async () => {
+    const provider = ports();
+    const result = await analyzeOwner(
+      workspace(40_000),
+      { ...input(), ranges: [range(0, 1000)], aiCount: 5 },
+      provider,
+      signal(),
+    );
+    expect(result.suggestions.length).toBeLessThan(5);
+    expect(result.manual).toHaveLength(1);
+    expect(result.calls).toEqual({ transcription: 1, selection: 1 });
+  });
   it("freezes the submitted inputs and source identity before dispatch", async () => {
     const request = input(),
       current = workspace(),

@@ -15,6 +15,7 @@ import {
   type OwnerMoment,
 } from "../../../packages/contracts/owner/selection.ts";
 import type { OwnerRuntimeCapabilities } from "../../../packages/contracts/owner/runtime.ts";
+import { OWNER_DEFAULT_AI_COUNT } from "../../../packages/contracts/owner/policy.ts";
 
 type Row = { id: string; start: string; end: string };
 type Props = {
@@ -41,6 +42,7 @@ export function OwnerSelectionPanel({
     [maximum, setMaximum] = useState("60");
   const [manualOnly, setManualOnly] = useState(false),
     [policyRevision, setPolicyRevision] = useState(0);
+  const [count, setCount] = useState(String(OWNER_DEFAULT_AI_COUNT));
   const [analysis, setAnalysis] = useState<OwnerAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false),
     [selected, setSelected] = useState<string[]>([]);
@@ -74,6 +76,7 @@ export function OwnerSelectionPanel({
           setMinimum(String(restored.inputs.aiDuration.minMs / 1000));
           setMaximum(String(restored.inputs.aiDuration.maxMs / 1000));
           setManualOnly(restored.inputs.manualOnly);
+          setCount(String(restored.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT));
           setPolicyRevision(restored.inputs.policyRevision);
           setAnalysis(restored);
           setMessage(
@@ -116,6 +119,7 @@ export function OwnerSelectionPanel({
         maxMs: Number(maximum) * 1000,
       },
       manualOnly,
+      aiCount: Number(count),
     });
   }
   function rounded(row: Row): string {
@@ -143,7 +147,7 @@ export function OwnerSelectionPanel({
         ownerCut(row, workspace.source.durationMs);
     } catch {
       setMessage(
-        "Check each range below. AI minimum/maximum must be 10–60 seconds, minimum ≤ maximum, with a possible 30fps duration. Exact equal bounds are allowed.",
+        "Check each range below. Request 1–10 AI moments. AI minimum/maximum must be 10–60 seconds, minimum ≤ maximum, with a possible 30fps duration. Exact equal bounds are allowed.",
       );
       return;
     }
@@ -169,7 +173,7 @@ export function OwnerSelectionPanel({
       if (!controller.signal.aborted && mounted.current) {
         setAnalysis(result);
         setMessage(
-          `Ready: ${result.manual.length} manual cuts and ${result.suggestions.length} additional ${result.mode === "synthetic-ai" ? "simulated " : ""}suggestions. ${result.mode === "synthetic-ai" ? "Simulated" : "Provider"} calls: transcription ${result.calls.transcription}, selection ${result.calls.selection}.`,
+          `Ready: ${result.manual.length} manual cuts and ${result.suggestions.length} of ${result.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT} requested additional ${result.mode === "synthetic-ai" ? "simulated " : ""}suggestions.${!result.inputs.manualOnly && result.suggestions.length < (result.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT) ? " Fewer grounded moments qualified; no clips were invented or retried." : ""} ${result.mode === "synthetic-ai" ? "Simulated" : "Provider"} calls: transcription ${result.calls.transcription}, selection ${result.calls.selection}.`,
         );
       }
     } catch {
@@ -343,6 +347,26 @@ export function OwnerSelectionPanel({
       </fieldset>
       <fieldset disabled={busy}>
         <legend>Additional AI discovery</legend>
+        <label>
+          Number of additional AI moments
+          <input
+            type="number"
+            min="1"
+            max={OWNER_LIMITS.suggestions}
+            step="1"
+            value={count}
+            disabled={manualOnly}
+            onChange={(event) => {
+              changed();
+              setCount(event.currentTarget.value);
+            }}
+          />
+        </label>
+        <p>
+          Request this many grounded moments within your duration bounds. If
+          fewer qualify, you will see the shortfall. Manual requests are
+          additional; select up to ten clips in total.
+        </p>
         <div className="duration-row">
           <label>
             AI minimum seconds

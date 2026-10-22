@@ -122,13 +122,18 @@ Browser downloads are explicit and remain outside workspace cleanup.
 
 The authenticated local API accepts `POST /api/workspace/{id}/analysis` with
 source/policy revisions, at most ten `{id,startMs,endMs}` rows, an independent
-`aiDuration:{minMs,maxMs}` and explicit `manualOnly`. Endpoints are integer
+`aiDuration:{minMs,maxMs}`, optional `aiCount` (integer 1–10, default four)
+and explicit `manualOnly`. Endpoints are integer
 milliseconds and `[start,end)`. Manual ranges last 1–300 seconds; AI limits are
 10–60 seconds, including equal bounds containing a 30fps duration. Invalid,
 out-of-source or stale revisions dispatch no AI/native work. An explicit run
 transcribes once, then selects at most once (skipped for manual-only, no words,
 or insufficient source duration). Matching AI/manual cuts link evidence without
-consuming one of four additional suggestion slots. No automatic retries.
+consuming a requested additional suggestion slot. Reconciliation enforces the
+requested count and reports fewer results when insufficient grounded moments
+qualify. The real provider receives the same count/duration policy and may
+propose at most ten manual overlaps plus the requested count; no extra calls or
+automatic retries are introduced. Public candidate limits remain unchanged.
 
 `GET /api/workspace/{id}/analysis` restores the last completed in-memory result
 without AI work. This is running-session state, not a diagnostic capture reader
@@ -194,14 +199,15 @@ an app restart; explicitly saved drafts can be reopened.
 
 `POST /api/workspace/{id}/clips/{clipId}/edit` accepts `operationId`,
 `expectedRevision`, `baseHash` and one to ten allowlisted operations:
-`caption`, `visual-upsert`, `visual-remove` or `reset` for a caption/picture
+`caption`, `visual-upsert`, `visual-remove`, `video-look` or `reset` for a caption/picture/video
 panel. Writes serialize with other clip mutations; a stale edit revision
 returns 409. Matching operation IDs are idempotent. A valid edit advances only
 that clip's revision, validates the complete overlay, and starts no AI or
 render. The public v2/v3 manifest formats and fixed public composition remain
 unchanged; owner edit/overlay documents cannot enter the public renderer.
 
-Caption settings use three bundled Arial presets, requested size 32–80px,
+Caption settings use three presets, requested size 24–120px, four fixed local
+fonts and independent highlight/pop/fade/static animation,
 six-digit text/highlight colors, left/center/right alignment and a normalized
 box. The box stays inside a 5% safe inset, occupies at least 60% of portrait
 width, and must fit two requested-size lines vertically. The shared caption
@@ -210,6 +216,11 @@ it retains timed words, line breaks and highlight clocks. Pictures use at most
 three timed cues per clip, normalized in-canvas geometry and contain/cover fit.
 Pictures draw in cue order below captions. No caption rewriting, arbitrary
 fonts/CSS, keyframes, B-roll or audio editing is accepted.
+
+Video looks use the same edit document, revision conflicts, agent projection
+and immutable export path. Fixed presets and integer strength are validated;
+resetting `video` removes the override. Only source pixels are transformed,
+before captions/pictures. Optional new fields preserve legacy draft hashes.
 
 `POST /api/workspace/{id}/clips/{clipId}/picture` receives JPEG/PNG bytes with
 an exact content length, at most 4 MiB and 16 million decoded pixels. Byte

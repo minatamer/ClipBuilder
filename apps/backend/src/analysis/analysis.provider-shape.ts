@@ -8,9 +8,9 @@ import {
 } from "@clipbuilder/contracts";
 
 export const CANDIDATE_GENERATION_SCHEMA_POLICY = "json_only";
-// Owner selection can propose ten manual overlaps plus four additional moments.
+// Owner selection can propose ten manual overlaps plus ten additional moments.
 // Public callers retain the four-candidate default below.
-const MAX_CANDIDATE_PROPOSALS = 14;
+const MAX_CANDIDATE_PROPOSALS = 20;
 export const candidateNormalizationDiagnosticSchema = z
   .object({
     inputShape: z.enum(["array", "envelope", "unsupported"]),

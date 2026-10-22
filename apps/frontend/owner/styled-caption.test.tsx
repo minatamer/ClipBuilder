@@ -54,6 +54,43 @@ it("keeps both supplied lines and all timed words in their original order", () =
   expect(render(2500)).toBe("");
 });
 
+it.each(["Arial", "Verdana", "Georgia", "Courier New"] as const)(
+  "uses the selected local %s font and explicit size",
+  (font) => {
+    const html = render(300, { ...style, font, fontSize: 64 });
+    expect(html).toContain(`font-family:${font}`);
+    expect(html).toContain("font-size:64px");
+  },
+);
+
+it("drives pop, fade and static styles from supplied time and includes fade in raster-cache identity", () => {
+  const pop = render(100, { ...style, animation: "pop" });
+  expect(wordMarkup(pop, "w_000001")).toContain("scale(0.88)");
+  expect(
+    wordMarkup(render(180, { ...style, animation: "pop" }), "w_000001"),
+  ).toContain("scale(1)");
+  const still = render(300, { ...style, animation: "none" });
+  expect(still.match(/opacity:0;/gu)).toHaveLength(4);
+  const overlay: OwnerOverlay = {
+    version: 1,
+    frames: 90,
+    captions: [caption],
+    visuals: [],
+    captionStyle: { ...style, animation: "fade" },
+  };
+  expect(render(160, overlay.captionStyle)).toContain("opacity:0.5");
+  expect(ownerOverlayFrame(overlay, 4).key).not.toBe(
+    ownerOverlayFrame(overlay, 5).key,
+  );
+  const seen = new Map<string, string>();
+  for (let frame = 0; frame < overlay.frames; frame++) {
+    const state = ownerOverlayFrame(overlay, frame);
+    const html = state.caption ? render(state.ms, overlay.captionStyle) : "";
+    if (seen.has(state.key)) expect(html).toBe(seen.get(state.key));
+    else seen.set(state.key, html);
+  }
+});
+
 it("uses exact word boundaries and the fixed 80ms onset without extending highlights across gaps", () => {
   expect(wordMarkup(render(100), "w_000001")).toContain("opacity:0.55");
   expect(wordMarkup(render(100), "w_000001")).toContain("scale(0.92)");

@@ -38,6 +38,12 @@ Synthetic success is not real-media, provider or human visual acceptance.
       timing, A/V sync, readability, keyboard behavior and responsiveness.
 - [ ] Move/style captions, replace/move/resize pictures and import an owned
       image. Compare preview with final MP4 at the same revision.
+- [ ] Review CL-026: request five 30–60-second AI moments and an insufficient-
+      source shortfall, preserving manual ranges. Check each local font,
+      24–120px size, colors and independent highlight/pop/fade/static animation;
+      preview/export readability and animation timing require actual owner review.
+      Try Original/Vivid/Warm/Cool/Mono and strength, confirm pictures/captions
+      retain their colors, then save/reopen/edit through the CLI and reset video.
 - [ ] Save a draft, close/reopen, edit through the UI and headless local CLI,
       then export again without a new AI call. Test save recovery and conflicts.
 - [ ] Check cleanup, disk warnings and targeted deletion without deleting

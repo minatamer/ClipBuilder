@@ -32,6 +32,7 @@ import {
 } from "../apps/backend/owner/agent-client.ts";
 import type { OwnerAgentCommand } from "../packages/contracts/owner/agent.ts";
 import { sampleOwnerResources } from "./owner-resource-sampler.ts";
+import { reviewOwnerControls } from "./owner-controls-browser.ts";
 
 it("makes three independent caption/picture MP4s locally, re-exports without AI and preserves their common source", async () => {
   const tools = await ownerNativeTools(resolve(".")),
@@ -77,7 +78,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
   const workerRpc = localWorkerPort(workerPort, "proof-worker", transport);
   const host = createOwnerHost({
     root,
-    ui: directory,
+    ui: resolve(".owner-build/ui"),
     storageRoot: join(directory, "library"),
     port: 0,
     token: "a".repeat(64),
@@ -201,6 +202,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
           { id: crypto.randomUUID(), startMs: 2000, endMs: 4000 },
         ],
         aiDuration: { minMs: 10_000, maxMs: 10_000 },
+        aiCount: 5,
         manualOnly: false,
       }),
     });
@@ -209,6 +211,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       JSON.parse(analyzed.body.toString()),
     );
     expect(analysis.calls).toEqual({ transcription: 1, selection: 1 });
+    expect(analysis.suggestions).toHaveLength(5);
     const body = JSON.stringify({
       operationId: crypto.randomUUID(),
       analysisId: analysis.id,
@@ -400,6 +403,9 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     const cue = clip.edit!.visuals[0]!;
     const style = {
       ...OWNER_CAPTION_PRESETS.bold,
+      font: "Georgia" as const,
+      fontSize: 90,
+      animation: "pop" as const,
       color: "#00ffff",
       highlight: "#552255",
       box: { ...OWNER_CAPTION_PRESETS.bold.box, y: 0.2 },
@@ -416,6 +422,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
           baseHash: clip.baseHash,
           operations: [
             { kind: "caption", style },
+            { kind: "video-look", look: { preset: "mono", strength: 100 } },
             {
               kind: "visual-upsert",
               cue: {
@@ -458,6 +465,26 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     ).toEqual([0, 1]);
     expect(rendered.clips[0]!.calls).toEqual({ plan: 1, image: 1, render: 2 });
     const editedFile = await ownerClipMediaPath(root, workspace.id, clip.id, 1);
+    const saturation = await runOwnedProcess(
+      tools.ffmpeg,
+      [
+        "-nostdin",
+        "-v",
+        "error",
+        "-i",
+        editedFile,
+        "-vf",
+        "select='eq(n,10)',crop=8:8:700:960,signalstats,metadata=print:key=lavfi.signalstats.SATAVG:file=-",
+        "-an",
+        "-f",
+        "null",
+        "-",
+      ],
+      signal,
+    );
+    expect(
+      Number(/lavfi\.signalstats\.SATAVG=([\d.]+)/u.exec(saturation)?.[1]),
+    ).toBeLessThan(2);
     expect(
       (await luma(editedFile, "eq(n,0)", "crop=8:8:266:860"))[0],
     ).toBeGreaterThan(220);
@@ -568,6 +595,15 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     const target = { workspaceId: reopened.id, clipId: clip.id };
     const inspection = await agent({ command: "inspect", ...target });
     if (inspection.kind !== "clip") throw new Error("expected_agent_clip");
+    expect(inspection.clip.videoLook).toEqual({
+      preset: "mono",
+      strength: 100,
+    });
+    expect(inspection.clip.captions).toMatchObject({
+      font: "Georgia",
+      fontSize: 90,
+      animation: "pop",
+    });
     const proposed = {
       operationId: crypto.randomUUID(),
       expectedRevision: inspection.clip.revision,
@@ -676,6 +712,13 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         })
       ).body,
     ).toEqual(await readFile(input));
+    await reviewOwnerControls(port);
+    expect({ transcriptions, selections, plans, pictures }).toEqual({
+      transcriptions: 4,
+      selections: 4,
+      plans: 3,
+      pictures: 3,
+    });
     completed = true;
   } finally {
     await host.close();

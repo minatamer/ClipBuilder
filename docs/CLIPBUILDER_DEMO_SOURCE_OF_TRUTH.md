@@ -1,5 +1,20 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Additional owner controls — 2026-10-22
+
+The owner requests an independent count of 1–10 additional AI suggestions
+(default four), keeping manual ranges and AI min/max duration separate. This
+supersedes the owner-only four-suggestion ceiling; ten selected clips and the
+one-transcription/one-selection budget remain. Report a shortfall if fewer
+grounded moments qualify, with no automatic retry or invented content.
+Caption customization adds fixed local fonts, independent animation and
+24–120px size alongside existing colors/geometry. Small adjustable source-video
+looks are local deterministic edits. See
+[CL-026](tickets/CL-026-expand-local-discovery-and-presentation-controls.md).
+These changes use the same real/provider-neutral workflow and fake simulations,
+with zero-spend agent validation. Public behavior and live/paid approvals stay
+unchanged; actual YouTube composition remains the separate CL-023 gap.
+
 ## Owner AFK implementation authorization — 2026-10-22
 
 The owner adopts the complete recommended local limits, Save draft once followed

@@ -14,24 +14,36 @@ CL-020 keeps the automatic base immutable and introduces a versioned owner edit
 document. `compileOwnerOverlay` re-exports the pure contract compiler used by
 the control API, browser preview and native worker: it resolves registered
 asset IDs to validated digests/provenance and applies bounded caption/picture
-overrides. It accepts no arbitrary URL, filename, CSS, font or executable
+overrides. It accepts no arbitrary URL, filename, CSS, font upload or executable
 composition input. Public manifests and package entrypoints remain separate.
 
 A null caption override uses the existing fixed appearance. Explicit owner
 styles offer Clean (64px, white/purple, weight 800), Classic (56px, white/teal,
 weight 700) and Bold (80px, yellow/dark, weight 900), all centered initially.
 Clean and Classic start in a 920×200 box at portrait position (80,1500); Bold
-uses 920×240 at (80,1460). The validated requested size is 32–80px, with text and
+uses 920×240 at (80,1460). The validated requested size is 24–120px, with text and
 highlight colors, left/center/right alignment and a normalized safe-area box.
 The box must leave 5% margins, be at least 0.6 canvas widths and fit two lines
 at the requested size. The same timed words, line boundaries and 80ms spoken
 word onset are retained; styling cannot rewrite captions.
 
-`OwnerStyledCaption` calculates a conservative Arial width estimate and a
+The local font menu is Arial, Verdana, Georgia and Courier New. Highlight
+(legacy default), word pop, line fade and static are independent choices.
+Animations depend only on supplied clip time; the raster cache includes line
+fade progress as well as spoken-word onset. Optional fields preserve older
+saved document hashes and their original appearance.
+
+`OwnerStyledCaption` calculates a conservative per-font width estimate and a
 bounded line height before rendering. Wide lines and long unbroken words
-shrink to fit their box, potentially below the requested 32px control minimum;
+shrink to fit their box, potentially below the requested 24px control minimum;
 the selected size is a maximum. This deterministic fit is shared by preview
 and rasterization and needs real-media readability acceptance separately.
+
+`OwnerVideoLookLayer` filters source-video children alone with a fixed sRGB SVG
+matrix. Original, Vivid, Warm, Cool and Mono share 0–100% interpolated RGB
+coefficients with native FFmpeg. Caption/picture overlays remain outside this
+layer. There are no external LUTs/assets or supplied expressions. Pure matrix
+values live once in contracts; native graph construction stays in renderer.
 
 Picture boxes retain normalized fractions and convert directly to portrait
 pixel coordinates in the shared tree; there is no separate preview rounding

@@ -8,6 +8,11 @@ import {
 import { Player, type PlayerRef } from "@remotion/player";
 import { AbsoluteFill, Html5Video, useCurrentFrame } from "remotion";
 import { OwnerAutomaticOverlay } from "../../../packages/composition/owner/automatic-overlay.tsx";
+import { OwnerVideoLookLayer } from "../../../packages/composition/owner/video-look.tsx";
+import {
+  OWNER_VIDEO_LOOKS,
+  type OwnerVideoLook,
+} from "../../../packages/contracts/owner/video-look.ts";
 import { compileOwnerOverlay } from "../../../packages/composition/owner/edit-overlay.ts";
 import {
   ownerClipListSchema,
@@ -17,6 +22,8 @@ import {
 } from "../../../packages/contracts/owner/clips.ts";
 import {
   OWNER_CAPTION_PRESETS,
+  OWNER_CAPTION_FONTS,
+  OWNER_CAPTION_ANIMATIONS,
   ownerEditDocumentSchema,
   ownerEditRequestSchema,
   type OwnerCaptionStyle,
@@ -201,11 +208,13 @@ function Review({
   const caption = overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean;
   return (
     <AbsoluteFill style={{ backgroundColor: "#101215" }}>
-      <Html5Video
-        src={sourceUrl}
-        style={{ width: "100%", height: "100%", objectFit: "contain" }}
-        pauseWhenBuffering
-      />
+      <OwnerVideoLookLayer look={overlay.videoLook}>
+        <Html5Video
+          src={sourceUrl}
+          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          pauseWhenBuffering
+        />
+      </OwnerVideoLookLayer>
       <OwnerAutomaticOverlay overlay={overlay} assets={assets} frame={frame} />
       <AbsoluteFill
         className="editor-interaction"
@@ -362,6 +371,8 @@ export function ClipEditor({
     setForm({ original, draft: next });
   }
   function setCaption(next: OwnerCaptionStyle) {
+    if (Number.isFinite(next.fontSize) && next.fontSize !== caption.fontSize)
+      next = { ...next, box: constrainOwnerBox(next.box, next) };
     update({ ...draft, captions: next });
   }
   function setCue(next: OwnerVisualEdit) {
@@ -560,11 +571,11 @@ export function ClipEditor({
                 </select>
               </label>
               <label>
-                Caption size (32–80 px)
+                Caption font size (24–120 px)
                 <input
                   type="number"
-                  min="32"
-                  max="80"
+                  min="24"
+                  max="120"
                   step="1"
                   value={
                     Number.isFinite(caption.fontSize) ? caption.fontSize : ""
@@ -577,6 +588,53 @@ export function ClipEditor({
                     setCaption({ ...caption, fontSize });
                   }}
                 />
+              </label>
+              <label>
+                Caption font
+                <select
+                  value={caption.font ?? "Arial"}
+                  onChange={(event) =>
+                    setCaption({
+                      ...caption,
+                      font: event.currentTarget.value as NonNullable<
+                        OwnerCaptionStyle["font"]
+                      >,
+                    })
+                  }
+                >
+                  {OWNER_CAPTION_FONTS.map((font) => (
+                    <option key={font} value={font}>
+                      {font}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Caption animation
+                <select
+                  value={caption.animation ?? "highlight"}
+                  onChange={(event) =>
+                    setCaption({
+                      ...caption,
+                      animation: event.currentTarget.value as NonNullable<
+                        OwnerCaptionStyle["animation"]
+                      >,
+                    })
+                  }
+                >
+                  {OWNER_CAPTION_ANIMATIONS.map((animation) => (
+                    <option key={animation} value={animation}>
+                      {
+                        {
+                          highlight: "Spoken-word highlight",
+                          pop: "Word pop",
+                          fade: "Line fade",
+                          none: "Static",
+                        }[animation]
+                      }
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 Caption text color
@@ -629,6 +687,76 @@ export function ClipEditor({
               onClick={() => update({ ...draft, captions: null })}
             >
               Reset captions to automatic
+            </button>
+          </fieldset>
+          <fieldset disabled={pending}>
+            <legend>Video look</legend>
+            <label>
+              Filter
+              <select
+                value={draft.videoLook?.preset ?? "original"}
+                onChange={(event) =>
+                  update({
+                    ...draft,
+                    videoLook: {
+                      preset: event.currentTarget
+                        .value as OwnerVideoLook["preset"],
+                      strength: draft.videoLook?.strength ?? 100,
+                    },
+                  })
+                }
+              >
+                {OWNER_VIDEO_LOOKS.map((look) => (
+                  <option key={look} value={look}>
+                    {
+                      {
+                        original: "Original",
+                        vivid: "Vivid",
+                        warm: "Warm",
+                        cool: "Cool",
+                        mono: "Black and white",
+                      }[look]
+                    }
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Filter strength ({draft.videoLook?.strength ?? 100}%)
+              <input
+                aria-label="Filter strength"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={draft.videoLook?.strength ?? 100}
+                disabled={
+                  !draft.videoLook || draft.videoLook.preset === "original"
+                }
+                onChange={(event) =>
+                  update({
+                    ...draft,
+                    videoLook: {
+                      preset: draft.videoLook?.preset ?? "original",
+                      strength: Number(event.currentTarget.value),
+                    },
+                  })
+                }
+              />
+            </label>
+            <p>
+              Changes source video only. Pictures and captions keep their own
+              colors. Apply, then export to save this look in a new MP4.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                const next = { ...draft };
+                delete next.videoLook;
+                update(next);
+              }}
+            >
+              Reset video to original
             </button>
           </fieldset>
           <fieldset disabled={pending}>

@@ -2,7 +2,7 @@ import { FIXED_COMPOSITION_POLICY } from "../../contracts/src/edit-plan.schema.t
 import { OWNER_FPS } from "../../contracts/owner/policy.ts";
 import type { OwnerOverlay } from "../../contracts/owner/clips.ts";
 
-/** Exact state of the fixed overlay. Only the spoken-word onset animates. */
+/** Exact frame-driven overlay state, including owner caption animation. */
 export function ownerOverlayFrame(overlay: OwnerOverlay, frame: number) {
   const ms = (frame * 1000) / OWNER_FPS;
   const captionIndex = overlay.captions.findIndex(
@@ -31,6 +31,9 @@ export function ownerOverlayFrame(overlay: OwnerOverlay, frame: number) {
     visuals,
     key: JSON.stringify([
       captionIndex,
+      overlay.captionStyle?.animation === "fade" && caption
+        ? Math.min(1, (ms - caption.startMs) / 120)
+        : null,
       highlights,
       visuals.map((cue) => cue.id),
     ]),

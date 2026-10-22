@@ -6,7 +6,7 @@ export const OWNER_LIMITS = {
   sourceMs: 60 * 60 * 1000,
   clipMs: 300_000,
   ranges: 10,
-  suggestions: 4,
+  suggestions: 10,
   clips: 10,
   scratchBytes: 20 * 1024 ** 3,
   reserveBytes: 10 * 1024 ** 3,
@@ -15,6 +15,7 @@ export const OWNER_LIMITS = {
   workspaceMs: 2 * 60 * 60 * 1000,
   jsonBytes: 1024 * 1024,
 } as const;
+export const OWNER_DEFAULT_AI_COUNT = 4;
 export const OWNER_FPS = 30;
 export const ownerAiModeSchema = z.enum(["synthetic-ai", "provider-ai"]);
 export type OwnerAiMode = z.infer<typeof ownerAiModeSchema>;

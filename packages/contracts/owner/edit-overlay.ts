@@ -70,5 +70,6 @@ export function compileOwnerOverlay(
     ...base.overlay,
     visuals,
     ...(edit?.captions ? { captionStyle: edit.captions } : {}),
+    ...(edit?.videoLook ? { videoLook: edit.videoLook } : {}),
   });
 }

@@ -24,6 +24,7 @@ import {
 } from "./media.ts";
 import { runOwnedProcess } from "../src/media/process-runner.ts";
 import { rasterizeOwnerOverlay } from "./rasterize-overlay.ts";
+import { ownerVideoLookFilter } from "./video-look.ts";
 
 type CachedCut = { binding: string; digest: string };
 export type OwnerCutCache = Map<string, CachedCut>;
@@ -149,7 +150,7 @@ export async function renderOwnerClip(
         "-i",
         join(frames, "%06d.png"),
         "-filter_complex",
-        "[0:v:0][1:v:0]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]",
+        `[0:v:0]${ownerVideoLookFilter(job.overlay.videoLook)}[source];[source][1:v:0]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`,
         "-filter_complex_threads",
         "2",
         "-filter_threads",

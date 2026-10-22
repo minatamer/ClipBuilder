@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
 import { createOwnerProviderAi } from "./provider-ai.ts";
 import { analyzeOwner } from "./analysis.ts";
-import { candidateSelectionPolicy } from "../src/analysis/analysis.prompt.ts";
+import { ownerSelectionPolicy } from "./selection-policy.ts";
 import { normalizeCandidateSelection } from "../src/analysis/analysis.provider-shape.ts";
 import { normalizeTranscription } from "../src/analysis/transcribe.normalization.ts";
 import {
@@ -21,7 +21,7 @@ import type { GeminiPictureGenerator } from "../src/assembly/gemini-pictures.ts"
 // All provider-shaped adapters below are synthetic injected doubles, with no SDK,
 // API key, source file, cloud resource or external request.
 const policy = { minMs: 10_133, maxMs: 11_877 };
-const instructions = candidateSelectionPolicy(policy, 14, 14, true);
+const instructions = ownerSelectionPolicy(policy);
 const annotations = [
   ["Coral", "0.111s", "0.711s"],
   ["reefs.", "0.812s", "1.411s"],
@@ -160,6 +160,38 @@ function fixture() {
 }
 
 describe("dormant owner provider ports with synthetic transports", () => {
+  it.each([5, 10])(
+    "binds requested count %i to the real provider prompt and response ceiling using injected transport",
+    async (count) => {
+      const f = fixture();
+      f.transport.candidates.mockResolvedValue({
+        text: JSON.stringify({
+          candidates: Array.from({ length: 10 + count }, () => proposal),
+        }),
+        finished: true,
+      });
+      const instructions = ownerSelectionPolicy(policy, count);
+      expect(
+        await f.ports.analysis.select(
+          words,
+          policy,
+          f.signal,
+          instructions,
+          count,
+        ),
+      ).toHaveLength(10 + count);
+      expect(f.transport.candidates).toHaveBeenCalledExactlyOnceWith(
+        JSON.stringify({ words }),
+        expect.any(AbortSignal),
+        instructions,
+      );
+      expect(instructions).toContain(
+        `owner requests ${count} independent final AI moments`,
+      );
+      expect(f.transport.upload).not.toHaveBeenCalled();
+      await f.ports.close(f.signal);
+    },
+  );
   it("is inert and preserves complete-source words, custom ranges and fourteen proposals", async () => {
     const f = fixture();
     expect(f.media).not.toHaveBeenCalled();
@@ -589,7 +621,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     expect(
       normalizeCandidateSelection(proposals, words, 14).candidates,
     ).toHaveLength(14);
-    expect(() => normalizeCandidateSelection(proposals, words, 15)).toThrow(
+    expect(() => normalizeCandidateSelection(proposals, words, 21)).toThrow(
       "candidate_policy_rejected",
     );
     expect(f.transport.transcribe).toHaveBeenCalledTimes(1);

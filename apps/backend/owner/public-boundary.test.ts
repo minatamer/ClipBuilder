@@ -70,6 +70,9 @@ it("rejects local ranges, durations, multiple candidates and mutable manifests o
     for (const ownerInput of [
       { ranges: [{ startMs: 0, endMs: 1000 }] },
       { aiDuration: { minMs: 30_000, maxMs: 30_000 } },
+      { aiCount: 5 },
+      { videoLook: { preset: "warm", strength: 60 } },
+      { captions: { font: "Georgia", fontSize: 96, animation: "pop" } },
       { candidateIds: [opaque("cand"), `cand_${"b".repeat(22)}`] },
       { manifest: { captionPosition: { x: 0.1, y: 0.2 } } },
       { edit: { version: 1, revision: 2 } },

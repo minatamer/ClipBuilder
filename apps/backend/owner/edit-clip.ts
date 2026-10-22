@@ -25,6 +25,9 @@ export function applyOwnerEdit(
   const next = ownerEditDocumentSchema.parse(clip.edit ?? automatic);
   for (const operation of request.operations) {
     switch (operation.kind) {
+      case "video-look":
+        next.videoLook = operation.look;
+        break;
       case "caption":
         next.captions = operation.style;
         break;
@@ -43,7 +46,9 @@ export function applyOwnerEdit(
         break;
       case "reset":
         if (operation.panel === "captions") next.captions = null;
-        else next.visuals = automatic.visuals;
+        else if (operation.panel === "visuals")
+          next.visuals = automatic.visuals;
+        else delete next.videoLook;
         break;
     }
   }
