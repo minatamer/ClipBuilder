@@ -35,6 +35,11 @@ import {
 } from "../../../packages/contracts/owner/agent.ts";
 import type { OwnerClipList } from "../../../packages/contracts/owner/clips.ts";
 import { ownerAgentClip } from "./agent-view.ts";
+import { OwnerSourceAcquisition } from "./source-acquisition.ts";
+import type { OwnerAcquisitionPort } from "./acquisition-port.ts";
+import { ownerYoutubeLinkRequestSchema } from "../../../packages/contracts/owner/acquisition.ts";
+import { ownerSourceMetadataRequestSchema } from "../../../packages/contracts/owner/acquisition-flow.ts";
+import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/owner/acquisition-profile.ts";
 
 export type OwnerHostOptions = {
   root: string;
@@ -42,10 +47,16 @@ export type OwnerHostOptions = {
   token: string;
   port: number;
   storageRoot?: string;
+  desktopStorageRoot?: string;
+  acquisition?: OwnerAcquisitionPort;
   shutdown?: () => void;
   analysis?: OwnerAnalysisPorts;
   clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image">;
-  media: (job: OwnerMediaJob, signal: AbortSignal) => Promise<OwnerMediaResult>;
+  media: (
+    job: OwnerMediaJob,
+    signal: AbortSignal,
+    stage?: (value: OwnerAcquisitionNativeStage) => void,
+  ) => Promise<OwnerMediaResult>;
 };
 export function createOwnerHost(options: OwnerHostOptions) {
   const files = new WorkspaceFiles(options.root);
@@ -98,6 +109,58 @@ export function createOwnerHost(options: OwnerHostOptions) {
   const busy = new Set<string>();
   const closingWorkspaces = new Set<string>();
   const expires = new Map<string, number>();
+  const sources = new OwnerSourceAcquisition({
+    files,
+    roots: {
+      ...(options.storageRoot ? { downloads: options.storageRoot } : {}),
+      ...(options.desktopStorageRoot
+        ? { desktop: options.desktopStorageRoot }
+        : {}),
+    },
+    ...(options.acquisition ? { port: options.acquisition } : {}),
+    media: options.media,
+    available: () => !closing && !uploading && workspaces.size === 0,
+    opened(id, source) {
+      if (closing || workspaces.size) throw new Error("workspace_busy");
+      const workspace: OwnerWorkspace = {
+        id,
+        source,
+        mode: options.analysis?.mode ?? "unavailable",
+        revision: 0,
+      };
+      workspaces.set(id, workspace);
+      expires.set(id, Date.now() + OWNER_LIMITS.workspaceMs);
+      return workspace;
+    },
+  });
+  async function receiveSource(
+    id: string,
+    req: IncomingMessage,
+    signal: AbortSignal,
+  ) {
+    const size = Number(req.headers["content-length"]);
+    if (
+      !Number.isSafeInteger(size) ||
+      size <= 0 ||
+      size > OWNER_LIMITS.sourceBytes ||
+      req.headers["content-type"] !== "video/mp4"
+    )
+      throw new Error("invalid_source");
+    await requireDisk(options.root, size * 2);
+    const file = await open(await files.file(id, "source.mp4"), "wx", 0o600);
+    try {
+      let received = 0;
+      for await (const chunk of req) {
+        signal.throwIfAborted();
+        received += chunk.length;
+        if (received > size) throw new Error("invalid_source");
+        await file.writeFile(Buffer.from(chunk));
+      }
+      if (received !== size) throw new Error("invalid_source");
+    } finally {
+      await file.close();
+    }
+  }
   let expiryTask = Promise.resolve();
   function expire() {
     expiryTask = expiryTask
@@ -299,6 +362,88 @@ export function createOwnerHost(options: OwnerHostOptions) {
           .end(JSON.stringify(current ?? null));
         return;
       }
+      if (req.method === "GET" && req.url === "/api/sources") {
+        const result = await sources.catalog(controller.signal);
+        res
+          .writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify(result));
+        return;
+      }
+      if (req.method === "GET" && req.url === "/api/sources/state") {
+        res
+          .writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify(sources.snapshot()));
+        return;
+      }
+      if (req.method === "POST" && req.url === "/api/sources/lookup") {
+        const input = ownerYoutubeLinkRequestSchema.parse(
+          await readOwnerJson(req),
+        );
+        const result = await sources.lookup(input.url, controller.signal);
+        res
+          .writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify(result));
+        return;
+      }
+      if (req.method === "POST" && req.url === "/api/sources/metadata") {
+        const input = ownerSourceMetadataRequestSchema.parse(
+          await readOwnerJson(req),
+        );
+        const result = await sources.metadata(input.url, controller.signal);
+        res
+          .writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify(result));
+        return;
+      }
+      if (req.method === "POST" && req.url === "/api/sources/import") {
+        const result = sources.start(await readOwnerJson(req));
+        res
+          .writeHead(202, { "Content-Type": "application/json" })
+          .end(JSON.stringify(result));
+        return;
+      }
+      if (req.method === "POST" && req.url === "/api/sources/open") {
+        const result = await sources.open(
+          await readOwnerJson(req),
+          controller.signal,
+        );
+        res
+          .writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify(result));
+        return;
+      }
+      if (req.method === "POST" && req.url === "/api/sources/cancel") {
+        res
+          .writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify(sources.cancel()));
+        return;
+      }
+      const sourceAction = req.url?.match(
+        /^\/api\/sources\/(downloads|desktop)\/([a-f0-9-]{36})(?:\/(locate))?$/,
+      );
+      if (sourceAction && req.method === "DELETE" && !sourceAction[3]) {
+        await sources.delete(
+          { destination: sourceAction[1], variantId: sourceAction[2] },
+          controller.signal,
+        );
+        res.writeHead(204).end();
+        return;
+      }
+      if (
+        sourceAction &&
+        req.method === "POST" &&
+        sourceAction[3] === "locate"
+      ) {
+        const result = await sources.locate(
+          { destination: sourceAction[1], variantId: sourceAction[2] },
+          (id, signal) => receiveSource(id, req, signal),
+          controller.signal,
+        );
+        res
+          .writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify(result));
+        return;
+      }
       if (req.method === "GET" && req.url === "/api/agent/status") {
         const workspace = [...workspaces.values()].find(
           (value) => !closingWorkspaces.has(value.id),
@@ -339,7 +484,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           return;
         }
         if (req.method === "POST" && savedDraft[2] === "open") {
-          if (uploading || workspaces.size) {
+          if (uploading || workspaces.size || sources.active) {
             res.writeHead(409).end();
             return;
           }
@@ -382,7 +527,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         return;
       }
       if (req.method === "POST" && req.url === "/api/source") {
-        if (uploading || workspaces.size >= 1)
+        if (uploading || workspaces.size >= 1 || sources.active)
           throw new Error("workspace_busy");
         const size = Number(req.headers["content-length"]);
         if (
@@ -396,23 +541,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         try {
           await requireDisk(options.root, size * 2);
           newId = await files.create();
-          const file = await open(
-            await files.file(newId, "source.mp4"),
-            "wx",
-            0o600,
-          );
-          try {
-            let received = 0;
-            for await (const chunk of req) {
-              controller.signal.throwIfAborted();
-              received += chunk.length;
-              if (received > size) throw new Error("invalid_source");
-              await file.writeFile(Buffer.from(chunk));
-            }
-            if (received !== size) throw new Error("invalid_source");
-          } finally {
-            await file.close();
-          }
+          await receiveSource(newId, req, controller.signal);
           const inspected = await options.media(
             { workspaceId: newId, operation: "inspect" },
             controller.signal,
@@ -903,7 +1032,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
       if (!res.destroyed)
         res
           .writeHead(
-            error instanceof Error && error.message === "stale_edit_revision"
+            error instanceof Error &&
+              ["stale_edit_revision", "source_operation_busy"].includes(
+                error.message,
+              )
               ? 409
               : 400,
             { "Content-Type": "application/json" },
@@ -921,6 +1053,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       clearInterval(expiryTimer);
       for (const c of controllers) c.abort();
       server.closeAllConnections();
+      await sources.close();
       await storage?.cancelPending();
       await Promise.allSettled([...tasks]);
       await expiryTask;

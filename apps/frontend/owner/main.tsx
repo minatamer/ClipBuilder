@@ -9,10 +9,13 @@ import { OwnerSelectionPanel } from "./selection-panel.tsx";
 import type { OwnerMomentExport } from "../../../packages/contracts/owner/selection.ts";
 import { OwnerClipBatchPanel } from "./clip-batch-panel.tsx";
 import { OwnerDraftPanel } from "./draft-panel.tsx";
+import { OwnerAcquisitionPanel } from "./acquisition-panel.tsx";
 
 function OwnerWorkspaceView() {
   const [workspace, setWorkspace] = useState<OwnerWorkspace | null>(null);
   const [busy, setBusy] = useState(true);
+  const [acquisitionBusy, setAcquisitionBusy] = useState(false);
+  const blocked = busy || acquisitionBusy;
   const [message, setMessage] = useState(
     "Choose an MP4 to open a private local processing copy.",
   );
@@ -30,6 +33,18 @@ function OwnerWorkspaceView() {
       setClearBlocked(false);
       setMessage(
         "Saved draft reopened locally. Source, timed words and edits were verified; no AI work was replayed.",
+      );
+    },
+    [choose],
+  );
+  const sourceOpened = useCallback(
+    (value: OwnerWorkspace) => {
+      setWorkspace(value);
+      choose([]);
+      setClipWork(false);
+      setClearBlocked(false);
+      setMessage(
+        "The complete saved source is ready locally. Choose manual ranges and discovery settings; no AI work was started by opening it.",
       );
     },
     [choose],
@@ -64,7 +79,7 @@ function OwnerWorkspaceView() {
     return () => controller.abort();
   }, []);
   async function upload(file: File | undefined) {
-    if (!file || busy) return;
+    if (!file || blocked) return;
     setBusy(true);
     setMessage("Copying and inspecting locally…");
     try {
@@ -88,7 +103,7 @@ function OwnerWorkspaceView() {
     }
   }
   async function clear(discardUnsaved = false) {
-    if (!workspace || busy || clipWork) return;
+    if (!workspace || blocked || clipWork) return;
     setBusy(true);
     try {
       const response = await fetch(`/api/workspace/${workspace.id}`, {
@@ -137,10 +152,16 @@ function OwnerWorkspaceView() {
       </p>
       <OwnerDraftPanel
         workspace={workspace}
-        busy={busy}
+        busy={blocked}
         active={clipWork}
         onBusy={setBusy}
         onOpen={opened}
+      />
+      <OwnerAcquisitionPanel
+        workspace={workspace}
+        busy={busy || clipWork}
+        onBusy={setAcquisitionBusy}
+        onOpen={sourceOpened}
       />
       {!workspace ? (
         <label className="file">
@@ -148,7 +169,7 @@ function OwnerWorkspaceView() {
           <input
             type="file"
             accept="video/mp4"
-            disabled={busy}
+            disabled={blocked}
             onChange={(event) => {
               void upload(event.target.files?.[0]);
               event.target.value = "";
@@ -160,7 +181,7 @@ function OwnerWorkspaceView() {
           <OwnerSelectionPanel
             key={workspace.id}
             workspace={workspace}
-            busy={busy || clipWork}
+            busy={blocked || clipWork}
             onBusy={setBusy}
             onChoose={choose}
           />
@@ -186,12 +207,12 @@ function OwnerWorkspaceView() {
             onActive={setClipWork}
           />
           <nav aria-label="Workspace actions">
-            <button disabled={busy || clipWork} onClick={() => void clear()}>
+            <button disabled={blocked || clipWork} onClick={() => void clear()}>
               Clear processing workspace
             </button>
             {clearBlocked && (
               <button
-                disabled={busy || clipWork}
+                disabled={blocked || clipWork}
                 onClick={() => void clear(true)}
               >
                 Discard unsaved session and clear

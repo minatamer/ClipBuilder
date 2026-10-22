@@ -124,6 +124,25 @@ is unchanged. Published hashes are recorded, but no tools were downloaded,
 installed or executed. Broker/tool/runtime compliance, source/method rights,
 maximum capacity and actual quality/latency remain owner-only unverified gates.
 
+CL-023 implementation: the isolated fake entry now supports link lookup,
+explicit offered-quality inspection, exact selection and a host-owned background
+import into the ordinary range/discovery/multi-clip/editor flow. Fake offers
+generate a complete 16-second source at actual 720p/1080p/2160p dimensions; they
+never download the linked video. Native proofs also cover portrait and lossless
+VP9/Opus remux/browser decode. Saved masters/strict private sidecars live under
+the OS-resolved Downloads library or an explicitly chosen Desktop library,
+outside Git. Alias lookup and a URL-free chooser validate/reopen intact saved
+bytes before any acquisition/provider gate, including with those ports absent
+after restart. No refresh/clear/render automatically reacquires a source.
+Source deletion requires an empty workspace and protects shared/draft-backed
+masters. The separate yt-dlp/Deno adapter and public-IP-pinning CONNECT broker
+are implemented/tested with synthetic process/network ports but remain
+uncomposed; no actual binaries, source clearance or retrieval were tested.
+All five root gates, five native proofs and public artifact exclusion pass.
+Real source quality/access/capacity, actual tool/runtime/proxy compliance and
+owner live AI activation/acceptance remain separate CL-024/CL-025 checkpoints.
+See the [local source guide](../apps/backend/owner/SOURCE_ACQUISITION.md).
+
 ## Owner local workflow planning instruction — 2026-10-22
 
 The owner requests research and fresh tickets for personal local-only controls:

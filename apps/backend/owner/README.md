@@ -5,8 +5,10 @@ Next routes and Docker contexts. CL-017–020 deliver one source preview,
 manual ranges alongside duration-controlled fake discovery, a bounded list of
 automatic clip edits, caption/picture adjustments, opt-in saved drafts, private
 loopback access and temporary workspace cleanup. CL-021 adds a protected local
-agent CLI using the same edit/export coordinator. AI is simulated; native video
-processing is real. Downloaded-source reuse follows in later tickets.
+agent CLI using the same edit/export coordinator. CL-023 adds synthetic linked
+source import and durable offline source reuse. AI/acquisition are simulated;
+native video processing is real. See the [source guide](SOURCE_ACQUISITION.md)
+for exact quality choices, Downloads/Desktop storage and dormant real-tool gates.
 
 From the repository root, prepare the free Windows x64 FFmpeg 9.0.2 portable
 tools once, then build:
@@ -62,8 +64,9 @@ malformed/oversized sources. The workspace expires after two hours; active work
 defers expiry. Clear and shutdown drain owned work and streams before removing
 only owned OS-temp copies. Saved source masters, retained demo assets,
 diagnostic captures, private logs, drafts and exports are never scratch cleanup
-targets. An explicit first Save creates the private Downloads library described
-below; ordinary upload and session-only editing create no persistent library.
+targets. Explicit source Import publishes a reusable master/sidecar; a first
+Save draft retains its own source, draft and exports as described below.
+Ordinary upload and session-only editing create no persistent library.
 Browser downloads are explicit and remain outside workspace cleanup.
 
 The authenticated local API accepts `POST /api/workspace/{id}/analysis` with

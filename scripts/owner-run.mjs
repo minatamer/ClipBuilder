@@ -59,6 +59,11 @@ try {
 } catch {
   /* Draft routes remain unavailable; no location fallback. */
 }
+try {
+  state.desktopStorageRoot = await resolveOwnerStorage("desktop");
+} catch {
+  /* Explicit Desktop saving remains unavailable; never choose another path. */
+}
 await writeFile(stateFile, JSON.stringify(state), { flag: "wx", mode: 0o600 });
 const children = [];
 const identities = new Map();

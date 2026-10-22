@@ -79,6 +79,7 @@ async function fixture() {
       },
       overlayBundle: join(temporary, "synthetic-overlay"),
       chromium: join(temporary, "synthetic-chrome"),
+      desktopStorageRoot: join(temporary, "synthetic-desktop", "ClipBuilder"),
     }),
   );
   return directory;
@@ -131,6 +132,13 @@ it("rejects unknown fields, escaped paths, malformed or oversized records with o
   await writeFile(pointer(), JSON.stringify(good));
   const stateFile = join(runtime, "state.json");
   const state = JSON.parse(await readFile(stateFile, "utf8"));
+  await writeFile(
+    stateFile,
+    JSON.stringify({ ...state, desktopStorageRoot: "relative-desktop" }),
+  );
+  await expect(discoverOwnerHost(options())).rejects.toThrow(
+    /^owner_host_unavailable$/,
+  );
   await writeFile(
     stateFile,
     JSON.stringify({ ...state, root: join(temporary, "outside") }),

@@ -1,7 +1,7 @@
 # CL-023 — Download a YouTube source in the background at the chosen resolution
 
-Status: dependency-ready for fake/synthetic implementation after CL-022's
-recorded technical go; real acquisition remains unavailable. Follow the
+Status: implemented and validated in the authorized fake/synthetic lane;
+real acquisition remains unavailable. Follow the
 [acquisition ADR](../architecture/LOCAL_SOURCE_ACQUISITION.md), including exact
 formats, Deno challenge runtime, egress broker, MP4 boundary and offline reuse.
 Source-specific rights/method permission and actual tools/network remain
@@ -165,43 +165,49 @@ URLs, identifiers, titles, filenames, stderr and media out of ordinary logs.
 
 ## Acceptance and verification
 
-- [ ] Cleared method is implemented exactly; unavailable/private/unsupported
+Checked items below describe injected acquisition/native synthetic evidence,
+not actual YouTube access or source/method clearance. The final real-source
+checkpoint remains unchecked and is carried into CL-025.
+
+- [x] The chosen technical method has a dormant, source-permit-gated adapter;
+      unavailable/private/unsupported
       sources return an actionable safe result without false quality claims.
-- [ ] Paste a link, choose one actual offered resolution and reach source-ready
+- [x] Paste a link, choose one offered synthetic resolution and reach source-ready
       with automatic download/merge/inspection and no manual file
       download/upload step. The same source then supports manual ranges and
       independent discovery.
-- [ ] Best available selects the highest accessible resolution; exact 720p,
+- [x] Best available selects the highest offered resolution; exact 720p,
       1080p and 2160p choices are covered with synthetic format lists, along
       with portrait dimensions, missing tiers and format changes after
       inspection. No case silently downgrades, upscales or drops audio.
-- [ ] Default successful source placement is the actual Downloads known folder,
-      outside Git, including a redirected-folder test; an explicit Desktop
-      destination also works. No source bytes/sidecars appear in build
+- [x] Default source placement resolves the actual Downloads known folder,
+      outside Git, with redirected-folder tests and isolated synthetic
+      publication; an explicit Desktop destination also works. Actual owner
+      Downloads publication remains a CL-025 check. No source bytes/sidecars appear in build
       artifacts.
-- [ ] Repeat the same link/resolution after closing/restarting: validate and
+- [x] Repeat the same link/resolution after closing/restarting: validate and
       reuse the saved source with exactly zero media download calls. Alias URLs,
       a stale Best available record and explicit online refresh cannot trigger
       redownload of an intact matching variant.
-- [ ] With the platform unavailable and all provider/paid/cloud features off,
+- [x] With the acquisition port absent and all provider/paid/cloud features off,
       both Use saved video and a repeated matching link reach source-ready with
       zero external metadata, downloader or provider calls. Reopening another
       range and a later AI/export failure still preserve the complete saved
       input.
-- [ ] Cover a missing/damaged/moved file, changed resolution, duplicate import,
+- [x] Cover a missing/damaged/moved file, changed resolution, duplicate import,
       partial transfer and variant failure. Workspace close/clear/expiry
       preserves completed sources; explicit targeted deletion removes only the
       chosen file and its owned sidecar after active readers drain.
-- [ ] Synthetic metadata/byte fixtures prove quality selection, separate-stream
+- [x] Synthetic metadata/byte fixtures prove quality selection, separate-stream
       handling, offsets, codec/HDR rejection, partial transfer and bounded disk
       use.
-- [ ] Validate malicious URLs, redirect/DNS changes, shell characters,
+- [x] Validate malicious URLs, redirect/DNS changes, shell characters,
       tool-config injection, oversized output and cancellation/orphan cleanup
       without real sites.
-- [ ] Imported source reaches the same manual-range/discovery/multi-clip
+- [x] Imported source reaches the same manual-range/discovery/multi-clip
       workflow as a local file; proxy creation never replaces the export-quality
       master.
-- [ ] Unit/integration tests use fake/paid-off, intercepted network and exact
+- [x] Unit/integration tests use fake/paid-off, intercepted network and exact
       zero provider/cloud calls. Run root five gates and public artifact
       exclusion proof.
 - [ ] Only after separate owner authorization, verify one cleared real source's
@@ -210,12 +216,93 @@ URLs, identifiers, titles, filenames, stderr and media out of ordinary logs.
 
 ## Documentation and gates
 
-Update the local source guide, cleared-method/tooling ADR, privacy/cleanup
-notes, source of truth and index. Current `FAKE_MODE=true`/no-key operation is
-synthetic and has no link import. Future authorized downloading/encoding may
+The local source guide, acquisition ADR, privacy/cleanup notes, source of truth
+and index are updated. Current `FAKE_MODE=true`/no-key operation has synthetic
+link import, saved-source reuse and actual local native media processing.
+Future authorized downloading/encoding may
 need no AI API key but still needs network, ready tools and source/method
 permission. Actual automatic analysis needs real keys, enabled flags and
 rights/data/spend approval; no local AI model/weights/runtime is supplied.
-CL-022 clearance, capacity, tool readiness, real source quality and owner
-acceptance are unchecked. No Git, paid call, installation, app launch, cloud
-update or deployment authorization.
+Source-specific clearance, maximum capacity, real downloader/runtime readiness,
+real source quality and owner acceptance remain unchecked. The later AFK
+authorization permits synthetic local tests/launches and this ticket's commit;
+no push, real retrieval, installation, paid/provider/cloud action or deployment.
+
+## Implementation and validation record — 2026-10-22
+
+- Owner contracts bind canonical source identity, metadata revision, exact
+  video/audio format rows, quality/audio choice, full-source offset and explicit
+  synthetic/acquired provenance. Best ranks before compatibility; exact tiers
+  never use ceilings or fallback selectors. Upstream original/default markers
+  are mapped from the pinned extractor; ambiguity requires a concrete choice.
+- Local lookup/list/open run without acquisition/provider adapters. Version-1
+  bounded adjacent records and streamed SHA256 masters survive app restart and
+  workspace cleanup. Atomically published masters match the saved-draft source
+  convention. Hash/native validation precedes reuse. Missing/moved files require
+  an explicit frozen-digest match; existing damaged masters are not overwritten.
+  Source deletion requires an empty workspace, drains readers and protects
+  shared variants/draft backups. No automatic completed-source deletion.
+- The isolated UI implements lookup before metadata, explicit refresh/rights
+  acknowledgement, Best/exact offered variants, Downloads or explicit Desktop,
+  background phases, cancel, URL-free saved chooser, locate and delete. Unknown
+  totals stay indeterminate; known transfer totals are projected. Refresh
+  reconnects to host-owned work without resubmission. Duplicate active requests
+  share one action; a later explicit retry is allowed after terminal cleanup.
+- Actual native generation at each selected synthetic dimension enters the same
+  typed lossless remux/inspection path. Acquisition alone admits supported
+  local WebM components; normal upload/public boundaries remain unchanged.
+  Codec/dimension/FPS/audio/duration, source digest and complete decode precede
+  publication. Protected worker phase samples expose the real inspection
+  interval; samples do not start/retry media work.
+- The dormant pinned yt-dlp/Deno adapter uses fixed argv/private stdin,
+  bounded strict projections, minimal environment, no ambient configs/plugins/
+  cookies/remote components/updates/exec/retries and exact selected IDs.
+  It rechecks offered descriptors before transfer. An authenticated job-owned
+  CONNECT broker checks every target/DNS answer and pins public IPs. Synthetic
+  processes verify stdin framing, output limits and owned-child-tree cancel;
+  injected network tests cover authentication, prohibited targets and rebinding.
+  This is not an OS sandbox or actual tool-compliance/access proof.
+- Resource admission reserves phased component/merge/publication bytes, 32MiB
+  overhead and the per-volume 10GiB free reserve under 20GiB scratch. Component
+  totals are rechecked before merging; near-limit sources can fail capacity
+  instead of dropping quality. Fixed runtime/output/rate/catalog limits are in
+  the [source guide](../../apps/backend/owner/SOURCE_ACQUISITION.md).
+- Read-only validation/fix/revalidation resolved metadata admission/shutdown,
+  response-header ordering, signal/parser/broker cleanup, upstream codec names,
+  Desktop discovery, in-flight cancel acknowledgement, accurate native phases,
+  source-delete/draft-save exclusion and explicit terminal retries. Latest
+  review has no actionable findings in the authorized implementation scope.
+- Verification: owner suite 307 tests before the final retry case; focused final
+  coordinator/API regressions 9 pass; the final root unit gate includes all
+  current owner files and passes **1,564 tests across 135 files**. All five root
+  gates pass: format, lint, typecheck, unit and public build. Final owner build
+  passes. Public exclusion passes **1,490 built files**, Docker context rules
+  and compiler roots; no container build/deploy claim.
+- Native `owner:proof`: **5 tests across 4 files**, 93.72s. New proofs cover
+  720p/1080p/2160p/portrait full 16s sources, exact offline reinspection and
+  mismatch rejection, VP9/Opus packet hashes preserved into MP4, installed
+  Chrome frame decode/seek, combined H.264/AAC remux and observable inspection.
+  Existing range/batch/editor/agent proofs remain green. These are generated
+  synthetic media mechanics, not real editorial quality or capacity benchmarks.
+- Browser trial: Best generated 3840×2160 source; refresh during import;
+  two manual 90-frame cuts plus an independent 300-frame fake suggestion;
+  three distinct native exports and editor review; clear/alias local lookup;
+  full process restart and saved-source open without a URL; exact 1080p explicit
+  Desktop publication; late cancel preserves completed source; another active
+  native import reaches canceling/canceled while prior masters survive.
+- Both hidden launches shut down with HTTP204, zero captured owned survivors
+  and zero 4100/4200 listeners. Workspace/capability/discovery files are gone;
+  browser tab closed. Only the exact isolated synthetic libraries/test launcher
+  were removed. Retained real masters/captures/private logs were untouched.
+  Content-safe logs/evidence remain outside Git in
+  `C:/Users/minat/AppData/Local/Temp/clipbuilder-cl023-manual-e49e3ffbcac3441f81e9ff34600b0103`,
+  `C:/Users/minat/AppData/Local/Temp/clipbuilder-owner-runtime-UQtpQ6` and
+  `C:/Users/minat/AppData/Local/Temp/clipbuilder-owner-runtime-ek899W`.
+
+Deviation: acquisition deliberately starts with the narrower proven
+H.264/VP9 + AAC/Opus profile; unsupported alternatives remain visible rather
+than widening decoders. Source-specific permission/access, actual pinned
+binary/runtime/EJS/proxy compliance, real quality/latency, maximum disk/CPU
+behavior and owner-only live AI remain unperformed. Real owner AI input/adapters
+and activation readiness still require CL-024 reconciliation; keys/flags alone
+do not implement that missing composition. No offline AI model is supplied.

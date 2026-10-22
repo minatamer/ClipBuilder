@@ -8,6 +8,7 @@ import {
   ownerAiModeSchema,
 } from "./policy.ts";
 import { ownerOverlaySchema, ownerOutputRevisionSchema } from "./clips.ts";
+import { ownerAcquisitionDescriptorSchema } from "./acquisition-profile.ts";
 export {
   OWNER_LIMITS,
   ownerIdSchema,
@@ -42,6 +43,31 @@ export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
   z
     .object({
       workspaceId: ownerIdSchema,
+      jobId: ownerIdSchema.optional(),
+      operation: z.literal("synthesize-acquisition"),
+      expected: ownerAcquisitionDescriptorSchema,
+    })
+    .strict(),
+  z
+    .object({
+      workspaceId: ownerIdSchema,
+      jobId: ownerIdSchema.optional(),
+      operation: z.literal("prepare-acquisition"),
+      expected: ownerAcquisitionDescriptorSchema,
+      combined: z.boolean().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      workspaceId: ownerIdSchema,
+      jobId: ownerIdSchema.optional(),
+      operation: z.literal("inspect-acquisition"),
+      expected: ownerAcquisitionDescriptorSchema,
+    })
+    .strict(),
+  z
+    .object({
+      workspaceId: ownerIdSchema,
       operation: z.literal("inspect"),
       jobId: ownerIdSchema.optional(),
     })
@@ -73,6 +99,17 @@ export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
 ]);
 export type OwnerMediaJob = z.infer<typeof ownerMediaJobSchema>;
 export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
+  z
+    .object({
+      operation: z.enum([
+        "synthesize-acquisition",
+        "prepare-acquisition",
+        "inspect-acquisition",
+      ]),
+      source: ownerSourceSchema,
+      descriptor: ownerAcquisitionDescriptorSchema,
+    })
+    .strict(),
   z
     .object({
       operation: z.literal("clip"),

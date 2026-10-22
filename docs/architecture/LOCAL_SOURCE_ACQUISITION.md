@@ -94,6 +94,12 @@ rendition is unsupported, stop visibly and offer an explicit alternative.
 Never silently redefine Best as Best compatible. Exact numeric tiers require
 equality, with concrete variant rows where FPS/HDR/audio differ.
 
+CL-023's deterministic codec tie order is AV1, VP9, HEVC, H.264, then VP8.
+This is only a tie-break after the preceding quality dimensions; it is not a
+compatibility filter or a fidelity claim. Original/default audio roles map
+only reviewed upstream markers; unknown or ambiguous tracks require a concrete
+owner selection. A format choice is rechecked immediately before real transfer.
+
 Bind selection to canonical source identity, metadata revision, exact video/
 audio IDs and descriptors. Select the original/default audio deliberately;
 unknown/multiple ambiguous tracks need an explicit choice. No silent dubbing,
@@ -102,11 +108,14 @@ fallback operators or ceiling/preference selectors. If availability or the
 downloaded descriptors change, reject the stale choice and require another
 explicit selection. [Format selection](https://github.com/yt-dlp/yt-dlp#format-selection).
 
-The current boundary is full-source SDR MP4, one video and one audio stream,
+The existing upload boundary is full-source SDR MP4, one video and one audio stream,
 H.264/VP8/VP9 with AAC/Opus/Vorbis, admitted 8-bit pixel formats, mono/stereo
 ≤48kHz, 12–60fps, ≤60 minutes/10GiB, ≤3840 per dimension and ≤3840×2160 pixels.
 AV1/HEVC, HDR, live/upcoming/incomplete live archives and account/DRM-gated
-sources stop safely. Add explicit owner codec membership checks after probing.
+sources stop safely. CL-023 adds explicit owner codec membership checks after probing.
+The new acquisition profile is deliberately narrower: H.264/VP9 plus AAC/Opus.
+VP8/Vorbis stay visible as unsupported acquisition choices; ordinary upload and
+public decoder boundaries do not widen.
 
 Acquired supported WebM components may enter a narrowly typed, local-file-only
 lossless MP4 remux; normal upload/public demuxer boundaries do not widen.

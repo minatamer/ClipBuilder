@@ -62,18 +62,19 @@ describe("isolated owner host", () => {
     await mkdir(root);
     await mkdir(ui);
     await writeFile(join(ui, "index.html"), "synthetic UI");
-    media = vi.fn(async (job) =>
-      job.operation === "inspect"
-        ? { operation: "inspect", source }
-        : {
-            operation: "portrait",
-            bytes: 10,
-            frames: job.cut.endFrame - job.cut.startFrame,
-            durationMs: Math.round(
-              ((job.cut.endFrame - job.cut.startFrame) * 1000) / 30,
-            ),
-          },
-    );
+    media = vi.fn(async (job) => {
+      if (job.operation === "inspect") return { operation: "inspect", source };
+      if (job.operation !== "portrait" && job.operation !== "clip")
+        throw new Error("unexpected_media_operation");
+      return {
+        operation: "portrait",
+        bytes: 10,
+        frames: job.cut.endFrame - job.cut.startFrame,
+        durationMs: Math.round(
+          ((job.cut.endFrame - job.cut.startFrame) * 1000) / 30,
+        ),
+      };
+    });
     shutdown = vi.fn();
     analysis = {
       mode: "synthetic-ai",

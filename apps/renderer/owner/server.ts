@@ -16,6 +16,12 @@ import {
   type OwnerNativeTools,
 } from "./media.ts";
 import { renderOwnerClip, type OwnerCutCache } from "./clip-render.ts";
+import {
+  inspectOwnerAcquisition,
+  prepareOwnerAcquisition,
+  synthesizeOwnerAcquisition,
+} from "./acquisition-media.ts";
+import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/owner/acquisition-profile.ts";
 
 export function createOwnerWorker(options: {
   root: string;
@@ -31,7 +37,13 @@ export function createOwnerWorker(options: {
   const cache: OwnerCutCache = new Map();
   const controllers = new Set<AbortController>();
   const tasks = new Set<Promise<void>>();
-  let current: { id: string; controller: AbortController } | undefined;
+  let current:
+    | {
+        id: string;
+        controller: AbortController;
+        stage: OwnerAcquisitionNativeStage | null;
+      }
+    | undefined;
   let closing = false;
   const pendingCancel = new Set<string>();
   let busy = false;
@@ -53,6 +65,18 @@ export function createOwnerWorker(options: {
     }
     if (req.method === "GET" && req.url === "/health") {
       res.writeHead(200).end('{"mode":"fake","cloud":false}');
+      return;
+    }
+    const progress = req.url?.match(/^\/progress\/([a-f0-9-]{36})$/);
+    if (req.method === "GET" && progress) {
+      const active = current;
+      if (!active || active.id !== progress[1] || !active.stage) {
+        res.writeHead(404).end();
+        return;
+      }
+      res
+        .writeHead(200, { "Content-Type": "application/json" })
+        .end(JSON.stringify({ stage: active.stage }));
       return;
     }
     if (req.method === "POST" && req.url === "/cancel") {
@@ -86,7 +110,21 @@ export function createOwnerWorker(options: {
     try {
       const job = await readJob(req);
       const key = job.jobId ?? `${job.workspaceId}:${job.operation}`;
-      current = { id: key, controller };
+      current = {
+        id: key,
+        controller,
+        stage:
+          job.operation === "inspect-acquisition"
+            ? "inspecting"
+            : job.operation === "synthesize-acquisition"
+              ? "video"
+              : job.operation === "prepare-acquisition"
+                ? "merging"
+                : null,
+      };
+      const stage = (value: OwnerAcquisitionNativeStage) => {
+        if (current?.id === key) current.stage = value;
+      };
       if (pendingCancel.has(key)) controller.abort();
       pendingCancel.delete(key);
       const source = await ownerMediaPath(
@@ -106,30 +144,60 @@ export function createOwnerWorker(options: {
               operation: "inspect",
               source: await inspectOwnerSource(source, options.tools, signal),
             }
-          : job.operation === "clip"
-            ? await renderOwnerClip(
-                {
-                  root: options.root,
-                  tools: options.tools,
-                  chromium: options.chromium ?? "",
-                  bundle: options.overlayBundle ?? "",
-                  cache,
-                },
-                job,
-                signal,
-              )
-            : await ownerPortrait(
-                source,
-                await ownerMediaPath(
+          : job.operation === "prepare-acquisition"
+            ? {
+                operation: job.operation,
+                ...(await prepareOwnerAcquisition(
                   options.root,
                   job.workspaceId,
-                  "portrait.mp4",
-                ),
-                options.tools,
-                signal,
-                job.cut,
-                job.fingerprint,
-              );
+                  job.expected,
+                  options.tools,
+                  signal,
+                  job.combined ?? false,
+                  stage,
+                )),
+              }
+            : job.operation === "synthesize-acquisition" ||
+                job.operation === "inspect-acquisition"
+              ? {
+                  operation: job.operation,
+                  ...(await (
+                    job.operation === "synthesize-acquisition"
+                      ? synthesizeOwnerAcquisition
+                      : inspectOwnerAcquisition
+                  )(
+                    options.root,
+                    job.workspaceId,
+                    job.expected,
+                    options.tools,
+                    signal,
+                    stage,
+                  )),
+                }
+              : job.operation === "clip"
+                ? await renderOwnerClip(
+                    {
+                      root: options.root,
+                      tools: options.tools,
+                      chromium: options.chromium ?? "",
+                      bundle: options.overlayBundle ?? "",
+                      cache,
+                    },
+                    job,
+                    signal,
+                  )
+                : await ownerPortrait(
+                    source,
+                    await ownerMediaPath(
+                      options.root,
+                      job.workspaceId,
+                      "portrait.mp4",
+                    ),
+                    options.tools,
+                    signal,
+                    job.cut,
+                    job.fingerprint,
+                  );
       res
         .writeHead(200, {
           "Content-Type": "application/json",

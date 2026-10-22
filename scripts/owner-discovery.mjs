@@ -206,7 +206,7 @@ async function readRuntime(ctx, runtime) {
       "overlayBundle",
       "chromium",
     ],
-    ["storageRoot"],
+    ["storageRoot", "desktopStorageRoot"],
   );
   shape(state.tools, ["ffmpeg", "ffprobe"]);
   if (
@@ -222,6 +222,8 @@ async function readRuntime(ctx, runtime) {
       state.tools.ffprobe,
     ].every(pathValue) ||
     (state.storageRoot !== undefined && !pathValue(state.storageRoot)) ||
+    (state.desktopStorageRoot !== undefined &&
+      !pathValue(state.desktopStorageRoot)) ||
     state.root !== join(runtime, "workspaces")
   )
     throw error();

@@ -15,6 +15,10 @@ import {
 import { probeMedia, SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { runOwnedProcess } from "../src/media/process-runner.ts";
 import { ownerOutputRevisionSchema } from "../../../packages/contracts/owner/clips.ts";
+import {
+  videoCodecSchema,
+  audioCodecSchema,
+} from "../../../packages/contracts/src/media.schema.ts";
 
 export type OwnerNativeTools = { ffmpeg: string; ffprobe: string };
 export async function ownerMediaPath(
@@ -45,6 +49,18 @@ export async function ownerAssetMediaPath(
 ) {
   ownerIdSchema.parse(assetId);
   return admittedMediaPath(root, id, `${assetId}.jpg`);
+}
+export async function ownerAcquisitionMediaPath(
+  root: string,
+  id: string,
+  kind: "video" | "audio" | "merged",
+) {
+  ownerIdSchema.parse(id);
+  return admittedMediaPath(
+    root,
+    id,
+    kind === "merged" ? "acquisition.merged.mp4" : `acquisition.${kind}`,
+  );
 }
 async function admittedMediaPath(
   root: string,
@@ -88,6 +104,8 @@ async function inspectOwnerMedia(
   if (
     !video ||
     !audio ||
+    !videoCodecSchema.safeParse(video.codec_name).success ||
+    !audioCodecSchema.safeParse(audio.codec_name).success ||
     !video.width ||
     !video.height ||
     !video.avg_frame_rate ||

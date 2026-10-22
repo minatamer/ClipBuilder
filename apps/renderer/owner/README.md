@@ -16,6 +16,25 @@ audio offsets stay on that video clock, preserving silence inside the source.
 Exact output frame counts and full decode are checked before publication. No
 speech stretching, frozen extension or out-of-source padding meets AI bounds.
 
+The linked-source path adds fixed synthetic generation, component preparation
+and acquisition inspection jobs. Fake acquisition generates the selected
+720p/1080p/2160p dimensions for a complete 16-second source at 30fps. The private
+merge accepts only admitted WebM/MP4 video/audio components, then losslessly
+muxes H.264/VP9 plus AAC/Opus into a complete SDR MP4. Native inspection checks
+the selected dimensions, FPS, duration and audio descriptor, hashes the result
+and fully decodes it before publication. This narrow path does not broaden
+normal upload or public renderer inputs. Final portrait clips keep their fixed
+1080×1920/30fps output profile.
+
+The control host owns the persistent source library and its private sidecars;
+this worker reads only admitted workspace copies. Opening a saved source runs
+native validation without downloading or calling AI. Missing/damaged copies
+cannot enter processing. See the
+[source acquisition guide](../../backend/owner/SOURCE_ACQUISITION.md) for the
+offline chooser, Downloads/Desktop destinations, phase-specific disk admission
+and real-tool gates. The real downloader remains uncomposed and unverified;
+native synthetic acquisition is local and needs no API keys or ADC.
+
 The multi-clip path retains a normalized portrait cut per clip, bound to the
 source fingerprint, selected range and actual cut-file digest. Re-export reuses
 that cut and a complete validated overlay compiled from the immutable automatic

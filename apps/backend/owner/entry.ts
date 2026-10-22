@@ -5,6 +5,7 @@ import { createOwnerHost } from "./server.ts";
 import { localWorkerPort } from "./worker-port.ts";
 import { fakeOwnerAnalysis } from "./fake-analysis.ts";
 import { fakeOwnerClipPreparation } from "./fake-clips.ts";
+import { fakeOwnerAcquisition } from "./fake-acquisition.ts";
 
 async function main() {
   assertOwnerFakeMode(process.env);
@@ -17,6 +18,7 @@ async function main() {
       token: z.string().length(64),
       workerToken: z.string().length(64),
       storageRoot: z.string().min(1).optional(),
+      desktopStorageRoot: z.string().min(1).optional(),
     })
     .parse(JSON.parse(await readFile(file, "utf8")));
   const host = createOwnerHost({
@@ -24,10 +26,14 @@ async function main() {
     ui: state.ui,
     token: state.token,
     ...(state.storageRoot ? { storageRoot: state.storageRoot } : {}),
+    ...(state.desktopStorageRoot
+      ? { desktopStorageRoot: state.desktopStorageRoot }
+      : {}),
     port: 4100,
     media: localWorkerPort(4200, state.workerToken),
     analysis: fakeOwnerAnalysis,
     clipPreparation: fakeOwnerClipPreparation,
+    acquisition: fakeOwnerAcquisition,
     shutdown: () => {
       if (process.connected) process.send?.("stop");
       else void close();

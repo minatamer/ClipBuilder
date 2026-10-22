@@ -7,6 +7,22 @@ receives bounded IDs/metadata and relative local media URLs, never filesystem
 paths, credentials or worker capabilities. The session capability is HttpOnly
 and SameSite; mutations also require the exact local Origin.
 
+The source panel accepts an upload, a YouTube link or a saved local source.
+**Look for saved source locally** checks canonical link aliases without a
+metadata request; **Use saved video** opens an intact saved variant without a
+URL, downloader or AI call. New metadata and Import actions are explicit. The
+current fake entry offers 720p, 1080p and 2160p at 30fps, generating a complete
+16-second synthetic source at the chosen dimensions. It does not retrieve the
+linked video. Import then performs real local merging, inspection and saving.
+
+Downloads uses the actual OS known folder; Desktop is an explicit choice for
+new acquisitions. A matching saved source is reused where it already lives.
+The source catalog shows provenance and integrity, warns at 50 GiB and supports
+explicit deletion or locating an exact missing copy. Clearing a workspace or
+deleting a draft preserves saved source masters. See the
+[source acquisition guide](../../backend/owner/SOURCE_ACQUISITION.md) for exact
+quality selection, capacity limits, repair rules and the dormant real downloader.
+
 CL-018 adds up to ten exact source-relative ranges (`HH:MM:SS.mmm`, 1–300
 seconds) alongside independent simulated discovery. Set AI minimum/maximum
 between 10 and 60 seconds; equal bounds request an exact duration. These settings
@@ -78,7 +94,9 @@ explicitly renders the current acknowledged revision with no AI calls. Each
 output is immutable, earlier links remain available and older edit revisions
 are labelled.
 
-Workspaces are session-only until **Save draft locally** succeeds. First save is
+Analysis and edits are session-only until **Save draft locally** succeeds.
+An imported source is already retained independently in the source library.
+First draft save is
 available after active native work finishes; it retains the source master, validated
 analysis/candidates, clip bases, applied edits, normalized assets/cuts and
 completed exports under separate Downloads/ClipBuilder source/draft/export
