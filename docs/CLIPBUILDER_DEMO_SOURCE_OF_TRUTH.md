@@ -169,6 +169,20 @@ workspace and must drain before its local inputs are removed. Real provider
 behavior, cleanup confirmation, latency and visual acceptance remain owner-only
 CL-025 checks; no offline AI weights or real provider tests are supplied.
 
+CL-024 combined evidence now extends one synthetic source through exact 30/60
+and variable discovery policies, three independent native clip exports,
+caption/personal-picture revision changes, headless CLI edits and draft reopen.
+A separate native handoff proof uses actual local provider-input preparation
+and receipt-checked reads with injected Gemini-shaped transports, then native
+edit/re-export. Public request/route negatives and strengthened artifact markers
+protect the deployed boundary. Resource observations include real process/disk
+samples and in-flight native cancellation; they do not establish worst-case
+capacity, two-worker responsiveness or real-provider quality. The
+[operator workflow](operations/LOCAL_OWNER_WORKFLOW.md) and
+[CL-024 ledger](tickets/CL-024-verify-local-owner-workflow-and-build-exclusion.md)
+keep file-based evidence, synthetic linked-source reuse and still-unperformed
+real YouTube/provider/owner acceptance distinct.
+
 ## Owner local workflow planning instruction — 2026-10-22
 
 The owner requests research and fresh tickets for personal local-only controls:

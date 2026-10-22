@@ -34,7 +34,7 @@ for (const directory of [
     )
       continue;
     if (
-      /CLIPBUILDER_OWNER_STATE|owner_fake_mode_required|\/api\/workspace\/|\/api\/agent\/|\/api\/sources\/|clipbuilder-owner-active|acquisition_source_not_cleared|Local owner workspace/.test(
+      /CLIPBUILDER_OWNER_STATE|OWNER_PROVIDER_APPROVED|owner_fake_mode_required|owner_provider_mode_required|prepare-owner-(?:audio|video)|\/api\/workspace\/|\/api\/agent\/|\/api\/sources\/|clipbuilder-owner-active|acquisition_source_not_cleared|Local owner workspace/.test(
         await readFile(file, "utf8"),
       )
     )

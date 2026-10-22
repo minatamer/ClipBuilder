@@ -6,6 +6,9 @@ a Next route and has no public navigation or hosted feature flag. Browser code
 receives bounded IDs/metadata and relative local media URLs, never filesystem
 paths, credentials or worker capabilities. The session capability is HttpOnly
 and SameSite; mutations also require the exact local Origin.
+The [operator workflow](../../../docs/operations/LOCAL_OWNER_WORKFLOW.md) connects
+these controls with source storage, draft recovery, CLI edits and open owner
+acceptance gates.
 
 The browser verifies `/api/capabilities` once before enabling actions. Its header
 and source explanation use the host's explicit AI/source modes; no browser flag,

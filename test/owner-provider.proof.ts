@@ -1,6 +1,14 @@
 import { expect, it } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
-import { lstat, mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { createOwnerWorker } from "../apps/renderer/owner/server.ts";
@@ -384,8 +392,10 @@ it("keeps a sixty-minute audio input and five-minute selected proxy below the ha
       await pause();
     }
     expect(encoding).toBe(true);
+    const cancellationStarted = performance.now();
     expect((await run(canceled, "/cancel")).status).toBe(204);
     expect((await pending).status).toBe(400);
+    const cancellationMs = Math.round(performance.now() - cancellationStarted);
     expect(await readdir(directory)).not.toContain(
       "provider.audio.partial.m4a",
     );
@@ -397,6 +407,18 @@ it("keeps a sixty-minute audio input and five-minute selected proxy below the ha
     expect(
       (await inspectOwnerSource(source, tools, signal())).fingerprint,
     ).toBe(admitted.fingerprint);
+    await mkdir(resolve(".owner-build/evidence"), { recursive: true });
+    await writeFile(
+      resolve(".owner-build/evidence/cl024-native-cancel.json"),
+      JSON.stringify({
+        encodingObserved: encoding,
+        cancellationMs,
+        audioBytes: audio.bytes,
+        videoBytes: video.bytes,
+        audioDurationMs: audio.durationMs,
+        videoDurationMs: video.durationMs,
+      }),
+    );
   } finally {
     await worker.close();
     await rm(root, { recursive: true, force: true });

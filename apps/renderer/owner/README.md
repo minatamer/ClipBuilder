@@ -31,6 +31,9 @@ captures frames serially before FFmpeg muxing starts. Chromium still owns its
 normal engine/utility threads; one page is not a claim that the whole browser is
 single-threaded. CL-024 records observed resource measurements separately from
 these configured work bounds.
+See the [combined evidence ledger](../../../docs/tickets/CL-024-verify-local-owner-workflow-and-build-exclusion.md)
+for sampled working sets/file payload, actual native cancellation and the
+distinction between synthetic encoding and owner-only real-media acceptance.
 
 The linked-source path adds fixed synthetic generation, component preparation
 and acquisition inspection jobs. Fake acquisition generates the selected

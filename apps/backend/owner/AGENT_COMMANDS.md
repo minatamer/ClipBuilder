@@ -6,12 +6,13 @@ It needs no browser tab or hosted service. Build and start that stack using the
 root with one JSON command (at most 32 KiB) on standard input. End standard input after that
 document. There are no command-line flags or capability/path arguments.
 
-Current execution requires `FAKE_MODE=true` and `PAID_DEMO_ENABLED=false`, with
-no API keys or ADC. AI preparation remains synthetic. Manual editing and native
-export use the same validated domain/media paths as the browser; an already
-prepared real bundle can be edited without the AI that made it. Automatic real
-analysis still requires the missing owner provider/input preparation, keys,
-live flags and approvals. No offline AI model is supplied. These commands never
+The CLI itself needs no AI configuration, API keys or ADC. It works with a
+prepared bundle on a fake, provider or AI-unavailable owner host. Manual editing
+and native export use the same validated domain/media paths as the browser;
+saved material can be edited without the AI that made it. The normal owner
+stack remains `FAKE_MODE=true`/`PAID_DEMO_ENABLED=false` with simulated AI.
+Fresh real analysis uses the separately gated provider entry in the host guide
+and remains owner-only. No offline AI model is supplied. These commands never
 start discovery, transcription, picture generation or a cloud render.
 
 ## Inspect and edit

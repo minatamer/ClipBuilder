@@ -10,6 +10,9 @@ source import and durable offline source reuse. Default AI/acquisition are
 simulated; native video processing is real. A separate provider entry is wired
 for later owner activation, with injected-transport verification only. See the [source guide](SOURCE_ACQUISITION.md)
 for exact quality choices, Downloads/Desktop storage and dormant real-tool gates.
+The [local workflow guide](../../../docs/operations/LOCAL_OWNER_WORKFLOW.md)
+connects source selection, manual/AI ranges, review, drafts and safe CLI edits;
+CL-024 records combined evidence and measured limitations.
 
 From the repository root, prepare the free Windows x64 FFmpeg 9.0.2 portable
 tools once, then build:

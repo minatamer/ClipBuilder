@@ -3,9 +3,9 @@
 ## Local owner workflow execution — 2026-10-22
 
 The owner adopted all recommendations and authorized sequential implementation,
-execute/validate/fix loops and a commit per clean ticket. CL-017–023 have local
-implementation/decision evidence; the required real-mode handoff correction is
-validated before CL-024 combined acceptance. All agent checks are synthetic/fake,
+execute/validate/fix loops and a commit per clean ticket. CL-017–024 have local
+implementation/decision/acceptance evidence, including the required real-mode
+handoff correction. CL-025 remains owner-only and unchecked. All agent checks are synthetic/fake,
 paid-off, credential-free and zero-spend. No push, real YouTube retrieval,
 provider/cloud calls or deployment is authorized. Read the
 [latest authorization](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#owner-afk-implementation-authorization--2026-10-22)
@@ -22,7 +22,7 @@ manual acceptance after implementation.
 | 5 | [CL-021](CL-021-enable-agent-access-to-local-edits.md) | Existing chat agent edits through the same validated local use cases and CLI | Implemented; 146 owner tests, three native proofs, 1,502 root tests, five gates and 1,490-file public exclusion pass; headless CLI/native export/cancel and UI synchronization verified |
 | Decision lane | [CL-022](CL-022-decide-youtube-source-feasibility.md) | Research background download, exact resolution choice and saved-source reuse | Decision complete; technical go for fake-only CL-023; yt-dlp/Deno pins and exact/offline design recorded; real source/method/tool/access gates open |
 | Conditional | [CL-023](CL-023-import-approved-high-quality-linked-source.md) | Paste link, choose resolution/Best available, background download to Downloads and reuse saved source | Implemented in fake lane; exact native synthetic sources/offline reuse, five native proofs, 1,564 root tests, five gates and 1,490-file exclusion pass; real acquisition/tools/source gates open |
-| Final local gate | [CL-024](CL-024-verify-local-owner-workflow-and-build-exclusion.md) | Combined offline media/agent checks and public artifact exclusion | CL-017–021; CL-022 decision; CL-023 only if cleared/implemented |
+| Final local gate | [CL-024](CL-024-verify-local-owner-workflow-and-build-exclusion.md) | Combined offline media/agent checks and public artifact exclusion | Implemented/validated in synthetic lane; 1,607 unit tests, eight native proofs, full gates, actual fake browser/headless CLI and 1,490-file exclusion pass; real owner/provider/YouTube gates remain open in CL-025 |
 
 Execute one dependency-ready packet at a time under the latest authorization.
 CL-022's desk research can inform the design independently; the

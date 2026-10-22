@@ -20,6 +20,9 @@ Synthetic success is not real-media, provider or human visual acceptance.
 - [ ] Separately authorize a bounded real YouTube source/acquisition method,
       tool installation if needed, resolution and Downloads destination. Choose
       Best available and an exact offered tier; check actual dimensions/audio.
+      The dormant adapter still needs its reviewed actual composition/tool/source
+      gates completed under CL-023 before a real trial; fake import is not that
+      evidence.
 - [ ] Reopen saved sources after restart and while offline. Verify zero new
       downloads, source preservation after close/failure and source relinking.
 - [ ] Confirm actual owner live adapter composition and local provider-input
@@ -49,3 +52,8 @@ Owner acceptance is complete only with actual owner evidence for each selected
 capability. Report deferred/unavailable cases explicitly; no production launch,
 public build change, cloud deployment, purchase, new paid budget or push follows
 from accepting the local editor. No local AI weights/runtime are provided.
+
+The [local workflow guide](../operations/LOCAL_OWNER_WORKFLOW.md) is the operator
+handoff. CL-024's agent-driven synthetic browser/native/CLI checks do not check
+off these owner-only items. The separately gated Gemini handoff is implemented;
+actual live provider behavior and actual YouTube acquisition remain unperformed.

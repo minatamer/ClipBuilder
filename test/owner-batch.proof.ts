@@ -1,6 +1,13 @@
 import { expect, it } from "vitest";
 import { join, resolve } from "node:path";
-import { mkdtemp, mkdir, readFile, readdir, rm } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createOwnerHost } from "../apps/backend/owner/server.ts";
 import { fakeOwnerAnalysis } from "../apps/backend/owner/fake-analysis.ts";
@@ -24,12 +31,20 @@ import {
   type OwnerAgentPorts,
 } from "../apps/backend/owner/agent-client.ts";
 import type { OwnerAgentCommand } from "../packages/contracts/owner/agent.ts";
+import { sampleOwnerResources } from "./owner-resource-sampler.ts";
 
 it("makes three independent caption/picture MP4s locally, re-exports without AI and preserves their common source", async () => {
   const tools = await ownerNativeTools(resolve(".")),
     directory = await mkdtemp(join(tmpdir(), "clipbuilder-owner-batch-proof-")),
     root = join(directory, "workspaces");
   await mkdir(root);
+  let resources: Awaited<ReturnType<typeof sampleOwnerResources>> | undefined;
+  let completed = false;
+  let cancellationMs: number | null = null;
+  let transcriptions = 0,
+    selections = 0,
+    plans = 0,
+    pictures = 0;
   const worker = createOwnerWorker({
     root,
     token: "proof-worker",
@@ -66,8 +81,28 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     storageRoot: join(directory, "library"),
     port: 0,
     token: "a".repeat(64),
-    analysis: fakeOwnerAnalysis,
-    clipPreparation: fakeOwnerClipPreparation,
+    analysis: {
+      ...fakeOwnerAnalysis,
+      async transcribe(...args) {
+        transcriptions++;
+        return fakeOwnerAnalysis.transcribe(...args);
+      },
+      async select(...args) {
+        selections++;
+        return fakeOwnerAnalysis.select(...args);
+      },
+    },
+    clipPreparation: {
+      ...fakeOwnerClipPreparation,
+      async plan(...args) {
+        plans++;
+        return fakeOwnerClipPreparation.plan(...args);
+      },
+      async image(...args) {
+        pictures++;
+        return fakeOwnerClipPreparation.image(...args);
+      },
+    },
     media: async (job, requestSignal) => {
       nativeCalls++;
       inFlight++;
@@ -83,6 +118,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     auth = { Authorization: `Bearer ${"a".repeat(64)}` },
     json = { ...auth, "Content-Type": "application/json" };
   try {
+    resources = await sampleOwnerResources(directory);
     const input = join(directory, "synthetic.mp4");
     await runOwnedProcess(
       tools.ffmpeg,
@@ -93,11 +129,11 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         "-f",
         "lavfi",
         "-i",
-        "color=c=blue:size=160x90:rate=30:duration=16,drawbox=color=green:t=fill:enable='gte(t,2)',drawbox=color=red:t=fill:enable='gte(t,10)'",
+        "color=c=blue:size=160x90:rate=30:duration=61,drawbox=color=green:t=fill:enable='gte(t,2)',drawbox=color=red:t=fill:enable='gte(t,10)'",
         "-f",
         "lavfi",
         "-i",
-        "sine=frequency=440:sample_rate=48000:duration=16",
+        "sine=frequency=440:sample_rate=48000:duration=61",
         "-c:v",
         "libx264",
         "-pix_fmt",
@@ -120,12 +156,46 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         JSON.parse(uploaded.body.toString()),
       ),
       endpoint = `/api/workspace/${workspace.id}`;
+    for (const [index, bounds] of [
+      { minMs: 30_000, maxMs: 30_000 },
+      { minMs: 60_000, maxMs: 60_000 },
+      { minMs: 20_000, maxMs: 40_000 },
+    ].entries()) {
+      const response = await ownerRequest(port, `${endpoint}/analysis`, {
+        method: "POST",
+        headers: json,
+        body: JSON.stringify({
+          sourceRevision: 0,
+          policyRevision: index + 1,
+          ranges: [
+            { id: crypto.randomUUID(), startMs: 200, endMs: 1200 },
+            { id: crypto.randomUUID(), startMs: 2000, endMs: 4000 },
+          ],
+          aiDuration: bounds,
+          manualOnly: false,
+        }),
+      });
+      expect(response.status).toBe(200);
+      const result = ownerAnalysisSchema.parse(
+        JSON.parse(response.body.toString()),
+      );
+      expect(result.manual.map((moment) => moment.cut)).toEqual([
+        { startFrame: 6, endFrame: 36 },
+        { startFrame: 60, endFrame: 120 },
+      ]);
+      expect(result.suggestions.length).toBeGreaterThan(0);
+      for (const moment of result.suggestions) {
+        const frames = moment.cut.endFrame - moment.cut.startFrame;
+        expect(frames).toBeGreaterThanOrEqual((bounds.minMs * 30) / 1000);
+        expect(frames).toBeLessThanOrEqual((bounds.maxMs * 30) / 1000);
+      }
+    }
     const analyzed = await ownerRequest(port, `${endpoint}/analysis`, {
       method: "POST",
       headers: json,
       body: JSON.stringify({
         sourceRevision: 0,
-        policyRevision: 1,
+        policyRevision: 4,
         ranges: [
           { id: crypto.randomUUID(), startMs: 200, endMs: 1200 },
           { id: crypto.randomUUID(), startMs: 2000, endMs: 4000 },
@@ -143,7 +213,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       operationId: crypto.randomUUID(),
       analysisId: analysis.id,
       sourceRevision: 0,
-      policyRevision: 1,
+      policyRevision: 4,
       momentIds: [...analysis.manual, analysis.suggestions[0]!].map(
         (moment) => moment.id,
       ),
@@ -285,6 +355,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       ).status,
     ).toBe(202);
     expect(nativeCalls).toBe(4);
+    expect([transcriptions, selections, plans, pictures]).toEqual([4, 4, 3, 3]);
     const clip = result.clips[0]!;
     const oldOutput = (
       await ownerRequest(port, `${endpoint}/clips/${clip.id}/output/0`, {
@@ -589,12 +660,15 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       ...target,
       request: { operationId: crypto.randomUUID(), expectedRevision: 2 },
     });
+    const cancellationStarted = performance.now();
     await agent({ command: "cancel", ...target });
     const canceled = await settledAgent();
+    cancellationMs = Math.round(performance.now() - cancellationStarted);
     expect(canceled.state).toBe("canceled");
     expect(canceled.outputs).toEqual(agentExport.outputs);
     expect(canceled.calls.plan).toBe(1);
     expect(canceled.calls.image).toBe(1);
+    expect([transcriptions, selections, plans, pictures]).toEqual([4, 4, 3, 3]);
     expect(
       (
         await ownerRequest(port, `${restoredEndpoint}/source`, {
@@ -602,12 +676,38 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         })
       ).body,
     ).toEqual(await readFile(input));
+    completed = true;
   } finally {
     await host.close();
     await worker.close();
     expect(await readdir(root)).toEqual([]);
     expect(host.server.listening).toBe(false);
     expect(worker.server.listening).toBe(false);
-    await rm(directory, { recursive: true, force: true });
+    try {
+      const measured = await resources?.finish();
+      if (measured) {
+        await mkdir(resolve(".owner-build/evidence"), { recursive: true });
+        await writeFile(
+          resolve(".owner-build/evidence/cl024-batch.json"),
+          JSON.stringify({
+            ...measured,
+            completed,
+            nativePeak: peak,
+            cancellationMs,
+            transcriptions,
+            selections,
+            plans,
+            pictures,
+          }),
+        );
+        if (completed) {
+          expect(measured.survivors).toBe(0);
+          expect(measured.peaks.ffmpegProcesses).toBeLessThanOrEqual(1);
+          expect(measured.samples).toBeGreaterThan(2);
+        }
+      }
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   }
 }, 160_000);
