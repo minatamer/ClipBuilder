@@ -18,12 +18,16 @@ async function main() {
         ffmpeg: z.string().min(1),
         ffprobe: z.string().min(1),
       }),
+      overlayBundle: z.string().min(1),
+      chromium: z.string().min(1),
     })
     .parse(JSON.parse(await readFile(file, "utf8")));
   const worker = createOwnerWorker({
     root: state.root,
     token: state.workerToken,
     tools: state.tools,
+    overlayBundle: state.overlayBundle,
+    chromium: state.chromium,
   });
   worker.server.listen(4200, "127.0.0.1");
   let stopping: Promise<void> | undefined;

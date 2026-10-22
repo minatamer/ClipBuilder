@@ -26,6 +26,17 @@ client, provider SDK composition or env-file loader enters owner runtime.
 Missing native tools fail closed. Fixed native commands/bundles, admitted local
 media and bounded descriptors are the renderer input boundary.
 
+Owner shared composition is now implemented in `packages/composition/owner`.
+The same explicit-frame React overlay serves browser review and transparent
+native rasterization. Installed Chrome opens only the fixed owner overlay page
+on an authenticated ephemeral loopback listener; it receives admitted JPEGs in
+memory and never receives source video, an arbitrary URL or a media proxy.
+Pinned native FFmpeg performs media decoding/muxing. The overlay server/browser
+are children of the single heavy job and close before cancellation completes.
+One worker is retained; simultaneous native rendering needs separate capacity
+evidence. Immutable per-clip outputs and normalized cuts share workspace-owned
+source lifetime, not first-export lifetime.
+
 The complete adopted numerical targets and persistence policy are in the
 source-of-truth authorization. Source masters and saved drafts/exports use
 separate OS Downloads/ClipBuilder subdirectories. Windows Downloads resolves via

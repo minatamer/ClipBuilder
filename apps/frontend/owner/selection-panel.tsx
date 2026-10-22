@@ -20,7 +20,7 @@ type Props = {
   workspace: OwnerWorkspace;
   busy: boolean;
   onBusy: (busy: boolean) => void;
-  onChoose: (selection: OwnerMomentExport | null) => void;
+  onChoose: (selection: OwnerMomentExport[]) => void;
 };
 
 export function OwnerSelectionPanel({
@@ -36,7 +36,7 @@ export function OwnerSelectionPanel({
     [policyRevision, setPolicyRevision] = useState(0);
   const [analysis, setAnalysis] = useState<OwnerAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false),
-    [selected, setSelected] = useState<string | null>(null);
+    [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState(
     "Add any exact ranges you already want, then find additional moments.",
   );
@@ -91,8 +91,8 @@ export function OwnerSelectionPanel({
   function changed() {
     setPolicyRevision((value) => value + 1);
     setAnalysis(null);
-    setSelected(null);
-    onChoose(null);
+    setSelected([]);
+    onChoose([]);
     setMessage(
       "Inputs changed. Choose Find moments to run the next simulated analysis.",
     );
@@ -147,8 +147,8 @@ export function OwnerSelectionPanel({
     setAnalyzing(true);
     onBusy(true);
     setAnalysis(null);
-    setSelected(null);
-    onChoose(null);
+    setSelected([]);
+    onChoose([]);
     setMessage(
       "Running one simulated transcription and independent selection…",
     );
@@ -208,15 +208,24 @@ export function OwnerSelectionPanel({
                     : "Independent simulated discovery"}
                 </p>
                 <button
-                  disabled={busy}
-                  aria-pressed={selected === moment.id}
+                  disabled={
+                    busy ||
+                    (!selected.includes(moment.id) &&
+                      selected.length >= OWNER_LIMITS.clips)
+                  }
+                  aria-pressed={selected.includes(moment.id)}
                   onClick={() => {
-                    setSelected(moment.id);
-                    onChoose({
-                      analysisId: analysis!.id,
-                      momentId: moment.id,
-                      policyRevision: analysis!.inputs.policyRevision,
-                    });
+                    const next = selected.includes(moment.id)
+                      ? selected.filter((id) => id !== moment.id)
+                      : [...selected, moment.id];
+                    setSelected(next);
+                    onChoose(
+                      next.map((momentId) => ({
+                        analysisId: analysis!.id,
+                        momentId,
+                        policyRevision: analysis!.inputs.policyRevision,
+                      })),
+                    );
                   }}
                 >
                   Choose {label === "Your exact requests" ? "manual" : "AI"} cut{" "}

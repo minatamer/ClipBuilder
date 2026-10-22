@@ -1,6 +1,6 @@
 # CL-019 — Process several selected moments from one local source
 
-Status: queued; owner authorized fake/synthetic implementation, validation loops
+Status: implemented and locally verified; owner authorized fake/synthetic implementation, validation loops
 and ticket commits on 2026-10-22. No paid/provider/cloud/real YouTube calls.
 Dependencies: CL-017 usable local source/runtime; CL-018 manual/AI range
 identities; current CL-008/009/010/011 assembly, preview and output-validation
@@ -23,7 +23,9 @@ the public single-selection reducer, disposable cloud intent or four-operation
 allowance into a batch service. No multi-source projects, distributed/durable
 queue, background service, auto-publishing or combined montage.
 
-Initial proposal: up to ten clips in one workspace, at most two concurrent local
+Adopted scope: up to ten clips in one workspace, one heavy native worker (two
+require later capacity evidence) and one active AI provider request. Original
+planning proposal: at most two concurrent local
 media jobs and one active AI provider request. Measure total renderer tab/thread
 concurrency, CPU, RAM and scratch use; do not multiply per-render defaults by
 job count without a global budget. Settled limits require synthetic capacity
@@ -86,36 +88,96 @@ capabilities.
 
 ## Acceptance and verification
 
-- [ ] One synthetic source with two manual moments and one AI moment produces
+- [x] One synthetic source with two manual moments and one AI moment produces
       three distinct, correctly ranged/revision-bound edit bundles and MP4s.
-- [ ] Prove the selected concurrency limit with a synthetic workload; exercise
-      two overlapping active jobs, bounded memory/scratch and continued UI
-      review.
-- [ ] One queued cancellation, one in-flight failure and one successful sibling
+- [x] Prove the selected one-worker fallback with overlapping queued work,
+      bounded representative memory/scratch and continued UI review. Two
+      simultaneously rendering jobs remain explicitly unverified.
+- [x] One queued cancellation, one in-flight failure and one successful sibling
       have isolated outcomes, exact call counts and no source deletion race.
-- [ ] Duplicate actions, reload/reconnect, stale revisions, cancel-all and close
+- [x] Duplicate actions, reload/reconnect, stale revisions, cancel-all and close
       dispatch no duplicate provider/render work and leave no owned
       process/scratch.
 - [ ] Export clip A, then edit/re-export A and render B; source remains usable,
       outputs remain distinct, and final workspace close removes only owned
-      scratch.
-- [ ] AI/assembly/render failure never deletes or marks an intact saved source
+      scratch. Deterministic re-export/source/cleanup portions pass; actual
+      presentation editing is completed and rechecked in dependent CL-020/024.
+- [x] AI/assembly/render failure never deletes or marks an intact saved source
       for download again; siblings and a new workspace reuse the same local
       input.
-- [ ] Unit/integration tests use synthetic fake/paid-off ports with exact
+- [x] Unit/integration tests use synthetic fake/paid-off ports with exact
       transcription/discovery/planner/image/render counts and external network
       denied.
-- [ ] Run focused checks, synthetic native workload, root five gates and public
+- [x] Run focused checks, synthetic native workload, root five gates and public
       artifact exclusion proof. Human A/V quality/concurrency responsiveness
       remain separately recorded manual checks.
 
 ## Documentation and remaining gates
 
-Update local workflow/render guides, cost bounds, cleanup ownership, source of
-truth and index. Current `FAKE_MODE=true` needs no keys and shows synthetic
-single-clip results; multi-clip behavior is planned. Future native synthetic
-exports can be API-free; real AI editing needs keys, enabled live flags and
-rights/transfer/ spend approval with owner-only paid testing. No offline AI
-weights/runtime are available. Capacity and real multi-clip quality remain
-unchecked; no Git, installation, launch, provider, cloud or deployment action is
-authorized today.
+Local workflow/render/composition guides, cost bounds, cleanup ownership,
+source of truth and index are updated with actual implementation evidence.
+`FAKE_MODE=true` and `PAID_DEMO_ENABLED=false` need no keys/ADC and produce
+fictional transcript/plans/pictures with real local native MP4 encoding. No
+live owner provider adapter or offline AI weights/runtime exists. Real AI
+requires further adapter implementation, keys, live flags and applicable
+rights/transfer/spend approval; paid testing is owner-only. Real quality,
+maximum 4K/300-second capacity and two-worker responsiveness remain unchecked.
+The owner authorized these local synthetic tests, hidden launches and commits;
+no provider/cloud/deployment/real YouTube processing is authorized.
+
+## Local execution and validation — 2026-10-22
+
+- Stable per-clip base/source/analysis identities, one serial heavy worker,
+  bounded operation receipts, whole-action disk reservation and independent
+  immutable export revisions are connected to the owner UI/control/worker.
+  Upper bound is N plans plus 3N picture attempts; this runtime makes zero
+  actual AI calls. Read/review/re-export never reruns analysis or planning.
+- Native proof creates three distinct 30/60/300-frame H.264/AAC portraits,
+  validates clocks/frame counts/full decode, samples source-color transitions,
+  picture/caption presence and absence, and re-exports without new fake AI work.
+- Browser keyboard checks cover three selections, queued cancellation and
+  explicit resume, review during sibling work, reload without reprocessing,
+  playback and immutable prior download links. A real native child was observed
+  before canceling an export: canceling → canceled, all three prior exports
+  retained, sibling re-export ready, plan/image counts unchanged.
+- Representative 180-sample owned process-tree profile on this 16 GiB/12 logical
+  CPU Windows machine: peak RSS 846,688,256 bytes, 238 threads, 6.71 sampled CPU
+  cores, 65,749,656 logical scratch bytes (hardlinks counted conservatively).
+  This supports the one-worker fallback for the measured synthetic workload,
+  not the maximum declared input or two parallel native renders.
+- Validation found and fixed a preview video CSS sizing mismatch, delayed
+  cancellation targeting a later job, and cancel-all racing admission. Checks
+  cover unique operation IDs, frozen inputs and cancel-before-admission zero
+  dispatch. Revalidation and final gate results follow below.
+- Browser Clear removed disposable workspace data, protected shutdown returned
+  204, and CIM creation-identity checks found zero owned processes/native
+  survivors or 4100/4200 listeners after stabilization. Capability and scratch
+  were removed; private runtime/launch logs, screenshots and resource report
+  remain outside Git. Retained masters/captures were untouched.
+
+Read-only revalidation pass: current combined unstaged implementation and new
+files, no staged changes. TL;DR: the packet delivers independent bounded local
+automatic edits, review/cancellation and immutable re-exports; interactive edits
+belong to CL-020. Verdict: meets this packet's implementation scope, with no
+actionable findings after the cancellation-admission fix. Covered: identities,
+one-worker admission, exact budgets, duplicate/stale actions, failure/cancel
+isolation, retained source, fixed shared preview/native overlays and cleanup.
+Partial cross-packet criterion: change presentation then re-export (CL-020/024).
+Unverified: real AI, maximum-size/two-worker capacity and owner A/V quality.
+Inspected contracts, UI, host/use case, worker/RPC, native media/raster lifecycle,
+build/lockfile changes and focused regression/proof code. Focused owner tests:
+43 passed. Required final gates are recorded separately; this review does not
+authorize live processing. Owner additionally requested a CL-017–019 real-mode
+compatibility pass after this packet, before continuing to CL-020.
+
+Final gates: `owner:test` 43/43; `owner:build` passes; `owner:proof` 3/3 native
+proofs; root `format:check`, `lint`, `typecheck`, `test:unit` and `build` pass.
+The root suite passes 1,299 tests across 115 files. Two existing frontend import
+tests initially hit their 5-second limit while checks overlapped; rerunning the
+unchanged suite after native work completed passed. No timeout was relaxed.
+`owner:artifacts` passes over 1,490 built files plus Docker/compiler roots.
+Windows standalone retains the existing 26 external package links and
+`selfContained:false`; this is not a target Linux deployment proof. Generated
+Next type-import noise was restored. No credentials, real media, paid/provider,
+cloud or YouTube retrieval were used. No deviation beyond the explicitly adopted
+one-worker fallback and the CL-020 cross-packet edit criterion.

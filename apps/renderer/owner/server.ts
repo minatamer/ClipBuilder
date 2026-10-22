@@ -6,6 +6,8 @@ import {
 import {
   ownerMediaJobSchema,
   OWNER_LIMITS,
+  type OwnerMediaJob,
+  type OwnerMediaResult,
 } from "../../../packages/contracts/owner/index.ts";
 import {
   inspectOwnerSource,
@@ -13,17 +15,25 @@ import {
   ownerPortrait,
   type OwnerNativeTools,
 } from "./media.ts";
+import { renderOwnerClip, type OwnerCutCache } from "./clip-render.ts";
 
 export function createOwnerWorker(options: {
   root: string;
   token: string;
   tools: OwnerNativeTools;
+  chromium?: string;
+  overlayBundle?: string;
+  execute?: (
+    job: OwnerMediaJob,
+    signal: AbortSignal,
+  ) => Promise<OwnerMediaResult>;
 }) {
+  const cache: OwnerCutCache = new Map();
   const controllers = new Set<AbortController>();
   const tasks = new Set<Promise<void>>();
   let current: { id: string; controller: AbortController } | undefined;
   let closing = false;
-  let pendingCancel: string | undefined;
+  const pendingCancel = new Set<string>();
   let busy = false;
   const server = createServer((req, res) => {
     const task = handle(req, res);
@@ -48,8 +58,13 @@ export function createOwnerWorker(options: {
     if (req.method === "POST" && req.url === "/cancel") {
       try {
         const job = await readJob(req);
-        if (current?.id === job.workspaceId) current.controller.abort();
-        else pendingCancel = job.workspaceId;
+        const key = job.jobId ?? `${job.workspaceId}:${job.operation}`;
+        if (current?.id === key) current.controller.abort();
+        else {
+          pendingCancel.add(key);
+          if (pendingCancel.size > 32)
+            pendingCancel.delete(pendingCancel.values().next().value!);
+        }
         res.writeHead(204).end();
       } catch {
         res.writeHead(400).end();
@@ -70,9 +85,10 @@ export function createOwnerWorker(options: {
     res.once("close", () => controller.abort());
     try {
       const job = await readJob(req);
-      current = { id: job.workspaceId, controller };
-      if (pendingCancel === job.workspaceId) controller.abort();
-      pendingCancel = undefined;
+      const key = job.jobId ?? `${job.workspaceId}:${job.operation}`;
+      current = { id: key, controller };
+      if (pendingCancel.has(key)) controller.abort();
+      pendingCancel.delete(key);
       const source = await ownerMediaPath(
         options.root,
         job.workspaceId,
@@ -82,24 +98,38 @@ export function createOwnerWorker(options: {
         controller.signal,
         AbortSignal.timeout(10 * 60_000),
       ]);
-      const result =
-        job.operation === "inspect"
+      signal.throwIfAborted();
+      const result = options.execute
+        ? await options.execute(job, signal)
+        : job.operation === "inspect"
           ? {
               operation: "inspect",
               source: await inspectOwnerSource(source, options.tools, signal),
             }
-          : await ownerPortrait(
-              source,
-              await ownerMediaPath(
-                options.root,
-                job.workspaceId,
-                "portrait.mp4",
-              ),
-              options.tools,
-              signal,
-              job.cut,
-              job.fingerprint,
-            );
+          : job.operation === "clip"
+            ? await renderOwnerClip(
+                {
+                  root: options.root,
+                  tools: options.tools,
+                  chromium: options.chromium ?? "",
+                  bundle: options.overlayBundle ?? "",
+                  cache,
+                },
+                job,
+                signal,
+              )
+            : await ownerPortrait(
+                source,
+                await ownerMediaPath(
+                  options.root,
+                  job.workspaceId,
+                  "portrait.mp4",
+                ),
+                options.tools,
+                signal,
+                job.cut,
+                job.fingerprint,
+              );
       res
         .writeHead(200, {
           "Content-Type": "application/json",
@@ -134,6 +164,8 @@ export function createOwnerWorker(options: {
       for (const controller of controllers) controller.abort();
       server.closeAllConnections();
       await Promise.allSettled([...tasks]);
+      cache.clear();
+      pendingCancel.clear();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     },
   };

@@ -44,7 +44,7 @@ article {
   padding: 16px;
   background: #131d34;
 }
-video {
+.previews video {
   width: 100%;
   max-height: 60vh;
   background: #000;
@@ -134,6 +134,19 @@ legend {
 .moments {
   list-style: none;
   padding: 0;
+}
+.clip-list {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 1rem;
+}
+.clip-list > li,
+.clip-review {
+  padding: 1rem;
+  border: 1px solid #526078;
+  border-radius: 0.75rem;
+  background: #152034;
 }
 .moments li {
   padding: 1rem;

@@ -51,7 +51,18 @@ Frame-normalized physical cuts preserve manual requests and source clock;
 synthetic native proofs cover VFR/offsets, silence, fractional endpoints and
 900/1,800-frame outputs. The owner composition still has no live AI adapter;
 provider keys/flags/approvals and owner-only real timing/editorial acceptance
-remain necessary. Saved drafts and batch editing follow in later packets.
+remain necessary. Saved drafts and presentation editing follow in later packets.
+
+CL-019 local evidence: one action prepares up to ten independent clip bundles
+and runs a serial native work list. Three synthetic clips (two manual, one AI)
+produce distinct 30/60/300-frame MP4s, with immutable prior exports, per-clip
+cancel/re-export and review while siblings progress. One heavy worker is the
+adopted fallback; two-worker capacity is unverified. Shared owner React overlays
+run in both preview and a fixed transparent raster page using installed Chrome,
+then pinned native FFmpeg encodes the result. The raster listener binds only
+loopback, serves no source video, and drains with its browser and scratch.
+Caption/picture controls and saved drafts remain CL-020. These checks use fake
+AI and no keys/ADC; they establish native mechanics, not real AI/editorial quality.
 
 ## Owner local workflow planning instruction — 2026-10-22
 

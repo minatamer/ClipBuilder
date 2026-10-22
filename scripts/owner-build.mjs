@@ -11,14 +11,17 @@ if (
   (await realpath(output)) !== output
 )
   throw new Error("owner_build_path_invalid");
-try {
-  if ((await lstat(resolve(output, "ui"))).isSymbolicLink())
-    throw new Error("owner_build_path_invalid");
-} catch (error) {
-  if (error.code !== "ENOENT") throw error;
+for (const directory of ["ui", "overlay"]) {
+  try {
+    if ((await lstat(resolve(output, directory))).isSymbolicLink())
+      throw new Error("owner_build_path_invalid");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
 }
-// This exact ignored output is the only tree this build replaces.
-await rm(resolve(output, "ui"), { recursive: true, force: true });
+// These exact ignored build outputs are the only trees this build replaces.
+for (const directory of ["ui", "overlay"])
+  await rm(resolve(output, directory), { recursive: true, force: true });
 await build({
   entryPoints: ["apps/frontend/owner/main.tsx"],
   bundle: true,
@@ -28,6 +31,18 @@ await build({
   jsx: "automatic",
   minify: false,
 });
+await build({
+  entryPoints: ["apps/renderer/owner/overlay-page.tsx"],
+  bundle: true,
+  platform: "browser",
+  format: "esm",
+  outfile: resolve(output, "overlay/app.js"),
+  jsx: "automatic",
+});
+await writeFile(
+  resolve(output, "overlay/index.html"),
+  `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data:; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'"><style>html,body{margin:0;width:1080px;height:1920px;background:transparent}</style></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>`,
+);
 for (const [entry, name] of [
   ["apps/backend/owner/entry.ts", "server"],
   ["apps/renderer/owner/entry.ts", "worker"],

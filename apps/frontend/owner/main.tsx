@@ -7,6 +7,7 @@ import {
 import "./style.css";
 import { OwnerSelectionPanel } from "./selection-panel.tsx";
 import type { OwnerMomentExport } from "../../../packages/contracts/owner/selection.ts";
+import { OwnerClipBatchPanel } from "./clip-batch-panel.tsx";
 
 function OwnerWorkspaceView() {
   const [workspace, setWorkspace] = useState<OwnerWorkspace | null>(null);
@@ -14,11 +15,10 @@ function OwnerWorkspaceView() {
   const [message, setMessage] = useState(
     "Choose an MP4 to open a private local processing copy.",
   );
-  const [output, setOutput] = useState(false);
-  const [selection, setSelection] = useState<OwnerMomentExport | null>(null);
-  const choose = useCallback((value: OwnerMomentExport | null) => {
+  const [selection, setSelection] = useState<OwnerMomentExport[]>([]);
+  const [clipWork, setClipWork] = useState(false);
+  const choose = useCallback((value: OwnerMomentExport[]) => {
     setSelection(value);
-    setOutput(false);
   }, []);
   useEffect(() => {
     const controller = new AbortController();
@@ -61,7 +61,7 @@ function OwnerWorkspaceView() {
       });
       if (!response.ok) throw new Error("unavailable");
       setWorkspace(ownerWorkspaceSchema.parse(await response.json()));
-      choose(null);
+      choose([]);
       setMessage(
         "Local source ready. AI is simulated; no provider or cloud processing.",
       );
@@ -73,37 +73,8 @@ function OwnerWorkspaceView() {
       setBusy(false);
     }
   }
-  async function exportPortrait() {
-    if (!workspace || !selection || busy) return;
-    setBusy(true);
-    setMessage("Encoding a local portrait preview…");
-    try {
-      const response = await fetch(`/api/workspace/${workspace.id}/portrait`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(selection),
-      });
-      if (response.status === 404) {
-        setWorkspace(null);
-        choose(null);
-        setMessage(
-          "The temporary workspace expired. Choose the saved source again.",
-        );
-        return;
-      }
-      if (!response.ok) throw new Error("unavailable");
-      setOutput(true);
-      setMessage(
-        "Local MP4 ready from the selected frame range. AI results remain simulated.",
-      );
-    } catch {
-      setMessage("Local encoding is unavailable. Your source remains open.");
-    } finally {
-      setBusy(false);
-    }
-  }
   async function clear() {
-    if (!workspace || busy) return;
+    if (!workspace || busy || clipWork) return;
     setBusy(true);
     try {
       const response = await fetch(`/api/workspace/${workspace.id}`, {
@@ -112,7 +83,8 @@ function OwnerWorkspaceView() {
       if (!response.ok && response.status !== 404)
         throw new Error("unavailable");
       setWorkspace(null);
-      choose(null);
+      choose([]);
+      setClipWork(false);
       setMessage(
         "Processing workspace cleared. Saved source masters are preserved.",
       );
@@ -153,7 +125,7 @@ function OwnerWorkspaceView() {
           <OwnerSelectionPanel
             key={workspace.id}
             workspace={workspace}
-            busy={busy}
+            busy={busy || clipWork}
             onBusy={setBusy}
             onChoose={choose}
           />
@@ -171,31 +143,15 @@ function OwnerWorkspaceView() {
                 {workspace.source.width} × {workspace.source.height}
               </p>
             </article>
-            {output && (
-              <article>
-                <h2>Portrait MP4</h2>
-                <video
-                  aria-label="Local portrait video"
-                  controls
-                  src={`/api/workspace/${workspace.id}/portrait`}
-                />
-                <a
-                  href={`/api/workspace/${workspace.id}/portrait`}
-                  download="clipbuilder-local.mp4"
-                >
-                  Download MP4
-                </a>
-              </article>
-            )}
           </section>
+          <OwnerClipBatchPanel
+            key={`clips-${workspace.id}`}
+            workspace={workspace}
+            selected={selection}
+            onActive={setClipWork}
+          />
           <nav aria-label="Workspace actions">
-            <button
-              disabled={busy || !selection}
-              onClick={() => void exportPortrait()}
-            >
-              Export selected moment locally
-            </button>
-            <button disabled={busy} onClick={() => void clear()}>
+            <button disabled={busy || clipWork} onClick={() => void clear()}>
               Clear processing workspace
             </button>
           </nav>

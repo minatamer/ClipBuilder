@@ -20,6 +20,7 @@ import {
   type OwnerAnalysis,
 } from "../../../packages/contracts/owner/selection.ts";
 import { readOwnerJson } from "./request-body.ts";
+import { OwnerClipBatch, type OwnerClipPorts } from "./clip-batch.ts";
 
 export type OwnerHostOptions = {
   root: string;
@@ -28,12 +29,14 @@ export type OwnerHostOptions = {
   port: number;
   shutdown?: () => void;
   analysis?: OwnerAnalysisPorts;
+  clipPreparation?: Pick<OwnerClipPorts, "plan" | "image">;
   media: (job: OwnerMediaJob, signal: AbortSignal) => Promise<OwnerMediaResult>;
 };
 export function createOwnerHost(options: OwnerHostOptions) {
   const files = new WorkspaceFiles(options.root);
   const workspaces = new Map<string, OwnerWorkspace>();
   const analyses = new Map<string, OwnerAnalysis>();
+  const batches = new Map<string, OwnerClipBatch>();
   const controllers = new Set<AbortController>();
   const tasks = new Set<Promise<void>>();
   const streams = new Set<{ id: string; close: () => Promise<void> }>();
@@ -54,9 +57,15 @@ export function createOwnerHost(options: OwnerHostOptions) {
     expiryTask = expiryTask
       .then(async () => {
         for (const [id, deadline] of expires) {
-          if (Date.now() >= deadline && !busy.has(id)) {
+          if (
+            Date.now() >= deadline &&
+            !busy.has(id) &&
+            !batches.get(id)?.active
+          ) {
             closingWorkspaces.add(id);
             await closeStreams(id);
+            await batches.get(id)?.close();
+            batches.delete(id);
             await files.remove(id);
             workspaces.delete(id);
             analyses.delete(id);
@@ -286,7 +295,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         }
       }
       const route = req.url?.match(
-        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis))?$/,
+        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|cancel|output|source)(?:\/(\d+))?)?)?)?$/,
       );
       const workspace = route?.[1] ? workspaces.get(route[1]) : undefined;
       if (!workspace) {
@@ -303,6 +312,163 @@ export function createOwnerHost(options: OwnerHostOptions) {
           .end(JSON.stringify(workspace));
         return;
       }
+      if (route?.[2] === "clips") {
+        let batch = batches.get(workspace.id);
+        if (req.method === "GET" && !route[3]) {
+          res
+            .writeHead(200, { "Content-Type": "application/json" })
+            .end(
+              JSON.stringify(
+                batch?.snapshot() ?? { clips: [], active: false, workers: 1 },
+              ),
+            );
+          return;
+        }
+        if (req.method === "POST" && !route[3]) {
+          if (busy.has(workspace.id)) {
+            res.writeHead(409).end();
+            return;
+          }
+          if (!options.clipPreparation) {
+            res.writeHead(503).end();
+            return;
+          }
+          const analysis = analyses.get(workspace.id);
+          if (!analysis) {
+            res.writeHead(409).end();
+            return;
+          }
+          busy.add(workspace.id);
+          try {
+            batch ??= new OwnerClipBatch(workspace, files, {
+              ...options.clipPreparation,
+              render: options.media,
+            });
+            batches.set(workspace.id, batch);
+            const result = await batch.submit(
+              await readOwnerJson(req),
+              analysis,
+            );
+            res
+              .writeHead(202, { "Content-Type": "application/json" })
+              .end(JSON.stringify(result));
+            return;
+          } finally {
+            busy.delete(workspace.id);
+          }
+        }
+        if (
+          req.method === "POST" &&
+          batch &&
+          (route[3] === "cancel" || route[4] === "cancel")
+        ) {
+          res
+            .writeHead(200, { "Content-Type": "application/json" })
+            .end(
+              JSON.stringify(
+                batch.cancel(route[3] === "cancel" ? undefined : route[3]),
+              ),
+            );
+          return;
+        }
+        if (
+          req.method === "POST" &&
+          batch &&
+          route[3] &&
+          route[4] === "render"
+        ) {
+          if (busy.has(workspace.id)) {
+            res.writeHead(409).end();
+            return;
+          }
+          busy.add(workspace.id);
+          try {
+            const result = await batch.render(
+              route[3],
+              await readOwnerJson(req),
+            );
+            res
+              .writeHead(202, { "Content-Type": "application/json" })
+              .end(JSON.stringify(result));
+            return;
+          } finally {
+            busy.delete(workspace.id);
+          }
+        }
+        if (
+          req.method === "GET" &&
+          batch &&
+          route[3] &&
+          route[4] === "output" &&
+          route[5]
+        ) {
+          const revision = Number(route[5]);
+          const clip = batch
+            .snapshot()
+            .clips.find((clip) => clip.id === route[3]);
+          if (!clip?.outputs.some((output) => output.revision === revision)) {
+            res.writeHead(404).end();
+            return;
+          }
+          await stream(
+            await files.output(workspace.id, clip.id, revision),
+            req,
+            res,
+            "video/mp4",
+            workspace.id,
+          );
+          return;
+        }
+        if (
+          req.method === "GET" &&
+          batch &&
+          route[3] &&
+          route[4] === "source"
+        ) {
+          const clip = batch
+            .snapshot()
+            .clips.find((clip) => clip.id === route[3]);
+          if (!clip?.base) {
+            res.writeHead(404).end();
+            return;
+          }
+          await stream(
+            await files.clipSource(workspace.id, clip.id),
+            req,
+            res,
+            "video/mp4",
+            workspace.id,
+          );
+          return;
+        }
+        res.writeHead(404).end();
+        return;
+      }
+      if (
+        req.method === "GET" &&
+        route?.[2] === "assets" &&
+        route[3] &&
+        !route[4]
+      ) {
+        const admitted = batches
+          .get(workspace.id)
+          ?.snapshot()
+          .clips.some((clip) =>
+            clip.assets.some((asset) => asset.id === route[3]),
+          );
+        if (!admitted) {
+          res.writeHead(404).end();
+          return;
+        }
+        await stream(
+          await files.asset(workspace.id, route[3]),
+          req,
+          res,
+          "image/jpeg",
+          workspace.id,
+        );
+        return;
+      }
       if (req.method === "GET" && route?.[2] === "analysis") {
         res
           .writeHead(200, { "Content-Type": "application/json" })
@@ -310,7 +476,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         return;
       }
       if (req.method === "POST" && route?.[2] === "analysis") {
-        if (busy.has(workspace.id)) {
+        if (busy.has(workspace.id) || batches.get(workspace.id)?.active) {
           res.writeHead(409).end();
           return;
         }
@@ -363,7 +529,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         return;
       }
       if (req.method === "POST" && route?.[2] === "portrait") {
-        if (busy.has(workspace.id)) {
+        if (busy.has(workspace.id) || batches.get(workspace.id)?.active) {
           res.writeHead(409).end();
           return;
         }
@@ -408,12 +574,14 @@ export function createOwnerHost(options: OwnerHostOptions) {
         }
       }
       if (req.method === "DELETE" && !route?.[2]) {
-        if (busy.has(workspace.id)) {
+        if (busy.has(workspace.id) || batches.get(workspace.id)?.active) {
           res.writeHead(409).end();
           return;
         }
         closingWorkspaces.add(workspace.id);
         await closeStreams(workspace.id);
+        await batches.get(workspace.id)?.close();
+        batches.delete(workspace.id);
         await files.remove(workspace.id);
         workspaces.delete(workspace.id);
         analyses.delete(workspace.id);
@@ -443,6 +611,8 @@ export function createOwnerHost(options: OwnerHostOptions) {
       server.closeAllConnections();
       await Promise.allSettled([...tasks]);
       await expiryTask;
+      await Promise.all([...batches.values()].map((batch) => batch.close()));
+      batches.clear();
       await files.close();
       analyses.clear();
       workspaces.clear();

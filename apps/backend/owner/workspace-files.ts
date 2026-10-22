@@ -5,6 +5,7 @@ import {
   OWNER_LIMITS,
   ownerIdSchema,
 } from "../../../packages/contracts/owner/index.ts";
+import { ownerOutputRevisionSchema } from "../../../packages/contracts/owner/clips.ts";
 
 export async function confinedPath(
   root: string,
@@ -54,6 +55,22 @@ export class WorkspaceFiles {
     ownerIdSchema.parse(id);
     if (!this.ids.has(id)) throw new Error("workspace_missing");
     return confinedPath(this.root, id, name);
+  }
+  async asset(id: string, assetId: string): Promise<string> {
+    ownerIdSchema.parse(assetId);
+    await this.file(id, "source.mp4");
+    return confinedPath(this.root, id, `${assetId}.jpg`);
+  }
+  async output(id: string, clipId: string, revision: number): Promise<string> {
+    ownerIdSchema.parse(clipId);
+    ownerOutputRevisionSchema.parse(revision);
+    await this.file(id, "source.mp4");
+    return confinedPath(this.root, id, `${clipId}.r${revision}.mp4`);
+  }
+  async clipSource(id: string, clipId: string): Promise<string> {
+    ownerIdSchema.parse(clipId);
+    await this.file(id, "source.mp4");
+    return confinedPath(this.root, id, `${clipId}.source.mp4`);
   }
   async remove(id: string): Promise<void> {
     ownerIdSchema.parse(id);

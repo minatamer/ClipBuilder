@@ -9,16 +9,47 @@ import {
   ownerCutSchema,
   type OwnerCut,
   ownerSourceSchema,
+  ownerIdSchema,
   type OwnerSource,
 } from "../../../packages/contracts/owner/index.ts";
 import { probeMedia, SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { runOwnedProcess } from "../src/media/process-runner.ts";
+import { ownerOutputRevisionSchema } from "../../../packages/contracts/owner/clips.ts";
 
 export type OwnerNativeTools = { ffmpeg: string; ffprobe: string };
 export async function ownerMediaPath(
   root: string,
   id: string,
   name: "source.mp4" | "portrait.mp4",
+): Promise<string> {
+  return admittedMediaPath(root, id, name);
+}
+export async function ownerClipMediaPath(
+  root: string,
+  id: string,
+  clipId: string,
+  kind: "source" | number,
+) {
+  ownerIdSchema.parse(clipId);
+  if (typeof kind === "number") ownerOutputRevisionSchema.parse(kind);
+  return admittedMediaPath(
+    root,
+    id,
+    `${clipId}.${kind === "source" ? "source" : `r${kind}`}.mp4`,
+  );
+}
+export async function ownerAssetMediaPath(
+  root: string,
+  id: string,
+  assetId: string,
+) {
+  ownerIdSchema.parse(assetId);
+  return admittedMediaPath(root, id, `${assetId}.jpg`);
+}
+async function admittedMediaPath(
+  root: string,
+  id: string,
+  name: string,
 ): Promise<string> {
   if (!/^[a-f0-9-]{36}$/.test(id)) throw new Error("invalid");
   const base = await realpath(root);
@@ -238,10 +269,16 @@ export async function ownerPortrait(
         "veryfast",
         "-crf",
         "22",
+        "-maxrate",
+        "8M",
+        "-bufsize",
+        "16M",
         "-pix_fmt",
         "yuv420p",
         "-c:a",
         "aac",
+        "-b:a",
+        "160k",
         "-ar",
         "48000",
         "-ac",
@@ -258,81 +295,92 @@ export async function ownerPortrait(
       ],
       signal,
     );
-    const info = await lstat(temporary);
-    const result = await probeMedia(temporary, tools.ffprobe, signal);
-    const video = result.streams.find((s) => s.codec_type === "video");
-    const audio = result.streams.find((s) => s.codec_type === "audio");
-    if (
-      info.size <= 0 ||
-      info.size > OWNER_LIMITS.outputBytes ||
-      video?.width !== 1080 ||
-      video.height !== 1920 ||
-      video.codec_name !== "h264" ||
-      video.avg_frame_rate !== "30/1" ||
-      video.pix_fmt !== "yuv420p" ||
-      video.sample_aspect_ratio !== "1:1" ||
-      audio?.codec_name !== "aac" ||
-      audio.sample_rate !== 48000 ||
-      audio.channels !== 2 ||
-      Math.abs((video.duration ?? Infinity) * 1000 - durationMs) > 100 ||
-      Math.abs((audio.duration ?? Infinity) * 1000 - durationMs) > 100 ||
-      Math.abs(result.format.duration * 1000 - durationMs) > 100
-    )
-      throw new Error("invalid_output");
-    const counted = z
-      .object({
-        streams: z
-          .array(z.object({ nb_read_frames: z.coerce.number().int() }))
-          .length(1),
-      })
-      .parse(
-        JSON.parse(
-          await runOwnedProcess(
-            tools.ffprobe,
-            [
-              "-v",
-              "error",
-              "-protocol_whitelist",
-              "file,pipe",
-              "-select_streams",
-              "v:0",
-              "-count_frames",
-              "-show_entries",
-              "stream=nb_read_frames",
-              "-of",
-              "json",
-              temporary,
-            ],
-            signal,
-          ),
-        ),
-      );
-    if (counted.streams[0]?.nb_read_frames !== frames)
-      throw new Error("invalid_frame_count");
-    await runOwnedProcess(
-      tools.ffmpeg,
-      [
-        "-nostdin",
-        "-v",
-        "error",
-        "-xerror",
-        ...SOURCE_INPUT_OPTIONS,
-        "-i",
-        temporary,
-        "-f",
-        "null",
-        "-",
-      ],
-      signal,
-    );
+    const bytes = await validateOwnerOutput(temporary, tools, signal, frames);
     await rename(temporary, output);
     return {
       operation: "portrait" as const,
-      bytes: info.size,
+      bytes,
       durationMs: Math.round(durationMs),
       frames,
     };
   } finally {
     await rm(temporary, { force: true });
   }
+}
+
+export async function validateOwnerOutput(
+  temporary: string,
+  tools: OwnerNativeTools,
+  signal: AbortSignal,
+  frames: number,
+): Promise<number> {
+  const durationMs = (frames * 1000) / OWNER_FPS;
+  const info = await lstat(temporary);
+  const result = await probeMedia(temporary, tools.ffprobe, signal);
+  const video = result.streams.find((s) => s.codec_type === "video");
+  const audio = result.streams.find((s) => s.codec_type === "audio");
+  if (
+    info.size <= 0 ||
+    info.size > OWNER_LIMITS.outputBytes ||
+    video?.width !== 1080 ||
+    video.height !== 1920 ||
+    video.codec_name !== "h264" ||
+    video.avg_frame_rate !== "30/1" ||
+    video.pix_fmt !== "yuv420p" ||
+    video.sample_aspect_ratio !== "1:1" ||
+    audio?.codec_name !== "aac" ||
+    audio.sample_rate !== 48000 ||
+    audio.channels !== 2 ||
+    Math.abs((video.duration ?? Infinity) * 1000 - durationMs) > 100 ||
+    Math.abs((audio.duration ?? Infinity) * 1000 - durationMs) > 100 ||
+    Math.abs(result.format.duration * 1000 - durationMs) > 100
+  )
+    throw new Error("invalid_output");
+  const counted = z
+    .object({
+      streams: z
+        .array(z.object({ nb_read_frames: z.coerce.number().int() }))
+        .length(1),
+    })
+    .parse(
+      JSON.parse(
+        await runOwnedProcess(
+          tools.ffprobe,
+          [
+            "-v",
+            "error",
+            "-protocol_whitelist",
+            "file,pipe",
+            "-select_streams",
+            "v:0",
+            "-count_frames",
+            "-show_entries",
+            "stream=nb_read_frames",
+            "-of",
+            "json",
+            temporary,
+          ],
+          signal,
+        ),
+      ),
+    );
+  if (counted.streams[0]?.nb_read_frames !== frames)
+    throw new Error("invalid_frame_count");
+  await runOwnedProcess(
+    tools.ffmpeg,
+    [
+      "-nostdin",
+      "-v",
+      "error",
+      "-xerror",
+      ...SOURCE_INPUT_OPTIONS,
+      "-i",
+      temporary,
+      "-f",
+      "null",
+      "-",
+    ],
+    signal,
+  );
+  return info.size;
 }

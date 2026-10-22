@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-import { OWNER_LIMITS, ownerIdSchema, ownerCutSchema } from "./policy.ts";
+import {
+  OWNER_LIMITS,
+  OWNER_FPS,
+  ownerIdSchema,
+  ownerCutSchema,
+} from "./policy.ts";
+import { ownerOverlaySchema, ownerOutputRevisionSchema } from "./clips.ts";
 export {
   OWNER_LIMITS,
   ownerIdSchema,
@@ -33,12 +39,32 @@ export type OwnerWorkspace = z.infer<typeof ownerWorkspaceSchema>;
 
 export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
   z
-    .object({ workspaceId: ownerIdSchema, operation: z.literal("inspect") })
+    .object({
+      workspaceId: ownerIdSchema,
+      operation: z.literal("inspect"),
+      jobId: ownerIdSchema.optional(),
+    })
     .strict(),
   z
     .object({
       workspaceId: ownerIdSchema,
+      operation: z.literal("clip"),
+      jobId: ownerIdSchema,
+      clipId: ownerIdSchema,
+      renderRevision: ownerOutputRevisionSchema,
+      cut: ownerCutSchema,
+      fingerprint: ownerSourceSchema.shape.fingerprint,
+      overlay: ownerOverlaySchema,
+    })
+    .strict()
+    .refine(
+      (job) => job.overlay.frames === job.cut.endFrame - job.cut.startFrame,
+    ),
+  z
+    .object({
+      workspaceId: ownerIdSchema,
       operation: z.literal("portrait"),
+      jobId: ownerIdSchema.optional(),
       cut: ownerCutSchema,
       fingerprint: ownerSourceSchema.shape.fingerprint,
     })
@@ -46,6 +72,18 @@ export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
 ]);
 export type OwnerMediaJob = z.infer<typeof ownerMediaJobSchema>;
 export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
+  z
+    .object({
+      operation: z.literal("clip"),
+      bytes: z.number().int().positive().max(OWNER_LIMITS.outputBytes),
+      frames: z
+        .number()
+        .int()
+        .positive()
+        .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
+      durationMs: z.number().int().positive().max(OWNER_LIMITS.clipMs),
+    })
+    .strict(),
   z
     .object({ operation: z.literal("inspect"), source: ownerSourceSchema })
     .strict(),

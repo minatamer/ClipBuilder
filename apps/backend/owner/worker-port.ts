@@ -3,6 +3,7 @@ import {
   OWNER_FPS,
   type OwnerMediaJob,
 } from "../../../packages/contracts/owner/index.ts";
+import { randomUUID } from "node:crypto";
 
 export function localWorkerPort(
   port: number,
@@ -17,7 +18,7 @@ export function localWorkerPort(
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     };
-    const body = JSON.stringify(job);
+    const body = JSON.stringify({ ...job, jobId: job.jobId ?? randomUUID() });
     // Keep the RPC open until the worker has reaped its native child. A caller
     // abort cancels the operation separately, then the host can safely delete scratch.
     const cancel = () => {
@@ -64,8 +65,8 @@ export function localWorkerPort(
       if (result.operation !== job.operation)
         throw new Error("invalid_media_result");
       if (
-        job.operation === "portrait" &&
-        result.operation === "portrait" &&
+        (job.operation === "portrait" || job.operation === "clip") &&
+        (result.operation === "portrait" || result.operation === "clip") &&
         (result.frames !== job.cut.endFrame - job.cut.startFrame ||
           result.durationMs !== Math.round((result.frames * 1000) / OWNER_FPS))
       )

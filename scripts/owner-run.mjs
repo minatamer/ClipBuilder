@@ -32,6 +32,8 @@ for (const file of [
   ...Object.values(tools),
   resolve(".owner-build/server.mjs"),
   resolve(".owner-build/worker.mjs"),
+  resolve(".owner-build/overlay/index.html"),
+  "C:/Program Files/Google/Chrome/Application/chrome.exe",
 ])
   await stat(file);
 const runtime = await mkdtemp(join(tmpdir(), "clipbuilder-owner-runtime-"));
@@ -44,6 +46,8 @@ const state = {
   token: randomBytes(32).toString("hex"),
   workerToken: randomBytes(32).toString("hex"),
   tools,
+  overlayBundle: resolve(".owner-build/overlay"),
+  chromium: "C:/Program Files/Google/Chrome/Application/chrome.exe",
 };
 await writeFile(stateFile, JSON.stringify(state), { flag: "wx", mode: 0o600 });
 const children = [];

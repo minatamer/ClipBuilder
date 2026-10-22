@@ -17,11 +17,36 @@ origins. Distinct overlapping manual requests remain available.
 Find moments is explicit: one fake transcription and at most one fake selection;
 editing inputs makes no AI calls. Manual-only still transcribes once for cues.
 No words or a source shorter than the AI minimum yields no AI suggestion while
-preserving manual cuts. Fictional words do not describe source audio. Choose one
-result, export locally, play/download the MP4, or clear the processing copy.
-Several selected clips arrive in CL-019. Changing inputs invalidates the current
-export selection. A refresh restores only completed analysis in this running
-session; saved drafts arrive later. Failure/cancellation preserves input rows.
+preserving manual cuts. Fictional words do not describe source audio.
+
+Choose up to ten manual/AI moments, then use **Process selected clips** once to
+create separate automatic edit bundles and MP4s. The page shows the selected
+count and upper bound of one simulated plan plus three simulated picture
+attempts per clip. Actual AI calls remain zero. One heavy worker processes the
+ordered list serially. Each clip displays its own state, simulated call counts,
+native attempts, cancel action and download links. One failure does not discard
+successful siblings. **Cancel all pending clips** also cancels the current job;
+its state remains `canceling` until owned native work drains. A queued clip that
+never started can be included in a new explicit processing action without
+reprocessing completed siblings.
+
+Review a completed clip while other selected clips continue. The Remotion Player
+combines that clip's normalized local video with the
+[shared fixed overlay](../../../packages/composition/owner/README.md) used for
+native export. Captions and pictures are synthetic placeholders. **Export clip
+again** runs local compute from the existing bundle with no AI calls and keeps
+every earlier export link. This slice has an automatic base at edit revision
+zero; caption/picture controls, personal image uploads and saved drafts arrive
+in CL-020.
+
+Changing analysis inputs invalidates the current selection without erasing
+existing clip results. Refreshing restores completed analysis and acknowledged
+clip work in this running session; it does not submit another processing
+action. If an action is not acknowledged, refresh status before an explicit
+retry. App restart does not restore ephemeral workspaces. Failure/cancellation
+preserves input rows, sibling exports and the workspace source. Clear becomes
+available after active work drains and removes the processing copy; browser
+downloads remain outside that cleanup.
 
 Busy controls are disabled and errors/statuses are announced. Fake AI and
 paid-off labels remain visible. Encoding uses real local FFmpeg without API
