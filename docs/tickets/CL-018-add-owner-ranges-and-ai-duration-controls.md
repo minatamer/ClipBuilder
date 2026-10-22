@@ -113,6 +113,12 @@ content.
 
 ## Documentation and gates
 
+Owner-requested compatibility revisit after CL-019: reconciliation was checked
+with arbitrary supplied words, fractional timings, speakers and duration bounds,
+independently of the fake recipe. Analysis provenance now comes from its typed
+adapter and counters are generic `calls`; mismatched/unavailable mode rejects
+before dispatch. See CL-019 follow-up for evidence and remaining live wiring.
+
 Local UI/API/worker guides and the source-of-truth addendum describe the new
 behavior. `FAKE_MODE=true` with `PAID_DEMO_ENABLED=false` needs no keys and
 returns fictional analysis. Actual AI remains unavailable in this owner

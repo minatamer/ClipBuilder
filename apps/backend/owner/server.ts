@@ -29,7 +29,7 @@ export type OwnerHostOptions = {
   port: number;
   shutdown?: () => void;
   analysis?: OwnerAnalysisPorts;
-  clipPreparation?: Pick<OwnerClipPorts, "plan" | "image">;
+  clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image">;
   media: (job: OwnerMediaJob, signal: AbortSignal) => Promise<OwnerMediaResult>;
 };
 export function createOwnerHost(options: OwnerHostOptions) {
@@ -279,7 +279,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           const workspace: OwnerWorkspace = {
             id: newId,
             source: inspected.source,
-            mode: "synthetic-ai",
+            mode: options.analysis?.mode ?? "unavailable",
             revision: 0,
           };
           controller.signal.throwIfAborted();

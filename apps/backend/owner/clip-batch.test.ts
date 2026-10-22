@@ -20,11 +20,13 @@ let directory: string,
   analysis: OwnerAnalysis,
   batch: OwnerClipBatch;
 let ports: {
+  mode: OwnerClipPorts["mode"];
   plan: ReturnType<typeof vi.fn<OwnerClipPorts["plan"]>>;
   image: ReturnType<typeof vi.fn<OwnerClipPorts["image"]>>;
   render: ReturnType<typeof vi.fn<OwnerClipPorts["render"]>>;
 };
 const analysisPorts = {
+  mode: "synthetic-ai" as const,
   transcribe: vi.fn(fakeOwnerAnalysis.transcribe),
   select: vi.fn(fakeOwnerAnalysis.select),
 };
@@ -62,6 +64,7 @@ beforeEach(async () => {
     new AbortController().signal,
   );
   ports = {
+    mode: "synthetic-ai",
     plan: vi.fn(fakeOwnerClipPreparation.plan),
     image: vi.fn(fakeOwnerClipPreparation.image),
     render: vi.fn(async (job) => {
@@ -159,7 +162,7 @@ it("prepares three independent bundles, reuses one analysis, and makes duplicate
     expect(clip.sourceRevision).toBe(0);
     expect(clip.base?.fingerprint).toBe(workspace.source.fingerprint);
     expect(clip.baseHash).toMatch(/^[a-f0-9]{64}$/);
-    expect(clip.fakeCalls).toEqual({ plan: 1, image: 1, render: 1 });
+    expect(clip.calls).toEqual({ plan: 1, image: 1, render: 1 });
   }
   await batch.submit(input, analysis);
   await batch.submit({ ...input, operationId: randomUUID() }, analysis);
@@ -194,7 +197,7 @@ it("freezes inputs before asynchronous admission and explicitly resumes a never-
   release.release();
   await batch.drain();
   expect(batch.snapshot().clips).toHaveLength(3);
-  expect(batch.snapshot().clips[2]?.fakeCalls.plan).toBe(0);
+  expect(batch.snapshot().clips[2]?.calls.plan).toBe(0);
   const resume = request();
   await batch.submit(resume, analysis);
   await batch.drain();
@@ -246,7 +249,7 @@ it("isolates a queued cancellation, an in-flight failure and a successful siblin
   expect(ports.image).toHaveBeenCalledTimes(2);
   expect(ports.render).toHaveBeenCalledTimes(2);
   expect(peak).toBe(1);
-  expect(batch.snapshot().clips[2]?.fakeCalls).toEqual({
+  expect(batch.snapshot().clips[2]?.calls).toEqual({
     plan: 0,
     image: 0,
     render: 0,

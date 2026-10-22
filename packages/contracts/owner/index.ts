@@ -5,6 +5,7 @@ import {
   OWNER_FPS,
   ownerIdSchema,
   ownerCutSchema,
+  ownerAiModeSchema,
 } from "./policy.ts";
 import { ownerOverlaySchema, ownerOutputRevisionSchema } from "./clips.ts";
 export {
@@ -31,7 +32,7 @@ export const ownerWorkspaceSchema = z
   .object({
     id: ownerIdSchema,
     source: ownerSourceSchema,
-    mode: z.literal("synthetic-ai"),
+    mode: z.union([ownerAiModeSchema, z.literal("unavailable")]),
     revision: z.number().int().nonnegative(),
   })
   .strict();

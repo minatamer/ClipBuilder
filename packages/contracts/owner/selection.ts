@@ -7,6 +7,7 @@ import {
   ownerIdSchema,
   OWNER_FPS,
   ownerCutSchema,
+  ownerAiModeSchema,
   type OwnerCut,
 } from "./policy.ts";
 export { OWNER_FPS, ownerCutSchema, type OwnerCut } from "./policy.ts";
@@ -78,11 +79,11 @@ export const ownerAnalysisSchema = z
   .object({
     id: ownerIdSchema,
     inputs: ownerAnalysisInputsSchema,
-    mode: z.literal("synthetic-ai"),
+    mode: ownerAiModeSchema,
     words: ownerWordsSchema,
     manual: z.array(ownerMomentSchema).max(OWNER_LIMITS.ranges),
     suggestions: z.array(ownerMomentSchema).max(OWNER_LIMITS.suggestions),
-    fakeCalls: z
+    calls: z
       .object({
         transcription: z.number().int().min(0).max(1),
         selection: z.number().int().min(0).max(1),

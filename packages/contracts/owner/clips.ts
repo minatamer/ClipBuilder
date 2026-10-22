@@ -6,6 +6,7 @@ import {
   OWNER_LIMITS,
   ownerCutSchema,
   ownerIdSchema,
+  ownerAiModeSchema,
 } from "./policy.ts";
 import { ownerWordsSchema } from "./selection.ts";
 import { CONTEXTUAL_PICTURE_POLICY } from "../src/contextual-picture.schema.ts";
@@ -34,7 +35,7 @@ export const ownerAssetSchema = z
       .int()
       .positive()
       .max(3 * 1024 ** 2),
-    origin: z.enum(["synthetic", "owner-supplied"]),
+    origin: z.enum(["synthetic", "generated", "owner-supplied"]),
   })
   .strict();
 export type OwnerAsset = z.infer<typeof ownerAssetSchema>;
@@ -115,6 +116,7 @@ export const ownerClipSchema = z
   .object({
     id: ownerIdSchema,
     momentId: ownerIdSchema,
+    mode: ownerAiModeSchema,
     analysisId: ownerIdSchema,
     sourceRevision: z.number().int().nonnegative(),
     revision: z.number().int().nonnegative(),
@@ -136,7 +138,7 @@ export const ownerClipSchema = z
       .array(ownerAssetSchema)
       .max(OWNER_BATCH_POLICY.imageAttemptsPerClip),
     outputs: z.array(ownerClipOutputSchema).max(OWNER_BATCH_POLICY.outputs),
-    fakeCalls: z
+    calls: z
       .object({
         plan: z.number().int().min(0).max(1),
         image: z

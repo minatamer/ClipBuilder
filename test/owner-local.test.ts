@@ -51,6 +51,7 @@ describe("isolated owner host", () => {
   let media: ReturnType<typeof vi.fn<OwnerHostOptions["media"]>>;
   let shutdown: ReturnType<typeof vi.fn<() => void>>;
   let analysis: {
+    mode: "synthetic-ai";
     transcribe: ReturnType<typeof vi.fn<typeof fakeOwnerAnalysis.transcribe>>;
     select: ReturnType<typeof vi.fn<typeof fakeOwnerAnalysis.select>>;
   };
@@ -75,6 +76,7 @@ describe("isolated owner host", () => {
     );
     shutdown = vi.fn();
     analysis = {
+      mode: "synthetic-ai",
       transcribe: vi.fn(fakeOwnerAnalysis.transcribe),
       select: vi.fn(fakeOwnerAnalysis.select),
     };

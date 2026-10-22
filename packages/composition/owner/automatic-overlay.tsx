@@ -33,7 +33,9 @@ export function OwnerAutomaticOverlay({
           alt={
             cue.origin === "synthetic"
               ? "Synthetic picture placeholder"
-              : "Owner picture"
+              : cue.origin === "generated"
+                ? "Generated illustration"
+                : "Owner picture"
           }
           style={{
             position: "absolute",

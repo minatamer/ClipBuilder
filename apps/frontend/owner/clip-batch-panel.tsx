@@ -113,7 +113,7 @@ export function OwnerClipBatchPanel({
       if (alive.current) {
         accept(value);
         setMessage(
-          "Local work list updated. One heavy worker; fake AI, zero paid calls.",
+          "Local work list updated. Native work runs one clip at a time.",
         );
       }
     } catch {
@@ -138,9 +138,13 @@ export function OwnerClipBatchPanel({
         {message}
       </p>
       <p>
-        {selected.length} selected · upper bound: {selected.length} simulated
-        plans and {selected.length * 3} simulated picture attempts. Discovery is
-        reused. Actual AI calls: zero. Native work runs one clip at a time.
+        {selected.length} selected · upper bound: {selected.length}{" "}
+        {workspace.mode === "synthetic-ai" ? "simulated plans" : "plans"} and{" "}
+        {selected.length * 3} picture attempts. Discovery is reused.{" "}
+        {workspace.mode === "synthetic-ai"
+          ? "Actual AI calls: zero."
+          : "Provider attempts are recorded per clip."}{" "}
+        Native work runs one clip at a time.
       </p>
       <nav>
         <button
@@ -172,9 +176,10 @@ export function OwnerClipBatchPanel({
               Clip {index + 1} · {clip.state}
             </h3>
             <p>
-              Revision {clip.revision} · simulated plans {clip.fakeCalls.plan},
-              pictures {clip.fakeCalls.image} · native attempts{" "}
-              {clip.fakeCalls.render}
+              Revision {clip.revision} ·{" "}
+              {clip.mode === "synthetic-ai" ? "simulated plans" : "plans"}{" "}
+              {clip.calls.plan}, pictures {clip.calls.image} · native attempts{" "}
+              {clip.calls.render}
             </p>
             {clip.error && (
               <p role="status">
@@ -231,8 +236,10 @@ export function OwnerClipBatchPanel({
         <article className="clip-review">
           <h3>Review · revision {current.revision}</h3>
           <p>
-            Captions and pictures below are synthetic placeholders. This preview
-            uses the same overlay as native export.
+            {current.mode === "synthetic-ai"
+              ? "Captions and pictures below are synthetic placeholders. "
+              : "This preview uses the saved timed captions and admitted pictures. "}
+            Preview uses the same overlay as native export.
           </p>
           <Player
             key={current.id}

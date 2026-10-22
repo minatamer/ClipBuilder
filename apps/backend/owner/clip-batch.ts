@@ -22,11 +22,19 @@ import {
 } from "../../../packages/contracts/owner/clips.ts";
 import {
   ownerAnalysisSchema,
+  ownerWordsSchema,
   type OwnerAnalysis,
   type OwnerMoment,
+  type OwnerWord,
 } from "../../../packages/contracts/owner/selection.ts";
 import { compileFixedCaptions } from "../src/assembly/fixed-captions.ts";
 import { WorkspaceFiles, requireDisk } from "./workspace-files.ts";
+import {
+  contextualPictureBriefSchema,
+  CONTEXTUAL_PICTURE_POLICY,
+} from "../../../packages/contracts/src/contextual-picture.schema.ts";
+import { normalizePicture } from "../src/assembly/picture-raster.ts";
+import type { OwnerAiMode } from "../../../packages/contracts/owner/policy.ts";
 
 export const ownerClipPlanSchema = z
   .array(
@@ -34,18 +42,29 @@ export const ownerClipPlanSchema = z
       .object({
         startFrame: z.number().int().nonnegative(),
         endFrame: z.number().int().positive(),
+        brief: contextualPictureBriefSchema,
+        evidenceWordIds: z
+          .array(ownerWordsSchema.element.shape.id)
+          .min(1)
+          .max(CONTEXTUAL_PICTURE_POLICY.maxSupportingPhraseWords),
       })
       .strict(),
   )
   .max(OWNER_BATCH_POLICY.imageAttemptsPerClip);
 export type OwnerClipPorts = {
+  readonly mode: OwnerAiMode;
   plan(
-    moment: OwnerMoment,
+    request: { workspace: OwnerWorkspace; clipId: string; moment: OwnerMoment },
     signal: AbortSignal,
   ): Promise<z.infer<typeof ownerClipPlanSchema>>;
   image(
+    request: {
+      clipId: string;
+      cue: z.infer<typeof ownerClipPlanSchema>[number];
+      words: OwnerWord[];
+    },
     signal: AbortSignal,
-  ): Promise<{ bytes: Buffer; width: number; height: number }>;
+  ): Promise<{ bytes: Buffer; origin: "synthetic" | "generated" }>;
   render(job: OwnerMediaJob, signal: AbortSignal): Promise<OwnerMediaResult>;
 };
 const digest = (value: unknown) =>
@@ -119,6 +138,7 @@ export class OwnerClipBatch {
       request.analysisId !== analysis.id ||
       request.sourceRevision !== this.workspace.revision ||
       analysis.inputs.sourceRevision !== this.workspace.revision ||
+      analysis.mode !== this.ports.mode ||
       request.policyRevision !== analysis.inputs.policyRevision
     )
       throw new Error("stale_analysis");
@@ -136,7 +156,7 @@ export class OwnerClipBatch {
       );
     const fresh = moments.filter((moment) => {
       const clip = existing(moment);
-      return !clip || (clip.state === "canceled" && clip.fakeCalls.plan === 0);
+      return !clip || (clip.state === "canceled" && clip.calls.plan === 0);
     });
     const additions = fresh.filter((moment) => !existing(moment)).length;
     if (this.clips.size + additions > OWNER_LIMITS.clips)
@@ -148,6 +168,7 @@ export class OwnerClipBatch {
       const clip: OwnerClip = existing(moment) ?? {
         id: randomUUID(),
         momentId: moment.id,
+        mode: this.ports.mode,
         analysisId: analysis.id,
         sourceRevision: this.workspace.revision,
         revision: 0,
@@ -157,7 +178,7 @@ export class OwnerClipBatch {
         base: null,
         assets: [],
         outputs: [],
-        fakeCalls: { plan: 0, image: 0, render: 0 },
+        calls: { plan: 0, image: 0, render: 0 },
         error: null,
       };
       clip.state = cancelVersion === this.cancelVersion ? "queued" : "canceled";
@@ -259,34 +280,69 @@ export class OwnerClipBatch {
     signal: AbortSignal,
   ): Promise<OwnerClipBase> {
     clip.state = "preparing";
-    clip.fakeCalls.plan++;
+    clip.calls.plan++;
     const frames = moment.cut.endFrame - moment.cut.startFrame;
     const plan = ownerClipPlanSchema.parse(
-      await this.ports.plan(structuredClone(moment), signal),
+      await this.ports.plan(
+        {
+          workspace: structuredClone(this.workspace),
+          clipId: clip.id,
+          moment: structuredClone(moment),
+        },
+        signal,
+      ),
     );
     if (
       plan.some(
-        (cue) => cue.endFrame <= cue.startFrame || cue.endFrame > frames,
+        (cue) =>
+          cue.endFrame <= cue.startFrame ||
+          cue.endFrame > frames ||
+          new Set(cue.evidenceWordIds).size !== cue.evidenceWordIds.length ||
+          cue.evidenceWordIds.some(
+            (id) =>
+              !moment.cues.some(
+                (word) =>
+                  word.id === id &&
+                  word.endMs > (cue.startFrame * 1000) / OWNER_FPS &&
+                  word.startMs < (cue.endFrame * 1000) / OWNER_FPS,
+              ),
+          ),
       )
     )
       throw new Error("invalid_plan_clock");
     signal.throwIfAborted();
     const visuals = [];
     for (const cue of plan) {
-      clip.fakeCalls.image++;
-      const picture = await this.ports.image(signal);
+      clip.calls.image++;
+      const picture = await this.ports.image(
+        {
+          clipId: clip.id,
+          cue: structuredClone(cue),
+          words: structuredClone(moment.cues),
+        },
+        signal,
+      );
+      signal.throwIfAborted();
+      if (
+        picture.origin !==
+        (this.ports.mode === "synthetic-ai" ? "synthetic" : "generated")
+      )
+        throw new Error("invalid_picture_provenance");
+      if (picture.bytes.length > CONTEXTUAL_PICTURE_POLICY.maxDownloadBytes)
+        throw new Error("picture_capacity");
+      const raster = await normalizePicture(picture.bytes);
       signal.throwIfAborted();
       const asset = ownerAssetSchema.parse({
         id: randomUUID(),
-        digest: createHash("sha256").update(picture.bytes).digest("hex"),
-        width: picture.width,
-        height: picture.height,
-        bytes: picture.bytes.length,
-        origin: "synthetic",
+        digest: createHash("sha256").update(raster.bytes).digest("hex"),
+        width: raster.width,
+        height: raster.height,
+        bytes: raster.bytes.length,
+        origin: picture.origin,
       });
       await writeFile(
         await this.files.asset(this.workspace.id, asset.id),
-        picture.bytes,
+        raster.bytes,
         { flag: "wx", mode: 0o600 },
       );
       clip.assets.push(asset);
@@ -303,7 +359,7 @@ export class OwnerClipBatch {
           height: 520 / 1920,
         },
         fit: "contain" as const,
-        origin: "synthetic" as const,
+        origin: picture.origin,
       });
     }
     const captions = compileFixedCaptions({
@@ -339,7 +395,7 @@ export class OwnerClipBatch {
         const snapshot = ownerClipBaseSchema.parse(clip.base),
           editRevision = clip.revision;
         clip.state = "rendering";
-        clip.fakeCalls.render++;
+        clip.calls.render++;
         const result = await this.ports.render(
           {
             workspaceId: this.workspace.id,

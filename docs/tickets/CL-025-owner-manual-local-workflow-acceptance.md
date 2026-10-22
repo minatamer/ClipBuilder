@@ -22,6 +22,10 @@ Synthetic success is not real-media, provider or human visual acceptance.
       Best available and an exact offered tier; check actual dimensions/audio.
 - [ ] Reopen saved sources after restart and while offline. Verify zero new
       downloads, source preservation after close/failure and source relinking.
+- [ ] Confirm actual owner live adapter composition and local provider-input
+      preparation have passed their injected, zero-spend integration checks;
+      provider-shaped data tests or flags alone are insufficient. Any missing
+      implementation returns to its owning packet before this walkthrough.
 - [ ] Separately enable live AI with owner-managed keys/live flags and explicit
       rights/transfer/spend approvals. Only the owner initiates paid processing;
       the agent does not turn it on or run a paid test.

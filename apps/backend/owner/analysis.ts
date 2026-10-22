@@ -19,9 +19,11 @@ import {
   type OwnerWord,
 } from "../../../packages/contracts/owner/selection.ts";
 import { candidateSelectionPolicy } from "../src/analysis/analysis.prompt.ts";
+import type { OwnerAiMode } from "../../../packages/contracts/owner/policy.ts";
 
 /** Domain ports only. This owner composition has no live provider implementation. */
 export type OwnerAnalysisPorts = {
+  readonly mode: OwnerAiMode;
   transcribe(
     workspace: OwnerWorkspace,
     signal: AbortSignal,
@@ -97,6 +99,7 @@ export async function analyzeOwner(
   signal: AbortSignal,
 ) {
   const workspace = ownerWorkspaceSchema.parse(currentWorkspace);
+  if (workspace.mode !== ports.mode) throw new Error("analysis_mode_mismatch");
   const inputs = ownerAnalysisInputsSchema.parse(value);
   if (inputs.sourceRevision !== workspace.revision)
     throw new Error("stale_source_revision");
@@ -237,11 +240,11 @@ export async function analyzeOwner(
   }
   return ownerAnalysisSchema.parse({
     id: randomUUID(),
-    mode: "synthetic-ai",
+    mode: ports.mode,
     inputs,
     words,
     manual,
     suggestions,
-    fakeCalls: { transcription: 1, selection: selected ? 1 : 0 },
+    calls: { transcription: 1, selection: selected ? 1 : 0 },
   });
 }

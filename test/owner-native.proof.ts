@@ -96,7 +96,7 @@ it("encodes and decodes a real synthetic portrait MP4 offline, then drains all s
     const result = ownerAnalysisSchema.parse(
       JSON.parse(analyzed.body.toString()),
     );
-    expect(result.fakeCalls).toEqual({ transcription: 1, selection: 0 });
+    expect(result.calls).toEqual({ transcription: 1, selection: 0 });
     const selection = {
       analysisId: result.id,
       policyRevision: result.inputs.policyRevision,

@@ -181,3 +181,61 @@ Windows standalone retains the existing 26 external package links and
 Next type-import noise was restored. No credentials, real media, paid/provider,
 cloud or YouTube retrieval were used. No deviation beyond the explicitly adopted
 one-worker fallback and the CL-020 cross-packet edit criterion.
+
+## Owner-requested CL-017–019 real-mode compatibility follow-up
+
+The owner requested this revisit after the first CL-019 commit, before CL-020.
+Reviewed commits `8d961fe`, `d500d30`, and `10b1613`, their owning tickets,
+domain/media paths and existing provider primitives. Native source inspection,
+fingerprinting, cut clocks, bounded jobs and immutable outputs process actual
+media independently of fake AI. Range reconciliation preserves supplied timed
+words and source-backed evidence. Public cloud composition stays separate.
+
+Two confirmed implementation gaps were addressed under this reopened packet:
+generic schemas/use cases hardcoded synthetic provenance/counter names, and
+the image port had no contextual input. Explicit synthetic/provider/unavailable
+metadata now labels data honestly; mode mismatches reject before dispatch and
+generic `calls` counts retain the same bounds. A planning request contains the
+admitted workspace/source identity, clip ID and moment. A picture request
+contains its validated brief, evidence IDs and actual clip-relative words;
+invented/out-of-window evidence is rejected before image work. Actual image
+bytes are normalized through the existing bounded backend raster primitive;
+their digest/dimensions derive from decoded canonical bytes. Synthetic and
+generated provenance cannot substitute for one another.
+
+All executable owner entrypoints still reject real/paid mode. Provider-shaped
+test doubles are contract/integration evidence only, not actual provider tests.
+The live owner adapter and local provider-input preparation are not composed;
+keys/live flags alone do not make real operation available. CL-024 must reconcile
+that remaining readiness separately before the CL-025 owner walkthrough. No
+offline speech model, credential access, AI/provider/cloud call or source
+download is introduced by this follow-up. Validation results follow below.
+
+Compatibility revalidation (settled follow-up worktree): TL;DR: the same local
+workflow now accepts validated arbitrary adapter output rather than a fixed
+fake recipe; native processing and protected startup remain unchanged. Verdict:
+**Meets the compatibility follow-up; no actionable findings.** Covered: explicit
+modes, actual supplied word/timing preservation, source/clip identity, grounded
+image context, provenance, bounded independent image normalization, immutable
+re-export and exact attempt counts. Ten new tests use injected provider-shaped
+doubles only, including malformed/oversized images and invented/out-of-window
+evidence. The full owner suite passes 53 tests. Inspected the current contract,
+host/use-case/adapter, frontend labels, shared overlay and test changes; no
+external or paid checks ran. Actual live adapter composition/input preparation,
+maximum capacity and human editorial quality remain unverified; the CL-024
+handoff requirement explicitly prevents calling flags-only activation complete.
+
+Follow-up focused/native gates: `owner:test` 53/53, `owner:build`, and all three
+`owner:proof` cases pass. Format/lint/typecheck pass. Root unit suite passes
+1,309 tests in 116 files with the installed Vitest-supported
+`VITEST_MAX_WORKERS=4` budget. The default parallel package runs again exhausted
+two existing 5-second frontend dynamic-import tests; bounding worker count
+resolved those timeouts without changing test assertions/timeouts or public
+source/configuration. This is a test-process CPU budget, independent of the
+one-native-worker product limit.
+
+Follow-up final `build` and `owner:artifacts` pass (1,490 built files plus
+Docker/compiler exclusion). The unchanged Windows packaging limitation remains
+26 external links, not a self-contained Linux deployment artifact. No live
+processing, credentials or Git push occurred. Generated Next declarations were
+restored; no public behavior or operating settings changed.

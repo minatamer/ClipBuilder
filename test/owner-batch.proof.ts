@@ -130,7 +130,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     const analysis = ownerAnalysisSchema.parse(
       JSON.parse(analyzed.body.toString()),
     );
-    expect(analysis.fakeCalls).toEqual({ transcription: 1, selection: 1 });
+    expect(analysis.calls).toEqual({ transcription: 1, selection: 1 });
     const body = JSON.stringify({
       operationId: crypto.randomUUID(),
       analysisId: analysis.id,
@@ -252,7 +252,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     expect(captions[0]).toBeGreaterThan(20);
     expect(captions[1]).toBeLessThan(18);
     for (const clip of result.clips) {
-      expect(clip.fakeCalls).toEqual({ plan: 1, image: 1, render: 1 });
+      expect(clip.calls).toEqual({ plan: 1, image: 1, render: 1 });
       const output = await ownerRequest(
         port,
         `${endpoint}/clips/${clip.id}/output/0`,

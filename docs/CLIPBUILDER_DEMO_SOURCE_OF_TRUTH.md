@@ -64,6 +64,20 @@ loopback, serves no source video, and drains with its browser and scratch.
 Caption/picture controls and saved drafts remain CL-020. These checks use fake
 AI and no keys/ADC; they establish native mechanics, not real AI/editorial quality.
 
+Owner real-mode compatibility clarification (2026-10-22): fake execution must
+exercise provider-neutral domain/media paths. The owner requested a revisit of
+CL-017–019 after CL-019 and before continuing. Domain results carry explicit
+synthetic/provider provenance and generic attempt counts; unknown/mismatched
+execution modes fail closed. Planning receives stable source/clip identity and
+timed words; picture generation receives a validated grounded contextual brief.
+Provider-shaped test doubles preserve their supplied words, timing and
+generated-image provenance through the same pipeline. Image bytes are
+independently normalized before admission. These metadata values cannot enable
+providers: executable owner entrypoints remain strictly fake/paid-off. Real
+adapter composition and local preparation for provider inputs must be reconciled
+before claiming real-mode readiness; flags/keys alone do not implement it.
+No live call is authorized.
+
 ## Owner local workflow planning instruction — 2026-10-22
 
 The owner requests research and fresh tickets for personal local-only controls:

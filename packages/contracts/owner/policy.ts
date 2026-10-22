@@ -16,6 +16,8 @@ export const OWNER_LIMITS = {
   jsonBytes: 1024 * 1024,
 } as const;
 export const OWNER_FPS = 30;
+export const ownerAiModeSchema = z.enum(["synthetic-ai", "provider-ai"]);
+export type OwnerAiMode = z.infer<typeof ownerAiModeSchema>;
 export const ownerIdSchema = z.uuid();
 export const ownerCutSchema = z
   .object({

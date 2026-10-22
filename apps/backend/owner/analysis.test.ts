@@ -45,6 +45,7 @@ const input = (minMs = 30_000, maxMs = minMs): OwnerAnalysisInputs => ({
   manualOnly: false,
 });
 const ports = () => ({
+  mode: "synthetic-ai" as const,
   transcribe: vi.fn(fakeOwnerAnalysis.transcribe),
   select: vi.fn(fakeOwnerAnalysis.select),
 });
@@ -99,7 +100,7 @@ describe("owner manual ranges and independent discovery", () => {
       expect(provider.select.mock.calls[0]?.[3]).toContain(
         `${min / 1000}–${max / 1000} second physical window`,
       );
-      expect(result.fakeCalls).toEqual({ transcription: 1, selection: 1 });
+      expect(result.calls).toEqual({ transcription: 1, selection: 1 });
     },
   );
   it("reuses exact duplicate cuts, links matching AI evidence and still offers four independent suggestions", async () => {

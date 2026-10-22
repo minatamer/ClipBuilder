@@ -12,6 +12,10 @@ with their normalized boxes and contain/cover fit. It uses the system Arial
 font and directly renders admitted JPEGs. It contains no source-video player,
 network loader, mutable editor state or renderer lifecycle.
 
+Asset provenance distinguishes a synthetic placeholder, generated illustration
+and owner picture. Rendering is the same deterministic path for each; it does
+not infer rights or actual provider availability from that metadata.
+
 The owner UI places this tree over the normalized selected video in its local
 Remotion Player. The owner renderer paints the same tree in a fixed transparent
 Chrome page, then combines its PNG frames with native video/audio. Geometry,

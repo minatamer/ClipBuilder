@@ -33,6 +33,15 @@ that must not be relabelled as measurements.
 
 ## Combined acceptance scenario
 
+Owner clarification after CL-019: inspect the real-mode handoff as well as the
+fake path. Test provider-shaped adapters with injected transports/data through
+the same contracts, media identities and edit/export use cases. Record actual
+owner live adapter composition/local provider-input preparation and activation
+readiness; return missing implementation to its narrow owning packet before
+claiming real-mode readiness. Fake-only entrypoints plus flags/keys do not make
+an unimplemented live adapter available. These are safe local checks; no agent
+credential access, real AI invocation or paid-flow test is authorized.
+
 Use synthetic media and invented timed words/pictures only. Open one source;
 enter several exact ranges; run independent fake discovery with 30–30, 60–60 and
 a variable min/max policy; select a mix of three manual/AI clips; process the

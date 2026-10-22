@@ -94,6 +94,19 @@ attempts are allowed per distinct clip; source transcription/discovery are
 reused. The current fake planner creates one colored placeholder when cues
 exist, with no real AI calls. There are no automatic retries.
 
+The shared domain is provider-neutral: explicit `mode` metadata distinguishes
+synthetic/provider results and unavailable analysis, while `calls` records
+bounded attempts. Planner inputs include the admitted workspace/source, clip
+ID and actual timed moment; picture inputs contain a bounded contextual brief,
+evidence word IDs and the clip's words. Invalid/out-of-window evidence and mode
+or provenance mismatches fail before downstream work. Returned raster bytes
+are independently decoded, oriented, metadata-stripped and normalized with the
+existing bounded picture primitive; metadata claims do not set saved geometry.
+Synthetic/generated/owner-supplied provenance stays distinct. Provider-shaped
+test doubles verify these paths without egress; they do not enable providers.
+Actual owner provider adapters/local provider-input preparation still need
+composition before real-mode activation. Flags/keys alone are insufficient.
+
 `GET /api/workspace/{id}/clips` reads progress and completed bundles without
 dispatch. Matching operation IDs/payloads are idempotent; conflicting payloads
 or stale revisions are rejected. A new explicit selection action may resume a

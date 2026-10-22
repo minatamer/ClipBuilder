@@ -4,6 +4,7 @@ import type { OwnerAnalysisPorts } from "./analysis.ts";
 
 /** Deliberately fictional words: this adapter never reads or transcribes source audio. */
 export const fakeOwnerAnalysis: OwnerAnalysisPorts = {
+  mode: "synthetic-ai",
   async transcribe(workspace, signal) {
     signal.throwIfAborted();
     return Array.from(

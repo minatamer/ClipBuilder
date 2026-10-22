@@ -29,6 +29,7 @@ export function OwnerSelectionPanel({
   onBusy,
   onChoose,
 }: Props) {
+  const synthetic = workspace.mode === "synthetic-ai";
   const [rows, setRows] = useState<Row[]>([]);
   const [minimum, setMinimum] = useState("10"),
     [maximum, setMaximum] = useState("60");
@@ -70,7 +71,7 @@ export function OwnerSelectionPanel({
           setPolicyRevision(restored.inputs.policyRevision);
           setAnalysis(restored);
           setMessage(
-            "The last simulated analysis is restored for this running session. Choose a moment to export.",
+            "The last completed analysis is restored for this running session. Choose a moment to export.",
           );
         }
       } catch {
@@ -93,9 +94,7 @@ export function OwnerSelectionPanel({
     setAnalysis(null);
     setSelected([]);
     onChoose([]);
-    setMessage(
-      "Inputs changed. Choose Find moments to run the next simulated analysis.",
-    );
+    setMessage("Inputs changed. Choose Find moments to run the next analysis.");
   }
   function parsed() {
     return ownerAnalysisInputsSchema.parse({
@@ -130,7 +129,7 @@ export function OwnerSelectionPanel({
     }
   }
   async function findMoments() {
-    if (busy) return;
+    if (busy || workspace.mode === "unavailable") return;
     let inputs;
     try {
       inputs = parsed();
@@ -150,7 +149,7 @@ export function OwnerSelectionPanel({
     setSelected([]);
     onChoose([]);
     setMessage(
-      "Running one simulated transcription and independent selection…",
+      `Running one ${synthetic ? "simulated " : ""}transcription and independent selection…`,
     );
     try {
       const response = await fetch(`/api/workspace/${workspace.id}/analysis`, {
@@ -164,7 +163,7 @@ export function OwnerSelectionPanel({
       if (!controller.signal.aborted && mounted.current) {
         setAnalysis(result);
         setMessage(
-          `Ready: ${result.manual.length} manual cuts and ${result.suggestions.length} additional simulated suggestions. Fake calls: transcription ${result.fakeCalls.transcription}, selection ${result.fakeCalls.selection}.`,
+          `Ready: ${result.manual.length} manual cuts and ${result.suggestions.length} additional ${result.mode === "synthetic-ai" ? "simulated " : ""}suggestions. ${result.mode === "synthetic-ai" ? "Simulated" : "Provider"} calls: transcription ${result.calls.transcription}, selection ${result.calls.selection}.`,
         );
       }
     } catch {
@@ -242,8 +241,11 @@ export function OwnerSelectionPanel({
     <section className="selection" aria-labelledby="selection-title">
       <h2 id="selection-title">Choose moments</h2>
       <p>
-        AI is simulated. Fictional transcript words do not describe your source.
-        No provider calls or automatic real captions.
+        {synthetic
+          ? "AI is simulated. Fictional transcript words do not describe your source. No provider calls or automatic real captions."
+          : workspace.mode === "unavailable"
+            ? "Automatic analysis is unavailable. Local media playback and prepared edits do not need AI access."
+            : "Analysis uses the configured provider. Review its timed words and suggestions before use."}
       </p>
       <p role="status" aria-live="polite">
         {message}
@@ -363,11 +365,15 @@ export function OwnerSelectionPanel({
               setManualOnly(event.target.checked);
             }}
           />
-          Manual-only run (transcription is still simulated once for cues)
+          Manual-only run (transcription is still{" "}
+          {synthetic ? "simulated " : ""}once for cues)
         </label>
       </fieldset>
       <nav>
-        <button disabled={busy} onClick={() => void findMoments()}>
+        <button
+          disabled={busy || workspace.mode === "unavailable"}
+          onClick={() => void findMoments()}
+        >
           Find moments
         </button>
         {analyzing && (
@@ -379,7 +385,12 @@ export function OwnerSelectionPanel({
       {analysis && (
         <div className="choices">
           {choices(analysis.manual, "Your exact requests")}
-          {choices(analysis.suggestions, "Additional simulated AI suggestions")}
+          {choices(
+            analysis.suggestions,
+            synthetic
+              ? "Additional simulated AI suggestions"
+              : "Additional AI suggestions",
+          )}
         </div>
       )}
     </section>
