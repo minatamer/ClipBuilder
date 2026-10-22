@@ -14,10 +14,12 @@ import {
   type OwnerMomentExport,
   type OwnerMoment,
 } from "../../../packages/contracts/owner/selection.ts";
+import type { OwnerRuntimeCapabilities } from "../../../packages/contracts/owner/runtime.ts";
 
 type Row = { id: string; start: string; end: string };
 type Props = {
   workspace: OwnerWorkspace;
+  capabilities: OwnerRuntimeCapabilities;
   busy: boolean;
   onBusy: (busy: boolean) => void;
   onChoose: (selection: OwnerMomentExport[]) => void;
@@ -25,11 +27,15 @@ type Props = {
 
 export function OwnerSelectionPanel({
   workspace,
+  capabilities,
   busy,
   onBusy,
   onChoose,
 }: Props) {
-  const synthetic = workspace.mode === "synthetic-ai";
+  const synthetic = capabilities.aiMode === "synthetic-ai";
+  const analysisAvailable =
+    capabilities.aiMode !== "unavailable" &&
+    workspace.mode === capabilities.aiMode;
   const [rows, setRows] = useState<Row[]>([]);
   const [minimum, setMinimum] = useState("10"),
     [maximum, setMaximum] = useState("60");
@@ -129,7 +135,7 @@ export function OwnerSelectionPanel({
     }
   }
   async function findMoments() {
-    if (busy || workspace.mode === "unavailable") return;
+    if (busy || !analysisAvailable) return;
     let inputs;
     try {
       inputs = parsed();
@@ -187,7 +193,7 @@ export function OwnerSelectionPanel({
         <h3>{label}</h3>
         {moments.length === 0 ? (
           <p>
-            {label === "Additional simulated AI suggestions"
+            {label !== "Your exact requests"
               ? "No qualifying AI suggestions. Manual requests remain available."
               : "No manual cuts requested."}
           </p>
@@ -204,7 +210,9 @@ export function OwnerSelectionPanel({
                 <p>
                   {moment.rangeIds.length
                     ? `${moment.rangeIds.length} manual row(s)${moment.evidence ? " · also discovered independently" : ""}`
-                    : "Independent simulated discovery"}
+                    : analysis?.mode === "synthetic-ai"
+                      ? "Independent simulated discovery"
+                      : "Independent provider discovery"}
                 </p>
                 <button
                   disabled={
@@ -241,14 +249,21 @@ export function OwnerSelectionPanel({
     <section className="selection" aria-labelledby="selection-title">
       <h2 id="selection-title">Choose moments</h2>
       <p>
-        {analysis?.mode === "provider-ai"
-          ? "The provider analysis below retains its supplied words and timings. Fresh analysis uses this runtime's current AI mode."
-          : synthetic
-            ? "AI is simulated. Fictional transcript words do not describe your source. No provider calls or automatic real captions."
-            : workspace.mode === "unavailable"
-              ? "Automatic analysis is unavailable. Local media playback and prepared edits do not need AI access."
-              : "Analysis uses the configured provider. Review its timed words and suggestions before use."}
+        {capabilities.aiMode === "unavailable"
+          ? "Fresh analysis is unavailable. Local media playback and prepared edits do not need AI access."
+          : !analysisAvailable
+            ? "This workspace retains a different AI provenance from the current runtime. Open a new processing source for fresh analysis; saved results and prepared edits remain available."
+            : synthetic
+              ? "AI is simulated. Fictional transcript words do not describe your source. No provider calls or automatic real captions."
+              : "Fresh analysis uses the configured provider. Review its timed words and suggestions before use."}
       </p>
+      {analysis && (
+        <p>
+          {analysis.mode === "synthetic-ai"
+            ? "The saved analysis below uses fictional simulated words and suggestions."
+            : "The saved provider analysis below retains its supplied words and timings."}
+        </p>
+      )}
       <p role="status" aria-live="polite">
         {message}
       </p>
@@ -367,13 +382,13 @@ export function OwnerSelectionPanel({
               setManualOnly(event.target.checked);
             }}
           />
-          Manual-only run (transcription is still{" "}
-          {synthetic ? "simulated " : ""}once for cues)
+          Manual-only run (one {synthetic ? "simulated " : ""}transcription
+          still supplies cues)
         </label>
       </fieldset>
       <nav>
         <button
-          disabled={busy || workspace.mode === "unavailable"}
+          disabled={busy || !analysisAvailable}
           onClick={() => void findMoments()}
         >
           Find moments

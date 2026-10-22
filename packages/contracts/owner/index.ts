@@ -39,7 +39,35 @@ export const ownerWorkspaceSchema = z
   .strict();
 export type OwnerWorkspace = z.infer<typeof ownerWorkspaceSchema>;
 
+/** Fixed local provider-input budgets; these do not enable provider dispatch. */
+export const OWNER_PROVIDER_MEDIA = {
+  bytes: 16 * 1024 ** 2,
+  audioSampleRate: 16_000,
+  audioBitrate: 32_000,
+  videoBitrate: 200_000,
+  videoFps: 12,
+  videoEdge: 640,
+} as const;
+
 export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
+  z
+    .object({
+      workspaceId: ownerIdSchema,
+      jobId: ownerIdSchema,
+      operation: z.literal("prepare-owner-audio"),
+      fingerprint: ownerSourceSchema.shape.fingerprint,
+    })
+    .strict(),
+  z
+    .object({
+      workspaceId: ownerIdSchema,
+      jobId: ownerIdSchema,
+      operation: z.literal("prepare-owner-video"),
+      clipId: ownerIdSchema,
+      cut: ownerCutSchema,
+      fingerprint: ownerSourceSchema.shape.fingerprint,
+    })
+    .strict(),
   z
     .object({
       workspaceId: ownerIdSchema,
@@ -101,6 +129,22 @@ export type OwnerMediaJob = z.infer<typeof ownerMediaJobSchema>;
 export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
   z
     .object({
+      operation: z.literal("prepare-owner-audio"),
+      bytes: z.number().int().positive().max(OWNER_PROVIDER_MEDIA.bytes),
+      durationMs: z.number().int().min(1000).max(OWNER_LIMITS.sourceMs),
+      digest: ownerSourceSchema.shape.fingerprint,
+    })
+    .strict(),
+  z
+    .object({
+      operation: z.literal("prepare-owner-video"),
+      bytes: z.number().int().positive().max(OWNER_PROVIDER_MEDIA.bytes),
+      durationMs: z.number().int().positive().max(OWNER_LIMITS.clipMs),
+      digest: ownerSourceSchema.shape.fingerprint,
+    })
+    .strict(),
+  z
+    .object({
       operation: z.enum([
         "synthesize-acquisition",
         "prepare-acquisition",
@@ -135,3 +179,7 @@ export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
     .strict(),
 ]);
 export type OwnerMediaResult = z.infer<typeof ownerMediaResultSchema>;
+export type OwnerProviderMediaResult = Extract<
+  OwnerMediaResult,
+  { operation: "prepare-owner-audio" | "prepare-owner-video" }
+>;

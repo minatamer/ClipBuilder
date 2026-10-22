@@ -15,7 +15,8 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import {
   nativeEnvironment,
-  assertOwnerFakeMode,
+  ownerLaunchMode,
+  ownerProviderEnvironment,
 } from "../apps/backend/owner/local-mode.ts";
 import { ownerProcessTree, forceOwnerTree } from "./owner-processes.mjs";
 import {
@@ -25,7 +26,7 @@ import {
 import { ownerNativeTools } from "../apps/renderer/owner/native-tools.ts";
 import { resolveOwnerStorage } from "../apps/backend/owner/owner-storage.ts";
 
-assertOwnerFakeMode(process.env);
+const mode = ownerLaunchMode(process.env, process.argv.slice(2));
 for (const port of [4100, 4200])
   await new Promise((done, fail) => {
     const probe = createServer();
@@ -66,6 +67,7 @@ try {
 }
 await writeFile(stateFile, JSON.stringify(state), { flag: "wx", mode: 0o600 });
 const children = [];
+const childNames = new Map();
 const identities = new Map();
 const logs = [];
 let stopping;
@@ -88,17 +90,28 @@ async function stop() {
     // Stop host first. It cancels/drains worker RPCs before deleting scratch.
     for (const child of [...children].reverse()) {
       if (child.exitCode !== null || child.signalCode !== null) continue;
-      await new Promise((done, fail) => {
-        const timer = setTimeout(() => {
-          void forceOwnerTree(child, identities.get(child.pid)).catch(fail);
-        }, 15_000);
-        child.once("exit", () => {
-          clearTimeout(timer);
-          done();
-        });
+      const graceMs =
+        mode === "provider" && childNames.get(child.pid) === "server"
+          ? 75_000
+          : 15_000;
+      let timer;
+      const exited = new Promise((done) =>
+        child.once("exit", () => done("exit")),
+      );
+      const deadline = new Promise((done) => {
+        timer = setTimeout(() => done("deadline"), graceMs);
+      });
+      try {
         if (child.connected) child.send("stop");
         else child.kill("SIGTERM");
-      });
+        if ((await Promise.race([exited, deadline])) === "deadline") {
+          // Wait for the complete verified tree cleanup, not only wrapper exit.
+          await forceOwnerTree(child, identities.get(child.pid));
+          await exited;
+        }
+      } finally {
+        clearTimeout(timer);
+      }
     }
     for (const log of logs) await log.close();
     // Keep content-safe logs; remove the private capability and owned media scratch.
@@ -125,14 +138,23 @@ try {
     logs.push(stdout, stderr);
     const child = spawn(
       process.execPath,
-      [resolve(`.owner-build/${name}.mjs`)],
+      [
+        resolve(`.owner-build/${name}.mjs`),
+        ...(name === "server" && mode === "provider" ? ["--provider"] : []),
+      ],
       {
         windowsHide: true,
-        env: { ...nativeEnvironment(root), CLIPBUILDER_OWNER_STATE: stateFile },
+        env: {
+          ...(name === "server" && mode === "provider"
+            ? ownerProviderEnvironment(root, process.env)
+            : nativeEnvironment(root)),
+          CLIPBUILDER_OWNER_STATE: stateFile,
+        },
         stdio: ["ignore", stdout.fd, stderr.fd, "ipc"],
       },
     );
     children.push(child);
+    childNames.set(child.pid, name);
     child.on("message", (message) => {
       if (message === "stop") stopSafely();
     });

@@ -104,7 +104,7 @@ local architecture, source of truth and index describe the implemented
 commands and limits. Current `FAKE_MODE=true` with `PAID_DEMO_ENABLED=false` is
 key-free with synthetic AI results; deterministic edits/exports are API-free
 with an already valid bundle and ready local Chrome/FFmpeg tools. Actual
-automatic AI still needs the uncomposed owner adapter/local provider-input
+automatic AI uses the separately gated owner adapter/local provider-input
 preparation, real keys, enabled flags and rights/transfer/spend approvals; keys
 alone are insufficient. No local AI model/weights are provided; paid tests
 remain owner-only. Real frame inspection scope, human visual/A/V acceptance
@@ -186,3 +186,15 @@ Remaining: human/rights/real-media quality and separately authorized real
 provider/input preparation and owner-only paid acceptance. No additional model
 service, hosted control surface, paid call, real download or cloud action was
 introduced. No product-scope deviation.
+
+## Provider-host compatibility correction during CL-024 handoff
+
+The CLI's main function formerly required fake/paid-off process flags even
+though its allowlisted protocol only performs local inspection, presentation
+edits, picture import, draft operations and native export/cancel. That guard is
+removed so already prepared provider bundles can use the same API-free client.
+Discovery, current process/capability identity, exact loopback transport, route
+allowlist, bounded stdin and revision checks remain unchanged. The CLI does not
+read AI configuration or gain analysis/planning/provider routes. Existing agent
+client/API checks pass 43/43 with synthetic ports; no real host or paid flow was
+run. The implementation/gates belong to the reopened CL-019 handoff record.

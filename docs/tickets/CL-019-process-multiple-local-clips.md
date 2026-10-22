@@ -121,8 +121,9 @@ Local workflow/render/composition guides, cost bounds, cleanup ownership,
 source of truth and index are updated with actual implementation evidence.
 `FAKE_MODE=true` and `PAID_DEMO_ENABLED=false` need no keys/ADC and produce
 fictional transcript/plans/pictures with real local native MP4 encoding. No
-live owner provider adapter or offline AI weights/runtime exists. Real AI
-requires further adapter implementation, keys, live flags and applicable
+offline AI weights/runtime exists. The provider handoff correction below adds
+the real adapter and bounded local inputs; real activation still requires keys,
+explicit owner mode/approval and applicable
 rights/transfer/spend approval; paid testing is owner-only. Real quality,
 maximum 4K/300-second capacity and two-worker responsiveness remain unchecked.
 The owner authorized these local synthetic tests, hidden launches and commits;
@@ -242,3 +243,77 @@ Docker/compiler exclusion). The unchanged Windows packaging limitation remains
 26 external links, not a self-contained Linux deployment artifact. No live
 processing, credentials or Git push occurred. Generated Next declarations were
 restored; no public behavior or operating settings changed.
+
+## CL-024 handoff correction under CL-017–019 ownership
+
+The required CL-024 readiness inspection confirmed that the first compatibility
+follow-up still lacked a composed real adapter and local provider inputs. This
+reopened slice implements those missing paths before combined acceptance;
+default execution and every agent check remain synthetic/fake and paid-off.
+
+- The fixed local worker prepares complete-source mono 16kHz AAC/32kbps audio
+  and an upright, physically selected H.264/AAC proxy (at most 640px per edge,
+  12fps). Each is capped at 16MiB, validated/decoded, atomically published and
+  bound to the source fingerprint and exact selected duration. The host reads
+  only fixed files with matching byte/digest receipts and rejects links,
+  mutation, mismatches and canceled reads before transfer.
+- The owner provider adapter reuses existing Gemini Files/transcription,
+  structured selection/planning and generated-picture primitives without public
+  cloud composition. Owner transcription preserves up to 30,000 words rather
+  than the public default of 12,000; selection considers fourteen proposals
+  before the existing four-additional-suggestion domain limit. Plans cite actual
+  clip-local words and admit generated images only after provenance/digest
+  checks. There is one request at a time and no automatic AI retry.
+- Workspace-scoped Files cleanup drains before local proxy removal. Pending
+  remote deletion or local removal prevents fresh AI work; explicit cleanup
+  retries cleanup alone. Clear preserves owned input when cleanup fails, and
+  host shutdown closes its listener even if recovery is still required. The
+  provider host has a bounded 75-second supervisor grace, covering cancellation
+  and the existing independent 30-second Files cleanup budgets; fake/native
+  processes retain 15 seconds.
+- `owner:start` remains strict fake/paid-off. The separately named provider
+  launcher requires explicit local development, paid-on, owner master approval,
+  a key and all individual transfer/image/project/spend approvals. Missing
+  prerequisites expose unavailable capabilities, never synthetic substitution.
+  Only its host receives the allowlisted Gemini settings; native children keep
+  fake/paid-off and receive no provider/ADC credentials. No env file is loaded,
+  no cloud renderer/sample/grant is composed and no real entry was launched.
+- Protected capabilities now drive current frontend labels and fresh-action
+  availability independently of restored clip provenance. Prepared bundles remain
+  editable/exportable when AI is unavailable. The narrow CL-021 compatibility
+  correction removes an unnecessary fake-environment check from the API-free
+  editing CLI; its protected route allowlist still has no AI action.
+- The resource precheck also found automatic decode/filter thread pools despite
+  bounded encoding. Owner native decode, encode and filter pools now explicitly
+  use two threads; one overlay page captures serial frames. Chromium engine
+  threads remain measured rather than described as single-threaded.
+
+Focused evidence: receipt/path/cancellation checks, protected capabilities,
+provider composition/cleanup, agent client/API and deterministic native checks
+pass. Native synthetic provider/range cases pass 3/3 in 82.43 seconds; batch and
+acquisition cases pass 3/3 in 82.87 seconds after the thread correction. These
+include full 60-minute audio, a 300-second video proxy, rotated/nonzero/fractional
+clocks, exact packet ends, unchanged prior outputs and in-flight cancellation.
+They establish local media behavior, not real AI/model quality, network/Files
+deletion behavior, maximum-complexity media capacity or owner visual acceptance.
+Final settled validation: **Meets the authorized handoff correction; no
+actionable findings.** Reviewed the combined unstaged implementation, new
+contracts/native jobs, adapters and public-default extensions, readiness/entry/
+launcher, protected host/input/cleanup paths, CLI compatibility, frontend
+capability labels and owning guides. Coverage is complete for the safe local
+implementation and injected-provider handoff; real execution/quality, source
+rights, actual Files deletion/network behavior, maximum-complexity 4K resources,
+two-worker concurrency and human acceptance remain explicitly unverified.
+
+Final gates pass: `format:check`, `lint`, `typecheck`, full `test:unit`
+**1,600 tests / 141 files**, deterministic fake/paid-off `build`, `owner:build`,
+all **7 synthetic native proofs / 5 files** (153.75 seconds) and
+`owner:artifacts` (**1,490 built files**, Docker/compiler exclusion).
+The 19 new provider tests and 39 existing public transcribed-analysis tests also
+pass in isolation. The Windows standalone retains the existing 26 external
+package links (`selfContained:false`); no Linux/container deployment proof is
+claimed. Generated Next declaration noise was restored. Relative links in the
+changed owning documentation and `git diff --check` pass. No retained master,
+credential file, real provider/YouTube/cloud call, paid test, deployment or push
+was used. Native proofs drain their listeners/children and remove owned synthetic
+scratch. Real activation remains exclusively owner-run under CL-025.

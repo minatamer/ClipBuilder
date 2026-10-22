@@ -1,8 +1,10 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, lstat, realpath, rm, statfs } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { constants } from "node:fs";
+import { mkdir, lstat, open, realpath, rm, statfs } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import {
   OWNER_LIMITS,
+  OWNER_PROVIDER_MEDIA,
   ownerIdSchema,
 } from "../../../packages/contracts/owner/index.ts";
 import { ownerOutputRevisionSchema } from "../../../packages/contracts/owner/clips.ts";
@@ -71,6 +73,103 @@ export class WorkspaceFiles {
     ownerIdSchema.parse(clipId);
     await this.file(id, "source.mp4");
     return confinedPath(this.root, id, `${clipId}.source.mp4`);
+  }
+  async providerAudio(id: string): Promise<string> {
+    await this.file(id, "source.mp4");
+    return confinedPath(this.root, id, "provider.audio.m4a");
+  }
+  async providerVideo(id: string, clipId: string): Promise<string> {
+    ownerIdSchema.parse(clipId);
+    await this.file(id, "source.mp4");
+    return confinedPath(this.root, id, `${clipId}.provider.mp4`);
+  }
+  /** Only fixed, worker-prepared inputs with a matching bounded receipt leave disk. */
+  async readProviderInput(
+    id: string,
+    request: { kind: "audio" } | { kind: "video"; clipId: string },
+    receipt: { bytes: number; durationMs: number; digest: string },
+    signal: AbortSignal,
+  ): Promise<Blob> {
+    signal.throwIfAborted();
+    if (
+      !Number.isSafeInteger(receipt.bytes) ||
+      receipt.bytes <= 0 ||
+      receipt.bytes > OWNER_PROVIDER_MEDIA.bytes ||
+      !Number.isSafeInteger(receipt.durationMs) ||
+      receipt.durationMs <= 0 ||
+      receipt.durationMs >
+        (request.kind === "audio"
+          ? OWNER_LIMITS.sourceMs
+          : OWNER_LIMITS.clipMs) ||
+      !/^[a-f0-9]{64}$/.test(receipt.digest)
+    )
+      throw new Error("provider_input_rejected");
+    const path =
+      request.kind === "audio"
+        ? await this.providerAudio(id)
+        : await this.providerVideo(id, request.clipId);
+    const before = await lstat(path, { bigint: true });
+    if (
+      !before.isFile() ||
+      before.isSymbolicLink() ||
+      before.nlink !== 1n ||
+      before.size !== BigInt(receipt.bytes)
+    )
+      throw new Error("provider_input_rejected");
+    const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      const opened = await file.stat({ bigint: true });
+      if (
+        opened.dev !== before.dev ||
+        opened.ino !== before.ino ||
+        opened.size !== before.size ||
+        opened.mtimeNs !== before.mtimeNs ||
+        opened.nlink !== 1n
+      )
+        throw new Error("provider_input_rejected");
+      const bytes = Buffer.alloc(receipt.bytes);
+      let offset = 0;
+      while (offset < bytes.length) {
+        signal.throwIfAborted();
+        const read = await file.read(
+          bytes,
+          offset,
+          bytes.length - offset,
+          offset,
+        );
+        if (!read.bytesRead) throw new Error("provider_input_rejected");
+        offset += read.bytesRead;
+      }
+      signal.throwIfAborted();
+      const after = await file.stat({ bigint: true });
+      const named = await lstat(path, { bigint: true });
+      if (
+        after.size !== before.size ||
+        after.mtimeNs !== before.mtimeNs ||
+        after.ctimeNs !== before.ctimeNs ||
+        named.dev !== before.dev ||
+        named.ino !== before.ino ||
+        named.isSymbolicLink() ||
+        after.nlink !== 1n ||
+        createHash("sha256").update(bytes).digest("hex") !== receipt.digest
+      )
+        throw new Error("provider_input_rejected");
+      return new Blob([bytes], {
+        type: request.kind === "audio" ? "audio/m4a" : "video/mp4",
+      });
+    } finally {
+      await file.close();
+    }
+  }
+  async removeProviderInput(
+    id: string,
+    request: { kind: "audio" } | { kind: "video"; clipId: string },
+  ): Promise<void> {
+    const path =
+      request.kind === "audio"
+        ? await this.providerAudio(id)
+        : await this.providerVideo(id, request.clipId);
+    await rm(path, { force: true });
   }
   async remove(id: string): Promise<void> {
     ownerIdSchema.parse(id);

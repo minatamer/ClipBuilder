@@ -40,6 +40,14 @@ import type { OwnerAcquisitionPort } from "./acquisition-port.ts";
 import { ownerYoutubeLinkRequestSchema } from "../../../packages/contracts/owner/acquisition.ts";
 import { ownerSourceMetadataRequestSchema } from "../../../packages/contracts/owner/acquisition-flow.ts";
 import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/owner/acquisition-profile.ts";
+import { ownerRuntimeCapabilitiesSchema } from "../../../packages/contracts/owner/runtime.ts";
+
+export type OwnerHostProviders = {
+  analysis?: OwnerAnalysisPorts;
+  clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image">;
+  close?: (signal: AbortSignal) => Promise<void>;
+  cleanupWorkspace?: (id: string, signal: AbortSignal) => Promise<void>;
+};
 
 export type OwnerHostOptions = {
   root: string;
@@ -52,6 +60,7 @@ export type OwnerHostOptions = {
   shutdown?: () => void;
   analysis?: OwnerAnalysisPorts;
   clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image">;
+  providers?: (files: WorkspaceFiles) => OwnerHostProviders;
   media: (
     job: OwnerMediaJob,
     signal: AbortSignal,
@@ -60,6 +69,18 @@ export type OwnerHostOptions = {
 };
 export function createOwnerHost(options: OwnerHostOptions) {
   const files = new WorkspaceFiles(options.root);
+  const providers = options.providers?.(files);
+  const analysis = providers?.analysis ?? options.analysis;
+  const clipPreparation = providers?.clipPreparation ?? options.clipPreparation;
+  const capabilities = ownerRuntimeCapabilitiesSchema.parse({
+    aiMode: analysis?.mode ?? "unavailable",
+    sourceMode: options.acquisition?.mode ?? null,
+    planningAvailable: Boolean(
+      analysis && clipPreparation && analysis.mode === clipPreparation.mode,
+    ),
+    localMedia: true,
+    cloud: false,
+  });
   const workspaces = new Map<string, OwnerWorkspace>();
   const analyses = new Map<string, OwnerAnalysis>();
   const batches = new Map<string, OwnerClipBatch>();
@@ -81,7 +102,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       workspace,
       files,
       {
-        ...(options.clipPreparation ?? {
+        ...(clipPreparation ?? {
           mode: "synthetic-ai" as const,
           async plan() {
             throw new Error("analysis_unavailable");
@@ -125,7 +146,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       const workspace: OwnerWorkspace = {
         id,
         source,
-        mode: options.analysis?.mode ?? "unavailable",
+        mode: analysis?.mode ?? "unavailable",
         revision: 0,
       };
       workspaces.set(id, workspace);
@@ -180,6 +201,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
             await closeStreams(id);
             await batches.get(id)?.close();
             await drafts?.flush(id);
+            await providers?.cleanupWorkspace?.(
+              id,
+              AbortSignal.timeout(30_000),
+            );
             await drafts?.forget(id);
             batches.delete(id);
             await files.remove(id);
@@ -318,9 +343,19 @@ export function createOwnerHost(options: OwnerHostOptions) {
         return;
       }
       if (req.method === "GET" && req.url === "/health") {
+        res.writeHead(200, { "Content-Type": "application/json" }).end(
+          JSON.stringify({
+            mode: capabilities.aiMode,
+            paid: capabilities.aiMode === "provider-ai",
+            cloud: false,
+          }),
+        );
+        return;
+      }
+      if (req.method === "GET" && req.url === "/api/capabilities") {
         res
           .writeHead(200, { "Content-Type": "application/json" })
-          .end('{"mode":"fake","paid":false,"cloud":false}');
+          .end(JSON.stringify(capabilities));
         return;
       }
       if (
@@ -496,7 +531,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             controller.signal.throwIfAborted();
             const workspace: OwnerWorkspace = {
               ...loaded.workspace,
-              mode: options.analysis?.mode ?? "unavailable",
+              mode: analysis?.mode ?? "unavailable",
             };
             const batch = createBatch(workspace);
             batch.restore(loaded.clips);
@@ -551,7 +586,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           const workspace: OwnerWorkspace = {
             id: newId,
             source: inspected.source,
-            mode: options.analysis?.mode ?? "unavailable",
+            mode: analysis?.mode ?? "unavailable",
             revision: 0,
           };
           controller.signal.throwIfAborted();
@@ -667,7 +702,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             res.writeHead(409).end();
             return;
           }
-          if (!options.clipPreparation) {
+          if (!clipPreparation) {
             res.writeHead(503).end();
             return;
           }
@@ -901,7 +936,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           res.writeHead(409).end();
           return;
         }
-        if (!options.analysis) {
+        if (!analysis) {
           res.writeHead(503).end();
           return;
         }
@@ -920,7 +955,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           const result = await analyzeOwner(
             workspace,
             inputs,
-            options.analysis,
+            analysis,
             controller.signal,
           );
           controller.signal.throwIfAborted();
@@ -1016,6 +1051,15 @@ export function createOwnerHost(options: OwnerHostOptions) {
         }
         await closeStreams(workspace.id);
         await batches.get(workspace.id)?.close();
+        try {
+          await providers?.cleanupWorkspace?.(
+            workspace.id,
+            AbortSignal.timeout(30_000),
+          );
+        } catch (error) {
+          closingWorkspaces.delete(workspace.id);
+          throw error;
+        }
         await drafts?.forget(workspace.id);
         batches.delete(workspace.id);
         await files.remove(workspace.id);
@@ -1053,18 +1097,22 @@ export function createOwnerHost(options: OwnerHostOptions) {
       clearInterval(expiryTimer);
       for (const c of controllers) c.abort();
       server.closeAllConnections();
-      await sources.close();
-      await storage?.cancelPending();
-      await Promise.allSettled([...tasks]);
-      await expiryTask;
-      await Promise.all([...batches.values()].map((batch) => batch.close()));
-      await drafts?.close();
-      batches.clear();
-      await files.close();
-      analyses.clear();
-      workspaces.clear();
-      expires.clear();
-      await new Promise<void>((resolve) => server.close(() => resolve()));
+      try {
+        await sources.close();
+        await storage?.cancelPending();
+        await Promise.allSettled([...tasks]);
+        await expiryTask;
+        await Promise.all([...batches.values()].map((batch) => batch.close()));
+        await drafts?.close();
+        batches.clear();
+        await providers?.close?.(AbortSignal.timeout(30_000));
+        await files.close();
+        analyses.clear();
+        workspaces.clear();
+        expires.clear();
+      } finally {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
     },
   };
 }

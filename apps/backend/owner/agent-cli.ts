@@ -12,7 +12,6 @@ import {
   OWNER_AGENT_INPUT_BYTES,
   type OwnerAgentRequest,
 } from "./agent-client.ts";
-import { assertOwnerFakeMode } from "./local-mode.ts";
 export { ownerAgentPicturePath } from "./agent-client.ts";
 
 const pictureError = () => new Error("owner_agent_picture_unavailable");
@@ -185,11 +184,8 @@ async function main() {
   process.once("SIGINT", cancel);
   process.once("SIGTERM", cancel);
   try {
-    try {
-      assertOwnerFakeMode(process.env);
-    } catch {
-      throw new Error("owner_agent_unavailable");
-    }
+    // This allowlisted client never composes AI or reads provider configuration.
+    // The discovered host owns authentication, current modes and native work.
     if (process.argv.length !== 2 || process.stdin.isTTY)
       throw new Error("owner_agent_invalid_command");
     const result = await executeOwnerAgentCommand(

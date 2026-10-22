@@ -16,6 +16,22 @@ audio offsets stay on that video clock, preserving silence inside the source.
 Exact output frame counts and full decode are checked before publication. No
 speech stretching, frozen extension or out-of-source padding meets AI bounds.
 
+Fixed provider-preparation jobs create a full-source mono 16kHz/32kbps AAC
+input and an upright, physically selected H.264/AAC video proxy at at most
+640 pixels per edge and 12fps. Both are limited to 16MiB; video retains arbitrary
+30fps cut endpoints through its final MP4 packet duration. Results expose only
+operation, bytes, duration and digest. Fingerprint/bounds checks, full decode,
+metadata stripping, atomic replacement and cancellation cleanup happen locally.
+These jobs never upload media or invoke AI. Synthetic proofs cover the full
+60-minute audio/300-second video envelopes and rotated/fractional selections.
+
+Heavy media jobs remain serial. Owner FFmpeg decode/encode and filter pools are
+explicitly set to two threads; overlay rendering owns one browser page and
+captures frames serially before FFmpeg muxing starts. Chromium still owns its
+normal engine/utility threads; one page is not a claim that the whole browser is
+single-threaded. CL-024 records observed resource measurements separately from
+these configured work bounds.
+
 The linked-source path adds fixed synthetic generation, component preparation
 and acquisition inspection jobs. Fake acquisition generates the selected
 720p/1080p/2160p dimensions for a complete 16-second source at 30fps. The private
@@ -108,10 +124,11 @@ See [host setup/checks](../../backend/owner/README.md). Fake AI and real synthet
 encoding need no API keys or ADC. No real AI model/runtime is included, and fake
 tests do not establish real-media or visual quality. Build the owner artifacts
 before `corepack pnpm owner:proof`; its generated-media multi-clip test requires
-the fixed overlay bundle and installed Chrome. Real provider AI is not composed
-here and would need implemented/composed provider adapters and input
-preparation, keys, enabled live flags and applicable owner approvals. Keys/flags
-alone are insufficient. Existing prepared bundles remain editable and locally
+the fixed overlay bundle and installed Chrome. The separate provider host entry
+uses bounded native audio/video preparation before its own API transfers; this
+worker still receives no AI key and composes no provider SDK. That host's real
+adapters have injected-transport coverage only; paid activation and real-media
+review remain owner-only. Existing prepared bundles remain editable and locally
 exportable when those provider capabilities are unavailable. No offline AI
 model/weights are included. Synthetic checks do not close owner acceptance of
 real caption readability, picture placement/crop or final A/V quality. No paid,

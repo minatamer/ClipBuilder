@@ -142,8 +142,11 @@ results as real processing. No offline transcription model is introduced.
 Owner-requested real-mode compatibility revisit after CL-019: native processing,
 source identities and cleanup are provider-independent. Workspace metadata now
 supports explicit unavailable/provider provenance without enabling execution;
-entrypoints remain strictly fake/paid-off. See the CL-019 follow-up for confirmed
-gaps/fixes, injected adapter evidence and the still-uncomposed live adapter gate.
+the default entrypoint remains strictly fake/paid-off. The later
+[CL-019 handoff correction](CL-019-process-multiple-local-clips.md) supplies actual
+bounded local provider inputs and a separate gated provider entry. Its checks
+use injected transports and synthetic media; real activation, provider quality
+and owner acceptance remain open.
 
 Update owning app READMEs, source of truth, scoped AGENTS operating constraints,
 ADR and index with actual evidence only. Current `FAKE_MODE=true` needs no API

@@ -1,12 +1,17 @@
 import { z } from "zod";
 import {
   PUBLIC_LIMITS,
+  OWNER_VALIDATION_LIMITS,
   type TranscriptWord,
   type TranscriptUtterance,
 } from "@clipbuilder/contracts";
 import { AnalysisDiagnostics } from "./analysis.diagnostics.js";
 
 export const TRANSCRIBE_MODEL = "gemini-3.5-transcribe";
+export type TranscriptionNormalizationPolicy = {
+  maxWords: number;
+  rejectOverflow: boolean;
+};
 const wordInfo = z.object({
   type: z.literal("word_info"),
   text: z
@@ -37,7 +42,17 @@ const contentSchema = z.object({ annotations: z.array(z.unknown()).catch([]) });
 export function normalizeTranscription(
   value: unknown,
   diagnostics = new AnalysisDiagnostics(),
+  policy: TranscriptionNormalizationPolicy = {
+    maxWords: PUBLIC_LIMITS.maxTranscriptWords,
+    rejectOverflow: false,
+  },
 ) {
+  if (
+    !Number.isInteger(policy.maxWords) ||
+    policy.maxWords < 1 ||
+    policy.maxWords > OWNER_VALIDATION_LIMITS.maxTranscriptWords
+  )
+    throw new Error("transcription_policy_rejected");
   const decoded = interactionSchema.safeParse(value);
   const annotations: z.infer<typeof wordInfo>[] = [];
   const adjustments: { index: number; reason: string }[] = [];
@@ -53,7 +68,9 @@ export function normalizeTranscription(
           adjustments.push({ index, reason: "annotation_not_decodable" });
           continue;
         }
-        if (annotations.length >= PUBLIC_LIMITS.maxTranscriptWords) {
+        if (annotations.length >= policy.maxWords) {
+          if (policy.rejectOverflow)
+            throw new Error("transcription_word_limit");
           adjustments.push({ index, reason: "word_collection_bounded" });
           break;
         }

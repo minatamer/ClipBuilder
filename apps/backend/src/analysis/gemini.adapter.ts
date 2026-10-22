@@ -7,6 +7,9 @@ import { z } from "zod";
 import {
   GROUNDED_ANALYSIS_LIMITS,
   TEMPORARY_MEDIA_LIMITS,
+  OWNER_VALIDATION_LIMITS,
+  PUBLIC_LIMITS,
+  transcriptWordSchema,
 } from "@clipbuilder/contracts";
 import type { BackendConfig } from "../config/env.schema.js";
 import { ApplicationError } from "../http/errorMapper.js";
@@ -18,6 +21,28 @@ import {
 } from "./transcribe.normalization.js";
 import { CANDIDATE_GENERATION_SCHEMA_POLICY } from "./analysis.provider-shape.js";
 import type { MediaDescriptor } from "@clipbuilder/contracts";
+
+export type GeminiProviderConfig = Pick<
+  BackendConfig,
+  "nodeEnv" | "providerMode" | "paidDemoEnabled"
+> & {
+  features: Pick<BackendConfig["features"], "liveAnalysis" | "liveAssembly">;
+  gemini: Pick<
+    BackendConfig["gemini"],
+    | "apiKey"
+    | "model"
+    | "timeoutMs"
+    | "maxOutputTokens"
+    | "transferApproved"
+    | "paidProjectConfirmed"
+  >;
+};
+export type GeminiTransportPolicy = { responseBytes: number };
+export type GeminiAnalysisProfile = {
+  maxTranscriptWords: number;
+  rejectTranscriptOverflow: boolean;
+  proxyBytes: number;
+};
 
 export interface AnalysisProvider {
   analyze(
@@ -40,6 +65,7 @@ export interface GeminiTransport {
   candidates(
     prompt: string,
     signal: AbortSignal,
+    policy?: string,
   ): Promise<{ text: string | undefined; finished: boolean }>;
   delete(name: string, signal: AbortSignal): Promise<void>;
 }
@@ -74,10 +100,19 @@ class GoogleFilesFailure extends Error {
   }
 }
 function composeGoogleClient(
-  config: BackendConfig,
+  config: GeminiProviderConfig,
   transport?: typeof fetch,
   diagnostics = new AnalysisDiagnostics(),
+  policy: GeminiTransportPolicy = {
+    responseBytes: GROUNDED_ANALYSIS_LIMITS.responseBytes,
+  },
 ) {
+  if (
+    !Number.isSafeInteger(policy.responseBytes) ||
+    policy.responseBytes < 1 ||
+    policy.responseBytes > 16 * 1024 ** 2
+  )
+    throw new ApplicationError({ code: "INVALID_REQUEST" });
   if (
     config.nodeEnv === "test" ||
     config.providerMode !== "live" ||
@@ -113,16 +148,13 @@ function composeGoogleClient(
           const chunk = await reader.read();
           if (chunk.done) break;
           size += chunk.value.byteLength;
-          if (size > GROUNDED_ANALYSIS_LIMITS.responseBytes) {
+          if (size > policy.responseBytes) {
             incompleteCaptured = true;
             diagnostics.privateGoogleResponse(
               operation,
               response.status,
               () =>
-                Buffer.concat(
-                  [...chunks, chunk.value],
-                  GROUNDED_ANALYSIS_LIMITS.responseBytes,
-                ),
+                Buffer.concat([...chunks, chunk.value], policy.responseBytes),
               response.headers,
               false,
               size,
@@ -170,7 +202,9 @@ function composeGoogleClient(
   };
   const ai = new GoogleGenAI({
     apiKey: config.gemini.apiKey,
+    vertexai: false,
     httpOptions: {
+      baseUrl: "https://generativelanguage.googleapis.com",
       timeout: config.gemini.timeoutMs,
       retryOptions: { attempts: 1 },
       fetch: boundedFetch,
@@ -180,7 +214,7 @@ function composeGoogleClient(
 }
 
 function generationConfig(
-  config: BackendConfig,
+  config: GeminiProviderConfig,
   abortSignal: AbortSignal,
   policy: string,
 ): GenerateContentConfig {
@@ -195,14 +229,16 @@ function generationConfig(
 }
 
 export function composeGeminiTransport(
-  config: BackendConfig,
+  config: GeminiProviderConfig,
   transport?: typeof fetch,
   diagnostics = new AnalysisDiagnostics(),
+  policy?: GeminiTransportPolicy,
 ): GeminiTransport {
   const { ai, boundedFetch } = composeGoogleClient(
     config,
     transport,
     diagnostics,
+    policy,
   );
   return {
     async upload(name, file, signal) {
@@ -344,7 +380,7 @@ export function composeGeminiTransport(
         throw new GoogleFilesFailure("transcription", response.status);
       return response.json();
     },
-    async candidates(prompt, abortSignal) {
+    async candidates(prompt, abortSignal, policy = CANDIDATE_SELECTION_POLICY) {
       diagnostics.generationRequest({
         purpose: "candidate_selection",
         schemaPolicy: CANDIDATE_GENERATION_SCHEMA_POLICY,
@@ -356,11 +392,7 @@ export function composeGeminiTransport(
       const response = await ai.models.generateContent({
         model: config.gemini.model,
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: generationConfig(
-          config,
-          abortSignal,
-          CANDIDATE_SELECTION_POLICY,
-        ),
+        config: generationConfig(config, abortSignal, policy),
       });
       const candidate = response.candidates?.[0];
       return {
@@ -450,6 +482,7 @@ type PendingGoogleFile = {
 };
 export class GeminiAnalysisProvider {
   private pendingFiles = new Map<string, PendingGoogleFile>();
+  private readonly transcriptSchema;
   constructor(
     private readonly transport: GeminiTransport,
     private readonly timeoutMs: number,
@@ -460,7 +493,32 @@ export class GeminiAnalysisProvider {
       await delay(ms, undefined, { signal });
     },
     private readonly diagnostics = new AnalysisDiagnostics(),
-  ) {}
+    private readonly profile: GeminiAnalysisProfile = {
+      maxTranscriptWords: PUBLIC_LIMITS.maxTranscriptWords,
+      rejectTranscriptOverflow: false,
+      proxyBytes: TEMPORARY_MEDIA_LIMITS.proxyBytes,
+    },
+  ) {
+    if (
+      !Number.isInteger(profile.maxTranscriptWords) ||
+      profile.maxTranscriptWords < 1 ||
+      profile.maxTranscriptWords > OWNER_VALIDATION_LIMITS.maxTranscriptWords ||
+      !Number.isSafeInteger(profile.proxyBytes) ||
+      profile.proxyBytes < 1 ||
+      profile.proxyBytes > TEMPORARY_MEDIA_LIMITS.proxyBytes
+    )
+      throw new ApplicationError({ code: "INVALID_REQUEST" });
+    this.transcriptSchema = normalizedAnalysisSchema
+      .omit({ candidates: true })
+      .extend({
+        words: z.array(transcriptWordSchema).max(profile.maxTranscriptWords),
+      });
+  }
+  hasPendingCleanup(scope?: string): boolean {
+    return [...this.pendingFiles.values()].some(
+      (pending) => scope === undefined || pending.scope === scope,
+    );
+  }
   analyze(
     proxy: Blob,
     signal: AbortSignal,
@@ -470,11 +528,19 @@ export class GeminiAnalysisProvider {
     return this.executeFile(proxy, signal, scope, task);
   }
   async transcribe(audio: Blob, signal: AbortSignal, scope: string) {
-    return normalizedAnalysisSchema
-      .omit({ candidates: true })
-      .parse(await this.executeFile(audio, signal, scope));
+    return this.transcriptSchema.parse(
+      await this.executeFile(audio, signal, scope),
+    );
   }
-  async candidates(prompt: string, signal: AbortSignal) {
+  async candidates(
+    prompt: string,
+    signal: AbortSignal,
+    options?: {
+      policy?: string;
+      requireFinished?: boolean;
+      responseBytes?: number;
+    },
+  ) {
     if (this.pendingFiles.size)
       throw new ApplicationError({ code: "CLEANUP_PENDING" });
     const deadline = AbortSignal.any([
@@ -485,14 +551,23 @@ export class GeminiAnalysisProvider {
     try {
       deadline.throwIfAborted();
       const result = await this.diagnostics.step("candidate_generation", () =>
-        this.transport.candidates(prompt, deadline),
+        this.transport.candidates(prompt, deadline, options?.policy),
       );
       this.diagnostics.privateGenerationResult(result);
       deadline.throwIfAborted();
       phase = "validation";
       return this.diagnostics.check("candidate_validation", () => {
+        if (options?.requireFinished && !result.finished)
+          throw new Error("candidate_response_unfinished");
         const text = result.text ?? "";
-        if (Buffer.byteLength(text) > GROUNDED_ANALYSIS_LIMITS.responseBytes)
+        const maximum =
+          options?.responseBytes ?? GROUNDED_ANALYSIS_LIMITS.responseBytes;
+        if (
+          !Number.isSafeInteger(maximum) ||
+          maximum < 1 ||
+          maximum > 16 * 1024 ** 2 ||
+          Buffer.byteLength(text) > maximum
+        )
           throw new Error("candidate_response_limit");
         try {
           const decoded: unknown = JSON.parse(text);
@@ -530,7 +605,7 @@ export class GeminiAnalysisProvider {
     if (
       proxy.type !== (task ? "video/mp4" : "audio/m4a") ||
       proxy.size <= 0 ||
-      proxy.size > TEMPORARY_MEDIA_LIMITS.proxyBytes
+      proxy.size > this.profile.proxyBytes
     )
       throw new ApplicationError({ code: "INVALID_REQUEST" });
     const deadline = AbortSignal.any([
@@ -612,14 +687,19 @@ export class GeminiAnalysisProvider {
         task ? "gemini_validation" : "transcription_normalization",
         () => {
           if (!task) {
-            const normalized = normalizeTranscription(result, this.diagnostics);
+            const normalized = normalizeTranscription(
+              result,
+              this.diagnostics,
+              {
+                maxWords: this.profile.maxTranscriptWords,
+                rejectOverflow: this.profile.rejectTranscriptOverflow,
+              },
+            );
             this.diagnostics.privateStageOutput(
               "transcription_normalized",
               normalized,
             );
-            return normalizedAnalysisSchema
-              .omit({ candidates: true })
-              .parse(normalized);
+            return this.transcriptSchema.parse(normalized);
           }
           const generated = z
             .object({ text: z.string().min(1), finished: z.literal(true) })

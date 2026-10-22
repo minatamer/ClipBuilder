@@ -7,17 +7,22 @@ import {
 } from "../../../packages/contracts/owner/clips.ts";
 import type { OwnerWorkspace } from "../../../packages/contracts/owner/index.ts";
 import type { OwnerMomentExport } from "../../../packages/contracts/owner/selection.ts";
+import type { OwnerRuntimeCapabilities } from "../../../packages/contracts/owner/runtime.ts";
 
 const initial: OwnerClipList = { clips: [], active: false, workers: 1 };
 export function OwnerClipBatchPanel({
   workspace,
+  capabilities,
   selected,
   onActive,
 }: {
   workspace: OwnerWorkspace;
+  capabilities: OwnerRuntimeCapabilities;
   selected: OwnerMomentExport[];
   onActive: (active: boolean) => void;
 }) {
+  const planningAvailable =
+    capabilities.planningAvailable && workspace.mode === capabilities.aiMode;
   const [list, setList] = useState(initial),
     [message, setMessage] = useState(
       "Select several moments, then process them in one action.",
@@ -136,17 +141,33 @@ export function OwnerClipBatchPanel({
       </p>
       <p>
         {selected.length} selected · upper bound: {selected.length}{" "}
-        {workspace.mode === "synthetic-ai" ? "simulated plans" : "plans"} and{" "}
-        {selected.length * 3} picture attempts. Discovery is reused.{" "}
+        {workspace.mode === "synthetic-ai"
+          ? "simulated plans"
+          : workspace.mode === "provider-ai"
+            ? "provider plans"
+            : "plans"}{" "}
+        and {selected.length * 3} picture attempts. Discovery is reused.{" "}
         {workspace.mode === "synthetic-ai"
           ? "Actual AI calls: zero."
-          : "Provider attempts are recorded per clip."}{" "}
+          : workspace.mode === "provider-ai"
+            ? "Provider attempts are recorded per clip."
+            : "Fresh planning is unavailable."}{" "}
         Native work runs one clip at a time.
       </p>
+      {!planningAvailable && (
+        <p role="status">
+          Automatic planning is unavailable for this workspace in the current
+          runtime. Prepared clips remain editable and can be exported locally
+          without AI access.
+        </p>
+      )}
       <nav>
         <button
-          disabled={!selected.length || pending || list.active}
+          disabled={
+            !planningAvailable || !selected.length || pending || list.active
+          }
           onClick={() => {
+            if (!planningAvailable) return;
             const first = selected[0]!;
             void action(endpoint, {
               operationId: crypto.randomUUID(),
@@ -180,7 +201,9 @@ export function OwnerClipBatchPanel({
             </h3>
             <p>
               Revision {clip.revision} ·{" "}
-              {clip.mode === "synthetic-ai" ? "simulated plans" : "plans"}{" "}
+              {clip.mode === "synthetic-ai"
+                ? "simulated plans"
+                : "provider plans"}{" "}
               {clip.calls.plan}, pictures {clip.calls.image} · native attempts{" "}
               {clip.calls.render}
             </p>
@@ -193,11 +216,7 @@ export function OwnerClipBatchPanel({
             )}
             <nav>
               <button
-                disabled={
-                  !clip.base ||
-                  clip.outputs.length === 0 ||
-                  (!!dirtyClip && dirtyClip !== clip.id)
-                }
+                disabled={!clip.base || (!!dirtyClip && dirtyClip !== clip.id)}
                 onClick={() => setReview(clip.id)}
               >
                 Review clip {index + 1}
@@ -249,7 +268,7 @@ export function OwnerClipBatchPanel({
           <h3>Review · revision {current.revision}</h3>
           <p>
             {current.mode === "synthetic-ai"
-              ? "Captions and pictures below are synthetic placeholders. "
+              ? "The automatic base uses simulated AI material; personal pictures retain their own provenance. "
               : "This preview uses the saved timed captions and admitted pictures. "}
             Preview uses the same overlay as native export.
           </p>

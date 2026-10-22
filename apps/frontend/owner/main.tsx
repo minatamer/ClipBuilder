@@ -10,12 +10,18 @@ import type { OwnerMomentExport } from "../../../packages/contracts/owner/select
 import { OwnerClipBatchPanel } from "./clip-batch-panel.tsx";
 import { OwnerDraftPanel } from "./draft-panel.tsx";
 import { OwnerAcquisitionPanel } from "./acquisition-panel.tsx";
+import {
+  ownerRuntimeCapabilitiesSchema,
+  type OwnerRuntimeCapabilities,
+} from "../../../packages/contracts/owner/runtime.ts";
 
 function OwnerWorkspaceView() {
   const [workspace, setWorkspace] = useState<OwnerWorkspace | null>(null);
+  const [capabilities, setCapabilities] =
+    useState<OwnerRuntimeCapabilities | null>(null);
   const [busy, setBusy] = useState(true);
   const [acquisitionBusy, setAcquisitionBusy] = useState(false);
-  const blocked = busy || acquisitionBusy;
+  const blocked = busy || acquisitionBusy || !capabilities;
   const [message, setMessage] = useState(
     "Choose an MP4 to open a private local processing copy.",
   );
@@ -53,6 +59,15 @@ function OwnerWorkspaceView() {
     const controller = new AbortController();
     void (async () => {
       try {
+        const capabilityResponse = await fetch("/api/capabilities", {
+          signal: controller.signal,
+        });
+        if (!capabilityResponse.ok) throw new Error("unavailable");
+        const currentCapabilities = ownerRuntimeCapabilitiesSchema.parse(
+          await capabilityResponse.json(),
+        );
+        if (controller.signal.aborted) return;
+        setCapabilities(currentCapabilities);
         const response = await fetch("/api/workspace", {
           signal: controller.signal,
         });
@@ -64,13 +79,13 @@ function OwnerWorkspaceView() {
           setWorkspace(current);
           if (current)
             setMessage(
-              "Local source restored in this running session. AI remains simulated.",
+              "Local source restored in this running session. Saved results retain their own provenance; fresh actions use the capabilities shown above.",
             );
         }
       } catch {
         if (!controller.signal.aborted)
           setMessage(
-            "The local workspace is unavailable. Check that its host is running.",
+            "Local capabilities or workspace status could not be verified. Check that the local host is running before continuing.",
           );
       } finally {
         if (!controller.signal.aborted) setBusy(false);
@@ -92,7 +107,7 @@ function OwnerWorkspaceView() {
       setWorkspace(ownerWorkspaceSchema.parse(await response.json()));
       choose([]);
       setMessage(
-        "Local source ready. AI is simulated; no provider or cloud processing.",
+        "Local source ready. No analysis was started; fresh actions use the capabilities shown above.",
       );
     } catch {
       setMessage(
@@ -140,7 +155,17 @@ function OwnerWorkspaceView() {
   return (
     <main>
       <header>
-        <p className="eyebrow">Local owner workspace · Fake AI · Paid off</p>
+        <p className="eyebrow">
+          Local owner workspace ·{" "}
+          {!capabilities
+            ? "Checking capabilities"
+            : capabilities.aiMode === "synthetic-ai"
+              ? "Simulated AI"
+              : capabilities.aiMode === "provider-ai"
+                ? "Provider AI"
+                : "AI unavailable"}
+          {capabilities ? " · Cloud off" : ""}
+        </p>
         <h1>ClipBuilder</h1>
         <p>
           Private local source preview and encoding. This workspace is excluded
@@ -150,19 +175,25 @@ function OwnerWorkspaceView() {
       <p role="status" aria-live="polite">
         {message}
       </p>
-      <OwnerDraftPanel
-        workspace={workspace}
-        busy={blocked}
-        active={clipWork}
-        onBusy={setBusy}
-        onOpen={opened}
-      />
-      <OwnerAcquisitionPanel
-        workspace={workspace}
-        busy={busy || clipWork}
-        onBusy={setAcquisitionBusy}
-        onOpen={sourceOpened}
-      />
+      {capabilities && (
+        <OwnerDraftPanel
+          workspace={workspace}
+          capabilities={capabilities}
+          busy={blocked}
+          active={clipWork}
+          onBusy={setBusy}
+          onOpen={opened}
+        />
+      )}
+      {capabilities && (
+        <OwnerAcquisitionPanel
+          workspace={workspace}
+          capabilities={capabilities}
+          busy={busy || clipWork}
+          onBusy={setAcquisitionBusy}
+          onOpen={sourceOpened}
+        />
+      )}
       {!workspace ? (
         <label className="file">
           Choose local MP4
@@ -178,13 +209,16 @@ function OwnerWorkspaceView() {
         </label>
       ) : (
         <>
-          <OwnerSelectionPanel
-            key={workspace.id}
-            workspace={workspace}
-            busy={blocked || clipWork}
-            onBusy={setBusy}
-            onChoose={choose}
-          />
+          {capabilities && (
+            <OwnerSelectionPanel
+              key={workspace.id}
+              workspace={workspace}
+              capabilities={capabilities}
+              busy={blocked || clipWork}
+              onBusy={setBusy}
+              onChoose={choose}
+            />
+          )}
           <section className="previews" aria-label="Local media previews">
             <article>
               <h2>Source</h2>
@@ -200,12 +234,15 @@ function OwnerWorkspaceView() {
               </p>
             </article>
           </section>
-          <OwnerClipBatchPanel
-            key={`clips-${workspace.id}`}
-            workspace={workspace}
-            selected={selection}
-            onActive={setClipWork}
-          />
+          {capabilities && (
+            <OwnerClipBatchPanel
+              key={`clips-${workspace.id}`}
+              workspace={workspace}
+              capabilities={capabilities}
+              selected={selection}
+              onActive={setClipWork}
+            />
+          )}
           <nav aria-label="Workspace actions">
             <button disabled={blocked || clipWork} onClick={() => void clear()}>
               Clear processing workspace

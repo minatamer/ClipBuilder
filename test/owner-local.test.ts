@@ -98,6 +98,22 @@ describe("isolated owner host", () => {
     await rm(directory, { recursive: true, force: true });
   });
   const auth = { Authorization: "Bearer test-token" };
+  it("exposes protected content-free runtime capabilities without dispatch", async () => {
+    expect((await ownerRequest(port, "/api/capabilities")).status).toBe(403);
+    const response = await ownerRequest(port, "/api/capabilities", {
+      headers: auth,
+    });
+    expect(response.status).toBe(200);
+    expect(JSON.parse(response.body.toString())).toEqual({
+      aiMode: "synthetic-ai",
+      sourceMode: null,
+      planningAvailable: false,
+      localMedia: true,
+      cloud: false,
+    });
+    expect(media).toHaveBeenCalledTimes(0);
+    expect(analysis.transcribe).toHaveBeenCalledTimes(0);
+  });
   it("protects the supervisor shutdown path with the same caller policy", async () => {
     expect(
       (await ownerRequest(port, "/api/shutdown", { method: "POST" })).status,

@@ -21,6 +21,7 @@
     "lint": "eslint .",
     "owner:build": "node scripts/owner-build.mjs",
     "owner:start": "node scripts/owner-run.mjs",
+    "owner:start:provider": "node scripts/owner-run.mjs --provider",
     "owner:test": "vitest run --config scripts/owner-test.config.ts",
     "owner:proof": "vitest run --config scripts/owner-proof.config.ts",
     "owner:artifacts": "node scripts/owner-artifacts.mjs",

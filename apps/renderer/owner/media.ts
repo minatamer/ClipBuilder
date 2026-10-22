@@ -62,6 +62,21 @@ export async function ownerAcquisitionMediaPath(
     kind === "merged" ? "acquisition.merged.mp4" : `acquisition.${kind}`,
   );
 }
+export async function ownerProviderMediaPath(
+  root: string,
+  id: string,
+  clipId: string | null,
+  partial = false,
+) {
+  ownerIdSchema.parse(id);
+  if (clipId !== null) ownerIdSchema.parse(clipId);
+  const name = clipId === null ? "provider.audio" : `${clipId}.provider`;
+  return admittedMediaPath(
+    root,
+    id,
+    `${name}${partial ? ".partial" : ""}.${clipId === null ? "m4a" : "mp4"}`,
+  );
+}
 async function admittedMediaPath(
   root: string,
   id: string,
@@ -86,7 +101,7 @@ async function admittedMediaPath(
   return target;
 }
 
-async function inspectOwnerMedia(
+export async function inspectOwnerMedia(
   file: string,
   tools: OwnerNativeTools,
   signal: AbortSignal,
@@ -266,6 +281,8 @@ export async function ownerPortrait(
         "-v",
         "error",
         ...SOURCE_INPUT_OPTIONS,
+        "-threads",
+        "2",
         "-copyts",
         "-i",
         source,
@@ -277,6 +294,10 @@ export async function ownerPortrait(
         "[a]",
         "-filter_complex",
         filter,
+        "-filter_complex_threads",
+        "2",
+        "-filter_threads",
+        "2",
         "-frames:v",
         String(frames),
         "-r",
@@ -369,6 +390,8 @@ export async function validateOwnerOutput(
             "error",
             "-protocol_whitelist",
             "file,pipe",
+            "-threads",
+            "2",
             "-select_streams",
             "v:0",
             "-count_frames",
@@ -392,8 +415,12 @@ export async function validateOwnerOutput(
       "error",
       "-xerror",
       ...SOURCE_INPUT_OPTIONS,
+      "-threads",
+      "2",
       "-i",
       temporary,
+      "-filter_threads",
+      "2",
       "-f",
       "null",
       "-",

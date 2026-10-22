@@ -9,6 +9,7 @@ import {
   ownerWorkspaceSchema,
   type OwnerWorkspace,
 } from "../../../packages/contracts/owner/index.ts";
+import type { OwnerRuntimeCapabilities } from "../../../packages/contracts/owner/runtime.ts";
 
 function savedTime(value: string | null): string {
   return value ? new Date(value).toLocaleString() : "No completed save";
@@ -17,12 +18,14 @@ function savedTime(value: string | null): string {
 /** Saving is explicit once; acknowledged edits then autosave in the local host. */
 export function OwnerDraftPanel({
   workspace,
+  capabilities,
   busy,
   active,
   onBusy,
   onOpen,
 }: {
   workspace: OwnerWorkspace | null;
+  capabilities: OwnerRuntimeCapabilities;
   busy: boolean;
   active: boolean;
   onBusy: (busy: boolean) => void;
@@ -304,10 +307,14 @@ export function OwnerDraftPanel({
       </ol>
       <p>
         Opening a valid saved bundle, reading, editing and native re-export need
-        no AI keys. Fake mode uses simulated AI material; real automatic
-        analysis still needs its provider implementation, API keys, live flags
-        and owner approval. No offline AI model is included, and real caption
-        readability, crop and A/V quality still need owner review.
+        no AI keys. Saved clips keep their original AI and picture provenance.
+        {capabilities.aiMode === "synthetic-ai"
+          ? " Fresh automatic analysis is simulated in this runtime."
+          : capabilities.aiMode === "provider-ai"
+            ? " Fresh automatic analysis uses this runtime's provider."
+            : " Fresh automatic analysis is unavailable in this runtime."}{" "}
+        No offline AI model is included, and real caption readability, crop and
+        A/V quality still need owner review.
       </p>
     </section>
   );

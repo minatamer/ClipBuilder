@@ -1,14 +1,22 @@
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
-import { assertOwnerFakeMode } from "./local-mode.ts";
+import { ownerLaunchMode } from "./local-mode.ts";
 import { createOwnerHost } from "./server.ts";
 import { localWorkerPort } from "./worker-port.ts";
 import { fakeOwnerAnalysis } from "./fake-analysis.ts";
 import { fakeOwnerClipPreparation } from "./fake-clips.ts";
 import { fakeOwnerAcquisition } from "./fake-acquisition.ts";
+import { readOwnerProviderReadiness } from "./provider-readiness.ts";
+import type { OwnerProviderReadiness } from "./provider-readiness.ts";
+import { composeOwnerProviders } from "./provider-composition.ts";
+import type { WorkspaceFiles } from "./workspace-files.ts";
 
 async function main() {
-  assertOwnerFakeMode(process.env);
+  const mode = ownerLaunchMode(process.env, process.argv.slice(2));
+  const readiness: OwnerProviderReadiness =
+    mode === "provider"
+      ? readOwnerProviderReadiness(process.env)
+      : { ready: false };
   const file = process.env.CLIPBUILDER_OWNER_STATE;
   if (!file) throw new Error("owner_state_missing");
   const state = z
@@ -21,6 +29,7 @@ async function main() {
       desktopStorageRoot: z.string().min(1).optional(),
     })
     .parse(JSON.parse(await readFile(file, "utf8")));
+  const media = localWorkerPort(4200, state.workerToken);
   const host = createOwnerHost({
     root: state.root,
     ui: state.ui,
@@ -30,10 +39,17 @@ async function main() {
       ? { desktopStorageRoot: state.desktopStorageRoot }
       : {}),
     port: 4100,
-    media: localWorkerPort(4200, state.workerToken),
-    analysis: fakeOwnerAnalysis,
-    clipPreparation: fakeOwnerClipPreparation,
-    acquisition: fakeOwnerAcquisition,
+    media,
+    ...(mode === "fake"
+      ? {
+          analysis: fakeOwnerAnalysis,
+          clipPreparation: fakeOwnerClipPreparation,
+          acquisition: fakeOwnerAcquisition,
+        }
+      : {
+          providers: (files: WorkspaceFiles) =>
+            composeOwnerProviders(readiness, files, media),
+        }),
     shutdown: () => {
       if (process.connected) process.send?.("stop");
       else void close();

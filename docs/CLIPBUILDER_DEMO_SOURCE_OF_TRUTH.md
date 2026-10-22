@@ -49,7 +49,7 @@ independent fake discovery under 10–60-second AI bounds, including exact 30/60
 seconds. Revisions freeze each request; invalid input dispatches no work.
 Frame-normalized physical cuts preserve manual requests and source clock;
 synthetic native proofs cover VFR/offsets, silence, fractional endpoints and
-900/1,800-frame outputs. The owner composition still has no live AI adapter;
+900/1,800-frame outputs. At that initial checkpoint the owner composition had no live AI adapter;
 provider keys/flags/approvals and owner-only real timing/editorial acceptance
 remain necessary. Saved drafts and presentation editing follow in later packets.
 
@@ -73,7 +73,7 @@ timed words; picture generation receives a validated grounded contextual brief.
 Provider-shaped test doubles preserve their supplied words, timing and
 generated-image provenance through the same pipeline. Image bytes are
 independently normalized before admission. These metadata values cannot enable
-providers: executable owner entrypoints remain strictly fake/paid-off. Real
+providers: the default owner entrypoint remains strictly fake/paid-off. Real
 adapter composition and local preparation for provider inputs must be reconciled
 before claiming real-mode readiness; flags/keys alone do not implement it.
 No live call is authorized.
@@ -90,8 +90,8 @@ autosave. Downloads/ClipBuilder keeps separate Sources, Drafts and Exports;
 source masters and exports survive draft deletion. Atomic documents retain one
 validated last-good backup; damaged bytes prevent restoration. Restored valid
 bundles can be edited and re-exported with every AI adapter absent. This adds no
-offline speech model or live automatic owner adapter. Actual provider-input
-preparation/composition and owner real-media acceptance remain separate gates.
+offline speech model. The later provider handoff below supplies actual local
+input preparation/composition; owner real-media acceptance remains separate.
 
 CL-021 local evidence: a separately bundled stdin-only agent CLI uses the same
 protected host and edit/export coordinator with the browser closed. Safe
@@ -142,6 +142,32 @@ All five root gates, five native proofs and public artifact exclusion pass.
 Real source quality/access/capacity, actual tool/runtime/proxy compliance and
 owner live AI activation/acceptance remain separate CL-024/CL-025 checkpoints.
 See the [local source guide](../apps/backend/owner/SOURCE_ACQUISITION.md).
+
+Owner provider handoff follow-up: the local owner host now has a separate,
+explicit provider launcher and composed adapters using the existing Gemini
+Files, transcription, selection, contextual planning and image-generation
+primitives. Full-source audio is mono 16kHz AAC at 32kbps; a selected clip is
+physically trimmed and normalized into an upright 12fps/640-pixel H.264 proxy.
+Each proxy has a hard 16MiB cap and a receipt-checked digest/duration before
+transfer. Native synthetic proofs cover 60-minute audio, 300-second video,
+rotation, fractional/source clocks and cancellation. Owner transcription admits
+up to 30,000 words without truncating at the public 12,000-word default; owner
+selection considers up to fourteen proposals before independent domain fitting.
+Public defaults and request contracts remain unchanged.
+
+The provider launcher requires explicit local/development mode, paid-on and
+`OWNER_PROVIDER_APPROVED=true` plus the key and individual transfer/image/project/
+spend approvals. Missing optional prerequisites expose unavailable AI rather
+than synthetic results. Nothing here authorizes activating it during agent work.
+The normal fake launcher stays API-free and paid-off; the native worker receives
+no provider credentials in either mode. No public/cloud media composition,
+ADC, remote renderer, sample reader or downloader is introduced into this entry.
+Protected runtime capabilities drive current UI labels while saved bundles keep
+their original provenance. Manual CLI editing/export requires no AI configuration
+and cannot invoke analysis or planning. Remote Files cleanup is scoped to the
+workspace and must drain before its local inputs are removed. Real provider
+behavior, cleanup confirmation, latency and visual acceptance remain owner-only
+CL-025 checks; no offline AI weights or real provider tests are supplied.
 
 ## Owner local workflow planning instruction — 2026-10-22
 

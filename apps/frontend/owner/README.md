@@ -7,6 +7,14 @@ receives bounded IDs/metadata and relative local media URLs, never filesystem
 paths, credentials or worker capabilities. The session capability is HttpOnly
 and SameSite; mutations also require the exact local Origin.
 
+The browser verifies `/api/capabilities` once before enabling actions. Its header
+and source explanation use the host's explicit AI/source modes; no browser flag,
+API key or environment value selects a provider. Saved analysis and individual
+clips keep their own provenance. An unavailable or incompatible AI composition
+disables fresh analysis/planning while valid prepared bundles remain editable
+and exportable through the local media worker. New source acquisition can be
+unavailable independently of offline saved-source reuse.
+
 The source panel accepts an upload, a YouTube link or a saved local source.
 **Look for saved source locally** checks canonical link aliases without a
 metadata request; **Use saved video** opens an intact saved variant without a
@@ -125,9 +133,11 @@ downloads remain outside that cleanup.
 Busy controls are disabled and errors/statuses are announced. With
 `FAKE_MODE=true` and `PAID_DEMO_ENABLED=false`, simulated AI requires no API keys.
 Editing a valid prepared bundle, previewing and native FFmpeg export need no AI
-keys, even when its original provider is unavailable. Real provider adapters
-remain uncomposed; keys alone cannot enable real automatic analysis. That work
-also needs an implemented adapter, live flags and applicable owner approvals.
+keys, even when its original provider is unavailable. A separate
+[provider host entry](../../backend/owner/README.md#separate-provider-entry-owner-activation-pending)
+composes the real adapters behind explicit local owner activation, key and
+approval gates; its checks use injected transports and synthetic inputs only.
+The default fake command does not activate it, and keys alone are insufficient.
 No offline model or weights are provided. This guide describes implemented
 controls, not a passed manual UI or real-media quality review; ticket evidence
 and owner acceptance track those separately.

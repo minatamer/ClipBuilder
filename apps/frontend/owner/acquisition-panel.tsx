@@ -19,6 +19,7 @@ import {
   ownerWorkspaceSchema,
   type OwnerWorkspace,
 } from "../../../packages/contracts/owner/index.ts";
+import type { OwnerRuntimeCapabilities } from "../../../packages/contracts/owner/runtime.ts";
 
 const reasons: Record<OwnerYoutubeSupportReason, string> = {
   "video-codec": "Unsupported video codec",
@@ -166,11 +167,13 @@ function SavedSourceEntries({
 
 export function OwnerAcquisitionPanel({
   workspace,
+  capabilities,
   busy,
   onBusy,
   onOpen,
 }: {
   workspace: OwnerWorkspace | null;
+  capabilities: OwnerRuntimeCapabilities;
   busy: boolean;
   onBusy: (busy: boolean) => void;
   onOpen: (workspace: OwnerWorkspace) => void;
@@ -337,10 +340,19 @@ export function OwnerAcquisitionPanel({
       };
       if (kind === "lookup") body = JSON.stringify({ url: url.trim() });
       else if (kind === "metadata") {
-        if (!checked || !rights) throw new Error("unavailable");
+        if (!capabilities.sourceMode || !checked || !rights)
+          throw new Error("unavailable");
         body = JSON.stringify({ url: checkedUrl, rightsAcknowledged: true });
       } else if (kind === "import") {
-        if (!offer || !selected || blockedChoice || !rights || !checked)
+        if (
+          !capabilities.sourceMode ||
+          !offer ||
+          offer.mode !== capabilities.sourceMode ||
+          !selected ||
+          blockedChoice ||
+          !rights ||
+          !checked
+        )
           throw new Error("unavailable");
         body = JSON.stringify(
           ownerSourceImportSchema.parse({
@@ -446,10 +458,12 @@ export function OwnerAcquisitionPanel({
         {message}
       </p>
       <p>
-        Current fake mode simulates acquisition with a generated 16-second
-        source at the selected dimensions. It does not download YouTube media or
-        prove real video availability. Native merge, inspection and encoding run
-        locally without AI keys.
+        {capabilities.sourceMode === "synthetic-source"
+          ? "Current fake acquisition generates a 16-second source at the selected dimensions. It does not download YouTube media or prove real video availability."
+          : capabilities.sourceMode === "provider-source"
+            ? "This runtime can acquire an explicitly selected source with its admitted downloader. Review the exact offered video/audio choice before importing."
+            : "New source acquisition is unavailable in this runtime. Local lookup and intact saved sources remain available without downloader or provider access."}{" "}
+        Native merge, inspection and encoding run locally without AI keys.
       </p>
       <fieldset disabled={busy || pending || active} style={{ minWidth: 0 }}>
         <legend>Full conversation source</legend>
@@ -497,14 +511,19 @@ export function OwnerAcquisitionPanel({
             </label>
             <button
               type="button"
-              disabled={!rights || !!workspace || !lookup?.metadataAvailable}
+              disabled={
+                !capabilities.sourceMode ||
+                !rights ||
+                !!workspace ||
+                !lookup?.metadataAvailable
+              }
               onClick={() => void action("metadata")}
             >
               {offer
                 ? "Refresh offered qualities explicitly"
                 : "Get offered qualities explicitly"}
             </button>
-            {!lookup?.metadataAvailable && (
+            {(!capabilities.sourceMode || !lookup?.metadataAvailable) && (
               <p>
                 Offered-quality inspection is unavailable in this runtime.
                 Intact saved sources still open without downloader or provider
@@ -591,7 +610,14 @@ export function OwnerAcquisitionPanel({
             <nav>
               <button
                 type="button"
-                disabled={blockedChoice || !rights || !checked || !!workspace}
+                disabled={
+                  !capabilities.sourceMode ||
+                  offer.mode !== capabilities.sourceMode ||
+                  blockedChoice ||
+                  !rights ||
+                  !checked ||
+                  !!workspace
+                }
                 onClick={() => void action("import")}
               >
                 Import selected source in background
@@ -697,10 +723,10 @@ export function OwnerAcquisitionPanel({
       <p>
         Completed sources survive clipping failures, cancellation, workspace
         clear and app restart. Missing or changed bytes require explicit
-        locate-and-validate or a new acquisition. Real downloading remains gated
-        on verified tools, source/method permission and a separate owner check;
-        real AI continuation also needs its implemented provider adapters, keys,
-        live flags and approvals. No offline AI model is supplied.
+        locate-and-validate or a new acquisition. New acquisition and automatic
+        analysis follow the separately admitted runtime capabilities; opening
+        saved material does not enable either one. No offline AI model is
+        supplied.
       </p>
     </section>
   );

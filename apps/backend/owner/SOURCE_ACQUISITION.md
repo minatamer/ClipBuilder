@@ -1,7 +1,7 @@
 # Local linked sources and saved videos
 
 CL-023 adds the owner-only link/quality/import flow and a durable local source
-chooser. The current launcher composes **fake acquisition only** with
+chooser. The default launcher composes **fake acquisition only** with
 `FAKE_MODE=true` and `PAID_DEMO_ENABLED=false`; it reads no env file. No API
 keys, ADC or downloader binaries are needed for this flow. Follow the
 [host setup](README.md) for the already admitted FFmpeg/FFprobe and installed
@@ -204,9 +204,11 @@ mux, inspect and decode actual synthetic video.
 Fake acquisition/AI needs no API keys. Native merge, inspection, deterministic
 editing and export are API-free and do real local processing. Real downloading
 can also be AI-key-free, but still needs network, verified tools and a cleared
-source/method plus owner authorization. Real automatic analysis/planning has
-separate uncomposed provider/input-preparation adapters, API keys, enabled live
-flags and applicable approvals. No offline AI model or weights are supplied.
+source/method plus owner authorization. Real automatic analysis/planning has a
+separate [provider host entry](README.md#separate-provider-entry-owner-activation-pending),
+implemented with injected-transport verification but no paid activation. It
+requires a manually supplied API key and all explicit owner gates; it composes
+no YouTube downloader. No offline AI model or weights are supplied.
 Real acquisition quality/latency, source rights/method, binary/runtime
 compatibility, full-capacity behavior and human A/V/readability review remain
 owner-only acceptance items.

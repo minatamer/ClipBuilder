@@ -8,16 +8,15 @@ import {
 } from "@clipbuilder/contracts";
 
 export const CANDIDATE_GENERATION_SCHEMA_POLICY = "json_only";
+// Owner selection can propose ten manual overlaps plus four additional moments.
+// Public callers retain the four-candidate default below.
+const MAX_CANDIDATE_PROPOSALS = 14;
 export const candidateNormalizationDiagnosticSchema = z
   .object({
     inputShape: z.enum(["array", "envelope", "unsupported"]),
     returnedCount: z.number().int().min(0).max(1_000_000),
-    consideredCount: z
-      .number()
-      .int()
-      .min(0)
-      .max(PUBLIC_LIMITS.maxCandidateCount),
-    acceptedCount: z.number().int().min(0).max(PUBLIC_LIMITS.maxCandidateCount),
+    consideredCount: z.number().int().min(0).max(MAX_CANDIDATE_PROPOSALS),
+    acceptedCount: z.number().int().min(0).max(MAX_CANDIDATE_PROPOSALS),
     droppedCount: z.number().int().min(0).max(1_000_000),
     adjustmentCount: z.number().int().min(0).max(1_000_000),
     dropReasons: z
@@ -56,7 +55,14 @@ const caveatNotes: Record<
 export function normalizeCandidateSelection(
   value: unknown,
   words: readonly TranscriptWord[],
+  maximum: number = PUBLIC_LIMITS.maxCandidateCount,
 ) {
+  if (
+    !Number.isInteger(maximum) ||
+    maximum < 1 ||
+    maximum > MAX_CANDIDATE_PROPOSALS
+  )
+    throw new Error("candidate_policy_rejected");
   const envelope = z
     .object({ candidates: z.array(z.unknown()) })
     .safeParse(value);
@@ -72,10 +78,7 @@ export function normalizeCandidateSelection(
       ? envelope.data.candidates
       : [];
   const dropCounts = {
-    candidate_limit: Math.max(
-      0,
-      received.length - PUBLIC_LIMITS.maxCandidateCount,
-    ),
+    candidate_limit: Math.max(0, received.length - maximum),
     candidate_not_decodable: 0,
     range_unavailable: 0,
   };
@@ -94,7 +97,7 @@ export function normalizeCandidateSelection(
     reason: string;
   }[] = [];
   const candidates = received
-    .slice(0, PUBLIC_LIMITS.maxCandidateCount)
+    .slice(0, maximum)
     .flatMap((item, candidateIndex) => {
       const decoded = proposalSchema.safeParse(item);
       if (!decoded.success) {
@@ -200,7 +203,7 @@ export function normalizeCandidateSelection(
   const diagnostic: CandidateNormalizationDiagnostic = {
     inputShape,
     returnedCount: received.length,
-    consideredCount: Math.min(received.length, PUBLIC_LIMITS.maxCandidateCount),
+    consideredCount: Math.min(received.length, maximum),
     acceptedCount: candidates.length,
     droppedCount: received.length - candidates.length,
     adjustmentCount: adjustments.length,

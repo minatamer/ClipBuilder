@@ -22,6 +22,7 @@ import {
   synthesizeOwnerAcquisition,
 } from "./acquisition-media.ts";
 import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/owner/acquisition-profile.ts";
+import { prepareOwnerProviderMedia } from "./provider-media.ts";
 
 export function createOwnerWorker(options: {
   root: string;
@@ -144,60 +145,68 @@ export function createOwnerWorker(options: {
               operation: "inspect",
               source: await inspectOwnerSource(source, options.tools, signal),
             }
-          : job.operation === "prepare-acquisition"
-            ? {
-                operation: job.operation,
-                ...(await prepareOwnerAcquisition(
-                  options.root,
-                  job.workspaceId,
-                  job.expected,
-                  options.tools,
-                  signal,
-                  job.combined ?? false,
-                  stage,
-                )),
-              }
-            : job.operation === "synthesize-acquisition" ||
-                job.operation === "inspect-acquisition"
+          : job.operation === "prepare-owner-audio" ||
+              job.operation === "prepare-owner-video"
+            ? await prepareOwnerProviderMedia(
+                options.root,
+                job,
+                options.tools,
+                signal,
+              )
+            : job.operation === "prepare-acquisition"
               ? {
                   operation: job.operation,
-                  ...(await (
-                    job.operation === "synthesize-acquisition"
-                      ? synthesizeOwnerAcquisition
-                      : inspectOwnerAcquisition
-                  )(
+                  ...(await prepareOwnerAcquisition(
                     options.root,
                     job.workspaceId,
                     job.expected,
                     options.tools,
                     signal,
+                    job.combined ?? false,
                     stage,
                   )),
                 }
-              : job.operation === "clip"
-                ? await renderOwnerClip(
-                    {
-                      root: options.root,
-                      tools: options.tools,
-                      chromium: options.chromium ?? "",
-                      bundle: options.overlayBundle ?? "",
-                      cache,
-                    },
-                    job,
-                    signal,
-                  )
-                : await ownerPortrait(
-                    source,
-                    await ownerMediaPath(
+              : job.operation === "synthesize-acquisition" ||
+                  job.operation === "inspect-acquisition"
+                ? {
+                    operation: job.operation,
+                    ...(await (
+                      job.operation === "synthesize-acquisition"
+                        ? synthesizeOwnerAcquisition
+                        : inspectOwnerAcquisition
+                    )(
                       options.root,
                       job.workspaceId,
-                      "portrait.mp4",
-                    ),
-                    options.tools,
-                    signal,
-                    job.cut,
-                    job.fingerprint,
-                  );
+                      job.expected,
+                      options.tools,
+                      signal,
+                      stage,
+                    )),
+                  }
+                : job.operation === "clip"
+                  ? await renderOwnerClip(
+                      {
+                        root: options.root,
+                        tools: options.tools,
+                        chromium: options.chromium ?? "",
+                        bundle: options.overlayBundle ?? "",
+                        cache,
+                      },
+                      job,
+                      signal,
+                    )
+                  : await ownerPortrait(
+                      source,
+                      await ownerMediaPath(
+                        options.root,
+                        job.workspaceId,
+                        "portrait.mp4",
+                      ),
+                      options.tools,
+                      signal,
+                      job.cut,
+                      job.fingerprint,
+                    );
       res
         .writeHead(200, {
           "Content-Type": "application/json",

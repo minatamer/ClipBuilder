@@ -6,8 +6,9 @@ manual ranges alongside duration-controlled fake discovery, a bounded list of
 automatic clip edits, caption/picture adjustments, opt-in saved drafts, private
 loopback access and temporary workspace cleanup. CL-021 adds a protected local
 agent CLI using the same edit/export coordinator. CL-023 adds synthetic linked
-source import and durable offline source reuse. AI/acquisition are simulated;
-native video processing is real. See the [source guide](SOURCE_ACQUISITION.md)
+source import and durable offline source reuse. Default AI/acquisition are
+simulated; native video processing is real. A separate provider entry is wired
+for later owner activation, with injected-transport verification only. See the [source guide](SOURCE_ACQUISITION.md)
 for exact quality choices, Downloads/Desktop storage and dormant real-tool gates.
 
 From the repository root, prepare the free Windows x64 FFmpeg 9.0.2 portable
@@ -41,8 +42,50 @@ See the [worker guide](../../renderer/owner/README.md) for that boundary.
 Use `http://localhost:4100/`. The private worker binds only to
 `127.0.0.1:4200`. Canonical visitor 3000/4000 services are independent. No ADC,
 gcloud, API keys, cloud access, model weights or provider SDK composition is
-needed here. Real provider AI is unavailable in this owner composition; fake
-results do not establish AI quality. Actual native encoding is local and API-free.
+needed for the default fake entry. Fake results do not establish AI quality.
+Actual native encoding is local and API-free. The separate provider entry below
+is not enabled by the fake command or an API key alone.
+
+## Separate provider entry: owner activation pending
+
+`corepack pnpm owner:start:provider` is a separate explicit launcher command.
+No agent run, paid request or real-media acceptance is authorized by its
+implementation. It requires process environment supplied manually by the owner:
+
+- `FAKE_MODE=false`, `PAID_DEMO_ENABLED=true`, `APP_ENV=local` and
+  `NODE_ENV=development`.
+- `OWNER_PROVIDER_APPROVED=true`; absent/false remains closed. Test, preview and
+  production modes cannot select this launcher.
+- A manually supplied `GEMINI_API_KEY` and explicit `true` for
+  `CLOUD_SPEND_APPROVED`, `GEMINI_TRANSFER_APPROVED`,
+  `GEMINI_IMAGE_GENERATION_APPROVED` and `GEMINI_PAID_PROJECT_CONFIRMED`.
+
+This command also reads no env file. It parses the selected provider inputs once
+and uses the existing fixed Gemini model, timeout and zero-retry policy; model,
+endpoint and timeout environment overrides are ignored. Invalid/conflicting mode
+settings reject startup. With valid local provider mode but an incomplete key or
+individual approval, the host exposes unavailable AI/planning capabilities and
+dispatches nothing; it does not substitute synthetic results. Existing prepared
+bundles can still be opened, edited and exported through native media work.
+
+The provider host composes bounded local audio/video preparation, Gemini Files
+transfer/transcription, independent selection, selected-clip planning and at most
+three generated-picture attempts per clip. These adapters are exercised with
+injected transports and synthetic inputs only. Real latency, model output,
+deletion confirmation and human A/V quality remain owner acceptance items. No
+offline AI model or weights are included.
+
+The launcher passes only the explicit Gemini key/approval allowlist to this
+host. Its native worker remains fake/paid-off and receives no provider key, ADC,
+Google/Vertex endpoint settings, inherited proxy or Node options. The host does
+not compose the public application, cloud renderer, sample reads, grants or a
+YouTube downloader. Downloaded source reuse remains available; new YouTube
+acquisition is unavailable in the provider entry until its independent tool and
+source/method gates are completed. The protected capabilities response drives
+the browser's current labels and fresh-action controls. Saved clip provenance
+does not change when the current provider becomes unavailable.
+
+## Runtime lifecycle and local media
 
 The supervisor writes a private capability state and content-free process
 identities/logs beneath an OS temporary runtime directory. It prints only the
@@ -51,6 +94,11 @@ per-run capabilities. Follow root AGENTS lifecycle rules for hidden background
 launch, readiness and cleanup. Stop the supervisor gracefully with Ctrl+C; it
 drains host/worker operations before removing owned processing copies. A failed
 cleanup reports recovery required instead of authorizing a new launch.
+Provider-host shutdown allows a fixed 75-second graceful drain for bounded
+request/remote-file cleanup; fake hosts and native workers retain 15 seconds.
+If grace expires, the supervisor awaits verified forced cleanup of the owned
+process tree before removing scratch or capabilities. This bound has not been
+exercised with an active paid request.
 
 Sources are limited to supported SDR MP4 codecs, 60 minutes, 10 GiB, 4K/60fps;
 one source and one heavy operation are admitted. Up to ten selected clips share
@@ -282,11 +330,12 @@ listeners are ready and their stable process ledger exists, then withdraws only
 its matching record before draining shutdown. Closed, expired or replaced
 identities fail safely before picture access or native work.
 
-Current CLI execution is fake/paid-off and needs no API keys or ADC. Manual
-editing and native export of prepared bundles are API-free even when their
-original AI provider is unavailable. Automatic real AI still needs the
-uncomposed owner provider/input-preparation adapters, keys, live flags and
-applicable owner approvals; keys/flags alone are insufficient. No offline AI
+CLI execution needs no API keys or ADC and can edit prepared bundles in any
+host capability mode. Its allowlisted commands expose no fresh AI action.
+Manual editing and native export remain API-free even when the original AI
+provider is unavailable. The separate provider host composition
+requires its complete explicit activation inputs and applicable owner approvals;
+it has not been activated or tested with real requests. No offline AI
 model/weights are included. These interface descriptions do not establish
 manual UI acceptance or real-media quality.
 
@@ -316,7 +365,7 @@ drains owned children/listeners and deletes its temporary files. The required
 general gates are in root AGENTS. Human real-media/visual quality and later external compatibility
 remain in CL-025; these checks do not establish real caption readability,
 picture crop or A/V acceptance. No agent-paid or real YouTube test is
-authorized. Fake mode needs no API keys; real automatic analysis/planning still
-needs implemented and composed provider adapters, local input preparation,
-keys, live flags and applicable approvals. Keys/flags alone cannot enable it,
-and no offline AI model/weights are included.
+authorized. Fake mode needs no API keys. Provider composition and local input
+preparation are implemented and checked with injected transports; real
+automatic analysis/planning still requires explicit owner activation, its key
+and every applicable approval. No offline AI model/weights are included.

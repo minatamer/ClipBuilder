@@ -21,7 +21,7 @@ import {
 import { candidateSelectionPolicy } from "../src/analysis/analysis.prompt.ts";
 import type { OwnerAiMode } from "../../../packages/contracts/owner/policy.ts";
 
-/** Domain ports only. This owner composition has no live provider implementation. */
+/** Domain ports only; explicit owner composition supplies synthetic or provider AI. */
 export type OwnerAnalysisPorts = {
   readonly mode: OwnerAiMode;
   transcribe(

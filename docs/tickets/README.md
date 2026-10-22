@@ -3,8 +3,9 @@
 ## Local owner workflow execution — 2026-10-22
 
 The owner adopted all recommendations and authorized sequential implementation,
-execute/validate/fix loops and a commit per clean ticket. CL-017–021 are locally verified;
-later implementation remains queued. All agent checks are synthetic/fake,
+execute/validate/fix loops and a commit per clean ticket. CL-017–023 have local
+implementation/decision evidence; the required real-mode handoff correction is
+validated before CL-024 combined acceptance. All agent checks are synthetic/fake,
 paid-off, credential-free and zero-spend. No push, real YouTube retrieval,
 provider/cloud calls or deployment is authorized. Read the
 [latest authorization](../CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#owner-afk-implementation-authorization--2026-10-22)
@@ -16,7 +17,7 @@ manual acceptance after implementation.
 | --- | --- | --- | --- |
 | 1 | [CL-017](CL-017-isolate-local-owner-workspace.md) | Separate local workspace, source lifecycle, native media runtime and public build exclusion | Implemented; fake/native synthetic checks pass; owner real-media gates remain open |
 | 2 | [CL-018](CL-018-add-owner-ranges-and-ai-duration-controls.md) | Exact manual ranges alongside independent discovery; AI-only min/max and exact duration | Implemented; 34 owner tests, two native proofs, root gates and artifact exclusion pass; real AI/owner acceptance open |
-| 3 | [CL-019](CL-019-process-multiple-local-clips.md) | Several selected clips, bounded concurrent work, per-clip review/export and source retention | Implemented plus CL-017–019 compatibility fixes; 53 owner tests, three native proofs, root gates and public exclusion pass; real adapter readiness remains a separate CL-024 handoff requirement |
+| 3 | [CL-019](CL-019-process-multiple-local-clips.md) | Several selected clips, bounded concurrent work, per-clip review/export and source retention | Implemented plus composed provider handoff/local inputs; 1,600 root tests, seven native proofs, five gates and 1,490-file exclusion pass; no live activation; CL-024 combined acceptance next |
 | 4 | [CL-020](CL-020-add-minimal-local-caption-and-visual-editor.md) | Caption style/position, visual placement/replacement, personal pictures and saved drafts | Implemented; 98 owner tests, three native proofs, 1,454 root tests, five gates and 1,490-file public exclusion pass; owner real-media/live acceptance open |
 | 5 | [CL-021](CL-021-enable-agent-access-to-local-edits.md) | Existing chat agent edits through the same validated local use cases and CLI | Implemented; 146 owner tests, three native proofs, 1,502 root tests, five gates and 1,490-file public exclusion pass; headless CLI/native export/cancel and UI synchronization verified |
 | Decision lane | [CL-022](CL-022-decide-youtube-source-feasibility.md) | Research background download, exact resolution choice and saved-source reuse | Decision complete; technical go for fake-only CL-023; yt-dlp/Deno pins and exact/offline design recorded; real source/method/tool/access gates open |
@@ -49,18 +50,21 @@ CL-017–021 provide private local preview, manual ranges, independent simulated
 discovery, serial multi-clip edits, review/cancel, caption/picture controls,
 personal pictures, opt-in saved/autosaved drafts, immutable native exports and
 headless agent commands through the same protected host;
-linked import feasibility/implementation is next. Actual AI needs real
+linked synthetic import and offline saved-source reuse are implemented. Actual AI needs real
 provider keys, enabled live flags and applicable rights/transfer/spend approvals;
-paid testing stays owner-only, and no live provider adapter is composed into this
-owner runtime yet. Verified synthetic encoding is API-free; no offline AI
+paid testing stays owner-only. The separate provider entry is implemented for
+later owner activation; current agent checks use injected transports only.
+Verified synthetic encoding is API-free; no offline AI
 model/weights are provided.
 
 The owner-requested CL-017–019 real-mode revisit is recorded in CL-019. Shared
 domain paths now preserve actual injected words/timings, source/clip context,
 grounded picture requests and explicit provenance instead of assuming fake
-data. Provider-shaped test doubles make no external calls. Executable startup
-still enforces fake/paid-off; CL-024/025 explicitly require actual adapter and
-local provider-input preparation readiness before owner live activation.
+data. Provider-shaped test doubles make no external calls. Default startup
+still enforces fake/paid-off. The subsequent CL-019 handoff follow-up supplies
+bounded native provider inputs and a separately gated provider launcher;
+CL-024 verifies that wiring without activation, and CL-025 keeps real provider
+and visual acceptance open.
 
 **CL-015 paid-off Cloud Run checkpoint — 2026-10-07:** The owner-approved
 whole-file commits and frontend/private-backend deployment are complete. Final

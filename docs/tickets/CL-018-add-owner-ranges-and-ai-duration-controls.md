@@ -179,3 +179,10 @@ Real provider composition/quality, owner media/visual acceptance and maximum
 resource capacity remain unverified in CL-025. No live, credential, cloud,
 rights-dependent or paid check was run. This clean review does not close those
 owner-only gates.
+
+Current handoff update: the subsequent
+[CL-019 correction](CL-019-process-multiple-local-clips.md) implements the missing
+bounded local provider inputs and separately gated adapter composition. It
+preserves manual cuts, the independent duration policy and public defaults.
+Only injected transports/synthetic media have been checked; real provider
+quality and owner acceptance remain open.
