@@ -97,6 +97,8 @@ export function createOwnerWorker(options: {
               ),
               options.tools,
               signal,
+              job.cut,
+              job.fingerprint,
             );
       res
         .writeHead(200, {

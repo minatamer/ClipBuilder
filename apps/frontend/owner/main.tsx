@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ownerWorkspaceSchema,
   type OwnerWorkspace,
 } from "../../../packages/contracts/owner/index.ts";
 import "./style.css";
+import { OwnerSelectionPanel } from "./selection-panel.tsx";
+import type { OwnerMomentExport } from "../../../packages/contracts/owner/selection.ts";
 
 function OwnerWorkspaceView() {
   const [workspace, setWorkspace] = useState<OwnerWorkspace | null>(null);
@@ -13,6 +15,11 @@ function OwnerWorkspaceView() {
     "Choose an MP4 to open a private local processing copy.",
   );
   const [output, setOutput] = useState(false);
+  const [selection, setSelection] = useState<OwnerMomentExport | null>(null);
+  const choose = useCallback((value: OwnerMomentExport | null) => {
+    setSelection(value);
+    setOutput(false);
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     void (async () => {
@@ -54,7 +61,7 @@ function OwnerWorkspaceView() {
       });
       if (!response.ok) throw new Error("unavailable");
       setWorkspace(ownerWorkspaceSchema.parse(await response.json()));
-      setOutput(false);
+      choose(null);
       setMessage(
         "Local source ready. AI is simulated; no provider or cloud processing.",
       );
@@ -67,16 +74,18 @@ function OwnerWorkspaceView() {
     }
   }
   async function exportPortrait() {
-    if (!workspace || busy) return;
+    if (!workspace || !selection || busy) return;
     setBusy(true);
     setMessage("Encoding a local portrait preview…");
     try {
       const response = await fetch(`/api/workspace/${workspace.id}/portrait`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(selection),
       });
       if (response.status === 404) {
         setWorkspace(null);
-        setOutput(false);
+        choose(null);
         setMessage(
           "The temporary workspace expired. Choose the saved source again.",
         );
@@ -85,7 +94,7 @@ function OwnerWorkspaceView() {
       if (!response.ok) throw new Error("unavailable");
       setOutput(true);
       setMessage(
-        "Local MP4 ready. This fixed first-ten-seconds encoding contains no AI analysis.",
+        "Local MP4 ready from the selected frame range. AI results remain simulated.",
       );
     } catch {
       setMessage("Local encoding is unavailable. Your source remains open.");
@@ -103,7 +112,7 @@ function OwnerWorkspaceView() {
       if (!response.ok && response.status !== 404)
         throw new Error("unavailable");
       setWorkspace(null);
-      setOutput(false);
+      choose(null);
       setMessage(
         "Processing workspace cleared. Saved source masters are preserved.",
       );
@@ -141,6 +150,13 @@ function OwnerWorkspaceView() {
         </label>
       ) : (
         <>
+          <OwnerSelectionPanel
+            key={workspace.id}
+            workspace={workspace}
+            busy={busy}
+            onBusy={setBusy}
+            onChoose={choose}
+          />
           <section className="previews" aria-label="Local media previews">
             <article>
               <h2>Source</h2>
@@ -173,8 +189,11 @@ function OwnerWorkspaceView() {
             )}
           </section>
           <nav aria-label="Workspace actions">
-            <button disabled={busy} onClick={() => void exportPortrait()}>
-              Encode first 10 seconds locally
+            <button
+              disabled={busy || !selection}
+              onClick={() => void exportPortrait()}
+            >
+              Export selected moment locally
             </button>
             <button disabled={busy} onClick={() => void clear()}>
               Clear processing workspace

@@ -5,6 +5,9 @@ import { lstat, realpath, rm, rename } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import {
   OWNER_LIMITS,
+  OWNER_FPS,
+  ownerCutSchema,
+  type OwnerCut,
   ownerSourceSchema,
   type OwnerSource,
 } from "../../../packages/contracts/owner/index.ts";
@@ -36,11 +39,11 @@ export async function ownerMediaPath(
   return target;
 }
 
-export async function inspectOwnerSource(
+async function inspectOwnerMedia(
   file: string,
   tools: OwnerNativeTools,
   signal: AbortSignal,
-): Promise<OwnerSource> {
+) {
   const info = await lstat(file);
   if (
     !info.isFile() ||
@@ -111,17 +114,67 @@ export async function inspectOwnerSource(
   if (![0, 90, -90, 180, -180, 270, -270].includes(rotation))
     throw new Error("invalid");
   const [numerator, denominator] = video.avg_frame_rate.split("/").map(Number);
+  const videoStart = video.start_time ?? probe.format.start_time ?? 0;
+  // MP4 stream duration can include a trailing muxer/edit-list allowance that
+  // the decoder never emits. Use packet presentation ends so endpoint cuts do
+  // not ask the CFR filter for nonexistent source frames. B-frame decode order
+  // is irrelevant to this maximum; the bounded probe never decodes source pixels.
+  const packets = await runOwnedProcess(
+    tools.ffprobe,
+    [
+      "-v",
+      "error",
+      ...SOURCE_INPUT_OPTIONS,
+      "-select_streams",
+      "v:0",
+      "-show_packets",
+      "-show_entries",
+      "packet=pts_time,duration_time",
+      "-of",
+      "csv=p=0",
+      file,
+    ],
+    signal,
+    { maxStdout: 16 * 1024 ** 2 },
+  );
+  let videoEnd = videoStart;
+  for (const row of packets.trim().split(/\r?\n/)) {
+    const parts = row.split(",");
+    if (parts.length !== 2 || parts.some((part) => part.trim() === ""))
+      throw new Error("invalid_video_clock");
+    const [pts, duration] = parts.map(Number);
+    if (
+      !Number.isFinite(pts) ||
+      !Number.isFinite(duration) ||
+      !duration ||
+      duration < 0
+    )
+      throw new Error("invalid_video_clock");
+    videoEnd = Math.max(videoEnd, pts! + duration);
+  }
   const hash = createHash("sha256");
   for await (const bytes of createReadStream(file, { signal }))
     hash.update(bytes);
-  return ownerSourceSchema.parse({
+  const metadata = ownerSourceSchema.parse({
     fingerprint: hash.digest("hex"),
     bytes: info.size,
-    durationMs: Math.round(probe.format.duration * 1000),
+    durationMs: Math.round((videoEnd - videoStart) * 1000),
     width: Math.abs(rotation) % 180 === 90 ? video.height : video.width,
     height: Math.abs(rotation) % 180 === 90 ? video.width : video.height,
     fps: (numerator ?? 0) / (denominator ?? 1),
   });
+  return {
+    metadata,
+    videoStart,
+  };
+}
+
+export async function inspectOwnerSource(
+  file: string,
+  tools: OwnerNativeTools,
+  signal: AbortSignal,
+): Promise<OwnerSource> {
+  return (await inspectOwnerMedia(file, tools, signal)).metadata;
 }
 
 export async function ownerPortrait(
@@ -129,9 +182,25 @@ export async function ownerPortrait(
   output: string,
   tools: OwnerNativeTools,
   signal: AbortSignal,
+  requestedCut: OwnerCut,
+  fingerprint: string,
 ) {
-  const metadata = await inspectOwnerSource(source, tools, signal);
-  const durationMs = Math.min(10_000, metadata.durationMs);
+  const { metadata, videoStart } = await inspectOwnerMedia(
+    source,
+    tools,
+    signal,
+  );
+  const cut = ownerCutSchema.parse(requestedCut);
+  if (
+    fingerprint !== metadata.fingerprint ||
+    cut.endFrame > Math.floor((metadata.durationMs * OWNER_FPS) / 1000)
+  )
+    throw new Error("stale_or_invalid_cut");
+  const frames = cut.endFrame - cut.startFrame;
+  const durationMs = (frames * 1000) / OWNER_FPS;
+  // Normalize the video clock before frame selection. This also handles VFR and
+  // nonzero container starts without moving words or stretching source time.
+  const filter = `[0:v:0]setpts=PTS-(${videoStart.toFixed(6)})/TB,fps=fps=${OWNER_FPS}:start_time=0:round=near,trim=start_frame=${cut.startFrame}:end_frame=${cut.endFrame},setpts=PTS-STARTPTS,scale=1080:1920:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1[v];[0:a:0]asetpts=PTS-(${videoStart.toFixed(6)})/TB,aresample=async=1:first_pts=0,apad,atrim=start=${cut.startFrame / OWNER_FPS}:end=${cut.endFrame / OWNER_FPS},asetpts=PTS-STARTPTS[a]`;
   const temporary = `${output}.partial.mp4`;
   try {
     if ((await lstat(temporary)).isSymbolicLink()) throw new Error("invalid");
@@ -148,18 +217,21 @@ export async function ownerPortrait(
         "-v",
         "error",
         ...SOURCE_INPUT_OPTIONS,
+        "-copyts",
         "-i",
         source,
         "-t",
         String(durationMs / 1000),
         "-map",
-        "0:v:0",
+        "[v]",
         "-map",
-        "0:a:0",
-        "-vf",
-        "scale=1080:1920:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1",
+        "[a]",
+        "-filter_complex",
+        filter,
+        "-frames:v",
+        String(frames),
         "-r",
-        "30",
+        String(OWNER_FPS),
         "-c:v",
         "libx264",
         "-preset",
@@ -207,6 +279,36 @@ export async function ownerPortrait(
       Math.abs(result.format.duration * 1000 - durationMs) > 100
     )
       throw new Error("invalid_output");
+    const counted = z
+      .object({
+        streams: z
+          .array(z.object({ nb_read_frames: z.coerce.number().int() }))
+          .length(1),
+      })
+      .parse(
+        JSON.parse(
+          await runOwnedProcess(
+            tools.ffprobe,
+            [
+              "-v",
+              "error",
+              "-protocol_whitelist",
+              "file,pipe",
+              "-select_streams",
+              "v:0",
+              "-count_frames",
+              "-show_entries",
+              "stream=nb_read_frames",
+              "-of",
+              "json",
+              temporary,
+            ],
+            signal,
+          ),
+        ),
+      );
+    if (counted.streams[0]?.nb_read_frames !== frames)
+      throw new Error("invalid_frame_count");
     await runOwnedProcess(
       tools.ffmpeg,
       [
@@ -224,7 +326,12 @@ export async function ownerPortrait(
       signal,
     );
     await rename(temporary, output);
-    return { operation: "portrait" as const, bytes: info.size, durationMs };
+    return {
+      operation: "portrait" as const,
+      bytes: info.size,
+      durationMs: Math.round(durationMs),
+      frames,
+    };
   } finally {
     await rm(temporary, { force: true });
   }

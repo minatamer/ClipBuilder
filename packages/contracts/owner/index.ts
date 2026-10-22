@@ -1,22 +1,13 @@
 import { z } from "zod";
 
-/** Local-only; deliberately absent from the public contracts entrypoint/build. */
-export const OWNER_LIMITS = {
-  sourceBytes: 10 * 1024 ** 3,
-  sourceMs: 60 * 60 * 1000,
-  clipMs: 300_000,
-  ranges: 10,
-  suggestions: 4,
-  clips: 10,
-  scratchBytes: 20 * 1024 ** 3,
-  reserveBytes: 10 * 1024 ** 3,
-  libraryWarningBytes: 50 * 1024 ** 3,
-  outputBytes: 1024 ** 3,
-  workspaceMs: 2 * 60 * 60 * 1000,
-  jsonBytes: 1024 * 1024,
-} as const;
-
-export const ownerIdSchema = z.uuid();
+import { OWNER_LIMITS, ownerIdSchema, ownerCutSchema } from "./policy.ts";
+export {
+  OWNER_LIMITS,
+  ownerIdSchema,
+  OWNER_FPS,
+  ownerCutSchema,
+  type OwnerCut,
+} from "./policy.ts";
 export const ownerSourceSchema = z
   .object({
     fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
@@ -40,12 +31,19 @@ export const ownerWorkspaceSchema = z
   .strict();
 export type OwnerWorkspace = z.infer<typeof ownerWorkspaceSchema>;
 
-export const ownerMediaJobSchema = z
-  .object({
-    workspaceId: ownerIdSchema,
-    operation: z.enum(["inspect", "portrait"]),
-  })
-  .strict();
+export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
+  z
+    .object({ workspaceId: ownerIdSchema, operation: z.literal("inspect") })
+    .strict(),
+  z
+    .object({
+      workspaceId: ownerIdSchema,
+      operation: z.literal("portrait"),
+      cut: ownerCutSchema,
+      fingerprint: ownerSourceSchema.shape.fingerprint,
+    })
+    .strict(),
+]);
 export type OwnerMediaJob = z.infer<typeof ownerMediaJobSchema>;
 export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
   z
@@ -56,6 +54,7 @@ export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
       operation: z.literal("portrait"),
       bytes: z.number().int().positive().max(OWNER_LIMITS.outputBytes),
       durationMs: z.number().int().positive(),
+      frames: z.number().int().positive(),
     })
     .strict(),
 ]);

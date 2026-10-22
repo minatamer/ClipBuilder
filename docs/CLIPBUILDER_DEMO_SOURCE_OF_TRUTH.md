@@ -44,6 +44,15 @@ for this local fake-tested implementation track. Current fake mode needs no
 keys/ADC and uses synthetic AI results; API-free local native encoding is a
 separate capability to verify. No offline AI model/weights are added.
 
+CL-018 local evidence: multiple manual 1–300-second ranges coexist with
+independent fake discovery under 10–60-second AI bounds, including exact 30/60
+seconds. Revisions freeze each request; invalid input dispatches no work.
+Frame-normalized physical cuts preserve manual requests and source clock;
+synthetic native proofs cover VFR/offsets, silence, fractional endpoints and
+900/1,800-frame outputs. The owner composition still has no live AI adapter;
+provider keys/flags/approvals and owner-only real timing/editorial acceptance
+remain necessary. Saved drafts and batch editing follow in later packets.
+
 ## Owner local workflow planning instruction — 2026-10-22
 
 The owner requests research and fresh tickets for personal local-only controls:

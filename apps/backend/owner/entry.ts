@@ -3,6 +3,7 @@ import { z } from "zod";
 import { assertOwnerFakeMode } from "./local-mode.ts";
 import { createOwnerHost } from "./server.ts";
 import { localWorkerPort } from "./worker-port.ts";
+import { fakeOwnerAnalysis } from "./fake-analysis.ts";
 
 async function main() {
   assertOwnerFakeMode(process.env);
@@ -20,6 +21,7 @@ async function main() {
     ...state,
     port: 4100,
     media: localWorkerPort(4200, state.workerToken),
+    analysis: fakeOwnerAnalysis,
     shutdown: () => {
       if (process.connected) process.send?.("stop");
       else void close();

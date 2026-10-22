@@ -1,5 +1,6 @@
 import {
   ownerMediaResultSchema,
+  OWNER_FPS,
   type OwnerMediaJob,
 } from "../../../packages/contracts/owner/index.ts";
 
@@ -61,6 +62,13 @@ export function localWorkerPort(
         JSON.parse(Buffer.concat(chunks).toString("utf8")),
       );
       if (result.operation !== job.operation)
+        throw new Error("invalid_media_result");
+      if (
+        job.operation === "portrait" &&
+        result.operation === "portrait" &&
+        (result.frames !== job.cut.endFrame - job.cut.startFrame ||
+          result.durationMs !== Math.round((result.frames * 1000) / OWNER_FPS))
+      )
         throw new Error("invalid_media_result");
       return result;
     } finally {

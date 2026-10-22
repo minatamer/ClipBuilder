@@ -28,6 +28,11 @@ import {
 } from "../packages/contracts/owner/index.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 import { localWorkerPort } from "../apps/backend/owner/worker-port.ts";
+import { fakeOwnerAnalysis } from "../apps/backend/owner/fake-analysis.ts";
+import {
+  ownerAnalysisSchema,
+  type OwnerAnalysisInputs,
+} from "../packages/contracts/owner/selection.ts";
 
 const source = {
   fingerprint: "a".repeat(64),
@@ -45,6 +50,10 @@ describe("isolated owner host", () => {
     port: number;
   let media: ReturnType<typeof vi.fn<OwnerHostOptions["media"]>>;
   let shutdown: ReturnType<typeof vi.fn<() => void>>;
+  let analysis: {
+    transcribe: ReturnType<typeof vi.fn<typeof fakeOwnerAnalysis.transcribe>>;
+    select: ReturnType<typeof vi.fn<typeof fakeOwnerAnalysis.select>>;
+  };
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), "clipbuilder-owner-test-"));
     root = join(directory, "scratch");
@@ -55,9 +64,20 @@ describe("isolated owner host", () => {
     media = vi.fn(async (job) =>
       job.operation === "inspect"
         ? { operation: "inspect", source }
-        : { operation: "portrait", bytes: 10, durationMs: 10_000 },
+        : {
+            operation: "portrait",
+            bytes: 10,
+            frames: job.cut.endFrame - job.cut.startFrame,
+            durationMs: Math.round(
+              ((job.cut.endFrame - job.cut.startFrame) * 1000) / 30,
+            ),
+          },
     );
     shutdown = vi.fn();
+    analysis = {
+      transcribe: vi.fn(fakeOwnerAnalysis.transcribe),
+      select: vi.fn(fakeOwnerAnalysis.select),
+    };
     host = createOwnerHost({
       root,
       ui,
@@ -65,6 +85,7 @@ describe("isolated owner host", () => {
       port: 0,
       media,
       shutdown,
+      analysis,
     });
     port = await listenOwner(host.server);
   });
@@ -99,6 +120,75 @@ describe("isolated owner host", () => {
     expect(response.status).toBe(200);
     return ownerWorkspaceSchema.parse(JSON.parse(response.body.toString()));
   }
+  const inputs = (): OwnerAnalysisInputs => ({
+    sourceRevision: 0,
+    policyRevision: 1,
+    ranges: [{ id: crypto.randomUUID(), startMs: 200, endMs: 2200 }],
+    aiDuration: { minMs: 10_000, maxMs: 60_000 },
+    manualOnly: false,
+  });
+  async function analyze(id: string, value = inputs()) {
+    return ownerRequest(port, `/api/workspace/${id}/analysis`, {
+      method: "POST",
+      headers: { ...auth, "Content-Type": "application/json" },
+      body: JSON.stringify(value),
+    });
+  }
+  async function selection(id: string) {
+    const response = await analyze(id);
+    expect(response.status).toBe(200);
+    const result = ownerAnalysisSchema.parse(
+      JSON.parse(response.body.toString()),
+    );
+    return {
+      analysisId: result.id,
+      momentId: result.manual[0]!.id,
+      policyRevision: result.inputs.policyRevision,
+    };
+  }
+  it("restores a completed fake analysis without calls and rejects stale selections before rendering", async () => {
+    const workspace = await upload();
+    const chosen = await selection(workspace.id);
+    const restored = await ownerRequest(
+      port,
+      `/api/workspace/${workspace.id}/analysis`,
+      { headers: auth },
+    );
+    expect(
+      ownerAnalysisSchema.parse(JSON.parse(restored.body.toString())).id,
+    ).toBe(chosen.analysisId);
+    expect(analysis.transcribe).toHaveBeenCalledTimes(1);
+    expect(analysis.select).toHaveBeenCalledTimes(1);
+    const newer = inputs();
+    newer.policyRevision = 2;
+    expect((await analyze(workspace.id, newer)).status).toBe(200);
+    expect((await analyze(workspace.id)).status).toBe(409);
+    expect(analysis.transcribe).toHaveBeenCalledTimes(2);
+    expect(analysis.select).toHaveBeenCalledTimes(2);
+    const rendered = await ownerRequest(
+      port,
+      `/api/workspace/${workspace.id}/portrait`,
+      {
+        method: "POST",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify(chosen),
+      },
+    );
+    expect(rendered.status).toBe(409);
+    expect(media).toHaveBeenCalledTimes(1);
+  });
+  it("rejects invalid source revisions/ranges without AI or native work", async () => {
+    const workspace = await upload();
+    const stale = inputs();
+    stale.sourceRevision++;
+    const outside = inputs();
+    outside.ranges[0]!.endMs = source.durationMs + 1;
+    for (const value of [stale, outside])
+      expect((await analyze(workspace.id, value)).status).toBe(400);
+    expect(analysis.transcribe).toHaveBeenCalledTimes(0);
+    expect(analysis.select).toHaveBeenCalledTimes(0);
+    expect(media).toHaveBeenCalledTimes(1);
+  });
   it("restores the running session after refresh and expires only temporary copies", async () => {
     const workspace = await upload();
     const current = await ownerRequest(port, "/api/workspace", {
@@ -223,6 +313,7 @@ describe("isolated owner host", () => {
   });
   it("does not delete a source during native work; close cancels and drains before cleanup", async () => {
     const workspace = await upload();
+    const chosen = await selection(workspace.id);
     let entered!: () => void,
       drained = false;
     const started = new Promise<void>((done) => {
@@ -245,7 +336,11 @@ describe("isolated owner host", () => {
     const active = ownerRequest(
       port,
       `/api/workspace/${workspace.id}/portrait`,
-      { method: "POST", headers: auth },
+      {
+        method: "POST",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify(chosen),
+      },
     ).catch(() => undefined);
     await started;
     expect(
@@ -260,6 +355,45 @@ describe("isolated owner host", () => {
     await active;
     expect(drained).toBe(true);
     expect(media).toHaveBeenCalledTimes(2);
+  });
+  it("locks analysis inputs and drains cancellation before source cleanup", async () => {
+    const workspace = await upload();
+    let entered!: () => void,
+      drained = false;
+    const started = new Promise<void>((done) => {
+      entered = done;
+    });
+    analysis.transcribe.mockImplementationOnce(async (_workspace, signal) => {
+      entered();
+      await new Promise<void>((done) =>
+        signal.addEventListener(
+          "abort",
+          () => {
+            drained = true;
+            done();
+          },
+          { once: true },
+        ),
+      );
+      signal.throwIfAborted();
+      return [];
+    });
+    const active = analyze(workspace.id).catch(() => undefined);
+    await started;
+    expect((await analyze(workspace.id)).status).toBe(409);
+    expect(
+      (
+        await ownerRequest(port, `/api/workspace/${workspace.id}`, {
+          method: "DELETE",
+          headers: auth,
+        })
+      ).status,
+    ).toBe(409);
+    await host.close();
+    await active;
+    expect(drained).toBe(true);
+    expect(analysis.transcribe).toHaveBeenCalledTimes(1);
+    expect(analysis.select).toHaveBeenCalledTimes(0);
   });
 });
 
@@ -321,7 +455,12 @@ it("cancels worker work separately and waits for the worker response before host
     "synthetic-token",
     transport,
   )(
-    { workspaceId: crypto.randomUUID(), operation: "portrait" },
+    {
+      workspaceId: crypto.randomUUID(),
+      operation: "portrait",
+      cut: { startFrame: 0, endFrame: 30 },
+      fingerprint: "a".repeat(64),
+    },
     controller.signal,
   );
   controller.abort();

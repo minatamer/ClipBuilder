@@ -3,7 +3,8 @@ export default defineConfig({
   envDir: false,
   test: {
     environment: "node",
-    include: ["test/owner-native.proof.ts"],
+    fileParallelism: false,
+    include: ["test/owner-*.proof.ts"],
     setupFiles: ["test/no-network.setup.ts"],
   },
 });

@@ -1,9 +1,10 @@
 # Local owner host
 
 This independent owner runtime is excluded from public `src`, package outputs,
-Next routes and Docker contexts. CL-017 currently delivers one source preview,
-a fixed first-ten-seconds portrait export, private loopback access and temporary
-workspace cleanup. AI is simulated. Later tickets add ranges, several clips,
+Next routes and Docker contexts. CL-017–018 deliver one source preview,
+manual ranges alongside duration-controlled fake discovery, exact selected-cut
+portrait exports, private loopback access and temporary workspace cleanup.
+AI is simulated. Later tickets add several clips,
 saved drafts, editing, CLI access and downloaded-source reuse.
 
 From the repository root, prepare the free Windows x64 FFmpeg 9.0.2 portable
@@ -52,6 +53,24 @@ masters, retained demo assets, diagnostic captures, private logs, drafts and
 exports are never scratch cleanup targets. Saved-source/draft/export features
 are introduced by later tickets; no Downloads directory is created by CL-017.
 
+The authenticated local API accepts `POST /api/workspace/{id}/analysis` with
+source/policy revisions, at most ten `{id,startMs,endMs}` rows, an independent
+`aiDuration:{minMs,maxMs}` and explicit `manualOnly`. Endpoints are integer
+milliseconds and `[start,end)`. Manual ranges last 1–300 seconds; AI limits are
+10–60 seconds, including equal bounds containing a 30fps duration. Invalid,
+out-of-source or stale revisions dispatch no AI/native work. An explicit run
+transcribes once, then selects at most once (skipped for manual-only, no words,
+or insufficient source duration). Matching AI/manual cuts link evidence without
+consuming one of four additional suggestion slots. No automatic retries.
+
+`GET /api/workspace/{id}/analysis` restores the last completed in-memory result
+without AI work. This is running-session state, not a diagnostic capture reader
+or durable replay. `POST /api/workspace/{id}/portrait` requires the returned
+`analysisId`, `momentId` and `policyRevision`; stale selections fail before native
+dispatch. The worker receives a bounded frame range plus source fingerprint,
+never arbitrary paths. Exact 30/60-second cuts contain 900/1,800 frames. Public
+payloads and default 10–60-second candidate reconciliation are unchanged.
+
 Focused offline checks, with shared pre-import fake/paid-off environment and
 external-network interception:
 
@@ -64,8 +83,10 @@ corepack pnpm build
 corepack pnpm owner:artifacts
 ```
 
-`owner:proof` is opt-in and uses generated color/tone video, never retained or
-owner media. It really encodes, probes and decodes the local MP4, then closes
+`owner:proof` is opt-in and uses generated color/tone/silence video, never retained
+or owner media. It verifies exact frames, fractional/source endpoints, VFR and
+nonzero video/audio offsets, pixel transitions and silent audio. It really
+encodes, probes and decodes the local MP4, then closes
 listeners and deletes its temporary files. The required general gates are in
 root AGENTS. Human real-media/visual quality and later external compatibility
 remain in CL-025; no agent-paid or real YouTube test is authorized.

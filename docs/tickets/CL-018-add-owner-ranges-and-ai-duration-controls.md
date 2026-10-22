@@ -1,6 +1,6 @@
 # CL-018 — Combine exact owner ranges with duration-controlled AI discovery
 
-Status: queued; owner authorized fake/synthetic implementation, validation loops
+Status: implemented and locally verified in fake/paid-off mode. Owner authorized fake/synthetic implementation, validation loops
 and ticket commits on 2026-10-22. No paid/provider/cloud/real YouTube calls.
 Dependencies: CL-017 isolation/workspace decisions and implementation; current
 CL-007 validated transcript and text-only candidate selection.
@@ -87,36 +87,89 @@ content.
 
 ## Acceptance and verification
 
-- [ ] Multiple manual ranges survive independent discovery, ranking, overlap,
+- [x] Multiple manual ranges survive independent discovery, ranking, overlap,
       empty AI results and changes to AI duration settings.
-- [ ] 30–30, 60–60 and 20–45-second AI policies work; manual ranges outside each
+- [x] 30–30, 60–60 and 20–45-second AI policies work; manual ranges outside each
       policy remain unchanged within the separately documented local safety
       envelope.
-- [ ] Reject NaN, infinity, invalid/reversed/equal endpoints, out-of-source
+- [x] Reject NaN, infinity, invalid/reversed/equal endpoints, out-of-source
       times, excessive rows and stale source revisions before any dispatch.
-- [ ] Equal manual start/end is rejected, equal AI minimum/maximum is accepted,
+- [x] Equal manual start/end is rejected, equal AI minimum/maximum is accepted,
       and reversed/nonfinite/out-of-policy AI bounds are rejected. A source
       shorter than the AI minimum produces no AI suggestion without discarding
       owner ranges.
-- [ ] Test fractional times, a source endpoint, VFR/nonzero offsets, silence,
+- [x] Test fractional times, a source endpoint, VFR/nonzero offsets, silence,
       duplicate/overlapping ranges, absent transcript words and exact-frame
       output.
-- [ ] Prompt, request, deterministic candidate reconciliation and actual cut
+- [x] Prompt, request, deterministic candidate reconciliation and actual cut
       validation enforce the same local policy. Public results stay 10–60
       seconds.
-- [ ] Focused unit/component tests assert exact fake transcription/selection
+- [x] Focused unit/component tests assert exact fake transcription/selection
       counts, cancellation and zero dispatch on validation errors. Synthetic
       native cut checks need no keys; real timing/editorial quality stays
       owner-manual.
-- [ ] After implementation run the focused tests, root five gates and public
+- [x] After implementation run the focused tests, root five gates and public
       artifact exclusion check. Record visual/keyboard review separately.
 
 ## Documentation and gates
 
-Update local UI/API guides, source-of-truth local addendum and index. Existing
-`FAKE_MODE=true` needs no keys and returns synthetic analysis; this new behavior
-is only planned. Actual AI needs real provider keys, live flags and rights/data/
-spend approval; the agent never runs the paid acceptance flow. API-free native
-cuts are deterministic, not a local AI transcription feature; no weights/runtime
-are supplied. Manual duration ceiling/capacity and owner exact-boundary review
-remain open. No Git, deployment, cloud or external action is authorized.
+Local UI/API/worker guides and the source-of-truth addendum describe the new
+behavior. `FAKE_MODE=true` with `PAID_DEMO_ENABLED=false` needs no keys and
+returns fictional analysis. Actual AI remains unavailable in this owner
+composition: a real adapter, provider keys, live flags and rights/data/spend
+approval would be necessary; paid acceptance stays owner-only. API-free native
+cuts are deterministic, not local AI transcription; no model/weights/runtime
+are supplied. The adopted manual ceiling is 300 seconds; maximum-capacity and
+owner real exact-boundary/editorial review remain in CL-025. The owner has
+authorized ticket commits, not push, deployment, cloud or external processing.
+
+## Execution and validation evidence — 2026-10-22
+
+- Owner contracts define one 30fps policy, source/policy revisions, exact range
+  provenance, independent AI bounds and strict selection identities. Public
+  request validators remain unchanged. The backend reuses its existing prompt
+  and normalized word/evidence primitives; no live adapter is composed.
+- One explicit Find action calls fake transcription once and selection at most
+  once. Manual-only, no words and short sources skip selection. Duplicate cuts
+  retain row aliases, matching AI evidence does not consume additional slots,
+  and manual cues clip to the cut clock without invented words.
+- Focused owner suite: **34 passed**. HTTP coverage includes invalid/stale input
+  with zero calls, busy isolation, restored results without reanalysis, stale
+  exports and cancellation/drain. Root suites: **1,290 passed** in 112 files.
+  All five root gates passed: `format:check`, `lint`, `typecheck`, `test:unit`,
+  `build`. `owner:build` passed. `owner:artifacts` checked 1,490 built files plus
+  Docker exclusions/compiler roots. The existing Windows standalone result has
+  26 external package links (`selfContained:false`); no Linux image or cloud
+  build is claimed. Generated Next declaration changes were excluded.
+- Opt-in native proof: **2 passed**, synthetic-only. Actual H.264/AAC outputs
+  fully decode, exact 30/60-second outputs contain 900/1,800 frames, VFR/nonzero
+  video/audio offsets preserve pixel transitions and silence, and fractional/
+  source-end cuts contain the expected frames. Packet presentation endpoints
+  corrected an observed MP4 duration overstatement that otherwise requested
+  nonexistent final frames. Source fingerprints prevent stale native cuts.
+- Browser review: two manual rows survived 30–30 and 60–60 AI policies; equal
+  manual endpoints were rejected; manual-only reported 1/0 fake calls; refresh
+  restored completed results; keyboard selection/export/clear worked. Busy
+  controls disabled. Synthetic screenshot is outside Git in
+  `C:/Users/minat/AppData/Local/Temp/clipbuilder-owner-launch-fefcc95ac84f4da2a79554e9ed8c48a8/cl018-controls.png`.
+- Runtime readiness: host/worker/UI GET checks returned 200 on 4100/4200; owned
+  supervisor 27444 and listeners 25868/27972 shut down through protected POST
+  (204). Stabilization found zero owned survivors/listeners; scratch and private
+  capability removed. Logs preserved at
+  `C:/Users/minat/AppData/Local/Temp/clipbuilder-owner-runtime-LAoD9B` and the
+  launch directory above. Generated synthetic inputs were removed; retained
+  masters, captures and all private logs were untouched.
+- Read-only validation rechecked current paths/contracts, public boundaries,
+  exact-call and cancellation tests, native clock findings and UI state. The
+  endpoint and stale-selection findings were fixed and revalidated. No
+  actionable findings remain in the settled implementation. Deviation: none;
+  optional source-player Set start/end controls are unnecessary for this slice.
+
+Validation pass 2 (settled worktree): **Meets ticket** for the authorized fake/
+synthetic track, **no actionable findings**. Coverage: manual provenance,
+independent duration/grounding, strict revisions, one-call budgets, native
+source clock, output frames, cancellation/cleanup and public isolation covered.
+Real provider composition/quality, owner media/visual acceptance and maximum
+resource capacity remain unverified in CL-025. No live, credential, cloud,
+rights-dependent or paid check was run. This clean review does not close those
+owner-only gates.

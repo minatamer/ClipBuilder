@@ -3,7 +3,7 @@
 ## Local owner workflow execution — 2026-10-22
 
 The owner adopted all recommendations and authorized sequential implementation,
-execute/validate/fix loops and a commit per clean ticket. CL-017 is locally verified;
+execute/validate/fix loops and a commit per clean ticket. CL-017–018 are locally verified;
 later implementation remains queued. All agent checks are synthetic/fake,
 paid-off, credential-free and zero-spend. No push, real YouTube retrieval,
 provider/cloud calls or deployment is authorized. Read the
@@ -15,7 +15,7 @@ manual acceptance after implementation.
 | Order | Packet | Outcome | Dependencies / state |
 | --- | --- | --- | --- |
 | 1 | [CL-017](CL-017-isolate-local-owner-workspace.md) | Separate local workspace, source lifecycle, native media runtime and public build exclusion | Implemented; fake/native synthetic checks pass; owner real-media gates remain open |
-| 2 | [CL-018](CL-018-add-owner-ranges-and-ai-duration-controls.md) | Exact manual ranges alongside independent discovery; AI-only min/max and exact duration | CL-017; planned |
+| 2 | [CL-018](CL-018-add-owner-ranges-and-ai-duration-controls.md) | Exact manual ranges alongside independent discovery; AI-only min/max and exact duration | Implemented; 34 owner tests, two native proofs, root gates and artifact exclusion pass; real AI/owner acceptance open |
 | 3 | [CL-019](CL-019-process-multiple-local-clips.md) | Several selected clips, bounded concurrent work, per-clip review/export and source retention | CL-017–018; planned |
 | 4 | [CL-020](CL-020-add-minimal-local-caption-and-visual-editor.md) | Caption style/position, visual placement/replacement and personal pictures | CL-017, CL-019; planned |
 | 5 | [CL-021](CL-021-enable-agent-access-to-local-edits.md) | Existing chat agent edits through the same validated local use cases and CLI | CL-017, CL-019–020; planned |
@@ -45,7 +45,8 @@ owner explicitly defers it. Ticket records distinguish verified local work from
 the still-open owner acceptance.
 
 Current `FAKE_MODE=true` works with no API keys using synthetic workflow data;
-CL-017 now provides private local preview and deterministic native encoding;
+CL-017–018 provide private local preview, manual ranges, independent simulated
+discovery and exact deterministic native encoding;
 later editing/import features are queued. Actual AI needs real
 provider keys, enabled live flags and applicable rights/transfer/spend approvals;
 paid testing stays owner-only, and no live provider adapter is composed into this

@@ -8,6 +8,8 @@ import { ownerNativeTools } from "../apps/renderer/owner/native-tools.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
 import { ownerWorkspaceSchema } from "../packages/contracts/owner/index.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
+import { fakeOwnerAnalysis } from "../apps/backend/owner/fake-analysis.ts";
+import { ownerAnalysisSchema } from "../packages/contracts/owner/selection.ts";
 
 it("encodes and decodes a real synthetic portrait MP4 offline, then drains all scratch/listeners", async () => {
   const tools = await ownerNativeTools(resolve("."));
@@ -23,6 +25,7 @@ it("encodes and decodes a real synthetic portrait MP4 offline, then drains all s
     ui: directory,
     port: 0,
     token: "proof-host",
+    analysis: fakeOwnerAnalysis,
     media: async (job) => {
       calls++;
       const response = await ownerRequest(workerPort, "/media", {
@@ -74,14 +77,46 @@ it("encodes and decodes a real synthetic portrait MP4 offline, then drains all s
       JSON.parse(upload.body.toString()),
     );
     expect(workspace.source.durationMs).toBe(2000);
+    const analyzed = await ownerRequest(
+      port,
+      `/api/workspace/${workspace.id}/analysis`,
+      {
+        method: "POST",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceRevision: 0,
+          policyRevision: 1,
+          ranges: [{ id: crypto.randomUUID(), startMs: 200, endMs: 1200 }],
+          aiDuration: { minMs: 30_000, maxMs: 30_000 },
+          manualOnly: false,
+        }),
+      },
+    );
+    expect(analyzed.status).toBe(200);
+    const result = ownerAnalysisSchema.parse(
+      JSON.parse(analyzed.body.toString()),
+    );
+    expect(result.fakeCalls).toEqual({ transcription: 1, selection: 0 });
+    const selection = {
+      analysisId: result.id,
+      policyRevision: result.inputs.policyRevision,
+      momentId: result.manual[0]!.id,
+    };
     for (let n = 0; n < 2; n++) {
       const rendered = await ownerRequest(
         port,
         `/api/workspace/${workspace.id}/portrait`,
-        { method: "POST", headers: auth },
+        {
+          method: "POST",
+          headers: { ...auth, "Content-Type": "application/json" },
+          body: JSON.stringify(selection),
+        },
       );
       expect(rendered.status).toBe(200);
-      expect(JSON.parse(rendered.body.toString()).durationMs).toBe(2000);
+      expect(JSON.parse(rendered.body.toString())).toMatchObject({
+        durationMs: 1000,
+        frames: 30,
+      });
     }
     const output = await ownerRequest(
       port,

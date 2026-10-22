@@ -13,6 +13,13 @@ import {
   type OwnerMediaResult,
 } from "../../../packages/contracts/owner/index.ts";
 import { WorkspaceFiles, requireDisk } from "./workspace-files.ts";
+import { analyzeOwner, type OwnerAnalysisPorts } from "./analysis.ts";
+import {
+  ownerAnalysisInputsSchema,
+  ownerMomentExportSchema,
+  type OwnerAnalysis,
+} from "../../../packages/contracts/owner/selection.ts";
+import { readOwnerJson } from "./request-body.ts";
 
 export type OwnerHostOptions = {
   root: string;
@@ -20,11 +27,13 @@ export type OwnerHostOptions = {
   token: string;
   port: number;
   shutdown?: () => void;
+  analysis?: OwnerAnalysisPorts;
   media: (job: OwnerMediaJob, signal: AbortSignal) => Promise<OwnerMediaResult>;
 };
 export function createOwnerHost(options: OwnerHostOptions) {
   const files = new WorkspaceFiles(options.root);
   const workspaces = new Map<string, OwnerWorkspace>();
+  const analyses = new Map<string, OwnerAnalysis>();
   const controllers = new Set<AbortController>();
   const tasks = new Set<Promise<void>>();
   const streams = new Set<{ id: string; close: () => Promise<void> }>();
@@ -50,6 +59,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             await closeStreams(id);
             await files.remove(id);
             workspaces.delete(id);
+            analyses.delete(id);
             expires.delete(id);
             closingWorkspaces.delete(id);
           }
@@ -276,7 +286,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         }
       }
       const route = req.url?.match(
-        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait))?$/,
+        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis))?$/,
       );
       const workspace = route?.[1] ? workspaces.get(route[1]) : undefined;
       if (!workspace) {
@@ -293,7 +303,53 @@ export function createOwnerHost(options: OwnerHostOptions) {
           .end(JSON.stringify(workspace));
         return;
       }
-      if (req.method === "GET" && route?.[2]) {
+      if (req.method === "GET" && route?.[2] === "analysis") {
+        res
+          .writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify(analyses.get(workspace.id) ?? null));
+        return;
+      }
+      if (req.method === "POST" && route?.[2] === "analysis") {
+        if (busy.has(workspace.id)) {
+          res.writeHead(409).end();
+          return;
+        }
+        if (!options.analysis) {
+          res.writeHead(503).end();
+          return;
+        }
+        busy.add(workspace.id);
+        try {
+          const inputs = ownerAnalysisInputsSchema.parse(
+            await readOwnerJson(req),
+          );
+          if (
+            inputs.policyRevision <
+            (analyses.get(workspace.id)?.inputs.policyRevision ?? 0)
+          ) {
+            res.writeHead(409).end();
+            return;
+          }
+          const result = await analyzeOwner(
+            workspace,
+            inputs,
+            options.analysis,
+            controller.signal,
+          );
+          controller.signal.throwIfAborted();
+          analyses.set(workspace.id, result);
+          res
+            .writeHead(200, { "Content-Type": "application/json" })
+            .end(JSON.stringify(result));
+          return;
+        } finally {
+          busy.delete(workspace.id);
+        }
+      }
+      if (
+        req.method === "GET" &&
+        (route?.[2] === "source" || route?.[2] === "portrait")
+      ) {
         await stream(
           await files.file(
             workspace.id,
@@ -313,9 +369,34 @@ export function createOwnerHost(options: OwnerHostOptions) {
         }
         busy.add(workspace.id);
         try {
+          const selection = ownerMomentExportSchema.parse(
+            await readOwnerJson(req),
+          );
+          const analysis = analyses.get(workspace.id);
+          if (
+            !analysis ||
+            analysis.id !== selection.analysisId ||
+            analysis.inputs.sourceRevision !== workspace.revision ||
+            analysis.inputs.policyRevision !== selection.policyRevision
+          ) {
+            res.writeHead(409).end();
+            return;
+          }
+          const moment = [...analysis.manual, ...analysis.suggestions].find(
+            (moment) => moment.id === selection.momentId,
+          );
+          if (!moment) {
+            res.writeHead(409).end();
+            return;
+          }
           await requireDisk(options.root, OWNER_LIMITS.outputBytes * 2);
           const result = await options.media(
-            { workspaceId: workspace.id, operation: "portrait" },
+            {
+              workspaceId: workspace.id,
+              operation: "portrait",
+              cut: moment.cut,
+              fingerprint: workspace.source.fingerprint,
+            },
             controller.signal,
           );
           res
@@ -335,6 +416,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         await closeStreams(workspace.id);
         await files.remove(workspace.id);
         workspaces.delete(workspace.id);
+        analyses.delete(workspace.id);
         expires.delete(workspace.id);
         closingWorkspaces.delete(workspace.id);
         res.writeHead(204).end();
@@ -362,6 +444,9 @@ export function createOwnerHost(options: OwnerHostOptions) {
       await Promise.allSettled([...tasks]);
       await expiryTask;
       await files.close();
+      analyses.clear();
+      workspaces.clear();
+      expires.clear();
       await new Promise<void>((resolve) => server.close(() => resolve()));
     },
   };
