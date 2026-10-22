@@ -317,3 +317,15 @@ changed owning documentation and `git diff --check` pass. No retained master,
 credential file, real provider/YouTube/cloud call, paid test, deployment or push
 was used. Native proofs drain their listeners/children and remove owned synthetic
 scratch. Real activation remains exclusively owner-run under CL-025.
+
+CL-024 isolation correction: the newly introduced `OWNER_PROVIDER_APPROVED`
+master is now explicitly reset to false by shared pre-import setup and native
+child environment construction. A deliberately inherited true value reproduced
+the missing-reset failure; the regression passes after the fix (five pre-import
+and seventeen readiness/local-host checks). The fake/paid-off/NODE_ENV gates
+already prevented real composition; no paid or provider execution occurred.
+The final combined repository gates pass after this correction: 1,607 unit
+tests/142 files, all five gates, eight synthetic native proofs and the expanded
+1,490-file owner-exclusion check. Read-only revalidation finds no actionable
+issue in the reset/allowlist change. CL-024 owns the remaining combined evidence
+and operator documentation; no live activation was performed.

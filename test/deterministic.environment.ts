@@ -19,6 +19,7 @@ export function installTestEnvironment(): void {
     GEMINI_PAID_PROJECT_CONFIRMED: "false",
     RENDERER_ENABLED: "false",
     PUBLIC_PAID_PROCESSING_APPROVED: "false",
+    OWNER_PROVIDER_APPROVED: "false",
   });
   for (const key of [
     "PAID_VALIDATION_STAGE",

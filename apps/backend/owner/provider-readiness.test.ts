@@ -110,7 +110,7 @@ it("passes only the Gemini allowlist to the provider host and keeps native child
     expect(host[key]).toBeUndefined();
   const native = nativeEnvironment("owned-scratch");
   expect(native.GEMINI_API_KEY).toBeUndefined();
-  expect(native.OWNER_PROVIDER_APPROVED).toBeUndefined();
+  expect(native.OWNER_PROVIDER_APPROVED).toBe("false");
   expect(native.FAKE_MODE).toBe("true");
   expect(native.PAID_DEMO_ENABLED).toBe("false");
 });

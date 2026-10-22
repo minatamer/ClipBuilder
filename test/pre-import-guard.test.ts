@@ -57,6 +57,7 @@ describe("pre-import deterministic safety", () => {
       GEMINI_PAID_PROJECT_CONFIRMED: "false",
       RENDERER_ENABLED: "false",
       PUBLIC_PAID_PROCESSING_APPROVED: "false",
+      OWNER_PROVIDER_APPROVED: "false",
     });
   });
 

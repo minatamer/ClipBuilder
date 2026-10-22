@@ -69,6 +69,7 @@ export function nativeEnvironment(directory: string): NodeJS.ProcessEnv {
     FAKE_MODE: "true",
     PROVIDER_MODE: "fake",
     PAID_DEMO_ENABLED: "false",
+    OWNER_PROVIDER_APPROVED: "false",
     CLOUD_RENDER_ENVIRONMENT: "disabled",
     CLOUD_SPEND_APPROVED: "false",
     GEMINI_TRANSFER_APPROVED: "false",
