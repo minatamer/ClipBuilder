@@ -61,8 +61,8 @@ adopted fallback; two-worker capacity is unverified. Shared owner React overlays
 run in both preview and a fixed transparent raster page using installed Chrome,
 then pinned native FFmpeg encodes the result. The raster listener binds only
 loopback, serves no source video, and drains with its browser and scratch.
-Caption/picture controls and saved drafts remain CL-020. These checks use fake
-AI and no keys/ADC; they establish native mechanics, not real AI/editorial quality.
+CL-020 supplies the caption/picture controls and saved drafts below. These checks
+use fake AI and no keys/ADC; they establish native mechanics, not real AI/editorial quality.
 
 Owner real-mode compatibility clarification (2026-10-22): fake execution must
 exercise provider-neutral domain/media paths. The owner requested a revisit of
@@ -77,6 +77,21 @@ providers: executable owner entrypoints remain strictly fake/paid-off. Real
 adapter composition and local preparation for provider inputs must be reconciled
 before claiming real-mode readiness; flags/keys alone do not implement it.
 No live call is authorized.
+
+CL-020 local evidence: immutable automatic bases now accept version-1,
+revision-checked presentation edit documents. Caption presets, bounded geometry,
+colors/alignment and up to three picture cues compile through one shared pure
+contract function for browser preview and native export. Personal JPEG/PNG bytes
+are inspected and normalized locally with owner-supplied provenance. An active
+render keeps its admitted snapshot; edits create a later revision and older MP4s
+remain immutable. Reading, applying edits and resetting dispatch no AI work.
+Explicit Save opts into a version-1 local draft, then acknowledged changes
+autosave. Downloads/ClipBuilder keeps separate Sources, Drafts and Exports;
+source masters and exports survive draft deletion. Atomic documents retain one
+validated last-good backup; damaged bytes prevent restoration. Restored valid
+bundles can be edited and re-exported with every AI adapter absent. This adds no
+offline speech model or live automatic owner adapter. Actual provider-input
+preparation/composition and owner real-media acceptance remain separate gates.
 
 ## Owner local workflow planning instruction — 2026-10-22
 

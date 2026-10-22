@@ -241,11 +241,13 @@ export function OwnerSelectionPanel({
     <section className="selection" aria-labelledby="selection-title">
       <h2 id="selection-title">Choose moments</h2>
       <p>
-        {synthetic
-          ? "AI is simulated. Fictional transcript words do not describe your source. No provider calls or automatic real captions."
-          : workspace.mode === "unavailable"
-            ? "Automatic analysis is unavailable. Local media playback and prepared edits do not need AI access."
-            : "Analysis uses the configured provider. Review its timed words and suggestions before use."}
+        {analysis?.mode === "provider-ai"
+          ? "The provider analysis below retains its supplied words and timings. Fresh analysis uses this runtime's current AI mode."
+          : synthetic
+            ? "AI is simulated. Fictional transcript words do not describe your source. No provider calls or automatic real captions."
+            : workspace.mode === "unavailable"
+              ? "Automatic analysis is unavailable. Local media playback and prepared edits do not need AI access."
+              : "Analysis uses the configured provider. Review its timed words and suggestions before use."}
       </p>
       <p role="status" aria-live="polite">
         {message}
@@ -387,7 +389,7 @@ export function OwnerSelectionPanel({
           {choices(analysis.manual, "Your exact requests")}
           {choices(
             analysis.suggestions,
-            synthetic
+            analysis.mode === "synthetic-ai"
               ? "Additional simulated AI suggestions"
               : "Additional AI suggestions",
           )}

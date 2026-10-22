@@ -110,12 +110,15 @@ export async function rasterizeOwnerOverlay(
       url: `http://127.0.0.1:${address.port}/`,
       timeout: 15_000,
     });
-    await page.evaluate((value) => globalThis.clipbuilderOwnerPrepare(value), {
-      overlay: options.overlay,
-      assets: options.assets,
-    });
+    await page.evaluate(
+      (value) => globalThis.clipbuilderOwnerPrepare(value),
+      JSON.stringify({
+        overlay: options.overlay,
+        assets: options.assets,
+      }),
+    );
     let bytes = 0;
-    const cache = new Map<string, { file: string; bytes: number }>();
+    const cache = new Map<string, { file: string }>();
     for (let frame = 0; frame < options.overlay.frames; frame++) {
       signal.throwIfAborted();
       const frameFile = join(
@@ -125,9 +128,6 @@ export async function rasterizeOwnerOverlay(
       const key = ownerOverlayFrame(options.overlay, frame).key,
         cached = cache.get(key);
       if (cached) {
-        bytes += cached.bytes;
-        if (bytes > OWNER_BATCH_POLICY.overlayBytes)
-          throw new Error("overlay_capacity");
         await link(cached.file, frameFile);
         continue;
       }
@@ -142,7 +142,7 @@ export async function rasterizeOwnerOverlay(
       if (bytes > OWNER_BATCH_POLICY.overlayBytes)
         throw new Error("overlay_capacity");
       await writeFile(frameFile, buffer, { flag: "wx", mode: 0o600 });
-      cache.set(key, { file: frameFile, bytes: buffer.length });
+      cache.set(key, { file: frameFile });
     }
   } finally {
     signal.removeEventListener("abort", cancel);

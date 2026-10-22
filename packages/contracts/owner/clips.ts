@@ -1,6 +1,16 @@
 import { z } from "zod";
 import { compositionManifestV3Schema } from "../src/edit-plan.schema.ts";
-import { normalizedBoxSchema } from "../src/edit-plan.schema.ts";
+import {
+  ownerAssetSchema,
+  ownerVisualSchema,
+  OWNER_PICTURE_LIMITS,
+} from "./assets.ts";
+import { ownerCaptionStyleSchema, ownerEditDocumentSchema } from "./editor.ts";
+export {
+  ownerAssetSchema,
+  ownerVisualSchema,
+  type OwnerAsset,
+} from "./assets.ts";
 import {
   OWNER_FPS,
   OWNER_LIMITS,
@@ -24,33 +34,6 @@ export const ownerOutputRevisionSchema = z
   .int()
   .min(0)
   .max(OWNER_BATCH_POLICY.outputs - 1);
-export const ownerAssetSchema = z
-  .object({
-    id: ownerIdSchema,
-    digest: z.string().regex(/^[a-f0-9]{64}$/),
-    width: z.number().int().positive().max(1920),
-    height: z.number().int().positive().max(1920),
-    bytes: z
-      .number()
-      .int()
-      .positive()
-      .max(3 * 1024 ** 2),
-    origin: z.enum(["synthetic", "generated", "owner-supplied"]),
-  })
-  .strict();
-export type OwnerAsset = z.infer<typeof ownerAssetSchema>;
-export const ownerVisualSchema = z
-  .object({
-    id: ownerIdSchema,
-    assetId: ownerIdSchema,
-    digest: ownerAssetSchema.shape.digest,
-    startFrame: z.number().int().nonnegative(),
-    endFrame: z.number().int().positive(),
-    box: normalizedBoxSchema,
-    fit: z.enum(["contain", "cover"]),
-    origin: ownerAssetSchema.shape.origin,
-  })
-  .strict();
 export const ownerOverlaySchema = z
   .object({
     version: z.literal(1),
@@ -60,6 +43,7 @@ export const ownerOverlaySchema = z
       .min(1)
       .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
     captions: compositionManifestV3Schema.shape.captions,
+    captionStyle: ownerCaptionStyleSchema.optional(),
     visuals: z
       .array(ownerVisualSchema)
       .max(OWNER_BATCH_POLICY.imageAttemptsPerClip),
@@ -127,6 +111,7 @@ export const ownerClipSchema = z
       "queued",
       "preparing",
       "review-ready",
+      "validated-revision",
       "rendering",
       "ready",
       "canceling",
@@ -134,9 +119,8 @@ export const ownerClipSchema = z
       "failed",
     ]),
     base: ownerClipBaseSchema.nullable(),
-    assets: z
-      .array(ownerAssetSchema)
-      .max(OWNER_BATCH_POLICY.imageAttemptsPerClip),
+    edit: ownerEditDocumentSchema.nullable().default(null),
+    assets: z.array(ownerAssetSchema).max(OWNER_PICTURE_LIMITS.assetsPerClip),
     outputs: z.array(ownerClipOutputSchema).max(OWNER_BATCH_POLICY.outputs),
     calls: z
       .object({

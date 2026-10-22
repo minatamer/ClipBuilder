@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
+import { z } from "zod";
 import {
   ownerOverlaySchema,
   type OwnerOverlay,
@@ -10,10 +11,13 @@ const root = createRoot(document.getElementById("root")!);
 let current:
   { overlay: OwnerOverlay; assets: Record<string, string> } | undefined;
 globalThis.clipbuilderOwnerPrepare = (value) => {
-  current = {
-    overlay: ownerOverlaySchema.parse(value.overlay),
-    assets: value.assets,
-  };
+  current = z
+    .object({
+      overlay: ownerOverlaySchema,
+      assets: z.record(z.uuid(), z.string()),
+    })
+    .strict()
+    .parse(JSON.parse(value));
 };
 globalThis.clipbuilderOwnerPaint = async (frame) => {
   if (

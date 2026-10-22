@@ -1,40 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Player } from "@remotion/player";
-import { AbsoluteFill, Html5Video, useCurrentFrame } from "remotion";
-import { OwnerAutomaticOverlay } from "../../../packages/composition/owner/automatic-overlay.tsx";
+import { ClipEditor } from "./clip-editor.tsx";
 import {
   ownerClipListSchema,
   type OwnerClip,
   type OwnerClipList,
-  type OwnerOverlay,
 } from "../../../packages/contracts/owner/clips.ts";
-import {
-  OWNER_FPS,
-  type OwnerWorkspace,
-} from "../../../packages/contracts/owner/index.ts";
+import type { OwnerWorkspace } from "../../../packages/contracts/owner/index.ts";
 import type { OwnerMomentExport } from "../../../packages/contracts/owner/selection.ts";
 
-function Review({
-  overlay,
-  assets,
-  sourceUrl,
-}: {
-  overlay: OwnerOverlay;
-  assets: Record<string, string>;
-  sourceUrl: string;
-}) {
-  const frame = useCurrentFrame();
-  return (
-    <AbsoluteFill style={{ backgroundColor: "#101215" }}>
-      <Html5Video
-        src={sourceUrl}
-        style={{ width: "100%", height: "100%", objectFit: "contain" }}
-        pauseWhenBuffering
-      />
-      <OwnerAutomaticOverlay overlay={overlay} assets={assets} frame={frame} />
-    </AbsoluteFill>
-  );
-}
 const initial: OwnerClipList = { clips: [], active: false, workers: 1 };
 export function OwnerClipBatchPanel({
   workspace,
@@ -51,9 +24,14 @@ export function OwnerClipBatchPanel({
     );
   const [pending, setPending] = useState(false),
     [review, setReview] = useState<string | null>(null);
+  const [dirtyClip, setDirtyClip] = useState<string | null>(null);
+  const editDirty = useCallback((id: string, dirty: boolean) => {
+    setDirtyClip((current) => (dirty ? id : current === id ? null : current));
+  }, []);
   const alive = useRef(false),
     requestController = useRef<AbortController | null>(null),
-    requesting = useRef(false);
+    requesting = useRef(false),
+    mutationRevision = useRef(0);
   const endpoint = `/api/workspace/${workspace.id}/clips`;
   const accept = useCallback(
     (value: OwnerClipList) => {
@@ -62,18 +40,36 @@ export function OwnerClipBatchPanel({
     },
     [onActive],
   );
+  const acceptEdit = useCallback(
+    (value: OwnerClipList) => {
+      mutationRevision.current++;
+      accept(value);
+    },
+    [accept],
+  );
   useEffect(() => {
     alive.current = true;
+    return () => {
+      alive.current = false;
+      requestController.current?.abort();
+    };
+  }, [endpoint]);
+  useEffect(() => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const refresh = async () => {
       let repeat = true;
+      const atMutation = mutationRevision.current;
       try {
         const response = await fetch(endpoint, { signal: controller.signal });
         if (!response.ok) throw new Error("unavailable");
         const result = ownerClipListSchema.parse(await response.json());
-        if (!controller.signal.aborted) accept(result);
-        repeat = result.active;
+        if (
+          !controller.signal.aborted &&
+          atMutation === mutationRevision.current
+        )
+          accept(result);
+        repeat = atMutation === mutationRevision.current ? result.active : true;
       } catch {
         if (!controller.signal.aborted)
           setMessage(
@@ -85,15 +81,14 @@ export function OwnerClipBatchPanel({
     };
     void refresh();
     return () => {
-      alive.current = false;
       controller.abort();
-      requestController.current?.abort();
       if (timer) clearTimeout(timer);
     };
   }, [endpoint, accept, list.active]);
   async function action(path: string, body?: unknown) {
     if (requesting.current) return;
     requesting.current = true;
+    mutationRevision.current++;
     setPending(true);
     const controller = new AbortController();
     requestController.current = controller;
@@ -111,6 +106,7 @@ export function OwnerClipBatchPanel({
       if (!response.ok) throw new Error("unavailable");
       const value = ownerClipListSchema.parse(await response.json());
       if (alive.current) {
+        mutationRevision.current++;
         accept(value);
         setMessage(
           "Local work list updated. Native work runs one clip at a time.",
@@ -130,7 +126,6 @@ export function OwnerClipBatchPanel({
   const current = list.clips.find((clip) => clip.id === review);
   const working = (clip: OwnerClip) =>
     ["queued", "preparing", "rendering", "canceling"].includes(clip.state);
-  const sourceUrl = (clip: OwnerClip) => `${endpoint}/${clip.id}/source`;
   return (
     <section aria-labelledby="batch-title">
       <h2 id="batch-title">Automatic local edits</h2>
@@ -169,6 +164,12 @@ export function OwnerClipBatchPanel({
           Cancel all pending clips
         </button>
       </nav>
+      {dirtyClip && (
+        <p role="status">
+          Apply or reload unapplied changes before reviewing another clip or
+          exporting this clip.
+        </p>
+      )}
       <ol className="clip-list">
         {list.clips.map((clip, index) => (
           <li key={clip.id}>
@@ -190,7 +191,11 @@ export function OwnerClipBatchPanel({
             )}
             <nav>
               <button
-                disabled={!clip.base || clip.outputs.length === 0}
+                disabled={
+                  !clip.base ||
+                  clip.outputs.length === 0 ||
+                  (!!dirtyClip && dirtyClip !== clip.id)
+                }
                 onClick={() => setReview(clip.id)}
               >
                 Review clip {index + 1}
@@ -204,7 +209,12 @@ export function OwnerClipBatchPanel({
                 Cancel clip {index + 1}
               </button>
               <button
-                disabled={!clip.base || working(clip) || pending}
+                disabled={
+                  !clip.base ||
+                  working(clip) ||
+                  pending ||
+                  dirtyClip === clip.id
+                }
                 onClick={() =>
                   void action(`${endpoint}/${clip.id}/render`, {
                     operationId: crypto.randomUUID(),
@@ -241,25 +251,12 @@ export function OwnerClipBatchPanel({
               : "This preview uses the saved timed captions and admitted pictures. "}
             Preview uses the same overlay as native export.
           </p>
-          <Player
+          <ClipEditor
             key={current.id}
-            component={Review}
-            inputProps={{
-              overlay: current.base.overlay,
-              assets: Object.fromEntries(
-                current.assets.map((asset) => [
-                  asset.id,
-                  `/api/workspace/${workspace.id}/assets/${asset.id}`,
-                ]),
-              ),
-              sourceUrl: sourceUrl(current),
-            }}
-            durationInFrames={current.base.overlay.frames}
-            compositionWidth={1080}
-            compositionHeight={1920}
-            fps={OWNER_FPS}
-            controls
-            style={{ width: "100%", maxWidth: 360 }}
+            clip={current}
+            workspaceId={workspace.id}
+            onAccepted={acceptEdit}
+            onDirty={editDirty}
           />
         </article>
       )}

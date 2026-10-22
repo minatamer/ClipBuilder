@@ -158,6 +158,102 @@ legend {
 button[aria-pressed="true"] {
   outline: 3px solid #d9ec80;
 }
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 360px) minmax(0, 1fr);
+  align-items: start;
+  gap: 1.5rem;
+}
+.editor-preview {
+  min-width: 0;
+}
+.editor-preview > p {
+  font-size: 0.9rem;
+  color: #cbd8ee;
+}
+.editor-panels {
+  min-width: 0;
+}
+.editor-fields,
+.editor-box-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+.clip-editor label {
+  display: grid;
+  gap: 0.4rem;
+}
+.clip-editor input:not([type="file"]),
+.clip-editor select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.6rem;
+  border: 1px solid #91a1bd;
+  border-radius: 6px;
+  background: #101a2e;
+  color: #f7f9ff;
+  font: inherit;
+}
+.clip-editor input[type="color"] {
+  min-height: 44px;
+  padding: 0.2rem;
+}
+.clip-editor fieldset > .file {
+  margin-top: 1rem;
+}
+.editor-warning {
+  padding: 0.75rem 1rem;
+  background: #382e12;
+  color: #fff1b5;
+  border-left: 4px solid #e4c967;
+}
+.editor-interaction .editor-layer,
+.editor-interaction .editor-resize {
+  position: absolute;
+  padding: 0;
+  margin: 0;
+  pointer-events: auto;
+  touch-action: none;
+  border-radius: 0;
+}
+.editor-interaction .editor-layer {
+  background: transparent;
+  border: 6px dashed transparent;
+  cursor: move;
+}
+.editor-interaction .editor-layer.selected,
+.editor-interaction .editor-layer:hover {
+  border-color: #d9ec80;
+  outline: none;
+}
+.editor-interaction .editor-resize {
+  width: 84px;
+  height: 84px;
+  border: 3px solid #101a2e;
+  background: #d9ec80;
+  color: #101a2e;
+  font:
+    bold 56px Arial,
+    sans-serif;
+  cursor: nwse-resize;
+}
+.editor-interaction .editor-layer:focus-visible,
+.editor-interaction .editor-resize:focus-visible {
+  outline: 9px solid #fff;
+  outline-offset: 6px;
+}
+@media (max-width: 800px) {
+  .editor-layout {
+    grid-template-columns: 1fr;
+  }
+  .editor-preview {
+    width: 100%;
+    max-width: 360px;
+    margin-inline: auto;
+  }
+}
 a {
   display: inline-block;
   margin-top: 12px;

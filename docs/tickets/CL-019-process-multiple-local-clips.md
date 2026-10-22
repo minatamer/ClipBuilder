@@ -98,10 +98,13 @@ capabilities.
 - [x] Duplicate actions, reload/reconnect, stale revisions, cancel-all and close
       dispatch no duplicate provider/render work and leave no owned
       process/scratch.
-- [ ] Export clip A, then edit/re-export A and render B; source remains usable,
+- [x] Export clip A, then edit/re-export A and render B; source remains usable,
       outputs remain distinct, and final workspace close removes only owned
-      scratch. Deterministic re-export/source/cleanup portions pass; actual
-      presentation editing is completed and rechecked in dependent CL-020/024.
+      scratch. CL-020's extended three-clip native proof changes A's caption
+      placement and personal picture, preserves sibling bundles and prior
+      outputs, re-exports A, saves/reopens the source and edits without AI,
+      then verifies owned scratch/listener cleanup. Real visual quality remains
+      owner-only in CL-025.
 - [x] AI/assembly/render failure never deletes or marks an intact saved source
       for download again; siblings and a new workspace reuse the same local
       input.

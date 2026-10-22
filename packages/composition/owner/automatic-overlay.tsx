@@ -2,6 +2,7 @@
 import type { OwnerOverlay } from "../../contracts/owner/clips.ts";
 import { FixedCaption } from "../src/fixed-layers.tsx";
 import { ownerOverlayFrame } from "./overlay-frame.ts";
+import { OwnerStyledCaption } from "./styled-caption.tsx";
 
 /** The same fixed overlay tree runs in local review and transparent export. */
 export function OwnerAutomaticOverlay({
@@ -48,7 +49,16 @@ export function OwnerAutomaticOverlay({
           }}
         />
       ))}
-      {caption && <FixedCaption caption={caption} ms={ms} />}
+      {caption &&
+        (overlay.captionStyle ? (
+          <OwnerStyledCaption
+            caption={caption}
+            ms={ms}
+            style={overlay.captionStyle}
+          />
+        ) : (
+          <FixedCaption caption={caption} ms={ms} />
+        ))}
     </div>
   );
 }

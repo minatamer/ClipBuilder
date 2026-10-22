@@ -17,6 +17,8 @@ import {
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 import { localWorkerPort } from "../apps/backend/owner/worker-port.ts";
 import { ownerClipMediaPath } from "../apps/renderer/owner/media.ts";
+import { OWNER_CAPTION_PRESETS } from "../packages/contracts/owner/editor.ts";
+import { ownerDraftStatusSchema } from "../packages/contracts/owner/drafts.ts";
 
 it("makes three independent caption/picture MP4s locally, re-exports without AI and preserves their common source", async () => {
   const tools = await ownerNativeTools(resolve(".")),
@@ -56,6 +58,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
   const host = createOwnerHost({
     root,
     ui: directory,
+    storageRoot: join(directory, "library"),
     port: 0,
     token: "proof-host",
     analysis: fakeOwnerAnalysis,
@@ -278,6 +281,85 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     ).toBe(202);
     expect(nativeCalls).toBe(4);
     const clip = result.clips[0]!;
+    const oldOutput = (
+      await ownerRequest(port, `${endpoint}/clips/${clip.id}/output/0`, {
+        headers: auth,
+      })
+    ).body;
+    const pictureInput = join(directory, "synthetic-picture.jpg");
+    await runOwnedProcess(
+      tools.ffmpeg,
+      [
+        "-nostdin",
+        "-v",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=white:s=640x360",
+        "-frames:v",
+        "1",
+        "-update",
+        "1",
+        pictureInput,
+      ],
+      signal,
+    );
+    const imported = await ownerRequest(
+      port,
+      `${endpoint}/clips/${clip.id}/picture`,
+      {
+        method: "POST",
+        headers: { ...auth, "Content-Type": "image/jpeg" },
+        body: await readFile(pictureInput),
+      },
+    );
+    expect(imported.status).toBe(200);
+    const importedClips = ownerClipListSchema.parse(
+      JSON.parse(imported.body.toString()),
+    );
+    const asset = importedClips.clips[0]!.assets.find(
+      (asset) => asset.origin === "owner-supplied",
+    )!;
+    const cue = clip.edit!.visuals[0]!;
+    const style = {
+      ...OWNER_CAPTION_PRESETS.bold,
+      color: "#00ffff",
+      highlight: "#552255",
+      box: { ...OWNER_CAPTION_PRESETS.bold.box, y: 0.2 },
+    };
+    const edited = await ownerRequest(
+      port,
+      `${endpoint}/clips/${clip.id}/edit`,
+      {
+        method: "POST",
+        headers: json,
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          expectedRevision: 0,
+          baseHash: clip.baseHash,
+          operations: [
+            { kind: "caption", style },
+            {
+              kind: "visual-upsert",
+              cue: {
+                ...cue,
+                assetId: asset.id,
+                startFrame: 0,
+                endFrame: 30,
+                box: { x: 0.1, y: 0.4, width: 0.3, height: 0.1 },
+              },
+            },
+          ],
+        }),
+      },
+    );
+    expect(edited.status).toBe(200);
+    expect(
+      ownerClipListSchema
+        .parse(JSON.parse(edited.body.toString()))
+        .clips.map((clip) => clip.revision),
+    ).toEqual([1, 0, 0]);
     expect(
       (
         await ownerRequest(port, `${endpoint}/clips/${clip.id}/render`, {
@@ -285,7 +367,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
           headers: json,
           body: JSON.stringify({
             operationId: crypto.randomUUID(),
-            expectedRevision: 0,
+            expectedRevision: 1,
           }),
         })
       ).status,
@@ -296,8 +378,84 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     );
     expect(nativeCalls).toBe(5);
     expect(
+      rendered.clips[0]!.outputs.map((output) => output.editRevision),
+    ).toEqual([0, 1]);
+    expect(rendered.clips[0]!.calls).toEqual({ plan: 1, image: 1, render: 2 });
+    const editedFile = await ownerClipMediaPath(root, workspace.id, clip.id, 1);
+    expect(
+      (await luma(editedFile, "eq(n,0)", "crop=8:8:266:860"))[0],
+    ).toBeGreaterThan(220);
+    expect(
+      (await luma(editedFile, "eq(n,0)", "crop=920:240:80:384"))[0],
+    ).toBeGreaterThan(20);
+    expect(
+      (await luma(editedFile, "eq(n,0)", "crop=920:200:80:1500"))[0],
+    ).toBeLessThan(18);
+    expect(
+      (
+        await ownerRequest(port, `${endpoint}/clips/${clip.id}/output/0`, {
+          headers: auth,
+        })
+      ).body,
+    ).toEqual(oldOutput);
+    expect(
       (await ownerRequest(port, `${endpoint}/source`, { headers: auth })).body,
     ).toEqual(await readFile(input));
+    const save = await ownerRequest(port, `${endpoint}/draft`, {
+      method: "POST",
+      headers: auth,
+    });
+    expect(save.status).toBe(200);
+    const saved = ownerDraftStatusSchema.parse(
+      JSON.parse(save.body.toString()),
+    );
+    expect(saved.state).toBe("saved");
+    expect(
+      (await ownerRequest(port, endpoint, { method: "DELETE", headers: auth }))
+        .status,
+    ).toBe(204);
+    const reopen = await ownerRequest(port, `/api/drafts/${saved.id}/open`, {
+      method: "POST",
+      headers: auth,
+    });
+    expect(reopen.status).toBe(200);
+    const reopened = ownerWorkspaceSchema.parse(
+      JSON.parse(reopen.body.toString()),
+    );
+    expect(reopened.id).not.toBe(workspace.id);
+    const restoredEndpoint = `/api/workspace/${reopened.id}`;
+    const restored = ownerClipListSchema.parse(
+      JSON.parse(
+        (
+          await ownerRequest(port, `${restoredEndpoint}/clips`, {
+            headers: auth,
+          })
+        ).body.toString(),
+      ),
+    );
+    expect(restored.clips[0]?.edit).toEqual(rendered.clips[0]?.edit);
+    expect(restored.clips.map((clip) => clip.calls)).toEqual(
+      rendered.clips.map((clip) => clip.calls),
+    );
+    expect(
+      (
+        await ownerRequest(
+          port,
+          `${restoredEndpoint}/clips/${clip.id}/output/0`,
+          { headers: auth },
+        )
+      ).body,
+    ).toEqual(oldOutput);
+    expect(
+      (
+        await ownerRequest(
+          port,
+          `${restoredEndpoint}/clips/${clip.id}/source`,
+          { headers: auth },
+        )
+      ).status,
+    ).toBe(200);
+    expect(nativeCalls).toBe(5);
   } finally {
     await host.close();
     await worker.close();

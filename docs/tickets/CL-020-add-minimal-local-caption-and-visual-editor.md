@@ -1,7 +1,10 @@
 # CL-020 — Review and adjust local captions and contextual pictures
 
-Status: queued; owner authorized fake/synthetic implementation, validation loops
-and ticket commits on 2026-10-22. No paid/provider/cloud/real YouTube calls.
+Status: locally implemented and verified; 98 owner tests, three native proofs,
+1,454 root tests in 122 files, all five root gates and public artifact exclusion
+pass. Read-only revalidation has no actionable findings. Owner real-media and
+live acceptance remain open. The owner authorized fake/synthetic implementation,
+validation loops and ticket commits on 2026-10-22. No paid/provider/cloud/real YouTube calls.
 Dependencies: CL-017 local runtime/privacy boundary; CL-019 independent
 reviewable clip bundles and source retention. Reuse current shared composition
 primitives.
@@ -60,8 +63,9 @@ Once a valid clip bundle exists in the workspace, caption/picture adjustments,
 preview and explicit re-export must work without provider keys, enabled paid
 features or cloud media routes. Do not couple this deterministic editor to
 availability of the AI that originally prepared the bundle. This does not
-promise reopenable drafts across app restarts; CL-017 keeps that separate from
-saved media.
+couple source retention to draft retention. The later owner adoption authorizes
+explicit Save followed by autosave, including reopenable drafts across restarts;
+source masters, draft documents and saved exports have separate ownership.
 
 ## Privacy, media safety and resource constraints
 
@@ -82,20 +86,20 @@ requires a separate explicit action/budget and is out of scope here.
 
 ## Acceptance and verification
 
-- [ ] Change caption style/position and replace/move/resize/remove/add a picture
+- [x] Change caption style/position and replace/move/resize/remove/add a picture
       on one of three clips; siblings retain their own revisions and assets.
-- [ ] Preview and encoded MP4 use identical revision, geometry, asset digest,
+- [x] Preview and encoded MP4 use identical revision, geometry, asset digest,
       caption clocks, colors and layering at sampled synthetic frames.
-- [ ] Reopen review after export, revise, then export again without reupload,
+- [x] Reopen review after export, revise, then export again without reupload,
       retranscription or any planner/image-generation call.
-- [ ] Disable provider/paid/cloud capabilities after preparing a synthetic
+- [x] Disable provider/paid/cloud capabilities after preparing a synthetic
       bundle; manual edits, preview and local re-export still succeed with zero
       egress.
-- [ ] Test portrait preview scaling, keyboard input, safe-area extremes, missing
+- [x] Test portrait preview scaling, keyboard input, safe-area extremes, missing
       assets, corrupt images, oversized pixels, asset replacement during render
       and concurrent stale writes. Old public manifests retain current output
       behavior.
-- [ ] Focused synthetic component/contracts/native frame checks assert zero AI/
+- [x] Focused synthetic component/contracts/native frame checks assert zero AI/
       cloud calls and no leaked bytes, paths or scratch. Run root five gates and
       public artifact exclusion check after implementation.
 - [ ] Owner reviews real caption readability, picture crop/placement and final
@@ -103,12 +107,77 @@ requires a separate explicit action/budget and is out of scope here.
 
 ## Documentation and gates
 
-Update local editor/composition guides, schema version note, source of truth and
-index. Today `FAKE_MODE=true` needs no API keys and supplies a fixed synthetic
-review; the editor is planned. Future deterministic edits/native rendering need
-no AI key once valid media/timed captions exist, but do not supply offline
-speech recognition. Real automatic captions/discovery/visual plans need provider
-keys, live flags and rights/data/spend approval; paid acceptance stays
-owner-only. Local tools, image/font licenses and human visual quality remain
-unchecked. No Git, installation, launch, cloud, paid call or deployment
-authorization.
+Local editor/composition/backend/renderer guides, schema notes, source of truth
+and index describe the implemented paths. `FAKE_MODE=true` with
+`PAID_DEMO_ENABLED=false` needs no API keys/ADC and supplies fictional AI
+material; actual local Chrome/FFmpeg rasterization/encoding is API-free.
+Deterministic edits/native exports work once valid media/timed captions exist,
+including restored bundles with AI ports omitted. No offline speech model or
+weights are supplied. Real automatic captions/discovery/visual plans still need
+the missing owner adapter/local provider-input preparation, keys, live flags and
+rights/data/spend approval; flags/keys alone are insufficient and paid acceptance
+stays owner-only. The owner authorized synthetic local launches and ticket Git
+commits. No real YouTube retrieval, provider/cloud call or deployment is authorized.
+
+## Local execution and validation — 2026-10-22
+
+- Caption presets (clean/classic/bold), size/colors/alignment and normalized
+  safe-area geometry preserve timed words. Personal pictures have a 4 MiB input,
+  16-million-pixel decode, 1,920-pixel canonical dimension and 3 MiB canonical
+  byte cap; up to 20 admitted assets per clip, three active cues. JPEG/PNG only;
+  orientation is normalized and metadata removed. Replacement derives digest
+  and provenance from admitted bytes, without retaining AI grounding claims.
+- Edit documents and saved draft inventories are independently versioned at 1.
+  Apply is separate from local form changes and explicit export. Expected
+  revision/base checks reject stale writes; an active render freezes its prior
+  overlay/assets. All assets are retained until workspace cleanup so automatic
+  resets, active exports and saved backups retain their references.
+- Shared React layout preserves the unchanged public default caption branch.
+  Owner captions render above pictures; overlap is visible. Long lines may
+  shrink below the selected nominal size to fit the validated box. Native PNG
+  scratch counts unique written payloads, with hardlinked repeats bounded by
+  the separate 9,000-frame cap.
+- Explicit Save creates separate local Sources/Drafts/Exports storage; later
+  acknowledged edits coalesce into autosave. Unapplied controls are not durable.
+  Streaming hashes/copies avoid buffering large sources; byte identity is
+  rechecked on open. Atomic 32 MiB documents keep one validated last-good
+  backup. Failed saves preserve the session and last good copy; clear refuses
+  unsaved changes until retry or explicit discard. Saved source/export files
+  survive deleting a draft. Shutdown flushes before discarding clip state.
+- Four HTTP integration cases cover three-clip isolation, concurrent stale
+  edits, missing assets/base mismatch, picture replacement during a held
+  render, exact AI counts, immediate shutdown autosave and restart with every
+  AI adapter omitted. No restore, edit or read dispatches processing. A later
+  explicit export uses the supplied revision and makes zero AI calls.
+- The extended native proof samples an imported white picture and moved bold
+  cyan captions in the actual MP4, checks that the old caption region clears,
+  preserves prior MP4 bytes/siblings/source, and saves/clears/reopens the edited
+  bundle without new analysis or render dispatch.
+- Browser checks on isolated synthetic storage verify scaled dragging,
+  keyboard movement/resize, numeric geometry, preset/alignment, unsafe-area
+  refusal, add/remove cues, overlap status, reset/reload, corrected JPEG upload
+  and deduplication, explicit immutable exports, refresh, opt-in Save,
+  acknowledged autosave, clear and reopen. A content-type mismatch found by
+  browser testing was fixed and rechecked. Synthetic proof/logs remain private
+  in OS-temp; no owner media was used. Protected shutdown returned 204, then
+  stabilization found zero owned survivors/descendants or 4100/4200 listeners;
+  scratch/capability and the isolated synthetic library/inputs were removed.
+- Final checks: `owner:test` 98/12 files; `owner:build`; `owner:proof` three
+  native proofs; root `format:check`, `lint`, `typecheck`, `test:unit` 1,454/122
+  files and deterministic fake/paid-off `build`; `owner:artifacts` 1,490 built
+  files plus Docker context/compiler roots; `git diff --check`. Root unit
+  workers were bounded to four. No API/ADC credentials, live provider, cloud,
+  real YouTube source, owner media or offline model was used.
+- Validation fixes were independently reproduced: the browser upload MIME
+  mismatch and shutdown's premature removal of clip state. Corrected upload
+  passes browser checks; immediate-close/reopen regression preserves all three
+  clips and prior output bytes. The final read-only pass covers the combined
+  current CL-020 worktree, contracts, host/lifecycle/store, UI, shared/native
+  composition and required docs; no actionable findings remain. Owner-only
+  visual/live/capacity checks stay unverified.
+
+Remaining: owner real-media readability, crop, licensing and A/V quality;
+maximum 4K/300-second capacity; live automatic adapter/input preparation and
+owner-only paid acceptance. No visual or live readiness is inferred from fake
+results. The adopted persistent-draft decision supersedes this packet's earlier
+session-only wording; no other scope deviation.

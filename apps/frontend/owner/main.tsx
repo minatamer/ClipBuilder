@@ -8,6 +8,7 @@ import "./style.css";
 import { OwnerSelectionPanel } from "./selection-panel.tsx";
 import type { OwnerMomentExport } from "../../../packages/contracts/owner/selection.ts";
 import { OwnerClipBatchPanel } from "./clip-batch-panel.tsx";
+import { OwnerDraftPanel } from "./draft-panel.tsx";
 
 function OwnerWorkspaceView() {
   const [workspace, setWorkspace] = useState<OwnerWorkspace | null>(null);
@@ -17,9 +18,22 @@ function OwnerWorkspaceView() {
   );
   const [selection, setSelection] = useState<OwnerMomentExport[]>([]);
   const [clipWork, setClipWork] = useState(false);
+  const [clearBlocked, setClearBlocked] = useState(false);
   const choose = useCallback((value: OwnerMomentExport[]) => {
     setSelection(value);
   }, []);
+  const opened = useCallback(
+    (value: OwnerWorkspace) => {
+      setWorkspace(value);
+      choose([]);
+      setClipWork(false);
+      setClearBlocked(false);
+      setMessage(
+        "Saved draft reopened locally. Source, timed words and edits were verified; no AI work was replayed.",
+      );
+    },
+    [choose],
+  );
   useEffect(() => {
     const controller = new AbortController();
     void (async () => {
@@ -73,18 +87,32 @@ function OwnerWorkspaceView() {
       setBusy(false);
     }
   }
-  async function clear() {
+  async function clear(discardUnsaved = false) {
     if (!workspace || busy || clipWork) return;
     setBusy(true);
     try {
       const response = await fetch(`/api/workspace/${workspace.id}`, {
         method: "DELETE",
+        ...(discardUnsaved
+          ? {
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ discardUnsaved: true }),
+            }
+          : {}),
       });
+      if (response.status === 409) {
+        setClearBlocked(true);
+        setMessage(
+          "The latest draft changes are not saved. Retry Save now, or explicitly discard this unsaved session. The last saved draft is preserved.",
+        );
+        return;
+      }
       if (!response.ok && response.status !== 404)
         throw new Error("unavailable");
       setWorkspace(null);
       choose([]);
       setClipWork(false);
+      setClearBlocked(false);
       setMessage(
         "Processing workspace cleared. Saved source masters are preserved.",
       );
@@ -107,6 +135,13 @@ function OwnerWorkspaceView() {
       <p role="status" aria-live="polite">
         {message}
       </p>
+      <OwnerDraftPanel
+        workspace={workspace}
+        busy={busy}
+        active={clipWork}
+        onBusy={setBusy}
+        onOpen={opened}
+      />
       {!workspace ? (
         <label className="file">
           Choose local MP4
@@ -154,6 +189,14 @@ function OwnerWorkspaceView() {
             <button disabled={busy || clipWork} onClick={() => void clear()}>
               Clear processing workspace
             </button>
+            {clearBlocked && (
+              <button
+                disabled={busy || clipWork}
+                onClick={() => void clear(true)}
+              >
+                Discard unsaved session and clear
+              </button>
+            )}
           </nav>
         </>
       )}

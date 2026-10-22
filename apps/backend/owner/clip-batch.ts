@@ -19,7 +19,16 @@ import {
   type OwnerClip,
   type OwnerClipBase,
   type OwnerClipList,
+  type OwnerOverlay,
 } from "../../../packages/contracts/owner/clips.ts";
+import { ownerEditRequestSchema } from "../../../packages/contracts/owner/editor.ts";
+import {
+  automaticOwnerEdit,
+  compileOwnerOverlay,
+} from "../../../packages/contracts/owner/edit-overlay.ts";
+import { OWNER_PICTURE_LIMITS } from "../../../packages/contracts/owner/assets.ts";
+import { applyOwnerEdit } from "./edit-clip.ts";
+import { normalizeOwnerPicture } from "./personal-picture.ts";
 import {
   ownerAnalysisSchema,
   ownerWordsSchema,
@@ -69,7 +78,14 @@ export type OwnerClipPorts = {
 };
 const digest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
-type Work = { clip: OwnerClip; moment?: OwnerMoment; renderRevision: number };
+type Work = {
+  clip: OwnerClip;
+  moment?: OwnerMoment;
+  renderRevision: number;
+  snapshot?: OwnerClipBase;
+  overlay?: OwnerOverlay;
+  editRevision?: number;
+};
 const working = (clip: OwnerClip) =>
   ["queued", "preparing", "rendering", "canceling"].includes(clip.state);
 
@@ -87,6 +103,7 @@ export class OwnerClipBatch {
     private readonly workspace: OwnerWorkspace,
     private readonly files: WorkspaceFiles,
     private readonly ports: OwnerClipPorts,
+    private readonly changed: () => void = () => {},
   ) {
     this.workspace = ownerWorkspaceSchema.parse(workspace);
   }
@@ -98,6 +115,93 @@ export class OwnerClipBatch {
       clips: [...this.clips.values()],
       active: this.active,
       workers: OWNER_BATCH_POLICY.workers,
+    });
+  }
+  restore(value: unknown) {
+    if (this.clips.size || this.active || this.closing)
+      throw new Error("workspace_busy");
+    const restored = ownerClipListSchema.shape.clips.parse(value);
+    const ids = new Set<string>();
+    for (const clip of restored) {
+      if (ids.has(clip.id)) throw new Error("duplicate_clip");
+      ids.add(clip.id);
+      if (
+        clip.sourceRevision !== this.workspace.revision ||
+        (clip.base &&
+          (clip.base.fingerprint !== this.workspace.source.fingerprint ||
+            digest(clip.base) !== clip.baseHash))
+      )
+        throw new Error("stale_saved_clip");
+      if (clip.base && clip.baseHash) {
+        clip.edit ??= automaticOwnerEdit(clip.base, clip.id, clip.baseHash);
+        if (
+          clip.edit.clipId !== clip.id ||
+          clip.edit.baseHash !== clip.baseHash ||
+          clip.edit.revision !== clip.revision
+        )
+          throw new Error("stale_saved_edit");
+        compileOwnerOverlay(clip.base, clip.edit, clip.assets);
+      }
+      if (working(clip)) {
+        clip.state = "canceled";
+        clip.error = "canceled";
+      }
+    }
+    for (const clip of restored) this.clips.set(clip.id, clip);
+  }
+  async edit(id: string, value: unknown) {
+    const request = ownerEditRequestSchema.parse(value);
+    return this.serialize(async () => {
+      const key = `edit:${id}:${request.operationId}`;
+      if (this.receipt(key, request)) return this.snapshot();
+      const clip = this.clips.get(id);
+      if (this.closing || !clip) throw new Error("workspace_closed");
+      const edit = applyOwnerEdit(clip, request);
+      clip.edit = edit;
+      clip.revision = edit.revision;
+      if (!working(clip)) clip.state = "validated-revision";
+      this.receipts.set(key, digest(request));
+      this.changed();
+      return this.snapshot();
+    });
+  }
+  async picture(id: string, bytes: Buffer, signal: AbortSignal) {
+    return this.serialize(async () => {
+      const clip = this.clips.get(id);
+      if (this.closing || !clip?.base) throw new Error("picture_unavailable");
+      signal.throwIfAborted();
+      const picture = await normalizeOwnerPicture(bytes, signal),
+        hash = createHash("sha256").update(picture.bytes).digest("hex");
+      if (
+        clip.assets.some(
+          (asset) => asset.digest === hash && asset.origin === "owner-supplied",
+        )
+      )
+        return this.snapshot();
+      if (clip.assets.length >= OWNER_PICTURE_LIMITS.assetsPerClip)
+        throw new Error("picture_unavailable");
+      await this.reserve(0, 0, picture.bytes.length);
+      signal.throwIfAborted();
+      if (this.closing) throw new Error("workspace_closed");
+      const asset = ownerAssetSchema.parse({
+        id: randomUUID(),
+        digest: hash,
+        width: picture.width,
+        height: picture.height,
+        bytes: picture.bytes.length,
+        origin: "owner-supplied",
+      });
+      const file = await this.files.asset(this.workspace.id, asset.id);
+      try {
+        await writeFile(file, picture.bytes, { flag: "wx", mode: 0o600 });
+        signal.throwIfAborted();
+        clip.assets.push(asset);
+      } catch (error) {
+        await rm(file, { force: true });
+        throw error;
+      }
+      this.changed();
+      return this.snapshot();
     });
   }
   private receipt(key: string, value: unknown) {
@@ -176,6 +280,7 @@ export class OwnerClipBatch {
         baseHash: null,
         state: "queued",
         base: null,
+        edit: null,
         assets: [],
         outputs: [],
         calls: { plan: 0, image: 0, render: 0 },
@@ -190,7 +295,7 @@ export class OwnerClipBatch {
     this.start();
     return this.snapshot();
   }
-  private async reserve(additional: number, outputs = 0) {
+  private async reserve(additional: number, outputs = 0, assets = 0) {
     const retained =
       this.clips.size +
       [...this.clips.values()].reduce(
@@ -200,6 +305,12 @@ export class OwnerClipBatch {
     await requireDisk(
       this.files.root,
       this.workspace.source.bytes +
+        assets +
+        [...this.clips.values()].reduce(
+          (sum, clip) =>
+            sum + clip.assets.reduce((total, asset) => total + asset.bytes, 0),
+          0,
+        ) +
         (retained + additional * 2 + outputs) *
           OWNER_BATCH_POLICY.clipReservationBytes +
         OWNER_BATCH_POLICY.overlayBytes,
@@ -239,7 +350,13 @@ export class OwnerClipBatch {
     if (cancelVersion !== this.cancelVersion) return this.snapshot();
     clip.state = "queued";
     clip.error = null;
-    this.queue.push({ clip, renderRevision });
+    this.queue.push({
+      clip,
+      renderRevision,
+      snapshot: ownerClipBaseSchema.parse(clip.base),
+      overlay: compileOwnerOverlay(clip.base, clip.edit, clip.assets),
+      editRevision: clip.revision,
+    });
     this.start();
     return this.snapshot();
   }
@@ -388,24 +505,29 @@ export class OwnerClipBatch {
         if (work.moment) {
           clip.base = await this.prepare(clip, work.moment, controller.signal);
           clip.baseHash = digest(clip.base);
+          clip.edit = automaticOwnerEdit(clip.base, clip.id, clip.baseHash);
           clip.state = "review-ready";
         }
         controller.signal.throwIfAborted();
         if (!clip.base) throw new Error("bundle_missing");
-        const snapshot = ownerClipBaseSchema.parse(clip.base),
-          editRevision = clip.revision;
+        const snapshot = work.snapshot ?? ownerClipBaseSchema.parse(clip.base),
+          editRevision = work.editRevision ?? clip.revision,
+          overlay =
+            work.overlay ??
+            compileOwnerOverlay(snapshot, clip.edit, clip.assets),
+          jobId = randomUUID();
         clip.state = "rendering";
         clip.calls.render++;
         const result = await this.ports.render(
           {
             workspaceId: this.workspace.id,
             operation: "clip",
-            jobId: randomUUID(),
+            jobId,
             clipId: clip.id,
             renderRevision: work.renderRevision,
             cut: structuredClone(snapshot.cut),
             fingerprint: snapshot.fingerprint,
-            overlay: structuredClone(snapshot.overlay),
+            overlay: structuredClone(overlay),
           },
           controller.signal,
         );
@@ -422,6 +544,8 @@ export class OwnerClipBatch {
         clip.outputs.push({
           id: digest({
             baseHash: clip.baseHash,
+            overlayHash: digest(overlay),
+            jobId,
             editRevision,
             renderRevision: work.renderRevision,
           }),
@@ -430,7 +554,8 @@ export class OwnerClipBatch {
           frames: result.frames,
           bytes: result.bytes,
         });
-        clip.state = "ready";
+        clip.state =
+          clip.revision === editRevision ? "ready" : "validated-revision";
         clip.error = null;
       } catch {
         clip.state = controller.signal.aborted ? "canceled" : "failed";
@@ -449,6 +574,7 @@ export class OwnerClipBatch {
         ).catch(() => undefined);
       } finally {
         this.current = undefined;
+        this.changed();
       }
     }
   }

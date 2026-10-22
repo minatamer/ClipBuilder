@@ -1,11 +1,12 @@
 # Local owner host
 
 This independent owner runtime is excluded from public `src`, package outputs,
-Next routes and Docker contexts. CL-017–019 deliver one source preview,
+Next routes and Docker contexts. CL-017–020 deliver one source preview,
 manual ranges alongside duration-controlled fake discovery, a bounded list of
-automatic clip edits, private loopback access and temporary workspace cleanup.
-AI is simulated; native video processing is real. Saved drafts, caption/picture
-editing, CLI access and downloaded-source reuse arrive in later tickets.
+automatic clip edits, caption/picture adjustments, opt-in saved drafts, private
+loopback access and temporary workspace cleanup. AI is simulated; native video
+processing is real. CLI access and downloaded-source reuse follow in later
+tickets.
 
 From the repository root, prepare the free Windows x64 FFmpeg 9.0.2 portable
 tools once, then build:
@@ -59,11 +60,11 @@ ceiling, preserving another 10 GiB free. Batch exports are H.264/AAC,
 limit. Native validation rejects HDR/high-bit-depth inputs and
 malformed/oversized sources. The workspace expires after two hours; active work
 defers expiry. Clear and shutdown drain owned work and streams before removing
-only owned OS-temp copies. Saved source
-masters, retained demo assets, diagnostic captures, private logs, drafts and
-exports are never scratch cleanup targets. Persistent source/draft/export
-management is introduced by later tickets; this slice creates no Downloads
-library. Browser downloads are explicit and remain outside workspace cleanup.
+only owned OS-temp copies. Saved source masters, retained demo assets,
+diagnostic captures, private logs, drafts and exports are never scratch cleanup
+targets. An explicit first Save creates the private Downloads library described
+below; ordinary upload and session-only editing create no persistent library.
+Browser downloads are explicit and remain outside workspace cleanup.
 
 The authenticated local API accepts `POST /api/workspace/{id}/analysis` with
 source/policy revisions, at most ten `{id,startMs,endMs}` rows, an independent
@@ -87,9 +88,9 @@ reconciliation are unchanged.
 `sourceRevision`, `policyRevision` and one to ten distinct `momentIds` from the
 completed analysis. Each stable clip ID owns its immutable automatic base,
 validated words/cut, asset references, edit revision and separate output
-revisions. The current edit revision is zero; mutable editor documents arrive
-in CL-020. Admission checks the entire selection and disk upper bound before
-starting any work. At most one simulated plan and three simulated picture
+revisions. A separate version-1 edit document records applied presentation
+changes over the immutable base. Admission checks the entire selection and
+disk upper bound before starting any work. At most one simulated plan and three simulated picture
 attempts are allowed per distinct clip; source transcription/discovery are
 reused. The current fake planner creates one colored placeholder when cues
 exist, with no real AI calls. There are no automatic retries.
@@ -122,15 +123,125 @@ validated outputs usable. Workspace clear is unavailable during active work;
 shutdown cancels and drains it.
 
 `POST /api/workspace/{id}/clips/{clipId}/render` accepts a fresh `operationId`
-and the current `expectedRevision` for an explicit local re-export. It reuses
-the immutable base and normalized selected material with zero AI calls. Output
-files have distinct revisions; earlier exports are not overwritten.
+and the current `expectedRevision` for an explicit local re-export. It freezes
+the compiled overlay and edit revision at admission and reuses the immutable
+base and normalized selected material with zero AI calls. Later edits can be
+acknowledged while that snapshot renders. Output files have distinct revisions
+and record the edit revision they contain; earlier exports are not overwritten
+and remain visibly older when the draft changes.
 `GET /api/workspace/{id}/clips/{clipId}/output/{revision}` downloads a published
 revision. The clip's `/source` route and workspace `/assets/{assetId}` route
 serve only admitted material for review. Completed clips remain reviewable
 while the next clip runs. Reloading restores the running session without
-submitting another processing action; restarting the app does not restore
-these ephemeral bundles.
+submitting another processing action. Unsaved session bundles do not survive
+an app restart; explicitly saved drafts can be reopened.
+
+## Caption and picture edits
+
+`POST /api/workspace/{id}/clips/{clipId}/edit` accepts `operationId`,
+`expectedRevision`, `baseHash` and one to ten allowlisted operations:
+`caption`, `visual-upsert`, `visual-remove` or `reset` for a caption/picture
+panel. Writes serialize with other clip mutations; a stale edit revision
+returns 409. Matching operation IDs are idempotent. A valid edit advances only
+that clip's revision, validates the complete overlay, and starts no AI or
+render. The public v2/v3 manifest formats and fixed public composition remain
+unchanged; owner edit/overlay documents cannot enter the public renderer.
+
+Caption settings use three bundled Arial presets, requested size 32–80px,
+six-digit text/highlight colors, left/center/right alignment and a normalized
+box. The box stays inside a 5% safe inset, occupies at least 60% of portrait
+width, and must fit two requested-size lines vertically. The shared caption
+tree may reduce the actual font size to fit the existing fixed caption lines;
+it retains timed words, line breaks and highlight clocks. Pictures use at most
+three timed cues per clip, normalized in-canvas geometry and contain/cover fit.
+Pictures draw in cue order below captions. No caption rewriting, arbitrary
+fonts/CSS, keyframes, B-roll or audio editing is accepted.
+
+`POST /api/workspace/{id}/clips/{clipId}/picture` receives JPEG/PNG bytes with
+an exact content length, at most 4 MiB and 16 million decoded pixels. Byte
+signatures, PNG framing and a single raster page are checked independently of
+the MIME declaration. Animated, malformed and unsupported inputs are rejected.
+The decoder applies orientation, removes metadata, flattens transparency onto
+the dark canvas and emits a canonical JPEG no larger than 1920px per side and
+3 MiB. Each clip admits at most 20 immutable assets, deduplicating identical
+owner-supplied pictures. Upload registers an asset; an explicit edit operation
+chooses its cue. Asset IDs and hashes are the only renderer references.
+Owner-supplied provenance replaces any generated/synthetic claim, and the owner
+must have permission to use the picture. Superseded assets remain available to
+the immutable base, in-flight snapshots and saved recovery copy.
+
+The local preview provides numeric controls, layer selection, drag/resize and
+keyboard equivalents. Apply acknowledges a revision; typing or dragging an
+unapplied form is not durable. Reset affects only the chosen panel. Preview,
+seeking, picture import, applied edits and explicit native re-export of a valid
+prepared bundle require no provider keys or live AI capabilities.
+
+## Private saved drafts
+
+The launcher resolves the Windows Downloads known folder from its specific
+User Shell Folders registry value; it does not read ignored env files. A
+redirected Downloads folder is respected. Failure leaves draft routes
+unavailable instead of choosing a fallback directory. Resolution/listing makes
+no library directories. The first explicit Save, allowed while native work is
+idle, creates separate local areas:
+
+| Area | Ownership and retention |
+| --- | --- |
+| `Downloads/ClipBuilder/Sources` | One hash-named source master, verified and reused by later saves/drafts. |
+| `Downloads/ClipBuilder/Drafts/{id}` | Versioned private document, one last-good backup, canonical pictures and available normalized cuts. |
+| `Downloads/ClipBuilder/Exports` | Immutable completed exports, independent of the draft directory. |
+
+The storage root must stay outside the repository and cannot traverse a
+symlink/junction. Fixed UUID/hash filenames are derived internally; neither the
+API nor saved document admits arbitrary paths or URLs. A version-1 snapshot
+contains admitted source metadata, validated transcript/candidates/ranges and
+duration settings when analysis exists, clip bases, applied edits, asset
+metadata, output revisions and bounded call counts. The private record adds a
+fixed inventory of byte counts/hashes, capped at 32 MiB. It contains no raw
+provider response, authentication, capabilities, credentials or environment
+values. Up to 200 drafts are listed; none expires automatically.
+
+| Authenticated route | Behavior |
+| --- | --- |
+| `GET /api/workspace/{id}/draft` | Read `session-only`, `saving`, `saved` or `unsaved`, plus the last completed save time. |
+| `POST /api/workspace/{id}/draft` | Explicit first Save or retry/save-now for the same bound draft. |
+| `GET /api/drafts` | List validated document summaries without reading all source media. |
+| `POST /api/drafts/{draftId}/open` | Require an empty processing workspace; verify stored bytes and restore into new owned scratch. |
+| `DELETE /api/drafts/{draftId}` | Drain its readers/writer and remove only that draft's directory; preserve source masters and saved exports. |
+
+After opt-in, acknowledged analysis/clip/edit changes debounce for 500ms into a
+single writer. A newer change during an earlier save remains `unsaved` until
+its own snapshot commits. Media is stream-hashed/copied; unchanged immutable
+files reuse their verified file identity during this process, so a caption
+change does not reread a 10 GiB source. Opening/restarting validates hashes
+afresh. Disk admission reserves bounded new writes and preserves 10 GiB free.
+Existing damaged masters or immutable exports are rejected, never overwritten.
+
+JSON writes sync a private temporary file before atomic replacement. A failed
+save keeps the last good document, ID and timestamp and reports `unsaved`;
+explicit retry remains available. Opening tries the current record and then
+the fully validated last-good backup. Recovery references retain their picture
+and cut files. Missing/changed required source, picture or published output
+blocks reopening, without downloading or rerunning AI. An absent unpublished
+normalized cut is allowed: a later explicit native export can rebuild it from
+the retained source. Load failure removes only the new processing workspace.
+
+Opening retains stable clip/base/edit/output identities, remaps the workspace
+ID, and marks interrupted queued/preparing/rendering work canceled. It never
+replays provider or native jobs. If automatic provider ports are unavailable,
+the restored workspace reports that limitation while valid prepared bundles
+remain editable and explicitly exportable with zero AI calls.
+
+Clear flushes opted-in changes first. If durability fails, clear returns 409;
+the owner can retry Save or explicitly request `discardUnsaved:true` to discard
+only the unsaved session. Expiry defers removal after a failed save. Shutdown
+cancels/drains large outstanding storage operations, flushes an existing bound
+draft's latest acknowledged state, and clears timers/owned scratch; it does not
+retry an unsuccessful first bulk save. These paths preserve every previously
+saved master/export/draft and private log. This is local file retention with no
+app cloud sync, not the retired diagnostic replay feature.
+
+## Verification
 
 Focused offline checks, with shared pre-import fake/paid-off environment and
 external-network interception:
@@ -149,7 +260,14 @@ or owner media. Build first: the multi-clip proof needs the fixed overlay bundle
 existing Chrome and pinned native tools. It checks exact frames,
 fractional/source endpoints, VFR and nonzero video/audio offsets, pixel
 transitions, silent audio, three isolated clip bundles and deterministic
-re-export. It really encodes, probes and decodes local MP4s, then drains owned
-children/listeners and deletes its temporary files. The required general gates are in
-root AGENTS. Human real-media/visual quality and later external compatibility
-remain in CL-025; no agent-paid or real YouTube test is authorized.
+re-export. Focused owner checks also cover applied revisions, image safety,
+atomic draft recovery, immutable retention and cancellation without external
+calls. The native proof really encodes, probes and decodes local MP4s, then
+drains owned children/listeners and deletes its temporary files. The required
+general gates are in root AGENTS. Human real-media/visual quality and later external compatibility
+remain in CL-025; these checks do not establish real caption readability,
+picture crop or A/V acceptance. No agent-paid or real YouTube test is
+authorized. Fake mode needs no API keys; real automatic analysis/planning still
+needs implemented and composed provider adapters, local input preparation,
+keys, live flags and applicable approvals. Keys/flags alone cannot enable it,
+and no offline AI model/weights are included.

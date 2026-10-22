@@ -19,6 +19,7 @@ import {
 } from "../apps/backend/owner/local-mode.ts";
 import { ownerProcessTree, forceOwnerTree } from "./owner-processes.mjs";
 import { ownerNativeTools } from "../apps/renderer/owner/native-tools.ts";
+import { resolveOwnerStorage } from "../apps/backend/owner/owner-storage.ts";
 
 assertOwnerFakeMode(process.env);
 for (const port of [4100, 4200])
@@ -49,6 +50,11 @@ const state = {
   overlayBundle: resolve(".owner-build/overlay"),
   chromium: "C:/Program Files/Google/Chrome/Application/chrome.exe",
 };
+try {
+  state.storageRoot = await resolveOwnerStorage();
+} catch {
+  /* Draft routes remain unavailable; no location fallback. */
+}
 await writeFile(stateFile, JSON.stringify(state), { flag: "wx", mode: 0o600 });
 const children = [];
 const identities = new Map();

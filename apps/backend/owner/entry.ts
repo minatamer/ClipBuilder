@@ -16,10 +16,14 @@ async function main() {
       ui: z.string().min(1),
       token: z.string().length(64),
       workerToken: z.string().length(64),
+      storageRoot: z.string().min(1).optional(),
     })
     .parse(JSON.parse(await readFile(file, "utf8")));
   const host = createOwnerHost({
-    ...state,
+    root: state.root,
+    ui: state.ui,
+    token: state.token,
+    ...(state.storageRoot ? { storageRoot: state.storageRoot } : {}),
     port: 4100,
     media: localWorkerPort(4200, state.workerToken),
     analysis: fakeOwnerAnalysis,

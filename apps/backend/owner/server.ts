@@ -21,12 +21,21 @@ import {
 } from "../../../packages/contracts/owner/selection.ts";
 import { readOwnerJson } from "./request-body.ts";
 import { OwnerClipBatch, type OwnerClipPorts } from "./clip-batch.ts";
+import { OwnerDraftStore } from "./draft-store.ts";
+import { OwnerWorkspaceDrafts } from "./workspace-drafts.ts";
+import {
+  ownerDraftSnapshotSchema,
+  ownerWorkspaceClearRequestSchema,
+} from "../../../packages/contracts/owner/drafts.ts";
+import { ownerIdSchema } from "../../../packages/contracts/owner/policy.ts";
+import { OWNER_PICTURE_LIMITS } from "../../../packages/contracts/owner/assets.ts";
 
 export type OwnerHostOptions = {
   root: string;
   ui: string;
   token: string;
   port: number;
+  storageRoot?: string;
   shutdown?: () => void;
   analysis?: OwnerAnalysisPorts;
   clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image">;
@@ -37,6 +46,37 @@ export function createOwnerHost(options: OwnerHostOptions) {
   const workspaces = new Map<string, OwnerWorkspace>();
   const analyses = new Map<string, OwnerAnalysis>();
   const batches = new Map<string, OwnerClipBatch>();
+  const storage = options.storageRoot
+    ? new OwnerDraftStore(options.storageRoot)
+    : undefined;
+  const drafts = storage
+    ? new OwnerWorkspaceDrafts(storage, files, (id) =>
+        ownerDraftSnapshotSchema.parse({
+          version: 1,
+          workspace: workspaces.get(id),
+          analysis: analyses.get(id) ?? null,
+          clips: batches.get(id)?.snapshot().clips ?? [],
+        }),
+      )
+    : undefined;
+  const createBatch = (workspace: OwnerWorkspace) =>
+    new OwnerClipBatch(
+      workspace,
+      files,
+      {
+        ...(options.clipPreparation ?? {
+          mode: "synthetic-ai" as const,
+          async plan() {
+            throw new Error("analysis_unavailable");
+          },
+          async image() {
+            throw new Error("analysis_unavailable");
+          },
+        }),
+        render: options.media,
+      },
+      () => drafts?.changed(workspace.id),
+    );
   const controllers = new Set<AbortController>();
   const tasks = new Set<Promise<void>>();
   const streams = new Set<{ id: string; close: () => Promise<void> }>();
@@ -63,8 +103,15 @@ export function createOwnerHost(options: OwnerHostOptions) {
             !batches.get(id)?.active
           ) {
             closingWorkspaces.add(id);
+            if ((await drafts?.flush(id))?.state === "unsaved") {
+              closingWorkspaces.delete(id);
+              expires.set(id, Date.now() + 60_000);
+              continue;
+            }
             await closeStreams(id);
             await batches.get(id)?.close();
+            await drafts?.flush(id);
+            await drafts?.forget(id);
             batches.delete(id);
             await files.remove(id);
             workspaces.delete(id);
@@ -238,6 +285,70 @@ export function createOwnerHost(options: OwnerHostOptions) {
           .end(JSON.stringify(current ?? null));
         return;
       }
+      if (req.method === "GET" && req.url === "/api/drafts") {
+        if (!storage) {
+          res.writeHead(503).end();
+          return;
+        }
+        res
+          .writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify(await storage.list()));
+        return;
+      }
+      const savedDraft = req.url?.match(
+        /^\/api\/drafts\/([a-f0-9-]{36})(?:\/(open))?$/,
+      );
+      if (savedDraft && storage && drafts) {
+        const id = ownerIdSchema.parse(savedDraft[1]);
+        if (req.method === "DELETE" && !savedDraft[2]) {
+          await drafts.forgetSaved(id);
+          await storage.delete(id);
+          res.writeHead(204).end();
+          return;
+        }
+        if (req.method === "POST" && savedDraft[2] === "open") {
+          if (uploading || workspaces.size) {
+            res.writeHead(409).end();
+            return;
+          }
+          uploading = true;
+          let restoredId: string | undefined;
+          try {
+            const loaded = await storage.load(id, files);
+            restoredId = loaded.workspace.id;
+            controller.signal.throwIfAborted();
+            const workspace: OwnerWorkspace = {
+              ...loaded.workspace,
+              mode: options.analysis?.mode ?? "unavailable",
+            };
+            const batch = createBatch(workspace);
+            batch.restore(loaded.clips);
+            workspaces.set(workspace.id, workspace);
+            batches.set(workspace.id, batch);
+            if (loaded.analysis) analyses.set(workspace.id, loaded.analysis);
+            expires.set(workspace.id, Date.now() + OWNER_LIMITS.workspaceMs);
+            const saved = (await storage.list()).find((item) => item.id === id);
+            if (!saved) throw new Error("saved_draft_missing");
+            drafts.bind(workspace.id, id, saved.savedAt);
+            restoredId = undefined;
+            res
+              .writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify(workspace));
+            return;
+          } finally {
+            uploading = false;
+            if (restoredId) {
+              batches.delete(restoredId);
+              workspaces.delete(restoredId);
+              analyses.delete(restoredId);
+              expires.delete(restoredId);
+              await files.remove(restoredId);
+            }
+          }
+        }
+        res.writeHead(404).end();
+        return;
+      }
       if (req.method === "POST" && req.url === "/api/source") {
         if (uploading || workspaces.size >= 1)
           throw new Error("workspace_busy");
@@ -295,7 +406,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         }
       }
       const route = req.url?.match(
-        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|cancel|output|source)(?:\/(\d+))?)?)?)?$/,
+        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|cancel|output|source|edit|picture)(?:\/(\d+))?)?)?)?$/,
       );
       const workspace = route?.[1] ? workspaces.get(route[1]) : undefined;
       if (!workspace) {
@@ -311,6 +422,38 @@ export function createOwnerHost(options: OwnerHostOptions) {
           .writeHead(200, { "Content-Type": "application/json" })
           .end(JSON.stringify(workspace));
         return;
+      }
+      if (route?.[2] === "draft") {
+        if (!drafts) {
+          res.writeHead(503).end();
+          return;
+        }
+        if (req.method === "GET") {
+          res
+            .writeHead(200, { "Content-Type": "application/json" })
+            .end(JSON.stringify(drafts.status(workspace.id)));
+          return;
+        }
+        if (req.method === "POST") {
+          if (
+            busy.has(workspace.id) ||
+            (drafts.status(workspace.id).id === null &&
+              batches.get(workspace.id)?.active)
+          ) {
+            res.writeHead(409).end();
+            return;
+          }
+          busy.add(workspace.id);
+          try {
+            const result = await drafts.save(workspace.id);
+            res
+              .writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify(result));
+            return;
+          } finally {
+            busy.delete(workspace.id);
+          }
+        }
       }
       if (route?.[2] === "clips") {
         let batch = batches.get(workspace.id);
@@ -340,10 +483,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           }
           busy.add(workspace.id);
           try {
-            batch ??= new OwnerClipBatch(workspace, files, {
-              ...options.clipPreparation,
-              render: options.media,
-            });
+            batch ??= createBatch(workspace);
             batches.set(workspace.id, batch);
             const result = await batch.submit(
               await readOwnerJson(req),
@@ -351,6 +491,66 @@ export function createOwnerHost(options: OwnerHostOptions) {
             );
             res
               .writeHead(202, { "Content-Type": "application/json" })
+              .end(JSON.stringify(result));
+            return;
+          } finally {
+            busy.delete(workspace.id);
+          }
+        }
+        if (req.method === "POST" && batch && route[3] && route[4] === "edit") {
+          if (busy.has(workspace.id)) {
+            res.writeHead(409).end();
+            return;
+          }
+          busy.add(workspace.id);
+          try {
+            const result = await batch.edit(route[3], await readOwnerJson(req));
+            res
+              .writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify(result));
+            return;
+          } finally {
+            busy.delete(workspace.id);
+          }
+        }
+        if (
+          req.method === "POST" &&
+          batch &&
+          route[3] &&
+          route[4] === "picture"
+        ) {
+          if (busy.has(workspace.id)) {
+            res.writeHead(409).end();
+            return;
+          }
+          busy.add(workspace.id);
+          try {
+            const size = Number(req.headers["content-length"]);
+            if (
+              !Number.isSafeInteger(size) ||
+              size <= 0 ||
+              size > OWNER_PICTURE_LIMITS.inputBytes ||
+              !["image/jpeg", "image/png"].includes(
+                String(req.headers["content-type"]),
+              )
+            )
+              throw new Error("invalid_picture");
+            const chunks: Buffer[] = [];
+            let received = 0;
+            for await (const chunk of req) {
+              controller.signal.throwIfAborted();
+              received += chunk.length;
+              if (received > size) throw new Error("invalid_picture");
+              chunks.push(Buffer.from(chunk));
+            }
+            if (received !== size) throw new Error("invalid_picture");
+            const result = await batch.picture(
+              route[3],
+              Buffer.concat(chunks),
+              controller.signal,
+            );
+            res
+              .writeHead(200, { "Content-Type": "application/json" })
               .end(JSON.stringify(result));
             return;
           } finally {
@@ -504,6 +704,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           );
           controller.signal.throwIfAborted();
           analyses.set(workspace.id, result);
+          drafts?.changed(workspace.id);
           res
             .writeHead(200, { "Content-Type": "application/json" })
             .end(JSON.stringify(result));
@@ -578,9 +779,23 @@ export function createOwnerHost(options: OwnerHostOptions) {
           res.writeHead(409).end();
           return;
         }
+        const discardUnsaved =
+          req.headers["content-type"] === "application/json"
+            ? ownerWorkspaceClearRequestSchema.parse(await readOwnerJson(req))
+                .discardUnsaved
+            : false;
         closingWorkspaces.add(workspace.id);
+        if (
+          (await drafts?.flush(workspace.id))?.state === "unsaved" &&
+          !discardUnsaved
+        ) {
+          closingWorkspaces.delete(workspace.id);
+          res.writeHead(409).end();
+          return;
+        }
         await closeStreams(workspace.id);
         await batches.get(workspace.id)?.close();
+        await drafts?.forget(workspace.id);
         batches.delete(workspace.id);
         await files.remove(workspace.id);
         workspaces.delete(workspace.id);
@@ -591,11 +806,16 @@ export function createOwnerHost(options: OwnerHostOptions) {
         return;
       }
       res.writeHead(404).end();
-    } catch {
+    } catch (error) {
       if (newId) await files.remove(newId).catch(() => undefined);
       if (!res.destroyed)
         res
-          .writeHead(400, { "Content-Type": "application/json" })
+          .writeHead(
+            error instanceof Error && error.message === "stale_edit_revision"
+              ? 409
+              : 400,
+            { "Content-Type": "application/json" },
+          )
           .end('{"error":"local_operation_unavailable"}');
     } finally {
       controllers.delete(controller);
@@ -609,9 +829,11 @@ export function createOwnerHost(options: OwnerHostOptions) {
       clearInterval(expiryTimer);
       for (const c of controllers) c.abort();
       server.closeAllConnections();
+      await storage?.cancelPending();
       await Promise.allSettled([...tasks]);
       await expiryTask;
       await Promise.all([...batches.values()].map((batch) => batch.close()));
+      await drafts?.close();
       batches.clear();
       await files.close();
       analyses.clear();
