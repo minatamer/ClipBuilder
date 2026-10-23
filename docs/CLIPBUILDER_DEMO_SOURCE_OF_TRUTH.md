@@ -12,6 +12,29 @@ not claim accessibility compliance. CL-039 owns removal and verification.
 
 ## Focused local clip editing — 2026-10-23
 
+CL-056: the collapsed editor should fit the available workspace on ordinary
+laptop/desktop windows. Use that space to scale the portrait preview, remove
+empty heading gaps and reduce excess control spacing while preserving readable
+text, touch targets and the anchored footer. Resizing must not reload playback.
+Expanded or intrinsically long/narrow layouts retain normal accessible scrolling;
+never hide overflowing controls to make a fit claim. Navbar, intake and hosted
+demo geometry remain unchanged.
+
+CL-055: preview selection borders, drag targets and resize handles follow the
+active setting: captions only in Captions, pictures only in Pictures, neither
+in Filters. Actual caption/image layers and edits persist while switching;
+inactive guides cannot capture input. Tab switching never reloads the video
+or starts processing, AI or export work.
+
+CL-054: clip switching uses a vertical left rail, with Up/Down/Home/End keyboard
+navigation and the existing dirty-edit guard. Editing is visible only after a
+clip reaches ready/validated-revision with prepared data and a completed output;
+queued, preparing, exporting, canceling, failed or canceled clips never expose
+settings, even when retaining an earlier base/output and even with fake AI.
+Initial preview loading shows a spinner before settings/handles are exposed;
+initial failure offers retry. Later playback failures preserve dirty settings.
+Keep state changes in the same content slot and relevant actions in the footer.
+
 Latest owner audit (CL-050–053): selection and editing are separate exclusive
 screens in the same app. Editor shows one clip via clip tabs, one settings panel
 and a contextual footer with one primary plus Add more clips (dirty edits use
@@ -232,6 +255,16 @@ quality and owner visual/manual acceptance remain unperformed. See the
 [CL-023 follow-up ledger](tickets/CL-023-import-approved-high-quality-linked-source.md#follow-up-changes-and-verification--2026-10-23).
 
 ## Additional owner controls — 2026-10-22
+
+Owner correction — 2026-10-23: manual cuts reserve their canonical frame intervals
+before discovery. AI suggestions must share zero frames with them, including
+duration padding, and cannot bridge a reserved interval. Adjacent cuts are valid.
+Keep the full transcript for context, send structured exclusions to discovery and
+enforce them on returned results in both fake and provider modes. The requested
+count means additional eligible AI moments from the remaining video. Preserve
+manual cuts, return an honest shortfall and skip selection when no remaining
+contiguous window fits the minimum. No automatic retries or added provider calls.
+See [CL-057](tickets/CL-057-reserve-manual-clips-before-ai-discovery.md).
 
 The owner requests an independent count of 1–10 additional AI suggestions
 (default four), keeping manual ranges and AI min/max duration separate. This

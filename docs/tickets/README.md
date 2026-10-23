@@ -1,5 +1,62 @@
 # ClipBuilder canonical ticket index
 
+## Owner Git handoff — 2026-10-24
+
+The owner authorized staging and committing all pending CL-054–057 changes in
+whole-file commits, with no push. This supersedes the earlier no-Git/unstaged
+statements, which record the implementation-time state. Handoff groups:
+
+- `ebe89df`: six frontend files — completed-state/preview readiness, vertical
+  clip rail, active-category selection guides and compact responsive layout.
+- `241897f`: eight backend files — manual exclusions, free-window fitting,
+  fake/provider discovery and focused regression tests.
+- `f4e6d65`: three proof files — synthetic host, browser and native regressions.
+- Final documentation commit: nine owning guides, instructions, authority and
+  ticket/index files recording the decisions and existing validation evidence.
+
+No implementation changed during this handoff. Existing fake/paid-off tests and
+native/browser proof remain the evidence; live-provider and owner-media checks
+are still unverified. No real download, paid processing, deployment or push.
+
+## Current manual exclusions — 2026-10-23
+
+[CL-057](CL-057-reserve-manual-clips-before-ai-discovery.md) reserves manual
+timestamps before AI discovery and enforces zero overlap in the combined list.
+Implemented/validated: 472 local tests, affected types/lint/format and generated
+native/browser export proof pass. Structured exclusions keep full transcript
+context; final duration padding stays outside manual time, eligible suggestions
+alone count, and impossible discovery skips its call. Exact final fake counts
+5/3/5/5, native peak one, no survivors. CL-054–056 remain intact; the owner has
+authorized the whole-file Git handoff above.
+Live AI/owner-media acceptance remains unchecked. See CL-057 for the proof's
+transient timeout and successful rerun evidence.
+
+## Current compact editor fit — 2026-10-23
+
+[CL-056](CL-056-fit-collapsed-editor-to-available-space.md) fits the collapsed
+editor to the available workflow height and removes excess top spacing while
+retaining normal overflow for expanded controls. Implemented/validated: affected
+types/lint/format and fake/native browser proof pass. Both collapsed caption
+views fit 1366×682, 1280×600 and 1440×900 without scrolling; expanded geometry
+remains reachable at 960×600. Prior uncommitted CL-054/055 changes are preserved.
+
+## Current preview selection guides — 2026-10-23
+
+[CL-055](CL-055-scope-preview-guides-to-active-setting.md) scopes caption/picture
+outlines and handles to their active setting, with a clean Filters preview.
+Implemented/validated: affected types/lint/format and the synthetic browser/native
+proof pass, including unchanged video identity and drag/dirty/readiness behavior.
+Preserves the completed, uncommitted CL-054 readiness/left-rail work.
+
+## Current editor readiness and clip rail — 2026-10-23
+
+[CL-054](CL-054-gate-editor-readiness-and-use-vertical-clip-tabs.md) hides editing
+until processing and initial preview loading finish, and moves clip selection
+into a vertical left rail. Implemented/validated: 16 focused tests, affected
+types/lint/format, synthetic browser/native export/decode proof and inspected
+1440/390/320 layouts pass; no surviving owned resources. Normal app remains
+fake AI/cloud-off. No new Git action, live AI, real download or deployment.
+
 ## Local flow design audit — 2026-10-23
 
 Owner-authorized sequence: [CL-050 clean flow](CL-050-clean-local-flow-and-editor.md)

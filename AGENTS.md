@@ -47,6 +47,9 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   footer. Caption and picture positioning/motion must work in actual scaled
   preview and native exports; verify real pointer gestures and saved state.
   Follow the documented audit before adding controls or prose.
+- Editor readiness (CL-054): queued/exporting clips never expose editing
+  controls just because retained prepared data exists. Follow the source of
+  truth's completed-state/preview gate and vertical left clip rail.
 - Local native parity: after changing local contracts/composition or worker
   code, rebuild and reload the normal backend's internal worker using verified
   lifecycle ownership. Preserve the other app/frontend, files and configuration.

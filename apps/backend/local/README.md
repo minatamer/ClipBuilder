@@ -51,6 +51,15 @@ Fake AI requires no keys; real downloads/native media are independent. Real AI
 uses normal Gemini configuration/approvals and stays owner-manual. Synthetic
 checks never call YouTube, Gemini or cloud resources.
 
+Manual timestamps reserve canonical 30fps intervals before discovery (CL-057).
+The provider receives the full transcript and structured reserved cuts; both
+provider and fake results are fitted within the remaining contiguous windows.
+AI suggestions share zero frames with manual clips, including padding, while
+adjacent endpoints are allowed. Only eligible suggestions count toward the
+requested additional count. Shortfalls never trigger another selection call;
+selection is skipped when no remaining window can fit the minimum duration.
+Manual cuts and the existing manual-first combined list remain authoritative.
+
 Fake analysis now emits an original fictional two-speaker conversation, not a
 transcription of uploaded media. Fake pictures use the bundled NASA Earth sample
 documented in [SAMPLE_MEDIA.md](SAMPLE_MEDIA.md), with no runtime network access.

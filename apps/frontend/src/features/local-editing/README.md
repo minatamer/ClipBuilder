@@ -121,5 +121,18 @@ Both features work with fake AI and no API keys.
 The permanent rule is documented in repository AGENTS.md (CL-045).
 
 See the [local workflow guide](../../../../../docs/operations/LOCAL_WORKFLOW.md).
+The editor view uses its actual workflow content container height to size the
+portrait preview and compact spacing. Collapsed laptop controls fit above the
+footer; long/expanded controls still scroll. Other flow/navbar geometry is
+preserved. CL-056 owns measured fit, resize and overflow evidence.
+Preview selection outlines/drag/resize targets follow the active setting:
+Captions for captions, Pictures for images, none in Filters. Tab switches retain
+edits and preview media/playhead; CL-055 owns this verification.
+Clip switching uses a left-hand vertical rail (Up/Down/Home/End). Queued and
+exporting clips show a spinner instead of editing controls, regardless of a
+retained base/output. Only completed ready/edited clips can open the editor;
+settings and layer handles wait for initial preview decoding. Initial failure
+keeps retry available; later playback failure preserves dirty edits. CL-054
+owns readiness and responsive regression evidence. This also applies to fake AI.
 Fake AI is fictional and key-free while downloads and native processing are
 real. Hosted `/start` keeps the existing demo and rejects local API requests.
