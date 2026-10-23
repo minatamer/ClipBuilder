@@ -140,3 +140,18 @@ completed cleanup, with no push. The validation evidence above describes the
 worktree before that authorization. Build-only Next.js declaration changes are
 excluded from the commit; ignored environment files and local artifacts remain
 outside Git.
+
+## Normal development startup follow-up — 2026-10-23
+
+The owner's subsequent run request exposed esbuild's import-time working-directory
+default when the backend package invokes the local media build. Both build calls
+now explicitly use the resolved repository working directory. The normal backend
+development command then built its worker/overlay and started successfully.
+Formatting and `git diff --check` pass for this correction. Normal frontend
+`/start`, `/api/sample/config`, backend health and local capabilities return 200;
+capabilities confirm synthetic AI, real source acquisition and no cloud. The
+owner explicitly requested fake AI, so this launch overrides fake/paid switches
+without reading or editing ignored environment files. Ports 3000/4000/4200 are
+verified against the recorded ClipBuilder process trees; other apps are untouched.
+This is startup evidence only, with no real YouTube or provider request. The
+owner subsequently authorized committing this correction and evidence, with no push.

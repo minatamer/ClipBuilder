@@ -25,6 +25,7 @@ for (const directory of ["overlay"]) {
 for (const directory of ["overlay"])
   await rm(resolve(output, directory), { recursive: true, force: true });
 await build({
+  absWorkingDir: process.cwd(),
   entryPoints: ["apps/renderer/local/overlay-page.tsx"],
   bundle: true,
   platform: "browser",
@@ -41,6 +42,7 @@ for (const [entry, name] of [
   ["apps/renderer/local/entry.ts", "worker"],
 ]) {
   await build({
+    absWorkingDir: process.cwd(),
     entryPoints: [entry],
     bundle: true,
     platform: "node",
