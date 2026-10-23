@@ -7,18 +7,61 @@ import {
 } from "../../../../../packages/contracts/local/editor.ts";
 import type { OwnerVisualEdit } from "../../../../../packages/contracts/local/assets.ts";
 import { automaticOwnerEdit } from "../../../../../packages/contracts/local/edit-overlay.ts";
+import { ownerVisualEditSchema } from "../../../../../packages/contracts/local/assets.ts";
 
 export type OwnerEditorBox = OwnerVisualEdit["box"];
 
+export function centeredOwnerBox(
+  box: OwnerEditorBox,
+  center: 0.25 | 0.5 | 0.75,
+  caption: OwnerCaptionStyle | null,
+): OwnerEditorBox {
+  const edge = caption ? 0.05 : 0;
+  const height = Math.min(
+    box.height,
+    2 * Math.min(center - edge, 1 - edge - center),
+  );
+  const fitted = constrainOwnerBox({ ...box, height }, caption);
+  return constrainOwnerBox(
+    { ...fitted, x: (1 - fitted.width) / 2, y: center - fitted.height / 2 },
+    caption,
+  );
+}
+
+/** Typography changes keep the owner's spatial placement and alignment. */
+export function ownerCaptionPreset(
+  current: OwnerCaptionStyle,
+  preset: OwnerCaptionStyle["preset"],
+): OwnerCaptionStyle {
+  const next = structuredClone(OWNER_CAPTION_PRESETS[preset]);
+  const fitted = constrainOwnerBox(current.box, next);
+  return {
+    ...next,
+    align: current.align,
+    verticalAlign: current.verticalAlign,
+    box: constrainOwnerBox(
+      {
+        ...fitted,
+        x: current.box.x + (current.box.width - fitted.width) / 2,
+        y: current.box.y + (current.box.height - fitted.height) / 2,
+      },
+      next,
+    ),
+  };
+}
+
 export function automaticVisualEdits(clip: OwnerClip): OwnerVisualEdit[] {
-  return (clip.base?.overlay.visuals ?? []).map(
-    ({ id, assetId, startFrame, endFrame, box, fit }) => ({
-      id,
-      assetId,
-      startFrame,
-      endFrame,
-      box: { ...box },
-      fit,
+  return (clip.base?.overlay.visuals ?? []).map((cue) =>
+    ownerVisualEditSchema.parse({
+      id: cue.id,
+      assetId: cue.assetId,
+      startFrame: cue.startFrame,
+      endFrame: cue.endFrame,
+      box: { ...cue.box },
+      fit: cue.fit,
+      entrance: cue.entrance,
+      exit: cue.exit,
+      animationFrames: cue.animationFrames,
     }),
   );
 }

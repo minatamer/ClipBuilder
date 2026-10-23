@@ -1,202 +1,82 @@
-import { useEffect, useRef, useState } from "react";
+import { Button } from "../../shared/ui/button";
+import { Progress } from "../../shared/ui/progress";
+import { useEffect, useId, useRef, useState } from "react";
+import { ArrowLeft, ChevronDown, Link2, LoaderCircle } from "lucide-react";
 import {
   ownerAcquisitionProgressSchema,
   ownerYoutubeOfferSchema,
   type OwnerAcquisitionProgress,
   type OwnerYoutubeOffer,
-  type OwnerYoutubeSupportReason,
 } from "../../../../../packages/contracts/local/acquisition.ts";
 import {
-  ownerSourceCatalogSchema,
   ownerSourceLookupSchema,
   ownerSourceImportSchema,
-  type OwnerSourceCatalog,
   type OwnerSavedSourceEntry,
-  type OwnerSourceDestination,
 } from "../../../../../packages/contracts/local/acquisition-flow.ts";
 import {
-  OWNER_LIMITS,
   ownerWorkspaceSchema,
   type OwnerWorkspace,
 } from "../../../../../packages/contracts/local/index.ts";
 import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts/local/runtime.ts";
+import {
+  resolutionChoices,
+  savedResolutionChoices,
+} from "./resolution-choices.ts";
+import { YoutubePreview } from "./youtube-preview.tsx";
 
-const reasons: Record<OwnerYoutubeSupportReason, string> = {
-  "video-codec": "Unsupported video codec",
-  "audio-codec": "Unsupported audio codec",
-  hdr: "HDR requires an unsupported conversion",
-  "dynamic-range-unknown": "Dynamic range is not verified",
-  drm: "Protected source is unavailable",
-  protocol: "Unsupported transfer protocol",
-  resolution: "Source dimensions exceed the local profile",
-  "frame-rate": "Unsupported source frame rate",
-  "audio-layout": "Unsupported audio channel count or sample rate",
-  duration: "Source duration exceeds the local profile",
-  "source-unavailable": "Source is unavailable",
-  bytes: "Source size exceeds the local profile",
-  "audio-ambiguous": "Choose an explicit audio variant",
-  "audio-missing": "No supported audio stream",
-};
 const stages: Record<OwnerAcquisitionProgress["stage"], string> = {
-  queued: "Queued locally",
-  video: "Acquiring video",
-  audio: "Acquiring audio",
-  merging: "Merging streams locally",
-  inspecting: "Inspecting and decoding source",
-  publishing: "Saving the complete source",
-  ready: "Source ready",
-  canceling: "Canceling and draining owned work",
-  canceled: "Canceled",
-  failed: "Import failed",
+  queued: "Starting download…",
+  video: "Downloading video…",
+  audio: "Downloading audio…",
+  merging: "Preparing video…",
+  inspecting: "Checking video…",
+  publishing: "Saving video…",
+  ready: "Video ready",
+  canceling: "Canceling…",
+  canceled: "Download canceled",
+  failed: "Download failed",
 };
 const running = (progress: OwnerAcquisitionProgress | null) =>
   !!progress && !["ready", "canceled", "failed"].includes(progress.stage);
-const size = (bytes: number | null) =>
-  bytes === null
-    ? "size unknown"
-    : bytes >= 1024 ** 3
-      ? `${(bytes / 1024 ** 3).toFixed(2)} GiB`
-      : `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
-
-function SavedSourceEntries({
-  entries,
-  group,
-  busy,
-  pending,
-  active,
-  workspace,
-  catalogError,
-  action,
-}: {
-  entries: OwnerSavedSourceEntry[];
-  group: string;
-  busy: boolean;
-  pending: boolean;
-  active: boolean;
-  workspace: OwnerWorkspace | null;
-  catalogError: boolean;
-  action: (
-    kind: "open" | "delete" | "locate",
-    entry: OwnerSavedSourceEntry,
-    file?: File,
-  ) => Promise<void>;
-}) {
-  return (
-    <ol className="clip-list">
-      {entries.map((entry) => {
-        const variant = entry.variant,
-          label = `${group} source ${variant.id.slice(0, 8)} at ${variant.actual.width} by ${variant.actual.height}`;
-        return (
-          <li key={`${entry.destination}-${variant.id}`}>
-            <h3>
-              Saved source {variant.id.slice(0, 8)} · {variant.state}
-            </h3>
-            <p>
-              {variant.actual.width} × {variant.actual.height} ·{" "}
-              {variant.actual.fps}fps · {variant.video.codec}/
-              {variant.audio.codec} · {size(variant.actual.bytes)} ·{" "}
-              {entry.destination === "downloads" ? "Downloads" : "Desktop"}
-            </p>
-            <p>
-              Saved {new Date(variant.acquiredAt).toLocaleString()} ·{" "}
-              {variant.selection.kind === "best"
-                ? "Best at acquisition time"
-                : "Selected saved variant"}
-              . This does not check today’s online maximum.
-              {variant.mode === "synthetic-source"
-                ? " Synthetic generated source; no YouTube media."
-                : ""}
-            </p>
-            <nav>
-              <button
-                type="button"
-                disabled={
-                  busy ||
-                  pending ||
-                  active ||
-                  !!workspace ||
-                  variant.state !== "ready" ||
-                  catalogError
-                }
-                aria-label={`Use ${label}`}
-                onClick={() => void action("open", entry)}
-              >
-                Use saved video
-              </button>
-              <button
-                type="button"
-                disabled={
-                  busy || pending || active || !!workspace || catalogError
-                }
-                aria-label={`Delete ${label}`}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Delete only ${label} and its unshared saved master? Sources referenced by another variant or draft remain protected.`,
-                    )
-                  )
-                    void action("delete", entry);
-                }}
-              >
-                Delete saved variant
-              </button>
-            </nav>
-            {variant.state !== "ready" && (
-              <label className="file">
-                Locate matching local MP4 for {variant.id.slice(0, 8)}
-                <input
-                  type="file"
-                  accept="video/mp4"
-                  disabled={
-                    busy || pending || active || !!workspace || catalogError
-                  }
-                  onChange={(event) => {
-                    const file = event.currentTarget.files?.[0];
-                    if (file) void action("locate", entry, file);
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </label>
-            )}
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
+const size = (bytes: number) =>
+  bytes >= 1024 ** 3
+    ? (bytes / 1024 ** 3).toFixed(1) + " GB"
+    : (bytes / 1024 ** 2).toFixed(1) + " MB";
+const savedChoice = (entry: OwnerSavedSourceEntry) =>
+  "saved:" + entry.destination + ":" + entry.variant.id;
+type Action = "resolve" | "metadata" | "use" | "cancel";
 
 export function OwnerAcquisitionPanel({
   workspace,
   capabilities,
   busy,
+  initializing = false,
   onBusy,
   onOpen,
 }: {
   workspace: OwnerWorkspace | null;
-  capabilities: OwnerRuntimeCapabilities;
+  capabilities: OwnerRuntimeCapabilities | null;
   busy: boolean;
+  initializing?: boolean;
   onBusy: (busy: boolean) => void;
   onOpen: (workspace: OwnerWorkspace) => void;
 }) {
+  const formId = useId();
+  const resolutionId = useId();
   const [url, setUrl] = useState("");
   const [checkedUrl, setCheckedUrl] = useState("");
+  const [step, setStep] = useState<"url" | "resolution">("url");
   const [lookup, setLookup] = useState<ReturnType<
     typeof ownerSourceLookupSchema.parse
   > | null>(null);
   const [offer, setOffer] = useState<OwnerYoutubeOffer | null>(null);
-  const [choice, setChoice] = useState("best");
-  const [destination, setDestination] =
-    useState<OwnerSourceDestination>("downloads");
-  const [catalog, setCatalog] = useState<OwnerSourceCatalog | null>(null);
+  const [choice, setChoice] = useState("");
   const [progress, setProgress] = useState<OwnerAcquisitionProgress | null>(
     null,
   );
-  const [pending, setPending] = useState(false);
-  const [refresh, setRefresh] = useState(0);
-  const [catalogError, setCatalogError] = useState(false);
-  const [message, setMessage] = useState(
-    "Look for a saved source first, or use a saved video without entering a URL.",
-  );
+  const [pending, setPending] = useState<Action | null>(null);
+  const [message, setMessage] = useState("");
+  const [shownDownload, setShownDownload] = useState<string | null>(null);
   const alive = useRef(false),
     request = useRef<AbortController | null>(null),
     ownedBusy = useRef(false),
@@ -206,14 +86,28 @@ export function OwnerAcquisitionPanel({
     openCallback = useRef(onOpen),
     currentWorkspace = useRef(workspace?.id ?? null);
   const active = running(progress);
+  const ready = capabilities !== null && !initializing;
   const checked = !!lookup && checkedUrl === url.trim();
-  const selected = offer?.choices.find(
-    (item) => item.id === (choice === "best" ? offer.bestChoiceId : choice),
+  const saved = savedResolutionChoices(lookup?.saved ?? []);
+  const selectedSaved = saved.find((entry) => savedChoice(entry) === choice);
+  const resolutions = resolutionChoices(offer?.choices ?? []).filter(
+    (item) =>
+      !saved.some(
+        (entry) =>
+          Math.min(entry.variant.actual.width, entry.variant.actual.height) ===
+          item.tier,
+      ),
   );
-  const blockedChoice =
-    !selected ||
-    !selected.supported ||
-    (choice === "best" && offer?.bestReason !== null);
+  const selected = resolutions.find((item) => item.id === choice);
+  const canUse =
+    checked &&
+    !workspace &&
+    Boolean(
+      selectedSaved ||
+      (capabilities?.sourceMode &&
+        offer?.mode === capabilities.sourceMode &&
+        selected?.supported),
+    );
   useEffect(() => {
     busyCallback.current = onBusy;
     openCallback.current = onOpen;
@@ -237,38 +131,10 @@ export function OwnerAcquisitionPanel({
     }
   }, [active, pending, onBusy]);
   useEffect(() => {
+    if (!ready) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const readCatalog = async () => {
-      const atRevision = revision.current;
-      try {
-        const response = await fetch("/api/local/sources", {
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("unavailable");
-        const value = ownerSourceCatalogSchema.parse(await response.json());
-        if (!controller.signal.aborted && atRevision === revision.current) {
-          setCatalog(value);
-          setCatalogError(false);
-          setLookup((current) =>
-            current
-              ? {
-                  ...current,
-                  saved: value.entries.filter(
-                    (entry) =>
-                      entry.variant.sourceId === current.sourceId &&
-                      (!current.mode || entry.variant.mode === current.mode),
-                  ),
-                }
-              : null,
-          );
-        }
-      } catch {
-        if (!controller.signal.aborted && atRevision === revision.current)
-          setCatalogError(true);
-      }
-    };
-    const readProgress = async () => {
+    const read = async () => {
       const atRevision = revision.current;
       try {
         const response = await fetch("/api/local/sources/state", {
@@ -279,9 +145,12 @@ export function OwnerAcquisitionPanel({
           .nullable()
           .parse(await response.json());
         if (!controller.signal.aborted && atRevision === revision.current) {
+          if (value && running(value)) {
+            setShownDownload(value.id);
+            setStep("resolution");
+          }
           setProgress(value);
           if (value?.stage === "ready" && completed.current !== value.id) {
-            await readCatalog();
             if (!currentWorkspace.current) {
               const opened = await fetch("/api/local/workspace", {
                 signal: controller.signal,
@@ -298,421 +167,427 @@ export function OwnerAcquisitionPanel({
         }
       } catch {
         if (!controller.signal.aborted)
-          setMessage(
-            "Import status is unavailable. Completed sources remain saved; refresh local status before retrying an action.",
-          );
+          setMessage("Download status unavailable.");
       }
       if (!controller.signal.aborted)
-        timer = setTimeout(() => void readProgress(), 1000);
+        timer = setTimeout(() => void read(), 1000);
     };
-    void readCatalog();
-    void readProgress();
+    void read();
     return () => {
       controller.abort();
       if (timer) clearTimeout(timer);
     };
-  }, [refresh]);
-  async function action(
-    kind:
-      | "lookup"
-      | "metadata"
-      | "import"
-      | "open"
-      | "delete"
-      | "locate"
-      | "cancel",
-    entry?: OwnerSavedSourceEntry,
-    file?: File,
-  ) {
+  }, [ready]);
+  async function post(
+    path: string,
+    body: unknown,
+    signal: AbortSignal,
+  ): Promise<unknown> {
+    const response = await fetch("/api/local/sources/" + path, {
+      method: "POST",
+      signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error("unavailable");
+    return response.json();
+  }
+  async function loadOffer(link: string, signal: AbortSignal) {
+    const value = ownerYoutubeOfferSchema.parse(
+      await post("metadata", { url: link }, signal),
+    );
+    if (!alive.current || signal.aborted) return;
+    setOffer(value);
+    setChoice("");
+  }
+  async function action(kind: Action) {
+    if (!ready || !capabilities) return;
     if (request.current || (busy && kind !== "cancel")) return;
-    if (["import", "open", "locate"].includes(kind) && workspace) return;
+    if ((active || workspace) && kind !== "cancel") return;
     const controller = new AbortController();
     request.current = controller;
     revision.current++;
-    setPending(true);
+    setPending(kind);
+    setMessage("");
     try {
-      let path = `/api/local/sources/${kind}`,
-        method = "POST",
-        body: BodyInit | undefined;
-      let headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (kind === "lookup") body = JSON.stringify({ url: url.trim() });
-      else if (kind === "metadata") {
-        if (!capabilities.sourceMode || !checked)
-          throw new Error("unavailable");
-        body = JSON.stringify({ url: checkedUrl });
-      } else if (kind === "import") {
-        if (
-          !capabilities.sourceMode ||
-          !offer ||
-          offer.mode !== capabilities.sourceMode ||
-          !selected ||
-          blockedChoice ||
-          !checked
-        )
-          throw new Error("unavailable");
-        body = JSON.stringify(
-          ownerSourceImportSchema.parse({
-            destination,
-            request: {
-              sourceId: offer.sourceId,
-              revision: offer.revision,
-              choiceId: selected.id,
-              selection:
-                choice === "best" ? { kind: "best" } : { kind: "variant" },
-            },
-          }),
+      if (kind === "resolve") {
+        const link = url.trim();
+        const value = ownerSourceLookupSchema.parse(
+          await post("lookup", { url: link }, controller.signal),
         );
-      } else if (kind === "open") {
-        if (!entry) throw new Error("unavailable");
-        body = JSON.stringify({
-          destination: entry.destination,
-          variantId: entry.variant.id,
-        });
-      } else if (kind === "delete" || kind === "locate") {
-        if (!entry) throw new Error("unavailable");
-        path = `/api/local/sources/${entry.destination}/${entry.variant.id}${kind === "locate" ? "/locate" : ""}`;
-        if (kind === "delete") method = "DELETE";
-        else {
-          if (!file || file.size < 1 || file.size > OWNER_LIMITS.sourceBytes)
-            throw new Error("unavailable");
-          body = file;
-          headers = { "Content-Type": "video/mp4" };
-        }
-      }
-      const response = await fetch(path, {
-        method,
-        signal: controller.signal,
-        headers,
-        ...(body === undefined ? {} : { body }),
-      });
-      if (!response.ok) throw new Error("unavailable");
-      revision.current++;
-      if (kind === "lookup") {
-        const value = ownerSourceLookupSchema.parse(await response.json());
-        if (!alive.current) return;
+        if (!alive.current || controller.signal.aborted) return;
         setLookup(value);
-        setCheckedUrl(url.trim());
+        setCheckedUrl(link);
+        setStep("resolution");
         setOffer(null);
-        setChoice("best");
-        setMessage(
-          value.saved.length
-            ? "Saved variants found locally. Use one below without a platform or downloader request."
-            : "No saved matching variant. Request offered qualities explicitly if you want a new acquisition.",
-        );
+        const ready = savedResolutionChoices(value.saved)[0];
+        if (ready) setChoice(savedChoice(ready));
+        else if (value.metadataAvailable && capabilities.sourceMode)
+          await loadOffer(link, controller.signal);
+        else setMessage("No English video available at 480p–1440p.");
       } else if (kind === "metadata") {
-        const value = ownerYoutubeOfferSchema.parse(await response.json());
-        if (!alive.current) return;
-        setOffer(value);
-        setChoice("best");
-        setMessage(
-          value.mode === "synthetic-source"
-            ? "Synthetic offered variants are ready. These describe generated fixtures, not availability on YouTube."
-            : "Offered source variants are ready. Choose the exact video/audio variant before Import.",
-        );
-      } else if (kind === "import" || kind === "cancel") {
+        if (!checked || !lookup?.metadataAvailable || !capabilities.sourceMode)
+          throw new Error("unavailable");
+        await loadOffer(checkedUrl, controller.signal);
+      } else if (kind === "use") {
+        if (!canUse) return;
+        if (selectedSaved) {
+          const value = ownerWorkspaceSchema.parse(
+            await post(
+              "open",
+              {
+                destination: selectedSaved.destination,
+                variantId: selectedSaved.variant.id,
+              },
+              controller.signal,
+            ),
+          );
+          if (alive.current && !controller.signal.aborted) onOpen(value);
+        } else {
+          if (!offer || !selected) return;
+          const value = ownerAcquisitionProgressSchema.parse(
+            await post(
+              "import",
+              ownerSourceImportSchema.parse({
+                destination: "downloads",
+                request: {
+                  sourceId: offer.sourceId,
+                  revision: offer.revision,
+                  choiceId: selected.id,
+                  selection: { kind: "variant" },
+                },
+              }),
+              controller.signal,
+            ),
+          );
+          if (alive.current && !controller.signal.aborted) {
+            setShownDownload(value.id);
+            setProgress(value);
+          }
+        }
+      } else {
         const value = ownerAcquisitionProgressSchema.parse(
-          await response.json(),
+          await post("cancel", undefined, controller.signal),
         );
-        if (!alive.current) return;
-        setProgress(value);
-        setMessage(
-          kind === "cancel"
-            ? value.stage === "ready"
-              ? "The import had already completed. Its saved source is preserved."
-              : "Cancellation requested. Owned work drains before partial scratch is removed."
-            : "Import admitted. The app handles component preparation, local merge, full inspection and saved-source publication.",
-        );
-      } else if (kind === "open" || kind === "locate") {
-        const value = ownerWorkspaceSchema.parse(await response.json());
-        if (!alive.current) return;
-        onOpen(value);
-        setMessage(
-          kind === "locate"
-            ? "The supplied local file matched the saved digest and supported profile; source reopened without a download."
-            : "Saved source validated locally and opened without platform metadata, download or AI calls.",
-        );
-      } else
-        setMessage(
-          "The selected saved variant was removed. Other variants, shared masters and saved drafts remain protected by the local host.",
-        );
-      if (alive.current) setRefresh((value) => value + 1);
+        if (alive.current && !controller.signal.aborted) setProgress(value);
+      }
     } catch {
       if (alive.current && !controller.signal.aborted)
         setMessage(
-          "The action was unavailable or not acknowledged. No lower quality or different file was substituted. Existing saved sources remain; refresh local status before an explicit retry.",
+          kind === "use"
+            ? "Couldn’t open this video. Try again."
+            : kind === "cancel"
+              ? "Couldn’t confirm cancellation."
+              : "Couldn’t load resolutions. Try again.",
         );
     } finally {
       request.current = null;
-      if (alive.current) setPending(false);
+      if (alive.current) setPending(null);
     }
   }
+  function changeLink() {
+    setShownDownload(null);
+    setStep("url");
+    setLookup(null);
+    setCheckedUrl("");
+    setOffer(null);
+    setChoice("");
+    setMessage("");
+  }
+  const disabled = !ready || busy || !!pending || active || !!workspace;
+  const hasChoices = saved.length > 0 || !!offer;
+  const openingSaved = pending === "use" && !!selectedSaved;
+  const transferring = active || (pending === "use" && !selectedSaved);
+  const transfer = active ? progress : null;
+  const outcome =
+    progress?.id === shownDownload &&
+    ["failed", "canceled"].includes(progress.stage)
+      ? progress
+      : null;
+  const fraction =
+    transfer &&
+    ["video", "audio"].includes(transfer.stage) &&
+    transfer.totalBytes !== null
+      ? transfer.downloadedBytes / transfer.totalBytes
+      : undefined;
+  const retry =
+    !hasChoices && capabilities?.sourceMode && lookup?.metadataAvailable;
   return (
-    <section className="selection" aria-labelledby="acquisition-title">
-      <h2 id="acquisition-title">YouTube link or saved local source</h2>
-      <p role="status" aria-live="polite">
-        {message}
-      </p>
-      <p>
-        {capabilities.sourceMode === "synthetic-source"
-          ? "Current fake acquisition generates a 16-second source at the selected dimensions. It does not download YouTube media or prove real video availability."
-          : capabilities.sourceMode === "provider-source"
-            ? "This runtime can acquire an explicitly selected source with its admitted downloader. Review the exact offered video/audio choice before importing."
-            : "New source acquisition is unavailable in this runtime. Local lookup and intact saved sources remain available without downloader or provider access."}{" "}
-        Native merge, inspection and encoding run locally without AI keys.
-      </p>
-      <fieldset disabled={busy || pending || active} style={{ minWidth: 0 }}>
-        <legend>Full conversation source</legend>
-        <label>
-          YouTube link
-          <input
-            type="url"
-            style={{ width: "100%", maxWidth: 720 }}
-            value={url}
-            autoComplete="off"
-            onChange={(event) => {
-              setUrl(event.currentTarget.value);
-              setLookup(null);
-              setCheckedUrl("");
-              setOffer(null);
-              setChoice("best");
-            }}
-            placeholder="Paste a watch, shorts or youtu.be link"
-          />
-        </label>
-        <nav>
-          <button
-            type="button"
-            disabled={!url.trim()}
-            onClick={() => void action("lookup")}
-          >
-            Look for saved source locally
-          </button>
-        </nav>
-        {checked && (
-          <>
-            <p>
-              {lookup?.saved.length ?? 0} saved variants matched this link.
-              Local lookup precedes any offered-format request.
-            </p>
-            <button
-              type="button"
-              disabled={
-                !capabilities.sourceMode ||
-                !!workspace ||
-                !lookup?.metadataAvailable
-              }
-              onClick={() => void action("metadata")}
-            >
-              {offer
-                ? "Refresh offered qualities explicitly"
-                : "Get offered qualities explicitly"}
-            </button>
-            {(!capabilities.sourceMode || !lookup?.metadataAvailable) && (
-              <p>
-                Offered-quality inspection is unavailable in this runtime.
-                Intact saved sources still open without downloader or provider
-                access.
-              </p>
-            )}
-          </>
-        )}
-        {offer && (
-          <>
-            <p>
-              {offer.mode === "synthetic-source" ? "Synthetic" : "Offered"}{" "}
-              source · {(offer.durationMs / 1000).toFixed(1)} seconds. Each
-              choice binds video/audio identities; numeric dimensions are exact,
-              never a ceiling.
-            </p>
-            <label>
-              Source resolution and audio variant
-              <select
-                style={{ width: "100%", maxWidth: "100%" }}
-                value={choice}
-                onChange={(event) => setChoice(event.currentTarget.value)}
-              >
-                <option value="best">
-                  Best available
-                  {offer.bestReason ? ` · ${reasons[offer.bestReason]}` : ""}
-                </option>
-                {offer.choices.map((item) => (
-                  <option
-                    key={item.id}
-                    value={item.id}
-                    disabled={!item.supported}
-                  >
-                    {item.tier}p · {item.video.width}×{item.video.height} ·{" "}
-                    {item.video.fps}fps · {item.video.codec}/
-                    {item.audio?.codec ?? "no audio"} ·{" "}
-                    {item.video.dynamicRange}
-                    {item.audio?.language
-                      ? ` · ${item.audio.language}`
-                      : ""} · {item.audio?.role ?? "unknown audio"} ·{" "}
-                    {item.bytesEstimated ? "estimated " : ""}
-                    {size(item.bytes)}
-                    {item.reason ? ` · ${reasons[item.reason]}` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {selected && (
-              <p>
-                Selected {selected.video.width} × {selected.video.height},{" "}
-                {selected.video.fps}fps · {selected.video.codec}/
-                {selected.audio?.codec ?? "no audio"}. Source quality is
-                separate from final 1080×1920 export.
-              </p>
-            )}
-            {blockedChoice && (
-              <p role="status">
-                The chosen option cannot be imported. Choose an explicitly
-                offered supported variant; no compatible or lower fallback is
-                selected automatically.
-              </p>
-            )}
-            <label>
-              Save completed source in
-              <select
-                value={destination}
-                onChange={(event) =>
-                  setDestination(
-                    event.currentTarget.value as OwnerSourceDestination,
-                  )
-                }
-              >
-                <option value="downloads">
-                  Downloads / ClipBuilder / Sources
-                </option>
-                <option
-                  value="desktop"
-                  disabled={!catalog?.destinations.includes("desktop")}
-                >
-                  Desktop / ClipBuilder / Sources
-                </option>
-              </select>
-            </label>
-            <nav>
-              <button
-                type="button"
-                disabled={
-                  !capabilities.sourceMode ||
-                  offer.mode !== capabilities.sourceMode ||
-                  blockedChoice ||
-                  !checked ||
-                  !!workspace
-                }
-                onClick={() => void action("import")}
-              >
-                Import selected source in background
-              </button>
-            </nav>
-          </>
-        )}
-      </fieldset>
-      {checked && lookup && lookup.saved.length > 0 && (
-        <section aria-label="Saved variants matching the link">
-          <SavedSourceEntries
-            entries={lookup.saved}
-            group="matching"
-            busy={busy}
-            pending={pending}
-            active={active}
-            workspace={workspace}
-            catalogError={catalogError}
-            action={action}
-          />
-        </section>
-      )}
-      {workspace && (
-        <p>
-          Clear the processing workspace before deleting saved sources,
-          importing or opening another saved source. Completed source masters
-          remain saved independently.
-        </p>
-      )}
-      {progress && (
-        <article aria-label="Background source import progress">
-          <h3>{stages[progress.stage]}</h3>
-          <p>
-            {progress.mode === "synthetic-source"
-              ? "Simulated platform acquisition; generated source."
-              : "Source acquisition."}{" "}
-            {size(progress.downloadedBytes)}
-            {progress.totalBytes === null
-              ? " · total unknown"
-              : ` of ${size(progress.totalBytes)}`}
-          </p>
-          {progress.totalBytes !== null && active && (
-            <progress
-              aria-label="Source transfer bytes"
-              max={progress.totalBytes}
-              value={progress.downloadedBytes}
+    <section
+      className="source-card youtube-card"
+      aria-labelledby="acquisition-title"
+    >
+      <div className="source-card-heading">
+        <span className="source-icon">
+          <Link2 size={24} aria-hidden="true" />
+        </span>
+        <h2 id="acquisition-title">
+          {step === "url"
+            ? "YouTube link"
+            : transferring
+              ? "Downloading video"
+              : "Choose resolution"}
+        </h2>
+      </div>
+      <div className="source-card-body">
+        {step === "resolution" &&
+          (selectedSaved ? (
+            <YoutubePreview
+              key={savedChoice(selectedSaved)}
+              source={{
+                kind: "saved",
+                destination: selectedSaved.destination,
+                variantId: selectedSaved.variant.id,
+              }}
+              title={offer?.preview?.title ?? "Saved video"}
+              resolution={Math.min(
+                selectedSaved.variant.actual.width,
+                selectedSaved.variant.actual.height,
+              )}
             />
-          )}
-          {progress.error && (
-            <p role="status">
-              Source action ended with {progress.error}. Existing completed
-              sources remain available.
-            </p>
-          )}
-          <button
-            type="button"
-            disabled={!active || pending || progress.stage === "canceling"}
-            onClick={() => void action("cancel")}
+          ) : offer?.preview ? (
+            <YoutubePreview
+              key={offer.sourceId}
+              source={{ kind: "youtube", sourceId: offer.sourceId }}
+              title={offer.preview.title}
+              resolution={selected?.tier}
+            />
+          ) : (
+            <div className="youtube-preview-placeholder" aria-hidden="true" />
+          ))}
+        {step === "url" ? (
+          <form
+            id={formId}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void action("resolve");
+            }}
           >
-            Cancel background source import
-          </button>
-        </article>
-      )}
-      <section aria-label="Saved local video chooser">
-        <h3>Use saved video · no URL or online check needed</h3>
-        <button
-          type="button"
-          disabled={busy || pending}
-          onClick={() => setRefresh((value) => value + 1)}
+            <p>Paste a video link.</p>
+            <fieldset className="link-fields" disabled={disabled}>
+              <legend className="local-sr-only">YouTube video</legend>
+              <label>
+                Video URL
+                <span className="youtube-url-field">
+                  <input
+                    type="url"
+                    aria-label="YouTube link"
+                    value={url}
+                    autoComplete="off"
+                    onChange={(event) => {
+                      setUrl(event.currentTarget.value);
+                      setMessage("");
+                    }}
+                    placeholder="youtube.com/watch?v=…"
+                    required
+                  />
+                  {initializing && (
+                    <span className="youtube-startup-indicator" role="status">
+                      <LoaderCircle
+                        size={18}
+                        className="acquisition-spinner"
+                        aria-hidden="true"
+                      />
+                      <span className="local-sr-only">Loading YouTube…</span>
+                    </span>
+                  )}
+                </span>
+              </label>
+            </fieldset>
+          </form>
+        ) : transferring ? (
+          <article
+            className="download-progress"
+            aria-label="Video download progress"
+          >
+            <Progress
+              label={stages[transfer?.stage ?? "queued"]}
+              {...(fraction === undefined ? {} : { fraction })}
+              {...(transfer
+                ? {
+                    valueText: `${size(transfer.downloadedBytes)}${transfer.totalBytes === null ? "" : " / " + size(transfer.totalBytes)}`,
+                  }
+                : {})}
+            />
+            {transfer &&
+              (transfer.downloadedBytes > 0 ||
+                transfer.totalBytes !== null) && (
+                <p className="download-bytes">
+                  {size(transfer.downloadedBytes)}
+                  {transfer.totalBytes === null
+                    ? ""
+                    : " / " + size(transfer.totalBytes)}
+                </p>
+              )}
+          </article>
+        ) : (
+          <>
+            <fieldset className="link-fields" disabled={disabled}>
+              <legend className="local-sr-only">Video quality</legend>
+              {(saved.length > 0 || resolutions.length > 0) && (
+                <label>
+                  <span>Resolution</span>
+                  <span className="youtube-resolution-select">
+                    <select
+                      id={resolutionId}
+                      value={choice}
+                      onChange={(event) => setChoice(event.currentTarget.value)}
+                    >
+                      <option value="" disabled>
+                        Select resolution
+                      </option>
+                      {saved.length > 0 && (
+                        <optgroup label="Saved on this device">
+                          {saved.map((entry) => (
+                            <option
+                              key={savedChoice(entry)}
+                              value={savedChoice(entry)}
+                            >
+                              {Math.min(
+                                entry.variant.actual.width,
+                                entry.variant.actual.height,
+                              )}
+                              p · Saved
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {offer && (
+                        <optgroup label="Available to download">
+                          {resolutions.map((item) => (
+                            <option
+                              key={item.id}
+                              value={item.id}
+                              disabled={!item.supported}
+                            >
+                              {item.tier}p
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                    <ChevronDown size={18} aria-hidden="true" />
+                  </span>
+                </label>
+              )}
+              {pending === "resolve" || pending === "metadata" ? (
+                <p className="acquisition-loading" role="status">
+                  <LoaderCircle
+                    size={18}
+                    className="acquisition-spinner"
+                    aria-hidden="true"
+                  />
+                  Loading resolutions…
+                </p>
+              ) : hasChoices ? (
+                <>
+                  {offer && !resolutions.length && !selectedSaved && (
+                    <p role="status">
+                      No English video available at 480p–1440p.
+                    </p>
+                  )}
+                  {!offer &&
+                    lookup?.metadataAvailable &&
+                    capabilities?.sourceMode && (
+                      <Button
+                        variant="quiet"
+                        onClick={() => void action("metadata")}
+                      >
+                        More resolutions
+                      </Button>
+                    )}
+                </>
+              ) : null}
+            </fieldset>
+            {outcome && (
+              <p className="download-outcome" role="status">
+                {stages[outcome.stage]}
+              </p>
+            )}
+          </>
+        )}
+        <p className="flow-notice" role="status" aria-live="polite">
+          {message}
+        </p>
+      </div>
+      <footer className="source-card-footer">
+        <nav
+          className="source-actions youtube-actions"
+          aria-label="YouTube actions"
         >
-          Refresh local saved sources
-        </button>
-        {catalogError && (
-          <p role="alert">
-            The local source catalog is unavailable. Refresh before opening or
-            deleting a displayed entry.
-          </p>
-        )}
-        {catalog && (
-          <p>
-            Saved source storage: {size(catalog.bytes)}
-            {catalog.warning
-              ? " · exceeds the 50 GiB advisory threshold; nothing is deleted automatically."
-              : "."}
-          </p>
-        )}
-        {catalog && !catalog.entries.length && (
-          <p>No completed saved sources are listed.</p>
-        )}
-        {catalog && (
-          <SavedSourceEntries
-            entries={catalog.entries}
-            group="catalog"
-            busy={busy}
-            pending={pending}
-            active={active}
-            workspace={workspace}
-            catalogError={catalogError}
-            action={action}
-          />
-        )}
-      </section>
-      <p>
-        Completed sources survive clipping failures, cancellation, workspace
-        clear and app restart. Missing or changed bytes require explicit
-        locate-and-validate or a new acquisition. New acquisition and automatic
-        analysis follow the separately admitted runtime capabilities; opening
-        saved material does not enable either one. No offline AI model is
-        supplied.
-      </p>
+          {step === "url" ? (
+            <Button
+              type="submit"
+              form={formId}
+              disabled={disabled || !url.trim()}
+            >
+              {pending ? (
+                <>
+                  <LoaderCircle
+                    size={18}
+                    className="acquisition-spinner"
+                    aria-hidden="true"
+                  />
+                  Checking…
+                </>
+              ) : (
+                "Continue"
+              )}
+            </Button>
+          ) : transferring ? (
+            <Button
+              variant="secondary"
+              disabled={!!pending || transfer?.stage === "canceling"}
+              onClick={() => void action("cancel")}
+            >
+              Cancel download
+            </Button>
+          ) : retry ? (
+            <Button disabled={disabled} onClick={() => void action("metadata")}>
+              Try again
+            </Button>
+          ) : (
+            <Button
+              disabled={disabled || !canUse}
+              aria-busy={openingSaved}
+              aria-label={openingSaved ? "Opening video" : undefined}
+              onClick={() => void action("use")}
+            >
+              {openingSaved ? (
+                <>
+                  <LoaderCircle
+                    size={18}
+                    className="acquisition-spinner"
+                    aria-hidden="true"
+                  />
+                  Opening…
+                </>
+              ) : selectedSaved ? (
+                "Use video"
+              ) : (
+                "Download video"
+              )}
+            </Button>
+          )}
+          {step === "resolution" && (
+            <Button
+              variant="quiet"
+              icon={ArrowLeft}
+              disabled={disabled}
+              onClick={changeLink}
+            >
+              Change link
+            </Button>
+          )}
+        </nav>
+        <span className="source-card-footnote source-hint">
+          {capabilities?.sourceMode === "synthetic-source"
+            ? "Simulated download."
+            : capabilities && !capabilities.sourceMode
+              ? "Downloads unavailable. Saved copies still work."
+              : null}
+        </span>
+      </footer>
     </section>
   );
 }

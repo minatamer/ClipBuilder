@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "../../shared/ui/button";
+import buttonStyles from "../../shared/ui/workflow.module.css";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ClipEditor } from "./clip-editor.tsx";
+import { LoaderCircle } from "lucide-react";
+import { WorkflowActions } from "./workflow-actions.tsx";
 import {
   ownerClipListSchema,
   type OwnerClip,
@@ -10,26 +14,54 @@ import type { OwnerMomentExport } from "../../../../../packages/contracts/local/
 import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts/local/runtime.ts";
 
 const initial: OwnerClipList = { clips: [], active: false, workers: 1 };
+const STATUS_UNAVAILABLE = "Reconnecting…";
 export function OwnerClipBatchPanel({
   workspace,
   capabilities,
   selected,
   onActive,
+  onClipsChange,
+  onProcessed,
+  initialReviewId,
+  onDirtyChange,
+  showProcessing = true,
+  selectionReady = selected.length > 0,
+  footerTarget,
 }: {
   workspace: OwnerWorkspace;
   capabilities: OwnerRuntimeCapabilities;
   selected: OwnerMomentExport[];
   onActive: (active: boolean) => void;
+  onClipsChange?: (hasClips: boolean) => void;
+  onProcessed?: () => void;
+  initialReviewId?: string | null;
+  onDirtyChange?: (dirty: boolean) => void;
+  showProcessing?: boolean;
+  selectionReady?: boolean;
+  footerTarget?: HTMLElement | null | undefined;
 }) {
   const planningAvailable =
     capabilities.planningAvailable && workspace.mode === capabilities.aiMode;
   const [list, setList] = useState(initial),
-    [message, setMessage] = useState(
-      "Select several moments, then process them in one action.",
-    );
+    [message, setMessage] = useState("");
   const [pending, setPending] = useState(false),
-    [review, setReview] = useState<string | null>(null);
+    [review, setReview] = useState<string | null>(initialReviewId ?? null);
   const [dirtyClip, setDirtyClip] = useState<string | null>(null);
+  const tabsId = useId();
+  const keyboardClip = useRef<string | null>(null);
+  useEffect(() => {
+    if (keyboardClip.current) {
+      document.getElementById(`${tabsId}-${keyboardClip.current}`)?.focus();
+      keyboardClip.current = null;
+    }
+  }, [review, tabsId]);
+  useEffect(() => {
+    onDirtyChange?.(Boolean(dirtyClip));
+  }, [dirtyClip, onDirtyChange]);
+  const hasClips = list.clips.length > 0;
+  useEffect(() => {
+    onClipsChange?.(hasClips);
+  }, [hasClips, onClipsChange]);
   const editDirty = useCallback((id: string, dirty: boolean) => {
     setDirtyClip((current) => (dirty ? id : current === id ? null : current));
   }, []);
@@ -72,15 +104,16 @@ export function OwnerClipBatchPanel({
         if (
           !controller.signal.aborted &&
           atMutation === mutationRevision.current
-        )
+        ) {
           accept(result);
+          setMessage((current) =>
+            current === STATUS_UNAVAILABLE ? "" : current,
+          );
+        }
         delay =
           atMutation !== mutationRevision.current || result.active ? 750 : 1000;
       } catch {
-        if (!controller.signal.aborted)
-          setMessage(
-            "Clip status is unavailable. The workspace retains acknowledged work; refreshing does not reprocess it.",
-          );
+        if (!controller.signal.aborted) setMessage(STATUS_UNAVAILABLE);
       }
       // Another local client can edit an idle bundle; reads never dispatch work.
       if (!controller.signal.aborted)
@@ -115,172 +148,229 @@ export function OwnerClipBatchPanel({
       if (alive.current) {
         mutationRevision.current++;
         accept(value);
-        setMessage(
-          "Local work list updated. Native work runs one clip at a time.",
-        );
+        setMessage("");
+        if (path === endpoint) onProcessed?.();
       }
     } catch {
       if (alive.current && !controller.signal.aborted)
-        setMessage(
-          "The action was not acknowledged. Refresh status before an explicit retry; no automatic retry is made.",
-        );
+        setMessage("Couldn’t complete this action. Try again.");
     } finally {
       requestController.current = null;
       requesting.current = false;
       if (alive.current) setPending(false);
     }
   }
-  const current = list.clips.find((clip) => clip.id === review);
+  const current =
+    list.clips.find((clip) => clip.id === review) ?? list.clips[0];
+  const currentIndex =
+    list.clips.findIndex((clip) => clip.id === current?.id) + 1;
+  const latest = current?.outputs.at(-1);
   const working = (clip: OwnerClip) =>
     ["queued", "preparing", "rendering", "canceling"].includes(clip.state);
   return (
-    <section aria-labelledby="batch-title">
-      <h2 id="batch-title">Automatic local edits</h2>
-      <p role="status" aria-live="polite">
+    <section
+      className="batch-section"
+      aria-labelledby={hasClips ? "batch-title" : undefined}
+      aria-label={hasClips ? undefined : "Clips"}
+    >
+      {hasClips && (
+        <h2 id="batch-title" className="local-sr-only">
+          Your clips
+        </h2>
+      )}
+      <p className="flow-notice" role="status" aria-live="polite">
         {message}
       </p>
-      <p>
-        {selected.length} selected · upper bound: {selected.length}{" "}
-        {workspace.mode === "synthetic-ai"
-          ? "simulated plans"
-          : workspace.mode === "provider-ai"
-            ? "provider plans"
-            : "plans"}{" "}
-        and {selected.length * 3} picture attempts. Discovery is reused.{" "}
-        {workspace.mode === "synthetic-ai"
-          ? "Actual AI calls: zero."
-          : workspace.mode === "provider-ai"
-            ? "Provider attempts are recorded per clip."
-            : "Fresh planning is unavailable."}{" "}
-        Native work runs one clip at a time.
-      </p>
-      {!planningAvailable && (
-        <p role="status">
-          Automatic planning is unavailable for this workspace in the current
-          runtime. Prepared clips remain editable and can be exported locally
-          without AI access.
-        </p>
+      {!planningAvailable && (hasClips || selected.length > 0) && (
+        <p role="status">AI unavailable. Prepared clips still work.</p>
       )}
-      <nav>
-        <button
-          disabled={
-            !planningAvailable || !selected.length || pending || list.active
-          }
-          onClick={() => {
-            if (!planningAvailable) return;
-            const first = selected[0]!;
-            void action(endpoint, {
-              operationId: crypto.randomUUID(),
-              analysisId: first.analysisId,
-              policyRevision: first.policyRevision,
-              sourceRevision: workspace.revision,
-              momentIds: selected.map((item) => item.momentId),
-            });
-          }}
-        >
-          Process selected clips
-        </button>
-        <button
-          disabled={!list.active || pending}
-          onClick={() => void action(`${endpoint}/cancel`)}
-        >
-          Cancel all pending clips
-        </button>
-      </nav>
-      {dirtyClip && (
-        <p role="status">
-          Apply or reload unapplied changes before reviewing another clip or
-          exporting this clip.
-        </p>
+      {((showProcessing && selectionReady) ||
+        (!showProcessing && list.active && !dirtyClip)) && (
+        <WorkflowActions target={footerTarget} label="Clip processing">
+          {showProcessing && selectionReady && !list.active && (
+            <Button
+              variant="primary"
+              disabled={
+                !planningAvailable ||
+                !selected.length ||
+                pending ||
+                list.active ||
+                !!dirtyClip
+              }
+              onClick={() => {
+                if (!planningAvailable) return;
+                const first = selected[0]!;
+                void action(endpoint, {
+                  operationId: crypto.randomUUID(),
+                  analysisId: first.analysisId,
+                  policyRevision: first.policyRevision,
+                  sourceRevision: workspace.revision,
+                  momentIds: selected.map((item) => item.momentId),
+                });
+              }}
+            >
+              Process clips
+            </Button>
+          )}
+          {!showProcessing && list.active && (
+            <Button
+              variant="secondary"
+              disabled={!list.active || pending}
+              onClick={() => void action(`${endpoint}/cancel`)}
+            >
+              Cancel processing
+            </Button>
+          )}
+        </WorkflowActions>
       )}
-      <ol className="clip-list">
-        {list.clips.map((clip, index) => (
-          <li key={clip.id}>
-            <h3>
-              Clip {index + 1} · {clip.state}
-            </h3>
-            <p>
-              Revision {clip.revision} ·{" "}
-              {clip.mode === "synthetic-ai"
-                ? "simulated plans"
-                : "provider plans"}{" "}
-              {clip.calls.plan}, pictures {clip.calls.image} · native attempts{" "}
-              {clip.calls.render}
-            </p>
-            {clip.error && (
-              <p role="status">
-                {clip.error === "canceled"
-                  ? "Canceled after owned work drained."
-                  : "This clip failed. Sibling outputs and the source remain available."}
-              </p>
-            )}
-            <nav>
-              <button
-                disabled={!clip.base || (!!dirtyClip && dirtyClip !== clip.id)}
-                onClick={() => setReview(clip.id)}
-              >
-                Review clip {index + 1}
-              </button>
-              <button
-                disabled={
-                  !working(clip) || pending || clip.state === "canceling"
+      <div hidden={showProcessing}>
+        <div className="clip-list" role="tablist" aria-label="Choose a clip">
+          {list.clips.map((clip, index) => (
+            <Button
+              key={clip.id}
+              variant="secondary"
+              className="clip-choice"
+              role="tab"
+              id={`${tabsId}-${clip.id}`}
+              aria-controls={`${tabsId}-panel`}
+              aria-selected={current?.id === clip.id}
+              tabIndex={current?.id === clip.id ? 0 : -1}
+              aria-label={`Edit clip ${index + 1}`}
+              disabled={!!dirtyClip && dirtyClip !== clip.id}
+              onClick={() => setReview(clip.id)}
+              onKeyDown={(event) => {
+                if (
+                  dirtyClip ||
+                  !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                    event.key,
+                  )
+                )
+                  return;
+                event.preventDefault();
+                const next =
+                  list.clips[
+                    event.key === "Home"
+                      ? 0
+                      : event.key === "End"
+                        ? list.clips.length - 1
+                        : (index +
+                            (event.key === "ArrowRight" ? 1 : -1) +
+                            list.clips.length) %
+                          list.clips.length
+                  ]!;
+                if (next.id === current?.id) {
+                  keyboardClip.current = null;
+                  event.currentTarget.focus();
+                } else {
+                  keyboardClip.current = next.id;
+                  setReview(next.id);
                 }
-                onClick={() => void action(`${endpoint}/${clip.id}/cancel`)}
-              >
-                Cancel clip {index + 1}
-              </button>
-              <button
-                disabled={
-                  !clip.base ||
-                  working(clip) ||
-                  pending ||
-                  dirtyClip === clip.id
-                }
-                onClick={() =>
-                  void action(`${endpoint}/${clip.id}/render`, {
-                    operationId: crypto.randomUUID(),
-                    expectedRevision: clip.revision,
-                  })
-                }
-              >
-                Export clip {index + 1} again
-              </button>
-            </nav>
-            {clip.outputs.map((output) => (
-              <p key={output.id}>
-                <a
-                  href={`${endpoint}/${clip.id}/output/${output.revision}`}
-                  download={`clip-${index + 1}-r${output.revision}.mp4`}
+              }}
+            >
+              <span>Clip {index + 1}</span>
+              <span className="clip-state">
+                {(
+                  {
+                    "validated-revision": "Edited",
+                    "review-ready": "Ready to edit",
+                    rendering: "Exporting",
+                  } as Partial<Record<OwnerClip["state"], string>>
+                )[clip.state] ?? clip.state}
+              </span>
+            </Button>
+          ))}
+        </div>
+        {current && (
+          <article
+            className="clip-review"
+            role="tabpanel"
+            id={`${tabsId}-panel`}
+            aria-labelledby={`${tabsId}-${current.id}`}
+          >
+            <div className="section-heading">
+              <div>
+                <h3 className="local-sr-only">Clip {currentIndex}</h3>
+              </div>
+              {!showProcessing && !list.active && (
+                <WorkflowActions
+                  target={footerTarget}
+                  label={`Clip ${currentIndex} actions`}
                 >
-                  Download clip {index + 1}, export {output.revision + 1}
-                </a>{" "}
-                · {output.frames} frames ·{" "}
-                {output.editRevision === clip.revision
-                  ? "current revision"
-                  : "older edit revision"}
-              </p>
-            ))}
-          </li>
-        ))}
-      </ol>
-      {current?.base && (
-        <article className="clip-review">
-          <h3>Review · revision {current.revision}</h3>
-          <p>
-            {current.mode === "synthetic-ai"
-              ? "The automatic base uses simulated AI material; personal pictures retain their own provenance. "
-              : "This preview uses the saved timed captions and admitted pictures. "}
-            Preview uses the same overlay as native export.
-          </p>
-          <ClipEditor
-            key={current.id}
-            clip={current}
-            workspaceId={workspace.id}
-            onAccepted={acceptEdit}
-            onDirty={editDirty}
-          />
-        </article>
-      )}
+                  {current.base &&
+                    !dirtyClip &&
+                    latest?.editRevision !== current.revision && (
+                      <Button
+                        variant="primary"
+                        disabled={
+                          working(current) ||
+                          pending ||
+                          dirtyClip === current.id
+                        }
+                        onClick={() =>
+                          void action(`${endpoint}/${current.id}/render`, {
+                            operationId: crypto.randomUUID(),
+                            expectedRevision: current.revision,
+                          })
+                        }
+                      >
+                        Export clip
+                      </Button>
+                    )}
+                  {latest &&
+                    !dirtyClip &&
+                    latest.editRevision === current.revision && (
+                      <a
+                        className={`${buttonStyles.button} ${buttonStyles.primary}`}
+                        aria-label={
+                          latest.editRevision === current.revision
+                            ? "Download clip"
+                            : "Download previous export"
+                        }
+                        href={`${endpoint}/${current.id}/output/${latest.revision}`}
+                        download={`clip-${currentIndex}-r${latest.revision}.mp4`}
+                      >
+                        {latest.editRevision === current.revision
+                          ? "Download clip"
+                          : "Previous export"}
+                      </a>
+                    )}
+                </WorkflowActions>
+              )}
+            </div>
+            {current.error &&
+              ["canceled", "failed"].includes(current.state) && (
+                <p role="status">
+                  {current.error === "canceled"
+                    ? "Canceled."
+                    : "Couldn’t process this clip. Try again."}
+                </p>
+              )}
+            {!current.base && working(current) && (
+              <div className="clip-preparing" role="status">
+                <LoaderCircle
+                  size={24}
+                  className="acquisition-spinner"
+                  aria-hidden="true"
+                />
+                <span>
+                  {current.state === "queued" ? "Queued" : "Preparing clip…"}
+                </span>
+              </div>
+            )}
+            {current.base && !showProcessing && (
+              <ClipEditor
+                key={current.id}
+                clip={current}
+                workspaceId={workspace.id}
+                onAccepted={acceptEdit}
+                onDirty={editDirty}
+                footerTarget={footerTarget}
+                actionsVisible={!showProcessing}
+              />
+            )}
+          </article>
+        )}
+      </div>
     </section>
   );
 }

@@ -5,8 +5,45 @@ import { ownerOverlayFrame } from "../../../../../packages/composition/local/ove
 import type { OwnerOverlay } from "../../../../../packages/contracts/local/clips.ts";
 import {
   OWNER_CAPTION_PRESETS,
+  OWNER_CAPTION_ANIMATIONS,
   type OwnerCaptionStyle,
 } from "../../../../../packages/contracts/local/editor.ts";
+
+it.each(OWNER_CAPTION_ANIMATIONS)(
+  "keeps %s preview markup identical for repeated native raster keys, including silent gaps",
+  (animation) => {
+    const overlay: OwnerOverlay = {
+      version: 1,
+      frames: 90,
+      captions: [caption],
+      visuals: [],
+      captionStyle: { ...style, animation },
+    };
+    const seen = new Map<string, string>();
+    for (let frame = 0; frame < 90; frame++) {
+      const state = ownerOverlayFrame(overlay, frame),
+        html = render(state.ms, overlay.captionStyle);
+      if (seen.has(state.key)) expect(html).toBe(seen.get(state.key));
+      seen.set(state.key, html);
+    }
+    expect(render(300, { ...style, animation: "reveal" })).not.toBe(
+      render(1500, { ...style, animation: "reveal" }),
+    );
+  },
+);
+
+it("renders single spoken words and centered rounded typography without changing timings", () => {
+  const html = render(300, {
+    ...OWNER_CAPTION_PRESETS.boxed,
+    animation: "single-word",
+  });
+  expect(html.match(/data-word-id=/g)).toHaveLength(1);
+  expect(html).toContain("justify-content:center");
+  expect(html).toContain("background-color:#101726");
+  expect(render(1200, { ...style, animation: "single-word" })).not.toContain(
+    "data-word-id=",
+  );
+});
 
 const caption: OwnerOverlay["captions"][number] = {
   startMs: 100,

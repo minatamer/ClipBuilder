@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { Button } from "../../shared/ui/button";
+import { Check, Clock3, LoaderCircle } from "lucide-react";
+import { WorkflowActions } from "./workflow-actions.tsx";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   OWNER_LIMITS,
   type OwnerWorkspace,
@@ -9,21 +12,41 @@ import {
   ownerAnalysisSchema,
   ownerCut,
   ownerTimestamp,
-  parseOwnerTimestamp,
   type OwnerAnalysis,
   type OwnerMomentExport,
   type OwnerMoment,
 } from "../../../../../packages/contracts/local/selection.ts";
 import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts/local/runtime.ts";
 import { OWNER_DEFAULT_AI_COUNT } from "../../../../../packages/contracts/local/policy.ts";
+import { normalizeManualTime, parseManualTime } from "./manual-time.ts";
+import { defaultMomentSelection } from "./moment-selection.ts";
 
-type Row = { id: string; start: string; end: string };
+const SELECTION_TABS = ["add", "clips"] as const;
+type SelectionTab = (typeof SELECTION_TABS)[number];
+
+type TimeField = { text: string; preservedMs?: number };
+type Row = { id: string; start: TimeField; end: TimeField };
+const restoredTime = (milliseconds: number): TimeField => ({
+  text: ownerTimestamp(milliseconds).slice(0, 8),
+  preservedMs: milliseconds,
+});
+const fieldMilliseconds = (field: TimeField) =>
+  field.preservedMs ?? parseManualTime(field.text);
+const normalizedTime = (field: TimeField): TimeField => ({
+  ...field,
+  text: normalizeManualTime(field.text),
+});
 type Props = {
   workspace: OwnerWorkspace;
   capabilities: OwnerRuntimeCapabilities;
   busy: boolean;
   onBusy: (busy: boolean) => void;
   onChoose: (selection: OwnerMomentExport[]) => void;
+  previewReady: boolean;
+  onCaptureTime: () => string | null;
+  onResultsViewChange: (visible: boolean) => void;
+  footerTarget?: HTMLElement | null | undefined;
+  actionsVisible?: boolean;
 };
 
 export function OwnerSelectionPanel({
@@ -32,8 +55,12 @@ export function OwnerSelectionPanel({
   busy,
   onBusy,
   onChoose,
+  previewReady,
+  onCaptureTime,
+  onResultsViewChange,
+  footerTarget,
+  actionsVisible = true,
 }: Props) {
-  const synthetic = capabilities.aiMode === "synthetic-ai";
   const analysisAvailable =
     capabilities.aiMode !== "unavailable" &&
     workspace.mode === capabilities.aiMode;
@@ -46,11 +73,29 @@ export function OwnerSelectionPanel({
   const [analysis, setAnalysis] = useState<OwnerAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false),
     [selected, setSelected] = useState<string[]>([]);
-  const [message, setMessage] = useState(
-    "Add any exact ranges you already want, then find additional moments.",
-  );
+  const [message, setMessage] = useState("");
+  const [tab, setTab] = useState<SelectionTab>("add");
+  const tabsId = useId();
+  const root = useRef<HTMLElement>(null);
   const pending = useRef<AbortController | null>(null),
     mounted = useRef(false);
+  const acceptAnalysis = useCallback(
+    (result: OwnerAnalysis) => {
+      const next = defaultMomentSelection(result);
+      setAnalysis(result);
+      setSelected(next.map(({ momentId }) => momentId));
+      onChoose(next);
+      setTab("clips");
+    },
+    [onChoose],
+  );
+  useEffect(() => {
+    onResultsViewChange(tab === "clips");
+  }, [tab, onResultsViewChange]);
+  function openTab(value: SelectionTab) {
+    setTab(value);
+    root.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
   useEffect(() => {
     mounted.current = true;
     const controller = new AbortController();
@@ -69,8 +114,8 @@ export function OwnerSelectionPanel({
           setRows(
             restored.inputs.ranges.map((row) => ({
               id: row.id,
-              start: ownerTimestamp(row.startMs),
-              end: ownerTimestamp(row.endMs),
+              start: restoredTime(row.startMs),
+              end: restoredTime(row.endMs),
             })),
           );
           setMinimum(String(restored.inputs.aiDuration.minMs / 1000));
@@ -78,16 +123,12 @@ export function OwnerSelectionPanel({
           setManualOnly(restored.inputs.manualOnly);
           setCount(String(restored.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT));
           setPolicyRevision(restored.inputs.policyRevision);
-          setAnalysis(restored);
-          setMessage(
-            "The last completed analysis is restored for this running session. Choose a moment to export.",
-          );
+          acceptAnalysis(restored);
+          setMessage("");
         }
       } catch {
         if (!controller.signal.aborted)
-          setMessage(
-            "Saved session analysis is unavailable. You can submit new inputs.",
-          );
+          setMessage("Couldn’t load moments. Try Find moments.");
       } finally {
         if (!controller.signal.aborted) onBusy(false);
       }
@@ -97,13 +138,36 @@ export function OwnerSelectionPanel({
       controller.abort();
       pending.current?.abort();
     };
-  }, [workspace.id, onBusy]);
+  }, [workspace.id, onBusy, acceptAnalysis]);
   function changed() {
     setPolicyRevision((value) => value + 1);
     setAnalysis(null);
     setSelected([]);
     onChoose([]);
-    setMessage("Inputs changed. Choose Find moments to run the next analysis.");
+    setMessage("");
+  }
+  function editTime(id: string, field: "start" | "end", text: string) {
+    changed();
+    setRows((current) =>
+      current.map((row) =>
+        row.id === id ? { ...row, [field]: { text } } : row,
+      ),
+    );
+  }
+  function normalizeTime(id: string, field: "start" | "end") {
+    setRows((current) =>
+      current.map((row) => {
+        if (row.id !== id) return row;
+        try {
+          return {
+            ...row,
+            [field]: normalizedTime(row[field]),
+          };
+        } catch {
+          return row;
+        }
+      }),
+    );
   }
   function parsed() {
     return ownerAnalysisInputsSchema.parse({
@@ -111,8 +175,8 @@ export function OwnerSelectionPanel({
       policyRevision,
       ranges: rows.map((row) => ({
         id: row.id,
-        startMs: parseOwnerTimestamp(row.start),
-        endMs: parseOwnerTimestamp(row.end),
+        startMs: fieldMilliseconds(row.start),
+        endMs: fieldMilliseconds(row.end),
       })),
       aiDuration: {
         minMs: Number(minimum) * 1000,
@@ -126,16 +190,14 @@ export function OwnerSelectionPanel({
     try {
       const cut = ownerCut(
         {
-          startMs: parseOwnerTimestamp(row.start),
-          endMs: parseOwnerTimestamp(row.end),
+          startMs: fieldMilliseconds(row.start),
+          endMs: fieldMilliseconds(row.end),
         },
         workspace.source.durationMs,
       );
-      return `Actual cut ${ownerTimestamp((cut.startFrame * 1000) / OWNER_FPS)}–${ownerTimestamp((cut.endFrame * 1000) / OWNER_FPS)} · ${cut.endFrame - cut.startFrame} frames`;
-    } catch (error) {
-      return error instanceof Error
-        ? error.message
-        : "This range is unsupported.";
+      return `${Number(((cut.endFrame - cut.startFrame) / OWNER_FPS).toFixed(2))}s`;
+    } catch {
+      return "Check start and end times.";
     }
   }
   async function findMoments() {
@@ -145,10 +207,15 @@ export function OwnerSelectionPanel({
       inputs = parsed();
       for (const row of inputs.ranges)
         ownerCut(row, workspace.source.durationMs);
-    } catch {
-      setMessage(
-        "Check each range below. Request 1–10 AI moments. AI minimum/maximum must be 10–60 seconds, minimum ≤ maximum, with a possible 30fps duration. Exact equal bounds are allowed.",
+      setRows(
+        rows.map((row) => ({
+          ...row,
+          start: normalizedTime(row.start),
+          end: normalizedTime(row.end),
+        })),
       );
+    } catch {
+      setMessage("Check clip times and the 10–60s duration limits.");
       return;
     }
     const controller = new AbortController();
@@ -158,9 +225,7 @@ export function OwnerSelectionPanel({
     setAnalysis(null);
     setSelected([]);
     onChoose([]);
-    setMessage(
-      `Running one ${synthetic ? "simulated " : ""}transcription and independent selection…`,
-    );
+    setMessage("");
     try {
       const response = await fetch(
         `/api/local/workspace/${workspace.id}/analysis`,
@@ -174,17 +239,22 @@ export function OwnerSelectionPanel({
       if (!response.ok) throw new Error("unavailable");
       const result = ownerAnalysisSchema.parse(await response.json());
       if (!controller.signal.aborted && mounted.current) {
-        setAnalysis(result);
+        acceptAnalysis(result);
+        root.current?.scrollIntoView({ block: "start", behavior: "smooth" });
         setMessage(
-          `Ready: ${result.manual.length} manual cuts and ${result.suggestions.length} of ${result.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT} requested additional ${result.mode === "synthetic-ai" ? "simulated " : ""}suggestions.${!result.inputs.manualOnly && result.suggestions.length < (result.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT) ? " Fewer grounded moments qualified; no clips were invented or retried." : ""} ${result.mode === "synthetic-ai" ? "Simulated" : "Provider"} calls: transcription ${result.calls.transcription}, selection ${result.calls.selection}.`,
+          !result.inputs.manualOnly &&
+            result.suggestions.length <
+              (result.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT)
+            ? `${result.suggestions.length} of ${result.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT} suggestions found.`
+            : "",
         );
       }
     } catch {
       if (mounted.current)
         setMessage(
           controller.signal.aborted
-            ? "Analysis canceled. Your manual rows are preserved."
-            : "Analysis failed. Your manual rows are preserved; retry only when you choose.",
+            ? "Canceled."
+            : "Couldn’t find moments. Try again.",
         );
     } finally {
       pending.current = null;
@@ -194,249 +264,317 @@ export function OwnerSelectionPanel({
       }
     }
   }
-  function choices(moments: OwnerMoment[], label: string) {
+  function choices(moments: OwnerMoment[], label: string, offset = 0) {
+    if (!moments.length) return null;
     return (
       <section aria-label={label}>
         <h3>{label}</h3>
-        {moments.length === 0 ? (
-          <p>
-            {label !== "Your exact requests"
-              ? "No qualifying AI suggestions. Manual requests remain available."
-              : "No manual cuts requested."}
-          </p>
-        ) : (
-          <ul className="moments">
-            {moments.map((moment, index) => (
-              <li key={moment.id}>
-                <p>
-                  {moment.evidence?.title ?? `Owner cut ${index + 1}`} ·{" "}
-                  {ownerTimestamp((moment.cut.startFrame * 1000) / OWNER_FPS)}–
-                  {ownerTimestamp((moment.cut.endFrame * 1000) / OWNER_FPS)} ·{" "}
-                  {moment.cut.endFrame - moment.cut.startFrame} frames
-                </p>
-                <p>
-                  {moment.rangeIds.length
-                    ? `${moment.rangeIds.length} manual row(s)${moment.evidence ? " · also discovered independently" : ""}`
-                    : analysis?.mode === "synthetic-ai"
-                      ? "Independent simulated discovery"
-                      : "Independent provider discovery"}
-                </p>
-                <button
-                  disabled={
-                    busy ||
-                    (!selected.includes(moment.id) &&
-                      selected.length >= OWNER_LIMITS.clips)
-                  }
-                  aria-pressed={selected.includes(moment.id)}
-                  onClick={() => {
-                    const next = selected.includes(moment.id)
-                      ? selected.filter((id) => id !== moment.id)
-                      : [...selected, moment.id];
-                    setSelected(next);
-                    onChoose(
-                      next.map((momentId) => ({
-                        analysisId: analysis!.id,
-                        momentId,
-                        policyRevision: analysis!.inputs.policyRevision,
-                      })),
-                    );
-                  }}
-                >
-                  Choose {label === "Your exact requests" ? "manual" : "AI"} cut{" "}
-                  {index + 1}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ul className="moments">
+          {moments.map((moment, index) => (
+            <li key={moment.id}>
+              <p>{moment.evidence?.title ?? `Clip ${offset + index + 1}`}</p>
+              <p className="source-hint">
+                {ownerTimestamp(
+                  (moment.cut.startFrame * 1000) / OWNER_FPS,
+                ).slice(0, 8)}
+                –
+                {ownerTimestamp((moment.cut.endFrame * 1000) / OWNER_FPS).slice(
+                  0,
+                  8,
+                )}
+              </p>
+              <Button
+                variant="secondary"
+                {...(selected.includes(moment.id) ? { icon: Check } : {})}
+                aria-label={`${selected.includes(moment.id) ? "Deselect" : "Select"} clip ${offset + index + 1}`}
+                disabled={
+                  busy ||
+                  (!selected.includes(moment.id) &&
+                    selected.length >= OWNER_LIMITS.clips)
+                }
+                aria-pressed={selected.includes(moment.id)}
+                onClick={() => {
+                  const next = selected.includes(moment.id)
+                    ? selected.filter((id) => id !== moment.id)
+                    : [...selected, moment.id];
+                  setSelected(next);
+                  onChoose(
+                    next.map((momentId) => ({
+                      analysisId: analysis!.id,
+                      momentId,
+                      policyRevision: analysis!.inputs.policyRevision,
+                    })),
+                  );
+                }}
+              >
+                {selected.includes(moment.id) ? "Deselect" : "Select"}
+              </Button>
+            </li>
+          ))}
+        </ul>
       </section>
     );
   }
   return (
-    <section className="selection" aria-labelledby="selection-title">
-      <h2 id="selection-title">Choose moments</h2>
-      <p>
-        {capabilities.aiMode === "unavailable"
-          ? "Fresh analysis is unavailable. Local media playback and prepared edits do not need AI access."
-          : !analysisAvailable
-            ? "This workspace retains a different AI provenance from the current runtime. Open a new processing source for fresh analysis; saved results and prepared edits remain available."
-            : synthetic
-              ? "AI is simulated. Fictional transcript words do not describe your source. No provider calls or automatic real captions."
-              : "Fresh analysis uses the configured provider. Review its timed words and suggestions before use."}
-      </p>
-      {analysis && (
-        <p>
-          {analysis.mode === "synthetic-ai"
-            ? "The saved analysis below uses fictional simulated words and suggestions."
-            : "The saved provider analysis below retains its supplied words and timings."}
+    <section ref={root} className="selection" aria-labelledby="selection-title">
+      <h2 id="selection-title" className="local-sr-only">
+        Choose moments
+      </h2>
+      <div className="moment-tabs" role="tablist" aria-label="Choose clips">
+        {SELECTION_TABS.map((value, index) => (
+          <button
+            key={value}
+            id={`${tabsId}-${value}`}
+            type="button"
+            role="tab"
+            aria-selected={tab === value}
+            aria-controls={`${tabsId}-${value}-panel`}
+            tabIndex={tab === value ? 0 : -1}
+            disabled={busy || (value === "clips" && !analysis)}
+            onClick={() => openTab(value)}
+            onKeyDown={(event) => {
+              if (
+                busy ||
+                !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+              )
+                return;
+              event.preventDefault();
+              const next =
+                SELECTION_TABS[
+                  event.key === "Home"
+                    ? 0
+                    : event.key === "End"
+                      ? 1
+                      : (index + 1) % 2
+                ]!;
+              if (next === "clips" && !analysis) return;
+              openTab(next);
+              document.getElementById(`${tabsId}-${next}`)?.focus();
+            }}
+          >
+            {value === "add" ? "Add clips" : "Your clips"}
+          </button>
+        ))}
+      </div>
+      {!analysisAvailable && (
+        <p role="status">
+          {capabilities.aiMode === "unavailable"
+            ? "AI unavailable. Prepared clips still work."
+            : "Reopen this video to use the current AI mode."}
         </p>
       )}
-      <p role="status" aria-live="polite">
+      <p className="flow-notice" role="status" aria-live="polite">
         {message}
       </p>
-      <fieldset disabled={busy}>
-        <legend>Exact manual requests</legend>
-        <p>
-          Up to ten ranges, 1–300 seconds each. AI duration settings do not
-          change these requests. Endpoints round by at most one 30fps frame.
-        </p>
-        {rows.map((row, index) => (
-          <div className="range-row" key={row.id}>
-            <label>
-              Range {index + 1} start
-              <input
-                value={row.start}
-                aria-describedby={`cut-${row.id}`}
-                onChange={(event) => {
+      <div
+        id={`${tabsId}-add-panel`}
+        role="tabpanel"
+        aria-labelledby={`${tabsId}-add`}
+        hidden={tab !== "add"}
+        tabIndex={0}
+      >
+        <fieldset disabled={busy}>
+          <legend>Manual clips</legend>
+          {rows.map((row, index) => (
+            <div className="range-row" key={row.id}>
+              {(["start", "end"] as const).map((field) => (
+                <div className="range-time" key={field}>
+                  <label>
+                    {field === "start" ? "Start" : "End"}
+                    <input
+                      value={row[field].text}
+                      maxLength={32}
+                      aria-label={`Clip ${index + 1} ${field}`}
+                      placeholder="HH:MM:SS"
+                      aria-describedby={`cut-${row.id}`}
+                      onChange={(event) =>
+                        editTime(row.id, field, event.target.value)
+                      }
+                      onBlur={() => normalizeTime(row.id, field)}
+                    />
+                  </label>
+                  <Button
+                    variant="quiet"
+                    icon={Clock3}
+                    disabled={!previewReady}
+                    aria-label={`Set clip ${index + 1} ${field} to current time`}
+                    title="Use current preview time"
+                    onClick={() => {
+                      if (busy || !previewReady) return;
+                      const time = onCaptureTime();
+                      if (time !== null) editTime(row.id, field, time);
+                    }}
+                  >
+                    Capture
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="secondary"
+                aria-label={`Remove clip ${index + 1}`}
+                onClick={() => {
                   changed();
                   setRows((current) =>
-                    current.map((item) =>
-                      item.id === row.id
-                        ? { ...item, start: event.target.value }
-                        : item,
-                    ),
+                    current.filter((item) => item.id !== row.id),
                   );
                 }}
-              />
-            </label>
-            <label>
-              Range {index + 1} end
-              <input
-                value={row.end}
-                aria-describedby={`cut-${row.id}`}
-                onChange={(event) => {
-                  changed();
-                  setRows((current) =>
-                    current.map((item) =>
-                      item.id === row.id
-                        ? { ...item, end: event.target.value }
-                        : item,
-                    ),
-                  );
-                }}
-              />
-            </label>
-            <button
-              onClick={() => {
-                changed();
-                setRows((current) =>
-                  current.filter((item) => item.id !== row.id),
-                );
-              }}
-            >
-              Remove range {index + 1}
-            </button>
-            <p id={`cut-${row.id}`}>{rounded(row)}</p>
-          </div>
-        ))}
-        <button
-          disabled={rows.length >= OWNER_LIMITS.ranges}
-          onClick={() => {
-            changed();
-            setRows((current) => [
-              ...current,
-              {
-                id: crypto.randomUUID(),
-                start: "00:00:00.000",
-                end: ownerTimestamp(
-                  Math.min(10_000, workspace.source.durationMs),
-                ),
-              },
-            ]);
-          }}
-        >
-          Add exact range
-        </button>
-      </fieldset>
-      <fieldset disabled={busy}>
-        <legend>Additional AI discovery</legend>
-        <label>
-          Number of additional AI moments
-          <input
-            type="number"
-            min="1"
-            max={OWNER_LIMITS.suggestions}
-            step="1"
-            value={count}
-            disabled={manualOnly}
-            onChange={(event) => {
+              >
+                Remove
+              </Button>
+              <p id={`cut-${row.id}`}>{rounded(row)}</p>
+            </div>
+          ))}
+          <Button
+            variant="secondary"
+            disabled={rows.length >= OWNER_LIMITS.ranges}
+            onClick={() => {
               changed();
-              setCount(event.currentTarget.value);
+              setRows((current) => [
+                ...current,
+                {
+                  id: crypto.randomUUID(),
+                  start: { text: "00:00:00" },
+                  end: restoredTime(
+                    Math.min(10_000, workspace.source.durationMs),
+                  ),
+                },
+              ]);
             }}
-          />
-        </label>
-        <p>
-          Request this many grounded moments within your duration bounds. If
-          fewer qualify, you will see the shortfall. Manual requests are
-          additional; select up to ten clips in total.
-        </p>
-        <div className="duration-row">
-          <label>
-            AI minimum seconds
+          >
+            Add clip
+          </Button>
+        </fieldset>
+        <fieldset disabled={busy}>
+          <legend>AI moments</legend>
+          <label className="check">
             <input
-              type="number"
-              min="10"
-              max="60"
-              step="0.001"
-              value={minimum}
+              type="checkbox"
+              checked={!manualOnly}
               onChange={(event) => {
                 changed();
-                setMinimum(event.target.value);
+                setManualOnly(!event.target.checked);
               }}
             />
+            Suggest clips
           </label>
-          <label>
-            AI maximum seconds
-            <input
-              type="number"
-              min="10"
-              max="60"
-              step="0.001"
-              value={maximum}
-              onChange={(event) => {
-                changed();
-                setMaximum(event.target.value);
-              }}
-            />
-          </label>
-        </div>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={manualOnly}
-            onChange={(event) => {
-              changed();
-              setManualOnly(event.target.checked);
-            }}
-          />
-          Manual-only run (one {synthetic ? "simulated " : ""}transcription
-          still supplies cues)
-        </label>
-      </fieldset>
-      <nav>
-        <button
-          disabled={busy || !analysisAvailable}
-          onClick={() => void findMoments()}
-        >
-          Find moments
-        </button>
-        {analyzing && (
-          <button onClick={() => pending.current?.abort()}>
-            Cancel analysis
-          </button>
-        )}
-      </nav>
-      {analysis && (
-        <div className="choices">
-          {choices(analysis.manual, "Your exact requests")}
-          {choices(
-            analysis.suggestions,
-            analysis.mode === "synthetic-ai"
-              ? "Additional simulated AI suggestions"
-              : "Additional AI suggestions",
+          {!manualOnly && (
+            <>
+              <label>
+                Clips
+                <input
+                  type="number"
+                  min="1"
+                  max={OWNER_LIMITS.suggestions}
+                  step="1"
+                  value={count}
+                  disabled={manualOnly}
+                  onChange={(event) => {
+                    changed();
+                    setCount(event.currentTarget.value);
+                  }}
+                />
+              </label>
+              <div className="duration-row">
+                <label>
+                  Min (s)
+                  <input
+                    type="number"
+                    min="10"
+                    max="60"
+                    step="1"
+                    value={minimum}
+                    onChange={(event) => {
+                      changed();
+                      setMinimum(event.target.value);
+                    }}
+                  />
+                </label>
+                <label>
+                  Max (s)
+                  <input
+                    type="number"
+                    min="10"
+                    max="60"
+                    step="1"
+                    value={maximum}
+                    onChange={(event) => {
+                      changed();
+                      setMaximum(event.target.value);
+                    }}
+                  />
+                </label>
+              </div>
+            </>
           )}
-        </div>
+        </fieldset>
+      </div>
+      {actionsVisible && tab === "add" && (
+        <WorkflowActions target={footerTarget} label="Moment actions">
+          <Button
+            variant="primary"
+            disabled={
+              busy || !analysisAvailable || (manualOnly && rows.length === 0)
+            }
+            onClick={() => void findMoments()}
+            aria-busy={analyzing}
+          >
+            {analyzing ? (
+              <>
+                <LoaderCircle
+                  size={18}
+                  className="acquisition-spinner"
+                  aria-hidden="true"
+                />
+                Finding…
+              </>
+            ) : manualOnly ? (
+              "Use clips"
+            ) : (
+              "Find moments"
+            )}
+          </Button>
+          {analyzing && (
+            <Button
+              variant="secondary"
+              onClick={() => pending.current?.abort()}
+            >
+              Cancel analysis
+            </Button>
+          )}
+        </WorkflowActions>
       )}
+      <div
+        id={`${tabsId}-clips-panel`}
+        role="tabpanel"
+        aria-labelledby={`${tabsId}-clips`}
+        hidden={tab !== "clips"}
+        tabIndex={0}
+      >
+        {analysis && (
+          <>
+            <p className="selection-count" role="status">
+              {selected.length} selected
+              {analysis.manual.length + analysis.suggestions.length >
+              OWNER_LIMITS.clips
+                ? ` · Max ${OWNER_LIMITS.clips}`
+                : ""}
+            </p>
+            {analysis.manual.length + analysis.suggestions.length === 0 && (
+              <p>No clips yet.</p>
+            )}
+            <div className="choices">
+              {choices(analysis.manual, "Manual clips")}
+              {choices(
+                analysis.suggestions,
+                analysis.mode === "synthetic-ai"
+                  ? "Demo suggestions"
+                  : "Suggestions",
+                analysis.manual.length,
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </section>
   );
 }

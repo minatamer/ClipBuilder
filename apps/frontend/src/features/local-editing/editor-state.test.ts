@@ -18,7 +18,66 @@ import {
   ownerEditOperations,
   ownerGestureBox,
   sameOwnerEdit,
+  centeredOwnerBox,
+  ownerCaptionPreset,
 } from "./editor-state.ts";
+
+it("keeps caption placement when changing typography, fitting larger presets around the same center", () => {
+  const current = {
+    ...OWNER_CAPTION_PRESETS.clean,
+    verticalAlign: "center" as const,
+    box: centeredOwnerBox(
+      OWNER_CAPTION_PRESETS.clean.box,
+      0.5,
+      OWNER_CAPTION_PRESETS.clean,
+    ),
+  };
+  const next = ownerCaptionPreset(current, "bold");
+  expect(next.box.x + next.box.width / 2).toBeCloseTo(0.5, 12);
+  expect(next.box.y + next.box.height / 2).toBeCloseTo(0.5, 12);
+  expect(next.verticalAlign).toBe("center");
+  expect(next.preset).toBe("bold");
+  expect(ownerCaptionStyleSchema.safeParse(next).success).toBe(true);
+});
+
+it("centers caption text boxes exactly at portrait quarters within safe bounds", () => {
+  for (const caption of Object.values(OWNER_CAPTION_PRESETS)) {
+    for (const center of [0.25, 0.5, 0.75] as const) {
+      const box = centeredOwnerBox(caption.box, center, caption);
+      expect(box.x + box.width / 2).toBeCloseTo(0.5, 12);
+      expect(box.y + box.height / 2).toBeCloseTo(center, 12);
+      expect(
+        ownerCaptionStyleSchema.safeParse({
+          ...caption,
+          box,
+          verticalAlign: "center",
+        }).success,
+      ).toBe(true);
+    }
+  }
+});
+
+it("fits oversized boxes before applying exact quarter/center presets", () => {
+  for (const center of [0.25, 0.5, 0.75] as const) {
+    const caption = { ...OWNER_CAPTION_PRESETS.bold, fontSize: 120 };
+    const box = centeredOwnerBox(
+      { x: 0.05, y: 0.05, width: 0.9, height: 0.9 },
+      center,
+      caption,
+    );
+    expect(box.y + box.height / 2).toBeCloseTo(center, 12);
+    expect(ownerCaptionStyleSchema.safeParse({ ...caption, box }).success).toBe(
+      true,
+    );
+    const picture = centeredOwnerBox(
+      { x: 0, y: 0, width: 1, height: 1 },
+      center,
+      null,
+    );
+    expect(picture.y + picture.height / 2).toBeCloseTo(center, 12);
+    expect(normalizedBoxSchema.safeParse(picture).success).toBe(true);
+  }
+});
 
 function clip(): OwnerClip {
   const id = crypto.randomUUID(),

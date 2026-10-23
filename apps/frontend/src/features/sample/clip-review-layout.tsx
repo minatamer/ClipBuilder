@@ -90,9 +90,7 @@ export function ClipReviewLayout({
     if (panel)
       track.current?.scrollTo({
         left: panel.offsetLeft,
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "instant"
-          : "smooth",
+        behavior: "smooth",
       });
   };
 

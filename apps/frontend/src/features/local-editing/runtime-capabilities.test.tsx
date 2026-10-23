@@ -7,7 +7,6 @@ import {
 import { ownerWorkspaceSchema } from "../../../../../packages/contracts/local/index.ts";
 import { OwnerAcquisitionPanel } from "./acquisition-panel.tsx";
 import { OwnerClipBatchPanel } from "./clip-batch-panel.tsx";
-import { OwnerDraftPanel } from "./draft-panel.tsx";
 import { OwnerSelectionPanel } from "./selection-panel.tsx";
 
 const capabilities: OwnerRuntimeCapabilities = {
@@ -71,17 +70,20 @@ it("labels fresh provider analysis truthfully and blocks unavailable or mismatch
         busy={false}
         onBusy={noop}
         onChoose={noop}
+        onResultsViewChange={noop}
+        previewReady={false}
+        onCaptureTime={() => null}
       />,
     );
   const provider = render(capabilities);
-  expect(provider).toContain("Fresh analysis uses the configured provider");
+  expect(provider).not.toContain("provider calls");
   expect(provider).not.toMatch(/simulated|fictional/iu);
   expect(buttonDisabled(provider, "Find moments")).toBe(false);
   const unavailable = render({ ...capabilities, aiMode: "unavailable" });
-  expect(unavailable).toContain("Fresh analysis is unavailable");
+  expect(unavailable).toContain("AI unavailable");
   expect(buttonDisabled(unavailable, "Find moments")).toBe(true);
   const mismatch = render({ ...capabilities, aiMode: "synthetic-ai" });
-  expect(mismatch).toContain("different AI provenance");
+  expect(mismatch).toContain("current AI mode");
   expect(buttonDisabled(mismatch, "Find moments")).toBe(true);
 });
 
@@ -102,11 +104,26 @@ it("blocks new automatic plans separately from local prepared-clip work", () => 
         onActive={noop}
       />,
     );
-  expect(buttonDisabled(render(true), "Process selected clips")).toBe(false);
+  expect(buttonDisabled(render(true), "Process clips")).toBe(false);
   const unavailable = render(false);
-  expect(buttonDisabled(unavailable, "Process selected clips")).toBe(true);
-  expect(unavailable).toContain("Prepared clips remain editable");
+  expect(buttonDisabled(unavailable, "Process clips")).toBe(true);
+  expect(unavailable).toContain("Prepared clips still work");
   expect(unavailable).not.toContain("Actual AI calls: zero");
+});
+
+it("keeps processing in the results view and disables it after every clip is deselected", () => {
+  const render = (selectionReady: boolean) =>
+    renderToStaticMarkup(
+      <OwnerClipBatchPanel
+        workspace={workspace}
+        capabilities={capabilities}
+        selected={[]}
+        onActive={noop}
+        selectionReady={selectionReady}
+      />,
+    );
+  expect(buttonDisabled(render(true), "Process clips")).toBe(true);
+  expect(render(false)).not.toContain("Process clips");
 });
 
 it("describes synthetic generation only for a synthetic source port and keeps offline reuse available", () => {
@@ -120,35 +137,31 @@ it("describes synthetic generation only for a synthetic source port and keeps of
         onOpen={noop}
       />,
     );
-  expect(render("synthetic-source")).toContain("generates a 16-second source");
+  expect(render("synthetic-source")).toContain("Simulated download");
   const provider = render("provider-source");
-  expect(provider).toContain("admitted downloader");
+  expect(provider).toContain("Paste a video link");
   expect(provider).not.toContain("16-second");
   expect(provider).not.toContain("Current fake");
   const offline = render(null);
-  expect(offline).toContain("New source acquisition is unavailable");
-  expect(buttonDisabled(offline, "Refresh local saved sources")).toBe(false);
+  expect(offline).toContain("Downloads unavailable");
+  expect(buttonDisabled(offline, "Continue")).toBe(true);
 });
 
-it("keeps offline draft reopening independent of the current AI port", () => {
+it("keeps the real URL form disabled while capabilities are unknown without claiming a fake source mode", () => {
   const html = renderToStaticMarkup(
-    <OwnerDraftPanel
-      workspace={workspace}
-      capabilities={{
-        ...capabilities,
-        aiMode: "unavailable",
-        planningAvailable: false,
-      }}
-      busy={false}
-      active={false}
+    <OwnerAcquisitionPanel
+      workspace={null}
+      capabilities={null}
+      initializing
+      busy
       onBusy={noop}
       onOpen={noop}
     />,
   );
-  expect(html).toContain(
-    "Saved clips keep their original AI and picture provenance",
-  );
-  expect(html).toContain("Fresh automatic analysis is unavailable");
-  expect(html).not.toContain("Fake mode");
-  expect(buttonDisabled(html, "Refresh saved drafts and status")).toBe(false);
+  expect(html).toContain('aria-label="YouTube link"');
+  expect(html).toMatch(/<fieldset[^>]*disabled/);
+  expect(html).toContain("youtube-startup-indicator");
+  expect(html).toContain("Loading YouTube");
+  expect(html).not.toContain("Simulated download");
+  expect(html).not.toContain("Downloads unavailable");
 });

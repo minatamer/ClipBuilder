@@ -1,12 +1,23 @@
+import { Button } from "../../shared/ui/button";
+import { LoaderCircle, RotateCw, Upload } from "lucide-react";
+import { WorkflowActions } from "./workflow-actions.tsx";
+import { ControlTabs } from "./control-tabs.tsx";
 import {
   useEffect,
+  useCallback,
+  useId,
   useRef,
   useState,
   type KeyboardEvent,
   type PointerEvent,
 } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
-import { AbsoluteFill, Html5Video, useCurrentFrame } from "remotion";
+import {
+  AbsoluteFill,
+  Html5Video,
+  useCurrentFrame,
+  useCurrentScale,
+} from "remotion";
 import { OwnerAutomaticOverlay } from "../../../../../packages/composition/local/automatic-overlay.tsx";
 import { OwnerVideoLookLayer } from "../../../../../packages/composition/local/video-look.tsx";
 import {
@@ -31,19 +42,19 @@ import {
 } from "../../../../../packages/contracts/local/editor.ts";
 import {
   OWNER_PICTURE_LIMITS,
+  OWNER_VISUAL_ANIMATIONS,
   type OwnerVisualEdit,
 } from "../../../../../packages/contracts/local/assets.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/index.ts";
-import { CONTEXTUAL_PICTURE_POLICY } from "@clipbuilder/contracts";
 import {
-  automaticVisualEdits,
   captionForOwnerEdit,
   constrainOwnerBox,
   initialOwnerEdit,
-  ownerBoxesOverlap,
   ownerEditOperations,
   ownerGestureBox,
   sameOwnerEdit,
+  centeredOwnerBox,
+  ownerCaptionPreset,
   type OwnerEditorBox,
 } from "./editor-state.ts";
 
@@ -51,7 +62,11 @@ type LayerControls = {
   selection: string;
   onSelect: (id: string) => void;
   onBox: (id: string, box: OwnerEditorBox) => void;
+  onGestureStart: () => void;
 };
+
+const SETTINGS = ["captions", "filters", "pictures"] as const;
+type EditorSetting = (typeof SETTINGS)[number];
 
 function SelectionBox({
   id,
@@ -61,13 +76,16 @@ function SelectionBox({
   caption,
   onSelect,
   onBox,
+  onGestureStart,
 }: {
   id: string;
   label: string;
   box: OwnerEditorBox;
   selected: boolean;
   caption: OwnerCaptionStyle | null;
-} & Pick<LayerControls, "onSelect" | "onBox">) {
+} & Pick<LayerControls, "onSelect" | "onBox" | "onGestureStart">) {
+  const scale = useCurrentScale();
+  const handle = Math.max(84, 44 / scale);
   const gesture = useRef<{
     pointer: number;
     x: number;
@@ -81,6 +99,7 @@ function SelectionBox({
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    onGestureStart();
     const canvas = event.currentTarget.parentElement!.getBoundingClientRect();
     gesture.current = {
       pointer: event.pointerId,
@@ -172,20 +191,37 @@ function SelectionBox({
           className="editor-resize"
           aria-label={`Resize ${label}`}
           style={{
+            width: handle,
+            height: handle,
+            fontSize: Math.max(56, 18 / scale),
             left: Math.max(
               0,
-              Math.min(1080 - 84, (box.x + box.width) * 1080 - 42),
+              Math.min(1080 - handle, (box.x + box.width) * 1080 - handle / 2),
             ),
             top: Math.max(
               0,
-              Math.min(1920 - 84, (box.y + box.height) * 1920 - 42),
+              Math.min(1920 - handle, (box.y + box.height) * 1920 - handle / 2),
             ),
           }}
           onPointerDown={(event) => start(event, true)}
           onKeyDown={(event) => key(event, true)}
           {...handlers}
         >
-          ↘
+          <span
+            aria-hidden="true"
+            style={{
+              display: "grid",
+              placeItems: "center",
+              width: 22 / scale,
+              height: 22 / scale,
+              fontSize: 14 / scale,
+              borderRadius: 4 / scale,
+              background: "#b7d3ff",
+              color: "#07142f",
+            }}
+          >
+            ↘
+          </span>
         </button>
       )}
     </>
@@ -199,10 +235,13 @@ function Review({
   selection,
   onSelect,
   onBox,
+  onGestureStart,
+  onPlaybackError,
 }: {
   overlay: OwnerOverlay;
   assets: Record<string, string>;
   sourceUrl: string;
+  onPlaybackError: () => void;
 } & LayerControls) {
   const frame = useCurrentFrame();
   const caption = overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean;
@@ -213,6 +252,12 @@ function Review({
           src={sourceUrl}
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
           pauseWhenBuffering
+          onErrorCapture={(event) => {
+            // Next treats Remotion's native-error console log as a page error too.
+            event.stopPropagation();
+            onPlaybackError();
+          }}
+          onError={onPlaybackError}
         />
       </OwnerVideoLookLayer>
       <OwnerAutomaticOverlay overlay={overlay} assets={assets} frame={frame} />
@@ -232,6 +277,7 @@ function Review({
               caption={null}
               onSelect={onSelect}
               onBox={onBox}
+              onGestureStart={onGestureStart}
             />
           ))}
         <SelectionBox
@@ -242,9 +288,26 @@ function Review({
           caption={caption}
           onSelect={onSelect}
           onBox={onBox}
+          onGestureStart={onGestureStart}
         />
       </AbsoluteFill>
     </AbsoluteFill>
+  );
+}
+
+function PreviewFailure({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="editor-preview-failure" role="alert">
+      <p>Preview unavailable.</p>
+      <Button
+        variant="secondary"
+        icon={RotateCw}
+        aria-label="Retry preview"
+        onClick={onRetry}
+      >
+        Retry
+      </Button>
+    </div>
   );
 }
 
@@ -258,29 +321,32 @@ function BoxFields({
   onChange: (box: OwnerEditorBox) => void;
 }) {
   return (
-    <div className="editor-box-fields">
-      {(["x", "y", "width", "height"] as const).map((key) => (
-        <label key={key}>
-          {label} {key} (0–1)
-          <input
-            type="number"
-            step="0.005"
-            min="0"
-            max="1"
-            value={Number.isFinite(box[key]) ? box[key] : ""}
-            onChange={(event) =>
-              onChange({
-                ...box,
-                [key]:
-                  event.currentTarget.value === ""
-                    ? NaN
-                    : Number(event.currentTarget.value),
-              })
-            }
-          />
-        </label>
-      ))}
-    </div>
+    <details className="geometry-controls">
+      <summary>Position and size</summary>
+      <div className="editor-box-fields">
+        {(["x", "y", "width", "height"] as const).map((key) => (
+          <label key={key}>
+            {label} {key} (0–1)
+            <input
+              type="number"
+              step="0.005"
+              min="0"
+              max="1"
+              value={Number.isFinite(box[key]) ? box[key] : ""}
+              onChange={(event) =>
+                onChange({
+                  ...box,
+                  [key]:
+                    event.currentTarget.value === ""
+                      ? NaN
+                      : Number(event.currentTarget.value),
+                })
+              }
+            />
+          </label>
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -290,25 +356,48 @@ export function ClipEditor({
   workspaceId,
   onAccepted,
   onDirty,
+  footerTarget,
+  actionsVisible = true,
 }: {
   clip: OwnerClip;
   workspaceId: string;
   onAccepted: (list: OwnerClipList) => void;
   onDirty: (clipId: string, dirty: boolean) => void;
+  footerTarget?: HTMLElement | null | undefined;
+  actionsVisible?: boolean;
 }) {
   const [form, setForm] = useState(() => {
     const original = initialOwnerEdit(clip);
     return { original, draft: structuredClone(original) };
   });
   const [selection, setSelection] = useState("captions");
-  const [message, setMessage] = useState(
-    "Adjust presentation locally, then Apply changes before an explicit export.",
-  );
+  const [setting, setSetting] = useState<EditorSetting>("captions");
+  const [captionTab, setCaptionTab] = useState("style");
+  const [pictureTab, setPictureTab] = useState("image");
+  const tabsId = useId();
+  const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [forcedStale, setForcedStale] = useState(false);
   const player = useRef<PlayerRef | null>(null);
+  const [playbackFailed, setPlaybackFailed] = useState(false);
+  const [previewAttempt, setPreviewAttempt] = useState(0);
+  const [previewFrame, setPreviewFrame] = useState(0);
+  const pictureInput = useRef<HTMLInputElement>(null);
   const request = useRef<AbortController | null>(null);
   const alive = useRef(true);
+  const playbackError = useCallback(() => {
+    if (!alive.current) return;
+    setPreviewFrame(player.current?.getCurrentFrame() ?? 0);
+    player.current?.pause();
+    setPlaybackFailed(true);
+  }, []);
+  function retryPreview() {
+    const frame = player.current?.getCurrentFrame();
+    if (frame !== undefined) setPreviewFrame(frame);
+    player.current?.pause();
+    setPreviewAttempt((value) => value + 1);
+    setPlaybackFailed(false);
+  }
   const changed = !sameOwnerEdit(form.original, form.draft);
   const revisionChanged = form.original.revision !== clip.revision;
   const original =
@@ -324,8 +413,21 @@ export function ClipEditor({
     ownerEditDocumentSchema.parse(draft);
     overlay = compileOwnerOverlay(base, draft, clip.assets);
   } catch {
-    error =
-      "Use valid geometry, registered pictures and increasing clip-relative frame times. Captions need 5% margins, width ≥ 0.6 and room for two lines.";
+    error = draft.visuals.some(
+      (cue) =>
+        !Number.isFinite(cue.startFrame) ||
+        !Number.isFinite(cue.endFrame) ||
+        cue.startFrame < 0 ||
+        cue.endFrame <= cue.startFrame ||
+        cue.endFrame > base.overlay.frames,
+    )
+      ? "Set each picture’s end after its start, within this clip."
+      : draft.captions &&
+          (!Number.isInteger(draft.captions.fontSize) ||
+            draft.captions.fontSize < 24 ||
+            draft.captions.fontSize > 120)
+        ? "Use a font size from 24 to 120."
+        : "Keep layers inside the preview and check their size.";
     try {
       overlay = compileOwnerOverlay(base, original, clip.assets);
     } catch {
@@ -334,18 +436,6 @@ export function ClipEditor({
   }
   const caption = captionForOwnerEdit(draft);
   const selectedCue = draft.visuals.find((cue) => cue.id === selection);
-  const overlaps = overlay.visuals.some(
-    (cue) =>
-      ownerBoxesOverlap(
-        cue.box,
-        overlay.captionStyle?.box ?? OWNER_CAPTION_PRESETS.clean.box,
-      ) &&
-      overlay.captions.some(
-        (item) =>
-          item.startMs < (cue.endFrame * 1000) / OWNER_FPS &&
-          item.endMs > (cue.startFrame * 1000) / OWNER_FPS,
-      ),
-  );
   const endpoint = `/api/local/workspace/${workspaceId}/clips/${clip.id}`;
   useEffect(() => {
     alive.current = true;
@@ -388,6 +478,38 @@ export function ClipEditor({
       const cue = draft.visuals.find((item) => item.id === id);
       if (cue) setCue({ ...cue, box });
     }
+  }
+  function selectLayer(id: string) {
+    setSelection(id);
+    setSetting(id === "captions" ? "captions" : "pictures");
+  }
+  function newPicture(assetId: string): OwnerVisualEdit {
+    const startFrame = Math.min(
+      player.current?.getCurrentFrame() ?? 0,
+      base.overlay.frames - 1,
+    );
+    return {
+      id: crypto.randomUUID(),
+      assetId,
+      startFrame,
+      endFrame: Math.min(base.overlay.frames, startFrame + 4 * OWNER_FPS),
+      box: { x: 0.1, y: 0.1, width: 0.8, height: 0.3 },
+      fit: "contain",
+      entrance: "fade",
+      exit: "fade",
+      animationFrames: 9,
+    };
+  }
+  function choosePicture(cue: OwnerVisualEdit) {
+    setSelection(cue.id);
+    player.current?.pause();
+    player.current?.seekTo(
+      cue.startFrame +
+        Math.min(
+          cue.animationFrames ?? 9,
+          Math.floor((cue.endFrame - cue.startFrame - 1) / 2),
+        ),
+    );
   }
   async function perform(kind: "edit" | "picture" | "reload", file?: File) {
     if (request.current) return;
@@ -439,20 +561,27 @@ export function ClipEditor({
         const accepted = initialOwnerEdit(acknowledged);
         setForm({ original: accepted, draft: structuredClone(accepted) });
         setForcedStale(false);
+      } else {
+        const assetId = value.pictureAssetId;
+        if (
+          !assetId ||
+          !acknowledged.assets.some((asset) => asset.id === assetId)
+        )
+          throw new Error("unacknowledged");
+        const cue = newPicture(assetId);
+        update({ ...draft, visuals: [...draft.visuals, cue] });
+        choosePicture(cue);
+        setPictureTab("image");
       }
-      setMessage(
-        kind === "picture"
-          ? "Picture normalized and registered locally. Choose it below to replace or add a cue; no cue changed automatically."
-          : kind === "reload"
-            ? "Acknowledged revision reloaded; unapplied changes discarded."
-            : "Changes acknowledged. Preview uses this revision; export it explicitly when ready. No AI work was started.",
-      );
+      setMessage("");
     } catch (failure) {
       if (alive.current && !controller.signal.aborted)
         setMessage(
           failure instanceof Error && failure.message === "stale"
-            ? "A newer revision exists. Your unapplied controls are preserved. Reload the acknowledged revision before applying again."
-            : "The action was not acknowledged. Your unapplied controls are preserved. Reload status before retrying; no automatic retry is made.",
+            ? "This clip changed elsewhere. Reload it to continue."
+            : kind === "picture"
+              ? "Couldn’t add this image. Use a static JPEG, PNG or WebP under 4 MB."
+              : "Couldn’t save these changes. Try again.",
         );
     } finally {
       request.current = null;
@@ -460,11 +589,10 @@ export function ClipEditor({
     }
   }
   function upload(file: File | undefined) {
-    if (!file) return;
+    if (!file || draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip)
+      return;
     if (file.size > OWNER_PICTURE_LIMITS.inputBytes || file.size === 0) {
-      setMessage(
-        "Choose a nonempty JPEG or PNG of at most 4 MiB. Actual image bytes and pixel limits are checked locally before admission.",
-      );
+      setMessage("Choose a JPEG, PNG or WebP under 4 MB.");
       return;
     }
     void perform("picture", file);
@@ -474,42 +602,29 @@ export function ClipEditor({
       className="clip-editor"
       aria-label="Local caption and picture editor"
     >
-      <p role="status" aria-live="polite">
-        {dirty
-          ? "Unapplied local changes. "
-          : `Acknowledged revision ${clip.revision}. `}
-        {message}
+      <p className="flow-notice" role="status" aria-live="polite">
+        {!stale && message}
       </p>
       {stale && (
         <p className="editor-warning" role="alert">
-          Revision conflict: reload before applying. Local controls remain
-          visible.
+          This clip changed elsewhere. Reload it to continue.
         </p>
       )}
       {error && (
         <p className="editor-warning" role="alert">
-          {error} Preview retains the acknowledged revision until controls are
-          valid.
-        </p>
-      )}
-      {overlaps && (
-        <p className="editor-warning" role="status">
-          Caption and picture bounds overlap. Captions render above pictures;
-          placement is retained.
+          {error}
         </p>
       )}
       <div className="editor-layout">
         <div className="editor-preview">
           {previewUnavailable ? (
-            <p role="alert">
-              Preview is unavailable because the acknowledged composition has a
-              missing or invalid asset. Reload a validated revision before
-              exporting.
-            </p>
+            <p role="alert">Preview unavailable. Reload this clip.</p>
+          ) : playbackFailed ? (
+            <PreviewFailure onRetry={retryPreview} />
           ) : (
             <Player
               ref={player}
-              key={clip.id}
+              key={`${clip.id}-${previewAttempt}`}
               component={Review}
               inputProps={{
                 overlay,
@@ -521,466 +636,761 @@ export function ClipEditor({
                   ]),
                 ),
                 selection,
-                onSelect: setSelection,
+                onSelect: selectLayer,
                 onBox: setBox,
+                onGestureStart: () => player.current?.pause(),
+                onPlaybackError: playbackError,
               }}
               durationInFrames={base.overlay.frames}
               compositionWidth={1080}
               compositionHeight={1920}
               fps={OWNER_FPS}
+              initialFrame={Math.min(previewFrame, base.overlay.frames - 1)}
+              errorFallback={() => <PreviewFailure onRetry={retryPreview} />}
               controls
+              clickToPlay={false}
+              doubleClickToFullscreen={false}
+              spaceKeyToPlayOrPause={false}
               style={{ width: "100%", maxWidth: 360 }}
             />
           )}
-          <p>
-            Drag a visible layer or its corner to resize. Arrow keys move the
-            focused layer or resize its corner; Alt uses larger steps. Numeric
-            fields give the same controls. Preview geometry is scaled from
-            1080×1920.
-          </p>
         </div>
         <div className="editor-panels">
-          <fieldset disabled={pending}>
-            <legend>Captions</legend>
-            <button
-              type="button"
-              aria-pressed={selection === "captions"}
-              onClick={() => setSelection("captions")}
-            >
-              Select caption layer
-            </button>
-            <div className="editor-fields">
-              <label>
-                Caption preset
-                <select
-                  value={caption.preset}
-                  onChange={(event) =>
-                    setCaption(
-                      structuredClone(
-                        OWNER_CAPTION_PRESETS[
-                          event.currentTarget
-                            .value as OwnerCaptionStyle["preset"]
-                        ],
-                      ),
+          <div
+            className="editor-tabs"
+            role="tablist"
+            aria-label="Clip settings"
+          >
+            {SETTINGS.map((value, index) => (
+              <button
+                key={value}
+                id={`${tabsId}-${value}`}
+                type="button"
+                role="tab"
+                aria-selected={setting === value}
+                aria-controls={`${tabsId}-${value}-panel`}
+                tabIndex={setting === value ? 0 : -1}
+                onClick={() => {
+                  setSetting(value);
+                  if (value === "captions") setSelection("captions");
+                }}
+                onKeyDown={(event) => {
+                  if (
+                    !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                      event.key,
                     )
-                  }
-                >
-                  <option value="clean">Clean</option>
-                  <option value="classic">Classic</option>
-                  <option value="bold">Bold</option>
-                </select>
-              </label>
-              <label>
-                Caption font size (24–120 px)
-                <input
-                  type="number"
-                  min="24"
-                  max="120"
-                  step="1"
-                  value={
-                    Number.isFinite(caption.fontSize) ? caption.fontSize : ""
-                  }
-                  onChange={(event) => {
-                    const fontSize =
-                      event.currentTarget.value === ""
-                        ? NaN
-                        : Number(event.currentTarget.value);
-                    setCaption({ ...caption, fontSize });
-                  }}
-                />
-              </label>
-              <label>
-                Caption font
-                <select
-                  value={caption.font ?? "Arial"}
-                  onChange={(event) =>
-                    setCaption({
-                      ...caption,
-                      font: event.currentTarget.value as NonNullable<
-                        OwnerCaptionStyle["font"]
-                      >,
-                    })
-                  }
-                >
-                  {OWNER_CAPTION_FONTS.map((font) => (
-                    <option key={font} value={font}>
-                      {font}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Caption animation
-                <select
-                  value={caption.animation ?? "highlight"}
-                  onChange={(event) =>
-                    setCaption({
-                      ...caption,
-                      animation: event.currentTarget.value as NonNullable<
-                        OwnerCaptionStyle["animation"]
-                      >,
-                    })
-                  }
-                >
-                  {OWNER_CAPTION_ANIMATIONS.map((animation) => (
-                    <option key={animation} value={animation}>
-                      {
-                        {
-                          highlight: "Spoken-word highlight",
-                          pop: "Word pop",
-                          fade: "Line fade",
-                          none: "Static",
-                        }[animation]
-                      }
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Caption text color
-                <input
-                  type="color"
-                  value={caption.color}
-                  onChange={(event) =>
-                    setCaption({ ...caption, color: event.currentTarget.value })
-                  }
-                />
-              </label>
-              <label>
-                Caption highlight color
-                <input
-                  type="color"
-                  value={caption.highlight}
-                  onChange={(event) =>
-                    setCaption({
-                      ...caption,
-                      highlight: event.currentTarget.value,
-                    })
-                  }
-                />
-              </label>
-              <label>
-                Caption alignment
-                <select
-                  value={caption.align}
-                  onChange={(event) =>
-                    setCaption({
-                      ...caption,
-                      align: event.currentTarget
-                        .value as OwnerCaptionStyle["align"],
-                    })
-                  }
-                >
-                  <option value="left">Left</option>
-                  <option value="center">Center</option>
-                  <option value="right">Right</option>
-                </select>
-              </label>
-            </div>
-            <BoxFields
-              label="Caption"
-              box={caption.box}
-              onChange={(box) => setCaption({ ...caption, box })}
-            />
-            <button
-              type="button"
-              onClick={() => update({ ...draft, captions: null })}
-            >
-              Reset captions to automatic
-            </button>
-          </fieldset>
-          <fieldset disabled={pending}>
-            <legend>Video look</legend>
-            <label>
-              Filter
-              <select
-                value={draft.videoLook?.preset ?? "original"}
-                onChange={(event) =>
-                  update({
-                    ...draft,
-                    videoLook: {
-                      preset: event.currentTarget
-                        .value as OwnerVideoLook["preset"],
-                      strength: draft.videoLook?.strength ?? 100,
-                    },
-                  })
-                }
-              >
-                {OWNER_VIDEO_LOOKS.map((look) => (
-                  <option key={look} value={look}>
-                    {
-                      {
-                        original: "Original",
-                        vivid: "Vivid",
-                        warm: "Warm",
-                        cool: "Cool",
-                        mono: "Black and white",
-                      }[look]
-                    }
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Filter strength ({draft.videoLook?.strength ?? 100}%)
-              <input
-                aria-label="Filter strength"
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={draft.videoLook?.strength ?? 100}
-                disabled={
-                  !draft.videoLook || draft.videoLook.preset === "original"
-                }
-                onChange={(event) =>
-                  update({
-                    ...draft,
-                    videoLook: {
-                      preset: draft.videoLook?.preset ?? "original",
-                      strength: Number(event.currentTarget.value),
-                    },
-                  })
-                }
-              />
-            </label>
-            <p>
-              Changes source video only. Pictures and captions keep their own
-              colors. Apply, then export to save this look in a new MP4.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                const next = { ...draft };
-                delete next.videoLook;
-                update(next);
-              }}
-            >
-              Reset video to original
-            </button>
-          </fieldset>
-          <fieldset disabled={pending}>
-            <legend>
-              Pictures · {draft.visuals.length}/
-              {CONTEXTUAL_PICTURE_POLICY.maxPictures} cues
-            </legend>
-            <label>
-              Picture cue
-              <select
-                value={selectedCue?.id ?? ""}
-                onChange={(event) => {
-                  setSelection(event.currentTarget.value);
-                  const cue = draft.visuals.find(
-                    (item) => item.id === event.currentTarget.value,
-                  );
-                  if (cue) player.current?.seekTo(cue.startFrame);
+                  )
+                    return;
+                  event.preventDefault();
+                  const next =
+                    SETTINGS[
+                      event.key === "Home"
+                        ? 0
+                        : event.key === "End"
+                          ? SETTINGS.length - 1
+                          : (index +
+                              (event.key === "ArrowRight" ? 1 : -1) +
+                              SETTINGS.length) %
+                            SETTINGS.length
+                    ]!;
+                  setSetting(next);
+                  if (next === "captions") setSelection("captions");
+                  document.getElementById(`${tabsId}-${next}`)?.focus();
                 }}
               >
-                <option value="">Choose a picture cue</option>
-                {draft.visuals.map((cue, index) => (
-                  <option key={cue.id} value={cue.id}>
-                    Picture {index + 1}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {selectedCue && (
-              <>
+                {
+                  {
+                    captions: "Captions",
+                    filters: "Filters",
+                    pictures: "Pictures",
+                  }[value]
+                }
+              </button>
+            ))}
+          </div>
+          <div
+            id={`${tabsId}-captions-panel`}
+            role="tabpanel"
+            aria-labelledby={`${tabsId}-captions`}
+            hidden={setting !== "captions"}
+            tabIndex={0}
+          >
+            <fieldset disabled={pending}>
+              <legend className="local-sr-only">Captions</legend>
+              <ControlTabs
+                id={`${tabsId}-caption`}
+                label="Caption controls"
+                items={[
+                  { value: "style", label: "Style" },
+                  { value: "position", label: "Position" },
+                ]}
+                value={captionTab}
+                onChange={setCaptionTab}
+              />
+              <div
+                role="tabpanel"
+                id={`${tabsId}-caption-style-panel`}
+                aria-labelledby={`${tabsId}-caption-style`}
+                hidden={captionTab !== "style"}
+                tabIndex={0}
+              >
                 <div className="editor-fields">
                   <label>
-                    Picture asset
+                    Style
                     <select
-                      value={selectedCue.assetId}
+                      value={caption.preset}
                       onChange={(event) =>
-                        setCue({
-                          ...selectedCue,
-                          assetId: event.currentTarget.value,
+                        setCaption(
+                          ownerCaptionPreset(
+                            caption,
+                            event.currentTarget
+                              .value as OwnerCaptionStyle["preset"],
+                          ),
+                        )
+                      }
+                    >
+                      <option value="clean">Clean</option>
+                      <option value="classic">Classic</option>
+                      <option value="bold">Bold</option>
+                      <option value="boxed">Rounded highlight</option>
+                      <option value="typewriter">Typewriter</option>
+                    </select>
+                  </label>
+                  <label>
+                    Font size
+                    <input
+                      type="number"
+                      min="24"
+                      max="120"
+                      step="1"
+                      value={
+                        Number.isFinite(caption.fontSize)
+                          ? caption.fontSize
+                          : ""
+                      }
+                      onChange={(event) => {
+                        const fontSize =
+                          event.currentTarget.value === ""
+                            ? NaN
+                            : Number(event.currentTarget.value);
+                        setCaption({ ...caption, fontSize });
+                      }}
+                    />
+                  </label>
+                  <label>
+                    Font
+                    <select
+                      value={caption.font ?? "Arial"}
+                      onChange={(event) =>
+                        setCaption({
+                          ...caption,
+                          font: event.currentTarget.value as NonNullable<
+                            OwnerCaptionStyle["font"]
+                          >,
                         })
                       }
                     >
-                      {clip.assets.map((asset, index) => (
-                        <option key={asset.id} value={asset.id}>
-                          Asset {index + 1} · {asset.origin}
+                      {OWNER_CAPTION_FONTS.map((font) => (
+                        <option key={font} value={font}>
+                          {font}
                         </option>
                       ))}
                     </select>
                   </label>
                   <label>
-                    Picture fit
+                    Animation
                     <select
-                      value={selectedCue.fit}
+                      value={caption.animation ?? "highlight"}
                       onChange={(event) =>
-                        setCue({
-                          ...selectedCue,
-                          fit: event.currentTarget
-                            .value as OwnerVisualEdit["fit"],
+                        setCaption({
+                          ...caption,
+                          animation: event.currentTarget.value as NonNullable<
+                            OwnerCaptionStyle["animation"]
+                          >,
                         })
                       }
                     >
-                      <option value="contain">Contain entire picture</option>
-                      <option value="cover">Crop to fill</option>
+                      {OWNER_CAPTION_ANIMATIONS.map((animation) => (
+                        <option key={animation} value={animation}>
+                          {
+                            {
+                              highlight: "Spoken-word highlight",
+                              pop: "Word pop",
+                              bounce: "Word bounce",
+                              reveal: "Typewriter reveal",
+                              "single-word": "Word by word",
+                              fade: "Line fade",
+                              none: "Static",
+                            }[animation]
+                          }
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label>
-                    Start frame (clip relative)
+                    Text color
                     <input
-                      type="number"
-                      min="0"
-                      max={base.overlay.frames - 1}
-                      step="1"
-                      value={
-                        Number.isFinite(selectedCue.startFrame)
-                          ? selectedCue.startFrame
-                          : ""
-                      }
+                      type="color"
+                      value={caption.color}
                       onChange={(event) =>
-                        setCue({
-                          ...selectedCue,
-                          startFrame:
-                            event.currentTarget.value === ""
-                              ? NaN
-                              : Number(event.currentTarget.value),
+                        setCaption({
+                          ...caption,
+                          color: event.currentTarget.value,
                         })
                       }
                     />
                   </label>
                   <label>
-                    End frame (exclusive)
+                    Highlight
                     <input
-                      type="number"
-                      min="1"
-                      max={base.overlay.frames}
-                      step="1"
-                      value={
-                        Number.isFinite(selectedCue.endFrame)
-                          ? selectedCue.endFrame
-                          : ""
-                      }
+                      type="color"
+                      value={caption.highlight}
                       onChange={(event) =>
-                        setCue({
-                          ...selectedCue,
-                          endFrame:
-                            event.currentTarget.value === ""
-                              ? NaN
-                              : Number(event.currentTarget.value),
+                        setCaption({
+                          ...caption,
+                          highlight: event.currentTarget.value,
                         })
                       }
                     />
                   </label>
+                  <label>
+                    Alignment
+                    <select
+                      value={caption.align}
+                      onChange={(event) =>
+                        setCaption({
+                          ...caption,
+                          align: event.currentTarget
+                            .value as OwnerCaptionStyle["align"],
+                        })
+                      }
+                    >
+                      <option value="left">Left</option>
+                      <option value="center">Center</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </label>
                 </div>
-                <p>
-                  {(selectedCue.startFrame / OWNER_FPS).toFixed(3)}–
-                  {(selectedCue.endFrame / OWNER_FPS).toFixed(3)} seconds ·{" "}
-                  {OWNER_FPS} frames/second. Layer order follows the picture
-                  list.
-                </p>
+              </div>
+              <div
+                role="tabpanel"
+                id={`${tabsId}-caption-position-panel`}
+                aria-labelledby={`${tabsId}-caption-position`}
+                hidden={captionTab !== "position"}
+                tabIndex={0}
+              >
+                <div
+                  className="position-presets"
+                  role="group"
+                  aria-label="Caption position"
+                >
+                  {(
+                    [
+                      { center: 0.25, label: "Upper half" },
+                      { center: 0.5, label: "Center" },
+                      { center: 0.75, label: "Lower half" },
+                    ] as const
+                  ).map((item) => (
+                    <Button
+                      key={item.center}
+                      variant="secondary"
+                      aria-pressed={
+                        Math.abs(
+                          caption.box.y + caption.box.height / 2 - item.center,
+                        ) < 0.00001 &&
+                        Math.abs(caption.box.x + caption.box.width / 2 - 0.5) <
+                          0.00001 &&
+                        caption.verticalAlign === "center"
+                      }
+                      onClick={() =>
+                        setCaption({
+                          ...caption,
+                          align: "center",
+                          verticalAlign: "center",
+                          box: centeredOwnerBox(
+                            caption.box,
+                            item.center,
+                            caption,
+                          ),
+                        })
+                      }
+                    >
+                      {item.label}
+                    </Button>
+                  ))}
+                </div>
                 <BoxFields
-                  label="Picture"
-                  box={selectedCue.box}
-                  onChange={(box) => setCue({ ...selectedCue, box })}
+                  label="Caption"
+                  box={caption.box}
+                  onChange={(box) => setCaption({ ...caption, box })}
                 />
-                <button
-                  type="button"
-                  onClick={() => {
+              </div>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => update({ ...draft, captions: null })}
+              >
+                Reset captions
+              </Button>
+            </fieldset>
+          </div>
+          <div
+            id={`${tabsId}-filters-panel`}
+            role="tabpanel"
+            aria-labelledby={`${tabsId}-filters`}
+            hidden={setting !== "filters"}
+            tabIndex={0}
+          >
+            <fieldset disabled={pending}>
+              <legend className="local-sr-only">Filters</legend>
+              <label>
+                Filter
+                <select
+                  value={draft.videoLook?.preset ?? "original"}
+                  onChange={(event) =>
                     update({
                       ...draft,
-                      visuals: draft.visuals.filter(
-                        (cue) => cue.id !== selectedCue.id,
-                      ),
-                    });
-                    setSelection("captions");
+                      videoLook: {
+                        preset: event.currentTarget
+                          .value as OwnerVideoLook["preset"],
+                        strength: draft.videoLook?.strength ?? 100,
+                      },
+                    })
+                  }
+                >
+                  {OWNER_VIDEO_LOOKS.map((look) => (
+                    <option key={look} value={look}>
+                      {
+                        {
+                          original: "Original",
+                          vivid: "Vivid",
+                          warm: "Warm",
+                          cool: "Cool",
+                          mono: "Black and white",
+                        }[look]
+                      }
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Strength ({draft.videoLook?.strength ?? 100}%)
+                <input
+                  aria-label="Filter strength"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={draft.videoLook?.strength ?? 100}
+                  disabled={
+                    !draft.videoLook || draft.videoLook.preset === "original"
+                  }
+                  onChange={(event) =>
+                    update({
+                      ...draft,
+                      videoLook: {
+                        preset: draft.videoLook?.preset ?? "original",
+                        strength: Number(event.currentTarget.value),
+                      },
+                    })
+                  }
+                />
+              </label>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  const next = { ...draft };
+                  delete next.videoLook;
+                  update(next);
+                }}
+              >
+                Reset filter
+              </Button>
+            </fieldset>
+          </div>
+          <div
+            id={`${tabsId}-pictures-panel`}
+            role="tabpanel"
+            aria-labelledby={`${tabsId}-pictures`}
+            hidden={setting !== "pictures"}
+            tabIndex={0}
+          >
+            <fieldset disabled={pending}>
+              <legend className="local-sr-only">Pictures</legend>
+              <div
+                className="picture-picker"
+                role="group"
+                aria-label="Pictures"
+              >
+                {draft.visuals.map((cue, index) => (
+                  <Button
+                    key={cue.id}
+                    variant="secondary"
+                    className="picture-choice"
+                    aria-label={`Edit picture ${index + 1}`}
+                    aria-pressed={selection === cue.id}
+                    onClick={() => choosePicture(cue)}
+                  >
+                    <span
+                      className="picture-thumb"
+                      aria-hidden="true"
+                      style={{
+                        backgroundImage: `url(/api/local/workspace/${workspaceId}/assets/${cue.assetId})`,
+                      }}
+                    />
+                    <span>Picture {index + 1}</span>
+                  </Button>
+                ))}
+              </div>
+              <div className="picture-tools">
+                <Button
+                  variant="secondary"
+                  disabled={
+                    pending ||
+                    clip.assets.length >= OWNER_PICTURE_LIMITS.assetsPerClip ||
+                    draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
+                  }
+                  onClick={() => pictureInput.current?.click()}
+                >
+                  {pending ? (
+                    <LoaderCircle
+                      size={18}
+                      className="acquisition-spinner"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Upload size={18} aria-hidden="true" />
+                  )}
+                  {pending ? "Uploading…" : "Upload image"}
+                </Button>
+                <Button
+                  variant="quiet"
+                  disabled={
+                    !clip.assets.length ||
+                    draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
+                  }
+                  onClick={() => {
+                    const cue = newPicture(
+                      selectedCue?.assetId ?? clip.assets[0]!.id,
+                    );
+                    update({ ...draft, visuals: [...draft.visuals, cue] });
+                    choosePicture(cue);
                   }}
                 >
-                  Remove selected picture cue
-                </button>
-              </>
-            )}
-            <nav>
-              <button
-                type="button"
-                disabled={
-                  !clip.assets.length ||
-                  draft.visuals.length >= CONTEXTUAL_PICTURE_POLICY.maxPictures
-                }
-                onClick={() => {
-                  const id = crypto.randomUUID();
-                  update({
-                    ...draft,
-                    visuals: [
-                      ...draft.visuals,
-                      {
-                        id,
-                        assetId: clip.assets[0]!.id,
-                        startFrame: 0,
-                        endFrame: Math.min(base.overlay.frames, OWNER_FPS * 4),
-                        box: { x: 0.1, y: 0.1, width: 0.8, height: 0.3 },
-                        fit: "contain",
-                      },
-                    ],
-                  });
-                  setSelection(id);
-                  player.current?.seekTo(0);
-                }}
-              >
-                Add picture cue
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  update({ ...draft, visuals: automaticVisualEdits(clip) });
-                  setSelection("captions");
-                }}
-              >
-                Reset pictures to automatic
-              </button>
-            </nav>
-            <label className="file">
-              Add your JPEG or PNG
+                  Add picture
+                </Button>
+              </div>
               <input
+                ref={pictureInput}
+                className="local-file-input"
+                aria-label="Upload picture"
                 type="file"
-                accept="image/jpeg,image/png"
+                accept="image/jpeg,image/png,image/webp"
                 disabled={
-                  clip.assets.length >= OWNER_PICTURE_LIMITS.assetsPerClip
+                  pending ||
+                  clip.assets.length >= OWNER_PICTURE_LIMITS.assetsPerClip ||
+                  draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
                 }
                 onChange={(event) => {
                   upload(event.currentTarget.files?.[0]);
                   event.currentTarget.value = "";
                 }}
               />
-            </label>
-            <p>
-              Use pictures you own or have permission to use. At most 4 MiB and
-              16 million decoded pixels; local import strips metadata and
-              normalizes to a bounded JPEG. Registered assets:{" "}
-              {clip.assets.length}/{OWNER_PICTURE_LIMITS.assetsPerClip}. Owner
-              pictures keep their own provenance.
-            </p>
-          </fieldset>
+              <p className="source-hint">JPEG, PNG, WebP · Max 4 MB</p>
+              {selectedCue && (
+                <>
+                  <ControlTabs
+                    id={`${tabsId}-picture`}
+                    label="Picture controls"
+                    items={[
+                      { value: "image", label: "Image" },
+                      { value: "timing", label: "Timing" },
+                      { value: "motion", label: "Motion" },
+                      { value: "position", label: "Position" },
+                    ]}
+                    value={pictureTab}
+                    onChange={setPictureTab}
+                  />
+                  <div
+                    role="tabpanel"
+                    id={`${tabsId}-picture-image-panel`}
+                    aria-labelledby={`${tabsId}-picture-image`}
+                    hidden={pictureTab !== "image"}
+                    tabIndex={0}
+                  >
+                    <div className="editor-fields">
+                      <label>
+                        Image
+                        <select
+                          value={selectedCue.assetId}
+                          onChange={(event) =>
+                            setCue({
+                              ...selectedCue,
+                              assetId: event.currentTarget.value,
+                            })
+                          }
+                        >
+                          {clip.assets.map((asset, index) => (
+                            <option key={asset.id} value={asset.id}>
+                              Image {index + 1}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Fit
+                        <select
+                          value={selectedCue.fit}
+                          onChange={(event) =>
+                            setCue({
+                              ...selectedCue,
+                              fit: event.currentTarget
+                                .value as OwnerVisualEdit["fit"],
+                            })
+                          }
+                        >
+                          <option value="contain">Fit</option>
+                          <option value="cover">Fill</option>
+                        </select>
+                      </label>
+                    </div>
+                    <Button
+                      variant="quiet"
+                      onClick={() => {
+                        update({
+                          ...draft,
+                          visuals: draft.visuals.filter(
+                            (cue) => cue.id !== selectedCue.id,
+                          ),
+                        });
+                        setSelection(
+                          draft.visuals.find((cue) => cue.id !== selectedCue.id)
+                            ?.id ?? "captions",
+                        );
+                      }}
+                    >
+                      Remove picture
+                    </Button>
+                  </div>
+                  <div
+                    role="tabpanel"
+                    id={`${tabsId}-picture-timing-panel`}
+                    aria-labelledby={`${tabsId}-picture-timing`}
+                    hidden={pictureTab !== "timing"}
+                    tabIndex={0}
+                  >
+                    <div className="editor-fields">
+                      {(["startFrame", "endFrame"] as const).map((key) => (
+                        <label key={key}>
+                          {key === "startFrame" ? "Start (s)" : "End (s)"}
+                          <input
+                            type="number"
+                            min={key === "startFrame" ? 0 : 1 / OWNER_FPS}
+                            max={
+                              key === "startFrame"
+                                ? (base.overlay.frames - 1) / OWNER_FPS
+                                : base.overlay.frames / OWNER_FPS
+                            }
+                            step="0.1"
+                            value={
+                              Number.isFinite(selectedCue[key])
+                                ? Number(
+                                    (selectedCue[key] / OWNER_FPS).toFixed(2),
+                                  )
+                                : ""
+                            }
+                            onChange={(event) =>
+                              setCue({
+                                ...selectedCue,
+                                [key]:
+                                  event.currentTarget.value === ""
+                                    ? NaN
+                                    : Math.round(
+                                        Number(event.currentTarget.value) *
+                                          OWNER_FPS,
+                                      ),
+                              })
+                            }
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div
+                    role="tabpanel"
+                    id={`${tabsId}-picture-motion-panel`}
+                    aria-labelledby={`${tabsId}-picture-motion`}
+                    hidden={pictureTab !== "motion"}
+                    tabIndex={0}
+                  >
+                    <div className="editor-fields">
+                      {(["entrance", "exit"] as const).map((key) => (
+                        <label key={key}>
+                          {key === "entrance" ? "Entrance" : "Exit"}
+                          <select
+                            value={selectedCue[key] ?? "none"}
+                            onChange={(event) =>
+                              setCue({
+                                ...selectedCue,
+                                [key]: event.currentTarget.value as NonNullable<
+                                  OwnerVisualEdit[typeof key]
+                                >,
+                              })
+                            }
+                          >
+                            {OWNER_VISUAL_ANIMATIONS.map((animation) => (
+                              <option key={animation} value={animation}>
+                                {
+                                  {
+                                    none: "None",
+                                    fade: "Fade",
+                                    pop: "Pop",
+                                    slide: "Slide",
+                                  }[animation]
+                                }
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ))}
+                      <label>
+                        Duration (s)
+                        <input
+                          type="number"
+                          min="0.1"
+                          max="1"
+                          step="0.1"
+                          value={
+                            Number.isFinite(selectedCue.animationFrames ?? 9)
+                              ? Number(
+                                  (
+                                    (selectedCue.animationFrames ?? 9) /
+                                    OWNER_FPS
+                                  ).toFixed(2),
+                                )
+                              : ""
+                          }
+                          onChange={(event) =>
+                            setCue({
+                              ...selectedCue,
+                              animationFrames:
+                                event.currentTarget.value === ""
+                                  ? NaN
+                                  : Math.round(
+                                      Number(event.currentTarget.value) *
+                                        OWNER_FPS,
+                                    ),
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      disabled={!!error || playbackFailed}
+                      onClick={() => {
+                        player.current?.seekTo(selectedCue.startFrame);
+                        player.current?.play();
+                      }}
+                    >
+                      Preview motion
+                    </Button>
+                  </div>
+                  <div
+                    role="tabpanel"
+                    id={`${tabsId}-picture-position-panel`}
+                    aria-labelledby={`${tabsId}-picture-position`}
+                    hidden={pictureTab !== "position"}
+                    tabIndex={0}
+                  >
+                    <div
+                      className="position-presets"
+                      role="group"
+                      aria-label="Picture position"
+                    >
+                      {(
+                        [
+                          { center: 0.25, label: "Upper half" },
+                          { center: 0.5, label: "Center" },
+                          { center: 0.75, label: "Lower half" },
+                        ] as const
+                      ).map((item) => (
+                        <Button
+                          key={item.center}
+                          variant="secondary"
+                          aria-pressed={
+                            Math.abs(
+                              selectedCue.box.x +
+                                selectedCue.box.width / 2 -
+                                0.5,
+                            ) < 0.00001 &&
+                            Math.abs(
+                              selectedCue.box.y +
+                                selectedCue.box.height / 2 -
+                                item.center,
+                            ) < 0.00001
+                          }
+                          onClick={() =>
+                            setCue({
+                              ...selectedCue,
+                              box: centeredOwnerBox(
+                                selectedCue.box,
+                                item.center,
+                                null,
+                              ),
+                            })
+                          }
+                        >
+                          {item.label}
+                        </Button>
+                      ))}
+                    </div>
+                    <BoxFields
+                      label="Picture"
+                      box={selectedCue.box}
+                      onChange={(box) => setCue({ ...selectedCue, box })}
+                    />
+                  </div>
+                </>
+              )}
+            </fieldset>
+          </div>
+          {actionsVisible && (dirty || stale || previewUnavailable) && (
+            <WorkflowActions target={footerTarget} label="Edit actions">
+              <Button
+                variant="primary"
+                type="button"
+                disabled={!dirty || !!error || stale || pending}
+                onClick={() => void perform("edit")}
+              >
+                {pending ? (
+                  <>
+                    <LoaderCircle
+                      size={18}
+                      className="acquisition-spinner"
+                      aria-hidden="true"
+                    />
+                    Working…
+                  </>
+                ) : (
+                  "Apply changes"
+                )}
+              </Button>
+              <Button
+                variant="quiet"
+                type="button"
+                disabled={pending || (!dirty && !stale && !previewUnavailable)}
+                onClick={() => void perform("reload")}
+              >
+                {(previewUnavailable && !dirty) || stale
+                  ? "Reload clip"
+                  : "Discard changes"}
+              </Button>
+            </WorkflowActions>
+          )}
         </div>
       </div>
-      <nav>
-        <button
-          type="button"
-          disabled={!dirty || !!error || stale || pending}
-          onClick={() => void perform("edit")}
-        >
-          Apply changes to clip
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => void perform("reload")}
-        >
-          Reload acknowledged revision (discard unapplied changes)
-        </button>
-      </nav>
-      <p>
-        Reading, seeking, changing controls and resetting use no provider calls.{" "}
-        {clip.mode === "synthetic-ai"
-          ? "This bundle uses simulated AI captions and pictures; real processing needs its provider adapters, keys, live flags and owner approval."
-          : "This bundle retains its provider provenance. Manual editing and native export use no AI keys."}{" "}
-        No offline AI model is supplied.
-      </p>
     </section>
   );
 }
