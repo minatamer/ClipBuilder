@@ -76,3 +76,6 @@ Thumbs.db
 .vscode/
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Research captures are archived on the owner Desktop, outside Git
+/docs/design-research/cl-002/screenshots/

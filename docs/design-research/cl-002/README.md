@@ -6,10 +6,19 @@ Purpose: current, content-safe design research and decision evidence for the
 ClipBuilder Next.js/React landing-page visual approval prototype.
 
 The earlier dark editorial/acid-lime synthesis was explicitly rejected by the
-owner and is not reused here. The screenshots in `screenshots/` are fresh
-captures of public official product pages at desktop and phone viewports. They
+owner and is not reused here. The captures of public official product pages
 are design-research evidence only, never ClipBuilder runtime assets or
 permission to copy another product's artwork, copy, layout, or brand language.
+
+On 23 October 2026, at the owner's request, the eight current captures were
+moved out of the working tree into the Desktop folder
+`ClipBuilder Research Screenshots - 2026-10-23`. That archive also preserves
+eight older screenshot versions recovered from branch/tag history, with
+original paths and SHA-256 checksums. The `screenshots/` directory is now
+ignored to prevent accidental reintroduction. The filenames below identify
+archived research evidence; they are not repository assets. The publication cleanup also removes this directory and its images from
+branch history. The separate recovery backup remains owner-local and must
+not be pushed back into the cleaned history.
 
 ## Skills used
 
@@ -26,9 +35,9 @@ task, and the Sites skill explicitly excludes development inside an existing
 non-Sites web project. No applicable standalone frontend-design or generic
 motion implementation skill was present in the current global catalog.
 
-## Official sources and fresh captures
+## Official sources and archived captures
 
-| Product | Official source | Desktop capture | Mobile capture | Why it is relevant |
+| Product | Official source | Archived desktop capture | Archived mobile capture | Why it is relevant |
 | --- | --- | --- | --- | --- |
 | OpusClip | <https://www.opus.pro/> | `opusclip-desktop-2026-09-29.jpg` | `opusclip-mobile-2026-09-29.jpg` | Direct clipping promise, concentrated CTA hierarchy, immediate product proof, confident reduction on phone |
 | Apple MacBook Air | <https://www.apple.com/macbook-air/> | `apple-macbook-air-desktop-2026-09-29.jpg` | `apple-macbook-air-mobile-2026-09-29.jpg` | Product-dominant storytelling, exceptional whitespace, material restraint, precise responsive scaling |
