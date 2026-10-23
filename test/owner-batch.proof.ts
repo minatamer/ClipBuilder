@@ -26,6 +26,7 @@ import { localWorkerPort } from "../apps/backend/local/worker-port.ts";
 import { ownerClipMediaPath } from "../apps/renderer/local/media.ts";
 import { OWNER_CAPTION_PRESETS } from "../packages/contracts/local/editor.ts";
 import { ownerDraftStatusSchema } from "../packages/contracts/local/drafts.ts";
+import { ownerPickedFileResultSchema } from "../packages/contracts/local/drafts.ts";
 import {
   executeOwnerAgentCommand,
   type OwnerAgentPorts,
@@ -35,6 +36,8 @@ import { sampleOwnerResources } from "./owner-resource-sampler.ts";
 import {
   reviewOwnerControls,
   prepareLocalControlsFixture,
+  prepareLocalOverlayFixture,
+  reviewFreshLocalFlow,
 } from "./owner-controls-browser.ts";
 
 it("makes three independent caption/picture MP4s locally, re-exports without AI and preserves their common source", async () => {
@@ -54,10 +57,10 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     token: "proof-worker",
     tools,
     chromium: "C:/Program Files/Google/Chrome/Application/chrome.exe",
-    overlayBundle: resolve(".local-build/overlay"),
+    overlayBundle: await prepareLocalOverlayFixture(directory),
   });
   const workerPort = await listenOwner(worker.server),
-    signal = AbortSignal.timeout(150_000);
+    signal = AbortSignal.timeout(240_000);
   let nativeCalls = 0,
     inFlight = 0,
     peak = 0;
@@ -330,15 +333,32 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       0,
     );
     const picture = await luma(aiFile, "eq(n,0)+eq(n,150)", "crop=8:8:536:956");
-    expect(picture[0]).toBeGreaterThan(100);
-    expect(picture[1]).toBeLessThan(100);
+    const aiSource = await ownerClipMediaPath(
+      root,
+      workspace.id,
+      result.clips[2]!.id,
+      "source",
+    );
+    const rawPicture = await luma(
+      aiSource,
+      "eq(n,0)+eq(n,150)",
+      "crop=8:8:536:956",
+    );
+    expect(Math.abs(picture[0]! - rawPicture[0]!)).toBeGreaterThan(10);
+    expect(Math.abs(picture[1]! - rawPicture[1]!)).toBeLessThan(3);
     const captions = await luma(
       aiFile,
       "eq(n,0)+eq(n,59)",
       "crop=920:200:80:1500",
     );
-    expect(captions[0]).toBeGreaterThan(20);
-    expect(captions[1]).toBeLessThan(18);
+    const rawCaptions = await luma(
+      aiSource,
+      "eq(n,0)+eq(n,59)",
+      "crop=920:200:80:1500",
+    );
+    expect(captions).toHaveLength(2);
+    for (let index = 0; index < 2; index++)
+      expect(captions[index]! - rawCaptions[index]!).toBeGreaterThan(1);
     for (const clip of result.clips) {
       expect(clip.calls).toEqual({ plan: 1, image: 1, render: 1 });
       const output = await ownerRequest(
@@ -719,12 +739,98 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         })
       ).body,
     ).toEqual(await readFile(input));
-    await reviewOwnerControls(port);
+    const beforeReopen = nativeCalls;
+    expect(
+      (
+        await ownerRequest(port, restoredEndpoint, {
+          method: "DELETE",
+          headers: auth,
+        })
+      ).status,
+    ).toBe(204);
+    const pickedVideo = await ownerRequest(port, "/api/open/video", {
+      method: "POST",
+      headers: { ...auth, "Content-Type": "video/mp4" },
+      body: oldOutput,
+    });
+    expect(pickedVideo.status).toBe(200);
+    const picked = ownerPickedFileResultSchema.parse(
+      JSON.parse(pickedVideo.body.toString()),
+    );
+    expect(picked.kind).toBe("draft");
+    expect(picked.clipId).toBe(clip.id);
+    expect(
+      (
+        await ownerRequest(
+          port,
+          `/api/workspace/${picked.workspace.id}/clips/${clip.id}/output/0`,
+          { headers: auth },
+        )
+      ).body,
+    ).toEqual(oldOutput);
+    expect(nativeCalls).toBe(beforeReopen);
+    expect(
+      (
+        await ownerRequest(port, `/api/workspace/${picked.workspace.id}`, {
+          method: "DELETE",
+          headers: auth,
+        })
+      ).status,
+    ).toBe(204);
+    await reviewOwnerControls(port, {
+      id: saved.id!,
+      sourceFingerprint: workspace.source.fingerprint,
+    });
+    expect(nativeCalls).toBe(beforeReopen);
     expect({ transcriptions, selections, plans, pictures }).toEqual({
       transcriptions: 4,
       selections: 4,
       plans: 3,
       pictures: 3,
+    });
+    const freshSource = join(directory, "synthetic-fresh.mp4");
+    await runOwnedProcess(
+      tools.ffmpeg,
+      [
+        "-nostdin",
+        "-v",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=160x90:rate=30:duration=6",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=550:sample_rate=48000:duration=6",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-threads",
+        "2",
+        freshSource,
+      ],
+      signal,
+    );
+    const freshExport = await reviewFreshLocalFlow(
+      port,
+      await readFile(freshSource),
+    );
+    const freshOutput = join(directory, "synthetic-fresh-export.mp4");
+    await writeFile(freshOutput, freshExport);
+    await runOwnedProcess(
+      tools.ffmpeg,
+      ["-nostdin", "-v", "error", "-i", freshOutput, "-f", "null", "-"],
+      signal,
+    );
+    expect({ transcriptions, selections, plans, pictures }).toEqual({
+      transcriptions: 5,
+      selections: 4,
+      plans: 5,
+      pictures: 5,
     });
     completed = true;
   } finally {
@@ -760,4 +866,4 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       await rm(directory, { recursive: true, force: true });
     }
   }
-}, 160_000);
+}, 250_000);

@@ -7,6 +7,7 @@ import {
   readdir,
   rename,
   rm,
+  copyFile,
 } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -83,6 +84,66 @@ const profile = (
   audioChannels: 1,
   audioSampleRate: 48000,
 });
+
+it("preserves NTSC packets while validating rounded offered timing and rejects real clock changes", async () => {
+  const tools = await ownerNativeTools(resolve("."));
+  const root = await mkdtemp(
+    join(tmpdir(), "clipbuilder-rounded-acquisition-"),
+  );
+  const signal = AbortSignal.timeout(150000),
+    id = randomUUID(),
+    directory = join(root, id);
+  await mkdir(directory);
+  const actual = {
+    ...profile(1280, 720),
+    fps: 30000 / 1001,
+    videoCodec: "vp9" as const,
+    audioCodec: "opus" as const,
+  };
+  const offered = { ...actual, fps: 30, durationMs: 17000 };
+  try {
+    await createSyntheticAcquisitionComponents(root, id, actual, tools, signal);
+    const backup = join(root, "backup");
+    await mkdir(backup);
+    for (const kind of ["video", "audio"])
+      await copyFile(
+        join(directory, "acquisition." + kind),
+        join(backup, "acquisition." + kind),
+      );
+    const result = await prepareOwnerAcquisition(
+      root,
+      id,
+      offered,
+      tools,
+      signal,
+    );
+    expect(result.source.fps).toBeCloseTo(30000 / 1001, 3);
+    expect(result.source.durationMs).toBeGreaterThan(16000);
+    expect(result.source.durationMs).toBeLessThan(16100);
+    expect(result.descriptor.fps).toBe(result.source.fps);
+    expect(result.descriptor.durationMs).toBe(result.source.durationMs);
+    for (const changed of [
+      { ...offered, fps: 25 },
+      { ...offered, durationMs: 18000 },
+    ]) {
+      const rejected = randomUUID(),
+        target = join(root, rejected);
+      await mkdir(target);
+      for (const kind of ["video", "audio"])
+        await copyFile(
+          join(backup, "acquisition." + kind),
+          join(target, "acquisition." + kind),
+        );
+      await expect(
+        prepareOwnerAcquisition(root, rejected, changed, tools, signal),
+      ).rejects.toThrow("acquisition_selection_changed");
+      expect(await readdir(target)).toEqual([]);
+    }
+  } finally {
+    expect(resolve(root, "..")).toBe(resolve(tmpdir()));
+    await rm(root, { recursive: true, force: true });
+  }
+}, 150000);
 
 it("generates and fully decodes exact synthetic 720p/1080p/2160p/portrait sources through the local worker without downloaded media", async () => {
   const tools = await ownerNativeTools(resolve("."));

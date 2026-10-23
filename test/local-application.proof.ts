@@ -228,7 +228,7 @@ it("runs the normal app with local controls, real native upload/ranges and fake 
     await page.goto({ url: "http://localhost:3000/start", timeout: 15_000 });
     await page._client().send("Runtime.evaluate", {
       expression:
-        "globalThis.clipbuilderLocalApplicationReady = () => document.body.textContent?.includes('Simulated AI') === true && [...document.querySelectorAll('label')].some(label => label.textContent?.includes('Number of additional AI moments') && label.querySelector('input')?.matches(':enabled') === true);",
+        "globalThis.clipbuilderLocalApplicationReady = () => document.body.textContent?.includes('Fake AI') === true && [...document.querySelectorAll('label')].some(label => label.textContent?.trim().startsWith('Clips') && label.querySelector('input')?.matches(':enabled') === true);",
     });
     let controlsReady = false;
     for (let attempt = 0; attempt < 100; attempt++) {

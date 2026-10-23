@@ -10,6 +10,22 @@ type Row = {
   rss: number;
   threads: number;
 };
+
+/** An older process cannot belong to a newly created parent with a reused PID. */
+export function resourceDescendants(rows: readonly Row[], rootPid: number) {
+  const owned = rows.filter((row) => row.pid === rootPid);
+  for (let index = 0; index < owned.length; index++) {
+    const parent = owned[index]!;
+    for (const row of rows)
+      if (
+        row.parent === parent.pid &&
+        Date.parse(row.created) >= Date.parse(parent.created) &&
+        !owned.some((item) => item.pid === row.pid)
+      )
+        owned.push(row);
+  }
+  return owned;
+}
 async function processes(): Promise<Row[]> {
   if (process.platform !== "win32" || !process.env.SystemRoot)
     throw new Error("owner_resource_platform_unverified");
@@ -43,7 +59,7 @@ async function processes(): Promise<Row[]> {
       row.parent < 0 ||
       !("created" in row) ||
       typeof row.created !== "string" ||
-      row.created.length < 20 ||
+      !Number.isFinite(Date.parse(row.created)) ||
       !("name" in row) ||
       typeof row.name !== "string" ||
       !row.name ||
@@ -137,14 +153,7 @@ export async function sampleOwnerResources(root: string) {
   let failed: string | undefined;
   async function sample() {
     const all = await processes();
-    const owned = all.filter((row) => row.pid === process.pid);
-    for (let index = 0; index < owned.length; index++)
-      for (const row of all)
-        if (
-          row.parent === owned[index]!.pid &&
-          !owned.some((item) => item.pid === row.pid)
-        )
-          owned.push(row);
+    const owned = resourceDescendants(all, process.pid);
     // Exclude only this sampler's own short-lived PowerShell query from metrics.
     const measured = owned.filter(
       (row) =>
