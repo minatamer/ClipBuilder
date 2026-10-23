@@ -1,5 +1,181 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Permanent application motion decision — 2026-10-23
+
+The owner requires normal motion everywhere, including loading spinners, field
+transitions and carousel navigation, under every OS/browser motion preference.
+Remove all application reduced-motion CSS/JavaScript overrides and never
+reintroduce them. Preserve normal inactive/completed-state behavior and leave
+OS/browser settings unchanged. This permanent decision supersedes historical
+fallbacks and instructions to reconsider suppression before release; it does
+not claim accessibility compliance. CL-039 owns removal and verification.
+
+## Focused local clip editing — 2026-10-23
+
+Latest owner audit (CL-050–053): selection and editing are separate exclusive
+screens in the same app. Editor shows one clip via clip tabs, one settings panel
+and a contextual footer with one primary plus Add more clips (dirty edits use
+Apply / Discard instead). Session actions belong in a compact menu. No appended
+selection disclosure, success narration or permanent export-history section.
+Captions support direct manipulation and exact quarter/center positions, local
+social typography and frame-driven word animation. Pictures support multiple
+manual uploads, clip-relative timing, entry/exit motion and direct placement.
+Fake AI uses a fictional conversation and a credited bundled sample photograph,
+never source transcription or provider-generated imagery. Shared composition
+preserves preview/export parity, optional schema compatibility and fixed provider
+budgets. Full audit/ordered acceptance is in CL-050; execute then validate each
+packet sequentially. This authorizes local code/tests only, no paid/cloud/Git or
+deployment action; real provider checks remain owner-only.
+
+CL-049 contains local native-video failures inside the existing portrait preview
+with a concise explicit retry. Preserve dirty settings and the paused playhead;
+retry remounts playback only, without AI, processing, export or clip reload.
+Handle expected media events before dependency logs can activate the developer
+overlay, and provide a render-error fallback. Existing invalid-overlay recovery
+and provider/runtime gates remain unchanged. CL-049 owns diagnostic/proof evidence.
+
+Permanent owner view rule (CL-048): successive form/result stages replace their
+content slot using mutually exclusive views or tabs; never append a complete
+second workflow below the form. Local selection uses Add clips / Your clips.
+Successful or restored analysis opens Your clips with unique results selected,
+manual-first within the existing ten-clip cap. Deselect to exclude; excess
+choices become selectable after freeing capacity. Tab changes retain inputs and
+selection without processing; edits invalidate stale results. Add clips owns
+Find moments / Use clips in the footer, Your clips owns Process clips (disabled
+for an empty selection). Processing still requires an explicit click. Reuse the
+settings-tab materials and keep one panel visible with keyboard navigation.
+AGENTS.md records the durable rule; CL-048 owns verification.
+
+CL-047 extends the whole-second manual clocks from CL-046: carry overflowing
+seconds/minutes on blur and submission (00:00:90 → 00:01:30;
+00:90:00 → 01:30:00). Preserve partial typing and existing precise restored
+endpoints until individually edited. Typed times retain source/range validation.
+Each Start/End has a concise inline Capture action that reads the actual
+source preview playhead, floors to whole seconds and stays within loaded source
+bounds. Loading, seeking, failed and busy previews cannot overwrite fields.
+Capture changes only that endpoint and invalidates stale selections; it never
+seeks the video, submits processing or needs AI/API keys. CL-047 owns evidence.
+
+CL-045 removes the Save draft option/status polling and unnecessary explanation,
+provenance/call counters and success narration throughout selection and editing.
+Keep concise labels, relevant errors and a compact fake/live identity. Existing
+saved drafts/reopening/autosave and retained sources/exports remain intact; do
+not silently create new durable projects. Picture timing is presented in seconds
+while preserving internal frame alignment and validation.
+
+Permanent owner rule: proceed and submit actions belong in the relevant footer.
+Use the persistent workspace footer for Find moments/Use clips, Process clips, Apply
+changes and Export/download, showing context-relevant actions and preserving
+busy/dirty/stale/cancel guards. Intake retains anchored card footers. Selection
+and field-specific tools remain with their controls. Closed selection panels and
+inactive editors must not expose submit actions. AGENTS.md records this rule;
+CL-045 owns desktop/phone, interaction and cleanup evidence.
+
+The owner requires a compact clip picker and one selected clip's editor. Display
+one settings category at a time using Captions, Filters and Pictures tabs. Keep
+the preview beside the inspector on desktop and stack them on phones. CL-050
+replaces the former source/moment disclosure with a separate selection view,
+retaining state without appending another workflow above the editor.
+Preserve unapplied edits across tabs and protect them when switching clips.
+CL-034 owns this presentation revision; processing, storage and fake/live gates
+remain unchanged.
+
+## Two-state YouTube intake — 2026-10-23
+
+CL-044 keeps a rotating “Opening…” indicator in the Use video button while a
+saved source opens. Keep controls disabled until the next step mounts, restore
+the action on failure and require explicit retry. Preserve the card/footer and
+preview; no fabricated progress or extra status section.
+
+CL-043 shows a still-frame preview for saved choices using the selected local
+master and the existing preview-row design. A protected same-origin range route
+validates the exact saved destination/variant and master integrity, returns at
+most 512 KiB per request with no-store, and creates no workspace or media copy.
+The browser seeks a paused/muted frame and releases its request on change or
+unmount. No YouTube, image metadata, native-worker or AI call is needed. Existing
+records remain compatible: use “Saved video” without an ephemeral title; do not
+persist new content. Read/decode failure retains a stable icon and explicit Use
+video. Stable card bounds, bottom action alignment and normal motion still apply.
+
+CL-042 admits nominal 24/30/60 fps metadata for the matching measured NTSC rate
+and less than one second of quantization in whole-second duration hints. Retain
+tight fractional-hint and audio/video clock checks, exact format/codec/dimension
+binding, bounded processing and lossless remux. Save the measured clocks and use
+the same frame-rate comparison for offline source admission. Only finite fixed
+diagnostic codes may cross the local worker/coordinator boundary; provider stderr
+and raw errors remain private. Real transfer verification with fake AI does not
+prove Gemini processing or change the owner-only paid gates.
+
+CL-041 requires shared header/body/footer geometry for both intake cards. Anchor
+paired actions on one bottom row, align sibling footers, and scroll only the body
+when space is constrained. Present the selected video as one coherent landscape
+media row with readable title and quality. Active transfer/preparation replaces
+the resolution controls in their existing slot; it must not append a new section.
+Use the shared blue, rounded Progress primitive, measured byte fractions only
+when the transfer total is known, and indeterminate activity during unknown or
+preparation stages. Keep cancel in the footer; terminal failure/cancellation
+restores quality selection with concise feedback. Inspect every state on desktop,
+tablet and phones. AGENTS.md records this durable design guard.
+
+CL-040 narrows the local picker to one supported English-audio choice per
+resolution from 480p through 1440p (2K), including regional English tags. Apply
+the same filter to saved copies, reuse an available saved tier, remove Best and
+require an explicit offered choice for new downloads. Unknown language is not
+assumed English; never substitute a hidden quality or track. Preserve server
+format ranking/admission and exact import identities. Use the shared glass
+tokens, inset chevron and native select semantics. Reserve responsive card height
+across URL/loading/resolution/error/progress states; keep overflow actions reachable.
+
+The owner explicitly authorizes a small selected-video thumbnail/title in this
+local card. Bounded projected title/identity stay in ephemeral offers/UI; a
+protected same-origin endpoint returns memory-only JPEG bytes from the fixed
+`i.ytimg.com/vi/<admitted-video-id>/mqdefault.jpg` path (five seconds, 256 KiB,
+no redirects, no credentials/cache). This is a narrow display exception to the
+earlier title-free projection, not permission for content logs, durable metadata,
+arbitrary URLs or renderer assets. Saved/offline reuse starts no preview request.
+Missing images degrade to an icon. Only overflowing titles scroll; the full text
+remains accessible. No motion-preference suppression is allowed.
+
+The owner requires a compact URL-entry → resolution-selection card. Continue may
+perform local saved-source lookup followed by offered-quality retrieval without
+an intermediate metadata button. The explicit Download action remains separate.
+Ready saved sources use the same picker offline; More resolutions is an explicit
+online request when needed. Remove source-management/save-location controls and
+save new sources under Downloads/ClipBuilder automatically. Preserve variant
+validation, retention, cancellation, fake/live separation and the existing design.
+CL-032 owns this revision and supersedes the extra quality-request UI step below.
+CL-038 keeps the full URL card mounted through initial connection, with a compact
+spinner and disabled input until capability/workspace restoration finishes.
+Readiness changes control availability without swapping card layouts.
+CL-039 runs capability/workspace restoration concurrently while preserving that
+complete readiness gate and fresh local runtime ownership verification.
+CL-037 corrects the local metadata boundary: up to 1,000 raw formats can expand
+into at most 10,000 exact video/audio choices. These are separate bounded limits;
+unsupported choices and original quality/track selection remain explicit. This
+changes no source duration/size, dispatch budget or public workflow.
+
+## Picker-based saved-material reuse — 2026-10-23
+
+The owner removes the permanent saved-draft and saved-video sections. Keep the
+same upload-or-YouTube intake. Choosing a registered draft JSON or a video whose
+bytes match saved draft material should reopen the saved work and existing
+exports without AI/acquisition/rendering. Choose the latest saved matching draft
+for video matches, preserving the matched clip when identifiable. Unknown video
+bytes use normal intake; unknown/damaged draft references fail without hidden
+reprocessing. Keep compact saving/status controls in the editing flow. CL-029
+owns this revision; saved media retention and configuration/spend gates remain.
+
+## Local workflow design correction — 2026-10-23
+
+The owner requires the existing demo's design quality and interaction hierarchy
+for the local extension. Intake offers upload or YouTube link in two columns on
+desktop, stacked on phones. Upload includes a local-only **Use demo sample** CTA
+using the existing secondary treatment. Saved sources/drafts stay secondary.
+Apply the existing navy glass surfaces, shared controls, typography and responsive
+spacing through selection and editing. Local functionality is part of the normal
+demo flow and is not an exception to its design principles. CL-028 owns this
+presentation correction without changing processing/configuration or permissions.
+
 ## Same application, local editing extension — 2026-10-23
 
 The owner explicitly rejects a separate owner application. Move the implemented
@@ -1337,8 +1513,8 @@ not the CL-002 brand foundation or any rights/privacy/spend gate.
   Evidence/rationale/caveats remain available on demand rather than dominating
   the first view. Remove the equation illustration from this UI; this does not
   remove grounded equation rendering from the later composition pipeline.
-- Animate deliberate selection/actual playback and genuine progress, with
-  reduced-motion alternatives. Upload percentage is measurable; analysis and
+- Animate deliberate selection/actual playback and genuine progress at normal
+  timing under every motion preference. Upload percentage is measurable; analysis and
   assembly use known stage labels and indeterminate progress, never timer-based
   percentages, fictional work, or invented completion.
 - Prefer fuller moments near one minute when editorially sound. Three to four
@@ -2850,7 +3026,7 @@ It shows the ordered named stages, current stage, elapsed time, source duration,
 and a plain-language explanation of what is happening.
 
 Completed stages use a check icon plus text. The active stage uses a restrained
-motion cue that becomes static under reduced motion. Future stages remain
+motion cue that remains animated under every motion preference. Future stages remain
 visible but unclaimed. No animated fake percentages.
 
 Actions:
@@ -6020,9 +6196,10 @@ intake operational in CL-002. How it works and Back to top navigation also
 retain their brief deterministic smooth transition without writing section
 fragments into the visible URL or browser history. Real fragment destinations
 remain in server-rendered markup as the semantic and JavaScript-free fallback.
-This owner-directed always-on-motion choice is a CL-002 accessibility exception,
-not a general production policy; reopen reduced-motion behavior before public
-release and during CL-013.
+The permanent application motion decision above extends this owner-directed
+always-on-motion choice across the app. Do not restore preference-based motion
+suppression during release preparation or CL-013; accessibility review remains
+required without implying compliance from that choice.
 
 Under reduced-transparency preferences or without `backdrop-filter`, replace
 translucent surfaces with opaque navy/white material tokens while preserving

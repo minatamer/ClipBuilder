@@ -1,5 +1,211 @@
 # ClipBuilder canonical ticket index
 
+## Local flow design audit — 2026-10-23
+
+Owner-authorized sequence: [CL-050 clean flow](CL-050-clean-local-flow-and-editor.md)
+→ [CL-051 captions](CL-051-caption-position-and-social-styles.md)
+→ [CL-052 pictures/fake content](CL-052-pictures-and-realistic-fake-content.md)
+→ [CL-053 integrated regression](CL-053-local-flow-audit-regression.md).
+The full issue-to-change audit is recorded in CL-050 before implementation.
+Execute/validate/fix each packet in order; synthetic fake/paid-off checks only.
+No Git mutations or external processing are authorized by this sequence.
+CL-050–053 implemented/validated. CL-053 final evidence and owner-only limits
+are recorded in its packet. The normal app is refreshed with fake AI/cloud-off;
+no separate app, Git mutation or deployment.
+
+Owner Git handoff (2026-10-23): all pending CL-028–053 changes are now authorized
+for staging and commits under the [four-group whole-file plan](CL-053-COMMIT_PLAN.md).
+This later authorization supersedes the earlier no-Git boundary for this handoff;
+push, deployment and external processing remain excluded. Existing validation
+and all owner-only acceptance limits remain as recorded in CL-053/CL-025.
+
+## Current editor playback failure recovery — 2026-10-23
+
+[CL-049](CL-049-handle-editor-preview-playback-failure.md) handles the uncontained
+video error behind the fake-mode developer overlay and adds explicit preview-only
+retry with edits/frame retained. Implemented: 10 units and the final native/browser
+proof pass, including generic/failed-media events, retained dirty edits, paused
+frame recovery, three responsive layouts and unchanged AI/native call counts.
+Read-only current-clip checks confirm fake AI/cloud-off and successful browser
+decode/seek/play for both existing clips; no media captured. Original event trigger
+remains unknown; verified unhandled-event and developer-overlay paths are fixed.
+
+## Current clip input and result tabs — 2026-10-23
+
+[CL-048](CL-048-switch-between-clip-inputs-and-results.md) replaces appended
+results with Add clips / Your clips tabs and selects completed clips by default.
+Implemented: 32 focused checks and both fresh-browser/restored-native proofs pass,
+including deselection, keyboard and three-size layout checks. Inputs/choices,
+existing limits and footer ownership are preserved. The permanent view rule is
+in AGENTS.md. Fake AI needs no API keys; zero external calls.
+
+## Current manual clock entry and preview capture — 2026-10-23
+
+[CL-047](CL-047-normalize-manual-times-and-capture-preview.md) carries overflowing
+manual clock parts and adds a current-preview-time capture action to each Start
+and End. Implemented: 27 focused units and generated-video browser proof pass,
+including per-row capture, availability/busy guards, canonical submission and
+three responsive sizes. Types/lint/format pass; no AI/API keys or external calls.
+Existing range/source validation, restored precision and footer rules remain intact.
+
+## Current manual-clock display — 2026-10-23
+
+[CL-046](CL-046-show-manual-times-without-milliseconds.md) shows manual Start/End
+as HH:MM:SS without milliseconds. Existing precise values stay intact until
+edited. Synthetic browser, types/lint/format and validation pass; fake AI and
+backend processing are unchanged.
+
+## Current concise controls and footer actions — 2026-10-23
+
+[CL-045](CL-045-simplify-local-controls-and-anchor-workflow-actions.md) removes
+Save draft and unnecessary selection/editor prose, shortens controls and anchors
+analysis/processing/apply/export in the workspace footer. The permanent CTA rule
+is in AGENTS.md. Implemented and validated: nine focused units, final generated
+native/browser integration and responsive/manual-only proof, types/lint/format
+pass. Existing saved work and fake/live gates remain intact; zero external calls.
+
+## Current saved-video opening feedback — 2026-10-23
+
+[CL-044](CL-044-show-saved-video-opening-spinner.md) adds a continuously rotating
+Opening button state until Use video reaches the next step. Implemented and
+validated: controlled slow/failure/retry/handoff browser proof, actual rotation,
+three-size geometry, types/lint/format pass. Fake AI stays active; no provider,
+configuration, saved-media or backend behavior changed.
+
+## Current saved-video preview — 2026-10-23
+
+[CL-043](CL-043-preview-saved-video-in-intake.md) previews the selected saved
+master inside the same card, offline and without AI, metadata or native jobs.
+Implemented: 25 focused tests and generated-media browser proof pass, including
+range/privacy/integrity checks, still-frame decode, fallback and responsive
+geometry. The normal app also decodes the existing saved 720p source with fake
+AI/cloud off and no workspace change. Validation passes with no actionable
+findings. No content was captured or persisted.
+
+## Current post-transfer download fix — 2026-10-23
+
+[CL-042](CL-042-fix-post-transfer-download-failure.md) fixes false rejection of
+nominal 30 fps/rounded duration metadata for an actual 29.97 fps source. Measured
+clocks are preserved and saved-source admission uses the same bounded comparison.
+Implemented: 36 focused units, two generated-media native proofs, types, lint,
+format and contracts build pass. The normal rebuilt app completes the authorized
+real 720p download, publication and browser seek with fake AI/cloud off. Saved
+media and unrelated services remain intact; real Gemini and owner aesthetic
+acceptance remain unchecked. No Git action or deployment occurred.
+
+## Current intake action/progress correction — 2026-10-23
+
+[CL-041](CL-041-align-intake-actions-and-transfer-design.md) aligns anchored CTA
+rows, improves the media preview and replaces the picker with shared blue
+progress during transfer. Implemented: 11 unit tests, final synthetic all-stage
+browser/geometry proof and validation pass. Durable design rules are in AGENTS.md.
+CL-042 records the subsequent real-transfer fix; fake AI remains unchanged.
+
+## Current resolution-card refinement — 2026-10-23
+
+[CL-040](CL-040-refine-youtube-resolution-card.md) narrows qualities to English
+480p–1440p, styles the native picker, stabilizes responsive card heights and adds
+a bounded thumbnail/title preview with overflow scrolling. Implemented and
+validated: 86 focused unit tests, final synthetic browser/layout/fallback proof,
+types/lint/format and contracts build pass. Fake AI remains active; actual
+YouTube preview acceptance remains manual. No Git action or deployment ran.
+
+## Current motion and startup follow-up — 2026-10-23
+
+[CL-039](CL-039-keep-motion-active-and-speed-up-startup.md) removes all application
+reduced-motion overrides permanently and runs local initialization reads
+concurrently while preserving complete readiness and fresh process verification.
+Implemented: actual rotation under both motion preferences, concurrent/full-ready
+startup and failure cancellation pass in the synthetic browser; 12 focused unit
+tests plus 19 preview-review tests and types/lint/format pass. Warm initialization
+measured about 0.8 seconds versus 1.3–1.7 seconds sequentially. Final validation
+passes with no actionable findings; fake AI and saved media remain unchanged.
+
+## Current startup transition — 2026-10-23
+
+[CL-038](CL-038-keep-youtube-startup-layout-stable.md) keeps the full YouTube card
+mounted during connection with a disabled URL field and inline spinner. In
+place and verified: identical pending/ready desktop/phone bounds, five focused
+unit tests, synthetic startup/failure/acquisition browser checks and validation
+pass. Processing, fake AI settings and saved-media behavior are unchanged.
+
+## Current resolution investigation — 2026-10-23
+
+[CL-037](CL-037-diagnose-resolution-lookup-failure.md) reproduces the owner's
+failing resolution lookup: valid multilingual metadata overflowed a wrongly
+shared 1,000-choice cap. Separate bounded raw-format/expanded-choice limits fix
+it. The exact link's normal UI lookup/selection now passes, alongside 834 backend
+tests and final validation. No download, real AI or cloud/paid action ran.
+
+## Current loading feedback — 2026-10-23
+
+[CL-036](CL-036-add-honest-resolution-loading-indicator.md) adds a spinner during
+YouTube link/resolution lookup. Implemented: synthetic pending/error/retry/success,
+reduced-motion and desktop/phone browser checks, types/lint/format and validation
+pass. No invented metadata percentage/ETA; existing download bytes are unchanged.
+
+## Current notice cleanup — 2026-10-23
+
+[CL-035](CL-035-remove-workspace-cleared-notice.md) removes the workspace-cleared
+success banner after Start over. Implemented; types/format/diff and validation pass. Retention,
+failure/conflict messages and fake AI configuration are unchanged.
+
+## Current focused editor — 2026-10-23
+
+[CL-034](CL-034-focus-clip-editor-with-setting-tabs.md) replaces long clip cards
+and stacked settings with one clip picker and Captions/Filters/Pictures tabs.
+Implemented: 488 frontend tests, synthetic multi-clip/native browser checks,
+desktop/phone visual inspection and final validate pass. AI stays fake and
+processing/configuration remains unchanged; owner visual/live acceptance is open.
+
+## Current transfer fix — 2026-10-23
+
+[CL-033](CL-033-fix-youtube-transfer-and-verify-flow.md) diagnoses the real YouTube
+failure and fixes its completion template. Implemented: real download → two manual
+ranges → local caption/video edit → saved draft and verified MP4 passed with AI
+fake. 832 backend tests, focused/native checks and final validate pass; no
+Gemini/cloud calls. CL-025 owner editorial/live acceptance remains open.
+
+## Current YouTube-card simplification — 2026-10-23
+
+[CL-032](CL-032-simplify-youtube-card.md) replaces URL entry with resolution
+selection in the same card, defaults storage to Downloads/ClipBuilder and removes
+extra prose and source-management controls. Implemented: 488 frontend tests,
+responsive/transition browser checks and final validate pass. The initial real
+trial retrieved qualities but failed transfer; CL-033 subsequently fixed and
+verified that path. CL-025 retains the owner acceptance checklist.
+
+## Current intake cleanup — 2026-10-23
+
+[CL-031](CL-031-remove-intake-mode-label.md) removes the mode-label row from
+upload/YouTube intake. Implemented; six synthetic viewport checks and phone visual
+inspection pass. Processing settings remain unchanged.
+
+## Current navbar spacing — 2026-10-23
+
+[CL-030](CL-030-responsive-navbar-spacing.md) increases responsive vertical
+navbar padding in the shared workflow shell and preserves the content viewport
+budget. Implemented; six synthetic viewport checks, visual inspection and focused
+types/formatting pass. Processing configuration remains unchanged.
+
+## Current picker simplification — 2026-10-23
+
+[CL-029](CL-029-open-saved-material-from-file-picker.md) replaces permanent saved
+library sections with recognition in the existing video/draft picker. Implemented
+and verified with synthetic unit/type/boundary/browser/native checks; saved work
+reopens without AI/acquisition/render dispatch and compact saving remains while
+editing. Owner manual acceptance remains open. CL-028's earlier collapsed-library
+choice is superseded.
+
+## Current design correction — 2026-10-23
+
+[CL-028](CL-028-align-local-controls-with-demo-design.md) applies the existing demo
+design through local intake, selection and editing. Owner direction: upload or
+YouTube in two columns, local demo-sample CTA with upload, secondary saved libraries.
+Implemented and verified with frontend, boundary, responsive/native browser and
+isolated production-compilation checks. Final validate has no actionable findings;
+processing configuration and owner visual/real-media acceptance remain unchanged.
+
 ## Current integration — 2026-10-23
 
 [CL-027](CL-027-integrate-local-editing-into-main-app.md) integrates the existing controls into normal `/start`, backend lifecycle and `.env.local`. Owner startup commands/4100/separate UI are superseded. Implemented and validated: five gates, 1,639 unit tests, synthetic native/browser checks and final validate with no actionable findings. Real YouTube/AI acceptance remains CL-025. No Git action or deployment is authorized.

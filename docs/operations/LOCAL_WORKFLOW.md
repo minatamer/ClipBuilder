@@ -4,6 +4,26 @@ Use the normal application at `http://localhost:3000/start`. The frontend runs
 on 3000 and backend on 4000 using their normal commands and existing app-local
 `.env.local` files. There is no separate owner app or startup mode.
 
+Processing opens a clean editor with clip tabs. Captions/Filters/Pictures show
+one inspector at a time; caption Style/Position and picture Image/Timing/Motion/
+Position keep related controls separate. Add more clips returns to selection;
+Back to editor preserves the work. Apply/Discard replace navigation while edits
+are pending. The footer has one primary plus one secondary; Session owns Start
+over. No Save draft or permanent export-history panel is shown.
+
+Caption positions center at the upper quarter, center or lower quarter. Drag,
+resize and keyboard placement use the actual scaled preview. Social caption
+styles and picture entrance/exit effects share native export rendering. Upload
+static PNG/JPEG/WebP pictures to insert them directly; configure each cue's timing
+and position. Up to twenty manual cues do not increase the three-image AI budget.
+Fake analysis is fictional dialogue; its recognizable offline sample image is
+credited in the backend's SAMPLE_MEDIA.md. Existing saved media is preserved.
+
+When changing shared local contracts/composition or native worker code, refresh
+the normal backend so its compiled worker/overlay matches the frontend. Normal
+startup performs the build; do not test against a stale `.local-build` bundle.
+Synthetic editing proofs compile the overlay into their own temporary scratch.
+
 For fake AI with actual local video processing and downloads, set
 `FAKE_MODE=true` and `PAID_DEMO_ENABLED=false` in `apps/backend/.env.local`.
 No API key or gcloud service is needed. The agent never reads that ignored file.
@@ -27,17 +47,30 @@ The pinned tools already prepared on this workstation live in ignored
 `scripts/prepare-local-media.ps1` and `corepack pnpm local:prepare:youtube`.
 Chrome must already exist at its documented fixed installation path.
 
-Upload an MP4 or enter a supported YouTube video link. Choose an offered quality
-or Best available, then Import. Downloading is real even with fake AI. Access,
+Choose an MP4 or a saved ClipBuilder `draft.json` with the same upload action.
+A matching saved source, clip or export reopens its latest saved draft and existing
+downloads without new AI, acquisition or rendering; otherwise an MP4 uses normal
+intake. Draft references resolve only the registered local bundle. Opening still
+validates and links/copies local bytes. A standalone MP4 has no editable draft
+metadata when no matching saved draft remains. Save applied edits from the compact
+editing-footer action; later acknowledged changes autosave. There are no permanent
+saved-library sections.
+
+Alternatively, enter a supported YouTube video link and Continue. The card switches
+to resolution selection; choose a quality or Best available, then Download video.
+Ready saved copies appear in the same picker offline; More resolutions explicitly
+requests online qualities. New downloads save automatically to Downloads/ClipBuilder.
+Downloading is real even with fake AI. Access,
 regional restrictions and upstream challenges can still prevent a download;
 there is no account-cookie/DRM bypass. Saved source reuse checks the existing
 bytes before offering a new download. Source masters, drafts and exports stay
-under OS Downloads/ClipBuilder (or explicitly chosen Desktop/ClipBuilder),
-outside Git. Clearing scratch or deleting a draft preserves its source/exports.
+outside Git. Existing Desktop/ClipBuilder sources remain reusable. Clearing scratch
+or deleting a draft preserves its source/exports.
 
 Choose exact manual ranges, independent AI duration bounds and suggestion
 count, then process several clips. Review captions, pictures, placement, fonts,
-animation, size and video looks; save drafts and export. Fake AI generates
+animation, size and video looks; export from the workspace footer. The Save draft
+control is retired; existing saved drafts still reopen and autosave. Fake AI generates
 fictional words/moments/pictures and does not establish real AI quality. Native
 inspection, cutting, overlays and encoding process actual local bytes.
 

@@ -8,6 +8,50 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 - Follow the latest explicit owner decision, then the source of truth, then the
   active ticket, then an approved ADR, then research/history.
+- Permanent owner motion decision (2026-10-23, CL-039): never introduce
+  app-level reduced-motion suppression in CSS or JavaScript. Animations,
+  transitions, smooth navigation and loading spinners retain their normal
+  timing under every OS/browser motion preference. Do not alter OS/browser
+  settings. Follow the motion decision in the source of truth; historical
+  reduced-motion fallback/reconsideration requirements are superseded.
+- Permanent owner design guard (2026-10-23, CL-041): local functionality follows
+  the demo's design system. Reuse shared Button/Progress primitives and tokens;
+  do not ship native/default-looking progress controls or isolated styling.
+  Intake cards share stable header/body/footer geometry, with paired actions
+  on one anchored bottom row. New states replace their content slot instead
+  of appending controls/progress below existing forms. Use a coherent media
+  preview with readable title, and inspect startup/loading/ready/transfer/
+  failure/cancel states at desktop and phone sizes before claiming design done.
+  The source of truth owns these product decisions; tickets own actual evidence.
+- Permanent owner interaction rule (2026-10-23, CL-045): proceed and submit
+  actions belong in the relevant footer, never scattered in scrolling content.
+  The workspace footer owns analysis/processing, apply and export/download;
+  intake uses its anchored card footers. Keep one context-relevant primary action,
+  concise labels and actionable errors. Do not add tutorial/implementation prose,
+  provider-call counters or redundant success messages to control flows. Inspect
+  footer visibility and responsive states whenever adding or moving an action.
+- Permanent owner view rule (2026-10-23, CL-048): successive form/result stages
+  replace the current content slot through mutually exclusive views or tabs;
+  never append another complete workflow below the input form and force scrolling.
+  Clip selection uses Add clips / Your clips tabs, retaining inputs on navigation.
+  Fresh/restored results start selected within the existing batch limit; owners
+  deselect unwanted clips. Selection never automatically submits processing.
+  Keep only the active view's proceed action in the persistent footer, including
+  a disabled Process clips when the results selection is empty. Verify tab state,
+  keyboard use and responsive geometry whenever changing this flow.
+- Owner flow audit (2026-10-23, CL-050–053): editing replaces the selection
+  screen entirely, with keyboard clip tabs and one settings/sub-settings panel.
+  Never hide a second workflow in a disclosure above/below an editor. Editor
+  footer has one primary and Add more clips; dirty mode replaces those with
+  Apply / Discard. Session actions use a compact menu, never accumulate in the
+  footer. Caption and picture positioning/motion must work in actual scaled
+  preview and native exports; verify real pointer gestures and saved state.
+  Follow the documented audit before adding controls or prose.
+- Local native parity: after changing local contracts/composition or worker
+  code, rebuild and reload the normal backend's internal worker using verified
+  lifecycle ownership. Preserve the other app/frontend, files and configuration.
+  Native proofs compile their own current-source overlay into owned temporary
+  scratch; never let an old `.local-build/overlay` silently validate new controls.
 - `README.md` owns the concise public, portfolio-facing product story and
   repository map. Link to service guides for setup and verification; do not put
   detailed commands, environment setup, or an operations manual there.

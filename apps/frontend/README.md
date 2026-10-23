@@ -471,7 +471,9 @@ controls and a back-to-gallery action leave the portrait unobstructed by
 external metadata. Proceed builds the one selected moment. Native shared-element
 View Transitions and a cancelable FLIP fallback animate entry, return and
 switching; the owner's explicit motion decision removes app-level reduced-motion
-gates permanently without changing OS/browser preferences. Motion accessibility
+gates permanently without changing OS/browser preferences. CL-039 applies this
+to all app animations, transitions, loading spinners and smooth navigation;
+never reintroduce preference-based suppression. Motion accessibility
 and final visual approval remain pending. The flow also includes simulated
 upload/ analysis/build/render, read-only review with manifest-grounded edit
 notes left and transcript right, Confirm export directly on review, and
