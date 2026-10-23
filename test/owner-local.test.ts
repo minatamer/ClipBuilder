@@ -170,17 +170,22 @@ describe("isolated owner host", () => {
       `/api/workspace/${workspace.id}/analysis`,
       { headers: auth },
     );
-    expect(
-      ownerAnalysisSchema.parse(JSON.parse(restored.body.toString())).id,
-    ).toBe(chosen.analysisId);
+    const restoredAnalysis = ownerAnalysisSchema.parse(
+      JSON.parse(restored.body.toString()),
+    );
+    expect(restoredAnalysis.id).toBe(chosen.analysisId);
+    expect(restoredAnalysis.manual).toHaveLength(1);
+    expect(restoredAnalysis.suggestions).toEqual([]);
+    // This 12-second source has only 9.8 seconds left after the manual cut.
+    expect(restoredAnalysis.calls).toEqual({ transcription: 1, selection: 0 });
     expect(analysis.transcribe).toHaveBeenCalledTimes(1);
-    expect(analysis.select).toHaveBeenCalledTimes(1);
+    expect(analysis.select).not.toHaveBeenCalled();
     const newer = inputs();
     newer.policyRevision = 2;
     expect((await analyze(workspace.id, newer)).status).toBe(200);
     expect((await analyze(workspace.id)).status).toBe(409);
     expect(analysis.transcribe).toHaveBeenCalledTimes(2);
-    expect(analysis.select).toHaveBeenCalledTimes(2);
+    expect(analysis.select).not.toHaveBeenCalled();
     const rendered = await ownerRequest(
       port,
       `/api/workspace/${workspace.id}/portrait`,

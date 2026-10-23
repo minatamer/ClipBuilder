@@ -194,8 +194,23 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         { startFrame: 6, endFrame: 36 },
         { startFrame: 60, endFrame: 120 },
       ]);
-      expect(result.suggestions.length).toBeGreaterThan(0);
+      // The longest unreserved window is 57 seconds: a 60-second AI cut
+      // cannot fit, so discovery is skipped instead of reusing manual time.
+      if (bounds.minMs === 60_000) {
+        expect(result.suggestions).toEqual([]);
+        expect(result.calls).toEqual({ transcription: 1, selection: 0 });
+      } else {
+        expect(result.suggestions.length).toBeGreaterThan(0);
+        expect(result.calls).toEqual({ transcription: 1, selection: 1 });
+      }
       for (const moment of result.suggestions) {
+        expect(
+          result.manual.every(
+            ({ cut }) =>
+              moment.cut.endFrame <= cut.startFrame ||
+              moment.cut.startFrame >= cut.endFrame,
+          ),
+        ).toBe(true);
         const frames = moment.cut.endFrame - moment.cut.startFrame;
         expect(frames).toBeGreaterThanOrEqual((bounds.minMs * 30) / 1000);
         expect(frames).toBeLessThanOrEqual((bounds.maxMs * 30) / 1000);
@@ -222,6 +237,15 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     );
     expect(analysis.calls).toEqual({ transcription: 1, selection: 1 });
     expect(analysis.suggestions).toHaveLength(5);
+    expect(
+      analysis.suggestions.every((moment) =>
+        analysis.manual.every(
+          ({ cut }) =>
+            moment.cut.endFrame <= cut.startFrame ||
+            moment.cut.startFrame >= cut.endFrame,
+        ),
+      ),
+    ).toBe(true);
     const body = JSON.stringify({
       operationId: crypto.randomUUID(),
       analysisId: analysis.id,
@@ -332,7 +356,9 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       result.clips[2]!.id,
       0,
     );
-    const picture = await luma(aiFile, "eq(n,0)+eq(n,150)", "crop=8:8:536:956");
+    // Sample the photograph's dark corner. Its previous top-center pixel has
+    // almost the same luma as green, now that the AI cut starts after manual time.
+    const picture = await luma(aiFile, "eq(n,0)+eq(n,150)", "crop=8:8:296:916");
     const aiSource = await ownerClipMediaPath(
       root,
       workspace.id,
@@ -342,7 +368,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     const rawPicture = await luma(
       aiSource,
       "eq(n,0)+eq(n,150)",
-      "crop=8:8:536:956",
+      "crop=8:8:296:916",
     );
     expect(Math.abs(picture[0]! - rawPicture[0]!)).toBeGreaterThan(10);
     expect(Math.abs(picture[1]! - rawPicture[1]!)).toBeLessThan(3);
@@ -385,7 +411,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       ).status,
     ).toBe(202);
     expect(nativeCalls).toBe(4);
-    expect([transcriptions, selections, plans, pictures]).toEqual([4, 4, 3, 3]);
+    expect([transcriptions, selections, plans, pictures]).toEqual([4, 3, 3, 3]);
     const clip = result.clips[0]!;
     const oldOutput = (
       await ownerRequest(port, `${endpoint}/clips/${clip.id}/output/0`, {
@@ -731,7 +757,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     expect(canceled.outputs).toEqual(agentExport.outputs);
     expect(canceled.calls.plan).toBe(1);
     expect(canceled.calls.image).toBe(1);
-    expect([transcriptions, selections, plans, pictures]).toEqual([4, 4, 3, 3]);
+    expect([transcriptions, selections, plans, pictures]).toEqual([4, 3, 3, 3]);
     expect(
       (
         await ownerRequest(port, `${restoredEndpoint}/source`, {
@@ -781,10 +807,12 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       id: saved.id!,
       sourceFingerprint: workspace.source.fingerprint,
     });
-    expect(nativeCalls).toBe(beforeReopen);
+    // The canceled clip is now blocked until the owner explicitly retries it.
+    // This adds one native-only job, never another fake AI boundary call.
+    expect(nativeCalls).toBe(beforeReopen + 1);
     expect({ transcriptions, selections, plans, pictures }).toEqual({
       transcriptions: 4,
-      selections: 4,
+      selections: 3,
       plans: 3,
       pictures: 3,
     });
@@ -828,7 +856,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     );
     expect({ transcriptions, selections, plans, pictures }).toEqual({
       transcriptions: 5,
-      selections: 4,
+      selections: 3,
       plans: 5,
       pictures: 5,
     });
