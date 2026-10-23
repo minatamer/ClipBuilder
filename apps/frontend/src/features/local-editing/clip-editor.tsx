@@ -237,11 +237,17 @@ function Review({
   onBox,
   onGestureStart,
   onPlaybackError,
+  onPreviewReady,
+  interactive,
+  setting,
 }: {
   overlay: OwnerOverlay;
   assets: Record<string, string>;
   sourceUrl: string;
   onPlaybackError: () => void;
+  onPreviewReady: () => void;
+  interactive: boolean;
+  setting: EditorSetting;
 } & LayerControls) {
   const frame = useCurrentFrame();
   const caption = overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean;
@@ -252,6 +258,7 @@ function Review({
           src={sourceUrl}
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
           pauseWhenBuffering
+          onLoadedData={onPreviewReady}
           onErrorCapture={(event) => {
             // Next treats Remotion's native-error console log as a page error too.
             event.stopPropagation();
@@ -263,33 +270,39 @@ function Review({
       <OwnerAutomaticOverlay overlay={overlay} assets={assets} frame={frame} />
       <AbsoluteFill
         className="editor-interaction"
-        style={{ pointerEvents: "none" }}
+        style={{
+          pointerEvents: "none",
+          visibility: interactive ? "visible" : "hidden",
+        }}
       >
-        {overlay.visuals
-          .filter((cue) => cue.startFrame <= frame && cue.endFrame > frame)
-          .map((cue, index) => (
-            <SelectionBox
-              key={cue.id}
-              id={cue.id}
-              label={`picture ${index + 1}`}
-              box={cue.box}
-              selected={selection === cue.id}
-              caption={null}
-              onSelect={onSelect}
-              onBox={onBox}
-              onGestureStart={onGestureStart}
-            />
-          ))}
-        <SelectionBox
-          id="captions"
-          label="captions"
-          box={caption.box}
-          selected={selection === "captions"}
-          caption={caption}
-          onSelect={onSelect}
-          onBox={onBox}
-          onGestureStart={onGestureStart}
-        />
+        {setting === "pictures" &&
+          overlay.visuals
+            .filter((cue) => cue.startFrame <= frame && cue.endFrame > frame)
+            .map((cue, index) => (
+              <SelectionBox
+                key={cue.id}
+                id={cue.id}
+                label={`picture ${index + 1}`}
+                box={cue.box}
+                selected={selection === cue.id}
+                caption={null}
+                onSelect={onSelect}
+                onBox={onBox}
+                onGestureStart={onGestureStart}
+              />
+            ))}
+        {setting === "captions" && (
+          <SelectionBox
+            id="captions"
+            label="captions"
+            box={caption.box}
+            selected={selection === "captions"}
+            caption={caption}
+            onSelect={onSelect}
+            onBox={onBox}
+            onGestureStart={onGestureStart}
+          />
+        )}
       </AbsoluteFill>
     </AbsoluteFill>
   );
@@ -379,12 +392,16 @@ export function ClipEditor({
   const [pending, setPending] = useState(false);
   const [forcedStale, setForcedStale] = useState(false);
   const player = useRef<PlayerRef | null>(null);
+  const alive = useRef(true);
   const [playbackFailed, setPlaybackFailed] = useState(false);
+  const [previewLoaded, setPreviewLoaded] = useState(false);
+  const previewReady = useCallback(() => {
+    if (alive.current) setPreviewLoaded(true);
+  }, []);
   const [previewAttempt, setPreviewAttempt] = useState(0);
   const [previewFrame, setPreviewFrame] = useState(0);
   const pictureInput = useRef<HTMLInputElement>(null);
   const request = useRef<AbortController | null>(null);
-  const alive = useRef(true);
   const playbackError = useCallback(() => {
     if (!alive.current) return;
     setPreviewFrame(player.current?.getCurrentFrame() ?? 0);
@@ -597,6 +614,8 @@ export function ClipEditor({
     }
     void perform("picture", file);
   }
+  const previewLoading =
+    !previewLoaded && !playbackFailed && !previewUnavailable;
   return (
     <section
       className="clip-editor"
@@ -615,7 +634,22 @@ export function ClipEditor({
           {error}
         </p>
       )}
-      <div className="editor-layout">
+      {previewLoading && (
+        <div className="clip-preparing" role="status">
+          <LoaderCircle
+            size={24}
+            className="acquisition-spinner"
+            aria-hidden="true"
+          />
+          <span>Loading preview…</span>
+        </div>
+      )}
+      <div
+        className="editor-layout"
+        data-loading={previewLoading || undefined}
+        aria-hidden={previewLoading || undefined}
+        inert={previewLoading}
+      >
         <div className="editor-preview">
           {previewUnavailable ? (
             <p role="alert">Preview unavailable. Reload this clip.</p>
@@ -640,6 +674,9 @@ export function ClipEditor({
                 onBox: setBox,
                 onGestureStart: () => player.current?.pause(),
                 onPlaybackError: playbackError,
+                onPreviewReady: previewReady,
+                interactive: previewLoaded,
+                setting,
               }}
               durationInFrames={base.overlay.frames}
               compositionWidth={1080}
@@ -655,7 +692,7 @@ export function ClipEditor({
             />
           )}
         </div>
-        <div className="editor-panels">
+        <div className="editor-panels" hidden={!previewLoaded}>
           <div
             className="editor-tabs"
             role="tablist"

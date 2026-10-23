@@ -273,7 +273,9 @@ export function LocalEditingExperience() {
           ) : null
         }
       >
-        <div className={`local-editing ${!workspace ? "local-intake" : ""}`}>
+        <div
+          className={`local-editing ${!workspace ? "local-intake" : view === "editor" ? "local-editor" : ""}`}
+        >
           <p className="flow-notice" role="status" aria-live="polite">
             {message}
           </p>

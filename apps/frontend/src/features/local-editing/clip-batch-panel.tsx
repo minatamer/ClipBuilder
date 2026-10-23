@@ -2,6 +2,7 @@ import { Button } from "../../shared/ui/button";
 import buttonStyles from "../../shared/ui/workflow.module.css";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ClipEditor } from "./clip-editor.tsx";
+import { isLocalClipEditable } from "./clip-readiness.ts";
 import { LoaderCircle } from "lucide-react";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import {
@@ -165,6 +166,8 @@ export function OwnerClipBatchPanel({
   const currentIndex =
     list.clips.findIndex((clip) => clip.id === current?.id) + 1;
   const latest = current?.outputs.at(-1);
+  const editable = current ? isLocalClipEditable(current) : false;
+  const retryable = current && ["failed", "canceled"].includes(current.state);
   const working = (clip: OwnerClip) =>
     ["queued", "preparing", "rendering", "canceling"].includes(clip.state);
   return (
@@ -223,8 +226,13 @@ export function OwnerClipBatchPanel({
           )}
         </WorkflowActions>
       )}
-      <div hidden={showProcessing}>
-        <div className="clip-list" role="tablist" aria-label="Choose a clip">
+      <div className="clip-workspace" hidden={showProcessing}>
+        <div
+          className="clip-list"
+          role="tablist"
+          aria-label="Choose a clip"
+          aria-orientation="vertical"
+        >
           {list.clips.map((clip, index) => (
             <Button
               key={clip.id}
@@ -241,9 +249,7 @@ export function OwnerClipBatchPanel({
               onKeyDown={(event) => {
                 if (
                   dirtyClip ||
-                  !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
-                    event.key,
-                  )
+                  !["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)
                 )
                   return;
                 event.preventDefault();
@@ -254,7 +260,7 @@ export function OwnerClipBatchPanel({
                       : event.key === "End"
                         ? list.clips.length - 1
                         : (index +
-                            (event.key === "ArrowRight" ? 1 : -1) +
+                            (event.key === "ArrowDown" ? 1 : -1) +
                             list.clips.length) %
                           list.clips.length
                   ]!;
@@ -298,7 +304,9 @@ export function OwnerClipBatchPanel({
                 >
                   {current.base &&
                     !dirtyClip &&
-                    latest?.editRevision !== current.revision && (
+                    (retryable ||
+                      (editable &&
+                        latest?.editRevision !== current.revision)) && (
                       <Button
                         variant="primary"
                         disabled={
@@ -313,10 +321,11 @@ export function OwnerClipBatchPanel({
                           })
                         }
                       >
-                        Export clip
+                        {editable ? "Export clip" : "Retry clip"}
                       </Button>
                     )}
                   {latest &&
+                    editable &&
                     !dirtyClip &&
                     latest.editRevision === current.revision && (
                       <a
@@ -345,7 +354,7 @@ export function OwnerClipBatchPanel({
                     : "Couldn’t process this clip. Try again."}
                 </p>
               )}
-            {!current.base && working(current) && (
+            {working(current) && (
               <div className="clip-preparing" role="status">
                 <LoaderCircle
                   size={24}
@@ -353,11 +362,20 @@ export function OwnerClipBatchPanel({
                   aria-hidden="true"
                 />
                 <span>
-                  {current.state === "queued" ? "Queued" : "Preparing clip…"}
+                  {
+                    (
+                      {
+                        queued: "Queued",
+                        preparing: "Preparing clip…",
+                        rendering: "Exporting clip…",
+                        canceling: "Canceling…",
+                      } as Partial<Record<OwnerClip["state"], string>>
+                    )[current.state]
+                  }
                 </span>
               </div>
             )}
-            {current.base && !showProcessing && (
+            {editable && !showProcessing && (
               <ClipEditor
                 key={current.id}
                 clip={current}
