@@ -51,6 +51,26 @@ function deferred<T>() {
 const response = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), { status });
 
+it.each([
+  ["acquisition_selection_changed", "acquisition_selection_changed"],
+  ["synthetic-private-worker-detail", "media_unavailable"],
+])(
+  "propagates only bounded worker failure reasons (%s)",
+  async (reason, expected) => {
+    const transport = vi.fn<typeof fetch>(async () =>
+      response({ error: "media_unavailable", reason }, 400),
+    );
+    await expect(
+      localWorkerPort(
+        4200,
+        "synthetic-token",
+        transport,
+      )(job(), new AbortController().signal),
+    ).rejects.toThrow(new RegExp(`^${expected}$`));
+    expect(transport).toHaveBeenCalledTimes(1);
+  },
+);
+
 it("protects only the active native stage and removes progress after completion or cancellation", async () => {
   const root = await mkdtemp(
     join(tmpdir(), "clipbuilder-owner-worker-progress-"),

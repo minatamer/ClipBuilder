@@ -6,6 +6,7 @@ import {
 import { createReadStream } from "node:fs";
 import { open, stat } from "node:fs/promises";
 import { resolve } from "node:path";
+import { createHash } from "node:crypto";
 import {
   OWNER_LIMITS,
   type OwnerWorkspace,
@@ -41,6 +42,7 @@ import { ownerYoutubeLinkRequestSchema } from "../../../packages/contracts/local
 import { ownerSourceMetadataRequestSchema } from "../../../packages/contracts/local/acquisition-flow.ts";
 import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/local/acquisition-profile.ts";
 import { ownerRuntimeCapabilitiesSchema } from "../../../packages/contracts/local/runtime.ts";
+import { openLocalDraft, openLocalVideo } from "./open-local-file.ts";
 
 export type OwnerHostProviders = {
   analysis?: OwnerAnalysisPorts;
@@ -170,17 +172,78 @@ export function createOwnerHost(options: OwnerHostOptions) {
       throw new Error("invalid_source");
     await requireDisk(options.root, size * 2);
     const file = await open(await files.file(id, "source.mp4"), "wx", 0o600);
+    const hash = createHash("sha256");
     try {
       let received = 0;
       for await (const chunk of req) {
         signal.throwIfAborted();
         received += chunk.length;
         if (received > size) throw new Error("invalid_source");
-        await file.writeFile(Buffer.from(chunk));
+        const bytes = Buffer.from(chunk);
+        hash.update(bytes);
+        await file.writeFile(bytes);
       }
       if (received !== size) throw new Error("invalid_source");
+      return { fingerprint: hash.digest("hex"), bytes: received };
     } finally {
       await file.close();
+    }
+  }
+  async function inspectWorkspace(
+    id: string,
+    signal: AbortSignal,
+  ): Promise<OwnerWorkspace> {
+    const inspected = await options.media(
+      { workspaceId: id, operation: "inspect" },
+      signal,
+    );
+    if (inspected.operation !== "inspect") throw new Error("invalid_source");
+    const workspace: OwnerWorkspace = {
+      id,
+      source: inspected.source,
+      mode: analysis?.mode ?? "unavailable",
+      revision: 0,
+    };
+    signal.throwIfAborted();
+    workspaces.set(id, workspace);
+    expires.set(id, Date.now() + OWNER_LIMITS.workspaceMs);
+    return workspace;
+  }
+  async function reopenDraft(
+    id: string,
+    signal: AbortSignal,
+  ): Promise<OwnerWorkspace> {
+    if (!storage || !drafts) throw new Error("draft_unavailable");
+    let restoredId: string | undefined;
+    try {
+      const loaded = await storage.load(id, files, signal);
+      restoredId = loaded.workspace.id;
+      signal.throwIfAborted();
+      const workspace: OwnerWorkspace = {
+        ...loaded.workspace,
+        mode: analysis?.mode ?? "unavailable",
+      };
+      const batch = createBatch(workspace);
+      batch.restore(loaded.clips);
+      workspaces.set(workspace.id, workspace);
+      batches.set(workspace.id, batch);
+      if (loaded.analysis) analyses.set(workspace.id, loaded.analysis);
+      expires.set(workspace.id, Date.now() + OWNER_LIMITS.workspaceMs);
+      const saved = (await storage.list()).find((item) => item.id === id);
+      signal.throwIfAborted();
+      if (!saved) throw new Error("saved_draft_missing");
+      drafts.bind(workspace.id, id, saved.savedAt);
+      restoredId = undefined;
+      return workspace;
+    } finally {
+      if (restoredId) {
+        await batches.get(restoredId)?.close();
+        batches.delete(restoredId);
+        workspaces.delete(restoredId);
+        analyses.delete(restoredId);
+        expires.delete(restoredId);
+        await files.remove(restoredId);
+      }
     }
   }
   let expiryTask = Promise.resolve();
@@ -263,11 +326,16 @@ export function createOwnerHost(options: OwnerHostOptions) {
     res: ServerResponse,
     type: string,
     workspaceId?: string,
+    maximumRangeBytes?: number,
   ) {
     const size = (await stat(file)).size;
     const range = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
     const start = range ? Number(range[1]) : 0;
-    const end = range?.[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+    const end = Math.min(
+      range?.[2] ? Number(range[2]) : size - 1,
+      size - 1,
+      range && maximumRangeBytes ? start + maximumRangeBytes - 1 : size - 1,
+    );
     if (
       (req.headers.range && !range) ||
       !Number.isSafeInteger(start) ||
@@ -415,6 +483,26 @@ export function createOwnerHost(options: OwnerHostOptions) {
           .end(JSON.stringify(sources.snapshot()));
         return;
       }
+      const thumbnail = req.url?.match(
+        /^\/api\/sources\/thumbnail\/([a-f0-9]{64})$/,
+      );
+      if (req.method === "GET" && thumbnail?.[1]) {
+        try {
+          const bytes = await sources.thumbnail(
+            thumbnail[1],
+            controller.signal,
+          );
+          res
+            .writeHead(200, {
+              "Content-Type": "image/jpeg",
+              "Content-Length": bytes.length,
+            })
+            .end(bytes);
+        } catch {
+          if (!res.destroyed) res.writeHead(404).end();
+        }
+        return;
+      }
       if (req.method === "POST" && req.url === "/api/sources/lookup") {
         const input = ownerYoutubeLinkRequestSchema.parse(
           await readOwnerJson(req),
@@ -459,8 +547,24 @@ export function createOwnerHost(options: OwnerHostOptions) {
         return;
       }
       const sourceAction = req.url?.match(
-        /^\/api\/sources\/(downloads|desktop)\/([a-f0-9-]{36})(?:\/(locate))?$/,
+        /^\/api\/sources\/(downloads|desktop)\/([a-f0-9-]{36})(?:\/(locate|preview))?$/,
       );
+      if (
+        sourceAction &&
+        req.method === "GET" &&
+        sourceAction[3] === "preview"
+      ) {
+        if (!req.headers.range) {
+          res.writeHead(416).end();
+          return;
+        }
+        const file = await sources.preview(
+          { destination: sourceAction[1], variantId: sourceAction[2] },
+          controller.signal,
+        );
+        await stream(file, req, res, "video/mp4", undefined, 512 * 1024);
+        return;
+      }
       if (sourceAction && req.method === "DELETE" && !sourceAction[3]) {
         await sources.delete(
           { destination: sourceAction[1], variantId: sourceAction[2] },
@@ -476,7 +580,9 @@ export function createOwnerHost(options: OwnerHostOptions) {
       ) {
         const result = await sources.locate(
           { destination: sourceAction[1], variantId: sourceAction[2] },
-          (id, signal) => receiveSource(id, req, signal),
+          async (id, signal) => {
+            await receiveSource(id, req, signal);
+          },
           controller.signal,
         );
         res
@@ -512,6 +618,49 @@ export function createOwnerHost(options: OwnerHostOptions) {
           .end(JSON.stringify(await storage.list()));
         return;
       }
+      if (
+        req.method === "POST" &&
+        (req.url === "/api/open/video" || req.url === "/api/open/draft")
+      ) {
+        if (uploading || workspaces.size || sources.active)
+          throw new Error("workspace_busy");
+        uploading = true;
+        try {
+          const result =
+            req.url === "/api/open/draft"
+              ? await openLocalDraft(
+                  await readOwnerJson(req),
+                  {
+                    match: (input, signal) => {
+                      if (!storage) throw new Error("draft_unavailable");
+                      return storage.matchReference(input, signal);
+                    },
+                    reopen: reopenDraft,
+                  },
+                  controller.signal,
+                )
+              : await openLocalVideo(
+                  {
+                    create: () => files.create(),
+                    receive: (id, signal) => receiveSource(id, req, signal),
+                    match: (file, signal) =>
+                      storage
+                        ? storage.matchVideo(file, signal)
+                        : Promise.resolve(null),
+                    reopen: reopenDraft,
+                    inspect: inspectWorkspace,
+                    discard: (id) => files.remove(id),
+                  },
+                  controller.signal,
+                );
+          res
+            .writeHead(200, { "Content-Type": "application/json" })
+            .end(JSON.stringify(result));
+          return;
+        } finally {
+          uploading = false;
+        }
+      }
       const savedDraft = req.url?.match(
         /^\/api\/drafts\/([a-f0-9-]{36})(?:\/(open))?$/,
       );
@@ -529,38 +678,14 @@ export function createOwnerHost(options: OwnerHostOptions) {
             return;
           }
           uploading = true;
-          let restoredId: string | undefined;
           try {
-            const loaded = await storage.load(id, files);
-            restoredId = loaded.workspace.id;
-            controller.signal.throwIfAborted();
-            const workspace: OwnerWorkspace = {
-              ...loaded.workspace,
-              mode: analysis?.mode ?? "unavailable",
-            };
-            const batch = createBatch(workspace);
-            batch.restore(loaded.clips);
-            workspaces.set(workspace.id, workspace);
-            batches.set(workspace.id, batch);
-            if (loaded.analysis) analyses.set(workspace.id, loaded.analysis);
-            expires.set(workspace.id, Date.now() + OWNER_LIMITS.workspaceMs);
-            const saved = (await storage.list()).find((item) => item.id === id);
-            if (!saved) throw new Error("saved_draft_missing");
-            drafts.bind(workspace.id, id, saved.savedAt);
-            restoredId = undefined;
+            const workspace = await reopenDraft(id, controller.signal);
             res
               .writeHead(200, { "Content-Type": "application/json" })
               .end(JSON.stringify(workspace));
             return;
           } finally {
             uploading = false;
-            if (restoredId) {
-              batches.delete(restoredId);
-              workspaces.delete(restoredId);
-              analyses.delete(restoredId);
-              expires.delete(restoredId);
-              await files.remove(restoredId);
-            }
           }
         }
         res.writeHead(404).end();
@@ -582,21 +707,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           await requireDisk(options.root, size * 2);
           newId = await files.create();
           await receiveSource(newId, req, controller.signal);
-          const inspected = await options.media(
-            { workspaceId: newId, operation: "inspect" },
-            controller.signal,
-          );
-          if (inspected.operation !== "inspect")
-            throw new Error("invalid_source");
-          const workspace: OwnerWorkspace = {
-            id: newId,
-            source: inspected.source,
-            mode: analysis?.mode ?? "unavailable",
-            revision: 0,
-          };
-          controller.signal.throwIfAborted();
-          workspaces.set(newId, workspace);
-          expires.set(newId, Date.now() + OWNER_LIMITS.workspaceMs);
+          const workspace = await inspectWorkspace(newId, controller.signal);
           newId = undefined;
           res
             .writeHead(200, { "Content-Type": "application/json" })
@@ -789,7 +900,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
               !Number.isSafeInteger(size) ||
               size <= 0 ||
               size > OWNER_PICTURE_LIMITS.inputBytes ||
-              !["image/jpeg", "image/png"].includes(
+              !["image/jpeg", "image/png", "image/webp"].includes(
                 String(req.headers["content-type"]),
               )
             )

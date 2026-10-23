@@ -36,8 +36,11 @@ export async function normalizeOwnerPicture(
   if (!bytes.length || bytes.length > limits.inputBytes) throw invalid();
   const input = Buffer.from(bytes);
   const png = input.subarray(0, pngSignature.length).equals(pngSignature),
-    jpeg = input[0] === 0xff && input[1] === 0xd8 && input[2] === 0xff;
-  if (!png && !jpeg) throw invalid();
+    jpeg = input[0] === 0xff && input[1] === 0xd8 && input[2] === 0xff,
+    webp =
+      input.toString("ascii", 0, 4) === "RIFF" &&
+      input.toString("ascii", 8, 12) === "WEBP";
+  if (!png && !jpeg && !webp) throw invalid();
   if (png) inspectPng(input);
   const image = sharp(input, {
     limitInputPixels: limits.inputPixels,
@@ -48,7 +51,7 @@ export async function normalizeOwnerPicture(
     const metadata = await image.metadata();
     signal.throwIfAborted();
     if (
-      metadata.format !== (png ? "png" : "jpeg") ||
+      metadata.format !== (png ? "png" : webp ? "webp" : "jpeg") ||
       (metadata.pages ?? 1) !== 1 ||
       !metadata.width ||
       !metadata.height ||

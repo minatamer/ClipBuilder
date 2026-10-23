@@ -82,6 +82,7 @@ function option(args: string[], name: string): string {
 function rawMetadata(muxed = false): {
   meta: {
     id: string;
+    title: string;
     duration: number;
     live_status: string;
     availability: string;
@@ -92,6 +93,7 @@ function rawMetadata(muxed = false): {
   return {
     meta: {
       id: "SYNTHETIC01",
+      title: "Synthetic selected video",
       duration: 75.125,
       live_status: "not_live",
       availability: "public",
@@ -309,6 +311,20 @@ describe("owner yt-dlp adapter with injected synthetic ports", () => {
     expect(await readdir(setup.scratchRoot)).toEqual([
       setup.directory.split(/[\\/]/u).at(-1),
     ]);
+  });
+
+  it("uses an explicit literal completion template rather than yt-dlp field shorthand", async () => {
+    const setup = await fixture();
+    const input = await setup.input();
+    await setup.port.download(input, vi.fn(), controller().signal);
+    const transfers = setup.requests.filter(
+      (request) => !tokens(request.input).includes("--skip-download"),
+    );
+    expect(transfers).toHaveLength(2);
+    for (const transfer of transfers)
+      expect(option(tokens(transfer.input), "--print")).toBe(
+        "after_move:%(id&CB_DONE|CB_DONE)s",
+      );
   });
 
   it("does not admit broker or child work when cancellation arrives during tool verification", async () => {

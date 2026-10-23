@@ -4,6 +4,7 @@ import {
   type OwnerMediaJob,
 } from "../../../packages/contracts/local/index.ts";
 import { randomUUID } from "node:crypto";
+import { ownerAcquisitionFailureCodeSchema } from "../../../packages/contracts/local/acquisition.ts";
 import { z } from "zod";
 import {
   ownerAcquisitionNativeStageSchema,
@@ -123,7 +124,13 @@ export function localWorkerPort(
         progress = poll();
       const response = await requested;
       if (!response.ok) {
-        await response.body?.cancel();
+        const failure = await workerBody(response, 1024).catch(() => null);
+        const parsed = ownerAcquisitionFailureCodeSchema.safeParse(
+          typeof failure === "object" && failure !== null && "reason" in failure
+            ? failure.reason
+            : null,
+        );
+        if (parsed.success) throw new Error(parsed.data);
         throw new Error("media_unavailable");
       }
       const value = await workerBody(response, 8192);

@@ -30,7 +30,11 @@ export async function prepareAppImage(root, application) {
         await copy(join(path, child), true);
       }
     } else if (info.isFile()) {
-      if (directorySource && !/\.(?:ts|tsx|css|svg)$/.test(path))
+      if (
+        directorySource &&
+        !/\.(?:ts|tsx|css|svg)$/.test(path) &&
+        path !== join("apps/backend/local", "sample-earth.jpg")
+      )
         throw new Error("unexpected_image_source");
       const target = join(destination, relative(sourceRoot, source));
       await mkdir(resolve(target, ".."), { recursive: true });

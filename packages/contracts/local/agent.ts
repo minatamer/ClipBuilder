@@ -3,6 +3,7 @@ import { ownerIdSchema, OWNER_LIMITS } from "./policy.ts";
 import { ownerWorkspaceSchema } from "./index.ts";
 import {
   ownerClipSchema,
+  ownerClipListSchema,
   ownerClipRenderRequestSchema,
   ownerOverlaySchema,
 } from "./clips.ts";
@@ -79,6 +80,7 @@ export const ownerAgentClipListSchema = z
     clips: z.array(ownerAgentClipSchema).max(OWNER_LIMITS.clips),
     active: z.boolean(),
     workers: z.literal(1),
+    pictureAssetId: ownerClipListSchema.shape.pictureAssetId,
   })
   .strict();
 export const ownerAgentStatusSchema = z

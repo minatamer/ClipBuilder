@@ -3,6 +3,29 @@ import { ownerWorkspaceSchema } from "./index.ts";
 import { ownerAnalysisSchema } from "./selection.ts";
 import { ownerClipSchema } from "./clips.ts";
 import { OWNER_LIMITS, ownerIdSchema } from "./policy.ts";
+import { ownerDigestSchema } from "./assets.ts";
+
+export const OWNER_DRAFT_DOCUMENT_BYTES = 32 * 1024 ** 2;
+/** Only identity is read from a selected manifest; supplied paths are ignored. */
+export const ownerPickedDraftFileSchema = z.object({
+  version: z.literal(1),
+  id: ownerIdSchema,
+  source: z.object({ digest: ownerDigestSchema }),
+});
+export const ownerPickedDraftRequestSchema = z
+  .object({
+    id: ownerIdSchema,
+    sourceFingerprint: ownerDigestSchema,
+  })
+  .strict();
+export const ownerPickedFileResultSchema = z
+  .object({
+    kind: z.enum(["draft", "video"]),
+    workspace: ownerWorkspaceSchema,
+    clipId: ownerIdSchema.nullable(),
+  })
+  .strict();
+export type OwnerPickedFileResult = z.infer<typeof ownerPickedFileResultSchema>;
 
 export const ownerDraftSnapshotSchema = z
   .object({

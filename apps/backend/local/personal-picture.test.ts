@@ -163,15 +163,16 @@ it.each([
   },
 );
 
-it("rejects actual WebP despite its supported-looking upload label", async () => {
+it("normalizes admitted static WebP to the same bounded JPEG profile", async () => {
   const bytes = await sharp({
     create: { width: 12, height: 9, channels: 3, background: "#416974" },
   })
     .webp()
     .toBuffer();
-  await expect(normalizeOwnerPicture(bytes, signal())).rejects.toThrow(
-    "invalid_owner_picture",
-  );
+  const normalized = await normalizeOwnerPicture(bytes, signal());
+  expect((await sharp(normalized.bytes).metadata()).format).toBe("jpeg");
+  expect(normalized.width).toBe(12);
+  expect(normalized.height).toBe(9);
 });
 
 it("rejects an over-limit byte buffer before decoding", async () => {

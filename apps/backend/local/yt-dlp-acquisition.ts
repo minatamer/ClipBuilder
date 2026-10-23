@@ -7,6 +7,7 @@ import {
   type OwnerYoutubeOffer,
 } from "../../../packages/contracts/local/acquisition.ts";
 import { OWNER_LIMITS } from "../../../packages/contracts/local/policy.ts";
+import { fetchYoutubeThumbnail } from "./youtube-thumbnail.ts";
 import {
   buildOwnerYoutubeOffer,
   normalizeOwnerYoutubeMetadata,
@@ -53,7 +54,7 @@ const quote = (value: string) => {
 };
 const FORMATS =
   "%\u0028formats.:.{format_id,width,height,fps,vcodec,acodec,filesize,filesize_approx,protocol,dynamic_range,language,has_drm,quality,preference,tbr,abr,audio_channels,asr,audio_track,language_preference})j";
-const META = "%\u0028.{id,duration,live_status,availability,age_limit})j";
+const META = "%\u0028.{id,title,duration,live_status,availability,age_limit})j";
 const PROGRESS =
   "%\u0028progress.{status,downloaded_bytes,total_bytes,total_bytes_estimate,speed,eta,elapsed,fragment_index,fragment_count})j";
 
@@ -149,7 +150,7 @@ export function ytDlpAcquisitionInput(input: {
       "--output",
       input.output,
       "--print",
-      "after_move:CB_DONE",
+      "after_move:%(id&CB_DONE|CB_DONE)s",
     );
   }
   args.push(input.canonicalUrl);
@@ -310,6 +311,8 @@ export function createYtDlpAcquisitionPort(
   }
   return {
     mode: "provider-source",
+    thumbnail: (identity, signal) =>
+      fetchYoutubeThumbnail(identity.videoId, signal),
     metadata: (identity, signal) =>
       session(identity, signal, (run) => readMetadata(identity, run)),
     async download(input, progress, signal) {

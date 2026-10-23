@@ -14,6 +14,7 @@ import { OWNER_LIMITS } from "../../../packages/contracts/local/policy.ts";
 import { probeMedia, SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { runOwnedProcess } from "../src/media/process-runner.ts";
 import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/local/acquisition-profile.ts";
+import { matchesOfferedFrameRate } from "../../../packages/contracts/local/acquisition-profile.ts";
 
 // Only this owner-only remux boundary admits WebM components. Upload/public
 // inspection keeps its existing MP4 demuxer boundary. All inputs are fixed
@@ -58,6 +59,12 @@ const fps = (value: string | undefined) => {
 };
 const frameTolerance = (value: OwnerAcquisitionDescriptor) =>
   Math.ceil(1000 / value.fps) + 1;
+const matchesOfferedDuration = (
+  actualMs: number,
+  selected: OwnerAcquisitionDescriptor,
+) =>
+  Math.abs(actualMs - selected.durationMs) <
+  (selected.durationMs % 1000 === 0 ? 1000 : frameTolerance(selected) + 1);
 async function boundedFile(path: string) {
   const info = await lstat(path);
   if (
@@ -116,7 +123,7 @@ function assertVideo(
     stream.codec_name !== selected.videoCodec ||
     stream.width !== selected.width ||
     stream.height !== selected.height ||
-    Math.abs(fps(stream.avg_frame_rate) - selected.fps) > 0.001 ||
+    !matchesOfferedFrameRate(fps(stream.avg_frame_rate), selected.fps) ||
     !Number.isFinite(fps(stream.avg_frame_rate)) ||
     !["yuv420p", "yuvj420p", "yuv422p", "yuv444p"].includes(
       stream.pix_fmt ?? "",
@@ -172,10 +179,9 @@ async function inspectPrepared(
   if (
     source.width !== selected.width ||
     source.height !== selected.height ||
-    Math.abs(source.durationMs - selected.durationMs) >
-      frameTolerance(selected) ||
+    !matchesOfferedDuration(source.durationMs, selected) ||
     !audio.duration ||
-    Math.abs(audio.duration * 1000 - selected.durationMs) >
+    Math.abs(audio.duration * 1000 - source.durationMs) >
       Math.max(100, frameTolerance(selected))
   )
     throw new Error("acquisition_selection_changed");
@@ -260,10 +266,10 @@ export async function prepareOwnerAcquisition(
     assertVideo(videoStream, selected);
     assertAudio(audioStream, selected);
     if (
-      Math.abs(videoProbe.format.duration * 1000 - selected.durationMs) >
-        frameTolerance(selected) ||
-      Math.abs(audioProbe.format.duration * 1000 - selected.durationMs) >
-        Math.max(100, frameTolerance(selected)) ||
+      !matchesOfferedDuration(videoProbe.format.duration * 1000, selected) ||
+      Math.abs(
+        audioProbe.format.duration * 1000 - videoProbe.format.duration * 1000,
+      ) > Math.max(100, frameTolerance(selected)) ||
       (await boundedFile(video)) + (combined ? 0 : await boundedFile(audio)) >
         OWNER_LIMITS.sourceBytes
     )

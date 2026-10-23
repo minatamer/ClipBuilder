@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { readFile } from "node:fs/promises";
 import { OWNER_FPS } from "../../../packages/contracts/local/policy.ts";
 import type { OwnerClipPorts } from "./clip-batch.ts";
 
@@ -18,9 +19,10 @@ export const fakeOwnerClipPreparation: Pick<
               moment.cut.endFrame - moment.cut.startFrame,
             ),
             brief: {
-              scene: "Fictional orange rectangle for local testing.",
-              searchQuery: "synthetic rectangle",
-              requiredTerms: ["rectangle"],
+              scene:
+                "A sample photograph of Earth from space for the fictional conversation.",
+              searchQuery: "Earth from space",
+              requiredTerms: ["Earth"],
               avoidTerms: [],
             },
             evidenceWordIds: [moment.cues[0]!.id],
@@ -30,9 +32,16 @@ export const fakeOwnerClipPreparation: Pick<
   },
   async image(_request, signal) {
     signal.throwIfAborted();
-    const bytes = await sharp({
-      create: { width: 640, height: 360, channels: 3, background: "#e39731" },
-    })
+    const sample = await readFile(
+      new URL("./sample-earth.jpg", import.meta.url),
+    );
+    const bytes = await sharp(sample)
+      .resize({
+        width: 640,
+        height: 640,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
       .jpeg({ quality: 80 })
       .toBuffer();
     signal.throwIfAborted();

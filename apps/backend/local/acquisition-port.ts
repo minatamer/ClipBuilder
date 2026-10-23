@@ -17,6 +17,10 @@ export type AcquisitionTransferProgress = {
 };
 export type OwnerAcquisitionPort = {
   mode: OwnerAcquisitionMode;
+  thumbnail?(
+    identity: OwnerLinkedIdentity,
+    signal: AbortSignal,
+  ): Promise<Uint8Array>;
   metadata(
     identity: OwnerLinkedIdentity,
     signal: AbortSignal,

@@ -112,6 +112,57 @@ async function exists(path: string) {
     throw cause;
   }
 }
+it("admits a saved preview after restart without creating a workspace and rejects changed or linked masters", async () => {
+  const original = await workspace(),
+    saved = await library.publish(publication(), original, files);
+  library = new OwnerSourceLibrary(storage);
+  const before = await readdir(scratch);
+  const file = await library.preview(saved.id, new AbortController().signal);
+  expect(await readFile(file)).toEqual(bytes);
+  expect(await readdir(scratch)).toEqual(before);
+  expect(() =>
+    library.preview("invalid", new AbortController().signal),
+  ).toThrow();
+  const canceled = new AbortController();
+  canceled.abort();
+  await expect(library.preview(saved.id, canceled.signal)).rejects.toThrow();
+  const alias = join(directory, "alias.mp4");
+  await link(file, alias);
+  await expect(
+    library.preview(saved.id, new AbortController().signal),
+  ).rejects.toThrow();
+  await rm(alias);
+  await writeFile(file, "synthetic changed master");
+  await expect(
+    library.preview(saved.id, new AbortController().signal),
+  ).rejects.toThrow();
+  await rm(file);
+  await expect(
+    library.preview(saved.id, new AbortController().signal),
+  ).rejects.toThrow();
+  expect(await readFile(await files.file(original.id, "source.mp4"))).toEqual(
+    bytes,
+  );
+});
+
+it("keeps measured NTSC source clocks ready when the frozen offer used nominal 30 fps", async () => {
+  const source = { ...metadata(), fps: 30000 / 1001 };
+  const pending = await workspace();
+  const saved = await library.publish(
+    publication(),
+    { ...pending, source },
+    files,
+  );
+  library = new OwnerSourceLibrary(storage);
+  expect((await library.list())[0]).toMatchObject({
+    state: "ready",
+    actual: { fps: source.fps },
+    video: { fps: 30 },
+  });
+  const opened = await library.open(saved.id, files, inspector(source));
+  expect(opened.variant.actual.fps).toBe(source.fps);
+});
+
 function inspector(source = metadata()) {
   return vi.fn(async (id: string, signal: AbortSignal) => {
     signal.throwIfAborted();

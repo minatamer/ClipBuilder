@@ -31,6 +31,9 @@ export function automaticOwnerEdit(
         endFrame: cue.endFrame,
         box: cue.box,
         fit: cue.fit,
+        entrance: cue.entrance,
+        exit: cue.exit,
+        animationFrames: cue.animationFrames,
       }),
     ),
   });

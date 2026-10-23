@@ -1,6 +1,7 @@
 import { FIXED_COMPOSITION_POLICY } from "@clipbuilder/contracts";
 import { OWNER_FPS } from "../../contracts/local/policy.ts";
 import type { OwnerOverlay } from "../../contracts/local/clips.ts";
+import { ownerVisualMotion } from "./visual-motion.ts";
 
 /** Exact frame-driven overlay state, including owner caption animation. */
 export function ownerOverlayFrame(overlay: OwnerOverlay, frame: number) {
@@ -31,11 +32,19 @@ export function ownerOverlayFrame(overlay: OwnerOverlay, frame: number) {
     visuals,
     key: JSON.stringify([
       captionIndex,
+      caption && overlay.captionStyle?.animation === "bounce"
+        ? caption.wordCues
+            .filter((cue) => cue.startMs <= ms && ms < cue.endMs)
+            .map((cue) => Math.min(1, (ms - cue.startMs) / 220))
+        : null,
+      caption && overlay.captionStyle?.animation === "reveal"
+        ? caption.wordCues.filter((cue) => cue.startMs <= ms).length
+        : null,
       overlay.captionStyle?.animation === "fade" && caption
         ? Math.min(1, (ms - caption.startMs) / 120)
         : null,
       highlights,
-      visuals.map((cue) => cue.id),
+      visuals.map((cue) => [cue.id, ownerVisualMotion(cue, frame)]),
     ]),
   };
 }

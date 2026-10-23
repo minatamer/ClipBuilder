@@ -1,8 +1,11 @@
 import { z } from "zod";
 import { normalizedBoxSchema } from "@clipbuilder/contracts";
 import { ownerIdSchema } from "./policy.ts";
-import { ownerDigestSchema, ownerVisualEditSchema } from "./assets.ts";
-import { CONTEXTUAL_PICTURE_POLICY } from "@clipbuilder/contracts";
+import {
+  ownerDigestSchema,
+  ownerVisualEditSchema,
+  OWNER_PICTURE_LIMITS,
+} from "./assets.ts";
 import { ownerVideoLookSchema } from "./video-look.ts";
 
 export const OWNER_CAPTION_FONTS = [
@@ -14,19 +17,23 @@ export const OWNER_CAPTION_FONTS = [
 export const OWNER_CAPTION_ANIMATIONS = [
   "highlight",
   "pop",
+  "bounce",
+  "reveal",
+  "single-word",
   "fade",
   "none",
 ] as const;
 
 export const ownerCaptionStyleSchema = z
   .object({
-    preset: z.enum(["clean", "classic", "bold"]),
+    preset: z.enum(["clean", "classic", "bold", "boxed", "typewriter"]),
     fontSize: z.number().int().min(24).max(120),
     font: z.enum(OWNER_CAPTION_FONTS).optional(),
     animation: z.enum(OWNER_CAPTION_ANIMATIONS).optional(),
     color: z.string().regex(/^#[a-fA-F0-9]{6}$/),
     highlight: z.string().regex(/^#[a-fA-F0-9]{6}$/),
     align: z.enum(["left", "center", "right"]),
+    verticalAlign: z.enum(["center", "bottom"]).optional(),
     box: normalizedBoxSchema,
   })
   .strict()
@@ -75,6 +82,28 @@ export const OWNER_CAPTION_PRESETS: Record<
     align: "center",
     box: { ...captionBox, height: 240 / 1920, y: 1460 / 1920 },
   },
+  boxed: {
+    preset: "boxed",
+    fontSize: 64,
+    font: "Verdana",
+    animation: "highlight",
+    color: "#ffffff",
+    highlight: "#e43e92",
+    align: "center",
+    verticalAlign: "center",
+    box: captionBox,
+  },
+  typewriter: {
+    preset: "typewriter",
+    fontSize: 60,
+    font: "Courier New",
+    animation: "reveal",
+    color: "#ffffff",
+    highlight: "#3173e8",
+    align: "center",
+    verticalAlign: "center",
+    box: captionBox,
+  },
 };
 export const ownerEditDocumentSchema = z
   .object({
@@ -87,7 +116,7 @@ export const ownerEditDocumentSchema = z
     videoLook: ownerVideoLookSchema.optional(),
     visuals: z
       .array(ownerVisualEditSchema)
-      .max(CONTEXTUAL_PICTURE_POLICY.maxPictures),
+      .max(OWNER_PICTURE_LIMITS.cuesPerClip),
   })
   .strict()
   .refine(
@@ -119,7 +148,10 @@ export const ownerEditRequestSchema = z
     operationId: ownerIdSchema,
     expectedRevision: z.number().int().nonnegative(),
     baseHash: ownerDigestSchema,
-    operations: z.array(ownerEditOperationSchema).min(1).max(10),
+    operations: z
+      .array(ownerEditOperationSchema)
+      .min(1)
+      .max(2 * OWNER_PICTURE_LIMITS.cuesPerClip + 2),
   })
   .strict();
 export type OwnerEditRequest = z.infer<typeof ownerEditRequestSchema>;

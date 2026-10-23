@@ -39,6 +39,7 @@ let directory: string,
   host: ReturnType<typeof createOwnerHost> | undefined,
   port: number;
 let media: ReturnType<typeof vi.fn<OwnerHostOptions["media"]>>;
+let sourcePayload: Buffer | undefined;
 const acquisition = {
   mode: "synthetic-source" as const,
   metadata: vi.fn(fakeOwnerAcquisition.metadata),
@@ -56,6 +57,7 @@ const preparation = {
 };
 beforeEach(async () => {
   vi.clearAllMocks();
+  sourcePayload = undefined;
   directory = await mkdtemp(join(tmpdir(), "clipbuilder-owner-source-api-"));
   root = join(directory, "scratch");
   await mkdir(root);
@@ -69,7 +71,8 @@ beforeEach(async () => {
       if (job.operation === "synthesize-acquisition")
         await writeFile(
           sourcePath,
-          `synthetic acquired source:${job.expected.width}x${job.expected.height}`,
+          sourcePayload ??
+            `synthetic acquired source:${job.expected.width}x${job.expected.height}`,
         );
       const bytes = await readFile(sourcePath);
       return {
@@ -131,6 +134,51 @@ const post = (path: string, body: unknown) =>
     body: JSON.stringify(body),
   });
 
+it("protects same-origin preview bytes and never dispatches acquisition or AI", async () => {
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+  const thumbnail = vi.fn(async () => jpeg);
+  const metadata = vi.fn(
+    async (...args: Parameters<typeof fakeOwnerAcquisition.metadata>) => ({
+      ...(await fakeOwnerAcquisition.metadata(...args)),
+      mode: "provider-source" as const,
+      preview: { videoId: args[0].videoId, title: "Synthetic selected video" },
+    }),
+  );
+  await start(true, {
+    mode: "provider-source",
+    metadata,
+    thumbnail,
+    download: acquisition.download,
+  });
+  expect((await get("/api/sources/thumbnail/" + "a".repeat(64))).status).toBe(
+    404,
+  );
+  const offer = ownerYoutubeOfferSchema.parse(
+    JSON.parse(
+      (
+        await post("/api/sources/metadata", {
+          url: "https://youtu.be/aaaaaaaaaaa",
+        })
+      ).body.toString(),
+    ),
+  );
+  const path = "/api/sources/thumbnail/" + offer.sourceId;
+  expect((await ownerRequest(port, path)).status).toBe(403);
+  const response = await get(path);
+  expect(response.status).toBe(200);
+  expect(response.headers["content-type"]).toBe("image/jpeg");
+  expect(response.headers["cache-control"]).toBe("no-store");
+  expect(response.headers["x-content-type-options"]).toBe("nosniff");
+  expect(response.body).toEqual(Buffer.from(jpeg));
+  expect(thumbnail).toHaveBeenCalledTimes(1);
+  expect(acquisition.download).not.toHaveBeenCalled();
+  expect(analysis.transcribe).not.toHaveBeenCalled();
+  expect(analysis.select).not.toHaveBeenCalled();
+  expect(preparation.plan).not.toHaveBeenCalled();
+  expect(preparation.image).not.toHaveBeenCalled();
+  expect(media).not.toHaveBeenCalled();
+});
+
 it("keeps real source acquisition independent from fake AI and accepts different entered sources without permits", async () => {
   const metadata = vi.fn(
     async (...args: Parameters<typeof fakeOwnerAcquisition.metadata>) => ({
@@ -163,6 +211,80 @@ it("keeps real source acquisition independent from fake AI and accepts different
   expect(preparation.plan).toHaveBeenCalledTimes(0);
   expect(preparation.image).toHaveBeenCalledTimes(0);
   expect(media).toHaveBeenCalledTimes(0);
+});
+
+it("previews saved bytes offline through protected bounded ranges without a workspace, native processing or AI", async () => {
+  sourcePayload = Buffer.alloc(700 * 1024, 0x61);
+  await start(true);
+  const offer = ownerYoutubeOfferSchema.parse(
+    JSON.parse(
+      (
+        await post("/api/sources/metadata", {
+          url: "https://youtu.be/aaaaaaaaaaa",
+        })
+      ).body.toString(),
+    ),
+  );
+  const choice = offer.choices.find((item) => item.tier === 720)!;
+  expect(
+    (
+      await post("/api/sources/import", {
+        destination: "downloads",
+        request: {
+          sourceId: offer.sourceId,
+          revision: offer.revision,
+          choiceId: choice.id,
+          selection: { kind: "variant" },
+        },
+      })
+    ).status,
+  ).toBe(202);
+  await vi.waitFor(async () =>
+    expect(
+      JSON.parse((await get("/api/sources/state")).body.toString()).stage,
+    ).toBe("ready"),
+  );
+  const saved = ownerSourceCatalogSchema.parse(
+    JSON.parse((await get("/api/sources")).body.toString()),
+  ).entries[0]!.variant;
+  await host!.close();
+  host = undefined;
+  await start(false);
+  const path = `/api/sources/downloads/${saved.id}/preview`;
+  expect((await ownerRequest(port, path)).status).toBe(403);
+  expect((await get(path)).status).toBe(416);
+  const range = (value: string, target = path) =>
+    ownerRequest(port, target, { headers: { ...auth, Range: value } });
+  const first = await range("bytes=0-");
+  expect(first.status).toBe(206);
+  expect(first.headers["content-type"]).toBe("video/mp4");
+  expect(first.headers["cache-control"]).toBe("no-store");
+  expect(first.headers["content-range"]).toBe(
+    `bytes 0-524287/${sourcePayload.length}`,
+  );
+  expect(first.body).toEqual(sourcePayload.subarray(0, 512 * 1024));
+  const second = await range("bytes=524288-");
+  expect(second.status).toBe(206);
+  expect(second.body).toEqual(sourcePayload.subarray(512 * 1024));
+  expect((await range("bytes=9999999-")).status).toBe(416);
+  expect((await range("bytes=0-4,8-12")).status).toBe(416);
+  expect(
+    (await range("bytes=0-31", path.replace("downloads", "desktop"))).status,
+  ).toBe(400);
+  expect(
+    (await range("bytes=0-31", path.replace(saved.id, randomUUID()))).status,
+  ).toBe(400);
+  expect(JSON.parse((await get("/api/workspace")).body.toString())).toBeNull();
+  expect(await readdir(root)).toEqual([]);
+  expect(acquisition.metadata).toHaveBeenCalledTimes(1);
+  expect(acquisition.download).toHaveBeenCalledTimes(1);
+  expect(media.mock.calls.map(([job]) => job.operation)).toEqual([
+    "synthesize-acquisition",
+  ]);
+  expect(analysis.transcribe).not.toHaveBeenCalled();
+  expect(analysis.select).not.toHaveBeenCalled();
+  expect(preparation.plan).not.toHaveBeenCalled();
+  expect(preparation.image).not.toHaveBeenCalled();
 });
 
 it("imports through protected HTTP into the existing range/analysis/batch flow and reuses the retained source after an offline host restart", async () => {

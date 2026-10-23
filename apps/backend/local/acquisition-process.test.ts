@@ -46,6 +46,26 @@ it("turns raw stderr and nonzero exits into a content-free failure", async () =>
     ),
   ).rejects.toThrow(/^acquisition_process_failed$/);
 });
+it.each([
+  ["acquisition_progress_invalid", "acquisition_progress_invalid"],
+  ["synthetic-private-provider-detail", "acquisition_process_failed"],
+])(
+  "preserves only whitelisted parser failure codes (%s)",
+  async (message, expected) => {
+    const execution = await request(
+      "process.stdout.write('CB_RECORD\\n');setInterval(()=>{},1000);",
+    );
+    await expect(
+      runAcquisitionProcess(
+        execution,
+        () => {
+          throw new Error(message);
+        },
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow(new RegExp(`^${expected}$`));
+  },
+);
 it("bounds an unterminated stdout record and drains the child", async () => {
   const execution = await request(
     "process.stdout.write('x'.repeat(2*1024*1024));setInterval(()=>{},1000);",

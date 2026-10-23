@@ -3,6 +3,7 @@ import type { OwnerOverlay } from "../../contracts/local/clips.ts";
 import { FixedCaption } from "../src/fixed-layers.tsx";
 import { ownerOverlayFrame } from "./overlay-frame.ts";
 import { OwnerStyledCaption } from "./styled-caption.tsx";
+import { ownerVisualMotion } from "./visual-motion.ts";
 
 /** The same fixed overlay tree runs in local review and transparent export. */
 export function OwnerAutomaticOverlay({
@@ -33,7 +34,7 @@ export function OwnerAutomaticOverlay({
           src={assets[cue.assetId]!}
           alt={
             cue.origin === "synthetic"
-              ? "Synthetic picture placeholder"
+              ? "Sample picture"
               : cue.origin === "generated"
                 ? "Generated illustration"
                 : "Owner picture"
@@ -46,6 +47,7 @@ export function OwnerAutomaticOverlay({
             height: cue.box.height * height,
             objectFit: cue.fit,
             borderRadius: 20,
+            ...ownerVisualMotion(cue, frame),
           }}
         />
       ))}

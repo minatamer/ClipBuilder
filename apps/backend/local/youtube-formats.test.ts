@@ -128,6 +128,38 @@ const projection = () => ({
 });
 
 describe("owner exact YouTube quality policy", () => {
+  it("projects only bounded display identity without remote image URLs", () => {
+    const input = projection();
+    const normalized = normalizeOwnerYoutubeMetadata(
+      {
+        ...input,
+        meta: { ...input.meta, title: "  Synthetic\nvideo <title>  " },
+      },
+      { videoId: "SYNTHETIC01", revision, mode: "provider-source" },
+    );
+    expect(buildOwnerYoutubeOffer(normalized).preview).toEqual({
+      videoId: "SYNTHETIC01",
+      title: "Synthetic video <title>",
+    });
+    expect(
+      ownerYoutubeOfferSchema.safeParse({
+        ...buildOwnerYoutubeOffer(normalized),
+        preview: {
+          videoId: "SYNTHETIC01",
+          title: "Synthetic",
+          url: "https://example.invalid",
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      buildOwnerYoutubeOffer(
+        normalizeOwnerYoutubeMetadata(
+          { ...input, meta: { ...input.meta, title: "\n\u0001" } },
+          { videoId: "SYNTHETIC01", revision, mode: "provider-source" },
+        ),
+      ).preview,
+    ).toBeUndefined();
+  });
   it("projects fractional metadata into a bounded source snapshot without content or URLs", () => {
     const input = projection();
     const normalized = normalizeOwnerYoutubeMetadata(input, {
@@ -203,6 +235,61 @@ describe("owner exact YouTube quality policy", () => {
         request(offer, offer.choices[0]!.id, { kind: "tier", tier: 1440 }),
       ),
     ).toThrow("owner_youtube_selection_stale");
+  });
+
+  it("keeps multilingual video/audio combinations beyond the raw-format limit selectable", () => {
+    const input = metadata({
+      videos: Array.from({ length: 38 }, (_, index) => video(`video-${index}`)),
+      audios: Array.from({ length: 105 }, (_, index) =>
+        audio(`audio-${index}`, {
+          trackId: `track-${Math.floor(index / 3)}`,
+          language: index < 3 ? "en" : `x-${Math.floor(index / 3)}`,
+          role: index < 3 ? "original" : "other",
+          bitrateKbps: [64, 128, 192][index % 3]!,
+        }),
+      ),
+    });
+    expect(input.videos.length + input.audios.length).toBeLessThan(
+      OWNER_ACQUISITION_LIMITS.maxFormats,
+    );
+    const offer = buildOwnerYoutubeOffer(input);
+    expect(offer.choices).toHaveLength(3990);
+    expect(ownerYoutubeOfferSchema.parse(offer)).toEqual(offer);
+    const exact = offer.choices.find(
+      (choice) =>
+        choice.video.formatId === "video-37" &&
+        choice.audio?.formatId === "audio-104",
+    )!;
+    expect(
+      selectOwnerYoutubeFormat(
+        offer,
+        request(offer, exact.id, { kind: "variant" }),
+      ).choice,
+    ).toEqual(exact);
+    expect(
+      offer.choices.find((choice) => choice.id === offer.bestChoiceId)?.audio
+        ?.formatId,
+    ).toBe("audio-2");
+    expect(input.audios).toHaveLength(105);
+  });
+
+  it("bounds expanded choices separately without relaxing raw metadata limits", () => {
+    const input = metadata({
+      videos: Array.from({ length: 100 }, (_, index) =>
+        video(`video-${index}`),
+      ),
+      audios: Array.from({ length: 100 }, (_, index) =>
+        audio(`audio-${index}`),
+      ),
+    });
+    expect(buildOwnerYoutubeOffer(input).choices).toHaveLength(
+      OWNER_ACQUISITION_LIMITS.maxChoices,
+    );
+    input.videos.push(video("video-over-limit"));
+    expect(() => buildOwnerYoutubeOffer(input)).toThrow(
+      "owner_youtube_metadata_invalid",
+    );
+    expect(OWNER_ACQUISITION_LIMITS.maxFormats).toBe(1000);
   });
 
   it("labels portrait and cinematic dimensions by their actual shorter edge", () => {

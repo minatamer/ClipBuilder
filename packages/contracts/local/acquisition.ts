@@ -17,6 +17,21 @@ export type OwnerAcquisitionMode = z.infer<typeof ownerAcquisitionModeSchema>;
 export const ownerYoutubeVideoIdSchema = z
   .string()
   .regex(/^[A-Za-z0-9_-]{11}$/);
+export const ownerYoutubePreviewSchema = z
+  .object({
+    videoId: ownerYoutubeVideoIdSchema,
+    title: z
+      .string()
+      .trim()
+      .min(1)
+      .max(500)
+      .refine((value) =>
+        Array.from(value).every(
+          (char) => char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127,
+        ),
+      ),
+  })
+  .strict();
 export const ownerYoutubeFormatIdSchema = z
   .string()
   .regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/);
@@ -123,9 +138,10 @@ export const ownerYoutubeOfferSchema = z
     revision: ownerIdSchema,
     mode: ownerAcquisitionModeSchema,
     durationMs: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+    preview: ownerYoutubePreviewSchema.optional(),
     choices: z
       .array(ownerYoutubeChoiceSchema)
-      .max(OWNER_ACQUISITION_LIMITS.maxFormats),
+      .max(OWNER_ACQUISITION_LIMITS.maxChoices),
     bestChoiceId: ownerDigestSchema.nullable(),
     bestReason: ownerYoutubeSupportReasonSchema.nullable(),
   })
@@ -152,6 +168,19 @@ export const ownerYoutubeImportRequestSchema = z
 export type OwnerYoutubeImportRequest = z.infer<
   typeof ownerYoutubeImportRequestSchema
 >;
+export const ownerAcquisitionFailureCodeSchema = z.enum([
+  "acquisition_selection_changed",
+  "acquisition_streams_invalid",
+  "acquisition_component_invalid",
+  "acquisition_progress_invalid",
+  "acquisition_bytes_invalid",
+  "acquisition_transfer_incomplete",
+  "acquisition_stale_format",
+  "acquisition_metadata_invalid",
+  "acquisition_process_failed",
+  "media_unavailable",
+  "unknown",
+]);
 export const ownerAcquisitionProgressSchema = z
   .object({
     id: ownerIdSchema,
@@ -191,6 +220,7 @@ export const ownerAcquisitionProgressSchema = z
         "failed",
       ])
       .nullable(),
+    diagnostic: ownerAcquisitionFailureCodeSchema.optional(),
   })
   .strict()
   .refine(

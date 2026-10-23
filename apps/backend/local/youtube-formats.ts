@@ -7,6 +7,7 @@ import {
   ownerYoutubeAudioSchema,
   ownerYoutubeImportRequestSchema,
   ownerYoutubeOfferSchema,
+  ownerYoutubePreviewSchema,
   ownerYoutubeVideoIdSchema,
   ownerYoutubeVideoSchema,
   type OwnerAcquisitionDescriptor,
@@ -31,6 +32,7 @@ const ownerYoutubeMetadataSchema = z
     mode: ownerAcquisitionModeSchema,
     durationMs: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
     status: z.enum(["vod", "live", "upcoming", "post-live", "unavailable"]),
+    preview: ownerYoutubePreviewSchema.optional(),
     videos: z
       .array(ownerYoutubeVideoSchema)
       .max(OWNER_ACQUISITION_LIMITS.maxFormats),
@@ -72,6 +74,7 @@ const projectionSchema = z
         live_status: optionalText,
         availability: optionalText,
         age_limit: optionalNumber,
+        title: z.string().max(2000).nullable().optional(),
       })
       .strict(),
     formats: z
@@ -108,7 +111,7 @@ const projectionSchema = z
   })
   .strict();
 
-/** Project only bounded metadata; no URL, title or raw provider object escapes. */
+/** Project bounded formats and optional local display identity; never raw URLs. */
 export function normalizeOwnerYoutubeMetadata(
   input: unknown,
   context: { videoId: string; revision: string; mode: OwnerAcquisitionMode },
@@ -118,6 +121,18 @@ export function normalizeOwnerYoutubeMetadata(
     const identity = ownerYoutubeVideoIdSchema.parse(context.videoId);
     if (projection.meta.id !== identity) throw new Error();
     const meta = projection.meta;
+    const cleanedTitle = Array.from(meta.title ?? "")
+      .map((char) =>
+        char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127 ? " " : char,
+      )
+      .join("")
+      .replace(/\s+/gu, " ")
+      .trim();
+    let title = "";
+    for (const char of cleanedTitle) {
+      if (title.length + char.length > 500) break;
+      title += char;
+    }
     const status: OwnerYoutubeMetadata["status"] =
       meta.availability && !["public", "unlisted"].includes(meta.availability)
         ? "unavailable"
@@ -198,6 +213,14 @@ export function normalizeOwnerYoutubeMetadata(
     return ownerYoutubeMetadataSchema.parse({
       ...context,
       videoId: identity,
+      ...(title
+        ? {
+            preview: {
+              videoId: identity,
+              title,
+            },
+          }
+        : {}),
       durationMs: meta.duration == null ? 0 : Math.round(meta.duration * 1000),
       status,
       videos,
@@ -321,7 +344,7 @@ export function buildOwnerYoutubeOffer(
       const preferred = preferredAudio(
         audios.filter((audio) => audio !== null),
       );
-      if (choices.length + audios.length > OWNER_ACQUISITION_LIMITS.maxFormats)
+      if (choices.length + audios.length > OWNER_ACQUISITION_LIMITS.maxChoices)
         throw new Error();
       for (const audio of audios) {
         const rejection = reason(metadata, video, audio);
@@ -367,6 +390,7 @@ export function buildOwnerYoutubeOffer(
       revision: metadata.revision,
       mode: metadata.mode,
       durationMs: metadata.durationMs,
+      ...(metadata.preview ? { preview: metadata.preview } : {}),
       choices,
       bestChoiceId: best?.id ?? null,
       bestReason: best

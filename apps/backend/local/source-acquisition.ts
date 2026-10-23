@@ -5,6 +5,7 @@ import {
   OWNER_ACQUISITION_LIMITS,
   ownerAcquisitionProgressSchema,
   ownerYoutubeOfferSchema,
+  ownerAcquisitionFailureCodeSchema,
   type OwnerAcquisitionProgress,
   type OwnerSavedSourceVariant,
   type OwnerYoutubeOffer,
@@ -87,6 +88,7 @@ export class OwnerSourceAcquisition {
   >();
   private readonly receipts = new Map<string, OwnerAcquisitionProgress>();
   private readonly scopes = new Set<AbortController>();
+  private readonly previewTasks = new Set<Promise<Uint8Array>>();
   private running: Promise<void> | undefined;
   private controller: AbortController | undefined;
   private metadataActive = false;
@@ -106,6 +108,37 @@ export class OwnerSourceAcquisition {
     return this.current
       ? ownerAcquisitionProgressSchema.parse(this.current)
       : null;
+  }
+  async thumbnail(sourceId: string, signal: AbortSignal) {
+    signal.throwIfAborted();
+    const prepared = [...this.offers.values()].find(
+      (entry) => entry.identity.sourceId === sourceId && entry.offer.preview,
+    );
+    const port = this.options.port;
+    const thumbnail = port?.thumbnail;
+    if (
+      this.closed ||
+      !prepared ||
+      !thumbnail ||
+      port?.mode !== "provider-source"
+    )
+      throw new Error("source_thumbnail_unavailable");
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    signal.addEventListener("abort", abort, { once: true });
+    this.scopes.add(controller);
+    const task = Promise.resolve()
+      .then(() => {
+        controller.signal.throwIfAborted();
+        return thumbnail(prepared.identity, controller.signal);
+      })
+      .finally(() => {
+        signal.removeEventListener("abort", abort);
+        this.scopes.delete(controller);
+        this.previewTasks.delete(task);
+      });
+    this.previewTasks.add(task);
+    return task;
   }
   private library(destination: OwnerSourceDestination) {
     const library = this.libraries.get(destination);
@@ -153,6 +186,10 @@ export class OwnerSourceAcquisition {
       saved,
     };
   }
+  preview(value: unknown, signal: AbortSignal) {
+    const input = ownerSourceOpenSchema.parse(value);
+    return this.library(input.destination).preview(input.variantId, signal);
+  }
   async metadata(url: string, signal: AbortSignal) {
     this.admit();
     const port = this.options.port;
@@ -172,7 +209,11 @@ export class OwnerSourceAcquisition {
       const offer = ownerYoutubeOfferSchema.parse(
         await port.metadata(identity, controller.signal),
       );
-      if (offer.mode !== port.mode || offer.sourceId !== identity.sourceId)
+      if (
+        offer.mode !== port.mode ||
+        offer.sourceId !== identity.sourceId ||
+        (offer.preview && offer.preview.videoId !== identity.videoId)
+      )
         throw new Error("source_metadata_invalid");
       controller.signal.throwIfAborted();
       while (this.offers.size >= 8)
@@ -383,6 +424,9 @@ export class OwnerSourceAcquisition {
               : message.includes("stale")
                 ? "stale"
                 : "failed",
+          diagnostic: ownerAcquisitionFailureCodeSchema
+            .catch("unknown")
+            .parse(message),
         };
       } finally {
         if (workspaceId) await this.options.files.remove(workspaceId);
@@ -507,6 +551,7 @@ export class OwnerSourceAcquisition {
   async close() {
     this.closed = true;
     this.cancel();
+    await Promise.allSettled([...this.previewTasks]);
     await this.metadataDrain;
     await this.running;
     await Promise.all(

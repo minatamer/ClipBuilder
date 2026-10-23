@@ -38,6 +38,76 @@ const pictureBytes = Buffer.from("synthetic canonical JPEG");
 const rawBytes = Buffer.from("synthetic normalized clip");
 const outputBytes = Buffer.from("synthetic native output");
 
+it("recognizes source, raw clip and existing export bytes, never filenames", async () => {
+  const snapshot = await fixture();
+  const saved = await store.save(undefined, snapshot, files);
+  for (const bytes of [sourceBytes, rawBytes, outputBytes]) {
+    expect(
+      await store.matchVideo(
+        { fingerprint: hash(bytes), bytes: bytes.length },
+        AbortSignal.timeout(5000),
+      ),
+    ).toEqual({
+      id: saved.id,
+      clipId: snapshot.clips[0]!.id,
+    });
+  }
+  expect(
+    await store.matchVideo(
+      { fingerprint: hash(outputBytes), bytes: outputBytes.length + 1 },
+      AbortSignal.timeout(5000),
+    ),
+  ).toBeNull();
+  expect(
+    await store.matchVideo(
+      { fingerprint: hash("different"), bytes: outputBytes.length },
+      AbortSignal.timeout(5000),
+    ),
+  ).toBeNull();
+});
+
+it("chooses the latest matching draft and checks selected manifest identity", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  try {
+    vi.setSystemTime(new Date("2026-01-01T10:00:00Z"));
+    const snapshot = await fixture();
+    const older = await store.save(undefined, snapshot, files);
+    vi.setSystemTime(new Date("2026-01-01T10:00:01Z"));
+    const newer = await store.save(undefined, snapshot, files);
+    const signal = AbortSignal.timeout(5000);
+    expect(
+      (
+        await store.matchVideo(
+          { fingerprint: hash(outputBytes), bytes: outputBytes.length },
+          signal,
+        )
+      )?.id,
+    ).toBe(newer.id);
+    expect(
+      (
+        await store.matchReference(
+          { id: older.id, sourceFingerprint: hash(sourceBytes) },
+          signal,
+        )
+      ).id,
+    ).toBe(older.id);
+    await expect(
+      store.matchReference(
+        { id: newer.id, sourceFingerprint: hash("other") },
+        signal,
+      ),
+    ).rejects.toThrow("draft_reference_mismatch");
+    expect(() =>
+      store.matchReference(
+        { id: "../outside", sourceFingerprint: hash(sourceBytes) },
+        signal,
+      ),
+    ).toThrow();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), "clipbuilder-owner-drafts-test-"));
   scratch = join(directory, "scratch");

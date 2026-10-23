@@ -22,6 +22,7 @@ import {
   synthesizeOwnerAcquisition,
 } from "./acquisition-media.ts";
 import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/local/acquisition-profile.ts";
+import { ownerAcquisitionFailureCodeSchema } from "../../../packages/contracts/local/acquisition.ts";
 import { prepareOwnerProviderMedia } from "./provider-media.ts";
 
 export function createOwnerWorker(options: {
@@ -213,9 +214,17 @@ export function createOwnerWorker(options: {
           "Cache-Control": "no-store",
         })
         .end(JSON.stringify(result));
-    } catch {
+    } catch (error) {
+      const code = ownerAcquisitionFailureCodeSchema.safeParse(
+        error instanceof Error ? error.message : null,
+      );
       if (!res.destroyed)
-        res.writeHead(400).end('{"error":"media_unavailable"}');
+        res.writeHead(400).end(
+          JSON.stringify({
+            error: "media_unavailable",
+            ...(code.success ? { reason: code.data } : {}),
+          }),
+        );
     } finally {
       controllers.delete(controller);
       busy = false;

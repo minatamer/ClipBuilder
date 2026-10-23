@@ -180,12 +180,10 @@ export class OwnerClipBatch {
       signal.throwIfAborted();
       const picture = await normalizeOwnerPicture(bytes, signal),
         hash = createHash("sha256").update(picture.bytes).digest("hex");
-      if (
-        clip.assets.some(
-          (asset) => asset.digest === hash && asset.origin === "owner-supplied",
-        )
-      )
-        return this.snapshot();
+      const existing = clip.assets.find(
+        (asset) => asset.digest === hash && asset.origin === "owner-supplied",
+      );
+      if (existing) return { ...this.snapshot(), pictureAssetId: existing.id };
       if (clip.assets.length >= OWNER_PICTURE_LIMITS.assetsPerClip)
         throw new Error("picture_unavailable");
       await this.reserve(0, 0, picture.bytes.length);
@@ -209,7 +207,7 @@ export class OwnerClipBatch {
         throw error;
       }
       this.changed();
-      return this.snapshot();
+      return { ...this.snapshot(), pictureAssetId: asset.id };
     });
   }
   private receipt(key: string, value: unknown) {

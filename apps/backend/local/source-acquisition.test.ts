@@ -36,6 +36,74 @@ let media: ReturnType<
 >;
 const url = "https://www.youtube.com/watch?v=aaaaaaaaaaa";
 const signal = () => new AbortController().signal;
+it.each([
+  ["acquisition_transfer_incomplete", "acquisition_transfer_incomplete"],
+  ["synthetic-private-provider-detail", "unknown"],
+])(
+  "records only a bounded diagnostic after a failed transfer (%s)",
+  async (message, diagnostic) => {
+    const offer = await acquisition.metadata(url, signal());
+    download.mockRejectedValueOnce(new Error(message));
+    acquisition.start(input(offer));
+    await vi.waitFor(() =>
+      expect(acquisition.snapshot()?.stage).toBe("failed"),
+    );
+    expect(acquisition.snapshot()).toMatchObject({
+      error: "failed",
+      diagnostic,
+    });
+  },
+);
+it("serves thumbnails only for admitted ephemeral offers, and drains them on close", async () => {
+  const thumbnail = vi.fn<NonNullable<OwnerAcquisitionPort["thumbnail"]>>(
+    async () => new Uint8Array([0xff, 0xd8, 0xff]),
+  );
+  await acquisition.close();
+  metadata.mockImplementation(async (identity, operationSignal) => ({
+    ...(await fakeOwnerAcquisition.metadata(identity, operationSignal)),
+    mode: "provider-source",
+    preview: { videoId: identity.videoId, title: "Synthetic selected video" },
+  }));
+  acquisition = create({
+    mode: "provider-source",
+    metadata,
+    download,
+    thumbnail,
+  });
+  await expect(acquisition.thumbnail("a".repeat(64), signal())).rejects.toThrow(
+    "source_thumbnail_unavailable",
+  );
+  expect(thumbnail).not.toHaveBeenCalled();
+  const offer = await acquisition.metadata(url, signal());
+  expect(await acquisition.thumbnail(offer.sourceId, signal())).toEqual(
+    new Uint8Array([0xff, 0xd8, 0xff]),
+  );
+  expect(thumbnail).toHaveBeenCalledTimes(1);
+  thumbnail.mockImplementation(() => {
+    throw new Error("synthetic-preview-failure");
+  });
+  await expect(acquisition.thumbnail(offer.sourceId, signal())).rejects.toThrow(
+    "synthetic-preview-failure",
+  );
+  thumbnail.mockImplementation(
+    async (_identity, operationSignal) =>
+      new Promise((_done, reject) =>
+        operationSignal.addEventListener(
+          "abort",
+          () => reject(new Error("synthetic-preview-aborted")),
+          { once: true },
+        ),
+      ),
+  );
+  const pending = expect(
+    acquisition.thumbnail(offer.sourceId, signal()),
+  ).rejects.toThrow();
+  await acquisition.close();
+  await pending;
+  await expect(acquisition.thumbnail(offer.sourceId, signal())).rejects.toThrow(
+    "source_thumbnail_unavailable",
+  );
+});
 beforeEach(async () => {
   directory = await mkdtemp(
     join(tmpdir(), "clipbuilder-owner-acquisition-test-"),

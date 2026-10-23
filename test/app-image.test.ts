@@ -59,6 +59,10 @@ describe("closed frontend/backend image inputs", () => {
               /capture-index|capture-product-film|studio/.test(path),
             ),
           ).toBe(false);
+        } else {
+          expect(
+            paths.filter((path) => /\.(?:jpg|jpeg|png|webp)$/.test(path)),
+          ).toEqual(["apps/backend/local/sample-earth.jpg"]);
         }
       } finally {
         await rm(directory, { recursive: true, force: true });

@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
 import { OWNER_ACQUISITION_LIMITS } from "../../../packages/contracts/local/acquisition-profile.ts";
+import { ownerAcquisitionFailureCodeSchema } from "../../../packages/contracts/local/acquisition.ts";
 
 export type AcquisitionProcessRequest = {
   executable: string;
@@ -36,6 +37,7 @@ export const runAcquisitionProcess: AcquisitionProcess = async (
     let output = 0;
     let stderr = 0;
     let failed = false;
+    let failureCode = "acquisition_process_failed";
     let termination: Promise<void> | undefined;
     let force: ReturnType<typeof setTimeout> | undefined;
     const stop = () => {
@@ -109,7 +111,11 @@ export const runAcquisitionProcess: AcquisitionProcess = async (
         if (value) {
           try {
             line(value);
-          } catch {
+          } catch (error) {
+            const code = ownerAcquisitionFailureCodeSchema.safeParse(
+              error instanceof Error ? error.message : null,
+            );
+            if (code.success) failureCode = code.data;
             stop();
             return;
           }
@@ -149,11 +155,7 @@ export const runAcquisitionProcess: AcquisitionProcess = async (
         }
       } else
         reject(
-          new Error(
-            signal.aborted
-              ? "acquisition_canceled"
-              : "acquisition_process_failed",
-          ),
+          new Error(signal.aborted ? "acquisition_canceled" : failureCode),
         );
     });
   });

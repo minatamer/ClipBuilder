@@ -8,7 +8,14 @@ export const OWNER_PICTURE_LIMITS = {
   dimension: 1920,
   bytes: 3 * 1024 ** 2,
   assetsPerClip: 20,
+  cuesPerClip: 20,
 } as const;
+export const OWNER_VISUAL_ANIMATIONS = [
+  "none",
+  "fade",
+  "pop",
+  "slide",
+] as const;
 export const ownerDigestSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export const ownerAssetSchema = z
   .object({
@@ -30,6 +37,9 @@ export const ownerVisualSchema = z
     endFrame: z.number().int().positive(),
     box: normalizedBoxSchema,
     fit: z.enum(["contain", "cover"]),
+    entrance: z.enum(OWNER_VISUAL_ANIMATIONS).optional(),
+    exit: z.enum(OWNER_VISUAL_ANIMATIONS).optional(),
+    animationFrames: z.number().int().min(1).max(30).optional(),
     origin: ownerAssetSchema.shape.origin,
   })
   .strict();

@@ -10,6 +10,8 @@ const weights: Record<OwnerCaptionStyle["preset"], number> = {
   clean: 800,
   classic: 700,
   bold: 900,
+  boxed: 800,
+  typewriter: 700,
 };
 
 /** Conservative local-font advances, without browser measurement or reflow. */
@@ -91,7 +93,8 @@ export function OwnerStyledCaption({
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
-        justifyContent: "flex-end",
+        justifyContent:
+          style.verticalAlign === "center" ? "center" : "flex-end",
         overflow: "hidden",
         fontFamily: style.font ?? "Arial",
         opacity:
@@ -123,6 +126,9 @@ export function OwnerStyledCaption({
                 (ms - cue.startMs) / FIXED_COMPOSITION_POLICY.spokenWordOnsetMs,
               ),
             );
+            const single = style.animation === "single-word";
+            if (single && !highlighted) return null;
+            const bounce = Math.min(1, Math.max(0, (ms - cue.startMs) / 220));
             return (
               <span
                 key={wordIndex}
@@ -131,13 +137,24 @@ export function OwnerStyledCaption({
                   position: "relative",
                   display: "inline-block",
                   padding: `4px ${wordPadding}px`,
-                  transform:
-                    style.animation === "pop" && highlighted
-                      ? `scale(${0.88 + onset * 0.12})`
+                  opacity:
+                    style.animation === "reveal"
+                      ? ms < cue.startMs
+                        ? 0
+                        : 1
                       : undefined,
+                  backgroundColor:
+                    style.preset === "boxed" ? "#101726" : undefined,
+                  borderRadius: style.preset === "boxed" ? 9 : undefined,
+                  transform:
+                    style.animation === "bounce" && highlighted
+                      ? `translateY(${-Math.sin(bounce * Math.PI) * fontSize * 0.2}px) scale(${1 + Math.sin(bounce * Math.PI) * 0.12})`
+                      : style.animation === "pop" && highlighted
+                        ? `scale(${0.88 + onset * 0.12})`
+                        : undefined,
                 }}
               >
-                {wordIndex ? " " : ""}
+                {wordIndex && !single ? " " : ""}
                 <span
                   aria-hidden="true"
                   style={{

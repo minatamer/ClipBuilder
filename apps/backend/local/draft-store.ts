@@ -8,6 +8,8 @@ import { z } from "zod";
 import {
   ownerDraftSnapshotSchema,
   ownerDraftSummarySchema,
+  OWNER_DRAFT_DOCUMENT_BYTES,
+  ownerPickedDraftRequestSchema,
   type OwnerDraftSnapshot,
 } from "../../../packages/contracts/local/drafts.ts";
 import {
@@ -23,7 +25,7 @@ import {
 import { rejectRepositoryStorage } from "./owner-storage.ts";
 
 export type OwnerDraftSummary = z.infer<typeof ownerDraftSummarySchema>;
-const MAX_DOCUMENT_BYTES = 32 * 1024 ** 2;
+const MAX_DOCUMENT_BYTES = OWNER_DRAFT_DOCUMENT_BYTES;
 const fileSchema = z
   .object({
     digest: ownerDigestSchema,
@@ -668,9 +670,77 @@ export class OwnerDraftStore {
       return summaries.sort((a, b) => b.savedAt.localeCompare(a.savedAt));
     });
   }
-  load(id: string, files: WorkspaceFiles): Promise<OwnerDraftSnapshot> {
+  matchReference(input: unknown, requestedSignal: AbortSignal) {
+    const request = ownerPickedDraftRequestSchema.parse(input);
+    return this.serial(async (ownSignal) => {
+      const signal = AbortSignal.any([ownSignal, requestedSignal]);
+      const record = await this.readRecord(request.id, signal, false);
+      if (record.source.digest !== request.sourceFingerprint)
+        throw new Error("draft_reference_mismatch");
+      return {
+        id: record.id,
+        clipId: record.snapshot.clips.find((clip) => clip.base)?.id ?? null,
+      };
+    });
+  }
+  matchVideo(
+    file: { fingerprint: string; bytes: number },
+    requestedSignal: AbortSignal,
+  ) {
+    ownerDigestSchema.parse(file.fingerprint);
+    if (
+      !Number.isSafeInteger(file.bytes) ||
+      file.bytes < 1 ||
+      file.bytes > OWNER_LIMITS.sourceBytes
+    )
+      throw new Error("invalid_source");
+    return this.serial(async (ownSignal) => {
+      const signal = AbortSignal.any([ownSignal, requestedSignal]);
+      const matches: Array<{
+        id: string;
+        clipId: string | null;
+        savedAt: string;
+      }> = [];
+      for (const id of await this.listIds(signal)) {
+        signal.throwIfAborted();
+        let record: DraftRecord;
+        try {
+          record = await this.readRecord(id, signal, false);
+        } catch {
+          signal.throwIfAborted();
+          continue;
+        }
+        const same = (stored: StoredFile) =>
+          stored.digest === file.fingerprint && stored.bytes === file.bytes;
+        const clipFile = [...record.outputs, ...record.raw].find(same);
+        if (clipFile || same(record.source))
+          matches.push({
+            id,
+            savedAt: record.savedAt,
+            clipId:
+              clipFile?.clipId ??
+              record.snapshot.clips.find((clip) => clip.base)?.id ??
+              null,
+          });
+      }
+      matches.sort(
+        (a, b) =>
+          b.savedAt.localeCompare(a.savedAt) || a.id.localeCompare(b.id),
+      );
+      const latest = matches[0];
+      return latest ? { id: latest.id, clipId: latest.clipId } : null;
+    });
+  }
+  load(
+    id: string,
+    files: WorkspaceFiles,
+    requestedSignal?: AbortSignal,
+  ): Promise<OwnerDraftSnapshot> {
     ownerIdSchema.parse(id);
-    return this.serial(async (signal) => {
+    return this.serial(async (ownSignal) => {
+      const signal = requestedSignal
+        ? AbortSignal.any([ownSignal, requestedSignal])
+        : ownSignal;
       if (!(await this.rootExists(signal)))
         throw new Error("draft_unavailable");
       // Opening a draft revalidates all admitted bytes, even within the same process.

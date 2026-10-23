@@ -1,6 +1,7 @@
 import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { copyFile } from "node:fs/promises";
 
 const repository = fileURLToPath(new URL("../", import.meta.url));
 if (process.platform === "win32") {
@@ -21,3 +22,7 @@ await build({
   format: "esm",
   packages: "external",
 });
+await copyFile(
+  new URL("../apps/backend/local/sample-earth.jpg", import.meta.url),
+  new URL("../apps/backend/dist/sample-earth.jpg", import.meta.url),
+);

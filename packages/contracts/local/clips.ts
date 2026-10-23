@@ -46,9 +46,7 @@ export const ownerOverlaySchema = z
     captions: compositionManifestV3Schema.shape.captions,
     captionStyle: ownerCaptionStyleSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
-    visuals: z
-      .array(ownerVisualSchema)
-      .max(OWNER_BATCH_POLICY.imageAttemptsPerClip),
+    visuals: z.array(ownerVisualSchema).max(OWNER_PICTURE_LIMITS.cuesPerClip),
   })
   .strict()
   .superRefine((overlay, ctx) => {
@@ -144,6 +142,7 @@ export const ownerClipListSchema = z
     clips: z.array(ownerClipSchema).max(OWNER_LIMITS.clips),
     active: z.boolean(),
     workers: z.literal(1),
+    pictureAssetId: ownerIdSchema.optional(),
   })
   .strict();
 export type OwnerClipList = z.infer<typeof ownerClipListSchema>;

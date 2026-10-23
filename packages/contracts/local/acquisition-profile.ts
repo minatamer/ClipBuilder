@@ -1,4 +1,17 @@
 import { z } from "zod";
+
+/** YouTube may round NTSC rates to nominal 24/30/60; never accept another family. */
+export function matchesOfferedFrameRate(
+  actual: number,
+  offered: number,
+): boolean {
+  if (!Number.isFinite(actual) || !Number.isFinite(offered)) return false;
+  if (Math.abs(actual - offered) <= 0.001) return true;
+  return [24, 30, 60].some(
+    (rate) =>
+      offered === rate && Math.abs(actual - (rate * 1000) / 1001) <= 0.001,
+  );
+}
 export const ownerAcquisitionNativeStageSchema = z.enum([
   "video",
   "audio",
@@ -18,6 +31,8 @@ export const OWNER_ACQUISITION_LIMITS = {
   lineBytes: 1024 ** 2,
   metadataBytes: 4 * 1024 ** 2,
   maxFormats: 1000,
+  // A valid raw format list can produce many exact video/audio combinations.
+  maxChoices: 10_000,
   maxConnections: 4,
   rateBytes: 50 * 1024 ** 2,
   catalogRecords: 500,

@@ -5,6 +5,7 @@ import { isAbsolute, resolve } from "node:path";
 import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { z } from "zod";
+import { matchesOfferedFrameRate } from "../../../packages/contracts/local/acquisition-profile.ts";
 import {
   OWNER_ACQUISITION_LIMITS,
   ownerSavedSourceVariantSchema,
@@ -243,7 +244,7 @@ function supported(variant: OwnerSavedSourceVariant) {
     return (
       video.width === actual.width &&
       video.height === actual.height &&
-      Math.abs(video.fps - actual.fps) <= 0.001 &&
+      matchesOfferedFrameRate(actual.fps, video.fps) &&
       (selection.kind !== "tier" ||
         selection.tier === Math.min(actual.width, actual.height))
     );
@@ -372,6 +373,19 @@ export class OwnerSourceLibrary {
       return result.sort((first, second) =>
         second.acquiredAt.localeCompare(first.acquiredAt),
       );
+    }, signal);
+  }
+  /** Read-only admission; no workspace, copy, native inspection or publication. */
+  preview(id: string, signal: AbortSignal): Promise<string> {
+    ownerIdSchema.parse(id);
+    return this.serial(async (current) => {
+      if (!(await prepareOwnerStorage(this.root))) throw error("missing");
+      const record = await this.read(id, current);
+      if (!supported(record.variant)) throw error("unsupported");
+      const file = await this.sourcePath(record.variant.actual.fingerprint);
+      await verifyMedia(file, record.variant.actual, current, this.verified);
+      current.throwIfAborted();
+      return file;
     }, signal);
   }
   usage(signal?: AbortSignal): Promise<{ bytes: number; warning: boolean }> {
