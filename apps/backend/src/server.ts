@@ -7,6 +7,7 @@ import {
 } from "./analysis/analysis.diagnostics.js";
 import { CANDIDATE_GENERATION_SCHEMA_POLICY } from "./analysis/analysis.provider-shape.js";
 import { composeLocalGeminiCapture } from "./analysis/gemini.local-capture.js";
+import { startLocalWorkflow } from "../local/runtime.ts";
 
 // Only the executable entry point loads owner-managed local configuration.
 function loadLocalEnvironment(): void {
@@ -21,9 +22,17 @@ function loadLocalEnvironment(): void {
     process.loadEnvFile(localEnvironment);
 }
 
-export function startBackend(environment: NodeJS.ProcessEnv) {
+export async function startBackend(environment: NodeJS.ProcessEnv) {
   const diagnostics = new AnalysisDiagnostics((line) => console.warn(line));
-  const { application, config } = composeBackend(environment, diagnostics);
+  const { application, config, localWorkflow } = composeBackend(
+    environment,
+    diagnostics,
+  );
+  let stopLocalFailure = () => {
+    process.exitCode = 1;
+  };
+  const local = await startLocalWorkflow(config, () => stopLocalFailure());
+  localWorkflow.current = local;
   const privateCapture = composeLocalGeminiCapture(
     config,
     undefined,
@@ -59,6 +68,10 @@ export function startBackend(environment: NodeJS.ProcessEnv) {
 
   function stopServer(signal: NodeJS.Signals): void {
     console.warn(`ClipBuilder backend received ${signal}; shutting down`);
+    localWorkflow.current = null;
+    void local?.close().catch(() => {
+      process.exitCode = 1;
+    });
     server.close((error) => {
       if (error) {
         console.error("ClipBuilder backend failed to close cleanly");
@@ -66,12 +79,41 @@ export function startBackend(environment: NodeJS.ProcessEnv) {
       }
     });
   }
+  stopLocalFailure = () => stopServer("SIGTERM");
+  server.once("error", () => {
+    localWorkflow.current = null;
+    void local?.close().catch(() => {
+      process.exitCode = 1;
+    });
+    process.exitCode = 1;
+  });
+  if (local) {
+    try {
+      await new Promise<void>((done, reject) => {
+        server.once("listening", done);
+        server.once("error", reject);
+      });
+      await local.publish();
+      console.warn(
+        `ClipBuilder local media ready; content-safe logs: ${local.runtime}`,
+      );
+    } catch {
+      await local.close();
+      server.closeAllConnections();
+      server.close();
+      throw new Error("local_workflow_unavailable");
+    }
+  }
 
   const interrupt = () => stopServer("SIGINT");
   const terminate = () => stopServer("SIGTERM");
   process.once("SIGINT", interrupt);
   process.once("SIGTERM", terminate);
   server.once("close", () => {
+    localWorkflow.current = null;
+    void local?.close().catch(() => {
+      process.exitCode = 1;
+    });
     process.removeListener("SIGINT", interrupt);
     process.removeListener("SIGTERM", terminate);
   });
@@ -80,5 +122,10 @@ export function startBackend(environment: NodeJS.ProcessEnv) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   loadLocalEnvironment();
-  startBackend(process.env);
+  void startBackend(process.env).catch(() => {
+    console.error(
+      "ClipBuilder backend startup unavailable; check local prerequisites",
+    );
+    process.exitCode = 1;
+  });
 }

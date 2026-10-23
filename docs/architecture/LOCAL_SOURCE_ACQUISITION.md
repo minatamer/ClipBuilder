@@ -1,4 +1,15 @@
+> Historical standalone architecture: CL-027 supersedes the separate owner app/commands/configuration. See [current local workflow](../operations/LOCAL_WORKFLOW.md).
+
 # Local linked-source acquisition decision
+
+2026-10-23 update: the latest explicit owner decision connects the real adapter
+behind local `--youtube`, independently of fake AI, and removes source-specific
+permits and the UI rights checkbox. The protected metadata/Import actions and
+all format, network, process, retention and public-exclusion bounds remain.
+Pinned tools/notices are now prepared and verified offline. Real source access
+and challenge/network compatibility remain untested. The source/method permit
+and unprepared/uncomposed statements below describe the original decision,
+superseded by the source of truth's owner local downloader activation entry.
 
 Date: 2026-10-22. CL-022 decision: **go for the isolated CL-023 implementation
 and synthetic validation; real acquisition remains unavailable until its

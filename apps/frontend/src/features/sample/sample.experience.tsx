@@ -9,7 +9,6 @@ import {
   useState,
   useCallback,
   useEffectEvent,
-  type ReactNode,
 } from "react";
 import { ArrowRight, Film, Upload, X } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -23,9 +22,9 @@ import {
   type SafeError,
   type ProcessingChallengeAction,
 } from "@clipbuilder/contracts";
-import { PrivacyDialog } from "../../app/privacy-dialog";
+import { Workspace } from "../../shared/ui/workspace";
 import { Button } from "../../shared/ui/button";
-import { BrandMark } from "../../shared/ui/brand-mark";
+
 import { Progress } from "../../shared/ui/progress";
 import { WorkflowFrame } from "../../shared/ui/workflow-frame";
 import {
@@ -69,62 +68,6 @@ const CloudClipReview = dynamic(
   () => import("./cloud-clip.review").then((module) => module.CloudClipReview),
   { loading: () => <p role="status">Loading clip playback</p> },
 );
-
-function Workspace({
-  children,
-  clear,
-  localMode = false,
-  cloudMode = false,
-}: {
-  children: ReactNode;
-  clear?: () => void;
-  localMode?: boolean;
-  cloudMode?: boolean;
-}) {
-  return (
-    <div className={styles.workspace}>
-      <a className={styles.skipLink} href="#sample-main">
-        Skip to main content
-      </a>
-      <header className={styles.header}>
-        <a
-          href="/"
-          className={styles.brand}
-          aria-label="ClipBuilder home"
-          onClick={
-            clear
-              ? (event) => {
-                  event.preventDefault();
-                  clear();
-                }
-              : undefined
-          }
-        >
-          <BrandMark className={styles.brandMark} />
-          <span className={styles.brandText}>ClipBuilder</span>
-        </a>
-        <div className={styles.headerActions}>
-          <PrivacyDialog
-            localMedia={localMode}
-            cloudMedia={cloudMode}
-            triggerVariant="secondary"
-            triggerClassName={styles.headerButton}
-          />
-          {clear !== undefined && (
-            <Button
-              variant="secondary"
-              className={styles.headerButton}
-              onClick={clear}
-            >
-              Exit
-            </Button>
-          )}
-        </div>
-      </header>
-      {children}
-    </div>
-  );
-}
 
 export function SampleExperience({
   api = sampleApi,

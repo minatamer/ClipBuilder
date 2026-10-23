@@ -6,26 +6,26 @@ import { tmpdir } from "node:os";
 import {
   createOwnerHost,
   type OwnerHostOptions,
-} from "../apps/backend/owner/server.ts";
-import { fakeOwnerAnalysis } from "../apps/backend/owner/fake-analysis.ts";
-import { fakeOwnerClipPreparation } from "../apps/backend/owner/fake-clips.ts";
-import { ownerWorkspaceSchema } from "../packages/contracts/owner/index.ts";
-import { ownerAnalysisSchema } from "../packages/contracts/owner/selection.ts";
+} from "../apps/backend/local/server.ts";
+import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
+import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
+import { ownerWorkspaceSchema } from "../packages/contracts/local/index.ts";
+import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
 import {
   ownerClipListSchema,
   type OwnerClip,
-} from "../packages/contracts/owner/clips.ts";
+} from "../packages/contracts/local/clips.ts";
 import {
   OWNER_CAPTION_PRESETS,
   type OwnerEditRequest,
-} from "../packages/contracts/owner/editor.ts";
+} from "../packages/contracts/local/editor.ts";
 import {
   ownerAgentClipSchema,
   ownerAgentClipListSchema,
   ownerAgentStatusSchema,
   ownerAgentValidationSchema,
-} from "../packages/contracts/owner/agent.ts";
-import { compileOwnerOverlay } from "../packages/contracts/owner/edit-overlay.ts";
+} from "../packages/contracts/local/agent.ts";
+import { compileOwnerOverlay } from "../packages/contracts/local/edit-overlay.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 
 // Only the protected HTTP coordinator runs here. AI and native media ports are

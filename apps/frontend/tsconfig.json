@@ -1,7 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "allowJs": false,
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
     "declaration": false,
     "declarationMap": false,
     "incremental": true,

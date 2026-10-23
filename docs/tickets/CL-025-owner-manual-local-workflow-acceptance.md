@@ -17,12 +17,11 @@ Synthetic success is not real-media, provider or human visual acceptance.
       diagnostic captures. Retained local playback itself needs no gcloud/ADC.
 - [ ] First inspect fake/paid-off controls and local behavior using synthetic
       data. No credentials/cloud/paid calls are needed for this walkthrough.
-- [ ] Separately authorize a bounded real YouTube source/acquisition method,
-      tool installation if needed, resolution and Downloads destination. Choose
+- [ ] Try an owner-chosen real YouTube video link, resolution and Downloads destination. Choose
       Best available and an exact offered tier; check actual dimensions/audio.
-      The dormant adapter still needs its reviewed actual composition/tool/source
-      gates completed under CL-023 before a real trial; fake import is not that
-      evidence.
+      CL-023's 2026-10-23 follow-up connects the adapter and prepares verified tools;
+      source permits/checkboxes were removed by owner instruction. Fake import and
+      offline tool checks do not establish actual platform/challenge compatibility.
 - [ ] Reopen saved sources after restart and while offline. Verify zero new
       downloads, source preservation after close/failure and source relinking.
 - [ ] Confirm actual owner live adapter composition and local provider-input
@@ -59,7 +58,7 @@ capability. Report deferred/unavailable cases explicitly; no production launch,
 public build change, cloud deployment, purchase, new paid budget or push follows
 from accepting the local editor. No local AI weights/runtime are provided.
 
-The [local workflow guide](../operations/LOCAL_OWNER_WORKFLOW.md) is the operator
+The [local workflow guide](../operations/LOCAL_WORKFLOW.md) is the operator
 handoff. CL-024's agent-driven synthetic browser/native/CLI checks do not check
 off these owner-only items. The separately gated Gemini handoff is implemented;
 actual live provider behavior and actual YouTube acquisition remain unperformed.

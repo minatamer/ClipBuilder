@@ -17,6 +17,7 @@ export function ownerRequest(
     method?: string;
     headers?: Record<string, string>;
     body?: Buffer | string;
+    signal?: AbortSignal;
   } = {},
 ) {
   return new Promise<{
@@ -27,9 +28,11 @@ export function ownerRequest(
     const req = request(
       {
         hostname: "127.0.0.1",
+        agent: false,
         port,
         path,
         method: options.method ?? "GET",
+        signal: options.signal,
         headers: {
           ...(options.body
             ? { "Content-Length": Buffer.byteLength(options.body) }

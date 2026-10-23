@@ -17,15 +17,15 @@ import {
   OWNER_AGENT_INPUT_BYTES,
   ownerAgentFailureCode,
   type OwnerAgentPorts,
-} from "../apps/backend/owner/agent-client.ts";
+} from "../apps/backend/local/agent-client.ts";
 import {
   ownerAgentPicturePath,
   readOwnerAgentCommand,
   readOwnerAgentPicture,
-} from "../apps/backend/owner/agent-cli.ts";
-import { ownerAgentClipSchema } from "../packages/contracts/owner/agent.ts";
-import { OWNER_CAPTION_PRESETS } from "../packages/contracts/owner/editor.ts";
-import { OWNER_PICTURE_LIMITS } from "../packages/contracts/owner/assets.ts";
+} from "../apps/backend/local/agent-cli.ts";
+import { ownerAgentClipSchema } from "../packages/contracts/local/agent.ts";
+import { OWNER_CAPTION_PRESETS } from "../packages/contracts/local/editor.ts";
+import { OWNER_PICTURE_LIMITS } from "../packages/contracts/local/assets.ts";
 
 const workspaceId = randomUUID(),
   clipId = randomUUID(),

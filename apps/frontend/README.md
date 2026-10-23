@@ -1,7 +1,6 @@
 # ClipBuilder frontend
 
-The separately launched personal workflow uses the
-[local owner UI](owner/README.md), outside Next routes and public builds.
+Local controls use the normal `/start` flow and app shell. See the [local workflow guide](../../docs/operations/LOCAL_WORKFLOW.md). The backend owns AI mode; no separate frontend mode or app is needed. Fake AI is key-free and fictional; real downloads/native media are available independently.
 
 CL-015 hosted paid-walkthrough checkpoint (2026-10-07): the public Linux standalone
 frontend is deployed against the private backend with paid processing enabled

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { GROUNDED_ANALYSIS_LIMITS } from "@clipbuilder/contracts";
 import {
   LocalGeminiCapture,
+  localCaptureWorkspace,
   LOCAL_GEMINI_CAPTURE_WINDOW_MS,
   LOCAL_GEMINI_CAPTURE_WORKSPACE,
   composeLocalGeminiCapture,
@@ -29,6 +30,20 @@ import {
 
 const requestId = "req_" + "a".repeat(32);
 const secondRequestId = "req_" + "b".repeat(32);
+it("keeps private capture bound to the same workspace in source and the normal backend bundle", () => {
+  expect(
+    localCaptureWorkspace(
+      "file:///C:/synthetic/ClipBuilder/apps/backend/src/analysis/gemini.local-capture.ts",
+    ),
+  ).toBe(
+    localCaptureWorkspace(
+      "file:///C:/synthetic/ClipBuilder/apps/backend/dist/server.js",
+    ),
+  );
+  expect(() =>
+    localCaptureWorkspace("file:///C:/unexpected/capture.js"),
+  ).toThrow("capture_workspace_invalid");
+});
 const config = () =>
   loadConfig({
     ...createLiveValidationEnvironment(),

@@ -53,7 +53,18 @@ export async function prepareAppImage(root, application) {
       "packages/contracts/package.json",
       "packages/contracts/tsconfig.json",
       "packages/contracts/src",
+      "packages/contracts/local",
+      "scripts/local-discovery.mjs",
+      "scripts/local-discovery.d.mts",
+      "scripts/local-processes.mjs",
+      "scripts/local-processes.d.mts",
     ];
+    if (application === "backend")
+      inputs.push(
+        "apps/backend/local",
+        "scripts/backend-build.mjs",
+        "scripts/native-tools.ts",
+      );
     if (application === "frontend")
       inputs.push(
         "apps/frontend/next-env.d.ts",
@@ -63,6 +74,7 @@ export async function prepareAppImage(root, application) {
         "packages/composition/package.json",
         "packages/composition/tsconfig.json",
         "packages/composition/src",
+        "packages/composition/local",
       );
     for (const path of inputs) await copy(path);
     if (application === "frontend") {

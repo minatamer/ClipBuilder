@@ -96,7 +96,7 @@ ticket commit of the validated changes; it does not authorize a push.
 - Actual built UI on a temporary protected host restores requested count five;
   changing size to 96px, Verdana, line fade, Warm and strength 60 updates the
   preview with no AI/render dispatch. Synthetic screenshot was visually checked
-  at 1440×1200 and remains ignored at `.owner-build/evidence/cl026-controls.png`.
+  at 1440×1200 and remains ignored at `.local-build/evidence/cl026-controls.png`.
 - Validation corrected the bounded proposal target to allow manual-match
   filtering, preserved legacy opacity markup, added the new agent projection,
   and made the browser check wait for asynchronous draft-analysis restoration.

@@ -13,23 +13,23 @@ import { join } from "node:path";
 import {
   createOwnerHost,
   type OwnerHostOptions,
-} from "../apps/backend/owner/server.ts";
-import { fakeOwnerAnalysis } from "../apps/backend/owner/fake-analysis.ts";
-import { fakeOwnerClipPreparation } from "../apps/backend/owner/fake-clips.ts";
-import { ownerWorkspaceSchema } from "../packages/contracts/owner/index.ts";
-import { ownerAnalysisSchema } from "../packages/contracts/owner/selection.ts";
+} from "../apps/backend/local/server.ts";
+import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
+import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
+import { ownerWorkspaceSchema } from "../packages/contracts/local/index.ts";
+import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
 import {
   ownerClipListSchema,
   type OwnerClip,
-} from "../packages/contracts/owner/clips.ts";
+} from "../packages/contracts/local/clips.ts";
 import {
   OWNER_CAPTION_PRESETS,
   type OwnerEditRequest,
-} from "../packages/contracts/owner/editor.ts";
+} from "../packages/contracts/local/editor.ts";
 import {
   ownerDraftListSchema,
   ownerDraftStatusSchema,
-} from "../packages/contracts/owner/drafts.ts";
+} from "../packages/contracts/local/drafts.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 
 // Control/API integration only: AI adapters and native media jobs are test doubles.

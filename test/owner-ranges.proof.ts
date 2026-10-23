@@ -2,13 +2,13 @@ import { expect, it } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { ownerNativeTools } from "../apps/renderer/owner/native-tools.ts";
+import { ownerNativeTools } from "../scripts/native-tools.ts";
 import {
   inspectOwnerSource,
   ownerPortrait,
-} from "../apps/renderer/owner/media.ts";
+} from "../apps/renderer/local/media.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
-import { ownerCut } from "../packages/contracts/owner/selection.ts";
+import { ownerCut } from "../packages/contracts/local/selection.ts";
 
 it("renders exact 30/60-second cuts and source-clock VFR/offset/silent/fractional boundaries offline", async () => {
   const tools = await ownerNativeTools(resolve("."));

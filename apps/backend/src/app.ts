@@ -27,11 +27,22 @@ import {
   rejectFrontendCaller,
   type FrontendCallerVerifier,
 } from "./http/frontend-caller.js";
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+export type LocalWorkflowSlot = {
+  current: {
+    dispatch: (
+      request: IncomingMessage,
+      response: ServerResponse,
+    ) => Promise<void>;
+  } | null;
+};
 
 export function createApplication(
   config: BackendConfig,
   diagnostics = new AnalysisDiagnostics(),
   injectedFrontendCaller?: FrontendCallerVerifier,
+  localWorkflow?: LocalWorkflowSlot,
 ): Express {
   const application = express();
 
@@ -54,6 +65,20 @@ export function createApplication(
   });
 
   application.use("/v1", createHealthRouter(config.appRevision));
+  application.use("/v1/local", (request, response) => {
+    if (
+      config.appEnv !== "local" ||
+      !["127.0.0.1", "::ffff:127.0.0.1", "::1"].includes(
+        request.socket.remoteAddress ?? "",
+      ) ||
+      !localWorkflow?.current
+    ) {
+      response.status(404).end();
+      return;
+    }
+    request.url = `/api${request.url}`;
+    void localWorkflow.current.dispatch(request, response);
+  });
   const frontendCaller =
     injectedFrontendCaller ??
     (config.appEnv !== "local" &&

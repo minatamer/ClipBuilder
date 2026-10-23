@@ -2,10 +2,11 @@
 **/.next
 **/dist
 **/owner
+.local-build
 .owner-build
 scripts/owner-*
 test/owner-*
-tsconfig.owner.json
+tsconfig.local.json
 .git
 private
 **/.env

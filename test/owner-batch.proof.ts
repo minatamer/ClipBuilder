@@ -9,30 +9,33 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { createOwnerHost } from "../apps/backend/owner/server.ts";
-import { fakeOwnerAnalysis } from "../apps/backend/owner/fake-analysis.ts";
-import { fakeOwnerClipPreparation } from "../apps/backend/owner/fake-clips.ts";
-import { createOwnerWorker } from "../apps/renderer/owner/server.ts";
-import { ownerNativeTools } from "../apps/renderer/owner/native-tools.ts";
+import { createOwnerHost } from "../apps/backend/local/server.ts";
+import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
+import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
+import { createOwnerWorker } from "../apps/renderer/local/server.ts";
+import { ownerNativeTools } from "../scripts/native-tools.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
-import { ownerWorkspaceSchema } from "../packages/contracts/owner/index.ts";
-import { ownerAnalysisSchema } from "../packages/contracts/owner/selection.ts";
+import { ownerWorkspaceSchema } from "../packages/contracts/local/index.ts";
+import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
 import {
   ownerClipListSchema,
   type OwnerClipList,
-} from "../packages/contracts/owner/clips.ts";
+} from "../packages/contracts/local/clips.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
-import { localWorkerPort } from "../apps/backend/owner/worker-port.ts";
-import { ownerClipMediaPath } from "../apps/renderer/owner/media.ts";
-import { OWNER_CAPTION_PRESETS } from "../packages/contracts/owner/editor.ts";
-import { ownerDraftStatusSchema } from "../packages/contracts/owner/drafts.ts";
+import { localWorkerPort } from "../apps/backend/local/worker-port.ts";
+import { ownerClipMediaPath } from "../apps/renderer/local/media.ts";
+import { OWNER_CAPTION_PRESETS } from "../packages/contracts/local/editor.ts";
+import { ownerDraftStatusSchema } from "../packages/contracts/local/drafts.ts";
 import {
   executeOwnerAgentCommand,
   type OwnerAgentPorts,
-} from "../apps/backend/owner/agent-client.ts";
-import type { OwnerAgentCommand } from "../packages/contracts/owner/agent.ts";
+} from "../apps/backend/local/agent-client.ts";
+import type { OwnerAgentCommand } from "../packages/contracts/local/agent.ts";
 import { sampleOwnerResources } from "./owner-resource-sampler.ts";
-import { reviewOwnerControls } from "./owner-controls-browser.ts";
+import {
+  reviewOwnerControls,
+  prepareLocalControlsFixture,
+} from "./owner-controls-browser.ts";
 
 it("makes three independent caption/picture MP4s locally, re-exports without AI and preserves their common source", async () => {
   const tools = await ownerNativeTools(resolve(".")),
@@ -51,7 +54,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     token: "proof-worker",
     tools,
     chromium: "C:/Program Files/Google/Chrome/Application/chrome.exe",
-    overlayBundle: resolve(".owner-build/overlay"),
+    overlayBundle: resolve(".local-build/overlay"),
   });
   const workerPort = await listenOwner(worker.server),
     signal = AbortSignal.timeout(150_000);
@@ -78,7 +81,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
   const workerRpc = localWorkerPort(workerPort, "proof-worker", transport);
   const host = createOwnerHost({
     root,
-    ui: resolve(".owner-build/ui"),
+    ui: await prepareLocalControlsFixture(directory),
     storageRoot: join(directory, "library"),
     port: 0,
     token: "a".repeat(64),
@@ -114,6 +117,10 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         inFlight--;
       }
     },
+  });
+  host.server.prependListener("request", (request) => {
+    if (request.url?.startsWith("/api/local/"))
+      request.url = request.url.replace("/api/local/", "/api/");
   });
   const port = await listenOwner(host.server),
     auth = { Authorization: `Bearer ${"a".repeat(64)}` },
@@ -729,9 +736,9 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     try {
       const measured = await resources?.finish();
       if (measured) {
-        await mkdir(resolve(".owner-build/evidence"), { recursive: true });
+        await mkdir(resolve(".local-build/evidence"), { recursive: true });
         await writeFile(
-          resolve(".owner-build/evidence/cl024-batch.json"),
+          resolve(".local-build/evidence/cl024-batch.json"),
           JSON.stringify({
             ...measured,
             completed,

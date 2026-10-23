@@ -23,6 +23,16 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Scope, privacy, and spend
 
+- Latest owner revision (2026-10-23): CL-027 replaces the separate owner app with
+  local functionality in the normal 3000/4000 application and existing backend
+  `.env.local` configuration. Retire the 4100 UI/owner launch commands and second
+  provider mode; native media work is an automatically managed internal worker.
+  Earlier standalone-only instructions below are superseded for this integration.
+  Tests remain synthetic/fake/paid-off and never load ignored env files. Do not
+  read, print or alter ignored configuration contents. No hosted deployment,
+  provider/cloud request, Git action or deletion of retained/saved media is
+  authorized. Execute CL-027 and the owner-requested validate pass.
+
 - Owner local-workflow authorization (2026-10-22): implement CL-017–CL-024
   sequentially with execute/validate/fix loops and ticket-prefixed staging and
   commits after clean validation. The adopted local decisions are in the source
@@ -33,16 +43,7 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   owner manual acceptance; do not mark its real-media checks passed. Preserve
   all retained masters/captures/private logs. The retained local video was checked
   for readability only; it is not an ordinary automated fixture.
-- Owner-local runtimes use explicit fake/paid-off composition without reading
-  ignored env files. UI/control bind to loopback port 4100 and the private local
-  worker to 4200; canonical public 3000/4000 startup remains unchanged. Never
-  fall back to another port or cloud processing. Inspect ownership before a
-  long-lived launch and use hidden detached processes with private runtime
-  records/logs outside Git. Synthetic short-lived harnesses own/drain their
-  processes, sockets and OS-temp scratch. Source masters, saved drafts and
-  exports live outside the repo under OS Downloads/ClipBuilder; deletion of one
-  draft does not delete its source or exports. Existing retained-demo-source
-  protection remains in force.
+- Local editing uses the same normal frontend/backend and app-local environment loading, ports 3000/4000. The backend internally owns the private loopback 4200 worker. No owner app, launcher or second AI setting remains. Normal process ownership, hidden launch and cleanup rules below apply. Sources, drafts and exports remain outside Git under OS Downloads/ClipBuilder; preserve masters, captures and private logs. All agent tests/harnesses force fake/paid-off with no ignored env reads or real downloads.
 - ClipBuilder is a disposable portfolio demo: one owned/licensed conversation,
   grounded candidate moments, one selected 10–60 second vertical edit, and one
   final download. The visitor chooses exactly one candidate, then receives an

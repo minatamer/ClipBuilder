@@ -1,6 +1,19 @@
 # ClipBuilder canonical ticket index
 
-## Local owner workflow execution — 2026-10-22
+## Current integration — 2026-10-23
+
+[CL-027](CL-027-integrate-local-editing-into-main-app.md) integrates the existing controls into normal `/start`, backend lifecycle and `.env.local`. Owner startup commands/4100/separate UI are superseded. Implemented and validated: five gates, 1,639 unit tests, synthetic native/browser checks and final validate with no actionable findings. Real YouTube/AI acceptance remains CL-025. No Git action or deployment is authorized.
+
+## Historical local owner workflow execution — 2026-10-22
+
+2026-10-23 follow-up: the owner authorizes real local YouTube downloads while AI
+stays fake/paid-off, removes per-source permits and explicitly removes the rights
+checkbox. [CL-023](CL-023-import-approved-high-quality-linked-source.md) now
+includes downloads in normal owner startup with verified portable tools; the
+separate synthetic command is reserved for simulated source testing. The historical
+fake-only authorization below is superseded for this local acquisition path;
+paid/provider/cloud/public-release restrictions remain. Actual source download
+and editorial acceptance are still unperformed.
 
 Current owner extension: [CL-026](CL-026-expand-local-discovery-and-presentation-controls.md)
 adds requested AI count, caption fonts/animation/size and restrained video looks.
@@ -28,8 +41,8 @@ manual acceptance after implementation.
 | 3 | [CL-019](CL-019-process-multiple-local-clips.md) | Several selected clips, bounded concurrent work, per-clip review/export and source retention | Implemented plus composed provider handoff/local inputs; 1,600 root tests, seven native proofs, five gates and 1,490-file exclusion pass; no live activation; CL-024 combined acceptance next |
 | 4 | [CL-020](CL-020-add-minimal-local-caption-and-visual-editor.md) | Caption style/position, visual placement/replacement, personal pictures and saved drafts | Implemented; 98 owner tests, three native proofs, 1,454 root tests, five gates and 1,490-file public exclusion pass; owner real-media/live acceptance open |
 | 5 | [CL-021](CL-021-enable-agent-access-to-local-edits.md) | Existing chat agent edits through the same validated local use cases and CLI | Implemented; 146 owner tests, three native proofs, 1,502 root tests, five gates and 1,490-file public exclusion pass; headless CLI/native export/cancel and UI synchronization verified |
-| Decision lane | [CL-022](CL-022-decide-youtube-source-feasibility.md) | Research background download, exact resolution choice and saved-source reuse | Decision complete; technical go for fake-only CL-023; yt-dlp/Deno pins and exact/offline design recorded; real source/method/tool/access gates open |
-| Conditional | [CL-023](CL-023-import-approved-high-quality-linked-source.md) | Paste link, choose resolution/Best available, background download to Downloads and reuse saved source | Implemented in fake lane; exact native synthetic sources/offline reuse, five native proofs, 1,564 root tests, five gates and 1,490-file exclusion pass; real acquisition/tools/source gates open |
+| Decision lane | [CL-022](CL-022-decide-youtube-source-feasibility.md) | Research background download, exact resolution choice and saved-source reuse | Research complete; 2026-10-23 owner authorization supersedes source-permit/fake-only gate; exact/offline design and pins retained, actual access/challenge compatibility open |
+| Conditional | [CL-023](CL-023-import-approved-high-quality-linked-source.md) | Paste link, choose resolution/Best available, background download to Downloads and reuse saved source | 2026-10-23 real downloader wiring complete independently of fake AI; owner-revoked permits/checkbox removed; pinned tools, local startup, 1,630 unit tests, nine native proofs, five gates and public exclusion pass; actual online download/owner acceptance unperformed |
 | Final local gate | [CL-024](CL-024-verify-local-owner-workflow-and-build-exclusion.md) | Combined offline media/agent checks and public artifact exclusion | Implemented/validated in synthetic lane; 1,607 unit tests, eight native proofs, full gates, actual fake browser/headless CLI and 1,490-file exclusion pass; real owner/provider/YouTube gates remain open in CL-025 |
 | Additional controls | [CL-026](CL-026-expand-local-discovery-and-presentation-controls.md) | Requested AI count, caption font/animation/size and adjustable video looks | Implemented/validated locally; 1,627 unit tests, three relevant native proofs including actual built UI, full gates and 1,490-file exclusion pass; owner real/visual acceptance remains CL-025 |
 
@@ -59,7 +72,9 @@ CL-017–021 provide private local preview, manual ranges, independent simulated
 discovery, serial multi-clip edits, review/cancel, caption/picture controls,
 personal pictures, opt-in saved/autosaved drafts, immutable native exports and
 headless agent commands through the same protected host;
-linked synthetic import and offline saved-source reuse are implemented. Actual AI needs real
+linked synthetic import and offline saved-source reuse are implemented. The
+normal `owner:start` command connects real acquisition with
+the same fake AI, no API keys and no gcloud services. Actual AI needs real
 provider keys, enabled live flags and applicable rights/transfer/spend approvals;
 paid testing stays owner-only. The separate provider entry is implemented for
 later owner activation; current agent checks use injected transports only.

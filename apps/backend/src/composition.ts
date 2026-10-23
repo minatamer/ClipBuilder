@@ -1,4 +1,4 @@
-import { createApplication } from "./app.js";
+import { createApplication, type LocalWorkflowSlot } from "./app.js";
 import { loadConfig } from "./config/loadConfig.js";
 import { AnalysisDiagnostics } from "./analysis/analysis.diagnostics.js";
 
@@ -7,9 +7,16 @@ export function composeBackend(
   diagnostics = new AnalysisDiagnostics(),
 ) {
   const config = loadConfig(environment);
+  const localWorkflow: LocalWorkflowSlot = { current: null };
 
   return {
-    application: createApplication(config, diagnostics),
+    application: createApplication(
+      config,
+      diagnostics,
+      undefined,
+      localWorkflow,
+    ),
+    localWorkflow,
     config,
   };
 }

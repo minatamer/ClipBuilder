@@ -169,7 +169,7 @@ reproduced as a failing regression, then passes the corrected pre-import check.
 | Public boundary | New `public-boundary.test.ts` checks valid public analysis/selection/render requests reject owner ranges, duration overrides, multiple candidates and mutable manifests. Six public route probes reject owner header/cookie/query attempts. Artifact markers now also cover provider activation and local input jobs. |
 | Ownership/privacy/resources | Auth/Host/Origin, path/junction, immutable hashes, draft recovery, source sharing, source deletion and worker concurrency tests remain included. The opt-in resource sampler records only process identities/counts/working sets/threads and file sizes; no command lines, environment, media bytes or dialogue. |
 
-The local [workflow guide](../operations/LOCAL_OWNER_WORKFLOW.md), owning app
+The local [workflow guide](../operations/LOCAL_WORKFLOW.md), owning app
 guides and agent command guide cover exact startup/stop behavior, tools, limits,
 storage/deletion, safe CLI actions, fake/provider distinctions and open gates.
 
@@ -225,7 +225,7 @@ Settled synthetic run (8 native tests / 6 files, 160.66 seconds):
 | Explicit discovery / selected-clip AI doubles | Four transcription + four selection actions, then three plans + three pictures; unchanged by edit/re-export/cancel |
 
 The private repeatable JSON observations are ignored under
-`.owner-build/evidence/cl024-batch.json` and `cl024-native-cancel.json`. These
+`.local-build/evidence/cl024-batch.json` and `cl024-native-cancel.json`. These
 numbers describe this small synthetic workload and fixed proxy envelopes, not
 maximum-complexity source/edit performance or live provider latency.
 

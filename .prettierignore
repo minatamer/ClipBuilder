@@ -1,4 +1,5 @@
 **/*.md
+.local-build/
 .owner-build/
 **/next-env.d.ts
 .next/

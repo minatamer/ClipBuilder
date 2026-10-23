@@ -306,7 +306,7 @@ Read-only review at HEAD `5a3e4cc18b367a9ce2c8e7c0f05c2eedff0eb1d1`
 found no actionable local finding; earlier unstaged work is preserved and the
 index remains empty. Fake mode needs no keys and produces simulated results;
 actual retained reads still need ADC/cloud setup, and Gemini still requires
-keys, enabled live flags and existing approvals. Media/device/owner/film/release
+keys, enabled live flags and existing approvals. Media/device/local/film/release
 gates remain open. No cloud/provider, credential, real media, local AI runtime/
 weights or Git action occurred.
 

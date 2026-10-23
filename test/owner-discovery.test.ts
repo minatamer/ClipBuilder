@@ -15,14 +15,51 @@ import {
   clearOwnerDiscovery,
   discoverOwnerHost,
   publishOwnerDiscovery,
-} from "../scripts/owner-discovery.mjs";
+  coalesceDiscoveryProbes,
+} from "../scripts/local-discovery.mjs";
+
+it("shares concurrent process queries without retaining stale snapshots", async () => {
+  let finish!: (
+    rows: { pid: number; parent: number; created: string }[],
+  ) => void;
+  const read = vi.fn(
+    () =>
+      new Promise<{ pid: number; parent: number; created: string }[]>(
+        (done) => {
+          finish = done;
+        },
+      ),
+  );
+  const probe = coalesceDiscoveryProbes(read);
+  const first = probe(41),
+    second = probe(41);
+  expect(read).toHaveBeenCalledTimes(1);
+  finish([]);
+  await Promise.all([first, second]);
+  const fresh = probe(41);
+  expect(read).toHaveBeenCalledTimes(2);
+  finish([]);
+  await fresh;
+});
+it("releases failed discovery queries so a later request can verify fresh identity", async () => {
+  const read = vi.fn(async () => {
+    throw new Error("synthetic-query-failed");
+  });
+  const probe = coalesceDiscoveryProbes(read);
+  const first = probe(41),
+    second = probe(41);
+  await expect(first).rejects.toThrow("synthetic-query-failed");
+  await expect(second).rejects.toThrow("synthetic-query-failed");
+  await expect(probe(41)).rejects.toThrow("synthetic-query-failed");
+  expect(read).toHaveBeenCalledTimes(2);
+});
 
 let temporary: string, runtime: string, clock: number;
 let identities: { pid: number; parent: number; created: string }[];
 let probe: ReturnType<
   typeof vi.fn<(pid: number) => Promise<typeof identities>>
 >;
-const pointer = () => join(temporary, "clipbuilder-owner-active.json");
+const pointer = () => join(temporary, "clipbuilder-local-active.json");
 const options = () => ({ temporaryRoot: temporary, probe, now: () => clock });
 beforeEach(async () => {
   temporary = await mkdtemp(
@@ -40,11 +77,6 @@ beforeEach(async () => {
       parent: process.pid,
       created: new Date(clock - 4000).toISOString(),
     },
-    {
-      pid: process.pid + 10_002,
-      parent: process.pid,
-      created: new Date(clock - 3000).toISOString(),
-    },
   ];
   probe = vi.fn(async () => structuredClone(identities));
   runtime = await fixture();
@@ -54,7 +86,7 @@ afterEach(async () => {
 });
 async function fixture() {
   const directory = await mkdtemp(
-    join(temporary, "clipbuilder-owner-runtime-"),
+    join(temporary, "clipbuilder-local-runtime-"),
   );
   await mkdir(join(directory, "workspaces"));
   await writeFile(
@@ -63,14 +95,13 @@ async function fixture() {
       supervisor: process.pid,
       startedAt: new Date(clock).toISOString(),
       identities,
-      ports: [4100, 4200],
+      ports: [4000, 4200],
     }),
   );
   await writeFile(
     join(directory, "state.json"),
     JSON.stringify({
       root: join(directory, "workspaces"),
-      ui: join(temporary, "synthetic-ui"),
       token: "a".repeat(64),
       workerToken: "b".repeat(64),
       tools: {
@@ -167,7 +198,7 @@ it("rejects expired, replaced or missing process identities before returning a c
   await expect(discoverOwnerHost(options())).rejects.toThrow(
     /^owner_host_unavailable$/,
   );
-  probe.mockResolvedValueOnce(identities.slice(0, 2));
+  probe.mockResolvedValueOnce(identities.slice(0, 1));
   await expect(discoverOwnerHost(options())).rejects.toThrow(
     /^owner_host_unavailable$/,
   );
@@ -208,7 +239,7 @@ it("refuses linked runtime paths, hardlinked or nonregular records and leaves ou
   );
   await rm(pointer());
   // Junctions are available without Windows symlink privileges for directory tests.
-  const linkedRuntime = join(temporary, "clipbuilder-owner-runtime-linked");
+  const linkedRuntime = join(temporary, "clipbuilder-local-runtime-linked");
   await symlink(runtime, linkedRuntime, "junction");
   await writeFile(
     pointer(),

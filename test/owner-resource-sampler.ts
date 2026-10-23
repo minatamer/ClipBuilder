@@ -72,7 +72,21 @@ async function disk(root: string) {
     unique = 0;
   const identities = new Set<string>();
   async function visit(directory: string) {
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
+    let entries;
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch (error) {
+      // Owned render subdirectories can disappear between traversal and enumeration.
+      if (
+        directory !== root &&
+        error instanceof Error &&
+        "code" in error &&
+        error.code === "ENOENT"
+      )
+        return;
+      throw error;
+    }
+    for (const entry of entries) {
       if (entry.isSymbolicLink())
         throw new Error("owner_resource_link_rejected");
       const file = join(directory, entry.name);
@@ -120,7 +134,7 @@ export async function sampleOwnerResources(root: string) {
   let samples = 0,
     stopped = false,
     timer: ReturnType<typeof setTimeout> | undefined;
-  let failed = false;
+  let failed: string | undefined;
   async function sample() {
     const all = await processes();
     const owned = all.filter((row) => row.pid === process.pid);
@@ -165,8 +179,21 @@ export async function sampleOwnerResources(root: string) {
   function schedule() {
     timer = setTimeout(() => {
       pending = sample()
-        .catch(() => {
-          failed = true;
+        .catch((error: unknown) => {
+          const known =
+            error instanceof Error &&
+            [
+              "owner_resource_snapshot_invalid",
+              "owner_resource_link_rejected",
+              "owner_resource_platform_unverified",
+            ].includes(error.message)
+              ? error.message
+              : error instanceof Error &&
+                  "code" in error &&
+                  ["ENOENT", "ETIMEDOUT", "EPERM"].includes(String(error.code))
+                ? String(error.code)
+                : "snapshot_unavailable";
+          failed = known;
         })
         .finally(() => {
           if (!stopped) schedule();
@@ -180,17 +207,31 @@ export async function sampleOwnerResources(root: string) {
       stopped = true;
       clearTimeout(timer);
       await pending;
-      if (failed) throw new Error("owner_resource_sample_failed");
-      const current = await processes();
-      const survivors = current.filter((row) =>
+      if (failed) throw new Error(`owner_resource_sample_failed:${failed}`);
+      let current = await processes();
+      let survivors = current.filter((row) =>
         observed.has(`${row.pid}:${row.created}`),
       );
+      // Browser/process exit can settle just after its close promise. Verify stabilization.
+      for (let attempt = 0; survivors.length && attempt < 5; attempt++) {
+        await new Promise((done) => setTimeout(done, 200));
+        current = await processes();
+        survivors = current.filter((row) =>
+          observed.has(`${row.pid}:${row.created}`),
+        );
+      }
       return {
         wallMs: Math.round(performance.now() - started),
         samples,
         peaks,
         observedChildren: observed.size,
         survivors: survivors.length,
+        survivorIdentities: survivors.map(({ pid, parent, created, name }) => ({
+          pid,
+          parent,
+          created,
+          name,
+        })),
       };
     },
   };

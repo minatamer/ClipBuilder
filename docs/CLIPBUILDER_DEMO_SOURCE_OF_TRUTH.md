@@ -1,5 +1,60 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Same application, local editing extension — 2026-10-23
+
+The owner explicitly rejects a separate owner application. Move the implemented
+local controls into the existing `/start` flow, normal Next frontend on 3000 and
+normal Express backend on 4000. Normal backend startup loads its existing
+`apps/backend/.env.local`; Next retains its normal frontend env loading. No
+second UI, separate configuration source, owner launcher or owner provider mode
+remains. The backend starts/drains the private local media worker internally;
+that implementation detail creates no additional user setup or UI. The ordinary
+FAKE_MODE/PAID_DEMO_ENABLED/Gemini settings govern the same application. Keep AI
+fake/paid-off for the requested local walkthrough and enable actual YouTube
+acquisition independently. Local extensions are active only for APP_ENV=local
+and loopback callers; hosted execution retains the existing demo. No deployment,
+paid processing, cloud change or Git action is authorized. Preserve all saved
+media/drafts/exports/captures/logs and keep imports inert. This supersedes the
+standalone-app, 4100, owner-command and process-env-only decisions below. Execute
+CL-027, then perform the explicitly requested validate pass and fix findings.
+
+## Historical standalone downloader activation — 2026-10-23
+
+The same-application decision above supersedes the launcher/command details in this historical evidence. Downloader behavior and independent fake AI remain.
+
+Default-startup follow-up: the owner explicitly requests downloading as a normal
+local capability, without a separate YouTube startup command. `owner:start`
+and `owner:start:provider` now select the existing real acquisition option;
+`owner:start:youtube` remains a compatibility alias. The separately named
+`owner:start:synthetic` preserves synthetic acquisition for isolated tests.
+This supersedes the opt-in command/default-synthetic decision below. Starting
+still makes no source/metadata request: the owner enters a link and explicitly
+requests offered qualities/Import. AI keys, mode and paid approvals remain
+independent; normal fake AI stays fake/paid-off with no API key or gcloud.
+
+The owner explicitly requests real local YouTube acquisition while AI remains
+fake/paid-off, and removes per-source permits for this private feature: accept
+any supported video link the owner enters. This supersedes the earlier CL-022/
+CL-023 composition-owned source-permit gate. The owner also explicitly confirms
+removing the UI rights/method checkbox after the automatic review rejection.
+The protected, deliberate metadata/Import actions remain; no source registry,
+per-source permit or acknowledgement is required.
+Implement a deliberate `--youtube` launcher option, separately prepared pinned
+tools and the existing protected metadata/Import actions. No allowlist of source
+IDs, provider key, paid/API approval or gcloud service is required for downloads.
+The test-specific synthetic launcher keeps synthetic acquisition. No account/cookie/DRM
+bypass, automatic retry, public route/build exposure, paid AI or cloud work is
+authorized. Agent verification stays synthetic/offline; real download acceptance
+waits for an owner-chosen link. Tool preparation is authorized by this request.
+
+Implementation evidence: explicit local startup reports real acquisition with
+synthetic AI and cloud false; pinned tools, offline versions/generated-options
+parser, Downloads resolution and clean shutdown pass. All 1,630 unit tests,
+nine native synthetic proofs, the five repository gates and public artifact
+exclusion pass. Actual YouTube transfer/challenge compatibility, real provider
+quality and owner visual/manual acceptance remain unperformed. See the
+[CL-023 follow-up ledger](tickets/CL-023-import-approved-high-quality-linked-source.md#follow-up-changes-and-verification--2026-10-23).
+
 ## Additional owner controls — 2026-10-22
 
 The owner requests an independent count of 1–10 additional AI suggestions
@@ -52,7 +107,7 @@ Physical isolation uses separate `owner/` trees within the existing apps and
 packages, independent local build outputs, and a local frontend artifact served
 by the local backend on 4100; the private local media worker uses 4200. No cross-
 app imports. Public source/build/container graphs exclude these trees. See
-[local architecture ADR](architecture/LOCAL_OWNER_WORKFLOW.md).
+[local architecture ADR](architecture/LOCAL_WORKFLOW.md).
 
 This authorization supersedes planning-only language in the records below solely
 for this local fake-tested implementation track. Current fake mode needs no
@@ -156,7 +211,7 @@ uncomposed; no actual binaries, source clearance or retrieval were tested.
 All five root gates, five native proofs and public artifact exclusion pass.
 Real source quality/access/capacity, actual tool/runtime/proxy compliance and
 owner live AI activation/acceptance remain separate CL-024/CL-025 checkpoints.
-See the [local source guide](../apps/backend/owner/SOURCE_ACQUISITION.md).
+See the [local source guide](../apps/backend/local/SOURCE_ACQUISITION.md).
 
 Owner provider handoff follow-up: the local owner host now has a separate,
 explicit provider launcher and composed adapters using the existing Gemini
@@ -193,7 +248,7 @@ edit/re-export. Public request/route negatives and strengthened artifact markers
 protect the deployed boundary. Resource observations include real process/disk
 samples and in-flight native cancellation; they do not establish worst-case
 capacity, two-worker responsiveness or real-provider quality. The
-[operator workflow](operations/LOCAL_OWNER_WORKFLOW.md) and
+[operator workflow](operations/LOCAL_WORKFLOW.md) and
 [CL-024 ledger](tickets/CL-024-verify-local-owner-workflow-and-build-exclusion.md)
 keep file-based evidence, synthetic linked-source reuse and still-unperformed
 real YouTube/provider/owner acceptance distinct.

@@ -3,13 +3,13 @@ import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { createOwnerWorker } from "../apps/renderer/owner/server.ts";
-import { localWorkerPort } from "../apps/backend/owner/worker-port.ts";
+import { createOwnerWorker } from "../apps/renderer/local/server.ts";
+import { localWorkerPort } from "../apps/backend/local/worker-port.ts";
 import type {
   OwnerMediaJob,
   OwnerMediaResult,
-} from "../packages/contracts/owner/index.ts";
-import type { OwnerAcquisitionDescriptor } from "../packages/contracts/owner/acquisition.ts";
+} from "../packages/contracts/local/index.ts";
+import type { OwnerAcquisitionDescriptor } from "../packages/contracts/local/acquisition.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 
 const descriptor: OwnerAcquisitionDescriptor = {

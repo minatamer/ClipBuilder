@@ -11,16 +11,16 @@ import {
 } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { createOwnerWorker } from "../apps/renderer/owner/server.ts";
-import { ownerNativeTools } from "../apps/renderer/owner/native-tools.ts";
-import { inspectOwnerSource } from "../apps/renderer/owner/media.ts";
+import { createOwnerWorker } from "../apps/renderer/local/server.ts";
+import { ownerNativeTools } from "../scripts/native-tools.ts";
+import { inspectOwnerSource } from "../apps/renderer/local/media.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
 import { probeMedia } from "../apps/renderer/src/media/inspection.ts";
 import {
   OWNER_PROVIDER_MEDIA,
   ownerMediaResultSchema,
   type OwnerMediaJob,
-} from "../packages/contracts/owner/index.ts";
+} from "../packages/contracts/local/index.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 
 const signal = () => AbortSignal.timeout(150_000);
@@ -407,9 +407,9 @@ it("keeps a sixty-minute audio input and five-minute selected proxy below the ha
     expect(
       (await inspectOwnerSource(source, tools, signal())).fingerprint,
     ).toBe(admitted.fingerprint);
-    await mkdir(resolve(".owner-build/evidence"), { recursive: true });
+    await mkdir(resolve(".local-build/evidence"), { recursive: true });
     await writeFile(
-      resolve(".owner-build/evidence/cl024-native-cancel.json"),
+      resolve(".local-build/evidence/cl024-native-cancel.json"),
       JSON.stringify({
         encodingObserved: encoding,
         cancellationMs,

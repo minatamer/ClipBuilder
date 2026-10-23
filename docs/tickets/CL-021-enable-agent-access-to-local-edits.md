@@ -34,7 +34,7 @@ Specify commands to inspect safe workspace/clip status, list asset IDs, import
 an explicitly supplied local picture, validate/apply bounded edits, inspect the
 resulting revision, request a deterministic local render, poll status and
 cancel. The implemented command surface is `corepack pnpm owner:agent`, built
-separately under `.owner-build`; it reads one bounded stdin JSON command. A
+separately under `.local-build`; it reads one bounded stdin JSON command. A
 structured patch file contains allowed caption/visual operations and an expected
 revision. Unknown commands/properties, arbitrary shell commands, compositions,
 paths, provider prompts and remote URLs are rejected before side effects.
@@ -99,7 +99,7 @@ command.
 
 ## Documentation and gates
 
-The [agent command guide](../../apps/backend/owner/AGENT_COMMANDS.md), app guides,
+The [agent command guide](../../apps/backend/local/AGENT_COMMANDS.md), app guides,
 local architecture, source of truth and index describe the implemented
 commands and limits. Current `FAKE_MODE=true` with `PAID_DEMO_ENABLED=false` is
 key-free with synthetic AI results; deterministic edits/exports are API-free

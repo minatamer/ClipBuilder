@@ -7,8 +7,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json && node ../../scripts/backend-build.mjs",
+    "dev": "node ../../scripts/local-media-build.mjs && tsx watch --ignore ../../.local-build src/server.ts",
     "format": "prettier --check --ignore-path ../../.prettierignore .",
     "format:write": "prettier --write --ignore-path ../../.prettierignore .",
     "lint": "eslint .",

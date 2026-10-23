@@ -52,7 +52,7 @@ describe("backend executable startup", () => {
     vi.spyOn(composition, "composeBackend").mockReturnValue(composed);
     const log = vi.spyOn(console, "warn").mockImplementation(() => {});
     const before = process.listeners("SIGTERM");
-    expect(startBackend(environment)).toBe(server);
+    expect(await startBackend(environment)).toBe(server);
     expect(listen).toHaveBeenCalledWith(
       composed.config.port,
       "127.0.0.1",

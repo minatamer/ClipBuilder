@@ -5,6 +5,7 @@ apps/renderer/runtime-tools.json
 .pnpm-store/
 
 # Build, test, and framework output
+.local-build/
 .owner-build/
 .next/
 dist/

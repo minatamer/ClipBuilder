@@ -10,19 +10,19 @@ import {
 } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { createOwnerWorker } from "../apps/renderer/owner/server.ts";
-import { ownerNativeTools } from "../apps/renderer/owner/native-tools.ts";
+import { createOwnerWorker } from "../apps/renderer/local/server.ts";
+import { ownerNativeTools } from "../scripts/native-tools.ts";
 import {
   createSyntheticAcquisitionComponents,
   prepareOwnerAcquisition,
-} from "../apps/renderer/owner/acquisition-media.ts";
+} from "../apps/renderer/local/acquisition-media.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
 import {
   ownerMediaResultSchema,
   type OwnerMediaJob,
-} from "../packages/contracts/owner/index.ts";
-import type { OwnerAcquisitionDescriptor } from "../packages/contracts/owner/acquisition.ts";
-import { ownerAcquisitionNativeStageSchema } from "../packages/contracts/owner/acquisition-profile.ts";
+} from "../packages/contracts/local/index.ts";
+import type { OwnerAcquisitionDescriptor } from "../packages/contracts/local/acquisition.ts";
+import { ownerAcquisitionNativeStageSchema } from "../packages/contracts/local/acquisition-profile.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 import { openBrowser } from "../apps/renderer/node_modules/@remotion/renderer/dist/index.js";
 

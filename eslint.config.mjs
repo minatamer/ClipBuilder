@@ -67,7 +67,7 @@ export default defineConfig([
     files: [
       "*.{js,mjs,ts}",
       "**/*.config.{js,mjs,ts}",
-      "test/**/*.ts",
+      "test/**/*.{ts,mjs}",
       "scripts/**/*.{mjs,ts}",
       "apps/backend/**/*.ts",
       "apps/renderer/**/*.{ts,tsx}",
@@ -93,7 +93,7 @@ export default defineConfig([
     rules: applicationBoundaryRules,
   },
   {
-    files: ["apps/frontend/{src,owner}/**/*.{ts,tsx}"],
+    files: ["apps/frontend/{src,local}/**/*.{ts,tsx}"],
     languageOptions: {
       globals: {
         ...disabledNodeGlobals,
@@ -138,7 +138,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["packages/contracts/{src,owner}/**/*.ts"],
+    files: ["packages/contracts/{src,local}/**/*.ts"],
     languageOptions: {
       globals: {
         ...disabledNodeGlobals,
@@ -206,7 +206,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["packages/composition/src/**/*.{ts,tsx}"],
+    files: ["packages/composition/{src,local}/**/*.{ts,tsx}"],
     languageOptions: {
       globals: { ...disabledNodeGlobals, ...globals.browser },
     },
@@ -284,6 +284,7 @@ export default defineConfig([
     rules: { "local-owner/public-import": "error" },
   },
   globalIgnores([
+    ".local-build/**",
     ".owner-build/**",
     "private/**",
     "**/.next/**",

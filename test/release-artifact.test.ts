@@ -27,6 +27,7 @@ async function fixture() {
       "/_not-found/page",
       "/_global-error/page",
       "/api/analysis/[action]/route",
+      "/api/local/[...path]/route",
       "/api/diagnostics/route",
       "/api/sample/[...path]/route",
       "/api/session/exit/route",
@@ -122,7 +123,7 @@ describe("production-only artifact inspection", () => {
       );
       await expect(
         verifyReleaseArtifact(f.root, "local-build"),
-      ).resolves.toMatchObject({ appRoutes: 10 });
+      ).resolves.toMatchObject({ appRoutes: 11 });
       await expect(verifyReleaseArtifact(f.root)).rejects.toThrow(
         "release_artifact_invalid",
       );
@@ -135,7 +136,7 @@ describe("production-only artifact inspection", () => {
     try {
       const first = await verifyReleaseArtifact(f.root);
       expect(first).toEqual(await verifyReleaseArtifact(f.root));
-      expect(first.appRoutes).toBe(10);
+      expect(first.appRoutes).toBe(11);
       expect(first.sha256).toMatch(/^[a-f0-9]{64}$/);
       await f.put(".next/static/chunks/app.js", "changed synthetic code");
       expect((await verifyReleaseArtifact(f.root)).sha256).not.toBe(

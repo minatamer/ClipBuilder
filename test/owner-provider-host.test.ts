@@ -5,10 +5,10 @@ import { tmpdir } from "node:os";
 import {
   createOwnerHost,
   type OwnerHostOptions,
-} from "../apps/backend/owner/server.ts";
-import type { WorkspaceFiles } from "../apps/backend/owner/workspace-files.ts";
-import { fakeOwnerAnalysis } from "../apps/backend/owner/fake-analysis.ts";
-import { fakeOwnerClipPreparation } from "../apps/backend/owner/fake-clips.ts";
+} from "../apps/backend/local/server.ts";
+import type { WorkspaceFiles } from "../apps/backend/local/workspace-files.ts";
+import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
+import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 
 let root: string, scratch: string, host: ReturnType<typeof createOwnerHost>;

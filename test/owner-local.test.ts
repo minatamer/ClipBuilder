@@ -12,27 +12,24 @@ import { join } from "node:path";
 import {
   createOwnerHost,
   type OwnerHostOptions,
-} from "../apps/backend/owner/server.ts";
+} from "../apps/backend/local/server.ts";
 import {
   WorkspaceFiles,
   confinedPath,
-} from "../apps/backend/owner/workspace-files.ts";
-import {
-  assertOwnerFakeMode,
-  nativeEnvironment,
-} from "../apps/backend/owner/local-mode.ts";
+} from "../apps/backend/local/workspace-files.ts";
+import { nativeEnvironment } from "../apps/backend/local/local-mode.ts";
 import {
   ownerMediaJobSchema,
   ownerWorkspaceSchema,
   OWNER_LIMITS,
-} from "../packages/contracts/owner/index.ts";
+} from "../packages/contracts/local/index.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
-import { localWorkerPort } from "../apps/backend/owner/worker-port.ts";
-import { fakeOwnerAnalysis } from "../apps/backend/owner/fake-analysis.ts";
+import { localWorkerPort } from "../apps/backend/local/worker-port.ts";
+import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
 import {
   ownerAnalysisSchema,
   type OwnerAnalysisInputs,
-} from "../packages/contracts/owner/selection.ts";
+} from "../packages/contracts/local/selection.ts";
 
 const source = {
   fingerprint: "a".repeat(64),
@@ -445,13 +442,8 @@ it("confines scratch and rejects junctions without touching saved inputs", async
 });
 
 it("requires explicit fake/paid-off and strips inherited credentials from children", () => {
-  expect(() =>
-    assertOwnerFakeMode({ FAKE_MODE: "true", PAID_DEMO_ENABLED: "fake" }),
-  ).toThrow();
-  expect(() =>
-    assertOwnerFakeMode({ FAKE_MODE: "true", PAID_DEMO_ENABLED: "false" }),
-  ).not.toThrow();
   const environment = nativeEnvironment("synthetic");
+  expect(environment.FAKE_MODE).toBe("true");
   expect(environment.PAID_DEMO_ENABLED).toBe("false");
   expect(environment.GOOGLE_APPLICATION_CREDENTIALS).toBeUndefined();
   expect(environment.GEMINI_API_KEY).toBeUndefined();

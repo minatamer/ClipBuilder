@@ -1,9 +1,39 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
+import { build, stop } from "esbuild";
 import { openBrowser } from "../apps/renderer/node_modules/@remotion/renderer/dist/index.js";
 
 declare global {
   function clipbuilderReviewControls(): Promise<boolean>;
+}
+
+/** Component-only browser fixture in owned OS-temp scratch, never a production UI bundle. */
+export async function prepareLocalControlsFixture(directory: string) {
+  const ui = join(directory, "synthetic-ui");
+  await mkdir(ui);
+  try {
+    await build({
+      stdin: {
+        contents:
+          'import React from "react"; import {createRoot} from "react-dom/client"; import {LocalEditingExperience} from "./apps/frontend/src/features/local-editing/experience.tsx"; import "./apps/frontend/src/styles/tokens.css"; createRoot(document.getElementById("root")).render(<LocalEditingExperience/>);',
+        resolveDir: resolve("."),
+        loader: "tsx",
+      },
+      nodePaths: [resolve("apps/frontend/node_modules")],
+      bundle: true,
+      platform: "browser",
+      format: "esm",
+      jsx: "automatic",
+      outfile: join(ui, "app.js"),
+    });
+  } finally {
+    await stop();
+  }
+  await writeFile(
+    join(ui, "index.html"),
+    '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>',
+  );
+  return ui;
 }
 
 /** Opt-in synthetic UI exercise only; never accepts media or arbitrary URLs. */
@@ -66,12 +96,13 @@ export async function reviewOwnerControls(port: number) {
     const captured = await page
       ._client()
       .send("Page.captureScreenshot", { format: "png", fromSurface: true });
-    await mkdir(resolve(".owner-build/evidence"), { recursive: true });
+    await mkdir(resolve(".local-build/evidence"), { recursive: true });
     await writeFile(
-      resolve(".owner-build/evidence/cl026-controls.png"),
+      resolve(".local-build/evidence/cl026-controls.png"),
       Buffer.from(captured.value.data, "base64"),
     );
   } finally {
     await browser.close({ silent: true });
+    await stop();
   }
 }

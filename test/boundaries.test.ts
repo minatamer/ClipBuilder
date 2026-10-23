@@ -3,12 +3,19 @@ import { fileURLToPath } from "node:url";
 
 import { ESLint } from "eslint";
 import ts from "typescript";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
+const eslint = new ESLint({ cwd: repositoryRoot });
+beforeAll(async () => {
+  await eslint.calculateConfigForFile(
+    fileURLToPath(
+      new URL("../apps/frontend/src/__boundary__.ts", import.meta.url),
+    ),
+  );
+}, 30_000);
 
 async function lintFixture(relativePath: string, source: string) {
-  const eslint = new ESLint({ cwd: repositoryRoot });
   const [result] = await eslint.lintText(source, {
     filePath: fileURLToPath(new URL(relativePath, import.meta.url)),
     warnIgnored: false,
@@ -38,7 +45,7 @@ describe("repository dependency boundaries", () => {
   it("keeps owner contracts browser-safe and permits owner app contract imports", async () => {
     expect(
       await lintFixture(
-        "../packages/contracts/owner/__negative__.ts",
+        "../packages/contracts/local/__negative__.ts",
         'import "node:fs"; void process;',
       ),
     ).toEqual(
@@ -48,8 +55,8 @@ describe("repository dependency boundaries", () => {
       ]),
     );
     const messages = await lintFixture(
-      "../apps/frontend/owner/__valid__.ts",
-      'import { OWNER_LIMITS } from "../../../packages/contracts/owner/index.ts"; void OWNER_LIMITS;',
+      "../apps/frontend/src/features/local-editing/__valid__.ts",
+      'import { OWNER_LIMITS } from "../../../../../packages/contracts/local/index.ts"; void OWNER_LIMITS;',
     );
     expect(messages.filter((message) => message.severity === 2)).toEqual([]);
   });

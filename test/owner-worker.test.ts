@@ -2,11 +2,11 @@ import { expect, it, vi } from "vitest";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createOwnerWorker } from "../apps/renderer/owner/server.ts";
+import { createOwnerWorker } from "../apps/renderer/local/server.ts";
 import type {
   OwnerMediaJob,
   OwnerMediaResult,
-} from "../packages/contracts/owner/index.ts";
+} from "../packages/contracts/local/index.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 
 it("does not let a delayed cancel for one operation abort a sibling, and skips pre-canceled work", async () => {

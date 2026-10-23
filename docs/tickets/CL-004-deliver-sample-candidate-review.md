@@ -1,6 +1,6 @@
 # CL-004 — Deliver the sample-to-candidate-review experience
 
-Status: Full local development preview verified; independent/owner/real-media/manual gates pending<br>
+Status: Full local development preview verified; independent/local/real-media/manual gates pending<br>
 Milestone: M1 — deterministic sample story<br>
 Last synchronized: 2026-10-01<br>
 Depends on: CL-002 owner-approved visual direction and CL-003<br>
@@ -272,7 +272,7 @@ Keep the approved landing copy and unrelated provider/film work unchanged.
   Approved landing copy and unrelated changes are preserved. No scope deviation
   or external/Git action; final diff check passes and staged diff is empty.
   Revalidation requested in the same authorized side chat; no verdict inferred.
-  Independent/owner/native AT/zoom and prior real-media/rights/
+  Independent/local/native AT/zoom and prior real-media/rights/
   privacy/credentials/paid/spend/cloud/release gates remain open. The two newly
   reproduced issues are locally fixed; the older Clear/restart report is not
   claimed fixed or definitively disproven by this evidence.
@@ -414,7 +414,7 @@ or unrelated reset/result-layout fix.
   `corepack pnpm build`; **229 tests pass**. No new dependency/schema/state/
   timer/listener/request/provider action. `git diff --check` passes and staged
   diff is empty; unrelated work preserved, nothing staged or committed.
-- Independent/owner/native AT/zoom/forced-colors/reduced-transparency
+- Independent/local/native AT/zoom/forced-colors/reduced-transparency
   and all prior real-media/rights/privacy/credentials/paid/
   spend/cloud/release gates remain pending. CSS fallbacks are implemented,
   not manually accepted. Prior reset-path/smallest delivery findings remain
@@ -450,7 +450,7 @@ changes, Git/provider/cloud action, or unrelated reset/result-layout fix.
   `corepack pnpm test:unit`, `corepack pnpm build`; **229 tests pass**.
   `git diff --check` passes and staged diff is empty. No new dependency,
   schema, state, timer, listener, request or configuration/capability change.
-- Independent/owner/native AT/zoom/forced-colors
+- Independent/local/native AT/zoom/forced-colors
   approval and all prior real-media/rights/privacy/credentials/paid/spend/
   cloud/release gates remain pending. Previously recorded reset-path and
   smallest delivery-layout findings are unchanged, not claimed resolved.
@@ -508,7 +508,7 @@ no new workflow, disclosure, capability or Git action.
   revalidation rather than altering session
   behavior in this presentation-only request. The previously recorded smallest
   delivery overlap also remains unresolved; this revision claims only header
-  bounds. Independent/owner/native AT/zoom/forced-colors
+  bounds. Independent/local/native AT/zoom/forced-colors
   and all prior real-media/rights/privacy/credentials/paid/spend/cloud/
   release gates remain pending. No Git/provider/cloud action; unrelated work
   preserved and staged diff empty.

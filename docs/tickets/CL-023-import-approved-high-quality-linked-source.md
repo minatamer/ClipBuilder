@@ -1,6 +1,120 @@
 # CL-023 — Download a YouTube source in the background at the chosen resolution
 
-Status: implemented and validated in the authorized fake/synthetic lane;
+## Owner follow-up — 2026-10-23
+
+Default-startup revision: the owner requests real downloads as the normal local
+capability. `owner:start` and `owner:start:provider` now include the already
+verified `--youtube` option; `owner:start:youtube` remains an alias, and
+`owner:start:synthetic` names the old simulated-source entry for tests. No runtime
+or downloader algorithm changes are needed. AI remains independently gated;
+starting makes zero metadata/download/provider calls. This supersedes the opt-in
+default recorded below. Validation for this command/documentation-only revision
+uses both actual startup commands/capability states, the existing mode tests and
+formatting; the prior full-suite/native evidence below covers unchanged code.
+
+Default-startup verification: ordinary `owner:start` actually launches with
+`sourceMode=provider-source`, `aiMode=synthetic-ai` and cloud false; the explicit
+synthetic entry launches with `synthetic-source` and the same fake AI. Both pass
+health/UI/capability reads on 4100/4200 and authenticated shutdown, with zero
+captured surviving processes and both ports free. Launcher PIDs were 16580 and
+18836. Four existing mode/readiness tests, package formatting and diff checks
+pass; read-only validation has no actionable findings for this revision.
+No real source, provider or paid request ran. Startup evidence/logs are preserved
+under the earlier private verification root in `owner-default-check` (runtime
+`clipbuilder-owner-runtime-Laxt4V`) and `synthetic-default-check` (runtime
+`clipbuilder-owner-runtime-nfRghK`). Changes remain unstaged/uncommitted. The
+only new changes in this revision are package startup defaults and owning docs;
+actual online download and real AI/owner acceptance remain unperformed.
+
+The owner requests actual local downloads independently of fake AI and explicitly
+removes source-specific permits for this private workflow. The latest source of
+truth supersedes the historical source-permit/installation restrictions
+below. Connect the real adapter behind an explicit local `--youtube` command,
+prepare/verify pinned portable tools, retain fake/paid-off AI and preserve source
+reuse, exact formats, process/egress bounds and public exclusion. No real source
+has been supplied for acceptance. Verify with synthetic ports plus offline real
+binary/runtime checks; do not run a paid provider or arbitrary real media trial.
+The owner subsequently explicitly confirms removal of the rights checkbox too,
+after the automatic approval reviewer rejected that edit as broader than the
+first instruction. Those changes are now accepted and implemented.
+
+Current status: real local acquisition is composed behind `--youtube`, including
+with fake AI and paid-off. Tools are prepared/verified; real-source acceptance
+is still unperformed. The following status/authorization record describes the
+original 2026-10-22 implementation and is superseded where stated above.
+
+### Follow-up changes and verification — 2026-10-23
+
+- `apps/backend/local/entry.ts`, `local-mode.ts` and new
+  `acquisition-composition.ts` plus `scripts/owner-run.mjs` connect explicit
+  `--youtube` independently of AI mode. The fake host remains credential-free,
+  fake AI and paid-off; native children receive no provider credentials. The
+  default fake command still generates synthetic sources. Explicit missing or
+  changed real tools fail before listening rather than falling back to fake.
+- New `apps/backend/local/acquisition-tools.ts` and
+  `scripts/prepare-youtube.mjs` centralize pins and tool identity checks,
+  prepare official portable yt-dlp/Deno and preserve license notices under
+  ignored `.local-build/tools/youtube`. Deno's upstream Windows checksum file
+  is itself pinned before its executable digest is used. Actual executable and
+  archive hashes plus offline versions pass. The actual yt-dlp binary also
+  accepts the adapter's generated options via stdin in an offline help/parser
+  check. No source URL was supplied to that process.
+- `yt-dlp-acquisition.ts` removes the revoked permit callback while preserving
+  canonical identity validation, private stdin, exact format binding, egress
+  policy, no credentials/cookies/plugins/remote components/retries and cleanup.
+  `apps/frontend/src/features/local-editing/acquisition-panel.tsx` and the owner acquisition
+  contracts remove the rights checkbox/field; explicit metadata and Import
+  remain separate protected actions. No public request schema changes.
+- Regression updates cover mode independence, any entered canonical source
+  without a permit, zero AI/native/transfer calls for metadata, forged tool
+  receipts and unchanged unauthorized/malformed-request rejection. Files:
+  `provider-readiness.test.ts`, `yt-dlp-acquisition.test.ts`, new
+  `acquisition-tools.test.ts`, `source-acquisition.test.ts`,
+  `youtube-formats.test.ts` and `test/owner-acquisition-api.test.ts`.
+  `scripts/local-artifacts.mjs` tracks the new owner-only markers. Host/source
+  READMEs, local workflow guide, acquisition ADR, source of truth, CL-025 and
+  index record the latest instruction and actual remaining checks.
+- Focused initial adapter/coordinator/API tests: **65 pass**. Settled root unit
+  scripts: **1,630 tests across 144 files pass**. All five required script
+  gates pass: format, lint, typecheck, unit and public build. Owner build passes;
+  public exclusion passes **1,490 built files**, Docker context rules and
+  compiler roots. This is no cloud/container deployment evidence.
+- `owner:proof`: **nine tests across seven files pass**, 158.55 seconds,
+  using generated media and intercepted network. Exact native acquisition,
+  remux/inspection, saved-source reuse, range/batch/editor/export and provider-
+  input mechanics remain covered without real AI or YouTube requests.
+- Hidden short-lived startup: health checks on **4100/4200**, UI asset and
+  protected capability reads pass. Capabilities report `synthetic-ai` with
+  `provider-source`, local media true and cloud false. Supervisor **19884** and
+  its captured tree drain after authenticated HTTP204 shutdown; zero captured
+  survivors and both ports free. Windows Downloads resolution succeeds without
+  creating or reading a source library. No source metadata/transfer action ran.
+- Content-free readiness/process record, harness and startup logs remain outside
+  Git at
+  `C:/Users/minat/AppData/Local/Temp/clipbuilder-cl023-gates-66f037d5b6cf49e393d16d71b5701632`.
+  Actual host/worker stdout/stderr logs are in its
+  `clipbuilder-owner-runtime-4Le373` subdirectory. Capability state and owned
+  workspace scratch are removed; retained masters/captures/private logs and
+  saved owner media are untouched.
+- Execution environment corrections: recursive scripts initially found the
+  host fallback pnpm 11.25.0. The final gates use a private OS-temp shim pointing
+  nested invocations to pinned **11.19.0**, a pre-import fake/paid-off environment,
+  removed provider credentials and blocked ignored env-file reads (committed
+  `.env.example` remains readable). Unit tests use two workers to avoid observed
+  resource-related timeouts. No repository engine/config requirement or test
+  assertion was weakened. The public build's generated `next-env.d.ts` change
+  was restored to its original state.
+- Settled read-only execute/validate review: **no actionable findings** in the
+  authorized follow-up. Changes remain unstaged/uncommitted; no push.
+
+Remaining unverified: actual YouTube access/challenge/broker compatibility,
+transfer/quality/latency, maximum-capacity behavior and owner visual/A/V/manual
+acceptance. Real Gemini still needs its key, explicit provider mode and every
+applicable approval; no paid/provider/cloud request or real media trial ran.
+No offline AI weights/model are supplied. The source-permit/checkbox removal
+is an explicit owner revision, not evidence of third-party rights or access.
+
+Original status: implemented and validated in the authorized fake/synthetic lane;
 real acquisition remains unavailable. Follow the
 [acquisition ADR](../architecture/LOCAL_SOURCE_ACQUISITION.md), including exact
 formats, Deno challenge runtime, egress broker, MP4 boundary and offline reuse.
@@ -266,7 +380,7 @@ no push, real retrieval, installation, paid/provider/cloud action or deployment.
   overhead and the per-volume 10GiB free reserve under 20GiB scratch. Component
   totals are rechecked before merging; near-limit sources can fail capacity
   instead of dropping quality. Fixed runtime/output/rate/catalog limits are in
-  the [source guide](../../apps/backend/owner/SOURCE_ACQUISITION.md).
+  the [source guide](../../apps/backend/local/SOURCE_ACQUISITION.md).
 - Read-only validation/fix/revalidation resolved metadata admission/shutdown,
   response-header ordering, signal/parser/broker cleanup, upstream codec names,
   Desktop discovery, in-flight cancel acknowledgement, accurate native phases,

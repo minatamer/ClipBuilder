@@ -13,21 +13,21 @@ import { tmpdir } from "node:os";
 import {
   createOwnerHost,
   type OwnerHostOptions,
-} from "../apps/backend/owner/server.ts";
-import { fakeOwnerAcquisition } from "../apps/backend/owner/fake-acquisition.ts";
-import { fakeOwnerAnalysis } from "../apps/backend/owner/fake-analysis.ts";
-import { fakeOwnerClipPreparation } from "../apps/backend/owner/fake-clips.ts";
-import { ownerWorkspaceSchema } from "../packages/contracts/owner/index.ts";
+} from "../apps/backend/local/server.ts";
+import { fakeOwnerAcquisition } from "../apps/backend/local/fake-acquisition.ts";
+import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
+import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
+import { ownerWorkspaceSchema } from "../packages/contracts/local/index.ts";
 import {
   ownerYoutubeOfferSchema,
   ownerAcquisitionProgressSchema,
-} from "../packages/contracts/owner/acquisition.ts";
+} from "../packages/contracts/local/acquisition.ts";
 import {
   ownerSourceCatalogSchema,
   ownerSourceLookupSchema,
-} from "../packages/contracts/owner/acquisition-flow.ts";
-import { ownerAnalysisSchema } from "../packages/contracts/owner/selection.ts";
-import { ownerClipListSchema } from "../packages/contracts/owner/clips.ts";
+} from "../packages/contracts/local/acquisition-flow.ts";
+import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
+import { ownerClipListSchema } from "../packages/contracts/local/clips.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 
 // The host/coordinator/library/filesystem are real; AI/native bytes are counted
@@ -105,7 +105,10 @@ afterEach(async () => {
   expect(await readdir(root)).toEqual([]);
   await rm(directory, { recursive: true, force: true });
 });
-async function start(withAcquisition: boolean) {
+async function start(
+  withAcquisition: boolean,
+  sourcePort: NonNullable<OwnerHostOptions["acquisition"]> = acquisition,
+) {
   host = createOwnerHost({
     root,
     ui: directory,
@@ -113,7 +116,7 @@ async function start(withAcquisition: boolean) {
     port: 0,
     storageRoot: join(directory, "Downloads", "ClipBuilder"),
     desktopStorageRoot: join(directory, "Desktop", "ClipBuilder"),
-    ...(withAcquisition ? { acquisition } : {}),
+    ...(withAcquisition ? { acquisition: sourcePort } : {}),
     analysis,
     clipPreparation: preparation,
     media,
@@ -127,6 +130,40 @@ const post = (path: string, body: unknown) =>
     headers: json,
     body: JSON.stringify(body),
   });
+
+it("keeps real source acquisition independent from fake AI and accepts different entered sources without permits", async () => {
+  const metadata = vi.fn(
+    async (...args: Parameters<typeof fakeOwnerAcquisition.metadata>) => ({
+      ...(await fakeOwnerAcquisition.metadata(...args)),
+      mode: "provider-source" as const,
+    }),
+  );
+  const download = vi.fn(fakeOwnerAcquisition.download);
+  await start(true, { mode: "provider-source", metadata, download });
+  expect(
+    JSON.parse((await get("/api/capabilities")).body.toString()),
+  ).toMatchObject({
+    aiMode: "synthetic-ai",
+    sourceMode: "provider-source",
+    cloud: false,
+  });
+  for (const videoId of ["aaaaaaaaaaa", "bbbbbbbbbbb"]) {
+    const response = await post("/api/sources/metadata", {
+      url: `https://youtu.be/${videoId}`,
+    });
+    expect(response.status).toBe(200);
+    expect(
+      ownerYoutubeOfferSchema.parse(JSON.parse(response.body.toString())).mode,
+    ).toBe("provider-source");
+  }
+  expect(metadata).toHaveBeenCalledTimes(2);
+  expect(download).toHaveBeenCalledTimes(0);
+  expect(analysis.transcribe).toHaveBeenCalledTimes(0);
+  expect(analysis.select).toHaveBeenCalledTimes(0);
+  expect(preparation.plan).toHaveBeenCalledTimes(0);
+  expect(preparation.image).toHaveBeenCalledTimes(0);
+  expect(media).toHaveBeenCalledTimes(0);
+});
 
 it("imports through protected HTTP into the existing range/analysis/batch flow and reuses the retained source after an offline host restart", async () => {
   await start(true);
@@ -143,7 +180,6 @@ it("imports through protected HTTP into the existing range/analysis/batch flow a
         (
           await post("/api/sources/metadata", {
             ...link,
-            rightsAcknowledged: true,
           })
         ).body.toString(),
       ),
@@ -156,7 +192,6 @@ it("imports through protected HTTP into the existing range/analysis/batch flow a
       revision: offer.revision,
       choiceId: choice.id,
       selection: { kind: "tier", tier: 1080 },
-      rightsAcknowledged: true,
     },
   });
   expect(accepted.status).toBe(202);
@@ -270,7 +305,7 @@ it("imports through protected HTTP into the existing range/analysis/batch flow a
   ]);
 });
 
-it("rejects unauthorized clients and missing rights acknowledgment before metadata, downloading, native work or library creation", async () => {
+it("rejects unauthorized clients and arbitrary metadata options before downloading, native work or library creation", async () => {
   await start(true);
   expect(
     (
@@ -279,7 +314,6 @@ it("rejects unauthorized clients and missing rights acknowledgment before metada
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: "https://youtu.be/aaaaaaaaaaa",
-          rightsAcknowledged: true,
         }),
       })
     ).status,
@@ -288,6 +322,7 @@ it("rejects unauthorized clients and missing rights acknowledgment before metada
     (
       await post("/api/sources/metadata", {
         url: "https://youtu.be/aaaaaaaaaaa",
+        options: "untrusted-downloader-options",
       })
     ).status,
   ).toBe(400);

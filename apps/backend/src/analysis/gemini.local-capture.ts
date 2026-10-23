@@ -5,7 +5,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { requestIdSchema } from "@clipbuilder/contracts";
 import { z } from "zod";
@@ -14,8 +14,16 @@ import type { GoogleOperation } from "./gemini.diagnostics.js";
 import type { ReconciliationDiagnostic } from "./analysis.reconciliation-diagnostics.js";
 
 export const LOCAL_GEMINI_CAPTURE_WINDOW_MS = 6 * 60 * 60 * 1000;
-export const LOCAL_GEMINI_CAPTURE_WORKSPACE = fileURLToPath(
-  new URL("../../../../", import.meta.url),
+export function localCaptureWorkspace(moduleUrl: string) {
+  const directory = basename(dirname(fileURLToPath(moduleUrl)));
+  if (directory !== "analysis" && directory !== "dist")
+    throw new Error("capture_workspace_invalid");
+  return fileURLToPath(
+    new URL(directory === "analysis" ? "../../../../" : "../../../", moduleUrl),
+  );
+}
+export const LOCAL_GEMINI_CAPTURE_WORKSPACE = localCaptureWorkspace(
+  import.meta.url,
 );
 export const LOCAL_GEMINI_CAPTURE_DIRECTORY = join(
   tmpdir(),

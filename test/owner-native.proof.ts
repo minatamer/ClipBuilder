@@ -2,14 +2,14 @@ import { expect, it } from "vitest";
 import { join, resolve } from "node:path";
 import { mkdtemp, mkdir, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { createOwnerHost } from "../apps/backend/owner/server.ts";
-import { createOwnerWorker } from "../apps/renderer/owner/server.ts";
-import { ownerNativeTools } from "../apps/renderer/owner/native-tools.ts";
+import { createOwnerHost } from "../apps/backend/local/server.ts";
+import { createOwnerWorker } from "../apps/renderer/local/server.ts";
+import { ownerNativeTools } from "../scripts/native-tools.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
-import { ownerWorkspaceSchema } from "../packages/contracts/owner/index.ts";
+import { ownerWorkspaceSchema } from "../packages/contracts/local/index.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
-import { fakeOwnerAnalysis } from "../apps/backend/owner/fake-analysis.ts";
-import { ownerAnalysisSchema } from "../packages/contracts/owner/selection.ts";
+import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
+import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
 
 it("encodes and decodes a real synthetic portrait MP4 offline, then drains all scratch/listeners", async () => {
   const tools = await ownerNativeTools(resolve("."));

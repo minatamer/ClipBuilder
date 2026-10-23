@@ -1,24 +1,25 @@
+import { loadConfig } from "../apps/backend/src/config/loadConfig.js";
 import { expect, it, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { createOwnerHost } from "../apps/backend/owner/server.ts";
-import { composeOwnerProviders } from "../apps/backend/owner/provider-composition.ts";
-import { readOwnerProviderReadiness } from "../apps/backend/owner/provider-readiness.ts";
-import { localWorkerPort } from "../apps/backend/owner/worker-port.ts";
-import { fakeOwnerClipPreparation } from "../apps/backend/owner/fake-clips.ts";
+import { createOwnerHost } from "../apps/backend/local/server.ts";
+import { composeOwnerProviders } from "../apps/backend/local/provider-composition.ts";
+import { localProviderReadiness } from "../apps/backend/local/provider-readiness.ts";
+import { localWorkerPort } from "../apps/backend/local/worker-port.ts";
+import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
 import type { GeminiTransport } from "../apps/backend/src/analysis/gemini.adapter.ts";
-import { createOwnerWorker } from "../apps/renderer/owner/server.ts";
-import { ownerNativeTools } from "../apps/renderer/owner/native-tools.ts";
+import { createOwnerWorker } from "../apps/renderer/local/server.ts";
+import { ownerNativeTools } from "../scripts/native-tools.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
 import {
   ownerWorkspaceSchema,
   type OwnerMediaResult,
-} from "../packages/contracts/owner/index.ts";
-import { ownerAnalysisSchema } from "../packages/contracts/owner/selection.ts";
-import { ownerClipListSchema } from "../packages/contracts/owner/clips.ts";
-import { OWNER_CAPTION_PRESETS } from "../packages/contracts/owner/editor.ts";
+} from "../packages/contracts/local/index.ts";
+import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
+import { ownerClipListSchema } from "../packages/contracts/local/clips.ts";
+import { OWNER_CAPTION_PRESETS } from "../packages/contracts/local/editor.ts";
 import { GENERATED_PICTURE_MODEL } from "../packages/contracts/src/contextual-picture.schema.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 
@@ -38,7 +39,7 @@ it("connects local native provider inputs, injected Gemini-shaped transports and
     tools,
     token: "synthetic-worker",
     chromium: "C:/Program Files/Google/Chrome/Application/chrome.exe",
-    overlayBundle: resolve(".owner-build/overlay"),
+    overlayBundle: resolve(".local-build/overlay"),
   });
   const workerPort = await listenOwner(worker.server);
   const rpc = localWorkerPort(
@@ -174,18 +175,19 @@ it("connects local native provider inputs, injected Gemini-shaped transports and
       };
     }),
   };
-  const readiness = readOwnerProviderReadiness({
-    NODE_ENV: "development",
-    APP_ENV: "local",
-    FAKE_MODE: "false",
-    PAID_DEMO_ENABLED: "true",
-    OWNER_PROVIDER_APPROVED: "true",
-    CLOUD_SPEND_APPROVED: "true",
-    GEMINI_TRANSFER_APPROVED: "true",
-    GEMINI_IMAGE_GENERATION_APPROVED: "true",
-    GEMINI_PAID_PROJECT_CONFIRMED: "true",
-    GEMINI_API_KEY: "invented-test-key",
-  });
+  const readiness = localProviderReadiness(
+    loadConfig({
+      NODE_ENV: "development",
+      APP_ENV: "local",
+      FAKE_MODE: "false",
+      PAID_DEMO_ENABLED: "true",
+      CLOUD_SPEND_APPROVED: "true",
+      GEMINI_TRANSFER_APPROVED: "true",
+      GEMINI_IMAGE_GENERATION_APPROVED: "true",
+      GEMINI_PAID_PROJECT_CONFIRMED: "true",
+      GEMINI_API_KEY: "invented-test-key",
+    }),
+  );
   const host = createOwnerHost({
     root,
     ui: directory,

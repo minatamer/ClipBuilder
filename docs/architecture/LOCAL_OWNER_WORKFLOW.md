@@ -1,9 +1,11 @@
+> Historical standalone architecture: CL-027 supersedes the separate owner app/commands/configuration. See [current local workflow](../operations/LOCAL_WORKFLOW.md).
+
 # Local owner composition
 
 Status: owner-adopted implementation direction, 2026-10-22. Public architecture
 and media lifecycle remain unchanged. Implementation evidence belongs to tickets.
 
-Use `apps/frontend/owner`, `apps/backend/owner`, `apps/renderer/owner`,
+Use `apps/frontend/src/features/local-editing`, `apps/backend/owner`, `apps/renderer/owner`,
 `packages/contracts/owner` and (when needed) `packages/composition/owner` outside
 deployed `src` trees. Local-only schemas live once in contracts and compile with
 no Node ambient types. Apps never import one another. A root build/launcher may
@@ -25,7 +27,7 @@ browser; it works without an open browser or a hosted service. The host remains
 the authoritative writer. Revision checks and operation receipts protect
 concurrent UI/CLI changes; validate is a pure dry run and never acknowledges a
 write or starts a render. Local reading/seeking/editing does not dispatch AI.
-See the [agent command guide](../../apps/backend/owner/AGENT_COMMANDS.md).
+See the [agent command guide](../../apps/backend/local/AGENT_COMMANDS.md).
 
 The agent status/singular clip API projects an explicit metadata allowlist:
 opaque identities, revisions, layout/asset geometry, hashes, counters and output
