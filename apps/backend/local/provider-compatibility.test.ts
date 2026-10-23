@@ -32,6 +32,12 @@ const timings: [string, number, number][] = [
   ["revive", 12213, 12973],
   ["damaged", 13301, 13781],
   ["ecosystems.", 13937, 14789],
+  ["Patient", 30117, 30619],
+  ["restoration", 30743, 31477],
+  ["can", 31701, 31929],
+  ["revive", 32213, 32973],
+  ["damaged", 33301, 33781],
+  ["ecosystems.", 33937, 34789],
 ];
 const words: OwnerWord[] = timings.map(
   ([punctuatedText, startMs, endMs], index) => ({
@@ -85,7 +91,7 @@ beforeEach(async () => {
     source: {
       fingerprint: createHash("sha256").update(sourceBytes).digest("hex"),
       bytes: sourceBytes.length,
-      durationMs: 24917,
+      durationMs: 44917,
       width: 320,
       height: 180,
       fps: 29.97,
@@ -107,20 +113,20 @@ beforeEach(async () => {
     transcribe: vi.fn(async () => structuredClone(words)),
     select: vi.fn(async () => [
       {
-        startWordId: "w_000006",
-        endWordId: "w_000011",
+        startWordId: "w_000012",
+        endWordId: "w_000017",
         title: "Patient restoration",
         hook: "restoration can revive",
         rationale: "Restoration leads to a clear ecological benefit.",
         evidence: [
           {
             signal: "immediate-hook",
-            wordIds: ["w_000006", "w_000007"],
+            wordIds: ["w_000012", "w_000013"],
             note: "The statement introduces its subject immediately.",
           },
           {
             signal: "clear-payoff",
-            wordIds: ["w_000009", "w_000010", "w_000011"],
+            wordIds: ["w_000015", "w_000016", "w_000017"],
             note: "The ending describes a concrete result.",
           },
         ],
@@ -215,8 +221,8 @@ it("carries arbitrary adapter words and grounded picture inputs through manual/A
     { startFrame: 307, endFrame: 453 },
   ]);
   expect(analysis.suggestions[0]?.cut).toEqual({
-    startFrame: 303,
-    endFrame: 607,
+    startFrame: 903,
+    endFrame: 1207,
   });
   expect(analysis.suggestions[0]?.evidence?.hook).toBe(
     "restoration can revive",

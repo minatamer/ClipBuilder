@@ -19,6 +19,7 @@ import {
   type OwnerWord,
 } from "../../../packages/contracts/local/selection.ts";
 import { ownerSelectionPolicy } from "./selection-policy.ts";
+import { ownerAvailableWindows } from "./selection-windows.ts";
 import { OWNER_DEFAULT_AI_COUNT } from "../../../packages/contracts/local/policy.ts";
 import type { OwnerAiMode } from "../../../packages/contracts/local/policy.ts";
 
@@ -35,6 +36,7 @@ export type OwnerAnalysisPorts = {
     signal: AbortSignal,
     instructions: string,
     requestedCount?: number,
+    excludedCuts?: readonly OwnerCut[],
   ): Promise<OwnerAiEvidence[]>;
 };
 
@@ -61,6 +63,7 @@ export function fitOwnerAiWindow(
   last: OwnerWord,
   sourceMs: number,
   policy: OwnerAnalysisInputs["aiDuration"],
+  available: readonly OwnerCut[] = ownerAvailableWindows(sourceMs, []),
 ): OwnerCut | null {
   const total = Math.floor((sourceMs * OWNER_FPS) / 1000),
     min = Math.ceil((policy.minMs * OWNER_FPS) / 1000),
@@ -75,7 +78,14 @@ export function fitOwnerAiWindow(
     evidenceEnd <= evidenceStart
   )
     return null;
-  const startFrame = Math.min(evidenceStart, total - frames);
+  const window = available.find(
+    (cut) =>
+      cut.startFrame <= evidenceStart &&
+      cut.endFrame >= evidenceEnd &&
+      cut.endFrame - cut.startFrame >= frames,
+  );
+  if (!window) return null;
+  const startFrame = Math.min(evidenceStart, window.endFrame - frames);
   return { startFrame, endFrame: startFrame + frames };
 }
 
@@ -152,10 +162,19 @@ export async function analyzeOwner(
     current.rangeIds.push(range.id);
   }
   const suggestions: OwnerMoment[] = [];
+  const excludedCuts = manual.map((item) => ({ ...item.cut }));
+  const available = ownerAvailableWindows(
+    workspace.source.durationMs,
+    excludedCuts,
+  );
   const selected =
     !inputs.manualOnly &&
     words.length > 0 &&
-    workspace.source.durationMs >= inputs.aiDuration.minMs;
+    available.some(
+      (cut) =>
+        cut.endFrame - cut.startFrame >=
+        Math.ceil((inputs.aiDuration.minMs * OWNER_FPS) / 1000),
+    );
   if (selected) {
     const proposals = z
       .array(ownerAiEvidenceSchema)
@@ -167,6 +186,7 @@ export async function analyzeOwner(
           signal,
           ownerSelectionPolicy(inputs.aiDuration, requestedCount),
           requestedCount,
+          excludedCuts,
         ),
       );
     signal.throwIfAborted();
@@ -207,13 +227,10 @@ export async function analyzeOwner(
         words[end]!,
         workspace.source.durationMs,
         inputs.aiDuration,
+        available,
       );
       if (!cut) continue;
-      const existing = byCut.get(key(cut));
-      if (existing) {
-        if (existing.rangeIds.length) existing.evidence ??= proposal;
-        continue;
-      }
+      if (byCut.has(key(cut))) continue;
       if (
         suggestions.length >= requestedCount ||
         suggestions.some(

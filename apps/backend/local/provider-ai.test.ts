@@ -160,6 +160,21 @@ function fixture() {
 }
 
 describe("dormant owner provider ports with synthetic transports", () => {
+  it("rejects malformed manual exclusions before contacting the injected transport", async () => {
+    const f = fixture();
+    for (const cuts of [
+      [{ startFrame: 30, endFrame: 29 }],
+      [{ startFrame: -1, endFrame: 30 }],
+      Array.from({ length: 11 }, () => ({ startFrame: 0, endFrame: 30 })),
+    ]) {
+      await expect(
+        f.ports.analysis.select(words, policy, f.signal, instructions, 4, cuts),
+      ).rejects.toThrow();
+    }
+    expect(f.transport.candidates).not.toHaveBeenCalled();
+    expect(f.transport.upload).not.toHaveBeenCalled();
+    await f.ports.close(f.signal);
+  });
   it.each([5, 10])(
     "binds requested count %i to the real provider prompt and response ceiling using injected transport",
     async (count) => {
@@ -206,7 +221,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
         manualOnly: false,
         ranges: [
           { id: randomUUID(), startMs: 0, endMs: 1000 },
-          { id: randomUUID(), startMs: 0, endMs: 300_000 },
+          { id: randomUUID(), startMs: 300_000, endMs: 600_000 },
         ],
       },
       f.ports.analysis,
@@ -216,7 +231,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     expect(result.words).toEqual(words);
     expect(result.manual.map((item) => item.cut)).toEqual([
       { startFrame: 0, endFrame: 30 },
-      { startFrame: 0, endFrame: 9000 },
+      { startFrame: 9000, endFrame: 18000 },
     ]);
     expect(result.suggestions).toHaveLength(1);
     expect(result.suggestions[0]!.evidence!.title).toBe("Restoration");
@@ -232,7 +247,13 @@ describe("dormant owner provider ports with synthetic transports", () => {
     expect(f.transport.upload).toHaveBeenCalledTimes(1);
     expect(f.transport.transcribe).toHaveBeenCalledTimes(1);
     expect(f.transport.candidates).toHaveBeenCalledExactlyOnceWith(
-      JSON.stringify({ words }),
+      JSON.stringify({
+        words,
+        manualExclusions: {
+          fps: 30,
+          cuts: result.manual.map(({ cut }) => cut),
+        },
+      }),
       expect.any(AbortSignal),
       instructions,
     );

@@ -4,6 +4,7 @@ import {
   OWNER_FPS,
   OWNER_LIMITS,
   OWNER_PROVIDER_MEDIA,
+  ownerCutSchema,
   ownerIdSchema,
   ownerMediaResultSchema,
   ownerWorkspaceSchema,
@@ -229,17 +230,27 @@ export function createOwnerProviderAi(options: Options): {
         signal,
         instructions,
         requestedCount = OWNER_DEFAULT_AI_COUNT,
+        excludedCuts = [],
       ) {
         return run(signal, async () => {
           const proposalLimit = OWNER_LIMITS.ranges + requestedCount;
           const cues = words(current),
             policy = ownerAiDurationSchema.parse(duration);
           const expected = ownerSelectionPolicy(policy, requestedCount);
+          const cuts = z
+            .array(ownerCutSchema)
+            .max(OWNER_LIMITS.ranges)
+            .parse(excludedCuts);
           if (instructions !== expected)
             throw new Error("owner_selection_policy_rejected");
           if (!cues.length) return [];
           const result = await provider.candidates(
-            JSON.stringify({ words: cues }),
+            JSON.stringify({
+              words: cues,
+              ...(cuts.length
+                ? { manualExclusions: { fps: OWNER_FPS, cuts } }
+                : {}),
+            }),
             signal,
             {
               policy: expected,

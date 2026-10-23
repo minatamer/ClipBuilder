@@ -2,10 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import {
   analyzeOwner,
+  fitOwnerAiWindow,
   ownerLocalCues,
   type OwnerAnalysisPorts,
 } from "./analysis.ts";
 import { fakeOwnerAnalysis } from "./fake-analysis.ts";
+import { ownerAvailableWindows } from "./selection-windows.ts";
 import {
   candidateSelectionPolicy,
   CANDIDATE_SELECTION_POLICY,
@@ -72,6 +74,34 @@ describe("owner manual ranges and independent discovery", () => {
         `owner requests ${count} independent final AI moments`,
       );
       expect(provider.select.mock.calls[0]?.[4]).toBe(count);
+      expect(provider.select.mock.calls[0]?.[5]).toEqual(
+        result.manual.map((moment) => moment.cut),
+      );
+      const proposed = await provider.select.mock.results[0]!.value;
+      for (const proposal of proposed) {
+        const first = result.words.find(
+          (word) => word.id === proposal.startWordId,
+        )!;
+        const last = result.words.find(
+          (word) => word.id === proposal.endWordId,
+        )!;
+        expect(
+          result.manual.every(
+            ({ cut }) =>
+              Math.ceil((last.endMs * 30) / 1000) <= cut.startFrame ||
+              Math.floor((first.startMs * 30) / 1000) >= cut.endFrame,
+          ),
+        ).toBe(true);
+      }
+      for (const suggestion of result.suggestions) {
+        expect(
+          result.manual.every(
+            ({ cut }) =>
+              suggestion.cut.endFrame <= cut.startFrame ||
+              suggestion.cut.startFrame >= cut.endFrame,
+          ),
+        ).toBe(true);
+      }
       expect(result.calls).toEqual({ transcription: 1, selection: 1 });
     },
   );
@@ -149,13 +179,13 @@ describe("owner manual ranges and independent discovery", () => {
       expect(result.calls).toEqual({ transcription: 1, selection: 1 });
     },
   );
-  it("reuses exact duplicate cuts, links matching AI evidence and still offers four independent suggestions", async () => {
+  it("reuses duplicate manual cuts without asking AI to rediscover them", async () => {
     const request = input();
     request.ranges = [range(0, 30_000), range(0, 30_000), range(1000, 8000)];
     const result = await analyzeOwner(workspace(), request, ports(), signal());
     expect(result.manual).toHaveLength(2);
     expect(result.manual[0]?.rangeIds).toHaveLength(2);
-    expect(result.manual[0]?.evidence).not.toBeNull();
+    expect(result.manual[0]?.evidence).toBeNull();
     expect(result.suggestions).toHaveLength(4);
     expect(
       new Set(
@@ -165,6 +195,97 @@ describe("owner manual ranges and independent discovery", () => {
       ).size,
     ).toBe(6);
     expect(result.inputs.ranges).toHaveLength(3);
+  });
+  it("rejects noncompliant overlapping proposals before counting additional suggestions", async () => {
+    const provider = ports();
+    provider.select.mockImplementationOnce(
+      async (words, _policy, cancellation, instructions) => {
+        // Deliberately ignores exclusions: reconciliation must still enforce them.
+        const pool = await fakeOwnerAnalysis.select(
+          words,
+          { minMs: 10_000, maxMs: 10_000 },
+          cancellation,
+          instructions,
+          5,
+        );
+        return [
+          { ...pool[1]!, endWordId: pool[2]!.endWordId }, // partial overlap
+          pool[2]!, // inside the manual cut
+          { ...pool[1]!, endWordId: pool[4]!.endWordId }, // contains the manual cut
+          { ...pool[0]!, endWordId: pool[1]!.endWordId }, // ends exactly at manual start
+          { ...pool[4]!, endWordId: pool[5]!.endWordId }, // starts exactly at manual end
+          ...pool.slice(6, 9),
+        ];
+      },
+    );
+    const result = await analyzeOwner(
+      workspace(120_000),
+      {
+        ...input(10_000, 60_000),
+        ranges: [range(20_000, 40_000)],
+        aiCount: 5,
+      },
+      provider,
+      signal(),
+    );
+    expect(result.suggestions.map(({ cut }) => cut)).toEqual([
+      { startFrame: 0, endFrame: 600 },
+      { startFrame: 1200, endFrame: 1800 },
+      { startFrame: 1800, endFrame: 2100 },
+      { startFrame: 2100, endFrame: 2400 },
+      { startFrame: 2400, endFrame: 2700 },
+    ]);
+    expect(result.calls).toEqual({ transcription: 1, selection: 1 });
+    expect(provider.select).toHaveBeenCalledTimes(1);
+  });
+  it("unions overlapping reservations without changing manual cuts and skips discovery when no gap fits", async () => {
+    const provider = ports();
+    const request = {
+      ...input(10_000),
+      ranges: [range(31_000, 40_000), range(10_000, 23_000), range(0, 12_000)],
+    };
+    const result = await analyzeOwner(
+      workspace(40_000),
+      request,
+      provider,
+      signal(),
+    );
+    expect(result.manual.map(({ cut }) => cut)).toEqual(
+      request.ranges.map((row) => ownerCut(row, 40_000)),
+    );
+    expect(result.suggestions).toEqual([]);
+    expect(provider.transcribe).toHaveBeenCalledTimes(1);
+    expect(provider.select).not.toHaveBeenCalled();
+    expect(result.calls).toEqual({ transcription: 1, selection: 0 });
+  });
+  it("does not let a selector mutate the authoritative exclusion windows", async () => {
+    const provider = ports();
+    provider.select.mockImplementationOnce(
+      async (words, duration, cancellation, instructions, count, excluded) => {
+        // Even an adapter that mutates its private copy cannot reopen manual time.
+        Object.assign(excluded![0]!, { startFrame: 0, endFrame: 1 });
+        return fakeOwnerAnalysis.select(
+          words,
+          duration,
+          cancellation,
+          instructions,
+          count,
+        );
+      },
+    );
+    const result = await analyzeOwner(
+      workspace(120_000),
+      { ...input(10_000), ranges: [range(20_000, 40_000)], aiCount: 5 },
+      provider,
+      signal(),
+    );
+    expect(result.manual[0]?.cut).toEqual({ startFrame: 600, endFrame: 1200 });
+    expect(result.suggestions).toHaveLength(5);
+    expect(
+      result.suggestions.every(
+        ({ cut }) => cut.endFrame <= 600 || cut.startFrame >= 1200,
+      ),
+    ).toBe(true);
   });
   it("keeps silent manual cuts and skips selection when words are absent", async () => {
     const provider = ports();
@@ -288,6 +409,27 @@ describe("owner manual ranges and independent discovery", () => {
     expect(provider.transcribe).toHaveBeenCalledTimes(1);
     expect(provider.select).toHaveBeenCalledTimes(1);
   });
+});
+
+it("fits AI padding inside remaining frame windows and never crosses a manual boundary", async () => {
+  const words = await fakeOwnerAnalysis.transcribe(workspace(60_000), signal());
+  const available = ownerAvailableWindows(60_000, [
+    { startFrame: 600, endFrame: 1200 },
+  ]);
+  const fit = (startMs: number, endMs: number, windows = available) =>
+    fitOwnerAiWindow(
+      { ...words[0]!, startMs },
+      { ...words[1]!, endMs },
+      60_000,
+      { minMs: 10_000, maxMs: 30_000 },
+      windows,
+    );
+  expect(fit(19_000, 19_900)).toEqual({ startFrame: 300, endFrame: 600 });
+  expect(fit(40_000, 41_000)).toEqual({ startFrame: 1200, endFrame: 1500 });
+  expect(fit(19_000, 20_001)).toBeNull(); // one overlapping frame
+  expect(fit(39_999, 41_000)).toBeNull();
+  expect(fit(18_000, 42_000)).toBeNull(); // evidence bridges a reserved cut
+  expect(fit(19_000, 19_900, [{ startFrame: 570, endFrame: 600 }])).toBeNull();
 });
 
 it("uses one frame conversion, displays fractional endpoints, and clips manual cues to local time", () => {
