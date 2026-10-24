@@ -7508,14 +7508,14 @@ live/provider/rights/cleanup checks are described as complete.
 <!-- build-progress:start -->
 ## Build command progress
 
-Current phase: **06-plan-commit**
-Next action: Complete the Linux image/probe checks, inspect staged content and commit the planned existing files.
-Active ticket: none
+Current phase: **10a-quality**
+Next action: Commit this progress-only checkpoint, confirm clean baseline, then inspect current code and document the CL-064 quality/efficiency plan in an isolated checkout.
+Active ticket: CL-064
 Phase prompts: delegated during AFK
 Local commits approved: yes
 
 AFK mode: AFK-SESSION-001
-Provisional owner reviews: 04-decisions
+Provisional owner reviews: 04-decisions, 09-visual-review
 
 ### AFK decisions
 
@@ -7527,17 +7527,25 @@ Provisional owner reviews: 04-decisions
   Reason: The owner requested audits, not a new product/design round.
   Consequence / reversibility: No extra features; provisional checkpoint owner review remains outstanding.
   Owner review requested on return: yes. Evidence: docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md, docs/tickets/README.md
+- **AFK-0003** (AFK-SESSION-001, 2026-10-24T13:34:26+00:00, 09-visual-review): Retain current visuals and proceed with requested audits while owner review remains outstanding.
+  Reason: Desktop/phone states and native UI flow passed; no new visual feedback is assigned.
+  Consequence / reversibility: No unsolicited design edits; personal visual/paid/release acceptance is not claimed.
+  Owner review requested on return: yes. Evidence: docs/tickets/CL-062-designed-loading-states.md, docs/tickets/CL-063-local-hosted-release-verification.md
+- **AFK-0004** (AFK-SESSION-001, 2026-10-24T13:34:26+00:00, 10a-quality): Use an isolated Git checkout for audit implementation and fake-only checks; keep the owner manual-review app on committed baseline 440c6a8.
+  Reason: Editing watched backend/frontend source could restart or interrupt a paid owner request.
+  Consequence / reversibility: Audit commits are reviewable separately. Applying them to the running checkout is deferred until owner manual review finishes; no second app is launched, and no credentials/media are copied.
+  Owner review requested on return: yes. Evidence: docs/operations/CL058_063_COMMIT_PLAN.md, human:2026-10-24-current-build-audit-message
 
 - [x] 01-docs — Documentation (complete)
 - [x] 02-flow — Core flow (complete)
 - [x] 03-product — Product and design (complete)
 - [x] 04-decisions — Product decisions (provisional)
 - [x] 05-tickets — Ticket plan (complete)
-- [ ] 06-plan-commit — Planning commit (in_progress)
-- [ ] 07-build — Execute and validate tickets (pending)
-- [ ] 08-performance — Performance investigation (pending)
-- [ ] 09-visual-review — Frontend visual approval checkpoint (pending)
-- [ ] 10a-quality — Quality audit and fixes (pending)
+- [x] 06-plan-commit — Planning commit (complete)
+- [x] 07-build — Execute and validate tickets (complete_local)
+- [x] 08-performance — Performance investigation (complete_local)
+- [x] 09-visual-review — Frontend visual approval checkpoint (provisional)
+- [ ] 10a-quality — Quality audit and fixes (in_progress)
 - [ ] 10b-security-review — Security audit and manual review (pending)
 - [ ] 11-security-fixes — Approved security fixes (pending)
 - [ ] 12-handoff — Final local handoff (pending)
@@ -7549,7 +7557,7 @@ This checklist records local work. Human approvals and unresolved external check
   "schema_version": 3,
   "repo_root": "C:\\Users\\minat\\Work\\ClipBuilder",
   "main_document": "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
-  "updated_at": "2026-10-24T13:12:45+00:00",
+  "updated_at": "2026-10-24T13:34:27+00:00",
   "context": {
     "PROJECT_NAME": {
       "value": "ClipBuilder",
@@ -7629,6 +7637,34 @@ This checklist records local work. Human approvals and unresolved external check
           "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
           "docs/tickets/README.md"
         ]
+      },
+      {
+        "id": "AFK-0003",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-24T13:34:26+00:00",
+        "phase": "09-visual-review",
+        "choice": "Retain current visuals and proceed with requested audits while owner review remains outstanding.",
+        "rationale": "Desktop/phone states and native UI flow passed; no new visual feedback is assigned.",
+        "consequence": "No unsolicited design edits; personal visual/paid/release acceptance is not claimed.",
+        "review_needed": true,
+        "evidence": [
+          "docs/tickets/CL-062-designed-loading-states.md",
+          "docs/tickets/CL-063-local-hosted-release-verification.md"
+        ]
+      },
+      {
+        "id": "AFK-0004",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-24T13:34:26+00:00",
+        "phase": "10a-quality",
+        "choice": "Use an isolated Git checkout for audit implementation and fake-only checks; keep the owner manual-review app on committed baseline 440c6a8.",
+        "rationale": "Editing watched backend/frontend source could restart or interrupt a paid owner request.",
+        "consequence": "Audit commits are reviewable separately. Applying them to the running checkout is deferred until owner manual review finishes; no second app is launched, and no credentials/media are copied.",
+        "review_needed": true,
+        "evidence": [
+          "docs/operations/CL058_063_COMMIT_PLAN.md",
+          "human:2026-10-24-current-build-audit-message"
+        ]
       }
     ]
   },
@@ -7638,8 +7674,8 @@ This checklist records local work. Human approvals and unresolved external check
     "local_commits_approved": true,
     "approval_source": "human:2026-10-24-current-build-audit-message"
   },
-  "active_ticket": null,
-  "next_action": "Complete the Linux image/probe checks, inspect staged content and commit the planned existing files.",
+  "active_ticket": "CL-064",
+  "next_action": "Commit this progress-only checkpoint, confirm clean baseline, then inspect current code and document the CL-064 quality/efficiency plan in an isolated checkout.",
   "phases": [
     {
       "id": "01-docs",
@@ -7803,7 +7839,7 @@ This checklist records local work. Human approvals and unresolved external check
       "id": "06-plan-commit",
       "name": "Planning commit",
       "gate": null,
-      "status": "in_progress",
+      "status": "complete",
       "prompt": {
         "text": "Finish already-started CL-063 local Linux verification as the precondition for committing existing work. Inspect the CL-058-063 whole-file plan; stage explicit owned paths only after clean relevant validation and staged secret/generated-content review. Commit cohesive ticket-prefixed groups and confirm the working tree is clean before audits. Preserve normal owner apps/media and configuration. No push, deployment, paid call, cloud mutation or scanner metadata export.",
         "sha256": "721009fe6fc4a955eb1a87c2018ba12f2172693f93fee33f2c9c1e8d53ddb5e4",
@@ -7816,7 +7852,12 @@ This checklist records local work. Human approvals and unresolved external check
         "approval": null,
         "afk_session": "AFK-SESSION-001"
       },
-      "evidence": [],
+      "evidence": [
+        "docs/operations/CL058_063_COMMIT_PLAN.md",
+        "commit:31683fc",
+        "commit:a5bc071",
+        "commit:440c6a8"
+      ],
       "blockers": [],
       "approval": null,
       "decision": null,
@@ -7826,10 +7867,31 @@ This checklist records local work. Human approvals and unresolved external check
       "id": "07-build",
       "name": "Execute and validate tickets",
       "gate": null,
-      "status": "pending",
-      "prompt": null,
-      "evidence": [],
-      "blockers": [],
+      "status": "complete_local",
+      "prompt": {
+        "text": "Reconcile completed CL-058-063 against actual source, ticket records and local commits 31683fc/a5bc071/440c6a8. Adopt the settled 1,770 synthetic tests, full types/lint/format and local Linux image/editor/native/cancel/retry proof. Do not repeat completed product work. Record actual hosted identity/routing, maximum allocation and live Gemini/owner acceptance as external, with no paid/cloud execution or deployment.",
+        "sha256": "850c94702c324cae79c5a9ee01dd5c2ae52455df85a1fc395db15cb6ec758e9c",
+        "context_sources": [
+          "docs/tickets/README.md",
+          "docs/tickets/CL-063-local-hosted-release-verification.md"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [
+        "docs/tickets/CL-063-local-hosted-release-verification.md",
+        "commit:31683fc",
+        "commit:a5bc071",
+        "commit:440c6a8"
+      ],
+      "blockers": [
+        {
+          "kind": "external",
+          "reason": "Actual hosted identity/TLS/Turnstile/routing and maximum hosting allocation, plus live Gemini/owner acceptance, require separate configuration/authorization or owner review. No deployment or paid call is authorized.",
+          "reference": "docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md"
+        }
+      ],
       "approval": null,
       "decision": null,
       "reviews": []
@@ -7838,10 +7900,28 @@ This checklist records local work. Human approvals and unresolved external check
       "id": "08-performance",
       "name": "Performance investigation",
       "gate": null,
-      "status": "pending",
-      "prompt": null,
-      "evidence": [],
-      "blockers": [],
+      "status": "complete_local",
+      "prompt": {
+        "text": "Adopt the measured ClipBuilder native/resource evidence from CL-063: one worker, bounded chunks/calls, completed preparation reused on retry, cancel/expiry/exit cleanup, about 930 MiB sample peak memory and 25 MiB scratch. Preserve ceilings rather than add parallel native work. Maximum hosted allocation remains external. The assigned efficiency review will investigate actual current code in phase 10a without unrelated product changes.",
+        "sha256": "4f629e46e55b41e824cc3ea0a80b721c07c824a448b860af0c8022cf750d9905",
+        "context_sources": [
+          "docs/tickets/CL-063-local-hosted-release-verification.md",
+          "packages/contracts/local/hosted-editing.ts"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [
+        "docs/tickets/CL-063-local-hosted-release-verification.md"
+      ],
+      "blockers": [
+        {
+          "kind": "external",
+          "reason": "Actual hosted identity/TLS/Turnstile/routing and maximum hosting allocation, plus live Gemini/owner acceptance, require separate configuration/authorization or owner review. No deployment or paid call is authorized.",
+          "reference": "docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md"
+        }
+      ],
       "approval": null,
       "decision": null,
       "reviews": []
@@ -7850,20 +7930,62 @@ This checklist records local work. Human approvals and unresolved external check
       "id": "09-visual-review",
       "name": "Frontend visual approval checkpoint",
       "gate": "visual",
-      "status": "pending",
-      "prompt": null,
-      "evidence": [],
+      "status": "provisional",
+      "prompt": {
+        "text": "Preserve completed CL-062 design and its actual desktop/phone screenshot/keyboard/readiness evidence, plus the shared Linux editor proof. The owner is performing manual paid-flow/visual review while asking for audits now. Record only a provisional AFK self-review to permit the explicitly assigned audits. Do not invent personal visual acceptance or make extra design changes.",
+        "sha256": "dccce60476c5c3032651b13f3dbc9b929890c92c5c0c891827c321b50300aeb9",
+        "context_sources": [
+          "docs/tickets/CL-062-designed-loading-states.md",
+          "docs/tickets/CL-063-local-hosted-release-verification.md",
+          "human:2026-10-24-current-build-audit-message"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [
+        "docs/tickets/CL-062-designed-loading-states.md",
+        "docs/tickets/CL-063-local-hosted-release-verification.md"
+      ],
       "blockers": [],
       "approval": null,
-      "decision": null,
-      "reviews": []
+      "decision": "self-reviewed",
+      "reviews": [
+        {
+          "afk_review": {
+            "session_id": "AFK-SESSION-001",
+            "decision_id": "AFK-0003",
+            "recorded_at": "2026-10-24T13:34:26+00:00"
+          },
+          "decision": "self-reviewed"
+        }
+      ],
+      "afk_review": {
+        "session_id": "AFK-SESSION-001",
+        "decision_id": "AFK-0003",
+        "recorded_at": "2026-10-24T13:34:26+00:00"
+      }
     },
     {
       "id": "10a-quality",
       "name": "Quality audit and fixes",
       "gate": null,
-      "status": "pending",
-      "prompt": null,
+      "status": "in_progress",
+      "prompt": {
+        "text": "Run a thorough code quality, efficiency and structure audit of ClipBuilder, an existing Next.js frontend/Express backend/shared contracts and React composition with internal Linux native worker, prepared for Cloud Run. Current flow is uploaded owned video to bounded manual/AI moments, caption/picture/filter editor and MP4 export; YouTube acquisition is local-only. First fully document a detailed functionality-preserving plan in CL-064 post-deployment/pre-sharing quality and the owning audit report. Inspect browser workflow/state, server/proxy/provider adapters, native worker/process/media ownership, contracts, persistence, scripts/build/test boundaries and CI/release files. Identify concrete redundancy, dead code, duplicate logic, avoidable work and cleanup/structural defects; avoid cosmetic churn or broad rewrites. Preserve all private diagnostics, generic user/browser errors, paid-output advisory critique policy, explicit retries/reuse, fixed bytes/calls/queues/deadlines/cancellation, shared design and normal motion. Preserve the running owner manual-review app using a separate source checkout and fake/no-key/paid-off/network-blocked tests; never read/copy ignored env or retained media. Execute justified quality fixes one dependency-ready packet at a time through execute/read-only validate/fix/revalidate until no actionable local findings remain. Prepare a whole-file commit plan, inspect staged diffs and make cohesive CL-prefixed local commits under the current explicit Git authorization. Do not start STRIDE/dependency security auditing until this quality phase is complete. Do not deploy, push, spend credits, call providers/cloud, export scanner metadata or claim owner acceptance. Save follow-up preservation guidelines for later manual-feedback edits.",
+        "sha256": "79e66c5b23765ee7510f6e7a622cff1dd7b0899957b9c06ccd86f6241d50cf40",
+        "context_sources": [
+          "AGENTS.md",
+          "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+          "docs/tickets/CL-061-shared-hosted-upload-editor.md",
+          "docs/tickets/CL-062-designed-loading-states.md",
+          "docs/tickets/CL-063-local-hosted-release-verification.md",
+          "human:2026-10-24-current-build-audit-message"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
       "evidence": [],
       "blockers": [],
       "approval": null,

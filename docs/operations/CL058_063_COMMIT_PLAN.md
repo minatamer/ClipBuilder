@@ -14,6 +14,12 @@ pass. No API/cloud spend, deployment or push. Source and proof commits:
 checkpoint commit updates the same main document/plan after the documentation
 commit, so audit work starts from a completely clean tree.
 
+Documentation committed as `440c6a8`. The final progress checkpoint adopts the
+completed local packets, records the remaining hosted/paid blockers, preserves
+provisional product/visual reviews and saves the full CL-064 quality prompt.
+Audit implementation will use a separate checkout so the owner's watched manual
+review app stays on this baseline. No owner configuration or media is copied.
+
 ## CL-058-062: integrate diagnostics advisory Gemini shared hosted editor and loading states
 
 - .gitignore
