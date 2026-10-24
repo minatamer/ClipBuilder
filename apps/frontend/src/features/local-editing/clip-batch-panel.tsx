@@ -3,7 +3,7 @@ import buttonStyles from "../../shared/ui/workflow.module.css";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ClipEditor } from "./clip-editor.tsx";
 import { isLocalClipEditable } from "./clip-readiness.ts";
-import { LoaderCircle } from "lucide-react";
+import { ProcessingState } from "../../shared/ui/processing-state";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import {
   ownerClipListSchema,
@@ -297,31 +297,35 @@ export function OwnerClipBatchPanel({
               <div>
                 <h3 className="local-sr-only">Clip {currentIndex}</h3>
               </div>
-              {!showProcessing && !list.active && (
+              {!showProcessing && (!list.active || retryable) && (
                 <WorkflowActions
                   target={footerTarget}
                   label={`Clip ${currentIndex} actions`}
                 >
-                  {current.base &&
-                    !dirtyClip &&
-                    (retryable ||
-                      (editable &&
-                        latest?.editRevision !== current.revision)) && (
+                  {(retryable ||
+                    (current.base &&
+                      editable &&
+                      latest?.editRevision !== current.revision)) &&
+                    !dirtyClip && (
                       <Button
                         variant="primary"
                         disabled={
                           working(current) ||
                           pending ||
+                          (!current.base && !planningAvailable) ||
                           dirtyClip === current.id
                         }
                         onClick={() =>
-                          void action(`${endpoint}/${current.id}/render`, {
-                            operationId: crypto.randomUUID(),
-                            expectedRevision: current.revision,
-                          })
+                          void action(
+                            `${endpoint}/${current.id}/${retryable ? "retry" : "render"}`,
+                            {
+                              operationId: crypto.randomUUID(),
+                              expectedRevision: current.revision,
+                            },
+                          )
                         }
                       >
-                        {editable ? "Export clip" : "Retry clip"}
+                        {retryable ? "Retry clip" : "Export clip"}
                       </Button>
                     )}
                   {latest &&
@@ -351,29 +355,23 @@ export function OwnerClipBatchPanel({
                 <p role="status">
                   {current.error === "canceled"
                     ? "Canceled."
-                    : "Couldn’t process this clip. Try again."}
+                    : "Couldn’t process this clip."}
                 </p>
               )}
             {working(current) && (
-              <div className="clip-preparing" role="status">
-                <LoaderCircle
-                  size={24}
-                  className="acquisition-spinner"
-                  aria-hidden="true"
-                />
-                <span>
-                  {
-                    (
-                      {
-                        queued: "Queued",
-                        preparing: "Preparing clip…",
-                        rendering: "Exporting clip…",
-                        canceling: "Canceling…",
-                      } as Partial<Record<OwnerClip["state"], string>>
-                    )[current.state]
-                  }
-                </span>
-              </div>
+              <ProcessingState
+                className="clip-preparing"
+                label={
+                  (
+                    {
+                      queued: "Queued",
+                      preparing: "Preparing clip",
+                      rendering: "Exporting clip",
+                      canceling: "Canceling",
+                    } as Partial<Record<OwnerClip["state"], string>>
+                  )[current.state] ?? "Preparing clip"
+                }
+              />
             )}
             {editable && !showProcessing && (
               <ClipEditor

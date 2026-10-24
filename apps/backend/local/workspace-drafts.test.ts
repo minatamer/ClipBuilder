@@ -1,3 +1,4 @@
+import { LocalDiagnostics } from "./diagnostics.ts";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
@@ -166,4 +167,30 @@ it("does not retry a failed bulk first save during shutdown", async () => {
   await drafts.close();
   expect(save).toHaveBeenCalledTimes(1);
   expect(vi.getTimerCount()).toBe(0);
+});
+
+it("records autosave failures while retaining unsaved state without retrying or exposing content", async () => {
+  const lines: string[] = [];
+  await drafts.close();
+  drafts = new OwnerWorkspaceDrafts(
+    { save },
+    new WorkspaceFiles("unused-synthetic-root"),
+    () => structuredClone(snapshot),
+    new LocalDiagnostics((line) => lines.push(line)),
+  );
+  save.mockRejectedValueOnce(
+    Object.assign(new Error("synthetic-private-draft-path"), {
+      code: "ENOSPC",
+    }),
+  );
+  expect((await drafts.save(workspaceId)).state).toBe("unsaved");
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(lines.map((line) => JSON.parse(line))).toContainEqual(
+    expect.objectContaining({
+      operation: "draft_save",
+      outcome: "failed",
+      error: expect.objectContaining({ systemCode: "ENOSPC" }),
+    }),
+  );
+  expect(lines.join("\n")).not.toContain("synthetic-private-draft-path");
 });

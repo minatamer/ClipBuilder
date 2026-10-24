@@ -116,6 +116,11 @@
     flex-direction: column;
     overflow: hidden;
   }
+  .source-options-upload {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(100%, 42rem);
+    margin-inline: auto;
+  }
   .source-card-heading {
     display: flex;
     align-items: center;
@@ -586,12 +591,7 @@
     box-shadow: 0 0 0 1px var(--cb-brand);
   }
   .clip-preparing {
-    min-height: 18rem;
-    display: grid;
-    place-content: center;
-    justify-items: center;
-    gap: 1rem;
-    color: var(--cb-ink-soft);
+    --processing-height: clamp(14rem, calc(100cqh - 1.5rem), 40rem);
   }
   [hidden] {
     display: none !important;
@@ -891,7 +891,7 @@
       gap: 0.65rem;
     }
     .clip-choice {
-      padding-inline: 0.5rem;
+      padding-inline: 0.375rem;
       font-size: 0.8125rem;
     }
     .clip-workspace .editor-fields {

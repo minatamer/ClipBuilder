@@ -2,8 +2,8 @@ import { z } from "zod";
 import { ownerAcquisitionModeSchema } from "./acquisition.ts";
 import { ownerAiModeSchema } from "./policy.ts";
 
-/** Public capabilities of the separate local composition, never configuration. */
-export const ownerRuntimeCapabilitiesSchema = z
+/** Content-free capabilities for the shared editing workflow. */
+const localRuntimeCapabilitiesSchema = z
   .object({
     aiMode: z.union([ownerAiModeSchema, z.literal("unavailable")]),
     sourceMode: ownerAcquisitionModeSchema.nullable(),
@@ -12,6 +12,20 @@ export const ownerRuntimeCapabilitiesSchema = z
     cloud: z.literal(false),
   })
   .strict();
+export const ownerRuntimeCapabilitiesSchema = z.union([
+  localRuntimeCapabilitiesSchema,
+  z
+    .object({
+      execution: z.literal("hosted"),
+      aiMode: z.union([ownerAiModeSchema, z.literal("unavailable")]),
+      sourceMode: z.null(),
+      planningAvailable: z.boolean(),
+      localMedia: z.literal(false),
+      cloud: z.literal(true),
+      processingSiteKey: z.string().min(1).max(500).optional(),
+    })
+    .strict(),
+]);
 export type OwnerRuntimeCapabilities = z.infer<
   typeof ownerRuntimeCapabilitiesSchema
 >;

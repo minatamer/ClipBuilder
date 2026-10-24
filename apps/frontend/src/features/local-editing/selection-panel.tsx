@@ -1,5 +1,6 @@
 import { Button } from "../../shared/ui/button";
-import { Check, Clock3, LoaderCircle } from "lucide-react";
+import { Check, Clock3 } from "lucide-react";
+import { ProcessingState } from "../../shared/ui/processing-state";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
@@ -73,6 +74,8 @@ export function OwnerSelectionPanel({
   const [analysis, setAnalysis] = useState<OwnerAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false),
     [selected, setSelected] = useState<string[]>([]);
+  const [restoring, setRestoring] = useState(true);
+  const waiting = analyzing || restoring;
   const [message, setMessage] = useState("");
   const [tab, setTab] = useState<SelectionTab>("add");
   const tabsId = useId();
@@ -130,7 +133,10 @@ export function OwnerSelectionPanel({
         if (!controller.signal.aborted)
           setMessage("Couldn’t load moments. Try Find moments.");
       } finally {
-        if (!controller.signal.aborted) onBusy(false);
+        if (!controller.signal.aborted) {
+          setRestoring(false);
+          onBusy(false);
+        }
       }
     })();
     return () => {
@@ -320,7 +326,12 @@ export function OwnerSelectionPanel({
       <h2 id="selection-title" className="local-sr-only">
         Choose moments
       </h2>
-      <div className="moment-tabs" role="tablist" aria-label="Choose clips">
+      <div
+        className="moment-tabs"
+        role="tablist"
+        aria-label="Choose clips"
+        hidden={waiting}
+      >
         {SELECTION_TABS.map((value, index) => (
           <button
             key={value}
@@ -366,11 +377,22 @@ export function OwnerSelectionPanel({
       <p className="flow-notice" role="status" aria-live="polite">
         {message}
       </p>
+      {waiting && (
+        <ProcessingState
+          label={
+            restoring
+              ? "Loading moments"
+              : manualOnly
+                ? "Preparing moments"
+                : "Finding moments"
+          }
+        />
+      )}
       <div
         id={`${tabsId}-add-panel`}
         role="tabpanel"
         aria-labelledby={`${tabsId}-add`}
-        hidden={tab !== "add"}
+        hidden={waiting || tab !== "add"}
         tabIndex={0}
       >
         <fieldset disabled={busy}>
@@ -510,29 +532,18 @@ export function OwnerSelectionPanel({
       </div>
       {actionsVisible && tab === "add" && (
         <WorkflowActions target={footerTarget} label="Moment actions">
-          <Button
-            variant="primary"
-            disabled={
-              busy || !analysisAvailable || (manualOnly && rows.length === 0)
-            }
-            onClick={() => void findMoments()}
-            aria-busy={analyzing}
-          >
-            {analyzing ? (
-              <>
-                <LoaderCircle
-                  size={18}
-                  className="acquisition-spinner"
-                  aria-hidden="true"
-                />
-                Finding…
-              </>
-            ) : manualOnly ? (
-              "Use clips"
-            ) : (
-              "Find moments"
-            )}
-          </Button>
+          {!waiting && (
+            <Button
+              variant="primary"
+              disabled={
+                busy || !analysisAvailable || (manualOnly && rows.length === 0)
+              }
+              onClick={() => void findMoments()}
+              aria-busy={analyzing}
+            >
+              {manualOnly ? "Use clips" : "Find moments"}
+            </Button>
+          )}
           {analyzing && (
             <Button
               variant="secondary"
@@ -547,7 +558,7 @@ export function OwnerSelectionPanel({
         id={`${tabsId}-clips-panel`}
         role="tabpanel"
         aria-labelledby={`${tabsId}-clips`}
-        hidden={tab !== "clips"}
+        hidden={waiting || tab !== "clips"}
         tabIndex={0}
       >
         {analysis && (

@@ -1,3 +1,4 @@
+import { LocalDiagnostics } from "./diagnostics.ts";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -343,4 +344,185 @@ it("retains immutable previous outputs and the source during explicit determinis
   expect(
     (await readFile(await files.file(workspace.id, "source.mp4"))).toString(),
   ).toBe("synthetic");
+});
+
+it("records background preparation and render failures with no extra processing calls", async () => {
+  const lines: string[] = [];
+  await batch.close();
+  batch = new OwnerClipBatch(
+    workspace,
+    files,
+    ports,
+    undefined,
+    new LocalDiagnostics((line) => lines.push(line)),
+  );
+  ports.render.mockRejectedValueOnce(
+    Object.assign(new Error("synthetic-private-ffmpeg-command"), {
+      code: "ENOSPC",
+    }),
+  );
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  expect(batch.snapshot().clips[0]?.state).toBe("failed");
+  expect(lines.map((line) => JSON.parse(line))).toContainEqual(
+    expect.objectContaining({
+      operation: "clip_build",
+      outcome: "failed",
+      error: expect.objectContaining({ systemCode: "ENOSPC" }),
+    }),
+  );
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.render).toHaveBeenCalledTimes(1);
+  expect(lines.join("\n")).not.toContain("synthetic-private-ffmpeg-command");
+});
+
+it("retries preparation without a base once, preserving successful siblings and stale/idempotency guards", async () => {
+  ports.plan.mockRejectedValueOnce(new Error("synthetic_transport_failure"));
+  await batch.submit(request(), analysis);
+  await batch.drain();
+  const before = batch.snapshot(),
+    failed = before.clips[0]!;
+  expect(failed.base).toBeNull();
+  expect(failed.state).toBe("failed");
+  await expect(
+    batch.retry(failed.id, { operationId: randomUUID(), expectedRevision: 9 }),
+  ).rejects.toThrow("stale_or_busy_clip");
+  const operation = { operationId: randomUUID(), expectedRevision: 0 };
+  await Promise.all([
+    batch.retry(failed.id, operation),
+    batch.retry(failed.id, operation),
+  ]);
+  await batch.drain();
+  expect(batch.snapshot().clips[0]?.state).toBe("ready");
+  expect(batch.snapshot().clips.slice(1)).toEqual(before.clips.slice(1));
+  expect(ports.plan).toHaveBeenCalledTimes(4);
+  expect(ports.image).toHaveBeenCalledTimes(3);
+  expect(ports.render).toHaveBeenCalledTimes(3);
+  await batch.retry(failed.id, operation);
+  await batch.drain();
+  expect(ports.plan).toHaveBeenCalledTimes(4);
+});
+
+it("retains a paid plan and completed images across a restored preparation retry", async () => {
+  const original = ports.plan.getMockImplementation()!;
+  ports.plan.mockImplementationOnce(async (...args) => {
+    const plan = await original(...args);
+    return [plan[0]!, { ...plan[0]!, startFrame: 1 }];
+  });
+  const image = ports.image.getMockImplementation()!;
+  ports.image
+    .mockImplementationOnce(image)
+    .mockRejectedValueOnce(new Error("synthetic_transport_failure"));
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const failed = batch.snapshot().clips[0]!;
+  expect(failed.state).toBe("failed");
+  expect(failed.preparation?.pictures).toHaveLength(1);
+  await batch.close();
+  batch = new OwnerClipBatch(workspace, files, ports);
+  batch.restore([failed]);
+  await batch.retry(failed.id, {
+    operationId: randomUUID(),
+    expectedRevision: 0,
+  });
+  await batch.drain();
+  const ready = batch.snapshot().clips[0]!;
+  expect(ready.state).toBe("ready");
+  expect(ready.assets[0]).toEqual(failed.assets[0]);
+  expect(ready.base?.overlay.visuals).toHaveLength(2);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.image).toHaveBeenCalledTimes(3);
+  expect(ports.render).toHaveBeenCalledTimes(1);
+});
+
+it("retries only native rendering when a prepared base survives failure", async () => {
+  ports.render.mockRejectedValueOnce(new Error("synthetic_native_failure"));
+  await batch.submit(request(), analysis);
+  await batch.drain();
+  const before = batch.snapshot(),
+    failed = before.clips[0]!;
+  expect(failed.base).not.toBeNull();
+  const operation = { operationId: randomUUID(), expectedRevision: 0 };
+  await Promise.all([
+    batch.retry(failed.id, operation),
+    batch.retry(failed.id, operation),
+  ]);
+  await batch.drain();
+  const ready = batch.snapshot().clips[0]!;
+  expect(ready.state).toBe("ready");
+  expect(ready.base).toEqual(failed.base);
+  expect(ready.assets).toEqual(failed.assets);
+  expect(ready.edit).toEqual(failed.edit);
+  expect(batch.snapshot().clips.slice(1)).toEqual(before.clips.slice(1));
+  expect(ports.plan).toHaveBeenCalledTimes(3);
+  expect(ports.image).toHaveBeenCalledTimes(3);
+  expect(ports.render).toHaveBeenCalledTimes(4);
+});
+
+it("rejects a rebound saved preparation before dispatching a retry", async () => {
+  ports.render.mockRejectedValueOnce(new Error("synthetic_native_failure"));
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const clip = batch.snapshot().clips[0]!;
+  await batch.close();
+  batch = new OwnerClipBatch(workspace, files, ports);
+  clip.preparation!.moment.id = randomUUID();
+  expect(() => batch.restore([clip])).toThrow("stale_saved_clip");
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.image).toHaveBeenCalledTimes(1);
+  expect(ports.render).toHaveBeenCalledTimes(1);
+});
+
+it("recovers an older failed clip without a checkpoint from its saved analysis", async () => {
+  ports.plan.mockRejectedValueOnce(new Error("synthetic_transport_failure"));
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const clip = batch.snapshot().clips[0]!;
+  delete clip.preparation;
+  await batch.close();
+  batch = new OwnerClipBatch(workspace, files, ports);
+  batch.restore([clip]);
+  await batch.retry(
+    clip.id,
+    { operationId: randomUUID(), expectedRevision: 0 },
+    analysis,
+  );
+  await batch.drain();
+  expect(batch.snapshot().clips[0]?.state).toBe("ready");
+  expect(ports.plan).toHaveBeenCalledTimes(2);
+  expect(ports.image).toHaveBeenCalledTimes(1);
+  expect(ports.render).toHaveBeenCalledTimes(1);
+});
+
+it("converts invalid visual clocks, critiques weak evidence, and renders without optional art", async () => {
+  const original = ports.plan.getMockImplementation()!;
+  ports.plan.mockImplementationOnce(async (...args) => {
+    const plan = await original(...args);
+    return [
+      { ...plan[0]!, startFrame: 1000.5, endFrame: -1, evidenceWordIds: [] },
+    ];
+  });
+  ports.image.mockResolvedValueOnce(null);
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  expect(batch.snapshot().clips[0]).toMatchObject({
+    state: "ready",
+    calls: { plan: 1, image: 1, render: 1 },
+    base: { overlay: { visuals: [] } },
+  });
 });

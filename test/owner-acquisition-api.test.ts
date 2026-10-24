@@ -262,10 +262,10 @@ it("previews saved bytes offline through protected bounded ranges without a work
   expect(first.headers["content-range"]).toBe(
     `bytes 0-524287/${sourcePayload.length}`,
   );
-  expect(first.body).toEqual(sourcePayload.subarray(0, 512 * 1024));
+  expect(first.body.equals(sourcePayload.subarray(0, 512 * 1024))).toBe(true);
   const second = await range("bytes=524288-");
   expect(second.status).toBe(206);
-  expect(second.body).toEqual(sourcePayload.subarray(512 * 1024));
+  expect(second.body.equals(sourcePayload.subarray(512 * 1024))).toBe(true);
   expect((await range("bytes=9999999-")).status).toBe(416);
   expect((await range("bytes=0-4,8-12")).status).toBe(416);
   expect(

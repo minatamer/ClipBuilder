@@ -40,7 +40,12 @@ describe("closed frontend/backend image inputs", () => {
         expect(
           paths
             .filter((path) => path.startsWith("apps/"))
-            .every((path) => path.startsWith(`apps/${application}/`)),
+            .every(
+              (path) =>
+                path.startsWith(`apps/${application}/`) ||
+                (application === "backend" &&
+                  path.startsWith("apps/renderer/")),
+            ),
         ).toBe(true);
         expect(
           paths.some((path) =>
@@ -60,6 +65,15 @@ describe("closed frontend/backend image inputs", () => {
             ),
           ).toBe(false);
         } else {
+          expect(paths).toContain("apps/renderer/local/entry.ts");
+          expect(paths).toContain("scripts/editing-worker-build.mjs");
+          expect(
+            paths.some((path) =>
+              /(?:yt-dlp|python)\.exe|cookiejar|(?:^|\/)\.env(?:\.|$)/u.test(
+                path,
+              ),
+            ),
+          ).toBe(false);
           expect(
             paths.filter((path) => /\.(?:jpg|jpeg|png|webp)$/.test(path)),
           ).toEqual(["apps/backend/local/sample-earth.jpg"]);

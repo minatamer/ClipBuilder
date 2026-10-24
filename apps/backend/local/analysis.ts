@@ -26,6 +26,7 @@ import type { OwnerAiMode } from "../../../packages/contracts/local/policy.ts";
 /** Domain ports only; explicit owner composition supplies synthetic or provider AI. */
 export type OwnerAnalysisPorts = {
   readonly mode: OwnerAiMode;
+  critique?(): void;
   transcribe(
     workspace: OwnerWorkspace,
     signal: AbortSignal,
@@ -128,13 +129,13 @@ export async function analyzeOwner(
   const ids = new Set<string>();
   let previousStart = -1;
   for (const word of words) {
+    if (ids.has(word.id)) throw new Error("invalid_owner_transcript");
     if (
-      ids.has(word.id) ||
       word.startMs < previousStart ||
       word.endMs <= word.startMs ||
       word.endMs > workspace.source.durationMs
     )
-      throw new Error("invalid_owner_transcript");
+      ports.critique?.();
     ids.add(word.id);
     previousStart = word.startMs;
   }
@@ -194,8 +195,14 @@ export async function analyzeOwner(
     for (const proposal of proposals) {
       const start = positions.get(proposal.startWordId),
         end = positions.get(proposal.endWordId);
-      if (start === undefined || end === undefined || start > end) continue;
-      const span = words.slice(start, end + 1);
+      if (start === undefined || end === undefined) {
+        ports.critique?.();
+        continue; // No physical source range can be decoded.
+      }
+      const first = Math.min(start, end),
+        last = Math.max(start, end);
+      if (start > end) ports.critique?.();
+      const span = words.slice(first, last + 1);
       if (
         !excerpt(proposal.title, span) ||
         !excerpt(proposal.hook, span) ||
@@ -203,7 +210,7 @@ export async function analyzeOwner(
         new Set(proposal.evidence.map((item) => item.signal)).size !==
           proposal.evidence.length
       )
-        continue;
+        ports.critique?.();
       if (
         proposal.evidence.some(
           (item) =>
@@ -212,8 +219,8 @@ export async function analyzeOwner(
               const position = positions.get(id);
               return (
                 position === undefined ||
-                position < start ||
-                position > end ||
+                position < first ||
+                position > last ||
                 (index > 0 &&
                   position !==
                     (positions.get(item.wordIds[index - 1]!) ?? -2) + 1)
@@ -221,18 +228,46 @@ export async function analyzeOwner(
             }),
         )
       )
-        continue;
-      const cut = fitOwnerAiWindow(
-        words[start]!,
-        words[end]!,
+        ports.critique?.();
+      let cut = fitOwnerAiWindow(
+        words[first]!,
+        words[last]!,
         workspace.source.durationMs,
         inputs.aiDuration,
         available,
       );
-      if (!cut) continue;
-      if (byCut.has(key(cut))) continue;
+      if (!cut) {
+        ports.critique?.();
+        // Keep the returned passage available. Only physical source/resource
+        // bounds constrain the render clock; duration/exclusion advice cannot veto it.
+        const total = Math.floor(
+          (workspace.source.durationMs * OWNER_FPS) / 1000,
+        );
+        const startFrame = Math.max(
+          0,
+          Math.min(
+            total - OWNER_FPS,
+            Math.floor(
+              (Math.min(...span.map((word) => word.startMs)) * OWNER_FPS) /
+                1000,
+            ),
+          ),
+        );
+        const endFrame = Math.max(
+          startFrame + OWNER_FPS,
+          Math.min(
+            total,
+            startFrame + (OWNER_LIMITS.clipMs * OWNER_FPS) / 1000,
+            Math.ceil(
+              (Math.max(...span.map((word) => word.endMs)) * OWNER_FPS) / 1000,
+            ),
+          ),
+        );
+        cut = { startFrame, endFrame };
+      }
+      if (suggestions.length >= requestedCount) break;
       if (
-        suggestions.length >= requestedCount ||
+        byCut.has(key(cut)) ||
         suggestions.some(
           (previous) =>
             Math.max(
@@ -247,7 +282,7 @@ export async function analyzeOwner(
             0.35,
         )
       )
-        continue;
+        ports.critique?.();
       const candidate = moment(cut);
       candidate.evidence = proposal;
       byCut.set(key(cut), candidate);

@@ -35,34 +35,66 @@ import { fakeOwnerClipPreparation } from "./fake-clips.ts";
 import { resolveOwnerStorage } from "./owner-storage.ts";
 import { composeOwnerProviders } from "./provider-composition.ts";
 import { localProviderReadiness } from "./provider-readiness.ts";
+import { LocalDiagnostics } from "./diagnostics.ts";
 
 /** Explicit normal-backend lifecycle; imports never start a process or read env files. */
 export async function startLocalWorkflow(
   config: BackendConfig,
   failed: () => void,
+  diagnostics = new LocalDiagnostics(),
 ) {
   if (config.appEnv !== "local" || config.nodeEnv === "test") return null;
+  return diagnostics.run("startup", () =>
+    composeLocalWorkflow(config, failed, diagnostics),
+  );
+}
+async function composeLocalWorkflow(
+  config: BackendConfig,
+  failed: () => void,
+  diagnostics: LocalDiagnostics,
+) {
   if (config.port !== 4000) throw new Error("local_backend_port_required");
-  await new Promise<void>((done, reject) => {
-    const probe = createServer();
-    probe.once("error", () => reject(new Error("local_worker_port_in_use")));
-    probe.listen(4200, "127.0.0.1", () => probe.close(() => done()));
-  });
+  await diagnostics.run(
+    "worker_port",
+    () =>
+      new Promise<void>((done, reject) => {
+        const probe = createServer();
+        probe.once("error", () =>
+          reject(new Error("local_worker_port_in_use")),
+        );
+        probe.listen(4200, "127.0.0.1", () => probe.close(() => done()));
+      }),
+  );
   const repository = fileURLToPath(new URL("../../../", import.meta.url));
-  const tools = await ownerNativeTools(repository);
-  const acquisition = await ownerAcquisitionTools(
-    repository,
-    process.env.SystemRoot,
-    AbortSignal.timeout(30_000),
+  const tools = await diagnostics.run("native_tools", () =>
+    ownerNativeTools(repository),
+  );
+  const acquisition = await diagnostics.run("acquisition_tools", () =>
+    ownerAcquisitionTools(
+      repository,
+      process.env.SystemRoot,
+      AbortSignal.timeout(30_000),
+    ),
   );
   const workerFile = resolve(repository, ".local-build/worker.mjs");
   const overlayBundle = resolve(repository, ".local-build/overlay");
   const chromium = "C:/Program Files/Google/Chrome/Application/chrome.exe";
-  for (const file of [workerFile, join(overlayBundle, "index.html"), chromium])
-    await stat(file);
-  const storageRoot = await resolveOwnerStorage();
+  await diagnostics.run("worker_files", async () => {
+    for (const file of [
+      workerFile,
+      join(overlayBundle, "index.html"),
+      chromium,
+    ])
+      await stat(file);
+  });
+  const storageRoot = await diagnostics.run("storage", () =>
+    resolveOwnerStorage(),
+  );
   const desktopStorageRoot = await resolveOwnerStorage("desktop").catch(
-    () => undefined,
+    (error: unknown) => {
+      diagnostics.failure("storage", error);
+      return undefined;
+    },
   );
   const runtime = await mkdtemp(join(tmpdir(), "clipbuilder-local-runtime-"));
   const root = join(runtime, "workspaces");
@@ -116,21 +148,33 @@ export async function startLocalWorkflow(
     }
     throw new Error("local_runtime_record_unavailable");
   }
-  const worker = spawn(process.execPath, [workerFile], {
-    windowsHide: true,
-    env: { ...nativeEnvironment(runtime), CLIPBUILDER_LOCAL_STATE: stateFile },
-    stdio: ["ignore", stdout.fd, stderr.fd, "ipc"],
-  });
+  const worker = diagnostics.check("worker_spawn", () =>
+    spawn(process.execPath, [workerFile], {
+      windowsHide: true,
+      env: {
+        ...nativeEnvironment(runtime),
+        CLIPBUILDER_LOCAL_STATE: stateFile,
+      },
+      stdio: ["ignore", stdout!.fd, stderr!.fd, "ipc"],
+    }),
+  );
   let host: ReturnType<typeof createOwnerHost> | undefined;
   let identity: { pid: number; parent: number; created: string } | undefined;
   let stopping: Promise<void> | undefined;
   let workerError = false;
-  worker.on("error", () => {
+  worker.on("error", (error) => {
+    diagnostics.failure("worker_spawn", error);
     workerError = true;
     failed();
   });
-  worker.once("exit", () => {
-    if (!stopping) failed();
+  worker.once("exit", (code, signal) => {
+    if (!stopping) {
+      diagnostics.failure(
+        "worker_exit",
+        Object.assign(new Error("local_worker_unavailable"), { code, signal }),
+      );
+      failed();
+    }
   });
   const close = () => {
     stopping ??= (async () => {
@@ -138,7 +182,8 @@ export async function startLocalWorkflow(
       const attempt = async (operation: () => Promise<unknown>) => {
         try {
           await operation();
-        } catch {
+        } catch (error) {
+          diagnostics.failure("cleanup", error);
           cleanupFailed = true;
         }
       };
@@ -187,28 +232,33 @@ export async function startLocalWorkflow(
     return stopping;
   };
   try {
-    [identity] = await ownerProcessTree(worker.pid);
+    [identity] = await diagnostics.run("worker_identity", () =>
+      ownerProcessTree(worker.pid),
+    );
     if (!identity) throw new Error("local_worker_identity_missing");
-    let ready = false;
-    for (let attempt = 0; attempt < 50; attempt++) {
-      if (workerError || worker.exitCode !== null) break;
-      try {
-        const response = await fetch("http://127.0.0.1:4200/health", {
-          headers: { Authorization: `Bearer ${state.workerToken}` },
-          signal: AbortSignal.timeout(1000),
-        });
-        ready = response.ok;
-        await response.body?.cancel();
-      } catch {
-        /* Bounded readiness probe, no media or provider requests. */
+    await diagnostics.run("worker_ready", async () => {
+      let ready = false;
+      for (let attempt = 0; attempt < 50; attempt++) {
+        if (workerError || worker.exitCode !== null) break;
+        try {
+          const response = await fetch("http://127.0.0.1:4200/health", {
+            headers: { Authorization: `Bearer ${state.workerToken}` },
+            signal: AbortSignal.timeout(1000),
+          });
+          ready = response.ok;
+          await response.body?.cancel();
+        } catch {
+          /* Bounded readiness probe, no media or provider requests. */
+        }
+        if (ready) break;
+        await new Promise((done) => setTimeout(done, 100));
       }
-      if (ready) break;
-      await new Promise((done) => setTimeout(done, 100));
-    }
-    if (!ready) throw new Error("local_worker_unavailable");
-    const media = localWorkerPort(4200, state.workerToken);
+      if (!ready) throw new Error("local_worker_unavailable");
+    });
+    const media = localWorkerPort(4200, state.workerToken, fetch, diagnostics);
     host = createOwnerHost({
       root,
+      diagnostics,
       token: state.token,
       port: 4000,
       frontendOrigin: config.frontendOrigin,
@@ -230,6 +280,8 @@ export async function startLocalWorkflow(
                 localProviderReadiness(config),
                 files,
                 media,
+                undefined,
+                diagnostics,
               ),
           }),
     });
@@ -238,22 +290,24 @@ export async function startLocalWorkflow(
       close,
       runtime,
       async publish() {
-        const tree = await ownerProcessTree(process.pid);
-        const supervisor = tree.find(
-          (row: { pid: number }) => row.pid === process.pid,
-        );
-        if (!supervisor) throw new Error("local_process_identity_missing");
-        await writeFile(
-          join(runtime, "processes.json"),
-          JSON.stringify({
-            supervisor: process.pid,
-            startedAt: new Date().toISOString(),
-            identities: [supervisor, identity],
-            ports: [4000, 4200],
-          }),
-          { flag: "wx", mode: 0o600 },
-        );
-        await publishOwnerDiscovery(runtime);
+        return diagnostics.run("discovery", async () => {
+          const tree = await ownerProcessTree(process.pid);
+          const supervisor = tree.find(
+            (row: { pid: number }) => row.pid === process.pid,
+          );
+          if (!supervisor) throw new Error("local_process_identity_missing");
+          await writeFile(
+            join(runtime, "processes.json"),
+            JSON.stringify({
+              supervisor: process.pid,
+              startedAt: new Date().toISOString(),
+              identities: [supervisor, identity],
+              ports: [4000, 4200],
+            }),
+            { flag: "wx", mode: 0o600 },
+          );
+          await publishOwnerDiscovery(runtime);
+        });
       },
     };
   } catch (error) {

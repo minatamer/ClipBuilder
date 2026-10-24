@@ -10,7 +10,8 @@ export default async function StartPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const query = await searchParams;
-  if (controlIsLocal() && query.source !== "sample")
-    return <LocalEditingExperience />;
-  return <SampleExperience sampleRequested={query.source === "sample"} />;
+  const local = controlIsLocal();
+  if (local && query.source === "sample")
+    return <SampleExperience sampleRequested />;
+  return <LocalEditingExperience hosted={!local} />;
 }

@@ -12,9 +12,11 @@ export async function runOwnedProcess(
       ...options,
       windowsHide: true,
       detached: process.platform !== "win32",
-      stdio: ["ignore", "pipe", "ignore"],
+      stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "",
+      stderr = Buffer.alloc(0),
+      overflow = false,
       failure = false,
       forceTimer: ReturnType<typeof setTimeout> | undefined,
       termination: Promise<void> | undefined;
@@ -69,14 +71,28 @@ export async function runOwnedProcess(
       stdout += chunk.toString("utf8");
       if (Buffer.byteLength(stdout) > (options.maxStdout ?? 65_536)) {
         stdout = "";
+        overflow = true;
         stop();
       }
     });
-    child.on("error", () => {
-      cleanup();
-      reject(new MediaFailure("media_failed"));
+    // A bounded in-memory tail is classified, never returned, logged or saved.
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderr = Buffer.concat([stderr, chunk]).subarray(-32768);
     });
-    child.on("close", async (code) => {
+    child.on("error", (error) => {
+      cleanup();
+      reject(
+        new MediaFailure(
+          "media_failed",
+          undefined,
+          undefined,
+          Object.assign(new Error("native_spawn_failed"), {
+            code: "code" in error ? error.code : undefined,
+          }),
+        ),
+      );
+    });
+    child.on("close", async (code, childSignal) => {
       if (failure && process.platform !== "win32" && child.pid) {
         try {
           process.kill(-child.pid, "SIGKILL");
@@ -86,8 +102,38 @@ export async function runOwnedProcess(
       }
       cleanup();
       await termination;
-      if (failure || signal.aborted) reject(new MediaFailure("canceled"));
-      else if (code !== 0) reject(new MediaFailure("media_failed"));
+      const text = stderr.toString("utf8");
+      const reason = overflow
+        ? "native_stdout_limit"
+        : signal.aborted
+          ? "canceled"
+          : /no space left on device/i.test(text)
+            ? "native_disk_full"
+            : /permission denied|access is denied/i.test(text)
+              ? "native_permission_denied"
+              : /matches no streams|does not contain any stream/i.test(text)
+                ? "native_stream_missing"
+                : /unknown encoder|encoder .* not found/i.test(text)
+                  ? "native_encoder_unavailable"
+                  : /unknown decoder|decoder .* not found/i.test(text)
+                    ? "native_decoder_unavailable"
+                    : /no such filter|filter not found/i.test(text)
+                      ? "native_filter_unavailable"
+                      : /invalid data found|error opening input|moov atom not found/i.test(
+                            text,
+                          )
+                        ? "native_input_invalid"
+                        : /cannot allocate memory|out of memory/i.test(text)
+                          ? "native_memory_exhausted"
+                          : "media_failed";
+      const cause = Object.assign(new Error(reason), {
+        code,
+        signal: childSignal,
+      });
+      if (failure || signal.aborted)
+        reject(new MediaFailure("canceled", undefined, undefined, cause));
+      else if (code !== 0)
+        reject(new MediaFailure("media_failed", undefined, undefined, cause));
       else resolve(stdout);
     });
   });

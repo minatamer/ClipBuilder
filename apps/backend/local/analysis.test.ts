@@ -196,11 +196,11 @@ describe("owner manual ranges and independent discovery", () => {
     ).toBe(6);
     expect(result.inputs.ranges).toHaveLength(3);
   });
-  it("rejects noncompliant overlapping proposals before counting additional suggestions", async () => {
+  it("logs overlapping proposals as advice and retains the requested usable results", async () => {
     const provider = ports();
     provider.select.mockImplementationOnce(
       async (words, _policy, cancellation, instructions) => {
-        // Deliberately ignores exclusions: reconciliation must still enforce them.
+        // Latest owner decision makes exclusions advisory after generation.
         const pool = await fakeOwnerAnalysis.select(
           words,
           { minMs: 10_000, maxMs: 10_000 },
@@ -229,11 +229,11 @@ describe("owner manual ranges and independent discovery", () => {
       signal(),
     );
     expect(result.suggestions.map(({ cut }) => cut)).toEqual([
+      { startFrame: 300, endFrame: 900 },
+      { startFrame: 600, endFrame: 900 },
+      { startFrame: 300, endFrame: 1500 },
       { startFrame: 0, endFrame: 600 },
       { startFrame: 1200, endFrame: 1800 },
-      { startFrame: 1800, endFrame: 2100 },
-      { startFrame: 2100, endFrame: 2400 },
-      { startFrame: 2400, endFrame: 2700 },
     ]);
     expect(result.calls).toEqual({ transcription: 1, selection: 1 });
     expect(provider.select).toHaveBeenCalledTimes(1);
@@ -258,11 +258,11 @@ describe("owner manual ranges and independent discovery", () => {
     expect(provider.select).not.toHaveBeenCalled();
     expect(result.calls).toEqual({ transcription: 1, selection: 0 });
   });
-  it("does not let a selector mutate the authoritative exclusion windows", async () => {
+  it("does not let a selector mutate manual cuts and retains overlapping returned results", async () => {
     const provider = ports();
     provider.select.mockImplementationOnce(
       async (words, duration, cancellation, instructions, count, excluded) => {
-        // Even an adapter that mutates its private copy cannot reopen manual time.
+        // The private prompt copy cannot change the owner's manual cuts.
         Object.assign(excluded![0]!, { startFrame: 0, endFrame: 1 });
         return fakeOwnerAnalysis.select(
           words,
@@ -285,7 +285,7 @@ describe("owner manual ranges and independent discovery", () => {
       result.suggestions.every(
         ({ cut }) => cut.endFrame <= 600 || cut.startFrame >= 1200,
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
   it("keeps silent manual cuts and skips selection when words are absent", async () => {
     const provider = ports();
@@ -391,8 +391,9 @@ describe("owner manual ranges and independent discovery", () => {
     ).rejects.toThrow();
     expect(unused.transcribe).toHaveBeenCalledTimes(0);
   });
-  it("drops unsupported references and invented copy without losing manual ranges", async () => {
+  it("keeps usable ranges with nonextractive copy while reporting critiques", async () => {
     const provider = ports();
+    const critique = vi.fn();
     provider.select.mockImplementation(
       async (...args: Parameters<OwnerAnalysisPorts["select"]>) => {
         const candidates = await fakeOwnerAnalysis.select(...args);
@@ -403,9 +404,20 @@ describe("owner manual ranges and independent discovery", () => {
         );
       },
     );
-    const result = await analyzeOwner(workspace(), input(), provider, signal());
+    const result = await analyzeOwner(
+      workspace(),
+      input(),
+      { ...provider, critique },
+      signal(),
+    );
     expect(result.manual).toHaveLength(2);
-    expect(result.suggestions).toEqual([]);
+    expect(result.suggestions).toHaveLength(2);
+    expect(
+      result.suggestions.every(
+        (moment) => moment.evidence?.title === "Invented text",
+      ),
+    ).toBe(true);
+    expect(critique).toHaveBeenCalled();
     expect(provider.transcribe).toHaveBeenCalledTimes(1);
     expect(provider.select).toHaveBeenCalledTimes(1);
   });

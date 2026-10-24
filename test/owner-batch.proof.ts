@@ -52,6 +52,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     selections = 0,
     plans = 0,
     pictures = 0;
+  let failNextPreparation = false;
   const worker = createOwnerWorker({
     root,
     token: "proof-worker",
@@ -102,6 +103,10 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     clipPreparation: {
       ...fakeOwnerClipPreparation,
       async plan(...args) {
+        if (failNextPreparation) {
+          failNextPreparation = false;
+          throw new Error("synthetic_preparation_failure");
+        }
         plans++;
         return fakeOwnerClipPreparation.plan(...args);
       },
@@ -843,9 +848,11 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       ],
       signal,
     );
+    failNextPreparation = true;
     const freshExport = await reviewFreshLocalFlow(
       port,
       await readFile(freshSource),
+      true,
     );
     const freshOutput = join(directory, "synthetic-fresh-export.mp4");
     await writeFile(freshOutput, freshExport);

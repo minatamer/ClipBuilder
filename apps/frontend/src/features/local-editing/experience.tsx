@@ -16,16 +16,37 @@ import { OwnerClipBatchPanel } from "./clip-batch-panel.tsx";
 import { openPickedFile } from "./open-local-file.ts";
 import { OwnerAcquisitionPanel } from "./acquisition-panel.tsx";
 import { capturePreviewTime } from "./manual-time.ts";
+import { AnalysisChallenge } from "../source-analysis/analysis-challenge";
+import { uploadHostedVideo, type HostedUploadProgress } from "./hosted-upload";
+import { ProcessingState } from "../../shared/ui/processing-state";
 import {
   ownerRuntimeCapabilitiesSchema,
   type OwnerRuntimeCapabilities,
 } from "../../../../../packages/contracts/local/runtime.ts";
 
-export function LocalEditingExperience() {
+export function LocalEditingExperience({
+  hosted = false,
+}: { hosted?: boolean } = {}) {
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const challengeResult = useRef<{
+    resolve: (token: string) => void;
+    reject: () => void;
+  } | null>(null);
+  const challengeToken = useCallback(
+    (token: string) => challengeResult.current?.resolve(token),
+    [],
+  );
+  const challengeCancel = useCallback(
+    () => challengeResult.current?.reject(),
+    [],
+  );
   const [workspace, setWorkspace] = useState<OwnerWorkspace | null>(null);
   const [capabilities, setCapabilities] =
     useState<OwnerRuntimeCapabilities | null>(null);
   const [busy, setBusy] = useState(true);
+  const [openingState, setOpeningState] = useState<
+    HostedUploadProgress | "opening" | null
+  >(null);
   const [acquisitionBusy, setAcquisitionBusy] = useState(false);
   const blocked = busy || acquisitionBusy || !capabilities;
   const [message, setMessage] = useState("");
@@ -132,20 +153,73 @@ export function LocalEditingExperience() {
         controller.abort();
         setBusy(false);
         setMessage(
-          "We couldn’t connect to the local service. Check the backend and refresh to try again.",
+          hosted
+            ? "We couldn’t connect. Refresh the page to try again."
+            : "We couldn’t connect to the local service. Check the backend and refresh to try again.",
         );
       }
     })();
     return () => controller.abort();
-  }, []);
+  }, [hosted]);
   async function upload(file: File | undefined) {
     if (!file || blocked || opening.current) return;
     const controller = new AbortController();
     opening.current = controller;
+    let releaseVerification = () => {};
     setBusy(true);
-    setMessage("Opening your file…");
+    setOpeningState("opening");
+    setMessage("");
     try {
-      const result = await openPickedFile(file, controller.signal);
+      if (hosted) {
+        if (file.name.toLowerCase().endsWith(".json"))
+          throw new Error("video_required");
+        const status = await fetch("/api/local/session", {
+          signal: controller.signal,
+        });
+        if (!status.ok) throw new Error("session_unavailable");
+        const existing = (await status.json()) as { active?: boolean };
+        if (!existing.active) {
+          if (
+            !capabilities ||
+            !("processingSiteKey" in capabilities) ||
+            !capabilities.processingSiteKey
+          )
+            throw new Error("verification_unavailable");
+          const nonce = crypto.randomUUID();
+          setChallenge(nonce);
+          try {
+            const token = await new Promise<string>((resolve, reject) => {
+              const fail = () => reject(new Error("verification_canceled"));
+              challengeResult.current = { resolve, reject: fail };
+              controller.signal.addEventListener("abort", fail, { once: true });
+              releaseVerification = () =>
+                controller.signal.removeEventListener("abort", fail);
+            });
+            const session = await fetch("/api/local/session", {
+              method: "POST",
+              signal: controller.signal,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                startNonce: nonce,
+                turnstileToken: token,
+              }),
+            });
+            if (!session.ok) throw new Error("session_unavailable");
+          } finally {
+            releaseVerification();
+            challengeResult.current = null;
+            setChallenge(null);
+          }
+        }
+      }
+      const result = hosted
+        ? await uploadHostedVideo(
+            file,
+            controller.signal,
+            fetch,
+            setOpeningState,
+          )
+        : await openPickedFile(file, controller.signal);
       setWorkspace(result.workspace);
       setUnapplied(false);
       setInitialClip(result.clipId);
@@ -157,10 +231,13 @@ export function LocalEditingExperience() {
     } catch {
       if (!controller.signal.aborted)
         setMessage(
-          "Couldn’t open this file. Choose an MP4 or ClipBuilder draft.",
+          hosted
+            ? "Couldn’t open this video. Check verification and try again."
+            : "Couldn’t open this file. Choose an MP4 or ClipBuilder draft.",
         );
     } finally {
       if (opening.current === controller) opening.current = null;
+      if (!controller.signal.aborted) setOpeningState(null);
       if (!controller.signal.aborted) setBusy(false);
     }
   }
@@ -203,7 +280,7 @@ export function LocalEditingExperience() {
     }
   }
   return (
-    <Workspace localMode>
+    <Workspace localMode={!hosted} cloudMode={hosted} illustrativePictures>
       <WorkflowFrame
         headingRef={heading}
         title={
@@ -216,7 +293,9 @@ export function LocalEditingExperience() {
         step={!workspace ? 0 : view === "moments" ? 1 : 2}
         subtitle={
           !workspace
-            ? "Start with a video on your computer or a YouTube link."
+            ? hosted
+              ? "Upload a video from your computer."
+              : "Start with a video on your computer or a YouTube link."
             : undefined
         }
         footer={
@@ -230,7 +309,9 @@ export function LocalEditingExperience() {
                     : capabilities.aiMode === "synthetic-ai"
                       ? "Fake AI"
                       : capabilities.aiMode === "provider-ai"
-                        ? "Gemini"
+                        ? hosted
+                          ? "Temporary session"
+                          : "Gemini"
                         : "AI unavailable"}
                 </p>
                 <details className="session-menu" ref={sessionMenu}>
@@ -279,100 +360,133 @@ export function LocalEditingExperience() {
           <p className="flow-notice" role="status" aria-live="polite">
             {message}
           </p>
-          {!workspace && (
-            <div className="source-options">
-              <section
-                className={`source-card upload-card ${dragging ? "is-dragging" : ""}`}
-                aria-labelledby="upload-title"
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  if (!blocked) setDragging(true);
-                }}
-                onDragLeave={(event) => {
-                  if (
-                    !(event.relatedTarget instanceof Node) ||
-                    !event.currentTarget.contains(event.relatedTarget)
-                  )
-                    setDragging(false);
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  setDragging(false);
-                  void upload(event.dataTransfer.files[0]);
-                }}
+          {!workspace && ((busy && !capabilities) || openingState) ? (
+            <ProcessingState
+              label={
+                openingState && typeof openingState === "object"
+                  ? openingState.phase === "uploading"
+                    ? "Uploading video"
+                    : "Opening video"
+                  : openingState
+                    ? "Opening video"
+                    : "Connecting"
+              }
+              {...(openingState &&
+              typeof openingState === "object" &&
+              openingState.phase === "uploading"
+                ? {
+                    progress: {
+                      fraction: openingState.received / openingState.total,
+                      valueText: `${openingState.received} of ${openingState.total} bytes uploaded`,
+                    },
+                  }
+                : {})}
+            />
+          ) : (
+            !workspace && (
+              <div
+                className={`source-options${hosted ? " source-options-upload" : ""}`}
               >
-                <div className="source-card-heading">
-                  <span className="source-icon">
-                    <Upload size={24} aria-hidden="true" />
-                  </span>
-                  <h2 id="upload-title">Upload a video</h2>
-                </div>
-                <div className="source-card-body">
-                  <p>
-                    Drop your conversation here, or choose a file from your
-                    computer.
-                  </p>
-                </div>
-                <footer className="source-card-footer">
-                  <div className="source-actions">
-                    <Button
-                      icon={Upload}
-                      disabled={blocked}
-                      onClick={() => fileInput.current?.click()}
-                    >
-                      Choose a video
-                    </Button>
-                    <a
-                      href="/start?source=sample"
-                      className={`${buttonStyles.button} ${buttonStyles.secondary}`}
-                    >
-                      <Film size={18} aria-hidden="true" />
-                      Use demo sample
-                    </a>
+                <section
+                  className={`source-card upload-card ${dragging ? "is-dragging" : ""}`}
+                  aria-labelledby="upload-title"
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    if (!blocked) setDragging(true);
+                  }}
+                  onDragLeave={(event) => {
+                    if (
+                      !(event.relatedTarget instanceof Node) ||
+                      !event.currentTarget.contains(event.relatedTarget)
+                    )
+                      setDragging(false);
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setDragging(false);
+                    void upload(event.dataTransfer.files[0]);
+                  }}
+                >
+                  <div className="source-card-heading">
+                    <span className="source-icon">
+                      <Upload size={24} aria-hidden="true" />
+                    </span>
+                    <h2 id="upload-title">Upload a video</h2>
                   </div>
-                  <input
-                    ref={fileInput}
-                    className="local-file-input"
-                    type="file"
-                    accept="video/mp4,.json"
-                    aria-label="Choose a video or saved ClipBuilder draft"
-                    tabIndex={-1}
-                    disabled={blocked}
-                    onChange={(event) => {
-                      void upload(event.target.files?.[0]);
-                      event.target.value = "";
-                    }}
+                  <div className="source-card-body">
+                    <p>
+                      Drop your conversation here, or choose a file from your
+                      computer.
+                    </p>
+                  </div>
+                  <footer className="source-card-footer">
+                    <div className="source-actions">
+                      <Button
+                        icon={Upload}
+                        disabled={blocked}
+                        onClick={() => fileInput.current?.click()}
+                      >
+                        Choose a video
+                      </Button>
+                      {!hosted && (
+                        <a
+                          href="/start?source=sample"
+                          className={`${buttonStyles.button} ${buttonStyles.secondary}`}
+                        >
+                          <Film size={18} aria-hidden="true" />
+                          Use demo sample
+                        </a>
+                      )}
+                    </div>
+                    <input
+                      ref={fileInput}
+                      className="local-file-input"
+                      type="file"
+                      accept={hosted ? "video/mp4" : "video/mp4,.json"}
+                      aria-label={
+                        hosted
+                          ? "Choose a video"
+                          : "Choose a video or saved ClipBuilder draft"
+                      }
+                      tabIndex={-1}
+                      disabled={blocked}
+                      onChange={(event) => {
+                        void upload(event.target.files?.[0]);
+                        event.target.value = "";
+                      }}
+                    />
+                    <span className="source-card-footnote source-hint">
+                      {hosted
+                        ? "MP4 video · Temporary editing session"
+                        : "MP4 or ClipBuilder draft · Saved edits reopen automatically"}
+                    </span>
+                  </footer>
+                </section>
+                {!hosted && (
+                  <OwnerAcquisitionPanel
+                    workspace={workspace}
+                    capabilities={capabilities}
+                    busy={busy || clipWork}
+                    initializing={busy && !capabilities}
+                    onBusy={setAcquisitionBusy}
+                    onOpen={sourceOpened}
                   />
-                  <span className="source-card-footnote source-hint">
-                    MP4 or ClipBuilder draft · Saved edits reopen automatically
-                  </span>
-                </footer>
-              </section>
-              <OwnerAcquisitionPanel
-                workspace={workspace}
-                capabilities={capabilities}
-                busy={busy || clipWork}
-                initializing={busy && !capabilities}
-                onBusy={setAcquisitionBusy}
-                onOpen={sourceOpened}
-              />
-            </div>
+                )}
+              </div>
+            )
           )}
           {workspace && (
             <>
               <section className="moment-selection" hidden={view !== "moments"}>
                 <div className="moment-layout">
-                  <aside
-                    className="source-preview"
-                    aria-label="Local media previews"
-                  >
+                  <aside className="source-preview" aria-label="Source preview">
                     <div className="section-heading">
                       <h2>Your video</h2>
                     </div>
                     <video
                       key={workspace.id}
                       ref={sourcePreview}
-                      aria-label="Local source video"
+                      aria-label="Source video"
                       controls
                       preload="metadata"
                       src={`/api/local/workspace/${workspace.id}/source`}
@@ -430,6 +544,18 @@ export function LocalEditingExperience() {
           )}
         </div>
       </WorkflowFrame>
+      {challenge &&
+        capabilities &&
+        "processingSiteKey" in capabilities &&
+        capabilities.processingSiteKey && (
+          <AnalysisChallenge
+            siteKey={capabilities.processingSiteKey}
+            action="session-start"
+            sessionId={challenge}
+            onToken={challengeToken}
+            onFailure={challengeCancel}
+          />
+        )}
     </Workspace>
   );
 }

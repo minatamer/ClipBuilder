@@ -18,9 +18,12 @@ import {
   ownerIdSchema,
   ownerAiModeSchema,
 } from "./policy.ts";
-import { ownerWordsSchema } from "./selection.ts";
+import { ownerWordsSchema, ownerMomentSchema } from "./selection.ts";
 import { ownerVideoLookSchema } from "./video-look.ts";
-import { CONTEXTUAL_PICTURE_POLICY } from "@clipbuilder/contracts";
+import {
+  CONTEXTUAL_PICTURE_POLICY,
+  contextualPictureBriefSchema,
+} from "@clipbuilder/contracts";
 
 export const OWNER_BATCH_POLICY = {
   workers: 1,
@@ -96,6 +99,38 @@ export const ownerClipOutputSchema = z
     bytes: z.number().int().positive().max(OWNER_LIMITS.outputBytes),
   })
   .strict();
+export const ownerClipPlanSchema = z
+  .array(
+    z.object({
+      startFrame: z.number().finite(),
+      endFrame: z.number().finite(),
+      brief: contextualPictureBriefSchema,
+      evidenceWordIds: z
+        .array(z.string().max(64))
+        .max(CONTEXTUAL_PICTURE_POLICY.maxSupportingPhraseWords),
+    }),
+  )
+  .max(OWNER_BATCH_POLICY.imageAttemptsPerClip);
+export const ownerClipPreparationSchema = z
+  .object({
+    moment: ownerMomentSchema,
+    plan: ownerClipPlanSchema.nullable(),
+    pictures: z
+      .array(
+        z
+          .object({
+            index: z
+              .number()
+              .int()
+              .min(0)
+              .max(OWNER_BATCH_POLICY.imageAttemptsPerClip - 1),
+            visual: ownerVisualSchema.nullable(),
+          })
+          .strict(),
+      )
+      .max(OWNER_BATCH_POLICY.imageAttemptsPerClip),
+  })
+  .strict();
 export const ownerClipSchema = z
   .object({
     id: ownerIdSchema,
@@ -119,17 +154,21 @@ export const ownerClipSchema = z
       "failed",
     ]),
     base: ownerClipBaseSchema.nullable(),
+    preparation: ownerClipPreparationSchema.optional(),
     edit: ownerEditDocumentSchema.nullable().default(null),
     assets: z.array(ownerAssetSchema).max(OWNER_PICTURE_LIMITS.assetsPerClip),
     outputs: z.array(ownerClipOutputSchema).max(OWNER_BATCH_POLICY.outputs),
     calls: z
       .object({
-        plan: z.number().int().min(0).max(1),
+        plan: z.number().int().min(0).max(OWNER_BATCH_POLICY.operations),
         image: z
           .number()
           .int()
           .min(0)
-          .max(OWNER_BATCH_POLICY.imageAttemptsPerClip),
+          .max(
+            OWNER_BATCH_POLICY.imageAttemptsPerClip *
+              OWNER_BATCH_POLICY.operations,
+          ),
         render: z.number().int().nonnegative(),
       })
       .strict(),

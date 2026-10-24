@@ -1,4 +1,9 @@
 import {
+  ownerDiagnosticRecordSchema,
+  describeOwnerDiagnosticError,
+  type OwnerDiagnosticOperation,
+} from "../../../packages/contracts/local/diagnostics.ts";
+import {
   createServer,
   type IncomingMessage,
   type ServerResponse,
@@ -26,6 +31,7 @@ import { ownerAcquisitionFailureCodeSchema } from "../../../packages/contracts/l
 import { prepareOwnerProviderMedia } from "./provider-media.ts";
 
 export function createOwnerWorker(options: {
+  diagnostic?: (line: string) => void;
   root: string;
   token: string;
   tools: OwnerNativeTools;
@@ -106,11 +112,45 @@ export function createOwnerWorker(options: {
       return;
     }
     busy = true;
+    const started = performance.now();
+    let operation: OwnerDiagnosticOperation = "worker_request";
+    let jobId: string | undefined;
+    const report = (
+      outcome: "started" | "succeeded" | "failed",
+      error?: unknown,
+    ) => {
+      try {
+        options.diagnostic?.(
+          JSON.stringify(
+            ownerDiagnosticRecordSchema.parse({
+              event: "local_diagnostic",
+              service: "worker",
+              at: new Date().toISOString(),
+              operation,
+              outcome,
+              ...(jobId ? { jobId } : {}),
+              elapsedMs: Math.max(
+                0,
+                Math.min(86400000, Math.round(performance.now() - started)),
+              ),
+              ...(error === undefined
+                ? {}
+                : { error: describeOwnerDiagnosticError(error) }),
+            }),
+          ),
+        );
+      } catch {
+        /* Logging must not affect native work or cleanup. */
+      }
+    };
     const controller = new AbortController();
     controllers.add(controller);
     res.once("close", () => controller.abort());
     try {
       const job = await readJob(req);
+      operation = job.operation;
+      jobId = job.jobId;
+      report("started");
       const key = job.jobId ?? `${job.workspaceId}:${job.operation}`;
       current = {
         id: key,
@@ -208,6 +248,7 @@ export function createOwnerWorker(options: {
                       job.cut,
                       job.fingerprint,
                     );
+      report("succeeded");
       res
         .writeHead(200, {
           "Content-Type": "application/json",
@@ -215,6 +256,7 @@ export function createOwnerWorker(options: {
         })
         .end(JSON.stringify(result));
     } catch (error) {
+      report("failed", error);
       const code = ownerAcquisitionFailureCodeSchema.safeParse(
         error instanceof Error ? error.message : null,
       );

@@ -80,6 +80,7 @@ describe("bounded ungrounded Gemini picture generation", () => {
     });
     expect(image).not.toHaveProperty("pageId");
     expect(image).not.toHaveProperty("license");
+    if (!image) throw new Error("synthetic_picture_missing");
     const bytes = Buffer.from(image.dataUri.slice(23), "base64");
     expect(image.sha256).toBe(createHash("sha256").update(bytes).digest("hex"));
     expect((await sharp(bytes).metadata()).format).toBe("jpeg");
@@ -113,26 +114,71 @@ describe("bounded ungrounded Gemini picture generation", () => {
     "unfinished",
     "noncanonical",
     "invalid-raster",
-    "oversized-body",
-  ])("rejects %s with one attempt", async (shape) => {
-    const value = content();
-    if (shape === "no-image") value.candidates[0]!.content.parts = [];
-    if (shape === "multiple-images")
-      value.candidates[0]!.content.parts.push(
-        value.candidates[0]!.content.parts[0]!,
-      );
-    if (shape === "unfinished")
-      value.candidates[0]!.finishReason = "MAX_TOKENS";
-    if (shape === "noncanonical")
-      value.candidates[0]!.content.parts[0]!.inlineData.data = "aaaaa";
-    const response =
-      shape === "oversized-body"
-        ? new Response(
-            new Uint8Array(GEMINI_PICTURE_POLICY.responseBytes + 1),
-            { headers: { "Content-Type": "application/json" } },
-          )
-        : Response.json(value);
-    const request = vi.fn<typeof fetch>().mockResolvedValue(response);
+  ])(
+    "continues without unreadable optional %s art with one attempt",
+    async (shape) => {
+      const value = content();
+      if (shape === "no-image") value.candidates[0]!.content.parts = [];
+      if (shape === "multiple-images")
+        value.candidates[0]!.content.parts.push(
+          value.candidates[0]!.content.parts[0]!,
+        );
+      if (shape === "unfinished")
+        value.candidates[0]!.finishReason = "MAX_TOKENS";
+      if (shape === "noncanonical")
+        value.candidates[0]!.content.parts[0]!.inlineData.data = "aaaaa";
+      const response =
+        shape === "oversized-body"
+          ? new Response(
+              new Uint8Array(GEMINI_PICTURE_POLICY.responseBytes + 1),
+              { headers: { "Content-Type": "application/json" } },
+            )
+          : Response.json(value);
+      const request = vi.fn<typeof fetch>().mockResolvedValue(response);
+      await expect(
+        new GeminiPictureGenerator("synthetic-key", request).find(
+          brief,
+          new AbortController().signal,
+        ),
+      ).resolves.toBeNull();
+      expect(request).toHaveBeenCalledOnce();
+    },
+  );
+  it("retains usable small images despite unfinished metadata and multiple parts with one paid attempt", async () => {
+    const png = await sharp({
+      create: { width: 40, height: 20, channels: 3, background: "#123456" },
+    })
+      .png()
+      .toBuffer();
+    const value = content(png.toString("base64"));
+    value.candidates[0]!.finishReason = "MAX_TOKENS";
+    value.candidates[0]!.content.parts.unshift({
+      ...value.candidates[0]!.content.parts[0]!,
+      inlineData: {
+        mimeType: "image/png",
+        data: Buffer.from("broken").toString("base64"),
+      },
+    });
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(Response.json(value));
+    const result = await new GeminiPictureGenerator(
+      "synthetic-key",
+      request,
+    ).find(brief, new AbortController().signal);
+    expect(result).toMatchObject({
+      width: 40,
+      height: 20,
+      repository: "google-gemini",
+    });
+    expect(request).toHaveBeenCalledOnce();
+  });
+  it("retains the response resource cap without another request", async () => {
+    const request = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(new Uint8Array(GEMINI_PICTURE_POLICY.responseBytes + 1), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
     await expect(
       new GeminiPictureGenerator("synthetic-key", request).find(
         brief,

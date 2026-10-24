@@ -31,4 +31,20 @@ describe("owned native process", () => {
     controller.abort();
     await check;
   });
+  it("retains only a classified native reason and exit status through the safe failure cause", async () => {
+    await expect(
+      runOwnedProcess(
+        process.execPath,
+        [
+          "-e",
+          "process.stderr.write('No such filter: synthetic-private-filter-and-path'); process.exitCode=9",
+        ],
+        new AbortController().signal,
+        { env: {} },
+      ),
+    ).rejects.toMatchObject({
+      code: "media_failed",
+      cause: { message: "native_filter_unavailable", code: 9 },
+    });
+  });
 });

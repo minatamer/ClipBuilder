@@ -60,8 +60,11 @@ type AnalysisAction =
   | "session"
   | "grant"
   | "exit"
-  | "diagnostics";
+  | "diagnostics"
+  | "local";
 const phases = [
+  "local_operation",
+  "local_validation",
   "browser_diagnostic",
   "request",
   "sample_fingerprint",
@@ -118,6 +121,8 @@ const phases = [
 ] as const;
 export type AnalysisPhase = (typeof phases)[number];
 const phaseMessages: Record<AnalysisPhase, string> = {
+  local_operation: "Local workflow operation",
+  local_validation: "Local workflow structural validation",
   browser_diagnostic:
     "Untrusted browser diagnostic accepted by private backend",
   request: "Backend request lifecycle",
@@ -296,6 +301,7 @@ const diagnosticSchema = z
       "grant",
       "exit",
       "diagnostics",
+      "local",
     ]),
     phase: z.enum(phases),
     outcome: z.enum([

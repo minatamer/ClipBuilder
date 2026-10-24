@@ -37,7 +37,10 @@ import type {
 } from "./acquisition-port.ts";
 import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/local/acquisition-profile.ts";
 
+import { LocalDiagnostics } from "./diagnostics.ts";
+
 type SourceAcquisitionOptions = {
+  diagnostics?: LocalDiagnostics;
   files: WorkspaceFiles;
   roots: Partial<Record<OwnerSourceDestination, string>>;
   port?: OwnerAcquisitionPort;
@@ -409,6 +412,7 @@ export class OwnerSourceAcquisition {
         workspaceId = undefined;
         update({ stage: "ready", variantId: variant.id });
       } catch (error) {
+        this.options.diagnostics?.failure("acquisition", error);
         const message = error instanceof Error ? error.message : "";
         const capacity =
           message.includes("capacity") ||
@@ -437,7 +441,8 @@ export class OwnerSourceAcquisition {
         this.running = undefined;
         this.controller = undefined;
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        this.options.diagnostics?.failure("cleanup", error);
         this.closed = true;
         update({ stage: "failed", error: "failed" });
       });

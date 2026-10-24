@@ -299,7 +299,7 @@ it.each([
   ["invented", "w_999999", 0, 70],
   ["outside the picture cue", "w_000001", 70, 77],
 ])(
-  "rejects %s planner evidence before any picture or render request",
+  "retains %s planner evidence and completes the clip without another plan",
   async (_reason, wordId, startFrame, endFrame) => {
     const validPlan = clipPorts.plan.getMockImplementation()!;
     clipPorts.plan.mockImplementationOnce(async (input, signal) => {
@@ -312,21 +312,21 @@ it.each([
     );
     await batch.drain();
     const clip = batch.snapshot().clips[0]!;
-    expect(clip.state).toBe("failed");
-    expect(clip.calls).toEqual({ plan: 1, image: 0, render: 0 });
-    expect(clip.base).toBeNull();
-    expect(clip.assets).toEqual([]);
-    expect(clip.outputs).toEqual([]);
+    expect(clip.state).toBe("ready");
+    expect(clip.calls).toEqual({ plan: 1, image: 1, render: 1 });
+    expect(clip.base?.overlay.visuals).toHaveLength(1);
+    expect(clip.assets).toHaveLength(1);
+    expect(clip.outputs).toHaveLength(1);
     expect(clipPorts.plan).toHaveBeenCalledTimes(1);
-    expect(clipPorts.image).toHaveBeenCalledTimes(0);
-    expect(clipPorts.render).toHaveBeenCalledTimes(0);
+    expect(clipPorts.image).toHaveBeenCalledTimes(1);
+    expect(clipPorts.render).toHaveBeenCalledTimes(1);
   },
 );
 
 it("fails closed when a provider-shaped image adapter returns synthetic provenance", async () => {
   const validImage = clipPorts.image.getMockImplementation()!;
   clipPorts.image.mockImplementationOnce(async (input, signal) => ({
-    ...(await validImage(input, signal)),
+    ...(await validImage(input, signal))!,
     origin: "synthetic",
   }));
   await batch.submit(

@@ -2,7 +2,7 @@ import {
   composeGeminiTransport,
   type GeminiTransport,
 } from "../src/analysis/gemini.adapter.js";
-import { AnalysisDiagnostics } from "../src/analysis/analysis.diagnostics.js";
+import { LocalDiagnostics } from "./diagnostics.ts";
 import { GeminiPictureGenerator } from "../src/assembly/gemini-pictures.js";
 import type { OwnerHostProviders } from "./server.ts";
 import type { WorkspaceFiles } from "./workspace-files.ts";
@@ -20,24 +20,30 @@ export function composeOwnerProviders(
     transport: GeminiTransport;
     pictures: Pick<GeminiPictureGenerator, "find">;
   },
+  diagnostics = new LocalDiagnostics(),
 ): OwnerHostProviders {
   if (!readiness.ready) return {};
-  const diagnostics = new AnalysisDiagnostics();
   return createOwnerProviderAi({
     files,
     media,
+    diagnostics,
     transport:
       injected?.transport ??
-      composeGeminiTransport(readiness.config, undefined, diagnostics, {
-        responseBytes: 16 * 1024 * 1024,
-      }),
+      composeGeminiTransport(
+        readiness.config,
+        undefined,
+        diagnostics.analysis,
+        {
+          responseBytes: 16 * 1024 * 1024,
+        },
+      ),
     pictures:
       injected?.pictures ??
       new GeminiPictureGenerator(
         readiness.config.gemini.apiKey!,
         undefined,
         undefined,
-        diagnostics,
+        diagnostics.analysis,
       ),
     timeoutMs: readiness.config.gemini.timeoutMs,
   });

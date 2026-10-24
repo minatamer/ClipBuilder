@@ -6,6 +6,8 @@ import {
 import type { OwnerDraftStore } from "./draft-store.ts";
 import type { WorkspaceFiles } from "./workspace-files.ts";
 
+import { LocalDiagnostics } from "./diagnostics.ts";
+
 type Binding = {
   id: string | null;
   savedAt: string | null;
@@ -22,6 +24,7 @@ export class OwnerWorkspaceDrafts {
     private readonly store: Pick<OwnerDraftStore, "save">,
     private readonly files: WorkspaceFiles,
     private readonly snapshot: (id: string) => OwnerDraftSnapshot,
+    private readonly diagnostics = new LocalDiagnostics(),
   ) {}
   status(id: string): OwnerDraftStatus {
     const entry = this.bindings.get(id);
@@ -69,10 +72,15 @@ export class OwnerWorkspaceDrafts {
     current.running = Promise.resolve().then(async () => {
       let succeeded = false;
       try {
-        const saved = await this.store.save(
-          current.id ?? undefined,
-          this.snapshot(id),
-          this.files,
+        const saved = await this.diagnostics.run(
+          "draft_save",
+          () =>
+            this.store.save(
+              current.id ?? undefined,
+              this.snapshot(id),
+              this.files,
+            ),
+          { independent: true },
         );
         current.id = saved.id;
         current.savedAt = saved.savedAt;

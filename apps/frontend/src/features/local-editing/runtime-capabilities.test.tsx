@@ -61,7 +61,7 @@ it("accepts only content-free local runtime capabilities, including unavailable 
     );
 });
 
-it("labels fresh provider analysis truthfully and blocks unavailable or mismatched analysis", () => {
+it("labels provider capabilities truthfully while restoration keeps submission unavailable", () => {
   const render = (runtime: OwnerRuntimeCapabilities) =>
     renderToStaticMarkup(
       <OwnerSelectionPanel
@@ -78,13 +78,14 @@ it("labels fresh provider analysis truthfully and blocks unavailable or mismatch
   const provider = render(capabilities);
   expect(provider).not.toContain("provider calls");
   expect(provider).not.toMatch(/simulated|fictional/iu);
-  expect(buttonDisabled(provider, "Find moments")).toBe(false);
+  expect(provider).toContain("Loading moments");
+  expect(provider).not.toContain(">Find moments</button>");
   const unavailable = render({ ...capabilities, aiMode: "unavailable" });
   expect(unavailable).toContain("AI unavailable");
-  expect(buttonDisabled(unavailable, "Find moments")).toBe(true);
+  expect(unavailable).not.toContain(">Find moments</button>");
   const mismatch = render({ ...capabilities, aiMode: "synthetic-ai" });
   expect(mismatch).toContain("current AI mode");
-  expect(buttonDisabled(mismatch, "Find moments")).toBe(true);
+  expect(mismatch).not.toContain(">Find moments</button>");
 });
 
 it("blocks new automatic plans separately from local prepared-clip work", () => {

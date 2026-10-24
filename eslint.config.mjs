@@ -292,6 +292,7 @@ export default defineConfig([
     "**/coverage/**",
     "**/node_modules/**",
     "apps/renderer/bundle/**",
+    "apps/renderer/editing-overlay/**",
     "**/*.d.ts",
   ]),
 ]);

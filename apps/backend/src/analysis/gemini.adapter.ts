@@ -558,7 +558,10 @@ export class GeminiAnalysisProvider {
       phase = "validation";
       return this.diagnostics.check("candidate_validation", () => {
         if (options?.requireFinished && !result.finished)
-          throw new Error("candidate_response_unfinished");
+          this.diagnostics.critique(
+            "candidate_validation",
+            new Error("candidate_response_unfinished"),
+          );
         const text = result.text ?? "";
         const maximum =
           options?.responseBytes ?? GROUNDED_ANALYSIS_LIMITS.responseBytes;
@@ -702,8 +705,13 @@ export class GeminiAnalysisProvider {
             return this.transcriptSchema.parse(normalized);
           }
           const generated = z
-            .object({ text: z.string().min(1), finished: z.literal(true) })
+            .object({ text: z.string().min(1), finished: z.boolean() })
             .parse(result);
+          if (!generated.finished)
+            this.diagnostics.critique(
+              "gemini_validation",
+              new Error("candidate_response_unfinished"),
+            );
           this.diagnostics.privateGenerationResult(generated);
           const decoded: unknown = JSON.parse(generated.text);
           this.diagnostics.privateStageOutput(

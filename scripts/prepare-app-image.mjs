@@ -27,6 +27,7 @@ export async function prepareAppImage(root, application) {
           continue;
         if (child.endsWith(".md")) continue;
         if (/\.test(?:-fixtures)?\.[tj]sx?$/.test(child)) continue;
+        if (/\.proof\.[tj]sx?$/.test(child)) continue;
         await copy(join(path, child), true);
       }
     } else if (info.isFile()) {
@@ -68,6 +69,14 @@ export async function prepareAppImage(root, application) {
         "apps/backend/local",
         "scripts/backend-build.mjs",
         "scripts/native-tools.ts",
+        "scripts/editing-worker-build.mjs",
+        "apps/renderer/package.json",
+        "apps/renderer/src",
+        "apps/renderer/local",
+        "packages/composition/package.json",
+        "packages/composition/tsconfig.json",
+        "packages/composition/src",
+        "packages/composition/local",
       );
     if (application === "frontend")
       inputs.push(

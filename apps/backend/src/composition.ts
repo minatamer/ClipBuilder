@@ -8,6 +8,7 @@ export function composeBackend(
 ) {
   const config = loadConfig(environment);
   const localWorkflow: LocalWorkflowSlot = { current: null };
+  const hostedWorkflow: LocalWorkflowSlot = { current: null };
 
   return {
     application: createApplication(
@@ -15,8 +16,10 @@ export function composeBackend(
       diagnostics,
       undefined,
       localWorkflow,
+      hostedWorkflow,
     ),
     localWorkflow,
+    hostedWorkflow,
     config,
   };
 }

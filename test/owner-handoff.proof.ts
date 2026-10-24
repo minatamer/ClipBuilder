@@ -164,6 +164,7 @@ it("connects local native provider inputs, injected Gemini-shaped transports and
         },
         signal,
       );
+      if (!image) throw new Error("synthetic_picture_missing");
       return {
         repository: "google-gemini" as const,
         model: GENERATED_PICTURE_MODEL,

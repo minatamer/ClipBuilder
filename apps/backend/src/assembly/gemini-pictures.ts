@@ -33,20 +33,10 @@ const encodedImage = z.object({
     .max(Math.ceil(CONTEXTUAL_PICTURE_POLICY.maxDownloadBytes / 3) * 4)
     .regex(/^[A-Za-z0-9+/]+={0,2}$/),
 });
-const responseSchema = z.object({
-  candidates: z
-    .array(
-      z.object({
-        finishReason: z.literal("STOP"),
-        content: z.object({
-          parts: z
-            .array(z.object({ inlineData: encodedImage.optional() }))
-            .min(1)
-            .max(32),
-        }),
-      }),
-    )
-    .length(1),
+const responseSchema = z.object({ candidates: z.array(z.unknown()) });
+const candidateSchema = z.object({
+  finishReason: z.string().optional(),
+  content: z.object({ parts: z.array(z.unknown()) }),
 });
 
 export class GeminiPictureGenerator implements ContextualPictureSource {
@@ -115,44 +105,78 @@ export class GeminiPictureGenerator implements ContextualPictureSource {
         )
       )
         throw new Error("contextual_picture_unavailable");
-      const decoded: unknown = JSON.parse(
-        (
-          await boundedPictureBody(
-            response,
-            GEMINI_PICTURE_POLICY.responseBytes,
-          )
-        ).toString("utf8"),
+      const body = await boundedPictureBody(
+        response,
+        GEMINI_PICTURE_POLICY.responseBytes,
       );
-      const result = responseSchema.parse(decoded);
-      const images = result.candidates[0]!.content.parts.flatMap((part) =>
-        part.inlineData ? [part.inlineData] : [],
-      );
-      if (images.length !== 1)
-        throw new Error("contextual_picture_unavailable");
-      const image = images[0]!,
-        bytes = Buffer.from(image.data, "base64");
-      if (
-        bytes.length > CONTEXTUAL_PICTURE_POLICY.maxDownloadBytes ||
-        bytes.toString("base64") !== image.data
-      )
-        throw new Error("contextual_picture_unavailable");
-      deadline.throwIfAborted();
-      const normalized = await this.normalize(bytes);
-      deadline.throwIfAborted();
-      if (
-        normalized.width < CONTEXTUAL_PICTURE_POLICY.minInputWidth ||
-        normalized.height < CONTEXTUAL_PICTURE_POLICY.minInputHeight
-      )
-        throw new Error("contextual_picture_unavailable");
-      return contextualPictureAssetSchema.parse({
-        repository: "google-gemini",
-        model: GENERATED_PICTURE_MODEL,
-        policy: "contextual-generated-v1",
-        width: normalized.width,
-        height: normalized.height,
-        sha256: createHash("sha256").update(normalized.bytes).digest("hex"),
-        dataUri: `data:image/jpeg;base64,${normalized.bytes.toString("base64")}`,
+      const critique = () =>
+        this.diagnostics.critique(
+          "assembly_picture_generation",
+          new Error("gemini_picture_critique"),
+        );
+      let decoded: unknown;
+      try {
+        decoded = JSON.parse(body.toString("utf8"));
+      } catch {
+        critique();
+        return null;
+      }
+      const result = responseSchema.safeParse(decoded);
+      if (!result.success) {
+        critique();
+        return null;
+      }
+      if (result.data.candidates.length !== 1) critique();
+      const images = result.data.candidates.slice(0, 32).flatMap((value) => {
+        const candidate = candidateSchema.safeParse(value);
+        if (!candidate.success) {
+          critique();
+          return [];
+        }
+        if (candidate.data.finishReason !== "STOP") critique();
+        return candidate.data.content.parts.slice(0, 32).flatMap((part) => {
+          const parsed = z.object({ inlineData: encodedImage }).safeParse(part);
+          return parsed.success ? [parsed.data.inlineData] : [];
+        });
       });
+      if (images.length !== 1) critique();
+      for (const image of images) {
+        const bytes = Buffer.from(image.data, "base64");
+        if (
+          bytes.length > CONTEXTUAL_PICTURE_POLICY.maxDownloadBytes ||
+          bytes.toString("base64") !== image.data
+        ) {
+          critique();
+          continue;
+        }
+        deadline.throwIfAborted();
+        let normalized: Awaited<ReturnType<typeof normalizePicture>>;
+        try {
+          normalized = await this.normalize(bytes);
+        } catch {
+          deadline.throwIfAborted();
+          critique();
+          continue;
+        }
+        deadline.throwIfAborted();
+        if (
+          normalized.width < CONTEXTUAL_PICTURE_POLICY.minInputWidth ||
+          normalized.height < CONTEXTUAL_PICTURE_POLICY.minInputHeight
+        )
+          critique();
+        const asset = contextualPictureAssetSchema.safeParse({
+          repository: "google-gemini",
+          model: GENERATED_PICTURE_MODEL,
+          policy: "contextual-generated-v1",
+          width: normalized.width,
+          height: normalized.height,
+          sha256: createHash("sha256").update(normalized.bytes).digest("hex"),
+          dataUri: `data:image/jpeg;base64,${normalized.bytes.toString("base64")}`,
+        });
+        if (asset.success) return asset.data;
+        critique();
+      }
+      return null;
     } finally {
       if (response.body && !response.body.locked)
         await response.body.cancel().catch(() => undefined);

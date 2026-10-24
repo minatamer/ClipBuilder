@@ -43,6 +43,7 @@ export function createApplication(
   diagnostics = new AnalysisDiagnostics(),
   injectedFrontendCaller?: FrontendCallerVerifier,
   localWorkflow?: LocalWorkflowSlot,
+  hostedWorkflow?: LocalWorkflowSlot,
 ): Express {
   const application = express();
 
@@ -125,6 +126,11 @@ export function createApplication(
     }
     next();
   });
+  application.use("/v1/editing", (request, response, next) => {
+    if (config.appEnv === "local" || !hostedWorkflow?.current)
+      return response.status(404).end();
+    void hostedWorkflow.current.dispatch(request, response).catch(next);
+  });
   application.use(
     "/v1/diagnostics",
     createBrowserDiagnosticRouter(
@@ -133,6 +139,10 @@ export function createApplication(
     ),
   );
   application.use("/v1/analysis", (request, response, next) => {
+    if (config.appEnv !== "local") {
+      response.status(404).end();
+      return;
+    }
     const action = request.path.slice(1);
     if (!(
       (request.method === "GET" &&
@@ -158,6 +168,13 @@ export function createApplication(
       response.once("close", () => finish("disconnected", response.statusCode));
       next();
     });
+  });
+  application.use("/v1/admission", (_request, response, next) => {
+    if (config.appEnv !== "local") {
+      response.status(404).end();
+      return;
+    }
+    next();
   });
   const admission = composeAdmission(config);
   application.use("/v1/session", (request, response, next) => {

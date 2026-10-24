@@ -58,6 +58,7 @@ it("returns a recognizable offline sample raster, never a solid placeholder", as
     },
     new AbortController().signal,
   );
+  if (!result) throw new Error("synthetic_picture_missing");
   const stats = await sharp(result.bytes).stats();
   expect(
     stats.channels.reduce((sum, channel) => sum + channel.stdev, 0),

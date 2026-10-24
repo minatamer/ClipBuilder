@@ -1,3 +1,4 @@
+import { LocalDiagnostics } from "./diagnostics.ts";
 import { createHash, randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
@@ -69,7 +70,7 @@ const cue = {
     avoidTerms: ["logos"],
   },
 };
-function fixture() {
+function fixture(diagnostics?: LocalDiagnostics) {
   const workspace: OwnerWorkspace = {
     id: randomUUID(),
     revision: 3,
@@ -107,7 +108,7 @@ function fixture() {
       text: JSON.stringify({ pictures: [cue] }),
       finished: true,
     })),
-    candidates: vi.fn(async () => ({
+    candidates: vi.fn<GeminiTransport["candidates"]>(async () => ({
       text: JSON.stringify({
         candidates: Array.from({ length: 14 }, () => proposal),
       }),
@@ -145,7 +146,13 @@ function fixture() {
       throw new Error("unexpected_picture_work");
     }),
   };
-  const ports = createOwnerProviderAi({ files, media, transport, pictures });
+  const ports = createOwnerProviderAi({
+    files,
+    media,
+    transport,
+    pictures,
+    ...(diagnostics ? { diagnostics } : {}),
+  });
   return {
     workspace,
     moment,
@@ -233,7 +240,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
       { startFrame: 0, endFrame: 30 },
       { startFrame: 9000, endFrame: 18000 },
     ]);
-    expect(result.suggestions).toHaveLength(1);
+    expect(result.suggestions).toHaveLength(4);
     expect(result.suggestions[0]!.evidence!.title).toBe("Restoration");
     expect(result.calls).toEqual({ transcription: 1, selection: 1 });
     expect(f.media).toHaveBeenCalledExactlyOnceWith(
@@ -325,7 +332,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
   });
 
   it.each(["invented", "misaligned"])(
-    "rejects %s grounding before any image work",
+    "retains %s grounding as advisory and allows optional image work",
     async (kind) => {
       const f = fixture();
       f.transport.generate.mockResolvedValue({
@@ -339,19 +346,19 @@ describe("dormant owner provider ports with synthetic transports", () => {
           ],
         }),
       });
-      await expect(
-        f.ports.clipPreparation.plan(
-          { workspace: f.workspace, clipId: f.clipId, moment: f.moment },
-          f.signal,
-        ),
-      ).rejects.toThrow("owner_plan_rejected");
+      const plan = await f.ports.clipPreparation.plan(
+        { workspace: f.workspace, clipId: f.clipId, moment: f.moment },
+        f.signal,
+      );
+      expect(plan).toHaveLength(1);
+      f.pictures.find.mockResolvedValue(null);
       await expect(
         f.ports.clipPreparation.image(
-          { clipId: f.clipId, cue, words },
+          { clipId: f.clipId, cue: plan[0]!, words },
           f.signal,
         ),
-      ).rejects.toThrow("owner_picture_not_admitted");
-      expect(f.pictures.find).not.toHaveBeenCalled();
+      ).resolves.toBeNull();
+      expect(f.pictures.find).toHaveBeenCalledTimes(1);
       expect(f.transport.generate).toHaveBeenCalledTimes(1);
       expect(f.transport.delete).toHaveBeenCalledTimes(1);
       expect(f.files.removeProviderInput).toHaveBeenCalledTimes(1);
@@ -426,7 +433,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
   });
 
   it.each(["unfinished", "malformed", "wrong-shape"])(
-    "rejects %s plans without image work or retry",
+    "retains usable %s plans without image work or retry",
     async (kind) => {
       const f = fixture();
       f.transport.generate.mockResolvedValue({
@@ -445,7 +452,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
           { workspace: f.workspace, clipId: f.clipId, moment: f.moment },
           f.signal,
         ),
-      ).rejects.toThrow();
+      ).resolves.toEqual(kind === "malformed" ? [] : [cue]);
       expect(f.transport.generate).toHaveBeenCalledTimes(1);
       expect(f.transport.delete).toHaveBeenCalledTimes(1);
       expect(f.files.removeProviderInput).toHaveBeenCalledTimes(1);
@@ -536,7 +543,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     await f.ports.close(f.signal);
   });
 
-  it("rejects unfinished owner selection while the public default remains compatible", async () => {
+  it("accepts unfinished usable owner selection while the public default remains compatible", async () => {
     const f = fixture();
     f.transport.candidates.mockResolvedValue({
       text: JSON.stringify({ candidates: [proposal] }),
@@ -544,7 +551,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     });
     await expect(
       f.ports.analysis.select(words, policy, f.signal, instructions),
-    ).rejects.toMatchObject({ code: "MODEL_OUTPUT_REJECTED" });
+    ).resolves.toHaveLength(1);
     const publicProvider = new GeminiAnalysisProvider(f.transport, 1000);
     expect(await publicProvider.candidates("synthetic", f.signal)).toEqual({
       candidates: [proposal],
@@ -555,7 +562,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
   });
 
   it.each(["malformed", "wrong-shape", "over-limit"])(
-    "rejects %s owner selection without a retry",
+    "decodes %s owner selection without a retry",
     async (kind) => {
       const f = fixture();
       f.transport.candidates.mockResolvedValue({
@@ -571,7 +578,9 @@ describe("dormant owner provider ports with synthetic transports", () => {
       });
       await expect(
         f.ports.analysis.select(words, policy, f.signal, instructions),
-      ).rejects.toThrow();
+      ).resolves.toHaveLength(
+        kind === "malformed" ? 0 : kind === "over-limit" ? 14 : 1,
+      );
       expect(f.transport.candidates).toHaveBeenCalledTimes(1);
       expect(f.transport.upload).not.toHaveBeenCalled();
       expect(f.media).not.toHaveBeenCalled();
@@ -648,4 +657,94 @@ describe("dormant owner provider ports with synthetic transports", () => {
     expect(f.transport.transcribe).toHaveBeenCalledTimes(1);
     await f.ports.close(f.signal);
   });
+});
+
+it("records the failing Gemini stage and HTTP classification once, preserving cleanup and privacy", async () => {
+  const lines: string[] = [];
+  const f = fixture(new LocalDiagnostics((line) => lines.push(line)));
+  const secret = "synthetic-private-provider-body-key-transcript";
+  const error = Object.assign(
+    new Error(
+      JSON.stringify({
+        error: { code: 403, status: "PERMISSION_DENIED", message: secret },
+      }),
+    ),
+    { name: "ApiError", status: 403 },
+  );
+  f.transport.transcribe.mockRejectedValueOnce(error);
+  await expect(
+    f.ports.analysis.transcribe(f.workspace, f.signal),
+  ).rejects.toThrow();
+  const records = lines.map((line) => JSON.parse(line));
+  expect(records).toContainEqual(
+    expect.objectContaining({
+      phase: "transcription_generation",
+      outcome: "failed",
+      upstreamHttpStatus: 403,
+    }),
+  );
+  expect(records).toContainEqual(
+    expect.objectContaining({ operation: "transcribe", outcome: "failed" }),
+  );
+  expect(new Set(records.map((record) => record.requestId)).size).toBe(1);
+  expect(f.transport.transcribe).toHaveBeenCalledTimes(1);
+  expect(f.transport.upload).toHaveBeenCalledTimes(1);
+  expect(f.transport.delete).toHaveBeenCalledTimes(1);
+  expect(f.files.removeProviderInput).toHaveBeenCalledTimes(1);
+  expect(lines.join("\n")).not.toContain(secret);
+  await f.ports.close(f.signal);
+});
+
+it("continues to selection after provider tokens with unusable timings without changing valid timings or repeating AI", async () => {
+  const lines: string[] = [];
+  const f = fixture(new LocalDiagnostics((line) => lines.push(line)));
+  f.transport.transcribe.mockResolvedValueOnce(
+    interaction([
+      annotations[1]!,
+      annotations[0]!,
+      annotations[2]!,
+      annotations[3]!,
+      ["SyntheticZero", "2s", "2s"],
+      ["SyntheticOutside", "4000s", "4001s"],
+    ]),
+  );
+  const transcript = await f.ports.analysis.transcribe(f.workspace, f.signal);
+  expect(transcript.map((word) => word.id)).toEqual([
+    "w_000001",
+    "w_000002",
+    "w_000003",
+    "w_000004",
+    "w_000005",
+    "w_000006",
+  ]);
+  expect(transcript.map((word) => [word.startMs, word.endMs])).toEqual([
+    [812, 1411],
+    [111, 711],
+    [10117, 10511],
+    [10612, 11411],
+    [2000, 2000],
+    [4000000, 4001000],
+  ]);
+  await f.ports.analysis.select(transcript, policy, f.signal, instructions);
+  expect(f.transport.transcribe).toHaveBeenCalledTimes(1);
+  expect(f.transport.candidates).toHaveBeenCalledTimes(1);
+  expect(f.transport.upload).toHaveBeenCalledTimes(1);
+  expect(f.transport.delete).toHaveBeenCalledTimes(1);
+  expect(lines.map((line) => JSON.parse(line))).toContainEqual(
+    expect.objectContaining({
+      transcriptTiming: {
+        returnedWords: 6,
+        acceptedWords: 6,
+        nonpositiveWords: 1,
+        outsideMediaWords: 1,
+        reorderedWords: 0,
+        outOfOrderWords: 2,
+      },
+    }),
+  );
+  expect(f.transport.candidates.mock.calls[0]![0]).toContain("SyntheticZero");
+  expect(f.transport.candidates.mock.calls[0]![0]).toContain(
+    "SyntheticOutside",
+  );
+  await f.ports.close(f.signal);
 });

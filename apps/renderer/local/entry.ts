@@ -1,3 +1,7 @@
+import {
+  ownerDiagnosticRecordSchema,
+  describeOwnerDiagnosticError,
+} from "../../../packages/contracts/local/diagnostics.ts";
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { createOwnerWorker } from "./server.ts";
@@ -23,6 +27,7 @@ async function main() {
     })
     .parse(JSON.parse(await readFile(file, "utf8")));
   const worker = createOwnerWorker({
+    diagnostic: (line) => process.stderr.write(line + "\n"),
     root: state.root,
     token: state.workerToken,
     tools: state.tools,
@@ -56,7 +61,20 @@ async function main() {
     void close();
   });
 }
-void main().catch(() => {
+void main().catch((error: unknown) => {
+  process.stderr.write(
+    JSON.stringify(
+      ownerDiagnosticRecordSchema.parse({
+        event: "local_diagnostic",
+        service: "worker",
+        at: new Date().toISOString(),
+        operation: "startup",
+        outcome: "failed",
+        elapsedMs: 0,
+        error: describeOwnerDiagnosticError(error),
+      }),
+    ) + "\n",
+  );
   process.stderr.write("owner_worker_unavailable\n");
   process.exitCode = 1;
   if (process.connected) process.disconnect();

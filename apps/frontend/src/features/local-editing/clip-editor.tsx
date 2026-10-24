@@ -1,4 +1,5 @@
 import { Button } from "../../shared/ui/button";
+import { ProcessingState } from "../../shared/ui/processing-state";
 import { LoaderCircle, RotateCw, Upload } from "lucide-react";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { ControlTabs } from "./control-tabs.tsx";
@@ -635,14 +636,7 @@ export function ClipEditor({
         </p>
       )}
       {previewLoading && (
-        <div className="clip-preparing" role="status">
-          <LoaderCircle
-            size={24}
-            className="acquisition-spinner"
-            aria-hidden="true"
-          />
-          <span>Loading preview…</span>
-        </div>
+        <ProcessingState className="clip-preparing" label="Loading preview" />
       )}
       <div
         className="editor-layout"

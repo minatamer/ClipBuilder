@@ -43,15 +43,28 @@ import { ownerSourceMetadataRequestSchema } from "../../../packages/contracts/lo
 import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/local/acquisition-profile.ts";
 import { ownerRuntimeCapabilitiesSchema } from "../../../packages/contracts/local/runtime.ts";
 import { openLocalDraft, openLocalVideo } from "./open-local-file.ts";
+import { LocalDiagnostics } from "./diagnostics.ts";
 
 export type OwnerHostProviders = {
   analysis?: OwnerAnalysisPorts;
-  clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image">;
+  clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image" | "resume">;
   close?: (signal: AbortSignal) => Promise<void>;
   cleanupWorkspace?: (id: string, signal: AbortSignal) => Promise<void>;
 };
 
 export type OwnerHostOptions = {
+  authorize?: (request: IncomingMessage) => boolean;
+  hosted?: boolean;
+  capacity?: typeof requireDisk;
+  sourceLimits?: { bytes: number; durationMs: number };
+  reserveRead?: (bytes: number) => void;
+  receiveSource?: (
+    id: string,
+    files: WorkspaceFiles,
+    request: IncomingMessage,
+    signal: AbortSignal,
+  ) => Promise<{ fingerprint: string; bytes: number }>;
+  diagnostics?: LocalDiagnostics;
   root: string;
   ui?: string;
   token: string;
@@ -71,6 +84,7 @@ export type OwnerHostOptions = {
   ) => Promise<OwnerMediaResult>;
 };
 export function createOwnerHost(options: OwnerHostOptions) {
+  const diagnostics = options.diagnostics ?? new LocalDiagnostics();
   const files = new WorkspaceFiles(options.root);
   const providers = options.providers?.(files);
   const analysis = providers?.analysis ?? options.analysis;
@@ -81,8 +95,9 @@ export function createOwnerHost(options: OwnerHostOptions) {
     planningAvailable: Boolean(
       analysis && clipPreparation && analysis.mode === clipPreparation.mode,
     ),
-    localMedia: true,
-    cloud: false,
+    ...(options.hosted
+      ? { execution: "hosted", localMedia: false, cloud: true }
+      : { localMedia: true, cloud: false }),
   });
   const workspaces = new Map<string, OwnerWorkspace>();
   const analyses = new Map<string, OwnerAnalysis>();
@@ -91,13 +106,17 @@ export function createOwnerHost(options: OwnerHostOptions) {
     ? new OwnerDraftStore(options.storageRoot)
     : undefined;
   const drafts = storage
-    ? new OwnerWorkspaceDrafts(storage, files, (id) =>
-        ownerDraftSnapshotSchema.parse({
-          version: 1,
-          workspace: workspaces.get(id),
-          analysis: analyses.get(id) ?? null,
-          clips: batches.get(id)?.snapshot().clips ?? [],
-        }),
+    ? new OwnerWorkspaceDrafts(
+        storage,
+        files,
+        (id) =>
+          ownerDraftSnapshotSchema.parse({
+            version: 1,
+            workspace: workspaces.get(id),
+            analysis: analyses.get(id) ?? null,
+            clips: batches.get(id)?.snapshot().clips ?? [],
+          }),
+        diagnostics,
       )
     : undefined;
   const createBatch = (workspace: OwnerWorkspace) =>
@@ -117,6 +136,8 @@ export function createOwnerHost(options: OwnerHostOptions) {
         render: options.media,
       },
       () => drafts?.changed(workspace.id),
+      diagnostics,
+      options.capacity,
     );
   const controllers = new Set<AbortController>();
   const tasks = new Set<Promise<void>>();
@@ -135,6 +156,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
   const expires = new Map<string, number>();
   const sources = new OwnerSourceAcquisition({
     files,
+    diagnostics,
     roots: {
       ...(options.storageRoot ? { downloads: options.storageRoot } : {}),
       ...(options.desktopStorageRoot
@@ -162,15 +184,17 @@ export function createOwnerHost(options: OwnerHostOptions) {
     req: IncomingMessage,
     signal: AbortSignal,
   ) {
+    if (options.receiveSource)
+      return options.receiveSource(id, files, req, signal);
     const size = Number(req.headers["content-length"]);
     if (
       !Number.isSafeInteger(size) ||
       size <= 0 ||
-      size > OWNER_LIMITS.sourceBytes ||
+      size > (options.sourceLimits?.bytes ?? OWNER_LIMITS.sourceBytes) ||
       req.headers["content-type"] !== "video/mp4"
     )
       throw new Error("invalid_source");
-    await requireDisk(options.root, size * 2);
+    await (options.capacity ?? requireDisk)(options.root, size * 2);
     const file = await open(await files.file(id, "source.mp4"), "wx", 0o600);
     const hash = createHash("sha256");
     try {
@@ -198,6 +222,12 @@ export function createOwnerHost(options: OwnerHostOptions) {
       signal,
     );
     if (inspected.operation !== "inspect") throw new Error("invalid_source");
+    if (
+      options.sourceLimits &&
+      (inspected.source.durationMs > options.sourceLimits.durationMs ||
+        inspected.source.bytes > options.sourceLimits.bytes)
+    )
+      throw new Error("invalid_source");
     const workspace: OwnerWorkspace = {
       id,
       source: inspected.source,
@@ -279,7 +309,8 @@ export function createOwnerHost(options: OwnerHostOptions) {
           }
         }
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        diagnostics.failure("cleanup", error);
         /* Failed cleanup remains owned for close/retry. */
       });
     return expiryTask;
@@ -295,13 +326,18 @@ export function createOwnerHost(options: OwnerHostOptions) {
   const origin = () =>
     options.frontendOrigin ?? `http://localhost:${boundPort()}`;
   function dispatch(req: IncomingMessage, res: ServerResponse) {
-    const task = handle(req, res);
+    const task = diagnostics.run(
+      req.method === "GET" ? "http_read" : "http_request",
+      () => handle(req, res),
+      { quiet: req.method === "GET", status: () => res.statusCode },
+    );
     tasks.add(task);
     void task.finally(() => tasks.delete(task));
     return task;
   }
   const server = createServer(dispatch);
   function authorized(req: IncomingMessage) {
+    if (options.authorize) return options.authorize(req);
     if (
       req.headers.host !== `localhost:${boundPort()}` &&
       req.headers.host !== `127.0.0.1:${boundPort()}`
@@ -346,6 +382,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       res.writeHead(416).end();
       return;
     }
+    options.reserveRead?.(end - start + 1);
     res.writeHead(range ? 206 : 200, {
       "Content-Type": type,
       "Content-Length": end - start + 1,
@@ -366,7 +403,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
     };
     if (workspaceId) streams.add(owned);
     try {
-      input.on("error", () => res.destroy());
+      input.on("error", (error) => {
+        diagnostics.failure("stream", error);
+        res.destroy();
+      });
       input.once("close", finish);
       res.once("close", () => {
         input.destroy();
@@ -385,6 +425,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
       "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
     );
     const controller = new AbortController();
+    if (options.hosted)
+      controller.signal.addEventListener("abort", () => req.destroy(), {
+        once: true,
+      });
     const agent = req.url?.startsWith("/api/agent/workspace/") ?? false;
     const clipReply = (list: OwnerClipList) =>
       agent
@@ -704,7 +748,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           throw new Error("invalid_source");
         uploading = true;
         try {
-          await requireDisk(options.root, size * 2);
+          await (options.capacity ?? requireDisk)(options.root, size * 2);
           newId = await files.create();
           await receiveSource(newId, req, controller.signal);
           const workspace = await inspectWorkspace(newId, controller.signal);
@@ -722,7 +766,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           ? req.url?.replace("/api/agent/workspace/", "/api/workspace/")
           : req.url
       )?.match(
-        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|cancel|output|source|edit|picture|validate)(?:\/(\d+))?)?)?)?$/,
+        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|picture|validate)(?:\/(\d+))?)?)?)?$/,
       );
       if (
         agent &&
@@ -732,9 +776,14 @@ export function createOwnerHost(options: OwnerHostOptions) {
           (req.method === "GET"
             ? Boolean(route[4])
             : req.method !== "POST" ||
-              !["edit", "picture", "render", "cancel", "validate"].includes(
-                route[4] ?? "",
-              )))
+              ![
+                "edit",
+                "picture",
+                "render",
+                "retry",
+                "cancel",
+                "validate",
+              ].includes(route[4] ?? "")))
       ) {
         res.writeHead(404).end();
         return;
@@ -947,7 +996,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           req.method === "POST" &&
           batch &&
           route[3] &&
-          route[4] === "render"
+          (route[4] === "render" || route[4] === "retry")
         ) {
           if (busy.has(workspace.id)) {
             res.writeHead(409).end();
@@ -955,10 +1004,15 @@ export function createOwnerHost(options: OwnerHostOptions) {
           }
           busy.add(workspace.id);
           try {
-            const result = await batch.render(
-              route[3],
-              await readOwnerJson(req),
-            );
+            const request = await readOwnerJson(req);
+            const result =
+              route[4] === "retry"
+                ? await batch.retry(
+                    route[3],
+                    request,
+                    analyses.get(workspace.id),
+                  )
+                : await batch.render(route[3], request);
             res
               .writeHead(202, { "Content-Type": "application/json" })
               .end(JSON.stringify(clipReply(result)));
@@ -1068,11 +1122,8 @@ export function createOwnerHost(options: OwnerHostOptions) {
             res.writeHead(409).end();
             return;
           }
-          const result = await analyzeOwner(
-            workspace,
-            inputs,
-            analysis,
-            controller.signal,
+          const result = await diagnostics.run("find_moments", () =>
+            analyzeOwner(workspace, inputs, analysis, controller.signal),
           );
           controller.signal.throwIfAborted();
           analyses.set(workspace.id, result);
@@ -1128,7 +1179,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
             res.writeHead(409).end();
             return;
           }
-          await requireDisk(options.root, OWNER_LIMITS.outputBytes * 2);
+          await (options.capacity ?? requireDisk)(
+            options.root,
+            OWNER_LIMITS.outputBytes * 2,
+          );
           const result = await options.media(
             {
               workspaceId: workspace.id,
@@ -1188,6 +1242,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       }
       res.writeHead(404).end();
     } catch (error) {
+      diagnostics.failure("http_request", error);
       if (newId) await files.remove(newId).catch(() => undefined);
       if (!res.destroyed)
         res
@@ -1210,26 +1265,30 @@ export function createOwnerHost(options: OwnerHostOptions) {
     server,
     expire,
     async close() {
-      closing = true;
-      clearInterval(expiryTimer);
-      for (const c of controllers) c.abort();
-      server.closeAllConnections();
-      try {
-        await sources.close();
-        await storage?.cancelPending();
-        await Promise.allSettled([...tasks]);
-        await expiryTask;
-        await Promise.all([...batches.values()].map((batch) => batch.close()));
-        await drafts?.close();
-        batches.clear();
-        await providers?.close?.(AbortSignal.timeout(30_000));
-        await files.close();
-        analyses.clear();
-        workspaces.clear();
-        expires.clear();
-      } finally {
-        await new Promise<void>((resolve) => server.close(() => resolve()));
-      }
+      return diagnostics.run("cleanup", async () => {
+        closing = true;
+        clearInterval(expiryTimer);
+        for (const c of controllers) c.abort();
+        server.closeAllConnections();
+        try {
+          await sources.close();
+          await storage?.cancelPending();
+          await Promise.allSettled([...tasks]);
+          await expiryTask;
+          await Promise.all(
+            [...batches.values()].map((batch) => batch.close()),
+          );
+          await drafts?.close();
+          batches.clear();
+          await providers?.close?.(AbortSignal.timeout(30_000));
+          await files.close();
+          analyses.clear();
+          workspaces.clear();
+          expires.clear();
+        } finally {
+          await new Promise<void>((resolve) => server.close(() => resolve()));
+        }
+      });
     },
   };
 }

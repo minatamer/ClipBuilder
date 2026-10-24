@@ -9,11 +9,13 @@ export function Workspace({
   clear,
   localMode = false,
   cloudMode = false,
+  illustrativePictures = false,
 }: {
   children: ReactNode;
   clear?: () => void;
   localMode?: boolean;
   cloudMode?: boolean;
+  illustrativePictures?: boolean;
 }) {
   return (
     <div className={styles.workspace}>
@@ -41,6 +43,7 @@ export function Workspace({
           <PrivacyDialog
             localMedia={localMode}
             cloudMedia={cloudMode}
+            illustrativePictures={illustrativePictures}
             triggerVariant="secondary"
             triggerClassName={styles.headerButton}
           />

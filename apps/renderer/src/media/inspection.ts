@@ -90,8 +90,8 @@ export async function probeMedia(
         ),
       ),
     );
-  } catch {
-    throw new MediaFailure("invalid");
+  } catch (error) {
+    throw new MediaFailure("invalid", undefined, undefined, error);
   }
 }
 export async function fileChecksum(path: string, signal: AbortSignal) {

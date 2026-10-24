@@ -169,7 +169,7 @@ async function identityToken(audience: string) {
 }
 export async function fetchControlApi(path: string, options: RequestInit) {
   if (
-    !/^\/v1\/(?:analysis\/[a-z-]+|session\/exit|diagnostics|sample\/[A-Za-z0-9/_-]+|retained-sample\/video)$/.test(
+    !/^\/v1\/(?:editing\/[A-Za-z0-9/_-]+|analysis\/[a-z-]+|session\/exit|diagnostics|sample\/[A-Za-z0-9/_-]+|retained-sample\/video)$/.test(
       path,
     )
   )

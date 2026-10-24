@@ -1,9 +1,14 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+vi.mock("./control-api", async (original) => ({
+  ...(await original<typeof import("./control-api")>()),
+  fetchControlApi: vi.fn(),
+}));
 vi.mock("../../../../scripts/local-discovery.mjs", () => ({
   discoverOwnerHost: vi.fn(),
 }));
 import { discoverOwnerHost } from "../../../../scripts/local-discovery.mjs";
 import { proxyLocalWorkflow } from "./local-workflow";
+import { fetchControlApi } from "./control-api";
 const fetcher = vi.fn<typeof fetch>();
 beforeEach(() => {
   vi.stubEnv("APP_ENV", "local");
@@ -19,6 +24,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   fetcher.mockReset();
   vi.mocked(discoverOwnerHost).mockReset();
+  vi.mocked(fetchControlApi).mockReset();
 });
 const input = (method = "GET", headers: Record<string, string> = {}) =>
   new Request("http://localhost:3000/api/local/capabilities", {
@@ -70,16 +76,47 @@ it("rejects cross-site, missing write Origin and agent access before private dis
   expect(discoverOwnerHost).toHaveBeenCalledTimes(0);
   expect(fetcher).toHaveBeenCalledTimes(0);
 });
-it("rejects hosted local routes without metadata, capability or upstream I/O", async () => {
+it("rejects hosted acquisition without capability discovery or upstream I/O", async () => {
   vi.stubEnv("APP_ENV", "preview");
   vi.stubEnv("PRIVATE_BACKEND_ORIGIN", "https://backend.run.app");
   vi.stubEnv("BACKEND_AUDIENCE", "https://backend.run.app");
   vi.stubEnv("FRONTEND_ORIGIN", "https://frontend.run.app");
-  expect((await proxyLocalWorkflow(input(), ["capabilities"])).status).toBe(
-    404,
-  );
+  expect(
+    (await proxyLocalWorkflow(input(), ["sources", "lookup"])).status,
+  ).toBe(404);
   expect(discoverOwnerHost).toHaveBeenCalledTimes(0);
   expect(fetcher).toHaveBeenCalledTimes(0);
+});
+it("forwards hosted editor requests through authenticated control transport with session cookies and CSRF", async () => {
+  vi.stubEnv("APP_ENV", "production");
+  vi.stubEnv("PRIVATE_BACKEND_ORIGIN", "https://backend.run.app");
+  vi.stubEnv("BACKEND_AUDIENCE", "https://backend.run.app");
+  vi.stubEnv("FRONTEND_ORIGIN", "https://frontend.run.app");
+  vi.mocked(fetchControlApi).mockResolvedValue(
+    new Response(null, { status: 204 }),
+  );
+  const cookie = `__Host-clipping_editor=${"a".repeat(43)}; __Host-clipping_editor_csrf=${"b".repeat(43)}; unrelated=private`;
+  const response = await proxyLocalWorkflow(
+    new Request("https://frontend.run.app/api/local/session", {
+      method: "DELETE",
+      headers: {
+        Host: "frontend.run.app",
+        "X-Forwarded-Proto": "https",
+        Origin: "https://frontend.run.app",
+        "Sec-Fetch-Site": "same-origin",
+        Cookie: cookie,
+      },
+    }),
+    ["session"],
+  );
+  expect(response.status).toBe(204);
+  expect(discoverOwnerHost).not.toHaveBeenCalled();
+  const [path, options] = vi.mocked(fetchControlApi).mock.calls[0]!;
+  expect(path).toBe("/v1/editing/session");
+  const headers = new Headers(options.headers);
+  expect(headers.get("X-CSRF-Token")).toBe("b".repeat(43));
+  expect(headers.get("Cookie")).not.toContain("unrelated");
+  expect(headers.has("Authorization")).toBe(false);
 });
 it("propagates browser cancellation into the upstream stream", async () => {
   fetcher.mockResolvedValue(

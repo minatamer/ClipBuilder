@@ -1,0 +1,122 @@
+.state {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cb-space-6);
+  width: 100%;
+  min-width: 0;
+  min-height: var(--processing-height, min(25rem, 55svh));
+  padding: var(--cb-space-8) var(--cb-space-4);
+  text-align: center;
+  border: 1px solid var(--cb-glass-border);
+  border-radius: var(--cb-radius-panel);
+  background:
+    radial-gradient(ellipse at 50% 38%, rgb(80 142 255 / 12%), transparent 62%),
+    var(--cb-glass-sheen), rgb(7 22 52 / 20%);
+  box-shadow: var(--cb-glass-edge-shadow);
+  overflow: hidden;
+}
+.visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(6.5rem, 12vw, 8rem);
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+}
+.halo {
+  position: absolute;
+  inset: -35%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(92 157 255 / 24%), transparent 68%);
+  animation: breathe 3.2s ease-in-out infinite;
+}
+.orbit {
+  position: absolute;
+  inset: 0.1rem;
+  border: 1px solid rgb(154 194 255 / 15%);
+  border-radius: 50%;
+}
+.orbit::after {
+  content: "";
+  position: absolute;
+  width: 0.45rem;
+  height: 0.45rem;
+  top: 12%;
+  left: 12%;
+  border-radius: 50%;
+  background: var(--cb-blue-light);
+  box-shadow: 0 0 1rem rgb(120 175 255 / 75%);
+}
+.spinner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--cb-blue-light);
+  opacity: 0.9;
+  animation: spin 2.4s linear infinite;
+}
+.mark {
+  width: 3.15rem;
+  height: 3.15rem;
+  border-radius: 1rem;
+  box-shadow:
+    var(--cb-glass-edge-shadow),
+    0 0.75rem 2.25rem rgb(0 8 28 / 24%);
+  animation: float 3.2s ease-in-out infinite;
+}
+.mark > span {
+  left: 0.74rem;
+  width: 1.65rem;
+  height: 0.45rem;
+}
+.mark > span:first-child {
+  top: 0.95rem;
+}
+.mark > span:last-child {
+  bottom: 0.95rem;
+  width: 1.3rem;
+}
+.state .title {
+  position: relative;
+  margin: 0;
+  color: var(--cb-ink);
+  font-size: clamp(1.25rem, 2.3vw, 1.75rem);
+  font-weight: 680;
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.meter {
+  width: min(100%, 20rem);
+  text-align: left;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes breathe {
+  50% {
+    opacity: 0.6;
+    transform: scale(0.88);
+  }
+}
+@keyframes float {
+  50% {
+    transform: translateY(-0.3rem);
+  }
+}
+@media (forced-colors: active) {
+  .state {
+    border-color: ButtonText;
+    background: Canvas;
+  }
+  .spinner {
+    color: Highlight;
+  }
+}

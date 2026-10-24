@@ -4,9 +4,28 @@ import { ArrowRight } from "lucide-react";
 
 import { Button, IconButton } from "./button";
 import { Progress } from "./progress";
+import { ProcessingState } from "./processing-state";
 import { WorkflowFrame } from "./workflow-frame";
 
 describe("shared workflow primitives", () => {
+  it("announces unknown work without a percentage and shows only supplied measured progress", () => {
+    const unknown = renderToStaticMarkup(
+      <ProcessingState label="Exporting clip" />,
+    );
+    expect(unknown).toContain('role="status"');
+    expect(unknown).toContain("Exporting clip");
+    expect(unknown).not.toContain('role="progressbar"');
+    expect(unknown).not.toContain("%");
+    const measured = renderToStaticMarkup(
+      <ProcessingState
+        label="Uploading video"
+        progress={{ fraction: 0.5, valueText: "50 of 100 bytes uploaded" }}
+      />,
+    );
+    expect(measured).toContain('aria-valuenow="50"');
+    expect(measured).toContain('aria-valuetext="50 of 100 bytes uploaded"');
+    expect(measured).toContain("transform:scaleX(0.5)");
+  });
   it.each([
     { step: 0 as const, title: "Choose your video", number: 1 },
     { step: 1 as const, title: "Pick one moment", number: 2 },

@@ -8,7 +8,8 @@ export class MediaFailure extends Error {
     readonly code: MediaFailureCode,
     readonly stage?: RendererFailureStage,
     readonly underlyingCode?: MediaFailureCode,
+    cause?: unknown,
   ) {
-    super(code);
+    super(code, cause === undefined ? undefined : { cause });
   }
 }

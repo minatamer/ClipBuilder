@@ -20,12 +20,14 @@ it("adds local controls while preserving the existing sample link", async () => 
   expect(sample.type).toBe(SampleExperience);
   expect(sample.props.sampleRequested).toBe(true);
 });
-it("keeps hosted start on the bounded demo", async () => {
+it("opens the shared upload/editor on hosted start and ignores the local sample bypass", async () => {
   vi.stubEnv("APP_ENV", "preview");
   vi.stubEnv("FRONTEND_ORIGIN", "https://frontend.run.app");
   vi.stubEnv("PRIVATE_BACKEND_ORIGIN", "https://backend.run.app");
   vi.stubEnv("BACKEND_AUDIENCE", "https://backend.run.app");
-  expect((await StartPage({ searchParams: Promise.resolve({}) })).type).toBe(
-    SampleExperience,
-  );
+  for (const query of [{}, { source: "sample" }]) {
+    const page = await StartPage({ searchParams: Promise.resolve(query) });
+    expect(page.type).toBe(LocalEditingExperience);
+    expect(page.props.hosted).toBe(true);
+  }
 });

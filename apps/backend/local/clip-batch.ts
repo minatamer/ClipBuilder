@@ -11,6 +11,7 @@ import {
 } from "../../../packages/contracts/local/index.ts";
 import {
   OWNER_BATCH_POLICY,
+  ownerClipPlanSchema,
   ownerAssetSchema,
   ownerBatchRequestSchema,
   ownerClipBaseSchema,
@@ -32,35 +33,20 @@ import { ownerAgentValidation } from "./agent-view.ts";
 import { normalizeOwnerPicture } from "./personal-picture.ts";
 import {
   ownerAnalysisSchema,
-  ownerWordsSchema,
   type OwnerAnalysis,
   type OwnerMoment,
   type OwnerWord,
 } from "../../../packages/contracts/local/selection.ts";
 import { compileFixedCaptions } from "../src/assembly/fixed-captions.ts";
 import { WorkspaceFiles, requireDisk } from "./workspace-files.ts";
-import {
-  contextualPictureBriefSchema,
-  CONTEXTUAL_PICTURE_POLICY,
-} from "../../../packages/contracts/src/contextual-picture.schema.ts";
+import { CONTEXTUAL_PICTURE_POLICY } from "../../../packages/contracts/src/contextual-picture.schema.ts";
 import { normalizePicture } from "../src/assembly/picture-raster.ts";
 import type { OwnerAiMode } from "../../../packages/contracts/local/policy.ts";
 
-export const ownerClipPlanSchema = z
-  .array(
-    z
-      .object({
-        startFrame: z.number().int().nonnegative(),
-        endFrame: z.number().int().positive(),
-        brief: contextualPictureBriefSchema,
-        evidenceWordIds: z
-          .array(ownerWordsSchema.element.shape.id)
-          .min(1)
-          .max(CONTEXTUAL_PICTURE_POLICY.maxSupportingPhraseWords),
-      })
-      .strict(),
-  )
-  .max(OWNER_BATCH_POLICY.imageAttemptsPerClip);
+import { LocalDiagnostics } from "./diagnostics.ts";
+import { critiqueOwnerVisualCue, ownerVisualClock } from "./gemini-critique.ts";
+
+export { ownerClipPlanSchema } from "../../../packages/contracts/local/clips.ts";
 export type OwnerClipPorts = {
   readonly mode: OwnerAiMode;
   plan(
@@ -74,7 +60,14 @@ export type OwnerClipPorts = {
       words: OwnerWord[];
     },
     signal: AbortSignal,
-  ): Promise<{ bytes: Buffer; origin: "synthetic" | "generated" }>;
+  ): Promise<{ bytes: Buffer; origin: "synthetic" | "generated" } | null>;
+  resume?(request: {
+    workspaceId: string;
+    clipId: string;
+    words: OwnerWord[];
+    frames: number;
+    plan: z.infer<typeof ownerClipPlanSchema>;
+  }): void;
   render(job: OwnerMediaJob, signal: AbortSignal): Promise<OwnerMediaResult>;
 };
 const digest = (value: unknown) =>
@@ -105,6 +98,8 @@ export class OwnerClipBatch {
     private readonly files: WorkspaceFiles,
     private readonly ports: OwnerClipPorts,
     private readonly changed: () => void = () => {},
+    private readonly diagnostics = new LocalDiagnostics(),
+    private readonly capacity = requireDisk,
   ) {
     this.workspace = ownerWorkspaceSchema.parse(workspace);
   }
@@ -133,6 +128,36 @@ export class OwnerClipBatch {
             digest(clip.base) !== clip.baseHash))
       )
         throw new Error("stale_saved_clip");
+      const preparation = clip.preparation;
+      if (preparation) {
+        const moment = preparation.moment;
+        const frames = moment.cut.endFrame - moment.cut.startFrame;
+        if (
+          moment.id !== clip.momentId ||
+          moment.cut.endFrame >
+            Math.floor((this.workspace.source.durationMs * OWNER_FPS) / 1000) ||
+          moment.processingIdentity !==
+            createHash("sha256")
+              .update(
+                `${this.workspace.source.fingerprint}:${moment.cut.startFrame}:${moment.cut.endFrame}`,
+              )
+              .digest("hex") ||
+          new Set(preparation.pictures.map((picture) => picture.index)).size !==
+            preparation.pictures.length ||
+          preparation.pictures.some(
+            (picture) =>
+              !preparation.plan?.[picture.index] ||
+              (picture.visual &&
+                (picture.visual.endFrame > frames ||
+                  !clip.assets.some(
+                    (asset) =>
+                      asset.id === picture.visual!.assetId &&
+                      asset.digest === picture.visual!.digest,
+                  ))),
+          )
+        )
+          throw new Error("stale_saved_clip");
+      }
       if (clip.base && clip.baseHash) {
         clip.edit ??= automaticOwnerEdit(clip.base, clip.id, clip.baseHash);
         if (
@@ -252,17 +277,28 @@ export class OwnerClipBatch {
       request.policyRevision !== analysis.inputs.policyRevision
     )
       throw new Error("stale_analysis");
-    const moments = request.momentIds.map((id) => {
+    const choices = request.momentIds.map((id) => {
       const moment = [...analysis.manual, ...analysis.suggestions].find(
         (item) => item.id === id,
       );
       if (!moment) throw new Error("moment_missing");
       return structuredClone(moment);
     });
+    // Identical returned passages stay visible; processing the same cut once
+    // avoids a second metered preparation for duplicate recommendations.
+    const moments = [
+      ...new Map(
+        choices.map((moment) => [moment.processingIdentity, moment]),
+      ).values(),
+    ];
     const existing = (moment: OwnerMoment) =>
       [...this.clips.values()].find(
         (clip) =>
-          clip.analysisId === analysis.id && clip.momentId === moment.id,
+          clip.analysisId === analysis.id &&
+          (clip.momentId === moment.id ||
+            clip.preparation?.moment.processingIdentity ===
+              moment.processingIdentity ||
+            clip.base?.processingIdentity === moment.processingIdentity),
       );
     const fresh = moments.filter((moment) => {
       const clip = existing(moment);
@@ -286,6 +322,7 @@ export class OwnerClipBatch {
         baseHash: null,
         state: "queued",
         base: null,
+        preparation: { moment, plan: null, pictures: [] },
         edit: null,
         assets: [],
         outputs: [],
@@ -308,7 +345,7 @@ export class OwnerClipBatch {
         (sum, clip) => sum + Math.max(1, clip.outputs.length),
         0,
       );
-    await requireDisk(
+    await this.capacity(
       this.files.root,
       this.workspace.source.bytes +
         assets +
@@ -326,6 +363,54 @@ export class OwnerClipBatch {
     const request = ownerClipRenderRequestSchema.parse(value),
       cancelVersion = this.cancelVersion;
     return this.serialize(() => this.renderOne(id, request, cancelVersion));
+  }
+  async retry(id: string, value: unknown, analysis?: OwnerAnalysis) {
+    const request = ownerClipRenderRequestSchema.parse(value),
+      cancelVersion = this.cancelVersion;
+    return this.serialize(async () => {
+      const key = `retry:${id}:${request.operationId}`;
+      if (this.receipt(key, request)) return this.snapshot();
+      const clip = this.clips.get(id);
+      if (
+        this.closing ||
+        !clip ||
+        clip.revision !== request.expectedRevision ||
+        !["failed", "canceled"].includes(clip.state)
+      )
+        throw new Error("stale_or_busy_clip");
+      if (clip.base) {
+        // Rendering a completed base never invokes planning or image generation.
+        const result = await this.renderOne(id, request, cancelVersion);
+        this.receipts.set(key, digest(request));
+        return result;
+      }
+      const moment =
+        clip.preparation?.moment ??
+        (analysis?.id === clip.analysisId
+          ? [...analysis.manual, ...analysis.suggestions].find(
+              (candidate) => candidate.id === clip.momentId,
+            )
+          : undefined);
+      if (!moment) throw new Error("moment_missing");
+      await this.reserve(0, 1);
+      this.receipts.set(key, digest(request));
+      if (cancelVersion !== this.cancelVersion) return this.snapshot();
+      clip.preparation ??= {
+        moment: structuredClone(moment),
+        plan: null,
+        pictures: [],
+      };
+      clip.state = "queued";
+      clip.error = null;
+      this.queue.push({
+        clip,
+        moment: structuredClone(moment),
+        renderRevision: 0,
+      });
+      this.changed();
+      this.start();
+      return this.snapshot();
+    });
   }
   private async renderOne(id: string, value: unknown, cancelVersion: number) {
     const request = ownerClipRenderRequestSchema.parse(value),
@@ -403,39 +488,45 @@ export class OwnerClipBatch {
     signal: AbortSignal,
   ): Promise<OwnerClipBase> {
     clip.state = "preparing";
-    clip.calls.plan++;
     const frames = moment.cut.endFrame - moment.cut.startFrame;
-    const plan = ownerClipPlanSchema.parse(
-      await this.ports.plan(
-        {
-          workspace: structuredClone(this.workspace),
-          clipId: clip.id,
-          moment: structuredClone(moment),
-        },
-        signal,
-      ),
-    );
-    if (
-      plan.some(
-        (cue) =>
-          cue.endFrame <= cue.startFrame ||
-          cue.endFrame > frames ||
-          new Set(cue.evidenceWordIds).size !== cue.evidenceWordIds.length ||
-          cue.evidenceWordIds.some(
-            (id) =>
-              !moment.cues.some(
-                (word) =>
-                  word.id === id &&
-                  word.endMs > (cue.startFrame * 1000) / OWNER_FPS &&
-                  word.startMs < (cue.endFrame * 1000) / OWNER_FPS,
-              ),
-          ),
-      )
-    )
-      throw new Error("invalid_plan_clock");
+    const preparation = (clip.preparation ??= {
+      moment: structuredClone(moment),
+      plan: null,
+      pictures: [],
+    });
+    if (preparation.plan === null) {
+      clip.calls.plan++;
+      preparation.plan = ownerClipPlanSchema.parse(
+        await this.ports.plan(
+          {
+            workspace: structuredClone(this.workspace),
+            clipId: clip.id,
+            moment: structuredClone(moment),
+          },
+          signal,
+        ),
+      );
+      this.changed();
+    }
+    const plan = preparation.plan;
+    this.ports.resume?.({
+      workspaceId: this.workspace.id,
+      clipId: clip.id,
+      words: moment.cues,
+      frames,
+      plan,
+    });
     signal.throwIfAborted();
-    const visuals = [];
-    for (const cue of plan) {
+    const visuals: OwnerClipBase["overlay"]["visuals"] = [];
+    for (const [index, cue] of plan.entries()) {
+      critiqueOwnerVisualCue(cue, moment.cues, frames, this.diagnostics);
+      const retained = preparation.pictures.find(
+        (picture) => picture.index === index,
+      );
+      if (retained) {
+        if (retained.visual) visuals.push(retained.visual);
+        continue;
+      }
       clip.calls.image++;
       const picture = await this.ports.image(
         {
@@ -446,6 +537,12 @@ export class OwnerClipBatch {
         signal,
       );
       signal.throwIfAborted();
+      if (!picture) {
+        this.diagnostics.critique("image_generate", "gemini_output_unusable");
+        preparation.pictures.push({ index, visual: null });
+        this.changed();
+        continue;
+      }
       if (
         picture.origin !==
         (this.ports.mode === "synthetic-ai" ? "synthetic" : "generated")
@@ -469,12 +566,11 @@ export class OwnerClipBatch {
         { flag: "wx", mode: 0o600 },
       );
       clip.assets.push(asset);
-      visuals.push({
+      const visual = {
         id: randomUUID(),
         assetId: asset.id,
         digest: asset.digest,
-        startFrame: cue.startFrame,
-        endFrame: cue.endFrame,
+        ...ownerVisualClock(cue, frames),
         box: {
           x: 80 / 1080,
           y: 900 / 1920,
@@ -483,12 +579,18 @@ export class OwnerClipBatch {
         },
         fit: "contain" as const,
         origin: picture.origin,
-      });
+      };
+      visuals.push(visual);
+      preparation.pictures.push({ index, visual });
+      this.changed();
     }
-    const captions = compileFixedCaptions({
-      words: moment.cues,
-      range: { startMs: 0, endMs: Math.round((frames * 1000) / OWNER_FPS) },
-    });
+    const captions = compileFixedCaptions(
+      {
+        words: moment.cues,
+        range: { startMs: 0, endMs: Math.round((frames * 1000) / OWNER_FPS) },
+      },
+      () => this.diagnostics.critique("clip_prepare"),
+    );
     return ownerClipBaseSchema.parse({
       version: 1,
       analysisId: clip.analysisId,
@@ -508,61 +610,70 @@ export class OwnerClipBatch {
       const controller = new AbortController();
       this.current = { clip, controller };
       try {
-        if (work.moment) {
-          clip.base = await this.prepare(clip, work.moment, controller.signal);
-          clip.baseHash = digest(clip.base);
-          clip.edit = automaticOwnerEdit(clip.base, clip.id, clip.baseHash);
-          clip.state = "review-ready";
-        }
-        controller.signal.throwIfAborted();
-        if (!clip.base) throw new Error("bundle_missing");
-        const snapshot = work.snapshot ?? ownerClipBaseSchema.parse(clip.base),
-          editRevision = work.editRevision ?? clip.revision,
-          overlay =
-            work.overlay ??
-            compileOwnerOverlay(snapshot, clip.edit, clip.assets),
-          jobId = randomUUID();
-        clip.state = "rendering";
-        clip.calls.render++;
-        const result = await this.ports.render(
-          {
-            workspaceId: this.workspace.id,
-            operation: "clip",
-            jobId,
-            clipId: clip.id,
-            renderRevision: work.renderRevision,
-            cut: structuredClone(snapshot.cut),
-            fingerprint: snapshot.fingerprint,
-            overlay: structuredClone(overlay),
+        await this.diagnostics.run(
+          "clip_build",
+          async () => {
+            if (work.moment) {
+              clip.base = await this.diagnostics.run("clip_prepare", () =>
+                this.prepare(clip, work.moment!, controller.signal),
+              );
+              clip.baseHash = digest(clip.base);
+              clip.edit = automaticOwnerEdit(clip.base, clip.id, clip.baseHash);
+              clip.state = "review-ready";
+            }
+            controller.signal.throwIfAborted();
+            if (!clip.base) throw new Error("bundle_missing");
+            const snapshot =
+                work.snapshot ?? ownerClipBaseSchema.parse(clip.base),
+              editRevision = work.editRevision ?? clip.revision,
+              overlay =
+                work.overlay ??
+                compileOwnerOverlay(snapshot, clip.edit, clip.assets),
+              jobId = randomUUID();
+            clip.state = "rendering";
+            clip.calls.render++;
+            const result = await this.ports.render(
+              {
+                workspaceId: this.workspace.id,
+                operation: "clip",
+                jobId,
+                clipId: clip.id,
+                renderRevision: work.renderRevision,
+                cut: structuredClone(snapshot.cut),
+                fingerprint: snapshot.fingerprint,
+                overlay: structuredClone(overlay),
+              },
+              controller.signal,
+            );
+            controller.signal.throwIfAborted();
+            if (
+              result.operation !== "clip" ||
+              result.frames !== snapshot.overlay.frames ||
+              result.bytes <= 0 ||
+              result.bytes > OWNER_BATCH_POLICY.clipReservationBytes ||
+              result.durationMs !==
+                Math.round((snapshot.overlay.frames * 1000) / OWNER_FPS)
+            )
+              throw new Error("invalid_clip_output");
+            clip.outputs.push({
+              id: digest({
+                baseHash: clip.baseHash,
+                overlayHash: digest(overlay),
+                jobId,
+                editRevision,
+                renderRevision: work.renderRevision,
+              }),
+              revision: work.renderRevision,
+              editRevision,
+              frames: result.frames,
+              bytes: result.bytes,
+            });
+            clip.state =
+              clip.revision === editRevision ? "ready" : "validated-revision";
+            clip.error = null;
           },
-          controller.signal,
+          { independent: true },
         );
-        controller.signal.throwIfAborted();
-        if (
-          result.operation !== "clip" ||
-          result.frames !== snapshot.overlay.frames ||
-          result.bytes <= 0 ||
-          result.bytes > OWNER_BATCH_POLICY.clipReservationBytes ||
-          result.durationMs !==
-            Math.round((snapshot.overlay.frames * 1000) / OWNER_FPS)
-        )
-          throw new Error("invalid_clip_output");
-        clip.outputs.push({
-          id: digest({
-            baseHash: clip.baseHash,
-            overlayHash: digest(overlay),
-            jobId,
-            editRevision,
-            renderRevision: work.renderRevision,
-          }),
-          revision: work.renderRevision,
-          editRevision,
-          frames: result.frames,
-          bytes: result.bytes,
-        });
-        clip.state =
-          clip.revision === editRevision ? "ready" : "validated-revision";
-        clip.error = null;
       } catch {
         clip.state = controller.signal.aborted ? "canceled" : "failed";
         clip.error = controller.signal.aborted
@@ -577,7 +688,7 @@ export class OwnerClipBatch {
             work.renderRevision,
           ),
           { force: true },
-        ).catch(() => undefined);
+        ).catch((error: unknown) => this.diagnostics.failure("cleanup", error));
       } finally {
         this.current = undefined;
         this.changed();
