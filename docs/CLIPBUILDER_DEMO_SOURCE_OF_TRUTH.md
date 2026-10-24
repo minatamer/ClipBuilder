@@ -7508,14 +7508,14 @@ live/provider/rights/cleanup checks are described as complete.
 <!-- build-progress:start -->
 ## Build command progress
 
-Current phase: **10a-quality**
-Next action: Commit this progress-only checkpoint, confirm clean baseline, then inspect current code and document the CL-064 quality/efficiency plan in an isolated checkout.
-Active ticket: CL-064
+Current phase: **11-security-fixes**
+Next action: Finish local backend/private-renderer image builds and offline startup/native parity on verified Node22.23.4, commit the image pin and final reports; retain SEC-04 native vendor release gate. Primary canonical progress-only commit allocates solely docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md; no audit source is applied to the running app.
+Active ticket: CL-065
 Phase prompts: delegated during AFK
 Local commits approved: yes
 
 AFK mode: AFK-SESSION-001
-Provisional owner reviews: 04-decisions, 09-visual-review
+Provisional owner reviews: 04-decisions, 09-visual-review, 10b-security-review
 
 ### AFK decisions
 
@@ -7535,6 +7535,22 @@ Provisional owner reviews: 04-decisions, 09-visual-review
   Reason: Editing watched backend/frontend source could restart or interrupt a paid owner request.
   Consequence / reversibility: Audit commits are reviewable separately. Applying them to the running checkout is deferred until owner manual review finishes; no second app is launched, and no credentials/media are copied.
   Owner review requested on return: yes. Evidence: docs/operations/CL058_063_COMMIT_PLAN.md, human:2026-10-24-current-build-audit-message
+- **AFK-0005** (AFK-SESSION-001, 2026-10-24T13:48:22+00:00, 10a-quality): Execute CL-064 Q-01 obsolete image verifier, Q-02 explicit/resilient cleanup and Q-03 bounded read-only polling; retain speculative optimizations and supported legacy flows.
+  Reason: The first two defects are reproduced; status read ownership has no deadline. Fixes preserve provider policy, calls, UI semantics and private diagnostics.
+  Consequence / reversibility: Small local corrections and regressions are committed in the isolated checkout. Running-app source and paid manual review remain unchanged; owner review is still outstanding.
+  Owner review requested on return: yes. Evidence: audit-worktree:docs/tickets/CL-064-post-deployment-pre-sharing-quality.md, audit-worktree:docs/operations/CODE_QUALITY_AUDIT_2026-10-24.md, audit-worktree:docs/operations/CODE_QUALITY_AUDIT_2026-10-24_INPUTS.json
+- **AFK-0006** (AFK-SESSION-001, 2026-10-24T14:05:17+00:00, 10a-quality): Add documented CL-064 Q-04: cache dependency installation independently from source-only Docker edits.
+  Reason: Both Dockerfiles copy all source before frozen install; source edits invalidate unchanged dependencies. Actual local installation was slow enough to justify the small standard layering correction.
+  Consequence / reversibility: No dependency/runtime behavior changes; actual images and offline cache reuse must pass before committing. Reversible Dockerfile-only change in isolated checkout.
+  Owner review requested on return: yes. Evidence: audit-worktree:docs/operations/CODE_QUALITY_AUDIT_2026-10-24.md#q-04, audit-worktree:docs/tickets/CL-064-post-deployment-pre-sharing-quality.md, commit:c476d8d, commit:311ee7d, commit:b8fefca
+- **AFK-0007** (AFK-SESSION-001, 2026-10-24T14:21:48+00:00, 10b-security-review): Compare pinned dependencies locally with public OSV ecosystem advisory downloads and official maintainer notices; do not run remote repository scanners or upload an npm audit payload.
+  Reason: Current known vulnerabilities require fresh advisory data. A public static feed sends no repository, source, dependency inventory, credentials or private configuration. Scanner metadata export is not authorized.
+  Consequence / reversibility: Local version/reachability analysis is possible; no scanner account, cloud mutation or paid call. Feed coverage/date and container-native limitations will remain explicit.
+  Owner review requested on return: yes. Evidence: https://google.github.io/osv.dev/data/, docs/operations/CODE_QUALITY_AUDIT_2026-10-24_INPUTS.json
+- **AFK-0008** (AFK-SESSION-001, 2026-10-24T14:32:28+00:00, 10b-security-review): Select CL-065 SEC-01 Zod validation patch, SEC-02 official Node image security patch and SEC-03 Next security release; retain SEC-04 as an unresolved vendor/native public-release gate.
+  Reason: Reports exist and desktop/phone HTML rendering was inspected. The bounded Zod reproduction confirms avoidable work; official patches exist for the runtime/framework. FFmpeg MOV metadata advisories remain unfixed on the current supported vendor branch, and a custom parser or broad distribution migration would not safely establish remediation.
+  Consequence / reversibility: Reversible scoped local dependency/image changes proceed through validation. No critical app exploit or owner acceptance is claimed. SEC-04 is unremediated; vendor resolution or explicit owner risk review is needed before public release. No paid/cloud action, scanner upload, push or deployment.
+  Owner review requested on return: yes. Evidence: audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md, audit-worktree:docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html, audit-worktree:docs/tickets/CL-065-post-deployment-pre-sharing-security.md, local HTML 1440/390 px, no horizontal overflow, four cards; bounded Zod input visits4096elements despite maximum10
 
 - [x] 01-docs — Documentation (complete)
 - [x] 02-flow — Core flow (complete)
@@ -7545,9 +7561,9 @@ Provisional owner reviews: 04-decisions, 09-visual-review
 - [x] 07-build — Execute and validate tickets (complete_local)
 - [x] 08-performance — Performance investigation (complete_local)
 - [x] 09-visual-review — Frontend visual approval checkpoint (provisional)
-- [ ] 10a-quality — Quality audit and fixes (in_progress)
-- [ ] 10b-security-review — Security audit and manual review (pending)
-- [ ] 11-security-fixes — Approved security fixes (pending)
+- [x] 10a-quality — Quality audit and fixes (complete_local)
+- [x] 10b-security-review — Security audit and manual review (provisional)
+- [ ] 11-security-fixes — Approved security fixes (in_progress)
 - [ ] 12-handoff — Final local handoff (pending)
 
 This checklist records local work. Human approvals and unresolved external checks are preserved below; it does not authorize paid calls or deployment.
@@ -7557,7 +7573,7 @@ This checklist records local work. Human approvals and unresolved external check
   "schema_version": 3,
   "repo_root": "C:\\Users\\minat\\Work\\ClipBuilder",
   "main_document": "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
-  "updated_at": "2026-10-24T13:34:27+00:00",
+  "updated_at": "2026-10-24T14:45:36+00:00",
   "context": {
     "PROJECT_NAME": {
       "value": "ClipBuilder",
@@ -7592,6 +7608,11 @@ This checklist records local work. Human approvals and unresolved external check
     "AUDIT_SCOPE": {
       "value": "Commit existing work first, then quality/efficiency and STRIDE/dependency audit/fix loops in AFK mode",
       "source": "human:2026-10-24-current-build-audit-message",
+      "confidence": "confirmed"
+    },
+    "AUDIT_WORKTREE": {
+      "value": "C:/Users/minat/.codex/worktrees/quality-security-audit/ClipBuilder",
+      "source": "managed worktree operation dd43d772-2eb5-4d0f-b93d-3ea1b8b03849 at baseline 68d5b96",
       "confidence": "confirmed"
     }
   },
@@ -7665,6 +7686,68 @@ This checklist records local work. Human approvals and unresolved external check
           "docs/operations/CL058_063_COMMIT_PLAN.md",
           "human:2026-10-24-current-build-audit-message"
         ]
+      },
+      {
+        "id": "AFK-0005",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-24T13:48:22+00:00",
+        "phase": "10a-quality",
+        "choice": "Execute CL-064 Q-01 obsolete image verifier, Q-02 explicit/resilient cleanup and Q-03 bounded read-only polling; retain speculative optimizations and supported legacy flows.",
+        "rationale": "The first two defects are reproduced; status read ownership has no deadline. Fixes preserve provider policy, calls, UI semantics and private diagnostics.",
+        "consequence": "Small local corrections and regressions are committed in the isolated checkout. Running-app source and paid manual review remain unchanged; owner review is still outstanding.",
+        "review_needed": true,
+        "evidence": [
+          "audit-worktree:docs/tickets/CL-064-post-deployment-pre-sharing-quality.md",
+          "audit-worktree:docs/operations/CODE_QUALITY_AUDIT_2026-10-24.md",
+          "audit-worktree:docs/operations/CODE_QUALITY_AUDIT_2026-10-24_INPUTS.json"
+        ]
+      },
+      {
+        "id": "AFK-0006",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-24T14:05:17+00:00",
+        "phase": "10a-quality",
+        "choice": "Add documented CL-064 Q-04: cache dependency installation independently from source-only Docker edits.",
+        "rationale": "Both Dockerfiles copy all source before frozen install; source edits invalidate unchanged dependencies. Actual local installation was slow enough to justify the small standard layering correction.",
+        "consequence": "No dependency/runtime behavior changes; actual images and offline cache reuse must pass before committing. Reversible Dockerfile-only change in isolated checkout.",
+        "review_needed": true,
+        "evidence": [
+          "audit-worktree:docs/operations/CODE_QUALITY_AUDIT_2026-10-24.md#q-04",
+          "audit-worktree:docs/tickets/CL-064-post-deployment-pre-sharing-quality.md",
+          "commit:c476d8d",
+          "commit:311ee7d",
+          "commit:b8fefca"
+        ]
+      },
+      {
+        "id": "AFK-0007",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-24T14:21:48+00:00",
+        "phase": "10b-security-review",
+        "choice": "Compare pinned dependencies locally with public OSV ecosystem advisory downloads and official maintainer notices; do not run remote repository scanners or upload an npm audit payload.",
+        "rationale": "Current known vulnerabilities require fresh advisory data. A public static feed sends no repository, source, dependency inventory, credentials or private configuration. Scanner metadata export is not authorized.",
+        "consequence": "Local version/reachability analysis is possible; no scanner account, cloud mutation or paid call. Feed coverage/date and container-native limitations will remain explicit.",
+        "review_needed": true,
+        "evidence": [
+          "https://google.github.io/osv.dev/data/",
+          "docs/operations/CODE_QUALITY_AUDIT_2026-10-24_INPUTS.json"
+        ]
+      },
+      {
+        "id": "AFK-0008",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-24T14:32:28+00:00",
+        "phase": "10b-security-review",
+        "choice": "Select CL-065 SEC-01 Zod validation patch, SEC-02 official Node image security patch and SEC-03 Next security release; retain SEC-04 as an unresolved vendor/native public-release gate.",
+        "rationale": "Reports exist and desktop/phone HTML rendering was inspected. The bounded Zod reproduction confirms avoidable work; official patches exist for the runtime/framework. FFmpeg MOV metadata advisories remain unfixed on the current supported vendor branch, and a custom parser or broad distribution migration would not safely establish remediation.",
+        "consequence": "Reversible scoped local dependency/image changes proceed through validation. No critical app exploit or owner acceptance is claimed. SEC-04 is unremediated; vendor resolution or explicit owner risk review is needed before public release. No paid/cloud action, scanner upload, push or deployment.",
+        "review_needed": true,
+        "evidence": [
+          "audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md",
+          "audit-worktree:docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html",
+          "audit-worktree:docs/tickets/CL-065-post-deployment-pre-sharing-security.md",
+          "local HTML 1440/390 px, no horizontal overflow, four cards; bounded Zod input visits4096elements despite maximum10"
+        ]
       }
     ]
   },
@@ -7674,8 +7757,8 @@ This checklist records local work. Human approvals and unresolved external check
     "local_commits_approved": true,
     "approval_source": "human:2026-10-24-current-build-audit-message"
   },
-  "active_ticket": "CL-064",
-  "next_action": "Commit this progress-only checkpoint, confirm clean baseline, then inspect current code and document the CL-064 quality/efficiency plan in an isolated checkout.",
+  "active_ticket": "CL-065",
+  "next_action": "Finish local backend/private-renderer image builds and offline startup/native parity on verified Node22.23.4, commit the image pin and final reports; retain SEC-04 native vendor release gate. Primary canonical progress-only commit allocates solely docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md; no audit source is applied to the running app.",
   "phases": [
     {
       "id": "01-docs",
@@ -7970,7 +8053,7 @@ This checklist records local work. Human approvals and unresolved external check
       "id": "10a-quality",
       "name": "Quality audit and fixes",
       "gate": null,
-      "status": "in_progress",
+      "status": "complete_local",
       "prompt": {
         "text": "Run a thorough code quality, efficiency and structure audit of ClipBuilder, an existing Next.js frontend/Express backend/shared contracts and React composition with internal Linux native worker, prepared for Cloud Run. Current flow is uploaded owned video to bounded manual/AI moments, caption/picture/filter editor and MP4 export; YouTube acquisition is local-only. First fully document a detailed functionality-preserving plan in CL-064 post-deployment/pre-sharing quality and the owning audit report. Inspect browser workflow/state, server/proxy/provider adapters, native worker/process/media ownership, contracts, persistence, scripts/build/test boundaries and CI/release files. Identify concrete redundancy, dead code, duplicate logic, avoidable work and cleanup/structural defects; avoid cosmetic churn or broad rewrites. Preserve all private diagnostics, generic user/browser errors, paid-output advisory critique policy, explicit retries/reuse, fixed bytes/calls/queues/deadlines/cancellation, shared design and normal motion. Preserve the running owner manual-review app using a separate source checkout and fake/no-key/paid-off/network-blocked tests; never read/copy ignored env or retained media. Execute justified quality fixes one dependency-ready packet at a time through execute/read-only validate/fix/revalidate until no actionable local findings remain. Prepare a whole-file commit plan, inspect staged diffs and make cohesive CL-prefixed local commits under the current explicit Git authorization. Do not start STRIDE/dependency security auditing until this quality phase is complete. Do not deploy, push, spend credits, call providers/cloud, export scanner metadata or claim owner acceptance. Save follow-up preservation guidelines for later manual-feedback edits.",
         "sha256": "79e66c5b23765ee7510f6e7a622cff1dd7b0899957b9c06ccd86f6241d50cf40",
@@ -7986,8 +8069,18 @@ This checklist records local work. Human approvals and unresolved external check
         "approval": null,
         "afk_session": "AFK-SESSION-001"
       },
-      "evidence": [],
-      "blockers": [],
+      "evidence": [
+        "audit-worktree:commit:a28a668",
+        "audit-worktree:docs/operations/CODE_QUALITY_AUDIT_2026-10-24.md",
+        "1784 tests/168 files; lint/types/format; Windows and actual Linux synthetic proofs pass, zero external attempts"
+      ],
+      "blockers": [
+        {
+          "kind": "external",
+          "reason": "Owner paid/visual acceptance, real hosted identity/resources and maximum capacity remain unverified; isolated audit commits await application after ongoing owner manual review.",
+          "reference": "docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md"
+        }
+      ],
       "approval": null,
       "decision": null,
       "reviews": []
@@ -7996,21 +8089,73 @@ This checklist records local work. Human approvals and unresolved external check
       "id": "10b-security-review",
       "name": "Security audit and manual review",
       "gate": "security",
-      "status": "pending",
-      "prompt": null,
-      "evidence": [],
+      "status": "provisional",
+      "prompt": {
+        "text": "Perform a thorough proportionate security audit of the whole ClipBuilder repository after committed CL-064 quality fixes (isolated checkout HEAD a28a668). Use STRIDE and general known threats across the Next frontend/bridge, Express backend, hosted session/admission/identity/cookies/CSRF/rate limits, upload and file delivery, provider use and paid ceilings, local-only YouTube boundary, native worker/subprocesses/FFmpeg/Chromium, contracts/shared composition, build/deployment scripts and pinned dependencies. The demo is one disposable Cloud Run application with upload to bounded manual/AI moments, caption/picture/filter editor and native MP4 download; only local composition permits YouTube acquisition. Identify only substantial realistically applicable threats. Verify exploit preconditions and distinguish source defects from unverified hosted settings and intentional bounded-demo constraints. Preserve private diagnostics and generic UI errors, semantic Gemini critique-only acceptance and explicit retry reuse, source/revision binding, fixed bytes/work/deadlines/cancellation and design/motion. First audit only: produce detailed Markdown with source identity, trust boundaries, STRIDE coverage, dependency/advisory methodology, ranked confirmed findings, evidence, careful functionality-preserving fix plans, scope/non-findings and real limitations; produce a concise severity-ranked PM HTML report and inspect its rendering. Use hardcoded fake/no-key/paid-off, generated synthetic data and network-blocked checks; do not read/copy ignored env, credentials, retained media or private captures. Never deploy/push/spend/call providers/cloud or export scanner metadata. Public read-only advisory information may be consulted without transmitting project/source/dependency inventory. Do not implement security changes before the actual reports exist and an explicit provisional AFK review records selected actual finding IDs under the owner current delegated authorization. After that selection, prepare phase 11 and execute only justified scoped local fixes through execute/read-only validate/fix loops and authorized cohesive commits. Preserve the owner running primary app and maintain the canonical progress ledger only in primary docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md.",
+        "sha256": "731a6a6fe03d075988e56ea7c8de666cf4ee619091979603f7771885edebf921",
+        "context_sources": [
+          "AGENTS.md",
+          "docs/operations/CODE_QUALITY_AUDIT_2026-10-24.md",
+          "docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md",
+          "human:2026-10-24-current-build-audit-message"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [
+        "audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md",
+        "audit-worktree:docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html",
+        "audit-worktree:docs/tickets/CL-065-post-deployment-pre-sharing-security.md",
+        "local HTML 1440/390 px, no horizontal overflow, four cards; bounded Zod input visits4096elements despite maximum10"
+      ],
       "blockers": [],
       "approval": null,
-      "decision": null,
-      "reviews": []
+      "decision": "selected-fixes",
+      "reviews": [
+        {
+          "afk_review": {
+            "session_id": "AFK-SESSION-001",
+            "decision_id": "AFK-0008",
+            "recorded_at": "2026-10-24T14:32:28+00:00"
+          },
+          "decision": "selected-fixes"
+        }
+      ],
+      "selected_findings": [
+        "SEC-01",
+        "SEC-02",
+        "SEC-03"
+      ],
+      "afk_review": {
+        "session_id": "AFK-SESSION-001",
+        "decision_id": "AFK-0008",
+        "recorded_at": "2026-10-24T14:32:28+00:00"
+      }
     },
     {
       "id": "11-security-fixes",
       "name": "Approved security fixes",
       "gate": null,
-      "status": "pending",
-      "prompt": null,
-      "evidence": [],
+      "status": "in_progress",
+      "prompt": {
+        "text": "Execute CL-065 selected findings SEC-01, SEC-02 and SEC-03 only in the isolated quality-security-audit worktree. The complete audit and PM HTML have been produced and inspected, and provisional AFK selection records the actual IDs; owner personal review remains outstanding. Follow the ticket whole-file allocation: exact compatible Zod4.6.6 and Next/eslint-config-next16.4.1 dependencies/lock plus meaningful early rejection regression, then verified immutable official Node22.23.4 Bookworm image digest in all three app Dockerfiles and narrowly owning checks/docs. Confirm package/image metadata before depending on it. Preserve valid input/editor/preview/native export, paid output critique-only semantics, explicit retry and preparation reuse, all diagnostics and generic user errors, fixed bounds, cancellation and cleanup. No unrelated feature rewrite, bulk dev-tool updates or invented native patch. Independently confirm each finding, implement, run focused fake/no-key/paid-off/network-blocked checks, perform a read-only validate pass without edits, confirm/fix actual findings and repeat until no actionable local issue remains. Finish settled lint/types/format/unit, Linux actual image startup/CSP and current-source browser/native parity/cancel proofs appropriate to the updated runtime/framework; isolate generated fixtures and owned processes/scratch. Keep SEC-04 explicitly unresolved awaiting vendor/native release review, not remediated by documentation. Keep the running primary app unchanged and defer application of audit commits during owner manual paid review. Stage explicit cohesive file groups and local CL-prefixed commits under existing human authorization, inspect staged diffs for secrets/generated artifacts, and update the canonical primary build/AFK ledger. No ignored env/credential/private-media reads, paid or provider/cloud requests, scanner metadata export, deployment or push. Prepare honest final handoff with remaining external and provisional reviews.",
+        "sha256": "55adc3e0eda9600f9b56266fb1c5e2ab6dc5a1506a4a53d6defb328c07dcb250",
+        "context_sources": [
+          "docs/tickets/CL-065-post-deployment-pre-sharing-security.md",
+          "docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md",
+          "docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html",
+          "human:2026-10-24-current-build-audit-message"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [
+        "audit-worktree:commit:c1d7169",
+        "1785 tests/169 files; full lint/types/format; current-source Windows synthetic editor proof115.03s; Next16.4.1/Node22.23.4 frontend image offline runtime/CSP pass",
+        "audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md"
+      ],
       "blockers": [],
       "approval": null,
       "decision": null,
