@@ -7508,9 +7508,9 @@ live/provider/rights/cleanup checks are described as complete.
 <!-- build-progress:start -->
 ## Build command progress
 
-Current phase: **11-security-fixes**
-Next action: Finish local backend/private-renderer image builds and offline startup/native parity on verified Node22.23.4, commit the image pin and final reports; retain SEC-04 native vendor release gate. Primary canonical progress-only commit allocates solely docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md; no audit source is applied to the running app.
-Active ticket: CL-065
+Current phase: **local workflow finished**
+Next action: Owner return: review linked audit HTML and provisional AFK decisions, finish paid manual review, then reconcile/apply the isolated committed fixes with existing app/source state. Resolve native vendor and actual hosted/resource gates before any owner-only deployment. No eligible automatic paid/cloud action; AFK ledger remains active until owner returns.
+Active ticket: none
 Phase prompts: delegated during AFK
 Local commits approved: yes
 
@@ -7563,8 +7563,8 @@ Provisional owner reviews: 04-decisions, 09-visual-review, 10b-security-review
 - [x] 09-visual-review — Frontend visual approval checkpoint (provisional)
 - [x] 10a-quality — Quality audit and fixes (complete_local)
 - [x] 10b-security-review — Security audit and manual review (provisional)
-- [ ] 11-security-fixes — Approved security fixes (in_progress)
-- [ ] 12-handoff — Final local handoff (pending)
+- [x] 11-security-fixes — Approved security fixes (complete_local)
+- [x] 12-handoff — Final local handoff (complete_local)
 
 This checklist records local work. Human approvals and unresolved external checks are preserved below; it does not authorize paid calls or deployment.
 
@@ -7573,7 +7573,7 @@ This checklist records local work. Human approvals and unresolved external check
   "schema_version": 3,
   "repo_root": "C:\\Users\\minat\\Work\\ClipBuilder",
   "main_document": "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
-  "updated_at": "2026-10-24T14:45:36+00:00",
+  "updated_at": "2026-10-24T14:53:12+00:00",
   "context": {
     "PROJECT_NAME": {
       "value": "ClipBuilder",
@@ -7757,8 +7757,8 @@ This checklist records local work. Human approvals and unresolved external check
     "local_commits_approved": true,
     "approval_source": "human:2026-10-24-current-build-audit-message"
   },
-  "active_ticket": "CL-065",
-  "next_action": "Finish local backend/private-renderer image builds and offline startup/native parity on verified Node22.23.4, commit the image pin and final reports; retain SEC-04 native vendor release gate. Primary canonical progress-only commit allocates solely docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md; no audit source is applied to the running app.",
+  "active_ticket": null,
+  "next_action": "Owner return: review linked audit HTML and provisional AFK decisions, finish paid manual review, then reconcile/apply the isolated committed fixes with existing app/source state. Resolve native vendor and actual hosted/resource gates before any owner-only deployment. No eligible automatic paid/cloud action; AFK ledger remains active until owner returns.",
   "phases": [
     {
       "id": "01-docs",
@@ -8137,7 +8137,7 @@ This checklist records local work. Human approvals and unresolved external check
       "id": "11-security-fixes",
       "name": "Approved security fixes",
       "gate": null,
-      "status": "in_progress",
+      "status": "complete_local",
       "prompt": {
         "text": "Execute CL-065 selected findings SEC-01, SEC-02 and SEC-03 only in the isolated quality-security-audit worktree. The complete audit and PM HTML have been produced and inspected, and provisional AFK selection records the actual IDs; owner personal review remains outstanding. Follow the ticket whole-file allocation: exact compatible Zod4.6.6 and Next/eslint-config-next16.4.1 dependencies/lock plus meaningful early rejection regression, then verified immutable official Node22.23.4 Bookworm image digest in all three app Dockerfiles and narrowly owning checks/docs. Confirm package/image metadata before depending on it. Preserve valid input/editor/preview/native export, paid output critique-only semantics, explicit retry and preparation reuse, all diagnostics and generic user errors, fixed bounds, cancellation and cleanup. No unrelated feature rewrite, bulk dev-tool updates or invented native patch. Independently confirm each finding, implement, run focused fake/no-key/paid-off/network-blocked checks, perform a read-only validate pass without edits, confirm/fix actual findings and repeat until no actionable local issue remains. Finish settled lint/types/format/unit, Linux actual image startup/CSP and current-source browser/native parity/cancel proofs appropriate to the updated runtime/framework; isolate generated fixtures and owned processes/scratch. Keep SEC-04 explicitly unresolved awaiting vendor/native release review, not remediated by documentation. Keep the running primary app unchanged and defer application of audit commits during owner manual paid review. Stage explicit cohesive file groups and local CL-prefixed commits under existing human authorization, inspect staged diffs for secrets/generated artifacts, and update the canonical primary build/AFK ledger. No ignored env/credential/private-media reads, paid or provider/cloud requests, scanner metadata export, deployment or push. Prepare honest final handoff with remaining external and provisional reviews.",
         "sha256": "55adc3e0eda9600f9b56266fb1c5e2ab6dc5a1506a4a53d6defb328c07dcb250",
@@ -8153,10 +8153,23 @@ This checklist records local work. Human approvals and unresolved external check
       },
       "evidence": [
         "audit-worktree:commit:c1d7169",
-        "1785 tests/169 files; full lint/types/format; current-source Windows synthetic editor proof115.03s; Next16.4.1/Node22.23.4 frontend image offline runtime/CSP pass",
-        "audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md"
+        "audit-worktree:commit:50521d8",
+        "audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md",
+        "audit-worktree:docs/operations/STRIDE_SECURITY_EVIDENCE_2026-10-24.json",
+        "1785 tests/169files plus lint/types/format pass; actual three Node22.23.4 images and offline probes pass; current Windows/Linux synthetic editor/export/cancel/retry/cleanup proofs pass, no external attempts; final readonly validation clean for selected scope"
       ],
-      "blockers": [],
+      "blockers": [
+        {
+          "kind": "external",
+          "reason": "SEC-04 native MOV/MP4 vendor risk is unresolved; maintained vendor fixes for all relevant issues or explicit owner risk review are needed before public release. No invented parser/distro migration.",
+          "reference": "audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md#sec-04"
+        },
+        {
+          "kind": "external",
+          "reason": "Owner paid/visual/AFK acceptance, actual hosted identity/isolation/resources/maxcapacity and global Windows Node runtime update are unverified. Applying isolated audit commits awaits completion of the owner ongoing manual review.",
+          "reference": "audit-worktree:docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md"
+        }
+      ],
       "approval": null,
       "decision": null,
       "reviews": []
@@ -8165,10 +8178,41 @@ This checklist records local work. Human approvals and unresolved external check
       "id": "12-handoff",
       "name": "Final local handoff",
       "gate": null,
-      "status": "pending",
-      "prompt": null,
-      "evidence": [],
-      "blockers": [],
+      "status": "complete_local",
+      "prompt": {
+        "text": "Finish the current ClipBuilder AFK audit run from actual evidence. Reconcile primary canonical build progress, isolated managed audit checkout commits/status and owner permission: existing pending CL-058–063 work was planned/validated/committed before audits; CL-064 quality has four local fixes; CL-065 audit and PM HTML exist, selected SEC-01–03 dependency/image fixes are validated/committed after provisional AFK selection. Read back all actual gates and pending owner reviews. Report source identity, cohesive commit allocation, passing1785tests/169files/lint/types/format, actual patched Node22.23.4 frontend/backend/renderer image probes and current Windows/Linux synthetic upload/editor/native export/cancel/retry/cleanup evidence, plus meaningful limits. Preserve private diagnostics, no Gemini semantic rejection, shared editor and local-only YouTube, all bounds and retained assets. Confirm no owned proof container/listener/process remains; preserve owner normal running app and all diagnostic files. Keep the attached audit checkout recoverable with clean committed changes; do not archive or apply audit source while owner paid manual review continues. Canonical progress updates are progress-only local commits on primary main with a one-file plan; no source merge/push. Summarize material AFK decisions and outstanding provisional product/visual/security review, SEC-04 unresolved vendor MOV risk, owner global Windows Node update, real hosted identity/TLS/Turnstile/single-instance/CPU/maxcapacity and real paid quality checks. State fake/no-key versus real-provider requirements honestly; no local AI weights or implementation is introduced. Link the concise PM HTML and detailed reports. Mark handoff complete_local while these real external/provisional gates remain; do not claim all security risks fixed, user acceptance, production readiness or deployment. No paid/provider/cloud call, ignored env read, metadata export, push or deployment. End without an ordinary approval question while AFK.",
+        "sha256": "648815042c9e69ed914f9cb9533ec80cc313db181eb23a7d778b11f98ab6c79a",
+        "context_sources": [
+          "audit-worktree:docs/tickets/CL-064-post-deployment-pre-sharing-quality.md",
+          "audit-worktree:docs/tickets/CL-065-post-deployment-pre-sharing-security.md",
+          "audit-worktree:docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html",
+          "human:2026-10-24-current-build-audit-message"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [
+        "audit-worktree:commit:c04b983",
+        "audit-worktree:commits:c476d8d,311ee7d,b8fefca,353c7f4,a28a668,c1d7169,50521d8,c04b983",
+        "primary:commits:31683fc,a5bc071,440c6a8,68d5b96,95123f1",
+        "audit checkout clean and attached; zero remaining audit Node processes/named proof containers",
+        "primary health/start/config GET200; unchanged listeners127.0.0.1 ports3000pid6684,4000pid15416,4200pid22856",
+        "audit-worktree:docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html",
+        "1785tests/169files,lint/types/format; allthree actual patched images/runtimeprobes; Windows and Linux synthetic editor/export/cancel/retry/cleanup pass, zero external processing attempts"
+      ],
+      "blockers": [
+        {
+          "kind": "external",
+          "reason": "SEC-04 native MOV/MP4 vendor resolution or explicit owner risk review before public release; native libraries are not comprehensively cleared by the Node patch.",
+          "reference": "audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md"
+        },
+        {
+          "kind": "external",
+          "reason": "Owner must review provisional product/visual/security AFK decisions and manual paid quality. Applying isolated audit source awaits completion of the ongoing owner manual review. Global Windows Node update and actual CloudRun identity/TLS/Turnstile/single-instance/CPU/maxcapacity/isolation remain unverified. No paid/cloud/deploy/push permission.",
+          "reference": "audit-worktree:docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md"
+        }
+      ],
       "approval": null,
       "decision": null,
       "reviews": []
