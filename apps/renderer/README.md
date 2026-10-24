@@ -1,5 +1,13 @@
 # Private media renderer
 
+CL-061 packages this application's fixed native editing worker and browser
+overlay inside the normal backend image. The backend starts it internally on
+private loopback; the same caption/picture/filter composition is used by the
+shared local and hosted editor. Provider credentials never enter the native
+child. This adds no second UI, public worker route or runtime tool download.
+The earlier private fixed-render service remains historical compatibility;
+the hosted editor profile has its own [release preparation](../../docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md).
+
 The independent [local owner worker](owner/README.md) uses admitted local native
 tools and no cloud fallback; it is excluded from this deployed renderer build.
 

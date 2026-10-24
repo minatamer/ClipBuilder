@@ -1,5 +1,75 @@
 # ClipBuilder canonical ticket index
 
+## Current local release verification — 2026-10-24
+
+[CL-063](CL-063-local-hosted-release-verification.md) checks the prepared images
+and hosted pipeline on local Linux Docker: both images build; offline frontend
+and actual backend startup pass. Synthetic chunked upload/editor/native export,
+caption/picture/filter state, real cancel/retry and expiry/exit cleanup pass.
+**1,770 synthetic tests** pass. Real hosted identity/routing, maximum remote
+allocation and live AI remain separate gates. No provider/cloud spend or deploy.
+
+Owner audit handoff: AFK quality/efficiency, then STRIDE/dependency review and
+justified local fixes are authorized after committing existing changes. The
+whole-file allocation is in [the commit plan](../operations/CL058_063_COMMIT_PLAN.md).
+Local commits are authorized; push, deployment and paid/provider/cloud calls are
+not. Personal visual/release acceptance remains with the owner.
+
+## Current loading-state design — 2026-10-24
+
+[CL-062](CL-062-designed-loading-states.md) is implemented and locally validated:
+larger centered branded animation for clip/workspace waits, with acknowledged
+upload progress only. Unknown queue/AI/native-export completion stays
+indeterminate. **92 focused tests**, types/lint/format and the synthetic native
+browser proof pass; desktop/phone loading, failure/Retry and keyboard states
+inspected. Shared editor work from CL-061 is implemented; Linux/cloud acceptance
+remains a separate release gate. No paid calls, deployment or Git mutation.
+
+## Current shared upload/editor release preparation — 2026-10-24
+
+[CL-061](CL-061-shared-hosted-upload-editor.md) is implemented and locally validated:
+one normal upload/moments/editor workflow, with only YouTube acquisition local-only.
+Hosted session/identity/CSRF, bounded chunked upload and internal native packaging
+are prepared. **1,767 synthetic tests**, types/lint/format and actual synthetic
+browser/native upload→edit→export proof pass. Local apps/saved paid work preserved.
+Linux image/resource/cloud acceptance remains unchecked before an owner release;
+the existing deployed revision is unchanged. Never deploy, and no credit-consuming
+tests until new explicit approval. Earlier hosted no-editor scope is superseded.
+
+## Current permanent Gemini acceptance and retry — 2026-10-24
+
+[CL-060](CL-060-advisory-gemini-validation-and-clip-retry.md) is implemented and
+locally validated: local Gemini quality checks log critiques and continue, and
+failed clips have explicit footer Retry with saved preparation reuse. Full local
+suite 491/491, supplemental retry checks, shared tests, types/lint/format and
+current-source browser/native proof pass. Desktop/phone Retry inspected. Backend
+and worker restarted in real mode; saved paid session and successful export
+restored, frontend/configuration preserved. No fresh paid retry or Git mutation;
+real quality and owner retry acceptance remain manual.
+
+## Current real moment discovery check — 2026-10-24
+
+[CL-059](CL-059-real-local-moment-discovery.md) is implemented/validated under the
+owner's explicit live-test authorization. The pre-fix request exposed local
+transcript timing rejection; usable-item admission now preserves valid timings
+and reports aggregate anomaly counts. **487 synthetic tests**, types/lint/format
+and read-only validation pass. Real Gemini retest **HTTP 200**, exactly **two
+moments: 47.3 and 50.8 seconds**, with one transcription/selection call on the
+successful run. Results retrieved again without another dispatch; backend and
+worker rebuilt/restarted, frontend preserved. No new download, automatic retry,
+deployment or Git mutation. Broader quality/export acceptance remains separate.
+
+## Current local diagnostics — 2026-10-24
+
+[CL-058](CL-058-local-workflow-diagnostics.md) is implemented/validated: safe
+correlated diagnostics across local analysis, provider/native work, background
+clips, persistence, cleanup and startup. Full local suite **483 tests**, focused
+shared tests, types/lint/format and read-only validate pass. Backend and rebuilt
+worker restarted; actual startup logs and **live / provider-ai / planning
+available** checks pass; frontend remains running. Real Gemini retry stays
+owner-manual. No agent-run paid flow or Git mutation; saved configuration,
+media and logs remain preserved. The old failure cannot be diagnosed retroactively.
+
 ## Owner Git handoff — 2026-10-24
 
 The owner authorized staging and committing all pending CL-054–057 changes in

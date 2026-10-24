@@ -1,5 +1,13 @@
 # ClipBuilder frontend
 
+The normal `/start` route now shares upload, moments and the caption/picture/filter
+editor across local and hosted composition (CL-061). Hosted intake has one upload
+card; YouTube and the local sample/library bypass are excluded. Browser requests
+use the authenticated same-origin editor bridge, with bounded upload chunks.
+Legacy local sample walkthroughs remain local-only. See [release preparation](../../docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md).
+Synthetic fake/no-key browser/native checks do not prove Linux/cloud/live
+acceptance. No deployment or paid test is authorized.
+
 Local controls use the normal `/start` flow and app shell. See the [local workflow guide](../../docs/operations/LOCAL_WORKFLOW.md). The backend owns AI mode; no separate frontend mode or app is needed. Fake AI is key-free and fictional; real downloads/native media are available independently.
 
 CL-015 hosted paid-walkthrough checkpoint (2026-10-07): the public Linux standalone

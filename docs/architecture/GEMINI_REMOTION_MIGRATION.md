@@ -1,5 +1,13 @@
 # Gemini and Cloud Run Remotion migration
 
+Current owner revision — 2026-10-24, CL-061: the shared upload/moments/editor
+workflow supersedes this document's historical hosted read-only/one-clip scope.
+Only YouTube acquisition remains local-only. Hosted source now uses isolated
+ephemeral backend scratch and an internal renderer-owned native worker. See
+[shared editor release preparation](../operations/HOSTED_EDITOR_RELEASE_PREPARATION.md)
+for current composition, preserved approval gates and unperformed Linux/cloud
+acceptance. The history below does not authorize a deployment or paid test.
+
 Status: **Local code through CL-014 and CL-015 release preparation is audited and validated with no actionable local findings. All five settled root gates and 665 synthetic tests in 66 files pass. The local frontend artifact inventory passes, but strict release verification rejects this Windows build's 26 external package links; an acceptable target-platform immutable build remains unverified. The release ledger keeps manual/media/device/film/provider/cloud/rights/spend and complete CL-015 deployment acceptance unchecked. No deployment or public paid enablement is authorized. The owner authorized sequential execute/validate/fix/document loops and ticket-prefixed commits through CL-014 and locally buildable CL-015. Missing keys/live/cloud evidence does not block this local sequence. Provider/paid/cloud/deployment, native full-fixture, pixel/audio/human quality, font/license/rights and real device/public-release gates remain deferred.**<br>
 Owner revision: 2026-10-02; supersedes the earlier same-day browser-render plan<br>
 Authority: latest explicit owner decision, then this current source-of-truth revision<br>

@@ -21,7 +21,21 @@ Real providers require keys/live/data/rights/paid approval; private media comput
 needs independent cloud approval. No local AI weights are used. Older contracts
 and records remain collapsed history where superseded.
 
-## Locked demo flow
+## Current shared editing flow
+
+CL-061 makes uploaded video → manual/AI moments → shared caption/picture/filter
+editor → export the normal application in local and hosted composition. Only
+YouTube acquisition is local-only. The former public no-editor rule is superseded.
+See [hosted editor release preparation](operations/HOSTED_EDITOR_RELEASE_PREPARATION.md)
+for architecture, temporary sessions and owner release gates. The deployed
+revision is unchanged. Synthetic fake/no-key checks prove workflow/native
+behavior, not real Gemini quality or hosted acceptance. CL-063 additionally
+verifies both images and a bounded native editor flow in offline local Linux
+Docker; maximum hosted resources and actual remote identity/routing remain
+unchecked. Agents must never deploy or run credit-consuming tests without new
+explicit approval.
+
+## Historical locked demo flow (superseded by CL-061)
 
 ClipBuilder exposes one narrow visitor journey: choose the sample or upload one
 owned/licensed conversation, watch analysis, preview zero to four grounded

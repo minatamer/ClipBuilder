@@ -1,5 +1,72 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Loading-state presentation — 2026-10-24
+
+CL-062: full-content waits use a centered branded animated treatment with a
+readable stage title. Preserve the active content slot, vertical clip rail,
+readiness gate and persistent footer actions. Show determinate progress only
+from measured work (for example acknowledged upload bytes). Queueing, Gemini,
+native export and preview readiness stay indeterminate until a genuine metric
+exists; never invent percentages, completion timing or phase weights. Motion
+retains normal timing under all OS/browser motion preferences.
+
+## Shared upload/editor release decision — 2026-10-24
+
+CL-061 supersedes the earlier hosted read-only/no-editor product boundary. There
+is one Next.js frontend, one Express backend and an internal native media worker,
+with the same upload → moments → clips/editor flow. Caption styles/position,
+picture controls/motion, filters, Apply/Discard, explicit retry and export are
+part of the hosted product as well as local use. Only YouTube URL downloading
+remains restricted to local use: do not render its intake or admit hosted lookup,
+metadata, import, saved-link or acquisition endpoints. Upload remains independent
+of downloader tooling and preserves access to the editor.
+
+Hosted processing requires session-isolated temporary media, authenticated
+frontend calls, browser origin/CSRF protection, abuse verification, fixed spend
+and resource limits, cancellation and expiry cleanup. Do not expose the local
+owner capability, filesystem library or agent controls to visitors. The editor
+is shared, not a separate app or a second AI mode. Historical local-only gates
+are implementation history, not the new release scope. This decision authorizes
+code/document preparation, never deployment. Agents must never deploy for the
+owner, and must obtain new explicit approval before any credit-consuming test.
+Fake/no-key synthetic verification does not prove hosted Linux/live quality.
+
+## Permanent Gemini acceptance decision — 2026-10-24
+
+CL-060: local Gemini validation is critique-only. Never reject, suppress or hide
+usable returned work for grounding/evidence, timing/order, duration/count/overlap,
+or editorial/visual quality; emit safe critiques and continue. This applies to
+all provider paths and their downstream duplicate quality gates, superseding
+older semantic rejection requirements. Basic decoding, authentication/source
+binding, bounded resources and media/executable safety remain. Physical render
+clocks may be safely converted to the admitted source/clip without rejecting the
+usable paid result. Preserve completed plans/assets/preparation across explicit
+failed-clip retries; no automatic provider retry or unrequested paid regeneration.
+Failed clips expose Retry clip in the persistent footer, including failure before
+prepared data exists, with normal revision/idempotency/cancellation guards.
+
+## Local workflow diagnostic coverage — 2026-10-24
+
+CL-059 originally admitted usable transcript intervals individually. CL-060's
+later permanent decision supersedes that filtering and sorting: retain all
+decoded words and original order/times, with aggregate critique counts. Structural
+decoding, identity uniqueness and bounded clip execution remain enforced. Timing
+diagnostics contain no word text or exact intervals. The one-transcription/
+one-selection limit remains; empty output skips selection. No automatic provider
+retry is introduced.
+
+CL-058: the normal local backend and its worker must retain content-safe failure
+evidence across analysis, provider/native preparation, clip processing/editing,
+export, persistence, streaming, cleanup and startup. Correlate operations with
+generated request/job IDs, bounded stage timings and allowlisted error/rule/
+system/schema classifications. Successful polling stays quiet; logging failure
+never changes processing, dispatch counts, retries or cleanup. Generic browser
+errors and all existing privacy/spend gates remain. Never log raw exception
+messages/stacks, provider payloads, prompts, real media, filenames, paths or
+credentials; local diagnostics must not activate private response capture.
+Synthetic fake/paid-off tests establish logging behavior only. Real Gemini
+acceptance remains an owner-triggered manual test with keys and approvals.
+
 ## Permanent application motion decision — 2026-10-23
 
 The owner requires normal motion everywhere, including loading spinners, field
@@ -7437,3 +7504,409 @@ live/provider/rights/cleanup checks are described as complete.
 
 
 </details>
+
+<!-- build-progress:start -->
+## Build command progress
+
+Current phase: **06-plan-commit**
+Next action: Complete the Linux image/probe checks, inspect staged content and commit the planned existing files.
+Active ticket: none
+Phase prompts: delegated during AFK
+Local commits approved: yes
+
+AFK mode: AFK-SESSION-001
+Provisional owner reviews: 04-decisions
+
+### AFK decisions
+
+- **AFK-0001** (AFK-SESSION-001, 2026-10-24T13:12:41+00:00, 06-plan-commit): Finish already-started CL-063 local verification before the baseline commits; preserve the running owner app.
+  Reason: The owner requires all existing work validated and committed before audits.
+  Consequence / reversibility: Only local synthetic checks; hosted identity/maximum resources/paid quality remain external. Reversible local source and Git commits.
+  Owner review requested on return: yes. Evidence: docs/tickets/CL-063-local-hosted-release-verification.md, docs/operations/CL058_063_COMMIT_PLAN.md
+- **AFK-0002** (AFK-SESSION-001, 2026-10-24T13:12:44+00:00, 04-decisions): Retain existing product decisions and proceed only with existing-work handoff and audits.
+  Reason: The owner requested audits, not a new product/design round.
+  Consequence / reversibility: No extra features; provisional checkpoint owner review remains outstanding.
+  Owner review requested on return: yes. Evidence: docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md, docs/tickets/README.md
+
+- [x] 01-docs — Documentation (complete)
+- [x] 02-flow — Core flow (complete)
+- [x] 03-product — Product and design (complete)
+- [x] 04-decisions — Product decisions (provisional)
+- [x] 05-tickets — Ticket plan (complete)
+- [ ] 06-plan-commit — Planning commit (in_progress)
+- [ ] 07-build — Execute and validate tickets (pending)
+- [ ] 08-performance — Performance investigation (pending)
+- [ ] 09-visual-review — Frontend visual approval checkpoint (pending)
+- [ ] 10a-quality — Quality audit and fixes (pending)
+- [ ] 10b-security-review — Security audit and manual review (pending)
+- [ ] 11-security-fixes — Approved security fixes (pending)
+- [ ] 12-handoff — Final local handoff (pending)
+
+This checklist records local work. Human approvals and unresolved external checks are preserved below; it does not authorize paid calls or deployment.
+
+```json
+{
+  "schema_version": 3,
+  "repo_root": "C:\\Users\\minat\\Work\\ClipBuilder",
+  "main_document": "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+  "updated_at": "2026-10-24T13:12:45+00:00",
+  "context": {
+    "PROJECT_NAME": {
+      "value": "ClipBuilder",
+      "source": "README.md",
+      "confidence": "confirmed"
+    },
+    "DEMO_PURPOSE": {
+      "value": "Uploaded owned conversation to bounded moments, shared caption/picture/filter editor and vertical MP4 exports",
+      "source": "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+      "confidence": "confirmed"
+    },
+    "TICKET_PREFIX": {
+      "value": "CL",
+      "source": "docs/tickets/README.md",
+      "confidence": "confirmed"
+    },
+    "DEPLOYMENT_PLATFORM": {
+      "value": "Cloud Run frontend/backend and internal Linux native worker; local Docker verification only",
+      "source": "docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md",
+      "confidence": "confirmed"
+    },
+    "MAIN_INPUT": {
+      "value": "Owned/licensed uploaded video; YouTube intake local-only",
+      "source": "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+      "confidence": "confirmed"
+    },
+    "MAIN_OUTPUT": {
+      "value": "Edited vertical MP4 download",
+      "source": "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+      "confidence": "confirmed"
+    },
+    "AUDIT_SCOPE": {
+      "value": "Commit existing work first, then quality/efficiency and STRIDE/dependency audit/fix loops in AFK mode",
+      "source": "human:2026-10-24-current-build-audit-message",
+      "confidence": "confirmed"
+    }
+  },
+  "afk": {
+    "active_session": "AFK-SESSION-001",
+    "sessions": [
+      {
+        "id": "AFK-SESSION-001",
+        "started_at": "2026-10-24T13:12:40+00:00",
+        "ended_at": null,
+        "authorization": {
+          "quote": "I'm in AFK mode ... any security audits you find that are meaningful, you can execute them right away in an execute valid loop ... you are allowed to stage and commit.",
+          "source": "human:2026-10-24-current-build-audit-message",
+          "scope": "Existing-work local commit handoff then quality/efficiency/security auditing and justified local fixes. No paid calls, cloud actions, metadata export, deployment or push."
+        }
+      }
+    ],
+    "decisions": [
+      {
+        "id": "AFK-0001",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-24T13:12:41+00:00",
+        "phase": "06-plan-commit",
+        "choice": "Finish already-started CL-063 local verification before the baseline commits; preserve the running owner app.",
+        "rationale": "The owner requires all existing work validated and committed before audits.",
+        "consequence": "Only local synthetic checks; hosted identity/maximum resources/paid quality remain external. Reversible local source and Git commits.",
+        "review_needed": true,
+        "evidence": [
+          "docs/tickets/CL-063-local-hosted-release-verification.md",
+          "docs/operations/CL058_063_COMMIT_PLAN.md"
+        ]
+      },
+      {
+        "id": "AFK-0002",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-24T13:12:44+00:00",
+        "phase": "04-decisions",
+        "choice": "Retain existing product decisions and proceed only with existing-work handoff and audits.",
+        "rationale": "The owner requested audits, not a new product/design round.",
+        "consequence": "No extra features; provisional checkpoint owner review remains outstanding.",
+        "review_needed": true,
+        "evidence": [
+          "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+          "docs/tickets/README.md"
+        ]
+      }
+    ]
+  },
+  "prompt_preapproval": null,
+  "prompt_mode_history": [],
+  "git": {
+    "local_commits_approved": true,
+    "approval_source": "human:2026-10-24-current-build-audit-message"
+  },
+  "active_ticket": null,
+  "next_action": "Complete the Linux image/probe checks, inspect staged content and commit the planned existing files.",
+  "phases": [
+    {
+      "id": "01-docs",
+      "name": "Documentation",
+      "gate": null,
+      "status": "complete",
+      "prompt": {
+        "text": "Reconcile the established ClipBuilder main specification, public README and architecture/service guides against the implemented one-app upload/editor scope. Preserve owner decisions and historical evidence. Adopt existing documentation for this established project; the current assignment is existing-work commits followed by audits, not a new product build or sibling-repo research. No cloud or paid work.",
+        "sha256": "85b6cd918c0f33bea88d907a4350f7b4e12d86dfe4357733ea979fccc9c0cd81",
+        "context_sources": [
+          "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+          "docs/README.md",
+          "README.md"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [
+        "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+        "docs/README.md",
+        "README.md"
+      ],
+      "blockers": [],
+      "approval": null,
+      "decision": null,
+      "reviews": []
+    },
+    {
+      "id": "02-flow",
+      "name": "Core flow",
+      "gate": null,
+      "status": "complete",
+      "prompt": {
+        "text": "Adopt the existing shared flow: upload owned video, manual/AI moments, bounded preparation, captions/pictures/filters, Apply/Discard and MP4 export. YouTube acquisition is local-only. Confirm documented current routing and synthetic editor proof; do not expand the product.",
+        "sha256": "177eda34b96a5089e034ce37e08f358f64a319cfdb4800590c199266cb99fb6d",
+        "context_sources": [
+          "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+          "docs/tickets/CL-061-shared-hosted-upload-editor.md"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [
+        "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+        "docs/tickets/CL-061-shared-hosted-upload-editor.md"
+      ],
+      "blockers": [],
+      "approval": null,
+      "decision": null,
+      "reviews": []
+    },
+    {
+      "id": "03-product",
+      "name": "Product and design",
+      "gate": null,
+      "status": "complete",
+      "prompt": {
+        "text": "Retain settled owner decisions: shared hosted editor, upload-only hosted intake, advisory Gemini critiques, explicit retry, footer actions, normal motion and CL-062 centered loading. No new product or visual work is assigned in this audit invocation. Adopt the actual implementation/evidence.",
+        "sha256": "e94e080951d1594fffd1d01d53a77a261f062264a2181b21839a58afa1343c29",
+        "context_sources": [
+          "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+          "docs/tickets/CL-060-advisory-gemini-validation-and-clip-retry.md",
+          "docs/tickets/CL-062-designed-loading-states.md"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [
+        "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+        "docs/tickets/CL-060-advisory-gemini-validation-and-clip-retry.md",
+        "docs/tickets/CL-062-designed-loading-states.md"
+      ],
+      "blockers": [],
+      "approval": null,
+      "decision": null,
+      "reviews": []
+    },
+    {
+      "id": "04-decisions",
+      "name": "Product decisions",
+      "gate": "product",
+      "status": "provisional",
+      "prompt": {
+        "text": "Reconcile current ClipBuilder product decisions with the latest human instructions and CL-060/061/062. Recommend retaining scope, no-spend/no-deploy bounds and owner-only paid manual review. Record provisional AFK reconciliation without inventing personal product acceptance.",
+        "sha256": "58b167373633785fa6eda437d0b833d245f4c490d76df2fe579cdc258266f9d1",
+        "context_sources": [
+          "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+          "human:2026-10-24-current-build-audit-message"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [
+        "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+        "docs/tickets/README.md"
+      ],
+      "blockers": [],
+      "approval": null,
+      "decision": "recommended",
+      "reviews": [
+        {
+          "afk_review": {
+            "session_id": "AFK-SESSION-001",
+            "decision_id": "AFK-0002",
+            "recorded_at": "2026-10-24T13:12:44+00:00"
+          },
+          "decision": "recommended"
+        }
+      ],
+      "afk_review": {
+        "session_id": "AFK-SESSION-001",
+        "decision_id": "AFK-0002",
+        "recorded_at": "2026-10-24T13:12:44+00:00"
+      }
+    },
+    {
+      "id": "05-tickets",
+      "name": "Ticket plan",
+      "gate": "tickets",
+      "status": "complete",
+      "prompt": {
+        "text": "Adopt dependency-ordered CL-058 through CL-063 and the explicit whole-file plan for all existing pending changes. Keep intertwined diagnostics, advisory Gemini, shared editor and loading code atomic; separate the Linux probe and documentation handoff. The current human message delegates this plan and local staging/committing. Future quality/security work gets separate scoped tickets. No push, spend or deployment.",
+        "sha256": "b7100aa3a7b9198a2f1b7347b009b35b8e0a123d36850137b13a00c581e11c7d",
+        "context_sources": [
+          "docs/operations/CL058_063_COMMIT_PLAN.md",
+          "docs/tickets/README.md",
+          "human:2026-10-24-current-build-audit-message"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [
+        "docs/operations/CL058_063_COMMIT_PLAN.md"
+      ],
+      "blockers": [],
+      "approval": {
+        "quote": "If you already have any kind of unstaged work right now, make another file-level commit plan for it first, and then stage and commit it.",
+        "source": "human:2026-10-24-current-build-audit-message",
+        "scope": "Delegated whole-file allocation and local commits for existing CL-058-063 changes. Subsequent scoped audit commits explicitly permitted by the same human message; no personal visual/security acceptance inferred.",
+        "recorded_at": "2026-10-24T13:12:45+00:00"
+      },
+      "decision": "approved",
+      "reviews": [
+        {
+          "decision": "approved",
+          "approval": {
+            "quote": "If you already have any kind of unstaged work right now, make another file-level commit plan for it first, and then stage and commit it.",
+            "source": "human:2026-10-24-current-build-audit-message",
+            "scope": "Delegated whole-file allocation and local commits for existing CL-058-063 changes. Subsequent scoped audit commits explicitly permitted by the same human message; no personal visual/security acceptance inferred.",
+            "recorded_at": "2026-10-24T13:12:45+00:00"
+          }
+        }
+      ]
+    },
+    {
+      "id": "06-plan-commit",
+      "name": "Planning commit",
+      "gate": null,
+      "status": "in_progress",
+      "prompt": {
+        "text": "Finish already-started CL-063 local Linux verification as the precondition for committing existing work. Inspect the CL-058-063 whole-file plan; stage explicit owned paths only after clean relevant validation and staged secret/generated-content review. Commit cohesive ticket-prefixed groups and confirm the working tree is clean before audits. Preserve normal owner apps/media and configuration. No push, deployment, paid call, cloud mutation or scanner metadata export.",
+        "sha256": "721009fe6fc4a955eb1a87c2018ba12f2172693f93fee33f2c9c1e8d53ddb5e4",
+        "context_sources": [
+          "docs/operations/CL058_063_COMMIT_PLAN.md",
+          "docs/tickets/CL-063-local-hosted-release-verification.md",
+          "human:2026-10-24-current-build-audit-message"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
+      "evidence": [],
+      "blockers": [],
+      "approval": null,
+      "decision": null,
+      "reviews": []
+    },
+    {
+      "id": "07-build",
+      "name": "Execute and validate tickets",
+      "gate": null,
+      "status": "pending",
+      "prompt": null,
+      "evidence": [],
+      "blockers": [],
+      "approval": null,
+      "decision": null,
+      "reviews": []
+    },
+    {
+      "id": "08-performance",
+      "name": "Performance investigation",
+      "gate": null,
+      "status": "pending",
+      "prompt": null,
+      "evidence": [],
+      "blockers": [],
+      "approval": null,
+      "decision": null,
+      "reviews": []
+    },
+    {
+      "id": "09-visual-review",
+      "name": "Frontend visual approval checkpoint",
+      "gate": "visual",
+      "status": "pending",
+      "prompt": null,
+      "evidence": [],
+      "blockers": [],
+      "approval": null,
+      "decision": null,
+      "reviews": []
+    },
+    {
+      "id": "10a-quality",
+      "name": "Quality audit and fixes",
+      "gate": null,
+      "status": "pending",
+      "prompt": null,
+      "evidence": [],
+      "blockers": [],
+      "approval": null,
+      "decision": null,
+      "reviews": []
+    },
+    {
+      "id": "10b-security-review",
+      "name": "Security audit and manual review",
+      "gate": "security",
+      "status": "pending",
+      "prompt": null,
+      "evidence": [],
+      "blockers": [],
+      "approval": null,
+      "decision": null,
+      "reviews": []
+    },
+    {
+      "id": "11-security-fixes",
+      "name": "Approved security fixes",
+      "gate": null,
+      "status": "pending",
+      "prompt": null,
+      "evidence": [],
+      "blockers": [],
+      "approval": null,
+      "decision": null,
+      "reviews": []
+    },
+    {
+      "id": "12-handoff",
+      "name": "Final local handoff",
+      "gate": null,
+      "status": "pending",
+      "prompt": null,
+      "evidence": [],
+      "blockers": [],
+      "approval": null,
+      "decision": null,
+      "reviews": []
+    }
+  ]
+}
+```
+<!-- build-progress:end -->

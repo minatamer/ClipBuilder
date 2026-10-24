@@ -1,6 +1,32 @@
 # ClipBuilder backend
 
+CL-061 adds the hosted adapter for the same upload/moments/editor use cases. It
+mounts `/v1/editing` behind verified frontend identity and exact origin checks;
+abuse-verified Secure/HttpOnly/SameSite session cookies and a server-forwarded
+CSRF proof isolate temporary workspaces. The closed route allowlist excludes
+YouTube acquisition, local libraries, agent controls and owner capabilities.
+Ordered 8 MiB upload chunks stay below hosted per-request limits. Fixed provider,
+native, delivery, source and disk budgets apply before dispatch. Exit/expiry
+cancel work and remove temporary files; downloaded outputs remain with visitors.
+The earlier hosted `/v1/analysis` and `/v1/admission` walkthrough routes are retired
+in hosted composition, preserving local sample compatibility.
+
+The image packages the renderer-owned native worker and fixed overlay internally;
+there is no second public application. Hosted startup uses fixed Linux FFmpeg/
+Chromium paths and never downloads tools. Local startup/configuration is unchanged.
+The new profile requires resource/lifecycle acceptance before release; the old
+lightweight backend allocation is insufficient. See [hosted editor preparation](../../docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md).
+No cloud build/deployment or credit-consuming verification was performed.
+
 Local editing is part of this same backend and its normal startup. See the [local workflow guide](../../docs/operations/LOCAL_WORKFLOW.md). Fake AI needs no key; actual downloads/native media are local. Real AI uses normal Gemini settings and approvals; owner-manual testing remains required.
+
+Permanent local Gemini acceptance (CL-060): quality checks emit safe critiques
+and continue with usable responses. Timing/grounding/evidence/overlap/visual
+judgments cannot veto a result. Failed clips support an explicit footer Retry,
+retaining completed preparation/images in saved drafts; a prepared base retries
+only native rendering. Transport/safety/resource and source-binding guards remain.
+Fake/no-key tests use synthetic media; real retry requires the owner's configured
+Gemini key/live approvals and deliberate action. No automatic paid retry.
 
 CL-015 hosted paid-walkthrough checkpoint (2026-10-07): the backend is deployed privately with
 the four exact Secret Manager references, narrow frontend invocation and bounded
@@ -569,6 +595,17 @@ Missing credentials do not require fake overrides or a cloud setup: leave
 gated features unavailable and report the owner-only setup that remains.
 
 ## Analysis diagnostics
+
+Local editing uses the same content-safe diagnostic sink, plus bounded
+`local_diagnostic` operation records. Provider stages share a request ID with
+their local operation; native RPC and worker records share a generated job ID.
+Failures are recorded before generic browser responses, including background
+clip/render, draft save, stream, cleanup and startup failures. Read polling is
+quiet on success. See the [local workflow guide](../../docs/operations/LOCAL_WORKFLOW.md)
+for limits and privacy boundaries. These logs never enable private body capture
+or automatic provider retries. Synthetic fake/no-key checks do not establish
+real Gemini quality; the configured provider/live/approval gates and owner
+manual paid testing still apply.
 
 The executable server writes bounded JSON lines to stderr for the fixed
 analysis upload/sample/run/clear routes. Each line has

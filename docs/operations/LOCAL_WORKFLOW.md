@@ -1,5 +1,12 @@
 # Local editing in ClipBuilder
 
+CL-061 makes upload → moments → editor the shared normal workflow locally and
+when hosted. Only YouTube acquisition is local-only. The local commands and
+configuration below remain; hosted session/native packaging and owner-only
+release checks are in [hosted editor preparation](HOSTED_EDITOR_RELEASE_PREPARATION.md).
+The existing deployed revision is unchanged until the owner deploys; agents must
+never deploy or run credit-consuming tests without new approval.
+
 Use the normal application at `http://localhost:3000/start`. The frontend runs
 on 3000 and backend on 4000 using their normal commands and existing app-local
 `.env.local` files. There is no separate owner app or startup mode.
@@ -89,6 +96,43 @@ Streaming proxies reject cross-site requests and propagate Range/cancellation.
 Runtime records and content-safe worker logs stay in an OS-temp
 `clipbuilder-local-runtime-*` folder. Logs are preserved on shutdown; private
 capabilities and processing scratch are removed.
+
+CL-058 connects structured `local_diagnostic` records in the normal backend and
+worker logs. Find moments, transcription/selection, input preparation, visual
+planning/images, background clip/render work, draft saving, streaming, cleanup
+and startup report operation names, timings and safe failure classifications.
+Backend request IDs correlate Gemini phase/HTTP/rule/schema diagnostics; native
+job IDs connect backend RPC records to worker failures. Successful read/progress
+polls stay quiet. Backend local records are capped at 128 per root operation
+(sixteen slots reserved for failures), alongside the existing 256-record provider
+cap. Each native job emits at most start and terminal records. Log sink failure
+does not alter processing or add a retry.
+
+Exception messages, stacks, media, filenames, local paths, credentials and raw
+provider responses are excluded. Native stderr has only a bounded in-memory
+classification tail; logs retain a fixed reason and exit/system code. Unknown
+errors retain their operation/class and safe structural details. Private Gemini
+body capture remains separate and is never enabled by local workflow diagnostics.
+An original failed attempt cannot be diagnosed retroactively if its old logger
+discarded the error. Fake/no-key tests verify logging with synthetic failures;
+actual Gemini failure evidence requires the owner's deliberate real-mode retry.
+
+Permanent Gemini acceptance (CL-060) supersedes CL-059's timing filtering:
+decoded words retain their provider order and timestamps. Timing, evidence,
+grounding, duration, overlap and visual-quality critiques are logged without
+rejecting usable results. Physical source/render bounds are converted safely.
+Usable pictures survive unfinished metadata, extra parts and low resolution;
+unreadable optional art leaves the video/captions available. Structural decoding,
+source/asset binding, cancellation and resource limits still apply.
+
+Failed or canceled clips expose Retry clip in the workspace footer, including
+failures before preparation finishes. Explicit retry retains completed plans and
+images across saved drafts, and a prepared clip repeats only native rendering.
+An older failed attempt that never retained a plan needs fresh planning on its
+first explicit retry. There is no automatic provider retry or regeneration.
+The same serialized worker, revision and duplicate-request guards remain. Fake
+mode needs no keys and proves these paths with synthetic data; real Gemini uses
+the configured API key/live approvals and the owner's deliberate action.
 
 Verification is synthetic/fake, paid-off and network-blocked. Real YouTube,
 Gemini quality, A/V readability and owner usability remain manual acceptance in

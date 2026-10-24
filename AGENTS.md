@@ -6,6 +6,35 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Current owner AFK audit authorization (2026-10-24): finish local verification,
+  prepare a whole-file plan and commit all existing pending work before the
+  build workflow's quality/efficiency and security audits. Run justified local
+  audit fixes through execute/validate and cohesive local commits. Preserve
+  functionality, private diagnostics and the running app for owner paid review.
+  AFK delegates ordinary decisions, not personal visual/release acceptance.
+  Tests remain synthetic/fake/paid-off. No provider spend, cloud changes,
+  deployment, push or scanner metadata export is authorized.
+
+- Latest owner release decision (2026-10-24, CL-061): one normal application
+  exposes upload, moment selection and the shared caption/picture/filter editor
+  locally and when hosted. Only YouTube URL acquisition is local-only; hosted UI
+  and server routes must exclude it. Earlier public no-editor restrictions are
+  superseded. Hosted sessions retain origin/authentication, isolation, expiry,
+  resource/spend bounds and temporary-media cleanup. Never deploy for the owner.
+  No test using API credits or paid cloud services is authorized until the owner
+  explicitly approves again; all agent checks use synthetic/fake/network-blocked
+  composition. Do not reinterpret earlier live-test approval as continuing consent.
+
+- Permanent owner Gemini acceptance decision (2026-10-24, CL-060): local
+  validators log critiques of Gemini output; they never reject or hide usable
+  returned results for grounding, evidence, timing/order, count/overlap or
+  editorial/visual quality. Audit downstream duplicate gates as well as provider
+  adapters. Preserve completed paid work for explicit retries. Basic decoding,
+  authentication/binding, bounded resources and actual media/executable safety
+  remain; safely convert physical render clocks without making quality a paid
+  retry prerequisite. Never add an automatic provider retry. The source of truth
+  owns this permanent rule; CL-060 owns implementation and verification.
+
 - Follow the latest explicit owner decision, then the source of truth, then the
   active ticket, then an approved ADR, then research/history.
 - Permanent owner motion decision (2026-10-23, CL-039): never introduce
@@ -91,14 +120,14 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   all retained masters/captures/private logs. The retained local video was checked
   for readability only; it is not an ordinary automated fixture.
 - Local editing uses the same normal frontend/backend and app-local environment loading, ports 3000/4000. The backend internally owns the private loopback 4200 worker. No owner app, launcher or second AI setting remains. Normal process ownership, hidden launch and cleanup rules below apply. Sources, drafts and exports remain outside Git under OS Downloads/ClipBuilder; preserve masters, captures and private logs. All agent tests/harnesses force fake/paid-off with no ignored env reads or real downloads.
-- ClipBuilder is a disposable portfolio demo: one owned/licensed conversation,
-  grounded candidate moments, one selected 10–60 second vertical edit, and one
-  final download. The visitor chooses exactly one candidate, then receives an
-  automatic clip with fixed captions and contextual visuals. Do not add an
-  editor, chatbot/assistant, manual trim/range path, caption or visual controls,
-  timeline, proposal flow, undo, or redo. Do not add accounts, durable projects,
-  a database, a general queue, history, batch workflows, direct publishing,
-  remote-platform downloads, arbitrary renderer inputs, or sensitive inference.
+- Current product scope (CL-061): an owned/licensed uploaded conversation,
+  manual/AI moments, bounded clip selection and the shared caption/picture/filter
+  editor, explicit retry and MP4 exports. Hosted intake is upload-only; YouTube
+  acquisition remains local-only. Hosted media/sessions are temporary, not the
+  owner's local filesystem library. Earlier one-clip/read-only/no-editor scope
+  is superseded. Do not add a chatbot, arbitrary timeline/renderer inputs,
+  accounts, a database, durable hosted projects, a general queue, direct
+  publishing, hosted remote-platform downloading or sensitive inference.
 - Keep real media, filenames, transcripts, captions, prompts, provider payloads,
   generated assets, output videos, signed capabilities, account identifiers, and
   credentials out of Git, fixtures, logs, errors, URLs, screenshots, and

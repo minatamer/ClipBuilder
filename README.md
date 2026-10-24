@@ -20,84 +20,93 @@
   />
 </p>
 
-ClipBuilder is an automatic AI-assisted clipping demo that finds strong moments
-inside long-form conversations and turns one visitor-selected moment into a
-polished vertical clip with active-speaker framing, one fixed caption style,
-and well-timed contextual visuals.
+ClipBuilder turns uploaded conversations into captioned vertical clips. Choose
+manual ranges or AI-suggested moments, then adjust captions, pictures, motion and
+filters in one focused editor before downloading an MP4.
 
-The product is designed around one complete result—not a pile of disconnected
-AI tools or editing controls. It understands the conversation, proposes up to
-four moments grounded in the transcript, lets the visitor choose exactly one,
-automatically composes it, and renders a real downloadable MP4.
+The same upload and editor flow serves local and hosted composition. YouTube URL
+downloading is available only locally; the hosted product accepts uploads only.
+The shared hosted adapter is implemented in source and awaits the owner's release
+checks and deployment. See [release preparation](docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md).
 
 ## Why ClipBuilder
 
-| Find the moment | Follow the speaker | Build the visual story |
+| Choose moments | Shape the captions | Build the visual story |
 | --- | --- | --- |
-| Identify up to four self-contained candidate moments and explain why each one works without padding weak results. | Use validated speaking-face evidence for focus and keep the scene wide when uncertain. | Support the selected conversation with up to three fixed, extractive statement, comparison, or steps cards. |
+| Combine manual ranges with AI suggestions from the conversation. | Adjust readable styles, animation and placement in the preview. | Place contextual pictures and tune their timing, position and motion. |
 
 ## From upload to finished clip
 
-1. **Add the conversation** — upload an owned or licensed recording, or open the purpose-built sample.
-2. **Choose one moment** — preview up to four transcript-grounded candidates
-   with exact source ranges and clear editorial reasoning, then select exactly
-   one.
-3. **Build automatically** — ClipBuilder reframes the active speaker, applies
-   its fixed readable captions, and places a few contextual visual beats where
-   they genuinely help.
-4. **Review and confirm** — play the completed read-only preview and confirm the
-   single render; there is no editor, chatbot, trim, caption-style, or visual
-   control surface.
-5. **Download the result** — receive one validated 1080 × 1920 H.264/AAC MP4.
+1. **Upload a conversation** — choose an owned or licensed MP4.
+2. **Choose moments** — add manual ranges or request AI suggestions, then select
+   the clips to prepare.
+3. **Prepare clips** — create vertical video with readable captions and contextual
+   illustrative pictures.
+4. **Review and edit** — adjust caption style and position, pictures and motion,
+   or filters. Apply or discard changes; explicitly retry failed clips.
+5. **Export and download** — render the current edit as a 1080 × 1920 MP4.
 
-Contextual visuals express what is actually being discussed using fixed graphic
-templates grounded in the selected conversation.
+Contextual pictures illustrate the selected conversation. Local quality checks
+record critiques while keeping usable Gemini results available.
 
 ## Built around the core edit
 
 - **Grounded selection:** candidate moments and visual cues reference real transcript words and timestamps.
-- **AI-directed framing:** active-speaker detection drives the vertical crop instead of asking the user to choose generic left, center, or right presets.
-- **Purposeful visuals:** deterministic graphic cards support the spoken idea while preserving a healthy balance with the original footage.
+- **Vertical composition:** a consistent portrait layout shares preview and export behavior.
+- **Purposeful visuals:** illustrative pictures support the spoken idea alongside the original footage.
 - **Deterministic output:** validated edit data drives a shared fixed preview composition and private Node renderer; the model never generates executable media commands.
-- **Demo-sized scope:** one temporary session, one selected clip, and one final export keep the experience focused and affordable.
-- **No editing surface:** candidate selection and render confirmation are the
-  only creative decisions exposed to the visitor.
+- **Bounded processing:** temporary sessions, fixed limits and explicit actions keep work contained.
+- **Focused editing:** one active clip and settings panel, with Apply/Discard and
+  exports in a persistent footer. Completed preparation is reused on retry.
 
 ## Implemented architecture
 
-The owner selected Gemini and private Cloud Run rendering. The [migration plan](docs/architecture/GEMINI_REMOTION_MIGRATION.md) defines the implemented local pipeline; live quality and the complete public deployment remain unverified.
+Gemini handles transcription and planning; a fixed native worker handles media.
+The [release preparation](docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md)
+distinguishes implemented shared editing from unperformed Linux/cloud acceptance.
 
 | Layer | Technology |
 | --- | --- |
 | Experience | Next.js, React, TypeScript |
 | API and contracts | Node.js, Express, shared Zod schemas |
 | Transcript and planning | Google Gemini through a server-only adapter |
-| Speaker and scene analysis | Google audiovisual association, validated and smoothed locally |
-| Contextual visuals | Fixed extractive React cards from bounded Google plans |
-| Composition and export | Fixed Remotion Node/Docker renderer on private Google Cloud Run |
-| Temporary media | Private GCS for active-flow media, terminal deletion and independent expiry cleanup |
-| Hosting | Lightweight control API plus isolated private Cloud Run media service; no database/queue |
+| Contextual visuals | Generated pictures from bounded scene descriptions |
+| Composition and export | Shared React overlay, Chromium and fixed FFmpeg worker |
+| Temporary media | Isolated ephemeral server workspaces with expiry cleanup; owner-managed local storage |
+| Hosting | One frontend/backend application with an internal media worker; no database/queue |
 | Abuse protection | Cloudflare Turnstile and bounded admission controls |
 
 ```text
 Browser
-  +-- Next.js source selection + read-only preview + download
+  +-- Next.js upload + moment selection + shared editor + download
   +-- browser-safe contracts + validated fixed composition preview
   +-- same-origin protected upload/analysis/render requests
        +-- private Express API -> server-only Google Gemini adapter
-       +-- private temporary GCS + authenticated Node renderer; cleanup after flow
+       +-- isolated temporary session + internal fixed native worker; expiry cleanup
 ```
 
 The model proposes bounded editorial data. Deterministic application code validates that data, resolves it against the source transcript, and owns every media operation.
 
-The implemented processing path temporarily uploads the original to private GCS and sends a
-bounded audiovisual proxy to Gemini. Private Cloud Run prepares and renders
-media. Terminal deletion, independent expiry cleanup and separate provider
-retention are explicit privacy requirements. Gemini speaking-face accuracy,
-Node/cloud performance, full-bound media handling and device playback/download
-remain unproved; see the [current migration plan](docs/architecture/GEMINI_REMOTION_MIGRATION.md).
+The shared hosted adapter keeps the uploaded original in an isolated temporary
+server workspace and sends bounded proxies to Gemini. Exit, expiry cleanup and
+separate provider retention remain explicit privacy requirements. Linux image,
+resource limits, cloud behavior and real Gemini acceptance remain owner release
+checks. Earlier GCS/private-renderer architecture is recorded as history in the
+[migration plan](docs/architecture/GEMINI_REMOTION_MIGRATION.md).
 
 ## Repository status
+
+CL-061 prepares the shared hosted editor and upload-only intake. Local fake AI
+needs no keys and can produce real native exports with fictional analysis and
+sample art. Hosted-shaped synthetic browser/native checks exercise upload,
+editing and export without provider calls. These checks do not prove live AI or
+Linux/cloud readiness; the deployed revision remains unchanged. Real Gemini
+requires the owner's API key, live settings and approvals. No local AI model or
+weights are used. Credit-consuming tests require new explicit approval, and
+agents must never deploy. Current release requirements are in the
+[hosted editor preparation guide](docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md).
+
+Historical hosted pipeline (through CL-015):
 
 Local code through CL-014 connects intake and temporary storage, protected
 analysis, immutable selected assembly, read-only preview, one confirmed private
@@ -120,7 +129,7 @@ public deployment and an acceptable immutable build remain pending.
 
 | Area | Responsibility | Guide |
 | --- | --- | --- |
-| `apps/frontend` | Responsive source selection, read-only preview and download | [Frontend guide](apps/frontend/README.md) |
+| `apps/frontend` | Shared upload, moment selection, editor and download | [Frontend guide](apps/frontend/README.md) |
 | `apps/backend` | Private Express API, configuration, and protected AI request boundaries | [Backend guide](apps/backend/README.md) |
 | `apps/renderer` | Private fixed media pipeline and verified temporary cleanup | [Renderer guide](apps/renderer/README.md) |
 | `packages/composition` | Shared fixed React preview/render layout | [Composition guide](packages/composition/README.md) |
