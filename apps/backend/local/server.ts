@@ -14,7 +14,11 @@ import {
   type OwnerMediaResult,
 } from "../../../packages/contracts/local/index.ts";
 import { WorkspaceFiles, requireDisk } from "./workspace-files.ts";
-import { analyzeOwner, type OwnerAnalysisPorts } from "./analysis.ts";
+import {
+  analyzeOwner,
+  type OwnerAnalysisPorts,
+  type OwnerTranscript,
+} from "./analysis.ts";
 import {
   ownerAnalysisInputsSchema,
   ownerMomentExportSchema,
@@ -101,6 +105,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
   });
   const workspaces = new Map<string, OwnerWorkspace>();
   const analyses = new Map<string, OwnerAnalysis>();
+  const transcripts = new Map<string, OwnerTranscript>();
   const batches = new Map<string, OwnerClipBatch>();
   const storage = options.storageRoot
     ? new OwnerDraftStore(options.storageRoot)
@@ -257,7 +262,15 @@ export function createOwnerHost(options: OwnerHostOptions) {
       batch.restore(loaded.clips);
       workspaces.set(workspace.id, workspace);
       batches.set(workspace.id, batch);
-      if (loaded.analysis) analyses.set(workspace.id, loaded.analysis);
+      if (loaded.analysis) {
+        analyses.set(workspace.id, loaded.analysis);
+        transcripts.set(workspace.id, {
+          fingerprint: workspace.source.fingerprint,
+          sourceRevision: loaded.analysis.inputs.sourceRevision,
+          mode: loaded.analysis.mode,
+          words: loaded.analysis.words,
+        });
+      }
       expires.set(workspace.id, Date.now() + OWNER_LIMITS.workspaceMs);
       const saved = (await storage.list()).find((item) => item.id === id);
       signal.throwIfAborted();
@@ -271,6 +284,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         batches.delete(restoredId);
         workspaces.delete(restoredId);
         analyses.delete(restoredId);
+        transcripts.delete(restoredId);
         expires.delete(restoredId);
         await files.remove(restoredId);
       }
@@ -304,6 +318,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             await files.remove(id);
             workspaces.delete(id);
             analyses.delete(id);
+            transcripts.delete(id);
             expires.delete(id);
             closingWorkspaces.delete(id);
           }
@@ -1123,7 +1138,15 @@ export function createOwnerHost(options: OwnerHostOptions) {
             return;
           }
           const result = await diagnostics.run("find_moments", () =>
-            analyzeOwner(workspace, inputs, analysis, controller.signal),
+            analyzeOwner(workspace, inputs, analysis, controller.signal, {
+              transcript: transcripts.get(workspace.id),
+              completed(transcript) {
+                transcripts.set(workspace.id, transcript);
+              },
+              reused() {
+                diagnostics.analysis.check("transcription_reuse", () => {});
+              },
+            }),
           );
           controller.signal.throwIfAborted();
           analyses.set(workspace.id, result);
@@ -1235,6 +1258,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         await files.remove(workspace.id);
         workspaces.delete(workspace.id);
         analyses.delete(workspace.id);
+        transcripts.delete(workspace.id);
         expires.delete(workspace.id);
         closingWorkspaces.delete(workspace.id);
         res.writeHead(204).end();
@@ -1283,6 +1307,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           await providers?.close?.(AbortSignal.timeout(30_000));
           await files.close();
           analyses.clear();
+          transcripts.clear();
           workspaces.clear();
           expires.clear();
         } finally {

@@ -26,6 +26,8 @@ import {
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 import { localWorkerPort } from "../apps/backend/local/worker-port.ts";
 import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
+import { LocalDiagnostics } from "../apps/backend/local/diagnostics.ts";
+import { parseAnalysisDiagnosticLine } from "../apps/backend/src/analysis/analysis.diagnostics.ts";
 import {
   ownerAnalysisSchema,
   type OwnerAnalysisInputs,
@@ -47,6 +49,7 @@ describe("isolated owner host", () => {
     port: number;
   let media: ReturnType<typeof vi.fn<OwnerHostOptions["media"]>>;
   let shutdown: ReturnType<typeof vi.fn<() => void>>;
+  let diagnosticLines: string[];
   let analysis: {
     mode: "synthetic-ai";
     transcribe: ReturnType<typeof vi.fn<typeof fakeOwnerAnalysis.transcribe>>;
@@ -73,6 +76,7 @@ describe("isolated owner host", () => {
       };
     });
     shutdown = vi.fn();
+    diagnosticLines = [];
     analysis = {
       mode: "synthetic-ai",
       transcribe: vi.fn(fakeOwnerAnalysis.transcribe),
@@ -86,6 +90,7 @@ describe("isolated owner host", () => {
       media,
       shutdown,
       analysis,
+      diagnostics: new LocalDiagnostics((line) => diagnosticLines.push(line)),
     });
     port = await listenOwner(host.server);
   });
@@ -182,9 +187,14 @@ describe("isolated owner host", () => {
     expect(analysis.select).not.toHaveBeenCalled();
     const newer = inputs();
     newer.policyRevision = 2;
-    expect((await analyze(workspace.id, newer)).status).toBe(200);
+    const repeated = await analyze(workspace.id, newer);
+    expect(repeated.status).toBe(200);
+    expect(JSON.parse(repeated.body.toString()).calls).toEqual({
+      transcription: 0,
+      selection: 0,
+    });
     expect((await analyze(workspace.id)).status).toBe(409);
-    expect(analysis.transcribe).toHaveBeenCalledTimes(2);
+    expect(analysis.transcribe).toHaveBeenCalledTimes(1);
     expect(analysis.select).not.toHaveBeenCalled();
     const rendered = await ownerRequest(
       port,
@@ -198,6 +208,201 @@ describe("isolated owner host", () => {
     expect(rendered.status).toBe(409);
     expect(media).toHaveBeenCalledTimes(1);
   });
+  it("keeps completed transcription after failed selection for an explicit HTTP retry", async () => {
+    const workspace = await upload();
+    const request = { ...inputs(), ranges: [] };
+    analysis.select.mockRejectedValueOnce(
+      new Error("synthetic_selection_failure"),
+    );
+    expect((await analyze(workspace.id, request)).status).toBe(400);
+    expect(analysis.transcribe).toHaveBeenCalledTimes(1);
+    expect(analysis.select).toHaveBeenCalledTimes(1);
+    const previous = await ownerRequest(
+      port,
+      `/api/workspace/${workspace.id}/analysis`,
+      { headers: auth },
+    );
+    expect(previous.body.toString()).toBe("null");
+    const retried = await analyze(workspace.id, request);
+    expect(retried.status).toBe(200);
+    expect(
+      ownerAnalysisSchema.parse(JSON.parse(retried.body.toString())).calls,
+    ).toEqual({ transcription: 0, selection: 1 });
+    expect(analysis.transcribe).toHaveBeenCalledTimes(1);
+    expect(analysis.select).toHaveBeenCalledTimes(2);
+  });
+  it("logs reuse on changed ranges with matching request IDs and no transcript/source content", async () => {
+    const workspace = await upload();
+    const request = { ...inputs(), manualOnly: true };
+    expect((await analyze(workspace.id, request)).status).toBe(200);
+    expect(
+      diagnosticLines.some((line) =>
+        line.includes('"phase":"transcription_reuse"'),
+      ),
+    ).toBe(false);
+    diagnosticLines.length = 0;
+    const repeated = await analyze(workspace.id, {
+      ...request,
+      policyRevision: 2,
+      ranges: [{ ...request.ranges[0]!, startMs: 1000, endMs: 3000 }],
+    });
+    expect(repeated.status).toBe(200);
+    const result = ownerAnalysisSchema.parse(
+      JSON.parse(repeated.body.toString()),
+    );
+    expect(result.calls).toEqual({ transcription: 0, selection: 0 });
+    const records = diagnosticLines.map((line) => JSON.parse(line));
+    const reused = records.filter(
+      (record) => record.phase === "transcription_reuse",
+    );
+    expect(reused.map((record) => record.outcome)).toEqual([
+      "started",
+      "succeeded",
+    ]);
+    expect(reused[1].message).toBe(
+      "Source transcription reused; no transcription request: succeeded",
+    );
+    expect(
+      records
+        .filter((record) => record.operation === "find_moments")
+        .every((record) => record.requestId === reused[1].requestId),
+    ).toBe(true);
+    for (const record of reused)
+      expect(
+        parseAnalysisDiagnosticLine(JSON.stringify(record)),
+      ).not.toBeNull();
+    for (const privateValue of [
+      workspace.id,
+      workspace.source.fingerprint,
+      result.words[0]!.punctuatedText,
+    ])
+      expect(diagnosticLines.join("\n")).not.toContain(privateValue);
+    expect(analysis.transcribe).toHaveBeenCalledTimes(1);
+    expect(analysis.select).toHaveBeenCalledTimes(0);
+  });
+  it("preserves the last successful analysis when a later selection fails", async () => {
+    const workspace = await upload();
+    const first = await analyze(workspace.id, {
+      ...inputs(),
+      manualOnly: true,
+    });
+    expect(first.status).toBe(200);
+    const original = ownerAnalysisSchema.parse(
+      JSON.parse(first.body.toString()),
+    );
+    analysis.select.mockRejectedValueOnce(
+      new Error("synthetic_selection_failure"),
+    );
+    const changed = { ...inputs(), policyRevision: 2, ranges: [] };
+    expect((await analyze(workspace.id, changed)).status).toBe(400);
+    const previous = await ownerRequest(
+      port,
+      `/api/workspace/${workspace.id}/analysis`,
+      { headers: auth },
+    );
+    expect(
+      ownerAnalysisSchema.parse(JSON.parse(previous.body.toString())),
+    ).toEqual(original);
+    const retried = await analyze(workspace.id, changed);
+    expect(retried.status).toBe(200);
+    const result = ownerAnalysisSchema.parse(
+      JSON.parse(retried.body.toString()),
+    );
+    expect(result.words).toEqual(original.words);
+    expect(result.calls).toEqual({ transcription: 0, selection: 1 });
+    expect(analysis.transcribe).toHaveBeenCalledTimes(1);
+    expect(analysis.select).toHaveBeenCalledTimes(2);
+  });
+  it("serializes concurrent requests and retains transcription after actual HTTP cancellation", async () => {
+    const workspace = await upload();
+    const request = { ...inputs(), ranges: [] };
+    let entered!: () => void, drained!: () => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const canceled = new Promise<void>((resolve) => {
+      drained = resolve;
+    });
+    analysis.select.mockImplementationOnce(
+      async (_words, _duration, cancellation) => {
+        entered();
+        await new Promise<void>((resolve) =>
+          cancellation.addEventListener("abort", () => resolve(), {
+            once: true,
+          }),
+        );
+        drained();
+        cancellation.throwIfAborted();
+        return [];
+      },
+    );
+    const controller = new AbortController();
+    const active = ownerRequest(
+      port,
+      `/api/workspace/${workspace.id}/analysis`,
+      {
+        method: "POST",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+        signal: controller.signal,
+      },
+    ).catch(() => undefined);
+    await started;
+    expect((await analyze(workspace.id, request)).status).toBe(409);
+    expect(
+      (
+        await ownerRequest(port, `/api/workspace/${workspace.id}`, {
+          method: "DELETE",
+          headers: auth,
+        })
+      ).status,
+    ).toBe(409);
+    controller.abort();
+    await active;
+    await canceled;
+    const retried = await analyze(workspace.id, request);
+    expect(retried.status).toBe(200);
+    expect(
+      ownerAnalysisSchema.parse(JSON.parse(retried.body.toString())).calls,
+    ).toEqual({ transcription: 0, selection: 1 });
+    expect(analysis.transcribe).toHaveBeenCalledTimes(1);
+    expect(analysis.select).toHaveBeenCalledTimes(2);
+  });
+  it.each(["clear", "expiry"])(
+    "does not share transcription with a new workspace after %s",
+    async (end) => {
+      const workspace = await upload();
+      expect((await analyze(workspace.id)).status).toBe(200);
+      if (end === "clear") {
+        expect(
+          (
+            await ownerRequest(port, `/api/workspace/${workspace.id}`, {
+              method: "DELETE",
+              headers: auth,
+            })
+          ).status,
+        ).toBe(204);
+      } else {
+        const clock = vi
+          .spyOn(Date, "now")
+          .mockReturnValue(Date.now() + OWNER_LIMITS.workspaceMs + 1);
+        try {
+          await host.expire();
+        } finally {
+          clock.mockRestore();
+        }
+      }
+      const fresh = await upload();
+      expect(fresh.id).not.toBe(workspace.id);
+      const result = await analyze(fresh.id);
+      expect(result.status).toBe(200);
+      expect(
+        ownerAnalysisSchema.parse(JSON.parse(result.body.toString())).calls,
+      ).toEqual({ transcription: 1, selection: 0 });
+      expect(analysis.transcribe).toHaveBeenCalledTimes(2);
+      expect(analysis.select).toHaveBeenCalledTimes(0);
+    },
+  );
   it("rejects invalid source revisions/ranges without AI or native work", async () => {
     const workspace = await upload();
     const stale = inputs();

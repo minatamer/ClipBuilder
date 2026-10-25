@@ -81,6 +81,32 @@ control is retired; existing saved drafts still reopen and autosave. Fake AI gen
 fictional words/moments/pictures and does not establish real AI quality. Native
 inspection, cutting, overlays and encoding process actual local bytes.
 
+Completed transcription is reused for the same source/revision and AI mode in
+the current workspace, including new ranges/settings and an explicit retry after
+moment selection fails. AI discovery still makes a fresh selection request.
+Existing saved drafts with analysis also reuse their verified transcript; new
+transcription checkpoints are session-only and disappear on clear/expiry/shutdown.
+There is no new persistent cache or automatic provider retry. Fake/no-key mode
+uses fictional words; real processing retains the keys/live approvals below.
+
+To verify reuse, keep the same source/session open, submit moments once, then
+change a clip range and submit again. In browser developer tools, inspect the
+new analysis **POST response**: `calls.transcription` is `0` on reuse (`1` for
+fresh transcription). AI discovery can still report `calls.selection: 1`; using
+manual-only ranges with retained words reports both calls as zero. Reading the
+response or logs does not dispatch AI; submitting real AI discovery can spend
+credits under the normal owner-controlled settings.
+
+The backend stderr log also emits an `analysis_diagnostic` record with
+`phase: "transcription_reuse"`, `outcome: "succeeded"` and the fixed message
+`Source transcription reused; no transcription request: succeeded`. Its
+`requestId` matches that request's `find_moments` diagnostics. Fresh real-mode
+transcription instead has `operation: "transcribe"` start/success records.
+Search the normal backend log recorded by the local launcher; no transcript,
+fingerprint, workspace ID or filename is included in the reuse marker. Clear,
+expiry and backend restart end session-only reuse; existing saved draft analysis
+can seed reuse again after reopening.
+
 Real AI uses the same normal backend configuration: `FAKE_MODE=false`,
 `PAID_DEMO_ENABLED=true`, `GEMINI_API_KEY` and the existing transfer, image,
 paid-project and spend approvals. Only Gemini APIs are used by this local AI

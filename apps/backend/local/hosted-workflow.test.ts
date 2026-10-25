@@ -154,7 +154,7 @@ it("runs upload, preparation and explicit retry through isolated normal editing 
   expect(opened.status).toBe(200);
   const id = opened.body.workspace.id,
     base = `/workspace/${id}`;
-  const analysis = await request(app)
+  const firstAnalysis = await request(app)
     .post(base + "/analysis")
     .set(headers)
     .send({
@@ -164,7 +164,14 @@ it("runs upload, preparation and explicit retry through isolated normal editing 
       aiDuration: { minMs: 10000, maxMs: 10000 },
       manualOnly: true,
     });
+  expect(firstAnalysis.status).toBe(200);
+  expect(firstAnalysis.body.calls).toEqual({ transcription: 1, selection: 0 });
+  const analysis = await request(app)
+    .post(base + "/analysis")
+    .set(headers)
+    .send(firstAnalysis.body.inputs);
   expect(analysis.status).toBe(200);
+  expect(analysis.body.calls).toEqual({ transcription: 0, selection: 0 });
   media.mockRejectedValueOnce(new Error("synthetic_native_failure"));
   const prepared = await request(app)
     .post(base + "/clips")

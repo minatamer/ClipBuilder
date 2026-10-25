@@ -1,5 +1,19 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Source transcription reuse — 2026-10-25
+
+CL-066: completed, structurally decoded transcription is reusable within its
+workspace, bound to source fingerprint, revision and AI mode. Changes to manual
+ranges, AI count/duration or manual-only selection do not transcribe again.
+Retain words before moment selection so explicit retries after selection failure
+or cancellation reuse completed work. Selection still runs for each requested
+AI discovery; never add an automatic provider retry or change model settings.
+Existing saved analyses seed reuse after normal draft/source verification.
+New checkpoints are session-local and cleared with workspace expiry, clear or
+shutdown; no new durable cache, cross-session lookup or hosted retention.
+Fake/no-key verification proves reuse and dispatch counts, not live AI quality.
+Real processing still requires configured keys/live approvals and owner action.
+
 ## Loading-state presentation — 2026-10-24
 
 CL-062: full-content waits use a centered branded animated treatment with a

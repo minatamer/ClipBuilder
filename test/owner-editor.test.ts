@@ -71,7 +71,10 @@ afterEach(async () => {
     await rm(directory, { recursive: true, force: true });
   }
 });
-async function start(withAI = true): Promise<Context> {
+async function start(
+  withAI = true,
+  mode: "synthetic-ai" | "provider-ai" = "synthetic-ai",
+): Promise<Context> {
   const root = join(directory, `scratch-${contexts.length}`);
   await mkdir(root);
   const media = vi.fn<OwnerHostOptions["media"]>(async (job, signal) => {
@@ -112,7 +115,12 @@ async function start(withAI = true): Promise<Context> {
     token: "editor-test",
     port: 0,
     media,
-    ...(withAI ? { analysis, clipPreparation: preparation } : {}),
+    ...(withAI
+      ? {
+          analysis: { ...analysis, mode },
+          clipPreparation: { ...preparation, mode },
+        }
+      : {}),
   });
   const context = { host, root, media, port: await listenOwner(host.server) };
   contexts.push(context);
@@ -489,6 +497,48 @@ it("imports a personal picture and edits/re-exports one of three clips with stal
   expect(rendered.overlay.captionStyle).toEqual(latest.edit?.captions);
   counts(context, 4);
 });
+
+it.each(["synthetic-ai", "provider-ai"] as const)(
+  "reopens a verified saved draft in %s mode and only reuses a matching transcript",
+  async (mode) => {
+    const initial = await start(),
+      { workspace } = await prepare(initial);
+    const saved = await post(initial, `${endpoint(workspace.id)}/draft`);
+    expect(saved.status).toBe(200);
+    const status = ownerDraftStatusSchema.parse(
+      JSON.parse(saved.body.toString()),
+    );
+    await stop(initial);
+    // Both modes use the same injected fake adapters; no real provider is called.
+    const restored = await start(true, mode);
+    const opened = await post(restored, `/api/drafts/${status.id}/open`);
+    expect(opened.status).toBe(200);
+    const reopened = ownerWorkspaceSchema.parse(
+      JSON.parse(opened.body.toString()),
+    );
+    expect(reopened.id).not.toBe(workspace.id);
+    const result = await post(restored, `${endpoint(reopened.id)}/analysis`, {
+      sourceRevision: reopened.revision,
+      policyRevision: 2,
+      ranges: [],
+      aiDuration: { minMs: 10_000, maxMs: 10_000 },
+      aiCount: 1,
+      manualOnly: false,
+    });
+    expect(result.status).toBe(200);
+    const analyzed = ownerAnalysisSchema.parse(
+      JSON.parse(result.body.toString()),
+    );
+    const transcription = mode === "synthetic-ai" ? 0 : 1;
+    expect(analyzed.calls).toEqual({ transcription, selection: 1 });
+    expect(analyzed.suggestions).toHaveLength(1);
+    expect(analysis.transcribe).toHaveBeenCalledTimes(1 + transcription);
+    expect(analysis.select).toHaveBeenCalledTimes(2);
+    expect(preparation.plan).toHaveBeenCalledTimes(3);
+    expect(preparation.image).toHaveBeenCalledTimes(3);
+    expect(restored.media).toHaveBeenCalledTimes(0);
+  },
+);
 
 it("flushes an acknowledged pending autosave before shutdown discards the in-memory clip bundles", async () => {
   const initial = await start(),

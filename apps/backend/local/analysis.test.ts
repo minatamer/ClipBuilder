@@ -5,6 +5,7 @@ import {
   fitOwnerAiWindow,
   ownerLocalCues,
   type OwnerAnalysisPorts,
+  type OwnerTranscript,
 } from "./analysis.ts";
 import { fakeOwnerAnalysis } from "./fake-analysis.ts";
 import { ownerAvailableWindows } from "./selection-windows.ts";
@@ -17,6 +18,7 @@ import {
   parseOwnerTimestamp,
   ownerTimestamp,
   type OwnerAnalysisInputs,
+  type OwnerWord,
 } from "../../../packages/contracts/local/selection.ts";
 import type { OwnerWorkspace } from "../../../packages/contracts/local/index.ts";
 import { startSessionRequestSchema } from "../../../packages/contracts/src/api.schema.ts";
@@ -52,6 +54,298 @@ const ports = () => ({
   select: vi.fn(fakeOwnerAnalysis.select),
 });
 const signal = () => new AbortController().signal;
+
+describe("source transcription reuse", () => {
+  function checkpoint() {
+    return {
+      transcript: undefined as OwnerTranscript | undefined,
+      completed(transcript: OwnerTranscript) {
+        this.transcript = transcript;
+      },
+    };
+  }
+
+  it("reuses words across changed ranges, duration/count and manual-only requests", async () => {
+    const current = workspace(),
+      provider = ports(),
+      reuse = checkpoint();
+    const first = await analyzeOwner(
+      current,
+      input(),
+      provider,
+      signal(),
+      reuse,
+    );
+    const changed = {
+      ...input(10_000, 20_000),
+      policyRevision: 2,
+      ranges: [range(100_000, 110_000)],
+      aiCount: 2,
+    };
+    const next = await analyzeOwner(
+      current,
+      changed,
+      provider,
+      signal(),
+      reuse,
+    );
+    const manual = await analyzeOwner(
+      current,
+      { ...changed, policyRevision: 3, manualOnly: true },
+      provider,
+      signal(),
+      reuse,
+    );
+    expect(next.words).toEqual(first.words);
+    expect(next.inputs).toEqual(changed);
+    expect(next.manual[0]?.cut).toEqual(ownerCut(changed.ranges[0]!, 240_000));
+    expect(next.suggestions).toHaveLength(2);
+    expect(first.calls).toEqual({ transcription: 1, selection: 1 });
+    expect(next.calls).toEqual({ transcription: 0, selection: 1 });
+    expect(manual.calls).toEqual({ transcription: 0, selection: 0 });
+    expect(provider.transcribe).toHaveBeenCalledTimes(1);
+    expect(provider.select).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["failure", "cancellation"])(
+    "retains transcription before selection %s and only retries on request",
+    async (outcome) => {
+      const current = workspace(),
+        provider = ports(),
+        reuse = checkpoint();
+      const controller = new AbortController();
+      provider.select.mockImplementationOnce(async () => {
+        if (outcome === "cancellation") {
+          controller.abort();
+          return [];
+        }
+        throw new Error("synthetic_selection_failed");
+      });
+      await expect(
+        analyzeOwner(current, input(), provider, controller.signal, reuse),
+      ).rejects.toThrow();
+      expect(reuse.transcript?.words.length).toBeGreaterThan(0);
+      expect(provider.transcribe).toHaveBeenCalledTimes(1);
+      expect(provider.select).toHaveBeenCalledTimes(1);
+      const result = await analyzeOwner(
+        current,
+        input(),
+        provider,
+        signal(),
+        reuse,
+      );
+      expect(result.calls).toEqual({ transcription: 0, selection: 1 });
+      expect(provider.transcribe).toHaveBeenCalledTimes(1);
+      expect(provider.select).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it.each(["fingerprint", "revision", "mode"])(
+    "does not reuse a transcript with a different %s",
+    async (field) => {
+      const current = workspace(),
+        provider = ports(),
+        reuse = checkpoint();
+      await analyzeOwner(current, input(), provider, signal(), reuse);
+      const cached = reuse.transcript!;
+      if (field === "fingerprint") cached.fingerprint = "c".repeat(64);
+      if (field === "revision") cached.sourceRevision++;
+      if (field === "mode") cached.mode = "provider-ai";
+      const result = await analyzeOwner(
+        current,
+        input(),
+        provider,
+        signal(),
+        reuse,
+      );
+      expect(result.calls).toEqual({ transcription: 1, selection: 1 });
+      expect(provider.transcribe).toHaveBeenCalledTimes(2);
+      expect(provider.select).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("reuses an empty completed transcript without dispatching selection", async () => {
+    const current = workspace(),
+      provider = ports(),
+      reuse = checkpoint();
+    provider.transcribe.mockResolvedValueOnce([]);
+    const first = await analyzeOwner(
+      current,
+      input(),
+      provider,
+      signal(),
+      reuse,
+    );
+    const next = await analyzeOwner(
+      current,
+      input(),
+      provider,
+      signal(),
+      reuse,
+    );
+    expect(first.calls).toEqual({ transcription: 1, selection: 0 });
+    expect(next.calls).toEqual({ transcription: 0, selection: 0 });
+    expect(provider.transcribe).toHaveBeenCalledTimes(1);
+    expect(provider.select).toHaveBeenCalledTimes(0);
+  });
+
+  it("isolates retained source words from provider buffers, returned results, clip cues and failed selection mutation", async () => {
+    const current = workspace(),
+      provider = ports(),
+      reuse = checkpoint();
+    let providerWords: OwnerWord[] = [];
+    provider.transcribe.mockImplementationOnce(async (source, cancellation) => {
+      providerWords = await fakeOwnerAnalysis.transcribe(source, cancellation);
+      return providerWords;
+    });
+    const first = await analyzeOwner(
+      current,
+      { ...input(), manualOnly: true },
+      provider,
+      signal(),
+      reuse,
+    );
+    const original = structuredClone(reuse.transcript!.words);
+    Object.assign(providerWords[0]!, {
+      text: "changed provider buffer",
+      startMs: 2000,
+    });
+    Object.assign(first.words[0]!, { text: "changed result", startMs: 3000 });
+    Object.assign(first.manual[0]!.cues[0]!, {
+      text: "changed caption",
+      startMs: 4000,
+    });
+    provider.select.mockImplementationOnce(async (words) => {
+      Object.assign(words[0]!, {
+        text: "changed selection input",
+        startMs: 5000,
+      });
+      throw new Error("synthetic_selection_failure");
+    });
+    await expect(
+      analyzeOwner(current, input(), provider, signal(), reuse),
+    ).rejects.toThrow();
+    const changed = {
+      ...input(),
+      ranges: [range(1000, 8000)],
+      manualOnly: true,
+    };
+    const result = await analyzeOwner(
+      current,
+      changed,
+      provider,
+      signal(),
+      reuse,
+    );
+    expect(reuse.transcript!.words).toEqual(original);
+    expect(result.words).toEqual(original);
+    expect(result.manual[0]!.cues).toEqual(
+      ownerLocalCues(
+        original,
+        ownerCut(changed.ranges[0]!, current.source.durationMs),
+      ),
+    );
+    expect(result.manual[0]!.cues[0]!.startMs).toBe(0);
+    expect(result.calls).toEqual({ transcription: 0, selection: 0 });
+    expect(provider.transcribe).toHaveBeenCalledTimes(1);
+    expect(provider.select).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves a checkpoint through rejected stale inputs and an already-canceled request", async () => {
+    const current = workspace(),
+      provider = ports(),
+      reuse = checkpoint();
+    await analyzeOwner(current, input(), provider, signal(), reuse);
+    const original = structuredClone(reuse.transcript);
+    for (const request of [
+      { ...input(), sourceRevision: 1 },
+      { ...input(), ranges: [range(240_000, 241_000)] },
+    ]) {
+      await expect(
+        analyzeOwner(current, request, provider, signal(), reuse),
+      ).rejects.toThrow();
+    }
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      analyzeOwner(current, input(), provider, controller.signal, reuse),
+    ).rejects.toThrow();
+    expect(reuse.transcript).toEqual(original);
+    expect(provider.transcribe).toHaveBeenCalledTimes(1);
+    expect(provider.select).toHaveBeenCalledTimes(1);
+    const next = await analyzeOwner(
+      current,
+      input(),
+      provider,
+      signal(),
+      reuse,
+    );
+    expect(next.words).toEqual(original!.words);
+    expect(next.calls).toEqual({ transcription: 0, selection: 1 });
+    expect(provider.transcribe).toHaveBeenCalledTimes(1);
+    expect(provider.select).toHaveBeenCalledTimes(2);
+  });
+
+  it("retains completed transcription if cancellation arrives with its result", async () => {
+    const current = workspace(),
+      provider = ports(),
+      reuse = checkpoint();
+    const controller = new AbortController();
+    provider.transcribe.mockImplementationOnce(async (source, cancellation) => {
+      const words = await fakeOwnerAnalysis.transcribe(source, cancellation);
+      controller.abort();
+      return words;
+    });
+    await expect(
+      analyzeOwner(current, input(), provider, controller.signal, reuse),
+    ).rejects.toThrow();
+    expect(reuse.transcript?.words.length).toBeGreaterThan(0);
+    expect(provider.select).toHaveBeenCalledTimes(0);
+    const next = await analyzeOwner(
+      current,
+      input(),
+      provider,
+      signal(),
+      reuse,
+    );
+    expect(next.calls).toEqual({ transcription: 0, selection: 1 });
+    expect(provider.transcribe).toHaveBeenCalledTimes(1);
+    expect(provider.select).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["failure", "undecodable", "duplicate IDs"])(
+    "does not checkpoint transcription %s or retry it automatically",
+    async (outcome) => {
+      const current = workspace(),
+        provider = ports(),
+        reuse = checkpoint();
+      provider.transcribe.mockImplementationOnce(async () => {
+        if (outcome === "failure")
+          throw new Error("synthetic_transcription_failed");
+        const words = await fakeOwnerAnalysis.transcribe(current, signal());
+        if (outcome === "undecodable") words[0]!.startMs = NaN;
+        else words[1]!.id = words[0]!.id;
+        return words;
+      });
+      await expect(
+        analyzeOwner(current, input(), provider, signal(), reuse),
+      ).rejects.toThrow();
+      expect(reuse.transcript).toBeUndefined();
+      expect(provider.transcribe).toHaveBeenCalledTimes(1);
+      expect(provider.select).toHaveBeenCalledTimes(0);
+      const retried = await analyzeOwner(
+        current,
+        input(),
+        provider,
+        signal(),
+        reuse,
+      );
+      expect(retried.calls).toEqual({ transcription: 1, selection: 1 });
+      expect(provider.transcribe).toHaveBeenCalledTimes(2);
+      expect(provider.select).toHaveBeenCalledTimes(1);
+    },
+  );
+});
 
 describe("owner manual ranges and independent discovery", () => {
   it.each([1, 5, 10])(

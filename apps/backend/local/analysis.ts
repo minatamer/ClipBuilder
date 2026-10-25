@@ -41,6 +41,14 @@ export type OwnerAnalysisPorts = {
   ): Promise<OwnerAiEvidence[]>;
 };
 
+/** Held by one workspace; saved analyses can seed it after source verification. */
+export type OwnerTranscript = {
+  fingerprint: string;
+  sourceRevision: number;
+  mode: OwnerAiMode;
+  words: OwnerWord[];
+};
+
 export function ownerLocalCues(
   words: readonly OwnerWord[],
   cut: OwnerCut,
@@ -110,6 +118,11 @@ export async function analyzeOwner(
   value: unknown,
   ports: OwnerAnalysisPorts,
   signal: AbortSignal,
+  reuse?: {
+    transcript: OwnerTranscript | undefined;
+    completed(transcript: OwnerTranscript): void;
+    reused?(): void;
+  },
 ) {
   const workspace = ownerWorkspaceSchema.parse(currentWorkspace);
   if (workspace.mode !== ports.mode) throw new Error("analysis_mode_mismatch");
@@ -122,10 +135,15 @@ export async function analyzeOwner(
   );
   signal.throwIfAborted();
   // Parsing freezes a private input snapshot before any asynchronous dispatch.
+  const cached = reuse?.transcript;
+  const reused =
+    cached !== undefined &&
+    cached.fingerprint === workspace.source.fingerprint &&
+    cached.sourceRevision === workspace.revision &&
+    cached.mode === workspace.mode;
   const words = ownerWordsSchema.parse(
-    await ports.transcribe(workspace, signal),
+    reused ? cached.words : await ports.transcribe(workspace, signal),
   );
-  signal.throwIfAborted();
   const ids = new Set<string>();
   let previousStart = -1;
   for (const word of words) {
@@ -139,6 +157,15 @@ export async function analyzeOwner(
     ids.add(word.id);
     previousStart = word.startMs;
   }
+  if (!reused)
+    reuse?.completed({
+      fingerprint: workspace.source.fingerprint,
+      sourceRevision: workspace.revision,
+      mode: workspace.mode,
+      words: ownerWordsSchema.parse(words),
+    });
+  signal.throwIfAborted();
+  if (reused) reuse?.reused?.();
   const byCut = new Map<string, OwnerMoment>();
   const key = (cut: OwnerCut) => `${cut.startFrame}:${cut.endFrame}`;
   const moment = (cut: OwnerCut): OwnerMoment => ({
@@ -296,6 +323,6 @@ export async function analyzeOwner(
     words,
     manual,
     suggestions,
-    calls: { transcription: 1, selection: selected ? 1 : 0 },
+    calls: { transcription: reused ? 0 : 1, selection: selected ? 1 : 0 },
   });
 }

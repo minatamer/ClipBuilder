@@ -1,5 +1,19 @@
 # ClipBuilder canonical ticket index
 
+## Source transcription reuse — 2026-10-25
+
+[CL-066](CL-066-reuse-source-transcription.md) implements the owner's selected
+Gemini saving: reuse completed, source/revision/mode-bound transcription across
+explicit analysis requests and selection retries. Existing saved analyses seed
+reuse; new checkpoints stay session-local. Other Gemini optimizations/settings
+are unchanged. **89 focused fake/no-key tests**, types/lint/format, read-only
+validation and normal-app readiness checks pass. Real AI quality and measured
+savings remain owner-manual; no paid/cloud, deployment or Git action occurred.
+Owner integrity/logging follow-up: explicit `transcription_reuse` diagnostics,
+mutation/race/cancel/restore-mode regressions and **119 focused synthetic tests**
+pass. Source words remain isolated from result/caption/selection edits; the
+workflow guide explains POST call counts and backend-log verification.
+
 ## Current local release verification — 2026-10-24
 
 [CL-063](CL-063-local-hosted-release-verification.md) checks the prepared images
