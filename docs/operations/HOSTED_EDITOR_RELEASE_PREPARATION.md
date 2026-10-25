@@ -6,6 +6,30 @@ Only YouTube URL acquisition is local-only. This is prepared source code; it
 does not change the currently deployed revision. Agents must never deploy for
 the owner or run credit-consuming tests without new explicit approval.
 
+## Deferred deployment checklist — 2026-10-25
+
+The owner is not deploying now. Revisit these items with the owner before a
+future deployment decision; this note authorizes no cloud changes or deployment.
+
+- [ ] Prepare the shared editor backend allocation: **4 CPUs, 16 GiB RAM and
+      always-allocated CPU**, retaining **minimum zero / maximum one instance**.
+      The read-only inspection found the older backend at one CPU, 512 MiB and
+      request-only CPU allocation. The larger profile remains unapplied and its
+      maximum workload capacity remains unverified.
+- [ ] Review the increased running cost and verify the existing **USD 5 Cloud Run
+      cap in Console**. CLI budget inspection was blocked by the disabled Billing
+      Budgets API; that does not establish that the cap is missing. Enabling that
+      API is not required for the Console check and is not authorized here.
+
+Preserve the inspected frontend settings, IAM, runtime identities, secret
+bindings and origins; no configuration change to those is currently needed.
+The custom domain has valid TLS, but its cutover is optional: the managed Cloud
+Run origin remains the working application origin. The owner also chose to
+leave FFmpeg unchanged; no remediation or public-release risk acceptance is
+claimed by that choice. The remaining release verification gates below still
+apply. Fake/no-key local proofs do not establish hosted capacity or real Gemini
+quality; hosted compute tests and real-provider checks retain separate approvals.
+
 ## Composition and boundaries
 
 - One Next frontend and Express backend. The same React editor, domain use cases,
