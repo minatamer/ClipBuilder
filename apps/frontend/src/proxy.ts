@@ -32,7 +32,9 @@ export function proxy(request: NextRequest) {
   return response;
 }
 export const config = {
+  // Picked MP4s stream through the route's own origin/auth checks. Document
+  // Proxy clones bodies and truncates large uploads at its 10 MB default.
   matcher: [
-    "/((?!_next/static|_next/image|icon.svg|favicon.ico|favicon.png|robots.txt).*)",
+    "/((?!api/local/open/video/?$|_next/static|_next/image|icon.svg|favicon.ico|favicon.png|robots.txt).*)",
   ],
 };

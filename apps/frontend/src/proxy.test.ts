@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
-import { proxy } from "./proxy";
+import { proxy, config } from "./proxy";
+import { unstable_doesMiddlewareMatch as doesProxyMatch } from "next/experimental/testing/server";
 import {
   browserSecurityPolicy,
   REMOTION_PLAYER_STYLE_HASH,
@@ -8,6 +9,22 @@ import {
 import { createHash } from "node:crypto";
 import { Internals } from "remotion";
 describe("request-scoped browser security", () => {
+  it("lets large picked-video bodies stream without document cloning while retaining adjacent coverage", () => {
+    for (const path of ["/api/local/open/video", "/api/local/open/video/"])
+      expect(
+        doesProxyMatch({ config, url: `http://localhost:3000${path}` }),
+      ).toBe(false);
+    for (const path of [
+      "/start",
+      "/api/local/open/draft",
+      "/api/local/open/videox",
+      "/api/local/open/video/extra",
+      "/api/local/uploads/synthetic/chunk",
+    ])
+      expect(
+        doesProxyMatch({ config, url: `http://localhost:3000${path}` }),
+      ).toBe(true);
+  });
   it("replaces an untrusted nonce, forwards it to rendering and never caches a document", () => {
     const request = new NextRequest("http://localhost:3000/start", {
       headers: { "x-nonce": "untrusted" },

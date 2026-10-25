@@ -63,6 +63,20 @@ it("rejects cross-site, missing write Origin and agent access before private dis
     403,
   );
   expect(
+    (await proxyLocalWorkflow(input("POST"), ["open", "video"])).status,
+  ).toBe(403);
+  expect(
+    (
+      await proxyLocalWorkflow(
+        input("POST", {
+          Origin: "https://other.example.test",
+          "sec-fetch-site": "cross-site",
+        }),
+        ["open", "video"],
+      )
+    ).status,
+  ).toBe(403);
+  expect(
     (
       await proxyLocalWorkflow(
         input("GET", { "sec-fetch-site": "cross-site" }),
