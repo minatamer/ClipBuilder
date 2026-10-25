@@ -10,6 +10,33 @@ acceptance. No deployment or paid test is authorized.
 
 Local controls use the normal `/start` flow and app shell. See the [local workflow guide](../../docs/operations/LOCAL_WORKFLOW.md). The backend owns AI mode; no separate frontend mode or app is needed. Fake AI is key-free and fictional; real downloads/native media are available independently.
 
+Picked MP4 uploads stream through their protected route instead of the document
+Proxy, whose default body clone truncates requests above 10 MB. This preserves
+large local uploads without raising a global memory-buffer limit. Origin/caller/
+session checks and backend media/resource bounds still apply. See
+[CL-075](../../docs/tickets/CL-075-large-local-video-upload.md).
+
+[CL-073](../../docs/tickets/CL-073-footer-start-over.md) exposes Start over directly
+in the workspace footer, including dirty edits. It resets the current session to
+fresh intake through existing protected cleanup; saved library files remain.
+
+CL-068/069/072 add Focus to the shared completed-clip editor: Camera/People
+tabs, numbered position handles, explicit person removal and playback-based
+Start/End Capture. Camera contains Timing/Advanced for the selected position;
+precise zoom/percentages live in Advanced. Every timestamped position is
+independent. Add position first asks for the person (defaulting to the highlighted
+row), then inserts below it on confirmation. Removal renumbers the list.
+People selects positions without appearance-time fields. Preview and MP4
+use the same even-pixel fill crop and frame clocks. Apply/Discard and explicit
+export retain their footer; reset restores the automatic plan. Fake mode uses
+fictional people and generated test media; real Gemini detection/quality remains
+owner-manual. Existing paid drafts remain readable and correctable without a
+new AI call. See [the position person selector](../../docs/tickets/CL-076-confirm-position-person.md).
+[CL-070](../../docs/tickets/CL-070-export-resolution-and-quality-audit.md) renders
+final vertical exports directly from the original at source-quality resolution
+and nominal frame rate. Reduced previews are separate; creating a new export
+revision uses the corrected path, without another AI call.
+
 CL-015 hosted paid-walkthrough checkpoint (2026-10-07): the public Linux standalone
 frontend is deployed against the private backend with paid processing enabled
 for the owner's manual test at the managed frontend URL. API routes validate the exact

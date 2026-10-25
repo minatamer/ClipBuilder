@@ -6,6 +6,7 @@ import {
   ownerDiagnosticRecordSchema,
   type OwnerDiagnosticOperation,
   type OwnerTranscriptTimingDiagnostic,
+  type OwnerFocusDiagnostic,
 } from "../../../packages/contracts/local/diagnostics.ts";
 import { AnalysisDiagnostics } from "../src/analysis/analysis.diagnostics.ts";
 
@@ -37,6 +38,7 @@ export class LocalDiagnostics {
     jobId?: string,
     httpStatus?: number,
     transcriptTiming?: OwnerTranscriptTimingDiagnostic,
+    focus?: OwnerFocusDiagnostic,
   ) {
     const context = this.contexts.getStore() ?? this.context();
     const limit =
@@ -71,6 +73,7 @@ export class LocalDiagnostics {
               : { error: describeOwnerDiagnosticError(error) }),
             ...(httpStatus ? { httpStatus } : {}),
             ...(transcriptTiming ? { transcriptTiming } : {}),
+            ...(focus ? { focus } : {}),
             droppedRecords: context.budget.dropped,
           }),
         ),
@@ -90,6 +93,21 @@ export class LocalDiagnostics {
       "transcript_validate",
       "succeeded",
       performance.now(),
+      undefined,
+      undefined,
+      undefined,
+      value,
+    );
+  }
+  focus(
+    operation: "focus_plan" | "focus_compile" | "focus_edit" | "focus_export",
+    value: OwnerFocusDiagnostic,
+  ) {
+    this.emit(
+      operation,
+      "succeeded",
+      performance.now(),
+      undefined,
       undefined,
       undefined,
       undefined,

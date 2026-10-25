@@ -108,7 +108,11 @@ stream, H.264/VP9 plus AAC/Opus, admitted 8-bit pixels, mono/stereo up to 48kHz,
 3840×2160 pixels. This linked-source profile is narrower than some existing
 local upload decoder choices. HDR, AV1/HEVC, unsupported audio/container
 combinations, live/upcoming/incomplete archives and restricted access stop
-safely. Final clips remain 1080×1920/30fps SDR regardless of source quality.
+safely. CL-070 final exports remain vertical SDR, preserve upright source height
+with even-pixel codec rounding, and retain the source's nominal frame rate;
+already vertical 9:16 sources keep their native dimensions. The logical editor
+clock and reduced browser previews remain 30 fps. Cropping/zoom can enlarge a
+region, but reduced previews/AI proxies never feed the final video encoder.
 
 Only the private acquisition merge can read admitted WebM/MP4 components. It
 losslessly muxes selected encoded streams into MP4, checks dimensions/FPS/audio

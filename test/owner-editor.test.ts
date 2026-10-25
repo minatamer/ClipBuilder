@@ -1,3 +1,7 @@
+import { vi as captionFixtureMock } from "vitest";
+captionFixtureMock.mock("../apps/backend/local/fake-content.ts", () => ({
+  FAKE_CAPTIONS_ENABLED: true,
+}));
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import {
@@ -15,7 +19,7 @@ import {
   type OwnerHostOptions,
 } from "../apps/backend/local/server.ts";
 import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
-import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
+import { editorContentFixture as fakeOwnerClipPreparation } from "./owner-content-fixture.ts";
 import { ownerWorkspaceSchema } from "../packages/contracts/local/index.ts";
 import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
 import {

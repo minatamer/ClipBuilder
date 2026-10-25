@@ -16,7 +16,7 @@ import {
 } from "../apps/backend/local/server.ts";
 import { fakeOwnerAcquisition } from "../apps/backend/local/fake-acquisition.ts";
 import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
-import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
+import { editorContentFixture as fakeOwnerClipPreparation } from "./owner-content-fixture.ts";
 import { ownerWorkspaceSchema } from "../packages/contracts/local/index.ts";
 import {
   ownerYoutubeOfferSchema,

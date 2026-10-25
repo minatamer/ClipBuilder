@@ -1,5 +1,14 @@
 # Local editing backend
 
+CL-068 includes anonymous person observations and automatic portrait framing in
+the existing selected-clip video planning request. Preparation retains focus
+beside completed pictures, and manual focus edits use the existing revision/base
+binding and explicit export snapshot. No extra provider call or automatic retry.
+Safe focus diagnostics record counts and fallback/hold/switch decisions; the
+normalized automatic plan stays in protected clip state/private drafts. See the
+[workflow guide](../../../docs/operations/LOCAL_WORKFLOW.md) for controls and log
+verification. Fake people are fictional; live Gemini quality is owner-manual.
+
 These modules extend the normal backend at `/v1/local`, mounted only for local
 loopback requests. Normal startup owns the native worker and `.env.local`;
 there is no separate host executable or owner/provider command.
@@ -60,11 +69,31 @@ requested additional count. Shortfalls never trigger another selection call;
 selection is skipped when no remaining window can fit the minimum duration.
 Manual cuts and the existing manual-first combined list remain authoritative.
 
-Fake analysis now emits an original fictional two-speaker conversation, not a
-transcription of uploaded media. Fake pictures use the bundled NASA Earth sample
-documented in [SAMPLE_MEDIA.md](SAMPLE_MEDIA.md), with no runtime network access.
-PNG/JPEG/WebP personal pictures normalize into the existing bounded static JPEG
-profile; animation and unsafe/over-limit rasters remain rejected. Picture upload
+Fake analysis emits fictional dialogue for moment/focus testing. New fake clips
+have no caption overlay by default: `fake-content.ts` owns the hardcoded
+`FAKE_CAPTIONS_ENABLED=false` switch, with no environment setting. The fake picture
+adapter permanently returns no plan and never generates the Earth sample.
+Existing saved media/edits stay intact; tests needing art/captions explicitly
+inject isolated content fixtures.
+
+CL-078 adds protected, revision-bound clip caption generation. Locally,
+Generate fake captions inserts fictional words with no key, spend or paid-attempt
+charge. It is absent from hosted UI/routes. Generate captions confirms audio
+transfer/Gemini credits, then transcribes only the selected cut's bounded M4A.
+The owner authorized this local-only caption port to use the existing configured
+Gemini key even with fake mode/paid master off. It changes no global config and
+exposes no analysis/selection/image/cloud bypass. Hosted caption generation keeps
+normal paid readiness, authentication/CSRF and provider/native session budgets.
+Explicit Gemini attempts are bounded to three per clip; repeated operation IDs
+never dispatch again and there is no automatic retry. Generation increments the
+edit revision and retains framing, pictures, style and old exports. Word corrections
+are text-only overrides keyed by existing IDs; the shared compiler preserves all
+timestamps for preview, autosave and export. No new environment entries.
+PNG/WebP personal pictures with alpha normalize to bounded static PNG, preserving
+transparent and half-transparent pixels. Opaque inputs retain the JPEG profile.
+Trusted optional format metadata controls fixed storage/draft extensions and
+response/render MIME; legacy missing format means JPEG. Editing cannot set that
+metadata. Animation and unsafe/over-limit rasters remain rejected. Picture upload
 returns the admitted asset ID even for duplicate bytes so the frontend can insert
 the chosen picture directly. Manual cues have a separate twenty-cue bound;
 automatic planning/image attempt limits remain three. Shared schema/edit/motion

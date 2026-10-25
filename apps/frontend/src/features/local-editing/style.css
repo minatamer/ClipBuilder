@@ -98,7 +98,7 @@
     display: none;
   }
   .source-options {
-    --source-card-height: clamp(25rem, 45svh, 27rem);
+    --source-card-height: clamp(28rem, 48svh, 30rem);
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 1.25rem;
@@ -141,7 +141,7 @@
     min-height: 0;
     min-width: 0;
     overflow-y: auto;
-    scrollbar-gutter: stable;
+    scrollbar-gutter: auto;
   }
   .source-card-footer {
     flex-shrink: 0;
@@ -164,7 +164,7 @@
     align-items: center;
     gap: 1rem;
     padding: 0.65rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
     border: 1px solid var(--cb-glass-border);
     border-radius: 1rem;
     background: var(--cb-glass-sheen), rgb(7 22 52 / 24%);
@@ -264,6 +264,48 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+  }
+  .upload-card .source-card-body {
+    display: flex;
+    padding-block: 0.25rem;
+  }
+  .upload-drop-area {
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    padding: clamp(0.85rem, 2vw, 1.5rem);
+    border: 1px dashed rgb(154 194 255 / 50%);
+    border-radius: 1rem;
+    background: rgb(80 142 255 / 5%);
+    text-align: center;
+    transition:
+      border-color var(--cb-motion-hover),
+      background-color var(--cb-motion-hover);
+  }
+  .upload-drop-area > svg {
+    width: clamp(1.5rem, 3vw, 2rem);
+    height: clamp(1.5rem, 3vw, 2rem);
+    color: var(--cb-brand-strong);
+  }
+  .upload-drop-area > strong {
+    font-size: clamp(0.9375rem, 1.5vw, 1.125rem);
+    font-weight: 650;
+  }
+  .upload-drop-area > span {
+    color: var(--cb-ink-soft);
+    font-size: 0.8125rem;
+  }
+  .upload-drop-area[data-disabled="true"] {
+    opacity: 0.55;
+  }
+  .upload-card.is-dragging .upload-drop-area {
+    border-color: var(--cb-focus);
+    background: var(--cb-brand-soft);
   }
   .source-actions a {
     text-decoration: none;
@@ -375,6 +417,9 @@
   }
   .link-fields > button {
     margin-block: 0.25rem 1rem;
+  }
+  .youtube-card .link-fields > button {
+    margin-bottom: 0;
   }
   .link-fields > p {
     margin-top: 1rem;
@@ -729,6 +774,223 @@
   .moment-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .editor-tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .focus-source {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    margin-inline: auto;
+    border: 1px solid var(--cb-border);
+    border-radius: 0.75rem;
+    background: var(--cb-canvas);
+  }
+  .focus-person-handle {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: grid;
+    place-items: center;
+    width: var(--cb-target);
+    height: var(--cb-target);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--cb-ink);
+    cursor: grab;
+    touch-action: none;
+  }
+  .focus-person-handle span {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid var(--cb-focus);
+    border-radius: 0.3rem;
+    background: var(--cb-brand);
+    font-weight: 700;
+  }
+  .focus-person-handle[aria-pressed="true"] span {
+    box-shadow: 0 0 0 2px var(--cb-brand-soft);
+  }
+  .focus-person-handle[aria-pressed="true"] {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+  .focus-person-handle:active {
+    cursor: grabbing;
+  }
+  .focus-crop {
+    position: absolute;
+    pointer-events: none;
+    border: 2px solid var(--cb-focus);
+    box-shadow: 0 0 0 100vmax rgb(0 0 0 / 32%);
+  }
+  .focus-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.8125rem;
+  }
+  .focus-context {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 0.5rem;
+    margin-block: 0.5rem;
+    font-size: 0.75rem;
+  }
+  .focus-context span {
+    color: var(--cb-ink-soft);
+  }
+  .focus-boundaries {
+    display: grid;
+    gap: 0.5rem;
+    margin-block: 0.5rem;
+  }
+  .caption-empty {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+  .caption-empty h4,
+  .caption-empty p {
+    margin: 0;
+  }
+  .caption-empty-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .caption-text-editor {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .caption-word-group {
+    border: 1px solid var(--cb-border);
+    border-radius: 0.75rem;
+    padding: 0.5rem;
+    min-width: 0;
+  }
+  .caption-words {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .caption-words label {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .caption-words input {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .focus-add-position {
+    margin-block: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--cb-border);
+    border-radius: 0.75rem;
+    background: var(--cb-canvas);
+  }
+  .focus-boundaries .range-time,
+  .picture-timing .range-time {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+  .focus-heading > span,
+  .focus-empty {
+    color: var(--cb-ink-soft);
+    font-size: 0.75rem;
+  }
+  .focus-empty {
+    margin-block: 0.5rem;
+  }
+  .focus-people {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .focus-person-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .focus-person-remove {
+    padding-inline: 0.5rem;
+    font-size: 0.75rem;
+  }
+  .focus-person-select[aria-pressed="true"] {
+    color: var(--cb-ink);
+    background: var(--cb-brand-soft);
+    border-color: var(--cb-focus);
+  }
+  .focus-person-select {
+    min-height: var(--cb-target);
+    background: transparent;
+    color: var(--cb-ink-soft);
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    font: inherit;
+    font-size: 0.75rem;
+    text-align: left;
+    cursor: pointer;
+  }
+  .focus-shot-list {
+    display: grid;
+    gap: 0.35rem;
+    max-height: 10rem;
+    overflow-y: auto;
+    margin-top: 0.5rem;
+  }
+  .focus-shot {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-width: 0;
+    min-height: var(--cb-target);
+    padding: 0.45rem 0.65rem 0.65rem;
+    background: var(--cb-canvas);
+    border: 1px solid var(--cb-border);
+    color: var(--cb-ink-soft);
+    border-radius: 0.5rem;
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .focus-shot[data-playing="true"] {
+    box-shadow: inset 3px 0 var(--cb-brand);
+  }
+  .focus-shot[aria-pressed="true"] {
+    border-color: var(--cb-focus);
+    color: var(--cb-ink);
+    background: var(--cb-brand-soft);
+  }
+  .focus-shot-bar {
+    position: absolute;
+    bottom: 0;
+    height: 3px;
+    background: var(--cb-brand);
+  }
+  .focus-shot:focus-visible,
+  .focus-person-handle:focus-visible,
+  .focus-person-select:focus-visible {
+    outline: 2px solid var(--cb-focus);
+    outline-offset: -2px;
+  }
+  .focus-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .editor-tabs button,
   .moment-tabs button {
     min-width: 0;
@@ -904,8 +1166,28 @@
     }
     .clip-workspace .editor-tabs {
       gap: 0;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .clip-workspace .editor-tabs button {
+      padding-inline: 0;
+      font-size: 0.75rem;
+    }
+    .focus-shot {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.2rem;
+    }
+    .focus-boundaries .range-time,
+    .picture-timing .range-time {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .control-tabs[aria-label="Focus controls"],
+    .control-tabs[aria-label="Camera controls"] {
+      gap: 0;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .control-tabs[aria-label="Focus controls"] button,
+    .control-tabs[aria-label="Camera controls"] button {
       padding-inline: 0;
       font-size: 0.75rem;
     }
@@ -917,7 +1199,7 @@
       font-size: 0.8125rem;
     }
     .source-options {
-      --source-card-height: clamp(26rem, 65svh, 28rem);
+      --source-card-height: clamp(27rem, 65svh, 29rem);
     }
     .source-options,
     .editor-layout {
@@ -993,49 +1275,11 @@
     transform: translateX(var(--youtube-title-shift));
   }
 }
-.local-mode-note {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--cb-ink-soft);
-  font-size: 0.75rem;
-  margin: 0;
-}
 .session-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
-}
-.session-menu {
-  position: relative;
-  color: var(--cb-ink-soft);
-  font-size: 0.8125rem;
-}
-.session-menu summary {
-  cursor: pointer;
-  min-height: var(--cb-target);
-  display: flex;
-  align-items: center;
-  list-style: none;
-}
-.session-menu summary::-webkit-details-marker {
-  display: none;
-}
-.session-menu-content {
-  position: absolute;
-  bottom: calc(100% + 0.5rem);
-  left: 0;
-  z-index: 20;
-  padding: 0.5rem;
-  min-width: 10rem;
-  border: 1px solid var(--cb-border);
-  border-radius: var(--cb-radius-card);
-  background: var(--cb-canvas);
-  box-shadow: var(--cb-glass-edge-shadow);
-}
-.session-menu-content button {
-  width: 100%;
-  justify-content: start;
+  gap: 0.5rem;
 }
 .local-footer-actions,
 .workflow-footer-slot,

@@ -27,7 +27,6 @@ import {
   prepareLocalControlsFixture,
   prepareLocalOverlayFixture,
 } from "./owner-controls-browser.ts";
-
 it("takes a hosted-shaped upload through the shared editor and native re-export without YouTube or paid calls", async () => {
   const directory = await mkdtemp(
       join(tmpdir(), "clipbuilder-hosted-editor-proof-"),
@@ -63,6 +62,17 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
     transcribe = vi.fn(fakeOwnerAnalysis.transcribe),
     plan = vi.fn(fakeOwnerClipPreparation.plan),
     image = vi.fn(fakeOwnerClipPreparation.image);
+  const captionTranscription = vi.fn(async (_workspace, clip) => {
+    if (captionTranscription.mock.calls.length === 1)
+      throw new Error("synthetic_caption_failure");
+    expect(clip.base!.cut).toEqual({ startFrame: 30, endFrame: 60 });
+    return fakeOwnerAnalysis.transcribe(
+      { ..._workspace, source: { ..._workspace.source, durationMs: 1000 } },
+      new AbortController().signal,
+    );
+  }) as import("vitest").Mock<
+    import("../apps/backend/local/clip-caption-port.ts").ClipCaptionTranscription
+  >;
   const ui = await prepareLocalControlsFixture(directory, true);
   let releaseConnection: () => void = () => {};
   const connection = new Promise<void>((done) => {
@@ -114,12 +124,14 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
     ttlMs: 120_000,
     siteKey: "synthetic-site-key",
     aiMode: "synthetic-ai",
+    captionGeneration: true,
     sourceLimits: { bytes: 10 * 1024 ** 2, durationMs: 60000 },
     abuse: { verify: async () => true },
     capacity: async () => {},
     media,
     providers: () => ({
       analysis: { ...fakeOwnerAnalysis, transcribe },
+      captionTranscription,
       clipPreparation: { ...fakeOwnerClipPreparation, plan, image },
     }),
   });
@@ -269,15 +281,18 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
     await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
     const encoded = (await readFile(source)).toString("base64");
     await page._client().send("Runtime.evaluate", {
-      expression: `globalThis.hostedRun=async()=>{
-      const wait=globalThis.hostedWait,button=text=>[...document.querySelectorAll('button')].find(n=>n.textContent.trim()===text);
+      expression: `globalThis.hostedRunSteps=async()=>{
+      const wait=globalThis.hostedWait;const longWait=wait;const button=text=>[...document.querySelectorAll('button')].find(n=>n.textContent.trim()===text);
       const originalFetch=window.fetch;
       globalThis.loadingStage='upload';globalThis.loadingRelease=false;
       window.fetch=async(input,init)=>{
-        const path=new URL(String(input),location.href).pathname;
+        const path=new URL(String(input),location.href).pathname;const workspaceMatch=path.match(new RegExp("/workspace/([a-f0-9-]{36})"));if(workspaceMatch)globalThis.pictureWorkspace=workspaceMatch[1];
         const stage=init?.method==='PUT'?'upload':path.endsWith('/open/video')?'opening':path.endsWith('/analysis')?(init?.method==='POST'?'analysis':'restoring'):null;
-        if(stage&&stage===globalThis.loadingStage){await wait(()=>globalThis.loadingRelease,'release_'+stage);globalThis.loadingRelease=false;globalThis.loadingStage=stage==='upload'?'opening':stage==='opening'?'restoring':stage==='restoring'?'analysis':null;}
-        return originalFetch(input,init);
+        if(stage&&stage===globalThis.loadingStage){await longWait(()=>globalThis.loadingRelease,'release_'+stage);globalThis.loadingRelease=false;globalThis.loadingStage=stage==='upload'?'opening':stage==='opening'?'restoring':stage==='restoring'?'analysis':null;}
+        if(path.endsWith('/edit')&&init?.method==='POST'&&globalThis.holdPictureSave)await longWait(()=>globalThis.releasePictureSave,'picture_save_release');
+        const response=await originalFetch(input,init);
+        if(path.endsWith('/edit')&&response.ok)globalThis.pictureSavedList=await response.clone().json();if(path.endsWith('/picture')&&response.ok)globalThis.alphaAssetList=await response.clone().json();
+        return response;
       };
       const input=document.querySelector('.upload-card input');const transfer=new DataTransfer();transfer.items.add(new File([Uint8Array.from(atob(${JSON.stringify(encoded)}),c=>c.charCodeAt(0))],'synthetic.mp4',{type:'video/mp4'}));input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));
       await wait(()=>button('Add clip')&&!button('Add clip').matches(':disabled'),'uploaded');button('Add clip').click();await wait(()=>document.querySelector('[aria-label="Clip 1 end"]'),'manual_row');
@@ -291,15 +306,47 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
       button('Process clips').click();
       await wait(()=>document.querySelector('a[aria-label="Download clip"]')&&document.querySelector('.editor-panels:not([hidden])'));
       if(document.querySelector('.moment-selection').getClientRects().length || document.querySelectorAll('.clip-editor').length!==1)throw new Error('hosted_editor_not_exclusive');
-      const font=[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim().startsWith('Font size')).querySelector('input');await change(font,'72');await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>button('Export clip'));button('Export clip').click();
-      const download=await wait(()=>document.querySelector('a[aria-label="Download clip"]')&&document.querySelector('.editor-panels:not([hidden])')&&document.querySelector('a[aria-label="Download clip"]'));const response=await fetch(download.href);if(!response.ok)throw new Error('hosted_download_failed');return (await response.arrayBuffer()).byteLength;
-    };`,
+      const captionPause=async stage=>{globalThis.captionStage=stage;globalThis.captionStageReleased=false;await wait(()=>globalThis.captionStageReleased,'caption_'+stage);globalThis.captionStage=null;};
+      if(button('Generate fake captions')||!document.querySelector('.caption-empty')||document.querySelectorAll('.picture-choice').length||document.querySelector('[aria-label="Select and move captions"]'))throw new Error('fake_content_not_empty');
+      await captionPause('empty');button('Generate captions').click();await wait(()=>document.querySelector('[aria-label="Caption generation actions"]'));await captionPause('confirm');if(!document.querySelector('.caption-empty').textContent.includes('Gemini credits'))throw new Error('caption_paid_consent_missing');button('Cancel').click();await wait(()=>!document.querySelector('[aria-label="Caption generation actions"]'));
+      button('Generate captions').click();await wait(()=>document.querySelector('[aria-label="Caption generation actions"]'));[...document.querySelectorAll('[aria-label="Caption generation actions"] button')].find(n=>n.textContent==='Generate captions').click();await wait(()=>document.querySelector('.clip-editor .flow-notice').textContent.includes('generate captions.'));await new Promise(done=>setTimeout(done,200));
+      [...document.querySelectorAll('[aria-label="Caption generation actions"] button')].find(n=>n.textContent==='Generate captions').click();await wait(()=>document.querySelector('[aria-label="Caption 1 word 1"]'));
+      globalThis.pictureCaptionBase=(await (await fetch('/api/local/workspace/'+globalThis.pictureWorkspace+'/clips')).json());
+      const font=[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim().startsWith('Font size')).querySelector('input');await change(font,'72');
+      const named=label=>document.querySelector('[aria-label="'+label+'"]');
+      [...document.querySelectorAll('[aria-label="Caption controls"] button')].find(n=>n.textContent==='Text').click();await new Promise(requestAnimationFrame);const first=named('Caption 1 word 1');const originalWord=first.value;await change(first,'Martian');button('Discard changes').click();await wait(()=>named('Caption 1 word 1')?.value===originalWord);await change(named('Caption 1 word 1'),'Martian');await captionPause('text');
+      const canvas=document.createElement('canvas');canvas.width=100;canvas.height=100;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,100,100);ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillRect(25,0,25,100);ctx.fillStyle='#fff';ctx.fillRect(50,0,25,100);const blob=await new Promise(done=>canvas.toBlob(done,'image/png'));const transferPicture=new DataTransfer();transferPicture.items.add(new File([blob],'synthetic-picture.png',{type:'image/png'}));[...document.querySelectorAll('[aria-label="Clip settings"] button')].find(n=>n.textContent==='Pictures').click();await new Promise(requestAnimationFrame);const pictureInput=named('Upload picture');pictureInput.files=transferPicture.files;pictureInput.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('.picture-choice')&&!button('Uploading…'));const assetResponse=await fetch('/api/local/workspace/'+globalThis.pictureWorkspace+'/assets/'+globalThis.alphaAssetList.pictureAssetId);if(assetResponse.headers.get('content-type')!=='image/png')throw new Error('transparent_asset_mime');const bitmap=await createImageBitmap(await assetResponse.blob());const check=document.createElement('canvas');check.width=100;check.height=100;const checkContext=check.getContext('2d');checkContext.drawImage(bitmap,0,0);bitmap.close();if(checkContext.getImageData(10,40,1,1).data[3]!==0||checkContext.getImageData(40,40,1,1).data[3]!==128||checkContext.getImageData(60,40,1,1).data[3]!==255)throw new Error('browser_transparency_lost');[...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Motion').click();await new Promise(requestAnimationFrame);for(const label of ['Entrance','Exit']){const select=[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim()===label).querySelector('select');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,'none');select.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(requestAnimationFrame);}[...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Position').click();await new Promise(requestAnimationFrame);[...document.querySelectorAll('[aria-label="Picture position"] button')].find(n=>n.textContent==='Center').click();await new Promise(requestAnimationFrame);
+
+      const pictureWait=async(fn,phase)=>{for(let i=0;i<200;i++){const value=fn();if(value)return value;await new Promise(done=>setTimeout(done,20));}const v=document.querySelector('.editor-preview video');throw new Error('picture_timeout_'+phase+'_'+globalThis.picturePhase+'_'+JSON.stringify({time:v?.currentTime,ready:v?.readyState,seeking:v?.seeking,disabled:named('Capture picture start')?.disabled,start:named('Picture start seconds')?.value,end:named('Picture end seconds')?.value}));};
+      const settings=async label=>{[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent===label).click();await new Promise(requestAnimationFrame);};
+      const timing=async(index=0)=>{await settings('Pictures');document.querySelectorAll('.picture-choice')[index].click();await new Promise(requestAnimationFrame);[...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Timing').click();await pictureWait(()=>named('Capture picture start')&&!named('Capture picture start').disabled,'picture_capture_ready');};
+      const values=()=>['start','end'].map(key=>Math.round(Number(named('Picture '+key+' seconds').value)*30));
+      const seek=async(frame,index=0)=>{globalThis.picturePhase='seek_'+frame;await timing(index);const bar=[...document.querySelectorAll('.editor-preview div')].find(n=>n.style.touchAction==='none'&&n.style.cursor==='pointer'&&n.style.paddingTop);if(!bar)throw new Error('preview_seek_bar_missing');const rect=bar.getBoundingClientRect();bar.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,buttons:1,pointerId:17,clientX:rect.left+rect.width*frame/29,clientY:rect.top+rect.height/2}));await new Promise(requestAnimationFrame);document.documentElement.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,button:0,pointerId:17}));await pictureWait(()=>{const v=document.querySelector('.editor-preview video');return v&&!v.seeking&&Math.abs(v.currentTime-frame/30)<.035&&!named('Capture picture start').disabled;},'picture_seek');};
+      const capture=async(key,frame,index=0)=>{await seek(frame,index);const video=document.querySelector('.editor-preview video');const before=video.currentTime;named('Capture picture '+key).click();await new Promise(requestAnimationFrame);if(!video.paused||Math.abs(video.currentTime-before)>.035)throw new Error('picture_capture_sought_or_not_paused');};
+      await capture('start',0);await capture('end',29);await capture('start',29);
+      if(JSON.stringify(values())!=='[29,30]')throw new Error('picture_last_frame_boundary');
+      await capture('start',6);await capture('end',23);
+      if(JSON.stringify(values())!=='[6,24]')throw new Error('picture_capture_not_exact');
+      await capture('start',25);if(JSON.stringify(values())!=='[6,24]'||!document.querySelector('.picture-timing').parentElement.querySelector('[role="alert"]'))throw new Error('picture_invalid_start_mutated');
+      await capture('end',2);if(JSON.stringify(values())!=='[6,24]')throw new Error('picture_invalid_end_mutated');
+      await capture('end',23);
+      const video=document.querySelector('.editor-preview video');Object.defineProperty(video,'seeking',{configurable:true,value:true});video.dispatchEvent(new Event('seeking'));await wait(()=>named('Capture picture start').disabled,'picture_seeking_guard');named('Capture picture start').click();if(JSON.stringify(values())!=='[6,24]')throw new Error('picture_seeking_overwrite');delete video.seeking;video.dispatchEvent(new Event('seeked'));await wait(()=>!named('Capture picture start').disabled);
+      video.dispatchEvent(new Event('waiting'));await wait(()=>named('Capture picture end').disabled,'picture_buffer_guard');video.dispatchEvent(new Event('canplay'));await wait(()=>!named('Capture picture end').disabled);
+      button('Add picture').click();await new Promise(requestAnimationFrame);await capture('start',20,1);if(JSON.stringify(values())!=='[20,30]')throw new Error('second_picture_capture');await timing();if(JSON.stringify(values())!=='[6,24]')throw new Error('capture_changed_other_picture');await timing(1);[...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Image').click();await new Promise(requestAnimationFrame);button('Remove picture').click();await timing();
+      document.querySelector('.editor-preview video').dispatchEvent(new Event('error'));await pictureWait(()=>named('Retry preview'),'picture_failed_preview');if(!named('Capture picture start').disabled||!named('Capture picture end').disabled)throw new Error('picture_failed_capture_enabled');named('Retry preview').click();await timing();if(JSON.stringify(values())!=='[6,24]')throw new Error('picture_retry_lost_timing');
+      globalThis.pictureCaptureReady=true;await longWait(()=>globalThis.pictureCaptureRelease,'picture_layout_release');
+      await wait(()=>button('Apply changes'));globalThis.holdPictureSave=true;button('Apply changes').click();await pictureWait(()=>named('Capture picture start').matches(':disabled')&&named('Capture picture end').matches(':disabled'),'picture_busy_guard');globalThis.releasePictureSave=true;await wait(()=>button('Export clip'));
+      const saved=globalThis.pictureSavedList.clips[0].edit.visuals[0];if(saved.startFrame!==6||saved.endFrame!==24)throw new Error('picture_capture_not_saved');
+      button('Export clip').click();
+      const download=await wait(()=>document.querySelector('a[aria-label="Download clip"]')&&document.querySelector('.editor-panels:not([hidden])')&&document.querySelector('a[aria-label="Download clip"]'));const response=await fetch(download.href);if(!response.ok)throw new Error('hosted_download_failed');return [...new Uint8Array(await response.arrayBuffer())];
+    };globalThis.hostedRun=()=>globalThis.hostedRunSteps().catch(error=>{globalThis.pictureCaptureError=String(error);throw error;});`,
     });
     const run = page.evaluate(() =>
       (
-        globalThis as unknown as { hostedRun: () => Promise<number> }
+        globalThis as unknown as { hostedRun: () => Promise<number[]> }
       ).hostedRun(),
     );
+    void run.catch(() => {});
     await captureLoading("Uploading video", "upload", true);
     await evaluate("globalThis.loadingRelease=true");
     await captureLoading("Opening video", "opening");
@@ -308,8 +355,125 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
     await evaluate("globalThis.loadingRelease=true");
     await captureLoading("Preparing moments", "analysis");
     await evaluate("globalThis.loadingRelease=true");
-    const size = await run;
-    expect(size).toBeGreaterThan(1000);
+    for (const stage of ["empty", "confirm", "text"]) {
+      await evaluate(
+        `globalThis.hostedWait(()=>{if(globalThis.pictureCaptureError)throw new Error(globalThis.pictureCaptureError);return globalThis.captionStage===${JSON.stringify(stage)};},'caption_stage').then(()=>true)`,
+      );
+      for (const [width, height] of [
+        [1440, 900],
+        [390, 844],
+        [320, 568],
+      ]) {
+        await page.setViewport({
+          width: width!,
+          height: height!,
+          deviceScaleFactor: 1,
+        });
+        expect(
+          await evaluate(
+            `(async()=>{const panel=document.querySelector('[id$="-captions-panel"]');panel.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const footer=document.querySelector('#sample-main > footer').getBoundingClientRect();return document.documentElement.scrollWidth<=innerWidth&&footer.top>=0&&footer.bottom<=innerHeight+1&&[...panel.querySelectorAll('button,input')].filter(n=>n.getClientRects().length).every(n=>n.getBoundingClientRect().height>=44);})()`,
+          ),
+        ).toBe(true);
+        const shot = await page
+          ._client()
+          .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+        await writeFile(
+          resolve(`.local-build/evidence/cl078-${stage}-${width}.png`),
+          Buffer.from(shot.value.data, "base64"),
+        );
+      }
+      await page.setViewport({
+        width: 1440,
+        height: 1000,
+        deviceScaleFactor: 1,
+      });
+      await evaluate("globalThis.captionStageReleased=true");
+    }
+    await evaluate(
+      "globalThis.hostedWait(()=>{if(globalThis.pictureCaptureError)throw new Error(globalThis.picturePhase+'_'+globalThis.pictureCaptureError);return globalThis.pictureCaptureReady;},'picture_capture_layout').then(()=>true)",
+    );
+    for (const [width, height] of [
+      [1440, 900],
+      [390, 844],
+      [320, 568],
+    ]) {
+      await page.setViewport({
+        width: width!,
+        height: height!,
+        deviceScaleFactor: 1,
+      });
+      const geometry = await evaluate(
+        `(async()=>{const panel=document.querySelector('.picture-timing');panel.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const footer=document.querySelector('#sample-main > footer').getBoundingClientRect(),buttons=[...panel.querySelectorAll('button')];return document.documentElement.scrollWidth<=innerWidth&&buttons.length===2&&buttons.every(n=>{const r=n.getBoundingClientRect();return r.width>=44&&r.height>=44&&r.bottom<=footer.top+1;})&&footer.top>=0&&footer.bottom<=innerHeight+1;})()`,
+      );
+      expect(geometry).toBe(true);
+      const shot = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        resolve(`.local-build/evidence/cl077-timing-${width}.png`),
+        Buffer.from(shot.value.data, "base64"),
+      );
+    }
+    await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+    await evaluate("globalThis.pictureCaptureRelease=true");
+    const bytes = Buffer.from(await run);
+    expect(bytes.length).toBeGreaterThan(1000);
+    const output = join(directory, "captured-picture.mp4");
+    await writeFile(output, bytes);
+    const luma = await runOwnedProcess(
+      tools.ffmpeg,
+      [
+        "-nostdin",
+        "-v",
+        "error",
+        "-i",
+        output,
+        "-vf",
+        "select='eq(n,5)+eq(n,6)+eq(n,23)+eq(n,24)',crop=8:8:20:48,signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-",
+        "-an",
+        "-f",
+        "null",
+        "-",
+      ],
+      signal,
+    );
+    const samples = [
+      ...luma.matchAll(/lavfi\.signalstats\.YAVG=([\d.]+)/g),
+    ].map((match) => Number(match[1]));
+    expect(samples).toHaveLength(4);
+    expect(Math.abs(samples[0]! - samples[3]!)).toBeLessThan(2);
+    expect(Math.abs(samples[1]! - samples[0]!)).toBeGreaterThan(5);
+    expect(Math.abs(samples[2]! - samples[3]!)).toBeGreaterThan(5);
+    const alphaSamples = async (crop: string) => {
+      const value = await runOwnedProcess(
+        tools.ffmpeg,
+        [
+          "-nostdin",
+          "-v",
+          "error",
+          "-i",
+          output,
+          "-vf",
+          `select='eq(n,5)+eq(n,10)',${crop},signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-`,
+          "-an",
+          "-f",
+          "null",
+          "-",
+        ],
+        signal,
+      );
+      return [...value.matchAll(/lavfi\.signalstats\.YAVG=([\d.]+)/g)].map(
+        (match) => Number(match[1]),
+      );
+    };
+    const transparent = await alphaSamples("crop=2:2:14:40"),
+      partial = await alphaSamples("crop=2:2:21:40"),
+      opaque = await alphaSamples("crop=2:2:28:40");
+    expect(transparent).toHaveLength(2);
+    expect(Math.abs(transparent[1]! - transparent[0]!)).toBeLessThan(5);
+    expect(partial[1]).toBeGreaterThan(130);
+    expect(partial[1]).toBeLessThan(170);
+    expect(opaque[1]).toBeGreaterThan(210);
     for (const width of [1440, 390]) {
       await page.setViewport({ width, height: 1000, deviceScaleFactor: 1 });
       const shot = await page
@@ -322,7 +486,28 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
     }
     expect(transcribe).toHaveBeenCalledTimes(1);
     expect(plan).toHaveBeenCalledTimes(1);
-    expect(image).toHaveBeenCalledTimes(1);
+    expect(image).toHaveBeenCalledTimes(0);
+    expect(captionTranscription).toHaveBeenCalledTimes(2);
+    const finalJob = media.mock.calls
+      .filter(([job]) => job.operation === "clip")
+      .at(-1)![0];
+    if (finalJob.operation !== "clip") throw new Error("missing_clip_job");
+    expect(finalJob.overlay.captions[0]!.wordCues[0]!.text).toBe("Martian");
+    const originalClocks = await evaluate(
+      "globalThis.pictureCaptionBase.clips[0].base.overlay.captions.map(c=>({startMs:c.startMs,endMs:c.endMs,words:c.wordCues.map(({text,...clock})=>clock)}))",
+    );
+    expect(
+      finalJob.overlay.captions.map((c) => ({
+        startMs: c.startMs,
+        endMs: c.endMs,
+        words: c.wordCues.map((word) => ({
+          wordId: word.wordId,
+          startMs: word.startMs,
+          endMs: word.endMs,
+        })),
+      })),
+    ).toEqual(originalClocks);
+
     expect(media.mock.calls.map(([job]) => job.operation)).toEqual([
       "inspect",
       "clip",

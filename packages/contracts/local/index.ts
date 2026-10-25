@@ -56,8 +56,11 @@ export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
       jobId: ownerIdSchema,
       operation: z.literal("prepare-owner-audio"),
       fingerprint: ownerSourceSchema.shape.fingerprint,
+      clipId: ownerIdSchema.optional(),
+      cut: ownerCutSchema.optional(),
     })
-    .strict(),
+    .strict()
+    .refine((job) => Boolean(job.clipId) === Boolean(job.cut)),
   z
     .object({
       workspaceId: ownerIdSchema,

@@ -1,50 +1,68 @@
-import sharp from "sharp";
-import { readFile } from "node:fs/promises";
 import { OWNER_FPS } from "../../../packages/contracts/local/policy.ts";
 import type { OwnerClipPorts } from "./clip-batch.ts";
+import { compileAutomaticOwnerFocus } from "../../../packages/contracts/local/focus.ts";
 
 export const fakeOwnerClipPreparation: Pick<
   OwnerClipPorts,
-  "mode" | "plan" | "image"
+  "mode" | "plan" | "image" | "focus"
 > = {
   mode: "synthetic-ai",
-  async plan({ moment }, signal) {
-    signal.throwIfAborted();
-    return moment.cues.length
-      ? [
+  focus({ workspace, moment }) {
+    const frames = moment.cut.endFrame - moment.cut.startFrame;
+    const mid = Math.floor(frames / 2);
+    return compileAutomaticOwnerFocus(
+      {
+        people: [
           {
-            startFrame: 0,
-            endFrame: Math.min(
-              4 * OWNER_FPS,
-              moment.cut.endFrame - moment.cut.startFrame,
-            ),
-            brief: {
-              scene:
-                "A sample photograph of Earth from space for the fictional conversation.",
-              searchQuery: "Earth from space",
-              requiredTerms: ["Earth"],
-              avoidTerms: [],
-            },
-            evidenceWordIds: [moment.cues[0]!.id],
+            id: "person_1",
+            observations: [
+              {
+                startFrame: 0,
+                endFrame: frames,
+                box: { x: 0.15, y: 0.1, width: 0.2, height: 0.5 },
+              },
+            ],
           },
-        ]
-      : [];
+          {
+            id: "person_2",
+            observations: [
+              {
+                startFrame: 0,
+                endFrame: frames,
+                box: { x: 0.65, y: 0.1, width: 0.2, height: 0.5 },
+              },
+            ],
+          },
+        ],
+        decisions: [
+          {
+            startFrame: mid,
+            endFrame: frames,
+            personId: "person_2",
+            speakerId: "spk_1",
+            confidence: 0.95,
+            evidenceWordIds: moment.cues
+              .filter(
+                (w) =>
+                  w.speakerId === "spk_1" && w.endMs > (mid * 1000) / OWNER_FPS,
+              )
+              .slice(0, 8)
+              .map((w) => w.id),
+            shotStart: false,
+          },
+        ],
+      },
+      workspace.source,
+      frames,
+      moment.cues,
+    ).focus;
+  },
+  async plan(_request, signal) {
+    signal.throwIfAborted();
+    return [];
   },
   async image(_request, signal) {
     signal.throwIfAborted();
-    const sample = await readFile(
-      new URL("./sample-earth.jpg", import.meta.url),
-    );
-    const bytes = await sharp(sample)
-      .resize({
-        width: 640,
-        height: 640,
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .jpeg({ quality: 80 })
-      .toBuffer();
-    signal.throwIfAborted();
-    return { bytes, origin: "synthetic" };
+    throw new Error("synthetic_picture_generation_disabled");
   },
 };

@@ -31,7 +31,12 @@ function inspectPng(bytes: Buffer) {
 export async function normalizeOwnerPicture(
   bytes: Buffer,
   signal: AbortSignal,
-): Promise<{ bytes: Buffer; width: number; height: number }> {
+): Promise<{
+  bytes: Buffer;
+  width: number;
+  height: number;
+  format: "png" | "jpeg";
+}> {
   signal.throwIfAborted();
   if (!bytes.length || bytes.length > limits.inputBytes) throw invalid();
   const input = Buffer.from(bytes);
@@ -58,17 +63,22 @@ export async function normalizeOwnerPicture(
       metadata.width * metadata.height > limits.inputPixels
     )
       throw invalid();
-    const normalized = await image
-      .rotate()
-      .resize({
-        width: limits.dimension,
-        height: limits.dimension,
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .flatten({ background: "#101215" })
-      .jpeg({ quality: 82, progressive: false, chromaSubsampling: "4:2:0" })
-      .toBuffer({ resolveWithObject: true });
+    const format = metadata.hasAlpha ? "png" : "jpeg";
+    const resized = image.rotate().resize({
+      width: limits.dimension,
+      height: limits.dimension,
+      fit: "inside",
+      withoutEnlargement: true,
+    });
+    const normalized = await (
+      format === "png"
+        ? resized.png({ compressionLevel: 9 })
+        : resized.jpeg({
+            quality: 82,
+            progressive: false,
+            chromaSubsampling: "4:2:0",
+          })
+    ).toBuffer({ resolveWithObject: true });
     signal.throwIfAborted();
     if (
       !normalized.data.length ||
@@ -81,6 +91,7 @@ export async function normalizeOwnerPicture(
       bytes: normalized.data,
       width: normalized.info.width,
       height: normalized.info.height,
+      format,
     };
   } catch {
     signal.throwIfAborted();

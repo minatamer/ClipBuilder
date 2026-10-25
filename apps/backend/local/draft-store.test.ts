@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import sharp from "sharp";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import {
@@ -122,23 +123,27 @@ afterEach(async () => {
   await files.close();
   await rm(directory, { recursive: true, force: true });
 });
-async function fixture(): Promise<OwnerDraftSnapshot> {
+async function fixture(
+  format?: "png",
+  assetBytes = pictureBytes,
+): Promise<OwnerDraftSnapshot> {
   const workspaceId = await files.create(),
     clipId = randomUUID(),
     momentId = randomUUID(),
     analysisId = randomUUID(),
     assetId = randomUUID();
   await writeFile(await files.file(workspaceId, "source.mp4"), sourceBytes);
-  await writeFile(await files.asset(workspaceId, assetId), pictureBytes);
+  await writeFile(await files.asset(workspaceId, assetId, format), assetBytes);
   await writeFile(await files.clipSource(workspaceId, clipId), rawBytes);
   await writeFile(await files.output(workspaceId, clipId, 0), outputBytes);
   const asset = {
     id: assetId,
-    digest: hash(pictureBytes),
-    bytes: pictureBytes.length,
+    digest: hash(assetBytes),
+    bytes: assetBytes.length,
     width: 640,
     height: 360,
     origin: "owner-supplied" as const,
+    ...(format ? { format } : {}),
   };
   const base = ownerClipBaseSchema.parse({
     version: 1,
@@ -163,6 +168,7 @@ async function fixture(): Promise<OwnerDraftSnapshot> {
           box: { x: 0, y: 0, width: 1, height: 0.4 },
           fit: "contain",
           origin: "owner-supplied",
+          ...(format ? { format } : {}),
         },
       ],
     },
@@ -506,4 +512,23 @@ it("rejects linked storage/draft paths and forged references without reading or 
     new OwnerDraftStore(linkedRoot).save(undefined, original, files),
   ).rejects.toThrow("invalid_path");
   expect(await readdir(outside)).toEqual(["keep.txt"]);
+});
+
+it("round-trips alpha PNG bytes and trusted format through a saved draft", async () => {
+  const png = await sharp({
+    create: { width: 3, height: 2, channels: 4, background: "#ff000000" },
+  })
+    .png()
+    .toBuffer();
+  const original = await fixture("png", png),
+    saved = await store.save(undefined, original, files),
+    restored = await store.load(saved.id, files);
+  const asset = restored.clips[0]!.assets[0]!;
+  expect(asset.format).toBe("png");
+  const reopened = await readFile(
+    await files.asset(restored.workspace.id, asset.id, asset.format),
+  );
+  expect(reopened).toEqual(png);
+  expect((await sharp(reopened).metadata()).hasAlpha).toBe(true);
+  expect(restored.clips[0]!.base!.overlay.visuals[0]!.format).toBe("png");
 });

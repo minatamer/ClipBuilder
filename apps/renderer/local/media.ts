@@ -16,9 +16,20 @@ import { probeMedia, SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { runOwnedProcess } from "../src/media/process-runner.ts";
 import { ownerOutputRevisionSchema } from "../../../packages/contracts/local/clips.ts";
 import {
+  ownerPictureFormatSchema,
+  ownerPictureExtension,
+  type OwnerPictureFormat,
+} from "../../../packages/contracts/local/assets.ts";
+import {
   videoCodecSchema,
   audioCodecSchema,
 } from "../../../packages/contracts/src/media.schema.ts";
+import {
+  ownerOutputProfile,
+  ownerCutVideoFilter,
+  ownerCutAudioFilter,
+  type OwnerOutputProfile,
+} from "./export-profile.ts";
 
 export type OwnerNativeTools = { ffmpeg: string; ffprobe: string };
 export async function ownerMediaPath(
@@ -46,9 +57,14 @@ export async function ownerAssetMediaPath(
   root: string,
   id: string,
   assetId: string,
+  format: OwnerPictureFormat = "jpeg",
 ) {
   ownerIdSchema.parse(assetId);
-  return admittedMediaPath(root, id, `${assetId}.jpg`);
+  return admittedMediaPath(
+    root,
+    id,
+    `${assetId}.${ownerPictureExtension(ownerPictureFormatSchema.parse(format))}`,
+  );
 }
 export async function ownerAcquisitionMediaPath(
   root: string,
@@ -67,14 +83,18 @@ export async function ownerProviderMediaPath(
   id: string,
   clipId: string | null,
   partial = false,
+  audioOnly = false,
 ) {
   ownerIdSchema.parse(id);
   if (clipId !== null) ownerIdSchema.parse(clipId);
-  const name = clipId === null ? "provider.audio" : `${clipId}.provider`;
+  const name =
+    clipId === null
+      ? "provider.audio"
+      : `${clipId}.provider${audioOnly ? ".audio" : ""}`;
   return admittedMediaPath(
     root,
     id,
-    `${name}${partial ? ".partial" : ""}.${clipId === null ? "m4a" : "mp4"}`,
+    `${name}${partial ? ".partial" : ""}.${clipId === null || audioOnly ? "m4a" : "mp4"}`,
   );
 }
 async function admittedMediaPath(
@@ -241,13 +261,28 @@ export async function inspectOwnerSource(
   return (await inspectOwnerMedia(file, tools, signal)).metadata;
 }
 
-export async function ownerPortrait(
+type PortraitArguments = [
   source: string,
   output: string,
   tools: OwnerNativeTools,
   signal: AbortSignal,
   requestedCut: OwnerCut,
   fingerprint: string,
+];
+export const ownerPortrait = (...args: PortraitArguments) =>
+  renderOwnerPortrait(...args, false);
+/** Browser playback cache only; final exports never read this encoded video. */
+export const ownerPreviewCut = (...args: PortraitArguments) =>
+  renderOwnerPortrait(...args, true);
+
+async function renderOwnerPortrait(
+  source: string,
+  output: string,
+  tools: OwnerNativeTools,
+  signal: AbortSignal,
+  requestedCut: OwnerCut,
+  fingerprint: string,
+  preview: boolean,
 ) {
   const { metadata, videoStart } = await inspectOwnerMedia(
     source,
@@ -262,9 +297,12 @@ export async function ownerPortrait(
     throw new Error("stale_or_invalid_cut");
   const frames = cut.endFrame - cut.startFrame;
   const durationMs = (frames * 1000) / OWNER_FPS;
+  const profile = preview
+    ? { width: 1080, height: 1920, fps: OWNER_FPS, frames }
+    : ownerOutputProfile(metadata, frames);
   // Normalize the video clock before frame selection. This also handles VFR and
   // nonzero container starts without moving words or stretching source time.
-  const filter = `[0:v:0]setpts=PTS-(${videoStart.toFixed(6)})/TB,fps=fps=${OWNER_FPS}:start_time=0:round=near,trim=start_frame=${cut.startFrame}:end_frame=${cut.endFrame},setpts=PTS-STARTPTS,scale=1080:1920:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1[v];[0:a:0]asetpts=PTS-(${videoStart.toFixed(6)})/TB,aresample=async=1:first_pts=0,apad,atrim=start=${cut.startFrame / OWNER_FPS}:end=${cut.endFrame / OWNER_FPS},asetpts=PTS-STARTPTS[a]`;
+  const filter = `[0:v:0]${ownerCutVideoFilter(videoStart, cut, profile)},scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=${profile.width}:${profile.height}:(ow-iw)/2:(oh-ih)/2,setsar=1[v];[0:a:0]${ownerCutAudioFilter(videoStart, cut)}[a]`;
   const temporary = `${output}.partial.mp4`;
   try {
     if ((await lstat(temporary)).isSymbolicLink()) throw new Error("invalid");
@@ -299,19 +337,16 @@ export async function ownerPortrait(
         "-filter_threads",
         "2",
         "-frames:v",
-        String(frames),
+        String(profile.frames),
         "-r",
-        String(OWNER_FPS),
+        String(profile.fps),
         "-c:v",
         "libx264",
         "-preset",
         "veryfast",
         "-crf",
-        "22",
-        "-maxrate",
-        "8M",
-        "-bufsize",
-        "16M",
+        preview ? "22" : "18",
+        ...(preview ? ["-maxrate", "8M", "-bufsize", "16M"] : []),
         "-pix_fmt",
         "yuv420p",
         "-c:a",
@@ -334,7 +369,13 @@ export async function ownerPortrait(
       ],
       signal,
     );
-    const bytes = await validateOwnerOutput(temporary, tools, signal, frames);
+    const bytes = await validateOwnerOutput(
+      temporary,
+      tools,
+      signal,
+      frames,
+      profile,
+    );
     await rename(temporary, output);
     return {
       operation: "portrait" as const,
@@ -352,19 +393,30 @@ export async function validateOwnerOutput(
   tools: OwnerNativeTools,
   signal: AbortSignal,
   frames: number,
+  profile: OwnerOutputProfile = {
+    width: 1080,
+    height: 1920,
+    fps: OWNER_FPS,
+    frames,
+  },
 ): Promise<number> {
   const durationMs = (frames * 1000) / OWNER_FPS;
   const info = await lstat(temporary);
   const result = await probeMedia(temporary, tools.ffprobe, signal);
   const video = result.streams.find((s) => s.codec_type === "video");
   const audio = result.streams.find((s) => s.codec_type === "audio");
+  const [numerator, denominator] = (video?.avg_frame_rate ?? "0/0")
+    .split("/")
+    .map(Number);
+  const rate = (numerator ?? 0) / (denominator ?? 0);
   if (
     info.size <= 0 ||
     info.size > OWNER_LIMITS.outputBytes ||
-    video?.width !== 1080 ||
-    video.height !== 1920 ||
+    video?.width !== profile.width ||
+    video.height !== profile.height ||
     video.codec_name !== "h264" ||
-    video.avg_frame_rate !== "30/1" ||
+    !Number.isFinite(rate) ||
+    Math.abs(rate - profile.fps) > 0.0001 ||
     video.pix_fmt !== "yuv420p" ||
     video.sample_aspect_ratio !== "1:1" ||
     audio?.codec_name !== "aac" ||
@@ -405,7 +457,7 @@ export async function validateOwnerOutput(
         ),
       ),
     );
-  if (counted.streams[0]?.nb_read_frames !== frames)
+  if (counted.streams[0]?.nb_read_frames !== profile.frames)
     throw new Error("invalid_frame_count");
   await runOwnedProcess(
     tools.ffmpeg,

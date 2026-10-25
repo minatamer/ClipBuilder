@@ -378,10 +378,14 @@ export function OwnerClipBatchPanel({
                 key={current.id}
                 clip={current}
                 workspaceId={workspace.id}
+                source={workspace.source}
                 onAccepted={acceptEdit}
                 onDirty={editDirty}
                 footerTarget={footerTarget}
                 actionsVisible={!showProcessing}
+                captionGeneration={capabilities.captionGeneration ?? false}
+                fakeCaptionGeneration={capabilities.localMedia}
+                onBusy={onActive}
               />
             )}
           </article>

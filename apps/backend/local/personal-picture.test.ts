@@ -81,22 +81,26 @@ it.each(["png", "jpeg"] as const)(
   },
 );
 
-it("keeps small inputs at their original dimensions and flattens transparent pixels to the fixed background", async () => {
-  const bytes = await sharp({
-    create: { width: 8, height: 6, channels: 4, background: "#ff000000" },
-  })
-    .png()
-    .toBuffer();
-  const result = await normalizeOwnerPicture(bytes, signal()),
-    pixels = await sharp(result.bytes)
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-  expect([result.width, result.height, pixels.info.channels]).toEqual([
-    8, 6, 3,
-  ]);
-  for (const [index, expected] of [16, 18, 21].entries())
-    expect(Math.abs(pixels.data[index]! - expected)).toBeLessThanOrEqual(2);
-});
+it.each(["png", "webp"] as const)(
+  "preserves transparent and partial alpha from %s without enlarging or adding a matte",
+  async (format) => {
+    const raw = Buffer.from([255, 0, 0, 0, 255, 255, 255, 128, 0, 255, 0, 255]);
+    const bytes = await sharp(raw, {
+      raw: { width: 3, height: 1, channels: 4 },
+    })
+      .toFormat(format, format === "webp" ? { lossless: true } : {})
+      .toBuffer();
+    const result = await normalizeOwnerPicture(bytes, signal()),
+      metadata = await sharp(result.bytes).metadata();
+    expect(result.format).toBe("png");
+    expect([result.width, result.height]).toEqual([3, 1]);
+    expect(metadata.format).toBe("png");
+    expect(metadata.hasAlpha).toBe(true);
+    const pixels = await sharp(result.bytes).raw().toBuffer();
+    expect([pixels[3], pixels[7], pixels[11]]).toEqual([0, 128, 255]);
+    expect([...pixels.subarray(4, 8)]).toEqual([255, 255, 255, 128]);
+  },
+);
 
 it("applies EXIF orientation to real pixels and strips orientation, EXIF and color-profile metadata", async () => {
   const width = 40,

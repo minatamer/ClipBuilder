@@ -12,6 +12,7 @@ import type { OwnerClip } from "../../../packages/contracts/local/clips.ts";
 export function applyOwnerEdit(
   clip: OwnerClip,
   value: unknown,
+  source?: { width: number; height: number },
 ): OwnerEditDocument {
   const request = ownerEditRequestSchema.parse(value);
   if (
@@ -25,6 +26,22 @@ export function applyOwnerEdit(
   const next = ownerEditDocumentSchema.parse(clip.edit ?? automatic);
   for (const operation of request.operations) {
     switch (operation.kind) {
+      case "caption-text":
+        next.captionText = operation.words;
+        break;
+      case "focus":
+        if (
+          operation.focus.frames !== clip.base.overlay.frames ||
+          (source &&
+            (source.width !== operation.focus.source.width ||
+              source.height !== operation.focus.source.height)) ||
+          (clip.base.overlay.focus &&
+            JSON.stringify(operation.focus.source) !==
+              JSON.stringify(clip.base.overlay.focus.source))
+        )
+          throw new Error("stale_edit_source");
+        next.focus = operation.focus;
+        break;
       case "video-look":
         next.videoLook = operation.look;
         break;
@@ -48,7 +65,10 @@ export function applyOwnerEdit(
         if (operation.panel === "captions") next.captions = null;
         else if (operation.panel === "visuals")
           next.visuals = automatic.visuals;
-        else delete next.videoLook;
+        else if (operation.panel === "focus") {
+          if (automatic.focus) next.focus = automatic.focus;
+          else delete next.focus;
+        } else delete next.videoLook;
         break;
     }
   }

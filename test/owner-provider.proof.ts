@@ -146,7 +146,13 @@ it("prepares full clock-normalized audio and only a fractional selected upright 
       fingerprint: admitted.fingerprint,
       cut: { startFrame: 61, endFrame: 92 },
     };
-    for (const job of [audioJob, videoJob]) {
+    const clipAudioJob: OwnerMediaJob = {
+      ...audioJob,
+      jobId: randomUUID(),
+      clipId,
+      cut: { startFrame: 61, endFrame: 92 },
+    };
+    for (const job of [audioJob, videoJob, clipAudioJob]) {
       const response = await run(job);
       expect(response.status).toBe(200);
       const result = ownerMediaResultSchema.parse(
@@ -163,7 +169,9 @@ it("prepares full clock-normalized audio and only a fractional selected upright 
       const file = join(
         directory,
         job.operation === "prepare-owner-audio"
-          ? "provider.audio.m4a"
+          ? job.clipId
+            ? `${clipId}.provider.audio.m4a`
+            : "provider.audio.m4a"
           : `${clipId}.provider.mp4`,
       );
       const bytes = await readFile(file);
@@ -178,9 +186,7 @@ it("prepares full clock-normalized audio and only a fractional selected upright 
         "durationMs",
         "operation",
       ]);
-      expect(result.durationMs).toBe(
-        job.operation === "prepare-owner-audio" ? 4000 : 1033,
-      );
+      expect(result.durationMs).toBe(!job.cut ? 4000 : 1033);
       const pcm = join(directory, "proof.pcm");
       await runOwnedProcess(
         tools.ffmpeg,
@@ -205,12 +211,11 @@ it("prepares full clock-normalized audio and only a fractional selected upright 
       );
       const decoded = await readFile(pcm);
       expect(frequency(decoded, 0.2, 0.8)).toBeCloseTo(
-        job.operation === "prepare-owner-audio" ? 500 : 1000,
+        !job.cut ? 500 : 1000,
         -1,
       );
-      if (job.operation === "prepare-owner-audio")
-        expect(frequency(decoded, 2.2, 2.8)).toBeCloseTo(1000, -1);
-      else {
+      if (!job.cut) expect(frequency(decoded, 2.2, 2.8)).toBeCloseTo(1000, -1);
+      else if (job.operation === "prepare-owner-video") {
         const probe = await probeMedia(file, tools.ffprobe, signal());
         const video = probe.streams.find(
           (stream) => stream.codec_type === "video",
@@ -266,6 +271,19 @@ it("prepares full clock-normalized audio and only a fractional selected upright 
         expect(tags).not.toContain("synthetic private audio title");
       }
     }
+    const clipAudioProbe = await probeMedia(
+      join(directory, `${clipId}.provider.audio.m4a`),
+      tools.ffprobe,
+      signal(),
+      "audio",
+    );
+    expect(clipAudioProbe.streams.map((stream) => stream.codec_type)).toEqual([
+      "audio",
+    ]);
+    expect(clipAudioProbe.format.duration).toBeCloseTo(31 / 30, 2);
+    expect(
+      (await readdir(directory)).filter((name) => name.includes(".partial.")),
+    ).toEqual([]);
     expect(
       (await run({ ...videoJob, fingerprint: "0".repeat(64) })).status,
     ).toBe(400);

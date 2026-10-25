@@ -61,6 +61,7 @@ type Options = {
   ttlMs: number;
   siteKey?: string;
   aiMode: OwnerAiMode;
+  captionGeneration?: boolean;
   providerCalls?: number;
   sourceLimits: { bytes: number; durationMs: number };
   abuse: AbuseVerifier;
@@ -157,6 +158,8 @@ export function createHostedEditingWorkflow(options: Options) {
         aiMode: options.aiMode,
         sourceMode: null,
         planningAvailable: true,
+        captionGeneration:
+          options.captionGeneration ?? options.aiMode === "provider-ai",
         localMedia: false,
         cloud: true,
         ...(options.siteKey ? { processingSiteKey: options.siteKey } : {}),
@@ -291,6 +294,18 @@ export function createHostedEditingWorkflow(options: Options) {
             const ports = options.providers(files);
             return {
               ...ports,
+              ...(ports.captionTranscription
+                ? {
+                    captionTranscription: async (
+                      ...args: Parameters<
+                        NonNullable<typeof ports.captionTranscription>
+                      >
+                    ) => {
+                      charge();
+                      return ports.captionTranscription!(...args);
+                    },
+                  }
+                : {}),
               ...(ports.analysis
                 ? {
                     analysis: {

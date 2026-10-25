@@ -16,7 +16,11 @@ import {
   OWNER_LIMITS,
   ownerIdSchema,
 } from "../../../packages/contracts/local/policy.ts";
-import { ownerDigestSchema } from "../../../packages/contracts/local/assets.ts";
+import {
+  ownerDigestSchema,
+  ownerPictureFormatSchema,
+  ownerPictureExtension,
+} from "../../../packages/contracts/local/assets.ts";
 import {
   confinedPath,
   requireDisk,
@@ -34,7 +38,9 @@ const fileSchema = z
   .strict();
 type StoredFile = z.infer<typeof fileSchema>;
 type FileCache = Map<string, { identity: string; file: StoredFile }>;
-const assetFileSchema = fileSchema.extend({ id: ownerIdSchema }).strict();
+const assetFileSchema = fileSchema
+  .extend({ id: ownerIdSchema, format: ownerPictureFormatSchema.optional() })
+  .strict();
 const rawFileSchema = fileSchema.extend({ clipId: ownerIdSchema }).strict();
 const outputFileSchema = fileSchema
   .extend({
@@ -285,7 +291,8 @@ function validateRelations(record: DraftRecord): void {
     if (
       !stored ||
       stored.digest !== asset.digest ||
-      stored.bytes !== asset.bytes
+      stored.bytes !== asset.bytes ||
+      (stored.format ?? "jpeg") !== (asset.format ?? "jpeg")
     )
       throw new Error("draft_document_invalid");
   }
@@ -323,7 +330,10 @@ function validateRelations(record: DraftRecord): void {
     for (const cue of clip.base?.overlay.visuals ?? []) {
       if (
         !clip.assets.some(
-          (asset) => asset.id === cue.assetId && asset.digest === cue.digest,
+          (asset) =>
+            asset.id === cue.assetId &&
+            asset.digest === cue.digest &&
+            (asset.format ?? "jpeg") === (cue.format ?? "jpeg"),
         )
       )
         throw new Error("draft_document_invalid");
@@ -422,7 +432,10 @@ export class OwnerDraftStore {
       assets: await Promise.all(
         record.assets.map(async (file) => ({
           from: "",
-          to: await entry("assets", `${file.id}.${file.digest}.jpg`),
+          to: await entry(
+            "assets",
+            `${file.id}.${file.digest}.${ownerPictureExtension(file.format)}`,
+          ),
           file,
         })),
       ),
@@ -509,6 +522,7 @@ export class OwnerDraftStore {
       id: asset.id,
       digest: asset.digest,
       bytes: asset.bytes,
+      ...(asset.format ? { format: asset.format } : {}),
     }));
     const raw: DraftRecord["raw"] = [];
     const outputs: DraftRecord["outputs"] = [];
@@ -571,7 +585,11 @@ export class OwnerDraftStore {
       for (let index = 0; index < assets.length; index++)
         copies.push({
           ...paths.assets[index]!,
-          from: await files.asset(snapshot.workspace.id, assets[index]!.id),
+          from: await files.asset(
+            snapshot.workspace.id,
+            assets[index]!.id,
+            assets[index]!.format,
+          ),
         });
       for (let index = 0; index < raw.length; index++)
         copies.push({
@@ -767,7 +785,11 @@ export class OwnerDraftStore {
         for (let index = 0; index < record.assets.length; index++)
           copies.push({
             from: paths.assets[index]!.to,
-            to: await files.asset(workspaceId, record.assets[index]!.id),
+            to: await files.asset(
+              workspaceId,
+              record.assets[index]!.id,
+              record.assets[index]!.format,
+            ),
             file: record.assets[index]!,
           });
         for (let index = 0; index < record.raw.length; index++)

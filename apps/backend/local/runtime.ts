@@ -35,6 +35,7 @@ import { fakeOwnerClipPreparation } from "./fake-clips.ts";
 import { resolveOwnerStorage } from "./owner-storage.ts";
 import { composeOwnerProviders } from "./provider-composition.ts";
 import { localProviderReadiness } from "./provider-readiness.ts";
+import { composeLocalCaptionProvider } from "./caption-provider-composition.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
 
 /** Explicit normal-backend lifecycle; imports never start a process or read env files. */
@@ -269,21 +270,27 @@ async function composeLocalWorkflow(
         scratchRoot: root,
         tools: acquisition,
       }),
-      ...(config.providerMode === "fake"
-        ? {
-            analysis: fakeOwnerAnalysis,
-            clipPreparation: fakeOwnerClipPreparation,
-          }
-        : {
-            providers: (files) =>
-              composeOwnerProviders(
+      providers: (files) => {
+        const normal =
+          config.providerMode === "fake"
+            ? {
+                analysis: fakeOwnerAnalysis,
+                clipPreparation: fakeOwnerClipPreparation,
+              }
+            : composeOwnerProviders(
                 localProviderReadiness(config),
                 files,
                 media,
                 undefined,
                 diagnostics,
-              ),
-          }),
+              );
+        return "captionTranscription" in normal
+          ? normal
+          : {
+              ...normal,
+              ...composeLocalCaptionProvider(config, files, media, diagnostics),
+            };
+      },
     });
     return {
       dispatch: host.dispatch,

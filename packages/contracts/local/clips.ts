@@ -20,6 +20,8 @@ import {
 } from "./policy.ts";
 import { ownerWordsSchema, ownerMomentSchema } from "./selection.ts";
 import { ownerVideoLookSchema } from "./video-look.ts";
+import { ownerFocusSchema } from "./focus.ts";
+import { OWNER_CAPTION_GENERATION_ATTEMPTS } from "./caption-generation.ts";
 import {
   CONTEXTUAL_PICTURE_POLICY,
   contextualPictureBriefSchema,
@@ -49,11 +51,13 @@ export const ownerOverlaySchema = z
     captions: compositionManifestV3Schema.shape.captions,
     captionStyle: ownerCaptionStyleSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
+    focus: ownerFocusSchema.optional(),
     visuals: z.array(ownerVisualSchema).max(OWNER_PICTURE_LIMITS.cuesPerClip),
   })
   .strict()
   .superRefine((overlay, ctx) => {
     if (
+      (overlay.focus && overlay.focus.frames !== overlay.frames) ||
       overlay.captions.some(
         (caption) =>
           caption.startMs < 0 ||
@@ -114,6 +118,7 @@ export const ownerClipPlanSchema = z
 export const ownerClipPreparationSchema = z
   .object({
     moment: ownerMomentSchema,
+    focus: ownerFocusSchema.optional(),
     plan: ownerClipPlanSchema.nullable(),
     pictures: z
       .array(
@@ -140,6 +145,12 @@ export const ownerClipSchema = z
     sourceRevision: z.number().int().nonnegative(),
     revision: z.number().int().nonnegative(),
     assemblyRevision: z.number().int().nonnegative(),
+    captionAttempts: z
+      .number()
+      .int()
+      .min(0)
+      .max(OWNER_CAPTION_GENERATION_ATTEMPTS)
+      .optional(),
     baseHash: ownerAssetSchema.shape.digest.nullable(),
     state: z.enum([
       "selected",

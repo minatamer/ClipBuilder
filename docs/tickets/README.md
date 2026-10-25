@@ -1,5 +1,150 @@
 # ClipBuilder canonical ticket index
 
+## Transparent picture overlays — 2026-10-25
+
+[CL-079](CL-079-transparent-picture-overlays.md) preserves uploaded PNG/WebP alpha
+through normalization, trusted format metadata, delivery, drafts and native video
+composition while keeping JPEG compatibility. All 564 local tests, browser alpha
+and native blending checks, types/lint/format and read-only review pass. Current
+worker/overlay were rebuilt and the backend reloaded, retaining fake mode and
+the frontend. No actionable findings. Older flattened
+uploads require re-uploading the original once. No live API calls or Git mutation.
+
+## Empty captions, explicit generation and word correction — 2026-10-25
+
+[CL-078](CL-078-caption-generation-and-word-editing.md) implements default-empty
+fake clips, retires automatic fake Earth art, adds explicit local fake captions
+and a confirmed caption-only Gemini path, plus fixed-timestamp Text editing.
+All 562 synthetic local tests, provider/native-audio and shared browser/export
+proofs pass, including desktop/390/320 and fixed caption clocks. Types/lint/format
+and read-only validation pass with no actionable findings. The normal backend
+and current worker were reloaded; app remains fake. Owner real API/visual
+acceptance remains manual.
+No live API calls, configuration edits, deployment or Git mutation.
+
+## Picture timing Capture — 2026-10-25
+
+[CL-077](CL-077-picture-timing-capture.md) adds Capture beside picture Start/End,
+using the settled preview frame and existing saved/exported timing. Verification
+passes for exact/invalid boundaries, two-picture isolation, seek/buffer/error/busy
+guards, desktop/390/320 and decoded MP4 timing. Shared Focus playback retains zero
+rewinds. Types/lint/format and read-only review pass with no actionable findings.
+Fake/paid-off synthetic checks only; no owner media, API calls or Git mutation.
+Owner personal visual acceptance remains manual.
+
+## Person selector before Add position — 2026-10-25
+
+[CL-076](CL-076-confirm-position-person.md) makes Add position ask for a person
+first, defaulted to the highlighted row. Confirm inserts directly below that row;
+Cancel leaves the draft unchanged. Another person uses their existing framing,
+with dynamic numbering. Fifteen unit checks and current-source browser/native
+proofs pass, including desktop/390/320, zero playback rewinds and actual MP4
+timing/zoom. Final review has no actionable findings; owner visual acceptance
+remains manual. No provider/schema/worker change, restart or Git mutation.
+
+## Large local picked-video uploads — 2026-10-25
+
+[CL-075](CL-075-large-local-video-upload.md) fixes Next document-Proxy truncation
+of local video uploads above 10 MB. Only the raw video-open route skips body
+cloning; its origin/authentication/bounds remain. Ten matcher/bridge checks and
+an actual isolated Next transfer of 64 MiB + 37 bytes pass with exact hash/length
+and clean teardown. Running app picked up the matcher in fake mode; no restart,
+owner upload, provider call or Git mutation. Owner actual-file retry remains manual.
+
+## Remove footer mode/status identity — 2026-10-25
+
+[CL-074](CL-074-remove-footer-mode-status.md) removes the mode label/icon and all
+its footer variants permanently by owner decision. Start over and workflow
+actions remain; no mode, approval or provider behavior changes.
+Existing synthetic footer/reset proof, frontend types/lint/format and final
+read-only validation pass. No actionable findings or Git mutation.
+
+## Visible footer Start over — 2026-10-25
+
+[CL-073](CL-073-footer-start-over.md) moves Start over directly into the shared
+workspace footer, including dirty editing. It clears the current session through
+the existing protected reset flow and returns to fresh intake; saved/retained
+media is preserved. Synthetic local/hosted browser checks cover desktop/phone,
+dirty reset, moment selection, pending/active guards and failure/retry/discard.
+Types/lint/format pass; final validation has no actionable findings. Owner visual
+acceptance remains manual. No backend change, paid call, restart or Git mutation.
+
+## Independent camera positions — 2026-10-25
+
+[CL-072](CL-072-independent-camera-positions.md) implements the owner's revision:
+Camera / People, with Timing / Advanced inside Camera; every position owns
+independent settings and timestamps. Add position appends the person's next
+number; deletion/reassignment renumbers the list. No identical-crop linking or
+Split at playhead control remains. Fourteen unit checks and current-source
+browser/native proofs pass, including added-position MP4 output and continuous
+playback at desktop/390/320. Final review has no actionable findings; no new
+schema, provider call or backend restart. Owner visual acceptance remains manual.
+
+## Focus playback regression — 2026-10-25
+
+[CL-071](CL-071-focus-preview-continuous-playback.md) is implemented and locally
+validated. Focus playhead updates are isolated from the Player's input props;
+its source overview holds an editing still during playback instead of seeking
+on every frame. Continuous generated-media playback has zero decoded rewinds
+at desktop/390/320, with the same main video element and existing editing/
+Capture/save/retry checks passing. Twelve focused unit checks and type/lint/
+format checks pass; final validation has no actionable findings. App remains
+in fake mode without a restart or provider calls. Owner actual-clip confirmation
+remains manual; export quality and other pending changes are preserved.
+
+## Export source quality — 2026-10-25
+
+[CL-070](CL-070-export-resolution-and-quality-audit.md) is implemented and locally
+validated in the normal shared editor/native path. Exports always stay vertical,
+crop original pixels, preserve native portrait/source-height resolution and
+source frame rate, and encode once. Four synthetic quality profiles, existing
+native/hosted-shaped editor proofs and focused unit/type/lint checks pass.
+Original, cache, saved-export and download bytes remain protected. The current
+worker was rebuilt/reloaded in fake mode; final review has no actionable
+findings. Owner real-media acceptance, new Linux/max-capacity verification and
+the retired separate renderer remain outside this local verdict. No paid call,
+cloud change or Git mutation.
+
+## Focus editor position UX — 2026-10-25
+
+[CL-069](CL-069-focus-editor-positions-and-capture.md) is implemented and locally
+validated: every camera change has a position label; People has visual framing;
+numeric controls live in Advanced; Start/End Capture uses the left preview.
+Twelve focused unit checks and current-source browser/native proofs pass,
+including desktop/390/320 pointer/touch, saved state and exact cut frames.
+Scope/selection and inherited handle-box review findings are resolved; final
+read-only validation has no actionable findings. No provider/schema change.
+Owner live/visual acceptance remains manual; CL-070 quality correction is separate.
+
+## Automatic and manual person focus — 2026-10-25
+
+[CL-068](CL-068-automatic-and-manual-person-focus.md) is implemented and locally
+validated: automatic portrait fill/held speaker framing plus a bounded Focus
+camera/person correction timeline in the shared editor. One existing video
+request, no extra AI call. The plan preceded full restart and execute/validate.
+**545 fake/no-key local tests**, 27 boundary checks, browser/native/hosted-shaped
+proofs, types/lint/format and read-only validation pass. Desktop/390/320 controls
+inspected; current worker reloaded and app verified in synthetic mode. Real
+Gemini quality, personal acceptance and Linux release verification remain
+manual/separate. All changes are unstaged/uncommitted; no cloud/deployment action.
+The person-removal follow-up is also verified: per-row Remove buttons, synced
+selection and final-appearance protection pass the synthetic desktop/phone
+editor regression. The owner canceled the separate opening-frame investigation.
+
+## Intake preview and upload area — 2026-10-25
+
+[CL-067](CL-067-intake-preview-and-upload-area.md) adds decoded-frame readiness
+and bounded fallback to saved thumbnails, removes fitting-card overflow and adds
+a responsive dashed upload area using the existing drop/picker flow. Twenty
+focused fake/no-key tests, a current-source synthetic browser proof, types/lint/
+format and read-only validation pass. Desktop/phone captures inspected; hosted
+stays upload-only. Owner-file/device acceptance remains manual. No paid calls,
+configuration/cloud changes, deployment or Git mutation.
+The owner-file follow-up identified the blue intro frame at one second as the
+blank-looking thumbnail; sampling now uses ten seconds, capped at a quarter of
+short clips. The same saved source decodes at the new clock in the normal app;
+its master remains unchanged and the generated blank-intro regression passes.
+
 ## Source transcription reuse — 2026-10-25
 
 [CL-066](CL-066-reuse-source-transcription.md) implements the owner's selected

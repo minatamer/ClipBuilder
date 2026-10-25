@@ -11,7 +11,7 @@ import {
   EDITING_CSRF_COOKIE,
 } from "./hosted-workflow.ts";
 import { fakeOwnerAnalysis } from "./fake-analysis.ts";
-import { fakeOwnerClipPreparation } from "./fake-clips.ts";
+import { editorContentFixture as fakeOwnerClipPreparation } from "../../../test/owner-content-fixture.ts";
 import { createApplication } from "../src/app.ts";
 import { loadConfig } from "../src/config/loadConfig.ts";
 let root: string, flow: ReturnType<typeof createHostedEditingWorkflow>;

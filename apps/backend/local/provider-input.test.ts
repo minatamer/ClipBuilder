@@ -29,11 +29,12 @@ it("reads only a receipt-matching fixed audio/video input and removes its owned 
   const clipId = randomUUID();
   for (const request of [
     { kind: "audio" as const },
+    { kind: "audio" as const, clipId },
     { kind: "video" as const, clipId },
   ]) {
     const path =
       request.kind === "audio"
-        ? await files.providerAudio(id)
+        ? await files.providerAudio(id, request.clipId)
         : await files.providerVideo(id, clipId);
     await writeFile(path, bytes);
     const blob = await files.readProviderInput(id, request, receipt, signal());

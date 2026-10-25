@@ -88,7 +88,7 @@ export async function reviewFreshLocalFlow(
         const wait=async(fn,phase='step')=>{for(let i=0;i<1200;i++){const value=fn();if(value)return value;await new Promise(done=>setTimeout(done,50));}throw new Error('fresh_flow_timeout_'+phase+'_'+[...document.querySelectorAll('.clip-state')].map(n=>n.textContent.trim()).join('_'));};
         const button=text=>[...document.querySelectorAll('button')].find(n=>n.textContent.trim()===text);
         await wait(()=>button('Add more clips'));
-        document.querySelector('.session-menu').open=true; button('Start over').click();
+        button('Start over').click();
         const input=await wait(()=>document.querySelector('.upload-card input:not(:disabled)'));
         const bytes=Uint8Array.from(atob(${JSON.stringify(source.toString("base64"))}),c=>c.charCodeAt(0));
         const transfer=new DataTransfer();transfer.items.add(new File([bytes],'synthetic-fresh.mp4',{type:'video/mp4'}));input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));
@@ -507,7 +507,7 @@ globalThis.clipbuilderReviewControls = async () => {
         await chooseTab('Filters');
         if (control('Filter').value !== 'warm' || control('Strength').value !== '60') throw new Error('tab_change_lost_filter_edits');
         tab('Filters').focus();
-        for (const [key, expected] of [['End','Pictures'], ['Home','Captions'], ['ArrowLeft','Pictures'], ['ArrowRight','Captions']]) {
+        for (const [key, expected] of [['End','Focus'], ['Home','Captions'], ['ArrowLeft','Focus'], ['ArrowRight','Captions']]) {
           document.activeElement.dispatchEvent(new KeyboardEvent('keydown', {key, bubbles:true}));
           await wait(() => document.activeElement === tab(expected) && tab(expected).getAttribute('aria-selected') === 'true');
           if (visiblePanels().length !== 1 || [...document.querySelectorAll('.editor-tabs > [role="tab"]')].filter(node => node.tabIndex === 0).length !== 1) throw new Error('tab_keyboard_failed');

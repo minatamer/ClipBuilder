@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useCallback,
   useLayoutEffect,
   useRef,
   useState,
@@ -24,14 +25,27 @@ function SavedVideoFrame({
   useEffect(() => {
     const media = video.current;
     if (!media) return;
+    const timeout = setTimeout(onError, 15_000);
+    const decoded = () => {
+      if (media.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+      clearTimeout(timeout);
+      setLoaded(true);
+    };
+    media.addEventListener("loadeddata", decoded);
+    media.addEventListener("canplay", decoded);
+    media.addEventListener("seeked", decoded);
     media.src = url;
     media.load();
     return () => {
+      clearTimeout(timeout);
+      media.removeEventListener("loadeddata", decoded);
+      media.removeEventListener("canplay", decoded);
+      media.removeEventListener("seeked", decoded);
       media.pause();
       media.removeAttribute("src");
       media.load();
     };
-  }, [url]);
+  }, [url, onError]);
   return (
     <>
       <video
@@ -45,9 +59,9 @@ function SavedVideoFrame({
           const media = event.currentTarget;
           if (!Number.isFinite(media.duration) || media.duration <= 0)
             onError();
-          else media.currentTime = Math.min(1, media.duration / 2);
+          // Avoid opening logos/blank intro frames without fetching a poster.
+          else media.currentTime = Math.min(10, media.duration / 4);
         }}
-        onSeeked={() => setLoaded(true)}
         onError={onError}
       />
       {!loaded && (
@@ -74,6 +88,7 @@ export function YoutubePreview({
   const text = useRef<HTMLSpanElement>(null);
   const [overflow, setOverflow] = useState(0);
   const [failed, setFailed] = useState(false);
+  const fail = useCallback(() => setFailed(true), []);
   useLayoutEffect(() => {
     const measure = () =>
       setOverflow(
@@ -104,7 +119,7 @@ export function YoutubePreview({
         ) : source.kind === "saved" ? (
           <SavedVideoFrame
             url={`/api/local/sources/${source.destination}/${source.variantId}/preview`}
-            onError={() => setFailed(true)}
+            onError={fail}
           />
         ) : (
           // The protected same-origin endpoint returns bounded JPEG bytes, never a remote URL.
@@ -113,7 +128,7 @@ export function YoutubePreview({
             src={`/api/local/sources/thumbnail/${source.sourceId}`}
             alt=""
             referrerPolicy="no-referrer"
-            onError={() => setFailed(true)}
+            onError={fail}
           />
         )}
       </div>

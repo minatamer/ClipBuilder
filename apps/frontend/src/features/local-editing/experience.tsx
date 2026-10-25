@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, Film, HardDrive } from "lucide-react";
+import { Upload, Film } from "lucide-react";
 import { Workspace } from "../../shared/ui/workspace";
 import { WorkflowFrame } from "../../shared/ui/workflow-frame";
 import { Button } from "../../shared/ui/button";
@@ -68,7 +68,6 @@ export function LocalEditingExperience({
   const [hasClips, setHasClips] = useState(false);
   const [view, setView] = useState<"moments" | "editor">("moments");
   const heading = useRef<HTMLHeadingElement>(null);
-  const sessionMenu = useRef<HTMLDetailsElement>(null);
   const clipsChanged = useCallback((value: boolean) => {
     setHasClips(value);
     if (value) setView("editor");
@@ -77,31 +76,7 @@ export function LocalEditingExperience({
     if (view === "editor") sourcePreview.current?.pause();
     heading.current?.focus({ preventScroll: true });
     heading.current?.scrollIntoView({ block: "start" });
-  }, [view]);
-  useEffect(() => {
-    const close = (
-      event: globalThis.PointerEvent | globalThis.KeyboardEvent,
-    ) => {
-      if (
-        event.type === "keydown" &&
-        (event as globalThis.KeyboardEvent).key !== "Escape"
-      )
-        return;
-      if (
-        event.type === "pointerdown" &&
-        event.target instanceof Node &&
-        sessionMenu.current?.contains(event.target)
-      )
-        return;
-      if (sessionMenu.current) sessionMenu.current.open = false;
-    };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, []);
+  }, [view, workspace?.id]);
   const [unapplied, setUnapplied] = useState(false);
   const [clearBlocked, setClearBlocked] = useState(false);
   const [footerTarget, setFooterTarget] = useState<HTMLDivElement | null>(null);
@@ -264,6 +239,8 @@ export function LocalEditingExperience({
       if (!response.ok && response.status !== 404)
         throw new Error("unavailable");
       setWorkspace(null);
+      setPreviewReadyFor(null);
+      setDragging(false);
       setShowMomentResults(false);
       setUnapplied(false);
       setInitialClip(null);
@@ -302,39 +279,22 @@ export function LocalEditingExperience({
           workspace ? (
             <>
               <div className="session-controls">
-                <p className="local-mode-note">
-                  <HardDrive size={16} aria-hidden="true" />
-                  {!capabilities
-                    ? "Connecting…"
-                    : capabilities.aiMode === "synthetic-ai"
-                      ? "Fake AI"
-                      : capabilities.aiMode === "provider-ai"
-                        ? hosted
-                          ? "Temporary session"
-                          : "Gemini"
-                        : "AI unavailable"}
-                </p>
-                <details className="session-menu" ref={sessionMenu}>
-                  <summary>Session</summary>
-                  <div className="session-menu-content">
-                    <Button
-                      variant="quiet"
-                      disabled={blocked || clipWork || unapplied}
-                      onClick={() => void clear()}
-                    >
-                      {clearBlocked ? "Retry" : "Start over"}
-                    </Button>
-                    {clearBlocked && (
-                      <Button
-                        variant="quiet"
-                        disabled={blocked || clipWork}
-                        onClick={() => void clear(true)}
-                      >
-                        Discard session
-                      </Button>
-                    )}
-                  </div>
-                </details>
+                <Button
+                  variant="quiet"
+                  disabled={blocked || clipWork}
+                  onClick={() => void clear()}
+                >
+                  {clearBlocked ? "Retry reset" : "Start over"}
+                </Button>
+                {clearBlocked && (
+                  <Button
+                    variant="quiet"
+                    disabled={blocked || clipWork}
+                    onClick={() => void clear(true)}
+                  >
+                    Discard session
+                  </Button>
+                )}
               </div>
               <div className="local-footer-actions">
                 {hasClips && !unapplied && !clipWork && !blocked && (
@@ -414,10 +374,13 @@ export function LocalEditingExperience({
                     <h2 id="upload-title">Upload a video</h2>
                   </div>
                   <div className="source-card-body">
-                    <p>
-                      Drop your conversation here, or choose a file from your
-                      computer.
-                    </p>
+                    <div className="upload-drop-area" data-disabled={blocked}>
+                      <Upload aria-hidden="true" />
+                      <strong>
+                        {dragging ? "Drop to upload" : "Drop your video here"}
+                      </strong>
+                      <span>or choose a file below</span>
+                    </div>
                   </div>
                   <footer className="source-card-footer">
                     <div className="source-actions">

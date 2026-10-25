@@ -11,20 +11,36 @@ Use the normal application at `http://localhost:3000/start`. The frontend runs
 on 3000 and backend on 4000 using their normal commands and existing app-local
 `.env.local` files. There is no separate owner app or startup mode.
 
-Processing opens a clean editor with clip tabs. Captions/Filters/Pictures show
-one inspector at a time; caption Style/Position and picture Image/Timing/Motion/
+Processing opens a clean editor with clip tabs. Captions/Filters/Pictures/Focus show
+one inspector at a time; caption Style/Position/Text and picture Image/Timing/Motion/
 Position keep related controls separate. Add more clips returns to selection;
 Back to editor preserves the work. Apply/Discard replace navigation while edits
-are pending. The footer has one primary plus one secondary; Session owns Start
-over. No Save draft or permanent export-history panel is shown.
+are pending. Start over is directly visible in the footer, including with dirty
+edits; it clears the current workspace and returns to fresh upload/YouTube
+intake. Active processing disables reset, and failed cleanup offers retry or
+explicit discard. Existing saved drafts/exports and downloaded/retained sources
+are preserved. No Save draft or permanent export-history panel is shown.
 
 Caption positions center at the upper quarter, center or lower quarter. Drag,
 resize and keyboard placement use the actual scaled preview. Social caption
 styles and picture entrance/exit effects share native export rendering. Upload
 static PNG/JPEG/WebP pictures to insert them directly; configure each cue's timing
 and position. Up to twenty manual cues do not increase the three-image AI budget.
-Fake analysis is fictional dialogue; its recognizable offline sample image is
-credited in the backend's SAMPLE_MEDIA.md. Existing saved media is preserved.
+Fake analysis supplies fictional dialogue for moment/focus testing; new clips
+start with no captions or automatic pictures. `apps/backend/local/fake-content.ts`
+owns `FAKE_CAPTIONS_ENABLED=false`, a hardcoded switch rather than an env entry.
+The automatic Earth picture is permanently retired. Existing saved media stays.
+
+Empty Captions offers Generate captions and, locally only, Generate fake captions.
+The fake action restores fictional captions on demand without keys or spend.
+The Gemini action confirms sending only this clip's audio and using credits.
+CL-078 authorizes this narrow local paid port even with FAKE_MODE=true and
+PAID_DEMO_ENABLED=false; an existing configured Gemini key is still required.
+It enables no other paid feature and changes no configuration. Hosted retains
+normal paid/authentication/spend gates and excludes fake generation. Automated
+checks inject fake transports; real API quality/spend remains owner-manual.
+Caption Text permits word corrections with timestamps fixed, shared by preview,
+Apply/Discard, saved drafts and exports. No caption timestamp controls are added.
 
 When changing shared local contracts/composition or native worker code, refresh
 the normal backend so its compiled worker/overlay matches the frontend. Normal
@@ -63,6 +79,64 @@ metadata when no matching saved draft remains. Save applied edits from the compa
 editing-footer action; later acknowledged changes autosave. There are no permanent
 saved-library sections.
 
+Focus has Camera and People views. Camera contains Timing and Advanced for the
+selected person/position. Each timeline row has its own position number, camera
+settings and time span, even when another row has identical framing. Select a
+position, scrub the left vertical preview and Capture its
+Start or End. End includes the paused frame; clip endpoints stay locked and inner
+boundaries move their neighbor too. Scrubbing never silently selects another
+position. Add position first asks for a person, defaulted to the highlighted row.
+Choose another person if wanted, then Add to insert directly below that row or
+Cancel without changing anything. The new range starts within the selected
+row's later interval and opens Timing; adjust Start/End or Capture the desired
+boundaries. It uses the chosen person's existing framing. Remove
+position extends its neighbor and renumbers that person's remaining positions.
+During playback the Focus source overview holds the selected camera's editing
+frame; pause or seek to update it. The left vertical preview and camera-row
+playhead continue normally, and Capture uses the settled left preview frame.
+People selects a person/position without appearance timestamp controls. Drag the
+centered numbered handle, or use arrow keys, to correct only that position.
+Changing the Position selector navigates to its own camera settings and time.
+Advanced inside Camera holds Zoom and Horizontal/Vertical percentages. Unused people have an explicit Use here
+action. Add a missed person at the current crop; each person has their own Remove
+button. Removal preserves their crops as custom framing and leaves other people
+unchanged. Original AI observations/timestamps remain retained as protected data.
+Apply/Discard use the existing footer. Reset focus restores the automatic plan;
+none of these manual controls calls Gemini. Applied focus is saved and used by
+the next explicit MP4 export; previous exports retain their original framing.
+Final exports stay vertical and use original source pixels, rather than the
+reduced preview cut. Native 9:16 portrait dimensions stay unchanged; landscape
+output uses source height with even-pixel width rounding (for example a 4K
+3840x2160 landscape source produces 1216x2160 portrait output). Native portrait
+2160x3840 stays 2160x3840. Source nominal frame rate is retained; VFR is normalized
+to that rate. The editor/overlay clock stays 30 fps. Cropping/zoom still limits
+available detail; a bigger file cannot recover pixels missing from the source.
+Video is encoded once at CRF 18 from the original; previews and AI proxies remain
+separate. Existing saved MP4s stay immutable; explicitly Export clip again to
+create a revision using the corrected path. Download/save copies do not re-encode.
+
+New clips fill the portrait frame automatically. The existing selected-clip video
+request also returns anonymous person observations and camera evidence. The
+compiler starts with a visible person (or a provisional side crop), holds
+same-shot framing through uncertainty and cuts after a second of supported
+speech for another visible person. Real shot cuts reset geometry. Fake mode
+supplies fictional people/tracks; it does not detect people in your actual video.
+Real observations still require the configured provider/live approvals and the
+owner's manual action. Existing saved clips keep their accepted appearance;
+use Focus to correct them without redoing paid analysis.
+
+Content-safe backend diagnostics include `focus_plan`, `focus_compile`,
+`focus_edit` and `focus_export`. The `focus` summary records returned/accepted
+people and decision counts, observation/shot counts, switches, holds, provisional
+fallbacks and discarded undecodable items/converted clocks. It never logs boxes,
+words, media, raw provider bodies or private paths. The normalized automatic
+track is in the protected clip response's `base.overlay.focus`; an applied
+override is in `edit.focus`, and preparation checkpoints retain `preparation.focus`.
+These stay in the existing workspace/private draft, with no public debug route
+or additional provider request. Compare safe log counts and inspect the People/
+Camera views to diagnose a hold or missed person. Real AI accuracy and Linux/
+hosted release acceptance remain separate from synthetic Windows proofs.
+
 Alternatively, enter a supported YouTube video link and Continue. The card switches
 to resolution selection; choose a quality or Best available, then Download video.
 Ready saved copies appear in the same picker offline; More resolutions explicitly
@@ -78,7 +152,7 @@ Choose exact manual ranges, independent AI duration bounds and suggestion
 count, then process several clips. Review captions, pictures, placement, fonts,
 animation, size and video looks; export from the workspace footer. The Save draft
 control is retired; existing saved drafts still reopen and autosave. Fake AI generates
-fictional words/moments/pictures and does not establish real AI quality. Native
+fictional moment/focus inputs and does not establish real AI quality. Native
 inspection, cutting, overlays and encoding process actual local bytes.
 
 Completed transcription is reused for the same source/revision and AI mode in

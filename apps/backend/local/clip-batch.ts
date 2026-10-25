@@ -44,11 +44,30 @@ import { normalizePicture } from "../src/assembly/picture-raster.ts";
 import type { OwnerAiMode } from "../../../packages/contracts/local/policy.ts";
 
 import { LocalDiagnostics } from "./diagnostics.ts";
+import { FAKE_CAPTIONS_ENABLED } from "./fake-content.ts";
+import {
+  ownerCaptionGenerationRequestSchema,
+  ownerFakeCaptionGenerationRequestSchema,
+  OWNER_CAPTION_GENERATION_ATTEMPTS,
+} from "../../../packages/contracts/local/caption-generation.ts";
+import { ownerWordsSchema } from "../../../packages/contracts/local/selection.ts";
+import { ownerEditDocumentSchema } from "../../../packages/contracts/local/editor.ts";
+import type { ClipCaptionTranscription } from "./clip-caption-port.ts";
 import { critiqueOwnerVisualCue, ownerVisualClock } from "./gemini-critique.ts";
+import {
+  defaultOwnerFocus,
+  ownerFocusCounts,
+  type OwnerFocus,
+} from "../../../packages/contracts/local/focus.ts";
 
 export { ownerClipPlanSchema } from "../../../packages/contracts/local/clips.ts";
 export type OwnerClipPorts = {
   readonly mode: OwnerAiMode;
+  focus?(request: {
+    workspace: OwnerWorkspace;
+    clipId: string;
+    moment: OwnerMoment;
+  }): OwnerFocus;
   plan(
     request: { workspace: OwnerWorkspace; clipId: string; moment: OwnerMoment },
     signal: AbortSignal,
@@ -93,6 +112,8 @@ export class OwnerClipBatch {
   private closing = false;
   private admission = Promise.resolve();
   private cancelVersion = 0;
+  private readonly failedCaptionAttempts = new Set<string>();
+  private captionProcessing = false;
   constructor(
     private readonly workspace: OwnerWorkspace,
     private readonly files: WorkspaceFiles,
@@ -104,7 +125,9 @@ export class OwnerClipBatch {
     this.workspace = ownerWorkspaceSchema.parse(workspace);
   }
   get active() {
-    return this.queue.length > 0 || Boolean(this.current);
+    return (
+      this.queue.length > 0 || Boolean(this.current) || this.captionProcessing
+    );
   }
   snapshot(): OwnerClipList {
     return ownerClipListSchema.parse({
@@ -179,7 +202,10 @@ export class OwnerClipBatch {
     return this.serialize(async () => {
       const clip = this.clips.get(id);
       if (this.closing || !clip) throw new Error("workspace_closed");
-      return ownerAgentValidation(clip, applyOwnerEdit(clip, value));
+      return ownerAgentValidation(
+        clip,
+        applyOwnerEdit(clip, value, this.workspace.source),
+      );
     });
   }
   async edit(id: string, value: unknown) {
@@ -189,13 +215,108 @@ export class OwnerClipBatch {
       if (this.receipt(key, request)) return this.snapshot();
       const clip = this.clips.get(id);
       if (this.closing || !clip) throw new Error("workspace_closed");
-      const edit = applyOwnerEdit(clip, request);
+      const edit = applyOwnerEdit(clip, request, this.workspace.source);
+      if (
+        edit.focus &&
+        request.operations.some(
+          (o) =>
+            o.kind === "focus" || (o.kind === "reset" && o.panel === "focus"),
+        )
+      )
+        this.diagnostics.focus("focus_edit", ownerFocusCounts(edit.focus));
       clip.edit = edit;
       clip.revision = edit.revision;
       if (!working(clip)) clip.state = "validated-revision";
       this.receipts.set(key, digest(request));
       this.changed();
       return this.snapshot();
+    });
+  }
+  async generateCaptions(
+    id: string,
+    value: unknown,
+    transcribe: ClipCaptionTranscription,
+    signal: AbortSignal,
+    fake = false,
+  ) {
+    const request = (
+      fake
+        ? ownerFakeCaptionGenerationRequestSchema
+        : ownerCaptionGenerationRequestSchema
+    ).parse(value);
+    return this.serialize(async () => {
+      const key = `captions:${fake ? "fake" : "gemini"}:${id}:${request.operationId}`;
+      if (this.receipt(key, request)) {
+        if (this.failedCaptionAttempts.has(key))
+          throw new Error("caption_attempt_failed");
+        return this.snapshot();
+      }
+      const clip = this.clips.get(id);
+      if (
+        this.closing ||
+        this.active ||
+        !clip?.base ||
+        !clip.baseHash ||
+        !["ready", "review-ready", "validated-revision"].includes(clip.state)
+      )
+        throw new Error("clip_unavailable");
+      if (clip.revision !== request.expectedRevision)
+        throw new Error("stale_edit_revision");
+      if (
+        clip.base.overlay.captions.length ||
+        (!fake &&
+          (clip.captionAttempts ?? 0) >= OWNER_CAPTION_GENERATION_ATTEMPTS)
+      )
+        throw new Error("caption_generation_unavailable");
+      signal.throwIfAborted();
+      this.receipts.set(key, digest(request));
+      if (!fake) clip.captionAttempts = (clip.captionAttempts ?? 0) + 1;
+      this.captionProcessing = true;
+      this.changed();
+      try {
+        const words = ownerWordsSchema.parse(
+          await transcribe(this.workspace, structuredClone(clip), signal),
+        );
+        const captions = compileFixedCaptions(
+          {
+            words,
+            range: {
+              startMs: 0,
+              endMs: Math.round((clip.base.overlay.frames * 1000) / OWNER_FPS),
+            },
+          },
+          () => this.diagnostics.critique("transcript_validate"),
+        );
+        const base = ownerClipBaseSchema.parse({
+          ...clip.base,
+          words,
+          overlay: { ...clip.base.overlay, captions },
+        });
+        const baseHash = digest(base),
+          revision = clip.revision + 1;
+        const edit = ownerEditDocumentSchema.parse({
+          ...(clip.edit ??
+            automaticOwnerEdit(clip.base, clip.id, clip.baseHash)),
+          baseHash,
+          revision,
+          captionText: [],
+        });
+        compileOwnerOverlay(base, edit, clip.assets);
+        clip.base = base;
+        clip.baseHash = baseHash;
+        clip.edit = edit;
+        clip.revision = revision;
+        clip.state = "validated-revision";
+        this.captionProcessing = false;
+        this.changed();
+        return this.snapshot();
+      } catch (error) {
+        this.failedCaptionAttempts.add(key);
+        throw error;
+      } finally {
+        this.captionProcessing = false;
+        this.changed();
+      }
     });
   }
   async picture(id: string, bytes: Buffer, signal: AbortSignal) {
@@ -221,8 +342,13 @@ export class OwnerClipBatch {
         height: picture.height,
         bytes: picture.bytes.length,
         origin: "owner-supplied",
+        ...(picture.format === "png" ? { format: picture.format } : {}),
       });
-      const file = await this.files.asset(this.workspace.id, asset.id);
+      const file = await this.files.asset(
+        this.workspace.id,
+        asset.id,
+        asset.format,
+      );
       try {
         await writeFile(file, picture.bytes, { flag: "wx", mode: 0o600 });
         signal.throwIfAborted();
@@ -506,6 +632,16 @@ export class OwnerClipBatch {
           signal,
         ),
       );
+      preparation.focus =
+        this.ports.focus?.({
+          workspace: structuredClone(this.workspace),
+          clipId: clip.id,
+          moment: structuredClone(moment),
+        }) ?? defaultOwnerFocus(this.workspace.source, frames);
+      this.diagnostics.focus(
+        "focus_compile",
+        ownerFocusCounts(preparation.focus),
+      );
       this.changed();
     }
     const plan = preparation.plan;
@@ -586,7 +722,10 @@ export class OwnerClipBatch {
     }
     const captions = compileFixedCaptions(
       {
-        words: moment.cues,
+        words:
+          this.ports.mode === "synthetic-ai" && !FAKE_CAPTIONS_ENABLED
+            ? []
+            : moment.cues,
         range: { startMs: 0, endMs: Math.round((frames * 1000) / OWNER_FPS) },
       },
       () => this.diagnostics.critique("clip_prepare"),
@@ -600,7 +739,14 @@ export class OwnerClipBatch {
       processingIdentity: moment.processingIdentity,
       cut: moment.cut,
       words: moment.cues,
-      overlay: { version: 1, frames, captions, visuals },
+      overlay: {
+        version: 1,
+        frames,
+        captions,
+        visuals,
+        focus:
+          preparation.focus ?? defaultOwnerFocus(this.workspace.source, frames),
+      },
     });
   }
   private async pump() {
@@ -631,6 +777,11 @@ export class OwnerClipBatch {
                 compileOwnerOverlay(snapshot, clip.edit, clip.assets),
               jobId = randomUUID();
             clip.state = "rendering";
+            if (overlay.focus)
+              this.diagnostics.focus(
+                "focus_export",
+                ownerFocusCounts(overlay.focus),
+              );
             clip.calls.render++;
             const result = await this.ports.render(
               {

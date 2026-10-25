@@ -8,6 +8,7 @@ const localRuntimeCapabilitiesSchema = z
     aiMode: z.union([ownerAiModeSchema, z.literal("unavailable")]),
     sourceMode: ownerAcquisitionModeSchema.nullable(),
     planningAvailable: z.boolean(),
+    captionGeneration: z.boolean().optional(),
     localMedia: z.literal(true),
     cloud: z.literal(false),
   })
@@ -20,6 +21,7 @@ export const ownerRuntimeCapabilitiesSchema = z.union([
       aiMode: z.union([ownerAiModeSchema, z.literal("unavailable")]),
       sourceMode: z.null(),
       planningAvailable: z.boolean(),
+      captionGeneration: z.boolean().optional(),
       localMedia: z.literal(false),
       cloud: z.literal(true),
       processingSiteKey: z.string().min(1).max(500).optional(),

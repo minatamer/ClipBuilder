@@ -8,6 +8,11 @@ import {
   ownerIdSchema,
 } from "../../../packages/contracts/local/index.ts";
 import { ownerOutputRevisionSchema } from "../../../packages/contracts/local/clips.ts";
+import {
+  ownerPictureFormatSchema,
+  ownerPictureExtension,
+  type OwnerPictureFormat,
+} from "../../../packages/contracts/local/assets.ts";
 
 export async function confinedPath(
   root: string,
@@ -58,10 +63,18 @@ export class WorkspaceFiles {
     if (!this.ids.has(id)) throw new Error("workspace_missing");
     return confinedPath(this.root, id, name);
   }
-  async asset(id: string, assetId: string): Promise<string> {
+  async asset(
+    id: string,
+    assetId: string,
+    format: OwnerPictureFormat = "jpeg",
+  ): Promise<string> {
     ownerIdSchema.parse(assetId);
     await this.file(id, "source.mp4");
-    return confinedPath(this.root, id, `${assetId}.jpg`);
+    return confinedPath(
+      this.root,
+      id,
+      `${assetId}.${ownerPictureExtension(ownerPictureFormatSchema.parse(format))}`,
+    );
   }
   async output(id: string, clipId: string, revision: number): Promise<string> {
     ownerIdSchema.parse(clipId);
@@ -74,9 +87,14 @@ export class WorkspaceFiles {
     await this.file(id, "source.mp4");
     return confinedPath(this.root, id, `${clipId}.source.mp4`);
   }
-  async providerAudio(id: string): Promise<string> {
+  async providerAudio(id: string, clipId?: string): Promise<string> {
+    if (clipId) ownerIdSchema.parse(clipId);
     await this.file(id, "source.mp4");
-    return confinedPath(this.root, id, "provider.audio.m4a");
+    return confinedPath(
+      this.root,
+      id,
+      clipId ? `${clipId}.provider.audio.m4a` : "provider.audio.m4a",
+    );
   }
   async providerVideo(id: string, clipId: string): Promise<string> {
     ownerIdSchema.parse(clipId);
@@ -86,7 +104,8 @@ export class WorkspaceFiles {
   /** Only fixed, worker-prepared inputs with a matching bounded receipt leave disk. */
   async readProviderInput(
     id: string,
-    request: { kind: "audio" } | { kind: "video"; clipId: string },
+    request:
+      { kind: "audio"; clipId?: string } | { kind: "video"; clipId: string },
     receipt: { bytes: number; durationMs: number; digest: string },
     signal: AbortSignal,
   ): Promise<Blob> {
@@ -106,7 +125,7 @@ export class WorkspaceFiles {
       throw new Error("provider_input_rejected");
     const path =
       request.kind === "audio"
-        ? await this.providerAudio(id)
+        ? await this.providerAudio(id, request.clipId)
         : await this.providerVideo(id, request.clipId);
     const before = await lstat(path, { bigint: true });
     if (
@@ -163,11 +182,12 @@ export class WorkspaceFiles {
   }
   async removeProviderInput(
     id: string,
-    request: { kind: "audio" } | { kind: "video"; clipId: string },
+    request:
+      { kind: "audio"; clipId?: string } | { kind: "video"; clipId: string },
   ): Promise<void> {
     const path =
       request.kind === "audio"
-        ? await this.providerAudio(id)
+        ? await this.providerAudio(id, request.clipId)
         : await this.providerVideo(id, request.clipId);
     await rm(path, { force: true });
   }

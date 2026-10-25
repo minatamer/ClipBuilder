@@ -52,10 +52,23 @@ Selection and editing reuse the demo's glass materials, shared
 buttons and responsive layout. Position/size fields remain under their disclosure.
 Processing opens a separate editor view, replacing selection entirely. Clip tabs
 open one preview and inspector; Captions, Filters and Pictures show one group at
-a time. Caption Style/Position and picture Image/Timing/Motion/Position sub-tabs
-keep controls compact. Apply/discard before changing clips or leaving editor.
+a time. Caption Style/Position/Text and picture Image/Timing/Motion/Position sub-tabs
+keep controls compact. Empty Captions offers Generate captions with an explicit
+Gemini/audio-transfer credit confirmation in the footer. The local-only Generate
+fake captions action beside it needs no key or credits; hosted excludes it.
+New fake clips start empty. The hardcoded backend fake-caption switch defaults
+off and the automatic Earth picture is retired; manual pictures still work.
+Text groups existing caption words into editable fields with read-only preview
+seek buttons. IDs/times stay fixed, Reset text restores original words, and
+Apply/Discard/reopen/native export share the same text-only overrides. Local paid
+caption transcription alone may bypass fake/paid-master switches by explicit
+owner decision; other providers/cloud keep their gates. No env change is needed.
+Apply/discard before changing clips or leaving editor.
 The footer has one primary plus Add more clips; dirty mode shows Apply/Discard.
-Back to editor retains inputs without submitting. Start over is in Session.
+Back to editor retains inputs without submitting. Start over is directly in the
+footer and also discards unapplied browser edits. Existing acknowledged session
+cleanup returns to fresh intake; pending work disables reset and failures retain
+retry/discard. Saved library files and retained masters remain preserved.
 No permanent export history or restored-session success notice is shown.
 
 Caption presets center text at 25%, 50% or 75% of the portrait, fitting oversized
@@ -73,12 +86,32 @@ have start/end seconds, entrance/exit and duration, quarter/center presets and
 direct manipulation. Animation is frame-driven in shared preview/native output;
 the raster cache includes motion state. Upload limits remain 4 MB/16M pixels,
 static rasters only. The same opaque asset receipt handles fresh/repeated uploads.
+Transparent PNG/WebP uploads preserve alpha through protected delivery, saved
+drafts, preview and MP4 composition; the video shows through, without a matte.
+Previously flattened uploads require re-uploading the original once. CL-079 owns
+verification; no AI keys or paid calls are needed.
 
-Controls use short labels and actionable errors. The compact Fake AI/Gemini
-footer identity replaces repeated provenance/tutorial text; provider/native call
-counts and success narration stay out of the product. Picture timing uses seconds
-and keeps exact frame-aligned values internally. Caption-layer selection follows
+Controls use short labels and actionable errors. CL-074 permanently removes the
+footer mode/status badge and icon in every mode. Provider/native call counts,
+provenance/tutorial text and success narration stay out of the product. Picture timing uses seconds
+and keeps exact frame-aligned values internally. Each endpoint has Capture from
+the settled preview: Start uses the displayed frame; End includes that frame.
+Capture pauses without seeking, changes only the selected picture's endpoint,
+and preserves the previous time for invalid order. Loading/seeking/failed/busy
+previews cannot capture. Apply/Discard and native exports use the same timing;
+this works in fake mode without API keys. CL-077 owns verification.
+Caption-layer selection follows
 the active settings tab; advanced position/size stays under its disclosure.
+
+Focus uses Camera / People; Camera contains Timing / Advanced for the selected
+person and position. Each timestamped row owns independent camera settings.
+Add position opens a person selector defaulted to the highlighted row. Add
+confirms insertion directly below it; Cancel leaves the draft untouched.
+Remove position renumbers remaining entries. Position selectors navigate rather
+than copying framing. People retains per-person removal and numbered-handle
+positioning without appearance times. CL-071 keeps playback ticks out of the
+parent Player inputs and holds the overview still during playback. See
+[CL-076](../../../../../docs/tickets/CL-076-confirm-position-person.md).
 
 Add clips / Your clips tabs replace the form with its results in the same slot;
 never append a full result workflow below the inputs. New/restored results open

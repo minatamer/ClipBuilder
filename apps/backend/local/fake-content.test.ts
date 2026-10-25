@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import sharp from "sharp";
+import { FAKE_CAPTIONS_ENABLED } from "./fake-content.ts";
 import { fakeOwnerAnalysis } from "./fake-analysis.ts";
 import { fakeOwnerClipPreparation } from "./fake-clips.ts";
 import { ownerWorkspaceSchema } from "../../../packages/contracts/local/index.ts";
@@ -38,30 +38,26 @@ it("uses deterministic fictional dialogue with speakers and source-bounded word 
   expect(proposals.length).toBeGreaterThanOrEqual(2);
 });
 
-it("returns a recognizable offline sample raster, never a solid placeholder", async () => {
-  // Request content is ignored by the fake adapter; no source or network is read.
-  const result = await fakeOwnerClipPreparation.image(
-    {
-      clipId: crypto.randomUUID(),
-      words: [],
-      cue: {
-        startFrame: 0,
-        endFrame: 30,
-        evidenceWordIds: ["w_000001"],
-        brief: {
-          scene: "sample",
-          searchQuery: "sample",
-          requiredTerms: [],
-          avoidTerms: [],
+it("defaults fake captions off and permanently disables fake picture generation", async () => {
+  expect(FAKE_CAPTIONS_ENABLED).toBe(false);
+  await expect(
+    fakeOwnerClipPreparation.image(
+      {
+        clipId: crypto.randomUUID(),
+        words: [],
+        cue: {
+          startFrame: 0,
+          endFrame: 30,
+          evidenceWordIds: [],
+          brief: {
+            scene: "sample",
+            searchQuery: "sample",
+            requiredTerms: [],
+            avoidTerms: [],
+          },
         },
       },
-    },
-    new AbortController().signal,
-  );
-  if (!result) throw new Error("synthetic_picture_missing");
-  const stats = await sharp(result.bytes).stats();
-  expect(
-    stats.channels.reduce((sum, channel) => sum + channel.stdev, 0),
-  ).toBeGreaterThan(40);
-  expect(result.origin).toBe("synthetic");
+      new AbortController().signal,
+    ),
+  ).rejects.toThrow("synthetic_picture_generation_disabled");
 });

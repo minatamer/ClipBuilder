@@ -10,6 +10,7 @@ import {
 } from "../../../../../packages/contracts/local/clips.ts";
 import { compileOwnerOverlay } from "../../../../../packages/contracts/local/edit-overlay.ts";
 import { normalizedBoxSchema } from "@clipbuilder/contracts";
+import { defaultOwnerFocus } from "../../../../../packages/contracts/local/focus.ts";
 import {
   automaticVisualEdits,
   constrainOwnerBox,
@@ -271,4 +272,29 @@ it("includes video looks in UI/CLI edit operations, compilation and reset withou
   expect(
     compileOwnerOverlay(current.base!, original, current.assets),
   ).not.toHaveProperty("videoLook");
+});
+
+it("adds and resets focus on legacy saved clips without rewriting their base or changing captions/pictures", () => {
+  const current = clip(),
+    original = initialOwnerEdit(current),
+    snapshot = JSON.stringify(current.base);
+  const focus = defaultOwnerFocus(
+      { width: 1280, height: 720 },
+      current.base!.overlay.frames,
+    ),
+    draft = { ...original, focus };
+  expect(sameOwnerEdit(original, draft)).toBe(false);
+  expect(ownerEditOperations(original, draft, current)).toEqual([
+    { kind: "focus", focus },
+  ]);
+  expect(
+    compileOwnerOverlay(current.base!, draft, current.assets).focus,
+  ).toEqual(focus);
+  expect(ownerEditOperations(draft, original, current)).toEqual([
+    { kind: "reset", panel: "focus" },
+  ]);
+  expect(
+    compileOwnerOverlay(current.base!, original, current.assets).focus,
+  ).toBeUndefined();
+  expect(JSON.stringify(current.base)).toBe(snapshot);
 });

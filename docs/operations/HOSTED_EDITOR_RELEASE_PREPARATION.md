@@ -2,9 +2,44 @@
 
 Owner decision, 2026-10-24 (CL-061): one normal app. Upload → manual/AI moments →
 clip preparation → caption/picture/filter editor → Apply/Discard → export/download.
-Only YouTube URL acquisition is local-only. This is prepared source code; it
+YouTube acquisition, local library/drafts/sample and the CL-078 fake-caption
+action / paid-switch exception are local-only. This is prepared source code; it
 does not change the currently deployed revision. Agents must never deploy for
 the owner or run credit-consuming tests without new explicit approval.
+
+## Next-build feature visibility — source audit, 2026-10-25
+
+This describes the current source with normal production paid/auth configuration.
+It is not a new deployment or a fresh inspection of the deployed revision/cloud
+settings. The owner will manually test these changes before choosing deployment.
+
+| Feature | Hosted next build | Local-only distinction |
+| --- | --- | --- |
+| MP4 upload and responsive drop area; manual/AI moments; clip selection | Visible | Hosted upload uses bounded chunks; the large raw local-file Proxy fix does not add hosted YouTube acquisition. |
+| Captions Style / Position / Text, word corrections with fixed timestamps | Visible | No timestamp editing or word insertion/deletion UI was added. |
+| Generate captions when a clip has none | Visible with normal paid/provider readiness and explicit consent | Only local mode can use the confirmed caption-only exception while fake mode / paid master are off. No new environment keys. |
+| Filters, real AI contextual pictures, manual pictures, timing Capture, motion and positioning | Visible | Uploaded PNG/WebP alpha is preserved in preview, drafts where supported, and native video composition; existing flattened copies require re-upload. |
+| Automatic portrait framing and Focus Camera / People editor | Visible | Every position has independent settings/times; person selection, numbering, removal and capture are shared UI. Fake people/tracks are test fixtures only. |
+| Vertical MP4 exports using original-source crop/detail and source frame rate | Visible | Hosted capacity must be verified for the larger high-resolution output; no silent quality downgrade is introduced. |
+| Start over, Add more clips, Apply/Discard, export/download | Visible | Hosted Start over discards temporary session media; local saved sources/drafts/exports remain outside that cleanup. Removed mode/status badges stay removed. |
+| Completed transcription reuse for the same source/revision | Shared within the session | Hosted has no durable or cross-user transcript/library cache. |
+| YouTube URL/resolution input and saved-download reuse | Hidden; routes rejected | Local only. Hosted users upload MP4s. |
+| Use demo sample, saved draft JSON import and Downloads library/reopen | Hidden; routes rejected | Owner-local filesystem features; hosted sessions expire and do not create durable projects. |
+| Generate fake captions and automatic fake-content policy | Fake CTA hidden; no fake runtime | Local CTA is key-free. New fake clips default to no captions; automatic fake Earth art is retired. |
+| Local paid-switch bypass, owner agent/capture tooling and retained private media | Hidden/unavailable | The caption exception requires APP_ENV=local; hosted keeps ordinary paid gates, authentication/CSRF, session isolation and budgets. |
+
+Evidence: shared `/start` routing in `apps/frontend/src/app/start/page.tsx`,
+hosted UI conditions in `experience.tsx` and `clip-batch-panel.tsx`, hosted path
+allowlist/capabilities/provider charging, and `composeLocalCaptionProvider`'s
+local/non-test guard. CL-067–079 own the feature/proof details. Current checks
+include 564 fake/paid-off local unit tests and actual Windows synthetic browser/
+native exports; they do not establish live Gemini quality or hosted capacity.
+
+Before any deployment decision, finish owner manual acceptance, rebuild/re-run
+the Linux packaged image proofs with these new features (CL-063 predates them),
+and verify the deferred allocation/cost/capacity items below. Keep FFmpeg as-is
+per owner decision. No push, cloud mutation, deployment or paid test is authorized
+by this audit or by the local commit approval.
 
 ## Deferred deployment checklist — 2026-10-25
 
@@ -20,6 +55,11 @@ future deployment decision; this note authorizes no cloud changes or deployment.
       cap in Console**. CLI budget inspection was blocked by the disabled Billing
       Budgets API; that does not establish that the cap is missing. Enabling that
       API is not required for the Console check and is not authorized here.
+- [ ] Include CL-070 source-quality output in the maximum workload check:
+      native portrait can remain 2160x3840 at up to 60 fps, with denser lossless
+      overlay capture. Existing byte/disk/duration limits still apply; exports
+      fail at capacity instead of silently lowering resolution. Local synthetic
+      proofs do not establish the proposed hosted allocation's maximum capacity.
 
 Preserve the inspected frontend settings, IAM, runtime identities, secret
 bindings and origins; no configuration change to those is currently needed.

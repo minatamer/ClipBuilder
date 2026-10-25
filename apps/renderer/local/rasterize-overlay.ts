@@ -18,6 +18,7 @@ export async function rasterizeOwnerOverlay(
     overlay: OwnerOverlay;
     assets: Record<string, string>;
     frames: string;
+    pixelRatio?: number;
   },
   signal: AbortSignal,
 ) {
@@ -51,6 +52,10 @@ export async function rasterizeOwnerOverlay(
       (!navigation && !cookie)
     ) {
       res.writeHead(403).end();
+      return;
+    }
+    if (req.url === "/favicon.ico") {
+      res.writeHead(204).end();
       return;
     }
     const file = staticFiles.get(req.url ?? "");
@@ -102,7 +107,11 @@ export async function rasterizeOwnerOverlay(
       onBrowserLog: null,
       onLog: () => {},
     });
-    await page.setViewport({ width: 1080, height: 1920, deviceScaleFactor: 1 });
+    await page.setViewport({
+      width: 1080,
+      height: 1920,
+      deviceScaleFactor: options.pixelRatio ?? 1,
+    });
     await page._client().send("Emulation.setDefaultBackgroundColorOverride", {
       color: { r: 0, g: 0, b: 0, a: 0 },
     });

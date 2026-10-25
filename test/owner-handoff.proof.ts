@@ -1,3 +1,7 @@
+import { vi as captionFixtureMock } from "vitest";
+captionFixtureMock.mock("../apps/backend/local/fake-content.ts", () => ({
+  FAKE_CAPTIONS_ENABLED: true,
+}));
 import { loadConfig } from "../apps/backend/src/config/loadConfig.js";
 import { expect, it, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
@@ -8,7 +12,7 @@ import { createOwnerHost } from "../apps/backend/local/server.ts";
 import { composeOwnerProviders } from "../apps/backend/local/provider-composition.ts";
 import { localProviderReadiness } from "../apps/backend/local/provider-readiness.ts";
 import { localWorkerPort } from "../apps/backend/local/worker-port.ts";
-import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
+import { editorContentFixture as fakeOwnerClipPreparation } from "./owner-content-fixture.ts";
 import type { GeminiTransport } from "../apps/backend/src/analysis/gemini.adapter.ts";
 import { createOwnerWorker } from "../apps/renderer/local/server.ts";
 import { ownerNativeTools } from "../scripts/native-tools.ts";

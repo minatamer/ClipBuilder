@@ -41,7 +41,7 @@ export async function prepareOwnerProviderMedia(
   );
   if (metadata.fingerprint !== job.fingerprint) throw new Error("stale_source");
   const cut =
-    job.operation === "prepare-owner-video"
+    job.operation === "prepare-owner-video" || job.cut
       ? ownerCutSchema.parse(job.cut)
       : null;
   if (
@@ -53,13 +53,21 @@ export async function prepareOwnerProviderMedia(
   const duration = cut
     ? (cut.endFrame - cut.startFrame) / OWNER_FPS
     : metadata.durationMs / 1000;
-  const clipId = job.operation === "prepare-owner-video" ? job.clipId : null;
-  const output = await ownerProviderMediaPath(root, job.workspaceId, clipId);
+  const clipId = job.clipId ?? null;
+  const videoInput = job.operation === "prepare-owner-video";
+  const output = await ownerProviderMediaPath(
+    root,
+    job.workspaceId,
+    clipId,
+    false,
+    !videoInput,
+  );
   const partial = await ownerProviderMediaPath(
     root,
     job.workspaceId,
     clipId,
     true,
+    !videoInput,
   );
   const audio = `[0:a:0]asetpts=PTS-(${videoStart.toFixed(6)})/TB,aresample=${OWNER_PROVIDER_MEDIA.audioSampleRate}:async=1:first_pts=0,apad,atrim=start=${start}:end=${start + duration},asetpts=PTS-STARTPTS[a]`;
   // Quantize the selection at the owner/source clock before reducing samples.
@@ -68,9 +76,10 @@ export async function prepareOwnerProviderMedia(
   const frames = Math.ceil(duration * OWNER_PROVIDER_MEDIA.videoFps - 1e-9);
   const packetTicks = 30_000 / OWNER_PROVIDER_MEDIA.videoFps;
   const finalTicks = Math.round(duration * 30_000) - (frames - 1) * packetTicks;
-  const video = cut
-    ? `[0:v:0]setpts=PTS-(${videoStart.toFixed(6)})/TB,fps=fps=${OWNER_FPS}:start_time=0:round=near,trim=start_frame=${cut.startFrame}:end_frame=${cut.endFrame},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=0.1,fps=fps=${OWNER_PROVIDER_MEDIA.videoFps}:start_time=0:round=near,trim=end_frame=${frames},scale=w='min(${OWNER_PROVIDER_MEDIA.videoEdge},iw)':h='min(${OWNER_PROVIDER_MEDIA.videoEdge},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:reset_sar=1,setsar=1[v];`
-    : "";
+  const video =
+    videoInput && cut
+      ? `[0:v:0]setpts=PTS-(${videoStart.toFixed(6)})/TB,fps=fps=${OWNER_FPS}:start_time=0:round=near,trim=start_frame=${cut.startFrame}:end_frame=${cut.endFrame},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=0.1,fps=fps=${OWNER_PROVIDER_MEDIA.videoFps}:start_time=0:round=near,trim=end_frame=${frames},scale=w='min(${OWNER_PROVIDER_MEDIA.videoEdge},iw)':h='min(${OWNER_PROVIDER_MEDIA.videoEdge},ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:reset_sar=1,setsar=1[v];`
+      : "";
   try {
     await runOwnedProcess(
       tools.ffmpeg,
@@ -91,7 +100,7 @@ export async function prepareOwnerProviderMedia(
         "2",
         "-filter_complex",
         `${video}${audio}`,
-        ...(cut
+        ...(videoInput
           ? [
               "-map",
               "[v]",
@@ -154,7 +163,7 @@ export async function prepareOwnerProviderMedia(
       tools,
       signal,
       duration,
-      cut ? frames : null,
+      videoInput ? frames : null,
     );
     const digest = await fileChecksum(partial, signal);
     const result = ownerMediaResultSchema.parse({

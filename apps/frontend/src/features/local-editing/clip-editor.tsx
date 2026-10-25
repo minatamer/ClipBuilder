@@ -3,6 +3,16 @@ import { ProcessingState } from "../../shared/ui/processing-state";
 import { LoaderCircle, RotateCw, Upload } from "lucide-react";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { ControlTabs } from "./control-tabs.tsx";
+import { FocusPreviewControls } from "./focus-preview-controls.tsx";
+import { PictureTiming } from "./picture-timing.tsx";
+import { CaptionTextEditor } from "./caption-text-editor.tsx";
+import { OWNER_CAPTION_GENERATION_ATTEMPTS } from "../../../../../packages/contracts/local/caption-generation.ts";
+import {
+  defaultOwnerFocus,
+  ownerFocusAt,
+  ownerFocusCrop,
+  ownerFocusSchema,
+} from "../../../../../packages/contracts/local/focus.ts";
 import {
   useEffect,
   useCallback,
@@ -66,7 +76,7 @@ type LayerControls = {
   onGestureStart: () => void;
 };
 
-const SETTINGS = ["captions", "filters", "pictures"] as const;
+const SETTINGS = ["captions", "filters", "pictures", "focus"] as const;
 type EditorSetting = (typeof SETTINGS)[number];
 
 function SelectionBox({
@@ -252,12 +262,26 @@ function Review({
 } & LayerControls) {
   const frame = useCurrentFrame();
   const caption = overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean;
+  const crop = overlay.focus
+    ? ownerFocusCrop(overlay.focus, ownerFocusAt(overlay.focus, frame))
+    : null;
   return (
     <AbsoluteFill style={{ backgroundColor: "#101215" }}>
       <OwnerVideoLookLayer look={overlay.videoLook}>
         <Html5Video
           src={sourceUrl}
-          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          style={
+            crop
+              ? {
+                  position: "absolute",
+                  width: (1080 * 1080) / crop.width,
+                  height: (1920 * 1920) / crop.height,
+                  maxWidth: "none",
+                  left: (-crop.x * 1080) / crop.width,
+                  top: (-crop.y * 1920) / crop.height,
+                }
+              : { width: "100%", height: "100%", objectFit: "contain" }
+          }
           pauseWhenBuffering
           onLoadedData={onPreviewReady}
           onErrorCapture={(event) => {
@@ -292,7 +316,7 @@ function Review({
                 onGestureStart={onGestureStart}
               />
             ))}
-        {setting === "captions" && (
+        {setting === "captions" && overlay.captions.length > 0 && (
           <SelectionBox
             id="captions"
             label="captions"
@@ -368,17 +392,25 @@ function BoxFields({
 export function ClipEditor({
   clip,
   workspaceId,
+  source,
   onAccepted,
   onDirty,
   footerTarget,
   actionsVisible = true,
+  captionGeneration = false,
+  fakeCaptionGeneration = false,
+  onBusy,
 }: {
   clip: OwnerClip;
   workspaceId: string;
+  source?: { width: number; height: number };
   onAccepted: (list: OwnerClipList) => void;
   onDirty: (clipId: string, dirty: boolean) => void;
   footerTarget?: HTMLElement | null | undefined;
   actionsVisible?: boolean;
+  captionGeneration?: boolean;
+  fakeCaptionGeneration?: boolean;
+  onBusy?: (busy: boolean) => void;
 }) {
   const [form, setForm] = useState(() => {
     const original = initialOwnerEdit(clip);
@@ -392,6 +424,9 @@ export function ClipEditor({
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [forcedStale, setForcedStale] = useState(false);
+  const [captionConfirm, setCaptionConfirm] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const captionWasConfirming = useRef(false);
   const player = useRef<PlayerRef | null>(null);
   const alive = useRef(true);
   const [playbackFailed, setPlaybackFailed] = useState(false);
@@ -431,21 +466,27 @@ export function ClipEditor({
     ownerEditDocumentSchema.parse(draft);
     overlay = compileOwnerOverlay(base, draft, clip.assets);
   } catch {
-    error = draft.visuals.some(
-      (cue) =>
-        !Number.isFinite(cue.startFrame) ||
-        !Number.isFinite(cue.endFrame) ||
-        cue.startFrame < 0 ||
-        cue.endFrame <= cue.startFrame ||
-        cue.endFrame > base.overlay.frames,
-    )
-      ? "Set each picture’s end after its start, within this clip."
-      : draft.captions &&
-          (!Number.isInteger(draft.captions.fontSize) ||
-            draft.captions.fontSize < 24 ||
-            draft.captions.fontSize > 120)
-        ? "Use a font size from 24 to 120."
-        : "Keep layers inside the preview and check their size.";
+    error = draft.captionText?.some((word) => !word.text.trim())
+      ? "Enter text for each caption word."
+      : draft.captionText?.length
+        ? "Keep each caption under 80 characters and use plain text."
+        : draft.focus && !ownerFocusSchema.safeParse(draft.focus).success
+          ? "Set camera changes inside this clip, with zoom from 1 to 3."
+          : draft.visuals.some(
+                (cue) =>
+                  !Number.isFinite(cue.startFrame) ||
+                  !Number.isFinite(cue.endFrame) ||
+                  cue.startFrame < 0 ||
+                  cue.endFrame <= cue.startFrame ||
+                  cue.endFrame > base.overlay.frames,
+              )
+            ? "Set each picture’s end after its start, within this clip."
+            : draft.captions &&
+                (!Number.isInteger(draft.captions.fontSize) ||
+                  draft.captions.fontSize < 24 ||
+                  draft.captions.fontSize > 120)
+              ? "Use a font size from 24 to 120."
+              : "Keep layers inside the preview and check their size.";
     try {
       overlay = compileOwnerOverlay(base, original, clip.assets);
     } catch {
@@ -463,9 +504,27 @@ export function ClipEditor({
     };
   }, []);
   useEffect(() => {
-    onDirty(clip.id, dirty);
+    onDirty(clip.id, dirty || captionConfirm || generating);
     return () => onDirty(clip.id, false);
-  }, [clip.id, dirty, onDirty]);
+  }, [clip.id, dirty, captionConfirm, generating, onDirty]);
+  useEffect(() => {
+    if (captionConfirm) {
+      const target = footerTarget ?? document.querySelector(".clip-editor");
+      target
+        ?.querySelector<HTMLButtonElement>(
+          '[aria-label="Caption generation actions"] button',
+        )
+        ?.focus();
+    } else if (captionWasConfirming.current) {
+      if (base.overlay.captions.length)
+        document.getElementById(`${tabsId}-caption-text`)?.focus();
+      else
+        document
+          .querySelector<HTMLButtonElement>(".caption-empty-actions button")
+          ?.focus();
+    }
+    captionWasConfirming.current = captionConfirm;
+  }, [captionConfirm, footerTarget, base.overlay.captions.length, tabsId]);
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -500,6 +559,12 @@ export function ClipEditor({
   function selectLayer(id: string) {
     setSelection(id);
     setSetting(id === "captions" ? "captions" : "pictures");
+  }
+  function selectSetting(value: EditorSetting) {
+    if (pending) return;
+    setCaptionConfirm(false);
+    setSetting(value);
+    if (value === "captions") setSelection("captions");
   }
   function newPicture(assetId: string): OwnerVisualEdit {
     const startFrame = Math.min(
@@ -615,13 +680,70 @@ export function ClipEditor({
     }
     void perform("picture", file);
   }
+  async function generateCaptions(fake = false) {
+    if (
+      request.current ||
+      dirty ||
+      stale ||
+      (fake
+        ? !fakeCaptionGeneration
+        : !captionConfirm ||
+          !captionGeneration ||
+          (clip.captionAttempts ?? 0) >= OWNER_CAPTION_GENERATION_ATTEMPTS)
+    )
+      return;
+    const controller = new AbortController();
+    request.current = controller;
+    setPending(true);
+    setGenerating(true);
+    onBusy?.(true);
+    setMessage("");
+    player.current?.pause();
+    try {
+      const response = await fetch(
+        `${endpoint}/${fake ? "fake-captions" : "captions"}`,
+        {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            operationId: crypto.randomUUID(),
+            expectedRevision: clip.revision,
+            ...(!fake ? { paidConsent: true } : {}),
+          }),
+        },
+      );
+      if (!response.ok) throw new Error("caption_generation_failed");
+      const list = ownerClipListSchema.parse(await response.json()),
+        accepted = list.clips.find((item) => item.id === clip.id);
+      if (!accepted?.base || !alive.current) return;
+      onAccepted(list);
+      const edit = initialOwnerEdit(accepted);
+      setForm({ original: edit, draft: structuredClone(edit) });
+      setCaptionConfirm(false);
+      setCaptionTab("text");
+      if (!accepted.base.overlay.captions.length)
+        setMessage("No speech found in this clip.");
+    } catch {
+      if (alive.current && !controller.signal.aborted)
+        setMessage(
+          fake
+            ? "Couldn’t add fake captions. Try again."
+            : "Couldn’t generate captions. Check Gemini setup and try again explicitly.",
+        );
+    } finally {
+      request.current = null;
+      if (alive.current) {
+        setPending(false);
+        setGenerating(false);
+        onBusy?.(false);
+      }
+    }
+  }
   const previewLoading =
     !previewLoaded && !playbackFailed && !previewUnavailable;
   return (
-    <section
-      className="clip-editor"
-      aria-label="Local caption and picture editor"
-    >
+    <section className="clip-editor" aria-label="Clip editor">
       <p className="flow-notice" role="status" aria-live="polite">
         {!stale && message}
       </p>
@@ -698,12 +820,12 @@ export function ClipEditor({
                 id={`${tabsId}-${value}`}
                 type="button"
                 role="tab"
+                disabled={pending}
                 aria-selected={setting === value}
                 aria-controls={`${tabsId}-${value}-panel`}
                 tabIndex={setting === value ? 0 : -1}
                 onClick={() => {
-                  setSetting(value);
-                  if (value === "captions") setSelection("captions");
+                  selectSetting(value);
                 }}
                 onKeyDown={(event) => {
                   if (
@@ -724,8 +846,7 @@ export function ClipEditor({
                               SETTINGS.length) %
                             SETTINGS.length
                     ]!;
-                  setSetting(next);
-                  if (next === "captions") setSelection("captions");
+                  selectSetting(next);
                   document.getElementById(`${tabsId}-${next}`)?.focus();
                 }}
               >
@@ -734,10 +855,42 @@ export function ClipEditor({
                     captions: "Captions",
                     filters: "Filters",
                     pictures: "Pictures",
+                    focus: "Focus",
                   }[value]
                 }
               </button>
             ))}
+          </div>
+          <div
+            id={`${tabsId}-focus-panel`}
+            role="tabpanel"
+            aria-labelledby={`${tabsId}-focus`}
+            hidden={setting !== "focus"}
+            tabIndex={0}
+          >
+            {setting === "focus" && (
+              <FocusPreviewControls
+                attempt={previewAttempt}
+                player={player}
+                available={!playbackFailed && previewLoaded}
+                focus={
+                  draft.focus ??
+                  defaultOwnerFocus(
+                    source ?? { width: 1080, height: 1920 },
+                    base.overlay.frames,
+                  )
+                }
+                automatic={base.overlay.focus}
+                sourceUrl={`${endpoint}/source`}
+                disabled={pending}
+                onChange={(focus) => {
+                  const next = { ...draft };
+                  if (focus) next.focus = focus;
+                  else delete next.focus;
+                  update(next);
+                }}
+              />
+            )}
           </div>
           <div
             id={`${tabsId}-captions-panel`}
@@ -746,224 +899,311 @@ export function ClipEditor({
             hidden={setting !== "captions"}
             tabIndex={0}
           >
-            <fieldset disabled={pending}>
-              <legend className="local-sr-only">Captions</legend>
-              <ControlTabs
-                id={`${tabsId}-caption`}
-                label="Caption controls"
-                items={[
-                  { value: "style", label: "Style" },
-                  { value: "position", label: "Position" },
-                ]}
-                value={captionTab}
-                onChange={setCaptionTab}
-              />
-              <div
-                role="tabpanel"
-                id={`${tabsId}-caption-style-panel`}
-                aria-labelledby={`${tabsId}-caption-style`}
-                hidden={captionTab !== "style"}
-                tabIndex={0}
-              >
-                <div className="editor-fields">
-                  <label>
-                    Style
-                    <select
-                      value={caption.preset}
-                      onChange={(event) =>
-                        setCaption(
-                          ownerCaptionPreset(
-                            caption,
-                            event.currentTarget
-                              .value as OwnerCaptionStyle["preset"],
-                          ),
-                        )
-                      }
-                    >
-                      <option value="clean">Clean</option>
-                      <option value="classic">Classic</option>
-                      <option value="bold">Bold</option>
-                      <option value="boxed">Rounded highlight</option>
-                      <option value="typewriter">Typewriter</option>
-                    </select>
-                  </label>
-                  <label>
-                    Font size
-                    <input
-                      type="number"
-                      min="24"
-                      max="120"
-                      step="1"
-                      value={
-                        Number.isFinite(caption.fontSize)
-                          ? caption.fontSize
-                          : ""
-                      }
-                      onChange={(event) => {
-                        const fontSize =
-                          event.currentTarget.value === ""
-                            ? NaN
-                            : Number(event.currentTarget.value);
-                        setCaption({ ...caption, fontSize });
-                      }}
-                    />
-                  </label>
-                  <label>
-                    Font
-                    <select
-                      value={caption.font ?? "Arial"}
-                      onChange={(event) =>
-                        setCaption({
-                          ...caption,
-                          font: event.currentTarget.value as NonNullable<
-                            OwnerCaptionStyle["font"]
-                          >,
-                        })
-                      }
-                    >
-                      {OWNER_CAPTION_FONTS.map((font) => (
-                        <option key={font} value={font}>
-                          {font}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Animation
-                    <select
-                      value={caption.animation ?? "highlight"}
-                      onChange={(event) =>
-                        setCaption({
-                          ...caption,
-                          animation: event.currentTarget.value as NonNullable<
-                            OwnerCaptionStyle["animation"]
-                          >,
-                        })
-                      }
-                    >
-                      {OWNER_CAPTION_ANIMATIONS.map((animation) => (
-                        <option key={animation} value={animation}>
-                          {
-                            {
-                              highlight: "Spoken-word highlight",
-                              pop: "Word pop",
-                              bounce: "Word bounce",
-                              reveal: "Typewriter reveal",
-                              "single-word": "Word by word",
-                              fade: "Line fade",
-                              none: "Static",
-                            }[animation]
+            {!base.overlay.captions.length ? (
+              <div className="caption-empty">
+                <h4>No captions yet</h4>
+                {generating ? (
+                  <ProcessingState label="Generating captions" />
+                ) : captionConfirm ? (
+                  <p>
+                    Send this clip’s audio to Gemini to generate captions? This
+                    uses Gemini credits, including in fake mode.
+                  </p>
+                ) : (
+                  <>
+                    <div className="caption-empty-actions">
+                      <Button
+                        variant="secondary"
+                        disabled={
+                          pending ||
+                          dirty ||
+                          stale ||
+                          !captionGeneration ||
+                          (clip.captionAttempts ?? 0) >=
+                            OWNER_CAPTION_GENERATION_ATTEMPTS
+                        }
+                        onClick={() => {
+                          setCaptionConfirm(true);
+                          setMessage("");
+                        }}
+                      >
+                        Generate captions
+                      </Button>
+                      {fakeCaptionGeneration && (
+                        <Button
+                          variant="quiet"
+                          disabled={pending || dirty || stale}
+                          onClick={() => void generateCaptions(true)}
+                        >
+                          Generate fake captions
+                        </Button>
+                      )}
+                    </div>
+                    {!captionGeneration && (
+                      <p>Gemini setup is required to generate captions.</p>
+                    )}
+                    {(clip.captionAttempts ?? 0) >=
+                      OWNER_CAPTION_GENERATION_ATTEMPTS && (
+                      <p>Caption generation limit reached for this clip.</p>
+                    )}
+                    {dirty && <p>Apply or discard your changes first.</p>}
+                  </>
+                )}
+              </div>
+            ) : (
+              <>
+                <fieldset disabled={pending}>
+                  <legend className="local-sr-only">Captions</legend>
+                  <ControlTabs
+                    id={`${tabsId}-caption`}
+                    label="Caption controls"
+                    items={[
+                      { value: "style", label: "Style" },
+                      { value: "position", label: "Position" },
+                      { value: "text", label: "Text" },
+                    ]}
+                    value={captionTab}
+                    onChange={setCaptionTab}
+                  />
+                  <div
+                    role="tabpanel"
+                    id={`${tabsId}-caption-style-panel`}
+                    aria-labelledby={`${tabsId}-caption-style`}
+                    hidden={captionTab !== "style"}
+                    tabIndex={0}
+                  >
+                    <div className="editor-fields">
+                      <label>
+                        Style
+                        <select
+                          value={caption.preset}
+                          onChange={(event) =>
+                            setCaption(
+                              ownerCaptionPreset(
+                                caption,
+                                event.currentTarget
+                                  .value as OwnerCaptionStyle["preset"],
+                              ),
+                            )
                           }
-                        </option>
+                        >
+                          <option value="clean">Clean</option>
+                          <option value="classic">Classic</option>
+                          <option value="bold">Bold</option>
+                          <option value="boxed">Rounded highlight</option>
+                          <option value="typewriter">Typewriter</option>
+                        </select>
+                      </label>
+                      <label>
+                        Font size
+                        <input
+                          type="number"
+                          min="24"
+                          max="120"
+                          step="1"
+                          value={
+                            Number.isFinite(caption.fontSize)
+                              ? caption.fontSize
+                              : ""
+                          }
+                          onChange={(event) => {
+                            const fontSize =
+                              event.currentTarget.value === ""
+                                ? NaN
+                                : Number(event.currentTarget.value);
+                            setCaption({ ...caption, fontSize });
+                          }}
+                        />
+                      </label>
+                      <label>
+                        Font
+                        <select
+                          value={caption.font ?? "Arial"}
+                          onChange={(event) =>
+                            setCaption({
+                              ...caption,
+                              font: event.currentTarget.value as NonNullable<
+                                OwnerCaptionStyle["font"]
+                              >,
+                            })
+                          }
+                        >
+                          {OWNER_CAPTION_FONTS.map((font) => (
+                            <option key={font} value={font}>
+                              {font}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Animation
+                        <select
+                          value={caption.animation ?? "highlight"}
+                          onChange={(event) =>
+                            setCaption({
+                              ...caption,
+                              animation: event.currentTarget
+                                .value as NonNullable<
+                                OwnerCaptionStyle["animation"]
+                              >,
+                            })
+                          }
+                        >
+                          {OWNER_CAPTION_ANIMATIONS.map((animation) => (
+                            <option key={animation} value={animation}>
+                              {
+                                {
+                                  highlight: "Spoken-word highlight",
+                                  pop: "Word pop",
+                                  bounce: "Word bounce",
+                                  reveal: "Typewriter reveal",
+                                  "single-word": "Word by word",
+                                  fade: "Line fade",
+                                  none: "Static",
+                                }[animation]
+                              }
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Text color
+                        <input
+                          type="color"
+                          value={caption.color}
+                          onChange={(event) =>
+                            setCaption({
+                              ...caption,
+                              color: event.currentTarget.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Highlight
+                        <input
+                          type="color"
+                          value={caption.highlight}
+                          onChange={(event) =>
+                            setCaption({
+                              ...caption,
+                              highlight: event.currentTarget.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Alignment
+                        <select
+                          value={caption.align}
+                          onChange={(event) =>
+                            setCaption({
+                              ...caption,
+                              align: event.currentTarget
+                                .value as OwnerCaptionStyle["align"],
+                            })
+                          }
+                        >
+                          <option value="left">Left</option>
+                          <option value="center">Center</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    role="tabpanel"
+                    id={`${tabsId}-caption-position-panel`}
+                    aria-labelledby={`${tabsId}-caption-position`}
+                    hidden={captionTab !== "position"}
+                    tabIndex={0}
+                  >
+                    <div
+                      className="position-presets"
+                      role="group"
+                      aria-label="Caption position"
+                    >
+                      {(
+                        [
+                          { center: 0.25, label: "Upper half" },
+                          { center: 0.5, label: "Center" },
+                          { center: 0.75, label: "Lower half" },
+                        ] as const
+                      ).map((item) => (
+                        <Button
+                          key={item.center}
+                          variant="secondary"
+                          aria-pressed={
+                            Math.abs(
+                              caption.box.y +
+                                caption.box.height / 2 -
+                                item.center,
+                            ) < 0.00001 &&
+                            Math.abs(
+                              caption.box.x + caption.box.width / 2 - 0.5,
+                            ) < 0.00001 &&
+                            caption.verticalAlign === "center"
+                          }
+                          onClick={() =>
+                            setCaption({
+                              ...caption,
+                              align: "center",
+                              verticalAlign: "center",
+                              box: centeredOwnerBox(
+                                caption.box,
+                                item.center,
+                                caption,
+                              ),
+                            })
+                          }
+                        >
+                          {item.label}
+                        </Button>
                       ))}
-                    </select>
-                  </label>
-                  <label>
-                    Text color
-                    <input
-                      type="color"
-                      value={caption.color}
-                      onChange={(event) =>
-                        setCaption({
-                          ...caption,
-                          color: event.currentTarget.value,
-                        })
-                      }
+                    </div>
+                    <BoxFields
+                      label="Caption"
+                      box={caption.box}
+                      onChange={(box) => setCaption({ ...caption, box })}
                     />
-                  </label>
-                  <label>
-                    Highlight
-                    <input
-                      type="color"
-                      value={caption.highlight}
-                      onChange={(event) =>
-                        setCaption({
-                          ...caption,
-                          highlight: event.currentTarget.value,
-                        })
-                      }
-                    />
-                  </label>
-                  <label>
-                    Alignment
-                    <select
-                      value={caption.align}
-                      onChange={(event) =>
-                        setCaption({
-                          ...caption,
-                          align: event.currentTarget
-                            .value as OwnerCaptionStyle["align"],
-                        })
-                      }
-                    >
-                      <option value="left">Left</option>
-                      <option value="center">Center</option>
-                      <option value="right">Right</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
-              <div
-                role="tabpanel"
-                id={`${tabsId}-caption-position-panel`}
-                aria-labelledby={`${tabsId}-caption-position`}
-                hidden={captionTab !== "position"}
-                tabIndex={0}
-              >
-                <div
-                  className="position-presets"
-                  role="group"
-                  aria-label="Caption position"
-                >
-                  {(
-                    [
-                      { center: 0.25, label: "Upper half" },
-                      { center: 0.5, label: "Center" },
-                      { center: 0.75, label: "Lower half" },
-                    ] as const
-                  ).map((item) => (
-                    <Button
-                      key={item.center}
-                      variant="secondary"
-                      aria-pressed={
-                        Math.abs(
-                          caption.box.y + caption.box.height / 2 - item.center,
-                        ) < 0.00001 &&
-                        Math.abs(caption.box.x + caption.box.width / 2 - 0.5) <
-                          0.00001 &&
-                        caption.verticalAlign === "center"
-                      }
-                      onClick={() =>
-                        setCaption({
-                          ...caption,
-                          align: "center",
-                          verticalAlign: "center",
-                          box: centeredOwnerBox(
-                            caption.box,
-                            item.center,
-                            caption,
-                          ),
-                        })
-                      }
-                    >
-                      {item.label}
-                    </Button>
-                  ))}
-                </div>
-                <BoxFields
-                  label="Caption"
-                  box={caption.box}
-                  onChange={(box) => setCaption({ ...caption, box })}
-                />
-              </div>
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={() => update({ ...draft, captions: null })}
-              >
-                Reset captions
-              </Button>
-            </fieldset>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    type="button"
+                    hidden={captionTab === "text"}
+                    onClick={() => update({ ...draft, captions: null })}
+                  >
+                    Reset captions
+                  </Button>
+                  <div
+                    role="tabpanel"
+                    id={`${tabsId}-caption-text-panel`}
+                    aria-labelledby={`${tabsId}-caption-text`}
+                    hidden={captionTab !== "text"}
+                    tabIndex={0}
+                  >
+                    {captionTab === "text" && (
+                      <CaptionTextEditor
+                        captions={base.overlay.captions}
+                        edits={draft.captionText}
+                        player={player}
+                        available={
+                          setting === "captions" &&
+                          previewLoaded &&
+                          !playbackFailed &&
+                          !pending
+                        }
+
+                        frames={base.overlay.frames}
+                        onChange={(captionText) =>
+                          update({ ...draft, captionText })
+                        }
+                      />
+                    )}
+                  </div>
+                </fieldset>
+              </>
+            )}
           </div>
           <div
             id={`${tabsId}-filters-panel`}
@@ -1211,42 +1451,21 @@ export function ClipEditor({
                     hidden={pictureTab !== "timing"}
                     tabIndex={0}
                   >
-                    <div className="editor-fields">
-                      {(["startFrame", "endFrame"] as const).map((key) => (
-                        <label key={key}>
-                          {key === "startFrame" ? "Start (s)" : "End (s)"}
-                          <input
-                            type="number"
-                            min={key === "startFrame" ? 0 : 1 / OWNER_FPS}
-                            max={
-                              key === "startFrame"
-                                ? (base.overlay.frames - 1) / OWNER_FPS
-                                : base.overlay.frames / OWNER_FPS
-                            }
-                            step="0.1"
-                            value={
-                              Number.isFinite(selectedCue[key])
-                                ? Number(
-                                    (selectedCue[key] / OWNER_FPS).toFixed(2),
-                                  )
-                                : ""
-                            }
-                            onChange={(event) =>
-                              setCue({
-                                ...selectedCue,
-                                [key]:
-                                  event.currentTarget.value === ""
-                                    ? NaN
-                                    : Math.round(
-                                        Number(event.currentTarget.value) *
-                                          OWNER_FPS,
-                                      ),
-                              })
-                            }
-                          />
-                        </label>
-                      ))}
-                    </div>
+                    <PictureTiming
+                      key={selectedCue.id}
+                      cue={selectedCue}
+                      frames={base.overlay.frames}
+                      player={player}
+                      available={
+                        setting === "pictures" &&
+                        pictureTab === "timing" &&
+                        previewLoaded &&
+                        !playbackFailed &&
+                        !pending
+                      }
+                      attempt={previewAttempt}
+                      onChange={setCue}
+                    />
                   </div>
                   <div
                     role="tabpanel"
@@ -1387,39 +1606,69 @@ export function ClipEditor({
               )}
             </fieldset>
           </div>
-          {actionsVisible && (dirty || stale || previewUnavailable) && (
-            <WorkflowActions target={footerTarget} label="Edit actions">
+          {actionsVisible && captionConfirm && (
+            <WorkflowActions
+              target={footerTarget}
+              label="Caption generation actions"
+            >
               <Button
                 variant="primary"
-                type="button"
-                disabled={!dirty || !!error || stale || pending}
-                onClick={() => void perform("edit")}
+                disabled={
+                  pending ||
+                  generating ||
+                  (clip.captionAttempts ?? 0) >=
+                    OWNER_CAPTION_GENERATION_ATTEMPTS
+                }
+                onClick={() => void generateCaptions()}
               >
-                {pending ? (
-                  <>
-                    <LoaderCircle
-                      size={18}
-                      className="acquisition-spinner"
-                      aria-hidden="true"
-                    />
-                    Working…
-                  </>
-                ) : (
-                  "Apply changes"
-                )}
+                {generating ? "Generating…" : "Generate captions"}
               </Button>
               <Button
                 variant="quiet"
-                type="button"
-                disabled={pending || (!dirty && !stale && !previewUnavailable)}
-                onClick={() => void perform("reload")}
+                disabled={pending || generating}
+                onClick={() => setCaptionConfirm(false)}
               >
-                {(previewUnavailable && !dirty) || stale
-                  ? "Reload clip"
-                  : "Discard changes"}
+                Cancel
               </Button>
             </WorkflowActions>
           )}
+          {actionsVisible &&
+            !captionConfirm &&
+            (dirty || stale || previewUnavailable) && (
+              <WorkflowActions target={footerTarget} label="Edit actions">
+                <Button
+                  variant="primary"
+                  type="button"
+                  disabled={!dirty || !!error || stale || pending}
+                  onClick={() => void perform("edit")}
+                >
+                  {pending ? (
+                    <>
+                      <LoaderCircle
+                        size={18}
+                        className="acquisition-spinner"
+                        aria-hidden="true"
+                      />
+                      Working…
+                    </>
+                  ) : (
+                    "Apply changes"
+                  )}
+                </Button>
+                <Button
+                  variant="quiet"
+                  type="button"
+                  disabled={
+                    pending || (!dirty && !stale && !previewUnavailable)
+                  }
+                  onClick={() => void perform("reload")}
+                >
+                  {(previewUnavailable && !dirty) || stale
+                    ? "Reload clip"
+                    : "Discard changes"}
+                </Button>
+              </WorkflowActions>
+            )}
         </div>
       </div>
     </section>

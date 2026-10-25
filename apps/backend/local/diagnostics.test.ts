@@ -13,6 +13,39 @@ import {
 import { ApplicationError } from "../src/http/errorMapper.ts";
 
 const secret = "synthetic-private-key-filename-transcript-url";
+it("logs only allowlisted aggregate focus decisions and drops content-bearing diagnostic objects", () => {
+  const lines: string[] = [],
+    diagnostics = new LocalDiagnostics((line) => lines.push(line));
+  diagnostics.focus("focus_plan", {
+    returnedPeople: 3,
+    returnedDecisions: 7,
+    people: 2,
+    observations: 4,
+    decisions: 5,
+    shots: 3,
+    switches: 2,
+    held: 3,
+    fallback: 1,
+    rejected: 1,
+    converted: 2,
+  });
+  const unsafe = {
+    people: 2,
+    observations: 4,
+    decisions: 5,
+    shots: 3,
+    raw: secret,
+  };
+  diagnostics.focus("focus_plan", unsafe);
+  expect(lines).toHaveLength(1);
+  expect(JSON.parse(lines[0]!).focus).toMatchObject({
+    returnedPeople: 3,
+    switches: 2,
+    held: 3,
+    fallback: 1,
+  });
+  expect(lines.join()).not.toContain(secret);
+});
 it("correlates local stages and safe provider/validation diagnostics without private capture", async () => {
   const lines: string[] = [];
   const diagnostics = new LocalDiagnostics((line) => lines.push(line));

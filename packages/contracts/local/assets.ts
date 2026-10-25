@@ -17,6 +17,12 @@ export const OWNER_VISUAL_ANIMATIONS = [
   "slide",
 ] as const;
 export const ownerDigestSchema = z.string().regex(/^[a-f0-9]{64}$/);
+export const ownerPictureFormatSchema = z.enum(["jpeg", "png"]);
+export type OwnerPictureFormat = z.infer<typeof ownerPictureFormatSchema>;
+export const ownerPictureExtension = (format: OwnerPictureFormat = "jpeg") =>
+  format === "png" ? "png" : "jpg";
+export const ownerPictureMime = (format: OwnerPictureFormat = "jpeg") =>
+  format === "png" ? "image/png" : "image/jpeg";
 export const ownerAssetSchema = z
   .object({
     id: ownerIdSchema,
@@ -25,6 +31,7 @@ export const ownerAssetSchema = z
     height: z.number().int().positive().max(OWNER_PICTURE_LIMITS.dimension),
     bytes: z.number().int().positive().max(OWNER_PICTURE_LIMITS.bytes),
     origin: z.enum(["synthetic", "generated", "owner-supplied"]),
+    format: ownerPictureFormatSchema.optional(),
   })
   .strict();
 export type OwnerAsset = z.infer<typeof ownerAssetSchema>;
@@ -41,10 +48,12 @@ export const ownerVisualSchema = z
     exit: z.enum(OWNER_VISUAL_ANIMATIONS).optional(),
     animationFrames: z.number().int().min(1).max(30).optional(),
     origin: ownerAssetSchema.shape.origin,
+    format: ownerPictureFormatSchema.optional(),
   })
   .strict();
 export const ownerVisualEditSchema = ownerVisualSchema.omit({
   digest: true,
   origin: true,
+  format: true,
 });
 export type OwnerVisualEdit = z.infer<typeof ownerVisualEditSchema>;

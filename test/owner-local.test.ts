@@ -110,6 +110,7 @@ describe("isolated owner host", () => {
       aiMode: "synthetic-ai",
       sourceMode: null,
       planningAvailable: false,
+      captionGeneration: false,
       localMedia: true,
       cloud: false,
     });

@@ -70,6 +70,76 @@ const cue = {
     avoidTerms: ["logos"],
   },
 };
+
+it("retains anonymous camera observations from the existing single video request while malformed focus leaves usable pictures intact", async () => {
+  const f = fixture();
+  f.transport.generate.mockResolvedValue({
+    finished: true,
+    text: JSON.stringify({
+      pictures: [cue],
+      focus: {
+        people: [
+          {
+            id: "person_1",
+            observations: [
+              {
+                startFrame: 0,
+                endFrame: 9000,
+                box: { x: 0.1, y: 0.1, width: 0.2, height: 0.4 },
+              },
+            ],
+          },
+          {
+            id: "person_2",
+            observations: [
+              {
+                startFrame: 0,
+                endFrame: 9000,
+                box: { x: 0.6, y: 0.1, width: 0.2, height: 0.4 },
+              },
+              null,
+            ],
+          },
+        ],
+        decisions: [
+          {
+            startFrame: 0,
+            endFrame: 90,
+            personId: "person_2",
+            speakerId: words[0]!.speakerId,
+            confidence: 0.95,
+            evidenceWordIds: words.slice(0, 2).map((w) => w.id),
+            shotStart: false,
+          },
+        ],
+      },
+    }),
+  });
+  expect(
+    await f.ports.clipPreparation.plan(
+      { workspace: f.workspace, clipId: f.clipId, moment: f.moment },
+      f.signal,
+    ),
+  ).toEqual([cue]);
+  const focus = f.ports.clipPreparation.focus!({
+    workspace: f.workspace,
+    clipId: f.clipId,
+    moment: f.moment,
+  });
+  expect(focus.people).toHaveLength(2);
+  expect(focus.shots[0]?.personId).toBe("person_2");
+  focus.people.length = 0;
+  expect(
+    f.ports.clipPreparation.focus!({
+      workspace: f.workspace,
+      clipId: f.clipId,
+      moment: f.moment,
+    }).people,
+  ).toHaveLength(2);
+  expect(f.transport.generate).toHaveBeenCalledTimes(1);
+  expect(f.media).toHaveBeenCalledTimes(1);
+  await f.ports.close(f.signal);
+});
 function fixture(diagnostics?: LocalDiagnostics) {
   const workspace: OwnerWorkspace = {
     id: randomUUID(),
@@ -309,9 +379,20 @@ describe("dormant owner provider ports with synthetic transports", () => {
       f.signal,
     );
     const task = f.transport.generate.mock.calls[0]![2];
-    expect(JSON.parse(task.prompt)).toEqual({ frames: 9000, fps: 30, words });
+    expect(JSON.parse(task.prompt)).toEqual({
+      frames: 9000,
+      fps: 30,
+      coordinateSpace: "upright-display",
+      source: { width: 1920, height: 1080 },
+      words,
+    });
     expect(task.policy).toContain("untrusted data");
-    expect(task.schema.safeParse({ pictures: [cue] }).success).toBe(true);
+    expect(
+      task.schema.safeParse({
+        pictures: [cue],
+        focus: { people: [], decisions: [] },
+      }).success,
+    ).toBe(true);
     const output = await f.ports.clipPreparation.image(
       { clipId: f.clipId, cue, words },
       f.signal,
@@ -746,5 +827,79 @@ it("continues to selection after provider tokens with unusable timings without c
   expect(f.transport.candidates.mock.calls[0]![0]).toContain(
     "SyntheticOutside",
   );
+  await f.ports.close(f.signal);
+});
+
+it("transcribes only a selected cut in synthetic mode through the explicit caption port and cleans both proxies", async () => {
+  const f = fixture();
+  const { ownerClipSchema } =
+    await import("../../../packages/contracts/local/clips.ts");
+  const clip = ownerClipSchema.parse({
+    id: f.clipId,
+    momentId: f.moment.id,
+    mode: "synthetic-ai",
+    analysisId: randomUUID(),
+    sourceRevision: 3,
+    revision: 0,
+    assemblyRevision: 0,
+    baseHash: "b".repeat(64),
+    state: "ready",
+    base: {
+      version: 1,
+      analysisId: randomUUID(),
+      momentId: f.moment.id,
+      sourceRevision: 3,
+      fingerprint: f.workspace.source.fingerprint,
+      processingIdentity: f.moment.processingIdentity,
+      cut: f.moment.cut,
+      words: f.moment.cues,
+      overlay: { version: 1, frames: 9000, captions: [], visuals: [] },
+    },
+    edit: null,
+    assets: [],
+    outputs: [],
+    calls: { plan: 0, image: 0, render: 0 },
+    error: null,
+  });
+  f.media.mockImplementationOnce(async (job) => {
+    if (job.operation !== "prepare-owner-audio")
+      throw new Error("unexpected_clip_input");
+    return {
+      operation: job.operation,
+      bytes: 24,
+      digest: "c".repeat(64),
+      durationMs: 300000,
+    };
+  });
+  const result = await f.ports.captionTranscription(
+    { ...f.workspace, mode: "synthetic-ai" },
+    clip,
+    f.signal,
+  );
+  expect(result).toHaveLength(4);
+  expect(f.media).toHaveBeenCalledTimes(1);
+  expect(f.media.mock.calls[0]![0]).toMatchObject({
+    operation: "prepare-owner-audio",
+    clipId: f.clipId,
+    cut: f.moment.cut,
+  });
+  expect(f.files.readProviderInput.mock.calls[0]![1]).toEqual({
+    kind: "audio",
+    clipId: f.clipId,
+  });
+  expect(f.transport.upload).toHaveBeenCalledTimes(1);
+  expect(f.transport.transcribe).toHaveBeenCalledTimes(1);
+  expect(f.transport.generate).toHaveBeenCalledTimes(0);
+  expect(f.transport.candidates).toHaveBeenCalledTimes(0);
+  expect(f.pictures.find).toHaveBeenCalledTimes(0);
+  expect(f.transport.delete).toHaveBeenCalledTimes(1);
+  expect(f.files.removeProviderInput).toHaveBeenCalledTimes(1);
+  await expect(
+    f.ports.analysis.transcribe(
+      { ...f.workspace, mode: "synthetic-ai" },
+      f.signal,
+    ),
+  ).rejects.toThrow("analysis_mode_mismatch");
+  expect(f.media).toHaveBeenCalledTimes(1);
   await f.ports.close(f.signal);
 });

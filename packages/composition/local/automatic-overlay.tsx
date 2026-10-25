@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- Shared native raster and local review use admitted JPEG assets directly. */
+/* eslint-disable @next/next/no-img-element -- Shared native raster and local review use admitted static raster assets directly. */
 import type { OwnerOverlay } from "../../contracts/local/clips.ts";
 import { FixedCaption } from "../src/fixed-layers.tsx";
 import { ownerOverlayFrame } from "./overlay-frame.ts";

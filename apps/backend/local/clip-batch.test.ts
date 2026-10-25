@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { OwnerClipBatch, type OwnerClipPorts } from "./clip-batch.ts";
-import { fakeOwnerClipPreparation } from "./fake-clips.ts";
+import { editorContentFixture as fakeOwnerClipPreparation } from "../../../test/owner-content-fixture.ts";
 import { fakeOwnerAnalysis } from "./fake-analysis.ts";
 import { analyzeOwner } from "./analysis.ts";
 import { WorkspaceFiles } from "./workspace-files.ts";
@@ -109,6 +109,103 @@ const gate = () => {
   });
   return { wait, release };
 };
+
+it("saves manual focus, preserves the automatic plan and restores snapshots without provider work or mutable export revisions", async () => {
+  const input = request();
+  input.momentIds = input.momentIds.slice(0, 1);
+  await batch.submit(input, analysis);
+  await batch.drain();
+  const clip = batch.snapshot().clips[0]!,
+    automatic = JSON.stringify(clip.base!.overlay.focus);
+  const focus = structuredClone(clip.base!.overlay.focus!);
+  focus.shots[0]!.centerX = 0.8;
+  focus.shots[0]!.zoom = 2;
+  focus.shots[0]!.reason = "manual";
+  const requestEdit = {
+    operationId: randomUUID(),
+    expectedRevision: clip.revision,
+    baseHash: clip.baseHash,
+    operations: [{ kind: "focus", focus }],
+  };
+  await batch.edit(clip.id, requestEdit);
+  await expect(
+    batch.edit(clip.id, { ...requestEdit, operationId: randomUUID() }),
+  ).rejects.toThrow("stale_edit_revision");
+  const release = gate();
+  const normalRender = ports.render.getMockImplementation()!;
+  ports.render.mockImplementation(async (job, signal) => {
+    await release.wait;
+    return normalRender(job, signal);
+  });
+  await batch.render(clip.id, {
+    operationId: randomUUID(),
+    expectedRevision: 1,
+  });
+  await batch.edit(clip.id, {
+    operationId: randomUUID(),
+    expectedRevision: 1,
+    baseHash: clip.baseHash,
+    operations: [{ kind: "reset", panel: "focus" }],
+  });
+  release.release();
+  await batch.drain();
+  const exported = ports.render.mock.calls[1]![0];
+  expect(exported.operation).toBe("clip");
+  if (exported.operation !== "clip") throw new Error("expected_clip");
+  expect(exported.overlay.focus?.shots[0]).toMatchObject({
+    centerX: 0.8,
+    zoom: 2,
+  });
+  const saved = batch.snapshot().clips;
+  expect(JSON.stringify(saved[0]!.edit!.focus)).toBe(automatic);
+  expect(JSON.stringify(saved[0]!.base!.overlay.focus)).toBe(automatic);
+  const restored = new OwnerClipBatch(workspace, files, ports);
+  restored.restore(JSON.parse(JSON.stringify(saved)));
+  expect(restored.snapshot().clips).toEqual(saved);
+  await restored.close();
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.image).toHaveBeenCalledTimes(1);
+  expect(ports.render).toHaveBeenCalledTimes(2);
+});
+it("retains detected people through cancel, saved checkpoint restore and explicit retry without another plan request", async () => {
+  await batch.close();
+  const focusPort = vi.fn(fakeOwnerClipPreparation.focus!);
+  batch = new OwnerClipBatch(workspace, files, { ...ports, focus: focusPort });
+  const release = gate(),
+    image = ports.image.getMockImplementation()!;
+  ports.image.mockImplementationOnce(async (input, signal) => {
+    await release.wait;
+    return image(input, signal);
+  });
+  const input = { ...request(), momentIds: [analysis.manual[0]!.id] };
+  await batch.submit(input, analysis);
+  await vi.waitFor(() => expect(ports.image).toHaveBeenCalledTimes(1));
+  const checkpoint = JSON.stringify(
+    batch.snapshot().clips[0]!.preparation!.focus,
+  );
+  expect(JSON.parse(checkpoint).people).toHaveLength(2);
+  batch.cancel();
+  release.release();
+  await batch.drain();
+  const saved = JSON.parse(JSON.stringify(batch.snapshot().clips));
+  await batch.close();
+  batch = new OwnerClipBatch(workspace, files, { ...ports, focus: focusPort });
+  batch.restore(saved);
+  const clip = batch.snapshot().clips[0]!;
+  expect(clip.state).toBe("canceled");
+  await batch.retry(clip.id, {
+    operationId: randomUUID(),
+    expectedRevision: clip.revision,
+  });
+  await batch.drain();
+  expect(JSON.stringify(batch.snapshot().clips[0]!.base!.overlay.focus)).toBe(
+    checkpoint,
+  );
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(focusPort).toHaveBeenCalledTimes(1);
+  expect(ports.image).toHaveBeenCalledTimes(2);
+  expect(ports.render).toHaveBeenCalledTimes(1);
+});
 
 it("cancel-all fences requests still waiting for admission without dispatching work", async () => {
   const submission = batch.submit(request(), analysis);
@@ -525,4 +622,196 @@ it("converts invalid visual clocks, critiques weak evidence, and renders without
     calls: { plan: 1, image: 1, render: 1 },
     base: { overlay: { visuals: [] } },
   });
+});
+
+it("starts production fake clips empty, explicitly transcribes one clip, preserves edits and replays without another paid call", async () => {
+  const appFake = await import("./fake-clips.ts");
+  ports.plan.mockImplementation(appFake.fakeOwnerClipPreparation.plan);
+  const input = { ...request(), momentIds: [analysis.manual[0]!.id] };
+  await batch.submit(input, analysis);
+  await batch.drain();
+  const before = batch.snapshot().clips[0]!;
+  expect(before.base!.overlay.captions).toEqual([]);
+  expect(before.assets).toEqual([]);
+  expect(ports.image).toHaveBeenCalledTimes(0);
+  const words = [
+    {
+      id: "w_900001",
+      text: "Mars",
+      punctuatedText: "Mars.",
+      startMs: 100,
+      endMs: 600,
+      speakerId: "spk_0",
+      confidence: 1,
+    },
+  ];
+  const transcribe = vi.fn(async () => structuredClone(words));
+  const action = {
+    operationId: randomUUID(),
+    expectedRevision: before.revision,
+    paidConsent: true,
+  };
+  const result = await batch.generateCaptions(
+    before.id,
+    action,
+    transcribe,
+    new AbortController().signal,
+  );
+  const generated = result.clips[0]!;
+  expect(generated.revision).toBe(1);
+  expect(generated.captionAttempts).toBe(1);
+  expect(generated.base!.overlay.focus).toEqual(before.base!.overlay.focus);
+  expect(generated.outputs).toEqual(before.outputs);
+  expect(generated.base!.overlay.captions[0]!.wordCues[0]).toMatchObject({
+    text: "Mars.",
+    startMs: 100,
+    endMs: 600,
+  });
+  await batch.generateCaptions(
+    before.id,
+    action,
+    transcribe,
+    new AbortController().signal,
+  );
+  expect(transcribe).toHaveBeenCalledTimes(1);
+  await expect(
+    batch.generateCaptions(
+      before.id,
+      { ...action, operationId: randomUUID() },
+      transcribe,
+      new AbortController().signal,
+    ),
+  ).rejects.toThrow("stale_edit_revision");
+  const edit = await batch.edit(before.id, {
+    operationId: randomUUID(),
+    expectedRevision: 1,
+    baseHash: generated.baseHash,
+    operations: [
+      {
+        kind: "caption-text",
+        words: [{ wordId: "w_900001", text: "Martian." }],
+      },
+    ],
+  });
+  expect(edit.clips[0]!.edit!.captionText).toEqual([
+    { wordId: "w_900001", text: "Martian." },
+  ]);
+  await batch.render(before.id, {
+    operationId: randomUUID(),
+    expectedRevision: 2,
+  });
+  await batch.drain();
+  const job = ports.render.mock.calls.at(-1)![0];
+  if (job.operation !== "clip") throw new Error("clip_missing");
+  expect(job.overlay.captions[0]!.wordCues[0]).toMatchObject({
+    text: "Martian.",
+    startMs: 100,
+    endMs: 600,
+  });
+  const reopened = new OwnerClipBatch(
+    workspace,
+    files,
+    ports,
+    () => {},
+    new LocalDiagnostics(),
+    async () => {},
+  );
+  reopened.restore(JSON.parse(JSON.stringify(batch.snapshot().clips)));
+  expect(reopened.snapshot().clips[0]!.edit!.captionText).toEqual([
+    { wordId: "w_900001", text: "Martian." },
+  ]);
+  await reopened.close();
+  expect(transcribe).toHaveBeenCalledTimes(1);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.image).toHaveBeenCalledTimes(0);
+});
+
+it("requires consent and revision, bounds failures, and never automatically repeats a failed caption attempt", async () => {
+  const appFake = await import("./fake-clips.ts");
+  ports.plan.mockImplementation(appFake.fakeOwnerClipPreparation.plan);
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const clip = batch.snapshot().clips[0]!;
+  const transcribe = vi.fn(async () => {
+    throw new Error("synthetic_failure");
+  });
+  const action = {
+    operationId: randomUUID(),
+    expectedRevision: 0,
+    paidConsent: true,
+  };
+  const signal = new AbortController().signal;
+  await expect(
+    batch.generateCaptions(
+      clip.id,
+      { ...action, paidConsent: false },
+      transcribe,
+      signal,
+    ),
+  ).rejects.toThrow();
+  expect(transcribe).toHaveBeenCalledTimes(0);
+  await expect(
+    batch.generateCaptions(clip.id, action, transcribe, signal),
+  ).rejects.toThrow("synthetic_failure");
+  await expect(
+    batch.generateCaptions(clip.id, action, transcribe, signal),
+  ).rejects.toThrow("caption_attempt_failed");
+  expect(transcribe).toHaveBeenCalledTimes(1);
+  for (let attempt = 0; attempt < 2; attempt++)
+    await expect(
+      batch.generateCaptions(
+        clip.id,
+        { ...action, operationId: randomUUID() },
+        transcribe,
+        signal,
+      ),
+    ).rejects.toThrow("synthetic_failure");
+  await expect(
+    batch.generateCaptions(
+      clip.id,
+      { ...action, operationId: randomUUID() },
+      transcribe,
+      signal,
+    ),
+  ).rejects.toThrow("caption_generation_unavailable");
+  expect(transcribe).toHaveBeenCalledTimes(3);
+  expect(batch.active).toBe(false);
+  expect(batch.snapshot().clips[0]!.base!.overlay.captions).toEqual([]);
+});
+
+it("adds fictional captions on demand without consuming a Gemini attempt or triggering planning/images/render", async () => {
+  const appFake = await import("./fake-clips.ts");
+  ports.plan.mockImplementation(appFake.fakeOwnerClipPreparation.plan);
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const clip = batch.snapshot().clips[0]!;
+  const result = await batch.generateCaptions(
+    clip.id,
+    { operationId: randomUUID(), expectedRevision: 0 },
+    async (current, selected, signal) =>
+      fakeOwnerAnalysis.transcribe(
+        {
+          ...current,
+          source: {
+            ...current.source,
+            durationMs: (selected.base!.overlay.frames * 1000) / OWNER_FPS,
+          },
+        },
+        signal,
+      ),
+    new AbortController().signal,
+    true,
+  );
+  expect(result.clips[0]!.base!.overlay.captions.length).toBeGreaterThan(0);
+  expect(result.clips[0]!.captionAttempts).toBeUndefined();
+  expect(result.clips[0]!.revision).toBe(1);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.image).toHaveBeenCalledTimes(0);
+  expect(ports.render).toHaveBeenCalledTimes(1);
 });

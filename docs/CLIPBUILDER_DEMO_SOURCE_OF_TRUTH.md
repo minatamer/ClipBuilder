@@ -1,5 +1,187 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Uploaded picture transparency — CL-079, 2026-10-25
+
+Preserve transparent and partially transparent pixels in uploaded PNG/WebP
+pictures. Normalize alpha-bearing uploads to bounded static PNG; opaque uploads
+and legacy/generated JPEG assets retain JPEG compatibility. Trusted optional
+format metadata flows through delivery, saved drafts and native export. Missing
+format means legacy JPEG; editing cannot set it. The underlying video must show
+through transparent regions, with no added matte or checkerboard. Existing
+flattened copies require re-uploading the original transparent image; never
+rewrite owner media or infer a cutout from the flattened pixels.
+
+## Clip caption generation and text correction — CL-078, 2026-10-25
+
+New fake-mode clips omit captions by a hardcoded default-off backend boolean;
+fake analysis can still supply fictional moment/focus inputs. The fake adapter
+permanently stops planning/generating the Earth picture. Preserve existing saved
+content and manual/real pictures.
+
+Locally, Generate fake captions sits beside Generate captions and restores the
+fictional dialogue on demand with no key, provider call or paid-attempt charge.
+Do not expose that action in hosted UI/routes. Its existence does not change the
+default-off automatic caption policy.
+
+Empty Captions offers Generate captions with an explicit audio-transfer/credit
+confirmation. For this owner-authorized local action only, a configured Gemini
+key may transcribe this clip's audio despite fake mode or paid master off. Never
+change global settings or enable moment search, images, cloud or automatic paid
+retries. Hosted generation retains normal provider gates and session budgets;
+tests use injected fake ports and cannot construct real transports. Preserve
+completed transcription, revisions and existing edits/exports.
+
+Style/Position/Text share one caption inspector. Text edits individual words
+with stable IDs and immutable timestamps, using Apply/Discard and the shared
+preview/export compiler. No timestamp editing, word insertion/deletion or new
+timeline. Keep playback updates in child controls and primary actions in the
+persistent footer. Owner live API and personal visual acceptance remain manual.
+
+## Confirm the person for a new position — 2026-10-25 owner revision
+
+CL-076 supersedes CL-072's immediate/last-use insertion. Add position first opens
+a person selector, defaulted to the highlighted camera row's person. The owner
+may select another existing person or custom framing, then explicitly Add or
+Cancel. Opening/choosing/canceling does not change the edit. Confirm inserts
+directly below the highlighted row and selects its new editable time range;
+per-person numbering remains chronological and updates dynamically.
+
+Retain contiguous coverage by using the selected row's later interval, initialized
+at a settled preview frame inside it or its midpoint. Same-person insertion copies
+that row's camera; another person uses existing framing within that source shot
+or their observation-based camera. Keep independent positions, original AI data,
+CL-071 playback, Apply/Discard and native export parity. No extra AI/provider
+request, schema, worker or approval change. CL-076 owns synthetic checks and
+owner-manual visual acceptance.
+
+## Large local upload transport — CL-075, 2026-10-25
+
+The picked-video API `/api/local/open/video` streams directly through its owning
+route/bridge; it is excluded from document nonce/header Proxy matching because
+Next clones/truncates Proxy bodies at a default 10 MB limit. Do not solve large
+local video intake by buffering full uploads or raising a global clone limit.
+The existing route's same-origin/site/path checks, private caller verification,
+hosted session/CSRF and backend byte/resource/media validation remain authoritative.
+Document and adjacent-route Proxy coverage remain; hosted 8 MB chunks and upload
+limits are unchanged. This is local transport correctness, not provider spend or
+deployment authorization. CL-075 owns synthetic verification and owner retry.
+
+## No footer mode/status badge — 2026-10-25 permanent owner decision
+
+CL-074 removes the footer mode identity and disk icon in every mode: Fake AI,
+Gemini, Temporary session, Connecting and AI unavailable. Do not restore those
+badges or substitute another environment/provider status label in the footer.
+This supersedes the older compact mode-identity design. Keep Start over and the
+contextual workflow actions; actual mode, provider approvals and processing
+gates remain unchanged. This is a display decision, not provider authorization.
+
+## Visible footer reset — 2026-10-25 owner revision
+
+CL-073 puts Start over directly in the shared workspace footer, including dirty
+editing. It returns to fresh upload/YouTube intake locally and upload-only intake
+when hosted, discarding current browser edits and clearing the session after the
+existing protected cleanup acknowledges success. Processing/acquisition/pending
+guards remain. A failed reset preserves the workspace and its retry/discard path.
+Saved drafts/exports, downloaded sources and retained masters keep their existing
+retention; reset does not purge the owner's saved library or alter configuration.
+This supersedes the older compact-Session-menu rule for Start over. Keep the
+other workflow actions contextual with one primary, shared controls and a
+reachable responsive footer. No new dialog, provider call or backend policy.
+
+## Independent camera positions — 2026-10-25 owner revision
+
+CL-072 supersedes CL-069's linked/repeated-position editing and sibling Advanced
+tab. Focus has Camera / People; Camera contains Timing / Advanced for the
+selected person and position. Each timestamped camera row is an independent
+position with its own framing and range, including rows with identical crops.
+Drag and numeric corrections affect that position only. Keep every original
+automatic row and all raw observations/decisions; this changes editor semantics,
+not Gemini prompts or automatic switch/hold policy.
+
+Add position appends the next chronological position for that person, selecting
+its editable range. Delete/reassignment renumbers positions per person without
+gaps. Initialize a new range from the last position's later interval and camera
+settings, using a settled preview time inside it or its midpoint; never create
+overlap, gaps or a zero-length interval. Existing Capture, complete coverage,
+source-shot fences and bounded counts remain. Position selectors navigate to
+that position's settings/time instead of copying another position's settings.
+
+Retain CL-071's isolated playback clock and still source overview, shared
+Apply/Discard, saved revisions and original-quality vertical export. Fake mode
+can edit/export without keys; owner real-provider and visual acceptance remain
+separate. CL-072 owns implementation and local evidence. No paid/cloud/deploy
+or Git action is authorized by this revision.
+
+## Export source-quality decision — 2026-10-25
+
+The owner requires exports to always stay vertical while preserving available
+source resolution/detail.
+CL-070 corrects the use of a reduced portrait preview as final-render input:
+final edited exports must crop from the original source and encode once.
+Keep preview/AI proxies separate, original media and accepted edits intact.
+Use a source-height portrait canvas with even-pixel codec rounding; native 9:16
+portrait dimensions stay unchanged, and final output retains source frame rate
+while existing edit/overlay timestamps remain on their 30 fps logical clock.
+Reframing/zoom still crops or enlarges source content; never promise extra detail
+or mathematically lossless edited MP4. Do not silently downgrade resolution to
+fit capacity limits. Existing exports remain immutable; new explicit exports
+use the corrected path. CL-070 owns verification and any remaining legacy-path
+limitations. This authorizes local code/fake verification, not paid/cloud/deploy.
+
+## Focus editor position UX decision — 2026-10-25
+
+CL-069 implements the owner-approved direction with synthetic local verification: use
+**position** for each distinct person framing, with every existing camera change
+remaining visible in chronological order. Preserve multiple positions and
+source-shot scopes; do not modify automatic observations, switch/hold behavior,
+prompts or provider calls as part of this editor revision. Do not claim anonymous
+person identity continuity across source shots.
+
+Focus uses Camera / People / Advanced views in the existing settings slot.
+People has Add/Remove, person/position selection and direct numbered-handle
+positioning with one selected blue portrait outline, without detection boxes or
+appearance timestamp controls. Camera owns chronological person/position rows,
+start/end with left-preview Capture, split/remove and timing. Precise zoom and
+horizontal/vertical percentages belong in Advanced. Distinguish edits to one
+camera change from repeated uses of the same position; never apply a person's
+correction indiscriminately across different positions/source shots.
+
+Retain original AI data, validated frame clocks, existing saved-edit/export
+parity and the shared Apply/Discard footer. Fake/no-key tests use synthetic
+people; actual detection quality still requires owner-manual approved Gemini
+processing. The ticket owns actual execution/verification evidence; this does
+not authorize paid/cloud/deployment actions. It supersedes CL-068's visible
+appearance-editing UX. CL-070 separately owns the export-detail correction.
+
+## Automatic and manual person focus — 2026-10-25
+
+CL-068: restore automatic portrait-fill framing to the shared normal editor and
+native export. Start on a visible anonymous person or a provisional side crop;
+hold the latest same-shot framing through uncertainty until another visible
+speaker is supported. Real shot changes reset geometry; ambiguity alone never
+widens to a letterboxed view. Extend the existing selected-clip video-planning
+request, with no additional provider call or automatic retry. Keep usable AI
+results despite quality critiques. Detection remains fallible and owner-manual
+live acceptance is required.
+
+Add Focus alongside the existing editor settings: anonymous observed presence
+lanes, bounded editable camera shots, person selection/addition and an explicit
+Remove action beside each person, center and zoom,
+split/remove, reset and shared footer Apply/Discard. Preview, saved edits and MP4
+use the same validated frame clocks and fill geometry. Preserve original AI
+observations separately from manual overrides and existing paid work/drafts.
+Safe aggregate diagnostics explain fallback, holds and switches without exposing
+media or raw provider content. Fake/no-key synthetic checks cover controls and
+native exports; no paid testing, cloud changes or deployment is authorized.
+
+## Saved intake thumbnail sampling — 2026-10-25
+
+CL-067: sample saved-video thumbnails at ten seconds, capped at the first quarter
+of short videos, to avoid showing opening logos/blank intro frames. This is a
+read-only local preview using the existing protected ranges; preserve the master,
+offline behavior, silent playback and explicit Use video action. No remote
+thumbnail lookup, native preview job or durable poster cache is introduced.
+
 ## Source transcription reuse — 2026-10-25
 
 CL-066: completed, structurally decoded transcription is reusable within its
@@ -119,7 +301,8 @@ Keep state changes in the same content slot and relevant actions in the footer.
 Latest owner audit (CL-050–053): selection and editing are separate exclusive
 screens in the same app. Editor shows one clip via clip tabs, one settings panel
 and a contextual footer with one primary plus Add more clips (dirty edits use
-Apply / Discard instead). Session actions belong in a compact menu. No appended
+Apply / Discard instead). CL-073 moves Start over directly into the footer;
+other session actions retain their compact placement. No appended
 selection disclosure, success narration or permanent export-history section.
 Captions support direct manipulation and exact quarter/center positions, local
 social typography and frame-driven word animation. Pictures support multiple
@@ -165,7 +348,12 @@ provenance/call counters and success narration throughout selection and editing.
 Keep concise labels, relevant errors and a compact fake/live identity. Existing
 saved drafts/reopening/autosave and retained sources/exports remain intact; do
 not silently create new durable projects. Picture timing is presented in seconds
-while preserving internal frame alignment and validation.
+while preserving internal frame alignment and validation. CL-077 adds Capture
+beside each picture endpoint, reading and pausing the settled clip preview without
+seeking. Start uses that frame; exclusive End includes it. Invalid ordering leaves
+the endpoint unchanged; loading/seeking/failed/busy previews cannot capture.
+Only the selected picture changes, through the existing Apply/Discard/export
+path. Capture needs no AI/provider call and preserves CL-071 playback isolation.
 
 Permanent owner rule: proceed and submit actions belong in the relevant footer.
 Use the persistent workspace footer for Find moments/Use clips, Process clips, Apply

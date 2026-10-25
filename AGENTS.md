@@ -6,6 +6,16 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Owner caption exception (2026-10-25, CL-078): an explicit confirmed local
+  Generate captions action may use the configured Gemini key for the selected
+  clip's audio even with FAKE_MODE=true / PAID_DEMO_ENABLED=false. This does not
+  enable other paid features or hosted/test bypasses. Agents still use injected
+  fake transports only and never trigger this paid action. New fake clips omit
+  captions by a hardcoded default-off boolean and never auto-add the Earth image.
+  A separate local-only Generate fake captions action may add fictional captions
+  on demand without keys, paid consent or a paid attempt; hosted excludes it.
+  Caption word corrections preserve IDs/timestamps. CL-078 owns implementation.
+
 - Current owner AFK audit authorization (2026-10-24): finish local verification,
   prepare a whole-file plan and commit all existing pending work before the
   build workflow's quality/efficiency and security audits. Run justified local

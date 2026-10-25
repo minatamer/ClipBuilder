@@ -179,6 +179,10 @@ export const ownerDiagnosticOperationSchema = z.enum([
   "clip_build",
   "clip_prepare",
   "visual_plan",
+  "focus_plan",
+  "focus_compile",
+  "focus_edit",
+  "focus_export",
   "visual_validate",
   "image_generate",
   "image_validate",
@@ -256,6 +260,22 @@ export const ownerTranscriptTimingDiagnosticSchema = z
 export type OwnerTranscriptTimingDiagnostic = z.infer<
   typeof ownerTranscriptTimingDiagnosticSchema
 >;
+export const ownerFocusDiagnosticSchema = z
+  .object({
+    returnedPeople: z.number().int().min(0).max(1000000).optional(),
+    returnedDecisions: z.number().int().min(0).max(1000000).optional(),
+    people: z.number().int().min(0).max(8),
+    observations: z.number().int().min(0).max(120),
+    decisions: z.number().int().min(0).max(120),
+    shots: z.number().int().min(1).max(60),
+    switches: z.number().int().min(0).max(120).optional(),
+    held: z.number().int().min(0).max(120).optional(),
+    fallback: z.number().int().min(0).max(120).optional(),
+    rejected: z.number().int().min(0).max(1000).optional(),
+    converted: z.number().int().min(0).max(1000).optional(),
+  })
+  .strict();
+export type OwnerFocusDiagnostic = z.infer<typeof ownerFocusDiagnosticSchema>;
 export function describeOwnerDiagnosticError(
   error: unknown,
 ): OwnerDiagnosticError {
@@ -315,6 +335,7 @@ export const ownerDiagnosticRecordSchema = z
     httpStatus: z.number().int().min(100).max(599).optional(),
     error: ownerDiagnosticErrorSchema.optional(),
     transcriptTiming: ownerTranscriptTimingDiagnosticSchema.optional(),
+    focus: ownerFocusDiagnosticSchema.optional(),
     droppedRecords: z.number().int().min(0).max(1000000).optional(),
   })
   .strict();

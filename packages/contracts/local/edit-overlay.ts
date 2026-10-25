@@ -4,6 +4,7 @@ import {
   type OwnerAsset,
 } from "./assets.ts";
 import { ownerEditDocumentSchema, type OwnerEditDocument } from "./editor.ts";
+import { correctedOwnerCaptions } from "./caption-text.ts";
 import {
   ownerClipBaseSchema,
   ownerOverlaySchema,
@@ -23,6 +24,7 @@ export function automaticOwnerEdit(
     baseHash,
     revision: 0,
     captions: null,
+    ...(base.overlay.focus ? { focus: base.overlay.focus } : {}),
     visuals: base.overlay.visuals.map((cue) =>
       ownerVisualEditSchema.parse({
         id: cue.id,
@@ -56,7 +58,12 @@ export function compileOwnerOverlay(
     ? edit.visuals.map((cue) => {
         const asset = assets.find((asset) => asset.id === cue.assetId);
         if (!asset) throw new Error("missing_edit_asset");
-        return { ...cue, digest: asset.digest, origin: asset.origin };
+        return {
+          ...cue,
+          digest: asset.digest,
+          origin: asset.origin,
+          ...(asset.format ? { format: asset.format } : {}),
+        };
       })
     : base.overlay.visuals;
   for (const cue of visuals)
@@ -65,14 +72,17 @@ export function compileOwnerOverlay(
         (asset) =>
           asset.id === cue.assetId &&
           asset.digest === cue.digest &&
+          (asset.format ?? "jpeg") === (cue.format ?? "jpeg") &&
           asset.origin === cue.origin,
       )
     )
       throw new Error("missing_edit_asset");
   return ownerOverlaySchema.parse({
     ...base.overlay,
+    captions: correctedOwnerCaptions(base.overlay.captions, edit?.captionText),
     visuals,
     ...(edit?.captions ? { captionStyle: edit.captions } : {}),
     ...(edit?.videoLook ? { videoLook: edit.videoLook } : {}),
+    ...(edit?.focus ? { focus: edit.focus } : {}),
   });
 }

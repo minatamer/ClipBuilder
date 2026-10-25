@@ -33,7 +33,10 @@ import {
   ownerWorkspaceClearRequestSchema,
 } from "../../../packages/contracts/local/drafts.ts";
 import { ownerIdSchema } from "../../../packages/contracts/local/policy.ts";
-import { OWNER_PICTURE_LIMITS } from "../../../packages/contracts/local/assets.ts";
+import {
+  OWNER_PICTURE_LIMITS,
+  ownerPictureMime,
+} from "../../../packages/contracts/local/assets.ts";
 import {
   ownerAgentClipListSchema,
   ownerAgentStatusSchema,
@@ -48,10 +51,16 @@ import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/lo
 import { ownerRuntimeCapabilitiesSchema } from "../../../packages/contracts/local/runtime.ts";
 import { openLocalDraft, openLocalVideo } from "./open-local-file.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
+import type { ClipCaptionTranscription } from "./clip-caption-port.ts";
+import { fakeOwnerAnalysis } from "./fake-analysis.ts";
 
 export type OwnerHostProviders = {
+  captionTranscription?: ClipCaptionTranscription;
   analysis?: OwnerAnalysisPorts;
-  clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image" | "resume">;
+  clipPreparation?: Pick<
+    OwnerClipPorts,
+    "mode" | "plan" | "image" | "resume" | "focus"
+  >;
   close?: (signal: AbortSignal) => Promise<void>;
   cleanupWorkspace?: (id: string, signal: AbortSignal) => Promise<void>;
 };
@@ -79,7 +88,7 @@ export type OwnerHostOptions = {
   acquisition?: OwnerAcquisitionPort;
   shutdown?: () => void;
   analysis?: OwnerAnalysisPorts;
-  clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image">;
+  clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image" | "focus">;
   providers?: (files: WorkspaceFiles) => OwnerHostProviders;
   media: (
     job: OwnerMediaJob,
@@ -99,6 +108,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
     planningAvailable: Boolean(
       analysis && clipPreparation && analysis.mode === clipPreparation.mode,
     ),
+    captionGeneration: Boolean(providers?.captionTranscription),
     ...(options.hosted
       ? { execution: "hosted", localMedia: false, cloud: true }
       : { localMedia: true, cloud: false }),
@@ -781,7 +791,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           ? req.url?.replace("/api/agent/workspace/", "/api/workspace/")
           : req.url
       )?.match(
-        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|picture|validate)(?:\/(\d+))?)?)?)?$/,
+        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|picture|validate|captions|fake-captions)(?:\/(\d+))?)?)?)?$/,
       );
       if (
         agent &&
@@ -922,6 +932,79 @@ export function createOwnerHost(options: OwnerHostOptions) {
           } finally {
             busy.delete(workspace.id);
           }
+        }
+        if (
+          req.method === "POST" &&
+          batch &&
+          route[3] &&
+          route[4] === "fake-captions"
+        ) {
+          if (options.hosted) {
+            res.writeHead(404).end();
+            return;
+          }
+          if (busy.has(workspace.id) || batch.active) {
+            res.writeHead(409).end();
+            return;
+          }
+          busy.add(workspace.id);
+          try {
+            const result = await batch.generateCaptions(
+              route[3],
+              await readOwnerJson(req),
+              (current, clip, signal) =>
+                fakeOwnerAnalysis.transcribe(
+                  {
+                    ...current,
+                    source: {
+                      ...current.source,
+                      durationMs: Math.round(
+                        (clip.base!.overlay.frames * 1000) / 30,
+                      ),
+                    },
+                  },
+                  signal,
+                ),
+              controller.signal,
+              true,
+            );
+            res
+              .writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify(clipReply(result)));
+          } finally {
+            busy.delete(workspace.id);
+          }
+          return;
+        }
+        if (
+          req.method === "POST" &&
+          batch &&
+          route[3] &&
+          route[4] === "captions"
+        ) {
+          if (!providers?.captionTranscription) {
+            res.writeHead(503).end();
+            return;
+          }
+          if (busy.has(workspace.id) || batch.active) {
+            res.writeHead(409).end();
+            return;
+          }
+          busy.add(workspace.id);
+          try {
+            const result = await batch.generateCaptions(
+              route[3],
+              await readOwnerJson(req),
+              providers.captionTranscription,
+              controller.signal,
+            );
+            res
+              .writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify(clipReply(result)));
+          } finally {
+            busy.delete(workspace.id);
+          }
+          return;
         }
         if (
           req.method === "POST" &&
@@ -1094,18 +1177,17 @@ export function createOwnerHost(options: OwnerHostOptions) {
         const admitted = batches
           .get(workspace.id)
           ?.snapshot()
-          .clips.some((clip) =>
-            clip.assets.some((asset) => asset.id === route[3]),
-          );
+          .clips.flatMap((clip) => clip.assets)
+          .find((asset) => asset.id === route[3]);
         if (!admitted) {
           res.writeHead(404).end();
           return;
         }
         await stream(
-          await files.asset(workspace.id, route[3]),
+          await files.asset(workspace.id, route[3], admitted.format),
           req,
           res,
-          "image/jpeg",
+          ownerPictureMime(admitted.format),
           workspace.id,
         );
         return;

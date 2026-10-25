@@ -1,3 +1,7 @@
+import { vi as captionFixtureMock } from "vitest";
+captionFixtureMock.mock("../apps/backend/local/fake-content.ts", () => ({
+  FAKE_CAPTIONS_ENABLED: true,
+}));
 import { expect, it } from "vitest";
 import { join, resolve } from "node:path";
 import {
@@ -11,7 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import { createOwnerHost } from "../apps/backend/local/server.ts";
 import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
-import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
+import { editorContentFixture as fakeOwnerClipPreparation } from "./owner-content-fixture.ts";
 import { createOwnerWorker } from "../apps/renderer/local/server.ts";
 import { ownerNativeTools } from "../scripts/native-tools.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";

@@ -7,6 +7,8 @@ import {
   OWNER_PICTURE_LIMITS,
 } from "./assets.ts";
 import { ownerVideoLookSchema } from "./video-look.ts";
+import { ownerFocusSchema } from "./focus.ts";
+import { boundedPlainTextSchema } from "../src/text.schema.ts";
 
 export const OWNER_CAPTION_FONTS = [
   "Arial",
@@ -48,6 +50,17 @@ export const ownerCaptionStyleSchema = z
     { message: "Caption text must fit inside the portrait safe area." },
   );
 export type OwnerCaptionStyle = z.infer<typeof ownerCaptionStyleSchema>;
+export const ownerCaptionTextSchema = z
+  .array(
+    z
+      .object({
+        wordId: z.string().min(1).max(64),
+        text: boundedPlainTextSchema(80),
+      })
+      .strict(),
+  )
+  .max(12000)
+  .refine((words) => new Set(words.map((w) => w.wordId)).size === words.length);
 const captionBox = {
   x: 80 / 1080,
   y: 1500 / 1920,
@@ -113,7 +126,9 @@ export const ownerEditDocumentSchema = z
     baseHash: ownerDigestSchema,
     revision: z.number().int().nonnegative(),
     captions: ownerCaptionStyleSchema.nullable(),
+    captionText: ownerCaptionTextSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
+    focus: ownerFocusSchema.optional(),
     visuals: z
       .array(ownerVisualEditSchema)
       .max(OWNER_PICTURE_LIMITS.cuesPerClip),
@@ -127,6 +142,10 @@ export const ownerEditDocumentSchema = z
 export type OwnerEditDocument = z.infer<typeof ownerEditDocumentSchema>;
 export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
   z
+    .object({ kind: z.literal("caption-text"), words: ownerCaptionTextSchema })
+    .strict(),
+  z.object({ kind: z.literal("focus"), focus: ownerFocusSchema }).strict(),
+  z
     .object({ kind: z.literal("video-look"), look: ownerVideoLookSchema })
     .strict(),
   z
@@ -139,7 +158,7 @@ export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("reset"),
-      panel: z.enum(["captions", "visuals", "video"]),
+      panel: z.enum(["captions", "visuals", "video", "focus"]),
     })
     .strict(),
 ]);
@@ -151,7 +170,7 @@ export const ownerEditRequestSchema = z
     operations: z
       .array(ownerEditOperationSchema)
       .min(1)
-      .max(2 * OWNER_PICTURE_LIMITS.cuesPerClip + 2),
+      .max(2 * OWNER_PICTURE_LIMITS.cuesPerClip + 4),
   })
   .strict();
 export type OwnerEditRequest = z.infer<typeof ownerEditRequestSchema>;

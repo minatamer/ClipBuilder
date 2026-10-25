@@ -8,7 +8,7 @@ import {
   type OwnerHostOptions,
 } from "../apps/backend/local/server.ts";
 import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
-import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
+import { editorContentFixture as fakeOwnerClipPreparation } from "./owner-content-fixture.ts";
 import { ownerWorkspaceSchema } from "../packages/contracts/local/index.ts";
 import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
 import {
