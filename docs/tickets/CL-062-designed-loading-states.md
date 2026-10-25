@@ -97,3 +97,25 @@ hosted resource and remote session/cloud acceptance remain unchecked release
 items. New explicit approval is required for any credit-consuming test; deployment
 is never authorized. No configuration, retained media or Git index/history was
 changed. All related work remains unstaged and uncommitted.
+
+## Owner follow-up — 2026-10-25
+
+Removed the decorative orbit dot from the shared loader at the owner's request.
+The ring, logo, glow and normal spinner animation remain unchanged.
+
+- The existing shared workflow suite passes: **6 tests in 1 file**.
+- A current-source synthetic connection preview passes at **1440×900, 390×844
+  and 320×568**: no dot pseudo-element, normal spinner animation, visible title
+  and no horizontal overflow. All three screenshots were visually inspected;
+  ignored evidence is `.local-build/evidence/cl062-no-dot-*.png`.
+- The preview holds connection locally without application/provider requests;
+  fake/paid-off composition, network interception and a same-origin CSP remain
+  active. Temporary browser, server and build scratch were cleaned up. The
+  normal app remains running; no worker restart is needed for this CSS change.
+- Read-only validate: **Meets ticket — no actionable findings** for the dot
+  removal. The earlier deferred hosted-configuration document is unrelated and
+  preserved. No provider quality, real-media or cloud acceptance is claimed.
+
+This visual change works in fake mode without API keys. Real Gemini processing
+still requires owner-managed keys, live flags and explicit owner testing; no
+paid/provider call, configuration change, deployment or Git mutation occurred.

@@ -40,17 +40,6 @@
   border: 1px solid rgb(154 194 255 / 15%);
   border-radius: 50%;
 }
-.orbit::after {
-  content: "";
-  position: absolute;
-  width: 0.45rem;
-  height: 0.45rem;
-  top: 12%;
-  left: 12%;
-  border-radius: 50%;
-  background: var(--cb-blue-light);
-  box-shadow: 0 0 1rem rgb(120 175 255 / 75%);
-}
 .spinner {
   position: absolute;
   inset: 0;
