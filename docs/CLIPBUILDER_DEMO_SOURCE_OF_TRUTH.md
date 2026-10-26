@@ -1,5 +1,22 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Owner FFmpeg risk deferral — CL-090, 2026-10-26
+
+After reviewing the SEC90-01 explanation, the owner directed that the issue be
+documented and deferred for the current demo, with no additional remediation
+work now and no interruption of fake-mode testing with paid mode off. The owner
+cited the project's spend limit as context for this priority decision. A spend
+limit is not a parser fix and does not prevent a processing crash; SEC90-01
+remains unresolved, not remediated. No cloud/budget configuration was inspected
+or changed to record this decision.
+
+This is an explicit owner deferral, superseding any recommendation to hold up
+current demo testing over this issue. Keep existing upload/resource/time limits
+and the finding documented. Revisit remediation when requested or if exposure
+materially changes. Other owner acceptance and release checks remain separate;
+this does not authorize deployment, push, paid/provider testing or cloud work.
+CL-090 and its current security report own the detailed follow-up.
+
 ## AI titles and preparation defaults — CL-087, 2026-10-26
 
 Owner requests a short editable top title from the existing selected-clip AI

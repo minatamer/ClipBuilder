@@ -1,4 +1,4 @@
-# ClipBuilder security audit â€” 2026-10-26
+# ClipBuilder security audit — 2026-10-26
 
 Audit baseline: primary `cc4c7dc`, following `ca10def`. The current source was
 reviewed; the earlier isolated CL-065 audit is historical and was not applied
@@ -7,6 +7,20 @@ Reports precede implementation. The owner's current AFK delegation permits
 provisional local finding selection and local commits; personal acceptance is
 outstanding. This is a proportionate source/advisory review, not a penetration
 test, a complete vulnerability database scan or a production security clearance.
+
+## Owner disposition follow-up — 2026-10-26
+
+The owner explicitly asked to document and commit the decision to defer
+SEC90-01 for the current demo. No further FFmpeg remediation is requested now;
+the issue must not hold up fake-mode testing with paid mode off. The owner cited
+the project spend limit as context. This is a priority/risk deferral, not a
+technical fix or verification of that limit: malformed MP4 processing can still
+consume CPU or crash within a spending allowance.
+
+**Current disposition: owner-deferred, technically unresolved.** The original
+finding and vendor follow-up plan below remain evidence, not a demand to stop
+current demo testing. Existing safeguards and other owner/release checks remain;
+no deployment, paid test or cloud action is authorized by this documentation.
 
 ## Trust boundaries and scope
 
@@ -40,7 +54,7 @@ alongside source. No ignored env, keys, retained media or private captures read.
 
 ## Findings ranked by practical priority
 
-### SEC90-01 â€” High: admitted MP4 still reaches a vendor-vulnerable parser
+### SEC90-01 — High: admitted MP4 still reaches a vendor-vulnerable parser
 
 **Open vendor/release risk.** Debian Bookworm's pinned
 `7:5.1.9-0+deb12u1` FFmpeg and the pinned Windows `9.0.2` are in the affected
@@ -71,9 +85,9 @@ the MP4 issue. Do not migrate distros, build an unreviewed parser fork, silently
 drop MP4 support or claim a Node upgrade resolves this. Owner risk acceptance,
 if chosen, must explicitly acknowledge the remaining risk before public release.
 
-### SEC90-02 â€” High upstream / conditional app exposure: outdated Node images
+### SEC90-02 — High upstream / conditional app exposure: outdated Node images
 
-All three Dockerfiles pin the official Node 22.23.3 image digest `43ac6c60â€¦` in
+All three Dockerfiles pin the official Node 22.23.3 image digest `43ac6c60…` in
 build/runtime stages. Anonymous official registry manifest/config lookup confirms
 that version. [Node's October 21 security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)
 provides 22.23.4 and 24.22.1, addressing memory-safety and network/TLS problems.
@@ -96,7 +110,7 @@ checked as 22.23.4; no system runtime was changed. An earlier inferred 24.19.0
 global-runtime concern is retracted for this executable. Other installations
 were not audited. Linux acceptance and native vendor risk are separate gates.
 
-### SEC90-03 â€” Medium: oversized collections amplify validation work
+### SEC90-03 — Medium: oversized collections amplify validation work
 
 Contracts and applications pin Zod 4.6.5. Its collection maximum is checked after
 element validation, so an authenticated editor can create excessive synchronous
@@ -119,7 +133,7 @@ reads and one size issue, while valid payloads still work. Run all contracts,
 local/hosted editing/provider-acceptance and UI/native proofs affected by the
 shared schema change. No stricter Gemini semantic-quality gate or paid retry.
 
-### SEC90-04 â€” Medium preventive maintenance: Next security baseline behind
+### SEC90-04 — Medium preventive maintenance: Next security baseline behind
 
 Next/eslint-config-next 16.3.8 precede the
 [October 14 security update](https://nextjs.org/blog/nextjs-security-update-october-14-2026).
@@ -234,7 +248,7 @@ Actual evidence:
   chunked upload with source hash binding; initially empty fake content and
   disabled suggestions; one explicitly requested fictional caption through an
   injected fake port, one canvas PNG upload, saved captions/picture motion/Text,
-  source-height 52Ã—90 one-second H.264/AAC export and decoded monochrome filter.
+  source-height 52×90 one-second H.264/AAC export and decoded monochrome filter.
   Exact counts: 1 analysis transcription, 1 fake caption request, 0 selection calls,
   1 plan, 0 image-generation calls, 1 source inspection, 1 preview and 4 final native
   attempts including 1 canceled attempt. Retry reuses preparation; exit and expiry
@@ -254,7 +268,7 @@ longer packaged separately; it now starts the actual backend bundle. Existing
 source `gemini-pictures.test.ts` retains production factory/approval assertions,
 rather than claiming those constructors were imported from the runtime image.
 The older Linux walkthrough assumed auto captions/Earth image, an initially
-checked suggestions box, 1080Ã—1920 final output and a fixed output revision. It
+checked suggestions box, 1080×1920 final output and a fixed output revision. It
 now makes synthetic content explicit, checks current defaults, derives native
 geometry from the shared source-quality profile and uses the actual revision.
 Its Export action waits atomically for an enabled, stable footer after Apply.

@@ -1,4 +1,4 @@
-# ClipBuilder AFK verification and audit handoff â€” 2026-10-26
+# ClipBuilder AFK verification and audit handoff — 2026-10-26
 
 Local work is complete. The owner authorized fake/paid-off verification,
 documented fixes, file-level plans/local commits and quality/security audits in
@@ -10,7 +10,7 @@ the single Build command progress section in the source of truth.
 
 | Commit | Outcome | Whole-file plan |
 | --- | --- | --- |
-| `ca10def` | CL-084â€“088 features, fake verification, inspector overflow and harness fixes; 84 files. | [Feature/verification allocation](CL084_088_COMMIT_PLAN.md) |
+| `ca10def` | CL-084–088 features, fake verification, inspector overflow and harness fixes; 84 files. | [Feature/verification allocation](CL084_088_COMMIT_PLAN.md) |
 | `cc4c7dc` | CL-089 failure-safe hosted cleanup/diagnostics and script-free cached Docker dependency fetch; 12 files. | [Quality allocation](CL089_COMMIT_PLAN.md) |
 | `6234d98` | CL-090 exact Node/Zod/Next security updates, actual-schema regressions, corrected image/native verification helpers and reports; 21 files. | [Security allocation](CL090_COMMIT_PLAN.md) |
 
@@ -57,7 +57,7 @@ agents did not invoke the local real-caption exception.
 | Final proof-helper corrections | Affected lint/format and 4 focused real-schema/closed-context cases pass after helper edits. Actual current helper executions below pass. Broad source gates were not needlessly repeated after proof-only repairs. |
 | Current Windows preview/native | Two Text cases cover independent timing/shared typography, real gestures, responsive guards, save/discard/reopen and native output. Current worker rebuilt/reloaded after contracts/dependencies. |
 | Actual patched images | All three current application images build on verified official Node 22.23.4; frontend standalone release-artifact checks pass. Three non-root, read-only, network-disabled runtime probes verify frontend CSP/assets/origin/routes, actual backend bundled entry/paid-off routes, and renderer imports/protected routes/baked tools/hashes. |
-| Current Linux shared workflow | Generated 8,388,731-byte chunk upload/hash binding; fake defaults off/empty; one explicit fictional caption request and canvas PNG upload; saved caption/picture motion/timed Text; source-height 52Ã—90 one-second H.264/AAC export, decoded mono filter; cancellation, preparation-reusing retry, expiry and exit cleanup. Exact counts: transcribe 1, caption 1, select 0, plan 1, generated image 0, inspect 1, preview 1, native final attempts 4 including 1 canceled. External attempts 0. |
+| Current Linux shared workflow | Generated 8,388,731-byte chunk upload/hash binding; fake defaults off/empty; one explicit fictional caption request and canvas PNG upload; saved caption/picture motion/timed Text; source-height 52×90 one-second H.264/AAC export, decoded mono filter; cancellation, preparation-reusing retry, expiry and exit cleanup. Exact counts: transcribe 1, caption 1, select 0, plan 1, generated image 0, inspect 1, preview 1, native final attempts 4 including 1 canceled. External attempts 0. |
 | Legacy renderer native | Independently reran actual patched-image render/audio/scratch/process-cancellation proof with network disabled and fixed image-owned tools. Owned temporary layout aliases only; no owner media or credentials. |
 | Content/boundaries/cleanup | Full types/boundary suites pass. Content-safe patterns checked 823 tracked text files with no token/private-key candidate; exact staged scopes were inspected separately. No owned CL090 proof container remains. Normal service ownership is verified on 127.0.0.1 ports 3000/4000/4200. |
 
@@ -102,6 +102,17 @@ These decisions and the earlier product/visual reviews remain provisional until
 the owner reviews them. Read the [ranked PM report](STRIDE_SECURITY_REVIEW_2026-10-26.html)
 and [full current audit](STRIDE_SECURITY_AUDIT_2026-10-26.md). The earlier isolated
 CL-065 checkout/commit evidence is historical, not the current source baseline.
+
+## Owner follow-up after this handoff — 2026-10-26
+
+The owner has now explicitly deferred further SEC90-01 remediation for the
+current demo and requested that decision be documented and committed. Keep the
+finding unresolved and documented; it must not hold up fake-mode testing with
+paid mode off. The project spend limit was the owner's prioritization context,
+not a parser mitigation or a newly verified cloud setting. Other owner/release
+checks and permissions remain separate. The original audit/AFK history below is
+retained; read the latest owner disposition in the source of truth and current
+security report before treating it as a request for more remediation work.
 
 ## Remaining release and owner checks
 

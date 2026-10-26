@@ -133,3 +133,33 @@ artifacts; all substantive assertions stay. No dead/debug product code, new
 runtime feature, unsafe cast, retained-media use or unplanned cloud/Git action
 was introduced. SEC90-01 and named owner/hosted gates are explicit concerns,
 not remediated findings or failed local checks. Final whitespace passes.
+
+## Owner follow-up: defer FFmpeg work — 2026-10-26
+
+Following the issue explanation, the owner asked to relax the priority for this
+demo, citing the project spend limit, then explicitly requested documentation
+and a commit. Record SEC90-01 as **owner-deferred and unresolved**. Do no extra
+remediation now and do not hold up fake-mode/paid-off testing. Spending controls
+do not repair the parser or prevent a processing crash; no budget/cloud setup
+was verified or changed. Other release/owner checks and external-action
+permissions remain separate. This is the owner's decision, not an AFK inference.
+
+Documentation-only whole-file commit plan:
+
+| File | Purpose |
+| --- | --- |
+| `docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md` | Authoritative owner deferral and exact scope. |
+| `docs/operations/STRIDE_SECURITY_AUDIT_2026-10-26.md` | Current finding disposition, retaining technical evidence. |
+| `docs/operations/STRIDE_SECURITY_REVIEW_2026-10-26.html` | PM summary reflects owner deferral without marking the issue fixed. |
+| `docs/operations/AFK_HANDOFF_2026-10-26.md` | Follow-up to the earlier provisional handoff. |
+| `docs/tickets/CL-090-current-security-audit.md` | This decision, documentation allocation and validation evidence. |
+
+Subject: `CL-090: record owner deferral of FFmpeg demo risk`. Review the complete
+documentation diff, format-check HTML, check whitespace and exact staged scope,
+then commit under the owner's direct request. No application tests are needed
+for this prose-only update; existing fake/real capability distinctions remain.
+
+Validation: complete documentation diff reviewed; no actionable issue. HTML
+format and whitespace checks pass. Garbled punctuation in the touched audit/
+handoff documents was also repaired using explicit UTF-8 reads/writes. No
+application tests or processing were run for this documentation-only follow-up.

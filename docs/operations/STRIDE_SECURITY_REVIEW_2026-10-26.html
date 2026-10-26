@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
-    <title>ClipBuilder Ã‚Â· Security review Ã‚Â· 26 October 2026</title>
+    <title>ClipBuilder · Security review · 26 October 2026</title>
     <style>
       :root {
         color-scheme: dark;
@@ -111,7 +111,7 @@
   </head>
   <body>
     <main>
-      <div class="eyebrow">ClipBuilder Ã‚Â· 26 October 2026 Ã‚Â· CL-090</div>
+      <div class="eyebrow">ClipBuilder · 26 October 2026 · CL-090</div>
       <h1>Security review</h1>
       <p class="intro">
         Source baseline <strong>cc4c7dc</strong>, after the feature and quality
@@ -119,14 +119,13 @@
         advisories only; no cloud access, repository upload or paid processing.
       </p>
       <div class="notice">
-        <strong>Public release still has an open native-media risk.</strong
-        ><br />Local tests can verify behavior and safeguards. They cannot patch
-        a vendor parser or approve deployment. AFK fix selection is provisional;
-        owner review remains.
+        <strong>FFmpeg work is deferred by the owner for this demo.</strong
+        ><br />The issue remains unresolved. Fake-mode testing with paid mode
+        off can continue; other release and owner checks remain separate.
       </div>
       <div class="grid">
         <article>
-          <span class="badge">High Ã‚Â· vendor open</span
+          <span class="badge">High · vendor open</span
           ><span class="id">SEC90-01</span>
           <h2>A hostile MP4 can crash its media parser</h2>
           <p>
@@ -134,16 +133,17 @@
             Upload limits and timeouts reduce impact, but do not remove it.
           </p>
           <p>
-            <strong>Plan:</strong> verify a maintained vendor fix and retest
-            native workflows before public release. No verified drop-in patch is
-            available in this audit; do not silently change video support.
+            <strong>Owner decision:</strong> leave the risk documented and defer
+            extra remediation now. Keep current safeguards; revisit the vendor
+            fix when prioritized. The spend limit does not prevent a parser
+            crash.
           </p>
           <a href="https://security-tracker.debian.org/tracker/CVE-2026-107678"
             >Vendor status</a
           >
         </article>
         <article>
-          <span class="badge">High upstream Ã‚Â· conditional</span
+          <span class="badge">High upstream · conditional</span
           ><span class="id">SEC90-02</span>
           <h2>Server images need the Node security patch</h2>
           <p>
@@ -161,7 +161,7 @@
           >
         </article>
         <article>
-          <span class="badge medium">Medium Ã‚Â· reproduced</span
+          <span class="badge medium">Medium · reproduced</span
           ><span class="id">SEC90-03</span>
           <h2>Oversized lists waste validation work</h2>
           <p>
@@ -179,7 +179,7 @@
           >
         </article>
         <article>
-          <span class="badge medium">Medium Ã‚Â· preventive</span
+          <span class="badge medium">Medium · preventive</span
           ><span class="id">SEC90-04</span>
           <h2>Bring Next.js to its security baseline</h2>
           <p>
@@ -200,8 +200,8 @@
       </div>
       <footer>
         <p class="decision" id="execution-status">
-          SEC90-02/03/04 are validated locally. SEC90-01 remains open. Reports
-          preceded AFK selection; owner security and release review remain.
+          SEC90-02/03/04 are validated locally. SEC90-01 is owner-deferred and
+          unresolved. Other owner and release checks remain.
         </p>
         <p>
           Preserve authentication, spending limits, diagnostic privacy,
