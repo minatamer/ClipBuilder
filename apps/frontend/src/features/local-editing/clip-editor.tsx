@@ -976,6 +976,7 @@ export function ClipEditor({
                       <label>
                         Style
                         <select
+                          className="select-control"
                           value={caption.preset}
                           onChange={(event) =>
                             setCaption(
@@ -1018,6 +1019,7 @@ export function ClipEditor({
                       <label>
                         Font
                         <select
+                          className="select-control"
                           value={caption.font ?? "Arial"}
                           onChange={(event) =>
                             setCaption({
@@ -1038,6 +1040,7 @@ export function ClipEditor({
                       <label>
                         Animation
                         <select
+                          className="select-control"
                           value={caption.animation ?? "highlight"}
                           onChange={(event) =>
                             setCaption({
@@ -1095,6 +1098,7 @@ export function ClipEditor({
                       <label>
                         Alignment
                         <select
+                          className="select-control"
                           value={caption.align}
                           onChange={(event) =>
                             setCaption({
@@ -1217,6 +1221,7 @@ export function ClipEditor({
               <label>
                 Filter
                 <select
+                  className="select-control"
                   value={draft.videoLook?.preset ?? "original"}
                   onChange={(event) =>
                     update({
@@ -1394,6 +1399,7 @@ export function ClipEditor({
                       <label>
                         Image
                         <select
+                          className="select-control"
                           value={selectedCue.assetId}
                           onChange={(event) =>
                             setCue({
@@ -1412,6 +1418,7 @@ export function ClipEditor({
                       <label>
                         Fit
                         <select
+                          className="select-control"
                           value={selectedCue.fit}
                           onChange={(event) =>
                             setCue({
@@ -1479,6 +1486,7 @@ export function ClipEditor({
                         <label key={key}>
                           {key === "entrance" ? "Entrance" : "Exit"}
                           <select
+                            className="select-control"
                             value={selectedCue[key] ?? "none"}
                             onChange={(event) =>
                               setCue({

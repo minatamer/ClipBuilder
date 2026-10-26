@@ -1,5 +1,42 @@
 # ClipBuilder canonical ticket index
 
+## Shared dropdown arrow inset — 2026-10-26
+
+[CL-083](CL-083-shared-dropdown-arrow-inset.md) applies one select class and inset
+across all 13 caption/picture/focus/resolution controls. Frontend types,
+lint/format, existing editor regression and inspected desktop/390/320 previews
+pass, including keyboard/disabled/forced-color states. Owner local real-caption
+success is recorded in CL-078. No backend restart or paid call; personal visual
+acceptance remains manual.
+
+## Long empty-overlay rendering — 2026-10-26
+
+[CL-082](CL-082-local-worker-render-failure.md) fixes Windows' per-file hardlink
+limit reached by long identical overlay runs, including default-empty fake clips.
+Full-minute isolated current-source overlay/MP4 and existing focus/native proofs,
+24 focused unit checks, types and read-only validation pass. Worker reload and
+final readiness verification pass; app remains fake with caption generation
+available. Owner should refresh/reopen after reload. Real-media/visual and Gemini
+acceptance remain manual. No provider calls or Git mutation.
+
+## Manual clip duration — 2026-10-26
+
+[CL-081](CL-081-manual-clip-duration-limit.md) caps new manual submissions at
+60 seconds in fake/local/hosted modes while preserving legacy saved results and
+advisory provider-output acceptance. All 98 focused synthetic tests, frontend/
+local/no-Node contract types, lint/format and read-only validation pass. Current
+backend/worker rebuilt and reloaded; frontend preserved. Owner visual/live
+acceptance remains manual; no paid call, cloud change or Git mutation.
+
+## Fake-mode manual clip default — 2026-10-26
+
+[CL-080](CL-080-fake-mode-manual-clips-default.md) changes only the initial
+Suggest clips preference: unchecked for synthetic AI, checked for provider AI.
+Saved preferences and manual toggles remain authoritative. Frontend types,
+lint/format and current-source fake/local-provider/hosted-provider markup checks
+pass. The broad design proof stops at intake before selection; owner visual
+acceptance remains manual. Fake mode needs no keys; live approvals are unchanged.
+
 ## Transparent picture overlays — 2026-10-25
 
 [CL-079](CL-079-transparent-picture-overlays.md) preserves uploaded PNG/WebP alpha
@@ -19,8 +56,10 @@ All 562 synthetic local tests, provider/native-audio and shared browser/export
 proofs pass, including desktop/390/320 and fixed caption clocks. Types/lint/format
 and read-only validation pass with no actionable findings. The normal backend
 and current worker were reloaded; app remains fake. Owner real API/visual
-acceptance remains manual.
-No live API calls, configuration edits, deployment or Git mutation.
+caption acceptance was reported on 2026-10-26: Generate captions worked really
+well while fake mode stayed on. Other real-media/export, spend measurement and
+hosted acceptance remain manual. Agent checks used no live API calls;
+no configuration edits, deployment or Git mutation.
 
 ## Picture timing Capture — 2026-10-25
 

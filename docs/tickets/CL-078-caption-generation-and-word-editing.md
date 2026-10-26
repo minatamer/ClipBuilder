@@ -1,7 +1,9 @@
 # CL-078 — Empty captions, explicit clip transcription and word correction
 
-Status: implemented and locally validated; owner real API quality/spend and
-personal visual acceptance remain manual. Owner request: 2026-10-25.
+Status: implemented and locally validated; owner reports successful local real
+Gemini caption generation while fake mode remained on (2026-10-26). Other
+real-media/export, spend measurement and hosted acceptance remain manual.
+Owner request: 2026-10-25.
 Dependencies: shared completed-clip editor/export, CL-060 acceptance policy,
 CL-070 native quality, CL-071 isolated playback, CL-077 Capture are present in
 the current worktree. Preserve all earlier pending work; no Git mutation.
@@ -138,3 +140,19 @@ encoding/seek/export-wait assumptions were corrected rather than changing app
 behavior. No deployment, cloud mutation, configuration edit or live API call.
 Nothing staged, committed or pushed. Owner real Gemini quality/credit usage and
 personal real-media/visual acceptance remain unchecked by policy.
+
+## Owner manual caption acceptance — 2026-10-26
+
+Owner reports that Generate captions worked really well while the normal local
+app remained in fake mode. This accepts the explicit confirmed local Gemini
+caption exception in that manual run. It is real provider transcription, separate
+from the key-free Generate fake captions action; no transcript, media identifier,
+provider payload or credential is recorded here.
+
+This is owner-reported evidence. Agents did not repeat the paid action or make a
+live API call. The report does not measure credit usage or establish hosted
+acceptance, all-source accuracy, word-edit/export acceptance or other paid paths.
+Normal fake-mode editing and fictional caption generation remain key-free;
+the local real-caption exception requires the configured key and explicit
+action-scoped consent. Other real/hosted processing retains its normal live
+flags and applicable approvals.

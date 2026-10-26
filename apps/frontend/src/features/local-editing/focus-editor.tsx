@@ -523,6 +523,7 @@ export function FocusEditor({
             <label>
               Position
               <select
+                className="select-control"
                 aria-label="Person position"
                 value={position.key}
                 onChange={(e) => {
@@ -637,6 +638,7 @@ export function FocusEditor({
             <label>
               Person
               <select
+                className="select-control"
                 ref={newPerson}
                 aria-label="New position person"
                 value={insertion.personId ?? "custom"}
@@ -699,6 +701,7 @@ export function FocusEditor({
           <label>
             Focus on
             <select
+              className="select-control"
               value={shot.personId ?? "custom"}
               onChange={(e) => assignPerson(e.currentTarget.value)}
             >
@@ -716,6 +719,7 @@ export function FocusEditor({
               <label>
                 Position
                 <select
+                  className="select-control"
                   aria-label="Camera position"
                   value={position.key}
                   onChange={(e) => {

@@ -225,25 +225,6 @@
   .youtube-video-title.is-overflowing {
     mask-image: linear-gradient(90deg, #000 92%, transparent);
   }
-  .youtube-resolution-select {
-    position: relative;
-    display: block;
-  }
-  .youtube-resolution-select select {
-    display: block;
-    appearance: none;
-    padding-right: 2.75rem;
-    background: var(--cb-glass-sheen), var(--cb-canvas);
-    box-shadow: var(--cb-glass-edge-shadow);
-  }
-  .youtube-resolution-select > svg {
-    position: absolute;
-    right: 0.9rem;
-    top: 50%;
-    transform: translateY(-50%);
-    pointer-events: none;
-    color: var(--cb-ink-soft);
-  }
   .source-card > p {
     max-width: 32rem;
   }
@@ -365,6 +346,19 @@
   select:focus-visible {
     outline: 3px solid var(--cb-focus);
     outline-offset: 3px;
+  }
+  select.select-control {
+    appearance: none;
+    padding-inline-end: 2.5rem;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--cb-ink-soft) 50%),
+      linear-gradient(135deg, var(--cb-ink-soft) 50%, transparent 50%);
+    background-position:
+      right 1.175rem center,
+      right 0.875rem center;
+    background-repeat: no-repeat;
+    background-size: 0.3rem 0.3rem;
+    text-overflow: ellipsis;
   }
   input:disabled,
   select:disabled {
@@ -1236,11 +1230,19 @@
       gap: 0.85rem 0.65rem;
       align-items: end;
     }
-    .editor-fields :where(input, select) {
+    .editor-fields input {
       padding-inline: 0.55rem;
+    }
+    .editor-fields select {
+      padding-inline-start: 0.55rem;
     }
   }
   @media (forced-colors: active) {
+    select.select-control {
+      appearance: auto;
+      background-image: none;
+      padding-inline-end: 0.85rem;
+    }
     .source-card,
     fieldset,
     .clip-review,

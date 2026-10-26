@@ -1,7 +1,7 @@
 import { Button } from "../../shared/ui/button";
 import { Progress } from "../../shared/ui/progress";
 import { useEffect, useId, useRef, useState } from "react";
-import { ArrowLeft, ChevronDown, Link2, LoaderCircle } from "lucide-react";
+import { ArrowLeft, Link2, LoaderCircle } from "lucide-react";
 import {
   ownerAcquisitionProgressSchema,
   ownerYoutubeOfferSchema,
@@ -427,47 +427,45 @@ export function OwnerAcquisitionPanel({
               {(saved.length > 0 || resolutions.length > 0) && (
                 <label>
                   <span>Resolution</span>
-                  <span className="youtube-resolution-select">
-                    <select
-                      id={resolutionId}
-                      value={choice}
-                      onChange={(event) => setChoice(event.currentTarget.value)}
-                    >
-                      <option value="" disabled>
-                        Select resolution
-                      </option>
-                      {saved.length > 0 && (
-                        <optgroup label="Saved on this device">
-                          {saved.map((entry) => (
-                            <option
-                              key={savedChoice(entry)}
-                              value={savedChoice(entry)}
-                            >
-                              {Math.min(
-                                entry.variant.actual.width,
-                                entry.variant.actual.height,
-                              )}
-                              p · Saved
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
-                      {offer && (
-                        <optgroup label="Available to download">
-                          {resolutions.map((item) => (
-                            <option
-                              key={item.id}
-                              value={item.id}
-                              disabled={!item.supported}
-                            >
-                              {item.tier}p
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
-                    </select>
-                    <ChevronDown size={18} aria-hidden="true" />
-                  </span>
+                  <select
+                    className="select-control"
+                    id={resolutionId}
+                    value={choice}
+                    onChange={(event) => setChoice(event.currentTarget.value)}
+                  >
+                    <option value="" disabled>
+                      Select resolution
+                    </option>
+                    {saved.length > 0 && (
+                      <optgroup label="Saved on this device">
+                        {saved.map((entry) => (
+                          <option
+                            key={savedChoice(entry)}
+                            value={savedChoice(entry)}
+                          >
+                            {Math.min(
+                              entry.variant.actual.width,
+                              entry.variant.actual.height,
+                            )}
+                            p · Saved
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {offer && (
+                      <optgroup label="Available to download">
+                        {resolutions.map((item) => (
+                          <option
+                            key={item.id}
+                            value={item.id}
+                            disabled={!item.supported}
+                          >
+                            {item.tier}p
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
                 </label>
               )}
               {pending === "resolve" || pending === "metadata" ? (
