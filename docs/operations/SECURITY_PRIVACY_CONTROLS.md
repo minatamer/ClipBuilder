@@ -1,5 +1,17 @@
 # Current local safeguard evidence
 
+CL-090 (2026-10-26) supersedes dependency/source-audit claims below for the
+current checkout. See the [current STRIDE report](STRIDE_SECURITY_AUDIT_2026-10-26.md)
+and [owner review HTML](STRIDE_SECURITY_REVIEW_2026-10-26.html). Exact local
+Node 22.23.4 images, Zod 4.6.6 and Next 16.4.1 updates preserve the existing product
+and guards. SEC90-01 remains an unresolved native MP4 vendor/release risk.
+Historical cloud observations below are not current cloud verification; G Cloud
+was not accessed in this audit. Fake/no-key checks prove synthetic integration,
+not live AI quality, owner acceptance or public-release clearance. Preserve the
+current report's future-edit safeguards and explicit outstanding gates.
+
+## Historical 2026-10-07 remediation
+
 Current CL-012 remediation (2026-10-07): the owner approved the
 [local execution and validation](STRIDE_SECURITY_REMEDIATION_2026-10-07.md).
 Nonce-bound verified starts now precede scarce allocation; preview/output/result

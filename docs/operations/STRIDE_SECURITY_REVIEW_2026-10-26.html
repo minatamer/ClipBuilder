@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>ClipBuilder Ã‚Â· Security review Ã‚Â· 26 October 2026</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+        background: #071225;
+        color: #edf3ff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 1100px;
+        margin: auto;
+        padding: 48px 24px;
+      }
+      .eyebrow {
+        color: #9db5e9;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 0.78rem;
+      }
+      h1 {
+        font-size: clamp(2rem, 5vw, 3.4rem);
+        line-height: 1.08;
+        margin: 16px 0;
+      }
+      h2 {
+        margin: 14px 0;
+        font-size: 1.3rem;
+      }
+      p {
+        line-height: 1.6;
+        color: #c4d2ec;
+      }
+      .intro {
+        max-width: 800px;
+      }
+      .notice {
+        border-left: 3px solid #e8b85b;
+        padding: 12px 18px;
+        background: #1b2638;
+        border-radius: 0 12px 12px 0;
+        margin: 28px 0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+      article {
+        padding: 24px;
+        border: 1px solid #314564;
+        background: #10213b;
+        border-radius: 18px;
+      }
+      .badge {
+        display: inline-block;
+        border-radius: 24px;
+        padding: 5px 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        background: #54303e;
+        color: #ffd3da;
+      }
+      .medium {
+        background: #463e26;
+        color: #ffe2a0;
+      }
+      .id {
+        color: #9db5e9;
+        font-size: 0.8rem;
+        margin-left: 8px;
+      }
+      strong {
+        color: #edf3ff;
+      }
+      a {
+        color: #9ec7ff;
+        text-underline-offset: 3px;
+        overflow-wrap: anywhere;
+      }
+      footer {
+        margin-top: 28px;
+        font-size: 0.9rem;
+      }
+      .decision {
+        color: #a8e6cd;
+      }
+      @media (max-width: 650px) {
+        main {
+          padding: 28px 18px;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        article {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">ClipBuilder Ã‚Â· 26 October 2026 Ã‚Â· CL-090</div>
+      <h1>Security review</h1>
+      <p class="intro">
+        Source baseline <strong>cc4c7dc</strong>, after the feature and quality
+        commits. Four issues below, ordered by priority. Local audit and public
+        advisories only; no cloud access, repository upload or paid processing.
+      </p>
+      <div class="notice">
+        <strong>Public release still has an open native-media risk.</strong
+        ><br />Local tests can verify behavior and safeguards. They cannot patch
+        a vendor parser or approve deployment. AFK fix selection is provisional;
+        owner review remains.
+      </div>
+      <div class="grid">
+        <article>
+          <span class="badge">High Ã‚Â· vendor open</span
+          ><span class="id">SEC90-01</span>
+          <h2>A hostile MP4 can crash its media parser</h2>
+          <p>
+            The pinned FFmpeg versions still have a known MP4 metadata issue.
+            Upload limits and timeouts reduce impact, but do not remove it.
+          </p>
+          <p>
+            <strong>Plan:</strong> verify a maintained vendor fix and retest
+            native workflows before public release. No verified drop-in patch is
+            available in this audit; do not silently change video support.
+          </p>
+          <a href="https://security-tracker.debian.org/tracker/CVE-2026-107678"
+            >Vendor status</a
+          >
+        </article>
+        <article>
+          <span class="badge">High upstream Ã‚Â· conditional</span
+          ><span class="id">SEC90-02</span>
+          <h2>Server images need the Node security patch</h2>
+          <p>
+            The audited baseline used Node 22.23.3. The maintained patch fixes
+            serious runtime issues; an app exploit was not demonstrated.
+          </p>
+          <p>
+            <strong>Fixed locally:</strong> pinned verified Node 22.23.4 images,
+            preserve packaging and run local image checks. The owner's global
+            Windows Node update remains separate.
+          </p>
+          <a
+            href="https://nodejs.org/en/blog/vulnerability/october-2026-security-releases"
+            >Node security release</a
+          >
+        </article>
+        <article>
+          <span class="badge medium">Medium Ã‚Â· reproduced</span
+          ><span class="id">SEC90-03</span>
+          <h2>Oversized lists waste validation work</h2>
+          <p>
+            A list capped at 10 still examined 4,096 synthetic items and created
+            20,481 errors. A valid editing session is required; request size is
+            already bounded.
+          </p>
+          <p>
+            <strong>Fixed locally:</strong> updated Zod to 4.6.6 and proved
+            oversized collections stop before reading elements. Keep valid
+            editing and AI acceptance unchanged.
+          </p>
+          <a href="https://github.com/colinhacks/zod/pull/6652"
+            >Maintainer fix</a
+          >
+        </article>
+        <article>
+          <span class="badge medium">Medium Ã‚Â· preventive</span
+          ><span class="id">SEC90-04</span>
+          <h2>Bring Next.js to its security baseline</h2>
+          <p>
+            The current app lacks the vulnerable Server Action/cache patterns
+            and already has patched Sharp. No reachable exploit was confirmed;
+            vendor guidance still recommends updating.
+          </p>
+          <p>
+            <strong>Fixed locally:</strong> aligned Next and its ESLint config
+            to 16.4.1, then verify standalone builds, protected streaming and
+            the editor.
+          </p>
+          <a
+            href="https://nextjs.org/blog/nextjs-security-update-october-14-2026"
+            >Framework security update</a
+          >
+        </article>
+      </div>
+      <footer>
+        <p class="decision" id="execution-status">
+          SEC90-02/03/04 are validated locally. SEC90-01 remains open. Reports
+          preceded AFK selection; owner security and release review remain.
+        </p>
+        <p>
+          Preserve authentication, spending limits, diagnostic privacy,
+          cancellation, cleanup and all editor functionality. Real AI/media
+          quality, rights, owner visual acceptance, actual hosted settings and
+          vendor/native release clearance remain unchecked.
+        </p>
+        <p>
+          <a href="STRIDE_SECURITY_AUDIT_2026-10-26.md"
+            >Detailed evidence, STRIDE coverage and fix plans</a
+          >
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

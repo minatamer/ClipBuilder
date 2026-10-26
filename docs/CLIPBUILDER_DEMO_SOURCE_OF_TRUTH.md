@@ -7787,14 +7787,14 @@ live/provider/rights/cleanup checks are described as complete.
 <!-- build-progress:start -->
 ## Build command progress
 
-Current phase: **10b-security-review**
-Next action: Stage/commit only the separate CL-089 whole-file plan, then prepare audit-only CL-090 security prompt/report before provisional AFK fix selection.
-Active ticket: CL-089
+Current phase: **11-security-fixes**
+Next action: Finish settled read-only validate, write exact CL090 whole-file commit allocation, inspect staged secrets/paths/whitespace and make authorized security commit. Then record final handoff and external/provisional gates.
+Active ticket: CL-090
 Phase prompts: delegated during AFK
 Local commits approved: yes
 
 AFK mode: AFK-SESSION-001
-Provisional owner reviews: 04-decisions, 09-visual-review
+Provisional owner reviews: 04-decisions, 09-visual-review, 10b-security-review
 
 ### AFK decisions
 
@@ -7846,6 +7846,18 @@ Provisional owner reviews: 04-decisions, 09-visual-review
   Reason: Current code confirms resource ownership is forgotten before failed removal and host-close can skip independent upload cleanup. All Dockerfiles invalidate dependency installation on source-only edits.
   Consequence / reversibility: Small reversible local fixes/tests/build-layer edits. No dependency/runtime version, provider budget, AI acceptance or product functionality change. Owner review remains provisional.
   Owner review requested on return: yes. Evidence: docs/tickets/CL-089-current-code-quality-audit.md, docs/operations/CODE_QUALITY_AUDIT_2026-10-26.md
+- **AFK-0013** (AFK-SESSION-001, 2026-10-26T13:42:56+00:00, 10b-security-review): Select exact Node22.23.4 image, Zod4.6.6 and aligned Next/eslint16.4.1 local security updates. Defer SEC90-01 vendor MP4 parser issue and owner/cloud/global tooling actions.
+  Reason: Current source/public vendor evidence and actual bounded-schema reproduction support maintained compatible updates. No verified drop-in native fix is available; redesign/format removal would threaten functionality. Reports were produced first and inspected at1440/390 with four readable cards and no horizontal overflow.
+  Consequence / reversibility: Local reversible patches and fake/network-blocked validation proceed under current Git authorization. Owner personal security/visual/paid acceptance and native vendor/hosted release gates remain open; no deployment or system update.
+  Owner review requested on return: yes. Evidence: docs/operations/STRIDE_SECURITY_AUDIT_2026-10-26.md, docs/operations/STRIDE_SECURITY_REVIEW_2026-10-26.html, docs/tickets/CL-090-current-security-audit.md, ignored evidence: cl090-security-1440.png and cl090-security-390.png inspected
+- **AFK-0014** (AFK-SESSION-001, 2026-10-26T13:58:07+00:00, 11-security-fixes): Repair stale image verification by executing the actual packaged backend bundle; retain source unit coverage for provider-factory approvals. Include Next16.4.1's automatically regenerated frontend AGENTS guidance in the owned file plan if changed.
+  Reason: The actual local image proof reproduced missing unpackaged module imports; the backend intentionally ships only dist/server.js. A corrected network-disabled entrypoint probe passes unchanged route/paid-off checks. Factory assertions already pass in source units. Normal Next startup regenerates its version-owned instruction block.
+  Consequence / reversibility: Verification/helper and generated guidance changes are reversible and do not alter product or expand security fixes. Owner review remains outstanding. The explicit host Node executable was checked22.23.4; no system update was made and the earlier global-version inference is retracted.
+  Owner review requested on return: yes. Evidence: docs/tickets/CL-090-current-security-audit.md, scripts/verify-image-runtime.mjs, apps/frontend/AGENTS.md, OS-temp cl090-backend-runtime.log
+- **AFK-0015** (AFK-SESSION-001, 2026-10-26T14:02:01+00:00, 11-security-fixes): Update the Linux synthetic walkthrough to explicitly create fictional captions and a canvas PNG, test timed Text and derive final geometry/output revision from accepted source-quality behavior.
+  Reason: Current fake preparation intentionally starts without captions/pictures and final exports preserve source height. The older walkthrough assumes automatic content and1080x1920 output, while its first invocation also omitted hosted=true. Reconcile fixture actions, not product defaults or assertions of actual cleanup/binding.
+  Consequence / reversibility: Only opt-in verification changes; no provider credentials, paid action or product gate is added. All fake ports remain injected and container network is disabled. Exact zero image-generation calls, one fake caption request and native/cancel/retry/cleanup counts will be asserted. Owner/native release gates remain.
+  Owner review requested on return: yes. Evidence: docs/tickets/CL-090-current-security-audit.md, scripts/verify-hosted-editing-linux.mjs, apps/backend/local/fake-content.ts, apps/renderer/local/export-profile.ts
 
 - [x] 01-docs — Documentation (complete)
 - [x] 02-flow — Core flow (complete)
@@ -7857,8 +7869,8 @@ Provisional owner reviews: 04-decisions, 09-visual-review
 - [x] 08-performance — Performance investigation (complete_local)
 - [x] 09-visual-review — Frontend visual approval checkpoint (provisional)
 - [x] 10a-quality — Quality audit and fixes (complete_local)
-- [ ] 10b-security-review — Security audit and manual review (pending)
-- [ ] 11-security-fixes — Approved security fixes (pending)
+- [x] 10b-security-review — Security audit and manual review (provisional)
+- [ ] 11-security-fixes — Approved security fixes (in_progress)
 - [ ] 12-handoff — Final local handoff (pending)
 
 This checklist records local work. Human approvals and unresolved external checks are preserved below; it does not authorize paid calls or deployment.
@@ -7868,7 +7880,7 @@ This checklist records local work. Human approvals and unresolved external check
   "schema_version": 3,
   "repo_root": "C:\\Users\\minat\\Work\\ClipBuilder",
   "main_document": "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
-  "updated_at": "2026-10-26T13:26:35+00:00",
+  "updated_at": "2026-10-26T14:14:52+00:00",
   "context": {
     "PROJECT_NAME": {
       "value": "ClipBuilder",
@@ -8106,6 +8118,54 @@ This checklist records local work. Human approvals and unresolved external check
           "docs/tickets/CL-089-current-code-quality-audit.md",
           "docs/operations/CODE_QUALITY_AUDIT_2026-10-26.md"
         ]
+      },
+      {
+        "id": "AFK-0013",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-26T13:42:56+00:00",
+        "phase": "10b-security-review",
+        "choice": "Select exact Node22.23.4 image, Zod4.6.6 and aligned Next/eslint16.4.1 local security updates. Defer SEC90-01 vendor MP4 parser issue and owner/cloud/global tooling actions.",
+        "rationale": "Current source/public vendor evidence and actual bounded-schema reproduction support maintained compatible updates. No verified drop-in native fix is available; redesign/format removal would threaten functionality. Reports were produced first and inspected at1440/390 with four readable cards and no horizontal overflow.",
+        "consequence": "Local reversible patches and fake/network-blocked validation proceed under current Git authorization. Owner personal security/visual/paid acceptance and native vendor/hosted release gates remain open; no deployment or system update.",
+        "review_needed": true,
+        "evidence": [
+          "docs/operations/STRIDE_SECURITY_AUDIT_2026-10-26.md",
+          "docs/operations/STRIDE_SECURITY_REVIEW_2026-10-26.html",
+          "docs/tickets/CL-090-current-security-audit.md",
+          "ignored evidence: cl090-security-1440.png and cl090-security-390.png inspected"
+        ]
+      },
+      {
+        "id": "AFK-0014",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-26T13:58:07+00:00",
+        "phase": "11-security-fixes",
+        "choice": "Repair stale image verification by executing the actual packaged backend bundle; retain source unit coverage for provider-factory approvals. Include Next16.4.1's automatically regenerated frontend AGENTS guidance in the owned file plan if changed.",
+        "rationale": "The actual local image proof reproduced missing unpackaged module imports; the backend intentionally ships only dist/server.js. A corrected network-disabled entrypoint probe passes unchanged route/paid-off checks. Factory assertions already pass in source units. Normal Next startup regenerates its version-owned instruction block.",
+        "consequence": "Verification/helper and generated guidance changes are reversible and do not alter product or expand security fixes. Owner review remains outstanding. The explicit host Node executable was checked22.23.4; no system update was made and the earlier global-version inference is retracted.",
+        "review_needed": true,
+        "evidence": [
+          "docs/tickets/CL-090-current-security-audit.md",
+          "scripts/verify-image-runtime.mjs",
+          "apps/frontend/AGENTS.md",
+          "OS-temp cl090-backend-runtime.log"
+        ]
+      },
+      {
+        "id": "AFK-0015",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-26T14:02:01+00:00",
+        "phase": "11-security-fixes",
+        "choice": "Update the Linux synthetic walkthrough to explicitly create fictional captions and a canvas PNG, test timed Text and derive final geometry/output revision from accepted source-quality behavior.",
+        "rationale": "Current fake preparation intentionally starts without captions/pictures and final exports preserve source height. The older walkthrough assumes automatic content and1080x1920 output, while its first invocation also omitted hosted=true. Reconcile fixture actions, not product defaults or assertions of actual cleanup/binding.",
+        "consequence": "Only opt-in verification changes; no provider credentials, paid action or product gate is added. All fake ports remain injected and container network is disabled. Exact zero image-generation calls, one fake caption request and native/cancel/retry/cleanup counts will be asserted. Owner/native release gates remain.",
+        "review_needed": true,
+        "evidence": [
+          "docs/tickets/CL-090-current-security-audit.md",
+          "scripts/verify-hosted-editing-linux.mjs",
+          "apps/backend/local/fake-content.ts",
+          "apps/renderer/local/export-profile.ts"
+        ]
       }
     ]
   },
@@ -8115,8 +8175,8 @@ This checklist records local work. Human approvals and unresolved external check
     "local_commits_approved": true,
     "approval_source": "human:2026-10-24-current-build-audit-message"
   },
-  "active_ticket": "CL-089",
-  "next_action": "Stage/commit only the separate CL-089 whole-file plan, then prepare audit-only CL-090 security prompt/report before provisional AFK fix selection.",
+  "active_ticket": "CL-090",
+  "next_action": "Finish settled read-only validate, write exact CL090 whole-file commit allocation, inspect staged secrets/paths/whitespace and make authorized security commit. Then record final handoff and external/provisional gates.",
   "phases": [
     {
       "id": "01-docs",
@@ -8519,17 +8579,29 @@ This checklist records local work. Human approvals and unresolved external check
       "id": "10b-security-review",
       "name": "Security audit and manual review",
       "gate": "security",
-      "status": "pending",
-      "prompt": null,
+      "status": "provisional",
+      "prompt": {
+        "text": "Audit the current ClipBuilder primary checkout after ca10def (CL-084–088) and cc4c7dc (CL-089). The owner's 2026-10-26 request delegates security/quality audits and ordinary local fixes in AFK execute/validate loops, with separate file-level plans and authorized local commits. Keep one dependency-ready packet CL-090. First audit only: review the complete current local/hosted upload-to-moments/shared-editor-to-explicit-MP4 workflow, new deferred rendering and timed Text/AI defaults, authentication/session/cookie/CSRF/source/revision binding, acquisition and hosted exclusions, upload/media/range/file handling, metered AI and native resource/cancellation/cleanup bounds, Gemini critique-only acceptance, diagnostic privacy, fixed React composition, subprocess/protocol safety, build contexts and dependency/runtime advisories. Use STRIDE plus substantial generally applicable threats; do not list minor speculative hardening or call intentional finite single-instance demo scope a defect. Distinguish current source evidence from historical isolated audit claims and actual deployed configuration that is unverified. Consult only public primary advisory metadata without sending repository/source/dependency inventories; no scanner export, G Cloud, credentials or paid requests. Produce detailed Markdown and concise severity-ranked PM HTML with actual finding IDs, reachability/preconditions, evidence, functionality-preserving fix plans, non-findings and honest external limits. Inspect the HTML at desktop and phone sizes. Before implementation record provisional AFK selection of justified actual findings, defer unsafe/vendor/cloud/owner-only work, then prepare phase11 for scoped fixes. Tests use synthetic source-controlled/generated media, hardcoded fake/no-key/paid-off/live-false before imports and network/env-file guards; never trigger owner's paid caption exception or retained-media use. Preserve private backend diagnostics, generic UI errors, current functionality, design/motion, exact metered counts, no automatic provider retries, retained sources and the running fake/cloud-off normal stack. Never read ignored env/secret files. Keep all progress in the existing source-of-truth ledger. No push/deploy/cloud changes or system runtime update. Finish reports before implementation; execute/read-only validate/fix loops and cohesive commits follow recorded finding selection under the current Git grant.",
+        "sha256": "8fb0152404d5bead885725438aeaee85ed0901d497356f6a8ceeb3be56a5e301",
+        "context_sources": [
+          "AGENTS.md",
+          "docs/tickets/CL-088-fake-mode-verification-and-commit.md",
+          "docs/tickets/CL-089-current-code-quality-audit.md",
+          "human:2026-10-26-current-request"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
       "evidence": [
-        "audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md",
-        "audit-worktree:docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html",
-        "audit-worktree:docs/tickets/CL-065-post-deployment-pre-sharing-security.md",
-        "local HTML 1440/390 px, no horizontal overflow, four cards; bounded Zod input visits4096elements despite maximum10"
+        "docs/operations/STRIDE_SECURITY_AUDIT_2026-10-26.md",
+        "docs/operations/STRIDE_SECURITY_REVIEW_2026-10-26.html",
+        "docs/tickets/CL-090-current-security-audit.md",
+        "ignored evidence: cl090-security-1440.png and cl090-security-390.png inspected"
       ],
       "blockers": [],
       "approval": null,
-      "decision": null,
+      "decision": "selected-fixes",
       "reviews": [
         {
           "afk_review": {
@@ -8558,26 +8630,51 @@ This checklist records local work. Human approvals and unresolved external check
           },
           "prior_approval": null,
           "prior_decision": "selected-fixes"
+        },
+        {
+          "afk_review": {
+            "session_id": "AFK-SESSION-001",
+            "decision_id": "AFK-0013",
+            "recorded_at": "2026-10-26T13:42:56+00:00"
+          },
+          "decision": "selected-fixes"
         }
       ],
       "selected_findings": [
-        "SEC-01",
-        "SEC-02",
-        "SEC-03"
-      ]
+        "SEC90-02",
+        "SEC90-03",
+        "SEC90-04"
+      ],
+      "afk_review": {
+        "session_id": "AFK-SESSION-001",
+        "decision_id": "AFK-0013",
+        "recorded_at": "2026-10-26T13:42:56+00:00"
+      }
     },
     {
       "id": "11-security-fixes",
       "name": "Approved security fixes",
       "gate": null,
-      "status": "pending",
-      "prompt": null,
+      "status": "in_progress",
+      "prompt": {
+        "text": "Execute CL-090 findings SEC90-02, SEC90-03 and SEC90-04 only in the current primary ClipBuilder checkout after cc4c7dc. The detailed security audit and PM HTML exist, desktop/phone rendering was inspected and provisional AFK selection records these actual IDs. Owner personal review remains outstanding. Use exact compatible Zod4.6.6 in all four owning packages and lockfile, exact Next/eslint-config-next16.4.1 together with React unchanged, and verified official node:22.23.4-bookworm-slim Linux/amd64 digest ea11b74b986d520137cdef9a5346e447a00f275ecc4abc0055b7151226231e09 in all three app Dockerfiles. Verify cache/registry identities and binary versions rather than trusting historical isolated artifacts. Before substantial edits allocate every file in CL-090. First add and run a meaningful actual Text/operation bounded-collection regression against unchanged Zod to prove excessive traversal; update the dependency and require early rejection with zero element reads and valid document compatibility. Preserve one canonical schema, provider semantic critique-only acceptance, no automatic retries, paid-work reuse, upload/editor/preview/native export behavior, all diagnostics and generic UI errors, exact session/origin/revision/source binding, fixed resource limits, cancellation and cleanup. Keep quality dependency-cache layers, fixed tools, Bookworm/ABI, non-root identity and release artifact boundaries. Read pinned Next guides before frontend edits. Fetch only public required packages/images, preferring cached/offline resolution, never audit/scanner uploads or credentials. All actual application checks must install fake/no-key/paid-off/live-false and env-file/external-network guards before imports with generated media. Build source-only current artifacts without ignored env or retained owner media. Run focused regressions, required lint/type/format/unit/local checks, then actual local image/runtime and current synthetic browser/native proofs appropriate to framework/schema/runtime updates; inspect bounds/cleanup/owned processes and keep inherited Linux/vendor limits honest. Perform a separate read-only validate pass of the settled complete diff, independently confirm and fix actual findings and repeat to no actionable local findings. Do not implement SEC90-01 vendor parser work, add speculative hardening, update the global Windows Node runtime, change G Cloud resources, deploy, push, trigger any provider/paid/real YouTube call, or read/alter ignored env. Use verified lifecycle ownership to rebuild/reload current normal worker after contracts/runtime changes and leave the app reachable at localhost3000/start with synthetic-ai/cloud=false. After clean validation write the exhaustive CL-090 whole-file commit plan, inspect exact staged files/content and make the authorized cohesive local commit. Finish canonical handoff showing actual evidence and unresolved native/hosted/owner/paid/rights/provisional reviews; never call local completion a public release clearance.",
+        "sha256": "8ae84ec56abb78fd201e1e0de0caeb6b33ccd7abc3a97f79ca6fb564dfccb045",
+        "context_sources": [
+          "AGENTS.md",
+          "docs/tickets/CL-090-current-security-audit.md",
+          "docs/operations/STRIDE_SECURITY_AUDIT_2026-10-26.md",
+          "docs/operations/STRIDE_SECURITY_REVIEW_2026-10-26.html",
+          "human:2026-10-26-current-request"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
       "evidence": [
-        "audit-worktree:commit:c1d7169",
-        "audit-worktree:commit:50521d8",
-        "audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md",
-        "audit-worktree:docs/operations/STRIDE_SECURITY_EVIDENCE_2026-10-24.json",
-        "1785 tests/169files plus lint/types/format pass; actual three Node22.23.4 images and offline probes pass; current Windows/Linux synthetic editor/export/cancel/retry/cleanup proofs pass, no external attempts; final readonly validation clean for selected scope"
+        "docs/tickets/CL-090-current-security-audit.md",
+        "docs/operations/STRIDE_SECURITY_AUDIT_2026-10-26.md",
+        "docs/operations/STRIDE_SECURITY_REVIEW_2026-10-26.html",
+        "final full gates: format/lint/types;146root+1728package and604local;4focused final schema/packaging cases; actual3patched images/runtime probes; WindowsText2cases; Linux shared and independently network-isolated legacy native proofs pass; no external processing attempts"
       ],
       "blockers": [
         {

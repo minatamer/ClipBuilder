@@ -1,6 +1,19 @@
 # ClipBuilder canonical ticket index
 
-## Current quality audit — 2026-10-26
+## Current security audit â€” 2026-10-26
+
+[CL-090](CL-090-current-security-audit.md) follows committed quality `cc4c7dc`.
+The full [STRIDE report](../operations/STRIDE_SECURITY_AUDIT_2026-10-26.md) and
+[PM HTML](../operations/STRIDE_SECURITY_REVIEW_2026-10-26.html) preceded
+provisional AFK selection. SEC90-02/03/04 exact Node/Zod/Next updates and stale
+proof-helper corrections are locally validated:146 root+ 1,728 package unit cases,
+604 local cases, lint/types/format, all three actual patched image/runtime checks,
+current Windows Text browser/native and Linux shared/legacy native proofs.
+SEC90-01's vendor MP4 risk and actual hosted/owner/paid/rights/visual acceptance
+remain open. A separate whole-file security plan owns the authorized local
+commit. No provider/cloud/scanner export, push or deployment.
+
+## Current quality audit â€” 2026-10-26
 
 [CL-089](CL-089-current-code-quality-audit.md) follows committed current work
 `ca10def`. Reproduced independent/retryable hosted upload cleanup and lockfile-first
@@ -11,7 +24,7 @@ features, diagnostics and bounds; synthetic fake/paid-off checks only. Separate
 file-level quality commit precedes CL-090 security. No provider/cloud/push/deploy
 or scanner metadata export; owner paid/visual/hosted release gates remain open.
 
-## Final fake-mode verification and commit — 2026-10-26
+## Final fake-mode verification and commit â€” 2026-10-26
 
 [CL-088](CL-088-fake-mode-verification-and-commit.md) is locally validated under
 renewed owner authorization: 599 local cases, exact full unit gate (144 root +
@@ -24,7 +37,7 @@ security AFK execute/validate loops, each with a separate file allocation. No
 provider/cloud call, ignored env inspection, metadata export, push or deployment.
 Real AI quality and owner visual/hosted/release acceptance remain unchecked.
 
-## AI title and preparation defaults — 2026-10-26
+## AI title and preparation defaults â€” 2026-10-26
 
 [CL-087](CL-087-ai-titles-defaults-and-preparation-stages.md) is locally validated
 after CL-086: one-request editable AI top title, TikTok caption/text defaults, picture
@@ -36,7 +49,7 @@ The current worker is rebuilt/reloaded and normal app remains fake/cloud-off.
 Owner personal visual, real-AI/media and actual hosted/release acceptance remain
 pending; no paid/cloud/Git action occurred.
 
-## Timed text and typography — 2026-10-26
+## Timed text and typography â€” 2026-10-26
 
 [CL-086](CL-086-timed-text-and-shared-typography.md) is locally validated: Text tab with
 bounded independent layers, timing/position and shared caption/text typography,
@@ -48,7 +61,7 @@ focused units, 27 boundaries and two actual synthetic browser/native proof cases
 pass; types/lint/format and read-only validation pass. Owner visual/real-media/
 hosted acceptance remains pending. No paid/cloud/Git action.
 
-## Review moment cards — 2026-10-26
+## Review moment cards â€” 2026-10-26
 
 [CL-085](CL-085-review-moment-cards.md) is locally validated: manual/AI result cards gain
 Jump to source playback, duration and Remove, replacing selection toggles with
@@ -59,7 +72,7 @@ proof pass, including exact playback jumps, removal/focus/tabs, capacity and
 desktop/390/320 geometry. Types/lint/format and read-only validation pass with no
 actionable findings. Owner visual/real-media/hosted acceptance remains pending.
 
-## Preview-first export on demand — 2026-10-26
+## Preview-first export on demand â€” 2026-10-26
 
 [CL-084](CL-084-preview-first-export-on-demand.md) implements preview-first
 preparation and explicit export, preserving AI, all editor features and current
@@ -72,7 +85,7 @@ rebuilt/reloaded with existing provider-ai configuration; frontend preserved.
 Owner real-mode/visual and hosted/cost acceptance remain unchecked. G Cloud and
 resource allocation are proposal-only: no access, changes, paid calls or Git action.
 
-## Shared dropdown arrow inset — 2026-10-26
+## Shared dropdown arrow inset â€” 2026-10-26
 
 [CL-083](CL-083-shared-dropdown-arrow-inset.md) applies one select class and inset
 across all 13 caption/picture/focus/resolution controls. Frontend types,
@@ -81,7 +94,7 @@ pass, including keyboard/disabled/forced-color states. Owner local real-caption
 success is recorded in CL-078. No backend restart or paid call; personal visual
 acceptance remains manual.
 
-## Long empty-overlay rendering — 2026-10-26
+## Long empty-overlay rendering â€” 2026-10-26
 
 [CL-082](CL-082-local-worker-render-failure.md) fixes Windows' per-file hardlink
 limit reached by long identical overlay runs, including default-empty fake clips.
@@ -91,7 +104,7 @@ final readiness verification pass; app remains fake with caption generation
 available. Owner should refresh/reopen after reload. Real-media/visual and Gemini
 acceptance remain manual. No provider calls or Git mutation.
 
-## Manual clip duration — 2026-10-26
+## Manual clip duration â€” 2026-10-26
 
 [CL-081](CL-081-manual-clip-duration-limit.md) caps new manual submissions at
 60 seconds in fake/local/hosted modes while preserving legacy saved results and
@@ -100,7 +113,7 @@ local/no-Node contract types, lint/format and read-only validation pass. Current
 backend/worker rebuilt and reloaded; frontend preserved. Owner visual/live
 acceptance remains manual; no paid call, cloud change or Git mutation.
 
-## Fake-mode manual clip default — 2026-10-26
+## Fake-mode manual clip default â€” 2026-10-26
 
 [CL-080](CL-080-fake-mode-manual-clips-default.md) changes only the initial
 Suggest clips preference: unchecked for synthetic AI, checked for provider AI.
@@ -109,7 +122,7 @@ lint/format and current-source fake/local-provider/hosted-provider markup checks
 pass. The broad design proof stops at intake before selection; owner visual
 acceptance remains manual. Fake mode needs no keys; live approvals are unchanged.
 
-## Transparent picture overlays — 2026-10-25
+## Transparent picture overlays â€” 2026-10-25
 
 [CL-079](CL-079-transparent-picture-overlays.md) preserves uploaded PNG/WebP alpha
 through normalization, trusted format metadata, delivery, drafts and native video
@@ -119,7 +132,7 @@ worker/overlay were rebuilt and the backend reloaded, retaining fake mode and
 the frontend. No actionable findings. Older flattened
 uploads require re-uploading the original once. No live API calls or Git mutation.
 
-## Empty captions, explicit generation and word correction — 2026-10-25
+## Empty captions, explicit generation and word correction â€” 2026-10-25
 
 [CL-078](CL-078-caption-generation-and-word-editing.md) implements default-empty
 fake clips, retires automatic fake Earth art, adds explicit local fake captions
@@ -133,7 +146,7 @@ well while fake mode stayed on. Other real-media/export, spend measurement and
 hosted acceptance remain manual. Agent checks used no live API calls;
 no configuration edits, deployment or Git mutation.
 
-## Picture timing Capture — 2026-10-25
+## Picture timing Capture â€” 2026-10-25
 
 [CL-077](CL-077-picture-timing-capture.md) adds Capture beside picture Start/End,
 using the settled preview frame and existing saved/exported timing. Verification
@@ -143,7 +156,7 @@ rewinds. Types/lint/format and read-only review pass with no actionable findings
 Fake/paid-off synthetic checks only; no owner media, API calls or Git mutation.
 Owner personal visual acceptance remains manual.
 
-## Person selector before Add position — 2026-10-25
+## Person selector before Add position â€” 2026-10-25
 
 [CL-076](CL-076-confirm-position-person.md) makes Add position ask for a person
 first, defaulted to the highlighted row. Confirm inserts directly below that row;
@@ -153,7 +166,7 @@ proofs pass, including desktop/390/320, zero playback rewinds and actual MP4
 timing/zoom. Final review has no actionable findings; owner visual acceptance
 remains manual. No provider/schema/worker change, restart or Git mutation.
 
-## Large local picked-video uploads — 2026-10-25
+## Large local picked-video uploads â€” 2026-10-25
 
 [CL-075](CL-075-large-local-video-upload.md) fixes Next document-Proxy truncation
 of local video uploads above 10 MB. Only the raw video-open route skips body
@@ -162,7 +175,7 @@ an actual isolated Next transfer of 64 MiB + 37 bytes pass with exact hash/lengt
 and clean teardown. Running app picked up the matcher in fake mode; no restart,
 owner upload, provider call or Git mutation. Owner actual-file retry remains manual.
 
-## Remove footer mode/status identity — 2026-10-25
+## Remove footer mode/status identity â€” 2026-10-25
 
 [CL-074](CL-074-remove-footer-mode-status.md) removes the mode label/icon and all
 its footer variants permanently by owner decision. Start over and workflow
@@ -170,7 +183,7 @@ actions remain; no mode, approval or provider behavior changes.
 Existing synthetic footer/reset proof, frontend types/lint/format and final
 read-only validation pass. No actionable findings or Git mutation.
 
-## Visible footer Start over — 2026-10-25
+## Visible footer Start over â€” 2026-10-25
 
 [CL-073](CL-073-footer-start-over.md) moves Start over directly into the shared
 workspace footer, including dirty editing. It clears the current session through
@@ -180,7 +193,7 @@ dirty reset, moment selection, pending/active guards and failure/retry/discard.
 Types/lint/format pass; final validation has no actionable findings. Owner visual
 acceptance remains manual. No backend change, paid call, restart or Git mutation.
 
-## Independent camera positions — 2026-10-25
+## Independent camera positions â€” 2026-10-25
 
 [CL-072](CL-072-independent-camera-positions.md) implements the owner's revision:
 Camera / People, with Timing / Advanced inside Camera; every position owns
@@ -191,7 +204,7 @@ browser/native proofs pass, including added-position MP4 output and continuous
 playback at desktop/390/320. Final review has no actionable findings; no new
 schema, provider call or backend restart. Owner visual acceptance remains manual.
 
-## Focus playback regression — 2026-10-25
+## Focus playback regression â€” 2026-10-25
 
 [CL-071](CL-071-focus-preview-continuous-playback.md) is implemented and locally
 validated. Focus playhead updates are isolated from the Player's input props;
@@ -203,7 +216,7 @@ format checks pass; final validation has no actionable findings. App remains
 in fake mode without a restart or provider calls. Owner actual-clip confirmation
 remains manual; export quality and other pending changes are preserved.
 
-## Export source quality — 2026-10-25
+## Export source quality â€” 2026-10-25
 
 [CL-070](CL-070-export-resolution-and-quality-audit.md) is implemented and locally
 validated in the normal shared editor/native path. Exports always stay vertical,
@@ -216,7 +229,7 @@ findings. Owner real-media acceptance, new Linux/max-capacity verification and
 the retired separate renderer remain outside this local verdict. No paid call,
 cloud change or Git mutation.
 
-## Focus editor position UX — 2026-10-25
+## Focus editor position UX â€” 2026-10-25
 
 [CL-069](CL-069-focus-editor-positions-and-capture.md) is implemented and locally
 validated: every camera change has a position label; People has visual framing;
@@ -227,7 +240,7 @@ Scope/selection and inherited handle-box review findings are resolved; final
 read-only validation has no actionable findings. No provider/schema change.
 Owner live/visual acceptance remains manual; CL-070 quality correction is separate.
 
-## Automatic and manual person focus — 2026-10-25
+## Automatic and manual person focus â€” 2026-10-25
 
 [CL-068](CL-068-automatic-and-manual-person-focus.md) is implemented and locally
 validated: automatic portrait fill/held speaker framing plus a bounded Focus
@@ -242,7 +255,7 @@ The person-removal follow-up is also verified: per-row Remove buttons, synced
 selection and final-appearance protection pass the synthetic desktop/phone
 editor regression. The owner canceled the separate opening-frame investigation.
 
-## Intake preview and upload area — 2026-10-25
+## Intake preview and upload area â€” 2026-10-25
 
 [CL-067](CL-067-intake-preview-and-upload-area.md) adds decoded-frame readiness
 and bounded fallback to saved thumbnails, removes fitting-card overflow and adds
@@ -256,7 +269,7 @@ blank-looking thumbnail; sampling now uses ten seconds, capped at a quarter of
 short clips. The same saved source decodes at the new clock in the normal app;
 its master remains unchanged and the generated blank-intro regression passes.
 
-## Source transcription reuse — 2026-10-25
+## Source transcription reuse â€” 2026-10-25
 
 [CL-066](CL-066-reuse-source-transcription.md) implements the owner's selected
 Gemini saving: reuse completed, source/revision/mode-bound transcription across
@@ -270,7 +283,7 @@ mutation/race/cancel/restore-mode regressions and **119 focused synthetic tests*
 pass. Source words remain isolated from result/caption/selection edits; the
 workflow guide explains POST call counts and backend-log verification.
 
-## Current local release verification — 2026-10-24
+## Current local release verification â€” 2026-10-24
 
 [CL-063](CL-063-local-hosted-release-verification.md) checks the prepared images
 and hosted pipeline on local Linux Docker: both images build; offline frontend
@@ -285,7 +298,7 @@ whole-file allocation is in [the commit plan](../operations/CL058_063_COMMIT_PLA
 Local commits are authorized; push, deployment and paid/provider/cloud calls are
 not. Personal visual/release acceptance remains with the owner.
 
-## Current loading-state design — 2026-10-24
+## Current loading-state design â€” 2026-10-24
 
 [CL-062](CL-062-designed-loading-states.md) is implemented and locally validated:
 larger centered branded animation for clip/workspace waits, with acknowledged
@@ -295,18 +308,18 @@ browser proof pass; desktop/phone loading, failure/Retry and keyboard states
 inspected. Shared editor work from CL-061 is implemented; Linux/cloud acceptance
 remains a separate release gate. No paid calls, deployment or Git mutation.
 
-## Current shared upload/editor release preparation — 2026-10-24
+## Current shared upload/editor release preparation â€” 2026-10-24
 
 [CL-061](CL-061-shared-hosted-upload-editor.md) is implemented and locally validated:
 one normal upload/moments/editor workflow, with only YouTube acquisition local-only.
 Hosted session/identity/CSRF, bounded chunked upload and internal native packaging
 are prepared. **1,767 synthetic tests**, types/lint/format and actual synthetic
-browser/native upload→edit→export proof pass. Local apps/saved paid work preserved.
+browser/native uploadâ†’editâ†’export proof pass. Local apps/saved paid work preserved.
 Linux image/resource/cloud acceptance remains unchecked before an owner release;
 the existing deployed revision is unchanged. Never deploy, and no credit-consuming
 tests until new explicit approval. Earlier hosted no-editor scope is superseded.
 
-## Current permanent Gemini acceptance and retry — 2026-10-24
+## Current permanent Gemini acceptance and retry â€” 2026-10-24
 
 [CL-060](CL-060-advisory-gemini-validation-and-clip-retry.md) is implemented and
 locally validated: local Gemini quality checks log critiques and continue, and
@@ -317,7 +330,7 @@ and worker restarted in real mode; saved paid session and successful export
 restored, frontend/configuration preserved. No fresh paid retry or Git mutation;
 real quality and owner retry acceptance remain manual.
 
-## Current real moment discovery check — 2026-10-24
+## Current real moment discovery check â€” 2026-10-24
 
 [CL-059](CL-059-real-local-moment-discovery.md) is implemented/validated under the
 owner's explicit live-test authorization. The pre-fix request exposed local
@@ -329,7 +342,7 @@ successful run. Results retrieved again without another dispatch; backend and
 worker rebuilt/restarted, frontend preserved. No new download, automatic retry,
 deployment or Git mutation. Broader quality/export acceptance remains separate.
 
-## Current local diagnostics — 2026-10-24
+## Current local diagnostics â€” 2026-10-24
 
 [CL-058](CL-058-local-workflow-diagnostics.md) is implemented/validated: safe
 correlated diagnostics across local analysis, provider/native work, background
@@ -340,17 +353,17 @@ available** checks pass; frontend remains running. Real Gemini retry stays
 owner-manual. No agent-run paid flow or Git mutation; saved configuration,
 media and logs remain preserved. The old failure cannot be diagnosed retroactively.
 
-## Owner Git handoff — 2026-10-24
+## Owner Git handoff â€” 2026-10-24
 
-The owner authorized staging and committing all pending CL-054–057 changes in
+The owner authorized staging and committing all pending CL-054â€“057 changes in
 whole-file commits, with no push. This supersedes the earlier no-Git/unstaged
 statements, which record the implementation-time state. Handoff groups:
 
-- `ebe89df`: six frontend files — completed-state/preview readiness, vertical
+- `ebe89df`: six frontend files â€” completed-state/preview readiness, vertical
   clip rail, active-category selection guides and compact responsive layout.
-- `241897f`: eight backend files — manual exclusions, free-window fitting,
+- `241897f`: eight backend files â€” manual exclusions, free-window fitting,
   fake/provider discovery and focused regression tests.
-- `f4e6d65`: three proof files — synthetic host, browser and native regressions.
+- `f4e6d65`: three proof files â€” synthetic host, browser and native regressions.
 - Final documentation commit: nine owning guides, instructions, authority and
   ticket/index files recording the decisions and existing validation evidence.
 
@@ -358,7 +371,7 @@ No implementation changed during this handoff. Existing fake/paid-off tests and
 native/browser proof remain the evidence; live-provider and owner-media checks
 are still unverified. No real download, paid processing, deployment or push.
 
-## Current manual exclusions — 2026-10-23
+## Current manual exclusions â€” 2026-10-23
 
 [CL-057](CL-057-reserve-manual-clips-before-ai-discovery.md) reserves manual
 timestamps before AI discovery and enforces zero overlap in the combined list.
@@ -366,21 +379,21 @@ Implemented/validated: 472 local tests, affected types/lint/format and generated
 native/browser export proof pass. Structured exclusions keep full transcript
 context; final duration padding stays outside manual time, eligible suggestions
 alone count, and impossible discovery skips its call. Exact final fake counts
-5/3/5/5, native peak one, no survivors. CL-054–056 remain intact; the owner has
+5/3/5/5, native peak one, no survivors. CL-054â€“056 remain intact; the owner has
 authorized the whole-file Git handoff above.
 Live AI/owner-media acceptance remains unchecked. See CL-057 for the proof's
 transient timeout and successful rerun evidence.
 
-## Current compact editor fit — 2026-10-23
+## Current compact editor fit â€” 2026-10-23
 
 [CL-056](CL-056-fit-collapsed-editor-to-available-space.md) fits the collapsed
 editor to the available workflow height and removes excess top spacing while
 retaining normal overflow for expanded controls. Implemented/validated: affected
 types/lint/format and fake/native browser proof pass. Both collapsed caption
-views fit 1366×682, 1280×600 and 1440×900 without scrolling; expanded geometry
-remains reachable at 960×600. Prior uncommitted CL-054/055 changes are preserved.
+views fit 1366Ã—682, 1280Ã—600 and 1440Ã—900 without scrolling; expanded geometry
+remains reachable at 960Ã—600. Prior uncommitted CL-054/055 changes are preserved.
 
-## Current preview selection guides — 2026-10-23
+## Current preview selection guides â€” 2026-10-23
 
 [CL-055](CL-055-scope-preview-guides-to-active-setting.md) scopes caption/picture
 outlines and handles to their active setting, with a clean Filters preview.
@@ -388,7 +401,7 @@ Implemented/validated: affected types/lint/format and the synthetic browser/nati
 proof pass, including unchanged video identity and drag/dirty/readiness behavior.
 Preserves the completed, uncommitted CL-054 readiness/left-rail work.
 
-## Current editor readiness and clip rail — 2026-10-23
+## Current editor readiness and clip rail â€” 2026-10-23
 
 [CL-054](CL-054-gate-editor-readiness-and-use-vertical-clip-tabs.md) hides editing
 until processing and initial preview loading finish, and moves clip selection
@@ -397,26 +410,26 @@ types/lint/format, synthetic browser/native export/decode proof and inspected
 1440/390/320 layouts pass; no surviving owned resources. Normal app remains
 fake AI/cloud-off. No new Git action, live AI, real download or deployment.
 
-## Local flow design audit — 2026-10-23
+## Local flow design audit â€” 2026-10-23
 
 Owner-authorized sequence: [CL-050 clean flow](CL-050-clean-local-flow-and-editor.md)
-→ [CL-051 captions](CL-051-caption-position-and-social-styles.md)
-→ [CL-052 pictures/fake content](CL-052-pictures-and-realistic-fake-content.md)
-→ [CL-053 integrated regression](CL-053-local-flow-audit-regression.md).
+â†’ [CL-051 captions](CL-051-caption-position-and-social-styles.md)
+â†’ [CL-052 pictures/fake content](CL-052-pictures-and-realistic-fake-content.md)
+â†’ [CL-053 integrated regression](CL-053-local-flow-audit-regression.md).
 The full issue-to-change audit is recorded in CL-050 before implementation.
 Execute/validate/fix each packet in order; synthetic fake/paid-off checks only.
 No Git mutations or external processing are authorized by this sequence.
-CL-050–053 implemented/validated. CL-053 final evidence and owner-only limits
+CL-050â€“053 implemented/validated. CL-053 final evidence and owner-only limits
 are recorded in its packet. The normal app is refreshed with fake AI/cloud-off;
 no separate app, Git mutation or deployment.
 
-Owner Git handoff (2026-10-23): all pending CL-028–053 changes are now authorized
+Owner Git handoff (2026-10-23): all pending CL-028â€“053 changes are now authorized
 for staging and commits under the [four-group whole-file plan](CL-053-COMMIT_PLAN.md).
 This later authorization supersedes the earlier no-Git boundary for this handoff;
 push, deployment and external processing remain excluded. Existing validation
 and all owner-only acceptance limits remain as recorded in CL-053/CL-025.
 
-## Current editor playback failure recovery — 2026-10-23
+## Current editor playback failure recovery â€” 2026-10-23
 
 [CL-049](CL-049-handle-editor-preview-playback-failure.md) handles the uncontained
 video error behind the fake-mode developer overlay and adds explicit preview-only
@@ -427,7 +440,7 @@ Read-only current-clip checks confirm fake AI/cloud-off and successful browser
 decode/seek/play for both existing clips; no media captured. Original event trigger
 remains unknown; verified unhandled-event and developer-overlay paths are fixed.
 
-## Current clip input and result tabs — 2026-10-23
+## Current clip input and result tabs â€” 2026-10-23
 
 [CL-048](CL-048-switch-between-clip-inputs-and-results.md) replaces appended
 results with Add clips / Your clips tabs and selects completed clips by default.
@@ -436,7 +449,7 @@ including deselection, keyboard and three-size layout checks. Inputs/choices,
 existing limits and footer ownership are preserved. The permanent view rule is
 in AGENTS.md. Fake AI needs no API keys; zero external calls.
 
-## Current manual clock entry and preview capture — 2026-10-23
+## Current manual clock entry and preview capture â€” 2026-10-23
 
 [CL-047](CL-047-normalize-manual-times-and-capture-preview.md) carries overflowing
 manual clock parts and adds a current-preview-time capture action to each Start
@@ -445,14 +458,14 @@ including per-row capture, availability/busy guards, canonical submission and
 three responsive sizes. Types/lint/format pass; no AI/API keys or external calls.
 Existing range/source validation, restored precision and footer rules remain intact.
 
-## Current manual-clock display — 2026-10-23
+## Current manual-clock display â€” 2026-10-23
 
 [CL-046](CL-046-show-manual-times-without-milliseconds.md) shows manual Start/End
 as HH:MM:SS without milliseconds. Existing precise values stay intact until
 edited. Synthetic browser, types/lint/format and validation pass; fake AI and
 backend processing are unchanged.
 
-## Current concise controls and footer actions — 2026-10-23
+## Current concise controls and footer actions â€” 2026-10-23
 
 [CL-045](CL-045-simplify-local-controls-and-anchor-workflow-actions.md) removes
 Save draft and unnecessary selection/editor prose, shortens controls and anchors
@@ -461,7 +474,7 @@ is in AGENTS.md. Implemented and validated: nine focused units, final generated
 native/browser integration and responsive/manual-only proof, types/lint/format
 pass. Existing saved work and fake/live gates remain intact; zero external calls.
 
-## Current saved-video opening feedback — 2026-10-23
+## Current saved-video opening feedback â€” 2026-10-23
 
 [CL-044](CL-044-show-saved-video-opening-spinner.md) adds a continuously rotating
 Opening button state until Use video reaches the next step. Implemented and
@@ -469,7 +482,7 @@ validated: controlled slow/failure/retry/handoff browser proof, actual rotation,
 three-size geometry, types/lint/format pass. Fake AI stays active; no provider,
 configuration, saved-media or backend behavior changed.
 
-## Current saved-video preview — 2026-10-23
+## Current saved-video preview â€” 2026-10-23
 
 [CL-043](CL-043-preview-saved-video-in-intake.md) previews the selected saved
 master inside the same card, offline and without AI, metadata or native jobs.
@@ -479,7 +492,7 @@ geometry. The normal app also decodes the existing saved 720p source with fake
 AI/cloud off and no workspace change. Validation passes with no actionable
 findings. No content was captured or persisted.
 
-## Current post-transfer download fix — 2026-10-23
+## Current post-transfer download fix â€” 2026-10-23
 
 [CL-042](CL-042-fix-post-transfer-download-failure.md) fixes false rejection of
 nominal 30 fps/rounded duration metadata for an actual 29.97 fps source. Measured
@@ -490,7 +503,7 @@ real 720p download, publication and browser seek with fake AI/cloud off. Saved
 media and unrelated services remain intact; real Gemini and owner aesthetic
 acceptance remain unchecked. No Git action or deployment occurred.
 
-## Current intake action/progress correction — 2026-10-23
+## Current intake action/progress correction â€” 2026-10-23
 
 [CL-041](CL-041-align-intake-actions-and-transfer-design.md) aligns anchored CTA
 rows, improves the media preview and replaces the picker with shared blue
@@ -498,16 +511,16 @@ progress during transfer. Implemented: 11 unit tests, final synthetic all-stage
 browser/geometry proof and validation pass. Durable design rules are in AGENTS.md.
 CL-042 records the subsequent real-transfer fix; fake AI remains unchanged.
 
-## Current resolution-card refinement — 2026-10-23
+## Current resolution-card refinement â€” 2026-10-23
 
 [CL-040](CL-040-refine-youtube-resolution-card.md) narrows qualities to English
-480p–1440p, styles the native picker, stabilizes responsive card heights and adds
+480pâ€“1440p, styles the native picker, stabilizes responsive card heights and adds
 a bounded thumbnail/title preview with overflow scrolling. Implemented and
 validated: 86 focused unit tests, final synthetic browser/layout/fallback proof,
 types/lint/format and contracts build pass. Fake AI remains active; actual
 YouTube preview acceptance remains manual. No Git action or deployment ran.
 
-## Current motion and startup follow-up — 2026-10-23
+## Current motion and startup follow-up â€” 2026-10-23
 
 [CL-039](CL-039-keep-motion-active-and-speed-up-startup.md) removes all application
 reduced-motion overrides permanently and runs local initialization reads
@@ -515,10 +528,10 @@ concurrently while preserving complete readiness and fresh process verification.
 Implemented: actual rotation under both motion preferences, concurrent/full-ready
 startup and failure cancellation pass in the synthetic browser; 12 focused unit
 tests plus 19 preview-review tests and types/lint/format pass. Warm initialization
-measured about 0.8 seconds versus 1.3–1.7 seconds sequentially. Final validation
+measured about 0.8 seconds versus 1.3â€“1.7 seconds sequentially. Final validation
 passes with no actionable findings; fake AI and saved media remain unchanged.
 
-## Current startup transition — 2026-10-23
+## Current startup transition â€” 2026-10-23
 
 [CL-038](CL-038-keep-youtube-startup-layout-stable.md) keeps the full YouTube card
 mounted during connection with a disabled URL field and inline spinner. In
@@ -526,7 +539,7 @@ place and verified: identical pending/ready desktop/phone bounds, five focused
 unit tests, synthetic startup/failure/acquisition browser checks and validation
 pass. Processing, fake AI settings and saved-media behavior are unchanged.
 
-## Current resolution investigation — 2026-10-23
+## Current resolution investigation â€” 2026-10-23
 
 [CL-037](CL-037-diagnose-resolution-lookup-failure.md) reproduces the owner's
 failing resolution lookup: valid multilingual metadata overflowed a wrongly
@@ -534,20 +547,20 @@ shared 1,000-choice cap. Separate bounded raw-format/expanded-choice limits fix
 it. The exact link's normal UI lookup/selection now passes, alongside 834 backend
 tests and final validation. No download, real AI or cloud/paid action ran.
 
-## Current loading feedback — 2026-10-23
+## Current loading feedback â€” 2026-10-23
 
 [CL-036](CL-036-add-honest-resolution-loading-indicator.md) adds a spinner during
 YouTube link/resolution lookup. Implemented: synthetic pending/error/retry/success,
 reduced-motion and desktop/phone browser checks, types/lint/format and validation
 pass. No invented metadata percentage/ETA; existing download bytes are unchanged.
 
-## Current notice cleanup — 2026-10-23
+## Current notice cleanup â€” 2026-10-23
 
 [CL-035](CL-035-remove-workspace-cleared-notice.md) removes the workspace-cleared
 success banner after Start over. Implemented; types/format/diff and validation pass. Retention,
 failure/conflict messages and fake AI configuration are unchanged.
 
-## Current focused editor — 2026-10-23
+## Current focused editor â€” 2026-10-23
 
 [CL-034](CL-034-focus-clip-editor-with-setting-tabs.md) replaces long clip cards
 and stacked settings with one clip picker and Captions/Filters/Pictures tabs.
@@ -555,15 +568,15 @@ Implemented: 488 frontend tests, synthetic multi-clip/native browser checks,
 desktop/phone visual inspection and final validate pass. AI stays fake and
 processing/configuration remains unchanged; owner visual/live acceptance is open.
 
-## Current transfer fix — 2026-10-23
+## Current transfer fix â€” 2026-10-23
 
 [CL-033](CL-033-fix-youtube-transfer-and-verify-flow.md) diagnoses the real YouTube
-failure and fixes its completion template. Implemented: real download → two manual
-ranges → local caption/video edit → saved draft and verified MP4 passed with AI
+failure and fixes its completion template. Implemented: real download â†’ two manual
+ranges â†’ local caption/video edit â†’ saved draft and verified MP4 passed with AI
 fake. 832 backend tests, focused/native checks and final validate pass; no
 Gemini/cloud calls. CL-025 owner editorial/live acceptance remains open.
 
-## Current YouTube-card simplification — 2026-10-23
+## Current YouTube-card simplification â€” 2026-10-23
 
 [CL-032](CL-032-simplify-youtube-card.md) replaces URL entry with resolution
 selection in the same card, defaults storage to Downloads/ClipBuilder and removes
@@ -572,20 +585,20 @@ responsive/transition browser checks and final validate pass. The initial real
 trial retrieved qualities but failed transfer; CL-033 subsequently fixed and
 verified that path. CL-025 retains the owner acceptance checklist.
 
-## Current intake cleanup — 2026-10-23
+## Current intake cleanup â€” 2026-10-23
 
 [CL-031](CL-031-remove-intake-mode-label.md) removes the mode-label row from
 upload/YouTube intake. Implemented; six synthetic viewport checks and phone visual
 inspection pass. Processing settings remain unchanged.
 
-## Current navbar spacing — 2026-10-23
+## Current navbar spacing â€” 2026-10-23
 
 [CL-030](CL-030-responsive-navbar-spacing.md) increases responsive vertical
 navbar padding in the shared workflow shell and preserves the content viewport
 budget. Implemented; six synthetic viewport checks, visual inspection and focused
 types/formatting pass. Processing configuration remains unchanged.
 
-## Current picker simplification — 2026-10-23
+## Current picker simplification â€” 2026-10-23
 
 [CL-029](CL-029-open-saved-material-from-file-picker.md) replaces permanent saved
 library sections with recognition in the existing video/draft picker. Implemented
@@ -594,7 +607,7 @@ reopens without AI/acquisition/render dispatch and compact saving remains while
 editing. Owner manual acceptance remains open. CL-028's earlier collapsed-library
 choice is superseded.
 
-## Current design correction — 2026-10-23
+## Current design correction â€” 2026-10-23
 
 [CL-028](CL-028-align-local-controls-with-demo-design.md) applies the existing demo
 design through local intake, selection and editing. Owner direction: upload or
@@ -603,11 +616,11 @@ Implemented and verified with frontend, boundary, responsive/native browser and
 isolated production-compilation checks. Final validate has no actionable findings;
 processing configuration and owner visual/real-media acceptance remain unchanged.
 
-## Current integration — 2026-10-23
+## Current integration â€” 2026-10-23
 
 [CL-027](CL-027-integrate-local-editing-into-main-app.md) integrates the existing controls into normal `/start`, backend lifecycle and `.env.local`. Owner startup commands/4100/separate UI are superseded. Implemented and validated: five gates, 1,639 unit tests, synthetic native/browser checks and final validate with no actionable findings. Real YouTube/AI acceptance remains CL-025. No Git action or deployment is authorized.
 
-## Historical local owner workflow execution — 2026-10-22
+## Historical local owner workflow execution â€” 2026-10-22
 
 2026-10-23 follow-up: the owner authorizes real local YouTube downloads while AI
 stays fake/paid-off, removes per-source permits and explicitly removes the rights
@@ -627,7 +640,7 @@ activation remain excluded. CL-025 remains the
 owner walkthrough, including these additional controls.
 
 The owner adopted all recommendations and authorized sequential implementation,
-execute/validate/fix loops and a commit per clean ticket. CL-017–024 have local
+execute/validate/fix loops and a commit per clean ticket. CL-017â€“024 have local
 implementation/decision/acceptance evidence, including the required real-mode
 handoff correction. CL-025 remains owner-only and unchecked. All agent checks are synthetic/fake,
 paid-off, credential-free and zero-spend. No push, real YouTube retrieval,
@@ -671,7 +684,7 @@ owner explicitly defers it. Ticket records distinguish verified local work from
 the still-open owner acceptance.
 
 Current `FAKE_MODE=true` works with no API keys using synthetic workflow data;
-CL-017–021 provide private local preview, manual ranges, independent simulated
+CL-017â€“021 provide private local preview, manual ranges, independent simulated
 discovery, serial multi-clip edits, review/cancel, caption/picture controls,
 personal pictures, opt-in saved/autosaved drafts, immutable native exports and
 headless agent commands through the same protected host;
@@ -684,7 +697,7 @@ later owner activation; current agent checks use injected transports only.
 Verified synthetic encoding is API-free; no offline AI
 model/weights are provided.
 
-The owner-requested CL-017–019 real-mode revisit is recorded in CL-019. Shared
+The owner-requested CL-017â€“019 real-mode revisit is recorded in CL-019. Shared
 domain paths now preserve actual injected words/timings, source/clip context,
 grounded picture requests and explicit provenance instead of assuming fake
 data. Provider-shaped test doubles make no external calls. Default startup
@@ -693,7 +706,7 @@ bounded native provider inputs and a separately gated provider launcher;
 CL-024 verifies that wiring without activation, and CL-025 keeps real provider
 and visual acceptance open.
 
-**CL-015 paid-off Cloud Run checkpoint — 2026-10-07:** The owner-approved
+**CL-015 paid-off Cloud Run checkpoint â€” 2026-10-07:** The owner-approved
 whole-file commits and frontend/private-backend deployment are complete. Final
 Linux artifacts, immutable scans, private renderer correction, exact identities,
 four secret version references, capacity and unpaid hosted/local probes pass.
@@ -705,7 +718,7 @@ See the [domain/cutover guide](../operations/CLOUD_RUN_PUBLIC_DEPLOYMENT_2026-10
 and [whole-file plan](CL-015-RELEASE-PREPARATION-COMMIT_PLAN.md).
 This supersedes the earlier hosting exclusion and undeployed/native-blocker state.
 
-**CL-015 final local paid-test preparation — 2026-10-07:** Owner-authorized
+**CL-015 final local paid-test preparation â€” 2026-10-07:** Owner-authorized
 local walkthrough preparation is verified, including the existing private
 renderer rollout and normal paid-mode local restart, with frontend/backend
 undeployed and no agent-paid flow. All five root gates and 1,239 fake/injected
@@ -718,7 +731,7 @@ Linux packaging, curated film delivery, scan corrections, verification and the
 remaining owner-only/public checks. Earlier security restrictions below are
 superseded only within this explicitly authorized preparation scope.
 
-**CL-012 security remediation — 2026-10-07:** The owner approved local fixes
+**CL-012 security remediation â€” 2026-10-07:** The owner approved local fixes
 after the STRIDE/practical review. The
 [execution report](../operations/STRIDE_SECURITY_REMEDIATION_2026-10-07.md),
 [PM HTML](../operations/STRIDE_SECURITY_REVIEW_2026-10-07.html) and
@@ -737,14 +750,14 @@ authorized the [security whole-file staging/commit plan](CL-015-SECURITY-COMMIT_
 after clean validation, with `CL-015:` subjects. No cloud build/mutation/deploy,
 push or agent-paid testing is authorized. Original audit snapshots remain.
 
-**CL-015-prefixed commit checkpoint — 2026-10-07:** The owner authorized staging
+**CL-015-prefixed commit checkpoint â€” 2026-10-07:** The owner authorized staging
 and commits for the completed CL-014 code-quality audit/remediation, with
 `CL-015:` on every commit subject. Follow the
 [four-commit whole-file plan](CL-015-CODE-QUALITY-COMMIT_PLAN.md). The validated
 source digest and existing fake/no-key evidence remain unchanged; this records
 Git authorization, not deployment or live-flow acceptance.
 
-**CL-014 code-quality remediation — 2026-10-07:** The owner approved the audit
+**CL-014 code-quality remediation â€” 2026-10-07:** The owner approved the audit
 plan's implementation with functionality and private backend logging
 prioritized. The
 [execution report](../operations/CODE_QUALITY_REMEDIATION_2026-10-07.md) records
@@ -763,7 +776,7 @@ behavior remains labelled fixture/injected with Download disabled; real
 affected-flow acceptance remains owner-manual with the required
 keys/live/approval/private-renderer setup.
 
-**CL-014 code-quality audit — 2026-10-07:** The owner requested
+**CL-014 code-quality audit â€” 2026-10-07:** The owner requested
 audit/documentation only before implementation, with the working journey/export
 and accepted motion landing preserved. The
 [current report](../operations/CODE_QUALITY_AUDIT_2026-10-07.md) documents ten
@@ -779,7 +792,7 @@ real acceptance is owner-manual with the required keys/live/approval setup. Code
 remediation, STRIDE and public release gates remain open. See
 [CL-014](CL-014-audit-release-candidate.md#historical-code-quality-audit--2026-10-07-documentation-only).
 
-**CL-013 motion hero — 2026-10-06:** The owner accepted the local 50-second
+**CL-013 motion hero â€” 2026-10-06:** The owner accepted the local 50-second
 cinematic hero, original responsive two-column layout, animated five-step flow
 and seamless control-free playback, then authorized a file-level plan and
 staging/commits. Follow the
@@ -793,7 +806,7 @@ actual processing keeps its keys/live/approval gates. Final media,
 rights/license, device/accessibility/performance and strict release acceptance
 remain unchecked.
 
-**CL-009 timing / CL-010 review follow-up — 2026-10-06:** The
+**CL-009 timing / CL-010 review follow-up â€” 2026-10-06:** The
 [bounded visual window](CL-009-build-contextual-visual-assembly.md#owner-bounded-visual-window--2026-10-06)
 keeps longer supporting phrases as context while signing an in-window excerpt.
 The subsequent
@@ -806,13 +819,13 @@ after the notes fix, with old-tree cleanup, health/config/page 200 and the
 original frontend preserved. All prior visual diagnostics remain intact. No
 validate workflow ran.
 
-**Current CL-015 configuration priority — 2026-10-06:** The owner requires
+**Current CL-015 configuration priority â€” 2026-10-06:** The owner requires
 environment-only backend configuration, removal of runtime JSON and normal
 real/paid-on/four-approvals-on defaults. Paid-off overrides all four approvals
 and capabilities. Tests stay explicit fake/paid-off and guarded. See the
 [CL-015 configuration packet](CL-015-deploy-validate-measure-and-rollback.md#owner-environment-only-configuration--2026-10-06).
 
-**CL-005 upload verification — 2026-10-06:** CL-005's sequential 4-MiB transfer
+**CL-005 upload verification â€” 2026-10-06:** CL-005's sequential 4-MiB transfer
 and confirmed-byte progress are implemented: 98 focused synthetic tests and 11
 native Chrome protocol checks pass. All five settled root gates and 1,084 tests
 in 89 files pass; scoped validation has no remaining actionable local findings.
@@ -848,7 +861,7 @@ rollout remain unchecked.
 Earlier verified revision:
 [CL-009 visual timing normalization](CL-009-build-contextual-visual-assembly.md#owner-visual-timing-normalization--2026-10-06).
 Recover valid phrase timing from supplied word clocks, including longer bounded
-phrases and anchors inside phrases, with readable 2–4.5-second holds. Tell
+phrases and anchors inside phrases, with readable 2â€“4.5-second holds. Tell
 Gemini to space suggestions by their full hold. **124 focused fake tests** pass;
 offline recompilation accepts all three formerly rejected owner plans using
 injected synthetic assets. All five root gates, the local renderer bundle and
@@ -864,7 +877,7 @@ added.
 Earlier verified revision:
 [CL-009 general creative visual rules](CL-009-build-contextual-visual-assembly.md#owner-general-creative-visual-rules--2026-10-06).
 Remove topic/age prompt recipes, plan two to three varied generic contextual
-pictures, use 2–4.5-second holds and allow adjacent pictures without group IDs.
+pictures, use 2â€“4.5-second holds and allow adjacent pictures without group IDs.
 Unavailable/duplicate images remain nonfatal and count shortfalls are logged.
 All five root gates, the local renderer bundle and **1,155 fake/paid-off tests
 in 94 files** pass, including two-picture signed preview/fake-export identity
@@ -922,7 +935,7 @@ saved-moments flow is required after backend reload.
 
 Current CL-010 owner UI follow-up (2026-10-05):
 [playback volume levels](CL-010-playback-volume-controls.md). Every workflow
-player opens a 0–100% level slider from its speaker button; the owner's
+player opens a 0â€“100% level slider from its speaker button; the owner's
 highlighted export explanation is removed. The five root gates and 1,039
 synthetic tests / 88 files pass. Native and Remotion browser audio levels and
 dismissal are verified with synthetic content, without paid dispatches. Actual
@@ -1295,7 +1308,7 @@ documentation; no paid/cloud/deployment action or push is included.
 
 Current Git handoff:
 [CL-007/CL-008 file-level commit plan](CL-007-008-COMMIT_PLAN.md) documents the
-seven owner-authorized sequential whole-file commits. Implementation steps 1–5
+seven owner-authorized sequential whole-file commits. Implementation steps 1â€“5
 are committed; the final execution record is in
 [CL-008](CL-008-productionize-active-speaker-assembly.md#commit-execution-record).
 
@@ -1347,7 +1360,7 @@ release-audit gate.
 | 11                           | [CL-015 later public deployment](CL-015-deploy-validate-measure-and-rollback.md) | Local artifact/release preparation validated; strict Windows artifact rejection and all public hosting/live/rollback gates remain open; early private evidence is separate                |
 
 There is exactly one CL-007 packet, the canonical link above. No duplicate path
-is introduced. CL-001–004 foundation/product/visual evidence remains; preserve
+is introduced. CL-001â€“004 foundation/product/visual evidence remains; preserve
 its gates and unchanged product behavior. Old local-model go was never passed;
 its architecture gate is retired, not marked complete. Every affected packet has
 current cloud authority followed by collapsed earlier evidence. Five-gate/fake
@@ -1454,7 +1467,7 @@ The packet repeats the ticket-local product context, contracts, file ownership,
 scope exclusions, privacy and spend constraints, acceptance criteria, focused
 verification, documentation work, gates, and commit boundary. Precision links
 into the parent source of truth are for exact schemas, full matrices, and
-provider or deployment detail—not an instruction to read all 5,000+ lines.
+provider or deployment detailâ€”not an instruction to read all 5,000+ lines.
 
 The original research brief and reusable portfolio-demo playbook remain inputs
 and decision history. They never override the parent source of truth or a later
@@ -1552,7 +1565,7 @@ readiness. Ticket count is not a quality metric; CL-015 remains last.
 - ClipBuilder is a disposable public portfolio demo, not a production SaaS,
   project manager, social analytics tool, or nonlinear editor.
 - One owned/licensed conversation produces grounded candidate moments and one
-  selected 10–60 second vertical clip.
+  selected 10â€“60 second vertical clip.
 - Analysis returns zero to four grounded candidates, targeting three strong
   choices without padding. The visitor selects exactly one.
 - The AI proposes bounded candidate and visual-plan data that references real
@@ -1593,7 +1606,7 @@ readiness. Ticket count is not a quality metric; CL-015 remains last.
   subprocess, temp file, lease, marker, and signed capability has an explicit
   cleanup owner.
 - Phone, tablet, laptop, desktop, large-monitor, short-height, keyboard, 200%
-  zoom, reduced-motion, and forced-colors behavior are release concerns—not a
+  zoom, reduced-motion, and forced-colors behavior are release concernsâ€”not a
   separate reduced mobile product.
 
 ## Ordered ticket index
@@ -1648,7 +1661,7 @@ and locally verified**: contracts allow zero to four candidates, the reducer
 uses immutable automatic clip review, persistence stores only manifest
 identity/hash, and legacy editor/assistant configuration is removed. CL-005 is
 locally verified with independent validation and release gates open; CL-006 has
-resumed after the owner-confirmed handoff and CL-007–CL-015 remain planned.
+resumed after the owner-confirmed handoff and CL-007â€“CL-015 remain planned.
 CL-010 is automatic read-only clip review and render confirmation, not an
 editor/assistant ticket. The owner subsequently reopened CL-003 for independent
 validation of nine session/restore/progress/fake/cleanup findings. All nine
@@ -1668,7 +1681,7 @@ packet and should be summarized here when work begins or finishes.
 
 |      Order | Ticket                                                                     | Milestone | Coherent outcome                                                                                                                               | Depends on                                                 |
 | ---------: | -------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-|          1 | [CL-001](CL-001-initialize-workspace-and-contracts.md)                     | M0        | Reproducible workspace, safe config, browser-safe contracts, and quality foundation                                                            | —                                                          |
+|          1 | [CL-001](CL-001-initialize-workspace-and-contracts.md)                     | M0        | Reproducible workspace, safe config, browser-safe contracts, and quality foundation                                                            | â€”                                                          |
 |          2 | [CL-002](CL-002-create-and-approve-visual-reference.md)                    | M0        | Running responsive React landing prototype plus research evidence and explicit visual gate                                                     | CL-001                                                     |
 |          3 | [CL-003](CL-003-build-canonical-session-and-sample-foundation.md)          | M1        | Canonical reducer, safe persistence, rights-recorded fixtures, and deterministic sample data                                                   | CL-001                                                     |
 |          4 | [CL-004](CL-004-deliver-sample-candidate-review.md)                        | M1        | Complete single-workspace development frontend journey; real adapters remain gated                                                             | CL-002, CL-003                                             |
@@ -1687,14 +1700,14 @@ packet and should be summarized here when work begins or finishes.
 
 ## Milestone boundaries
 
-- **M0 — foundation and visual gate:** CL-001–CL-002.
-- **M1 — deterministic sample story and provider setup guides:** CL-003–CL-004A.
-- **M2 — private media foundation:** CL-005–CL-006.
-- **M3 — live analysis:** CL-007.
-- **M4 — automatic AI first cut and review:** CL-008–CL-010.
-- **M5 — final render and delivery:** CL-011.
-- **M6 — public-demo hardening and audit:** CL-012–CL-014.
-- **M7 — final GCloud setup, deployment and controlled live evidence:** CL-015.
+- **M0 â€” foundation and visual gate:** CL-001â€“CL-002.
+- **M1 â€” deterministic sample story and provider setup guides:** CL-003â€“CL-004A.
+- **M2 â€” private media foundation:** CL-005â€“CL-006.
+- **M3 â€” live analysis:** CL-007.
+- **M4 â€” automatic AI first cut and review:** CL-008â€“CL-010.
+- **M5 â€” final render and delivery:** CL-011.
+- **M6 â€” public-demo hardening and audit:** CL-012â€“CL-014.
+- **M7 â€” final GCloud setup, deployment and controlled live evidence:** CL-015.
 
 CL-014 is the final pre-deployment audit. CL-015 may deploy only the exact
 revision and immutable image inputs that pass CL-014; any material change after
@@ -1716,7 +1729,7 @@ Delivery/release: CL-005 + CL-010 -> CL-011 -> CL-012 -> CL-013 -> CL-014 -> CL-
 
 CL-003 may proceed while CL-002 waits for visual approval. Broad production UI
 styling and CL-004 completion wait for the visual gate. CL-004A documentation
-supports deterministic CL-005–CL-012 work without requiring credential setup.
+supports deterministic CL-005â€“CL-012 work without requiring credential setup.
 Any local provider check still stops at its named owner gates. Actual hosting,
 transport/restart/rollout/hard-cap and deployed live validation wait for final
 CL-015; cloud-media jobs/storage/render are withdrawn, not deferred. Local/fake

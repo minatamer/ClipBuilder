@@ -1,13 +1,13 @@
 # Shared upload/editor release preparation
 
-Owner decision, 2026-10-24 (CL-061): one normal app. Upload → manual/AI moments →
-clip preparation → caption/picture/filter editor → Apply/Discard → export/download.
+Owner decision, 2026-10-24 (CL-061): one normal app. Upload â†’ manual/AI moments â†’
+clip preparation â†’ caption/picture/filter editor â†’ Apply/Discard â†’ export/download.
 YouTube acquisition, local library/drafts/sample and the CL-078 fake-caption
 action / paid-switch exception are local-only. This is prepared source code; it
 does not change the currently deployed revision. Agents must never deploy for
 the owner or run credit-consuming tests without new explicit approval.
 
-## Next-build feature visibility — source audit, 2026-10-25
+## Next-build feature visibility â€” source audit, 2026-10-25
 
 This describes the current source with normal production paid/auth configuration.
 It is not a new deployment or a fresh inspection of the deployed revision/cloud
@@ -31,7 +31,7 @@ settings. The owner will manually test these changes before choosing deployment.
 Evidence: shared `/start` routing in `apps/frontend/src/app/start/page.tsx`,
 hosted UI conditions in `experience.tsx` and `clip-batch-panel.tsx`, hosted path
 allowlist/capabilities/provider charging, and `composeLocalCaptionProvider`'s
-local/non-test guard. CL-067–079 own the feature/proof details. Current checks
+local/non-test guard. CL-067â€“079 own the feature/proof details. Current checks
 include 564 fake/paid-off local unit tests and actual Windows synthetic browser/
 native exports; they do not establish live Gemini quality or hosted capacity.
 
@@ -41,7 +41,7 @@ and verify the deferred allocation/cost/capacity items below. Keep FFmpeg as-is
 per owner decision. No push, cloud mutation, deployment or paid test is authorized
 by this audit or by the local commit approval.
 
-## Deferred deployment checklist — 2026-10-25
+## Deferred deployment checklist â€” 2026-10-25
 
 CL-084 follow-up, 2026-10-26: the owner explicitly keeps G Cloud inaccessible to
 the agent. No live configuration/billing was inspected and no cloud changes are
@@ -157,7 +157,7 @@ Cloud builds and real-provider/paid acceptance require new explicit approval;
 agents must never deploy. A Windows synthetic native/browser proof is not Linux
 image or cloud acceptance. See CL-061 for checks actually run and unchecked gates.
 
-## Local Linux verification completed — CL-063
+## Local Linux verification completed â€” CL-063
 
 The current secret-free frontend/backend images build and run on the owner's
 local Linux Docker engine. An offline generated-media probe exercises the actual
@@ -190,3 +190,13 @@ Still unchecked before release:
 | Owner media/quality acceptance | Deliberate owner-only manual paid review remains separate from synthetic processing. |
 
 Do not deploy or infer approval for credit-consuming tests from this local proof.
+
+## Current security checkpoint — 2026-10-26
+
+CL-090 (2026-10-26): review the [current security audit](STRIDE_SECURITY_AUDIT_2026-10-26.md)
+before public release. All three image stages now pin the verified official
+Node 22.23.4 Bookworm security image; application Zod is 4.6.6 and Next/eslint
+are 16.4.1. This does not close SEC90-01's MP4 parser vendor risk or replace actual
+hosted identity, single-instance routing, resource/CPU, Turnstile, owner rights
+and paid/visual acceptance. No G Cloud changes, deployment or provider test is
+authorized by local verification. Follow CL-090 for current evidence and limits.

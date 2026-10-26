@@ -1,5 +1,5 @@
 # Standard Remotion Node SSR. Linux image proof remains a separately gated step.
-FROM --platform=linux/amd64 node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c AS base
+FROM --platform=linux/amd64 node:22.23.4-bookworm-slim@sha256:ea11b74b986d520137cdef9a5346e447a00f275ecc4abc0055b7151226231e09 AS base
 # Visitor media uses Debian's security-maintained CLI, separate from Remotion ABI libraries.
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends ffmpeg=7:5.1.9-0+deb12u1 libnss3 libdbus-1-3 libatk1.0-0 libgbm1 libasound2 libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 libxdamage1 libatk-bridge2.0-0 libpango-1.0-0 libcairo2 libcups2 fonts-liberation ca-certificates && rm -rf /var/lib/apt/lists/*
 

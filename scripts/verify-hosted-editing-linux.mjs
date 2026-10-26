@@ -68,6 +68,14 @@ const [
   import("../apps/backend/local/local-mode.ts"),
   import("../packages/contracts/local/hosted-editing.ts"),
 ]);
+const { ownerOutputProfile } =
+  await import("../apps/renderer/local/export-profile.ts");
+const { OWNER_SOCIAL_TEXT_PRESETS } =
+  await import("../packages/contracts/local/text-style.ts");
+const expectedProfile = ownerOutputProfile(
+  { width: 160, height: 90, fps: 30 },
+  30,
+);
 const run = promisify(execFile),
   pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const directory = await mkdtemp(join(tmpdir(), "clipbuilder-hosted-linux-")),
@@ -100,6 +108,7 @@ let flow,
   peakMemory = 0;
 const counts = {
   transcribe: 0,
+  caption: 0,
   select: 0,
   plan: 0,
   image: 0,
@@ -244,6 +253,7 @@ try {
     now: () => now,
     siteKey: "synthetic-site",
     aiMode: "synthetic-ai",
+    captionGeneration: true,
     sourceLimits: { bytes: 20 * 1024 ** 2, durationMs: 60000 },
     abuse: { verify: async () => true },
     capacity: async (_directory, peak) => {
@@ -255,6 +265,14 @@ try {
       return native(job, signal);
     },
     providers: () => ({
+      async captionTranscription(workspace, clip, signal) {
+        counts.caption++;
+        assert.equal(clip.base.cut.endFrame - clip.base.cut.startFrame, 30);
+        return fakeOwnerAnalysis.transcribe(
+          { ...workspace, source: { ...workspace.source, durationMs: 1000 } },
+          signal,
+        );
+      },
       analysis: {
         ...fakeOwnerAnalysis,
         async transcribe(...args) {
@@ -313,14 +331,19 @@ try {
     const change=async(node,value)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(node,value);node.dispatchEvent(new Event('input',{bubbles:true}));await new Promise(requestAnimationFrame);};
     await wait(()=>document.querySelector('[aria-label="Clip 1 end"]'));
     await change(document.querySelector('[aria-label="Clip 1 start"]'),'00:00:01');await change(document.querySelector('[aria-label="Clip 1 end"]'),'00:00:02');
-    document.querySelector('.selection input[type="checkbox"]').click();await wait(()=>button('Use clips')&&!button('Use clips').disabled);button('Use clips').click();await wait(()=>button('Process clips')&&!button('Process clips').disabled);button('Process clips').click();
+    if(document.querySelector('.selection input[type="checkbox"]').checked)throw new Error('fake_ai_default_enabled');await wait(()=>button('Use clips')&&!button('Use clips').disabled);button('Use clips').click();await wait(()=>button('Process clips')&&!button('Process clips').disabled);button('Process clips').click();
     const ready=()=>document.querySelector('.editor-panels:not([hidden])')&&document.querySelector('a[aria-label="Download clip"]');
-    await wait(()=>button('Export clip')&&document.querySelector('.editor-panels:not([hidden])'),'preview_ready');button('Export clip').click();await wait(ready,'initial_export');const first=await (await fetch(ready().href)).arrayBuffer();
-    const font=[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim().startsWith('Font size')).querySelector('input');await change(font,'72');
-    await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>button('Export clip'));button('Export clip').click();
+    await wait(()=>button('Export clip')&&document.querySelector('.editor-panels:not([hidden])'),'preview_ready');
+    if(!document.querySelector('.caption-empty')||document.querySelector('.picture-choice'))throw new Error('fake_defaults_not_empty');
+    button('Generate captions').click();await wait(()=>document.querySelector('[aria-label="Caption generation actions"]'),'caption_consent');[...document.querySelectorAll('[aria-label="Caption generation actions"] button')].find(n=>n.textContent==='Generate captions').click();await wait(()=>!document.querySelector('.caption-empty')&&!document.querySelector('[aria-label="Caption generation actions"]'),'fake_caption_port');
+    const settings=async label=>{[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent===label).click();await new Promise(requestAnimationFrame);};
+    await settings('Pictures');const canvas=document.createElement('canvas');canvas.width=100;canvas.height=100;const context=canvas.getContext('2d');context.fillStyle='#00ff00';context.fillRect(0,0,100,100);const blob=await new Promise(done=>canvas.toBlob(done,'image/png'));const imageTransfer=new DataTransfer();imageTransfer.items.add(new File([blob],'synthetic.png',{type:'image/png'}));const pictureInput=document.querySelector('[aria-label="Upload picture"]');pictureInput.files=imageTransfer.files;pictureInput.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('.picture-choice')&&button('Apply changes')&&!button('Apply changes').disabled,'explicit_picture');button('Apply changes').click();await wait(()=>button('Export clip')&&!button('Export clip').disabled,'picture_applied');
+    await wait(()=>{const action=button('Export clip');if(button('Apply changes')||!action||action.disabled)return false;action.click();return true;},'initial_export_start');await wait(ready,'initial_export');const first=await (await fetch(ready().href)).arrayBuffer();
+    await settings('Captions');const font=[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim().startsWith('Font size')).querySelector('input');await change(font,'72');
+    await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>{const action=button('Export clip');if(button('Apply changes')||!action||action.disabled)return false;action.click();return true;},'edited_export_start');
     await wait(ready,'edited_export');const last=await (await fetch(ready().href)).arrayBuffer();
     const workspace=await (await fetch('/api/local/workspace')).json();const list=await (await fetch('/api/local/workspace/'+workspace.id+'/clips')).json();
-    return {workspaceId:workspace.id,clipId:list.clips[0].id,revision:list.clips[0].revision,firstBytes:first.byteLength,lastBytes:last.byteLength,exclusive:!document.querySelector('.moment-selection').getClientRects().length,edit:list.clips[0].edit};
+    return {workspaceId:workspace.id,clipId:list.clips[0].id,revision:list.clips[0].revision,outputRevision:list.clips[0].outputs.at(-1).revision,firstBytes:first.byteLength,lastBytes:last.byteLength,exclusive:!document.querySelector('.moment-selection').getClientRects().length,edit:list.clips[0].edit};
   })()`,
   });
   if (evaluated.value.exceptionDetails)
@@ -339,7 +362,10 @@ try {
       .digest("hex"),
     createHash("sha256").update(uploaded).digest("hex"),
   );
-  const video = join(workspace, result.clipId + ".r1.mp4");
+  const video = join(
+    workspace,
+    result.clipId + `.r${result.outputRevision}.mp4`,
+  );
   const profile = JSON.parse(
     (
       await run("/usr/bin/ffprobe", [
@@ -357,8 +383,8 @@ try {
     profile.streams.some(
       (stream) =>
         stream.codec_name === "h264" &&
-        stream.width === 1080 &&
-        stream.height === 1920,
+        stream.width === expectedProfile.width &&
+        stream.height === expectedProfile.height,
     ),
   );
   assert.ok(profile.streams.some((stream) => stream.codec_name === "aac"));
@@ -415,11 +441,27 @@ try {
       },
       { kind: "video-look", look: { preset: "mono", strength: 100 } },
       { kind: "visual-upsert", cue: movedPicture },
+      {
+        kind: "text-layers",
+        layers: [
+          {
+            id: crypto.randomUUID(),
+            text: "Linux synthetic title",
+            startFrame: 0,
+            endFrame: 30,
+            style: {
+              ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
+              box: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
+            },
+          },
+        ],
+      },
     ],
   });
   const revision = edited.clips[0].revision;
   assert.equal(edited.clips[0].edit.visuals[0].entrance, "slide");
   assert.equal(edited.clips[0].edit.captions.box.y, 0.12);
+  assert.equal(edited.clips[0].edit.texts[0].endFrame, 30);
   await api(clip + "/render", "POST", {
     operationId: crypto.randomUUID(),
     expectedRevision: revision,
@@ -440,9 +482,10 @@ try {
   }, "retried");
   assert.deepEqual(counts, {
     transcribe: 1,
+    caption: 1,
     select: 0,
     plan: 1,
-    image: 1,
+    image: 0,
     inspect: 1,
     clip: 4,
     "clip-preview": 1,
@@ -524,8 +567,12 @@ try {
     captionPositionSaved: true,
     picturePositionMotionSaved: true,
     decodedMonoFilter: true,
-    outputWidth: 1080,
-    outputHeight: 1920,
+    outputWidth: expectedProfile.width,
+    outputHeight: expectedProfile.height,
+    sourceHeightPreserved: true,
+    timedTextSaved: true,
+    explicitSyntheticCaptions: true,
+    explicitUploadedPicture: true,
     outputSeconds: Number(profile.format.duration),
     outputBytes: Number(profile.format.size),
     canceled: true,

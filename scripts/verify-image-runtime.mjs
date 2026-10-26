@@ -18,7 +18,6 @@ for (const path of [
 assert.notEqual(process.getuid(), 0);
 const target = process.argv[2];
 let server, child;
-let productionPictureFallbackVerified = false;
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function fetchLocal(path, options) {
   return fetch(
@@ -140,60 +139,34 @@ try {
   } else {
     let application;
     if (target === "backend") {
-      const { composeBackend } = await import("/app/dist/composition.js");
-      const { loadConfig } = await import("/app/dist/config/loadConfig.js");
-      const { composeGeminiPictureGenerator, GeminiPictureGenerator } =
-        await import("/app/dist/assembly/gemini-pictures.js");
-      const { AnalysisDiagnostics } =
-        await import("/app/dist/analysis/analysis.diagnostics.js");
-      // Pure synthetic composition; the process stays fake/paid-off and offline.
-      const productionEnvironment = {
-        NODE_ENV: "production",
-        APP_ENV: "production",
-        APP_REVISION: "synthetic-release",
-        FAKE_MODE: "false",
-        PAID_DEMO_ENABLED: "true",
-        PUBLIC_PAID_PROCESSING_APPROVED: "true",
-        FRONTEND_ORIGIN: "https://synthetic-frontend.run.app",
-        BACKEND_ORIGIN: "https://synthetic-backend.run.app",
-        BACKEND_AUDIENCE: "https://synthetic-backend.run.app",
-        FRONTEND_CALLER_EMAIL: "synthetic@synthetic.iam.gserviceaccount.com",
-        TURNSTILE_EXPECTED_HOSTNAME: "synthetic-frontend.run.app",
-        GEMINI_API_KEY: "synthetic-key",
-        TURNSTILE_SITE_KEY: "synthetic-site",
-        TURNSTILE_SECRET_KEY: "synthetic-secret",
-        PROCESSING_GRANT_KEY: Buffer.alloc(32, 7).toString("base64url"),
-        PRIVATE_RENDERER_ORIGIN: "https://synthetic-renderer.run.app",
-      };
-      assert.ok(
-        composeGeminiPictureGenerator(
-          loadConfig(productionEnvironment),
-          new AnalysisDiagnostics(),
-        ) instanceof GeminiPictureGenerator,
-      );
-      assert.equal(
-        composeGeminiPictureGenerator(
-          loadConfig({
-            ...productionEnvironment,
-            GEMINI_IMAGE_GENERATION_APPROVED: "false",
-          }),
-          new AnalysisDiagnostics(),
-        ),
-        undefined,
-      );
-      assert.throws(() =>
-        loadConfig({
-          ...productionEnvironment,
-          PUBLIC_PAID_PROCESSING_APPROVED: "false",
-        }),
-      );
-      productionPictureFallbackVerified = true;
-      application = composeBackend({
-        NODE_ENV: "test",
-        APP_ENV: "preview",
-        FAKE_MODE: "true",
-        PAID_DEMO_ENABLED: "false",
-      }).application;
+      // The backend ships one fixed bundle; exercise its real executable entry.
+      // Provider-factory approval behavior is covered by source unit tests.
+      child = spawn(process.execPath, ["dist/server.js"], {
+        cwd: "/app",
+        stdio: "ignore",
+        env: {
+          ...process.env,
+          NODE_ENV: "test",
+          APP_ENV: "preview",
+          FAKE_MODE: "true",
+          PROVIDER_MODE: "fake",
+          PAID_DEMO_ENABLED: "false",
+          PORT: "8080",
+        },
+      });
+      for (let attempt = 0; attempt < 100; attempt++) {
+        if (child.exitCode !== null)
+          throw new Error("backend_probe_startup_failed");
+        if (
+          await fetchLocal("/v1/health").then(
+            (response) => response.status === 200,
+            () => false,
+          )
+        )
+          break;
+        if (attempt === 99) throw new Error("backend_probe_unavailable");
+        await pause(100);
+      }
     } else if (target === "renderer") {
       const { createRendererApplication } = await import("/app/dist/app.js");
       application = createRendererApplication(
@@ -208,10 +181,13 @@ try {
         { verify: async () => "control" },
       );
     } else throw new Error("invalid_probe_target");
-    server = await new Promise((resolve, reject) => {
-      const value = application.listen(8080, "127.0.0.1", () => resolve(value));
-      value.once("error", reject);
-    });
+    if (application)
+      server = await new Promise((resolve, reject) => {
+        const value = application.listen(8080, "127.0.0.1", () =>
+          resolve(value),
+        );
+        value.once("error", reject);
+      });
     assert.equal((await fetchLocal("/v1/health")).status, 200);
     if (target === "backend") {
       const config = await (await fetchLocal("/v1/sample/config")).json();
@@ -284,7 +260,7 @@ try {
     JSON.stringify({
       target,
       runtimeVerified: true,
-      ...(target === "backend" ? { productionPictureFallbackVerified } : {}),
+      ...(target === "backend" ? { packagedEntryPointVerified: true } : {}),
       nonRoot: true,
       externalNetwork: false,
       aiCalls: 0,
