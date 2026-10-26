@@ -1,9 +1,11 @@
 FROM --platform=linux/amd64 node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c AS build
 WORKDIR /workspace
 RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN corepack pnpm fetch --ignore-scripts
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN corepack pnpm install --frozen-lockfile
+RUN corepack pnpm install --offline --frozen-lockfile
 RUN corepack pnpm --filter @clipbuilder/contracts build && corepack pnpm --filter @clipbuilder/composition build && corepack pnpm --filter @clipbuilder/frontend exec next build
 # Linux acceptance: no links to the source store, authoring captures, secrets or test UI.
 RUN node --experimental-strip-types apps/frontend/scripts/verify-release-artifact.ts

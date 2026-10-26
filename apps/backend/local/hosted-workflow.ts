@@ -97,15 +97,25 @@ export function createHostedEditingWorkflow(options: Options) {
       await Promise.allSettled(
         [...session.transfers].map((transfer) => transfer.done),
       );
-      await session.host.close();
-      await session.upload.discard();
+      const results = await Promise.allSettled([
+        session.host.close(),
+        session.upload.discard(),
+      ]);
+      const failures = results.filter((result) => result.status === "rejected");
+      if (failures.length)
+        throw new AggregateError(
+          failures.map((result) => result.reason),
+          "hosted_cleanup_failed",
+        );
       recovery.delete(key);
     })();
     cleanup.add(task);
     void task
       .catch((error) => {
         recovery.set(key, session);
-        diagnostics.failure("cleanup", error);
+        const failures: unknown[] =
+          error instanceof AggregateError ? error.errors : [error];
+        for (const failure of failures) diagnostics.failure("cleanup", failure);
       })
       .finally(() => cleanup.delete(task));
     return task;

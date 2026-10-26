@@ -7787,9 +7787,9 @@ live/provider/rights/cleanup checks are described as complete.
 <!-- build-progress:start -->
 ## Build command progress
 
-Current phase: **10a-quality**
-Next action: Commit the authorized 84-file current-work snapshot, then prepare CL-089 quality audit prompt and packet.
-Active ticket: CL-088
+Current phase: **10b-security-review**
+Next action: Stage/commit only the separate CL-089 whole-file plan, then prepare audit-only CL-090 security prompt/report before provisional AFK fix selection.
+Active ticket: CL-089
 Phase prompts: delegated during AFK
 Local commits approved: yes
 
@@ -7842,6 +7842,10 @@ Provisional owner reviews: 04-decisions, 09-visual-review
   Reason: Actual generated 1280x600 and390px screenshots inspected; current-source browser assertions cover desktop/laptop/phone, exact actions/keyboard/gestures, visible footer and reachable final controls. Owner requested AFK audit work, not a new design round.
   Consequence / reversibility: Provisional agent review only; personal visual, real-AI/media and release acceptance remain owner-only. Reversible local source/commits only.
   Owner review requested on return: yes. Evidence: docs/tickets/CL-088-fake-mode-verification-and-commit.md, .local-build/evidence/cl086-text-1280.png (ignored synthetic capture), .local-build/evidence/cl086-text-390.png (ignored synthetic capture)
+- **AFK-0012** (AFK-SESSION-001, 2026-10-26T13:09:26+00:00, 10a-quality): CL-089: execute Q-01 retryable independent hosted cleanup and Q-02 lockfile-first Docker dependency caching; preserve supported flows and defer speculative refactors.
+  Reason: Current code confirms resource ownership is forgotten before failed removal and host-close can skip independent upload cleanup. All Dockerfiles invalidate dependency installation on source-only edits.
+  Consequence / reversibility: Small reversible local fixes/tests/build-layer edits. No dependency/runtime version, provider budget, AI acceptance or product functionality change. Owner review remains provisional.
+  Owner review requested on return: yes. Evidence: docs/tickets/CL-089-current-code-quality-audit.md, docs/operations/CODE_QUALITY_AUDIT_2026-10-26.md
 
 - [x] 01-docs — Documentation (complete)
 - [x] 02-flow — Core flow (complete)
@@ -7852,7 +7856,7 @@ Provisional owner reviews: 04-decisions, 09-visual-review
 - [x] 07-build — Execute and validate tickets (complete_local)
 - [x] 08-performance — Performance investigation (complete_local)
 - [x] 09-visual-review — Frontend visual approval checkpoint (provisional)
-- [ ] 10a-quality — Quality audit and fixes (pending)
+- [x] 10a-quality — Quality audit and fixes (complete_local)
 - [ ] 10b-security-review — Security audit and manual review (pending)
 - [ ] 11-security-fixes — Approved security fixes (pending)
 - [ ] 12-handoff — Final local handoff (pending)
@@ -7864,7 +7868,7 @@ This checklist records local work. Human approvals and unresolved external check
   "schema_version": 3,
   "repo_root": "C:\\Users\\minat\\Work\\ClipBuilder",
   "main_document": "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
-  "updated_at": "2026-10-26T13:02:30+00:00",
+  "updated_at": "2026-10-26T13:26:35+00:00",
   "context": {
     "PROJECT_NAME": {
       "value": "ClipBuilder",
@@ -8088,6 +8092,20 @@ This checklist records local work. Human approvals and unresolved external check
           ".local-build/evidence/cl086-text-1280.png (ignored synthetic capture)",
           ".local-build/evidence/cl086-text-390.png (ignored synthetic capture)"
         ]
+      },
+      {
+        "id": "AFK-0012",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-26T13:09:26+00:00",
+        "phase": "10a-quality",
+        "choice": "CL-089: execute Q-01 retryable independent hosted cleanup and Q-02 lockfile-first Docker dependency caching; preserve supported flows and defer speculative refactors.",
+        "rationale": "Current code confirms resource ownership is forgotten before failed removal and host-close can skip independent upload cleanup. All Dockerfiles invalidate dependency installation on source-only edits.",
+        "consequence": "Small reversible local fixes/tests/build-layer edits. No dependency/runtime version, provider budget, AI acceptance or product functionality change. Owner review remains provisional.",
+        "review_needed": true,
+        "evidence": [
+          "docs/tickets/CL-089-current-code-quality-audit.md",
+          "docs/operations/CODE_QUALITY_AUDIT_2026-10-26.md"
+        ]
       }
     ]
   },
@@ -8097,8 +8115,8 @@ This checklist records local work. Human approvals and unresolved external check
     "local_commits_approved": true,
     "approval_source": "human:2026-10-24-current-build-audit-message"
   },
-  "active_ticket": "CL-088",
-  "next_action": "Commit the authorized 84-file current-work snapshot, then prepare CL-089 quality audit prompt and packet.",
+  "active_ticket": "CL-089",
+  "next_action": "Stage/commit only the separate CL-089 whole-file plan, then prepare audit-only CL-090 security prompt/report before provisional AFK fix selection.",
   "phases": [
     {
       "id": "01-docs",
@@ -8443,18 +8461,31 @@ This checklist records local work. Human approvals and unresolved external check
       "id": "10a-quality",
       "name": "Quality audit and fixes",
       "gate": null,
-      "status": "pending",
-      "prompt": null,
+      "status": "complete_local",
+      "prompt": {
+        "text": "Audit the current whole ClipBuilder repository after ca10def committed CL-084–088. Preserve upload/manual-AI moments, preview-first explicit export, caption/picture/filter/focus/Text controls, TikTok/title/fade defaults, original-source output, source/revision binding, usable Gemini critique-only acceptance, explicit retry reuse, bounds/cancellation and private diagnostics. First document the actual quality/efficiency/structure findings and careful functionality-preserving plan in CL-089 and the dated quality report. Current justified findings: Q-01 independently settle hosted host/upload cleanup and retain staged directory identity after a filesystem failure; Q-02 cache pinned Docker dependency fetch before source COPY, keeping frozen offline installation and original build/runtime behavior. No arbitrary monolith rewrite, speculative optimization, dependency upgrade or new feature. Reproduce Q-01 using injected failures and generated files with zero native/provider work, fix narrowly, run focused and settled fake/no-key/paid-off/network-blocked checks and meaningful pinned offline-fetch/closed-context verification. Read-only validate, independently confirm/fix findings and revalidate until no actionable local issue remains. Write a separate exhaustive whole-file plan, inspect staged content and make authorized CL-089 local commits. The prior current-work commit must remain intact. Keep owner env/media/diagnostics and the running fake app; verify lifecycle ownership if backend reload is required. No G Cloud access/change, provider call/spend, scanner metadata export, deployment or push. Real AI, personal visual/media/rights, actual hosted resources/identity and current Linux/native vendor acceptance remain open. Complete quality before CL-090 security audit.",
+        "sha256": "a72a2e8a868a28d4fdd0aae42889574658f785f810591b2e868041bfef83c553",
+        "context_sources": [
+          "docs/tickets/CL-089-current-code-quality-audit.md",
+          "docs/operations/CODE_QUALITY_AUDIT_2026-10-26.md",
+          "commit:ca10def",
+          "human:2026-10-26-current-request"
+        ],
+        "status": "afk",
+        "approval": null,
+        "afk_session": "AFK-SESSION-001"
+      },
       "evidence": [
-        "audit-worktree:commit:a28a668",
-        "audit-worktree:docs/operations/CODE_QUALITY_AUDIT_2026-10-24.md",
-        "1784 tests/168 files; lint/types/format; Windows and actual Linux synthetic proofs pass, zero external attempts"
+        "docs/tickets/CL-089-current-code-quality-audit.md",
+        "docs/operations/CODE_QUALITY_AUDIT_2026-10-26.md",
+        "three unchanged-code cleanup failures reproduced; diagnostic preservation rechecked;8focused,602local,144root+1728package cases pass; affectedtypes/lint/format",
+        "guarded pnpm11.19 fetch/offline install zero external attempts/downloads and unchanged lock; earlier public npm attempt invalidated/documented"
       ],
       "blockers": [
         {
           "kind": "external",
-          "reason": "Owner paid/visual acceptance, real hosted identity/resources and maximum capacity remain unverified; isolated audit commits await application after ongoing owner manual review.",
-          "reference": "docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md"
+          "reason": "Actual current Linux image/hosted resources/identity/native-vendor and owner real AI/media/rights/personal visual/release gates remain open. No cloud/provider/deploy/push/scanner-export approval.",
+          "reference": "docs/tickets/CL-089-current-code-quality-audit.md"
         }
       ],
       "approval": null,

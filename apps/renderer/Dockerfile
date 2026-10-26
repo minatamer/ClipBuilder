@@ -6,8 +6,10 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
 FROM base AS build
 WORKDIR /workspace
 RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN corepack pnpm fetch --ignore-scripts
 COPY . .
-RUN corepack pnpm install --frozen-lockfile
+RUN corepack pnpm install --offline --frozen-lockfile
 RUN corepack pnpm --filter @clipbuilder/contracts build && corepack pnpm --filter @clipbuilder/composition build && corepack pnpm --filter @clipbuilder/renderer build && corepack pnpm --filter @clipbuilder/renderer bundle
 RUN corepack pnpm --filter @clipbuilder/renderer exec tsx scripts/stage-tools.ts /opt/clipbuilder
 RUN dpkg-query -W > /opt/clipbuilder/debian-packages.txt

@@ -1,5 +1,16 @@
 # ClipBuilder canonical ticket index
 
+## Current quality audit — 2026-10-26
+
+[CL-089](CL-089-current-code-quality-audit.md) follows committed current work
+`ca10def`. Reproduced independent/retryable hosted upload cleanup and lockfile-first
+Docker caching fixes are implemented and locally validated: 602 local cases,
+full 144-root/1,728-package unit gate, affected types/lint/format and guarded
+cached fetch/offline install. Read-only review is clean. Preserve all
+features, diagnostics and bounds; synthetic fake/paid-off checks only. Separate
+file-level quality commit precedes CL-090 security. No provider/cloud/push/deploy
+or scanner metadata export; owner paid/visual/hosted release gates remain open.
+
 ## Final fake-mode verification and commit — 2026-10-26
 
 [CL-088](CL-088-fake-mode-verification-and-commit.md) is locally validated under

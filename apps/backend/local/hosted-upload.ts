@@ -134,8 +134,8 @@ export class HostedUpload {
     this.busy = true;
     try {
       await rename(stage.path, await files.file(workspaceId, "source.mp4"));
-      this.stage = undefined;
       await rm(stage.directory, { recursive: true, force: true });
+      if (this.stage === stage) this.stage = undefined;
       return { fingerprint: stage.hash.digest("hex"), bytes: stage.bytes };
     } finally {
       this.busy = false;
@@ -143,7 +143,9 @@ export class HostedUpload {
   }
   async discard() {
     const stage = this.stage;
-    this.stage = undefined;
-    if (stage) await rm(stage.directory, { recursive: true, force: true });
+    if (stage) {
+      await rm(stage.directory, { recursive: true, force: true });
+      if (this.stage === stage) this.stage = undefined;
+    }
   }
 }
