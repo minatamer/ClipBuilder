@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
-import { lstat, readFile, writeFile, link } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, readFile, writeFile, link, copyFile } from "node:fs/promises";
 import { join } from "node:path";
 import { openBrowser } from "@remotion/renderer";
 import {
@@ -9,6 +10,9 @@ import {
 } from "../../../packages/contracts/local/clips.ts";
 import { ownerOverlayFrame } from "../../../packages/composition/local/overlay-frame.ts";
 import type {} from "./overlay-protocol.ts";
+
+// Keep each shared PNG below Windows' per-file hardlink limit.
+const OVERLAY_LINKS_PER_FILE = 512;
 
 /** Fixed local React page; no Remotion media proxy, arbitrary URL or source video. */
 export async function rasterizeOwnerOverlay(
@@ -127,7 +131,10 @@ export async function rasterizeOwnerOverlay(
       }),
     );
     let bytes = 0;
-    const cache = new Map<string, { file: string }>();
+    const cache = new Map<
+      string,
+      { file: string; links: number; bytes: number }
+    >();
     for (let frame = 0; frame < options.overlay.frames; frame++) {
       signal.throwIfAborted();
       const frameFile = join(
@@ -137,7 +144,17 @@ export async function rasterizeOwnerOverlay(
       const key = ownerOverlayFrame(options.overlay, frame).key,
         cached = cache.get(key);
       if (cached) {
-        await link(cached.file, frameFile);
+        if (cached.links < OVERLAY_LINKS_PER_FILE) {
+          await link(cached.file, frameFile);
+          cached.links++;
+        } else {
+          if (bytes + cached.bytes > OWNER_BATCH_POLICY.overlayBytes)
+            throw new Error("overlay_capacity");
+          await copyFile(cached.file, frameFile, constants.COPYFILE_EXCL);
+          bytes += cached.bytes;
+          cached.file = frameFile;
+          cached.links = 1;
+        }
         continue;
       }
       await page.evaluate(async (value) => {
@@ -151,7 +168,7 @@ export async function rasterizeOwnerOverlay(
       if (bytes > OWNER_BATCH_POLICY.overlayBytes)
         throw new Error("overlay_capacity");
       await writeFile(frameFile, buffer, { flag: "wx", mode: 0o600 });
-      cache.set(key, { file: frameFile });
+      cache.set(key, { file: frameFile, links: 1, bytes: buffer.length });
     }
   } finally {
     signal.removeEventListener("abort", cancel);
