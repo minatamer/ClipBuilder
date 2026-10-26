@@ -4,6 +4,7 @@ import { clipCandidateSchema } from "@clipbuilder/contracts";
 import { OWNER_VALIDATION_LIMITS } from "@clipbuilder/contracts";
 import {
   OWNER_LIMITS,
+  OWNER_MAX_REQUESTED_CLIP_MS,
   ownerIdSchema,
   OWNER_FPS,
   ownerCutSchema,
@@ -13,8 +14,8 @@ import {
 export { OWNER_FPS, ownerCutSchema, type OwnerCut } from "./policy.ts";
 export const ownerAiDurationSchema = z
   .object({
-    minMs: z.number().int().min(10_000).max(60_000),
-    maxMs: z.number().int().min(10_000).max(60_000),
+    minMs: z.number().int().min(10_000).max(OWNER_MAX_REQUESTED_CLIP_MS),
+    maxMs: z.number().int().min(10_000).max(OWNER_MAX_REQUESTED_CLIP_MS),
   })
   .strict()
   .refine(
@@ -59,6 +60,17 @@ export const ownerAnalysisInputsSchema = z
     { message: "Range row IDs must be unique." },
   );
 export type OwnerAnalysisInputs = z.infer<typeof ownerAnalysisInputsSchema>;
+/** New submissions are narrower than retained analysis and physical render clocks. */
+export const ownerAnalysisRequestSchema = ownerAnalysisInputsSchema.refine(
+  (input) =>
+    input.ranges.every(
+      (range) => range.endMs - range.startMs <= OWNER_MAX_REQUESTED_CLIP_MS,
+    ),
+  {
+    path: ["ranges"],
+    message: `Manual clips cannot exceed ${OWNER_MAX_REQUESTED_CLIP_MS / 1000} seconds.`,
+  },
+);
 export type OwnerRange = z.infer<typeof ownerRangeSchema>;
 export const ownerWordsSchema = z
   .array(transcriptWordSchema)

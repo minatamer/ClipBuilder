@@ -9,7 +9,7 @@ import {
 } from "../../../../../packages/contracts/local/index.ts";
 import {
   OWNER_FPS,
-  ownerAnalysisInputsSchema,
+  ownerAnalysisRequestSchema,
   ownerAnalysisSchema,
   ownerCut,
   ownerTimestamp,
@@ -18,7 +18,10 @@ import {
   type OwnerMoment,
 } from "../../../../../packages/contracts/local/selection.ts";
 import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts/local/runtime.ts";
-import { OWNER_DEFAULT_AI_COUNT } from "../../../../../packages/contracts/local/policy.ts";
+import {
+  OWNER_DEFAULT_AI_COUNT,
+  OWNER_MAX_REQUESTED_CLIP_MS,
+} from "../../../../../packages/contracts/local/policy.ts";
 import { normalizeManualTime, parseManualTime } from "./manual-time.ts";
 import { defaultMomentSelection } from "./moment-selection.ts";
 
@@ -67,8 +70,12 @@ export function OwnerSelectionPanel({
     workspace.mode === capabilities.aiMode;
   const [rows, setRows] = useState<Row[]>([]);
   const [minimum, setMinimum] = useState("10"),
-    [maximum, setMaximum] = useState("60");
-  const [manualOnly, setManualOnly] = useState(false),
+    [maximum, setMaximum] = useState(
+      String(OWNER_MAX_REQUESTED_CLIP_MS / 1000),
+    );
+  const [manualOnly, setManualOnly] = useState(
+      capabilities.aiMode === "synthetic-ai",
+    ),
     [policyRevision, setPolicyRevision] = useState(0);
   const [count, setCount] = useState(String(OWNER_DEFAULT_AI_COUNT));
   const [analysis, setAnalysis] = useState<OwnerAnalysis | null>(null);
@@ -176,7 +183,7 @@ export function OwnerSelectionPanel({
     );
   }
   function parsed() {
-    return ownerAnalysisInputsSchema.parse({
+    return ownerAnalysisRequestSchema.parse({
       sourceRevision: workspace.revision,
       policyRevision,
       ranges: rows.map((row) => ({
@@ -194,6 +201,11 @@ export function OwnerSelectionPanel({
   }
   function rounded(row: Row): string {
     try {
+      if (
+        fieldMilliseconds(row.end) - fieldMilliseconds(row.start) >
+        OWNER_MAX_REQUESTED_CLIP_MS
+      )
+        return `Keep clips to ${OWNER_MAX_REQUESTED_CLIP_MS / 1000} seconds or less.`;
       const cut = ownerCut(
         {
           startMs: fieldMilliseconds(row.start),
@@ -221,7 +233,11 @@ export function OwnerSelectionPanel({
         })),
       );
     } catch {
-      setMessage("Check clip times and the 10–60s duration limits.");
+      setMessage(
+        manualOnly
+          ? `Manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000} seconds. Check start and end times.`
+          : `Check clip times: manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s and AI durations 10–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s.`,
+      );
       return;
     }
     const controller = new AbortController();
@@ -502,7 +518,7 @@ export function OwnerSelectionPanel({
                   <input
                     type="number"
                     min="10"
-                    max="60"
+                    max={OWNER_MAX_REQUESTED_CLIP_MS / 1000}
                     step="1"
                     value={minimum}
                     onChange={(event) => {
@@ -516,7 +532,7 @@ export function OwnerSelectionPanel({
                   <input
                     type="number"
                     min="10"
-                    max="60"
+                    max={OWNER_MAX_REQUESTED_CLIP_MS / 1000}
                     step="1"
                     value={maximum}
                     onChange={(event) => {

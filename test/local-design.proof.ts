@@ -903,6 +903,8 @@ globalThis.clipbuilderOpenedOffline = async () => {
   return true;
 };
 globalThis.clipbuilderMomentFooterReady = async () => {
+  const suggest=await wait(()=>document.querySelector('.selection input[type="checkbox"]:enabled'));
+  if(!suggest.checked)suggest.click();
   await wait(()=>[...document.querySelectorAll('#sample-main > footer button')].some(node=>node.textContent.trim()==='Find moments' && !node.disabled));
   const copy=document.body.textContent;
   if(document.querySelector('.draft-controls') || /Save draft|Fictional transcript|Times round|provider calls|Number of additional/.test(copy)) throw new Error('verbose_moment_ui_retained');

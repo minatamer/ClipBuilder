@@ -7,7 +7,7 @@ import {
 } from "../../../packages/contracts/local/index.ts";
 import {
   OWNER_FPS,
-  ownerAnalysisInputsSchema,
+  ownerAnalysisRequestSchema,
   ownerAiEvidenceSchema,
   ownerAnalysisSchema,
   ownerCut,
@@ -126,7 +126,7 @@ export async function analyzeOwner(
 ) {
   const workspace = ownerWorkspaceSchema.parse(currentWorkspace);
   if (workspace.mode !== ports.mode) throw new Error("analysis_mode_mismatch");
-  const inputs = ownerAnalysisInputsSchema.parse(value);
+  const inputs = ownerAnalysisRequestSchema.parse(value);
   const requestedCount = inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT;
   if (inputs.sourceRevision !== workspace.revision)
     throw new Error("stale_source_revision");

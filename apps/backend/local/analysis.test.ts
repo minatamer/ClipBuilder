@@ -15,6 +15,7 @@ import {
 } from "../src/analysis/analysis.prompt.ts";
 import {
   ownerCut,
+  ownerAnalysisSchema,
   parseOwnerTimestamp,
   ownerTimestamp,
   type OwnerAnalysisInputs,
@@ -44,7 +45,7 @@ const range = (startMs: number, endMs: number) => ({
 const input = (minMs = 30_000, maxMs = minMs): OwnerAnalysisInputs => ({
   sourceRevision: 0,
   policyRevision: 1,
-  ranges: [range(1001, 8999), range(70_000, 145_000)],
+  ranges: [range(1001, 8999), range(70_000, 130_000)],
   aiDuration: { minMs, maxMs },
   manualOnly: false,
 });
@@ -348,6 +349,55 @@ describe("source transcription reuse", () => {
 });
 
 describe("owner manual ranges and independent discovery", () => {
+  it("accepts a manual clip exactly 60 seconds long without AI selection", async () => {
+    const provider = ports();
+    const result = await analyzeOwner(
+      workspace(),
+      { ...input(), ranges: [range(1000, 61_000)], manualOnly: true },
+      provider,
+      signal(),
+    );
+    expect(result.manual[0]?.cut).toEqual({ startFrame: 30, endFrame: 1830 });
+    expect(provider.transcribe).toHaveBeenCalledTimes(1);
+    expect(provider.select).not.toHaveBeenCalled();
+  });
+  it.each(["synthetic-ai", "provider-ai"] as const)(
+    "rejects a manual clip one millisecond over 60 seconds before any %s dispatch",
+    async (mode) => {
+      const provider = { ...ports(), mode };
+      await expect(
+        analyzeOwner(
+          { ...workspace(), mode },
+          { ...input(), ranges: [range(1000, 61_001)], manualOnly: true },
+          provider,
+          signal(),
+        ),
+      ).rejects.toThrow("Manual clips cannot exceed 60 seconds.");
+      expect(provider.transcribe).not.toHaveBeenCalled();
+      expect(provider.select).not.toHaveBeenCalled();
+    },
+  );
+  it("keeps legacy saved analysis readable but rejects its longer manual ranges on resubmission", async () => {
+    const saved = ownerAnalysisSchema.parse({
+      id: randomUUID(),
+      mode: "synthetic-ai",
+      inputs: { ...input(), ranges: [range(0, 75_000)], manualOnly: true },
+      words: [],
+      manual: [],
+      suggestions: [],
+      calls: { transcription: 0, selection: 0 },
+    });
+    expect(ownerCut(saved.inputs.ranges[0]!, 240_000)).toEqual({
+      startFrame: 0,
+      endFrame: 2250,
+    });
+    const provider = ports();
+    await expect(
+      analyzeOwner(workspace(), saved.inputs, provider, signal()),
+    ).rejects.toThrow("Manual clips cannot exceed 60 seconds.");
+    expect(provider.transcribe).not.toHaveBeenCalled();
+    expect(provider.select).not.toHaveBeenCalled();
+  });
   it.each([1, 5, 10])(
     "requests %i grounded suggestions without changing manual cuts or repeating calls",
     async (count) => {

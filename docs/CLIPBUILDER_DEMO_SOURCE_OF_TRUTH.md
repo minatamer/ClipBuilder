@@ -1,5 +1,21 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Manual clip duration — CL-081, 2026-10-26
+
+New manual clips last 1–60 seconds, matching the AI duration setting's maximum,
+in fake, real local and hosted modes. Reject longer submissions before provider
+work and show an actionable limit error. Preserve saved analyses and existing
+clips/exports; the broader physical media-resource allowance stays unchanged.
+AI duration preferences remain advisory for returned usable provider results
+under CL-060; this input limit adds no quality rejection or automatic retry.
+
+## Fake-mode manual clip default — CL-080, 2026-10-26
+
+Fresh fake-mode selection starts with Suggest clips unchecked; owners may enable
+simulated suggestions manually. Real/hosted provider mode keeps Suggest clips
+checked by default. Saved analysis restores its own preference, and navigation
+preserves current inputs. This changes no capability, provider gate or paid path.
+
 ## Uploaded picture transparency — CL-079, 2026-10-25
 
 Preserve transparent and partially transparent pixels in uploaded PNG/WebP

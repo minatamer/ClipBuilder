@@ -20,7 +20,7 @@ import {
   type OwnerTranscript,
 } from "./analysis.ts";
 import {
-  ownerAnalysisInputsSchema,
+  ownerAnalysisRequestSchema,
   ownerMomentExportSchema,
   type OwnerAnalysis,
 } from "../../../packages/contracts/local/selection.ts";
@@ -1209,7 +1209,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         }
         busy.add(workspace.id);
         try {
-          const inputs = ownerAnalysisInputsSchema.parse(
+          const inputs = ownerAnalysisRequestSchema.parse(
             await readOwnerJson(req),
           );
           if (
