@@ -99,7 +99,7 @@ export async function reviewFreshLocalFlow(
         for(const [label,value] of [['Clip 1 start','00:00:01'],['Clip 1 end','00:00:02'],['Clip 2 start','00:00:03'],['Clip 2 end','00:00:04']]) await change(document.querySelector('[aria-label="'+label+'"]'),value);
         const suggest=document.querySelector('.selection input[type="checkbox"]');if(suggest.checked)suggest.click();
         await wait(()=>button('Use clips') && !button('Use clips').disabled);button('Use clips').click();
-        await wait(()=>document.querySelectorAll('.moments button[aria-pressed="true"]').length===2);
+        await wait(()=>document.querySelectorAll('.moment-card').length===2);
         const process=await wait(()=>button('Process clips'));if(!document.querySelector('#sample-main > footer').contains(process))throw new Error('fresh_process_outside_footer');
         const sourceVideo=document.querySelector('.source-preview video');sourceVideo.muted=true;await sourceVideo.play();
         process.click();await wait(()=>document.querySelectorAll('.clip-choice').length===2 && document.querySelector('.moment-selection').hidden);
@@ -113,7 +113,7 @@ export async function reviewFreshLocalFlow(
           while(globalThis.clipbuilderRetryPending)await new Promise(done=>setTimeout(done,50));
           retry.focus();retry.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));retry.click();
         }
-        await wait(()=>document.querySelector('a[aria-label="Download clip"]') && button('Add more clips'));
+        await wait(()=>button('Export clip') && document.querySelector('.editor-panels:not([hidden])') && button('Add more clips'));
         if(document.querySelector('.moment-selection').getClientRects().length || document.querySelector('.processing-details') || document.querySelectorAll('.clip-editor').length!==1)throw new Error('fresh_editor_stacked');
         const control=label=>[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim()===label)?.querySelector('input,select');
         await change(control('Style'),'boxed');await change(control('Animation'),'bounce');
@@ -133,7 +133,12 @@ export async function reviewFreshLocalFlow(
       };
     `,
     });
-    const flow = page.evaluate(() => globalThis.clipbuilderFreshFlow());
+    const flow = page
+      .evaluate(() => globalThis.clipbuilderFreshFlow())
+      .then(
+        (value) => ({ ok: true as const, value }),
+        (error: unknown) => ({ ok: false as const, error }),
+      );
     if (retryFailure) {
       let ready = false;
       for (let attempt = 0; attempt < 600; attempt++) {
@@ -172,7 +177,9 @@ export async function reviewFreshLocalFlow(
         globalThis.clipbuilderRetryPending = false;
       });
     }
-    const bytes = Buffer.from(await flow, "base64");
+    const result = await flow;
+    if (!result.ok) throw result.error;
+    const bytes = Buffer.from(result.value, "base64");
     await page.goto({ url: `http://localhost:${port}/`, timeout: 10000 });
     await page._client().send("Runtime.evaluate", {
       expression: `
@@ -293,7 +300,7 @@ globalThis.clipbuilderReviewReadiness = async () => {
     return new Response(JSON.stringify(list),{status:200,headers:{'Content-Type':'application/json'}});
   };
   try {
-    await wait(()=>clip(1)?.querySelector('.clip-state').textContent==='Exporting' && !document.querySelector('.clip-editor'));
+    await wait(()=>clip(1)?.querySelector('.clip-state').textContent==='Exporting clip' && !document.querySelector('.clip-editor'));
     const busy=document.querySelector('.clip-preparing');
     if(!busy?.textContent.includes('Exporting') || getComputedStyle(busy.querySelector('svg')).animationName==='none' || document.querySelector('a[aria-label="Download clip"]'))throw new Error('export_exposed_editor');
     const rail=document.querySelector('.clip-list');
@@ -371,11 +378,12 @@ globalThis.clipbuilderExpandedEditorScroll = async () => {
   const details=document.querySelector('.clip-editor .geometry-controls');details.open=true;
   await new Promise(requestAnimationFrame);
   const content=document.querySelector('.local-editing').parentElement;
+  const inspector=document.querySelector('.editor-panels');
   const target=[...details.querySelectorAll('input')].at(-1);
   target.scrollIntoView({block:'end'});
   await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);
   const box=target.getBoundingClientRect(),footer=document.querySelector('#sample-main > footer').getBoundingClientRect();
-  return content.scrollHeight>content.clientHeight && box.bottom<=footer.top+1 && box.top>=content.getBoundingClientRect().top-1 && footer.bottom<=innerHeight+1 && document.querySelector('.editor-preview video')===globalThis.clipbuilderCompactVideo;
+  return (content.scrollHeight>content.clientHeight || inspector.scrollHeight>inspector.clientHeight) && box.bottom<=Math.min(footer.top,inspector.getBoundingClientRect().bottom)+1 && box.top>=Math.max(content.getBoundingClientRect().top,inspector.getBoundingClientRect().top)-1 && footer.bottom<=innerHeight+1 && document.querySelector('.editor-preview video')===globalThis.clipbuilderCompactVideo;
 };
 
 globalThis.clipbuilderPictureCapture=async()=>{
@@ -461,10 +469,10 @@ globalThis.clipbuilderReviewControls = async () => {
         await wait(() => !moments.hidden && control('Clips').value === '5' && !document.querySelector('.clip-editor'));
         const selectionTab = label => [...document.querySelectorAll('.moment-tabs button')].find(node=>node.textContent===label);
         await wait(()=>selectionTab('Your clips').getAttribute('aria-selected')==='true');
-        const momentsSelected=await wait(()=>{const nodes=[...document.querySelectorAll('.moments button')]; return nodes.length && nodes.every(node=>node.getAttribute('aria-pressed')==='true') ? nodes : null;});
+        const momentsSelected=await wait(()=>{const nodes=[...document.querySelectorAll('.moment-remove')]; return nodes.length ? nodes : null;});
         await wait(()=>button('Process clips'));
         if(!footer.contains(button('Process clips')) || button('Find moments')) throw new Error('process_not_in_footer');
-        for (const node of momentsSelected) { node.click(); await wait(()=>node.getAttribute('aria-pressed')==='false'); }
+        for (const node of momentsSelected) { node.click(); await wait(()=>!node.isConnected); }
         await wait(()=>button('Process clips')?.disabled);
         if(button('Find moments')) throw new Error('find_leaked_into_results');
         selectionTab('Add clips').click();
@@ -472,8 +480,6 @@ globalThis.clipbuilderReviewControls = async () => {
         if(!footer.contains(button('Find moments')) || button('Process clips') || control('Clips').value!=='5') throw new Error('find_not_in_footer');
         selectionTab('Your clips').click();
         await wait(()=>button('Process clips')?.disabled);
-        momentsSelected[0].click();
-        await wait(()=>!button('Process clips').disabled);
         button('Back to editor').click();
         await wait(() => moments.hidden && !button('Process clips')?.getClientRects().length);
         clip(2).click();

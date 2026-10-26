@@ -274,6 +274,16 @@ function validateRelations(record: DraftRecord): void {
   >();
   for (const clip of snapshot.clips) {
     if (
+      clip.preview &&
+      (!clip.base ||
+        clip.preview.frames !== clip.base.overlay.frames ||
+        !raw.some(
+          (file) =>
+            file.clipId === clip.id && file.bytes === clip.preview!.bytes,
+        ))
+    )
+      throw new Error("draft_document_invalid");
+    if (
       new Set(clip.assets.map((asset) => asset.id)).size !== clip.assets.length
     )
       throw new Error("draft_document_invalid");

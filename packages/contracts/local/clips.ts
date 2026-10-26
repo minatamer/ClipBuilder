@@ -21,6 +21,7 @@ import {
 import { ownerWordsSchema, ownerMomentSchema } from "./selection.ts";
 import { ownerVideoLookSchema } from "./video-look.ts";
 import { ownerFocusSchema } from "./focus.ts";
+import { ownerTextLayersSchema, ownerClipTitleSchema } from "./text-layers.ts";
 import { OWNER_CAPTION_GENERATION_ATTEMPTS } from "./caption-generation.ts";
 import {
   CONTEXTUAL_PICTURE_POLICY,
@@ -50,6 +51,7 @@ export const ownerOverlaySchema = z
       .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
     captions: compositionManifestV3Schema.shape.captions,
     captionStyle: ownerCaptionStyleSchema.optional(),
+    texts: ownerTextLayersSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
     focus: ownerFocusSchema.optional(),
     visuals: z.array(ownerVisualSchema).max(OWNER_PICTURE_LIMITS.cuesPerClip),
@@ -68,6 +70,7 @@ export const ownerOverlaySchema = z
         (cue) =>
           cue.endFrame <= cue.startFrame || cue.endFrame > overlay.frames,
       ) ||
+      overlay.texts?.some((layer) => layer.endFrame > overlay.frames) ||
       new Set(overlay.visuals.map((cue) => cue.id)).size !==
         overlay.visuals.length
     )
@@ -103,6 +106,11 @@ export const ownerClipOutputSchema = z
     bytes: z.number().int().positive().max(OWNER_LIMITS.outputBytes),
   })
   .strict();
+/** Measured playback media; a completed final export is a separate artifact. */
+export const ownerClipPreviewSchema = ownerClipOutputSchema.pick({
+  frames: true,
+  bytes: true,
+});
 export const ownerClipPlanSchema = z
   .array(
     z.object({
@@ -120,6 +128,7 @@ export const ownerClipPreparationSchema = z
     moment: ownerMomentSchema,
     focus: ownerFocusSchema.optional(),
     plan: ownerClipPlanSchema.nullable(),
+    title: ownerClipTitleSchema.optional(),
     pictures: z
       .array(
         z
@@ -164,7 +173,11 @@ export const ownerClipSchema = z
       "canceled",
       "failed",
     ]),
+    preparationStage: z
+      .enum(["planning", "pictures", "captions", "preview"])
+      .optional(),
     base: ownerClipBaseSchema.nullable(),
+    preview: ownerClipPreviewSchema.optional(),
     preparation: ownerClipPreparationSchema.optional(),
     edit: ownerEditDocumentSchema.nullable().default(null),
     assets: z.array(ownerAssetSchema).max(OWNER_PICTURE_LIMITS.assetsPerClip),

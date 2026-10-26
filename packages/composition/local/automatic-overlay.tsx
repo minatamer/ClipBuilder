@@ -3,6 +3,7 @@ import type { OwnerOverlay } from "../../contracts/local/clips.ts";
 import { FixedCaption } from "../src/fixed-layers.tsx";
 import { ownerOverlayFrame } from "./overlay-frame.ts";
 import { OwnerStyledCaption } from "./styled-caption.tsx";
+import { OwnerTextLayerView } from "./text-layer.tsx";
 import { ownerVisualMotion } from "./visual-motion.ts";
 
 /** The same fixed overlay tree runs in local review and transparent export. */
@@ -17,7 +18,7 @@ export function OwnerAutomaticOverlay({
 }) {
   const width = 1080,
     height = 1920;
-  const { ms, caption, visuals } = ownerOverlayFrame(overlay, frame);
+  const { ms, caption, visuals, texts } = ownerOverlayFrame(overlay, frame);
   return (
     <div
       style={{
@@ -50,6 +51,9 @@ export function OwnerAutomaticOverlay({
             ...ownerVisualMotion(cue, frame),
           }}
         />
+      ))}
+      {texts.map((layer) => (
+        <OwnerTextLayerView key={layer.id} layer={layer} />
       ))}
       {caption &&
         (overlay.captionStyle ? (

@@ -43,11 +43,9 @@ type IntakeLayout = {
   viewportHeight: number;
 };
 type StartupLayout = {
-  card: number[];
-  input: number[];
-  upload: number[];
-  sameInput: boolean;
-  disabled: boolean;
+  inputsAbsent: boolean;
+  visible: boolean;
+  overflow: boolean;
   spinner: boolean;
 };
 declare global {
@@ -542,19 +540,17 @@ it("presents two designed intake choices across desktop and phone layouts", asyn
     await setMotion("no-preference");
     await page.goto({ url: `http://localhost:${port}/`, timeout: 15_000 });
     const intakeDriver = `"use strict";
-let startupInput;
 globalThis.clipbuilderIntakeMounted = async () => {
   for (let attempt=0; attempt<200; attempt++) {
-    if (document.querySelector('.youtube-card input')) return true;
+    if ([...document.querySelectorAll('[role="status"]')].some(node=>node.textContent.trim()==='Connecting')) return true;
     await new Promise(done => setTimeout(done,50));
   }
   return false;
 };
 globalThis.clipbuilderStartupLayout = () => {
-  const input = document.querySelector('.youtube-card input');
-  if (!startupInput) startupInput = input;
-  const bounds = node => {const rect=node.getBoundingClientRect(); return [rect.x,rect.y,rect.width,rect.height].map(value => Math.round(value*10)/10);};
-  return {card:bounds(document.querySelector('.youtube-card')),input:bounds(input),upload:bounds(document.querySelector('.upload-card')),sameInput:input===startupInput,disabled:input.matches(':disabled'),spinner:!!document.querySelector('.youtube-startup-indicator')};
+  const status=[...document.querySelectorAll('[role="status"]')].find(node=>node.textContent.trim()==='Connecting');
+  const rect=status?.getBoundingClientRect();
+  return {inputsAbsent:!document.querySelector('.source-options'),visible:!!rect && rect.width>0 && rect.top>=0 && rect.bottom<=innerHeight,overflow:document.documentElement.scrollWidth>innerWidth,spinner:!!status?.parentElement.querySelector('.lucide-loader-circle')};
 };
 globalThis.clipbuilderCardBounds = () => {
   const bounds = node => [node.offsetTop,node.offsetWidth,node.offsetHeight];
@@ -569,7 +565,7 @@ globalThis.clipbuilderCtaLayout = () => {
   return {sameRow:actions.every(rect=>Math.abs(rect.y-actions[0].y)<1),aligned:innerWidth<768 || Math.abs(actions[0].y-upload.y)<1,inside:actions.every(rect=>rect.left>=bounds.left && rect.right<=bounds.right && rect.bottom<=bounds.bottom),minimum:Math.min(...actions.map(rect=>rect.height)),footer:footer.offsetTop};
 };
 globalThis.clipbuilderSpinnerAdvances = async () => {
-  const spinner = document.querySelector('.youtube-card .acquisition-spinner');
+  const spinner = document.querySelector('.local-editing .lucide-loader-circle');
   const animation = spinner?.getAnimations()[0];
   if (!animation || typeof animation.currentTime !== 'number') return false;
   const start = animation.currentTime;
@@ -666,8 +662,9 @@ globalThis.clipbuilderIntakeLayout = () => {
         globalThis.clipbuilderStartupLayout(),
       );
       expect(layout).toMatchObject({
-        sameInput: true,
-        disabled: true,
+        inputsAbsent: true,
+        visible: true,
+        overflow: false,
         spinner: true,
       });
       startupMetrics.push({ width, height, layout });
@@ -695,25 +692,28 @@ globalThis.clipbuilderIntakeLayout = () => {
     releaseCapabilities();
     expect(
       await page.evaluate(() => globalThis.clipbuilderStartupLayout()),
-    ).toMatchObject({ sameInput: true, disabled: true, spinner: true });
+    ).toMatchObject({
+      inputsAbsent: true,
+      visible: true,
+      overflow: false,
+      spinner: true,
+    });
     expect(statusReads).toBe(0);
     releaseWorkspace();
     expect(await page.evaluate(() => globalThis.clipbuilderIntakeReady())).toBe(
       true,
     );
-    for (const { width, height, layout: before } of startupMetrics) {
+    for (const { width, height } of startupMetrics) {
       await page.setViewport({ width, height, deviceScaleFactor: 1 });
       const after = await page.evaluate(() =>
         globalThis.clipbuilderStartupLayout(),
       );
       expect(after).toMatchObject({
-        sameInput: true,
-        disabled: false,
+        inputsAbsent: false,
+        visible: false,
+        overflow: false,
         spinner: false,
       });
-      expect(after.card).toEqual(before.card);
-      expect(after.input).toEqual(before.input);
-      expect(after.upload).toEqual(before.upload);
     }
     const metrics = [];
     const footerPositions = new Map<string, number>();
@@ -841,8 +841,8 @@ globalThis.clipbuilderVideoPreview = async () => {
   const before=animation?.currentTime;
   await new Promise(done=>setTimeout(done,150));
   const select=document.querySelector('.youtube-card select');
-  const arrow=document.querySelector('.youtube-resolution-select > svg');
-  return {loaded:image.naturalWidth>0,overflow:text.scrollWidth>title.clientWidth,animated:typeof before==='number' && animation.currentTime>before,fullTitle:title.title===text.textContent,arrow:!!arrow && getComputedStyle(select).appearance==='none' && getComputedStyle(arrow).pointerEvents==='none',options:[...select.options].map(option=>option.textContent)};
+  const selectStyle=getComputedStyle(select);
+  return {loaded:image.naturalWidth>0,overflow:text.scrollWidth>title.clientWidth,animated:typeof before==='number' && animation.currentTime>before,fullTitle:title.title===text.textContent,arrow:select.classList.contains('select-control') && selectStyle.appearance==='none' && selectStyle.backgroundImage!=='none' && parseFloat(selectStyle.paddingRight)>=40,options:[...select.options].map(option=>option.textContent)};
 };
 globalThis.clipbuilderDownloadAndCancel = async () => {
   const download = await wait(() => button('Download video')); download.click();
@@ -876,7 +876,9 @@ globalThis.clipbuilderFinishDownload = async () => {
 globalThis.clipbuilderPrepareOffline = async () => {
   await fillLink();
   const video=await wait(()=>{const node=document.querySelector('.youtube-preview video');return node?.dataset.loaded==='true' && node;});
-  if(video.videoWidth!==320 || video.videoHeight!==180 || video.currentTime!==1 || !video.paused || !video.muted || video.autoplay) throw new Error('saved_preview_not_silent_still');
+  const thumbnailTime=Math.min(10,video.duration/4);
+  await wait(()=>video.readyState>=2 && Math.abs(video.currentTime-thumbnailTime)<0.05);
+  if(video.videoWidth!==320 || video.videoHeight!==180 || !video.paused || !video.muted || video.autoplay || !video.playsInline || video.controls) throw new Error('saved_preview_not_silent_still');
   if(document.querySelector('.youtube-preview img') || document.querySelector('.youtube-preview .acquisition-spinner') || document.querySelector('.youtube-video-title').textContent!=='Saved video') throw new Error('saved_preview_not_local');
   if (button('More resolutions') || button('Download video') || document.querySelector('.youtube-card input')) throw new Error('offline_picker_unavailable');
   return true;
@@ -996,9 +998,9 @@ globalThis.clipbuilderManualTimesFit = () => {
 globalThis.clipbuilderSubmitManualTimes = async () => {
   const node=document.querySelector('input[aria-label="Clip 2 end"]');
   node.focus();
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(node,'00:00:60');
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(node,'00:01:02');
   node.dispatchEvent(new Event('input',{bubbles:true}));
-  await wait(()=>node.value==='00:00:60');
+  await wait(()=>node.value==='00:01:02');
   [...document.querySelectorAll('button')].find(node=>node.textContent.trim()==='Find moments').click();
   await wait(()=>document.querySelector('.selection .flow-notice').textContent.includes('Check clip times'));
   if(document.querySelector('button[aria-busy="true"]')) throw new Error('out_of_source_time_submitted');
@@ -1007,7 +1009,7 @@ globalThis.clipbuilderSubmitManualTimes = async () => {
   await wait(()=>node.value==='0:0:2');
   // Keep the input focused: submission must normalize without relying on blur.
   [...document.querySelectorAll('button')].find(node=>node.textContent.trim()==='Find moments').click();
-  await wait(()=>document.querySelector('button[aria-busy="true"]'));
+  await wait(()=>[...document.querySelectorAll('.selection [role="status"]')].some(node=>node.textContent.trim()==='Finding moments'));
   await wait(()=>node.value==='00:00:02');
   return true;
 };
@@ -1020,16 +1022,16 @@ globalThis.clipbuilderCaptureBusy = () => {
 globalThis.clipbuilderRetryMoments = async () => {
   const find=await wait(()=>[...document.querySelectorAll('#sample-main > footer button')].find(node=>node.textContent.trim()==='Find moments' && !node.disabled));
   find.click();
-  await wait(()=>document.querySelector('button[aria-busy="true"]'));
+  await wait(()=>[...document.querySelectorAll('.selection [role="status"]')].some(node=>node.textContent.trim()==='Finding moments'));
   return true;
 };
 globalThis.clipbuilderMomentResults = async () => {
   const tab=label=>[...document.querySelectorAll('.moment-tabs button')].find(node=>node.textContent===label);
   await wait(()=>tab('Your clips')?.getAttribute('aria-selected')==='true');
-  const buttons=await wait(()=>{const nodes=[...document.querySelectorAll('.moments button')]; return nodes.length===3 && nodes.every(node=>node.getAttribute('aria-pressed')==='true') && nodes;});
+  const buttons=await wait(()=>{const nodes=[...document.querySelectorAll('.moment-remove')]; return nodes.length===3 && nodes;});
   const process=await wait(()=>[...document.querySelectorAll('#sample-main > footer button')].find(node=>node.textContent.trim()==='Process clips' && !node.disabled));
   if(!process || document.querySelectorAll('.selection > [role="tabpanel"]:not([hidden])').length!==1 || document.querySelector('.range-row').getClientRects().length || [...document.querySelectorAll('button')].some(node=>node.textContent.trim()==='Find moments')) throw new Error('results_were_appended_or_not_selected');
-  if(!buttons.every(node=>node.textContent.trim()==='Deselect') || !document.querySelector('.selection-count').textContent.includes('3 selected')) throw new Error('selection_not_intuitive');
+  if(!buttons.every(node=>node.textContent.trim()==='Remove') || !document.querySelector('.selection-count').textContent.includes('3 clips')) throw new Error('selection_not_intuitive');
   await wait(()=>{const bounds=document.querySelector('.moment-tabs').getBoundingClientRect(); return bounds.top>=document.querySelector('#sample-main > header').getBoundingClientRect().bottom-1 && bounds.bottom<=innerHeight;});
   return true;
 };
@@ -1043,20 +1045,18 @@ globalThis.clipbuilderMomentResultsFit = () => {
 globalThis.clipbuilderMomentTabs = async () => {
   const tab=label=>[...document.querySelectorAll('.moment-tabs button')].find(node=>node.textContent===label);
   const action=label=>[...document.querySelectorAll('#sample-main > footer button')].find(node=>node.textContent.trim()===label);
-  const resultButtons=[...document.querySelectorAll('.moments button')];
+  const resultButtons=[...document.querySelectorAll('.moment-remove')];
   resultButtons[0].click();
-  await wait(()=>resultButtons[0].getAttribute('aria-pressed')==='false');
+  await wait(()=>!resultButtons[0].isConnected);
   tab('Add clips').click();
   await wait(()=>action('Find moments') && !action('Process clips'));
   if(document.querySelector('input[aria-label="Clip 2 end"]').value!=='00:00:02' || document.querySelector('.choices').getClientRects().length) throw new Error('tab_lost_input_or_showed_both_views');
   tab('Your clips').click();
   await wait(()=>action('Process clips'));
-  if(resultButtons[0].getAttribute('aria-pressed')!=='false' || !document.querySelector('.selection-count').textContent.includes('2 selected')) throw new Error('tab_lost_selection');
-  for(const node of resultButtons.slice(1)) {node.click();await wait(()=>node.getAttribute('aria-pressed')==='false');}
+  if(resultButtons[0].isConnected || !document.querySelector('.selection-count').textContent.includes('2 clips')) throw new Error('tab_lost_selection');
+  for(const node of resultButtons.slice(1)) {node.click();await wait(()=>!node.isConnected);}
   await wait(()=>action('Process clips').disabled);
   if(action('Find moments')) throw new Error('deselected_results_changed_to_form_action');
-  resultButtons[0].click();
-  await wait(()=>!action('Process clips').disabled);
   tab('Your clips').focus();
   for(const [key,label] of [['ArrowLeft','Add clips'],['ArrowRight','Your clips'],['Home','Add clips'],['End','Your clips']]) {
     document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true}));
@@ -1070,7 +1070,7 @@ globalThis.clipbuilderMomentTabs = async () => {
   if(!tab('Your clips').disabled || action('Process clips')) throw new Error('edited_inputs_kept_stale_results');
   remove().click(); await wait(()=>!document.querySelector('.range-row'));
   action('Find moments').click();
-  await wait(()=>document.querySelector('button[aria-busy="true"]'));
+  await wait(()=>[...document.querySelectorAll('.selection [role="status"]')].some(node=>node.textContent.trim()==='Finding moments'));
   return true;
 };
 globalThis.clipbuilderEmptyMoments = async () => {

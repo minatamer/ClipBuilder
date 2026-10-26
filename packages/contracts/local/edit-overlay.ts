@@ -24,6 +24,7 @@ export function automaticOwnerEdit(
     baseHash,
     revision: 0,
     captions: null,
+    ...(base.overlay.texts ? { texts: base.overlay.texts } : {}),
     ...(base.overlay.focus ? { focus: base.overlay.focus } : {}),
     visuals: base.overlay.visuals.map((cue) =>
       ownerVisualEditSchema.parse({
@@ -81,6 +82,7 @@ export function compileOwnerOverlay(
     ...base.overlay,
     captions: correctedOwnerCaptions(base.overlay.captions, edit?.captionText),
     visuals,
+    ...(edit?.texts ? { texts: edit.texts } : {}),
     ...(edit?.captions ? { captionStyle: edit.captions } : {}),
     ...(edit?.videoLook ? { videoLook: edit.videoLook } : {}),
     ...(edit?.focus ? { focus: edit.focus } : {}),

@@ -1,8 +1,7 @@
-import { vi as captionFixtureMock } from "vitest";
-captionFixtureMock.mock("../apps/backend/local/fake-content.ts", () => ({
+vi.mock("../apps/backend/local/fake-content.ts", () => ({
   FAKE_CAPTIONS_ENABLED: true,
 }));
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { join, resolve } from "node:path";
 import {
   mkdtemp,
@@ -207,10 +206,16 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       // cannot fit, so discovery is skipped instead of reusing manual time.
       if (bounds.minMs === 60_000) {
         expect(result.suggestions).toEqual([]);
-        expect(result.calls).toEqual({ transcription: 1, selection: 0 });
+        expect(result.calls).toEqual({
+          transcription: index === 0 ? 1 : 0,
+          selection: 0,
+        });
       } else {
         expect(result.suggestions.length).toBeGreaterThan(0);
-        expect(result.calls).toEqual({ transcription: 1, selection: 1 });
+        expect(result.calls).toEqual({
+          transcription: index === 0 ? 1 : 0,
+          selection: 1,
+        });
       }
       for (const moment of result.suggestions) {
         expect(
@@ -244,7 +249,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     const analysis = ownerAnalysisSchema.parse(
       JSON.parse(analyzed.body.toString()),
     );
-    expect(analysis.calls).toEqual({ transcription: 1, selection: 1 });
+    expect(analysis.calls).toEqual({ transcription: 0, selection: 1 });
     expect(analysis.suggestions).toHaveLength(5);
     expect(
       analysis.suggestions.every((moment) =>
@@ -284,15 +289,13 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         result = ownerClipListSchema.parse(
           JSON.parse(response.body.toString()),
         );
-        const ready = result.clips.find((clip) => clip.outputs.length > 0);
+        const ready = result.clips.find((clip) => clip.preview);
         if (result.active && ready && !reviewDuringWork) {
           expect(
             (
-              await ownerRequest(
-                port,
-                `${endpoint}/clips/${ready.id}/output/0`,
-                { headers: auth },
-              )
+              await ownerRequest(port, `${endpoint}/clips/${ready.id}/source`, {
+                headers: auth,
+              })
             ).status,
           ).toBe(200);
           reviewDuringWork = true;
@@ -304,7 +307,29 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         `synthetic_batch_timeout:${result?.clips.map((clip) => clip.state).join(",")}`,
       );
     }
-    const result = await waitForClips();
+    let result = await waitForClips();
+    expect(
+      result.clips.every(
+        (clip) =>
+          clip.preview && clip.outputs.length === 0 && clip.calls.render === 0,
+      ),
+    ).toBe(true);
+    for (const clip of result.clips) {
+      expect(
+        (
+          await ownerRequest(port, `${endpoint}/clips/${clip.id}/render`, {
+            method: "POST",
+            headers: json,
+            body: JSON.stringify({
+              operationId: crypto.randomUUID(),
+              expectedRevision: 0,
+            }),
+          })
+        ).status,
+      ).toBe(202);
+      await waitForClips();
+    }
+    result = await waitForClips();
     expect(reviewDuringWork).toBe(true);
     expect(result.clips.map((clip) => clip.state)).toEqual([
       "ready",
@@ -325,7 +350,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
           "-i",
           file,
           "-vf",
-          `select='${selected}',${crop},signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-`,
+          `select='${selected}',scale=1080:1920:flags=neighbor,${crop},signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-`,
           "-an",
           "-f",
           "null",
@@ -367,7 +392,13 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     );
     // Sample the photograph's dark corner. Its previous top-center pixel has
     // almost the same luma as green, now that the AI cut starts after manual time.
-    const picture = await luma(aiFile, "eq(n,0)+eq(n,150)", "crop=8:8:296:916");
+    // New pictures fade in over nine frames: compare after the fade, then
+    // after the picture ends, against exactly the same source frames.
+    const picture = await luma(
+      aiFile,
+      "eq(n,0)+eq(n,15)+eq(n,150)",
+      "crop=8:8:296:916",
+    );
     const aiSource = await ownerClipMediaPath(
       root,
       workspace.id,
@@ -376,20 +407,32 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     );
     const rawPicture = await luma(
       aiSource,
-      "eq(n,0)+eq(n,150)",
+      "eq(n,0)+eq(n,15)+eq(n,150)",
       "crop=8:8:296:916",
     );
-    expect(Math.abs(picture[0]! - rawPicture[0]!)).toBeGreaterThan(10);
-    expect(Math.abs(picture[1]! - rawPicture[1]!)).toBeLessThan(3);
+    expect(picture).toHaveLength(3);
+    expect(rawPicture).toHaveLength(3);
+    expect(Math.abs(picture[0]! - rawPicture[0]!)).toBeLessThan(3);
+    expect(Math.abs(picture[1]! - rawPicture[1]!)).toBeGreaterThan(10);
+    expect(Math.abs(picture[2]! - rawPicture[2]!)).toBeLessThan(3);
+    // Sample actual retained caption intervals, not old assumed zero/59 clocks.
+    const retainedCaptions = result.clips[2]!.base!.overlay.captions;
+    const captionFrames = [retainedCaptions[0]!, retainedCaptions.at(-1)!].map(
+      (caption) => Math.floor(((caption.startMs + caption.endMs) * 30) / 2000),
+    );
+    expect(new Set(captionFrames).size).toBe(2);
+    const captionSelection = captionFrames
+      .map((frame) => `eq(n,${frame})`)
+      .join("+");
     const captions = await luma(
       aiFile,
-      "eq(n,0)+eq(n,59)",
+      captionSelection,
       "crop=920:200:80:1500",
     );
     const rawCaptions = await luma(
       aiSource,
-      "eq(n,0)+eq(n,59)",
-      "crop=920:200:80:1500",
+      captionSelection,
+      "crop=920:200:80:800",
     );
     expect(captions).toHaveLength(2);
     for (let index = 0; index < 2; index++)
@@ -419,8 +462,8 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         })
       ).status,
     ).toBe(202);
-    expect(nativeCalls).toBe(4);
-    expect([transcriptions, selections, plans, pictures]).toEqual([4, 3, 3, 3]);
+    expect(nativeCalls).toBe(7);
+    expect([transcriptions, selections, plans, pictures]).toEqual([1, 3, 3, 3]);
     const clip = result.clips[0]!;
     const oldOutput = (
       await ownerRequest(port, `${endpoint}/clips/${clip.id}/output/0`, {
@@ -521,7 +564,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     expect(rendered.clips[0]?.outputs.map((output) => output.revision)).toEqual(
       [0, 1],
     );
-    expect(nativeCalls).toBe(5);
+    expect(nativeCalls).toBe(8);
     expect(
       rendered.clips[0]!.outputs.map((output) => output.editRevision),
     ).toEqual([0, 1]);
@@ -536,7 +579,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         "-i",
         editedFile,
         "-vf",
-        "select='eq(n,10)',crop=8:8:700:960,signalstats,metadata=print:key=lavfi.signalstats.SATAVG:file=-",
+        "select='eq(n,10)',scale=1080:1920:flags=neighbor,crop=8:8:700:960,signalstats,metadata=print:key=lavfi.signalstats.SATAVG:file=-",
         "-an",
         "-f",
         "null",
@@ -548,14 +591,20 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       Number(/lavfi\.signalstats\.SATAVG=([\d.]+)/u.exec(saturation)?.[1]),
     ).toBeLessThan(2);
     expect(
-      (await luma(editedFile, "eq(n,0)", "crop=8:8:266:860"))[0],
+      (await luma(editedFile, "eq(n,15)", "crop=8:8:266:860"))[0],
     ).toBeGreaterThan(220);
     expect(
       (await luma(editedFile, "eq(n,0)", "crop=920:240:80:384"))[0],
     ).toBeGreaterThan(20);
-    expect(
-      (await luma(editedFile, "eq(n,0)", "crop=920:200:80:1500"))[0],
-    ).toBeLessThan(18);
+    // Source-quality framing fills the portrait: the old caption area should
+    // match plain monochrome video rather than the retired black letterbox.
+    const bottom = (
+      await luma(editedFile, "eq(n,0)", "crop=920:200:80:1500")
+    )[0]!;
+    const background = (
+      await luma(editedFile, "eq(n,0)", "crop=8:8:700:960")
+    )[0]!;
+    expect(Math.abs(bottom - background)).toBeLessThan(3);
     expect(
       (
         await ownerRequest(port, `${endpoint}/clips/${clip.id}/output/0`, {
@@ -620,7 +669,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
         )
       ).status,
     ).toBe(200);
-    expect(nativeCalls).toBe(5);
+    expect(nativeCalls).toBe(8);
     const agentPorts: OwnerAgentPorts = {
       discover: async () => ({ token: "a".repeat(64) }),
       picture: async () => {
@@ -697,7 +746,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     });
     if (validation.kind !== "validation")
       throw new Error("expected_validation");
-    expect(nativeCalls).toBe(5);
+    expect(nativeCalls).toBe(8);
     const applied = await agent({
       command: "apply",
       ...target,
@@ -736,13 +785,13 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       0, 1, 2,
     ]);
     expect(agentExport.calls).toEqual({ plan: 1, image: 1, render: 3 });
-    expect(nativeCalls).toBe(6);
+    expect(nativeCalls).toBe(9);
     const agentFile = await ownerClipMediaPath(root, reopened.id, clip.id, 2);
     expect(
-      (await luma(agentFile, "eq(n,0)", "crop=8:8:700:900"))[0],
+      (await luma(agentFile, "eq(n,15)", "crop=8:8:700:900"))[0],
     ).toBeGreaterThan(220);
     expect(
-      (await luma(agentFile, "eq(n,0)", "crop=8:8:266:860"))[0],
+      (await luma(agentFile, "eq(n,15)", "crop=8:8:266:860"))[0],
     ).toBeLessThan(100);
     expect(
       (
@@ -766,7 +815,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     expect(canceled.outputs).toEqual(agentExport.outputs);
     expect(canceled.calls.plan).toBe(1);
     expect(canceled.calls.image).toBe(1);
-    expect([transcriptions, selections, plans, pictures]).toEqual([4, 3, 3, 3]);
+    expect([transcriptions, selections, plans, pictures]).toEqual([1, 3, 3, 3]);
     expect(
       (
         await ownerRequest(port, `${restoredEndpoint}/source`, {
@@ -820,7 +869,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
     // This adds one native-only job, never another fake AI boundary call.
     expect(nativeCalls).toBe(beforeReopen + 1);
     expect({ transcriptions, selections, plans, pictures }).toEqual({
-      transcriptions: 4,
+      transcriptions: 1,
       selections: 3,
       plans: 3,
       pictures: 3,
@@ -866,7 +915,7 @@ it("makes three independent caption/picture MP4s locally, re-exports without AI 
       signal,
     );
     expect({ transcriptions, selections, plans, pictures }).toEqual({
-      transcriptions: 5,
+      transcriptions: 2,
       selections: 3,
       plans: 5,
       pictures: 5,

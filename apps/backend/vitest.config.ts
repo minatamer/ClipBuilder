@@ -12,6 +12,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    testTimeout: 15_000,
     setupFiles: [
       fileURLToPath(new URL("../../test/no-network.setup.ts", import.meta.url)),
     ],

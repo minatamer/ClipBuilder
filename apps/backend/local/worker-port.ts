@@ -149,8 +149,12 @@ export function localWorkerPort(
           if (result.operation !== job.operation)
             throw new Error("invalid_media_result");
           if (
-            (job.operation === "portrait" || job.operation === "clip") &&
-            (result.operation === "portrait" || result.operation === "clip") &&
+            (job.operation === "portrait" ||
+              job.operation === "clip" ||
+              job.operation === "clip-preview") &&
+            (result.operation === "portrait" ||
+              result.operation === "clip" ||
+              result.operation === "clip-preview") &&
             (result.frames !== job.cut.endFrame - job.cut.startFrame ||
               result.durationMs !==
                 Math.round((result.frames * 1000) / OWNER_FPS))

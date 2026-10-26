@@ -6,20 +6,24 @@ import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import { Button } from "../../shared/ui/button";
 import { useEditorPreview } from "./use-editor-preview.ts";
 
-export function PictureTiming({
+export function PictureTiming<
+  T extends Pick<OwnerVisualEdit, "startFrame" | "endFrame">,
+>({
   cue,
   frames,
   player,
   available,
   attempt,
   onChange,
+  label = "Picture",
 }: {
-  cue: OwnerVisualEdit;
+  cue: T;
   frames: number;
   player: RefObject<PlayerRef | null>;
   available: boolean;
   attempt: number;
-  onChange: (cue: OwnerVisualEdit) => void;
+  onChange: (cue: T) => void;
+  label?: string;
 }) {
   const preview = useEditorPreview({ player, available, attempt, frames });
   const [error, setError] = useState("");
@@ -36,8 +40,8 @@ export function PictureTiming({
     ) {
       setError(
         key === "startFrame"
-          ? "Choose a frame before the picture's end."
-          : "Choose a frame at or after the picture's start.",
+          ? `Choose a frame before the ${label.toLowerCase()}'s end.`
+          : `Choose a frame at or after the ${label.toLowerCase()}'s start.`,
       );
       return;
     }
@@ -55,9 +59,7 @@ export function PictureTiming({
                 {start ? "Start (s)" : "End (s)"}
                 <input
                   type="number"
-                  aria-label={
-                    start ? "Picture start seconds" : "Picture end seconds"
-                  }
+                  aria-label={`${label} ${start ? "start" : "end"} seconds`}
                   min={start ? 0 : 1 / OWNER_FPS}
                   max={(start ? frames - 1 : frames) / OWNER_FPS}
                   step="0.033333"
@@ -84,9 +86,7 @@ export function PictureTiming({
                 variant="quiet"
                 icon={Clock3}
                 disabled={!preview.captureReady}
-                aria-label={
-                  start ? "Capture picture start" : "Capture picture end"
-                }
+                aria-label={`Capture ${label.toLowerCase()} ${start ? "start" : "end"}`}
                 title={
                   start
                     ? "Use current preview frame"

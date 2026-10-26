@@ -6,6 +6,15 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Current owner AFK audit authorization (2026-10-26, CL-088–090): fully verify
+  pending CL-084–087 work using fake AI/paid-off checks, document confirmed fixes,
+  prepare whole-file plans and make local staging/commits; then renew quality
+  and security audits through execute/validate loops with a file allocation for
+  each. Preserve functionality, media, diagnostics and the healthy fake-mode app.
+  AFK reviews are provisional; personal visual/real-AI/hosted/release acceptance
+  remains owner-only. No provider spend, G Cloud access/change, scanner metadata
+  export, deployment or push. Earlier audit evidence remains historical.
+
 - Owner caption exception (2026-10-25, CL-078): an explicit confirmed local
   Generate captions action may use the configured Gemini key for the selected
   clip's audio even with FAKE_MODE=true / PAID_DEMO_ENABLED=false. This does not
@@ -73,8 +82,10 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   replace the current content slot through mutually exclusive views or tabs;
   never append another complete workflow below the input form and force scrolling.
   Clip selection uses Add clips / Your clips tabs, retaining inputs on navigation.
-  Fresh/restored results start selected within the existing batch limit; owners
-  deselect unwanted clips. Selection never automatically submits processing.
+  CL-085 updates review: fresh/restored results retain all unique clips; owners
+  remove unwanted cards instead of toggling selection. Cards show duration and
+  Jump to source playback. More than ten retained clips disables processing
+  until extras are removed; review never automatically submits processing.
   Keep only the active view's proceed action in the persistent footer, including
   a disabled Process clips when the results selection is empty. Verify tab state,
   keyboard use and responsive geometry whenever changing this flow.

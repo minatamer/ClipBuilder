@@ -64,6 +64,31 @@ Apply/Discard/reopen/native export share the same text-only overrides. Local pai
 caption transcription alone may bypass fake/paid-master switches by explicit
 owner decision; other providers/cloud keep their gates. No env change is needed.
 Apply/discard before changing clips or leaving editor.
+CL-086 adds a Text setting with up to ten independent 500-character text layers
+(up to ten explicit lines each),
+clip-relative Start/End and Capture, drag/resize, position presets and shared
+typography controls. Text and captions share TikTok style (white/black outline),
+Solid background and Translucent background presets, font/size/weight/color,
+alignment, outline and background color/opacity. Text supports line breaks and
+wrapping; captions retain word timing and their existing animation controls.
+All text changes follow Apply/Discard, saved drafts and explicit export. No key
+is needed for manual text in either mode; fake captions remain fictional and real
+AI generation retains its separate keys/consent/approval requirements.
+CL-087 new automatic clips add a short editable top title in TikTok style for up
+to four seconds. New automatic/generated captions use TikTok style; reset shows
+the actual base default, while legacy/explicit styles remain compatible. New
+pictures fade in/out. The rail and loading panel follow actual preparation work
+(Planning edits / Adding pictures / Adding captions / Preparing preview), without
+invented percentages or timed message cycling. Fake titles are fictional and
+fake captions remain default-off; real titles share the existing approved AI
+planning request, adding no separate provider call.
+CL-084 opens the editor after validated preview preparation, before any finished
+MP4 exists. AI captions/pictures/framing and all edits remain live in the Player.
+The footer shows Export clip until the first explicit export finishes, then
+Download clip for the matching revision. Applying edits does not auto-export;
+saved preview-only clips reopen without AI or rendering. The final renderer and
+quality profile are unchanged. Real AI remains owner-tested with keys/approvals;
+fake/no-key tests exercise the native workflow with injected content.
 The footer has one primary plus Add more clips; dirty mode shows Apply/Discard.
 Back to editor retains inputs without submitting. Start over is directly in the
 footer and also discards unapplied browser edits. Existing acknowledged session
@@ -115,13 +140,14 @@ parent Player inputs and holds the overview still during playback. See
 
 Add clips / Your clips tabs replace the form with its results in the same slot;
 never append a full result workflow below the inputs. New/restored results open
-Your clips selected by default, manual-first up to the existing ten-clip limit.
-Deselect unwanted clips; extra choices can be selected after freeing capacity.
+Your clips with all unique results, manual-first. CL-085 cards show source range,
+frame-derived duration, Jump to source playback and Remove. Remove unwanted
+cards; keep extra returned results visible until explicitly removed.
 Tabs preserve inputs and choices without any request; changed inputs invalidate
 stale results. Add clips owns Find moments / Use clips; Your clips owns Process
-clips, disabled when none are selected. Processing always needs an explicit
-click. Use the existing settings-tab materials, keyboard navigation and targets.
-This permanent owner view rule is in AGENTS.md (CL-048).
+clips, disabled when none or more than ten remain. Processing always needs an
+explicit click. Use the existing settings-tab materials, keyboard navigation and targets.
+This permanent owner view rule is in AGENTS.md (CL-048/085).
 
 Editor playback errors stay in the portrait preview with Retry. Native
 error capture handles them before Remotion's error log can activate Next's
@@ -163,9 +189,21 @@ Captions for captions, Pictures for images, none in Filters. Tab switches retain
 edits and preview media/playhead; CL-055 owns this verification.
 Clip switching uses a left-hand vertical rail (Up/Down/Home/End). Queued and
 exporting clips show a spinner instead of editing controls, regardless of a
-retained base/output. Only completed ready/edited clips can open the editor;
+retained base/output. CL-084 also admits review-ready/edited clips with a measured
+preview receipt and no final export; legacy completed output-backed clips remain
+compatible. Other active/failed/canceled states cannot open the editor;
 settings and layer handles wait for initial preview decoding. Initial failure
 keeps retry available; later playback failure preserves dirty edits. CL-054
-owns readiness and responsive regression evidence. This also applies to fake AI.
+owns the original readiness regression; CL-084 owns preview-first evidence.
+This also applies to fake AI.
 Fake AI is fictional and key-free while downloads and native processing are
-real. Hosted `/start` keeps the existing demo and rejects local API requests.
+real. Hosted `/start` uses the shared upload-only editor and authenticated bridge.
+
+## Compact editor settings
+
+Desktop inspectors scroll within the available workspace height, keeping the
+preview and persistent actions above the footer as typography controls grow.
+Phone layouts retain their vertical content scroll. Text and caption controls,
+keyboard focus and 44px targets remain available. CL-088 covers the compact
+laptop regression; fake/no-key fixtures prove mechanics, not owner visual or
+real-provider acceptance.

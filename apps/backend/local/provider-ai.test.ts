@@ -2,6 +2,7 @@ import { LocalDiagnostics } from "./diagnostics.ts";
 import { createHash, randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { createOwnerProviderAi } from "./provider-ai.ts";
 import { analyzeOwner } from "./analysis.ts";
 import { ownerSelectionPolicy } from "./selection-policy.ts";
@@ -70,6 +71,58 @@ const cue = {
     avoidTerms: ["logos"],
   },
 };
+
+it.each([
+  "A grounded clip headline",
+  "A headline ".repeat(20),
+  null,
+  { bad: true },
+])(
+  "keeps optional title independent of usable picture/focus output with one existing request (%j)",
+  async (title) => {
+    const f = fixture();
+    f.transport.generate.mockResolvedValue({
+      finished: true,
+      text: JSON.stringify({
+        title,
+        pictures: [cue],
+        focus: { people: [], decisions: [] },
+      }),
+    });
+    const request = {
+      workspace: f.workspace,
+      clipId: f.clipId,
+      moment: f.moment,
+    };
+    expect(await f.ports.clipPreparation.plan(request, f.signal)).toEqual([
+      cue,
+    ]);
+    const headline = f.ports.clipPreparation.title!(request);
+    if (typeof title === "string") {
+      expect(headline).toBeTruthy();
+      expect(headline!.length).toBeLessThanOrEqual(80);
+    } else expect(headline).toBeNull();
+    expect(
+      f.ports.clipPreparation.title!({
+        ...request,
+        workspace: { ...f.workspace, id: randomUUID() },
+      }),
+    ).toBeNull();
+    expect(f.transport.generate).toHaveBeenCalledTimes(1);
+    expect(f.transport.transcribe).toHaveBeenCalledTimes(0);
+    expect(f.pictures.find).toHaveBeenCalledTimes(0);
+    expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
+      "one short top title",
+    );
+    expect(() =>
+      z.toJSONSchema(f.transport.generate.mock.calls[0]![2].schema, {
+        io: "input",
+      }),
+    ).not.toThrow();
+    await f.ports.close(f.signal);
+    expect(f.ports.clipPreparation.title!(request)).toBeNull();
+  },
+);
 
 it("retains anonymous camera observations from the existing single video request while malformed focus leaves usable pictures intact", async () => {
   const f = fixture();
@@ -298,7 +351,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
         manualOnly: false,
         ranges: [
           { id: randomUUID(), startMs: 0, endMs: 1000 },
-          { id: randomUUID(), startMs: 300_000, endMs: 600_000 },
+          { id: randomUUID(), startMs: 300_000, endMs: 360_000 },
         ],
       },
       f.ports.analysis,
@@ -308,7 +361,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     expect(result.words).toEqual(words);
     expect(result.manual.map((item) => item.cut)).toEqual([
       { startFrame: 0, endFrame: 30 },
-      { startFrame: 9000, endFrame: 18000 },
+      { startFrame: 9000, endFrame: 10800 },
     ]);
     expect(result.suggestions).toHaveLength(4);
     expect(result.suggestions[0]!.evidence!.title).toBe("Restoration");

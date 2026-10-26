@@ -10,6 +10,8 @@ import { composeLocalGeminiCapture } from "./analysis/gemini.local-capture.js";
 import { startLocalWorkflow } from "../local/runtime.ts";
 import { LocalDiagnostics } from "../local/diagnostics.ts";
 import { startHostedEditingWorkflow } from "../local/hosted-runtime.ts";
+import { ZodError } from "zod";
+import { ENVIRONMENT_KEYS } from "./config/env.schema.js";
 
 // Only the executable entry point loads owner-managed local configuration.
 function loadLocalEnvironment(): void {
@@ -156,6 +158,15 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     loadLocalEnvironment();
     await startBackend(process.env);
   })().catch((error: unknown) => {
+    if (error instanceof ZodError) {
+      const fields = [...ENVIRONMENT_KEYS, "NODE_ENV", "PORT"].filter((key) =>
+        error.issues.some((issue) => issue.path[0] === key),
+      );
+      if (fields.length)
+        console.warn(
+          `ClipBuilder startup configuration invalid fields: ${fields.join(", ")}`,
+        );
+    }
     new LocalDiagnostics((line) => console.warn(line)).failure(
       "startup",
       error,

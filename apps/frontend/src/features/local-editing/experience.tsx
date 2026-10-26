@@ -483,6 +483,37 @@ export function LocalEditingExperience({
                           workspace.source.durationMs,
                         )
                       }
+                      onJumpTo={(seconds) => {
+                        const video = sourcePreview.current;
+                        if (
+                          blocked ||
+                          clipWork ||
+                          !video ||
+                          video.readyState < 1 ||
+                          video.error ||
+                          !Number.isFinite(seconds) ||
+                          seconds < 0 ||
+                          seconds >= workspace.source.durationMs / 1000
+                        )
+                          return;
+                        try {
+                          setMessage("");
+                          video.currentTime = seconds;
+                          video.scrollIntoView({
+                            block: "center",
+                            behavior: "smooth",
+                          });
+                          video.focus({ preventScroll: true });
+                          void video.play().catch(() => {
+                            if (sourcePreview.current === video)
+                              setMessage("Press play in the video preview.");
+                          });
+                        } catch {
+                          setMessage(
+                            "Couldn’t jump to this clip. Try the video controls.",
+                          );
+                        }
+                      }}
                     />
                   )}
                 </div>

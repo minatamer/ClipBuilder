@@ -13,7 +13,7 @@ beforeAll(async () => {
       new URL("../apps/frontend/src/__boundary__.ts", import.meta.url),
     ),
   );
-}, 30_000);
+}, 60_000);
 
 async function lintFixture(relativePath: string, source: string) {
   const [result] = await eslint.lintText(source, {

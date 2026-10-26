@@ -304,14 +304,15 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
       add.focus();add.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));await new Promise(requestAnimationFrame);
       if(document.activeElement.textContent.trim()!=='Your clips'||document.activeElement.getAttribute('aria-selected')!=='true')throw new Error('loading_broke_keyboard_tabs');
       button('Process clips').click();
-      await wait(()=>document.querySelector('a[aria-label="Download clip"]')&&document.querySelector('.editor-panels:not([hidden])'));
+      await wait(()=>button('Export clip')&&document.querySelector('.editor-panels:not([hidden])'));
+      const prepared=await (await fetch('/api/local/workspace/'+globalThis.pictureWorkspace+'/clips')).json();if(prepared.clips[0].outputs.length||!prepared.clips[0].preview||prepared.clips[0].calls.render)throw new Error('unexpected_eager_export');if(prepared.clips[0].base.overlay.texts?.length!==1||prepared.clips[0].base.overlay.texts[0].style.preset!=='tiktok'||prepared.clips[0].base.overlay.texts[0].style.fontSize!==56)throw new Error('automatic_top_title_missing');
       if(document.querySelector('.moment-selection').getClientRects().length || document.querySelectorAll('.clip-editor').length!==1)throw new Error('hosted_editor_not_exclusive');
       const captionPause=async stage=>{globalThis.captionStage=stage;globalThis.captionStageReleased=false;await wait(()=>globalThis.captionStageReleased,'caption_'+stage);globalThis.captionStage=null;};
       if(button('Generate fake captions')||!document.querySelector('.caption-empty')||document.querySelectorAll('.picture-choice').length||document.querySelector('[aria-label="Select and move captions"]'))throw new Error('fake_content_not_empty');
       await captionPause('empty');button('Generate captions').click();await wait(()=>document.querySelector('[aria-label="Caption generation actions"]'));await captionPause('confirm');if(!document.querySelector('.caption-empty').textContent.includes('Gemini credits'))throw new Error('caption_paid_consent_missing');button('Cancel').click();await wait(()=>!document.querySelector('[aria-label="Caption generation actions"]'));
       button('Generate captions').click();await wait(()=>document.querySelector('[aria-label="Caption generation actions"]'));[...document.querySelectorAll('[aria-label="Caption generation actions"] button')].find(n=>n.textContent==='Generate captions').click();await wait(()=>document.querySelector('.clip-editor .flow-notice').textContent.includes('generate captions.'));await new Promise(done=>setTimeout(done,200));
       [...document.querySelectorAll('[aria-label="Caption generation actions"] button')].find(n=>n.textContent==='Generate captions').click();await wait(()=>document.querySelector('[aria-label="Caption 1 word 1"]'));
-      globalThis.pictureCaptionBase=(await (await fetch('/api/local/workspace/'+globalThis.pictureWorkspace+'/clips')).json());
+      globalThis.pictureCaptionBase=(await (await fetch('/api/local/workspace/'+globalThis.pictureWorkspace+'/clips')).json());if(globalThis.pictureCaptionBase.clips[0].base.overlay.captionStyle?.preset!=='tiktok')throw new Error('caption_default_not_tiktok');
       const font=[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim().startsWith('Font size')).querySelector('input');await change(font,'72');
       const named=label=>document.querySelector('[aria-label="'+label+'"]');
       [...document.querySelectorAll('[aria-label="Caption controls"] button')].find(n=>n.textContent==='Text').click();await new Promise(requestAnimationFrame);const first=named('Caption 1 word 1');const originalWord=first.value;await change(first,'Martian');button('Discard changes').click();await wait(()=>named('Caption 1 word 1')?.value===originalWord);await change(named('Caption 1 word 1'),'Martian');await captionPause('text');
@@ -335,9 +336,9 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
       button('Add picture').click();await new Promise(requestAnimationFrame);await capture('start',20,1);if(JSON.stringify(values())!=='[20,30]')throw new Error('second_picture_capture');await timing();if(JSON.stringify(values())!=='[6,24]')throw new Error('capture_changed_other_picture');await timing(1);[...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Image').click();await new Promise(requestAnimationFrame);button('Remove picture').click();await timing();
       document.querySelector('.editor-preview video').dispatchEvent(new Event('error'));await pictureWait(()=>named('Retry preview'),'picture_failed_preview');if(!named('Capture picture start').disabled||!named('Capture picture end').disabled)throw new Error('picture_failed_capture_enabled');named('Retry preview').click();await timing();if(JSON.stringify(values())!=='[6,24]')throw new Error('picture_retry_lost_timing');
       globalThis.pictureCaptureReady=true;await longWait(()=>globalThis.pictureCaptureRelease,'picture_layout_release');
-      await wait(()=>button('Apply changes'));globalThis.holdPictureSave=true;button('Apply changes').click();await pictureWait(()=>named('Capture picture start').matches(':disabled')&&named('Capture picture end').matches(':disabled'),'picture_busy_guard');globalThis.releasePictureSave=true;await wait(()=>button('Export clip'));
+      await wait(()=>button('Apply changes'));globalThis.holdPictureSave=true;button('Apply changes').click();await pictureWait(()=>named('Capture picture start').matches(':disabled')&&named('Capture picture end').matches(':disabled'),'picture_busy_guard');globalThis.releasePictureSave=true;globalThis.picturePhase='apply_ack';await wait(()=>button('Export clip')&&!button('Export clip').disabled&&!button('Apply changes'));
       const saved=globalThis.pictureSavedList.clips[0].edit.visuals[0];if(saved.startFrame!==6||saved.endFrame!==24)throw new Error('picture_capture_not_saved');
-      button('Export clip').click();
+      globalThis.picturePhase='download_wait';button('Export clip').click();
       const download=await wait(()=>document.querySelector('a[aria-label="Download clip"]')&&document.querySelector('.editor-panels:not([hidden])')&&document.querySelector('a[aria-label="Download clip"]'));const response=await fetch(download.href);if(!response.ok)throw new Error('hosted_download_failed');return [...new Uint8Array(await response.arrayBuffer())];
     };globalThis.hostedRun=()=>globalThis.hostedRunSteps().catch(error=>{globalThis.pictureCaptureError=String(error);throw error;});`,
     });
@@ -359,6 +360,9 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
       await evaluate(
         `globalThis.hostedWait(()=>{if(globalThis.pictureCaptureError)throw new Error(globalThis.pictureCaptureError);return globalThis.captionStage===${JSON.stringify(stage)};},'caption_stage').then(()=>true)`,
       );
+      expect(
+        media.mock.calls.filter(([job]) => job.operation === "clip"),
+      ).toHaveLength(0);
       for (const [width, height] of [
         [1440, 900],
         [390, 844],
@@ -378,7 +382,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
           ._client()
           .send("Page.captureScreenshot", { format: "png", fromSurface: true });
         await writeFile(
-          resolve(`.local-build/evidence/cl078-${stage}-${width}.png`),
+          resolve(`.local-build/evidence/cl084-${stage}-${width}.png`),
           Buffer.from(shot.value.data, "base64"),
         );
       }
@@ -416,7 +420,37 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
     }
     await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
     await evaluate("globalThis.pictureCaptureRelease=true");
-    const bytes = Buffer.from(await run);
+    let completionTimer: ReturnType<typeof setTimeout> | undefined;
+    let finalBytes: number[];
+    try {
+      finalBytes = await Promise.race([
+        run,
+        new Promise<never>((_resolve, reject) => {
+          completionTimer = setTimeout(() => {
+            void evaluate(
+              "({phase:globalThis.picturePhase,error:globalThis.pictureCaptureError,states:[...document.querySelectorAll('.clip-state')].map(n=>n.textContent),buttons:[...document.querySelectorAll('footer button')].map(n=>({text:n.textContent,disabled:n.disabled})),notices:[...document.querySelectorAll('.flow-notice')].map(n=>n.textContent)})",
+            ).then(
+              (value) =>
+                reject(
+                  new Error(
+                    "export_completion_" +
+                      JSON.stringify({
+                        value,
+                        operations: media.mock.calls.map(
+                          ([job]) => job.operation,
+                        ),
+                      }),
+                  ),
+                ),
+              reject,
+            );
+          }, 30_000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(completionTimer);
+    }
+    const bytes = Buffer.from(finalBytes);
     expect(bytes.length).toBeGreaterThan(1000);
     const output = join(directory, "captured-picture.mp4");
     await writeFile(output, bytes);
@@ -510,7 +544,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
 
     expect(media.mock.calls.map(([job]) => job.operation)).toEqual([
       "inspect",
-      "clip",
+      "clip-preview",
       "clip",
     ]);
     // Retain real synthetic prepared data and exercise response-driven readiness states.
@@ -543,7 +577,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
     }
     for (const state of ["failed", "canceled"]) {
       await evaluate(
-        `globalThis.loadingClipState=${JSON.stringify(state)};globalThis.hostedWait(()=>document.querySelector('.clip-state')?.textContent.trim()===${JSON.stringify(state)}).then(()=>true)`,
+        `globalThis.loadingClipState=${JSON.stringify(state)};globalThis.hostedWait(()=>document.querySelector('.clip-state')?.textContent.trim().toLowerCase()===${JSON.stringify(state)}).then(()=>true)`,
       );
       expect(
         await evaluate(

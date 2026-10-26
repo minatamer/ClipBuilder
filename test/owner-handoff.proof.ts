@@ -1,11 +1,18 @@
-import { vi as captionFixtureMock } from "vitest";
-captionFixtureMock.mock("../apps/backend/local/fake-content.ts", () => ({
+vi.mock("../apps/backend/local/fake-content.ts", () => ({
   FAKE_CAPTIONS_ENABLED: true,
 }));
 import { loadConfig } from "../apps/backend/src/config/loadConfig.js";
 import { expect, it, vi } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { createOwnerHost } from "../apps/backend/local/server.ts";
@@ -26,6 +33,91 @@ import { ownerClipListSchema } from "../packages/contracts/local/clips.ts";
 import { OWNER_CAPTION_PRESETS } from "../packages/contracts/local/editor.ts";
 import { GENERATED_PICTURE_MODEL } from "../packages/contracts/src/contextual-picture.schema.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
+import { prepareLocalOverlayFixture } from "./owner-controls-browser.ts";
+import { prepareOwnerClipPreview } from "../apps/renderer/local/clip-preview.ts";
+import { inspectOwnerSource } from "../apps/renderer/local/media.ts";
+
+it("prepares measured playback without Chromium and reuses only the bound unchanged preview", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "clipbuilder-preview-only-")),
+    workspaceId = randomUUID(),
+    clipId = randomUUID(),
+    source = join(directory, workspaceId, "source.mp4"),
+    raw = join(directory, workspaceId, `${clipId}.source.mp4`),
+    tools = await ownerNativeTools(resolve(".")),
+    signal = AbortSignal.timeout(30_000);
+  await mkdir(join(directory, workspaceId));
+  try {
+    await runOwnedProcess(
+      tools.ffmpeg,
+      [
+        "-nostdin",
+        "-v",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=size=160x90:rate=30:duration=2",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=440:sample_rate=48000:duration=2",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-threads",
+        "2",
+        source,
+      ],
+      signal,
+    );
+    const metadata = await inspectOwnerSource(source, tools, signal);
+    const job = {
+      operation: "clip-preview" as const,
+      workspaceId,
+      clipId,
+      jobId: randomUUID(),
+      cut: { startFrame: 6, endFrame: 36 },
+      fingerprint: metadata.fingerprint,
+    };
+    const options = { root: directory, tools, cache: new Map() };
+    const preview = await prepareOwnerClipPreview(options, job, signal);
+    expect(preview).toMatchObject({
+      operation: "clip-preview",
+      frames: 30,
+      durationMs: 1000,
+    });
+    expect(preview.bytes).toBeGreaterThan(1000);
+    expect((await readdir(join(directory, workspaceId))).sort()).toEqual(
+      [`${clipId}.source.mp4`, "source.mp4"].sort(),
+    );
+    const before = await stat(raw);
+    expect(await prepareOwnerClipPreview(options, job, signal)).toEqual(
+      preview,
+    );
+    expect((await stat(raw)).mtimeMs).toBe(before.mtimeMs);
+    await expect(
+      prepareOwnerClipPreview(
+        options,
+        { ...job, cut: { startFrame: 7, endFrame: 37 } },
+        signal,
+      ),
+    ).rejects.toThrow("stale_clip_source");
+    await writeFile(raw, "synthetic damaged preview");
+    await expect(prepareOwnerClipPreview(options, job, signal)).rejects.toThrow(
+      "stale_clip_source",
+    );
+  } finally {
+    expect(
+      resolve(directory).startsWith(
+        resolve(tmpdir(), "clipbuilder-preview-only-"),
+      ),
+    ).toBe(true);
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 40_000);
 
 it("connects local native provider inputs, injected Gemini-shaped transports and native edit/re-export with no live configuration", async () => {
   expect(process.env.FAKE_MODE).toBe("true");
@@ -43,7 +135,7 @@ it("connects local native provider inputs, injected Gemini-shaped transports and
     tools,
     token: "synthetic-worker",
     chromium: "C:/Program Files/Google/Chrome/Application/chrome.exe",
-    overlayBundle: resolve(".local-build/overlay"),
+    overlayBundle: await prepareLocalOverlayFixture(directory),
   });
   const workerPort = await listenOwner(worker.server);
   const rpc = localWorkerPort(
@@ -289,7 +381,40 @@ it("connects local native provider inputs, injected Gemini-shaped transports and
         await new Promise((done) => setTimeout(done, 50));
       }
     }
+    const prepared = await settled();
+    expect(prepared.state).toBe("review-ready");
+    expect(prepared.preview?.frames).toBe(30);
+    expect(prepared.outputs).toEqual([]);
+    expect(prepared.calls).toEqual({ plan: 1, image: 1, render: 0 });
+    expect(prepared.base?.overlay.captions.length).toBeGreaterThan(0);
+    expect(prepared.base?.overlay.visuals.length).toBeGreaterThan(0);
+    expect(receipts.map((receipt) => receipt.operation)).toEqual([
+      "inspect",
+      "prepare-owner-audio",
+      "prepare-owner-video",
+      "clip-preview",
+    ]);
+    expect(
+      (await readdir(join(root, workspace.id))).some(
+        (name) => name.includes(".r0.") || name.startsWith("overlay-"),
+      ),
+    ).toBe(false);
+    const previewPath = join(root, workspace.id, `${prepared.id}.source.mp4`);
+    const previewBefore = await stat(previewPath);
+    expect(
+      (
+        await ownerRequest(port, `${endpoint}/clips/${prepared.id}/render`, {
+          method: "POST",
+          headers: json,
+          body: JSON.stringify({
+            operationId: randomUUID(),
+            expectedRevision: 0,
+          }),
+        })
+      ).status,
+    ).toBe(202);
     const clip = await settled();
+    expect((await stat(previewPath)).mtimeMs).toBe(previewBefore.mtimeMs);
     expect(clip.state).toBe("ready");
     expect(clip.mode).toBe("provider-ai");
     expect(clip.assets[0]?.origin).toBe("generated");
@@ -354,6 +479,7 @@ it("connects local native provider inputs, injected Gemini-shaped transports and
       "inspect",
       "prepare-owner-audio",
       "prepare-owner-video",
+      "clip-preview",
       "clip",
       "clip",
     ]);

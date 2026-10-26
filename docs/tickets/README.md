@@ -1,5 +1,66 @@
 # ClipBuilder canonical ticket index
 
+## Final fake-mode verification and commit — 2026-10-26
+
+[CL-088](CL-088-fake-mode-verification-and-commit.md) is locally validated under
+renewed owner authorization: 599 local cases, exact full unit gate (144 root +
+1,725 package cases), all 25 synthetic proof cases reconciled, build/types/lint/
+format, focused compact laptop/phone/Text/Focus and normal fake-mode restoration.
+The inspector overflow and harness corrections are documented; read-only review
+has no actionable findings. The 84-file allocation authorizes the local handoff.
+Follow with CL-089 quality and CL-090
+security AFK execute/validate loops, each with a separate file allocation. No
+provider/cloud call, ignored env inspection, metadata export, push or deployment.
+Real AI quality and owner visual/hosted/release acceptance remain unchecked.
+
+## AI title and preparation defaults — 2026-10-26
+
+[CL-087](CL-087-ai-titles-defaults-and-preparation-stages.md) is locally validated
+after CL-086: one-request editable AI top title, TikTok caption/text defaults, picture
+fades and loading labels tied to actual work. No extra AI call, automatic retry,
+export, cloud or Git action. Preserve legacy edits and fake caption/picture gates.
+Final gate: 599 local units, 27 boundaries and three actual synthetic browser/
+native cases pass, with types/lint/format and no actionable read-only findings.
+The current worker is rebuilt/reloaded and normal app remains fake/cloud-off.
+Owner personal visual, real-AI/media and actual hosted/release acceptance remain
+pending; no paid/cloud/Git action occurred.
+
+## Timed text and typography — 2026-10-26
+
+[CL-086](CL-086-timed-text-and-shared-typography.md) is locally validated: Text tab with
+bounded independent layers, timing/position and shared caption/text typography,
+including TikTok outline, solid and translucent background presets. Execute then
+validate locally; preserve CL-084/085. Finish implementation and restart normal
+app into owner-configured fake mode before tests. After the owner's saved-line
+correction, restart confirmed synthetic-ai/cloud-off before all checks. Forty-five
+focused units, 27 boundaries and two actual synthetic browser/native proof cases
+pass; types/lint/format and read-only validation pass. Owner visual/real-media/
+hosted acceptance remains pending. No paid/cloud/Git action.
+
+## Review moment cards — 2026-10-26
+
+[CL-085](CL-085-review-moment-cards.md) is locally validated: manual/AI result cards gain
+Jump to source playback, duration and Remove, replacing selection toggles with
+an explicit retained list. Preserve all returned results and the ten-clip
+processing bound; no AI, native, configuration or cloud change. CL-084 pending
+work is preserved. Eighteen focused units and one current-source synthetic browser
+proof pass, including exact playback jumps, removal/focus/tabs, capacity and
+desktop/390/320 geometry. Types/lint/format and read-only validation pass with no
+actionable findings. Owner visual/real-media/hosted acceptance remains pending.
+
+## Preview-first export on demand — 2026-10-26
+
+[CL-084](CL-084-preview-first-export-on-demand.md) implements preview-first
+preparation and explicit export, preserving AI, all editor features and current
+original-source quality. Focused unit and actual synthetic browser/native proofs
+pass, including provider-shaped nonempty captions/pictures, zero initial outputs,
+drafts and retries. Final local gate: 576 unit + 27 boundary tests and five
+native/browser proof cases pass; types/lint/format and read-only validation pass
+with no actionable findings. Backend/worker
+rebuilt/reloaded with existing provider-ai configuration; frontend preserved.
+Owner real-mode/visual and hosted/cost acceptance remain unchecked. G Cloud and
+resource allocation are proposal-only: no access, changes, paid calls or Git action.
+
 ## Shared dropdown arrow inset — 2026-10-26
 
 [CL-083](CL-083-shared-dropdown-arrow-inset.md) applies one select class and inset

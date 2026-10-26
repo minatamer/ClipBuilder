@@ -1,5 +1,28 @@
 # Local editing backend
 
+CL-086 adds a bounded text-layers edit operation to the existing source/revision
+bound patch. Shared compilation validates plain text, safe typography/geometry
+and clip-relative timing before acknowledgment or native dispatch. Optional text
+lists survive the same saved-draft/export snapshot flow; no provider is called
+by text or caption style edits. Existing fake/real and explicit export gates apply.
+
+CL-087 uses the existing selected-clip video-planning request for a short title
+alongside pictures/focus, with no extra provider call or retry. The completed
+title is checkpointed into one editable top text layer for the first four
+seconds, clamped to clip length. Missing/invalid optional titles cannot discard
+usable plans; bounded existing moment/transcript text provides a fallback. New
+captions use TikTok style and new pictures explicitly fade in/out. Saved accepted
+bases/styles remain unchanged. Preparation stages report actual planning,
+picture, caption and preview boundaries, then clear on completion/failure.
+
+CL-084 prepares AI plans/assets and a measured playback preview without encoding
+a finished MP4. Review-ready clips can be edited before their first export.
+Export is explicit and keeps the existing original-source renderer; downloading
+an unchanged revision reuses its output. Preview retry reuses completed AI work;
+export retry performs only final rendering. Preview-only drafts retain playback
+bytes and reopen offline with zero outputs. Fake/no-key checks use synthetic
+media; real AI keeps normal provider keys, consent and approval gates.
+
 CL-068 includes anonymous person observations and automatic portrait framing in
 the existing selected-clip video planning request. Preparation retains focus
 beside completed pictures, and manual focus edits use the existing revision/base

@@ -1,5 +1,5 @@
 import { Button } from "../../shared/ui/button";
-import { Check, Clock3 } from "lucide-react";
+import { Play, Trash2, Clock3 } from "lucide-react";
 import { ProcessingState } from "../../shared/ui/processing-state";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -23,7 +23,7 @@ import {
   OWNER_MAX_REQUESTED_CLIP_MS,
 } from "../../../../../packages/contracts/local/policy.ts";
 import { normalizeManualTime, parseManualTime } from "./manual-time.ts";
-import { defaultMomentSelection } from "./moment-selection.ts";
+import { defaultMomentSelection, momentDuration } from "./moment-selection.ts";
 
 const SELECTION_TABS = ["add", "clips"] as const;
 type SelectionTab = (typeof SELECTION_TABS)[number];
@@ -48,6 +48,7 @@ type Props = {
   onChoose: (selection: OwnerMomentExport[]) => void;
   previewReady: boolean;
   onCaptureTime: () => string | null;
+  onJumpTo: (seconds: number) => void;
   onResultsViewChange: (visible: boolean) => void;
   footerTarget?: HTMLElement | null | undefined;
   actionsVisible?: boolean;
@@ -61,6 +62,7 @@ export function OwnerSelectionPanel({
   onChoose,
   previewReady,
   onCaptureTime,
+  onJumpTo,
   onResultsViewChange,
   footerTarget,
   actionsVisible = true,
@@ -87,6 +89,7 @@ export function OwnerSelectionPanel({
   const [tab, setTab] = useState<SelectionTab>("add");
   const tabsId = useId();
   const root = useRef<HTMLElement>(null);
+  const removedAt = useRef<number | null>(null);
   const pending = useRef<AbortController | null>(null),
     mounted = useRef(false);
   const acceptAnalysis = useCallback(
@@ -102,6 +105,15 @@ export function OwnerSelectionPanel({
   useEffect(() => {
     onResultsViewChange(tab === "clips");
   }, [tab, onResultsViewChange]);
+  useEffect(() => {
+    if (removedAt.current === null) return;
+    const buttons =
+      root.current?.querySelectorAll<HTMLButtonElement>(".moment-remove");
+    if (buttons?.length)
+      buttons[Math.min(removedAt.current, buttons.length - 1)]?.focus();
+    else document.getElementById(`${tabsId}-clips-panel`)?.focus();
+    removedAt.current = null;
+  }, [selected, tabsId]);
   function openTab(value: SelectionTab) {
     setTab(value);
     root.current?.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -287,50 +299,71 @@ export function OwnerSelectionPanel({
     }
   }
   function choices(moments: OwnerMoment[], label: string, offset = 0) {
-    if (!moments.length) return null;
+    const retained = moments
+      .map((moment, index) => ({ moment, number: offset + index + 1 }))
+      .filter(({ moment }) => selected.includes(moment.id));
+    if (!retained.length) return null;
     return (
       <section aria-label={label}>
         <h3>{label}</h3>
         <ul className="moments">
-          {moments.map((moment, index) => (
-            <li key={moment.id}>
-              <p>{moment.evidence?.title ?? `Clip ${offset + index + 1}`}</p>
-              <p className="source-hint">
-                {ownerTimestamp(
-                  (moment.cut.startFrame * 1000) / OWNER_FPS,
-                ).slice(0, 8)}
-                –
-                {ownerTimestamp((moment.cut.endFrame * 1000) / OWNER_FPS).slice(
-                  0,
-                  8,
-                )}
-              </p>
-              <Button
-                variant="secondary"
-                {...(selected.includes(moment.id) ? { icon: Check } : {})}
-                aria-label={`${selected.includes(moment.id) ? "Deselect" : "Select"} clip ${offset + index + 1}`}
-                disabled={
-                  busy ||
-                  (!selected.includes(moment.id) &&
-                    selected.length >= OWNER_LIMITS.clips)
-                }
-                aria-pressed={selected.includes(moment.id)}
-                onClick={() => {
-                  const next = selected.includes(moment.id)
-                    ? selected.filter((id) => id !== moment.id)
-                    : [...selected, moment.id];
-                  setSelected(next);
-                  onChoose(
-                    next.map((momentId) => ({
-                      analysisId: analysis!.id,
-                      momentId,
-                      policyRevision: analysis!.inputs.policyRevision,
-                    })),
-                  );
-                }}
-              >
-                {selected.includes(moment.id) ? "Deselect" : "Select"}
-              </Button>
+          {retained.map(({ moment, number }) => (
+            <li key={moment.id} className="moment-card">
+              <div className="moment-card-body">
+                <h4 className="moment-card-title">
+                  {moment.evidence?.title ?? `Clip ${number}`}
+                </h4>
+                <div className="moment-card-meta">
+                  <span className="moment-card-range">
+                    {ownerTimestamp(
+                      (moment.cut.startFrame * 1000) / OWNER_FPS,
+                    ).slice(0, 8)}
+                    {" – "}
+                    {ownerTimestamp(
+                      (moment.cut.endFrame * 1000) / OWNER_FPS,
+                    ).slice(0, 8)}
+                  </span>
+                  <span
+                    className="moment-card-duration"
+                    aria-label={`Duration ${momentDuration(moment.cut)}`}
+                  >
+                    <Clock3 size={14} aria-hidden="true" />
+                    {momentDuration(moment.cut)}
+                  </span>
+                </div>
+              </div>
+              <div className="moment-card-actions">
+                <Button
+                  variant="secondary"
+                  icon={Play}
+                  aria-label={`Jump to clip ${number}`}
+                  disabled={busy || !previewReady}
+                  onClick={() => onJumpTo(moment.cut.startFrame / OWNER_FPS)}
+                >
+                  Jump to
+                </Button>
+                <Button
+                  variant="quiet"
+                  className="moment-remove"
+                  icon={Trash2}
+                  aria-label={`Remove clip ${number}`}
+                  disabled={busy}
+                  onClick={() => {
+                    removedAt.current = selected.indexOf(moment.id);
+                    const next = selected.filter((id) => id !== moment.id);
+                    setSelected(next);
+                    onChoose(
+                      next.map((momentId) => ({
+                        analysisId: analysis!.id,
+                        momentId,
+                        policyRevision: analysis!.inputs.policyRevision,
+                      })),
+                    );
+                  }}
+                >
+                  Remove
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
@@ -580,15 +613,12 @@ export function OwnerSelectionPanel({
         {analysis && (
           <>
             <p className="selection-count" role="status">
-              {selected.length} selected
-              {analysis.manual.length + analysis.suggestions.length >
-              OWNER_LIMITS.clips
-                ? ` · Max ${OWNER_LIMITS.clips}`
+              {selected.length} {selected.length === 1 ? "clip" : "clips"}
+              {selected.length > OWNER_LIMITS.clips
+                ? ` · Remove ${selected.length - OWNER_LIMITS.clips} to keep ${OWNER_LIMITS.clips} or fewer.`
                 : ""}
             </p>
-            {analysis.manual.length + analysis.suggestions.length === 0 && (
-              <p>No clips yet.</p>
-            )}
+            {selected.length === 0 && <p>No clips yet.</p>}
             <div className="choices">
               {choices(analysis.manual, "Manual clips")}
               {choices(

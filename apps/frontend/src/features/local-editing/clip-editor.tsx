@@ -6,6 +6,15 @@ import { ControlTabs } from "./control-tabs.tsx";
 import { FocusPreviewControls } from "./focus-preview-controls.tsx";
 import { PictureTiming } from "./picture-timing.tsx";
 import { CaptionTextEditor } from "./caption-text-editor.tsx";
+import { TypographyFields } from "./typography-fields.tsx";
+import { TextInspector } from "./text-inspector.tsx";
+import { BoxFields, TextPositionFields } from "./position-fields.tsx";
+import { OWNER_SOCIAL_TEXT_PRESETS } from "../../../../../packages/contracts/local/text-style.ts";
+import {
+  OWNER_TEXT_LIMITS,
+  ownerLayerTextSchema,
+  type OwnerTextLayer,
+} from "../../../../../packages/contracts/local/text-layers.ts";
 import { OWNER_CAPTION_GENERATION_ATTEMPTS } from "../../../../../packages/contracts/local/caption-generation.ts";
 import {
   defaultOwnerFocus,
@@ -44,7 +53,6 @@ import {
 } from "../../../../../packages/contracts/local/clips.ts";
 import {
   OWNER_CAPTION_PRESETS,
-  OWNER_CAPTION_FONTS,
   OWNER_CAPTION_ANIMATIONS,
   ownerEditDocumentSchema,
   ownerEditRequestSchema,
@@ -65,6 +73,7 @@ import {
   ownerGestureBox,
   sameOwnerEdit,
   centeredOwnerBox,
+  type OwnerTextGeometry,
   ownerCaptionPreset,
   type OwnerEditorBox,
 } from "./editor-state.ts";
@@ -76,7 +85,7 @@ type LayerControls = {
   onGestureStart: () => void;
 };
 
-const SETTINGS = ["captions", "filters", "pictures", "focus"] as const;
+const SETTINGS = ["captions", "text", "filters", "pictures", "focus"] as const;
 type EditorSetting = (typeof SETTINGS)[number];
 
 function SelectionBox({
@@ -93,7 +102,7 @@ function SelectionBox({
   label: string;
   box: OwnerEditorBox;
   selected: boolean;
-  caption: OwnerCaptionStyle | null;
+  caption: OwnerTextGeometry | null;
 } & Pick<LayerControls, "onSelect" | "onBox" | "onGestureStart">) {
   const scale = useCurrentScale();
   const handle = Math.max(84, 44 / scale);
@@ -316,6 +325,26 @@ function Review({
                 onGestureStart={onGestureStart}
               />
             ))}
+        {setting === "text" &&
+          (overlay.texts ?? [])
+            .map((layer, index) => ({ layer, index }))
+            .filter(
+              ({ layer }) =>
+                layer.startFrame <= frame && frame < layer.endFrame,
+            )
+            .map(({ layer, index }) => (
+              <SelectionBox
+                key={layer.id}
+                id={layer.id}
+                label={`text ${index + 1}`}
+                box={layer.style.box}
+                caption={layer.style}
+                selected={selection === layer.id}
+                onSelect={onSelect}
+                onBox={onBox}
+                onGestureStart={onGestureStart}
+              />
+            ))}
         {setting === "captions" && overlay.captions.length > 0 && (
           <SelectionBox
             id="captions"
@@ -346,45 +375,6 @@ function PreviewFailure({ onRetry }: { onRetry: () => void }) {
         Retry
       </Button>
     </div>
-  );
-}
-
-function BoxFields({
-  label,
-  box,
-  onChange,
-}: {
-  label: string;
-  box: OwnerEditorBox;
-  onChange: (box: OwnerEditorBox) => void;
-}) {
-  return (
-    <details className="geometry-controls">
-      <summary>Position and size</summary>
-      <div className="editor-box-fields">
-        {(["x", "y", "width", "height"] as const).map((key) => (
-          <label key={key}>
-            {label} {key} (0–1)
-            <input
-              type="number"
-              step="0.005"
-              min="0"
-              max="1"
-              value={Number.isFinite(box[key]) ? box[key] : ""}
-              onChange={(event) =>
-                onChange({
-                  ...box,
-                  [key]:
-                    event.currentTarget.value === ""
-                      ? NaN
-                      : Number(event.currentTarget.value),
-                })
-              }
-            />
-          </label>
-        ))}
-      </div>
-    </details>
   );
 }
 
@@ -419,6 +409,7 @@ export function ClipEditor({
   const [selection, setSelection] = useState("captions");
   const [setting, setSetting] = useState<EditorSetting>("captions");
   const [captionTab, setCaptionTab] = useState("style");
+  const [textTab, setTextTab] = useState("content");
   const [pictureTab, setPictureTab] = useState("image");
   const tabsId = useId();
   const [message, setMessage] = useState("");
@@ -466,34 +457,47 @@ export function ClipEditor({
     ownerEditDocumentSchema.parse(draft);
     overlay = compileOwnerOverlay(base, draft, clip.assets);
   } catch {
-    error = draft.captionText?.some((word) => !word.text.trim())
-      ? "Enter text for each caption word."
-      : draft.captionText?.length
-        ? "Keep each caption under 80 characters and use plain text."
-        : draft.focus && !ownerFocusSchema.safeParse(draft.focus).success
-          ? "Set camera changes inside this clip, with zoom from 1 to 3."
-          : draft.visuals.some(
-                (cue) =>
-                  !Number.isFinite(cue.startFrame) ||
-                  !Number.isFinite(cue.endFrame) ||
-                  cue.startFrame < 0 ||
-                  cue.endFrame <= cue.startFrame ||
-                  cue.endFrame > base.overlay.frames,
-              )
-            ? "Set each picture’s end after its start, within this clip."
-            : draft.captions &&
-                (!Number.isInteger(draft.captions.fontSize) ||
-                  draft.captions.fontSize < 24 ||
-                  draft.captions.fontSize > 120)
-              ? "Use a font size from 24 to 120."
-              : "Keep layers inside the preview and check their size.";
+    error = draft.texts?.some(
+      (layer) => !ownerLayerTextSchema.safeParse(layer.text).success,
+    )
+      ? "Use 1–500 plain-text characters and up to 10 lines per text layer."
+      : draft.texts?.some(
+            (layer) =>
+              !Number.isInteger(layer.startFrame) ||
+              !Number.isInteger(layer.endFrame) ||
+              layer.startFrame < 0 ||
+              layer.endFrame <= layer.startFrame ||
+              layer.endFrame > base.overlay.frames,
+          )
+        ? "Set each text layer’s end after its start, within this clip."
+        : draft.captionText?.some((word) => !word.text.trim())
+          ? "Enter text for each caption word."
+          : draft.captionText?.length
+            ? "Keep each caption under 80 characters and use plain text."
+            : draft.focus && !ownerFocusSchema.safeParse(draft.focus).success
+              ? "Set camera changes inside this clip, with zoom from 1 to 3."
+              : draft.visuals.some(
+                    (cue) =>
+                      !Number.isFinite(cue.startFrame) ||
+                      !Number.isFinite(cue.endFrame) ||
+                      cue.startFrame < 0 ||
+                      cue.endFrame <= cue.startFrame ||
+                      cue.endFrame > base.overlay.frames,
+                  )
+                ? "Set each picture’s end after its start, within this clip."
+                : draft.captions &&
+                    (!Number.isInteger(draft.captions.fontSize) ||
+                      draft.captions.fontSize < 24 ||
+                      draft.captions.fontSize > 120)
+                  ? "Use a font size from 24 to 120."
+                  : "Keep layers inside the preview and check their size.";
     try {
       overlay = compileOwnerOverlay(base, original, clip.assets);
     } catch {
       previewUnavailable = true;
     }
   }
-  const caption = captionForOwnerEdit(draft);
+  const caption = captionForOwnerEdit(draft, base.overlay.captionStyle);
   const selectedCue = draft.visuals.find((cue) => cue.id === selection);
   const endpoint = `/api/local/workspace/${workspaceId}/clips/${clip.id}`;
   useEffect(() => {
@@ -551,6 +555,15 @@ export function ClipEditor({
   function setBox(id: string, box: OwnerEditorBox) {
     if (pending) return;
     if (id === "captions") setCaption({ ...caption, box });
+    else if (draft.texts?.some((layer) => layer.id === id))
+      update({
+        ...draft,
+        texts: draft.texts.map((layer) =>
+          layer.id === id
+            ? { ...layer, style: { ...layer.style, box } }
+            : layer,
+        ),
+      });
     else {
       const cue = draft.visuals.find((item) => item.id === id);
       if (cue) setCue({ ...cue, box });
@@ -558,13 +571,56 @@ export function ClipEditor({
   }
   function selectLayer(id: string) {
     setSelection(id);
-    setSetting(id === "captions" ? "captions" : "pictures");
+    setSetting(
+      id === "captions"
+        ? "captions"
+        : draft.texts?.some((layer) => layer.id === id)
+          ? "text"
+          : "pictures",
+    );
   }
   function selectSetting(value: EditorSetting) {
     if (pending) return;
     setCaptionConfirm(false);
     setSetting(value);
     if (value === "captions") setSelection("captions");
+    if (
+      value === "text" &&
+      !draft.texts?.some((layer) => layer.id === selection) &&
+      draft.texts?.[0]
+    )
+      chooseText(draft.texts[0]);
+  }
+  function chooseText(layer: OwnerTextLayer) {
+    setSelection(layer.id);
+    player.current?.pause();
+    if (
+      Number.isInteger(layer.startFrame) &&
+      layer.startFrame >= 0 &&
+      layer.startFrame < base.overlay.frames
+    )
+      player.current?.seekTo(layer.startFrame);
+  }
+  function addText() {
+    if (pending || (draft.texts?.length ?? 0) >= OWNER_TEXT_LIMITS.layers)
+      return;
+    const startFrame = Math.max(
+      0,
+      Math.min(player.current?.getCurrentFrame() ?? 0, base.overlay.frames - 1),
+    );
+    const layer: OwnerTextLayer = {
+      id: crypto.randomUUID(),
+      text: "Your text",
+      startFrame,
+      endFrame: Math.min(base.overlay.frames, startFrame + 4 * OWNER_FPS),
+      style: {
+        ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
+        box: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
+      },
+    };
+    update({ ...draft, texts: [...(draft.texts ?? []), layer] });
+    setTextTab("content");
+    chooseText(layer);
   }
   function newPicture(assetId: string): OwnerVisualEdit {
     const startFrame = Math.min(
@@ -853,6 +909,7 @@ export function ClipEditor({
                 {
                   {
                     captions: "Captions",
+                    text: "Text",
                     filters: "Filters",
                     pictures: "Pictures",
                     focus: "Focus",
@@ -860,6 +917,33 @@ export function ClipEditor({
                 }
               </button>
             ))}
+          </div>
+          <div
+            id={`${tabsId}-text-panel`}
+            role="tabpanel"
+            aria-labelledby={`${tabsId}-text`}
+            hidden={setting !== "text"}
+            tabIndex={0}
+          >
+            {setting === "text" && (
+              <fieldset disabled={pending}>
+                <legend className="local-sr-only">Text</legend>
+                <TextInspector
+                  id={`${tabsId}-text-controls`}
+                  layers={draft.texts ?? []}
+                  selected={selection}
+                  onSelect={chooseText}
+                  onAdd={addText}
+                  onChange={(texts) => update({ ...draft, texts })}
+                  frames={base.overlay.frames}
+                  player={player}
+                  available={!playbackFailed && previewLoaded && !pending}
+                  attempt={previewAttempt}
+                  tab={textTab}
+                  onTab={setTextTab}
+                />
+              </fieldset>
+            )}
           </div>
           <div
             id={`${tabsId}-focus-panel`}
@@ -972,71 +1056,14 @@ export function ClipEditor({
                     hidden={captionTab !== "style"}
                     tabIndex={0}
                   >
+                    <TypographyFields
+                      value={caption}
+                      onChange={(style) => setCaption({ ...caption, ...style })}
+                      onPreset={(preset) =>
+                        setCaption(ownerCaptionPreset(caption, preset))
+                      }
+                    />
                     <div className="editor-fields">
-                      <label>
-                        Style
-                        <select
-                          className="select-control"
-                          value={caption.preset}
-                          onChange={(event) =>
-                            setCaption(
-                              ownerCaptionPreset(
-                                caption,
-                                event.currentTarget
-                                  .value as OwnerCaptionStyle["preset"],
-                              ),
-                            )
-                          }
-                        >
-                          <option value="clean">Clean</option>
-                          <option value="classic">Classic</option>
-                          <option value="bold">Bold</option>
-                          <option value="boxed">Rounded highlight</option>
-                          <option value="typewriter">Typewriter</option>
-                        </select>
-                      </label>
-                      <label>
-                        Font size
-                        <input
-                          type="number"
-                          min="24"
-                          max="120"
-                          step="1"
-                          value={
-                            Number.isFinite(caption.fontSize)
-                              ? caption.fontSize
-                              : ""
-                          }
-                          onChange={(event) => {
-                            const fontSize =
-                              event.currentTarget.value === ""
-                                ? NaN
-                                : Number(event.currentTarget.value);
-                            setCaption({ ...caption, fontSize });
-                          }}
-                        />
-                      </label>
-                      <label>
-                        Font
-                        <select
-                          className="select-control"
-                          value={caption.font ?? "Arial"}
-                          onChange={(event) =>
-                            setCaption({
-                              ...caption,
-                              font: event.currentTarget.value as NonNullable<
-                                OwnerCaptionStyle["font"]
-                              >,
-                            })
-                          }
-                        >
-                          {OWNER_CAPTION_FONTS.map((font) => (
-                            <option key={font} value={font}>
-                              {font}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
                       <label>
                         Animation
                         <select
@@ -1070,19 +1097,6 @@ export function ClipEditor({
                         </select>
                       </label>
                       <label>
-                        Text color
-                        <input
-                          type="color"
-                          value={caption.color}
-                          onChange={(event) =>
-                            setCaption({
-                              ...caption,
-                              color: event.currentTarget.value,
-                            })
-                          }
-                        />
-                      </label>
-                      <label>
                         Highlight
                         <input
                           type="color"
@@ -1095,24 +1109,6 @@ export function ClipEditor({
                           }
                         />
                       </label>
-                      <label>
-                        Alignment
-                        <select
-                          className="select-control"
-                          value={caption.align}
-                          onChange={(event) =>
-                            setCaption({
-                              ...caption,
-                              align: event.currentTarget
-                                .value as OwnerCaptionStyle["align"],
-                            })
-                          }
-                        >
-                          <option value="left">Left</option>
-                          <option value="center">Center</option>
-                          <option value="right">Right</option>
-                        </select>
-                      </label>
                     </div>
                   </div>
                   <div
@@ -1122,53 +1118,18 @@ export function ClipEditor({
                     hidden={captionTab !== "position"}
                     tabIndex={0}
                   >
-                    <div
-                      className="position-presets"
-                      role="group"
-                      aria-label="Caption position"
-                    >
-                      {(
-                        [
-                          { center: 0.25, label: "Upper half" },
-                          { center: 0.5, label: "Center" },
-                          { center: 0.75, label: "Lower half" },
-                        ] as const
-                      ).map((item) => (
-                        <Button
-                          key={item.center}
-                          variant="secondary"
-                          aria-pressed={
-                            Math.abs(
-                              caption.box.y +
-                                caption.box.height / 2 -
-                                item.center,
-                            ) < 0.00001 &&
-                            Math.abs(
-                              caption.box.x + caption.box.width / 2 - 0.5,
-                            ) < 0.00001 &&
-                            caption.verticalAlign === "center"
-                          }
-                          onClick={() =>
-                            setCaption({
-                              ...caption,
-                              align: "center",
-                              verticalAlign: "center",
-                              box: centeredOwnerBox(
-                                caption.box,
-                                item.center,
-                                caption,
-                              ),
-                            })
-                          }
-                        >
-                          {item.label}
-                        </Button>
-                      ))}
-                    </div>
-                    <BoxFields
+                    <TextPositionFields
                       label="Caption"
-                      box={caption.box}
-                      onChange={(box) => setCaption({ ...caption, box })}
+                      style={caption}
+                      onChange={(box, centered) =>
+                        setCaption({
+                          ...caption,
+                          ...(centered
+                            ? { align: "center", verticalAlign: "center" }
+                            : {}),
+                          box,
+                        })
+                      }
                     />
                   </div>
                   <Button

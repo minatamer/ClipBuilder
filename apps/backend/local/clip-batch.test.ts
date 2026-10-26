@@ -69,6 +69,20 @@ beforeEach(async () => {
     plan: vi.fn(fakeOwnerClipPreparation.plan),
     image: vi.fn(fakeOwnerClipPreparation.image),
     render: vi.fn(async (job) => {
+      if (job.operation === "clip-preview") {
+        const frames = job.cut.endFrame - job.cut.startFrame;
+        const bytes = Buffer.from(`synthetic-preview:${job.clipId}`);
+        await writeFile(
+          await files.clipSource(workspace.id, job.clipId),
+          bytes,
+        );
+        return {
+          operation: "clip-preview",
+          frames,
+          bytes: bytes.length,
+          durationMs: Math.round((frames * 1000) / OWNER_FPS),
+        };
+      }
       if (job.operation !== "clip") throw new Error("wrong_operation");
       const bytes = Buffer.from(
         `synthetic:${job.clipId}:${job.renderRevision}`,
@@ -109,6 +123,180 @@ const gate = () => {
   });
   return { wait, release };
 };
+
+it("checkpoints one planned headline with TikTok captions/text and picture fades, reporting real phases and reusing them on preview retry", async () => {
+  await batch.close();
+  ports.mode = "provider-ai";
+  workspace.mode = "provider-ai";
+  analysis.mode = "provider-ai";
+  ports.image.mockImplementation(async (request, signal) => {
+    const picture = await fakeOwnerClipPreparation.image(request, signal);
+    return picture ? { ...picture, origin: "generated" } : null;
+  });
+  const title = vi.fn(() => "A synthetic planned headline"),
+    observed: string[] = [];
+  batch = new OwnerClipBatch(workspace, files, { ...ports, title }, () => {
+    const clip = batch.snapshot().clips[0];
+    if (clip?.preparationStage) observed.push(clip.preparationStage);
+  });
+  ports.render.mockRejectedValueOnce(new Error("synthetic_preview_failure"));
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[1]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const failed = batch.snapshot().clips[0]!;
+  expect(failed.state).toBe("failed");
+  expect(failed.preparationStage).toBeUndefined();
+  expect([...new Set(observed)]).toEqual([
+    "planning",
+    "pictures",
+    "captions",
+    "preview",
+  ]);
+  expect(failed.preparation?.title).toBe("A synthetic planned headline");
+  expect(failed.base!.overlay.texts![0]).toMatchObject({
+    text: "A synthetic planned headline",
+    startFrame: 0,
+    endFrame: 60,
+    style: {
+      preset: "tiktok",
+      fontSize: 56,
+      box: { x: 0.1, y: 0.08, width: 0.8, height: 0.16 },
+    },
+  });
+  expect(failed.base!.overlay.captionStyle?.preset).toBe("tiktok");
+  expect(failed.base!.overlay.captions.length).toBeGreaterThan(0);
+  expect(failed.base!.overlay.visuals[0]).toMatchObject({
+    entrance: "fade",
+    exit: "fade",
+    animationFrames: 9,
+  });
+  const retained = structuredClone(failed.base);
+  const restored = new OwnerClipBatch(workspace, files, { ...ports, title });
+  restored.restore([
+    { ...failed, state: "preparing", preparationStage: "pictures" },
+  ]);
+  expect(restored.snapshot().clips[0]).toMatchObject({
+    state: "canceled",
+    preparation: { title: "A synthetic planned headline" },
+  });
+  expect(restored.snapshot().clips[0]!.preparationStage).toBeUndefined();
+  await restored.close();
+  await batch.retry(failed.id, {
+    operationId: randomUUID(),
+    expectedRevision: 0,
+  });
+  await batch.drain();
+  const ready = batch.snapshot().clips[0]!;
+  expect(ready.state).toBe("review-ready");
+  expect(ready.preparationStage).toBeUndefined();
+  expect(ready.base).toEqual(retained);
+  expect(title).toHaveBeenCalledTimes(1);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.image).toHaveBeenCalledTimes(1);
+  expect(ports.render.mock.calls.map(([job]) => job.operation)).toEqual([
+    "clip-preview",
+    "clip-preview",
+  ]);
+  expect(ready.outputs).toEqual([]);
+  expect(ready.calls.render).toBe(0);
+});
+
+it("exports only on request and retries a failed first export without repeating prepared AI or preview work", async () => {
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const prepared = batch.snapshot().clips[0]!;
+  expect(prepared.state).toBe("review-ready");
+  expect(prepared.preview?.frames).toBe(30);
+  expect(prepared.outputs).toEqual([]);
+  expect(prepared.calls).toEqual({ plan: 1, image: 1, render: 0 });
+  expect(ports.render.mock.calls.map(([job]) => job.operation)).toEqual([
+    "clip-preview",
+  ]);
+  await expect(
+    readFile(await files.output(workspace.id, prepared.id, 0)),
+  ).rejects.toThrow();
+  ports.render.mockRejectedValueOnce(new Error("synthetic_export_failure"));
+  await batch.render(prepared.id, {
+    operationId: randomUUID(),
+    expectedRevision: 0,
+  });
+  await batch.drain();
+  expect(batch.snapshot().clips[0]).toMatchObject({
+    state: "failed",
+    preview: prepared.preview,
+    outputs: [],
+  });
+  await batch.retry(prepared.id, {
+    operationId: randomUUID(),
+    expectedRevision: 0,
+  });
+  await batch.drain();
+  const exported = batch.snapshot().clips[0]!;
+  expect(exported.state).toBe("ready");
+  expect(exported.outputs).toHaveLength(1);
+  expect(exported.base).toEqual(prepared.base);
+  expect(exported.assets).toEqual(prepared.assets);
+  expect(ports.render.mock.calls.map(([job]) => job.operation)).toEqual([
+    "clip-preview",
+    "clip",
+    "clip",
+  ]);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.image).toHaveBeenCalledTimes(1);
+});
+
+it.each([
+  { operation: "clip", frames: 30, bytes: 100, durationMs: 1000 },
+  { operation: "clip-preview", frames: 29, bytes: 100, durationMs: 1000 },
+  { operation: "clip-preview", frames: 30, bytes: 100, durationMs: 999 },
+  {
+    operation: "clip-preview",
+    frames: 30,
+    bytes: 384 * 1024 ** 2 + 1,
+    durationMs: 1000,
+  },
+] as const)(
+  "keeps an invalid preview receipt non-editable and retries no paid preparation: %j",
+  async (invalid) => {
+    ports.render.mockResolvedValueOnce(invalid);
+    await batch.submit(
+      { ...request(), momentIds: [analysis.manual[0]!.id] },
+      analysis,
+    );
+    await batch.drain();
+    const failed = batch.snapshot().clips[0]!;
+    expect(failed.state).toBe("failed");
+    expect(failed.preview).toBeUndefined();
+    expect(failed.outputs).toEqual([]);
+    await expect(
+      batch.render(failed.id, {
+        operationId: randomUUID(),
+        expectedRevision: 0,
+      }),
+    ).rejects.toThrow("stale_or_busy_clip");
+    await batch.retry(failed.id, {
+      operationId: randomUUID(),
+      expectedRevision: 0,
+    });
+    await batch.drain();
+    expect(batch.snapshot().clips[0]).toMatchObject({
+      state: "review-ready",
+      outputs: [],
+      calls: { plan: 1, image: 1, render: 0 },
+    });
+    expect(ports.plan).toHaveBeenCalledTimes(1);
+    expect(ports.image).toHaveBeenCalledTimes(1);
+    expect(ports.render.mock.calls.map(([job]) => job.operation)).toEqual([
+      "clip-preview",
+      "clip-preview",
+    ]);
+  },
+);
 
 it("saves manual focus, preserves the automatic plan and restores snapshots without provider work or mutable export revisions", async () => {
   const input = request();
@@ -233,7 +421,7 @@ it("cancel-all fences requests still waiting for admission without dispatching w
   expect(ports.plan).toHaveBeenCalledTimes(3);
   expect(ports.image).toHaveBeenCalledTimes(3);
   expect(ports.render).toHaveBeenCalledTimes(3);
-  expect(batch.snapshot().clips[0]?.outputs).toHaveLength(1);
+  expect(batch.snapshot().clips[0]?.outputs).toHaveLength(0);
 });
 
 it("prepares three independent bundles, reuses one analysis, and makes duplicate batch submissions idempotent", async () => {
@@ -247,20 +435,22 @@ it("prepares three independent bundles, reuses one analysis, and makes duplicate
   expect(result.active).toBe(false);
   expect(result.workers).toBe(1);
   expect(result.clips.map((clip) => clip.state)).toEqual([
-    "ready",
-    "ready",
-    "ready",
+    "review-ready",
+    "review-ready",
+    "review-ready",
   ]);
   expect(result.clips.map((clip) => clip.base?.overlay.frames)).toEqual([
     30, 60, 300,
   ]);
   expect(new Set(result.clips.map((clip) => clip.id)).size).toBe(3);
-  expect(new Set(result.clips.map((clip) => clip.outputs[0]?.id)).size).toBe(3);
+  expect(
+    result.clips.every((clip) => clip.outputs.length === 0 && clip.preview),
+  ).toBe(true);
   for (const clip of result.clips) {
     expect(clip.sourceRevision).toBe(0);
     expect(clip.base?.fingerprint).toBe(workspace.source.fingerprint);
     expect(clip.baseHash).toMatch(/^[a-f0-9]{64}$/);
-    expect(clip.calls).toEqual({ plan: 1, image: 1, render: 1 });
+    expect(clip.calls).toEqual({ plan: 1, image: 1, render: 0 });
   }
   await batch.submit(input, analysis);
   await batch.submit({ ...input, operationId: randomUUID() }, analysis);
@@ -301,9 +491,9 @@ it("freezes inputs before asynchronous admission and explicitly resumes a never-
   await batch.drain();
   expect(batch.snapshot().clips[2]?.id).toBe(third.id);
   expect(batch.snapshot().clips.map((clip) => clip.state)).toEqual([
-    "ready",
-    "ready",
-    "ready",
+    "review-ready",
+    "review-ready",
+    "review-ready",
   ]);
   expect(ports.plan).toHaveBeenCalledTimes(3);
   expect(ports.image).toHaveBeenCalledTimes(3);
@@ -340,7 +530,7 @@ it("isolates a queued cancellation, an in-flight failure and a successful siblin
   await batch.drain();
   expect(batch.snapshot().clips.map((clip) => clip.state)).toEqual([
     "failed",
-    "ready",
+    "review-ready",
     "canceled",
   ]);
   expect(ports.plan).toHaveBeenCalledTimes(2);
@@ -421,8 +611,19 @@ it("retains immutable previous outputs and the source during explicit determinis
   await batch.submit(request(), analysis);
   await batch.drain();
   const clip = batch.snapshot().clips[0]!;
+  await batch.render(clip.id, {
+    operationId: randomUUID(),
+    expectedRevision: 0,
+  });
+  await batch.drain();
+  await batch.edit(clip.id, {
+    operationId: randomUUID(),
+    expectedRevision: 0,
+    baseHash: clip.baseHash,
+    operations: [{ kind: "reset", panel: "focus" }],
+  });
   const first = await readFile(await files.output(workspace.id, clip.id, 0)),
-    operation = { operationId: randomUUID(), expectedRevision: 0 };
+    operation = { operationId: randomUUID(), expectedRevision: 1 };
   await Promise.all([
     batch.render(clip.id, operation),
     batch.render(clip.id, operation),
@@ -436,8 +637,8 @@ it("retains immutable previous outputs and the source during explicit determinis
   );
   expect(ports.plan).toHaveBeenCalledTimes(3);
   expect(ports.image).toHaveBeenCalledTimes(3);
-  expect(ports.render).toHaveBeenCalledTimes(4);
-  expect(batch.snapshot().clips[1]?.outputs).toHaveLength(1);
+  expect(ports.render).toHaveBeenCalledTimes(5);
+  expect(batch.snapshot().clips[1]?.outputs).toHaveLength(0);
   expect(
     (await readFile(await files.file(workspace.id, "source.mp4"))).toString(),
   ).toBe("synthetic");
@@ -493,7 +694,7 @@ it("retries preparation without a base once, preserving successful siblings and 
     batch.retry(failed.id, operation),
   ]);
   await batch.drain();
-  expect(batch.snapshot().clips[0]?.state).toBe("ready");
+  expect(batch.snapshot().clips[0]?.state).toBe("review-ready");
   expect(batch.snapshot().clips.slice(1)).toEqual(before.clips.slice(1));
   expect(ports.plan).toHaveBeenCalledTimes(4);
   expect(ports.image).toHaveBeenCalledTimes(3);
@@ -530,7 +731,7 @@ it("retains a paid plan and completed images across a restored preparation retry
   });
   await batch.drain();
   const ready = batch.snapshot().clips[0]!;
-  expect(ready.state).toBe("ready");
+  expect(ready.state).toBe("review-ready");
   expect(ready.assets[0]).toEqual(failed.assets[0]);
   expect(ready.base?.overlay.visuals).toHaveLength(2);
   expect(ports.plan).toHaveBeenCalledTimes(1);
@@ -552,7 +753,7 @@ it("retries only native rendering when a prepared base survives failure", async 
   ]);
   await batch.drain();
   const ready = batch.snapshot().clips[0]!;
-  expect(ready.state).toBe("ready");
+  expect(ready.state).toBe("review-ready");
   expect(ready.base).toEqual(failed.base);
   expect(ready.assets).toEqual(failed.assets);
   expect(ready.edit).toEqual(failed.edit);
@@ -597,7 +798,7 @@ it("recovers an older failed clip without a checkpoint from its saved analysis",
     analysis,
   );
   await batch.drain();
-  expect(batch.snapshot().clips[0]?.state).toBe("ready");
+  expect(batch.snapshot().clips[0]?.state).toBe("review-ready");
   expect(ports.plan).toHaveBeenCalledTimes(2);
   expect(ports.image).toHaveBeenCalledTimes(1);
   expect(ports.render).toHaveBeenCalledTimes(1);
@@ -618,8 +819,8 @@ it("converts invalid visual clocks, critiques weak evidence, and renders without
   );
   await batch.drain();
   expect(batch.snapshot().clips[0]).toMatchObject({
-    state: "ready",
-    calls: { plan: 1, image: 1, render: 1 },
+    state: "review-ready",
+    calls: { plan: 1, image: 1, render: 0 },
     base: { overlay: { visuals: [] } },
   });
 });
@@ -809,6 +1010,7 @@ it("adds fictional captions on demand without consuming a Gemini attempt or trig
     true,
   );
   expect(result.clips[0]!.base!.overlay.captions.length).toBeGreaterThan(0);
+  expect(result.clips[0]!.base!.overlay.captionStyle?.preset).toBe("tiktok");
   expect(result.clips[0]!.captionAttempts).toBeUndefined();
   expect(result.clips[0]!.revision).toBe(1);
   expect(ports.plan).toHaveBeenCalledTimes(1);

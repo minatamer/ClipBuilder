@@ -69,6 +69,28 @@ const render = (ms: number, value = style) =>
   renderToStaticMarkup(
     <OwnerStyledCaption caption={caption} ms={ms} style={value} />,
   );
+it("preserves legacy rounded word boxes until explicit shared background color/opacity overrides them", () => {
+  const legacy = render(300, {
+    ...OWNER_CAPTION_PRESETS.boxed,
+    animation: "none",
+  });
+  expect(legacy).toContain("background-color:#101726;");
+  const transparent = render(300, {
+    ...OWNER_CAPTION_PRESETS.boxed,
+    animation: "none",
+    backgroundOpacity: 0,
+  });
+  expect(transparent).toContain("background-color:#10172600");
+  expect(transparent).not.toContain("background-color:#101726;");
+  const gray = render(300, {
+    ...OWNER_CAPTION_PRESETS.boxed,
+    animation: "none",
+    backgroundColor: "#777777",
+    backgroundOpacity: 0.5,
+  });
+  expect(gray).toContain("background-color:#77777780");
+  expect(gray).not.toContain("background-color:#101726;");
+});
 const wordMarkup = (html: string, wordId: string) => {
   const start = html.indexOf(`data-word-id="${wordId}"`),
     end = html.indexOf("data-word-id=", start + 1);

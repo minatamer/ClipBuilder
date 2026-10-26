@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { ownerAnalysisSchema } from "../../../../../packages/contracts/local/selection.ts";
-import { defaultMomentSelection } from "./moment-selection.ts";
+import { defaultMomentSelection, momentDuration } from "./moment-selection.ts";
 
 function analysis(manual: number, suggestions: number) {
   const moment = () => ({
@@ -37,13 +37,13 @@ it("defaults to all results with the correct analysis and policy identity", () =
     })),
   );
 });
-it("keeps the existing ten-clip bound and manual-first order without modifying results", () => {
+it("retains every result in manual-first order without truncating or modifying analysis", () => {
   const result = analysis(8, 5);
   const before = structuredClone(result);
   const selected = defaultMomentSelection(result);
-  expect(selected).toHaveLength(10);
+  expect(selected).toHaveLength(13);
   expect(selected.map(({ momentId }) => momentId)).toEqual(
-    [...result.manual, ...result.suggestions.slice(0, 2)].map(({ id }) => id),
+    [...result.manual, ...result.suggestions].map(({ id }) => id),
   );
   expect(result).toEqual(before);
 });
@@ -57,3 +57,17 @@ it("never repeats a selected ID even if a result crosses groups", () => {
 it("keeps empty results unselected", () => {
   expect(defaultMomentSelection(analysis(0, 0))).toEqual([]);
 });
+
+it.each([
+  [30, "1s"],
+  [1470, "49s"],
+  [1800, "1m"],
+  [2700, "1m 30s"],
+  [46, "1.53s"],
+] as const)(
+  "formats %i frames using actual cut duration: %s",
+  (frames, label) =>
+    expect(momentDuration({ startFrame: 135, endFrame: 135 + frames })).toBe(
+      label,
+    ),
+);

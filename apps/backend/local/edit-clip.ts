@@ -26,6 +26,9 @@ export function applyOwnerEdit(
   const next = ownerEditDocumentSchema.parse(clip.edit ?? automatic);
   for (const operation of request.operations) {
     switch (operation.kind) {
+      case "text-layers":
+        next.texts = operation.layers;
+        break;
       case "caption-text":
         next.captionText = operation.words;
         break;

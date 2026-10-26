@@ -43,6 +43,32 @@ by this audit or by the local commit approval.
 
 ## Deferred deployment checklist — 2026-10-25
 
+CL-084 follow-up, 2026-10-26: the owner explicitly keeps G Cloud inaccessible to
+the agent. No live configuration/billing was inspected and no cloud changes are
+authorized. Source now separates preview preparation from final export: real AI
+preparation remains; finished MP4s are created only on explicit Export. Linux
+image/current-feature and owner real-mode acceptance remain release gates.
+
+Resource proposal for owner review only: retain min zero/max one; benchmark a
+**4 vCPU / 8 GiB** demo profile before considering any change from the proposed
+4 vCPU / 16 GiB profile. This would require a smaller temporary-media allowance
+(candidate at most 5 GiB, leaving processing headroom) and explicit capacity
+behavior, not a silent RAM-only reduction. Existing 12 GiB scratch cannot fit
+inside 8 GiB RAM. Current-quality 4K/60fps, source/batch/export-history maxima and
+Chromium/FFmpeg peak RSS must pass a current Linux proof before proposing exact
+limits for approval. No such capacity proof or smaller allocation is claimed.
+A later 2 vCPU / 8 GiB comparison is optional only if deadlines still pass;
+slower rendering may erase CPU savings. Keep output quality unchanged.
+
+First measure allocation/billable lifetime versus native work, AI waiting and
+idle editor time. The editor currently polls about once per second even when
+stable; reducing hosted idle/background polling is a separate local-code
+candidate, not implemented by CL-084. Always-allocated CPU is currently needed
+for background work; request-only billing is not a safe settings-only change.
+A separate processing service/temporary-media handoff is deferred unless real
+measurements justify the added demo complexity. Render-count reductions do not
+establish billed CPU/GiB or dollar savings. See CL-084's explicit acceptance gate.
+
 The owner is not deploying now. Revisit these items with the owner before a
 future deployment decision; this note authorizes no cloud changes or deployment.
 

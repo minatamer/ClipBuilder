@@ -9,6 +9,7 @@ import {
 } from "../apps/renderer/local/media.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
 import { ownerCut } from "../packages/contracts/local/selection.ts";
+import { ownerOutputProfile } from "../apps/renderer/local/export-profile.ts";
 
 it("renders exact 30/60-second cuts and source-clock VFR/offset/silent/fractional boundaries offline", async () => {
   const tools = await ownerNativeTools(resolve("."));
@@ -106,11 +107,13 @@ it("renders exact 30/60-second cuts and source-clock VFR/offset/silent/fractiona
     );
     expect(result).toMatchObject({ frames: 60, durationMs: 2000 });
     stage = "pixel boundary probe";
+    // Logical edit clocks remain 30fps; CL-070 exports at the source cadence.
+    const lastFrame = ownerOutputProfile(nonzero, result.frames).frames - 1;
     const pixels = await run([
       "-i",
       fractional,
       "-vf",
-      "select='eq(n,0)+eq(n,59)',crop=16:16:(iw-16)/2:(ih-16)/2,signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-",
+      `select='eq(n,0)+eq(n,${lastFrame})',crop=16:16:(iw-16)/2:(ih-16)/2,signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-`,
       "-an",
       "-f",
       "null",

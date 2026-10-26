@@ -1,5 +1,65 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## AI titles and preparation defaults — CL-087, 2026-10-26
+
+Owner requests a short editable top title from the existing selected-clip AI
+planning request, using CL-086 timed text with TikTok styling. New captions and
+manual text default to TikTok style; new pictures default to fade entrance/exit.
+Preserve accepted/saved bases and owner edits. Store completed title work for
+explicit retries; a missing/malformed optional title cannot veto usable provider
+results or cause another AI call. Preparation labels follow actual planning,
+picture, caption and preview work, with no invented timed progress. Fake titles
+are fictional, fake captions remain default-off and no Earth picture returns.
+CL-087 depends on CL-086 and owns implementation/verification; no provider spend,
+cloud access, configuration edit, deployment or Git action is authorized.
+
+## Timed text and shared typography — CL-086, 2026-10-26
+
+Owner adds independent clip-relative timed text in a Text editor tab. Bounded
+plain-text layers (ten per clip, 500 characters/ten explicit lines each) support
+content, start/end, positioning/resize and shared
+typography with captions: font/size/weight/color/alignment, outline and background
+color/opacity. Include TikTok style (white with black outline), Solid background
+and Translucent background presets. Reuse existing local fonts; no font download.
+Preserve caption words/timestamps and legacy styles. Text appears above pictures
+and below spoken captions, using the same frame-driven preview/export tree.
+Shared Apply/Discard, saved edits and explicit original-quality export apply;
+no new AI/provider call, automatic export, cloud or deployment. CL-086 owns the
+bounded contracts, controls, native parity and synthetic evidence. Owner requires
+normal restart and verified fake mode before agent tests on this revision.
+
+## Moment review cards — CL-085, 2026-10-26
+
+Manual/AI results in Your clips form a retained processing list. Every card shows
+its title, source range and frame-derived duration, with Jump to source playback
+and Remove. Remove replaces Select/Deselect; it removes the card from the
+current list without changing raw analysis or calling AI. Tabs preserve the list;
+new/restored analysis starts with all unique results, manual-first. Keep usable
+extra results visible and disable Process clips until at most ten remain; do
+not silently truncate AI results or increase the processing limit. Empty lists
+keep a disabled Process clips in the footer. Jump seeks/plays the existing source
+preview at the cut start, with loaded/busy/error guards and no processing call.
+Reuse shared cards/buttons/tokens and inspect long titles/responsive/keyboard
+states. CL-085 supersedes CL-048's selection-toggle/default-truncation behavior;
+its mutually exclusive views, retained inputs and explicit submission remain.
+
+## Preview-first export decision — CL-084, 2026-10-26
+
+The owner approved reducing production render work without changing AI or final
+video quality: selected clips retain normal transcription/selection, AI framing,
+picture planning/generation and shared editing, but first prepare only a
+validated playback preview. Editing may open in review-ready with a measured
+preview receipt and no final output. Initial playback still gates controls;
+queued/preparing/exporting/canceling/failed/canceled clips stay non-editable.
+An explicit Export creates the first finished MP4 using the unchanged renderer,
+original source and source-quality profile; matching Download reuses it. Apply,
+caption generation, navigation, restore and preparation retry do not auto-export.
+Retain completed AI work across explicit retry. Legacy saved output-backed clips
+remain compatible. CL-084 owns implementation/evidence; owner real-mode testing
+is manual. Agent checks use synthetic media/injected AI only. No cloud access,
+allocation/configuration change, paid request, Git mutation or deployment is
+authorized. Cloud cost/allocation recommendations require separate approval.
+
 ## Manual clip duration — CL-081, 2026-10-26
 
 New manual clips last 1–60 seconds, matching the AI duration setting's maximum,
@@ -307,7 +367,8 @@ or starts processing, AI or export work.
 
 CL-054: clip switching uses a vertical left rail, with Up/Down/Home/End keyboard
 navigation and the existing dirty-edit guard. Editing is visible only after a
-clip reaches ready/validated-revision with prepared data and a completed output;
+clip reaches ready/validated-revision with prepared data and a completed output,
+or CL-084 review-ready/validated-revision with a validated preview receipt;
 queued, preparing, exporting, canceling, failed or canceled clips never expose
 settings, even when retaining an earlier base/output and even with fake AI.
 Initial preview loading shows a spinner before settings/handles are exposed;
@@ -340,13 +401,13 @@ and provider/runtime gates remain unchanged. CL-049 owns diagnostic/proof eviden
 Permanent owner view rule (CL-048): successive form/result stages replace their
 content slot using mutually exclusive views or tabs; never append a complete
 second workflow below the form. Local selection uses Add clips / Your clips.
-Successful or restored analysis opens Your clips with unique results selected,
-manual-first within the existing ten-clip cap. Deselect to exclude; excess
-choices become selectable after freeing capacity. Tab changes retain inputs and
-selection without processing; edits invalidate stale results. Add clips owns
+CL-085 updates successful/restored analysis to retain all unique results,
+manual-first, with Jump to, duration and Remove on each card. Remove extras to
+meet the existing ten-clip processing cap. Tab changes retain inputs and the
+current list without processing; edits invalidate stale results. Add clips owns
 Find moments / Use clips in the footer, Your clips owns Process clips (disabled
-for an empty selection). Processing still requires an explicit click. Reuse the
-settings-tab materials and keep one panel visible with keyboard navigation.
+for an empty or over-limit list). Processing still requires an explicit click.
+Reuse the settings-tab materials and keep one panel visible with keyboard navigation.
 AGENTS.md records the durable rule; CL-048 owns verification.
 
 CL-047 extends the whole-second manual clocks from CL-046: carry overflowing
@@ -7726,14 +7787,14 @@ live/provider/rights/cleanup checks are described as complete.
 <!-- build-progress:start -->
 ## Build command progress
 
-Current phase: **local workflow finished**
-Next action: Owner return: review linked audit HTML and provisional AFK decisions, finish paid manual review, then reconcile/apply the isolated committed fixes with existing app/source state. Resolve native vendor and actual hosted/resource gates before any owner-only deployment. No eligible automatic paid/cloud action; AFK ledger remains active until owner returns.
-Active ticket: none
+Current phase: **10a-quality**
+Next action: Commit the authorized 84-file current-work snapshot, then prepare CL-089 quality audit prompt and packet.
+Active ticket: CL-088
 Phase prompts: delegated during AFK
 Local commits approved: yes
 
 AFK mode: AFK-SESSION-001
-Provisional owner reviews: 04-decisions, 09-visual-review, 10b-security-review
+Provisional owner reviews: 04-decisions, 09-visual-review
 
 ### AFK decisions
 
@@ -7769,6 +7830,18 @@ Provisional owner reviews: 04-decisions, 09-visual-review, 10b-security-review
   Reason: Reports exist and desktop/phone HTML rendering was inspected. The bounded Zod reproduction confirms avoidable work; official patches exist for the runtime/framework. FFmpeg MOV metadata advisories remain unfixed on the current supported vendor branch, and a custom parser or broad distribution migration would not safely establish remediation.
   Consequence / reversibility: Reversible scoped local dependency/image changes proceed through validation. No critical app exploit or owner acceptance is claimed. SEC-04 is unremediated; vendor resolution or explicit owner risk review is needed before public release. No paid/cloud action, scanner upload, push or deployment.
   Owner review requested on return: yes. Evidence: audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md, audit-worktree:docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html, audit-worktree:docs/tickets/CL-065-post-deployment-pre-sharing-security.md, local HTML 1440/390 px, no horizontal overflow, four cards; bounded Zod input visits4096elements despite maximum10
+- **AFK-0009** (AFK-SESSION-001, 2026-10-26T12:18:22+00:00, 07-build): CL-088: use the current primary checkout for renewed verification/commits, then audit the resulting current snapshot. Owner explicitly renewed AFK and Git authorization on 2026-10-26.
+  Reason: Normal app is now verified synthetic-ai/cloud=false; previous paid-review isolation rationale no longer applies. Preserve prior isolated audit evidence without applying unrelated commits.
+  Consequence / reversibility: Only reversible local changes and authorized commits; no paid calls/cloud/metadata export/push/deployment. Personal acceptance remains open.
+  Owner review requested on return: yes. Evidence: docs/tickets/CL-088-fake-mode-verification-and-commit.md, human:2026-10-26-current-request
+- **AFK-0010** (AFK-SESSION-001, 2026-10-26T12:34:22+00:00, 07-build): CL-088: briefly stop verified normal frontend/backend/worker, run the canonical-port app proof against the clean source-only scratch production build, then restore normal owner-configured services.
+  Reason: The proof correctly refuses occupied canonical ports; changing ports or using the owner app as a test fixture would weaken its isolation. Current normal mode is confirmed fake/cloud-off.
+  Consequence / reversibility: Short local downtime only; preserve all config/media and perform tree-aware shutdown/startup with new identities and safe GETs. No paid action.
+  Owner review requested on return: yes. Evidence: test/local-application.proof.ts, docs/tickets/CL-088-fake-mode-verification-and-commit.md, human:2026-10-26-current-request
+- **AFK-0011** (AFK-SESSION-001, 2026-10-26T13:02:30+00:00, 09-visual-review): Retain current verified CL-084–088 design after the documented compact-inspector fix and proceed to the requested audits after the baseline commit.
+  Reason: Actual generated 1280x600 and390px screenshots inspected; current-source browser assertions cover desktop/laptop/phone, exact actions/keyboard/gestures, visible footer and reachable final controls. Owner requested AFK audit work, not a new design round.
+  Consequence / reversibility: Provisional agent review only; personal visual, real-AI/media and release acceptance remain owner-only. Reversible local source/commits only.
+  Owner review requested on return: yes. Evidence: docs/tickets/CL-088-fake-mode-verification-and-commit.md, .local-build/evidence/cl086-text-1280.png (ignored synthetic capture), .local-build/evidence/cl086-text-390.png (ignored synthetic capture)
 
 - [x] 01-docs — Documentation (complete)
 - [x] 02-flow — Core flow (complete)
@@ -7779,10 +7852,10 @@ Provisional owner reviews: 04-decisions, 09-visual-review, 10b-security-review
 - [x] 07-build — Execute and validate tickets (complete_local)
 - [x] 08-performance — Performance investigation (complete_local)
 - [x] 09-visual-review — Frontend visual approval checkpoint (provisional)
-- [x] 10a-quality — Quality audit and fixes (complete_local)
-- [x] 10b-security-review — Security audit and manual review (provisional)
-- [x] 11-security-fixes — Approved security fixes (complete_local)
-- [x] 12-handoff — Final local handoff (complete_local)
+- [ ] 10a-quality — Quality audit and fixes (pending)
+- [ ] 10b-security-review — Security audit and manual review (pending)
+- [ ] 11-security-fixes — Approved security fixes (pending)
+- [ ] 12-handoff — Final local handoff (pending)
 
 This checklist records local work. Human approvals and unresolved external checks are preserved below; it does not authorize paid calls or deployment.
 
@@ -7791,7 +7864,7 @@ This checklist records local work. Human approvals and unresolved external check
   "schema_version": 3,
   "repo_root": "C:\\Users\\minat\\Work\\ClipBuilder",
   "main_document": "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
-  "updated_at": "2026-10-24T14:53:12+00:00",
+  "updated_at": "2026-10-26T13:02:30+00:00",
   "context": {
     "PROJECT_NAME": {
       "value": "ClipBuilder",
@@ -7831,6 +7904,11 @@ This checklist records local work. Human approvals and unresolved external check
     "AUDIT_WORKTREE": {
       "value": "C:/Users/minat/.codex/worktrees/quality-security-audit/ClipBuilder",
       "source": "managed worktree operation dd43d772-2eb5-4d0f-b93d-3ea1b8b03849 at baseline 68d5b96",
+      "confidence": "confirmed"
+    },
+    "CURRENT_AUDIT_AUTHORIZATION": {
+      "value": "Fully test fake/paid-off, document fixes, file-level plan and local stage/commit, then quality/security audits with execute/validate loops in AFK mode.",
+      "source": "human:2026-10-26-current-request",
       "confidence": "confirmed"
     }
   },
@@ -7966,6 +8044,50 @@ This checklist records local work. Human approvals and unresolved external check
           "audit-worktree:docs/tickets/CL-065-post-deployment-pre-sharing-security.md",
           "local HTML 1440/390 px, no horizontal overflow, four cards; bounded Zod input visits4096elements despite maximum10"
         ]
+      },
+      {
+        "id": "AFK-0009",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-26T12:18:22+00:00",
+        "phase": "07-build",
+        "choice": "CL-088: use the current primary checkout for renewed verification/commits, then audit the resulting current snapshot. Owner explicitly renewed AFK and Git authorization on 2026-10-26.",
+        "rationale": "Normal app is now verified synthetic-ai/cloud=false; previous paid-review isolation rationale no longer applies. Preserve prior isolated audit evidence without applying unrelated commits.",
+        "consequence": "Only reversible local changes and authorized commits; no paid calls/cloud/metadata export/push/deployment. Personal acceptance remains open.",
+        "review_needed": true,
+        "evidence": [
+          "docs/tickets/CL-088-fake-mode-verification-and-commit.md",
+          "human:2026-10-26-current-request"
+        ]
+      },
+      {
+        "id": "AFK-0010",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-26T12:34:22+00:00",
+        "phase": "07-build",
+        "choice": "CL-088: briefly stop verified normal frontend/backend/worker, run the canonical-port app proof against the clean source-only scratch production build, then restore normal owner-configured services.",
+        "rationale": "The proof correctly refuses occupied canonical ports; changing ports or using the owner app as a test fixture would weaken its isolation. Current normal mode is confirmed fake/cloud-off.",
+        "consequence": "Short local downtime only; preserve all config/media and perform tree-aware shutdown/startup with new identities and safe GETs. No paid action.",
+        "review_needed": true,
+        "evidence": [
+          "test/local-application.proof.ts",
+          "docs/tickets/CL-088-fake-mode-verification-and-commit.md",
+          "human:2026-10-26-current-request"
+        ]
+      },
+      {
+        "id": "AFK-0011",
+        "session_id": "AFK-SESSION-001",
+        "recorded_at": "2026-10-26T13:02:30+00:00",
+        "phase": "09-visual-review",
+        "choice": "Retain current verified CL-084–088 design after the documented compact-inspector fix and proceed to the requested audits after the baseline commit.",
+        "rationale": "Actual generated 1280x600 and390px screenshots inspected; current-source browser assertions cover desktop/laptop/phone, exact actions/keyboard/gestures, visible footer and reachable final controls. Owner requested AFK audit work, not a new design round.",
+        "consequence": "Provisional agent review only; personal visual, real-AI/media and release acceptance remain owner-only. Reversible local source/commits only.",
+        "review_needed": true,
+        "evidence": [
+          "docs/tickets/CL-088-fake-mode-verification-and-commit.md",
+          ".local-build/evidence/cl086-text-1280.png (ignored synthetic capture)",
+          ".local-build/evidence/cl086-text-390.png (ignored synthetic capture)"
+        ]
       }
     ]
   },
@@ -7975,8 +8097,8 @@ This checklist records local work. Human approvals and unresolved external check
     "local_commits_approved": true,
     "approval_source": "human:2026-10-24-current-build-audit-message"
   },
-  "active_ticket": null,
-  "next_action": "Owner return: review linked audit HTML and provisional AFK decisions, finish paid manual review, then reconcile/apply the isolated committed fixes with existing app/source state. Resolve native vendor and actual hosted/resource gates before any owner-only deployment. No eligible automatic paid/cloud action; AFK ledger remains active until owner returns.",
+  "active_ticket": "CL-088",
+  "next_action": "Commit the authorized 84-file current-work snapshot, then prepare CL-089 quality audit prompt and packet.",
   "phases": [
     {
       "id": "01-docs",
@@ -8170,32 +8292,55 @@ This checklist records local work. Human approvals and unresolved external check
       "gate": null,
       "status": "complete_local",
       "prompt": {
-        "text": "Reconcile completed CL-058-063 against actual source, ticket records and local commits 31683fc/a5bc071/440c6a8. Adopt the settled 1,770 synthetic tests, full types/lint/format and local Linux image/editor/native/cancel/retry proof. Do not repeat completed product work. Record actual hosted identity/routing, maximum allocation and live Gemini/owner acceptance as external, with no paid/cloud execution or deployment.",
-        "sha256": "850c94702c324cae79c5a9ee01dd5c2ae52455df85a1fc395db15cb6ec758e9c",
+        "text": "Finish ClipBuilder CL-088 after implemented CL-084 preview-first/export-on-demand, CL-085 review cards, CL-086 timed text/shared typography and CL-087 AI title/defaults/stages. Confirm synthetic-ai/cloud=false via safe GET before tests. Run full deterministic unit/local, boundary, type/lint/format, synthetic browser/native and source-only scratch production build checks without ignored env, real media or paid/provider/cloud calls. Investigate and fix confirmed failures, retain useful assertions, record every fix and run settled checks. Read-only validate complete current work against its packets and preserve all behavior/bounds/diagnostics/retained media. After clean validation write an exhaustive whole-file dependency-complete plan; stage explicit listed paths, inspect staged diff for secrets/generated media and make authorized ticket-prefixed local commits. Verify clean Git and healthy fake-mode app before starting renewed quality then security audits. No push/deploy/cloud access/spend/scanner metadata export. Owner visual, paid AI and actual hosted/release acceptance remain unchecked.",
+        "sha256": "97d3002b076c8df136dc3c57fb31747850e63556087cded9f6104bef498fc5aa",
         "context_sources": [
-          "docs/tickets/README.md",
-          "docs/tickets/CL-063-local-hosted-release-verification.md"
+          "docs/tickets/CL-088-fake-mode-verification-and-commit.md",
+          "docs/tickets/CL-084-preview-first-export-on-demand.md",
+          "docs/tickets/CL-085-review-moment-cards.md",
+          "docs/tickets/CL-086-timed-text-and-shared-typography.md",
+          "docs/tickets/CL-087-ai-titles-defaults-and-preparation-stages.md",
+          "human:2026-10-26-current-request"
         ],
         "status": "afk",
         "approval": null,
         "afk_session": "AFK-SESSION-001"
       },
       "evidence": [
-        "docs/tickets/CL-063-local-hosted-release-verification.md",
-        "commit:31683fc",
-        "commit:a5bc071",
-        "commit:440c6a8"
+        "docs/tickets/CL-088-fake-mode-verification-and-commit.md",
+        "docs/operations/CL084_088_COMMIT_PLAN.md",
+        "599 local; exact full unit144root+1725package; all25syntheticproof cases reconciled; final Focus/Text browser; scratch build/artifact; lint/types/format",
+        "normal app synthetic-ai/cloud=false health/start/config200; current worker rebuilt; proof resource survivors0"
       ],
       "blockers": [
         {
           "kind": "external",
-          "reason": "Actual hosted identity/TLS/Turnstile/routing and maximum hosting allocation, plus live Gemini/owner acceptance, require separate configuration/authorization or owner review. No deployment or paid call is authorized.",
-          "reference": "docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md"
+          "reason": "Owner real AI/editorial/media/rights and personal visual acceptance, actual hosted identity/resources/Linux native-vendor/release checks remain unverified. No paid/cloud/deploy/push/scanner-export permission.",
+          "reference": "docs/tickets/CL-088-fake-mode-verification-and-commit.md"
         }
       ],
       "approval": null,
       "decision": null,
-      "reviews": []
+      "reviews": [
+        {
+          "reopened_at": "2026-10-26T12:18:19+00:00",
+          "reason": "New CL-084–087 implementation and explicit 2026-10-26 owner verification/commit/AFK audit request supersede the earlier audit snapshot; retain all earlier evidence and owner-only gates.",
+          "prior_status": "complete_local",
+          "prior_prompt": {
+            "text": "Reconcile completed CL-058-063 against actual source, ticket records and local commits 31683fc/a5bc071/440c6a8. Adopt the settled 1,770 synthetic tests, full types/lint/format and local Linux image/editor/native/cancel/retry proof. Do not repeat completed product work. Record actual hosted identity/routing, maximum allocation and live Gemini/owner acceptance as external, with no paid/cloud execution or deployment.",
+            "sha256": "850c94702c324cae79c5a9ee01dd5c2ae52455df85a1fc395db15cb6ec758e9c",
+            "context_sources": [
+              "docs/tickets/README.md",
+              "docs/tickets/CL-063-local-hosted-release-verification.md"
+            ],
+            "status": "afk",
+            "approval": null,
+            "afk_session": "AFK-SESSION-001"
+          },
+          "prior_approval": null,
+          "prior_decision": null
+        }
+      ]
     },
     {
       "id": "08-performance",
@@ -8233,20 +8378,20 @@ This checklist records local work. Human approvals and unresolved external check
       "gate": "visual",
       "status": "provisional",
       "prompt": {
-        "text": "Preserve completed CL-062 design and its actual desktop/phone screenshot/keyboard/readiness evidence, plus the shared Linux editor proof. The owner is performing manual paid-flow/visual review while asking for audits now. Record only a provisional AFK self-review to permit the explicitly assigned audits. Do not invent personal visual acceptance or make extra design changes.",
-        "sha256": "dccce60476c5c3032651b13f3dbc9b929890c92c5c0c891827c321b50300aeb9",
+        "text": "Review actual ClipBuilder CL-084–088 synthetic desktop/phone/browser/native evidence without changing the product or claiming personal owner approval. The owner explicitly requests AFK audits after verified current-work commits. Inspect actual 1280x600 timed-text and 390px captures plus current-source browser assertions at1440,1366x682,1280x600,390,320 for footer visibility, selected settings, text/caption parity and real focus/scroll/pointer mechanics. Retain all25 reconciled native/browser cases and focused Text/Focus passes. Record a provisional AFK self-review solely to permit the assigned quality then security audit. Owner real AI/media/visual/rights/hosted/release acceptance remains outstanding. No new design round, paid action, cloud access, push/deployment or scanner metadata export.",
+        "sha256": "d212e02d10e192004c918a782ad94a449d089866ab2f3acc9d7330dcabe386cc",
         "context_sources": [
-          "docs/tickets/CL-062-designed-loading-states.md",
-          "docs/tickets/CL-063-local-hosted-release-verification.md",
-          "human:2026-10-24-current-build-audit-message"
+          "docs/tickets/CL-088-fake-mode-verification-and-commit.md",
+          "human:2026-10-26-current-request"
         ],
         "status": "afk",
         "approval": null,
         "afk_session": "AFK-SESSION-001"
       },
       "evidence": [
-        "docs/tickets/CL-062-designed-loading-states.md",
-        "docs/tickets/CL-063-local-hosted-release-verification.md"
+        "docs/tickets/CL-088-fake-mode-verification-and-commit.md",
+        ".local-build/evidence/cl086-text-1280.png (ignored synthetic capture)",
+        ".local-build/evidence/cl086-text-390.png (ignored synthetic capture)"
       ],
       "blockers": [],
       "approval": null,
@@ -8259,34 +8404,47 @@ This checklist records local work. Human approvals and unresolved external check
             "recorded_at": "2026-10-24T13:34:26+00:00"
           },
           "decision": "self-reviewed"
+        },
+        {
+          "reopened_at": "2026-10-26T12:18:20+00:00",
+          "reason": "New CL-084–087 implementation and explicit 2026-10-26 owner verification/commit/AFK audit request supersede the earlier audit snapshot; retain all earlier evidence and owner-only gates.",
+          "prior_status": "provisional",
+          "prior_prompt": {
+            "text": "Preserve completed CL-062 design and its actual desktop/phone screenshot/keyboard/readiness evidence, plus the shared Linux editor proof. The owner is performing manual paid-flow/visual review while asking for audits now. Record only a provisional AFK self-review to permit the explicitly assigned audits. Do not invent personal visual acceptance or make extra design changes.",
+            "sha256": "dccce60476c5c3032651b13f3dbc9b929890c92c5c0c891827c321b50300aeb9",
+            "context_sources": [
+              "docs/tickets/CL-062-designed-loading-states.md",
+              "docs/tickets/CL-063-local-hosted-release-verification.md",
+              "human:2026-10-24-current-build-audit-message"
+            ],
+            "status": "afk",
+            "approval": null,
+            "afk_session": "AFK-SESSION-001"
+          },
+          "prior_approval": null,
+          "prior_decision": "self-reviewed"
+        },
+        {
+          "afk_review": {
+            "session_id": "AFK-SESSION-001",
+            "decision_id": "AFK-0011",
+            "recorded_at": "2026-10-26T13:02:30+00:00"
+          },
+          "decision": "self-reviewed"
         }
       ],
       "afk_review": {
         "session_id": "AFK-SESSION-001",
-        "decision_id": "AFK-0003",
-        "recorded_at": "2026-10-24T13:34:26+00:00"
+        "decision_id": "AFK-0011",
+        "recorded_at": "2026-10-26T13:02:30+00:00"
       }
     },
     {
       "id": "10a-quality",
       "name": "Quality audit and fixes",
       "gate": null,
-      "status": "complete_local",
-      "prompt": {
-        "text": "Run a thorough code quality, efficiency and structure audit of ClipBuilder, an existing Next.js frontend/Express backend/shared contracts and React composition with internal Linux native worker, prepared for Cloud Run. Current flow is uploaded owned video to bounded manual/AI moments, caption/picture/filter editor and MP4 export; YouTube acquisition is local-only. First fully document a detailed functionality-preserving plan in CL-064 post-deployment/pre-sharing quality and the owning audit report. Inspect browser workflow/state, server/proxy/provider adapters, native worker/process/media ownership, contracts, persistence, scripts/build/test boundaries and CI/release files. Identify concrete redundancy, dead code, duplicate logic, avoidable work and cleanup/structural defects; avoid cosmetic churn or broad rewrites. Preserve all private diagnostics, generic user/browser errors, paid-output advisory critique policy, explicit retries/reuse, fixed bytes/calls/queues/deadlines/cancellation, shared design and normal motion. Preserve the running owner manual-review app using a separate source checkout and fake/no-key/paid-off/network-blocked tests; never read/copy ignored env or retained media. Execute justified quality fixes one dependency-ready packet at a time through execute/read-only validate/fix/revalidate until no actionable local findings remain. Prepare a whole-file commit plan, inspect staged diffs and make cohesive CL-prefixed local commits under the current explicit Git authorization. Do not start STRIDE/dependency security auditing until this quality phase is complete. Do not deploy, push, spend credits, call providers/cloud, export scanner metadata or claim owner acceptance. Save follow-up preservation guidelines for later manual-feedback edits.",
-        "sha256": "79e66c5b23765ee7510f6e7a622cff1dd7b0899957b9c06ccd86f6241d50cf40",
-        "context_sources": [
-          "AGENTS.md",
-          "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
-          "docs/tickets/CL-061-shared-hosted-upload-editor.md",
-          "docs/tickets/CL-062-designed-loading-states.md",
-          "docs/tickets/CL-063-local-hosted-release-verification.md",
-          "human:2026-10-24-current-build-audit-message"
-        ],
-        "status": "afk",
-        "approval": null,
-        "afk_session": "AFK-SESSION-001"
-      },
+      "status": "pending",
+      "prompt": null,
       "evidence": [
         "audit-worktree:commit:a28a668",
         "audit-worktree:docs/operations/CODE_QUALITY_AUDIT_2026-10-24.md",
@@ -8301,26 +8459,37 @@ This checklist records local work. Human approvals and unresolved external check
       ],
       "approval": null,
       "decision": null,
-      "reviews": []
+      "reviews": [
+        {
+          "reopened_at": "2026-10-26T12:18:20+00:00",
+          "reason": "New CL-084–087 implementation and explicit 2026-10-26 owner verification/commit/AFK audit request supersede the earlier audit snapshot; retain all earlier evidence and owner-only gates.",
+          "prior_status": "complete_local",
+          "prior_prompt": {
+            "text": "Run a thorough code quality, efficiency and structure audit of ClipBuilder, an existing Next.js frontend/Express backend/shared contracts and React composition with internal Linux native worker, prepared for Cloud Run. Current flow is uploaded owned video to bounded manual/AI moments, caption/picture/filter editor and MP4 export; YouTube acquisition is local-only. First fully document a detailed functionality-preserving plan in CL-064 post-deployment/pre-sharing quality and the owning audit report. Inspect browser workflow/state, server/proxy/provider adapters, native worker/process/media ownership, contracts, persistence, scripts/build/test boundaries and CI/release files. Identify concrete redundancy, dead code, duplicate logic, avoidable work and cleanup/structural defects; avoid cosmetic churn or broad rewrites. Preserve all private diagnostics, generic user/browser errors, paid-output advisory critique policy, explicit retries/reuse, fixed bytes/calls/queues/deadlines/cancellation, shared design and normal motion. Preserve the running owner manual-review app using a separate source checkout and fake/no-key/paid-off/network-blocked tests; never read/copy ignored env or retained media. Execute justified quality fixes one dependency-ready packet at a time through execute/read-only validate/fix/revalidate until no actionable local findings remain. Prepare a whole-file commit plan, inspect staged diffs and make cohesive CL-prefixed local commits under the current explicit Git authorization. Do not start STRIDE/dependency security auditing until this quality phase is complete. Do not deploy, push, spend credits, call providers/cloud, export scanner metadata or claim owner acceptance. Save follow-up preservation guidelines for later manual-feedback edits.",
+            "sha256": "79e66c5b23765ee7510f6e7a622cff1dd7b0899957b9c06ccd86f6241d50cf40",
+            "context_sources": [
+              "AGENTS.md",
+              "docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md",
+              "docs/tickets/CL-061-shared-hosted-upload-editor.md",
+              "docs/tickets/CL-062-designed-loading-states.md",
+              "docs/tickets/CL-063-local-hosted-release-verification.md",
+              "human:2026-10-24-current-build-audit-message"
+            ],
+            "status": "afk",
+            "approval": null,
+            "afk_session": "AFK-SESSION-001"
+          },
+          "prior_approval": null,
+          "prior_decision": null
+        }
+      ]
     },
     {
       "id": "10b-security-review",
       "name": "Security audit and manual review",
       "gate": "security",
-      "status": "provisional",
-      "prompt": {
-        "text": "Perform a thorough proportionate security audit of the whole ClipBuilder repository after committed CL-064 quality fixes (isolated checkout HEAD a28a668). Use STRIDE and general known threats across the Next frontend/bridge, Express backend, hosted session/admission/identity/cookies/CSRF/rate limits, upload and file delivery, provider use and paid ceilings, local-only YouTube boundary, native worker/subprocesses/FFmpeg/Chromium, contracts/shared composition, build/deployment scripts and pinned dependencies. The demo is one disposable Cloud Run application with upload to bounded manual/AI moments, caption/picture/filter editor and native MP4 download; only local composition permits YouTube acquisition. Identify only substantial realistically applicable threats. Verify exploit preconditions and distinguish source defects from unverified hosted settings and intentional bounded-demo constraints. Preserve private diagnostics and generic UI errors, semantic Gemini critique-only acceptance and explicit retry reuse, source/revision binding, fixed bytes/work/deadlines/cancellation and design/motion. First audit only: produce detailed Markdown with source identity, trust boundaries, STRIDE coverage, dependency/advisory methodology, ranked confirmed findings, evidence, careful functionality-preserving fix plans, scope/non-findings and real limitations; produce a concise severity-ranked PM HTML report and inspect its rendering. Use hardcoded fake/no-key/paid-off, generated synthetic data and network-blocked checks; do not read/copy ignored env, credentials, retained media or private captures. Never deploy/push/spend/call providers/cloud or export scanner metadata. Public read-only advisory information may be consulted without transmitting project/source/dependency inventory. Do not implement security changes before the actual reports exist and an explicit provisional AFK review records selected actual finding IDs under the owner current delegated authorization. After that selection, prepare phase 11 and execute only justified scoped local fixes through execute/read-only validate/fix loops and authorized cohesive commits. Preserve the owner running primary app and maintain the canonical progress ledger only in primary docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md.",
-        "sha256": "731a6a6fe03d075988e56ea7c8de666cf4ee619091979603f7771885edebf921",
-        "context_sources": [
-          "AGENTS.md",
-          "docs/operations/CODE_QUALITY_AUDIT_2026-10-24.md",
-          "docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md",
-          "human:2026-10-24-current-build-audit-message"
-        ],
-        "status": "afk",
-        "approval": null,
-        "afk_session": "AFK-SESSION-001"
-      },
+      "status": "pending",
+      "prompt": null,
       "evidence": [
         "audit-worktree:docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md",
         "audit-worktree:docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html",
@@ -8329,7 +8498,7 @@ This checklist records local work. Human approvals and unresolved external check
       ],
       "blockers": [],
       "approval": null,
-      "decision": "selected-fixes",
+      "decision": null,
       "reviews": [
         {
           "afk_review": {
@@ -8338,37 +8507,40 @@ This checklist records local work. Human approvals and unresolved external check
             "recorded_at": "2026-10-24T14:32:28+00:00"
           },
           "decision": "selected-fixes"
+        },
+        {
+          "reopened_at": "2026-10-26T12:18:20+00:00",
+          "reason": "New CL-084–087 implementation and explicit 2026-10-26 owner verification/commit/AFK audit request supersede the earlier audit snapshot; retain all earlier evidence and owner-only gates.",
+          "prior_status": "provisional",
+          "prior_prompt": {
+            "text": "Perform a thorough proportionate security audit of the whole ClipBuilder repository after committed CL-064 quality fixes (isolated checkout HEAD a28a668). Use STRIDE and general known threats across the Next frontend/bridge, Express backend, hosted session/admission/identity/cookies/CSRF/rate limits, upload and file delivery, provider use and paid ceilings, local-only YouTube boundary, native worker/subprocesses/FFmpeg/Chromium, contracts/shared composition, build/deployment scripts and pinned dependencies. The demo is one disposable Cloud Run application with upload to bounded manual/AI moments, caption/picture/filter editor and native MP4 download; only local composition permits YouTube acquisition. Identify only substantial realistically applicable threats. Verify exploit preconditions and distinguish source defects from unverified hosted settings and intentional bounded-demo constraints. Preserve private diagnostics and generic UI errors, semantic Gemini critique-only acceptance and explicit retry reuse, source/revision binding, fixed bytes/work/deadlines/cancellation and design/motion. First audit only: produce detailed Markdown with source identity, trust boundaries, STRIDE coverage, dependency/advisory methodology, ranked confirmed findings, evidence, careful functionality-preserving fix plans, scope/non-findings and real limitations; produce a concise severity-ranked PM HTML report and inspect its rendering. Use hardcoded fake/no-key/paid-off, generated synthetic data and network-blocked checks; do not read/copy ignored env, credentials, retained media or private captures. Never deploy/push/spend/call providers/cloud or export scanner metadata. Public read-only advisory information may be consulted without transmitting project/source/dependency inventory. Do not implement security changes before the actual reports exist and an explicit provisional AFK review records selected actual finding IDs under the owner current delegated authorization. After that selection, prepare phase 11 and execute only justified scoped local fixes through execute/read-only validate/fix loops and authorized cohesive commits. Preserve the owner running primary app and maintain the canonical progress ledger only in primary docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md.",
+            "sha256": "731a6a6fe03d075988e56ea7c8de666cf4ee619091979603f7771885edebf921",
+            "context_sources": [
+              "AGENTS.md",
+              "docs/operations/CODE_QUALITY_AUDIT_2026-10-24.md",
+              "docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md",
+              "human:2026-10-24-current-build-audit-message"
+            ],
+            "status": "afk",
+            "approval": null,
+            "afk_session": "AFK-SESSION-001"
+          },
+          "prior_approval": null,
+          "prior_decision": "selected-fixes"
         }
       ],
       "selected_findings": [
         "SEC-01",
         "SEC-02",
         "SEC-03"
-      ],
-      "afk_review": {
-        "session_id": "AFK-SESSION-001",
-        "decision_id": "AFK-0008",
-        "recorded_at": "2026-10-24T14:32:28+00:00"
-      }
+      ]
     },
     {
       "id": "11-security-fixes",
       "name": "Approved security fixes",
       "gate": null,
-      "status": "complete_local",
-      "prompt": {
-        "text": "Execute CL-065 selected findings SEC-01, SEC-02 and SEC-03 only in the isolated quality-security-audit worktree. The complete audit and PM HTML have been produced and inspected, and provisional AFK selection records the actual IDs; owner personal review remains outstanding. Follow the ticket whole-file allocation: exact compatible Zod4.6.6 and Next/eslint-config-next16.4.1 dependencies/lock plus meaningful early rejection regression, then verified immutable official Node22.23.4 Bookworm image digest in all three app Dockerfiles and narrowly owning checks/docs. Confirm package/image metadata before depending on it. Preserve valid input/editor/preview/native export, paid output critique-only semantics, explicit retry and preparation reuse, all diagnostics and generic user errors, fixed bounds, cancellation and cleanup. No unrelated feature rewrite, bulk dev-tool updates or invented native patch. Independently confirm each finding, implement, run focused fake/no-key/paid-off/network-blocked checks, perform a read-only validate pass without edits, confirm/fix actual findings and repeat until no actionable local issue remains. Finish settled lint/types/format/unit, Linux actual image startup/CSP and current-source browser/native parity/cancel proofs appropriate to the updated runtime/framework; isolate generated fixtures and owned processes/scratch. Keep SEC-04 explicitly unresolved awaiting vendor/native release review, not remediated by documentation. Keep the running primary app unchanged and defer application of audit commits during owner manual paid review. Stage explicit cohesive file groups and local CL-prefixed commits under existing human authorization, inspect staged diffs for secrets/generated artifacts, and update the canonical primary build/AFK ledger. No ignored env/credential/private-media reads, paid or provider/cloud requests, scanner metadata export, deployment or push. Prepare honest final handoff with remaining external and provisional reviews.",
-        "sha256": "55adc3e0eda9600f9b56266fb1c5e2ab6dc5a1506a4a53d6defb328c07dcb250",
-        "context_sources": [
-          "docs/tickets/CL-065-post-deployment-pre-sharing-security.md",
-          "docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md",
-          "docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html",
-          "human:2026-10-24-current-build-audit-message"
-        ],
-        "status": "afk",
-        "approval": null,
-        "afk_session": "AFK-SESSION-001"
-      },
+      "status": "pending",
+      "prompt": null,
       "evidence": [
         "audit-worktree:commit:c1d7169",
         "audit-worktree:commit:50521d8",
@@ -8390,26 +8562,35 @@ This checklist records local work. Human approvals and unresolved external check
       ],
       "approval": null,
       "decision": null,
-      "reviews": []
+      "reviews": [
+        {
+          "reopened_at": "2026-10-26T12:18:21+00:00",
+          "reason": "New CL-084–087 implementation and explicit 2026-10-26 owner verification/commit/AFK audit request supersede the earlier audit snapshot; retain all earlier evidence and owner-only gates.",
+          "prior_status": "complete_local",
+          "prior_prompt": {
+            "text": "Execute CL-065 selected findings SEC-01, SEC-02 and SEC-03 only in the isolated quality-security-audit worktree. The complete audit and PM HTML have been produced and inspected, and provisional AFK selection records the actual IDs; owner personal review remains outstanding. Follow the ticket whole-file allocation: exact compatible Zod4.6.6 and Next/eslint-config-next16.4.1 dependencies/lock plus meaningful early rejection regression, then verified immutable official Node22.23.4 Bookworm image digest in all three app Dockerfiles and narrowly owning checks/docs. Confirm package/image metadata before depending on it. Preserve valid input/editor/preview/native export, paid output critique-only semantics, explicit retry and preparation reuse, all diagnostics and generic user errors, fixed bounds, cancellation and cleanup. No unrelated feature rewrite, bulk dev-tool updates or invented native patch. Independently confirm each finding, implement, run focused fake/no-key/paid-off/network-blocked checks, perform a read-only validate pass without edits, confirm/fix actual findings and repeat until no actionable local issue remains. Finish settled lint/types/format/unit, Linux actual image startup/CSP and current-source browser/native parity/cancel proofs appropriate to the updated runtime/framework; isolate generated fixtures and owned processes/scratch. Keep SEC-04 explicitly unresolved awaiting vendor/native release review, not remediated by documentation. Keep the running primary app unchanged and defer application of audit commits during owner manual paid review. Stage explicit cohesive file groups and local CL-prefixed commits under existing human authorization, inspect staged diffs for secrets/generated artifacts, and update the canonical primary build/AFK ledger. No ignored env/credential/private-media reads, paid or provider/cloud requests, scanner metadata export, deployment or push. Prepare honest final handoff with remaining external and provisional reviews.",
+            "sha256": "55adc3e0eda9600f9b56266fb1c5e2ab6dc5a1506a4a53d6defb328c07dcb250",
+            "context_sources": [
+              "docs/tickets/CL-065-post-deployment-pre-sharing-security.md",
+              "docs/operations/STRIDE_SECURITY_AUDIT_2026-10-24.md",
+              "docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html",
+              "human:2026-10-24-current-build-audit-message"
+            ],
+            "status": "afk",
+            "approval": null,
+            "afk_session": "AFK-SESSION-001"
+          },
+          "prior_approval": null,
+          "prior_decision": null
+        }
+      ]
     },
     {
       "id": "12-handoff",
       "name": "Final local handoff",
       "gate": null,
-      "status": "complete_local",
-      "prompt": {
-        "text": "Finish the current ClipBuilder AFK audit run from actual evidence. Reconcile primary canonical build progress, isolated managed audit checkout commits/status and owner permission: existing pending CL-058–063 work was planned/validated/committed before audits; CL-064 quality has four local fixes; CL-065 audit and PM HTML exist, selected SEC-01–03 dependency/image fixes are validated/committed after provisional AFK selection. Read back all actual gates and pending owner reviews. Report source identity, cohesive commit allocation, passing1785tests/169files/lint/types/format, actual patched Node22.23.4 frontend/backend/renderer image probes and current Windows/Linux synthetic upload/editor/native export/cancel/retry/cleanup evidence, plus meaningful limits. Preserve private diagnostics, no Gemini semantic rejection, shared editor and local-only YouTube, all bounds and retained assets. Confirm no owned proof container/listener/process remains; preserve owner normal running app and all diagnostic files. Keep the attached audit checkout recoverable with clean committed changes; do not archive or apply audit source while owner paid manual review continues. Canonical progress updates are progress-only local commits on primary main with a one-file plan; no source merge/push. Summarize material AFK decisions and outstanding provisional product/visual/security review, SEC-04 unresolved vendor MOV risk, owner global Windows Node update, real hosted identity/TLS/Turnstile/single-instance/CPU/maxcapacity and real paid quality checks. State fake/no-key versus real-provider requirements honestly; no local AI weights or implementation is introduced. Link the concise PM HTML and detailed reports. Mark handoff complete_local while these real external/provisional gates remain; do not claim all security risks fixed, user acceptance, production readiness or deployment. No paid/provider/cloud call, ignored env read, metadata export, push or deployment. End without an ordinary approval question while AFK.",
-        "sha256": "648815042c9e69ed914f9cb9533ec80cc313db181eb23a7d778b11f98ab6c79a",
-        "context_sources": [
-          "audit-worktree:docs/tickets/CL-064-post-deployment-pre-sharing-quality.md",
-          "audit-worktree:docs/tickets/CL-065-post-deployment-pre-sharing-security.md",
-          "audit-worktree:docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html",
-          "human:2026-10-24-current-build-audit-message"
-        ],
-        "status": "afk",
-        "approval": null,
-        "afk_session": "AFK-SESSION-001"
-      },
+      "status": "pending",
+      "prompt": null,
       "evidence": [
         "audit-worktree:commit:c04b983",
         "audit-worktree:commits:c476d8d,311ee7d,b8fefca,353c7f4,a28a668,c1d7169,50521d8,c04b983",
@@ -8433,7 +8614,28 @@ This checklist records local work. Human approvals and unresolved external check
       ],
       "approval": null,
       "decision": null,
-      "reviews": []
+      "reviews": [
+        {
+          "reopened_at": "2026-10-26T12:18:22+00:00",
+          "reason": "New CL-084–087 implementation and explicit 2026-10-26 owner verification/commit/AFK audit request supersede the earlier audit snapshot; retain all earlier evidence and owner-only gates.",
+          "prior_status": "complete_local",
+          "prior_prompt": {
+            "text": "Finish the current ClipBuilder AFK audit run from actual evidence. Reconcile primary canonical build progress, isolated managed audit checkout commits/status and owner permission: existing pending CL-058–063 work was planned/validated/committed before audits; CL-064 quality has four local fixes; CL-065 audit and PM HTML exist, selected SEC-01–03 dependency/image fixes are validated/committed after provisional AFK selection. Read back all actual gates and pending owner reviews. Report source identity, cohesive commit allocation, passing1785tests/169files/lint/types/format, actual patched Node22.23.4 frontend/backend/renderer image probes and current Windows/Linux synthetic upload/editor/native export/cancel/retry/cleanup evidence, plus meaningful limits. Preserve private diagnostics, no Gemini semantic rejection, shared editor and local-only YouTube, all bounds and retained assets. Confirm no owned proof container/listener/process remains; preserve owner normal running app and all diagnostic files. Keep the attached audit checkout recoverable with clean committed changes; do not archive or apply audit source while owner paid manual review continues. Canonical progress updates are progress-only local commits on primary main with a one-file plan; no source merge/push. Summarize material AFK decisions and outstanding provisional product/visual/security review, SEC-04 unresolved vendor MOV risk, owner global Windows Node update, real hosted identity/TLS/Turnstile/single-instance/CPU/maxcapacity and real paid quality checks. State fake/no-key versus real-provider requirements honestly; no local AI weights or implementation is introduced. Link the concise PM HTML and detailed reports. Mark handoff complete_local while these real external/provisional gates remain; do not claim all security risks fixed, user acceptance, production readiness or deployment. No paid/provider/cloud call, ignored env read, metadata export, push or deployment. End without an ordinary approval question while AFK.",
+            "sha256": "648815042c9e69ed914f9cb9533ec80cc313db181eb23a7d778b11f98ab6c79a",
+            "context_sources": [
+              "audit-worktree:docs/tickets/CL-064-post-deployment-pre-sharing-quality.md",
+              "audit-worktree:docs/tickets/CL-065-post-deployment-pre-sharing-security.md",
+              "audit-worktree:docs/operations/STRIDE_SECURITY_REVIEW_2026-10-24.html",
+              "human:2026-10-24-current-build-audit-message"
+            ],
+            "status": "afk",
+            "approval": null,
+            "afk_session": "AFK-SESSION-001"
+          },
+          "prior_approval": null,
+          "prior_decision": null
+        }
+      ]
     }
   ]
 }

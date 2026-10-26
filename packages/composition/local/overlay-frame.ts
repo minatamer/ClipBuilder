@@ -13,6 +13,9 @@ export function ownerOverlayFrame(overlay: OwnerOverlay, frame: number) {
   const visuals = overlay.visuals.filter(
     (cue) => cue.startFrame <= frame && frame < cue.endFrame,
   );
+  const texts = (overlay.texts ?? []).filter(
+    (layer) => layer.startFrame <= frame && frame < layer.endFrame,
+  );
   const highlights =
     caption?.wordCues
       .filter((cue) => cue.startMs <= ms && ms < cue.endMs)
@@ -30,8 +33,10 @@ export function ownerOverlayFrame(overlay: OwnerOverlay, frame: number) {
     ms,
     caption,
     visuals,
+    texts,
     key: JSON.stringify([
       captionIndex,
+      texts.map((layer) => layer.id),
       caption && overlay.captionStyle?.animation === "bounce"
         ? caption.wordCues
             .filter((cue) => cue.startMs <= ms && ms < cue.endMs)

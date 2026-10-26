@@ -9,6 +9,12 @@ when the backend uses real Gemini AI. It never dispatches cloud processing.
 See the [local workflow guide](../../../docs/operations/LOCAL_WORKFLOW.md).
 Synthetic native proofs use generated media, not retained source masters.
 
+CL-084 adds fixed `clip-preview` jobs using the existing 1080x1920/30fps playback
+profile, source/cut binding, measured validation and hash-checked cache. They do
+not start Chromium, rasterize art or encode a final export. Explicit `clip` jobs
+reuse/ensure that preview for compatibility, then use the unchanged final-render
+path below. The worker has no AI key and no new runtime setting.
+
 Final edited/portrait exports use original source pixels and a source-height
 portrait canvas (even-pixel codec rounding), preserving native portrait sizes
 and the source's nominal frame rate. Variable-rate sources are normalized to

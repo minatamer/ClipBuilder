@@ -18,6 +18,16 @@ application imports; executable negative fixtures guard those boundaries.
 Import only from `@clipbuilder/contracts`. Consumers must parse every value at
 its trust boundary; inferred types do not replace runtime validation.
 
+The shared editor's `local/` entry contracts also serve CL-061 hosted editing.
+CL-086 `text-style.ts` owns closed typography/font/preset/color/opacity values;
+`text-layers.ts` owns bounded multiline plain text, safe boxes and frame ranges.
+Optional text lists preserve old edit/overlay documents; compilation validates
+their ends against the actual clip. Text never changes caption word identities
+or transcription clocks. No arbitrary CSS, markup, URL font or renderer input.
+CL-087 adds a shared 80-character title contract and optional closed preparation
+stage metadata. Title work is retained with the existing preparation checkpoint;
+stage metadata describes work, not progress estimates or completion percentages.
+
 ## Implemented cloud contracts
 
 The [current migration](../../docs/architecture/GEMINI_REMOTION_MIGRATION.md) uses

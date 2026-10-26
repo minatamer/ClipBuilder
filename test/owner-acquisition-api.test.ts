@@ -88,6 +88,19 @@ beforeEach(async () => {
         },
       };
     }
+    if (job.operation === "clip-preview") {
+      const frames = job.cut.endFrame - job.cut.startFrame;
+      await writeFile(
+        join(root, job.workspaceId, `${job.clipId}.source.mp4`),
+        "synthetic-preview",
+      );
+      return {
+        operation: "clip-preview",
+        frames,
+        bytes: 17,
+        durationMs: Math.round((frames * 1000) / 30),
+      };
+    }
     if (job.operation !== "clip") throw new Error("unexpected_native_call");
     const bytes = Buffer.from("synthetic native clip");
     await writeFile(
@@ -239,10 +252,12 @@ it("previews saved bytes offline through protected bounded ranges without a work
       })
     ).status,
   ).toBe(202);
-  await vi.waitFor(async () =>
-    expect(
-      JSON.parse((await get("/api/sources/state")).body.toString()).stage,
-    ).toBe("ready"),
+  await vi.waitFor(
+    async () =>
+      expect(
+        JSON.parse((await get("/api/sources/state")).body.toString()).stage,
+      ).toBe("ready"),
+    { timeout: 5000 },
   );
   const saved = ownerSourceCatalogSchema.parse(
     JSON.parse((await get("/api/sources")).body.toString()),
@@ -317,13 +332,16 @@ it("imports through protected HTTP into the existing range/analysis/batch flow a
     },
   });
   expect(accepted.status).toBe(202);
-  await vi.waitFor(async () => {
-    expect(
-      ownerAcquisitionProgressSchema.parse(
-        JSON.parse((await get("/api/sources/state")).body.toString()),
-      ).stage,
-    ).toBe("ready");
-  });
+  await vi.waitFor(
+    async () => {
+      expect(
+        ownerAcquisitionProgressSchema.parse(
+          JSON.parse((await get("/api/sources/state")).body.toString()),
+        ).stage,
+      ).toBe("ready");
+    },
+    { timeout: 5000 },
+  );
   const workspace = ownerWorkspaceSchema.parse(
     JSON.parse((await get("/api/workspace")).body.toString()),
   );
@@ -359,7 +377,7 @@ it("imports through protected HTTP into the existing range/analysis/batch flow a
           (await get(`/api/workspace/${workspace.id}/clips`)).body.toString(),
         ),
       ).clips[0]?.state,
-    ).toBe("ready");
+    ).toBe("review-ready");
   });
   expect(analysis.transcribe).toHaveBeenCalledTimes(1);
   expect(analysis.select).toHaveBeenCalledTimes(0);
@@ -369,7 +387,7 @@ it("imports through protected HTTP into the existing range/analysis/batch flow a
   expect(acquisition.download).toHaveBeenCalledTimes(1);
   expect(media.mock.calls.map(([job]) => job.operation)).toEqual([
     "synthesize-acquisition",
-    "clip",
+    "clip-preview",
   ]);
   const catalog = ownerSourceCatalogSchema.parse(
       JSON.parse((await get("/api/sources")).body.toString()),
@@ -422,7 +440,7 @@ it("imports through protected HTTP into the existing range/analysis/batch flow a
   expect(analysis.select).toHaveBeenCalledTimes(0);
   expect(media.mock.calls.map(([job]) => job.operation)).toEqual([
     "synthesize-acquisition",
-    "clip",
+    "clip-preview",
     "inspect-acquisition",
   ]);
 });

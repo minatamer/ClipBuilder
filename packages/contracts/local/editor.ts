@@ -9,13 +9,13 @@ import {
 import { ownerVideoLookSchema } from "./video-look.ts";
 import { ownerFocusSchema } from "./focus.ts";
 import { boundedPlainTextSchema } from "../src/text.schema.ts";
+import {
+  ownerTypographySchema,
+  OWNER_SOCIAL_TEXT_PRESETS,
+} from "./text-style.ts";
+import { ownerTextLayersSchema } from "./text-layers.ts";
+export { OWNER_TEXT_FONTS as OWNER_CAPTION_FONTS } from "./text-style.ts";
 
-export const OWNER_CAPTION_FONTS = [
-  "Arial",
-  "Verdana",
-  "Georgia",
-  "Courier New",
-] as const;
 export const OWNER_CAPTION_ANIMATIONS = [
   "highlight",
   "pop",
@@ -26,16 +26,10 @@ export const OWNER_CAPTION_ANIMATIONS = [
   "none",
 ] as const;
 
-export const ownerCaptionStyleSchema = z
-  .object({
-    preset: z.enum(["clean", "classic", "bold", "boxed", "typewriter"]),
-    fontSize: z.number().int().min(24).max(120),
-    font: z.enum(OWNER_CAPTION_FONTS).optional(),
+export const ownerCaptionStyleSchema = ownerTypographySchema
+  .extend({
     animation: z.enum(OWNER_CAPTION_ANIMATIONS).optional(),
-    color: z.string().regex(/^#[a-fA-F0-9]{6}$/),
     highlight: z.string().regex(/^#[a-fA-F0-9]{6}$/),
-    align: z.enum(["left", "center", "right"]),
-    verticalAlign: z.enum(["center", "bottom"]).optional(),
     box: normalizedBoxSchema,
   })
   .strict()
@@ -71,6 +65,24 @@ export const OWNER_CAPTION_PRESETS: Record<
   OwnerCaptionStyle["preset"],
   OwnerCaptionStyle
 > = {
+  tiktok: {
+    ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
+    highlight: "#7652d8",
+    animation: "none",
+    box: captionBox,
+  },
+  solid: {
+    ...OWNER_SOCIAL_TEXT_PRESETS.solid,
+    highlight: "#7652d8",
+    animation: "none",
+    box: captionBox,
+  },
+  translucent: {
+    ...OWNER_SOCIAL_TEXT_PRESETS.translucent,
+    highlight: "#7652d8",
+    animation: "none",
+    box: captionBox,
+  },
   clean: {
     preset: "clean",
     fontSize: 64,
@@ -127,6 +139,7 @@ export const ownerEditDocumentSchema = z
     revision: z.number().int().nonnegative(),
     captions: ownerCaptionStyleSchema.nullable(),
     captionText: ownerCaptionTextSchema.optional(),
+    texts: ownerTextLayersSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
     focus: ownerFocusSchema.optional(),
     visuals: z
@@ -141,6 +154,9 @@ export const ownerEditDocumentSchema = z
   );
 export type OwnerEditDocument = z.infer<typeof ownerEditDocumentSchema>;
 export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
+  z
+    .object({ kind: z.literal("text-layers"), layers: ownerTextLayersSchema })
+    .strict(),
   z
     .object({ kind: z.literal("caption-text"), words: ownerCaptionTextSchema })
     .strict(),
@@ -170,7 +186,7 @@ export const ownerEditRequestSchema = z
     operations: z
       .array(ownerEditOperationSchema)
       .min(1)
-      .max(2 * OWNER_PICTURE_LIMITS.cuesPerClip + 4),
+      .max(2 * OWNER_PICTURE_LIMITS.cuesPerClip + 5),
   })
   .strict();
 export type OwnerEditRequest = z.infer<typeof ownerEditRequestSchema>;

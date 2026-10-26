@@ -39,6 +39,38 @@ const pictureBytes = Buffer.from("synthetic canonical JPEG");
 const rawBytes = Buffer.from("synthetic normalized clip");
 const outputBytes = Buffer.from("synthetic native output");
 
+it("round-trips a verified preview-only draft with no exports and rejects missing or rebound preview media", async () => {
+  const original = await fixture();
+  const clip = original.clips[0]!;
+  clip.outputs = [];
+  clip.calls.render = 0;
+  clip.state = "review-ready";
+  clip.preview = { frames: clip.base!.overlay.frames, bytes: rawBytes.length };
+  await rm(await files.output(original.workspace.id, clip.id, 0));
+  const saved = await store.save(undefined, original, files);
+  const restored = await store.load(saved.id, files);
+  expect(restored.clips[0]).toMatchObject({
+    state: "review-ready",
+    preview: clip.preview,
+    outputs: [],
+    calls: { render: 0 },
+  });
+  expect(
+    await readFile(await files.clipSource(restored.workspace.id, clip.id)),
+  ).toEqual(rawBytes);
+  expect(await readdir(join(storage, "Exports"))).toEqual([]);
+  clip.preview.bytes++;
+  await expect(store.save(undefined, original, files)).rejects.toThrow(
+    "draft_document_invalid",
+  );
+  clip.preview.bytes--;
+  await rm(await files.clipSource(original.workspace.id, clip.id));
+  await expect(store.save(undefined, original, files)).rejects.toThrow(
+    "draft_document_invalid",
+  );
+  expect((await store.load(saved.id, files)).clips[0]?.outputs).toEqual([]);
+});
+
 it("recognizes source, raw clip and existing export bytes, never filenames", async () => {
   const snapshot = await fixture();
   const saved = await store.save(undefined, snapshot, files);

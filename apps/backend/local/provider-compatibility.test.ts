@@ -170,6 +170,19 @@ beforeEach(async () => {
       origin: "generated",
     })),
     render: vi.fn(async (job) => {
+      if (job.operation === "clip-preview") {
+        const frames = job.cut.endFrame - job.cut.startFrame;
+        await writeFile(
+          await files.clipSource(workspace.id, job.clipId),
+          "synthetic-preview",
+        );
+        return {
+          operation: "clip-preview",
+          frames,
+          bytes: 17,
+          durationMs: Math.round((frames * 1000) / OWNER_FPS),
+        };
+      }
       if (job.operation !== "clip") throw new Error("wrong_operation");
       // Synthetic bytes prove ownership/revisions, not native MP4 validity.
       const output = Buffer.from(
@@ -233,9 +246,9 @@ it("carries arbitrary adapter words and grounded picture inputs through manual/A
   await batch.drain();
   const initial = batch.snapshot();
   expect(initial.clips.map((clip) => clip.state)).toEqual([
-    "ready",
-    "ready",
-    "ready",
+    "review-ready",
+    "review-ready",
+    "review-ready",
   ]);
   expect(initial.clips.map((clip) => clip.mode)).toEqual([
     "provider-ai",
@@ -257,7 +270,7 @@ it("carries arbitrary adapter words and grounded picture inputs through manual/A
     expect(clip.base?.fingerprint).toBe(workspace.source.fingerprint);
     expect(clipPorts.plan.mock.calls[index]?.[0].workspace).toEqual(workspace);
     expect(clipPorts.plan.mock.calls[index]?.[0].clipId).toBe(clip.id);
-    expect(clip.calls).toEqual({ plan: 1, image: 1, render: 1 });
+    expect(clip.calls).toEqual({ plan: 1, image: 1, render: 0 });
     expect(clip.assets.map((asset) => asset.origin)).toEqual(["generated"]);
     expect(clip.base?.overlay.visuals.map((cue) => cue.origin)).toEqual([
       "generated",
@@ -272,9 +285,25 @@ it("carries arbitrary adapter words and grounded picture inputs through manual/A
       moment.cues.slice(0, 2).map((word) => word.id),
     );
   }
-  const first = initial.clips[0]!,
-    original = await readFile(await files.output(workspace.id, first.id, 0)),
-    reexport = { operationId: randomUUID(), expectedRevision: 0 };
+  const first = initial.clips[0]!;
+  expect(
+    initial.clips.every((clip) => clip.preview && clip.outputs.length === 0),
+  ).toBe(true);
+  await batch.render(first.id, {
+    operationId: randomUUID(),
+    expectedRevision: 0,
+  });
+  await batch.drain();
+  await batch.edit(first.id, {
+    operationId: randomUUID(),
+    expectedRevision: 0,
+    baseHash: first.baseHash,
+    operations: [{ kind: "reset", panel: "focus" }],
+  });
+  const original = await readFile(
+      await files.output(workspace.id, first.id, 0),
+    ),
+    reexport = { operationId: randomUUID(), expectedRevision: 1 };
   await batch.submit(submission, analysis);
   await Promise.all([
     batch.render(first.id, reexport),
@@ -292,7 +321,7 @@ it("carries arbitrary adapter words and grounded picture inputs through manual/A
   expect(analysisPorts.select).toHaveBeenCalledTimes(1);
   expect(clipPorts.plan).toHaveBeenCalledTimes(3);
   expect(clipPorts.image).toHaveBeenCalledTimes(3);
-  expect(clipPorts.render).toHaveBeenCalledTimes(4);
+  expect(clipPorts.render).toHaveBeenCalledTimes(5);
 });
 
 it.each([
@@ -312,11 +341,11 @@ it.each([
     );
     await batch.drain();
     const clip = batch.snapshot().clips[0]!;
-    expect(clip.state).toBe("ready");
-    expect(clip.calls).toEqual({ plan: 1, image: 1, render: 1 });
+    expect(clip.state).toBe("review-ready");
+    expect(clip.calls).toEqual({ plan: 1, image: 1, render: 0 });
     expect(clip.base?.overlay.visuals).toHaveLength(1);
     expect(clip.assets).toHaveLength(1);
-    expect(clip.outputs).toHaveLength(1);
+    expect(clip.outputs).toHaveLength(0);
     expect(clipPorts.plan).toHaveBeenCalledTimes(1);
     expect(clipPorts.image).toHaveBeenCalledTimes(1);
     expect(clipPorts.render).toHaveBeenCalledTimes(1);
@@ -401,7 +430,7 @@ it("normalizes adapter raster bytes and derives dimensions/digest instead of tru
   await batch.drain();
   const clip = batch.snapshot().clips[0]!,
     asset = clip.assets[0]!;
-  expect(clip.state).toBe("ready");
+  expect(clip.state).toBe("review-ready");
   expect(asset).toEqual(
     expect.objectContaining({
       width: 920,

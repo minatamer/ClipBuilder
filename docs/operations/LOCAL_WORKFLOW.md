@@ -225,9 +225,17 @@ Usable pictures survive unfinished metadata, extra parts and low resolution;
 unreadable optional art leaves the video/captions available. Structural decoding,
 source/asset binding, cancellation and resource limits still apply.
 
+CL-084 prepares a playable preview and AI editing data first, with zero finished
+MP4 exports. Review/edit normally, Apply/Discard, then use Export clip to create
+the first final MP4. Download reuses a matching output. Captions, pictures,
+framing, filters and final original-source quality are unchanged. Preview-only
+drafts reopen locally without processing. Agent checks use synthetic media and
+injected AI; owner real-mode acceptance still requires normal keys/approvals.
+
 Failed or canceled clips expose Retry clip in the workspace footer, including
 failures before preparation finishes. Explicit retry retains completed plans and
-images across saved drafts, and a prepared clip repeats only native rendering.
+images across saved drafts. Missing preview preparation retries playback only;
+an actual failed export retries final rendering without repeating AI.
 An older failed attempt that never retained a plan needs fresh planning on its
 first explicit retry. There is no automatic provider retry or regeneration.
 The same serialized worker, revision and duplicate-request guards remain. Fake

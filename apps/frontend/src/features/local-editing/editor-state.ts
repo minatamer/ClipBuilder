@@ -8,13 +8,15 @@ import {
 import type { OwnerVisualEdit } from "../../../../../packages/contracts/local/assets.ts";
 import { automaticOwnerEdit } from "../../../../../packages/contracts/local/edit-overlay.ts";
 import { ownerVisualEditSchema } from "../../../../../packages/contracts/local/assets.ts";
+import type { OwnerTextStyle } from "../../../../../packages/contracts/local/text-layers.ts";
+export type OwnerTextGeometry = OwnerCaptionStyle | OwnerTextStyle;
 
 export type OwnerEditorBox = OwnerVisualEdit["box"];
 
 export function centeredOwnerBox(
   box: OwnerEditorBox,
   center: 0.25 | 0.5 | 0.75,
-  caption: OwnerCaptionStyle | null,
+  caption: OwnerTextGeometry | null,
 ): OwnerEditorBox {
   const edge = caption ? 0.05 : 0;
   const height = Math.min(
@@ -82,6 +84,7 @@ export function sameOwnerEdit(
 ): boolean {
   return (
     JSON.stringify(left.captions) === JSON.stringify(right.captions) &&
+    JSON.stringify(left.texts ?? []) === JSON.stringify(right.texts ?? []) &&
     JSON.stringify(left.captionText ?? []) ===
       JSON.stringify(right.captionText ?? []) &&
     JSON.stringify(left.videoLook) === JSON.stringify(right.videoLook) &&
@@ -96,6 +99,10 @@ export function ownerEditOperations(
   clip: OwnerClip,
 ): OwnerEditRequest["operations"] {
   const operations: OwnerEditRequest["operations"] = [];
+  if (
+    JSON.stringify(original.texts ?? []) !== JSON.stringify(draft.texts ?? [])
+  )
+    operations.push({ kind: "text-layers", layers: draft.texts ?? [] });
   if (
     JSON.stringify(original.captionText ?? []) !==
     JSON.stringify(draft.captionText ?? [])
@@ -144,13 +151,19 @@ export function ownerEditOperations(
 /** Clamp pointer/keyboard gestures to the same safe bounds the contract admits. */
 export function constrainOwnerBox(
   box: OwnerEditorBox,
-  caption: OwnerCaptionStyle | null,
+  caption: OwnerTextGeometry | null,
 ): OwnerEditorBox {
   const edge = caption ? 0.05 : 0;
   const extent = 1 - edge * 2;
-  const width = Math.max(caption ? 0.6 : 1 / 1080, Math.min(extent, box.width));
+  const isCaption = caption && "highlight" in caption;
+  const width = Math.max(
+    caption ? (isCaption ? 0.6 : 0.2) : 1 / 1080,
+    Math.min(extent, box.width),
+  );
   const minHeight = caption
-    ? (2 * (caption.fontSize * 1.2 + 8)) / 1920
+    ? (isCaption
+        ? 2 * (caption.fontSize * 1.2 + 8)
+        : caption.fontSize * 1.2 + 32) / 1920
     : 1 / 1920;
   const height = Math.max(minHeight, Math.min(extent, box.height));
   return {
@@ -163,8 +176,9 @@ export function constrainOwnerBox(
 
 export function captionForOwnerEdit(
   document: OwnerEditDocument,
+  automatic?: OwnerCaptionStyle,
 ): OwnerCaptionStyle {
-  return document.captions ?? OWNER_CAPTION_PRESETS.clean;
+  return document.captions ?? automatic ?? OWNER_CAPTION_PRESETS.clean;
 }
 
 export function ownerBoxesOverlap(
@@ -185,7 +199,7 @@ export function ownerGestureBox(
   dy: number,
   canvas: { width: number; height: number },
   resize: boolean,
-  caption: OwnerCaptionStyle | null,
+  caption: OwnerTextGeometry | null,
 ): OwnerEditorBox {
   return constrainOwnerBox(
     resize

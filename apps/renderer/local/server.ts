@@ -21,6 +21,7 @@ import {
   type OwnerNativeTools,
 } from "./media.ts";
 import { renderOwnerClip, type OwnerCutCache } from "./clip-render.ts";
+import { prepareOwnerClipPreview } from "./clip-preview.ts";
 import {
   inspectOwnerAcquisition,
   prepareOwnerAcquisition,
@@ -224,30 +225,36 @@ export function createOwnerWorker(options: {
                       stage,
                     )),
                   }
-                : job.operation === "clip"
-                  ? await renderOwnerClip(
-                      {
-                        root: options.root,
-                        tools: options.tools,
-                        chromium: options.chromium ?? "",
-                        bundle: options.overlayBundle ?? "",
-                        cache,
-                      },
+                : job.operation === "clip-preview"
+                  ? await prepareOwnerClipPreview(
+                      { root: options.root, tools: options.tools, cache },
                       job,
                       signal,
                     )
-                  : await ownerPortrait(
-                      source,
-                      await ownerMediaPath(
-                        options.root,
-                        job.workspaceId,
-                        "portrait.mp4",
-                      ),
-                      options.tools,
-                      signal,
-                      job.cut,
-                      job.fingerprint,
-                    );
+                  : job.operation === "clip"
+                    ? await renderOwnerClip(
+                        {
+                          root: options.root,
+                          tools: options.tools,
+                          chromium: options.chromium ?? "",
+                          bundle: options.overlayBundle ?? "",
+                          cache,
+                        },
+                        job,
+                        signal,
+                      )
+                    : await ownerPortrait(
+                        source,
+                        await ownerMediaPath(
+                          options.root,
+                          job.workspaceId,
+                          "portrait.mp4",
+                        ),
+                        options.tools,
+                        signal,
+                        job.cut,
+                        job.fingerprint,
+                      );
       report("succeeded");
       res
         .writeHead(200, {

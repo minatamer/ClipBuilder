@@ -29,6 +29,9 @@ import {
 } from "../../../packages/contracts/local/edit-overlay.ts";
 import { OWNER_PICTURE_LIMITS } from "../../../packages/contracts/local/assets.ts";
 import { applyOwnerEdit } from "./edit-clip.ts";
+import { chooseClipTitle } from "./clip-title.ts";
+import { OWNER_CAPTION_PRESETS } from "../../../packages/contracts/local/editor.ts";
+import { OWNER_SOCIAL_TEXT_PRESETS } from "../../../packages/contracts/local/text-style.ts";
 import { ownerAgentValidation } from "./agent-view.ts";
 import { normalizeOwnerPicture } from "./personal-picture.ts";
 import {
@@ -63,6 +66,11 @@ import {
 export { ownerClipPlanSchema } from "../../../packages/contracts/local/clips.ts";
 export type OwnerClipPorts = {
   readonly mode: OwnerAiMode;
+  title?(request: {
+    workspace: OwnerWorkspace;
+    clipId: string;
+    moment: OwnerMoment;
+  }): string | null;
   focus?(request: {
     workspace: OwnerWorkspace;
     clipId: string;
@@ -91,14 +99,16 @@ export type OwnerClipPorts = {
 };
 const digest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
-type Work = {
-  clip: OwnerClip;
-  moment?: OwnerMoment;
-  renderRevision: number;
-  snapshot?: OwnerClipBase;
-  overlay?: OwnerOverlay;
-  editRevision?: number;
-};
+type Work = { clip: OwnerClip } & (
+  | { kind: "prepare"; moment?: OwnerMoment }
+  | {
+      kind: "export";
+      renderRevision: number;
+      snapshot: OwnerClipBase;
+      overlay: OwnerOverlay;
+      editRevision: number;
+    }
+);
 const working = (clip: OwnerClip) =>
   ["queued", "preparing", "rendering", "canceling"].includes(clip.state);
 
@@ -145,6 +155,8 @@ export class OwnerClipBatch {
       if (ids.has(clip.id)) throw new Error("duplicate_clip");
       ids.add(clip.id);
       if (
+        (clip.preview &&
+          (!clip.base || clip.preview.frames !== clip.base.overlay.frames)) ||
         clip.sourceRevision !== this.workspace.revision ||
         (clip.base &&
           (clip.base.fingerprint !== this.workspace.source.fingerprint ||
@@ -195,6 +207,7 @@ export class OwnerClipBatch {
         clip.state = "canceled";
         clip.error = "canceled";
       }
+      delete clip.preparationStage;
     }
     for (const clip of restored) this.clips.set(clip.id, clip);
   }
@@ -290,7 +303,12 @@ export class OwnerClipBatch {
         const base = ownerClipBaseSchema.parse({
           ...clip.base,
           words,
-          overlay: { ...clip.base.overlay, captions },
+          overlay: {
+            ...clip.base.overlay,
+            captions,
+            captionStyle:
+              clip.base.overlay.captionStyle ?? OWNER_CAPTION_PRESETS.tiktok,
+          },
         });
         const baseHash = digest(base),
           revision = clip.revision + 1;
@@ -459,7 +477,7 @@ export class OwnerClipBatch {
       clip.error = clip.state === "canceled" ? "canceled" : null;
       this.clips.set(clip.id, clip);
       if (clip.state === "queued")
-        this.queue.push({ clip, moment, renderRevision: 0 });
+        this.queue.push({ kind: "prepare", clip, moment });
     }
     this.start();
     return this.snapshot();
@@ -504,7 +522,7 @@ export class OwnerClipBatch {
         !["failed", "canceled"].includes(clip.state)
       )
         throw new Error("stale_or_busy_clip");
-      if (clip.base) {
+      if (clip.base && (clip.preview || clip.outputs.length)) {
         // Rendering a completed base never invokes planning or image generation.
         const result = await this.renderOne(id, request, cancelVersion);
         this.receipts.set(key, digest(request));
@@ -517,21 +535,22 @@ export class OwnerClipBatch {
               (candidate) => candidate.id === clip.momentId,
             )
           : undefined);
-      if (!moment) throw new Error("moment_missing");
+      if (!clip.base && !moment) throw new Error("moment_missing");
       await this.reserve(0, 1);
       this.receipts.set(key, digest(request));
       if (cancelVersion !== this.cancelVersion) return this.snapshot();
-      clip.preparation ??= {
-        moment: structuredClone(moment),
-        plan: null,
-        pictures: [],
-      };
+      if (moment)
+        clip.preparation ??= {
+          moment: structuredClone(moment),
+          plan: null,
+          pictures: [],
+        };
       clip.state = "queued";
       clip.error = null;
       this.queue.push({
+        kind: "prepare",
         clip,
-        moment: structuredClone(moment),
-        renderRevision: 0,
+        ...(moment ? { moment: structuredClone(moment) } : {}),
       });
       this.changed();
       this.start();
@@ -546,6 +565,7 @@ export class OwnerClipBatch {
     if (
       this.closing ||
       !clip?.base ||
+      !(clip.preview || clip.outputs.length) ||
       clip.revision !== request.expectedRevision ||
       working(clip)
     )
@@ -568,6 +588,7 @@ export class OwnerClipBatch {
     clip.state = "queued";
     clip.error = null;
     this.queue.push({
+      kind: "export",
       clip,
       renderRevision,
       snapshot: ownerClipBaseSchema.parse(clip.base),
@@ -621,6 +642,8 @@ export class OwnerClipBatch {
       pictures: [],
     });
     if (preparation.plan === null) {
+      clip.preparationStage = "planning";
+      this.changed();
       clip.calls.plan++;
       preparation.plan = ownerClipPlanSchema.parse(
         await this.ports.plan(
@@ -638,6 +661,14 @@ export class OwnerClipBatch {
           clipId: clip.id,
           moment: structuredClone(moment),
         }) ?? defaultOwnerFocus(this.workspace.source, frames);
+      preparation.title = chooseClipTitle(
+        moment,
+        this.ports.title?.({
+          workspace: this.workspace,
+          clipId: clip.id,
+          moment,
+        }),
+      );
       this.diagnostics.focus(
         "focus_compile",
         ownerFocusCounts(preparation.focus),
@@ -645,6 +676,7 @@ export class OwnerClipBatch {
       this.changed();
     }
     const plan = preparation.plan;
+    preparation.title ??= chooseClipTitle(moment, null);
     this.ports.resume?.({
       workspaceId: this.workspace.id,
       clipId: clip.id,
@@ -664,6 +696,8 @@ export class OwnerClipBatch {
         continue;
       }
       clip.calls.image++;
+      clip.preparationStage = "pictures";
+      this.changed();
       const picture = await this.ports.image(
         {
           clipId: clip.id,
@@ -714,18 +748,26 @@ export class OwnerClipBatch {
           height: 520 / 1920,
         },
         fit: "contain" as const,
+        entrance: "fade" as const,
+        exit: "fade" as const,
+        animationFrames: 9,
         origin: picture.origin,
       };
       visuals.push(visual);
       preparation.pictures.push({ index, visual });
       this.changed();
     }
+    const captionWords =
+      this.ports.mode === "synthetic-ai" && !FAKE_CAPTIONS_ENABLED
+        ? []
+        : moment.cues;
+    if (captionWords.length) {
+      clip.preparationStage = "captions";
+      this.changed();
+    }
     const captions = compileFixedCaptions(
       {
-        words:
-          this.ports.mode === "synthetic-ai" && !FAKE_CAPTIONS_ENABLED
-            ? []
-            : moment.cues,
+        words: captionWords,
         range: { startMs: 0, endMs: Math.round((frames * 1000) / OWNER_FPS) },
       },
       () => this.diagnostics.critique("clip_prepare"),
@@ -743,6 +785,22 @@ export class OwnerClipBatch {
         version: 1,
         frames,
         captions,
+        ...(captions.length
+          ? { captionStyle: OWNER_CAPTION_PRESETS.tiktok }
+          : {}),
+        texts: [
+          {
+            id: randomUUID(),
+            text: preparation.title ?? chooseClipTitle(moment, null),
+            startFrame: 0,
+            endFrame: Math.min(frames, 4 * OWNER_FPS),
+            style: {
+              ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
+              fontSize: 56,
+              box: { x: 0.1, y: 0.08, width: 0.8, height: 0.16 },
+            },
+          },
+        ],
         visuals,
         focus:
           preparation.focus ?? defaultOwnerFocus(this.workspace.source, frames),
@@ -759,22 +817,55 @@ export class OwnerClipBatch {
         await this.diagnostics.run(
           "clip_build",
           async () => {
-            if (work.moment) {
-              clip.base = await this.diagnostics.run("clip_prepare", () =>
-                this.prepare(clip, work.moment!, controller.signal),
+            if (work.kind === "prepare") {
+              clip.state = "preparing";
+              if (!clip.base) {
+                const moment = work.moment;
+                if (!moment) throw new Error("moment_missing");
+                clip.base = await this.diagnostics.run("clip_prepare", () =>
+                  this.prepare(clip, moment, controller.signal),
+                );
+                clip.baseHash = digest(clip.base);
+                clip.edit = automaticOwnerEdit(
+                  clip.base,
+                  clip.id,
+                  clip.baseHash,
+                );
+              }
+              controller.signal.throwIfAborted();
+              const frames = clip.base.overlay.frames;
+              clip.preparationStage = "preview";
+              this.changed();
+              const result = await this.ports.render(
+                {
+                  operation: "clip-preview",
+                  workspaceId: this.workspace.id,
+                  jobId: randomUUID(),
+                  clipId: clip.id,
+                  cut: structuredClone(clip.base.cut),
+                  fingerprint: clip.base.fingerprint,
+                },
+                controller.signal,
               );
-              clip.baseHash = digest(clip.base);
-              clip.edit = automaticOwnerEdit(clip.base, clip.id, clip.baseHash);
+              controller.signal.throwIfAborted();
+              if (
+                result.operation !== "clip-preview" ||
+                result.frames !== frames ||
+                result.bytes <= 0 ||
+                result.bytes > OWNER_BATCH_POLICY.clipReservationBytes ||
+                result.durationMs !== Math.round((frames * 1000) / OWNER_FPS)
+              )
+                throw new Error("invalid_clip_output");
+              clip.preview = { frames: result.frames, bytes: result.bytes };
               clip.state = "review-ready";
+              clip.error = null;
+              return;
             }
             controller.signal.throwIfAborted();
             if (!clip.base) throw new Error("bundle_missing");
-            const snapshot =
-                work.snapshot ?? ownerClipBaseSchema.parse(clip.base),
-              editRevision = work.editRevision ?? clip.revision,
-              overlay =
-                work.overlay ??
-                compileOwnerOverlay(snapshot, clip.edit, clip.assets),
+            const snapshot = work.snapshot,
+              editRevision = work.editRevision,
+              overlay = work.overlay,
               jobId = randomUUID();
             clip.state = "rendering";
             if (overlay.focus)
@@ -832,15 +923,19 @@ export class OwnerClipBatch {
           : "local_clip_failed";
         // Failed output is derived scratch only. The admitted master and sibling
         // bundles/assets/outputs retain their independent workspace ownership.
-        await rm(
-          await this.files.output(
-            this.workspace.id,
-            clip.id,
-            work.renderRevision,
-          ),
-          { force: true },
-        ).catch((error: unknown) => this.diagnostics.failure("cleanup", error));
+        if (work.kind === "export")
+          await rm(
+            await this.files.output(
+              this.workspace.id,
+              clip.id,
+              work.renderRevision,
+            ),
+            { force: true },
+          ).catch((error: unknown) =>
+            this.diagnostics.failure("cleanup", error),
+          );
       } finally {
+        delete clip.preparationStage;
         this.current = undefined;
         this.changed();
       }

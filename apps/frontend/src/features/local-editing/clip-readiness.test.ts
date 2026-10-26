@@ -48,7 +48,9 @@ it.each(["synthetic-ai", "provider-ai"] as const)(
     const clip = completedClip(mode);
     for (const state of ownerClipSchema.shape.state.options) {
       expect(isLocalClipEditable({ ...clip, state }), state).toBe(
-        state === "ready" || state === "validated-revision",
+        state === "review-ready" ||
+          state === "ready" ||
+          state === "validated-revision",
       );
     }
     expect(clip.outputs).toHaveLength(1);
@@ -63,3 +65,33 @@ it("requires both prepared data and a completed output before revealing edits", 
     expect(isLocalClipEditable({ ...clip, state, outputs: [] })).toBe(false);
   }
 });
+
+it.each(["synthetic-ai", "provider-ai"] as const)(
+  "opens a measured preview with no export in %s, retaining active/failure gates",
+  (mode) => {
+    const clip = {
+      ...completedClip(mode),
+      outputs: [],
+      preview: { frames: 90, bytes: 1000 },
+    };
+    for (const state of ownerClipSchema.shape.state.options) {
+      expect(isLocalClipEditable({ ...clip, state }), state).toBe(
+        ["review-ready", "ready", "validated-revision"].includes(state),
+      );
+    }
+    expect(
+      isLocalClipEditable({
+        ...clip,
+        state: "review-ready",
+        preview: undefined,
+      }),
+    ).toBe(false);
+    expect(
+      isLocalClipEditable({
+        ...clip,
+        state: "review-ready",
+        preview: { frames: 89, bytes: 1000 },
+      }),
+    ).toBe(false);
+  },
+);

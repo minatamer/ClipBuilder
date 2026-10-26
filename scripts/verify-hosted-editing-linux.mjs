@@ -105,6 +105,7 @@ const counts = {
   image: 0,
   inspect: 0,
   clip: 0,
+  "clip-preview": 0,
 };
 const metrics = {};
 async function wait(read, label, timeout = 120000) {
@@ -314,7 +315,7 @@ try {
     await change(document.querySelector('[aria-label="Clip 1 start"]'),'00:00:01');await change(document.querySelector('[aria-label="Clip 1 end"]'),'00:00:02');
     document.querySelector('.selection input[type="checkbox"]').click();await wait(()=>button('Use clips')&&!button('Use clips').disabled);button('Use clips').click();await wait(()=>button('Process clips')&&!button('Process clips').disabled);button('Process clips').click();
     const ready=()=>document.querySelector('.editor-panels:not([hidden])')&&document.querySelector('a[aria-label="Download clip"]');
-    await wait(ready,'initial_export');const first=await (await fetch(ready().href)).arrayBuffer();
+    await wait(()=>button('Export clip')&&document.querySelector('.editor-panels:not([hidden])'),'preview_ready');button('Export clip').click();await wait(ready,'initial_export');const first=await (await fetch(ready().href)).arrayBuffer();
     const font=[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim().startsWith('Font size')).querySelector('input');await change(font,'72');
     await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>button('Export clip'));button('Export clip').click();
     await wait(ready,'edited_export');const last=await (await fetch(ready().href)).arrayBuffer();
@@ -444,6 +445,7 @@ try {
     image: 1,
     inspect: 1,
     clip: 4,
+    "clip-preview": 1,
   });
   const finalRevision = (await api(base)).clips[0].outputs.at(-1).revision;
   const monoPixel = (

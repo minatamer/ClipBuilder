@@ -73,6 +73,7 @@ it("labels provider capabilities truthfully while restoration keeps submission u
         onResultsViewChange={noop}
         previewReady={false}
         onCaptureTime={() => null}
+        onJumpTo={noop}
       />,
     );
   const provider = render(capabilities);
@@ -112,7 +113,7 @@ it("blocks new automatic plans separately from local prepared-clip work", () => 
   expect(unavailable).not.toContain("Actual AI calls: zero");
 });
 
-it("keeps processing in the results view and disables it after every clip is deselected", () => {
+it("keeps processing in the results view and disables it after every clip is removed", () => {
   const render = (selectionReady: boolean) =>
     renderToStaticMarkup(
       <OwnerClipBatchPanel
@@ -126,6 +127,30 @@ it("keeps processing in the results view and disables it after every clip is des
   expect(buttonDisabled(render(true), "Process clips")).toBe(true);
   expect(render(false)).not.toContain("Process clips");
 });
+
+it.each([
+  [0, true],
+  [10, false],
+  [11, true],
+] as const)(
+  "enforces the processing limit for %i retained clips without hiding results",
+  (count, disabled) => {
+    const html = renderToStaticMarkup(
+      <OwnerClipBatchPanel
+        workspace={workspace}
+        capabilities={capabilities}
+        selected={Array.from({ length: count }, () => ({
+          analysisId: crypto.randomUUID(),
+          momentId: crypto.randomUUID(),
+          policyRevision: 0,
+        }))}
+        onActive={noop}
+        selectionReady
+      />,
+    );
+    expect(buttonDisabled(html, "Process clips")).toBe(disabled);
+  },
+);
 
 it("describes synthetic generation only for a synthetic source port and keeps offline reuse available", () => {
   const render = (sourceMode: OwnerRuntimeCapabilities["sourceMode"]) =>

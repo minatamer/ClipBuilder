@@ -95,6 +95,19 @@ async function start() {
           fps: 30,
         },
       };
+    if (job.operation === "clip-preview") {
+      const frames = job.cut.endFrame - job.cut.startFrame;
+      await writeFile(
+        join(root, job.workspaceId, `${job.clipId}.source.mp4`),
+        "synthetic-preview",
+      );
+      return {
+        operation: "clip-preview",
+        frames,
+        bytes: 17,
+        durationMs: Math.round((frames * 1000) / 30),
+      };
+    }
     if (job.operation !== "clip") throw new Error("unexpected_media_job");
     const bytes = Buffer.from(
       `synthetic output:${job.clipId}:${job.renderRevision}`,
@@ -184,12 +197,27 @@ async function prepare(value: Context) {
       })
     ).status,
   ).toBe(202);
-  const list = await drain(value, workspace.id);
+  let list = await drain(value, workspace.id);
   expect(list.clips.map((clip) => clip.state)).toEqual([
-    "ready",
-    "ready",
-    "ready",
+    "review-ready",
+    "review-ready",
+    "review-ready",
   ]);
+  expect(
+    list.clips.every((clip) => clip.preview && clip.outputs.length === 0),
+  ).toBe(true);
+  for (const clip of list.clips) {
+    expect(
+      (
+        await post(value, `${ui(workspace.id)}/${clip.id}/render`, {
+          operationId: randomUUID(),
+          expectedRevision: 0,
+        })
+      ).status,
+    ).toBe(202);
+    await drain(value, workspace.id);
+  }
+  list = await drain(value, workspace.id);
   counts(value, 3);
   return { workspace, list };
 }
@@ -209,7 +237,12 @@ function counts(value: Context, nativeAttempts: number) {
   expect(analysis.select).toHaveBeenCalledTimes(1);
   expect(preparation.plan).toHaveBeenCalledTimes(3);
   expect(preparation.image).toHaveBeenCalledTimes(3);
-  expect(value.media).toHaveBeenCalledTimes(nativeAttempts + 1);
+  expect(
+    value.media.mock.calls.filter(([job]) => job.operation === "clip"),
+  ).toHaveLength(nativeAttempts);
+  expect(
+    value.media.mock.calls.filter(([job]) => job.operation === "clip-preview"),
+  ).toHaveLength(3);
 }
 function safeProjection(value: unknown) {
   const forbidden = new Set([

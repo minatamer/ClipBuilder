@@ -3,6 +3,7 @@ import buttonStyles from "../../shared/ui/workflow.module.css";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ClipEditor } from "./clip-editor.tsx";
 import { isLocalClipEditable } from "./clip-readiness.ts";
+import { clipStageLabel } from "./clip-stage.ts";
 import { ProcessingState } from "../../shared/ui/processing-state";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import {
@@ -10,7 +11,10 @@ import {
   type OwnerClip,
   type OwnerClipList,
 } from "../../../../../packages/contracts/local/clips.ts";
-import type { OwnerWorkspace } from "../../../../../packages/contracts/local/index.ts";
+import {
+  OWNER_LIMITS,
+  type OwnerWorkspace,
+} from "../../../../../packages/contracts/local/index.ts";
 import type { OwnerMomentExport } from "../../../../../packages/contracts/local/selection.ts";
 import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts/local/runtime.ts";
 
@@ -196,12 +200,18 @@ export function OwnerClipBatchPanel({
               disabled={
                 !planningAvailable ||
                 !selected.length ||
+                selected.length > OWNER_LIMITS.clips ||
                 pending ||
                 list.active ||
                 !!dirtyClip
               }
               onClick={() => {
-                if (!planningAvailable) return;
+                if (
+                  !planningAvailable ||
+                  !selected.length ||
+                  selected.length > OWNER_LIMITS.clips
+                )
+                  return;
                 const first = selected[0]!;
                 void action(endpoint, {
                   operationId: crypto.randomUUID(),
@@ -274,15 +284,7 @@ export function OwnerClipBatchPanel({
               }}
             >
               <span>Clip {index + 1}</span>
-              <span className="clip-state">
-                {(
-                  {
-                    "validated-revision": "Edited",
-                    "review-ready": "Ready to edit",
-                    rendering: "Exporting",
-                  } as Partial<Record<OwnerClip["state"], string>>
-                )[clip.state] ?? clip.state}
-              </span>
+              <span className="clip-state">{clipStageLabel(clip)}</span>
             </Button>
           ))}
         </div>
@@ -361,16 +363,7 @@ export function OwnerClipBatchPanel({
             {working(current) && (
               <ProcessingState
                 className="clip-preparing"
-                label={
-                  (
-                    {
-                      queued: "Queued",
-                      preparing: "Preparing clip",
-                      rendering: "Exporting clip",
-                      canceling: "Canceling",
-                    } as Partial<Record<OwnerClip["state"], string>>
-                  )[current.state] ?? "Preparing clip"
-                }
+                label={clipStageLabel(current)}
               />
             )}
             {editable && !showProcessing && (

@@ -39,6 +39,19 @@ beforeEach(async () => {
           fps: 30,
         },
       };
+    if (job.operation === "clip-preview") {
+      const frames = job.cut.endFrame - job.cut.startFrame;
+      await writeFile(
+        join(root, job.workspaceId, `${job.clipId}.source.mp4`),
+        "synthetic-preview",
+      );
+      return {
+        operation: "clip-preview",
+        frames,
+        bytes: 17,
+        durationMs: Math.round((frames * 1000) / 30),
+      };
+    }
     if (job.operation !== "clip")
       throw new Error("unexpected_native_operation");
     await writeFile(
@@ -206,7 +219,7 @@ it("runs upload, preparation and explicit retry through isolated normal editing 
         .send(operation)
     ).status,
   ).toBe(202);
-  expect((await settled()).clips[0].state).toBe("ready");
+  expect((await settled()).clips[0].state).toBe("review-ready");
   expect(
     (
       await request(app)
@@ -219,6 +232,24 @@ it("runs upload, preparation and explicit retry through isolated normal editing 
   expect(plan).toHaveBeenCalledTimes(1);
   expect(image).toHaveBeenCalledTimes(1);
   expect(media).toHaveBeenCalledTimes(3);
+  expect((await settled()).clips[0].outputs).toEqual([]);
+  expect(
+    (await request(app).get(`${base}/clips/${failed.id}/output/0`).set(headers))
+      .status,
+  ).toBe(404);
+  expect(
+    (
+      await request(app)
+        .post(`${base}/clips/${failed.id}/render`)
+        .set(headers)
+        .send({ operationId: randomUUID(), expectedRevision: 0 })
+    ).status,
+  ).toBe(202);
+  expect((await settled()).clips[0].state).toBe("ready");
+  expect(media).toHaveBeenCalledTimes(4);
+  expect(plan).toHaveBeenCalledTimes(1);
+  expect(image).toHaveBeenCalledTimes(1);
+
   expect(
     (await request(app).get(`${base}/clips/${failed.id}/output/0`).set(headers))
       .status,

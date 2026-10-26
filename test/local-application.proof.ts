@@ -139,10 +139,7 @@ it("runs the normal app with local controls, real native upload/ranges and fake 
           signal: AbortSignal.timeout(1000),
         });
         const html = await response.text();
-        ready =
-          response.ok &&
-          html.includes("Choose your source") &&
-          html.includes("Local editing");
+        ready = response.ok && html.includes("Choose your video");
       } catch {
         /* Bounded readiness probe. */
       }
@@ -159,7 +156,6 @@ it("runs the normal app with local controls, real native upload/ranges and fake 
     expect(capabilities.status).toBe(200);
     expect(await capabilities.json()).toMatchObject({
       aiMode: "synthetic-ai",
-      sourceMode: "provider-source",
       localMedia: true,
       cloud: false,
     });
@@ -228,7 +224,7 @@ it("runs the normal app with local controls, real native upload/ranges and fake 
     await page.goto({ url: "http://localhost:3000/start", timeout: 15_000 });
     await page._client().send("Runtime.evaluate", {
       expression:
-        "globalThis.clipbuilderLocalApplicationReady = () => document.body.textContent?.includes('Fake AI') === true && [...document.querySelectorAll('label')].some(label => label.textContent?.trim().startsWith('Clips') && label.querySelector('input')?.matches(':enabled') === true);",
+        "globalThis.clipbuilderLocalApplicationReady = () => document.querySelector('h1')?.textContent.includes('Choose your moments') === true && document.querySelector('.selection input[type=checkbox]')?.checked === false && [...document.querySelectorAll('button')].some(button => button.textContent.trim()==='Add clip' && !button.disabled) && document.querySelector('.source-preview video')?.readyState >= 1;",
     });
     let controlsReady = false;
     for (let attempt = 0; attempt < 100; attempt++) {

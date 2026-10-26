@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
 import {
   lstat,
   mkdtemp,
@@ -19,7 +18,6 @@ import {
   ownerAssetMediaPath,
   ownerClipMediaPath,
   ownerMediaPath,
-  ownerPreviewCut,
   inspectOwnerMedia,
   validateOwnerOutput,
   type OwnerNativeTools,
@@ -35,14 +33,8 @@ import {
 } from "./export-profile.ts";
 import { SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 
-type CachedCut = { binding: string; digest: string };
-export type OwnerCutCache = Map<string, CachedCut>;
-const hashFile = async (file: string, signal: AbortSignal) => {
-  const hash = createHash("sha256");
-  for await (const bytes of createReadStream(file, { signal }))
-    hash.update(bytes);
-  return hash.digest("hex");
-};
+import { prepareOwnerClipPreview, type OwnerCutCache } from "./clip-preview.ts";
+export type { OwnerCutCache } from "./clip-preview.ts";
 
 /** A fixed transparent React overlay, then the admitted FFmpeg performs muxing.
  * Chromium never decodes source media and no Remotion FFmpeg binary is used. */
@@ -57,14 +49,6 @@ export async function renderOwnerClip(
   job: Extract<OwnerMediaJob, { operation: "clip" }>,
   signal: AbortSignal,
 ) {
-  for (const key of options.cache.keys())
-    if (!key.startsWith(`${job.workspaceId}:`)) options.cache.delete(key);
-  const raw = await ownerClipMediaPath(
-    options.root,
-    job.workspaceId,
-    job.clipId,
-    "source",
-  );
   const output = await ownerClipMediaPath(
     options.root,
     job.workspaceId,
@@ -79,33 +63,7 @@ export async function renderOwnerClip(
     if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
       throw error;
   }
-  const binding = JSON.stringify({
-      fingerprint: job.fingerprint,
-      cut: job.cut,
-    }),
-    key = `${job.workspaceId}:${job.clipId}`;
-  const cached = options.cache.get(key);
-  if (cached) {
-    if (
-      cached.binding !== binding ||
-      (await hashFile(raw, signal)) !== cached.digest
-    )
-      throw new Error("stale_clip_source");
-  } else {
-    const result = await ownerPreviewCut(
-      await ownerMediaPath(options.root, job.workspaceId, "source.mp4"),
-      raw,
-      options.tools,
-      signal,
-      job.cut,
-      job.fingerprint,
-    );
-    if (result.bytes > OWNER_BATCH_POLICY.clipReservationBytes) {
-      await rm(raw, { force: true });
-      throw new Error("clip_capacity");
-    }
-    options.cache.set(key, { binding, digest: await hashFile(raw, signal) });
-  }
+  await prepareOwnerClipPreview(options, job, signal);
   const original = await ownerMediaPath(
     options.root,
     job.workspaceId,

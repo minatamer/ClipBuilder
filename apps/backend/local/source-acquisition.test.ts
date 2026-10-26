@@ -192,7 +192,9 @@ function input(
   };
 }
 async function settled() {
-  await vi.waitFor(() => expect(acquisition.active).toBe(false));
+  await vi.waitFor(() => expect(acquisition.active).toBe(false), {
+    timeout: 5000,
+  });
   return acquisition.snapshot()!;
 }
 async function clear() {

@@ -4,38 +4,14 @@ import {
   ownerCaptionStyleSchema,
   type OwnerCaptionStyle,
 } from "../../contracts/local/editor.ts";
+import {
+  ownerTypographyPaint,
+  ownerTypographyBackground,
+  ownerTextLineUnits,
+} from "./text-paint.ts";
+import { ownerTextBackground } from "../../contracts/local/text-style.ts";
 
 type Caption = OwnerOverlay["captions"][number];
-const weights: Record<OwnerCaptionStyle["preset"], number> = {
-  clean: 800,
-  classic: 700,
-  bold: 900,
-  boxed: 800,
-  typewriter: 700,
-};
-
-/** Conservative local-font advances, without browser measurement or reflow. */
-function lineUnits(line: string, font: OwnerCaptionStyle["font"]) {
-  if (font === "Courier New")
-    return Array.from(line).reduce(
-      (sum, char) => sum + ((char.codePointAt(0) ?? 0) > 127 ? 1.2 : 0.65),
-      0,
-    );
-  return (
-    Array.from(line).reduce(
-      (total, char) =>
-        total +
-        (/[MWmw@%]/u.test(char) || (char.codePointAt(0) ?? 0) > 127
-          ? 1.1
-          : /[A-Z]/u.test(char)
-            ? 0.9
-            : /[ilj.,'!:; ]/u.test(char)
-              ? 0.4
-              : 0.7),
-      0,
-    ) * (font && font !== "Arial" ? 1.15 : 1)
-  );
-}
 
 /** Fixed timed words inside a validated owner box; no text or timing edits. */
 export function OwnerStyledCaption({
@@ -60,8 +36,14 @@ export function OwnerStyledCaption({
     tokens.map((token) => token.word).join(" ") !== caption.text
   )
     throw new Error("invalid_owner_caption");
+  const legacyBoxed =
+    style.preset === "boxed" &&
+    style.backgroundColor === undefined &&
+    style.backgroundOpacity === undefined;
   const width = style.box.width * 1080,
     height = style.box.height * 1920,
+    backgroundPadding =
+      !legacyBoxed && ownerTextBackground(style).opacity ? 24 : 0,
     wordPadding = Math.min(
       8,
       width /
@@ -71,11 +53,15 @@ export function OwnerStyledCaption({
       1,
       Math.min(
         style.fontSize,
-        Math.floor((height / caption.lines.length - 8) / 1.2),
+        Math.floor(
+          (height / caption.lines.length - 8 - backgroundPadding) / 1.2,
+        ),
         ...caption.lines.map((line) =>
           Math.floor(
-            (width - line.split(" ").length * wordPadding * 2) /
-              Math.max(1, lineUnits(line, style.font)),
+            (width -
+              backgroundPadding -
+              line.split(" ").length * wordPadding * 2) /
+              Math.max(1, ownerTextLineUnits(line, style.font)),
           ),
         ),
       ),
@@ -96,7 +82,7 @@ export function OwnerStyledCaption({
         justifyContent:
           style.verticalAlign === "center" ? "center" : "flex-end",
         overflow: "hidden",
-        fontFamily: style.font ?? "Arial",
+        ...ownerTypographyPaint(style),
         opacity:
           style.animation === "fade"
             ? Math.min(1, (ms - caption.startMs) / 120)
@@ -105,77 +91,84 @@ export function OwnerStyledCaption({
         textAlign: style.align,
         fontSize,
         lineHeight: 1.2,
-        fontWeight: weights[style.preset],
-        textShadow:
-          "0 2px 2px #000, 2px 0 2px #000, -2px 0 2px #000, 0 -2px 2px #000",
       }}
     >
       {caption.lines.map((line, lineIndex) => (
         <div
           key={lineIndex}
           data-caption-line={lineIndex}
-          style={{ flexShrink: 0, whiteSpace: "nowrap" }}
+          style={{
+            flexShrink: 0,
+            whiteSpace: "nowrap",
+            paddingBlock: backgroundPadding ? 6 : undefined,
+          }}
         >
-          {line.split(" ").map((word, wordIndex) => {
-            const { cue } = tokens[tokenIndex++]!;
-            const highlighted = cue.startMs <= ms && ms < cue.endMs;
-            const onset = Math.min(
-              1,
-              Math.max(
-                0,
-                (ms - cue.startMs) / FIXED_COMPOSITION_POLICY.spokenWordOnsetMs,
-              ),
-            );
-            const single = style.animation === "single-word";
-            if (single && !highlighted) return null;
-            const bounce = Math.min(1, Math.max(0, (ms - cue.startMs) / 220));
-            return (
-              <span
-                key={wordIndex}
-                data-word-id={cue.wordId}
-                style={{
-                  position: "relative",
-                  display: "inline-block",
-                  padding: `4px ${wordPadding}px`,
-                  opacity:
-                    style.animation === "reveal"
-                      ? ms < cue.startMs
-                        ? 0
-                        : 1
-                      : undefined,
-                  backgroundColor:
-                    style.preset === "boxed" ? "#101726" : undefined,
-                  borderRadius: style.preset === "boxed" ? 9 : undefined,
-                  transform:
-                    style.animation === "bounce" && highlighted
-                      ? `translateY(${-Math.sin(bounce * Math.PI) * fontSize * 0.2}px) scale(${1 + Math.sin(bounce * Math.PI) * 0.12})`
-                      : style.animation === "pop" && highlighted
-                        ? `scale(${0.88 + onset * 0.12})`
-                        : undefined,
-                }}
-              >
-                {wordIndex && !single ? " " : ""}
+          <span
+            style={legacyBoxed ? undefined : ownerTypographyBackground(style)}
+          >
+            {line.split(" ").map((word, wordIndex) => {
+              const { cue } = tokens[tokenIndex++]!;
+              const highlighted = cue.startMs <= ms && ms < cue.endMs;
+              const onset = Math.min(
+                1,
+                Math.max(
+                  0,
+                  (ms - cue.startMs) /
+                    FIXED_COMPOSITION_POLICY.spokenWordOnsetMs,
+                ),
+              );
+              const single = style.animation === "single-word";
+              if (single && !highlighted) return null;
+              const bounce = Math.min(1, Math.max(0, (ms - cue.startMs) / 220));
+              return (
                 <span
-                  aria-hidden="true"
+                  key={wordIndex}
+                  data-word-id={cue.wordId}
                   style={{
-                    position: "absolute",
-                    inset: 0,
-                    borderRadius: 9,
-                    backgroundColor: style.highlight,
+                    position: "relative",
+                    display: "inline-block",
+                    padding: `4px ${wordPadding}px`,
                     opacity:
-                      highlighted &&
-                      (style.animation === undefined ||
-                        style.animation === "highlight" ||
-                        style.animation === "pop")
-                        ? 0.55 + onset * 0.45
-                        : 0,
-                    transform: `scale(${highlighted ? 0.92 + onset * 0.08 : 1})`,
+                      style.animation === "reveal"
+                        ? ms < cue.startMs
+                          ? 0
+                          : 1
+                        : undefined,
+                    backgroundColor: legacyBoxed
+                      ? ownerTextBackground(style).color
+                      : undefined,
+                    borderRadius: legacyBoxed ? 9 : undefined,
+                    transform:
+                      style.animation === "bounce" && highlighted
+                        ? `translateY(${-Math.sin(bounce * Math.PI) * fontSize * 0.2}px) scale(${1 + Math.sin(bounce * Math.PI) * 0.12})`
+                        : style.animation === "pop" && highlighted
+                          ? `scale(${0.88 + onset * 0.12})`
+                          : undefined,
                   }}
-                />
-                <span style={{ position: "relative" }}>{word}</span>
-              </span>
-            );
-          })}
+                >
+                  {wordIndex && !single ? " " : ""}
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      borderRadius: 9,
+                      backgroundColor: style.highlight,
+                      opacity:
+                        highlighted &&
+                        (style.animation === undefined ||
+                          style.animation === "highlight" ||
+                          style.animation === "pop")
+                          ? 0.55 + onset * 0.45
+                          : 0,
+                      transform: `scale(${highlighted ? 0.92 + onset * 0.08 : 1})`,
+                    }}
+                  />
+                  <span style={{ position: "relative" }}>{word}</span>
+                </span>
+              );
+            })}
+          </span>
         </div>
       ))}
     </div>

@@ -7,7 +7,11 @@ import {
   ownerCutSchema,
   ownerAiModeSchema,
 } from "./policy.ts";
-import { ownerOverlaySchema, ownerOutputRevisionSchema } from "./clips.ts";
+import {
+  ownerOverlaySchema,
+  ownerOutputRevisionSchema,
+  ownerClipPreviewSchema,
+} from "./clips.ts";
 import { ownerAcquisitionDescriptorSchema } from "./acquisition-profile.ts";
 export {
   OWNER_LIMITS,
@@ -50,6 +54,16 @@ export const OWNER_PROVIDER_MEDIA = {
 } as const;
 
 export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
+  z
+    .object({
+      workspaceId: ownerIdSchema,
+      jobId: ownerIdSchema,
+      operation: z.literal("clip-preview"),
+      clipId: ownerIdSchema,
+      cut: ownerCutSchema,
+      fingerprint: ownerSourceSchema.shape.fingerprint,
+    })
+    .strict(),
   z
     .object({
       workspaceId: ownerIdSchema,
@@ -130,6 +144,12 @@ export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
 ]);
 export type OwnerMediaJob = z.infer<typeof ownerMediaJobSchema>;
 export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
+  ownerClipPreviewSchema
+    .extend({
+      operation: z.literal("clip-preview"),
+      durationMs: z.number().int().positive().max(OWNER_LIMITS.clipMs),
+    })
+    .strict(),
   z
     .object({
       operation: z.literal("prepare-owner-audio"),
