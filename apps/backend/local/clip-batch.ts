@@ -29,9 +29,7 @@ import {
 } from "../../../packages/contracts/local/edit-overlay.ts";
 import { OWNER_PICTURE_LIMITS } from "../../../packages/contracts/local/assets.ts";
 import { applyOwnerEdit } from "./edit-clip.ts";
-import { chooseClipTitle } from "./clip-title.ts";
 import { OWNER_CAPTION_PRESETS } from "../../../packages/contracts/local/editor.ts";
-import { OWNER_SOCIAL_TEXT_PRESETS } from "../../../packages/contracts/local/text-style.ts";
 import { ownerAgentValidation } from "./agent-view.ts";
 import { normalizeOwnerPicture } from "./personal-picture.ts";
 import {
@@ -66,11 +64,6 @@ import {
 export { ownerClipPlanSchema } from "../../../packages/contracts/local/clips.ts";
 export type OwnerClipPorts = {
   readonly mode: OwnerAiMode;
-  title?(request: {
-    workspace: OwnerWorkspace;
-    clipId: string;
-    moment: OwnerMoment;
-  }): string | null;
   focus?(request: {
     workspace: OwnerWorkspace;
     clipId: string;
@@ -661,14 +654,6 @@ export class OwnerClipBatch {
           clipId: clip.id,
           moment: structuredClone(moment),
         }) ?? defaultOwnerFocus(this.workspace.source, frames);
-      preparation.title = chooseClipTitle(
-        moment,
-        this.ports.title?.({
-          workspace: this.workspace,
-          clipId: clip.id,
-          moment,
-        }),
-      );
       this.diagnostics.focus(
         "focus_compile",
         ownerFocusCounts(preparation.focus),
@@ -676,7 +661,6 @@ export class OwnerClipBatch {
       this.changed();
     }
     const plan = preparation.plan;
-    preparation.title ??= chooseClipTitle(moment, null);
     this.ports.resume?.({
       workspaceId: this.workspace.id,
       clipId: clip.id,
@@ -788,19 +772,7 @@ export class OwnerClipBatch {
         ...(captions.length
           ? { captionStyle: OWNER_CAPTION_PRESETS.tiktok }
           : {}),
-        texts: [
-          {
-            id: randomUUID(),
-            text: preparation.title ?? chooseClipTitle(moment, null),
-            startFrame: 0,
-            endFrame: Math.min(frames, 4 * OWNER_FPS),
-            style: {
-              ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
-              fontSize: 56,
-              box: { x: 0.1, y: 0.08, width: 0.8, height: 0.16 },
-            },
-          },
-        ],
+        texts: [],
         visuals,
         focus:
           preparation.focus ?? defaultOwnerFocus(this.workspace.source, frames),

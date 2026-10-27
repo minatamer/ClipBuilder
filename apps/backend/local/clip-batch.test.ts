@@ -124,7 +124,51 @@ const gate = () => {
   return { wait, release };
 };
 
-it("checkpoints one planned headline with TikTok captions/text and picture fades, reporting real phases and reusing them on preview retry", async () => {
+it.each(["synthetic-ai", "provider-ai"] as const)(
+  "starts %s clips without text and ignores a legacy title on preparation retry",
+  async (mode) => {
+    await batch.close();
+    ports.mode = workspace.mode = analysis.mode = mode;
+    ports.plan.mockResolvedValue([]);
+    batch = new OwnerClipBatch(workspace, files, ports);
+    await batch.submit(
+      { ...request(), momentIds: [analysis.manual[1]!.id] },
+      analysis,
+    );
+    await batch.drain();
+    const ready = batch.snapshot().clips[0]!;
+    expect(ready.base!.overlay.texts).toEqual([]);
+    expect(ready.preparation?.title).toBeUndefined();
+    await batch.close();
+    batch = new OwnerClipBatch(workspace, files, ports);
+    batch.restore([
+      {
+        ...ready,
+        state: "failed",
+        base: null,
+        baseHash: null,
+        preview: undefined,
+        preparation: {
+          ...ready.preparation!,
+          title: "Legacy title must stay invisible",
+        },
+      },
+    ]);
+    await batch.retry(ready.id, {
+      operationId: randomUUID(),
+      expectedRevision: 0,
+    });
+    await batch.drain();
+    const retried = batch.snapshot().clips[0]!;
+    expect(retried.state).toBe("review-ready");
+    expect(retried.base!.overlay.texts).toEqual([]);
+    expect(ports.plan).toHaveBeenCalledTimes(1);
+    expect(ports.image).toHaveBeenCalledTimes(0);
+    expect(ports.render).toHaveBeenCalledTimes(2);
+  },
+);
+
+it("keeps new text empty with TikTok captions and picture fades, reporting real phases and reusing them on preview retry", async () => {
   await batch.close();
   ports.mode = "provider-ai";
   workspace.mode = "provider-ai";
@@ -133,9 +177,8 @@ it("checkpoints one planned headline with TikTok captions/text and picture fades
     const picture = await fakeOwnerClipPreparation.image(request, signal);
     return picture ? { ...picture, origin: "generated" } : null;
   });
-  const title = vi.fn(() => "A synthetic planned headline"),
-    observed: string[] = [];
-  batch = new OwnerClipBatch(workspace, files, { ...ports, title }, () => {
+  const observed: string[] = [];
+  batch = new OwnerClipBatch(workspace, files, ports, () => {
     const clip = batch.snapshot().clips[0];
     if (clip?.preparationStage) observed.push(clip.preparationStage);
   });
@@ -154,17 +197,9 @@ it("checkpoints one planned headline with TikTok captions/text and picture fades
     "captions",
     "preview",
   ]);
-  expect(failed.preparation?.title).toBe("A synthetic planned headline");
-  expect(failed.base!.overlay.texts![0]).toMatchObject({
-    text: "A synthetic planned headline",
-    startFrame: 0,
-    endFrame: 60,
-    style: {
-      preset: "tiktok",
-      fontSize: 56,
-      box: { x: 0.1, y: 0.08, width: 0.8, height: 0.16 },
-    },
-  });
+  expect(failed.preparation?.title).toBeUndefined();
+  expect(failed.base!.overlay.texts).toEqual([]);
+  expect(failed.base!.overlay.captionStyle?.outlineWidth).toBe(12);
   expect(failed.base!.overlay.captionStyle?.preset).toBe("tiktok");
   expect(failed.base!.overlay.captions.length).toBeGreaterThan(0);
   expect(failed.base!.overlay.visuals[0]).toMatchObject({
@@ -173,13 +208,12 @@ it("checkpoints one planned headline with TikTok captions/text and picture fades
     animationFrames: 9,
   });
   const retained = structuredClone(failed.base);
-  const restored = new OwnerClipBatch(workspace, files, { ...ports, title });
+  const restored = new OwnerClipBatch(workspace, files, ports);
   restored.restore([
     { ...failed, state: "preparing", preparationStage: "pictures" },
   ]);
   expect(restored.snapshot().clips[0]).toMatchObject({
     state: "canceled",
-    preparation: { title: "A synthetic planned headline" },
   });
   expect(restored.snapshot().clips[0]!.preparationStage).toBeUndefined();
   await restored.close();
@@ -192,7 +226,6 @@ it("checkpoints one planned headline with TikTok captions/text and picture fades
   expect(ready.state).toBe("review-ready");
   expect(ready.preparationStage).toBeUndefined();
   expect(ready.base).toEqual(retained);
-  expect(title).toHaveBeenCalledTimes(1);
   expect(ports.plan).toHaveBeenCalledTimes(1);
   expect(ports.image).toHaveBeenCalledTimes(1);
   expect(ports.render.mock.calls.map(([job]) => job.operation)).toEqual([

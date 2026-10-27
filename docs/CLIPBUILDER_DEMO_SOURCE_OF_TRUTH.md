@@ -1,5 +1,51 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Upload-only intake spacing — CL-094, 2026-10-27
+
+When YouTube intake is excluded, the single upload card uses the available
+content width and remaining vertical space responsively instead of a narrow,
+vertically centered 42rem column. Preserve readable minimum height, scrolling
+on short screens, anchored card actions, and local paired-card geometry.
+CL-094 owns the CSS and synthetic responsive captures; no mode/configuration,
+provider, cloud or release permission changes.
+
+## Manual text only and TikTok outline — CL-093, 2026-10-27
+
+The owner reverses automatic top titles: new clips start with no independent
+Text in fake, real local or hosted mode. Do not request/generate a title or
+insert one from a moment/transcript fallback or saved preparation metadata.
+Text is added explicitly through Add text. Preserve existing saved bases and
+manual edits, captions, focus, pictures/fades and all retry/spend rules. This
+supersedes only CL-087's title behavior; truthful stages and other defaults stay.
+TikTok style defaults to outline width 12 for Text/captions; controls and preview/
+export share that fallback and preserve explicit owner-saved widths. CL-093 owns
+implementation and synthetic fake/paid-off evidence. No provider/cloud or Git
+action, configuration edit or saved-media migration is authorized.
+
+## Solid text panel and sliding captions — CL-092, 2026-10-26
+
+Add an explicit Solid block typography preset: one continuous rounded panel
+behind all text lines, with existing shared color/opacity/font controls and
+caption parity. Preserve earlier line/highlight presets and saved appearances.
+Add Sliding highlight caption motion that moves its background between spoken
+words on the same line, using the same deterministic clock and actual logical
+word geometry in preview/native export. Reset across lines/long gaps and hide
+in silence. Keep word data, default TikTok style, existing animation modes,
+resource/quality/retry rules and motion preferences intact. No new AI request,
+font download, provider/cloud permission or deployment; CL-092 owns synthetic
+UI/native verification and normal worker refresh. The linked TikTok video was
+not accessible; the owner's screenshot and motion description define this task.
+
+## Retired demo-sample entry — CL-091, 2026-10-26
+
+The owner removes Use demo sample and the obsolete screen it opened. The current
+upload/YouTube/editor workflow owns /start; source=sample no longer selects the
+legacy screen. Remove the exclusively used wrapper/imports/styles while keeping
+shared helpers, protected APIs and all retained/saved media. This supersedes
+CL-028's demo-sample CTA requirement, without changing fake/real modes or any
+provider/cloud/spend/rights/release permissions. CL-091 owns implementation and
+synthetic verification; no paid call, environment edit or deployment is implied.
+
 ## Owner FFmpeg risk deferral — CL-090, 2026-10-26
 
 After reviewing the SEC90-01 explanation, the owner directed that the issue be
@@ -555,8 +601,9 @@ owns this revision; saved media retention and configuration/spend gates remain.
 
 The owner requires the existing demo's design quality and interaction hierarchy
 for the local extension. Intake offers upload or YouTube link in two columns on
-desktop, stacked on phones. Upload includes a local-only **Use demo sample** CTA
-using the existing secondary treatment. Saved sources/drafts stay secondary.
+desktop, stacked on phones. CL-028 originally added a local-only **Use demo
+sample** CTA; CL-091 retires that CTA and its obsolete screen entry. Saved
+sources/drafts stay secondary.
 Apply the existing navy glass surfaces, shared controls, typography and responsive
 spacing through selection and editing. Local functionality is part of the normal
 demo flow and is not an exception to its design principles. CL-028 owns this

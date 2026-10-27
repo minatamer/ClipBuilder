@@ -78,7 +78,7 @@ it.each([
   null,
   { bad: true },
 ])(
-  "keeps optional title independent of usable picture/focus output with one existing request (%j)",
+  "ignores unsolicited title data without rejecting usable pictures/focus or adding a request (%j)",
   async (title) => {
     const f = fixture();
     f.transport.generate.mockResolvedValue({
@@ -97,30 +97,23 @@ it.each([
     expect(await f.ports.clipPreparation.plan(request, f.signal)).toEqual([
       cue,
     ]);
-    const headline = f.ports.clipPreparation.title!(request);
-    if (typeof title === "string") {
-      expect(headline).toBeTruthy();
-      expect(headline!.length).toBeLessThanOrEqual(80);
-    } else expect(headline).toBeNull();
-    expect(
-      f.ports.clipPreparation.title!({
-        ...request,
-        workspace: { ...f.workspace, id: randomUUID() },
-      }),
-    ).toBeNull();
     expect(f.transport.generate).toHaveBeenCalledTimes(1);
     expect(f.transport.transcribe).toHaveBeenCalledTimes(0);
     expect(f.pictures.find).toHaveBeenCalledTimes(0);
     expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
-      "one short top title",
+      "Do not generate titles or text overlays.",
     );
+    expect(
+      z.toJSONSchema(f.transport.generate.mock.calls[0]![2].schema, {
+        io: "input",
+      }),
+    ).not.toHaveProperty("properties.title");
     expect(() =>
       z.toJSONSchema(f.transport.generate.mock.calls[0]![2].schema, {
         io: "input",
       }),
     ).not.toThrow();
     await f.ports.close(f.signal);
-    expect(f.ports.clipPreparation.title!(request)).toBeNull();
   },
 );
 

@@ -1,5 +1,9 @@
 # CL-087 — AI title, TikTok defaults and accurate preparation stages
 
+Owner revision 2026-10-27: CL-093 supersedes this packet's automatic-title
+prompt/accessor/layer behavior in every mode. Keep the evidence below historical;
+stages, caption defaults and picture fades remain. New Text is manual-only.
+
 Status: implemented and locally validated; owner visual/real-provider/hosted
 acceptance pending. Explicitly owner-authorized 2026-10-26. CL-086's owner-only
 acceptance remains open.

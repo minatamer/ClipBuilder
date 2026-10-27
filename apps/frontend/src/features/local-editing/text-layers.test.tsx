@@ -6,12 +6,48 @@ import { OWNER_CAPTION_PRESETS } from "../../../../../packages/contracts/local/e
 import { OwnerAutomaticOverlay } from "../../../../../packages/composition/local/automatic-overlay.tsx";
 import { OwnerStyledCaption } from "../../../../../packages/composition/local/styled-caption.tsx";
 import { ownerOverlayFrame } from "../../../../../packages/composition/local/overlay-frame.ts";
+import { TypographyFields } from "./typography-fields.tsx";
 import { constrainOwnerBox, ownerCaptionPreset } from "./editor-state.ts";
 import {
   syntheticTextClip,
   syntheticTextLayer,
 } from "../../../../../test/owner-text-fixture.ts";
-it.each(["tiktok", "solid", "translucent"] as const)(
+
+it.each([undefined, 0, 5, 12])(
+  "shares TikTok outline fallback while preserving explicit width %s",
+  (outlineWidth) => {
+    const layer = syntheticTextLayer(),
+      caption = syntheticTextClip().base!.overlay.captions[0]!;
+    layer.style.outlineWidth = outlineWidth;
+    const style = { ...OWNER_CAPTION_PRESETS.tiktok, outlineWidth };
+    const width = outlineWidth ?? 12;
+    const text = markup(
+      createElement(OwnerAutomaticOverlay, {
+        overlay: {
+          ...syntheticTextClip().base!.overlay,
+          captions: [],
+          texts: [layer],
+        },
+        assets: {},
+        frame: 20,
+      }),
+    );
+    const words = markup(
+      createElement(OwnerStyledCaption, { caption, ms: 700, style }),
+    );
+    for (const html of [text, words])
+      expect(html).toContain(`${width}px #000000`);
+    const fields = markup(
+      createElement(TypographyFields, {
+        value: style,
+        onChange: () => {},
+        onPreset: () => {},
+      }),
+    );
+    expect(fields).toContain(`max="12" step="1" value="${width}"`);
+  },
+);
+it.each(["tiktok", "solid", "translucent", "solid-block"] as const)(
   "shares %s typography and preserves caption placement/word identity",
   (preset) => {
     const clip = syntheticTextClip(),
@@ -37,10 +73,10 @@ it.each(["tiktok", "solid", "translucent"] as const)(
     expect(text).toContain(`data-text-preset="${preset}"`);
     for (const html of [text, words]) {
       expect(html).toContain(
-        preset === "tiktok" ? "5px #000000" : "0px #000000",
+        preset === "tiktok" ? "12px #000000" : "0px #000000",
       );
       expect(html).toContain(
-        preset === "solid"
+        preset === "solid" || preset === "solid-block"
           ? "background-color:#ffffffff"
           : preset === "translucent"
             ? "background-color:#17171799"

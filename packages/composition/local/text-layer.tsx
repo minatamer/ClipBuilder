@@ -47,6 +47,7 @@ export function OwnerTextLayerView({ layer }: { layer: OwnerTextLayer }) {
     width = style.box.width * 1080,
     height = style.box.height * 1920;
   const background = ownerTextBackground(style).opacity > 0;
+  const block = style.preset === "solid-block";
   function layout(fontSize: number) {
     const scale = Math.min(1, fontSize / 64),
       gap = Math.min(12, fontSize * 0.2);
@@ -60,7 +61,9 @@ export function OwnerTextLayerView({ layer }: { layer: OwnerTextLayer }) {
       scale,
       gap,
       fits:
-        lines.length * (fontSize * 1.2 + gap + (background ? 12 * scale : 0)) <=
+        lines.length *
+          (fontSize * 1.2 + gap + (background && !block ? 12 * scale : 0)) +
+          (background && block ? 12 * scale : 0) <=
         height - 16,
     };
   }
@@ -95,32 +98,60 @@ export function OwnerTextLayerView({ layer }: { layer: OwnerTextLayer }) {
         ...ownerTypographyPaint(style),
       }}
     >
-      {lines.map((line, index) => (
+      {block ? (
         <div
-          key={index}
+          data-text-panel="true"
           style={{
-            display: "flex",
-            justifyContent:
+            ...ownerTypographyBackground(style, scale),
+            width: "max-content",
+            maxWidth: "100%",
+            boxSizing: "border-box",
+            alignSelf:
               style.align === "left"
                 ? "flex-start"
                 : style.align === "right"
                   ? "flex-end"
                   : "center",
             flexShrink: 0,
-            paddingBlock: gap / 2,
           }}
         >
-          <span
+          {lines.map((line, index) => (
+            <div
+              key={index}
+              style={{ whiteSpace: "pre", paddingBlock: gap / 2 }}
+            >
+              {line || "\u00a0"}
+            </div>
+          ))}
+        </div>
+      ) : (
+        lines.map((line, index) => (
+          <div
+            key={index}
             style={{
-              display: "block",
-              whiteSpace: "pre",
-              ...ownerTypographyBackground(style, scale),
+              display: "flex",
+              justifyContent:
+                style.align === "left"
+                  ? "flex-start"
+                  : style.align === "right"
+                    ? "flex-end"
+                    : "center",
+              flexShrink: 0,
+              paddingBlock: gap / 2,
             }}
           >
-            {line || "\u00a0"}
-          </span>
-        </div>
-      ))}
+            <span
+              style={{
+                display: "block",
+                whiteSpace: "pre",
+                ...ownerTypographyBackground(style, scale),
+              }}
+            >
+              {line || "\u00a0"}
+            </span>
+          </div>
+        ))
+      )}
     </div>
   );
 }

@@ -17,6 +17,7 @@ import {
   prepareLocalOverlayFixture,
 } from "./owner-controls-browser.ts";
 import { syntheticTextClip, syntheticTextLayer } from "./owner-text-fixture.ts";
+import { OWNER_CAPTION_PRESETS } from "../packages/contracts/local/editor.ts";
 import type { OwnerClip } from "../packages/contracts/local/clips.ts";
 import { ownerNativeTools } from "../scripts/native-tools.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
@@ -273,6 +274,10 @@ it("edits independent text with shared typography, timing, gestures, discard/sav
     await evaluate(
       `(async()=>{textButton('Add text').click();await waitText(()=>document.querySelector('[aria-label="Text content"]'));await textChange(document.querySelector('[aria-label="Text content"]'),'');return true;})()`,
     );
+    await evaluate(`textSub('Style')`);
+    expect(await evaluate(`textControl('Style').value`)).toBe("tiktok");
+    expect(await evaluate(`textControl('Outline width').value`)).toBe("12");
+    await evaluate(`textSub('Content')`);
     expect(await evaluate(`textButton('Apply changes').disabled`)).toBe(true);
     await evaluate(
       `textChange(document.querySelector('[aria-label="Text content"]'),${JSON.stringify(Array(11).fill("line").join("\n"))})`,
@@ -309,7 +314,7 @@ it("edits independent text with shared typography, timing, gestures, discard/sav
     );
     expect(await evaluate(`textButton('Apply changes').disabled`)).toBe(true);
     await evaluate(
-      `(async()=>{await textChange(document.querySelector('[aria-label="Text end seconds"]'),'2');await textSub('Style');await textChange(textControl('Style'),'tiktok');await textChange(textControl('Font size'),'');await textChange(textControl('Font size'),'72');await textChange(textControl('Weight'),'800');return true;})()`,
+      `(async()=>{await textChange(document.querySelector('[aria-label="Text end seconds"]'),'2');await textSub('Style');await textChange(textControl('Style'),'solid-block');await textChange(textControl('Font size'),'');await textChange(textControl('Font size'),'72');await textChange(textControl('Weight'),'800');return true;})()`,
     );
     expect(await evaluate(`textButton('Apply changes').disabled`)).toBe(false);
     await evaluate(
@@ -409,7 +414,7 @@ it("edits independent text with shared typography, timing, gestures, discard/sav
       `[...textPanel().querySelectorAll('.typography-fields label')].map(n=>n.firstChild.textContent.trim().split(' (')[0])`,
     );
     await evaluate(
-      `(async()=>{await textSetting('Captions');await textSub('Style');await textChange(textControl('Style'),'translucent');return true;})()`,
+      `(async()=>{await textSetting('Captions');await textSub('Style');await textChange(textControl('Style'),'solid-block');await textChange(textControl('Animation'),'slide');return true;})()`,
     );
     expect(
       await evaluate(
@@ -428,12 +433,15 @@ it("edits independent text with shared typography, timing, gestures, discard/sav
       text: "A synthetic headline\nSecond line",
       startFrame: 15,
       endFrame: 60,
-      style: { preset: "tiktok", fontSize: 72, fontWeight: 800 },
+      style: { preset: "solid-block", fontSize: 72, fontWeight: 800 },
     });
     expect(clip.edit!.texts![0]!.style.box.x).toBeGreaterThan(0.1);
     expect(clip.edit!.texts![0]!.style.box.y).toBeGreaterThan(0.1);
     expect(clip.edit!.texts![0]!.style.box.width).toBeLessThan(0.8);
-    expect(clip.edit!.captions!.preset).toBe("translucent");
+    expect(clip.edit!.captions).toMatchObject({
+      preset: "solid-block",
+      animation: "slide",
+    });
     expect(clip.base!.overlay.captions[0]!.wordIds).toEqual([
       "w_000001",
       "w_000002",
@@ -446,6 +454,18 @@ it("edits independent text with shared typography, timing, gestures, discard/sav
         `document.querySelector('[aria-label="Text content"]').value`,
       ),
     ).toBe("A synthetic headline\nSecond line");
+    await evaluate(`textSub('Style')`);
+    expect(await evaluate(`textControl('Style').value`)).toBe("solid-block");
+    expect(
+      await evaluate(`document.querySelectorAll('[data-text-panel]').length`),
+    ).toBe(1);
+    await evaluate(
+      `(async()=>{await textSetting('Captions');await textSub('Style');return true;})()`,
+    );
+    expect(await evaluate(`textControl('Animation').value`)).toBe("slide");
+    await evaluate(
+      `(async()=>{await textSetting('Text');await textSub('Content');return true;})()`,
+    );
     stale = true;
     await evaluate(
       `(async()=>{await textChange(document.querySelector('[aria-label="Text content"]'),'Unsaved change');textButton('Apply changes').click();await waitText(()=>document.querySelector('.editor-warning')?.textContent.includes('changed elsewhere'));return true;})()`,
@@ -609,6 +629,175 @@ it("exports text-only TikTok, solid and alpha backgrounds at exact frame boundar
       expect(pixels.white).toBeGreaterThan(30);
       expect(pixels.alpha).toBeGreaterThan(400);
     }
+    expect(
+      (await readdir(workspace)).some(
+        (name) => name.startsWith("overlay-") || name.endsWith(".partial.mp4"),
+      ),
+    ).toBe(false);
+  } finally {
+    await cleanup(directory);
+  }
+}, 120_000);
+
+it("exports a continuous opaque/alpha text panel and a highlight that slides between measured word bounds", async () => {
+  const directory = await scratch();
+  try {
+    const root = join(directory, "workspaces"),
+      workspaceId = randomUUID(),
+      clipId = randomUUID(),
+      workspace = join(root, workspaceId);
+    await mkdir(workspace, { recursive: true });
+    const tools = await makeSource(join(workspace, "source.mp4"));
+    const metadata = await inspectOwnerSource(
+      join(workspace, "source.mp4"),
+      tools,
+      AbortSignal.timeout(10000),
+    );
+    const layer = {
+      ...syntheticTextLayer("solid-block"),
+      text: "WWWWWWWW\nI",
+      startFrame: 0,
+      endFrame: 45,
+    };
+    const overlay = {
+      ...syntheticTextClip().base!.overlay,
+      texts: [
+        layer,
+        {
+          ...layer,
+          id: randomUUID(),
+          startFrame: 45,
+          endFrame: 90,
+          style: { ...layer.style, backgroundOpacity: 0.5 },
+        },
+      ],
+      captionStyle: {
+        ...OWNER_CAPTION_PRESETS.tiktok,
+        outlineWidth: 0,
+        highlight: "#ff00ff",
+        animation: "slide" as const,
+        box: { x: 0.1, y: 0.6, width: 0.8, height: 0.2 },
+      },
+      captions: [
+        {
+          startMs: 0,
+          endMs: 3000,
+          text: "ONE TWO SIX",
+          lines: ["ONE TWO SIX"],
+          wordIds: ["w_000001", "w_000002", "w_000003"],
+          wordCues: [
+            { wordId: "w_000001", text: "ONE", startMs: 0, endMs: 500 },
+            { wordId: "w_000002", text: "TWO", startMs: 500, endMs: 1000 },
+            { wordId: "w_000003", text: "SIX", startMs: 1000, endMs: 1500 },
+          ],
+        },
+      ],
+    };
+    const result = await renderOwnerClip(
+      {
+        root,
+        tools,
+        chromium: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+        bundle: await prepareLocalOverlayFixture(directory),
+        cache: new Map(),
+      },
+      {
+        operation: "clip",
+        workspaceId,
+        clipId,
+        jobId: randomUUID(),
+        renderRevision: 0,
+        cut: { startFrame: 0, endFrame: 90 },
+        fingerprint: metadata.fingerprint,
+        overlay,
+      },
+      AbortSignal.timeout(90000),
+    );
+    expect(result).toMatchObject({ frames: 90, durationMs: 3000 });
+    const output = join(workspace, `${clipId}.r0.mp4`);
+    await mkdir(resolve(".local-build/evidence"), { recursive: true });
+    const samples = new Map<
+      number,
+      { panel: number[]; left: number; right: number; count: number }
+    >();
+    for (const frame of [14, 15, 16, 18, 60]) {
+      const raw = join(directory, `slide-${frame}.rgb`);
+      await runOwnedProcess(
+        tools.ffmpeg,
+        [
+          "-nostdin",
+          "-v",
+          "error",
+          "-i",
+          output,
+          "-vf",
+          `select=eq(n\\,${frame})`,
+          "-frames:v",
+          "1",
+          "-f",
+          "rawvideo",
+          "-pix_fmt",
+          "rgb24",
+          raw,
+        ],
+        AbortSignal.timeout(10000),
+      );
+      const pixels = await readFile(raw);
+      let left = 540,
+        right = 0,
+        count = 0;
+      for (let y = 576; y < 768; y++)
+        for (let x = 54; x < 486; x++) {
+          const i = (y * 540 + x) * 3;
+          if (pixels[i]! > 180 && pixels[i + 1]! < 80 && pixels[i + 2]! > 180) {
+            left = Math.min(left, x);
+            right = Math.max(right, x);
+            count++;
+          }
+        }
+      samples.set(frame, {
+        panel: [
+          ...pixels.subarray((214 * 540 + 190) * 3, (214 * 540 + 190) * 3 + 3),
+        ],
+        left,
+        right,
+        count,
+      });
+      await runOwnedProcess(
+        tools.ffmpeg,
+        [
+          "-nostdin",
+          "-v",
+          "error",
+          "-i",
+          output,
+          "-vf",
+          `select=eq(n\\,${frame})`,
+          "-frames:v",
+          "1",
+          "-y",
+          resolve(`.local-build/evidence/cl092-native-${frame}.png`),
+        ],
+        AbortSignal.timeout(10000),
+      );
+    }
+    const before = samples.get(14)!,
+      onset = samples.get(15)!,
+      moving = samples.get(16)!,
+      settled = samples.get(18)!,
+      silent = samples.get(60)!;
+    expect(onset.count).toBeGreaterThan(100);
+    expect(Math.abs(onset.left - before.left)).toBeLessThanOrEqual(2);
+    expect(moving.left).toBeGreaterThan(onset.left + 5);
+    expect(moving.left).toBeLessThan(settled.left - 5);
+    expect(moving.right).toBeLessThan(settled.right - 5);
+    expect(silent.count).toBe(0);
+    expect(before.panel.every((channel) => channel > 230)).toBe(true);
+    expect(silent.panel[0]).toBeGreaterThan(110);
+    expect(silent.panel[0]).toBeLessThan(150);
+    expect(silent.panel[1]).toBeGreaterThan(110);
+    expect(silent.panel[1]).toBeLessThan(150);
+    expect(silent.panel[2]).toBeGreaterThan(230);
     expect(
       (await readdir(workspace)).some(
         (name) => name.startsWith("overlay-") || name.endsWith(".partial.mp4"),

@@ -1,5 +1,53 @@
 # ClipBuilder canonical ticket index
 
+## Approved local commit — 2026-10-27
+
+The owner approved staging and committing the completed CL-091–094 follow-ups.
+[Whole-file plan](../operations/CL091_094_COMMIT_PLAN.md) lists all 36 files,
+including the plan, in one cohesive local commit. Implementation handoff notes
+below predate this approval; real/hosted/release acceptance stays separate.
+No push, deployment, provider/cloud request or configuration change is approved.
+
+## Wider upload-only intake — 2026-10-27
+
+[CL-094](CL-094-fill-hosted-upload-space.md) makes the hosted single upload card
+fill available space responsively, preserving local paired cards. Existing
+synthetic hosted flow passed with six inspected desktop/laptop/tablet/phone
+captures; affected lint/format/types and read-only review pass. Fresh desktop
+file preview queued with phone image linked. No paid, configuration, cloud,
+deployment or Git action; owner visual/release acceptance remains open.
+
+## Manual text only and TikTok outline — 2026-10-27
+
+[CL-093](CL-093-manual-text-only-and-tiktok-outline.md) removes CL-087's automatic
+AI/fake title layer in every composition and sets shared TikTok outline defaults
+to 12. Manual Text and saved edits remain. Locally verified: 614 local cases,
+four current-source Text/hosted-shaped browser/native proofs, affected types,
+lint/format and clean read-only validation. Backend/worker refreshed; normal app
+reports fake/cloud-off/live-disabled. Owner visual/real-AI/hosted acceptance
+remains open. No paid/provider/cloud/configuration/Git action.
+
+## Solid text panel and sliding highlight — 2026-10-26
+
+[CL-092](CL-092-solid-text-block-and-sliding-captions.md) adds an explicit shared
+Solid block preset and Sliding highlight caption animation, preserving existing
+styles and word timing. Locally verified: 609 local cases, three current-source
+synthetic editor/native proofs, types, affected lint/format and inspected
+phone/laptop/native PNGs. Final font-cache correction passed affected checks
+and all three proofs. Owner visual/real-AI/hosted acceptance remains open; no
+paid, configuration, cloud, deployment or Git action. Preserve CL-091's pending
+validated removal alongside this separately scoped implementation.
+
+## Retire outdated demo entry — 2026-10-26
+
+[CL-091](CL-091-retire-demo-sample-entry.md) removes Use demo sample, the legacy
+sample query switch and its exclusively used screen wrapper. Keep the current
+upload/YouTube/editor flow, shared helpers/protected APIs and retained media.
+Locally validated: two entry cases, existing synthetic desktop/phone intake
+proof, affected lint/format and frontend/test types pass. Both normal and old
+sample URLs return the current workflow. Changes remain unstaged/uncommitted;
+no paid, cloud, configuration or deployment action occurred.
+
 ## Current security audit â€” 2026-10-26
 
 [CL-090](CL-090-current-security-audit.md) follows committed quality `cc4c7dc`.

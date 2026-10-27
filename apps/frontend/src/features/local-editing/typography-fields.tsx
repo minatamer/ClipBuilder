@@ -3,6 +3,7 @@ import {
   OWNER_TEXT_PRESET_LABELS,
   ownerTextBackground,
   ownerTypographyWeight,
+  ownerTypographyOutline,
   type OwnerTypography,
 } from "../../../../../packages/contracts/local/text-style.ts";
 
@@ -140,7 +141,7 @@ export function TypographyFields({
           min="0"
           max="12"
           step="1"
-          value={value.outlineWidth ?? (value.preset === "tiktok" ? 5 : 0)}
+          value={ownerTypographyOutline(value)}
           onChange={(event) =>
             onChange({
               ...value,

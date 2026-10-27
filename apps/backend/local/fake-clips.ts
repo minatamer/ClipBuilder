@@ -4,12 +4,9 @@ import { compileAutomaticOwnerFocus } from "../../../packages/contracts/local/fo
 
 export const fakeOwnerClipPreparation: Pick<
   OwnerClipPorts,
-  "mode" | "plan" | "image" | "focus" | "title"
+  "mode" | "plan" | "image" | "focus"
 > = {
   mode: "synthetic-ai",
-  title() {
-    return "A sample conversation";
-  },
   focus({ workspace, moment }) {
     const frames = moment.cut.endFrame - moment.cut.startFrame;
     const mid = Math.floor(frames / 2);

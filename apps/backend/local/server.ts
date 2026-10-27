@@ -59,7 +59,7 @@ export type OwnerHostProviders = {
   analysis?: OwnerAnalysisPorts;
   clipPreparation?: Pick<
     OwnerClipPorts,
-    "mode" | "plan" | "image" | "resume" | "focus" | "title"
+    "mode" | "plan" | "image" | "resume" | "focus"
   >;
   close?: (signal: AbortSignal) => Promise<void>;
   cleanupWorkspace?: (id: string, signal: AbortSignal) => Promise<void>;
@@ -88,10 +88,7 @@ export type OwnerHostOptions = {
   acquisition?: OwnerAcquisitionPort;
   shutdown?: () => void;
   analysis?: OwnerAnalysisPorts;
-  clipPreparation?: Pick<
-    OwnerClipPorts,
-    "mode" | "plan" | "image" | "focus" | "title"
-  >;
+  clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image" | "focus">;
   providers?: (files: WorkspaceFiles) => OwnerHostProviders;
   media: (
     job: OwnerMediaJob,

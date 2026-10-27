@@ -258,8 +258,15 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
         .hostedIntakeReady()
         .then(() => true);
     });
-    for (const width of [1440, 390]) {
-      await page.setViewport({ width, height: 1000, deviceScaleFactor: 1 });
+    for (const [width, height] of [
+      [1440, 1000],
+      [1366, 600],
+      [1024, 768],
+      [768, 1024],
+      [390, 844],
+      [320, 568],
+    ] as const) {
+      await page.setViewport({ width, height, deviceScaleFactor: 1 });
       const result = await page._client().send("Runtime.evaluate", {
         expression: `JSON.stringify({youtube:document.body.textContent.includes('YouTube'),sample:document.body.textContent.includes('Use demo sample'),cards:document.querySelectorAll('.source-card').length,overflow:document.documentElement.scrollWidth>innerWidth})`,
         returnByValue: true,
@@ -305,7 +312,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
       if(document.activeElement.textContent.trim()!=='Your clips'||document.activeElement.getAttribute('aria-selected')!=='true')throw new Error('loading_broke_keyboard_tabs');
       button('Process clips').click();
       await wait(()=>button('Export clip')&&document.querySelector('.editor-panels:not([hidden])'));
-      const prepared=await (await fetch('/api/local/workspace/'+globalThis.pictureWorkspace+'/clips')).json();if(prepared.clips[0].outputs.length||!prepared.clips[0].preview||prepared.clips[0].calls.render)throw new Error('unexpected_eager_export');if(prepared.clips[0].base.overlay.texts?.length!==1||prepared.clips[0].base.overlay.texts[0].style.preset!=='tiktok'||prepared.clips[0].base.overlay.texts[0].style.fontSize!==56)throw new Error('automatic_top_title_missing');
+      const prepared=await (await fetch('/api/local/workspace/'+globalThis.pictureWorkspace+'/clips')).json();if(prepared.clips[0].outputs.length||!prepared.clips[0].preview||prepared.clips[0].calls.render)throw new Error('unexpected_eager_export');if(prepared.clips[0].base.overlay.texts?.length)throw new Error('unexpected_automatic_text');
       if(document.querySelector('.moment-selection').getClientRects().length || document.querySelectorAll('.clip-editor').length!==1)throw new Error('hosted_editor_not_exclusive');
       const captionPause=async stage=>{globalThis.captionStage=stage;globalThis.captionStageReleased=false;await wait(()=>globalThis.captionStageReleased,'caption_'+stage);globalThis.captionStage=null;};
       if(button('Generate fake captions')||!document.querySelector('.caption-empty')||document.querySelectorAll('.picture-choice').length||document.querySelector('[aria-label="Select and move captions"]'))throw new Error('fake_content_not_empty');

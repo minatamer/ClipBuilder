@@ -30,8 +30,8 @@ type IntakeLayout = {
   rootOverflow: boolean;
   contentOverflow: boolean;
   smallestTarget: number;
-  sampleLabel: string;
-  sampleSecondary: boolean;
+  sampleEntryAbsent: boolean;
+  uploadActions: number;
   nativePickerHidden: boolean;
   continueDisabled: boolean;
   focusWidth: number;
@@ -625,9 +625,8 @@ globalThis.clipbuilderIntakeLayout = () => {
         rootOverflow: document.documentElement.scrollWidth > innerWidth,
         contentOverflow: scroll.scrollWidth > scroll.clientWidth,
         smallestTarget: Math.min(...actions.map((node) => node.getBoundingClientRect().height)),
-        sampleLabel: sample.textContent?.trim(),
-        sampleSecondary: getComputedStyle(sample).backgroundColor !==
-            getComputedStyle(choose).backgroundColor,
+        sampleEntryAbsent: sample === null && !document.body.textContent.includes('Use demo sample'),
+        uploadActions: document.querySelectorAll('.upload-card .source-actions button, .upload-card .source-actions a').length,
         nativePickerHidden: document
             .querySelector('input[type="file"]')
             .getBoundingClientRect().width <= 1,
@@ -736,8 +735,8 @@ globalThis.clipbuilderIntakeLayout = () => {
       expect(layout.rootOverflow).toBe(false);
       expect(layout.contentOverflow).toBe(false);
       expect(layout.smallestTarget).toBeGreaterThanOrEqual(44);
-      expect(layout.sampleLabel).toBe("Use demo sample");
-      expect(layout.sampleSecondary).toBe(true);
+      expect(layout.sampleEntryAbsent).toBe(true);
+      expect(layout.uploadActions).toBe(1);
       expect(layout.nativePickerHidden).toBe(true);
       expect(layout.continueDisabled).toBe(true);
       expect(layout.focusWidth).toBeGreaterThanOrEqual(2);

@@ -128,6 +128,7 @@ export const ownerClipPreparationSchema = z
     moment: ownerMomentSchema,
     focus: ownerFocusSchema.optional(),
     plan: ownerClipPlanSchema.nullable(),
+    // Decode legacy partial drafts only; new preparation never generates titles.
     title: ownerClipTitleSchema.optional(),
     pictures: z
       .array(

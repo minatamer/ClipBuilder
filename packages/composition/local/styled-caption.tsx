@@ -10,6 +10,7 @@ import {
   ownerTextLineUnits,
 } from "./text-paint.ts";
 import { ownerTextBackground } from "../../contracts/local/text-style.ts";
+import { SlidingCaptionLine } from "./sliding-caption-line.tsx";
 
 type Caption = OwnerOverlay["captions"][number];
 
@@ -40,6 +41,8 @@ export function OwnerStyledCaption({
     style.preset === "boxed" &&
     style.backgroundColor === undefined &&
     style.backgroundOpacity === undefined;
+  const block = style.preset === "solid-block";
+  const paint = ownerTypographyPaint(style);
   const width = style.box.width * 1080,
     height = style.box.height * 1920,
     backgroundPadding =
@@ -54,7 +57,10 @@ export function OwnerStyledCaption({
       Math.min(
         style.fontSize,
         Math.floor(
-          (height / caption.lines.length - 8 - backgroundPadding) / 1.2,
+          ((height - (block ? backgroundPadding : 0)) / caption.lines.length -
+            8 -
+            (block ? 0 : backgroundPadding)) /
+            1.2,
         ),
         ...caption.lines.map((line) =>
           Math.floor(
@@ -66,48 +72,44 @@ export function OwnerStyledCaption({
         ),
       ),
     );
-  let tokenIndex = 0;
-  return (
-    <div
-      data-caption-preset={style.preset}
-      style={{
-        position: "absolute",
-        left: style.box.x * 1080,
-        top: style.box.y * 1920,
-        width,
-        height,
-        boxSizing: "border-box",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent:
-          style.verticalAlign === "center" ? "center" : "flex-end",
-        overflow: "hidden",
-        ...ownerTypographyPaint(style),
-        opacity:
-          style.animation === "fade"
-            ? Math.min(1, (ms - caption.startMs) / 120)
-            : undefined,
-        color: style.color,
-        textAlign: style.align,
-        fontSize,
-        lineHeight: 1.2,
-      }}
-    >
-      {caption.lines.map((line, lineIndex) => (
-        <div
-          key={lineIndex}
-          data-caption-line={lineIndex}
-          style={{
-            flexShrink: 0,
-            whiteSpace: "nowrap",
-            paddingBlock: backgroundPadding ? 6 : undefined,
-          }}
+  const lines = caption.lines.map((line, lineIndex) => {
+    const tokenIndex = caption.lines
+      .slice(0, lineIndex)
+      .reduce((sum, text) => sum + text.split(" ").length, 0);
+    const lineTokens = tokens.slice(
+      tokenIndex,
+      tokenIndex + line.split(" ").length,
+    );
+    return (
+      <div
+        key={lineIndex}
+        data-caption-line={lineIndex}
+        style={{
+          flexShrink: 0,
+          whiteSpace: "nowrap",
+          paddingBlock: backgroundPadding && !block ? 6 : undefined,
+        }}
+      >
+        <span
+          style={
+            legacyBoxed || block ? undefined : ownerTypographyBackground(style)
+          }
         >
-          <span
-            style={legacyBoxed ? undefined : ownerTypographyBackground(style)}
-          >
-            {line.split(" ").map((word, wordIndex) => {
-              const { cue } = tokens[tokenIndex++]!;
+          {style.animation === "slide" ? (
+            <SlidingCaptionLine
+              tokens={lineTokens}
+              cues={caption.wordCues}
+              ms={ms}
+              color={style.highlight}
+              wordPadding={wordPadding}
+              fontKey={JSON.stringify([
+                paint.fontFamily,
+                paint.fontWeight,
+                fontSize,
+              ])}
+            />
+          ) : (
+            lineTokens.map(({ word, cue }, wordIndex) => {
               const highlighted = cue.startMs <= ms && ms < cue.endMs;
               const onset = Math.min(
                 1,
@@ -167,10 +169,60 @@ export function OwnerStyledCaption({
                   <span style={{ position: "relative" }}>{word}</span>
                 </span>
               );
-            })}
-          </span>
+            })
+          )}
+        </span>
+      </div>
+    );
+  });
+  return (
+    <div
+      data-caption-preset={style.preset}
+      style={{
+        position: "absolute",
+        left: style.box.x * 1080,
+        top: style.box.y * 1920,
+        width,
+        height,
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent:
+          style.verticalAlign === "center" ? "center" : "flex-end",
+        overflow: "hidden",
+        ...paint,
+        opacity:
+          style.animation === "fade"
+            ? Math.min(1, (ms - caption.startMs) / 120)
+            : undefined,
+        color: style.color,
+        textAlign: style.align,
+        fontSize,
+        lineHeight: 1.2,
+      }}
+    >
+      {block ? (
+        <div
+          data-caption-panel="true"
+          style={{
+            ...ownerTypographyBackground(style),
+            width: "max-content",
+            maxWidth: "100%",
+            boxSizing: "border-box",
+            alignSelf:
+              style.align === "left"
+                ? "flex-start"
+                : style.align === "right"
+                  ? "flex-end"
+                  : "center",
+            flexShrink: 0,
+          }}
+        >
+          {lines}
         </div>
-      ))}
+      ) : (
+        lines
+      )}
     </div>
   );
 }

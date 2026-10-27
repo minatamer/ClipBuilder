@@ -2,14 +2,15 @@ import type { CSSProperties } from "react";
 import {
   ownerTextBackground,
   ownerTypographyWeight,
+  ownerTypographyOutline,
   type OwnerTypography,
 } from "../../contracts/local/text-style.ts";
 
 export function ownerTypographyPaint(style: OwnerTypography): CSSProperties {
-  const outline = style.outlineWidth ?? (style.preset === "tiktok" ? 5 : 0);
+  const outline = ownerTypographyOutline(style);
   const legacyShadow =
     style.outlineWidth === undefined &&
-    !["tiktok", "solid", "translucent"].includes(style.preset);
+    !["tiktok", "solid", "solid-block", "translucent"].includes(style.preset);
   return {
     fontFamily: style.font ?? "Arial",
     fontWeight: ownerTypographyWeight(style),

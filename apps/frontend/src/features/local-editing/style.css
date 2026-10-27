@@ -16,6 +16,9 @@
   &.local-intake {
     justify-content: center;
   }
+  &.local-intake:has(.source-options-upload) {
+    justify-content: flex-start;
+  }
   &.local-editor {
     --local-preview-width: min(16rem, calc((100cqh - 0.5rem) * 9 / 16));
     --local-editor-spacing: clamp(0.5rem, 1.5cqh, 1rem);
@@ -118,8 +121,9 @@
   }
   .source-options-upload {
     grid-template-columns: minmax(0, 1fr);
-    width: min(100%, 42rem);
-    margin-inline: auto;
+    grid-auto-rows: minmax(22rem, 1fr);
+    width: 100%;
+    flex: 1;
   }
   .source-card-heading {
     display: flex;
@@ -287,9 +291,6 @@
   .upload-card.is-dragging .upload-drop-area {
     border-color: var(--cb-focus);
     background: var(--cb-brand-soft);
-  }
-  .source-actions a {
-    text-decoration: none;
   }
   .upload-card.is-dragging {
     border-color: var(--cb-focus);

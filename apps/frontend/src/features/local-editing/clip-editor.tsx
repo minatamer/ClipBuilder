@@ -1085,6 +1085,7 @@ export function ClipEditor({
                                 {
                                   highlight: "Spoken-word highlight",
                                   pop: "Word pop",
+                                  slide: "Sliding highlight",
                                   bounce: "Word bounce",
                                   reveal: "Typewriter reveal",
                                   "single-word": "Word by word",

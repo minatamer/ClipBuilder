@@ -14,6 +14,7 @@ export const OWNER_TEXT_PRESET_LABELS = {
   typewriter: "Typewriter",
   tiktok: "TikTok style",
   solid: "Solid background",
+  "solid-block": "Solid block",
   translucent: "Translucent background",
 } as const;
 export const ownerTypographySchema = z
@@ -26,6 +27,7 @@ export const ownerTypographySchema = z
       "typewriter",
       "tiktok",
       "solid",
+      "solid-block",
       "translucent",
     ]),
     fontSize: z.number().int().min(24).max(120),
@@ -67,7 +69,7 @@ export const OWNER_SOCIAL_TEXT_PRESETS = {
     align: "center",
     verticalAlign: "center",
     outlineColor: "#000000",
-    outlineWidth: 5,
+    outlineWidth: 12,
     backgroundColor: "#171717",
     backgroundOpacity: 0,
   },
@@ -97,6 +99,19 @@ export const OWNER_SOCIAL_TEXT_PRESETS = {
     backgroundColor: "#171717",
     backgroundOpacity: 0.6,
   },
+  "solid-block": {
+    preset: "solid-block",
+    font: "Arial",
+    fontSize: 64,
+    fontWeight: 700,
+    color: "#111111",
+    align: "center",
+    verticalAlign: "center",
+    outlineColor: "#000000",
+    outlineWidth: 0,
+    backgroundColor: "#ffffff",
+    backgroundOpacity: 1,
+  },
 } as const satisfies Record<string, OwnerTypography>;
 
 export function ownerTypographyWeight(style: OwnerTypography): number {
@@ -111,9 +126,19 @@ export function ownerTypographyWeight(style: OwnerTypography): number {
         typewriter: 700,
         tiktok: 700,
         solid: 700,
+        "solid-block": 700,
         translucent: 700,
       } as const
     )[style.preset]
+  );
+}
+
+export function ownerTypographyOutline(style: OwnerTypography): number {
+  return (
+    style.outlineWidth ??
+    (style.preset === "tiktok"
+      ? OWNER_SOCIAL_TEXT_PRESETS.tiktok.outlineWidth
+      : 0)
   );
 }
 
@@ -121,14 +146,16 @@ export function ownerTextBackground(style: OwnerTypography) {
   return {
     color:
       style.backgroundColor ??
-      (style.preset === "solid"
+      (style.preset === "solid" || style.preset === "solid-block"
         ? "#ffffff"
         : style.preset === "boxed"
           ? "#101726"
           : "#171717"),
     opacity:
       style.backgroundOpacity ??
-      (style.preset === "solid" || style.preset === "boxed"
+      (style.preset === "solid" ||
+      style.preset === "solid-block" ||
+      style.preset === "boxed"
         ? 1
         : style.preset === "translucent"
           ? 0.6

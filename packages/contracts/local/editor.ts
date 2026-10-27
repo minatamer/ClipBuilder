@@ -19,6 +19,7 @@ export { OWNER_TEXT_FONTS as OWNER_CAPTION_FONTS } from "./text-style.ts";
 export const OWNER_CAPTION_ANIMATIONS = [
   "highlight",
   "pop",
+  "slide",
   "bounce",
   "reveal",
   "single-word",
@@ -73,6 +74,12 @@ export const OWNER_CAPTION_PRESETS: Record<
   },
   solid: {
     ...OWNER_SOCIAL_TEXT_PRESETS.solid,
+    highlight: "#7652d8",
+    animation: "none",
+    box: captionBox,
+  },
+  "solid-block": {
+    ...OWNER_SOCIAL_TEXT_PRESETS["solid-block"],
     highlight: "#7652d8",
     animation: "none",
     box: captionBox,

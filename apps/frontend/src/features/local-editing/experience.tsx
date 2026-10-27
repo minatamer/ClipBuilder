@@ -1,10 +1,9 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, Film } from "lucide-react";
+import { Upload } from "lucide-react";
 import { Workspace } from "../../shared/ui/workspace";
 import { WorkflowFrame } from "../../shared/ui/workflow-frame";
 import { Button } from "../../shared/ui/button";
-import buttonStyles from "../../shared/ui/workflow.module.css";
 import {
   ownerWorkspaceSchema,
   type OwnerWorkspace,
@@ -391,15 +390,6 @@ export function LocalEditingExperience({
                       >
                         Choose a video
                       </Button>
-                      {!hosted && (
-                        <a
-                          href="/start?source=sample"
-                          className={`${buttonStyles.button} ${buttonStyles.secondary}`}
-                        >
-                          <Film size={18} aria-hidden="true" />
-                          Use demo sample
-                        </a>
-                      )}
                     </div>
                     <input
                       ref={fileInput}
