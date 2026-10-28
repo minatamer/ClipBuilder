@@ -28,5 +28,7 @@ export function ownerNativeFocusFilter(
     const crop = ownerOriginalFocusCrop(focus, shot);
     return `${(shot.startFrame / OWNER_FPS).toFixed(6)} crop@focus w ${crop.width}, crop@focus h ${crop.height}, crop@focus x ${crop.x}, crop@focus y ${crop.y}`;
   });
-  return `${commands.length ? `sendcmd=c='${commands.join(";")}',` : ""}crop@focus=${first.width}:${first.height}:${first.x}:${first.y},scale=${profile.width}:${profile.height}:eval=frame,setsar=1`;
+  // Keep the scaler input aspect stable when crop dimensions change. FFmpeg 5.1
+  // can otherwise stop delivering frames to the downstream overlay at a zoom.
+  return `${commands.length ? `sendcmd=c='${commands.join(";")}',` : ""}crop@focus=${first.width}:${first.height}:${first.x}:${first.y},setsar=1,scale=${profile.width}:${profile.height}:eval=frame,setsar=1`;
 }
