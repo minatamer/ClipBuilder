@@ -221,6 +221,15 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
         fakeCaptionRequests++;
         const nextBase = {
           ...clip.base!,
+          words: ["Fictional", "captions."].map((text, index) => ({
+            id: `w_00000${index + 1}`,
+            text,
+            punctuatedText: text,
+            startMs: index * 250,
+            endMs: (index + 1) * 250,
+            speakerId: `spk_${index}`,
+            confidence: 1,
+          })),
           overlay: {
             ...clip.base!.overlay,
             captions: [
@@ -432,6 +441,39 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
           fake.click();await wait(()=>document.querySelector('[aria-label="Caption 1 word 1"]'),'fake_added');
           return document.querySelector('[aria-label="Caption 1 word 1"]').value==='Fictional'&&!document.querySelector('.caption-text-editor input[type="number"]')&&!document.querySelector('[aria-label="Caption generation actions"]');
         }
+        if(action==='speakers'){
+          [...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Captions').click();await new Promise(requestAnimationFrame);
+          const tabs=[...document.querySelectorAll('[aria-label="Caption controls"] [role="tab"]')];
+          const speakers=tabs.find(n=>n.textContent==='Speakers');if(!speakers)throw new Error('missing_speakers_tab');
+          speakers.focus();speakers.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));speakers.click();await wait(()=>named('Speaker for w_000001'));
+          const enabled=document.querySelector('.speaker-toggle input');if(!enabled.checked)return false;
+          const set=async(label,text)=>{const n=named(label);Object.getOwnPropertyDescriptor(n.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype,'value').set.call(n,text);n.dispatchEvent(new Event(n.tagName==='SELECT'?'change':'input',{bubbles:true}));await new Promise(r=>setTimeout(r,40));};
+          await set('Speaker 0 text color','#ff0000');await set('Speaker for w_000002','spk_0');
+          await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>!button('Apply changes')&&!button('Reset speakers').matches(':disabled'));
+          const n=named('Speaker for w_000002');n.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const r=n.getBoundingClientRect(),f=document.querySelector('footer').getBoundingClientRect();
+          const fits=r.left>=0&&r.right<=innerWidth+1&&r.height>=44&&document.documentElement.scrollWidth<=innerWidth&&f.top>=0&&f.bottom<=innerHeight+1;
+          const saved=await fetch('/seed').then(r=>r.json());if(!saved.edit?.captionSpeakers)throw new Error('speakers_not_saved_'+JSON.stringify(saved.edit));
+          button('Reset speakers').click();await wait(()=>button('Apply changes'),'speaker_reset_'+JSON.stringify({disabled:button('Reset speakers').disabled,buttons:[...document.querySelectorAll('footer button')].map(n=>n.textContent)}));button('Discard changes').click();await wait(()=>!button('Apply changes'));
+          await new Promise(r=>setTimeout(r,80));const retained=fits&&named('Speaker for w_000002').value==='spk_0';button('Reset speakers').click();await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>!button('Apply changes')&&!button('Reset speakers').matches(':disabled'));return retained;
+        }
+        if(action==='hook'){
+          const setting=async label=>{[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent===label).click();await new Promise(requestAnimationFrame);};
+          const set=async(label,text)=>{const n=named(label);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(n,text);n.dispatchEvent(new Event('input',{bubbles:true}));await new Promise(r=>setTimeout(r,60));};
+          await setting('Hook');button('Add hook').click();await wait(()=>named('Hook start seconds'));
+          await set('Hook start seconds','1');await set('Hook end seconds','2');
+          await setting('Focus');await tab('Advanced');await change('Time (s)','1.5');await frameReady();
+          if(Math.abs(sourceVideo().currentTime-1.5)>.04)throw new Error('hook_focus_clock_'+sourceVideo().currentTime);
+          await setting('Hook');await wait(()=>!named('Capture hook end').matches(':disabled'),'hook_capture_ready');named('Capture hook end').click();await wait(()=>Math.abs(Number(named('Hook end seconds').value)-1.533)<.002,'hook_source_capture');
+          await set('Hook end seconds','2');button('Apply changes').click();await wait(()=>!button('Apply changes')&&!button('Remove hook').matches(':disabled'),'hook_saved');
+          const saved=await fetch('/seed').then(r=>r.json());if(saved.edit?.hook?.startFrame!==30||saved.edit?.hook?.endFrame!==60)throw new Error('hook_not_saved');
+          button('Preview hook').click();await wait(()=>sourceVideo().currentTime>1.15&&sourceVideo().currentTime<1.9,'hook_preview');document.querySelector('[aria-label="Pause video"]')?.click();
+          const n=named('Capture hook end');n.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const f=document.querySelector('footer').getBoundingClientRect(),r=n.getBoundingClientRect();const fits=r.width>=44&&r.height>=44&&r.left>=0&&r.right<=innerWidth+1&&document.documentElement.scrollWidth<=innerWidth&&f.top>=0&&f.bottom<=innerHeight+1;
+          await set('Hook end seconds','20');if(!button('Apply changes').disabled||!document.querySelector('[role="alert"]').textContent.includes('10 seconds'))return false;
+          button('Discard changes').click();await wait(()=>!button('Apply changes'));await new Promise(r=>setTimeout(r,80));button('Remove hook').click();await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>!button('Apply changes')&&!button('Add hook').matches(':disabled'));return fits;
+        }
+        if(action==='speaker-shot'){document.querySelector('.speaker-palette').scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);return;}
+        if(action==='hook-shot'){button('Add hook').click();await wait(()=>named('Hook start seconds'));document.querySelector('.hook-controls').scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);return;}
+        if(action==='hook-shot-discard'){button('Discard changes').click();await wait(()=>!button('Apply changes'));await new Promise(r=>setTimeout(r,80));return;}
         if(action==='playback'){
           const video=sourceVideo(),overview=document.querySelector('.focus-source video');
           const descriptor=Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype,'currentTime');
@@ -516,6 +558,39 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
         await page.setViewport({ ...viewport, deviceScaleFactor: 1 });
         expect(await run("fake-captions")).toBe(true);
         expect(fakeCaptionRequests).toBe(1);
+        for (const width of [1440, 390, 320]) {
+          await page.setViewport({
+            width,
+            height: width === 320 ? 568 : 900,
+            deviceScaleFactor: 1,
+          });
+          expect(await run("speakers")).toBe(true);
+          expect(clip.edit?.captionSpeakers).toBeUndefined();
+          await run("speaker-shot");
+          const speakerShot = await page
+            ._client()
+            .send("Page.captureScreenshot", {
+              format: "png",
+              fromSurface: true,
+            });
+          await writeFile(
+            resolve(`.local-build/evidence/cl128-speakers-${width}.png`),
+            Buffer.from(speakerShot.value.data, "base64"),
+          );
+          expect(await run("hook")).toBe(true);
+          expect(clip.edit?.hook).toBeUndefined();
+          await run("hook-shot");
+          const hookShot = await page._client().send("Page.captureScreenshot", {
+            format: "png",
+            fromSurface: true,
+          });
+          await writeFile(
+            resolve(`.local-build/evidence/cl129-hook-${width}.png`),
+            Buffer.from(hookShot.value.data, "base64"),
+          );
+          await run("hook-shot-discard");
+        }
+        await page.setViewport({ ...viewport, deviceScaleFactor: 1 });
         clip = ownerClipSchema.parse({
           ...clip,
           base,
@@ -839,7 +914,7 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
       1,
     );
     expect(clip.calls).toEqual({ plan: 0, image: 0, render: 0 });
-    expect(edits).toBe(25);
+    expect(edits).toBe(37);
   } finally {
     await stop();
     await browser?.close({ silent: true });

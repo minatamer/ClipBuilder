@@ -1,5 +1,16 @@
 # ClipBuilder canonical ticket index
 
+## Speaker captions and manual hook — 2026-10-28
+
+[CL-128](CL-128-speaker-caption-colors.md) and
+[CL-129](CL-129-manual-hook-prefix.md) are implemented and locally validated:
+speaker colors/manual corrections and a captured manual hook before the intact
+clip. Sequential execute/validate completed with no actionable findings;
+89 focused tests, real synthetic MP4s and desktop/phone browser proofs pass.
+Owner visual/live-AI/hosted release acceptance remains unchecked. No paid/cloud/
+release action was performed. The owner authorized local staging/commits on
+2026-10-29; see the [file-level plan](../operations/CL128_129_COMMIT_PLAN.md).
+
 ## Local native capacity benchmark — 2026-10-28
 
 [CL-127](CL-127-native-worker-response-deadline.md) fixes the second prerequisite:

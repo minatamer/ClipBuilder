@@ -1,5 +1,24 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Speaker captions and manual hooks — CL-128/129, 2026-10-28
+
+The owner requests caption colors keyed to existing anonymous transcript speaker
+IDs, with manual word-to-speaker correction and text/background/highlight color
+control under Captions → Speakers. Enable automatically for multiple known
+speakers, fall back neutrally for unknown labels, and share preview/export logic.
+Preserve word IDs/timing, preset behavior, saved edits and explicit fake-caption
+generation (two simulated speakers); new fake clips still omit captions.
+
+Then add a manual Hook tab: choose/capture a bounded segment inside the clip
+(up to 10 seconds), duplicate it at the front and retain the whole normal body.
+Both occurrences carry the same edits, audio and properly clipped captions.
+Source-relative capture and presentation playback clocks must agree; preserve
+original source quality/cadence and one final encode. No AI hook request is made.
+These local/hosted editor features change no provider approval, trial quota,
+native time/spend or cloud release gate. CL-128 then CL-129 own execution and
+synthetic fake/no-key UI/native verification. Actual diarization/visual/live-AI/
+release acceptance remains owner-only.
+
 ## Local capacity measurement — CL-125, 2026-10-28
 
 The owner authorizes local Linux benchmarks starting at 2 CPUs/8 GiB and then
