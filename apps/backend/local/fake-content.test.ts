@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { FAKE_CAPTIONS_ENABLED } from "./fake-content.ts";
-import { fakeOwnerAnalysis } from "./fake-analysis.ts";
+import { fakeOwnerAnalysis, fakeOwnerCaptionWords } from "./fake-analysis.ts";
 import { fakeOwnerClipPreparation } from "./fake-clips.ts";
 import { ownerWorkspaceSchema } from "../../../packages/contracts/local/index.ts";
 import { ownerWordsSchema } from "../../../packages/contracts/local/selection.ts";
@@ -28,6 +28,19 @@ it("uses deterministic fictional dialogue with speakers and source-bounded word 
   expect(new Set(words.map((word) => word.speakerId)).size).toBe(2);
   expect(words.at(-1)!.endMs).toBe(15300);
   expect(words.every((word) => word.startMs < word.endMs)).toBe(true);
+  for (const durationMs of [1000, 3000]) {
+    const captions = ownerWordsSchema.parse(
+      await fakeOwnerCaptionWords(
+        { ...workspace, source: { ...workspace.source, durationMs } },
+        signal,
+      ),
+    );
+    expect(new Set(captions.map((word) => word.speakerId)).size).toBe(2);
+    expect(captions.at(-1)!.endMs).toBe(durationMs);
+    expect(captions.map((word) => word.id)).toEqual(
+      captions.map((_, i) => `w_${String(i + 1).padStart(6, "0")}`),
+    );
+  }
   const proposals = await fakeOwnerAnalysis.select(
     words,
     { minMs: 4000, maxMs: 4000 },

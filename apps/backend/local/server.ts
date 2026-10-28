@@ -52,7 +52,7 @@ import { ownerRuntimeCapabilitiesSchema } from "../../../packages/contracts/loca
 import { openLocalDraft, openLocalVideo } from "./open-local-file.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
 import type { ClipCaptionTranscription } from "./clip-caption-port.ts";
-import { fakeOwnerAnalysis } from "./fake-analysis.ts";
+import { fakeOwnerCaptionWords } from "./fake-analysis.ts";
 import { limitHostedDemoInputs } from "../../../packages/contracts/local/hosted-editing.ts";
 
 export type OwnerHostProviders = {
@@ -958,7 +958,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
               route[3],
               await readOwnerJson(req),
               (current, clip, signal) =>
-                fakeOwnerAnalysis.transcribe(
+                fakeOwnerCaptionWords(
                   {
                     ...current,
                     source: {

@@ -129,3 +129,15 @@ export const fakeOwnerAnalysis: OwnerAnalysisPorts = {
     return candidates;
   },
 };
+
+/** Explicit fake captions demonstrate a speaker turn even on short clips. */
+export const fakeOwnerCaptionWords: OwnerAnalysisPorts["transcribe"] = async (
+  workspace,
+  signal,
+) => {
+  const words = await fakeOwnerAnalysis.transcribe(workspace, signal);
+  return words.map((word, index) => ({
+    ...word,
+    speakerId: index < Math.ceil(words.length / 2) ? "spk_0" : "spk_1",
+  }));
+};
