@@ -144,6 +144,25 @@ it("reviews integrated full-canvas scenes, action-only passages and shared-objec
       );
     };
     await page.goto({ url: `http://localhost:${port}/`, timeout: 30_000 });
+    await page.setViewport({ width: 686, height: 549, deviceScaleFactor: 1 });
+    await evaluate(`window.reviewFilm(236,1536)`);
+    const loaderCleared = () =>
+      evaluate(`(()=>{
+      const root=document.querySelector('[data-film-beat]');
+      const opacity=n=>{let value=1;for(let node=n;node&&node!==root;node=node.parentElement)value*=Number(getComputedStyle(node).opacity);return value};
+      return [...root.querySelectorAll('img')].filter(n=>n.src.includes('/analysis.png')).every(n=>opacity(n)<.001);
+    })()`);
+    await capture("cl118-analysis-cards-236");
+    expect(
+      await loaderCleared(),
+      "analysis loading UI must clear before the cards form",
+    ).toBe(true);
+    await evaluate(`window.reviewFilm(286,1536)`);
+    const selectedBlend = await evaluate(
+      `Number(getComputedStyle([...document.querySelectorAll('[data-film-camera]>img')].find(n=>n.src.includes('/selected.png'))).opacity)`,
+    );
+    expect(selectedBlend).toBeGreaterThan(0);
+    expect(selectedBlend).toBeLessThan(1);
     const shots = [25, 90, 195, 268, 390, 460, 490, 590, 690] as const;
     for (const [width, height] of [
       [686, 549],
@@ -154,6 +173,22 @@ it("reviews integrated full-canvas scenes, action-only passages and shared-objec
       const canvasHeight = Math.round((1920 * height) / width);
       for (const frame of shots) {
         await evaluate(`window.reviewFilm(${frame},${canvasHeight})`);
+        expect(
+          await evaluate(
+            `document.querySelector('[data-film-stage]').textContent.includes('One useful conversation')`,
+          ),
+        ).toBe(false);
+        expect(
+          await evaluate(
+            `document.querySelector('[data-film-stage]').textContent.includes('A small first step.')`,
+          ),
+        ).toBe(false);
+        if (frame === 590)
+          expect(
+            await evaluate(
+              `document.querySelector('[data-film-clip-details]').textContent.replace(/\\s/g,'').includes('Startbeforeyoufeelready.')`,
+            ),
+          ).toBe(true);
         const geometry = await evaluate(`(()=>{
           const root=document.querySelector('[data-film-beat]'),title=root.querySelector('[data-film-title]');
           const frame=root.querySelector('[data-film-demo]'),portrait=root.querySelector('[data-film-portrait]');
@@ -203,6 +238,10 @@ it("reviews integrated full-canvas scenes, action-only passages and shared-objec
         ])
           samples.add(shot.from + local);
       }
+      for (const frame of [
+        198, 204, 210, 216, 222, 228, 234, 239, 240, 246, 252, 258, 264,
+      ])
+        samples.add(frame);
       for (const frame of [...samples].sort((a, b) => a - b)) {
         await evaluate(`window.reviewFilm(${frame},${canvasHeight})`);
         const safety = await evaluate(`(() => {
@@ -229,6 +268,13 @@ it("reviews integrated full-canvas scenes, action-only passages and shared-objec
         expect(safety.globalMasks).toBe(false);
         expect(safety.visibleCopy).toBeLessThanOrEqual(1);
         expect(safety.tracks).toBe(0);
+        if (frame >= 211 && frame <= 267)
+          expect(
+            await loaderCleared(),
+            `${width}px frame ${frame} loading UI behind cards`,
+          ).toBe(true);
+        if ([198, 210, 222, 234, 239, 240, 252, 264].includes(frame))
+          await capture(`cl118-handoff-${width}-${frame}`);
         if (
           FILM_TIMELINES.walkthrough.some((shot) =>
             [shot.from, shot.from + 12, shot.from + 26].includes(frame),

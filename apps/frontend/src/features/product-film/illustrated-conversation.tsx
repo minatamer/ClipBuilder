@@ -1,5 +1,5 @@
 import type { CompositionManifestV3 } from "@clipbuilder/contracts";
-import { ContextualCard, FixedCaption } from "@clipbuilder/composition";
+import { FixedCaption } from "@clipbuilder/composition";
 
 /** Original vector stand-in. This is animation artwork, never processing evidence. */
 function Speaker({
@@ -186,14 +186,6 @@ const caption: CompositionManifestV3["captions"][number] = {
     endMs: (i + 1) * 800,
   })),
 };
-const card: CompositionManifestV3["cards"][number] = {
-  origin: "planner",
-  kind: "statement",
-  title: "One useful conversation",
-  lines: ["A small first step."],
-  startMs: 0,
-  endMs: 8000,
-};
 
 export function IllustratedClip({
   frame,
@@ -229,7 +221,6 @@ export function IllustratedClip({
             background: "linear-gradient(transparent 30%, #05102899 100%)",
           }}
         />
-        <ContextualCard card={card} ms={ms} />
         <FixedCaption caption={caption} ms={ms} />
         <div
           style={{
