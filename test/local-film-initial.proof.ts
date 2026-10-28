@@ -128,11 +128,40 @@ it("keeps the poster proportional before hydration and waits for measured player
     await client.send("Emulation.setScriptExecutionDisabled", { value: true });
     for (const [width, height] of [
       [1366, 768],
+      [320, 568],
+      [360, 640],
+      [390, 600],
       [390, 844],
+      [430, 932],
+      [320, 480],
       [1920, 450],
     ] as const) {
       await page.setViewport({ width, height, deviceScaleFactor: 1 });
       await page.goto({ url: "http://localhost:3000/", timeout: 30_000 });
+      if (width < 760) {
+        const phone = await evaluate(`(()=>{
+          const hero=document.querySelector('#top').getBoundingClientRect();
+          const brand=document.querySelector('[data-hero-brand]'),b=brand.getBoundingClientRect();
+          const film=document.querySelector('[data-film-surface]').getBoundingClientRect();
+          const next=document.querySelector('#how-it-works').getBoundingClientRect();
+          const name=brand.querySelector('[class*="wordmarkText"]');
+          return {brand:getComputedStyle(brand).display!=='none'&&b.height>0&&getComputedStyle(name).display!=='none',
+            nextBelow:next.top>=innerHeight-1,viewportMin:hero.height>=innerHeight-1,
+            contentFits:film.bottom<=innerHeight+1,overflow:document.documentElement.scrollWidth>innerWidth};
+        })()`);
+        expect(phone.brand, `${width}x${height} hero wordmark`).toBe(true);
+        expect(
+          phone.nextBelow,
+          `${width}x${height} next section below fold`,
+        ).toBe(true);
+        expect(phone.viewportMin).toBe(true);
+        expect(phone.overflow).toBe(false);
+        if (height >= 568)
+          expect(
+            phone.contentFits,
+            `${width}x${height} hero content fits`,
+          ).toBe(true);
+      }
       expect(await inspectPoster()).toEqual({
         fills: true,
         typeAligned: true,
@@ -141,7 +170,26 @@ it("keeps the poster proportional before hydration and waits for measured player
         squareLogo: true,
         player: false,
       });
+      if (width < 760) await new Promise((done) => setTimeout(done, 650));
       await capture(`cl108-nojs-${width}x${height}`);
+      if (width === 320 && height === 480) {
+        await evaluate(`document.documentElement.style.fontSize='200%';true`);
+        const enlarged = await evaluate(`(()=>{
+          const hero=document.querySelector('#top').getBoundingClientRect();
+          const title=document.querySelector('#hero-title');
+          const first=title.firstElementChild.firstElementChild,last=title.lastElementChild;
+          return {scrolls:hero.height>innerHeight,rects:[first,last].flatMap(n=>{
+            const range=document.createRange();range.selectNodeContents(n);return [...range.getClientRects()].map(r=>({left:r.left,right:r.right}));
+          }),whole:[first,last].every(n=>{
+            const range=document.createRange();range.selectNodeContents(n);return [...range.getClientRects()].every(r=>r.left>=hero.left&&r.right<=hero.right);
+          })};
+        })()`);
+        await capture("cl120-enlarged-320x480");
+        expect(enlarged).toMatchObject({ scrolls: true, whole: true });
+        await evaluate(
+          `document.documentElement.style.removeProperty('font-size');true`,
+        );
+      }
     }
     // Hold the first real measurement at zero while hydration and intersection
     // effects run. This reproduces the race without changing application code.
@@ -200,8 +248,21 @@ it("keeps the poster proportional before hydration and waits for measured player
       return {frame:Number(film.dataset.filmFrame),fills:Math.abs(f.left-b.left)<1&&Math.abs(f.top-b.top)<1&&Math.abs(f.width-b.width)<1&&Math.abs(f.height-b.height)<1,
         sameType:Math.abs(p.left-t.left)<1&&Math.abs(p.top-t.top)<1&&Math.abs(p.width-t.width)<1&&Math.abs(p.height-t.height)<1};
     })()`);
+    const posterCovered = () =>
+      evaluate(`(()=>{
+      const surface=document.querySelector('[data-film-surface]');
+      const poster=surface.querySelector('[data-film-poster]');
+      const letter=poster.querySelector('[data-film-title] span span');
+      const rect=letter.getBoundingClientRect();
+      const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+      return !!hit&&!hit.closest('[data-film-poster]');
+    })()`);
     expect(await compare()).toEqual({ frame: 25, fills: true, sameType: true });
     await capture("cl108-first-player");
+    expect(
+      await posterCovered(),
+      "live player must cover the poster's independently stacked title",
+    ).toBe(true);
     await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
     await new Promise((done) => setTimeout(done, 200));
     expect(await compare()).toEqual({ frame: 25, fills: true, sameType: true });
@@ -213,6 +274,43 @@ it("keeps the poster proportional before hydration and waits for measured player
       squareLogo: true,
     });
     await capture("cl108-resized-phone");
+    expect(
+      await posterCovered(),
+      "phone live player must cover poster type",
+    ).toBe(true);
+    await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 });
+    await evaluate(
+      `Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});document.dispatchEvent(new Event('visibilitychange'));true`,
+    );
+    for (let attempt = 0; attempt < 160; attempt++) {
+      if (
+        await evaluate(
+          `Number(document.querySelector('[data-film-frame]').dataset.filmFrame)>=85`,
+        )
+      )
+        break;
+      await new Promise((done) => setTimeout(done, 25));
+    }
+    await evaluate(
+      `Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));true`,
+    );
+    expect(
+      await evaluate(
+        `document.querySelector('[data-film-frame]').dataset.filmBeat`,
+      ),
+    ).toBe("intake");
+    for (const [width, height] of [
+      [1366, 768],
+      [390, 844],
+    ] as const) {
+      await page.setViewport({ width, height, deviceScaleFactor: 1 });
+      await new Promise((done) => setTimeout(done, 150));
+      await capture(`cl116-live-intake-${width}`);
+      expect(
+        await posterCovered(),
+        `${width}px intake must not show the opening poster title`,
+      ).toBe(true);
+    }
     expect({ external, processing }).toEqual({ external: 0, processing: 0 });
   } finally {
     closing = true;
