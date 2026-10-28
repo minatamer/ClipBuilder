@@ -124,12 +124,14 @@ export function ProductFilmHero() {
             <>
               <ProductFilmPoster />
               {loaded && compositionHeight !== null && (
-                <FilmPlayer
-                  key={visit}
-                  variant="walkthrough"
-                  compositionHeight={compositionHeight}
-                  active={visible && foreground}
-                />
+                <div className={styles.player} data-film-player>
+                  <FilmPlayer
+                    key={visit}
+                    variant="walkthrough"
+                    compositionHeight={compositionHeight}
+                    active={visible && foreground}
+                  />
+                </div>
               )}
             </>
           )}

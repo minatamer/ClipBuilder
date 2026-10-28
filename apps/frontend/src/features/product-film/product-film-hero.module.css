@@ -11,6 +11,7 @@
   height: min(clamp(24rem, calc(100svh - 10rem), 46rem), 80cqw);
   min-height: 56.25cqw;
   position: relative;
+  isolation: isolate;
   background: radial-gradient(
     ellipse at 78% 63%,
     #163768,
@@ -25,6 +26,14 @@
   display: block;
   width: 100%;
   height: 100%;
+  z-index: 0;
+  isolation: isolate;
+}
+.player {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  isolation: isolate;
 }
 
 @media (max-width: 63.99rem) {
