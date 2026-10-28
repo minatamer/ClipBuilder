@@ -61,6 +61,28 @@ throttled CPU. Actual received IP headers, maximum native workload capacity and
 owner real-AI/visual/rights/release acceptance remain unverified; flags remain
 disabled and no application deployment/configuration change has occurred.
 
+Owner follow-up [CL-124](tickets/CL-124-verify-hosted-client-ip-and-enable-settings.md),
+2026-10-28: authorize a short-lived authenticated diagnostic on the unchanged
+frontend image, bounded probes through actual managed/custom-domain ingress,
+forged-header checks, diagnostic cleanup and enabling the verified-IP settings
+only after success. The prepared backend ledger setting may be injected then.
+This narrowly permits the necessary diagnostic/config revisions, not a product
+source release, resource/CPU change, cloud build, paid AI or public acceptance.
+Stage/commit the scoped source fix if needed and truthful verification records.
+
+CL-124 actual evidence supersedes the earlier unverified two-hop assumption:
+native managed/custom-domain ingress appends one final observed client address.
+The old helper rejected ordinary one-address requests and selected a supplied
+prefix when present; real probes and focused tests reproduced it. The source
+helper now selects the final address behind the verification gate. Corrected
+real spoofing probes pass on both entries with the same coded identity;
+direct unauthenticated private-backend identity spoofing is denied. Diagnostic
+startup/routing/revisions are removed. Both verified-IP settings and the backend
+ledger setting are enabled, with existing images/resources/identities preserved.
+The fixed source is prepared for the next application release, not yet rolled
+out as new app images; capacity/cost and owner paid-AI/release acceptance remain
+open. Reverify the trust rule after any ingress/proxy/topology change.
+
 ## Upload-only intake spacing — CL-094, 2026-10-27
 
 When YouTube intake is excluded, the single upload card uses the available

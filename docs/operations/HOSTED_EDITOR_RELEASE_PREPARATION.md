@@ -1,5 +1,58 @@
 # Shared upload/editor release preparation
 
+## Actual ingress verification — CL-124, 2026-10-28
+
+The owner explicitly authorized the protected temporary ingress probe, required
+source fix, named settings updates after success and scoped local commits.
+Both current native Cloud Run entry points append **one final observed client
+address**. The earlier external-load-balancer two-address assumption below is
+superseded for this verified topology. Reverify after DNS/proxy/ingress changes.
+
+The first real probe reproduced a security defect: ordinary requests had one
+forwarded address and were rejected, while adding a supplied prefix made the
+old second-to-last extraction select the supplied address. Corrected the actual
+source helper to use the final native Cloud Run address; retained the explicit
+verification gate, IP/length validation and authenticated backend bridge. Added
+the observed one-hop/forged-prefix regressions and a disabled-gate zero-dispatch
+check. Both affected suites reproduced failures first and now pass: eight tests,
+with frontend types and scoped ESLint/Prettier clean.
+
+The corrected source helper passed actual managed-URL and custom-domain probes:
+baseline, single/multiple/malformed/duplicate/mixed-case forwarded prefixes,
+forged client-IP/X-Real-IP/CF-Connecting-IP/Forwarded fields, oversized input and
+unauthenticated diagnostic access. Accepted requests selected the same coded
+network identity across entries; hostile inputs were ignored or rejected.
+Direct unauthenticated backend requests with forged identity headers were denied.
+Only coded header shapes/results were returned to the authenticated operator;
+no raw IP or bearer token was logged or written to the result record.
+
+The probe used a short-lived bearer-gated startup wrapper before the existing
+unchanged frontend server, first locally and at zero traffic, then through the
+actual entry points. Normal app pages kept working. The wrapper had a fixed
+expiry/no-store responses. Normal startup/routing was restored, all diagnostic
+revisions/tags and local probe containers were removed. Cloud Run's serving
+`latestReady` pointer initially still named the probe after creation of an
+unrouted normal revision; cleanup was corrected to route `latestCreated` and
+verify actual entry commands/readiness before deletion. No permanent route ships.
+
+After the passing corrected probe and cleanup, enabled
+`HOSTED_DEMO_IP_VERIFIED=true` on backend and frontend and injected the private
+backend ledger setting. Only these named non-secret values were projected for
+verification; secret payloads/ignored env files were not read. Both config
+revisions serve normally and the non-processing config bridge returns 200.
+Images, identities, ingress/IAM and CPU/memory/concurrency/timeouts/scaling are
+unchanged. The fixed-source frontend Linux image also builds (30.42s) and its
+offline non-root asset/CSP/route probe passes (2.34s).
+
+These are prepared live ingress settings and a committed source correction,
+not a rollout of the new application images: the existing deployed images were
+preserved and their new editor capability route remains 404. The new hosted
+quota/editor workflow is not claimed released. Maximum native workload/resource
+and cost acceptance, owner real-AI upload/export, visual/rights/security and
+public release gates remain open. CPU comparison requested by the owner was
+read-only; the backend stays one CPU/512 MiB with throttled CPU. Four CPUs/16 GiB
+with always-allocated CPU remains a proposal, not an applied setting.
+
 ## Current production preflight — CL-123, 2026-10-28
 
 The owner authorizes deployment preparation and local staging/commits. This
@@ -115,17 +168,19 @@ Owner release prerequisites and verified storage setup:
       Direct frontend-identity denial was not exercised because existing CLI
       impersonation permission for that identity was unavailable; no extra
       impersonation grant was made. The bucket policy was inspected instead.
-- [ ] Inject backend `HOSTED_DEMO_LEDGER_BUCKET` during a separately authorized
-      release/configuration change. The existing private `PROCESSING_GRANT_KEY`
+- [x] Inject backend `HOSTED_DEMO_LEDGER_BUCKET` during the CL-124 authorized
+      configuration change and verify only this named setting. The private `PROCESSING_GRANT_KEY`
       supplies domain-separated network HMACs; preserve it across releases.
       Rotation must retain prior allowance coverage. CL-122 changed no app env,
-      revision, secret, origin, paid switch or local configuration.
-- [ ] Verify the actual frontend ingress suffix is Google's documented
-      `[untrusted supplied prefix,] client-ip, load-balancer-ip`, with no direct
-      bypass/extra unaccounted proxies. Only then set `HOSTED_DEMO_IP_VERIFIED=true`
-      on frontend/backend. Never enable for an unverified Cloud Run/custom-domain
-      topology. The bridge replaces browser identity headers and selects only
-      the verified suffix over the authenticated private API. Missing IP fails closed.
+      revision, secret, origin, paid switch or local configuration; CL-124 later
+      adds only the named settings through config revisions.
+- [x] Verify the actual native Cloud Run suffix on managed/custom-domain ingress:
+      `[untrusted supplied prefix,] client-ip`. CL-124 corrects the old two-hop
+      assumption, proves supplied headers cannot replace that final address,
+      verifies private backend denial and enables the verified flags afterward.
+      The bridge replaces browser identity headers over the authenticated API.
+      Missing/malformed trusted suffix or a disabled gate fails closed. Re-audit
+      before using another load balancer, CDN or changed ingress topology.
 - [ ] Verify real hosted concurrency, cross-revision accounting, conditional
       conflicts, IAM failure, ingress spoofing, exhausted entry and owner bypass.
       Provider calls retain separate owner approval; local tests cannot certify

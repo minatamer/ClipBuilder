@@ -1,5 +1,17 @@
 # ClipBuilder canonical ticket index
 
+## Actual hosted client-IP verification — 2026-10-28
+
+[CL-124](CL-124-verify-hosted-client-ip-and-enable-settings.md) authorizes the
+protected temporary real-ingress probe, anti-spoofing verification, cleanup and
+verified-setting updates only after success, plus scoped local commits.
+Complete: actual native/custom-domain probes reproduced the two-hop extraction
+bug; the single-suffix source fix and eight affected tests now pass, as do the
+corrected real spoofing checks and fixed-source Linux build/runtime checks.
+Diagnostics are removed; verified flags and backend ledger setting are enabled.
+Images/resources are unchanged. Source-release, capacity and owner paid-AI
+acceptance stay separate. Exact whole-file commits follow the packet allocation.
+
 ## Current deployment preflight — 2026-10-28
 
 [CL-123](CL-123-hosted-deployment-preflight.md) executes the owner's deployment
