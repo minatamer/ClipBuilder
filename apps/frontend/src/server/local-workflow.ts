@@ -1,4 +1,6 @@
 import { hostedEditingPath as admittedHostedPath } from "../../../../packages/contracts/local/hosted-editing.ts";
+import { env } from "node:process";
+import { hostedDemoClientIp } from "./demo-client-ip";
 import { discoverOwnerHost } from "../../../../scripts/local-discovery.mjs";
 import {
   acquireControlRequest,
@@ -57,6 +59,13 @@ export async function proxyLocalWorkflow(request: Request, segments: string[]) {
       "Sec-Fetch-Site": "same-origin",
     });
     if (!local) {
+      headers.set(
+        "X-ClipBuilder-Client-IP",
+        hostedDemoClientIp(
+          request.headers,
+          env.HOSTED_DEMO_IP_VERIFIED === "true",
+        ),
+      );
       const cookie = request.headers.get("cookie") ?? "";
       const pairs = cookie
         .split(";")
@@ -110,6 +119,7 @@ export async function proxyLocalWorkflow(request: Request, segments: string[]) {
       "content-range",
       "accept-ranges",
       "content-disposition",
+      "retry-after",
     ]) {
       const value = response.headers.get(key);
       if (value !== null) resultHeaders.set(key, value);

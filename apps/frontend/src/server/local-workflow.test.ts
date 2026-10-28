@@ -102,6 +102,7 @@ it("rejects hosted acquisition without capability discovery or upstream I/O", as
   expect(fetcher).toHaveBeenCalledTimes(0);
 });
 it("forwards hosted editor requests through authenticated control transport with session cookies and CSRF", async () => {
+  vi.stubEnv("HOSTED_DEMO_IP_VERIFIED", "true");
   vi.stubEnv("APP_ENV", "production");
   vi.stubEnv("PRIVATE_BACKEND_ORIGIN", "https://backend.run.app");
   vi.stubEnv("BACKEND_AUDIENCE", "https://backend.run.app");
@@ -116,6 +117,8 @@ it("forwards hosted editor requests through authenticated control transport with
       headers: {
         Host: "frontend.run.app",
         "X-Forwarded-Proto": "https",
+        "X-Forwarded-For": "spoofed-prefix, 192.0.2.7, 198.51.100.1",
+        "X-ClipBuilder-Client-IP": "203.0.113.9",
         Origin: "https://frontend.run.app",
         "Sec-Fetch-Site": "same-origin",
         Cookie: cookie,
@@ -131,6 +134,7 @@ it("forwards hosted editor requests through authenticated control transport with
   expect(headers.get("X-CSRF-Token")).toBe("b".repeat(43));
   expect(headers.get("Cookie")).not.toContain("unrelated");
   expect(headers.has("Authorization")).toBe(false);
+  expect(headers.get("X-ClipBuilder-Client-IP")).toBe("192.0.2.7");
 });
 it("propagates browser cancellation into the upstream stream", async () => {
   fetcher.mockResolvedValue(
