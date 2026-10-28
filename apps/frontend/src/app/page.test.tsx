@@ -16,7 +16,7 @@ describe("visual approval prototype", () => {
     expect(markup).toContain(
       "aren’t published, used in marketing or kept as demos",
     );
-    expect(markup).toContain("short audio/video copy to Google Gemini");
+    expect(markup).toContain("short audio/video copy to our AI provider");
     expect(markup).toContain("retention rules are separate");
     expect(markup).toContain("Device and cloud copies are temporary");
     expect(markup).toContain("Exit starts deletion");
@@ -28,7 +28,7 @@ describe("visual approval prototype", () => {
       "Wikimedia Commons receives short scene descriptions from your clip",
     );
     expect(markup).toContain("Your video isn’t sent to Wikimedia");
-    expect(markup).toContain("Gemini may generate a fallback image");
+    expect(markup).toContain("AI may generate a fallback image");
 
     const localMarkup = renderToStaticMarkup(<PrivacyDialog localMedia />);
     expect(localMarkup).toContain("Media stays on this device");
@@ -38,7 +38,7 @@ describe("visual approval prototype", () => {
     expect(localMarkup).not.toContain("Preview mode:");
 
     const previewMarkup = renderToStaticMarkup(<PrivacyDialog />);
-    expect(previewMarkup).toContain(
+    expect(previewMarkup).not.toContain(
       "Preview mode: selected files aren’t read or uploaded",
     );
     expect(previewMarkup).toContain(
@@ -49,10 +49,13 @@ describe("visual approval prototype", () => {
       <PrivacyDialog localMedia cloudMedia illustrativePictures />,
     );
     expect(generatedMarkup).toContain(
-      "Gemini generates pictures from short scene descriptions of your selected clip",
+      "AI generates pictures from short scene descriptions of your selected clip",
     );
     expect(generatedMarkup).not.toContain("Wikimedia");
     for (const value of [markup, localMarkup, previewMarkup, generatedMarkup]) {
+      expect(value).not.toContain("Google");
+      expect(value).not.toContain("Gemini");
+      expect(value).toContain("retention rules are separate");
       expect(value).not.toContain("01</span>");
       expect(value).not.toContain("instant deletion");
       expect(value).not.toContain("never stored");
@@ -69,7 +72,7 @@ describe("visual approval prototype", () => {
       expect(markup.match(/<dialog\b/g)).toHaveLength(1);
       expect(markup).toContain("Close privacy");
       expect(markup).not.toContain("The local development preview simulates");
-      expect(markup).toContain("selected files aren’t read or uploaded");
+      expect(markup).not.toContain("selected files aren’t read or uploaded");
       expect(markup).not.toContain("Maximum: 20 minutes and 500 MiB");
       expect(markup).not.toContain("Visible bounds");
     },

@@ -125,11 +125,6 @@ export function PrivacyDialog({
             <p className={styles.dialogIntro} id={descriptionId}>
               Only used for your clip.
             </p>
-            {!localMedia && !cloudMedia && (
-              <p className={styles.dialogMode}>
-                Preview mode: selected files aren’t read or uploaded.
-              </p>
-            )}
           </div>
 
           <div
@@ -153,6 +148,12 @@ export function PrivacyDialog({
                       ? "Media stays on this device. Exit starts best-effort deletion; closing the tab doesn’t. Downloaded files remain."
                       : "Real processing uses temporary private storage. Exit starts deletion; delays are possible. Downloaded files remain."}
                 </p>
+                {cloudMedia && (
+                  <p>
+                    A temporary coded network identifier limits free demo use.
+                    It is separate from your media.
+                  </p>
+                )}
               </div>
             </section>
             <section data-privacy-point="ai">
@@ -160,20 +161,20 @@ export function PrivacyDialog({
               <div>
                 <h3>AI processing</h3>
                 <p>
-                  Real AI sends a short audio/video copy to Google Gemini.
-                  Google’s retention rules are separate.
+                  Real AI processing sends a short audio/video copy to our AI
+                  provider. Its retention rules are separate.
                 </p>
                 {illustrativePictures ? (
                   <p>
-                    Gemini generates pictures from short scene descriptions of
-                    your selected clip.
+                    AI generates pictures from short scene descriptions of your
+                    selected clip.
                   </p>
                 ) : (
                   cloudMedia && (
                     <p>
                       Wikimedia Commons receives short scene descriptions from
                       your clip for picture search. Your video isn’t sent to
-                      Wikimedia. Gemini may generate a fallback image.
+                      Wikimedia. AI may generate a fallback image.
                     </p>
                   )
                 )}
