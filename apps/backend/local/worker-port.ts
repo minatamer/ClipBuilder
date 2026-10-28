@@ -12,6 +12,10 @@ import {
 } from "../../../packages/contracts/local/acquisition-profile.ts";
 
 import { LocalDiagnostics } from "./diagnostics.ts";
+import {
+  nativeWorkerFetch,
+  WORKER_RESPONSE_BYTES,
+} from "./worker-transport.ts";
 
 async function workerBody(response: Response, maximum: number) {
   if (!response.body) throw new Error("invalid_media_result");
@@ -39,7 +43,7 @@ const stageSchema = z
 export function localWorkerPort(
   port: number,
   token: string,
-  transport: typeof fetch = fetch,
+  transport: typeof fetch = nativeWorkerFetch,
   diagnostics = new LocalDiagnostics(),
 ) {
   if (!Number.isInteger(port) || port < 1 || port > 65535)
@@ -143,7 +147,7 @@ export function localWorkerPort(
             if (parsed.success) throw new Error(parsed.data);
             throw new Error("media_unavailable");
           }
-          const value = await workerBody(response, 8192);
+          const value = await workerBody(response, WORKER_RESPONSE_BYTES);
           signal.throwIfAborted();
           const result = ownerMediaResultSchema.parse(value);
           if (result.operation !== job.operation)
