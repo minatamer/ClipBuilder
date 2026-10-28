@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 import { writeFile, rm } from "node:fs/promises";
 import { z } from "zod";
 import {
@@ -313,6 +314,9 @@ export class OwnerClipBatch {
           baseHash,
           revision,
           captionText: [],
+          captionSpeakers: clip.edit?.captionSpeakers
+            ? { ...clip.edit.captionSpeakers, assignments: [] }
+            : undefined,
         });
         compileOwnerOverlay(base, edit, clip.assets);
         clip.base = base;
@@ -864,11 +868,13 @@ export class OwnerClipBatch {
             controller.signal.throwIfAborted();
             if (
               result.operation !== "clip" ||
-              result.frames !== snapshot.overlay.frames ||
+              result.frames !== ownerPresentationFrames(overlay) ||
               result.bytes <= 0 ||
               result.bytes > OWNER_BATCH_POLICY.clipReservationBytes ||
               result.durationMs !==
-                Math.round((snapshot.overlay.frames * 1000) / OWNER_FPS)
+                Math.round(
+                  (ownerPresentationFrames(overlay) * 1000) / OWNER_FPS,
+                )
             )
               throw new Error("invalid_clip_output");
             await this.exported();

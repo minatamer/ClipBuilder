@@ -21,6 +21,7 @@ import {
   ownerClipSchema,
 } from "../../../packages/contracts/local/clips.ts";
 import { type OwnerDraftSnapshot } from "../../../packages/contracts/local/drafts.ts";
+import { automaticOwnerEdit } from "../../../packages/contracts/local/edit-overlay.ts";
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
@@ -38,6 +39,31 @@ const sourceBytes = Buffer.from("synthetic owner source");
 const pictureBytes = Buffer.from("synthetic canonical JPEG");
 const rawBytes = Buffer.from("synthetic normalized clip");
 const outputBytes = Buffer.from("synthetic native output");
+
+it("round-trips hook edits and longer exports, retains historical lengths, and rejects rebound current lengths", async () => {
+  const original = await fixture(),
+    clip = original.clips[0]!;
+  clip.edit = {
+    ...automaticOwnerEdit(clip.base!, clip.id, clip.baseHash!),
+    hook: { startFrame: 5, endFrame: 20 },
+  };
+  clip.outputs[0]!.frames = 45;
+  const saved = await store.save(undefined, original, files),
+    restored = await store.load(saved.id, files);
+  expect(restored.clips[0]!.edit?.hook).toEqual({
+    startFrame: 5,
+    endFrame: 20,
+  });
+  expect(restored.clips[0]!.outputs[0]!.frames).toBe(45);
+  clip.outputs[0]!.frames = 44;
+  await expect(store.save(undefined, original, files)).rejects.toThrow(
+    "draft_document_invalid",
+  );
+  clip.revision = clip.edit.revision = 1;
+  delete clip.edit.hook;
+  clip.outputs[0]!.frames = 45;
+  await expect(store.save(undefined, original, files)).resolves.toBeDefined();
+});
 
 it("round-trips a verified preview-only draft with no exports and rejects missing or rebound preview media", async () => {
   const original = await fixture();

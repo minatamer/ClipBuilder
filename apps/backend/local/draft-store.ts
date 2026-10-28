@@ -1,4 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
+import {
+  OWNER_HOOK_MAX_FRAMES,
+  ownerPresentationFrames,
+} from "../../../packages/contracts/local/hook.ts";
 import { createReadStream, createWriteStream } from "node:fs";
 import { lstat, mkdir, open, readdir, rename, rm } from "node:fs/promises";
 import { isAbsolute, parse, relative, resolve, sep } from "node:path";
@@ -314,7 +318,14 @@ function validateRelations(record: DraftRecord): void {
       clip.outputs.some(
         (output) =>
           !clip.base ||
-          output.frames !== clip.base.overlay.frames ||
+          output.frames < clip.base.overlay.frames ||
+          output.frames > clip.base.overlay.frames + OWNER_HOOK_MAX_FRAMES ||
+          (output.editRevision === clip.revision &&
+            output.frames !==
+              ownerPresentationFrames({
+                ...clip.base.overlay,
+                hook: clip.edit?.hook,
+              })) ||
           output.editRevision > clip.revision,
       )
     )

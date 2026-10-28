@@ -51,6 +51,59 @@ function deferred<T>() {
 const response = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), { status });
 
+it("binds a hooked clip result to presentation duration while retaining ordinary source-cut bounds", async () => {
+  const clip: Extract<OwnerMediaJob, { operation: "clip" }> = {
+    operation: "clip",
+    workspaceId: randomUUID(),
+    clipId: randomUUID(),
+    jobId: randomUUID(),
+    renderRevision: 0,
+    fingerprint: "a".repeat(64),
+    cut: { startFrame: 0, endFrame: 60 },
+    overlay: {
+      version: 1,
+      frames: 60,
+      captions: [],
+      visuals: [],
+      hook: { startFrame: 30, endFrame: 60 },
+    },
+  };
+  const transport = vi.fn<typeof fetch>(async () =>
+    response({ operation: "clip", bytes: 100, frames: 90, durationMs: 3000 }),
+  );
+  const port = localWorkerPort(4200, "synthetic-token", transport);
+  await expect(port(clip, new AbortController().signal)).resolves.toMatchObject(
+    { frames: 90 },
+  );
+  expect(transport).toHaveBeenCalledTimes(1);
+  transport.mockImplementation(async () =>
+    response({ operation: "clip", bytes: 100, frames: 60, durationMs: 2000 }),
+  );
+  await expect(port(clip, new AbortController().signal)).rejects.toThrow(
+    "invalid_media_result",
+  );
+  transport.mockImplementation(async () =>
+    response({
+      operation: "portrait",
+      bytes: 100,
+      frames: 90,
+      durationMs: 3000,
+    }),
+  );
+  await expect(
+    port(
+      {
+        operation: "portrait",
+        workspaceId: clip.workspaceId,
+        cut: clip.cut,
+        fingerprint: clip.fingerprint,
+      },
+      new AbortController().signal,
+    ),
+  ).rejects.toThrow("invalid_media_result");
+  expect(transport).toHaveBeenCalledTimes(3);
+});
+
 it.each([
   ["acquisition_selection_changed", "acquisition_selection_changed"],
   ["synthetic-private-worker-detail", "media_unavailable"],

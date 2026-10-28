@@ -1,4 +1,5 @@
 import { LocalDiagnostics } from "./diagnostics.ts";
+import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -93,9 +94,11 @@ beforeEach(async () => {
       );
       return {
         operation: "clip",
-        frames: job.overlay.frames,
+        frames: ownerPresentationFrames(job.overlay),
         bytes: bytes.length,
-        durationMs: Math.round((job.overlay.frames * 1000) / OWNER_FPS),
+        durationMs: Math.round(
+          (ownerPresentationFrames(job.overlay) * 1000) / OWNER_FPS,
+        ),
       };
     }),
   };
@@ -123,6 +126,65 @@ const gate = () => {
   });
   return { wait, release };
 };
+
+it("applies, exports, restores and removes a bounded manual hook without another AI request", async () => {
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[1]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  let clip = batch.snapshot().clips[0]!;
+  const base = JSON.stringify(clip.base),
+    planCalls = ports.plan.mock.calls.length,
+    imageCalls = ports.image.mock.calls.length;
+  await expect(
+    batch.edit(clip.id, {
+      operationId: randomUUID(),
+      expectedRevision: 0,
+      baseHash: clip.baseHash,
+      operations: [
+        {
+          kind: "hook",
+          hook: { startFrame: 0, endFrame: clip.base!.overlay.frames + 1 },
+        },
+      ],
+    }),
+  ).rejects.toThrow();
+  const hook = { startFrame: 10, endFrame: 25 };
+  clip = (
+    await batch.edit(clip.id, {
+      operationId: randomUUID(),
+      expectedRevision: 0,
+      baseHash: clip.baseHash,
+      operations: [{ kind: "hook", hook }],
+    })
+  ).clips[0]!;
+  await batch.render(clip.id, {
+    operationId: randomUUID(),
+    expectedRevision: 1,
+  });
+  await batch.drain();
+  clip = batch.snapshot().clips[0]!;
+  expect(clip.outputs.at(-1)?.frames).toBe(clip.base!.overlay.frames + 15);
+  const job = ports.render.mock.calls.at(-1)![0];
+  expect(job.operation).toBe("clip");
+  if (job.operation !== "clip") throw new Error("missing_clip");
+  expect(job.overlay.hook).toEqual(hook);
+  const restored = new OwnerClipBatch(workspace, files, ports);
+  restored.restore(JSON.parse(JSON.stringify(batch.snapshot().clips)));
+  expect(restored.snapshot().clips[0]!.edit?.hook).toEqual(hook);
+  await restored.close();
+  await batch.edit(clip.id, {
+    operationId: randomUUID(),
+    expectedRevision: 1,
+    baseHash: clip.baseHash,
+    operations: [{ kind: "hook", hook: null }],
+  });
+  expect(batch.snapshot().clips[0]!.edit?.hook).toBeUndefined();
+  expect(JSON.stringify(clip.base)).toBe(base);
+  expect(ports.plan).toHaveBeenCalledTimes(planCalls);
+  expect(ports.image).toHaveBeenCalledTimes(imageCalls);
+});
 
 it.each(["synthetic-ai", "provider-ai"] as const)(
   "starts %s clips without text and ignores a legacy title on preparation retry",
@@ -930,13 +992,49 @@ it("starts production fake clips empty, explicitly transcribes one clip, preserv
   expect(edit.clips[0]!.edit!.captionText).toEqual([
     { wordId: "w_900001", text: "Martian." },
   ]);
-  await batch.render(before.id, {
+  const speakers = {
+    enabled: true,
+    colors: [
+      {
+        speakerId: "spk_7",
+        color: "#123456",
+        backgroundColor: "#654321",
+        highlight: "#abcdef",
+      },
+    ],
+    assignments: [{ wordId: "w_900001", speakerId: "spk_7" }],
+  };
+  const colored = await batch.edit(before.id, {
     operationId: randomUUID(),
     expectedRevision: 2,
+    baseHash: generated.baseHash,
+    operations: [{ kind: "caption-speakers", speakers }],
+  });
+  expect(colored.clips[0]!.edit!.captionSpeakers).toEqual(speakers);
+  await expect(
+    batch.edit(before.id, {
+      operationId: randomUUID(),
+      expectedRevision: 3,
+      baseHash: generated.baseHash,
+      operations: [
+        {
+          kind: "caption-speakers",
+          speakers: {
+            ...speakers,
+            assignments: [{ wordId: "absent", speakerId: null }],
+          },
+        },
+      ],
+    }),
+  ).rejects.toThrow("unknown_caption_word");
+  await batch.render(before.id, {
+    operationId: randomUUID(),
+    expectedRevision: 3,
   });
   await batch.drain();
   const job = ports.render.mock.calls.at(-1)![0];
   if (job.operation !== "clip") throw new Error("clip_missing");
+  expect(job.overlay.captionSpeakers).toEqual(speakers);
   expect(job.overlay.captions[0]!.wordCues[0]).toMatchObject({
     text: "Martian.",
     startMs: 100,
@@ -951,6 +1049,7 @@ it("starts production fake clips empty, explicitly transcribes one clip, preserv
     async () => {},
   );
   reopened.restore(JSON.parse(JSON.stringify(batch.snapshot().clips)));
+  expect(reopened.snapshot().clips[0]!.edit!.captionSpeakers).toEqual(speakers);
   expect(reopened.snapshot().clips[0]!.edit!.captionText).toEqual([
     { wordId: "w_900001", text: "Martian." },
   ]);

@@ -1,3 +1,4 @@
+import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 import {
   ownerMediaResultSchema,
   OWNER_FPS,
@@ -159,7 +160,10 @@ export function localWorkerPort(
             (result.operation === "portrait" ||
               result.operation === "clip" ||
               result.operation === "clip-preview") &&
-            (result.frames !== job.cut.endFrame - job.cut.startFrame ||
+            (result.frames !==
+              (job.operation === "clip"
+                ? ownerPresentationFrames(job.overlay)
+                : job.cut.endFrame - job.cut.startFrame) ||
               result.durationMs !==
                 Math.round((result.frames * 1000) / OWNER_FPS))
           )
