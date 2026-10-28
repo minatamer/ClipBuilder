@@ -24,6 +24,11 @@ import {
 } from "../../../../../packages/contracts/local/policy.ts";
 import { normalizeManualTime, parseManualTime } from "./manual-time.ts";
 import { defaultMomentSelection, momentDuration } from "./moment-selection.ts";
+import {
+  HOSTED_DEMO_POLICY,
+  limitHostedDemoInputs,
+} from "../../../../../packages/contracts/local/hosted-editing.ts";
+import { DemoLimitToast } from "./demo-limit-toast.tsx";
 
 const SELECTION_TABS = ["add", "clips"] as const;
 type SelectionTab = (typeof SELECTION_TABS)[number];
@@ -67,6 +72,12 @@ export function OwnerSelectionPanel({
   footerTarget,
   actionsVisible = true,
 }: Props) {
+  const demoLimit =
+    "execution" in capabilities && capabilities.demoClipLimit !== null
+      ? HOSTED_DEMO_POLICY.clips
+      : null;
+  const clipLimit = demoLimit ?? OWNER_LIMITS.clips;
+  const [limitNotice, setLimitNotice] = useState(0);
   const analysisAvailable =
     capabilities.aiMode !== "unavailable" &&
     workspace.mode === capabilities.aiMode;
@@ -79,7 +90,9 @@ export function OwnerSelectionPanel({
       capabilities.aiMode === "synthetic-ai",
     ),
     [policyRevision, setPolicyRevision] = useState(0);
-  const [count, setCount] = useState(String(OWNER_DEFAULT_AI_COUNT));
+  const [count, setCount] = useState(
+    String(demoLimit ?? OWNER_DEFAULT_AI_COUNT),
+  );
   const [analysis, setAnalysis] = useState<OwnerAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false),
     [selected, setSelected] = useState<string[]>([]);
@@ -94,13 +107,15 @@ export function OwnerSelectionPanel({
     mounted = useRef(false);
   const acceptAnalysis = useCallback(
     (result: OwnerAnalysis) => {
-      const next = defaultMomentSelection(result);
+      const all = defaultMomentSelection(result);
+      const next = demoLimit ? all.slice(0, demoLimit) : all;
+      if (next.length < all.length) setLimitNotice((value) => value + 1);
       setAnalysis(result);
       setSelected(next.map(({ momentId }) => momentId));
       onChoose(next);
       setTab("clips");
     },
-    [onChoose],
+    [onChoose, demoLimit],
   );
   useEffect(() => {
     onResultsViewChange(tab === "clips");
@@ -195,7 +210,7 @@ export function OwnerSelectionPanel({
     );
   }
   function parsed() {
-    return ownerAnalysisRequestSchema.parse({
+    const inputs = ownerAnalysisRequestSchema.parse({
       sourceRevision: workspace.revision,
       policyRevision,
       ranges: rows.map((row) => ({
@@ -210,6 +225,7 @@ export function OwnerSelectionPanel({
       manualOnly,
       aiCount: Number(count),
     });
+    return demoLimit ? limitHostedDemoInputs(inputs) : inputs;
   }
   function rounded(row: Row): string {
     try {
@@ -235,6 +251,17 @@ export function OwnerSelectionPanel({
     let inputs;
     try {
       inputs = parsed();
+      if (
+        demoLimit &&
+        (inputs.ranges.length !== rows.length ||
+          inputs.aiCount !== Number(count) ||
+          inputs.manualOnly !== manualOnly)
+      ) {
+        setLimitNotice((value) => value + 1);
+        setRows((current) => current.slice(0, demoLimit));
+        setCount(String(inputs.aiCount));
+        setManualOnly(inputs.manualOnly);
+      }
       for (const row of inputs.ranges)
         ownerCut(row, workspace.source.durationMs);
       setRows(
@@ -426,6 +453,7 @@ export function OwnerSelectionPanel({
       <p className="flow-notice" role="status" aria-live="polite">
         {message}
       </p>
+      {limitNotice > 0 && <DemoLimitToast key={limitNotice} />}
       {waiting && (
         <ProcessingState
           label={
@@ -497,9 +525,21 @@ export function OwnerSelectionPanel({
           ))}
           <Button
             variant="secondary"
-            disabled={rows.length >= OWNER_LIMITS.ranges}
+            disabled={!demoLimit && rows.length >= OWNER_LIMITS.ranges}
             onClick={() => {
+              if (demoLimit && rows.length >= demoLimit) {
+                setLimitNotice((value) => value + 1);
+                return;
+              }
               changed();
+              if (demoLimit && !manualOnly) {
+                const remaining = demoLimit - rows.length - 1;
+                if (Number(count) > remaining) {
+                  setCount(String(Math.max(1, remaining)));
+                  setLimitNotice((value) => value + 1);
+                }
+                if (!remaining) setManualOnly(true);
+              }
               setRows((current) => [
                 ...current,
                 {
@@ -522,8 +562,28 @@ export function OwnerSelectionPanel({
               type="checkbox"
               checked={!manualOnly}
               onChange={(event) => {
+                if (
+                  event.target.checked &&
+                  demoLimit &&
+                  rows.length >= demoLimit
+                ) {
+                  setLimitNotice((value) => value + 1);
+                  return;
+                }
                 changed();
                 setManualOnly(!event.target.checked);
+                if (demoLimit) {
+                  if (
+                    event.target.checked &&
+                    Number(count) > demoLimit - rows.length
+                  )
+                    setLimitNotice((value) => value + 1);
+                  setCount(
+                    String(
+                      Math.min(Number(count) || 1, demoLimit - rows.length),
+                    ),
+                  );
+                }
               }}
             />
             Suggest clips
@@ -535,13 +595,25 @@ export function OwnerSelectionPanel({
                 <input
                   type="number"
                   min="1"
-                  max={OWNER_LIMITS.suggestions}
+                  max={
+                    demoLimit
+                      ? Math.max(1, demoLimit - rows.length)
+                      : OWNER_LIMITS.suggestions
+                  }
                   step="1"
                   value={count}
                   disabled={manualOnly}
                   onChange={(event) => {
                     changed();
-                    setCount(event.currentTarget.value);
+                    const value = event.currentTarget.value;
+                    if (
+                      demoLimit &&
+                      value !== "" &&
+                      Number(value) > demoLimit - rows.length
+                    ) {
+                      setCount(String(Math.max(1, demoLimit - rows.length)));
+                      setLimitNotice((current) => current + 1);
+                    } else setCount(value);
                   }}
                 />
               </label>
@@ -614,8 +686,8 @@ export function OwnerSelectionPanel({
           <>
             <p className="selection-count" role="status">
               {selected.length} {selected.length === 1 ? "clip" : "clips"}
-              {selected.length > OWNER_LIMITS.clips
-                ? ` · Remove ${selected.length - OWNER_LIMITS.clips} to keep ${OWNER_LIMITS.clips} or fewer.`
+              {selected.length > clipLimit
+                ? ` · Remove ${selected.length - clipLimit} to keep ${clipLimit} or fewer.`
                 : ""}
             </p>
             {selected.length === 0 && <p>No clips yet.</p>}

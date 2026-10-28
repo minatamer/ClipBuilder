@@ -17,6 +17,8 @@ import {
 } from "../../../../../packages/contracts/local/index.ts";
 import type { OwnerMomentExport } from "../../../../../packages/contracts/local/selection.ts";
 import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts/local/runtime.ts";
+import { HOSTED_DEMO_POLICY } from "../../../../../packages/contracts/local/hosted-editing.ts";
+import { DemoLimitToast } from "./demo-limit-toast.tsx";
 
 const initial: OwnerClipList = { clips: [], active: false, workers: 1 };
 const STATUS_UNAVAILABLE = "Reconnecting…";
@@ -45,6 +47,11 @@ export function OwnerClipBatchPanel({
   selectionReady?: boolean;
   footerTarget?: HTMLElement | null | undefined;
 }) {
+  const clipLimit =
+    "execution" in capabilities && capabilities.demoClipLimit !== null
+      ? HOSTED_DEMO_POLICY.clips
+      : OWNER_LIMITS.clips;
+  const [limitNotice, setLimitNotice] = useState(0);
   const planningAvailable =
     capabilities.planningAvailable && workspace.mode === capabilities.aiMode;
   const [list, setList] = useState(initial),
@@ -148,6 +155,18 @@ export function OwnerClipBatchPanel({
               body: JSON.stringify(body),
             }),
       });
+      if (response.status === 429) {
+        const error: unknown = await response.json();
+        if (
+          error &&
+          typeof error === "object" &&
+          "error" in error &&
+          error.error === "demo_clip_limit"
+        ) {
+          if (alive.current) setLimitNotice((value) => value + 1);
+          return;
+        }
+      }
       if (!response.ok) throw new Error("unavailable");
       const value = ownerClipListSchema.parse(await response.json());
       if (alive.current) {
@@ -188,6 +207,12 @@ export function OwnerClipBatchPanel({
       <p className="flow-notice" role="status" aria-live="polite">
         {message}
       </p>
+      {limitNotice > 0 && (
+        <DemoLimitToast
+          key={limitNotice}
+          message="Free demo mode allows 3 clips total per run. Your existing clips are still available to edit and export."
+        />
+      )}
       {!planningAvailable && (hasClips || selected.length > 0) && (
         <p role="status">AI unavailable. Prepared clips still work.</p>
       )}
@@ -200,7 +225,7 @@ export function OwnerClipBatchPanel({
               disabled={
                 !planningAvailable ||
                 !selected.length ||
-                selected.length > OWNER_LIMITS.clips ||
+                selected.length > clipLimit ||
                 pending ||
                 list.active ||
                 !!dirtyClip
@@ -209,7 +234,7 @@ export function OwnerClipBatchPanel({
                 if (
                   !planningAvailable ||
                   !selected.length ||
-                  selected.length > OWNER_LIMITS.clips
+                  selected.length > clipLimit
                 )
                   return;
                 const first = selected[0]!;
