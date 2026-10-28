@@ -1,6 +1,11 @@
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useState, useContext, type RefObject } from "react";
 import type { PlayerRef } from "@remotion/player";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
+import {
+  ownerSourceFrame,
+  ownerPresentationFrame,
+} from "../../../../../packages/contracts/local/hook.ts";
+import { EditorHookClock } from "./editor-clock.ts";
 
 /** Keep playback ticks in controls, away from the parent Player's input props. */
 export function useEditorPreview({
@@ -14,6 +19,7 @@ export function useEditorPreview({
   attempt: number;
   frames: number;
 }) {
+  const hook = useContext(EditorHookClock);
   const [frame, setFrame] = useState(
     () => player.current?.getCurrentFrame() ?? 0,
   );
@@ -24,7 +30,7 @@ export function useEditorPreview({
   useEffect(() => {
     const current = player.current;
     if (!available || !current) return;
-    const video = current.getContainerNode()?.querySelector("video");
+    const container = current.getContainerNode();
     const sync = () => {
       setFrame(current.getCurrentFrame());
       mediaReady();
@@ -33,22 +39,27 @@ export function useEditorPreview({
       setPlaying(current.isPlaying());
       sync();
     };
-    const mediaReady = () =>
+    const mediaReady = () => {
+      const video = container?.querySelector("video");
       setReady(
         Boolean(
           video &&
           video.readyState >= 2 &&
           !video.seeking &&
           !video.error &&
-          Math.abs(video.currentTime - current.getCurrentFrame() / OWNER_FPS) <=
+          Math.abs(
+            video.currentTime -
+              ownerSourceFrame({ hook }, current.getCurrentFrame()) / OWNER_FPS,
+          ) <=
             1 / OWNER_FPS + 0.001,
         ),
       );
+    };
     const waiting = () => setReady(false);
     for (const event of ["loadeddata", "seeked", "canplay"])
-      video?.addEventListener(event, mediaReady);
+      container?.addEventListener(event, mediaReady, true);
     for (const event of ["seeking", "waiting", "emptied"])
-      video?.addEventListener(event, waiting);
+      container?.addEventListener(event, waiting, true);
     current.addEventListener("frameupdate", sync);
     current.addEventListener("seeked", sync);
     current.addEventListener("play", playingNow);
@@ -63,14 +74,14 @@ export function useEditorPreview({
       current.removeEventListener("pause", playingNow);
       current.removeEventListener("ended", playingNow);
       for (const event of ["loadeddata", "seeked", "canplay"])
-        video?.removeEventListener(event, mediaReady);
+        container?.removeEventListener(event, mediaReady, true);
       for (const event of ["seeking", "waiting", "emptied"])
-        video?.removeEventListener(event, waiting);
+        container?.removeEventListener(event, waiting, true);
     };
-  }, [available, player, attempt]);
+  }, [available, player, attempt, hook]);
 
   return {
-    frame,
+    frame: ownerSourceFrame({ hook }, frame),
     playing,
     captureReady: available && ready,
     captureFrame: () => {
@@ -86,7 +97,7 @@ export function useEditorPreview({
       )
         return null;
       current.pause();
-      const at = current.getCurrentFrame();
+      const at = ownerSourceFrame({ hook }, current.getCurrentFrame());
       return Number.isInteger(at) &&
         at >= 0 &&
         at < frames &&
@@ -96,8 +107,9 @@ export function useEditorPreview({
     },
     seekTo: (at: number) => {
       player.current?.pause();
-      player.current?.seekTo(at);
-      setFrame(at);
+      const presentation = ownerPresentationFrame({ hook }, at);
+      player.current?.seekTo(presentation);
+      setFrame(presentation);
     },
   };
 }

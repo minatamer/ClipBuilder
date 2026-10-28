@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { ownerPresentationFrames } from "../../../../../packages/contracts/local/hook.ts";
 import {
   OWNER_CAPTION_PRESETS,
   ownerCaptionStyleSchema,
@@ -136,6 +137,33 @@ function clip(): OwnerClip {
     },
   });
 }
+
+it("persists and removes a manual hook while retaining body, captions and other edits", () => {
+  const current = clip(),
+    original = initialOwnerEdit(current),
+    saved = JSON.stringify(current.base);
+  const draft = { ...original, hook: { startFrame: 15, endFrame: 45 } };
+  expect(sameOwnerEdit(original, draft)).toBe(false);
+  expect(ownerEditOperations(original, draft, current)).toEqual([
+    { kind: "hook", hook: draft.hook },
+  ]);
+  expect(
+    ownerPresentationFrames(
+      compileOwnerOverlay(current.base!, draft, current.assets),
+    ),
+  ).toBe(current.base!.overlay.frames + 30);
+  expect(ownerEditOperations(draft, original, current)).toEqual([
+    { kind: "hook", hook: null },
+  ]);
+  expect(() =>
+    compileOwnerOverlay(
+      current.base!,
+      { ...draft, hook: { startFrame: 80, endFrame: 100 } },
+      current.assets,
+    ),
+  ).toThrow();
+  expect(JSON.stringify(current.base)).toBe(saved);
+});
 
 it("applies a bounded patch without modifying the automatic base or retaining generated provenance on a personal replacement", () => {
   const current = clip(),

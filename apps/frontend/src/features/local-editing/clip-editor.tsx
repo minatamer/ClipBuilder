@@ -6,6 +6,16 @@ import { ControlTabs } from "./control-tabs.tsx";
 import { FocusPreviewControls } from "./focus-preview-controls.tsx";
 import { PictureTiming } from "./picture-timing.tsx";
 import { CaptionTextEditor } from "./caption-text-editor.tsx";
+import { CaptionSpeakers } from "./caption-speakers.tsx";
+import { HookControls } from "./hook-controls.tsx";
+import { EditorHookClock } from "./editor-clock.ts";
+import {
+  ownerSourceFrame,
+  ownerPresentationFrame,
+  ownerPresentationFrames,
+  ownerHookFrames,
+  ownerHookSchema,
+} from "../../../../../packages/contracts/local/hook.ts";
 import { TypographyFields } from "./typography-fields.tsx";
 import { TextInspector } from "./text-inspector.tsx";
 import { BoxFields, TextPositionFields } from "./position-fields.tsx";
@@ -35,6 +45,7 @@ import { Player, type PlayerRef } from "@remotion/player";
 import {
   AbsoluteFill,
   Html5Video,
+  Sequence,
   useCurrentFrame,
   useCurrentScale,
 } from "remotion";
@@ -85,7 +96,14 @@ type LayerControls = {
   onGestureStart: () => void;
 };
 
-const SETTINGS = ["captions", "text", "filters", "pictures", "focus"] as const;
+const SETTINGS = [
+  "captions",
+  "text",
+  "filters",
+  "pictures",
+  "focus",
+  "hook",
+] as const;
 type EditorSetting = (typeof SETTINGS)[number];
 
 function SelectionBox({
@@ -269,7 +287,8 @@ function Review({
   interactive: boolean;
   setting: EditorSetting;
 } & LayerControls) {
-  const frame = useCurrentFrame();
+  const presentationFrame = useCurrentFrame();
+  const frame = ownerSourceFrame(overlay, presentationFrame);
   const caption = overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean;
   const crop = overlay.focus
     ? ownerFocusCrop(overlay.focus, ownerFocusAt(overlay.focus, frame))
@@ -277,31 +296,63 @@ function Review({
   return (
     <AbsoluteFill style={{ backgroundColor: "#101215" }}>
       <OwnerVideoLookLayer look={overlay.videoLook}>
-        <Html5Video
-          src={sourceUrl}
-          style={
-            crop
-              ? {
-                  position: "absolute",
-                  width: (1080 * 1080) / crop.width,
-                  height: (1920 * 1920) / crop.height,
-                  maxWidth: "none",
-                  left: (-crop.x * 1080) / crop.width,
-                  top: (-crop.y * 1920) / crop.height,
-                }
-              : { width: "100%", height: "100%", objectFit: "contain" }
-          }
-          pauseWhenBuffering
-          onLoadedData={onPreviewReady}
-          onErrorCapture={(event) => {
-            // Next treats Remotion's native-error console log as a page error too.
-            event.stopPropagation();
-            onPlaybackError();
-          }}
-          onError={onPlaybackError}
-        />
+        {[
+          ...(overlay.hook
+            ? [
+                {
+                  from: 0,
+                  duration: ownerHookFrames(overlay),
+                  start: overlay.hook.startFrame,
+                  end: overlay.hook.endFrame,
+                },
+              ]
+            : []),
+          {
+            from: ownerHookFrames(overlay),
+            duration: overlay.frames,
+            start: 0,
+            end: overlay.frames,
+          },
+        ].map((part, index) => (
+          <Sequence
+            key={index}
+            from={part.from}
+            durationInFrames={part.duration}
+            layout="none"
+          >
+            <Html5Video
+              src={sourceUrl}
+              trimBefore={part.start}
+              trimAfter={part.end}
+              style={
+                crop
+                  ? {
+                      position: "absolute",
+                      width: (1080 * 1080) / crop.width,
+                      height: (1920 * 1920) / crop.height,
+                      maxWidth: "none",
+                      left: (-crop.x * 1080) / crop.width,
+                      top: (-crop.y * 1920) / crop.height,
+                    }
+                  : { width: "100%", height: "100%", objectFit: "contain" }
+              }
+              pauseWhenBuffering
+              onLoadedData={onPreviewReady}
+              onErrorCapture={(event) => {
+                // Next treats Remotion's native-error console log as a page error too.
+                event.stopPropagation();
+                onPlaybackError();
+              }}
+              onError={onPlaybackError}
+            />
+          </Sequence>
+        ))}
       </OwnerVideoLookLayer>
-      <OwnerAutomaticOverlay overlay={overlay} assets={assets} frame={frame} />
+      <OwnerAutomaticOverlay
+        overlay={overlay}
+        assets={assets}
+        frame={presentationFrame}
+      />
       <AbsoluteFill
         className="editor-interaction"
         style={{
@@ -457,40 +508,46 @@ export function ClipEditor({
     ownerEditDocumentSchema.parse(draft);
     overlay = compileOwnerOverlay(base, draft, clip.assets);
   } catch {
-    error = draft.texts?.some(
-      (layer) => !ownerLayerTextSchema.safeParse(layer.text).success,
-    )
-      ? "Use 1–500 plain-text characters and up to 10 lines per text layer."
-      : draft.texts?.some(
-            (layer) =>
-              !Number.isInteger(layer.startFrame) ||
-              !Number.isInteger(layer.endFrame) ||
-              layer.startFrame < 0 ||
-              layer.endFrame <= layer.startFrame ||
-              layer.endFrame > base.overlay.frames,
-          )
-        ? "Set each text layer’s end after its start, within this clip."
-        : draft.captionText?.some((word) => !word.text.trim())
-          ? "Enter text for each caption word."
-          : draft.captionText?.length
-            ? "Keep each caption under 80 characters and use plain text."
-            : draft.focus && !ownerFocusSchema.safeParse(draft.focus).success
-              ? "Set camera changes inside this clip, with zoom from 1 to 3."
-              : draft.visuals.some(
-                    (cue) =>
-                      !Number.isFinite(cue.startFrame) ||
-                      !Number.isFinite(cue.endFrame) ||
-                      cue.startFrame < 0 ||
-                      cue.endFrame <= cue.startFrame ||
-                      cue.endFrame > base.overlay.frames,
-                  )
-                ? "Set each picture’s end after its start, within this clip."
-                : draft.captions &&
-                    (!Number.isInteger(draft.captions.fontSize) ||
-                      draft.captions.fontSize < 24 ||
-                      draft.captions.fontSize > 120)
-                  ? "Use a font size from 24 to 120."
-                  : "Keep layers inside the preview and check their size.";
+    error =
+      draft.hook &&
+      (!ownerHookSchema.safeParse(draft.hook).success ||
+        draft.hook.endFrame > base.overlay.frames)
+        ? "Choose a hook inside this clip, from one frame up to 10 seconds."
+        : draft.texts?.some(
+              (layer) => !ownerLayerTextSchema.safeParse(layer.text).success,
+            )
+          ? "Use 1–500 plain-text characters and up to 10 lines per text layer."
+          : draft.texts?.some(
+                (layer) =>
+                  !Number.isInteger(layer.startFrame) ||
+                  !Number.isInteger(layer.endFrame) ||
+                  layer.startFrame < 0 ||
+                  layer.endFrame <= layer.startFrame ||
+                  layer.endFrame > base.overlay.frames,
+              )
+            ? "Set each text layer’s end after its start, within this clip."
+            : draft.captionText?.some((word) => !word.text.trim())
+              ? "Enter text for each caption word."
+              : draft.captionText?.length
+                ? "Keep each caption under 80 characters and use plain text."
+                : draft.focus &&
+                    !ownerFocusSchema.safeParse(draft.focus).success
+                  ? "Set camera changes inside this clip, with zoom from 1 to 3."
+                  : draft.visuals.some(
+                        (cue) =>
+                          !Number.isFinite(cue.startFrame) ||
+                          !Number.isFinite(cue.endFrame) ||
+                          cue.startFrame < 0 ||
+                          cue.endFrame <= cue.startFrame ||
+                          cue.endFrame > base.overlay.frames,
+                      )
+                    ? "Set each picture’s end after its start, within this clip."
+                    : draft.captions &&
+                        (!Number.isInteger(draft.captions.fontSize) ||
+                          draft.captions.fontSize < 24 ||
+                          draft.captions.fontSize > 120)
+                      ? "Use a font size from 24 to 120."
+                      : "Keep layers inside the preview and check their size.";
     try {
       overlay = compileOwnerOverlay(base, original, clip.assets);
     } catch {
@@ -599,14 +656,17 @@ export function ClipEditor({
       layer.startFrame >= 0 &&
       layer.startFrame < base.overlay.frames
     )
-      player.current?.seekTo(layer.startFrame);
+      player.current?.seekTo(ownerPresentationFrame(overlay, layer.startFrame));
   }
   function addText() {
     if (pending || (draft.texts?.length ?? 0) >= OWNER_TEXT_LIMITS.layers)
       return;
     const startFrame = Math.max(
       0,
-      Math.min(player.current?.getCurrentFrame() ?? 0, base.overlay.frames - 1),
+      Math.min(
+        ownerSourceFrame(overlay, player.current?.getCurrentFrame() ?? 0),
+        base.overlay.frames - 1,
+      ),
     );
     const layer: OwnerTextLayer = {
       id: crypto.randomUUID(),
@@ -624,7 +684,7 @@ export function ClipEditor({
   }
   function newPicture(assetId: string): OwnerVisualEdit {
     const startFrame = Math.min(
-      player.current?.getCurrentFrame() ?? 0,
+      ownerSourceFrame(overlay, player.current?.getCurrentFrame() ?? 0),
       base.overlay.frames - 1,
     );
     return {
@@ -643,11 +703,14 @@ export function ClipEditor({
     setSelection(cue.id);
     player.current?.pause();
     player.current?.seekTo(
-      cue.startFrame +
-        Math.min(
-          cue.animationFrames ?? 9,
-          Math.floor((cue.endFrame - cue.startFrame - 1) / 2),
-        ),
+      ownerPresentationFrame(
+        overlay,
+        cue.startFrame +
+          Math.min(
+            cue.animationFrames ?? 9,
+            Math.floor((cue.endFrame - cue.startFrame - 1) / 2),
+          ),
+      ),
     );
   }
   async function perform(kind: "edit" | "picture" | "reload", file?: File) {
@@ -798,7 +861,7 @@ export function ClipEditor({
   }
   const previewLoading =
     !previewLoaded && !playbackFailed && !previewUnavailable;
-  return (
+  const content = (
     <section className="clip-editor" aria-label="Clip editor">
       <p className="flow-notice" role="status" aria-live="polite">
         {!stale && message}
@@ -850,11 +913,14 @@ export function ClipEditor({
                 interactive: previewLoaded,
                 setting,
               }}
-              durationInFrames={base.overlay.frames}
+              durationInFrames={ownerPresentationFrames(overlay)}
               compositionWidth={1080}
               compositionHeight={1920}
               fps={OWNER_FPS}
-              initialFrame={Math.min(previewFrame, base.overlay.frames - 1)}
+              initialFrame={Math.min(
+                previewFrame,
+                ownerPresentationFrames(overlay) - 1,
+              )}
               errorFallback={() => <PreviewFailure onRetry={retryPreview} />}
               controls
               clickToPlay={false}
@@ -913,10 +979,33 @@ export function ClipEditor({
                     filters: "Filters",
                     pictures: "Pictures",
                     focus: "Focus",
+                    hook: "Hook",
                   }[value]
                 }
               </button>
             ))}
+          </div>
+          <div
+            id={`${tabsId}-hook-panel`}
+            role="tabpanel"
+            aria-labelledby={`${tabsId}-hook`}
+            hidden={setting !== "hook"}
+            tabIndex={0}
+          >
+            {setting === "hook" && (
+              <fieldset disabled={pending}>
+                <legend className="local-sr-only">Hook</legend>
+                <HookControls
+                  hook={draft.hook}
+                  frames={base.overlay.frames}
+                  player={player}
+                  available={!playbackFailed && previewLoaded && !pending}
+                  attempt={previewAttempt}
+                  valid={!error}
+                  onChange={(hook) => update({ ...draft, hook })}
+                />
+              </fieldset>
+            )}
           </div>
           <div
             id={`${tabsId}-text-panel`}
@@ -1045,6 +1134,7 @@ export function ClipEditor({
                       { value: "style", label: "Style" },
                       { value: "position", label: "Position" },
                       { value: "text", label: "Text" },
+                      { value: "speakers", label: "Speakers" },
                     ]}
                     value={captionTab}
                     onChange={setCaptionTab}
@@ -1136,7 +1226,7 @@ export function ClipEditor({
                   <Button
                     variant="secondary"
                     type="button"
-                    hidden={captionTab === "text"}
+                    hidden={captionTab === "text" || captionTab === "speakers"}
                     onClick={() => update({ ...draft, captions: null })}
                   >
                     Reset captions
@@ -1163,6 +1253,24 @@ export function ClipEditor({
                         frames={base.overlay.frames}
                         onChange={(captionText) =>
                           update({ ...draft, captionText })
+                        }
+                      />
+                    )}
+                  </div>
+                  <div
+                    role="tabpanel"
+                    id={`${tabsId}-caption-speakers-panel`}
+                    aria-labelledby={`${tabsId}-caption-speakers`}
+                    hidden={captionTab !== "speakers"}
+                    tabIndex={0}
+                  >
+                    {captionTab === "speakers" && overlay.captionSpeakers && (
+                      <CaptionSpeakers
+                        value={overlay.captionSpeakers}
+                        captions={overlay.captions}
+                        style={caption}
+                        onChange={(captionSpeakers) =>
+                          update({ ...draft, captionSpeakers })
                         }
                       />
                     )}
@@ -1510,7 +1618,12 @@ export function ClipEditor({
                       variant="secondary"
                       disabled={!!error || playbackFailed}
                       onClick={() => {
-                        player.current?.seekTo(selectedCue.startFrame);
+                        player.current?.seekTo(
+                          ownerPresentationFrame(
+                            overlay,
+                            selectedCue.startFrame,
+                          ),
+                        );
                         player.current?.play();
                       }}
                     >
@@ -1643,4 +1756,5 @@ export function ClipEditor({
       </div>
     </section>
   );
+  return <EditorHookClock value={overlay.hook}>{content}</EditorHookClock>;
 }

@@ -83,7 +83,10 @@ export function sameOwnerEdit(
   right: OwnerEditDocument,
 ): boolean {
   return (
+    JSON.stringify(left.hook) === JSON.stringify(right.hook) &&
     JSON.stringify(left.captions) === JSON.stringify(right.captions) &&
+    JSON.stringify(left.captionSpeakers) ===
+      JSON.stringify(right.captionSpeakers) &&
     JSON.stringify(left.texts ?? []) === JSON.stringify(right.texts ?? []) &&
     JSON.stringify(left.captionText ?? []) ===
       JSON.stringify(right.captionText ?? []) &&
@@ -99,6 +102,16 @@ export function ownerEditOperations(
   clip: OwnerClip,
 ): OwnerEditRequest["operations"] {
   const operations: OwnerEditRequest["operations"] = [];
+  if (JSON.stringify(original.hook) !== JSON.stringify(draft.hook))
+    operations.push({ kind: "hook", hook: draft.hook ?? null });
+  if (
+    JSON.stringify(original.captionSpeakers) !==
+    JSON.stringify(draft.captionSpeakers)
+  )
+    operations.push({
+      kind: "caption-speakers",
+      speakers: draft.captionSpeakers ?? null,
+    });
   if (
     JSON.stringify(original.texts ?? []) !== JSON.stringify(draft.texts ?? [])
   )

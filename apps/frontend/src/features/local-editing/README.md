@@ -203,6 +203,23 @@ real. Hosted `/start` uses the shared upload-only editor and authenticated bridg
 
 ## Compact editor settings
 
+Captions → Speakers uses anonymous transcript labels to color speaker turns.
+Text, background and highlight colors are editable per speaker; each caption
+word can be reassigned or left unassigned. Apply/Discard and saved edits use
+the same colors in preview and native exports. Reset speakers restores automatic
+labels/colors. Generate fake captions supplies fictional speaker labels without
+keys; real transcription quality requires configured provider keys, live flags
+and owner approvals. New fake clips still start without captions.
+
+Hook adds one manual prefix of up to ten seconds from inside this clip.
+Start/End seconds accept frame precision; Capture uses the decoded preview
+frame (End includes that frame). Preview hook plays the prefix then the intact
+body. Captions, speaker colors, text, pictures, focus, filters and audio follow
+the repeated segment in preview and MP4. Apply/Discard and saved drafts retain
+the hook; Remove hook restores the ordinary clip. Other inspectors keep times
+relative to the original clip and seek into its complete body. Hooks need no AI
+request or API key; native media rendering still requires the installed tooling.
+
 Desktop inspectors scroll within the available workspace height, keeping the
 preview and persistent actions above the footer as typography controls grow.
 Phone layouts retain their vertical content scroll. Text and caption controls,

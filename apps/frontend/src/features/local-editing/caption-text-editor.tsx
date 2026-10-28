@@ -1,10 +1,12 @@
-import type { RefObject } from "react";
+import { useContext, type RefObject } from "react";
 import type { PlayerRef } from "@remotion/player";
 import { Play } from "lucide-react";
 import type { OwnerOverlay } from "../../../../../packages/contracts/local/clips.ts";
 import type { OwnerEditDocument } from "../../../../../packages/contracts/local/editor.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import { Button } from "../../shared/ui/button";
+import { EditorHookClock } from "./editor-clock.ts";
+import { ownerPresentationFrame } from "../../../../../packages/contracts/local/hook.ts";
 
 export function CaptionTextEditor({
   captions,
@@ -21,6 +23,7 @@ export function CaptionTextEditor({
   frames: number;
   onChange: (edits: NonNullable<OwnerEditDocument["captionText"]>) => void;
 }) {
+  const hook = useContext(EditorHookClock);
   const replacements = new Map(edits?.map((edit) => [edit.wordId, edit.text]));
   return (
     <div className="caption-text-editor">
@@ -38,9 +41,12 @@ export function CaptionTextEditor({
             onClick={() => {
               player.current?.pause();
               player.current?.seekTo(
-                Math.min(
-                  frames - 1,
-                  Math.floor((caption.startMs * OWNER_FPS) / 1000),
+                ownerPresentationFrame(
+                  { hook },
+                  Math.min(
+                    frames - 1,
+                    Math.floor((caption.startMs * OWNER_FPS) / 1000),
+                  ),
                 ),
               );
             }}
