@@ -5,6 +5,7 @@ import {
   PUBLIC_SITE_HOSTNAME,
 } from "@clipbuilder/contracts";
 import { z } from "zod";
+import { isIP } from "node:net";
 import { ACTIVE_PROCESSING_GRANT_KEY_ID } from "../admission/processing.grant.js";
 
 function optionalString(maximum = 4_096) {
@@ -64,6 +65,25 @@ const environmentShape = {
   BACKEND_AUDIENCE: optionalString(500),
   FRONTEND_CALLER_EMAIL: optionalString(254),
   PUBLIC_PAID_PROCESSING_APPROVED: booleanValue(false),
+  HOSTED_DEMO_LEDGER_BUCKET: optionalString(223),
+  HOSTED_DEMO_IP_VERIFIED: booleanValue(false),
+  HOSTED_DEMO_OWNER_IPS: z
+    .string()
+    .trim()
+    .max(4096)
+    .default("")
+    .transform((value) =>
+      value === "" ? [] : value.split(",").map((ip) => ip.trim()),
+    )
+    .pipe(
+      z
+        .array(
+          z.string().refine((ip) => isIP(ip) !== 0 && !ip.includes("%"), {
+            message: "Expected an exact IPv4 or IPv6 address.",
+          }),
+        )
+        .max(32),
+    ),
   PORT: integerValue(4_000, 1, 65_535),
   CLOUD_RENDER_ENVIRONMENT: z.enum(["disabled", "cloud"]).default("disabled"),
   CLOUD_SPEND_APPROVED: booleanValue(true),
@@ -174,6 +194,9 @@ export const ENVIRONMENT_KEYS = Object.freeze([
   "BACKEND_AUDIENCE",
   "FRONTEND_CALLER_EMAIL",
   "PUBLIC_PAID_PROCESSING_APPROVED",
+  "HOSTED_DEMO_LEDGER_BUCKET",
+  "HOSTED_DEMO_IP_VERIFIED",
+  "HOSTED_DEMO_OWNER_IPS",
   "PRIVATE_RENDERER_ORIGIN",
   "TURNSTILE_EXPECTED_HOSTNAME",
   "RETAINED_SAMPLE_BUCKET",
@@ -588,6 +611,9 @@ export const environmentSchema = rawEnvironmentSchema
       renderAttemptsPerSession: environment.MAX_RENDER_ATTEMPTS_PER_SESSION,
     },
     admission: {
+      demoLedgerBucket: environment.HOSTED_DEMO_LEDGER_BUCKET ?? null,
+      demoIpVerified: environment.HOSTED_DEMO_IP_VERIFIED,
+      demoOwnerIps: environment.HOSTED_DEMO_OWNER_IPS,
       grantsEnabled: environment.PROCESSING_GRANTS_ENABLED,
       maxRecords: environment.ADMISSION_MAX_RECORDS,
       maxConcurrentActions: environment.ADMISSION_MAX_CONCURRENT_ACTIONS,

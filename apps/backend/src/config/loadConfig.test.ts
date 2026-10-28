@@ -329,3 +329,52 @@ describe("backend environment configuration", () => {
       expect(values[key]).toBe("");
   });
 });
+
+it.each([undefined, "", "   "])(
+  "defaults a blank private owner allowlist to no exemptions (%s)",
+  (value) => {
+    const config = loadConfig({
+      ...createSafeTestEnvironment(),
+      HOSTED_DEMO_OWNER_IPS: value,
+    });
+    expect(config.admission.demoOwnerIps).toEqual([]);
+  },
+);
+it("parses a bounded private IP list without exposing it in public configuration", async () => {
+  const environment = {
+    ...createSafeTestEnvironment(),
+    HOSTED_DEMO_OWNER_IPS: " 192.0.2.10 , 2001:db8::a , ::ffff:192.0.2.10 ",
+  };
+  const { application, config } = composeBackend(environment);
+  expect(config.admission.demoOwnerIps).toEqual([
+    "192.0.2.10",
+    "2001:db8::a",
+    "::ffff:192.0.2.10",
+  ]);
+  const response = await request(application)
+    .get("/v1/sample/config")
+    .expect(200);
+  const text = JSON.stringify(response.body);
+  expect(text).not.toContain("192.0.2.10");
+  expect(text).not.toContain("2001:db8");
+  expect(text).not.toContain("demoOwnerIps");
+  expect(text).not.toContain("HOSTED_DEMO_OWNER_IPS");
+});
+it.each([
+  "*",
+  "192.0.2.0/24",
+  "example.test",
+  "192.0.2.1:3000",
+  "192.0.2.1,",
+  "192.0.2.1,,192.0.2.2",
+  "fe80::1%eth0",
+  Array(33).fill("192.0.2.1").join(","),
+  "x".repeat(4097),
+])("rejects malformed or oversized private owner lists (%s)", (value) => {
+  expect(() =>
+    loadConfig({
+      ...createSafeTestEnvironment(),
+      HOSTED_DEMO_OWNER_IPS: value,
+    }),
+  ).toThrow();
+});

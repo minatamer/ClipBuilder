@@ -19,6 +19,7 @@ export function installTestEnvironment(): void {
     GEMINI_PAID_PROJECT_CONFIRMED: "false",
     RENDERER_ENABLED: "false",
     PUBLIC_PAID_PROCESSING_APPROVED: "false",
+    HOSTED_DEMO_IP_VERIFIED: "false",
     OWNER_PROVIDER_APPROVED: "false",
   });
   for (const key of [
@@ -29,6 +30,8 @@ export function installTestEnvironment(): void {
     "BACKEND_AUDIENCE",
     "FRONTEND_CALLER_EMAIL",
     "PRIVATE_BACKEND_ORIGIN",
+    "HOSTED_DEMO_LEDGER_BUCKET",
+    "HOSTED_DEMO_OWNER_IPS",
     "PRIVATE_RENDERER_ORIGIN",
     "TURNSTILE_EXPECTED_HOSTNAME",
     "RETAINED_SAMPLE_BUCKET",
