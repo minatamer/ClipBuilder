@@ -373,6 +373,12 @@ export function filmStage(
     pose,
     cardsProgress,
     cardsOpacity,
+    // The analysis component leaves before any card grows into its old space.
+    analysisOpacity:
+      shot.beat === "analysis"
+        ? 1 -
+          sceneProgress(local, shot.duration - fps * 1.4, shot.duration - fps)
+        : 0,
     narrative: filmNarrative(shot.beat, local, height),
     previousNarrative: filmNarrative(
       previous.beat,

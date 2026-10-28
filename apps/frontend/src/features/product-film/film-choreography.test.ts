@@ -105,6 +105,22 @@ describe("content-led film choreography", () => {
     expect(after.pose.y).toBe(before.pose.y);
     expect(after.pose.scale).toBe(before.pose.scale);
   });
+  it("clears the loading capture before card formation and never restores it at the list seam", () => {
+    for (const height of [1080, 1440, 1536]) {
+      let previous = 1;
+      for (let frame = 198; frame <= 270; frame++) {
+        const stage = filmStage("walkthrough", frame, height, 30);
+        expect(stage.analysisOpacity).toBeLessThanOrEqual(previous);
+        previous = stage.analysisOpacity;
+        if (stage.cardsProgress > 0) expect(stage.analysisOpacity).toBe(0);
+      }
+      expect(filmStage("walkthrough", 198, height, 30).analysisOpacity).toBe(1);
+      expect(filmStage("walkthrough", 210, height, 30).cardsProgress).toBe(0);
+      expect(
+        filmStage("walkthrough", 234, height, 30).cardsOpacity,
+      ).toBeGreaterThan(0.9);
+    }
+  });
   it("carries the same portrait from build into editor, out to result and then widens its framing", () => {
     for (const height of [1080, 1440, 1536]) {
       const selected = filmStage("walkthrough", 329, height, 30);

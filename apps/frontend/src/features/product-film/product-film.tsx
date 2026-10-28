@@ -246,7 +246,9 @@ function ScreenScene({ stage }: { stage: ReturnType<typeof filmStage> }) {
         ? 42
         : 0;
   const previousBeat = stage.previous.beat;
-  const previousScreen = isScreenBeat(previousBeat);
+  // Analysis has already cleared as its cards form; never bring its loader back.
+  const previousScreen =
+    isScreenBeat(previousBeat) && previousBeat !== "analysis";
   const prior =
     stage.local < fps * 0.9 &&
     previousScreen &&
@@ -255,17 +257,20 @@ function ScreenScene({ stage }: { stage: ReturnType<typeof filmStage> }) {
       : stateAt > 0
         ? captureAt(beat, stateAt - 1)
         : undefined;
-  const blend = prior
-    ? sceneProgress(
-        stage.local < fps * 0.9 &&
-          previousScreen &&
-          stage.screenBeat === stage.shot.beat
-          ? stage.local
-          : frame,
-        stateAt > 0 ? stateAt : 0,
-        stateAt > 0 ? stateAt + fps * 0.3 : fps * 0.4,
-      )
-    : 1;
+  const blend =
+    beat === "choose" && previousBeat === "analysis" && stateAt === 0
+      ? 1 - stage.cardsOpacity
+      : prior
+        ? sceneProgress(
+            stage.local < fps * 0.9 &&
+              previousScreen &&
+              stage.screenBeat === stage.shot.beat
+              ? stage.local
+              : frame,
+            stateAt > 0 ? stateAt : 0,
+            stateAt > 0 ? stateAt + fps * 0.3 : fps * 0.4,
+          )
+        : 1;
   return (
     <div
       data-film-demo
@@ -293,6 +298,8 @@ function ScreenScene({ stage }: { stage: ReturnType<typeof filmStage> }) {
           transformOrigin: "0 0",
           transform: `scale(${pose.scale})`,
           maskImage: "linear-gradient(180deg,transparent 190px,#000 245px)",
+          background:
+            "linear-gradient(135deg,#193d76 0%,#0b2c67 52%,#081b40 100%)",
         }}
       >
         {prior && blend < 1 && (
@@ -314,7 +321,7 @@ function ScreenScene({ stage }: { stage: ReturnType<typeof filmStage> }) {
             display: "block",
             width: "100%",
             height: "100%",
-            opacity: blend,
+            opacity: blend * (beat === "analysis" ? stage.analysisOpacity : 1),
           }}
         />
         {stage.cardsOpacity > 0 && (
