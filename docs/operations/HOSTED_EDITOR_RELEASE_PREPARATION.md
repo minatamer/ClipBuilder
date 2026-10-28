@@ -1,5 +1,68 @@
 # Shared upload/editor release preparation
 
+## Current production preflight — CL-123, 2026-10-28
+
+The owner authorizes deployment preparation and local staging/commits. This
+section supersedes older pending-Linux statements only for the evidence below;
+it is not public-release acceptance or permission to run paid AI. CL-122 storage
+setup is committed as `7d7fe71`. No application revision/configuration changed.
+
+- Current secret-free frontend/backend Linux/amd64 production images build
+  locally (34.84s / 39.99s), with anonymous Docker configuration and public build
+  dependencies only. Both non-root, read-only, network-isolated runtime probes
+  pass (1.59s / 1.12s), covering frontend assets/CSP/route exclusion and the real
+  backend bundled entry/health/paid-off guards. These are local images, not
+  registry-pushed or deployed revisions.
+- The original hosted Linux proof reproduced 503 capability/workspace failures
+  and timed out (124.20s) because its synthetic host predated mandatory usage
+  injection/verified client identity. Update the existing proof with the shared
+  fake usage fixture, controlled synthetic identities and current session status
+  envelope. All original editor/native checks remain. The current proof passes
+  (28.61s), additionally denying a second session after successful export.
+  It covers generated chunked upload/hash binding, explicit fake captions,
+  uploaded picture, timed Text, saved settings/filter, native export, cancellation,
+  retry reuse and exit/expiry cleanup with no keys or external network.
+- The small fixture is **52x90, 30 fps, one-second output**. Measured peak
+  container memory is **961,482,752 bytes**, scratch **12,221,838 bytes** and
+  declared reservation **3,766,485,353 bytes**. This is not a 4K/60fps or maximum
+  source/three-clip capacity proof. Docker has 8,118,738,944 bytes total, and the
+  proof is capped at four CPUs / 4 GiB; it cannot certify the proposed 16 GiB
+  maximum-workload profile.
+- Fresh read-only Cloud Run metadata confirms frontend and backend each remain
+  at **one CPU / 512 MiB**, concurrency eight, max one, timeout 360 seconds and
+  CPU throttling enabled. The backend has no public invocation binding. This
+  existing allocation remains unsuitable for the shared native editor; no
+  resource/billing setting was changed. Candidate backend settings remain four
+  CPUs / 16 GiB, always-allocated CPU, min zero/max one, pending maximum capacity
+  and cost acceptance. Keep frontend settings unchanged.
+- One native Cloud Run domain mapping exists. Compute forwarding-rule metadata
+  cannot be queried because its API is disabled; no API was enabled. Neither
+  service metadata nor a native mapping proves the received two-address header
+  suffix assumed by `hostedDemoClientIp`. Actual controlled header probes through
+  the custom domain and native service entry point, including forged supplied
+  prefixes/direct bypass, are still required. **Do not enable verified-IP flags.**
+
+Private concrete image/context/log records and the candidate ledger/resource
+settings are retained outside Git. No ignored env/secret values were inspected.
+Source/proof and deployment settings are ready for review, but public deployment
+is not ready: actual trusted ingress, maximum capacity/resource/cost acceptance
+and the owner's real-AI/visual/rights/release gates remain open.
+
+Owner real-AI checklist for a separately approved protected release candidate:
+
+1. Confirm real provider/Turnstile keys, live flags and paid/transfer approvals;
+   preserve the existing HMAC key and inject the new bucket setting. Verify
+   trusted ingress first; keep normal localhost free of hosted quotas.
+2. Upload an owned short conversation, request a mix of manual/AI clips totaling
+   three, try excess inputs and inspect correction/toast, then process explicitly.
+3. Inspect actual returned moments, preview and captions/pictures/filter edits;
+   Apply and Export deliberately. Verify MP4 audio, framing, text and playback.
+4. Exit and retry from the same network: exhausted entry must appear after a
+   successful export whether downloaded or not. Existing-session editing/export
+   must still work. Never reset/delete the ledger to repeat acceptance.
+5. Inspect the current production allocation/cost/capacity and final visual,
+   physical-device, rights and release acceptance before public cutover.
+
 ## CL-114 usage accounting prerequisite — 2026-10-28
 
 Hosted visitors share three manual/AI slots, three cumulative prepared clips and

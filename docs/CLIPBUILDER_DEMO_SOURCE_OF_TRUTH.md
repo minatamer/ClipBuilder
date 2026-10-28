@@ -44,6 +44,23 @@ list denial were verified. Private resource/configuration metadata stays outside
 Git. Application environment/revisions and secret payloads were untouched;
 hosted setting injection, ingress/AI/capacity and release acceptance remain open.
 
+Owner deployment-preparation follow-up [CL-123](tickets/CL-123-hosted-deployment-preflight.md),
+2026-10-28: inspect relevant live ingress/resource metadata, prepare current
+secret-free production/Linux artifacts and offline synthetic proofs, document
+actual gaps and stage/commit the scoped remaining work. No app deployment,
+provider processing, cloud build/benchmark, API enablement or release acceptance
+is inferred. Verified-IP flags require actual ingress evidence; owner real-AI
+upload/export and maximum-capacity acceptance remain separate gates.
+
+CL-123 current preflight evidence: both latest production/Linux images and
+offline runtime probes pass. The stale Linux hosted fixture was corrected to
+inject the existing synthetic usage port and identity, preserving native/editor
+checks and adding export-consumes-trial denial; the proof passes with fake AI
+and no external network. Fresh hosting metadata still shows one CPU/512 MiB and
+throttled CPU. Actual received IP headers, maximum native workload capacity and
+owner real-AI/visual/rights/release acceptance remain unverified; flags remain
+disabled and no application deployment/configuration change has occurred.
+
 ## Upload-only intake spacing — CL-094, 2026-10-27
 
 When YouTube intake is excluded, the single upload card uses the available

@@ -1,5 +1,15 @@
 # ClipBuilder canonical ticket index
 
+## Current deployment preflight — 2026-10-28
+
+[CL-123](CL-123-hosted-deployment-preflight.md) executes the owner's deployment
+preparation and local commit approval. Latest frontend/backend Linux images and
+offline runtime probes pass; the corrected hosted native/browser quota proof
+passes (28.61s). Fresh metadata confirms the existing one-CPU/512-MiB throttled
+backend; actual header-chain and maximum-capacity proof remain open. IP flags
+stay disabled; owner real-AI/release acceptance is pending. Local preflight is
+ready for review and scoped commits; no deployment or AI calls.
+
 ## Private demo usage ledger setup — 2026-10-28
 
 [CL-122](CL-122-provision-private-demo-usage-ledger.md) records the owner's
