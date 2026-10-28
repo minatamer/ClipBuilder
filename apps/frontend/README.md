@@ -451,7 +451,13 @@ control, and that recorded prototype-only accessibility exception must be
 revisited before public release. Laptop and desktop widths use a split hero with
 the brand, two-line promise, and supporting copy beside the product-motion
 frame; tablet and phone widths stack the same content. The header retains the
-only first-viewport CTA.
+only first-viewport CTA. CL-097 animates the desktop navbar into a compact
+logo/Privacy/Get Started pill after the hero and reverses on return; phone
+navigation retains its full form. CL-098 runs the illustrated Upload/Read/Cut
+cycle in 12 seconds with synchronized visual timing and copy entering from the
+left. It cancels timers offscreen/when hidden and restarts at Upload on return;
+only the first cycle announces automatically. Both client islands clean up
+their observers and listeners.
 
 CL-003 adds the complete canonical session reducer, derived selectors,
 allow-listed `sessionStorage` projection, server-evidence reconciliation, effect
@@ -545,14 +551,15 @@ session/upload IDs cannot complete a replacement run. Delivery sizes the
 portrait inside its own grid slot, keeping Download and social actions in
 separate rows when the bounded phone layout scrolls.
 
-Privacy uses the shared 28px heading (22px on phones), 14px intro/row text and
-12px numbering. One framed lower panel holds four numbered rows with thin
-separators; number/title/notes columns remain on larger screens, while phone
-notes sit under their title. Both dialog triggers use this same layout. The rows
-explain no reuse/publishing, mode-specific temporary storage, Gemini transfer
-and clearing. Upload rights/limits remain in intake. Copy distinguishes the
-no-file-read fake preview from real device/private-cloud processing and
-separates app cleanup from provider retention and downloaded copies.
+CL-111 gives shared Privacy one solid navy surface and two concise, unboxed
+groups: Your files covers use/storage/Exit cleanup; AI processing covers Gemini
+transfer/retention and mode-specific picture descriptions. The preview-only note
+states that selected files are not read or uploaded. Title focus, Tab/Shift-Tab
+cycling, Escape and focus return support keyboard reading; the close control
+stays reachable while longer disclosures scroll on small screens. Blue accents
+and dividers replace nested glass/numbered rows. Upload rights/limits remain in
+intake. Copy distinguishes local from device/cloud storage, preserves cleanup
+limits and separates app deletion from provider retention and downloaded copies.
 
 Workspace Privacy and Clear media actions reuse the shared secondary Button.
 Clear is a two-word text command, not an icon-only action. Below 480px, the
@@ -621,40 +628,42 @@ editable timeline, proposals, or undo/redo.
 
 ## Product film authoring (CL-013)
 
-The editable cinematic walkthrough lives in `src/features/product-film/`. Open
-`http://localhost:3000/` to review it directly in the landing hero. It plays the
-50-second, 1920×1080, 30fps composition silently, with no player controls or
-click-to-pause interaction. It pauses offscreen and when the document is hidden.
-The eight-second motion test remains available in Studio. The owner requested
-the clean 52-second presentation with stronger angles and close-ups; the preview
-has no duration picker, slide markers or production notes underneath. The owner
-then removed the outer frame and its header/footer; the video itself has
-rounded, clipped corners matching the site, with no extra border. During seconds
-8–12 the analysis shot uses one continuous camera push with a moving light
-reflection, keeping the angle steady after its entrance without a static hold or
-extra cuts. The owner shortened this beat by two seconds from the original
-52-second cut. The owner restored the original laptop two-column layout:
-ClipBuilder, headline and description on the left, film on the right. Original
-responsive type, spacing and compact-screen breakpoints are restored. At 1536px
-and wider, laptops expand the hero and its column gap; the headline scales
-against both viewport and column width, so it stays inside the copy column as
-the video grows. Phones keep their compact copy-above-video layout with
-content-sized rows and a natural hero height, eliminating the former stretched
-empty area around the player. The following process section uses tighter
-responsive phone spacing. The film retains its rounded edges and pacing. A
-compact animated five-step flow beneath the columns summarizes upload, grounded
-moments, one choice, automatic captions and visuals, and a share-ready cut.
-Allocating this row brings the main hero closer to the navbar; phones use a
-compact vertical sequence with natural height. The flow pauses its decorative
-animation offscreen and when the document is hidden. At laptop heights of 640px
-or less, its compact row keeps the sequence within the hero.
-
-The loading image is the exact opening frame, so it keeps the same artwork and
-layout as playback. The Player starts loading alongside capture validation and
-autoplays silently on visits, refreshes and restored back/forward visits. The
-owner removed all controls, so the film acts as an uninterrupted hero animation
-and autoplay does not steal keyboard focus. Playback resumes when it returns
-onscreen.
+The editable landing film lives in `src/features/product-film/` and previews
+at `http://localhost:3000/`. CL-095 replaces the old 50-second cut with a
+24-second, 1920x1080, 30fps story: conversation, upload, moments, selection,
+preparation, editing, download and close. CL-099 fills the actual responsive
+canvas with nearly full-width demo frames and large headlines. CL-102 refines
+that direction after playback review: one modest monotone push and a filtered,
+continuous cursor-follow replace the restless zoom changes. Cursor journeys
+have eased starts/stops and keep active controls/labels inside the source crop;
+analysis holds steady. CL-106 replaces the rejected full-scene reveal with
+content-led transitions on a persistent stage: the conversation enters the
+upload preview, analysis forms moment cards, the selected preview splits into
+source/portrait, and that portrait carries through the editor and final result.
+The result widens into the conversation using one continuously reframed SVG.
+CL-107 removes the repeated title-above-frame layout. Application captures fill
+the canvas; copy occupies scene-specific quiet areas, shifts between sides and
+clears before cursor actions. Building and late actions play without headlines.
+The opening conversation blends into the background beside its typography;
+closing/opening share identical artwork/geometry and brand, changing only type.
+Static soft crops remove captured navigation/headings. Caption/card details fit
+the visible portrait even during camera close-ups. The film adds no bottom
+progress track, scene
+mask or entrance rotation. `film-choreography.ts` owns seek-safe geometry;
+`film-identity.tsx` shares primitives with the responsive HTML/CSS poster.
+CL-108 makes that poster fit the surface before JavaScript or size observers
+run, using container-relative dimensions instead of a fixed 16:9 SVG wrapper.
+The live player mounts only after a positive surface measurement; its opening
+matches the CSS poster through the handoff and responsive resizes.
+The authoring JPEG and delivery hash remain unchanged. The eight-second Studio
+study remains.
+CL-096 removes the duplicate hero flow strip. Desktop film height follows
+viewport height with a column-width bound; stacked layouts use 4:3. The
+ResizeObserver fits the canvas without distorting artwork. Loading/error states
+retain its dimensions. Playback stays silent
+without controls, pauses offscreen/when hidden, and resumes on return. Dynamic
+loading and asset failures retain the poster/recovery surface. This uses
+synthetic UI captures and original artwork, with no provider call.
 
 From the repository root:
 
@@ -673,9 +682,10 @@ existing cached headless-shell executable can be used. The normal frontend and
 backend must already be running; follow the startup guides below.
 
 Ten 1440×1000 PNG captures and a cursor/state index are written to the ignored
-`public/generated/product-film/` directory. The poster command renders only a
-local 960×540 JPEG at the Player's shared opening frame, into that same ignored
-directory; regenerate it after changing the opening. Its command requires an
+`public/generated/product-film/` directory. The poster command renders only an optional
+local 960×540 authoring JPEG at the shared opening frame; production loading
+uses the responsive code-native opening scene. Regenerate an authoring still
+after changing the opening. Its command requires an
 existing browser and cannot download one. It does not export an MP4. Studio runs
 at `http://localhost:3002` without opening an external browser. Select
 `ClipBuilderWalkthrough` or `ClipBuilderMotionTest`; both use the same scene
@@ -700,12 +710,14 @@ local capture folder; only the local-build gate permits it. Replace those local
 authoring assets with approved delivery assets at the film release checkpoint.
 The current CL-015 checkpoint promotes ten approved synthetic PNGs and the
 existing opening poster into hash-allowlisted `public/product-film/` delivery.
-The accepted motion/layout remains unchanged; the capture index and authoring
+That original checkpoint kept motion/layout unchanged. CL-095/096 now refine
+the timeline and responsive canvas while retaining those assets and hashes. The
+capture index and authoring
 folder stay excluded from strict cloud contexts. Future recaptures/posters need
 deliberate review and an updated delivery hash manifest before release. No MP4
 or audio export is added. Remotion 4.0.534 is pinned; its installed license permits
 individual use/evaluation. Studio currently warns that the repository's Zod
-4.6.5 differs from its optional Zod integration's 4.5.4 expectation. This film
+4.6.6 differs from its optional Zod integration's 4.5.4 expectation. This film
 has no Zod schema integration; existing app contracts remain pinned and
 unchanged.
 

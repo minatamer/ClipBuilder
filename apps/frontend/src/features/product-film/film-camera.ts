@@ -1,80 +1,137 @@
-import { Easing, interpolate } from "remotion";
+export type ScreenBeat = "intake" | "analysis" | "choose" | "review";
+export const FILM_CAPTURE_SIZE = { width: 1440, height: 1000 } as const;
 
-export type CameraPose = {
-  x: number;
-  y: number;
-  scale: number;
-  pitch: number;
-  yaw: number;
-  roll: number;
-};
-type CameraKey = CameraPose & { frame: number };
-export type ScreenBeat = "intake" | "analysis" | "choose" | "review" | "result";
-
-// Close-ups settle face-on at cursor actions; the pointer lives on the screen plane.
-const cameras: Record<ScreenBeat, readonly CameraKey[]> = {
-  intake: [
-    { frame: 0, x: 520, y: 365, scale: 0.7, pitch: 12, yaw: -29, roll: -5 },
-    { frame: 28, x: 432, y: 285, scale: 0.73, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 50, x: 330, y: 255, scale: 0.86, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 64, x: 365, y: 215, scale: 0.86, pitch: -5, yaw: 12, roll: 2 },
-    { frame: 94, x: 432, y: 280, scale: 0.73, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 150, x: 432, y: 280, scale: 0.73, pitch: 0, yaw: 0, roll: 0 },
-  ],
-  analysis: [
-    { frame: 0, x: 480, y: 325, scale: 0.73, pitch: 5, yaw: -17, roll: -2 },
-    { frame: 30, x: 432, y: 280, scale: 0.76, pitch: 0, yaw: -8, roll: 0 },
-    { frame: 120, x: 368, y: 230, scale: 0.84, pitch: 0, yaw: -8, roll: 0 },
-  ],
-  choose: [
-    { frame: 0, x: 525, y: 340, scale: 0.76, pitch: 8, yaw: -28, roll: -5 },
-    { frame: 28, x: 432, y: 280, scale: 0.73, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 68, x: 530, y: -30, scale: 1.2, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 87, x: 530, y: -30, scale: 1.2, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 120, x: 405, y: 275, scale: 0.75, pitch: 0, yaw: 8, roll: 1 },
-    { frame: 157, x: 432, y: 280, scale: 0.73, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 184, x: 432, y: 280, scale: 0.73, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 210, x: 460, y: 305, scale: 0.73, pitch: -5, yaw: -14, roll: -3 },
-  ],
-  review: [
-    { frame: 0, x: 380, y: 390, scale: 0.76, pitch: -9, yaw: 24, roll: 4 },
-    { frame: 32, x: 432, y: 280, scale: 0.73, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 70, x: 160, y: 35, scale: 1.09, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 98, x: 145, y: 28, scale: 1.11, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 130, x: 432, y: 280, scale: 0.73, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 165, x: 432, y: 280, scale: 0.73, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 210, x: 330, y: 235, scale: 0.84, pitch: 5, yaw: -17, roll: -3 },
-  ],
-  result: [
-    { frame: 0, x: 300, y: 340, scale: 0.78, pitch: 10, yaw: 22, roll: 3 },
-    { frame: 26, x: 432, y: 280, scale: 0.73, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 60, x: 432, y: 280, scale: 0.73, pitch: 0, yaw: 0, roll: 0 },
-    { frame: 90, x: 250, y: 235, scale: 0.8, pitch: 4, yaw: 16, roll: 3 },
-  ],
+type Point = { x: number; y: number };
+type Action = { from: number; click: number; to: Point };
+export type CameraFraming = {
+  anchorX: number;
+  anchorY: number;
+  lens: number;
+  focus?: Point;
+  focusWeight?: number;
 };
 
-export function screenCamera(beat: ScreenBeat, frame: number): CameraPose {
-  const keys = cameras[beat];
-  const value = (property: keyof CameraPose) =>
-    interpolate(
-      frame,
-      keys.map((key) => key.frame),
-      keys.map((key) => key[property]),
-      {
-        easing:
-          beat === "analysis" && frame >= 30
-            ? Easing.linear
-            : Easing.bezier(0.22, 0.7, 0.2, 1),
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-      },
-    );
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+// Zero velocity and acceleration at both ends, without spring overshoot.
+const progress = (frame: number, from: number, to: number) => {
+  const t = clamp((frame - from) / (to - from), 0, 1);
+  return t * t * t * (t * (t * 6 - 15) + 10);
+};
+
+/** A single continuous path: pick, then proceed. The camera never invents a move. */
+function actionAt(beat: ScreenBeat, frame: number, duration: number) {
+  if (beat === "analysis") return null;
+  const actions: Action[] =
+    beat === "intake"
+      ? [
+          { from: 0, click: 25, to: { x: 650, y: 590 } },
+          { from: 32, click: 76, to: { x: 1256, y: 945 } },
+        ]
+      : beat === "choose"
+        ? [
+            { from: 0, click: 28, to: { x: 307, y: 575 } },
+            { from: 36, click: duration - 14, to: { x: 1264, y: 945 } },
+          ]
+        : [{ from: 32, click: 80, to: { x: 1240, y: 945 } }];
+  let from: Point =
+    beat === "intake"
+      ? { x: 805, y: 430 }
+      : beat === "choose"
+        ? { x: 470, y: 430 }
+        : { x: 1050, y: 680 };
+  let current = actions[0]!;
+  for (const action of actions.slice(1)) {
+    if (action.from > frame) break;
+    from = current.to;
+    current = action;
+  }
+  const travel = progress(frame, current.from, current.click - 2);
   return {
-    x: value("x"),
-    y: value("y"),
-    scale: value("scale"),
-    pitch: value("pitch"),
-    yaw: value("yaw"),
-    roll: value("roll"),
+    x: from.x + (current.to.x - from.x) * travel,
+    y: from.y + (current.to.y - from.y) * travel,
+    opacity: progress(frame, 0, 8),
+    ring:
+      frame < current.click
+        ? 0
+        : 1 - progress(frame, current.click, current.click + 18),
   };
+}
+
+export function screenCamera(
+  beat: ScreenBeat,
+  frame: number,
+  duration: number,
+  width: number,
+  height: number,
+  framing?: CameraFraming,
+) {
+  const cover = Math.max(
+    width / FILM_CAPTURE_SIZE.width,
+    height / FILM_CAPTURE_SIZE.height,
+  );
+  const cursor = actionAt(beat, frame, duration);
+  const targetAt = (sample: number) => {
+    const pointer = actionAt(beat, sample, duration);
+    const zoom =
+      beat === "analysis"
+        ? 1.04
+        : 1.1 + 0.12 * progress(sample, 0, duration - 1);
+    const scale = cover * zoom * (framing?.lens ?? 1);
+    const focusWeight = framing?.focusWeight ?? 0;
+    const focusX =
+      (pointer?.x ?? 720) * (1 - focusWeight) +
+      (framing?.focus?.x ?? 720) * focusWeight;
+    const focusY =
+      (pointer?.y ?? 500) * (1 - focusWeight) +
+      (framing?.focus?.y ?? 500) * focusWeight;
+    return {
+      scale,
+      x: clamp(
+        width * (framing?.anchorX ?? 0.5) - focusX * scale,
+        width - 1440 * scale,
+        0,
+      ),
+      y: clamp(
+        height * (framing?.anchorY ?? 0.5) - focusY * scale,
+        height - 1000 * scale,
+        0,
+      ),
+    };
+  };
+  // Symmetric finite filtering is seek-safe and anticipates the same eased mouse
+  // path. Averaging bounded poses also preserves image coverage at the edges.
+  let weight = 0,
+    x = 0,
+    y = 0,
+    scale = 0;
+  for (let offset = -12; offset <= 12; offset++) {
+    const influence = Math.exp(-(offset * offset) / 50);
+    const pose = targetAt(clamp(frame + offset, 0, duration - 1));
+    x += pose.x * influence;
+    y += pose.y * influence;
+    scale += pose.scale * influence;
+    weight += influence;
+  }
+  scale /= weight;
+  x /= weight;
+  y /= weight;
+  if (cursor && (framing?.focusWeight ?? 0) < 0.01) {
+    // Retain the complete pointer and nearby control label during a close-up.
+    const left = Math.max(0, cursor.x - 120);
+    const right = Math.min(1440, cursor.x + 120);
+    const top = Math.max(0, cursor.y - 60);
+    const bottom = Math.min(1000, cursor.y + 52);
+    x = clamp(
+      x,
+      Math.max(width - 1440 * scale, -left * scale),
+      Math.min(0, width - right * scale),
+    );
+    y = clamp(
+      y,
+      Math.max(height - 1000 * scale, -top * scale),
+      Math.min(0, height - bottom * scale),
+    );
+  }
+  return { x, y, scale, zoom: scale / cover, cursor };
 }

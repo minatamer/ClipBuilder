@@ -1,18 +1,11 @@
-import Image from "next/image";
-import { FILM_FORMAT, FILM_POSTER } from "./film-timeline";
+import { FILM_FORMAT } from "./film-timeline";
+import { FilmIdentity } from "./film-identity";
 import styles from "./product-film-hero.module.css";
 
 export function ProductFilmPoster() {
   return (
-    <Image
-      className={styles.poster}
-      src={FILM_POSTER}
-      alt=""
-      width={FILM_FORMAT.width}
-      height={FILM_FORMAT.height}
-      loading="eager"
-      fetchPriority="high"
-      unoptimized
-    />
+    <div className={styles.poster} data-film-poster aria-hidden="true">
+      <FilmIdentity height={FILM_FORMAT.height} enter={1} responsive />
+    </div>
   );
 }

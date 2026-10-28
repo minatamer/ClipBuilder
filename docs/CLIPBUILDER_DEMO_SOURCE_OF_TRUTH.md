@@ -1080,6 +1080,111 @@ covers implemented chunk progress, synthetic verification and two protected
 actual browser/GCS upload/Exit checks with validated cleanup results. Normal
 paid continuation remains owner-only.
 
+### Owner landing refinement decision — 2026-10-28
+
+Saved-minutes motion revision [CL-113](tickets/CL-113-synchronized-saved-minutes-headline.md):
+count the headline and card saved-minute readouts together from 00 to 50 using
+the same progress as the visual comparison. Reserve tabular two-digit slots so
+neighboring words do not shift. Use a smooth slow–fast–slow curve while keeping
+CL-110's visible-only, once-only entrance and existing example/accessibility
+qualifications. This changes presentation, not performance evidence.
+
+Market motion/disclosure revision [CL-112](tickets/CL-112-once-only-market-shine.md):
+give mostly visible platform cards one sequential, roughly one-second hover-like
+shine per visit, without pointer events or replay. Offscreen phone rows wait for
+their own entry. Retain real hover and informational behavior, remove side dots
+at every size, and explicitly state that ClipBuilder is not affiliated with or
+partnered with the platforms. Earnings/campaign caveats remain.
+
+Time-card revision [CL-110](tickets/CL-110-visible-time-animation-and-larger-clock.md):
+start its one-shot animation only when the number/clock area is meaningfully in
+view, rather than on the first sliver of the card. Enlarge the clock and remove
+the Illustrative goal badge; retain the what-if/Example/Target framing and the
+existing accessible qualification. Preserve the 60-to-10 example and removed
+visible footnote. Pending enhanced visuals hold their starting pose offscreen;
+no-JS/accessibility retains complete final values.
+
+Responsive market revision [CL-109](tickets/CL-109-roomier-responsive-market-cards.md):
+avoid squeezing three platform cards into narrow tablet/phone columns. Use wider
+tablet cards and full-width phone rows with readable labels and generous logo
+space. Preserve the desktop treatment, official vector proportions, decorative
+hover and informational/non-navigating behavior.
+
+Initial-load correction [CL-108](tickets/CL-108-correct-film-first-paint.md):
+the approved hero aspect applies from the first paint, before hydration or size
+observers. Use CSS-responsive shared poster primitives and mount the live player
+only with a measured composition size. No fixed 16:9 initial poster, distorted
+artwork or headline crop; preserve CL-107's composition and outer geometry.
+
+Latest composition revision [CL-107](tickets/CL-107-integrated-full-canvas-film.md):
+the owner prefers an integrated full-canvas film over a repeated headline band
+above a framed screenshot. Place animated copy in scene-specific negative space,
+use purposeful camera framing to create room, and let action-only passages play
+without headlines. Copy and important actions stay clear of each other. This
+supersedes the fixed-header layout, preserving the approved outer aspect,
+CL-106's shared-object transitions and stable-art text-only loop, smooth cursor
+following, normal motion policy and concise duration. The poster shares the
+integrated opening composition. Local checks do not grant owner visual/release
+acceptance or prove real AI performance.
+
+Transition revision [CL-106](tickets/CL-106-content-led-film-transitions.md):
+the owner rejects the center-opening full-scene reveal. Replace it with explicit
+content connections: conversation into upload preview, media into analysis,
+analysis into moment cards, selection into source/portrait, portrait into editor,
+then out to result and back to conversation. Carry shared objects and their
+geometry through the cut; never slice, wipe or slide the entire scene. Closing
+and opening retain the identical conversation artwork/pose and stable brand;
+only their text transitions with restrained kinetic typography. Keep CL-102's
+smooth cursor following, readable copy, no added frame progress track, large
+responsive canvas and the 24-second story. Research informs the choreography;
+it is not evidence of conversion or real processing performance.
+
+Earlier playback revision [CL-102](tickets/CL-102-smooth-purposeful-film-tracking.md):
+replace CL-099's busy multi-zoom camera with a continuous, eased mouse-follow,
+centering the pointer as far as source bounds allow and retaining active labels.
+Use a modest one-way zoom, steady noninteractive holds, longer cursor journeys
+and gentle connected scene handoffs. Remove the film-added bottom progress
+track, bright wipes, title masks and gratuitous rotations. Narrative copy stays
+in a safe region outside the camera, with separate outgoing/incoming timing.
+Keep the large frames, responsive outer aspect, 24-second story and shared poster.
+Local synthetic/no-key evidence does not replace owner visual/release acceptance.
+
+Earlier follow-up [CL-099](tickets/CL-099-fill-landing-film-and-track-actions.md):
+the owner approves the outer film aspect and requests a much fuller interior.
+CL-100 also swaps the shared Privacy dialog surfaces: brighter blue outside
+and the darker previous outer material on the inner cards, preserving copy and
+interaction. Enlarge demo frames and text, use the actual canvas height, vary text placement
+and transitions, and zoom/pan with meaningful cursor actions. The implemented
+film uses nearly full-width screens, large headlines, bounded cursor-led pans,
+light wipes and enlarged illustrations; its responsive static loading poster
+shares the same opening scene. CL-099/100 record local checks and clean read-only
+reviews without claiming owner personal acceptance. This supersedes
+the restrained camera direction below while retaining readable context and
+the concise 24-second story. Preserve hero dimensions, navbar and process work.
+
+The owner is satisfied with the actual demo and requests landing-only changes.
+[CL-095](tickets/CL-095-concise-contextual-landing-film.md) replaces the long film
+with a concise 24-second story, clear context throughout and restrained camera
+movement. [CL-096](tickets/CL-096-taller-hero-without-redundant-flow.md) removes
+the redundant hero flow strip and uses its space for a taller responsive film,
+retaining laptop columns and natural phone height. [CL-097](tickets/CL-097-animated-compact-landing-navbar.md)
+smoothly compacts laptop/desktop navigation after the hero to logo, Privacy and
+Get Started, reversing on return. [CL-098](tickets/CL-098-faster-process-visual-and-text-entry.md)
+speeds up the existing How it works illustration and brings adjacent text in
+from left to right. These decisions supersede the earlier 50-second duration,
+hero flow strip, fixed film aspect and full navigation below the hero.
+Silent autoplay, offscreen/hidden pause, shared design tokens, normal motion
+under every motion preference, Privacy and application behavior remain.
+Execute and read-only validate each packet sequentially. API-free synthetic
+visuals need no keys; real processing still requires providers/live flags,
+approvals and owner action. No staging/commit/deployment/paid/cloud action.
+Owner personal visual, rights and release acceptance remain separate.
+Local implementation/verification is recorded in CL-095-098: concise context-
+retaining film, responsive canvas with an uncropped short-screen minimum,
+650ms reversible compact navigation, and a complete 12-second process cycle
+with left-to-right copy. Final read-only reviews report no actionable local
+findings; synthetic browser/type/lint evidence does not claim owner acceptance.
+
 ### Owner landing motion decision — 2026-10-06
 
 The owner explicitly replaces the landing hero placeholder with the locally
@@ -1716,7 +1821,15 @@ clip: ClipBuilder does not publish them, reuse them in marketing or retain them
 as demo content. The separately owned, rights-approved demonstration master above
 does not authorize reuse or retention of visitor media.
 
-Later owner feedback limits this panel to three short points: no reuse/publishing,
+Latest owner design revision (2026-10-28, [CL-111](tickets/CL-111-matte-two-point-privacy-dialog.md))
+uses a solid navy dialog, restrained blue accents and two concise groups: Your
+files combines use with storage/Exit cleanup, and AI processing covers provider
+transfer/retention and mode-specific picture descriptions. Remove nested glass,
+numbered rows and redundant wording. Keep all material mode distinctions,
+readable semantics, title focus, native modal keyboard behavior and a reachable
+close control. This supersedes CL-100's palette/material choice, not privacy policy.
+
+Earlier owner feedback limited this panel to three short points: no reuse/publishing,
 temporary storage combined with Clear, and Gemini transfer/retention. The intro
 is brief and still identifies the fake preview's no-file-read/upload behavior.
 The compact panel does not repeat retention timings; the exact policy below and
@@ -2415,13 +2528,29 @@ Allowed:
 - “Add readable captions automatically and export a vertical clip.”
 - “Your media is temporary and can be cleared explicitly.”
 
-The CL-002 landing prototype may also state that at least six researched
-platforms publicly host paid clipping campaigns, provided that the claim is
-re-checked against current first-party sources before release. The presentation
-must say that brands or creators fund the campaigns, identify the platforms as
-unaffiliated market examples rather than partners or integrations, provide no
-earnings guarantee, and disclose that availability, eligibility, rates, and
-rules vary.
+Owner landing revision (2026-10-28, CL-101): replace the old nine-platform wall
+with a compact introduction and three researched campaign examples: Whop,
+Clipster and Picsart. Use their official locally served vector logos. Owner follow-up CL-104 removes
+Explore/actions and external navigation; retain decorative card hover with no
+interactive role or tab stops.
+Brands/creators fund paid clipping campaigns; these are unaffiliated market
+examples, with no earnings guarantee. Availability, eligibility, rates and rules
+vary. This shortlist is not a definitive popularity ranking: published audience
+and payout measures are not comparable.
+
+Owner correction (2026-10-28, CL-103): the separate animated example uses a
+five-clip batch, 60 manual minutes versus a 10-minute ClipBuilder target. That is
+about 17% **of** the original time, 50 minutes back (roughly 83% saved), replacing
+CL-101's mistaken 25%-less interpretation. Use clock/timeline/countdown motion
+and distinctive brand-colored platform cards while keeping the market compact.
+Owner follow-up CL-105 removes the visible explanatory footnote, retaining
+the then-current Illustrative goal / Target labels. CL-110 removes the goal
+badge, retaining what-if/Example/Target framing and the accessible qualification.
+Historical suggestion-discovery
+timings do not establish a finished-clip production or manual-time benchmark.
+Do not represent it as a benchmark, guarantee, fixed clip yield or support for
+hours-long uploads.
+Scroll-triggered numeric animations retain accessible and no-JS final values.
 
 Forbidden:
 
@@ -6557,10 +6686,11 @@ evidence, warning, and status icons have consistent semantics.
 CL-002 builds only the primitives needed by the landing prototype: header,
 primary/secondary text actions, trust/status strip, evidence steps, and a
 synthetic product-media frame. Its final market-context section may add one
-responsive wordmark wall of researched paid clipping campaign platforms. Those
-wordmarks are original text/CSS treatments with an explicit no-affiliation and
-no-earnings-guarantee disclosure; they are not customer, partner, or integration
-logos. Later tickets build the functional controls when their behavior exists.
+compact row of three researched paid clipping campaign platforms. CL-101
+replaces the original text/CSS imitations with official local vector logos and
+an explicit no-affiliation/no-earnings-guarantee disclosure; these identify
+market examples, not customers, partners or integrations. A separate labelled
+illustrative time-saving goal uses scroll-triggered count-up numbers. Later tickets build the functional controls when their behavior exists.
 Do not build a generalized dashboard/card system or pretend that the prototype
 actions already upload, analyze, or render media.
 

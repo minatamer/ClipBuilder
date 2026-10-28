@@ -313,23 +313,38 @@ export function ProcessNarrative() {
       );
     };
 
+    let onScreen = false;
+    let running = false;
+    let hasStarted = false;
+    const clearTimers = () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+      timers.clear();
+    };
+    const synchronize = () => {
+      const next = onScreen && document.visibilityState === "visible";
+      if (next === running) return;
+      running = next;
+      section.dataset.visible = String(next);
+      if (next) {
+        runSequence(!hasStarted);
+        hasStarted = true;
+      } else clearTimers();
+    };
     const entranceObserver = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting) {
-          section.dataset.visible = "true";
-          runSequence(true);
-          entranceObserver.disconnect();
-        }
+        onScreen = Boolean(
+          entry?.isIntersecting && entry.intersectionRatio >= 0.2,
+        );
+        synchronize();
       },
       { rootMargin: "-8% 0px -18%", threshold: 0.2 },
     );
-
     entranceObserver.observe(stage);
-
+    document.addEventListener("visibilitychange", synchronize);
     return () => {
       entranceObserver.disconnect();
-      timers.forEach((timer) => window.clearTimeout(timer));
-      timers.clear();
+      document.removeEventListener("visibilitychange", synchronize);
+      clearTimers();
     };
   }, []);
 

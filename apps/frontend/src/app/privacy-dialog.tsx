@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef } from "react";
-import { X } from "lucide-react";
+import { ShieldCheck, FolderLock, Sparkles, X } from "lucide-react";
 import { Button } from "../shared/ui/button";
 
 import styles from "./page.module.css";
@@ -24,12 +24,14 @@ export function PrivacyDialog({
   illustrativePictures = false,
 }: PrivacyDialogProperties) {
   const dialogReference = useRef<HTMLDialogElement>(null);
+  const titleReference = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
   const descriptionId = useId();
 
   const openDialog = () => {
     if (!dialogReference.current?.open) {
       dialogReference.current?.showModal();
+      titleReference.current?.focus({ preventScroll: true });
     }
   };
 
@@ -62,18 +64,51 @@ export function PrivacyDialog({
         ref={dialogReference}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
+        onKeyDown={(event) => {
+          if (
+            event.key !== "Tab" ||
+            event.altKey ||
+            event.ctrlKey ||
+            event.metaKey
+          )
+            return;
+          const stops = [
+            ...event.currentTarget.querySelectorAll<HTMLElement>(
+              'button:not(:disabled),a[href],[tabindex="0"]',
+            ),
+          ];
+          const first = stops[0],
+            last = stops.at(-1);
+          if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first?.focus();
+          }
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last?.focus();
+          }
+        }}
         onClick={(event) => {
           if (event.target === event.currentTarget) {
-            closeDialog();
+            const bounds = event.currentTarget.getBoundingClientRect();
+            if (
+              event.clientX < bounds.left ||
+              event.clientX > bounds.right ||
+              event.clientY < bounds.top ||
+              event.clientY > bounds.bottom
+            )
+              closeDialog();
           }
         }}
       >
         <div className={styles.dialogSurface}>
           <div className={styles.dialogLead}>
             <div className={styles.dialogHeading}>
-              <div>
+              <div className={styles.dialogIdentity}>
+                <span className={styles.dialogMark} aria-hidden="true">
+                  <ShieldCheck size={22} />
+                </span>
                 <p className={styles.dialogEyebrow}>Privacy</p>
-                <h2 id={titleId}>Your media stays yours.</h2>
               </div>
               <button
                 className={styles.dialogClose}
@@ -84,58 +119,65 @@ export function PrivacyDialog({
                 <X size={18} aria-hidden="true" />
               </button>
             </div>
-
+            <h2 id={titleId} ref={titleReference} tabIndex={-1}>
+              Your media stays yours.
+            </h2>
             <p className={styles.dialogIntro} id={descriptionId}>
-              Used only to create your requested clip.
-              {!localMedia &&
-                !cloudMedia &&
-                " Development preview never reads or uploads selected files."}
+              Only used for your clip.
             </p>
+            {!localMedia && !cloudMedia && (
+              <p className={styles.dialogMode}>
+                Preview mode: selected files aren’t read or uploaded.
+              </p>
+            )}
           </div>
 
-          <div className={styles.dialogGrid}>
-            <section>
-              <span>01</span>
-              <h3>No reuse or publishing</h3>
-              <p>
-                We don’t publish your video or edit, reuse them in marketing, or
-                keep them as demo content.
-              </p>
-            </section>
-            <section>
-              <span>02</span>
-              <h3>Temporary storage</h3>
-              <p>
-                {cloudMedia
-                  ? "Device and cloud copies are temporary. Exit starts background deletion; cleanup may be delayed. Downloaded files remain."
-                  : localMedia
-                    ? "Your video stays on this device. Exit starts best-effort cleanup; closing the tab doesn’t. Downloaded files remain."
-                    : "Real processing uses temporary private storage. Exit starts background deletion; cleanup may be delayed. Downloaded files remain."}
-              </p>
-            </section>
-            <section>
-              <span>03</span>
-              <h3>AI processing</h3>
-              <p>
-                Real AI processing sends a short audio/video copy to Google
-                Gemini. Google’s retention rules are separate.
-              </p>
-              {illustrativePictures ? (
+          <div
+            className={styles.dialogGrid}
+            role="region"
+            aria-label="Privacy details"
+            tabIndex={0}
+          >
+            <section data-privacy-point="files">
+              <FolderLock size={20} aria-hidden="true" />
+              <div>
+                <h3>Your files</h3>
                 <p>
-                  Contextual pictures are generated by Gemini from short scene
-                  descriptions from the selected clip.
+                  Your video and edits aren’t published, used in marketing or
+                  kept as demos.
                 </p>
-              ) : (
-                cloudMedia && (
+                <p>
+                  {cloudMedia
+                    ? "Device and cloud copies are temporary. Exit starts deletion; delays are possible. Downloaded files remain."
+                    : localMedia
+                      ? "Media stays on this device. Exit starts best-effort deletion; closing the tab doesn’t. Downloaded files remain."
+                      : "Real processing uses temporary private storage. Exit starts deletion; delays are possible. Downloaded files remain."}
+                </p>
+              </div>
+            </section>
+            <section data-privacy-point="ai">
+              <Sparkles size={20} aria-hidden="true" />
+              <div>
+                <h3>AI processing</h3>
+                <p>
+                  Real AI sends a short audio/video copy to Google Gemini.
+                  Google’s retention rules are separate.
+                </p>
+                {illustrativePictures ? (
                   <p>
-                    Contextual pictures may use short scene descriptions from
-                    the selected clip to search Wikimedia Commons. Your video is
-                    not sent to Wikimedia. If no usable picture is found, Gemini
-                    may create an illustrative image from a short scene
-                    description.
+                    Gemini generates pictures from short scene descriptions of
+                    your selected clip.
                   </p>
-                )
-              )}
+                ) : (
+                  cloudMedia && (
+                    <p>
+                      Wikimedia Commons receives short scene descriptions from
+                      your clip for picture search. Your video isn’t sent to
+                      Wikimedia. Gemini may generate a fallback image.
+                    </p>
+                  )
+                )}
+              </div>
             </section>
           </div>
         </div>

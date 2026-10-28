@@ -89,21 +89,25 @@ function Speaker({
 export function IllustratedConversation({
   frame,
   portrait = false,
+  portraitAmount = portrait ? 1 : 0,
+  showLabel = true,
 }: {
   frame: number;
   portrait?: boolean;
+  portraitAmount?: number;
+  showLabel?: boolean;
 }) {
   const activeSecond = Math.floor(frame / 72) % 2 === 1;
   const settle = Math.min(1, (frame % 72) / 18);
   const blend = settle * settle * (3 - 2 * settle);
   const nextX = activeSecond ? -415 : 65;
   const previousX = frame < 72 ? nextX : activeSecond ? 65 : -415;
-  const cameraX = portrait ? previousX + (nextX - previousX) * blend : 0;
+  const cameraX = (previousX + (nextX - previousX) * blend) * portraitAmount;
   return (
     <svg
       width="100%"
       height="100%"
-      viewBox={portrait ? "0 0 560 1000" : "0 0 1200 1000"}
+      viewBox={`0 0 ${1200 - 640 * portraitAmount} 1000`}
       preserveAspectRatio="xMidYMid slice"
       aria-label="Original animated illustration of two podcast speakers"
     >
@@ -151,16 +155,18 @@ export function IllustratedConversation({
             />
           </g>
         ))}
-        <text
-          x="95"
-          y="188"
-          fill="#b9d6ff"
-          fontFamily="Arial, sans-serif"
-          fontSize="22"
-          letterSpacing="6"
-        >
-          THE CONVERSATION
-        </text>
+        {showLabel && (
+          <text
+            x="95"
+            y="188"
+            fill="#b9d6ff"
+            fontFamily="Arial, sans-serif"
+            fontSize="22"
+            letterSpacing="6"
+          >
+            THE CONVERSATION
+          </text>
+        )}
       </g>
     </svg>
   );
@@ -189,7 +195,15 @@ const card: CompositionManifestV3["cards"][number] = {
   endMs: 8000,
 };
 
-export function IllustratedClip({ frame }: { frame: number }) {
+export function IllustratedClip({
+  frame,
+  detailsOnly = false,
+  detailsOpacity = 1,
+}: {
+  frame: number;
+  detailsOnly?: boolean;
+  detailsOpacity?: number;
+}) {
   const ms = (frame % 180) * (1000 / 30);
   return (
     <div
@@ -200,32 +214,37 @@ export function IllustratedClip({ frame }: { frame: number }) {
         overflow: "hidden",
         color: "white",
         fontFamily: "Arial, sans-serif",
-        background: "#142b55",
+        background: detailsOnly ? "transparent" : "#142b55",
       }}
     >
-      <IllustratedConversation frame={frame} portrait />
+      {!detailsOnly && <IllustratedConversation frame={frame} portrait />}
       <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "linear-gradient(transparent 30%, #05102899 100%)",
-        }}
-      />
-      <ContextualCard card={card} ms={ms} />
-      <FixedCaption caption={caption} ms={ms} />
-      <div
-        style={{
-          position: "absolute",
-          left: 64,
-          top: 60,
-          padding: "16px 24px",
-          background: "#07162ed9",
-          borderRadius: 40,
-          fontSize: 26,
-          letterSpacing: 2,
-        }}
+        data-film-clip-details={detailsOnly ? true : undefined}
+        style={{ position: "absolute", inset: 0, opacity: detailsOpacity }}
       >
-        ILLUSTRATIVE CLIP
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(transparent 30%, #05102899 100%)",
+          }}
+        />
+        <ContextualCard card={card} ms={ms} />
+        <FixedCaption caption={caption} ms={ms} />
+        <div
+          style={{
+            position: "absolute",
+            left: 64,
+            top: 60,
+            padding: "16px 24px",
+            background: "#07162ed9",
+            borderRadius: 40,
+            fontSize: 26,
+            letterSpacing: 2,
+          }}
+        >
+          ILLUSTRATIVE CLIP
+        </div>
       </div>
     </div>
   );

@@ -1,22 +1,37 @@
 import styles from "./page.module.css";
+import Image from "next/image";
 import { HeroHeadline } from "./hero-headline";
-import { HeroFlow } from "./hero-flow";
+import { LandingHeader } from "./landing-header";
 import { PrivacyDialog } from "./privacy-dialog";
 import { ProcessNarrative } from "./process-narrative";
 import { SmoothScrollLink } from "./smooth-scroll-link";
 import { BrandMark } from "../shared/ui/brand-mark";
 import { ProductFilmHero } from "../features/product-film/product-film-hero";
+import { TimeSavings } from "./time-savings";
+import { CampaignWall } from "./campaign-wall";
 
 const clippingPlatforms = [
-  { name: "whop", detail: "Content Rewards", brand: "whop" },
-  { name: "CLIPPING", detail: "Campaign network", brand: "clipping" },
-  { name: "Picsart", detail: "Clipping", brand: "picsart" },
-  { name: "insy", detail: "Creator campaigns", brand: "insy" },
-  { name: "Clipped", detail: "Pay per result", brand: "clipped" },
-  { name: "AMPLIFY", detail: "CLIPS", brand: "amplify" },
-  { name: "Clipster", detail: "Clipping campaigns", brand: "clipster" },
-  { name: "ClipReward", detail: "Funded rewards", brand: "clipreward" },
-  { name: "CLIPCO", detail: "Verified campaigns", brand: "clipco" },
+  {
+    name: "Whop",
+    detail: "Content rewards",
+    brand: "whop",
+    width: 119,
+    height: 26,
+  },
+  {
+    name: "Clipster",
+    detail: "Creator campaigns",
+    brand: "clipster",
+    width: 97,
+    height: 23,
+  },
+  {
+    name: "Picsart",
+    detail: "Clipping campaigns",
+    brand: "picsart",
+    width: 104,
+    height: 24,
+  },
 ] as const;
 
 function Wordmark() {
@@ -35,28 +50,24 @@ export default function HomePage() {
         Skip to main content
       </a>
 
-      <header className={styles.siteHeader}>
-        <div className={styles.headerInner}>
-          <SmoothScrollLink
-            className={styles.wordmark}
-            href="#top"
-            aria-label="ClipBuilder home"
-          >
-            <Wordmark />
-          </SmoothScrollLink>
+      <LandingHeader>
+        <SmoothScrollLink
+          className={styles.wordmark}
+          href="#top"
+          aria-label="ClipBuilder home"
+        >
+          <Wordmark />
+        </SmoothScrollLink>
 
-          <nav className={styles.primaryNav} aria-label="Primary navigation">
-            <SmoothScrollLink href="#how-it-works">
-              How it works
-            </SmoothScrollLink>
-            <PrivacyDialog triggerClassName={styles.navButton} />
-          </nav>
+        <nav className={styles.primaryNav} aria-label="Primary navigation">
+          <SmoothScrollLink href="#how-it-works">How it works</SmoothScrollLink>
+          <PrivacyDialog triggerClassName={styles.navButton} />
+        </nav>
 
-          <a className={styles.headerAction} href="/start">
-            Get Started
-          </a>
-        </div>
-      </header>
+        <a className={styles.headerAction} href="/start">
+          Get Started
+        </a>
+      </LandingHeader>
 
       <main id="main-content">
         <section className={styles.hero} id="top" aria-labelledby="hero-title">
@@ -76,57 +87,55 @@ export default function HomePage() {
 
             <ProductFilmHero />
           </div>
-          <HeroFlow />
         </section>
 
         <ProcessNarrative />
 
-        <section className={styles.finalSection} aria-labelledby="final-title">
+        <section
+          className={styles.finalSection}
+          aria-labelledby="market-title"
+          data-market-section
+        >
           <div className={styles.marketIntro}>
-            <p className={styles.eyebrowLight}>The clipping economy is live</p>
-            <div className={styles.marketMetric}>
-              <strong>9+</strong>
-              <span>platforms publicly host paid clipping campaigns</span>
-            </div>
-            <h2 id="final-title">Your cut can carry the story further.</h2>
+            <p className={styles.eyebrowLight}>A market for your next cut</p>
+            <h2 id="market-title">The clipping economy is live.</h2>
             <p>
-              Brands and creators fund the brief. Clippers turn long-form
-              moments into short-form attention—to entertain, to deliver, and,
-              when the rules are met, to earn.
-            </p>
-            <p className={styles.marketCallout}>
-              The next clip does not care when you started.
+              Brands and creators fund paid clipping campaigns on platforms like
+              these.
             </p>
           </div>
 
-          <ul
-            className={styles.campaignWall}
-            aria-label="Platforms with public paid clipping campaigns"
-          >
+          <CampaignWall>
             {clippingPlatforms.map((platform) => (
               <li
                 className={styles.campaignLogo}
-                data-platform-logo
                 data-brand={platform.brand}
                 key={platform.name}
               >
-                <strong>{platform.name}</strong>
-                <span>{platform.detail}</span>
+                <div className={styles.campaignSurface}>
+                  <span className={styles.campaignCategory} aria-hidden="true">
+                    {platform.detail}
+                  </span>
+                  <Image
+                    data-platform-logo
+                    src={`/platforms/${platform.brand}.svg`}
+                    alt={platform.name}
+                    width={platform.width}
+                    height={platform.height}
+                  />
+                </div>
               </li>
             ))}
-          </ul>
+          </CampaignWall>
 
           <p className={styles.marketDisclaimer}>
-            Public campaign platforms shown as market examples. No affiliation
-            or earnings guarantee. Availability, eligibility, payout rates, and
-            campaign rules vary.
+            Independent platforms. ClipBuilder is not affiliated with or
+            partnered with these platforms. No earnings guarantee. Campaign
+            availability, eligibility and payouts vary.
           </p>
-
-          <SmoothScrollLink className={styles.backToTop} href="#top">
-            Back to top
-            <span aria-hidden="true">↑</span>
-          </SmoothScrollLink>
         </section>
+
+        <TimeSavings />
       </main>
 
       <footer className={styles.siteFooter}>

@@ -10,31 +10,53 @@ describe("visual approval prototype", () => {
     const markup = renderToStaticMarkup(
       <PrivacyDialog localMedia cloudMedia />,
     );
-    expect(markup.match(/<section\b/g)).toHaveLength(3);
-    expect(markup).toContain("No reuse or publishing");
-    expect(markup).toContain("reuse them in marketing");
+    expect(markup.match(/<section\b/g)).toHaveLength(2);
+    expect(markup).toContain("Your files");
+    expect(markup).toContain("AI processing");
+    expect(markup).toContain(
+      "aren’t published, used in marketing or kept as demos",
+    );
     expect(markup).toContain("short audio/video copy to Google Gemini");
     expect(markup).toContain("retention rules are separate");
     expect(markup).toContain("Device and cloud copies are temporary");
-    expect(markup).toContain("Exit starts background deletion");
-    expect(markup).toContain("cleanup may be delayed");
+    expect(markup).toContain("Exit starts deletion");
+    expect(markup).toContain("delays are possible");
     expect(markup).toContain("Downloaded files remain");
-    expect(markup).not.toContain("Your video stays on this device");
-    expect(markup).not.toContain("Development preview never reads or uploads");
+    expect(markup).not.toContain("Media stays on this device");
+    expect(markup).not.toContain("Preview mode:");
+    expect(markup).toContain(
+      "Wikimedia Commons receives short scene descriptions from your clip",
+    );
+    expect(markup).toContain("Your video isn’t sent to Wikimedia");
+    expect(markup).toContain("Gemini may generate a fallback image");
 
     const localMarkup = renderToStaticMarkup(<PrivacyDialog localMedia />);
-    expect(localMarkup).toContain("Your video stays on this device");
+    expect(localMarkup).toContain("Media stays on this device");
     expect(localMarkup).toContain("closing the tab doesn’t");
     expect(localMarkup).toContain("best-effort");
     expect(localMarkup).not.toContain("cloud copies");
+    expect(localMarkup).not.toContain("Preview mode:");
 
     const previewMarkup = renderToStaticMarkup(<PrivacyDialog />);
     expect(previewMarkup).toContain(
-      "Development preview never reads or uploads",
+      "Preview mode: selected files aren’t read or uploaded",
     );
     expect(previewMarkup).toContain(
       "Real processing uses temporary private storage",
     );
+    expect(previewMarkup).not.toContain("Wikimedia");
+    const generatedMarkup = renderToStaticMarkup(
+      <PrivacyDialog localMedia cloudMedia illustrativePictures />,
+    );
+    expect(generatedMarkup).toContain(
+      "Gemini generates pictures from short scene descriptions of your selected clip",
+    );
+    expect(generatedMarkup).not.toContain("Wikimedia");
+    for (const value of [markup, localMarkup, previewMarkup, generatedMarkup]) {
+      expect(value).not.toContain("01</span>");
+      expect(value).not.toContain("instant deletion");
+      expect(value).not.toContain("never stored");
+    }
   });
   it.each([undefined, "secondary"] as const)(
     "preserves one named privacy-dialog trigger with variant %s",
@@ -47,7 +69,7 @@ describe("visual approval prototype", () => {
       expect(markup.match(/<dialog\b/g)).toHaveLength(1);
       expect(markup).toContain("Close privacy");
       expect(markup).not.toContain("The local development preview simulates");
-      expect(markup).toContain("Development preview never reads or uploads");
+      expect(markup).toContain("selected files aren’t read or uploaded");
       expect(markup).not.toContain("Maximum: 20 minutes and 500 MiB");
       expect(markup).not.toContain("Visible bounds");
     },
@@ -94,7 +116,10 @@ describe("visual approval prototype", () => {
     expect(markup).toContain("<dialog");
     expect(markup).toContain('aria-haspopup="dialog"');
     expect(markup).toContain("Your media stays yours.");
-    expect(markup).toContain("No reuse or publishing");
+    expect(markup).toContain("Your files");
+    expect(markup).toContain(
+      "aren’t published, used in marketing or kept as demos",
+    );
     expect(markup).not.toContain("MP4 under 10 minutes and 250 MiB");
   });
 
@@ -159,24 +184,66 @@ describe("visual approval prototype", () => {
     const markup = renderToStaticMarkup(<HomePage />);
 
     expect(markup).toContain("The clipping economy is live");
-    expect(markup).toContain("9+");
-    expect(markup).toContain("platforms publicly host paid clipping campaigns");
-    expect(markup.match(/data-platform-logo="true"/g)).toHaveLength(9);
-    for (const platform of [
-      "whop",
-      "CLIPPING",
-      "Picsart",
-      "insy",
-      "Clipped",
-      "AMPLIFY",
-      "Clipster",
-      "ClipReward",
-      "CLIPCO",
-    ]) {
-      expect(markup).toContain(platform);
+    expect(markup).toContain(
+      "Brands and creators fund paid clipping campaigns",
+    );
+    expect(markup.match(/data-platform-logo="true"/g)).toHaveLength(3);
+    for (const platform of ["Whop", "Clipster", "Picsart"]) {
+      expect(markup).toContain(`alt="${platform}"`);
+      expect(markup).toContain(
+        `src="/platforms/${platform.toLowerCase()}.svg"`,
+      );
     }
-    expect(markup).toContain("No affiliation or earnings guarantee.");
+    const market = markup.match(
+      /<section[^>]*data-market-section[^>]*>[\s\S]*?<\/section>/,
+    )?.[0];
+    expect(market).toBeDefined();
+    expect(market).not.toMatch(/<a\b|<button\b|tabindex=|Explore/);
+    expect(markup).toContain(
+      "ClipBuilder is not affiliated with or partnered with these platforms.",
+    );
+    expect(markup).toContain("No earnings guarantee.");
+    expect(markup).toContain('data-campaign-wall="true"');
     expect(markup).not.toContain("From conversation to grounded cut.");
+  });
+
+  it("keeps the time example and accessible final values without the removed goal badge", () => {
+    const markup = renderToStaticMarkup(<HomePage />);
+    expect(markup).toContain('aria-labelledby="time-title"');
+    expect(markup).toContain(
+      'aria-label="What would you do with 50 minutes back?"',
+    );
+    expect(markup.match(/data-minutes-back="true"/g)).toHaveLength(2);
+    expect(
+      markup.match(
+        /data-count-target="50" data-count-from="0" data-count-digits="2"/g,
+      ),
+    ).toHaveLength(2);
+    expect(markup).not.toContain("Illustrative goal");
+    expect(markup).toContain("Five-clip example:");
+    expect(markup).toContain("The five-clip what-if");
+    expect(markup).toContain("not a measured result");
+    expect(markup).not.toContain("An example for a batch of");
+    expect(markup).not.toContain(
+      "Actual time depends on your footage, edits and processing.",
+    );
+    expect(markup).toContain(
+      "60 minutes manually compared with a 10-minute ClipBuilder target",
+    );
+    expect(markup).toContain(
+      "About 17 percent of the time: 50 minutes back, roughly 83 percent saved",
+    );
+    expect(markup).toContain("of the time.");
+    expect(markup).not.toContain("less hands-on time.");
+    for (const [value, from] of [
+      [17, 100],
+      [60, 60],
+      [10, 60],
+    ]) {
+      expect(markup).toContain(
+        `data-count-target="${value}" data-count-from="${from}">${value}</span>`,
+      );
+    }
   });
 
   it("keeps smooth-scroll destinations available as real anchors", () => {

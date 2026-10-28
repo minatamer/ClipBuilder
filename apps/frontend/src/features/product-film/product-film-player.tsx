@@ -15,9 +15,11 @@ import { ProductFilmFallback } from "./product-film-fallback";
 export function ProductFilmPlayer({
   active,
   variant,
+  compositionHeight,
 }: {
   active: boolean;
   variant: FilmVariant;
+  compositionHeight: number;
 }) {
   const player = useRef<PlayerRef>(null);
   useEffect(() => {
@@ -36,7 +38,7 @@ export function ProductFilmPlayer({
       inputProps={{ variant }}
       durationInFrames={filmDuration(variant)}
       compositionWidth={FILM_FORMAT.width}
-      compositionHeight={FILM_FORMAT.height}
+      compositionHeight={compositionHeight}
       fps={FILM_FORMAT.fps}
       controls={false}
       clickToPlay={false}
@@ -49,7 +51,7 @@ export function ProductFilmPlayer({
       showVolumeControls={false}
       numberOfSharedAudioTags={0}
       spaceKeyToPlayOrPause={false}
-      style={{ width: "100%", aspectRatio: "16 / 9" }}
+      style={{ width: "100%", height: "100%" }}
       errorFallback={() => <ProductFilmFallback />}
     />
   );

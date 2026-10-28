@@ -1,5 +1,240 @@
 # ClipBuilder canonical ticket index
 
+## Approved visual commit — 2026-10-28
+
+The owner authorized a whole-file plan, staging and local commit of CL-095–113
+while AFK, with personal review later. The [57-file allocation](../operations/CL095_113_COMMIT_PLAN.md)
+owns that combined commit. A fresh combined affected landing unit pass reports
+23 tests passing (1.52s); packet-local checks and remaining owner gates are
+unchanged. Earlier unstaged/no-commit handoffs are historical for this approved
+Git action only. No push, deployment or paid/provider/cloud work is authorized.
+
+## Synchronized saved-minutes headline — 2026-10-28
+
+[CL-113](CL-113-synchronized-saved-minutes-headline.md) counts the headline/card
+saved minutes together to 50, with stable word gaps and slow–fast–slow easing.
+Preserve CL-095–112; execute/validate locally, no Git/deploy/provider action.
+Implemented and verified: shared 2.2-second progress, fixed two-digit slots and
+quintic easing. Twelve page tests, frontend/test types, affected lint/format and
+the guarded browser proof pass (31.14s), including frame-by-frame synchronization,
+stable word geometry and faster middle/slower ends. V113-final: Meets ticket;
+No actionable findings. Owner visual/release gates remain open. No Git mutation,
+provider/cloud request or deployment.
+
+## Once-only platform shine — 2026-10-28
+
+[CL-112](CL-112-once-only-market-shine.md) adds a sequential in-view shine without
+mouse events, removes side dots and makes non-affiliation/non-partnership
+explicit. Preserve CL-095–111; execute/validate locally, no Git/deploy action.
+Implemented and verified: a one-second visible-card queue, shared hover sheen,
+no dot pseudo-element and explicit no-affiliation/no-partnership copy. Twelve
+page tests, frontend/test types, affected lint/format and the guarded market/time
+proof pass (30.12s), including no-hover sequence, no replay and offscreen phone
+waiting. V112-final: Meets ticket; No actionable findings. Owner visual/release
+gates remain open. No Git mutation, provider/cloud request or deployment.
+
+## Matte two-point Privacy dialog — 2026-10-28
+
+[CL-111](CL-111-matte-two-point-privacy-dialog.md) redesigns the shared disclosure
+as one matte navy sheet with two concise groups, preserving mode-specific facts
+and native dialog behavior. Research/documentation precede execute/validate.
+Preserve CL-095–110; no Git/deploy/provider action.
+Implemented with solid navy material, two shorter groups and preserved mode-
+specific facts. Twelve page tests, frontend/test types, affected lint/format and
+the guarded all-mode dialog/actual-landing proof pass (7.05s). Keyboard wrapping
+and the inherited heading outline were fixed from browser checks. V111-final:
+Meets ticket; No actionable findings. Personal visual/physical-device/rights/
+real-AI/hosted/release gates remain open. No Git mutation or deployment.
+
+## Visible time entrance and larger clock — 2026-10-28
+
+[CL-110](CL-110-visible-time-animation-and-larger-clock.md) is the active follow-up:
+defer animation until its number/clock area is in view, remove Illustrative goal
+and enlarge the clock. Preserve CL-095–109; execute/validate locally.
+Implemented with explicit metric visibility/hidden-tab gating, coherent pending
+values, badge removal and a larger responsive clock. Twelve page tests, frontend/
+test types, affected lint/format and the guarded proof pass (22.33s), including
+partial entry, no replay, clock motion and 320px pending-value clearance.
+V110-final: Meets ticket; No actionable findings. Personal visual/release gates
+remain open. No Git mutation, provider/cloud request or deployment.
+
+## Roomier responsive market cards — 2026-10-28
+
+[CL-109](CL-109-roomier-responsive-market-cards.md) is the active follow-up:
+wider tablet cards and full-width phone rows with larger logos/labels, retaining
+hover and non-navigation. Preserve CL-095–108; execute/validate locally.
+Implemented and verified with 12 page tests, frontend/test types, affected lint/
+format and the guarded market proof (20.60s). Phone/tablet breakpoints, logo room,
+whole labels, real hover/click, forced colors, no-JS and retained time animation
+pass. Read-only V109-final: Meets ticket; No actionable findings. Personal visual/
+physical-device/rights/real-AI/hosted/release acceptance stays open. No Git/deploy.
+
+## Correct film first paint — 2026-10-28
+
+[CL-108](CL-108-correct-film-first-paint.md) fixes the initial 16:9 poster inside
+the taller hero: CSS-responsive shared primitives before hydration, measured
+player mount and focused first-paint verification. Preserve CL-095–107 and all
+approved outer geometry. Execute/validate locally, no Git/deploy/provider action.
+Implemented and verified: the shared poster is responsive before hydration and
+Player waits for measured dimensions. The guarded first-paint proof passes
+(15.72s), including no-JS, delayed measurement, first live frame and phone resize;
+actual landing integration passes (78.29s). Twenty-two focused units, frontend/
+test types and affected lint/format pass. V108-final: Meets ticket; No actionable
+findings. Owner personal visual/release gates remain open; no Git/deploy action.
+
+## Integrated full-canvas film — 2026-10-28
+
+[CL-107](CL-107-integrated-full-canvas-film.md) is the active follow-up: replace
+the repeated title-above-frame layout with full-canvas scenes, animated copy in
+negative space and action-only passages. Preserve CL-095–106, approved geometry,
+shared-object handoffs and the fake/no-key app. Execute/validate locally.
+Implemented with full-canvas product scenes, varied animated copy, quiet action
+passages, a full-height build and blended opening/closing art. Twenty-two focused
+units, frontend/test types, affected lint/format and both guarded browser proofs
+pass (120.65s). Frame-review collisions were fixed; read-only V107-final reports
+Meets ticket, No actionable findings. Personal visual/physical-device/rights/
+real-AI/hosted/release acceptance remains open. No Git mutation or deployment.
+
+## Content-led film transitions — 2026-10-28
+
+[CL-106](CL-106-content-led-film-transitions.md) documents the transition revision:
+replace the rejected full-scene reveal with per-scene shared-object handoffs;
+keep close/open artwork steady and change only type at that seam. Preserve all
+CL-095–105 work and the no-key app; execute/validate locally.
+Implemented with selected-preview/source/portrait continuity, a single SVG
+reframing into the close, and typography-only close/open. Twenty focused units,
+frontend/test types, affected lint/format and both guarded browser proofs pass
+(133.28s); the final crop refinement passes the isolated proof again (50.40s).
+Image ghosting, early type and wide-canvas media/text cropping were fixed from
+frame inspection. Read-only V106-final: Meets ticket; No actionable findings.
+Owner personal visual/physical-device/rights/real-AI/hosted/release gates stay
+open. No Git mutation, provider/cloud request or deployment.
+
+## Shorter time-card copy — 2026-10-28
+
+[CL-105](CL-105-remove-time-card-footnote.md) removes the verbose visible
+footnote at owner request, retaining Illustrative goal / Target and the existing
+comparison/animation. Historical discovery timings remain separate from a
+finished-clip or manual-time benchmark. Twelve page checks and the guarded
+30.68s desktop/phone browser proof pass; read-only V105-final reports Meets
+ticket, No actionable findings. No Git mutation/provider/cloud/deployment.
+
+## Informational market cards — 2026-10-28
+
+[CL-104](CL-104-non-navigating-market-cards.md) removes Explore/actions and
+external navigation while preserving brand cards and decorative hover.
+Implemented and locally verified: twelve page tests, frontend/test types,
+lint/format and guarded real-click/hover browser proof pass (28.55s). Read-only
+V104-final: Meets ticket; No actionable findings. Owner visual/release gates
+remain open. No Git mutation, provider/cloud request or deployment.
+
+## Correct time example and richer market — 2026-10-28
+
+[CL-103](CL-103-correct-time-example-and-enrich-market.md) implements the owner
+correction: 60 → 10 illustrative minutes, about 17% of the time / 50 minutes back,
+with clock/timeline motion and more distinctive compact platform cards. Preserve
+CL-095–102. Clock rewind, coherent percentage/countdown and one-sixth timeline
+share a single one-shot animation. Distinct brand light, stagger, labels and
+hover/focus polish retain compact official-logo cards. Twelve units, frontend/
+test types, lint/format and the 19.32s guarded browser proof pass. Read-only
+V103-final: Meets ticket; No actionable findings. Public-only desktop/phone,
+hover/focus, forced-color and no-JS captures inspected. Owner visual/rights/
+measured-performance/real-AI/hosted/release gates remain open; no Git mutation,
+provider/cloud request or deployment.
+
+## Smooth purposeful film tracking — 2026-10-28
+
+[CL-102](CL-102-smooth-purposeful-film-tracking.md) implements the follow-up to
+owner CL-099 playback feedback: smooth continuous cursor tracking, fewer camera
+moves, no added frame progress overlay and clean connected transitions/text.
+Implemented with continuous bounded cursor/camera motion and a gentle one-way
+zoom, no added track, separate whole-copy layers and center-opening panel
+handoffs including the loop seam. Sixteen units, frontend/test types, affected
+lint/format and both browser proofs pass (107.96s). Read-only V102-final: Meets
+ticket; No actionable findings. A cancelled-interception proof race was fixed
+and reverified. CL-095–101 and normal services remain preserved; no Git mutation,
+provider/cloud request or deployment. Owner visual/rights/real-AI/hosted/release
+acceptance remains open.
+
+## Compact market and time-saving example — 2026-10-28
+
+[CL-101](CL-101-compact-market-and-animated-time-example.md) implements the owner follow-up: three researched official logos (Whop,
+Clipster, Picsart), a shorter market section and a separate scroll-counted
+illustrative time-saving goal. No measured speed claim or global ranking.
+12 page tests, frontend/test types, affected lint/format, asset hashes and the
+16.51s guarded browser proof pass. Read-only V101-final: Meets ticket; No
+actionable findings. CL-095–100 and the healthy fake-mode app remain preserved.
+Owner visual/rights/measured-performance/release acceptance remains open; no
+Git mutation or deployment.
+
+## Privacy surface swap — 2026-10-28
+
+[CL-100](CL-100-swap-privacy-dialog-surfaces.md) responds to the owner's follow-up
+while reviewing CL-099: brighter outer blue dialog, darker inner panels. CSS-only
+work preserves all pending landing/film changes and dialog behavior. Desktop/
+phone captures and keyboard/close checks pass. Read-only V100-1 reports Meets
+ticket; No actionable findings. Owner personal visual acceptance stays open.
+
+## Fuller film and cursor tracking — 2026-10-28
+
+[CL-099](CL-099-fill-landing-film-and-track-actions.md) preserves the approved
+outer aspect and pending CL-095-098 work while enlarging the film's internal
+frames/type and adding cursor-led zooms and more expressive scene transitions.
+Implemented and validated with synthetic no-key, paid-off checks. The pure
+camera follows the cursor through bounded zooms, enlarged scenes/headlines use
+the actual canvas, and the shared opening scene supplies the responsive poster.
+Crop/travel and click-title overlap findings were fixed and rechecked. Final
+checks: 15 focused units, frontend/test types, affected lint/format, both browser
+proofs together (73.58s) and final isolated recheck (8.15s). Read-only V99-final:
+Meets ticket; No actionable findings. Existing outer aspect, 24-second length,
+navbar/process work and all private configuration/media remain preserved.
+There are now 28 pending changed/new/deleted paths across CL-095-100; none staged
+or committed. No provider/cloud/Git/deploy action. Personal visual, real devices,
+rights, real-AI/hosted and release acceptance remain owner-only.
+
+## Landing refinement queue — 2026-10-28
+
+Owner requests four sequential execute/validate loops, with the demo accepted
+for this feedback and landing changes only: [CL-095 film](CL-095-concise-contextual-landing-film.md)
+→ [CL-096 hero](CL-096-taller-hero-without-redundant-flow.md) →
+[CL-097 navbar](CL-097-animated-compact-landing-navbar.md) →
+[CL-098 process](CL-098-faster-process-visual-and-text-entry.md).
+All were documented before implementation and executed sequentially through
+read-only validate/fix loops: V95-1, V96-1/V96-2, V97-2 and V98-2 report **No
+actionable findings**. The navbar edge-contact and initial process-text overlap
+were reproduced/fixed; poster seams and a short-wide canvas bound were checked.
+Final local evidence: 14 focused units, frontend/test types, affected lint/format
+and the 67.45s actual fake/no-key browser integration proof. Nine responsive
+sizes, complete film/process loops, forward/reverse navbar animation, keyboard,
+loading/fallback and hidden/offscreen states pass. See each ticket for scope,
+file ownership, exact evidence and review limitations. The running normal app
+is preserved. All 23 changed/new/deleted files remain unstaged/uncommitted.
+No provider/cloud call, private media/configuration change or deployment.
+Personal visual, physical device, real-AI, rights, hosted and release acceptance
+remain owner-only; these local checks do not grant release clearance.
+
+### Landing file allocation (unstaged)
+
+All paths below are relative to the repository; overlapping files are reviewed
+with their corresponding packets. Baseline is committed `b945401`.
+
+| Owner | Changed files |
+| --- | --- |
+| CL-095 | `apps/frontend/src/features/product-film/film-timeline.ts`, `film-camera.ts`, `film-camera.test.ts`, `product-film.tsx` (also CL-096). |
+| CL-096 | `apps/frontend/src/app/page.tsx`, `page.module.css` (also CL-097/098); delete `hero-flow.tsx` and `hero-flow.module.css`; `apps/frontend/src/features/product-film/product-film-hero.tsx`, `product-film-hero.module.css`, `product-film-player.tsx`. |
+| CL-097 | New `apps/frontend/src/app/landing-header.tsx`, plus shared page/CSS above. |
+| CL-098 | `apps/frontend/src/app/process-narrative.tsx`, `process-narrative-timing.ts`, `process-narrative.test.ts`, plus shared CSS above. |
+| CL-106 | `apps/frontend/src/features/product-film/film-choreography.ts`, `film-choreography.test.ts`, `film-identity.tsx`, `illustrated-conversation.tsx`, `product-film-poster.tsx`, shared `product-film.tsx`; `test/local-film.proof.ts` and timing observation in `test/local-landing.proof.ts`. |
+| CL-107 | Shared film choreography/identity/product files above, `film-camera.ts`, `film-camera.test.ts`, `film-timeline.ts`, `film-choreography.test.ts`, and `test/local-film.proof.ts`; film README and owning decision/ticket documentation. |
+| CL-108 | `product-film-hero.tsx`, `product-film-hero.module.css`, `product-film-player.tsx`, `product-film-poster.tsx`, `film-identity.tsx`, new `test/local-film-initial.proof.ts`, poster API adaptation in `test/local-film.proof.ts`; film README and owning decision/ticket docs. |
+| CL-109 | Responsive campaign-card styles in `apps/frontend/src/app/page.module.css`, existing `test/local-market.proof.ts`, narrow source-of-truth market direction and ticket/index. |
+| CL-110 | `apps/frontend/src/app/time-savings.tsx`, `time-savings.module.css`, `page.test.tsx`, existing `test/local-market.proof.ts`, narrow source-of-truth time-card direction and ticket/index. |
+| CL-111 | `apps/frontend/src/app/privacy-dialog.tsx`, dialog styles in `page.module.css`, `page.test.tsx`, new `test/local-privacy.proof.ts`; frontend Privacy README paragraph and owning source/ticket/index. |
+| CL-112 | New `apps/frontend/src/app/campaign-wall.tsx`, market wrapper/disclosure in `page.tsx`, campaign styles in `page.module.css`, `page.test.tsx`, existing `test/local-market.proof.ts`; owning source/ticket/index. |
+| CL-113 | Saved-minute count/spacing/easing in `apps/frontend/src/app/time-savings.tsx`, `time-savings.module.css`, `page.test.tsx`, existing `test/local-market.proof.ts`; narrow source-of-truth direction and ticket/index. |
+| Shared verification/guidance | `test/local-landing.proof.ts`, `apps/frontend/README.md`. |
+| Owning documentation | `docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`, this index, and the four CL-095-098 ticket files linked above. |
+
 ## Approved local commit — 2026-10-27
 
 The owner approved staging and committing the completed CL-091–094 follow-ups.

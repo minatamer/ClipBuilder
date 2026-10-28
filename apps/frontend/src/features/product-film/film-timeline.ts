@@ -10,7 +10,6 @@ export type FilmBeat =
   | "build"
   | "review"
   | "result"
-  | "share"
   | "close";
 export type FilmShot = { beat: FilmBeat; from: number; duration: number };
 
@@ -25,15 +24,14 @@ function timeline(beats: readonly (readonly [FilmBeat, number])[]): FilmShot[] {
 
 export const FILM_TIMELINES: Record<FilmVariant, readonly FilmShot[]> = {
   walkthrough: timeline([
-    ["identity", 90],
-    ["intake", 150],
-    ["analysis", 120],
-    ["choose", 210],
-    ["build", 210],
-    ["review", 210],
-    ["result", 240],
-    ["share", 150],
-    ["close", 120],
+    ["identity", 60],
+    ["intake", 90],
+    ["analysis", 90],
+    ["choose", 90],
+    ["build", 105],
+    ["review", 105],
+    ["result", 120],
+    ["close", 60],
   ]),
   style: timeline([
     ["identity", 30],
@@ -65,33 +63,32 @@ export const FILM_CAPTURES = {
 
 export const FILM_COPY: Record<FilmBeat, { title: string; detail: string }> = {
   identity: {
-    title: "A conversation. A complete idea.",
+    title: "A conversation.\nA complete idea.",
     detail: "ClipBuilder",
   },
   intake: {
-    title: "Bring the conversation.",
+    title: "Bring the\nconversation.",
     detail: "Prepare one recording.",
   },
   analysis: {
-    title: "Find the complete ideas.",
+    title: "Find the\ncomplete ideas.",
     detail: "Grounded in the source.",
   },
-  choose: { title: "One moment worth keeping.", detail: "Choose exactly one." },
+  choose: {
+    title: "Pick your\nmoments.",
+    detail: "Keep the moments you want.",
+  },
   build: {
-    title: "Let the story take shape.",
-    detail: "Framing. Fixed captions. Context.",
+    title: "Let the story\ntake shape.",
+    detail: "Framing. Captions. Context.",
   },
   review: {
-    title: "Watch. Then confirm.",
-    detail: "Read-only review before export.",
+    title: "Make the\ncut yours.",
+    detail: "Edit captions, pictures and style.",
   },
   result: {
-    title: "The idea, in focus.",
-    detail: "Illustrative vertical composition.",
+    title: "Your next\nstandout clip.",
+    detail: "Download your MP4. Share it anywhere.",
   },
-  share: {
-    title: "Carry the story further.",
-    detail: "Download first. Share outside ClipBuilder.",
-  },
-  close: { title: "Your conversation. Your next cut.", detail: "ClipBuilder" },
+  close: { title: "Your next cut.\nStarts here.", detail: "ClipBuilder" },
 };
