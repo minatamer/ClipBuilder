@@ -25,6 +25,7 @@ export const ownerRuntimeCapabilitiesSchema = z.union([
       localMedia: z.literal(false),
       cloud: z.literal(true),
       processingSiteKey: z.string().min(1).max(500).optional(),
+      demoClipLimit: z.literal(3).nullable().optional(),
     })
     .strict(),
 ]);

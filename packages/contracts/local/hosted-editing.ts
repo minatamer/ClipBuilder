@@ -1,3 +1,41 @@
+import { z } from "zod";
+import type { OwnerAnalysisInputs } from "./selection.ts";
+import { OWNER_DEFAULT_AI_COUNT } from "./policy.ts";
+
+export const HOSTED_DEMO_POLICY = {
+  clips: 3,
+  cooldownMs: 24 * 60 * 60 * 1000,
+  dailySessions: 20,
+  dailyProviderCalls: 100,
+  dailyNativeCalls: 200,
+} as const;
+export const HOSTED_DEMO_LIMIT_MESSAGE =
+  "Free demo mode allows 3 clips total. We've adjusted your selection.";
+export const hostedDemoStatusSchema = z
+  .object({
+    active: z.boolean(),
+    limited: z.boolean(),
+    retryAt: z.number().int().nonnegative().nullable(),
+  })
+  .strict();
+export type HostedDemoStatus = z.infer<typeof hostedDemoStatusSchema>;
+/** Manual slots take priority; the same rule runs before browser and server work. */
+export function limitHostedDemoInputs(
+  input: OwnerAnalysisInputs,
+): OwnerAnalysisInputs {
+  const ranges = input.ranges.slice(0, HOSTED_DEMO_POLICY.clips);
+  const available = HOSTED_DEMO_POLICY.clips - ranges.length;
+  return {
+    ...input,
+    ranges,
+    manualOnly: input.manualOnly || available === 0,
+    aiCount: Math.max(
+      1,
+      Math.min(input.aiCount ?? OWNER_DEFAULT_AI_COUNT, available),
+    ),
+  };
+}
+
 export const EDITING_SESSION_COOKIE = "__Host-clipping_editor";
 export const EDITING_CSRF_COOKIE = "__Host-clipping_editor_csrf";
 export const HOSTED_EDITING_POLICY = {
@@ -33,6 +71,7 @@ export function hostedEditingPath(method: string, path: string) {
       path,
     );
   if (!match) return false;
+  if (method === "POST" && match[1] === "portrait") return false;
   if (method === "DELETE") return !match[1];
   if (method === "GET") return true;
   return (
