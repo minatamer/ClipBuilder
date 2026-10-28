@@ -60,6 +60,7 @@ const [
   { localWorkerPort },
   { nativeEnvironment },
   { HOSTED_EDITING_POLICY },
+  { demoUsageFixture },
 ] = await Promise.all([
   import("../apps/backend/local/hosted-workflow.ts"),
   import("../apps/backend/local/fake-analysis.ts"),
@@ -67,6 +68,7 @@ const [
   import("../apps/backend/local/worker-port.ts"),
   import("../apps/backend/local/local-mode.ts"),
   import("../packages/contracts/local/hosted-editing.ts"),
+  import("../test/demo-usage-fixture.ts"),
 ]);
 const { ownerOutputProfile } =
   await import("../apps/renderer/local/export-profile.ts");
@@ -206,12 +208,14 @@ try {
   padding.write("free", 4);
   const uploaded = Buffer.concat([bytes, padding]);
   const native = localWorkerPort(4200, token);
-  let origin = "";
+  let origin = "",
+    clientIp = "192.0.2.1";
   server = createServer((req, res) => {
     void (async () => {
       if (req.url?.startsWith("/api/local/")) {
         req.url = req.url.replace("/api/local/", "/");
         req.headers.origin = origin;
+        req.headers["x-clipbuilder-client-ip"] = clientIp;
         req.headers["sec-fetch-site"] = "same-origin";
         const csrf = editingCookie(req.headers.cookie, EDITING_CSRF_COOKIE);
         if (csrf) req.headers["x-csrf-token"] = csrf;
@@ -247,6 +251,7 @@ try {
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   origin = "http://localhost:" + server.address().port;
   flow = createHostedEditingWorkflow({
+    usage: demoUsageFixture(() => now).usage,
     root,
     origin,
     ttlMs: 180000,
@@ -522,7 +527,22 @@ try {
   );
   await api("/session", "DELETE");
   assert.deepEqual(await readdir(root), []);
+  const denied = await fetch(origin + "/api/local/session", {
+    method: "POST",
+    headers: {
+      Origin: origin,
+      "Sec-Fetch-Site": "same-origin",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      startNonce: crypto.randomUUID(),
+      turnstileToken: "synthetic",
+    }),
+  });
+  assert.equal(denied.status, 429);
+  assert.equal((await denied.json()).limited, true);
   stage = "expiry";
+  clientIp = "192.0.2.2";
   const start = await fetch(origin + "/api/local/session", {
     method: "POST",
     headers: {
@@ -555,7 +575,11 @@ try {
   const expired = await fetch(origin + "/api/local/session", {
     headers: nextHeaders,
   });
-  assert.deepEqual(await expired.json(), { active: false });
+  assert.deepEqual(await expired.json(), {
+    active: false,
+    limited: false,
+    retryAt: null,
+  });
   await wait(async () => !(await readdir(root)).length, "expiry_cleanup");
   metrics.result = {
     synthetic: true,
@@ -579,6 +603,7 @@ try {
     retryReusedPreparation: true,
     exitClean: true,
     expiryClean: true,
+    demoQuotaEnforced: true,
     counts,
     externalAttempts,
   };
