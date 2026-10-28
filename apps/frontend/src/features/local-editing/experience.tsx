@@ -19,6 +19,11 @@ import { AnalysisChallenge } from "../source-analysis/analysis-challenge";
 import { uploadHostedVideo, type HostedUploadProgress } from "./hosted-upload";
 import { ProcessingState } from "../../shared/ui/processing-state";
 import {
+  hostedDemoStatusSchema,
+  type HostedDemoStatus,
+} from "../../../../../packages/contracts/local/hosted-editing.ts";
+import { DemoLimitScreen } from "./demo-limit-screen.tsx";
+import {
   ownerRuntimeCapabilitiesSchema,
   type OwnerRuntimeCapabilities,
 } from "../../../../../packages/contracts/local/runtime.ts";
@@ -40,6 +45,7 @@ export function LocalEditingExperience({
     [],
   );
   const [workspace, setWorkspace] = useState<OwnerWorkspace | null>(null);
+  const [demoStatus, setDemoStatus] = useState<HostedDemoStatus | null>(null);
   const [capabilities, setCapabilities] =
     useState<OwnerRuntimeCapabilities | null>(null);
   const [busy, setBusy] = useState(true);
@@ -113,13 +119,22 @@ export function LocalEditingExperience({
           if (!response.ok) throw new Error("unavailable");
           return ownerWorkspaceSchema.nullable().parse(await response.json());
         });
-        const [currentCapabilities, current] = await Promise.all([
+        const [currentCapabilities, current, status] = await Promise.all([
           capabilitiesReady,
           workspaceReady,
+          hosted
+            ? fetch("/api/local/session", { signal: controller.signal }).then(
+                async (response) => {
+                  if (!response.ok) throw new Error("demo_unavailable");
+                  return hostedDemoStatusSchema.parse(await response.json());
+                },
+              )
+            : Promise.resolve(null),
         ]);
         if (!controller.signal.aborted) {
           setCapabilities(currentCapabilities);
           setWorkspace(current);
+          setDemoStatus(status);
           setBusy(false);
         }
       } catch {
@@ -151,7 +166,9 @@ export function LocalEditingExperience({
           signal: controller.signal,
         });
         if (!status.ok) throw new Error("session_unavailable");
-        const existing = (await status.json()) as { active?: boolean };
+        const existing = hostedDemoStatusSchema.parse(await status.json());
+        setDemoStatus(existing);
+        if (existing.limited) return;
         if (!existing.active) {
           if (
             !capabilities ||
@@ -178,6 +195,15 @@ export function LocalEditingExperience({
                 turnstileToken: token,
               }),
             });
+            if (session.status === 429) {
+              const limited = hostedDemoStatusSchema.safeParse(
+                await session.json(),
+              );
+              if (limited.success && limited.data.limited) {
+                setDemoStatus(limited.data);
+                return;
+              }
+            }
             if (!session.ok) throw new Error("session_unavailable");
           } finally {
             releaseVerification();
@@ -219,15 +245,18 @@ export function LocalEditingExperience({
     if (!workspace || blocked || clipWork) return;
     setBusy(true);
     try {
-      const response = await fetch(`/api/local/workspace/${workspace.id}`, {
-        method: "DELETE",
-        ...(discardUnsaved
-          ? {
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ discardUnsaved: true }),
-            }
-          : {}),
-      });
+      const response = await fetch(
+        hosted ? "/api/local/session" : `/api/local/workspace/${workspace.id}`,
+        {
+          method: "DELETE",
+          ...(discardUnsaved
+            ? {
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ discardUnsaved: true }),
+              }
+            : {}),
+        },
+      );
       if (response.status === 409) {
         setClearBlocked(true);
         setMessage(
@@ -249,6 +278,11 @@ export function LocalEditingExperience({
       setView("moments");
       setClearBlocked(false);
       setMessage("");
+      if (hosted) {
+        const status = await fetch("/api/local/session");
+        if (!status.ok) throw new Error("demo_unavailable");
+        setDemoStatus(hostedDemoStatusSchema.parse(await status.json()));
+      }
     } catch {
       setMessage("The processing copy could not be cleared. Try again.");
     } finally {
@@ -260,19 +294,23 @@ export function LocalEditingExperience({
       <WorkflowFrame
         headingRef={heading}
         title={
-          !workspace
-            ? "Choose your video"
-            : view === "moments"
-              ? "Choose your moments"
-              : "Review and edit clips"
+          !workspace && demoStatus?.limited
+            ? "Your free demo"
+            : !workspace
+              ? "Choose your video"
+              : view === "moments"
+                ? "Choose your moments"
+                : "Review and edit clips"
         }
         step={!workspace ? 0 : view === "moments" ? 1 : 2}
         subtitle={
-          !workspace
-            ? hosted
-              ? "Upload a video from your computer."
-              : "Start with a video on your computer or a YouTube link."
-            : undefined
+          !workspace && demoStatus?.limited
+            ? undefined
+            : !workspace
+              ? hosted
+                ? "Upload a video from your computer."
+                : "Start with a video on your computer or a YouTube link."
+              : undefined
         }
         footer={
           workspace ? (
@@ -319,7 +357,9 @@ export function LocalEditingExperience({
           <p className="flow-notice" role="status" aria-live="polite">
             {message}
           </p>
-          {!workspace && ((busy && !capabilities) || openingState) ? (
+          {!workspace && demoStatus?.limited ? (
+            <DemoLimitScreen retryAt={demoStatus.retryAt} />
+          ) : !workspace && ((busy && !capabilities) || openingState) ? (
             <ProcessingState
               label={
                 openingState && typeof openingState === "object"
