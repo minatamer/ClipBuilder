@@ -53,6 +53,7 @@ import { openLocalDraft, openLocalVideo } from "./open-local-file.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
 import type { ClipCaptionTranscription } from "./clip-caption-port.ts";
 import { fakeOwnerAnalysis } from "./fake-analysis.ts";
+import { limitHostedDemoInputs } from "../../../packages/contracts/local/hosted-editing.ts";
 
 export type OwnerHostProviders = {
   captionTranscription?: ClipCaptionTranscription;
@@ -68,6 +69,8 @@ export type OwnerHostProviders = {
 export type OwnerHostOptions = {
   authorize?: (request: IncomingMessage) => boolean;
   hosted?: boolean;
+  clipLimit?: number | undefined;
+  exported?: (() => Promise<void>) | undefined;
   capacity?: typeof requireDisk;
   sourceLimits?: { bytes: number; durationMs: number };
   reserveRead?: (bytes: number) => void;
@@ -153,6 +156,8 @@ export function createOwnerHost(options: OwnerHostOptions) {
       () => drafts?.changed(workspace.id),
       diagnostics,
       options.capacity,
+      options.clipLimit,
+      options.exported,
     );
   const controllers = new Set<AbortController>();
   const tasks = new Set<Promise<void>>();
@@ -1209,9 +1214,13 @@ export function createOwnerHost(options: OwnerHostOptions) {
         }
         busy.add(workspace.id);
         try {
-          const inputs = ownerAnalysisRequestSchema.parse(
+          const parsedInputs = ownerAnalysisRequestSchema.parse(
             await readOwnerJson(req),
           );
+          const inputs =
+            options.clipLimit === 3
+              ? limitHostedDemoInputs(parsedInputs)
+              : parsedInputs;
           if (
             inputs.policyRevision <
             (analyses.get(workspace.id)?.inputs.policyRevision ?? 0)
@@ -1350,6 +1359,17 @@ export function createOwnerHost(options: OwnerHostOptions) {
     } catch (error) {
       diagnostics.failure("http_request", error);
       if (newId) await files.remove(newId).catch(() => undefined);
+      if (
+        options.clipLimit === 3 &&
+        error instanceof Error &&
+        error.message === "clip_limit"
+      ) {
+        if (!res.destroyed)
+          res
+            .writeHead(429, { "Content-Type": "application/json" })
+            .end('{"error":"demo_clip_limit"}');
+        return;
+      }
       if (!res.destroyed)
         res
           .writeHead(

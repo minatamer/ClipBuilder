@@ -124,6 +124,8 @@ export class OwnerClipBatch {
     private readonly changed: () => void = () => {},
     private readonly diagnostics = new LocalDiagnostics(),
     private readonly capacity = requireDisk,
+    private readonly clipLimit: number = OWNER_LIMITS.clips,
+    private readonly exported: () => Promise<void> = async () => {},
   ) {
     this.workspace = ownerWorkspaceSchema.parse(workspace);
   }
@@ -442,7 +444,7 @@ export class OwnerClipBatch {
       return !clip || (clip.state === "canceled" && clip.calls.plan === 0);
     });
     const additions = fresh.filter((moment) => !existing(moment)).length;
-    if (this.clips.size + additions > OWNER_LIMITS.clips)
+    if (this.clips.size + additions > this.clipLimit)
       throw new Error("clip_limit");
     await this.reserve(additions);
     if (this.closing) throw new Error("workspace_closed");
@@ -869,6 +871,8 @@ export class OwnerClipBatch {
                 Math.round((snapshot.overlay.frames * 1000) / OWNER_FPS)
             )
               throw new Error("invalid_clip_output");
+            await this.exported();
+            controller.signal.throwIfAborted();
             clip.outputs.push({
               id: digest({
                 baseHash: clip.baseHash,
