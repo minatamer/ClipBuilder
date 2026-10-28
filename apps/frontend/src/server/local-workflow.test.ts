@@ -117,7 +117,7 @@ it("forwards hosted editor requests through authenticated control transport with
       headers: {
         Host: "frontend.run.app",
         "X-Forwarded-Proto": "https",
-        "X-Forwarded-For": "spoofed-prefix, 192.0.2.7, 198.51.100.1",
+        "X-Forwarded-For": "spoofed-prefix, 203.0.113.9, 192.0.2.7",
         "X-ClipBuilder-Client-IP": "203.0.113.9",
         Origin: "https://frontend.run.app",
         "Sec-Fetch-Site": "same-origin",
@@ -135,6 +135,28 @@ it("forwards hosted editor requests through authenticated control transport with
   expect(headers.get("Cookie")).not.toContain("unrelated");
   expect(headers.has("Authorization")).toBe(false);
   expect(headers.get("X-ClipBuilder-Client-IP")).toBe("192.0.2.7");
+});
+it("dispatches no hosted request while ingress verification is disabled", async () => {
+  vi.stubEnv("HOSTED_DEMO_IP_VERIFIED", "false");
+  vi.stubEnv("APP_ENV", "production");
+  vi.stubEnv("PRIVATE_BACKEND_ORIGIN", "https://backend.run.app");
+  vi.stubEnv("BACKEND_AUDIENCE", "https://backend.run.app");
+  vi.stubEnv("FRONTEND_ORIGIN", "https://frontend.run.app");
+  const response = await proxyLocalWorkflow(
+    new Request("https://frontend.run.app/api/local/capabilities", {
+      headers: {
+        Host: "frontend.run.app",
+        "X-Forwarded-Proto": "https",
+        "X-Forwarded-For": "203.0.113.9, 192.0.2.7",
+        "X-ClipBuilder-Client-IP": "203.0.113.9",
+        "Sec-Fetch-Site": "same-origin",
+      },
+    }),
+    ["capabilities"],
+  );
+  expect(response.status).toBe(503);
+  expect(fetchControlApi).toHaveBeenCalledTimes(0);
+  expect(discoverOwnerHost).toHaveBeenCalledTimes(0);
 });
 it("propagates browser cancellation into the upstream stream", async () => {
   fetcher.mockResolvedValue(
