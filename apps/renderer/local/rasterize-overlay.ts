@@ -9,6 +9,7 @@ import {
   type OwnerOverlay,
 } from "../../../packages/contracts/local/clips.ts";
 import { ownerOverlayFrame } from "../../../packages/composition/local/overlay-frame.ts";
+import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 import type {} from "./overlay-protocol.ts";
 
 // Keep each shared PNG below Windows' per-file hardlink limit.
@@ -135,7 +136,11 @@ export async function rasterizeOwnerOverlay(
       string,
       { file: string; links: number; bytes: number }
     >();
-    for (let frame = 0; frame < options.overlay.frames; frame++) {
+    for (
+      let frame = 0;
+      frame < ownerPresentationFrames(options.overlay);
+      frame++
+    ) {
       signal.throwIfAborted();
       const frameFile = join(
         options.frames,

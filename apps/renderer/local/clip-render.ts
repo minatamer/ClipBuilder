@@ -32,6 +32,7 @@ import {
   ownerCutAudioFilter,
 } from "./export-profile.ts";
 import { SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
+import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 
 import { prepareOwnerClipPreview, type OwnerCutCache } from "./clip-preview.ts";
 export type { OwnerCutCache } from "./clip-preview.ts";
@@ -79,7 +80,32 @@ export async function renderOwnerClip(
     job.cut.endFrame > Math.floor((metadata.durationMs * OWNER_FPS) / 1000)
   )
     throw new Error("stale_clip_source");
-  const profile = ownerOutputProfile(metadata, job.overlay.frames);
+  const presentationFrames = ownerPresentationFrames(job.overlay);
+  const bodyProfile = ownerOutputProfile(metadata, job.overlay.frames);
+  const hook = job.overlay.hook;
+  const hookProfile = hook
+    ? ownerOutputProfile(metadata, hook.endFrame - hook.startFrame)
+    : null;
+  const profile = {
+    ...bodyProfile,
+    frames: bodyProfile.frames + (hookProfile?.frames ?? 0),
+  };
+  const focus = ownerNativeFocusFilter(
+    job.overlay.focus,
+    metadata,
+    bodyProfile,
+    job.overlay.hook ? "body" : "focus",
+  );
+  const bodyVideo = `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${focus}`;
+  const bodyAudio = ownerCutAudioFilter(videoStart, job.cut);
+  const hookVideo = hook
+    ? `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${ownerNativeFocusFilter(job.overlay.focus, metadata, bodyProfile, "hook")},trim=start_frame=${Math.floor((hook.startFrame * profile.fps) / OWNER_FPS + 1e-9)}:end_frame=${Math.floor((hook.startFrame * profile.fps) / OWNER_FPS + 1e-9) + hookProfile!.frames},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${hookProfile!.frames}`
+    : "";
+  // Independent source decoders avoid buffering a full raw-video branch in split.
+  // Both occurrences read original pixels and meet in one final encode.
+  const sourceGraph = hook
+    ? `[0:v:0]${bodyVideo}[body];[1:v:0]${hookVideo}[hook];[0:a:0]${bodyAudio},apad,atrim=duration=${bodyProfile.frames / profile.fps}[bodyAudio];[1:a:0]${bodyAudio},atrim=start=${hook.startFrame / OWNER_FPS}:end=${hook.endFrame / OWNER_FPS},asetpts=PTS-STARTPTS,apad,atrim=duration=${hookProfile!.frames / profile.fps}[hookAudio];[hook][hookAudio][body][bodyAudio]concat=n=2:v=1:a=1[sequence][audio];[sequence]fps=fps=${profile.fps}:start_time=0:round=near,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${profile.frames},${ownerVideoLookFilter(job.overlay.videoLook)}[source]`
+    : `[0:v:0]${bodyVideo},${ownerVideoLookFilter(job.overlay.videoLook)}[source];[0:a:0]${bodyAudio}[audio]`;
   const assets: Record<string, string> = {};
   for (const cue of job.overlay.visuals) {
     const file = await ownerAssetMediaPath(
@@ -132,6 +158,16 @@ export async function renderOwnerClip(
         "-copyts",
         "-i",
         original,
+        ...(hook
+          ? [
+              ...SOURCE_INPUT_OPTIONS,
+              "-threads",
+              "2",
+              "-copyts",
+              "-i",
+              original,
+            ]
+          : []),
         "-framerate",
         String(OWNER_FPS),
         "-threads",
@@ -139,7 +175,7 @@ export async function renderOwnerClip(
         "-i",
         join(frames, "%06d.png"),
         "-filter_complex",
-        `[0:v:0]${ownerCutVideoFilter(videoStart, job.cut, profile)},${ownerNativeFocusFilter(job.overlay.focus, metadata, profile)},${ownerVideoLookFilter(job.overlay.videoLook)}[source];[1:v:0]scale=${profile.width}:${profile.height},tpad=stop_mode=clone:stop_duration=${1 / OWNER_FPS}[art];[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v];[0:a:0]${ownerCutAudioFilter(videoStart, job.cut)}[audio]`,
+        `${sourceGraph};[${hook ? 2 : 1}:v:0]scale=${profile.width}:${profile.height},tpad=stop_mode=clone:stop_duration=${1 / OWNER_FPS + (hook ? 2 / profile.fps : 0)}[art];[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`,
         "-filter_complex_threads",
         "2",
         "-filter_threads",
@@ -149,7 +185,9 @@ export async function renderOwnerClip(
         "-map",
         "[audio]",
         "-t",
-        String(job.overlay.frames / OWNER_FPS),
+        String(
+          hook ? profile.frames / profile.fps : presentationFrames / OWNER_FPS,
+        ),
         "-frames:v",
         String(profile.frames),
         "-r",
@@ -186,7 +224,7 @@ export async function renderOwnerClip(
       temporary,
       options.tools,
       signal,
-      job.overlay.frames,
+      presentationFrames,
       profile,
     );
     if (bytes > OWNER_BATCH_POLICY.clipReservationBytes)
@@ -195,8 +233,8 @@ export async function renderOwnerClip(
     return {
       operation: "clip" as const,
       bytes,
-      frames: job.overlay.frames,
-      durationMs: Math.round((job.overlay.frames * 1000) / OWNER_FPS),
+      frames: presentationFrames,
+      durationMs: Math.round((presentationFrames * 1000) / OWNER_FPS),
     };
   } finally {
     await rm(temporary, { force: true });

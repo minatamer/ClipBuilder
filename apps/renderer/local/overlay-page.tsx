@@ -7,6 +7,7 @@ import {
 } from "../../../packages/contracts/local/clips.ts";
 import { OwnerAutomaticOverlay } from "../../../packages/composition/local/automatic-overlay.tsx";
 import type {} from "./overlay-protocol.ts";
+import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 const root = createRoot(document.getElementById("root")!);
 let current:
   { overlay: OwnerOverlay; assets: Record<string, string> } | undefined;
@@ -24,7 +25,7 @@ globalThis.clipbuilderOwnerPaint = async (frame) => {
     !current ||
     !Number.isInteger(frame) ||
     frame < 0 ||
-    frame >= current.overlay.frames
+    frame >= ownerPresentationFrames(current.overlay)
   )
     throw new Error("invalid_frame");
   flushSync(() =>

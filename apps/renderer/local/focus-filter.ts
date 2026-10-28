@@ -14,6 +14,7 @@ export function ownerNativeFocusFilter(
   value: OwnerFocus | undefined,
   source: OwnerSource,
   profile: OwnerOutputProfile,
+  target: "focus" | "body" | "hook" = "focus",
 ): string {
   if (!value)
     return `scale=${profile.width}:${profile.height}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=${profile.width}:${profile.height}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
@@ -26,9 +27,9 @@ export function ownerNativeFocusFilter(
   const first = ownerOriginalFocusCrop(focus, focus.shots[0]!);
   const commands = focus.shots.slice(1).map((shot) => {
     const crop = ownerOriginalFocusCrop(focus, shot);
-    return `${(shot.startFrame / OWNER_FPS).toFixed(6)} crop@focus w ${crop.width}, crop@focus h ${crop.height}, crop@focus x ${crop.x}, crop@focus y ${crop.y}`;
+    return `${(shot.startFrame / OWNER_FPS).toFixed(6)} crop@${target} w ${crop.width}, crop@${target} h ${crop.height}, crop@${target} x ${crop.x}, crop@${target} y ${crop.y}`;
   });
   // Keep the scaler input aspect stable when crop dimensions change. FFmpeg 5.1
   // can otherwise stop delivering frames to the downstream overlay at a zoom.
-  return `${commands.length ? `sendcmd=c='${commands.join(";")}',` : ""}crop@focus=${first.width}:${first.height}:${first.x}:${first.y},setsar=1,scale=${profile.width}:${profile.height}:eval=frame,setsar=1`;
+  return `${commands.length ? `sendcmd=c='${commands.join(";")}',` : ""}crop@${target}=${first.width}:${first.height}:${first.x}:${first.y},setsar=1,scale=${profile.width}:${profile.height}:eval=frame,setsar=1`;
 }
