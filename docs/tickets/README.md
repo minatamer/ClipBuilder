@@ -1,5 +1,29 @@
 # ClipBuilder canonical ticket index
 
+## Local native capacity benchmark — 2026-10-28
+
+[CL-127](CL-127-native-worker-response-deadline.md) fixes the second prerequisite:
+actual 4K controls exposed fetch's five-minute header cutoff despite the intended
+11-minute deadline. Bounded loopback HTTP now passes six focused tests, current
+Linux cancellation/editor/export/quota proof and a completed 387-second export.
+Native limits, quality and operating flags are preserved.
+
+[CL-126](CL-126-linux-focus-aspect-normalization.md) is a necessary prerequisite
+discovered by CL-125: Linux encoding stalled at dynamic zoom despite low RAM.
+Crop aspect normalization passes actual short/full-minute packaged-worker
+exports. No quality or deployed settings change.
+
+[CL-125](CL-125-native-resource-benchmark.md) tests 2 CPU/8 GiB first, then
+smaller caps using synthetic media and the actual offline Linux native worker.
+Quality settings stay fixed. Measurements are complete: recommend 2 CPU/4 GiB
+as the processing target; one CPU is much slower. Four CPUs speed heavy 4K at
+more allocated CPU cost. Direct HD/short-4K quality checks pass, and peak native
+RAM reaches 1.48 GiB. The [report](../operations/HOSTED_NATIVE_BENCHMARK.md) retains
+scope/quality limits. Reconcile the 12 GiB scratch policy before reducing hosted
+RAM; no cloud change, paid test or release approval is implied. Final local
+review has no actionable findings; the five [whole-file commits](../operations/CL125_126_COMMIT_PLAN.md)
+record both fixes, the runners, actual evidence and this documentation handoff.
+
 ## Actual hosted client-IP verification — 2026-10-28
 
 [CL-124](CL-124-verify-hosted-client-ip-and-enable-settings.md) authorizes the

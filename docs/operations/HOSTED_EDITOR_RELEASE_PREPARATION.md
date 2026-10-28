@@ -1,5 +1,27 @@
 # Shared upload/editor release preparation
 
+## Measured native sizing — CL-125–127, 2026-10-28
+
+[Offline benchmark and limits](HOSTED_NATIVE_BENCHMARK.md) supersedes treating
+the older 4-CPU/16-GiB proposal below as measured need. Current measurements use
+the rebuilt actual Linux worker after CL-126's metadata-only zoom fix and
+CL-127's bounded native RPC transport, preserving the existing 10/11-minute
+budgets. Recommended processing target is **2 CPU/4 GiB**: full-minute HD takes
+158s versus 164s at 8 GiB with identical decoded video/audio. One CPU takes 292s.
+Full-minute landscape 4K/60 takes 409s at 2 CPU/4 GiB or 292s at 4 CPU/4 GiB;
+the latter costs 43% more allocated CPU seconds. Short archived 4K controls are
+byte-identical at both RAM caps (SSIM 1.000000), and maximum-frame-size portrait
+testing peaks at 1.48 GiB. Full-minute 4K runs are not claimed bit-identical.
+
+No deployed allocation changed. **Do not apply 4 GiB as a RAM-only reduction**:
+the unchanged 12 GiB scratch ceiling and slot/history/overlay reservations must
+be reconciled with bounded RAM-backed storage while preserving hosted/local
+behavior. Steady CPU for background work, lifecycle and maximum accepted
+workload gates remain; these local caps do not model Cloud Run throttling or
+prove every permitted source/history combination. Owner real-AI, rights, visual
+and release acceptance remain separate. Older larger-resource language below
+documents the conservative storage-envelope proposal, not measured CPU/RAM need.
+
 ## Actual ingress verification — CL-124, 2026-10-28
 
 The owner explicitly authorized the protected temporary ingress probe, required

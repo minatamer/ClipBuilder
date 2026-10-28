@@ -1,5 +1,33 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Local capacity measurement — CL-125, 2026-10-28
+
+The owner authorizes local Linux benchmarks starting at 2 CPUs/8 GiB and then
+smaller allocations, using synthetic media, fake mode and no paid/provider
+calls. Preserve production quality settings and the healthy normal app. Record
+latency, memory/scratch and output equivalence before recommending capacity.
+This authorizes no deployed resource change, cloud benchmark or release.
+[CL-125](tickets/CL-125-native-resource-benchmark.md) owns the evidence and limits.
+
+CL-125 exposed a Linux FFmpeg stall at camera zoom changes. Necessary prerequisite
+[CL-126](tickets/CL-126-linux-focus-aspect-normalization.md) normalizes crop pixel
+aspect before the fixed scale, preserving pixels, geometry and encoding quality.
+Verify the rebuilt worker before resuming capacity comparisons; no cloud change.
+
+CL-127 then corrects the observed five-minute implicit fetch headers cutoff in
+the loopback worker caller, preserving its existing explicit 11-minute deadline
+and the native worker's 10-minute budget. Use bounded loopback HTTP and retain
+cancel/reap, fake/provider and resource gates; no budget or quality expansion.
+
+Measured outcome: target 2 CPU/4 GiB for native processing. HD latency is similar
+to 8 GiB, one CPU is 84% slower, and four CPUs speed heavy 4K with more allocated
+CPU time. Direct HD and short-4K quality comparisons pass; sampled native RAM
+peaks at 1.48 GiB. This does not approve a deployment reduction: first reconcile
+the unchanged 12 GiB scratch envelope, slot/history/overlay reservations and
+RAM-backed storage without reducing hosted/local behavior or output quality.
+Full accepted maxima and owner/provider/release acceptance remain separate.
+The [benchmark report](operations/HOSTED_NATIVE_BENCHMARK.md) owns actual evidence.
+
 ## Hosted free-demo limits — CL-114, 2026-10-28
 
 Owner AFK authorization adopts the recommendation in
