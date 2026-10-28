@@ -1,5 +1,7 @@
 # Local editing controls
 
+CL-114 hosted limits: manual rows and AI count share three slots; manual rows take priority, and excess input is corrected with a body-portal status toast. Server admission and cumulative batch limits remain authoritative. Hosted Start over clears the session and rechecks its network allowance; exhausted intake replaces upload. Localhost retains its current ten-clip safety limits. Quota UI checks use fake ports/no keys; real AI and durable hosted setup remain separately gated.
+
 This client feature is rendered inside the existing application shell at
 `/start` when normal server configuration is local. It uses `/api/local` and
 has no separate bundle, server, startup command or AI configuration.

@@ -1,5 +1,98 @@
 # ClipBuilder canonical ticket index
 
+## Approved CL-114–121 local commit sequence — 2026-10-28
+
+The owner approved a file-level plan, many small local commits and exact-path
+staging for all pending feedback. [Whole-file allocation](../operations/CL114_121_COMMIT_PLAN.md)
+assigns 57 files to 16 ordered commits over `09fb914`, including hosted usage and
+private allowlist follow-ups. Earlier unstaged/no-commit notes below describe
+original implementation handoffs and are superseded for this local Git action.
+Personal visual, real-AI, hosted and release acceptance remain owner-only.
+No push, deployment, provider/cloud request or ignored configuration change.
+
+## Remove floating film card — 2026-10-28
+
+[CL-121](CL-121-remove-floating-film-card.md) removes the small sample callout
+over the illustrated speaker, keeping the portrait and bottom captions.
+Implemented; 23 units, responsive film proof (58.91s), frontend/test types and
+scoped lint/format pass. V121-final: Meets ticket; No actionable findings.
+Shared editor/composition functionality is unchanged; work remains unstaged.
+
+## Full-screen phone hero — 2026-10-28
+
+[CL-120](CL-120-full-screen-phone-hero.md) restores the phone hero wordmark and
+viewport-height minimum, keeping How it works below the initial fold.
+Implemented: balanced full-height phone hero, compact short-screen spacing and
+wrapping enlarged hero copy; film stays 4:3. The extended first-paint/live proof
+passes (14.08s), with 12 page units and scoped type/lint/format checks clean.
+V120-final: Meets ticket; No actionable findings. Personal device/visual release
+acceptance remains open; no Git mutation/deployment.
+
+## Generic AI-provider Privacy wording — 2026-10-28
+
+[CL-119](CL-119-provider-neutral-privacy-copy.md) replaces Google/Gemini names
+in the dialog with generic AI wording, retaining transfer and retention details.
+Implemented; 12 page tests and the all-mode desktop/phone Privacy proof (7.06s)
+pass with scoped lint/format. V119-final: Meets ticket; No actionable findings.
+Actual providers/privacy behavior remain unchanged; work is unstaged.
+
+## Clean analysis-to-moments handoff — 2026-10-28
+
+[CL-118](CL-118-clean-analysis-to-moments-background.md) clears the old analysis
+loading content behind forming moment cards, preserving camera/card continuity.
+Implemented: loading content clears before formation and cannot return as a
+prior image; matching moment-list pixels take over from formed cards. The
+reproduced failing opacity assertion now passes, along with 23 units, the dense
+three-size film proof (58.77s), types/lint/format. V118-final: Meets ticket;
+No actionable findings. Owner visual/release acceptance remains open; unstaged.
+
+## Remove Privacy preview note — 2026-10-28
+
+[CL-117](CL-117-remove-privacy-preview-note.md) removes the owner-highlighted
+preview-mode sentence and its unused styling, preserving other Privacy copy.
+Implemented; 12 page tests and the guarded dialog proof (7.02s) pass, alongside
+scoped lint/format/whitespace. V117-final: Meets ticket; No actionable findings.
+Other processing/privacy behavior is unchanged; work remains unstaged.
+
+## Poster/live title overlap — 2026-10-28
+
+[CL-116](CL-116-prevent-poster-title-over-live-film.md) fixes the full hero's
+poster/player stacking after the owner reported duplicate opening/intake text.
+Preserve the pending hosted usage/environment work and existing choreography.
+Implemented: isolate poster descendants at layer zero and the live player at
+layer one. The new full-hero paint-order assertion reproduced the defect before
+the fix and passes afterward; first-paint/desktop/phone intake proof (10.06s),
+actual playback/recovery proof (72.35s), 22 units, types/lint/format all pass.
+V116-final: Meets ticket; No actionable findings. Visual owner acceptance remains
+open; no Git mutation/deployment. CL-114/115 changes are preserved.
+
+## Private environment allowlist — 2026-10-28
+
+[CL-115](CL-115-private-environment-owner-allowlist.md) moves the CL-114 owner
+allowlist into private backend `HOSTED_DEMO_OWNER_IPS`; source examples stay
+blank. Current owner correction supersedes the earlier code-list instructions.
+Localhost and all hosted security/global caps remain unchanged.
+Implemented and verified: 40 backend configuration tests and nine domain/runtime
+tests pass, with backend/local types, scoped lint/format and whitespace clean.
+V115-final: Meets ticket; No actionable findings in the private-list follow-up.
+The source list is removed; ignored configuration was not read or edited. Actual
+hosted configuration and CL-114 release gates remain owner-only. Work is unstaged.
+
+## Hosted usage limits — 2026-10-28
+
+[CL-114](CL-114-hosted-three-clip-demo-and-durable-usage.md) implements the
+owner-authorized hosted three-clip total, recommended rolling 24-hour network
+allowance, durable global accounting, exhausted entry and owner allowlist.
+Selected for execute/validate after visual commit `09fb914`; local limits stay.
+Implemented and fake-verified: shared/manual AI correction, three cumulative
+clips, one source, a reserved/consumed rolling allowance, exact owner allowlist
+and durable conditional global counters. Local units/config/proxy checks,
+types/lint/format, hosted-shaped native proof (28.37s) and desktop/phone browser
+proof (4.78s) pass. The reproduced asynchronous admission race is fixed with
+capacity/shutdown regressions. V114-final: Meets ticket; No actionable findings
+in local code. Cloud object/IAM, trusted ingress and owner release acceptance
+remain unverified prerequisites. CL-114 is unstaged; no deployment or cloud call.
+
 ## Approved visual commit — 2026-10-28
 
 The owner authorized a whole-file plan, staging and local commit of CL-095–113

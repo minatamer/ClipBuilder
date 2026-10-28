@@ -1,5 +1,61 @@
 # Shared upload/editor release preparation
 
+## CL-114 usage accounting prerequisite — 2026-10-28
+
+Hosted visitors share three manual/AI slots, three cumulative prepared clips and
+one source. A two-hour reservation blocks concurrent/new sessions; first valid
+export generation consumes a rolling 24-hour network allowance, independently
+of downloads. Same-session retry/edit/export stays usable. Failed/abandoned
+reservations expire; actual dispatch charges never refund. Localhost is unchanged.
+
+The backend-only `HOSTED_DEMO_OWNER_IPS` environment value starts blank (CL-115).
+Set comma-separated exact public IPv4/IPv6 addresses in ignored backend
+`.env.local` for local configuration, or inject the same private environment key
+on the hosted backend. Restart after changing it; do not put addresses in source,
+frontend environment, build arguments or public configuration. At most 32 exact
+addresses are allowed; blank means no exemptions. Mapped IPv4 normalizes; visitor IPv6
+accounting groups /64 privacy addresses. Exempt owners keep the existing ten-clip
+safety bound and can clear/start another session. Security/global caps remain.
+
+Global UTC-day ceilings: 20 session admissions, 100 provider dispatches and
+200 native jobs, including provider-internal media preparation and owner use.
+Hosted retains the existing 32-call session/process editor budget rather than
+the old seven-call walkthrough allowance. These work bounds are not dollar
+limits or protection against all infrastructure DoS; retain billing safeguards.
+An IP is not a person: NAT shares allowances; VPN/address changes evade IP
+friction. Global accounting still bounds work across IPs/instances/restarts.
+
+Owner release prerequisites — not performed/authorized by local implementation:
+
+- [ ] Provision a dedicated private Cloud Storage bucket with the fixed
+      `demo-usage-v1.json` object. Narrow exception to historical no-cloud-object
+      policy for metadata only: no media/accounts/durable projects. Pre-create
+      once with `{"version":1,"day":0,"sessions":0,"provider":0,"native":0,"leases":[]}`.
+      Never reset/delete it during releases or media cleanup. Review object
+      version/soft-delete retention; expired active records leave on next write.
+- [ ] Grant only backend runtime object read/conditional-overwrite access in that
+      bucket. Keep frontend/browser unprivileged; no credential files/browser
+      keys. Populate backend `HOSTED_DEMO_LEDGER_BUCKET` manually. The existing
+      private `PROCESSING_GRANT_KEY` supplies domain-separated network HMACs;
+      preserve it across releases. Rotation must retain prior allowance coverage.
+- [ ] Verify the actual frontend ingress suffix is Google's documented
+      `[untrusted supplied prefix,] client-ip, load-balancer-ip`, with no direct
+      bypass/extra unaccounted proxies. Only then set `HOSTED_DEMO_IP_VERIFIED=true`
+      on frontend/backend. Never enable for an unverified Cloud Run/custom-domain
+      topology. The bridge replaces browser identity headers and selects only
+      the verified suffix over the authenticated private API. Missing IP fails closed.
+- [ ] Verify real hosted concurrency, cross-revision accounting, conditional
+      conflicts, IAM failure, ingress spoofing, exhausted entry and owner bypass.
+      Provider calls retain separate owner approval; local tests cannot certify
+      deployment wiring. Re-audit after topology changes.
+
+The adapter reads a bounded pre-existing object pinned to its generation and
+writes only with `ifGenerationMatch`. Accounting conflicts retry at most four
+times; provider work never retries automatically. Missing/corrupt/offline/busy
+accounting fails closed with no memory/filesystem fallback. Only digests, lease
+IDs and counters persist; no raw IP/media/filename/credential enters the ledger.
+Hosted Privacy discloses separate temporary coded network accounting.
+
 Owner decision, 2026-10-24 (CL-061): one normal app. Upload â†’ manual/AI moments â†’
 clip preparation â†’ caption/picture/filter editor â†’ Apply/Discard â†’ export/download.
 YouTube acquisition, local library/drafts/sample and the CL-078 fake-caption

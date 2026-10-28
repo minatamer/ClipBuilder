@@ -1,5 +1,31 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Hosted free-demo limits — CL-114, 2026-10-28
+
+Owner AFK authorization adopts the recommendation in
+[CL-114](tickets/CL-114-hosted-three-clip-demo-and-durable-usage.md): hosted
+visitors share three manual/AI clip slots, one source and one successful demo
+per network address per rolling 24 hours. Reserve before work and consume on
+first successful export generation, independently of downloads. Keep the active
+session's editing/retry/export access and existing local owner limits. An empty
+private backend environment IP allowlist permits owner quota bypass without
+bypassing security or global processing caps. UI correction/toast and the exhausted entry view
+supplement server enforcement.
+
+A bounded private usage ledger (keyed address digests, no media or raw addresses)
+is now required for cross-instance/restart accounting. This narrowly supersedes
+historical process-local-only/no-durable-quota decisions. It is not a project
+database. Global UTC-day ceilings are 20 admitted sessions, 100 provider calls
+and 200 native jobs, including allowlisted use; charge before work, fail closed
+without durable atomic storage or verified ingress. IP restrictions are abuse
+friction, not guaranteed per-person identity or a monetary hard cap. Owner-only
+cloud provisioning/IAM/ingress verification and deployment remain unapproved.
+
+Owner privacy correction [CL-115](tickets/CL-115-private-environment-owner-allowlist.md):
+configure `HOSTED_DEMO_OWNER_IPS` only in the backend's ignored `.env.local` or
+private deployment environment. Source examples stay blank; no owner address is
+hardcoded or exposed in browser configuration. Missing/blank means no exemptions.
+
 ## Upload-only intake spacing — CL-094, 2026-10-27
 
 When YouTube intake is excluded, the single upload card uses the available
@@ -1082,6 +1108,13 @@ paid continuation remains owner-only.
 
 ### Owner landing refinement decision — 2026-10-28
 
+Phone hero revision [CL-120](tickets/CL-120-full-screen-phone-hero.md): keep the
+initial phone viewport on the hero, with How it works below the fold. Restore
+the existing ClipBuilder hero wordmark. Use a full small-viewport minimum and
+balanced stacked layout, compact short-phone spacing and natural scroll/wrapping
+for very short screens or enlarged hero copy. Preserve the film's 4:3 aspect and
+tablet/laptop layout; do not hide lower sections or force clipped content.
+
 Saved-minutes motion revision [CL-113](tickets/CL-113-synchronized-saved-minutes-headline.md):
 count the headline and card saved-minute readouts together from 00 to 50 using
 the same progress as the visual comparison. Reserve tabular two-digit slots so
@@ -1829,9 +1862,19 @@ numbered rows and redundant wording. Keep all material mode distinctions,
 readable semantics, title focus, native modal keyboard behavior and a reachable
 close control. This supersedes CL-100's palette/material choice, not privacy policy.
 
+Owner copy follow-up [CL-117](tickets/CL-117-remove-privacy-preview-note.md)
+removes the preview-mode no-file-read/upload note from this dialog. Other
+disclosures and actual fake/real processing behavior remain unchanged.
+
+Owner wording follow-up [CL-119](tickets/CL-119-provider-neutral-privacy-copy.md)
+uses generic AI-provider language in this dialog in place of Google/Gemini names.
+Keep short audio/video transfer, separate provider retention and relevant picture
+descriptions explicit. Actual provider/configuration/privacy rules are unchanged.
+
 Earlier owner feedback limited this panel to three short points: no reuse/publishing,
 temporary storage combined with Clear, and Gemini transfer/retention. The intro
-is brief and still identifies the fake preview's no-file-read/upload behavior.
+was brief and identified the fake preview's no-file-read/upload behavior until
+the CL-117 copy revision above.
 The compact panel does not repeat retention timings; the exact policy below and
 the processing confirmation remain unchanged. No instant-deletion promise is added.
 

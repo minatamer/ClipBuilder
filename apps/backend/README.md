@@ -1,5 +1,7 @@
 # ClipBuilder backend
 
+CL-114 adds hosted-only three-clip/network allowances and durable global usage accounting. Hosted readiness now requires a private pre-created ledger and verified client-IP ingress; see the usage accounting checklist in [release preparation](../../docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md). CL-115 moves owner exemptions into backend-only `HOSTED_DEMO_OWNER_IPS`: comma-separated exact IPv4/IPv6 addresses in ignored `.env.local` or the private hosted environment. The committed example stays blank; restart after changing the private value. No cloud setup is performed by the code. Localhost keeps its existing limits.
+
 CL-061 adds the hosted adapter for the same upload/moments/editor use cases. It
 mounts `/v1/editing` behind verified frontend identity and exact origin checks;
 abuse-verified Secure/HttpOnly/SameSite session cookies and a server-forwarded

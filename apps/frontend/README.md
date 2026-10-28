@@ -1,5 +1,7 @@
 # ClipBuilder frontend
 
+CL-114 shares three hosted manual/AI clip slots, corrects excess with a visible accessible toast, and replaces exhausted intake with a timed free-demo screen. Existing active editors/downloads remain available. The server enforces cumulative limits; the authenticated bridge requires verified Google LB client-IP ingress. See [release preparation](../../docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md). Localhost retains existing owner limits.
+
 The normal `/start` route now shares upload, moments and the caption/picture/filter
 editor across local and hosted composition (CL-061). Hosted intake has one upload
 card; YouTube and the local sample/library bypass are excluded. Browser requests
@@ -552,9 +554,10 @@ portrait inside its own grid slot, keeping Download and social actions in
 separate rows when the bounded phone layout scrolls.
 
 CL-111 gives shared Privacy one solid navy surface and two concise, unboxed
-groups: Your files covers use/storage/Exit cleanup; AI processing covers Gemini
-transfer/retention and mode-specific picture descriptions. The preview-only note
-states that selected files are not read or uploaded. Title focus, Tab/Shift-Tab
+groups: Your files covers use/storage/Exit cleanup; AI processing covers provider
+transfer/retention and mode-specific picture descriptions. CL-117 removes the
+preview-mode note at the owner's request. CL-119 uses generic AI-provider wording
+while retaining transfer/retention details. Title focus, Tab/Shift-Tab
 cycling, Escape and focus return support keyboard reading; the close control
 stays reachable while longer disclosures scroll on small screens. Blue accents
 and dividers replace nested glass/numbered rows. Upload rights/limits remain in
@@ -640,13 +643,19 @@ analysis holds steady. CL-106 replaces the rejected full-scene reveal with
 content-led transitions on a persistent stage: the conversation enters the
 upload preview, analysis forms moment cards, the selected preview splits into
 source/portrait, and that portrait carries through the editor and final result.
+CL-118 clears the captured analysis component before card formation, keeping a
+clean workspace gradient behind the same cards/camera. The moment-list capture
+takes over only as the formed card overlays leave; the prior loader capture is
+excluded from that handoff. The later selection highlight keeps its own blend.
 The result widens into the conversation using one continuously reframed SVG.
 CL-107 removes the repeated title-above-frame layout. Application captures fill
 the canvas; copy occupies scene-specific quiet areas, shifts between sides and
 clears before cursor actions. Building and late actions play without headlines.
 The opening conversation blends into the background beside its typography;
 closing/opening share identical artwork/geometry and brand, changing only type.
-Static soft crops remove captured navigation/headings. Caption/card details fit
+CL-121 removes the floating contextual card from the illustrated film portrait;
+the bottom captions and actual editor/composition features remain intact.
+Static soft crops remove captured navigation/headings. Caption details fit
 the visible portrait even during camera close-ups. The film adds no bottom
 progress track, scene
 mask or entrance rotation. `film-choreography.ts` owns seek-safe geometry;
@@ -655,11 +664,21 @@ CL-108 makes that poster fit the surface before JavaScript or size observers
 run, using container-relative dimensions instead of a fixed 16:9 SVG wrapper.
 The live player mounts only after a positive surface measurement; its opening
 matches the CSS poster through the handoff and responsive resizes.
+CL-116 isolates the poster's internal title/brand stacking and places the live
+player in an explicit higher sibling layer. The poster stays available for
+first paint/loading but its opening words cannot paint over later live scenes.
+The actual-hero first-paint proof checks painted order as well as geometry,
+including desktop/phone intake; isolated composition checks alone do not cover
+the surrounding poster.
 The authoring JPEG and delivery hash remain unchanged. The eight-second Studio
 study remains.
 CL-096 removes the duplicate hero flow strip. Desktop film height follows
-viewport height with a column-width bound; stacked layouts use 4:3. The
-ResizeObserver fits the canvas without distorting artwork. Loading/error states
+viewport height with a column-width bound; stacked layouts use 4:3.
+CL-120 phone hero restores its ClipBuilder wordmark and fills at least one
+small viewport height, placing How it works below the initial fold. Short-phone
+spacing is compact; very short screens/enlarged hero text grow naturally and
+scroll, with wrapping instead of clipped copy. The film retains its 4:3 aspect.
+The ResizeObserver fits the canvas without distorting artwork. Loading/error states
 retain its dimensions. Playback stays silent
 without controls, pauses offscreen/when hidden, and resumes on return. Dynamic
 loading and asset failures retain the poster/recovery surface. This uses
