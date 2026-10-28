@@ -1,6 +1,6 @@
 # ClipBuilder frontend
 
-CL-114 shares three hosted manual/AI clip slots, corrects excess with a visible accessible toast, and replaces exhausted intake with a timed free-demo screen. Existing active editors/downloads remain available. The server enforces cumulative limits; the authenticated bridge requires verified Google LB client-IP ingress. See [release preparation](../../docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md). Localhost retains existing owner limits.
+CL-114 shares three hosted manual/AI clip slots, corrects excess with a visible accessible toast, and replaces exhausted intake with a timed free-demo screen. Existing active editors/downloads remain available. The server enforces cumulative limits; the authenticated bridge requires verified native Cloud Run client-IP ingress. CL-124 confirms the platform appends one final client address on both current entry points; preceding values and alternative visitor headers are untrusted. Reverify after topology changes. See [release preparation](../../docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md). Localhost retains existing owner limits.
 
 The normal `/start` route now shares upload, moments and the caption/picture/filter
 editor across local and hosted composition (CL-061). Hosted intake has one upload
