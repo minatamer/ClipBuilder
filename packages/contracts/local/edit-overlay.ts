@@ -5,6 +5,7 @@ import {
 } from "./assets.ts";
 import { ownerEditDocumentSchema, type OwnerEditDocument } from "./editor.ts";
 import { correctedOwnerCaptions } from "./caption-text.ts";
+import { resolveCaptionSpeakers } from "./caption-speakers.ts";
 import {
   ownerClipBaseSchema,
   ownerOverlaySchema,
@@ -81,6 +82,12 @@ export function compileOwnerOverlay(
   return ownerOverlaySchema.parse({
     ...base.overlay,
     captions: correctedOwnerCaptions(base.overlay.captions, edit?.captionText),
+    captionSpeakers: resolveCaptionSpeakers(
+      base.overlay.captions,
+      base.words,
+      edit?.captionSpeakers,
+    ),
+    ...(edit?.hook ? { hook: edit.hook } : {}),
     visuals,
     ...(edit?.texts ? { texts: edit.texts } : {}),
     ...(edit?.captions ? { captionStyle: edit.captions } : {}),

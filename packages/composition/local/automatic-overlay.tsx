@@ -5,12 +5,13 @@ import { ownerOverlayFrame } from "./overlay-frame.ts";
 import { OwnerStyledCaption } from "./styled-caption.tsx";
 import { OwnerTextLayerView } from "./text-layer.tsx";
 import { ownerVisualMotion } from "./visual-motion.ts";
+import { OWNER_CAPTION_PRESETS } from "../../contracts/local/editor.ts";
 
 /** The same fixed overlay tree runs in local review and transparent export. */
 export function OwnerAutomaticOverlay({
   overlay,
   assets,
-  frame,
+  frame: presentationFrame,
 }: {
   overlay: OwnerOverlay;
   assets: Record<string, string>;
@@ -18,7 +19,10 @@ export function OwnerAutomaticOverlay({
 }) {
   const width = 1080,
     height = 1920;
-  const { ms, caption, visuals, texts } = ownerOverlayFrame(overlay, frame);
+  const { ms, frame, caption, colors, visuals, texts } = ownerOverlayFrame(
+    overlay,
+    presentationFrame,
+  );
   return (
     <div
       style={{
@@ -56,11 +60,12 @@ export function OwnerAutomaticOverlay({
         <OwnerTextLayerView key={layer.id} layer={layer} />
       ))}
       {caption &&
-        (overlay.captionStyle ? (
+        (overlay.captionStyle || colors ? (
           <OwnerStyledCaption
             caption={caption}
             ms={ms}
-            style={overlay.captionStyle}
+            style={overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean}
+            {...(colors ? { colors } : {})}
           />
         ) : (
           <FixedCaption caption={caption} ms={ms} />

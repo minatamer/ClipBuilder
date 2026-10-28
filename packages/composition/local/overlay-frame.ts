@@ -2,14 +2,30 @@ import { FIXED_COMPOSITION_POLICY } from "@clipbuilder/contracts";
 import { OWNER_FPS } from "../../contracts/local/policy.ts";
 import type { OwnerOverlay } from "../../contracts/local/clips.ts";
 import { ownerVisualMotion } from "./visual-motion.ts";
+import { captionSpeakerFrame } from "../../contracts/local/caption-speakers.ts";
+import { OWNER_CAPTION_PRESETS } from "../../contracts/local/editor.ts";
+import {
+  ownerSourceFrame,
+  ownerHookFrames,
+  ownerHookCaption,
+} from "../../contracts/local/hook.ts";
 
 /** Exact frame-driven overlay state, including owner caption animation. */
 export function ownerOverlayFrame(overlay: OwnerOverlay, frame: number) {
+  const inHook = !!overlay.hook && frame < ownerHookFrames(overlay);
+  frame = ownerSourceFrame(overlay, frame);
   const ms = (frame * 1000) / OWNER_FPS;
   const captionIndex = overlay.captions.findIndex(
     (cue) => cue.startMs <= ms && ms < cue.endMs,
   );
-  const caption = overlay.captions[captionIndex];
+  const { caption, colors } = captionSpeakerFrame(
+    inHook
+      ? ownerHookCaption(overlay.captions[captionIndex], overlay.hook!)
+      : overlay.captions[captionIndex],
+    ms,
+    overlay.captionSpeakers,
+    overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean,
+  );
   const visuals = overlay.visuals.filter(
     (cue) => cue.startFrame <= frame && frame < cue.endFrame,
   );
@@ -31,11 +47,16 @@ export function ownerOverlayFrame(overlay: OwnerOverlay, frame: number) {
       ]) ?? [];
   return {
     ms,
+    frame,
     caption,
+    colors,
     visuals,
     texts,
     key: JSON.stringify([
+      inHook,
       captionIndex,
+      caption?.wordIds,
+      colors?.speakerId,
       texts.map((layer) => layer.id),
       caption && overlay.captionStyle?.animation === "bounce"
         ? caption.wordCues

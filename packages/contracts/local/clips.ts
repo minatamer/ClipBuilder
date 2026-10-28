@@ -23,6 +23,8 @@ import { ownerVideoLookSchema } from "./video-look.ts";
 import { ownerFocusSchema } from "./focus.ts";
 import { ownerTextLayersSchema, ownerClipTitleSchema } from "./text-layers.ts";
 import { OWNER_CAPTION_GENERATION_ATTEMPTS } from "./caption-generation.ts";
+import { ownerCaptionSpeakersSchema } from "./caption-speakers.ts";
+import { ownerHookSchema, OWNER_PRESENTATION_MAX_FRAMES } from "./hook.ts";
 import {
   CONTEXTUAL_PICTURE_POLICY,
   contextualPictureBriefSchema,
@@ -51,6 +53,8 @@ export const ownerOverlaySchema = z
       .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
     captions: compositionManifestV3Schema.shape.captions,
     captionStyle: ownerCaptionStyleSchema.optional(),
+    captionSpeakers: ownerCaptionSpeakersSchema.optional(),
+    hook: ownerHookSchema.optional(),
     texts: ownerTextLayersSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
     focus: ownerFocusSchema.optional(),
@@ -59,6 +63,7 @@ export const ownerOverlaySchema = z
   .strict()
   .superRefine((overlay, ctx) => {
     if (
+      (overlay.hook && overlay.hook.endFrame > overlay.frames) ||
       (overlay.focus && overlay.focus.frames !== overlay.frames) ||
       overlay.captions.some(
         (caption) =>
@@ -102,15 +107,17 @@ export const ownerClipOutputSchema = z
     id: ownerAssetSchema.shape.digest,
     revision: ownerOutputRevisionSchema,
     editRevision: z.number().int().nonnegative(),
-    frames: ownerOverlaySchema.shape.frames,
+    frames: z.number().int().positive().max(OWNER_PRESENTATION_MAX_FRAMES),
     bytes: z.number().int().positive().max(OWNER_LIMITS.outputBytes),
   })
   .strict();
 /** Measured playback media; a completed final export is a separate artifact. */
-export const ownerClipPreviewSchema = ownerClipOutputSchema.pick({
-  frames: true,
-  bytes: true,
-});
+export const ownerClipPreviewSchema = ownerClipOutputSchema
+  .pick({
+    frames: true,
+    bytes: true,
+  })
+  .extend({ frames: ownerOverlaySchema.shape.frames });
 export const ownerClipPlanSchema = z
   .array(
     z.object({

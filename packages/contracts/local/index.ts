@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OWNER_PRESENTATION_MAX_FRAMES } from "./hook.ts";
 
 import {
   OWNER_LIMITS,
@@ -181,12 +182,12 @@ export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
     .object({
       operation: z.literal("clip"),
       bytes: z.number().int().positive().max(OWNER_LIMITS.outputBytes),
-      frames: z
+      frames: z.number().int().positive().max(OWNER_PRESENTATION_MAX_FRAMES),
+      durationMs: z
         .number()
         .int()
         .positive()
-        .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
-      durationMs: z.number().int().positive().max(OWNER_LIMITS.clipMs),
+        .max((OWNER_PRESENTATION_MAX_FRAMES * 1000) / OWNER_FPS),
     })
     .strict(),
   z

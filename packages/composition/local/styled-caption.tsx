@@ -11,6 +11,7 @@ import {
 } from "./text-paint.ts";
 import { ownerTextBackground } from "../../contracts/local/text-style.ts";
 import { SlidingCaptionLine } from "./sliding-caption-line.tsx";
+import type { OwnerSpeakerColor } from "../../contracts/local/caption-speakers.ts";
 
 type Caption = OwnerOverlay["captions"][number];
 
@@ -19,12 +20,23 @@ export function OwnerStyledCaption({
   caption,
   ms,
   style: suppliedStyle,
+  colors,
 }: {
   caption: Caption;
   ms: number;
   style: OwnerCaptionStyle;
+  colors?: OwnerSpeakerColor;
 }) {
-  const style = ownerCaptionStyleSchema.parse(suppliedStyle);
+  const style = ownerCaptionStyleSchema.parse({
+    ...suppliedStyle,
+    ...(colors
+      ? {
+          color: colors.color,
+          backgroundColor: colors.backgroundColor,
+          highlight: colors.highlight,
+        }
+      : {}),
+  });
   if (!Number.isFinite(ms) || ms < caption.startMs || ms >= caption.endMs)
     return null;
   const tokens = caption.wordCues.flatMap((cue) =>
@@ -39,8 +51,8 @@ export function OwnerStyledCaption({
     throw new Error("invalid_owner_caption");
   const legacyBoxed =
     style.preset === "boxed" &&
-    style.backgroundColor === undefined &&
-    style.backgroundOpacity === undefined;
+    suppliedStyle.backgroundColor === undefined &&
+    suppliedStyle.backgroundOpacity === undefined;
   const block = style.preset === "solid-block";
   const paint = ownerTypographyPaint(style);
   const width = style.box.width * 1080,

@@ -14,6 +14,8 @@ import {
   OWNER_SOCIAL_TEXT_PRESETS,
 } from "./text-style.ts";
 import { ownerTextLayersSchema } from "./text-layers.ts";
+import { ownerCaptionSpeakersSchema } from "./caption-speakers.ts";
+import { ownerHookSchema } from "./hook.ts";
 export { OWNER_TEXT_FONTS as OWNER_CAPTION_FONTS } from "./text-style.ts";
 
 export const OWNER_CAPTION_ANIMATIONS = [
@@ -146,6 +148,8 @@ export const ownerEditDocumentSchema = z
     revision: z.number().int().nonnegative(),
     captions: ownerCaptionStyleSchema.nullable(),
     captionText: ownerCaptionTextSchema.optional(),
+    captionSpeakers: ownerCaptionSpeakersSchema.optional(),
+    hook: ownerHookSchema.optional(),
     texts: ownerTextLayersSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
     focus: ownerFocusSchema.optional(),
@@ -161,6 +165,15 @@ export const ownerEditDocumentSchema = z
   );
 export type OwnerEditDocument = z.infer<typeof ownerEditDocumentSchema>;
 export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
+  z
+    .object({ kind: z.literal("hook"), hook: ownerHookSchema.nullable() })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("caption-speakers"),
+      speakers: ownerCaptionSpeakersSchema.nullable(),
+    })
+    .strict(),
   z
     .object({ kind: z.literal("text-layers"), layers: ownerTextLayersSchema })
     .strict(),
@@ -193,7 +206,7 @@ export const ownerEditRequestSchema = z
     operations: z
       .array(ownerEditOperationSchema)
       .min(1)
-      .max(2 * OWNER_PICTURE_LIMITS.cuesPerClip + 5),
+      .max(2 * OWNER_PICTURE_LIMITS.cuesPerClip + 7),
   })
   .strict();
 export type OwnerEditRequest = z.infer<typeof ownerEditRequestSchema>;
