@@ -18,13 +18,31 @@ historical process-local-only/no-durable-quota decisions. It is not a project
 database. Global UTC-day ceilings are 20 admitted sessions, 100 provider calls
 and 200 native jobs, including allowlisted use; charge before work, fail closed
 without durable atomic storage or verified ingress. IP restrictions are abuse
-friction, not guaranteed per-person identity or a monetary hard cap. Owner-only
-cloud provisioning/IAM/ingress verification and deployment remain unapproved.
+friction, not guaranteed per-person identity or a monetary hard cap. The later
+CL-122 authorization below permits only the named storage/IAM setup. Actual
+ingress verification, provider acceptance and deployment remain separate gates.
 
 Owner privacy correction [CL-115](tickets/CL-115-private-environment-owner-allowlist.md):
 configure `HOSTED_DEMO_OWNER_IPS` only in the backend's ignored `.env.local` or
 private deployment environment. Source examples stay blank; no owner address is
 hardcoded or exposed in browser configuration. Missing/blank means no exemptions.
+
+Owner follow-up [CL-122](tickets/CL-122-provision-private-demo-usage-ledger.md),
+2026-10-28: retain the existing Cloud Storage design for the low-traffic demo;
+do not migrate to Redis or Firestore. Authorize CLI discovery, one private
+regional ledger bucket/object, exact backend storage permissions and bounded
+storage verification. Preserve existing usage and private configuration. No
+application revision/environment change, provider call, cloud compute build,
+API enablement, push or deployment is included. Single-object rapid-write
+constraints remain a known operational limitation, not a completed load proof.
+
+CL-122 storage evidence: the dedicated private regional bucket and fixed ledger
+now exist, with uniform access/public prevention and an exact-object backend
+read/create/delete role. Actual source-adapter backend read/conditional update,
+stale-write rejection, unchanged ledger content, anonymous denial and backend
+list denial were verified. Private resource/configuration metadata stays outside
+Git. Application environment/revisions and secret payloads were untouched;
+hosted setting injection, ingress/AI/capacity and release acceptance remain open.
 
 ## Upload-only intake spacing — CL-094, 2026-10-27
 

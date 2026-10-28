@@ -25,19 +25,38 @@ limits or protection against all infrastructure DoS; retain billing safeguards.
 An IP is not a person: NAT shares allowances; VPN/address changes evade IP
 friction. Global accounting still bounds work across IPs/instances/restarts.
 
-Owner release prerequisites — not performed/authorized by local implementation:
+CL-122 owner follow-up, 2026-10-28: retain the Cloud Storage design and authorize
+the private bucket/object, narrow backend IAM and bounded storage verification.
+Storage setup below is complete. This does not deploy an application revision
+or enable/change its environment. Concrete resource names and the later backend
+setting are in a private OS-temporary handoff, outside Git; no secrets were read.
 
-- [ ] Provision a dedicated private Cloud Storage bucket with the fixed
+Owner release prerequisites and verified storage setup:
+
+- [x] Provision a dedicated private Cloud Storage bucket with the fixed
       `demo-usage-v1.json` object. Narrow exception to historical no-cloud-object
       policy for metadata only: no media/accounts/durable projects. Pre-create
       once with `{"version":1,"day":0,"sessions":0,"provider":0,"native":0,"leases":[]}`.
       Never reset/delete it during releases or media cleanup. Review object
       version/soft-delete retention; expired active records leave on next write.
-- [ ] Grant only backend runtime object read/conditional-overwrite access in that
-      bucket. Keep frontend/browser unprivileged; no credential files/browser
-      keys. Populate backend `HOSTED_DEMO_LEDGER_BUCKET` manually. The existing
-      private `PROCESSING_GRANT_KEY` supplies domain-separated network HMACs;
-      preserve it across releases. Rotation must retain prior allowance coverage.
+      CL-122: Standard storage in `europe-west1`, uniform bucket-level access,
+      enforced public-access prevention, no versioning/retention/lifecycle rule,
+      and soft delete disabled. Exactly one ledger object was verified.
+- [x] Grant the existing backend runtime a custom role with only
+      `storage.objects.get/create/delete`, bound on the dedicated bucket with a
+      condition restricting it to the exact ledger object. Delete permission is
+      required for overwrite; application writes use generation preconditions.
+      No frontend/public binding was added. Actual backend adapter read and
+      unchanged-content conditional update passed; a stale generation returned
+      false, backend listing was denied and anonymous object read was denied.
+      Direct frontend-identity denial was not exercised because existing CLI
+      impersonation permission for that identity was unavailable; no extra
+      impersonation grant was made. The bucket policy was inspected instead.
+- [ ] Inject backend `HOSTED_DEMO_LEDGER_BUCKET` during a separately authorized
+      release/configuration change. The existing private `PROCESSING_GRANT_KEY`
+      supplies domain-separated network HMACs; preserve it across releases.
+      Rotation must retain prior allowance coverage. CL-122 changed no app env,
+      revision, secret, origin, paid switch or local configuration.
 - [ ] Verify the actual frontend ingress suffix is Google's documented
       `[untrusted supplied prefix,] client-ip, load-balancer-ip`, with no direct
       bypass/extra unaccounted proxies. Only then set `HOSTED_DEMO_IP_VERIFIED=true`

@@ -1,5 +1,17 @@
 # ClipBuilder canonical ticket index
 
+## Private demo usage ledger setup — 2026-10-28
+
+[CL-122](CL-122-provision-private-demo-usage-ledger.md) records the owner's
+decision to keep Cloud Storage and authorizes the private bucket/object,
+backend-only IAM grant and bounded storage verification through the CLI.
+Completed: private bucket/ledger and exact-object backend grant exist; actual
+backend adapter read/conditional write, stale-generation rejection, anonymous
+denial, listing denial and preserved data were verified. V122-final: Meets
+ticket; No actionable findings. App setting injection, ingress verification,
+owner/provider/capacity/release gates remain open. No deployment or AI calls;
+documentation remains unstaged for review.
+
 ## Approved CL-114–121 local commit sequence — 2026-10-28
 
 The owner approved a file-level plan, many small local commits and exact-path
