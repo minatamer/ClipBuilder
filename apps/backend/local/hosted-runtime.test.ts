@@ -22,6 +22,8 @@ it("does not start native or provider composition in test/fake/paid-off/local/pr
     publicPaidProcessingApproved: true,
     admission: {
       ...fake.admission,
+      demoIpVerified: true,
+      demoLedgerBucket: "synthetic-demo-ledger",
       grantsEnabled: true,
       maxProcessDispatches: 7,
     },
@@ -31,6 +33,10 @@ it("does not start native or provider composition in test/fake/paid-off/local/pr
       liveAssembly: true,
       liveRender: true,
       liveImageGeneration: true,
+    },
+    session: {
+      ...fake.session,
+      processingGrantKey: "synthetic-demo-key".repeat(4),
     },
     renderer: { ...fake.renderer, spendApproved: true },
     gemini: {
@@ -55,6 +61,8 @@ it("does not start native or provider composition in test/fake/paid-off/local/pr
     { ...ready, paidDemoEnabled: false },
     { ...ready, publicPaidProcessingApproved: false },
     { ...ready, providerMode: "fake" as const },
+    { ...ready, admission: { ...ready.admission, demoIpVerified: false } },
+    { ...ready, admission: { ...ready.admission, demoLedgerBucket: null } },
     { ...ready, gemini: { ...ready.gemini, apiKey: null } },
     { ...ready, renderer: { ...ready.renderer, spendApproved: false } },
   ])

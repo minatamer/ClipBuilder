@@ -1,4 +1,5 @@
 import { expect, it, vi } from "vitest";
+import { demoUsageFixture } from "./demo-usage-fixture.ts";
 import { createServer } from "node:http";
 import {
   mkdtemp,
@@ -85,6 +86,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
         if (req.url === "/api/local/capabilities") await connection;
         req.url = req.url.replace("/api/local/", "/");
         req.headers.origin = origin;
+        req.headers["x-clipbuilder-client-ip"] = "192.0.2.1";
         req.headers["sec-fetch-site"] = "same-origin";
         const csrf = editingCookie(req.headers.cookie, EDITING_CSRF_COOKIE);
         if (csrf) req.headers["x-csrf-token"] = csrf;
@@ -119,6 +121,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
   const port = await listenOwner(server);
   origin = `http://localhost:${port}`;
   const flow = createHostedEditingWorkflow({
+    usage: demoUsageFixture().usage,
     root,
     origin,
     ttlMs: 120_000,

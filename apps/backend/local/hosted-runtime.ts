@@ -13,6 +13,8 @@ import { composeOwnerProviders } from "./provider-composition.ts";
 import { localWorkerPort } from "./worker-port.ts";
 import { nativeEnvironment } from "./local-mode.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
+import { HostedDemoUsage } from "./demo-usage.ts";
+import { composeDemoUsageStore } from "./demo-usage.gcs.ts";
 
 /** Explicit executable composition only. Hosted imports/tests never spawn media. */
 export function hostedEditingReady(config: BackendConfig) {
@@ -23,6 +25,10 @@ export function hostedEditingReady(config: BackendConfig) {
     config.paidDemoEnabled &&
     config.publicPaidProcessingApproved &&
     config.admission.grantsEnabled &&
+    config.admission.demoIpVerified &&
+    Boolean(
+      config.admission.demoLedgerBucket && config.session.processingGrantKey,
+    ) &&
     config.admission.maxProcessDispatches > 0 &&
     config.features.liveAnalysis &&
     config.features.liveAssembly &&
@@ -127,7 +133,13 @@ export async function startHostedEditingWorkflow(
       ttlMs: config.session.accessTtlSeconds * 1000,
       siteKey: config.turnstile.siteKey!,
       aiMode: "provider-ai",
-      providerCalls: config.admission.maxProcessDispatches,
+      usage: new HostedDemoUsage(
+        composeDemoUsageStore(config.admission.demoLedgerBucket!),
+        config.session.processingGrantKey!,
+        Date.now,
+        config.admission.demoOwnerIps,
+      ),
+      providerCalls: HOSTED_EDITING_POLICY.providerCalls,
       sourceLimits: {
         bytes: config.limits.sourceBytes,
         durationMs: config.limits.sourceSeconds * 1000,
@@ -144,7 +156,7 @@ export async function startHostedEditingWorkflow(
         )
           throw new Error("disk_unavailable");
       },
-      providers: (files) =>
+      providers: (files, scopedMedia) =>
         composeOwnerProviders(
           {
             ready: true,
@@ -157,7 +169,7 @@ export async function startHostedEditingWorkflow(
             },
           },
           files,
-          media,
+          scopedMedia,
           undefined,
           diagnostics,
         ),

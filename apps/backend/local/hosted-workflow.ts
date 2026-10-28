@@ -1,4 +1,10 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createHash,
+  randomBytes,
+  randomUUID,
+  timingSafeEqual,
+} from "node:crypto";
+import { DemoLimit, type HostedDemoUsage } from "./demo-usage.ts";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { sessionStartProofSchema } from "@clipbuilder/contracts";
 import type { AbuseVerifier } from "../src/admission/processing.admission.js";
@@ -18,6 +24,7 @@ import {
   EDITING_SESSION_COOKIE,
   EDITING_CSRF_COOKIE,
   HOSTED_EDITING_POLICY,
+  HOSTED_DEMO_POLICY,
   hostedEditingPath,
 } from "../../../packages/contracts/local/hosted-editing.ts";
 export {
@@ -45,6 +52,9 @@ export function editingCookie(
   return /^[A-Za-z0-9_-]{43}$/u.test(value) ? value : null;
 }
 type Session = {
+  network: string;
+  exempt: boolean;
+  sourceOpened: boolean;
   csrf: string;
   expires: number;
   calls: number;
@@ -56,6 +66,7 @@ type Session = {
   transfers: Set<{ request: IncomingMessage; done: Promise<void> }>;
 };
 type Options = {
+  usage: HostedDemoUsage;
   root: string;
   origin: string;
   ttlMs: number;
@@ -67,7 +78,10 @@ type Options = {
   abuse: AbuseVerifier;
   capacity: typeof requireDisk;
   media: OwnerHostOptions["media"];
-  providers(files: WorkspaceFiles): OwnerHostProviders;
+  providers(
+    files: WorkspaceFiles,
+    media: OwnerHostOptions["media"],
+  ): OwnerHostProviders;
   diagnostics?: LocalDiagnostics;
   now?: () => number;
 };
@@ -162,6 +176,19 @@ export function createHostedEditingWorkflow(options: Options) {
     sweep();
     const token = editingCookie(req.headers.cookie, EDITING_SESSION_COOKIE);
     const session = token ? sessions.get(hash(token)) : undefined;
+    let identity;
+    try {
+      const ip = req.headers["x-clipbuilder-client-ip"];
+      if (typeof ip !== "string") throw new Error("demo_identity_unavailable");
+      identity = options.usage.identity(ip);
+    } catch {
+      reply(res, 503, { error: "demo_unavailable" });
+      return;
+    }
+    if (session && session.network !== identity.network) {
+      res.writeHead(403).end();
+      return;
+    }
     if (path === "/capabilities") {
       reply(res, 200, {
         execution: "hosted",
@@ -172,6 +199,10 @@ export function createHostedEditingWorkflow(options: Options) {
           options.captionGeneration ?? options.aiMode === "provider-ai",
         localMedia: false,
         cloud: true,
+        demoClipLimit:
+          (session?.exempt ?? identity.exempt)
+            ? null
+            : HOSTED_DEMO_POLICY.clips,
         ...(options.siteKey ? { processingSiteKey: options.siteKey } : {}),
       });
       return;
@@ -248,11 +279,23 @@ export function createHostedEditingWorkflow(options: Options) {
         }
         const secret = randomBytes(32).toString("base64url"),
           csrf = randomBytes(32).toString("base64url");
+        const leaseId = randomUUID();
+        await options.usage.reserve(identity, leaseId, options.ttlMs);
+        controller.signal.throwIfAborted();
+        // Durable I/O yields; another admission or shutdown may have won meanwhile.
+        if (
+          closing ||
+          sessions.size + cleanup.size + recovery.size >=
+            HOSTED_EDITING_POLICY.sessions
+        ) {
+          res.writeHead(closing ? 503 : 429).end();
+          return;
+        }
         const upload = new HostedUpload(
           options.root,
           options.sourceLimits.bytes,
         );
-        const charge = () => {
+        const charge = async () => {
           if (
             closing ||
             entry.expires <= now() ||
@@ -262,7 +305,9 @@ export function createHostedEditingWorkflow(options: Options) {
             throw new Error("provider_budget_exhausted");
           entry.calls++;
           providerCalls++;
+          await options.usage.charge(leaseId, "provider");
         };
+        let completed = false;
         const media: OwnerHostOptions["media"] = async (...args) => {
           if (
             closing ||
@@ -271,6 +316,8 @@ export function createHostedEditingWorkflow(options: Options) {
           )
             throw new Error("native_budget_exhausted");
           entry.native++;
+          await options.usage.charge(leaseId, "native");
+          args[1].throwIfAborted();
           return options.media(...args);
         };
         const host = createOwnerHost({
@@ -278,6 +325,13 @@ export function createHostedEditingWorkflow(options: Options) {
           token: randomBytes(32).toString("hex"),
           port: 0,
           hosted: true,
+          clipLimit: identity.exempt ? undefined : HOSTED_DEMO_POLICY.clips,
+          async exported() {
+            if (!completed) {
+              await options.usage.complete(leaseId);
+              completed = true;
+            }
+          },
           authorize: (request) => trusted.has(request),
           frontendOrigin: options.origin,
           media,
@@ -285,11 +339,19 @@ export function createHostedEditingWorkflow(options: Options) {
           capacity: options.capacity,
           diagnostics,
           async receiveSource(id, files, request, signal) {
+            if (entry.sourceOpened) throw new Error("demo_source_limit");
             const value = z
               .object({ uploadId: z.uuid() })
               .strict()
               .parse(await hostedJson(request));
-            return upload.finish(value.uploadId, files, id, signal);
+            const source = await upload.finish(
+              value.uploadId,
+              files,
+              id,
+              signal,
+            );
+            entry.sourceOpened = true;
+            return source;
           },
           reserveRead(bytes) {
             if (
@@ -301,7 +363,7 @@ export function createHostedEditingWorkflow(options: Options) {
             entry.bytes += bytes;
           },
           providers(files) {
-            const ports = options.providers(files);
+            const ports = options.providers(files, media);
             return {
               ...ports,
               ...(ports.captionTranscription
@@ -311,7 +373,7 @@ export function createHostedEditingWorkflow(options: Options) {
                         NonNullable<typeof ports.captionTranscription>
                       >
                     ) => {
-                      charge();
+                      await charge();
                       return ports.captionTranscription!(...args);
                     },
                   }
@@ -321,11 +383,11 @@ export function createHostedEditingWorkflow(options: Options) {
                     analysis: {
                       ...ports.analysis,
                       async transcribe(...args) {
-                        charge();
+                        await charge();
                         return ports.analysis!.transcribe(...args);
                       },
                       async select(...args) {
-                        charge();
+                        await charge();
                         return ports.analysis!.select(...args);
                       },
                     },
@@ -336,11 +398,11 @@ export function createHostedEditingWorkflow(options: Options) {
                     clipPreparation: {
                       ...ports.clipPreparation,
                       async plan(...args) {
-                        charge();
+                        await charge();
                         return ports.clipPreparation!.plan(...args);
                       },
                       async image(...args) {
-                        charge();
+                        await charge();
                         return ports.clipPreparation!.image(...args);
                       },
                     },
@@ -350,6 +412,8 @@ export function createHostedEditingWorkflow(options: Options) {
           },
         });
         const entry: Session = {
+          ...identity,
+          sourceOpened: false,
           csrf,
           expires: now() + options.ttlMs,
           calls: 0,
@@ -365,8 +429,20 @@ export function createHostedEditingWorkflow(options: Options) {
         cookies(res, secret, csrf, Math.floor(options.ttlMs / 1000));
         reply(res, 201, { active: true });
       } catch (error) {
+        if (error instanceof DemoLimit) {
+          res.setHeader(
+            "Retry-After",
+            String(Math.max(1, Math.ceil((error.retryAt - now()) / 1000))),
+          );
+          reply(res, 429, {
+            active: false,
+            limited: true,
+            retryAt: error.retryAt,
+          });
+          return;
+        }
         diagnostics.failure("http_request", error);
-        if (!res.destroyed) reply(res, 400, { error: "session_unavailable" });
+        if (!res.destroyed) reply(res, 503, { error: "session_unavailable" });
       } finally {
         pending--;
         clearTimeout(deadline);
@@ -375,7 +451,18 @@ export function createHostedEditingWorkflow(options: Options) {
       return;
     }
     if (method === "GET" && path === "/session") {
-      reply(res, 200, { active: Boolean(session) });
+      if (session)
+        reply(res, 200, { active: true, limited: false, retryAt: null });
+      else {
+        try {
+          reply(res, 200, {
+            active: false,
+            ...(await options.usage.status(identity.network, identity.exempt)),
+          });
+        } catch {
+          reply(res, 503, { error: "demo_unavailable" });
+        }
+      }
       return;
     }
     if (!session) {
@@ -401,6 +488,10 @@ export function createHostedEditingWorkflow(options: Options) {
       return;
     }
     if (method === "POST" && path === "/upload") {
+      if (session.sourceOpened) {
+        reply(res, 409, { error: "demo_source_limit" });
+        return;
+      }
       await transfer(session, req, res, () => session.upload.start(req), 201);
       return;
     }

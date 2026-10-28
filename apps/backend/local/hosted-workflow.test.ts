@@ -14,8 +14,11 @@ import { fakeOwnerAnalysis } from "./fake-analysis.ts";
 import { editorContentFixture as fakeOwnerClipPreparation } from "../../../test/owner-content-fixture.ts";
 import { createApplication } from "../src/app.ts";
 import { loadConfig } from "../src/config/loadConfig.ts";
+import { demoUsageFixture } from "../../../test/demo-usage-fixture.ts";
+import type { HostedDemoUsage } from "./demo-usage.ts";
 let root: string, flow: ReturnType<typeof createHostedEditingWorkflow>;
 let now: number;
+let usage: HostedDemoUsage;
 const origin = "https://frontend.run.app";
 const media = vi.fn(),
   transcribe = vi.fn(fakeOwnerAnalysis.transcribe),
@@ -65,7 +68,9 @@ beforeEach(async () => {
       durationMs: Math.round((job.overlay.frames * 1000) / 30),
     };
   });
+  usage = demoUsageFixture(() => now).usage;
   flow = createHostedEditingWorkflow({
+    usage,
     root,
     origin,
     ttlMs: 5000,
@@ -89,12 +94,17 @@ afterEach(async () => {
 });
 const server = () =>
   createServer((req, res) => {
+    req.headers["x-clipbuilder-client-ip"] ??= "192.0.2.1";
     void flow.dispatch(req, res);
   });
-const start = async (app: ReturnType<typeof server>) => {
+const start = async (app: ReturnType<typeof server>, ip = "192.0.2.1") => {
   const response = await request(app)
     .post("/session")
-    .set({ Origin: origin, "Sec-Fetch-Site": "same-origin" })
+    .set({
+      Origin: origin,
+      "Sec-Fetch-Site": "same-origin",
+      "X-ClipBuilder-Client-IP": ip,
+    })
     .send({ startNonce: randomUUID(), turnstileToken: "synthetic-proof" });
   expect(response.status).toBe(201);
   const setCookies = z.array(z.string()).parse(response.headers["set-cookie"]);
@@ -107,6 +117,7 @@ const start = async (app: ReturnType<typeof server>) => {
     "X-CSRF-Token": cookies
       .find((cookie) => cookie.startsWith(EDITING_CSRF_COOKIE + "="))!
       .split("=")[1]!,
+    "X-ClipBuilder-Client-IP": ip,
   };
 };
 it("rejects every hosted YouTube/library/agent path before proof verification, media or AI", async () => {
@@ -123,6 +134,7 @@ it("rejects every hosted YouTube/library/agent path before proof verification, m
     "/drafts",
     "/agent/status",
     "/shutdown",
+    `/workspace/${randomUUID()}/portrait`,
   ]) {
     expect(
       (
@@ -246,6 +258,15 @@ it("runs upload, preparation and explicit retry through isolated normal editing 
     ).status,
   ).toBe(202);
   expect((await settled()).clips[0].state).toBe("ready");
+  // No download is needed to consume the trial; the active editor stays usable.
+  const beforeDownload = await request(app)
+    .get("/session")
+    .set({ Origin: origin, "Sec-Fetch-Site": "same-origin" });
+  expect(beforeDownload.body).toMatchObject({
+    active: false,
+    limited: true,
+    retryAt: now + 86_400_000,
+  });
   expect(media).toHaveBeenCalledTimes(4);
   expect(plan).toHaveBeenCalledTimes(1);
   expect(image).toHaveBeenCalledTimes(1);
@@ -263,7 +284,13 @@ it("runs upload, preparation and explicit retry through isolated normal editing 
   ).toBe(401);
   expect((await request(app).delete("/session").set(headers)).status).toBe(204);
   expect(await readdir(root)).toEqual([]);
-  const other = await start(app);
+  const denied = await request(app)
+    .post("/session")
+    .set({ Origin: origin, "Sec-Fetch-Site": "same-origin" })
+    .send({ startNonce: randomUUID(), turnstileToken: "synthetic-proof" });
+  expect(denied.status).toBe(429);
+  expect(denied.body.limited).toBe(true);
+  const other = await start(app, "192.0.2.2");
   expect((await request(app).get(base).set(other)).status).toBe(404);
 });
 it("requires exact origin, bounds source size and expires the session without provider work", async () => {
@@ -284,6 +311,8 @@ it("requires exact origin, bounds source size and expires the session without pr
   now = 7000;
   expect((await request(app).get("/session").set(headers)).body).toEqual({
     active: false,
+    limited: false,
+    retryAt: null,
   });
   expect(media).not.toHaveBeenCalled();
   expect(transcribe).not.toHaveBeenCalled();
@@ -311,9 +340,235 @@ it("mounts hosted editing after frontend identity verification and preserves loo
   verify.mockResolvedValue(true);
   const response = await request(app)
     .get("/v1/editing/capabilities")
+    .set("X-ClipBuilder-Client-IP", "192.0.2.1")
     .set({ Origin: origin, "Sec-Fetch-Site": "same-origin" });
   expect(response.status).toBe(200);
   expect(response.body.sourceMode).toBeNull();
   expect((await request(app).get("/v1/local/capabilities")).status).toBe(404);
   expect(media).not.toHaveBeenCalled();
+});
+
+it("enforces mixed manual/AI slots and three cumulative clips against direct API requests", async () => {
+  const app = server(),
+    headers = await start(app);
+  const upload = await request(app)
+    .post("/upload")
+    .set(headers)
+    .send({ bytes: 9 });
+  await request(app)
+    .put(`/upload/${upload.body.uploadId}/0`)
+    .set(headers)
+    .set("Content-Type", "application/octet-stream")
+    .send(Buffer.from("synthetic"));
+  const opened = await request(app)
+    .post("/open/video")
+    .set(headers)
+    .send({ uploadId: upload.body.uploadId });
+  const base = `/workspace/${opened.body.workspace.id}`;
+  const inputs = {
+    sourceRevision: 0,
+    policyRevision: 0,
+    manualOnly: false,
+    aiCount: 10,
+    aiDuration: { minMs: 10000, maxMs: 60000 },
+    ranges: Array.from({ length: 2 }, (_, i) => ({
+      id: randomUUID(),
+      startMs: i * 10000,
+      endMs: (i + 1) * 10000,
+    })),
+  };
+  const mixed = await request(app)
+    .post(base + "/analysis")
+    .set(headers)
+    .send(inputs);
+  expect(mixed.status).toBe(200);
+  expect(mixed.body.inputs.aiCount).toBe(1);
+  expect(
+    mixed.body.manual.length + mixed.body.suggestions.length,
+  ).toBeLessThanOrEqual(3);
+  const analysis = await request(app)
+    .post(base + "/analysis")
+    .set(headers)
+    .send({
+      ...inputs,
+      policyRevision: 1,
+      ranges: Array.from({ length: 10 }, (_, i) => ({
+        id: randomUUID(),
+        startMs: i * 1000,
+        endMs: (i + 1) * 1000,
+      })),
+    });
+  expect(analysis.status).toBe(200);
+  expect(analysis.body.manual).toHaveLength(3);
+  expect(analysis.body.suggestions).toHaveLength(0);
+  expect(analysis.body.inputs.manualOnly).toBe(true);
+  const batch = {
+    operationId: randomUUID(),
+    analysisId: analysis.body.id,
+    sourceRevision: 0,
+    policyRevision: 1,
+    momentIds: analysis.body.manual.map((moment: { id: string }) => moment.id),
+  };
+  expect(
+    (
+      await request(app)
+        .post(base + "/clips")
+        .set(headers)
+        .send(batch)
+    ).status,
+  ).toBe(202);
+  await vi.waitFor(async () =>
+    expect(
+      (
+        await request(app)
+          .get(base + "/clips")
+          .set(headers)
+      ).body.active,
+    ).toBe(false),
+  );
+  expect(plan).toHaveBeenCalledTimes(3);
+  const current = await request(app)
+    .post(base + "/analysis")
+    .set(headers)
+    .send({
+      ...inputs,
+      policyRevision: 2,
+      manualOnly: true,
+      ranges: [{ id: randomUUID(), startMs: 30000, endMs: 31000 }],
+    });
+  const before = plan.mock.calls.length;
+  expect(
+    (
+      await request(app)
+        .post(base + "/clips")
+        .set(headers)
+        .send({
+          ...batch,
+          operationId: randomUUID(),
+          analysisId: current.body.id,
+          policyRevision: 2,
+          momentIds: [current.body.manual[0].id],
+        })
+    ).status,
+  ).toBe(429);
+  expect(plan).toHaveBeenCalledTimes(before);
+  expect(
+    (await request(app).post("/upload").set(headers).send({ bytes: 9 })).status,
+  ).toBe(409);
+  const calls = media.mock.calls.length;
+  expect(
+    (
+      await request(app)
+        .post(base + "/portrait")
+        .set(headers)
+        .send({})
+    ).status,
+  ).toBe(404);
+  expect(media).toHaveBeenCalledTimes(calls);
+  await request(app).delete(base).set(headers);
+  expect(
+    (
+      await request(app)
+        .post("/open/video")
+        .set(headers)
+        .send({ uploadId: upload.body.uploadId })
+    ).status,
+  ).toBe(400);
+});
+
+it("dispatches no native or provider work when durable charging fails", async () => {
+  const app = server(),
+    headers = await start(app);
+  vi.spyOn(usage, "charge").mockRejectedValue(
+    new Error("synthetic_ledger_offline"),
+  );
+  const upload = await request(app)
+    .post("/upload")
+    .set(headers)
+    .send({ bytes: 9 });
+  await request(app)
+    .put(`/upload/${upload.body.uploadId}/0`)
+    .set(headers)
+    .set("Content-Type", "application/octet-stream")
+    .send(Buffer.from("synthetic"));
+  expect(
+    (
+      await request(app)
+        .post("/open/video")
+        .set(headers)
+        .send({ uploadId: upload.body.uploadId })
+    ).status,
+  ).toBe(400);
+  expect(media).not.toHaveBeenCalled();
+  expect(transcribe).not.toHaveBeenCalled();
+  expect(plan).not.toHaveBeenCalled();
+  expect(image).not.toHaveBeenCalled();
+  expect(
+    (
+      await request(app).get("/capabilities").set({
+        Origin: origin,
+        "Sec-Fetch-Site": "same-origin",
+        "X-ClipBuilder-Client-IP": "forged, 192.0.2.1",
+      })
+    ).status,
+  ).toBe(503);
+});
+
+it("rechecks session capacity after asynchronous durable reservation", async () => {
+  const app = server(),
+    original = usage.reserve.bind(usage);
+  let waiting = 0,
+    release: () => void = () => {};
+  const barrier = new Promise<void>((done) => {
+    release = done;
+  });
+  vi.spyOn(usage, "reserve").mockImplementation(async (...args) => {
+    await original(...args);
+    if (++waiting === 2) release();
+    await barrier;
+  });
+  const replies = await Promise.all(
+    ["192.0.2.1", "192.0.2.2"].map((ip) =>
+      request(app)
+        .post("/session")
+        .set({
+          Origin: origin,
+          "Sec-Fetch-Site": "same-origin",
+          "X-ClipBuilder-Client-IP": ip,
+        })
+        .send({ startNonce: randomUUID(), turnstileToken: "synthetic-proof" }),
+    ),
+  );
+  expect(replies.map((reply) => reply.status).sort()).toEqual([201, 429]);
+  expect(media).not.toHaveBeenCalled();
+  expect(plan).not.toHaveBeenCalled();
+});
+
+it("does not publish a new host when shutdown wins during durable admission", async () => {
+  const app = server(),
+    original = usage.reserve.bind(usage);
+  let reserved: () => void = () => {},
+    release: () => void = () => {};
+  const entered = new Promise<void>((done) => {
+      reserved = done;
+    }),
+    barrier = new Promise<void>((done) => {
+      release = done;
+    });
+  vi.spyOn(usage, "reserve").mockImplementation(async (...args) => {
+    await original(...args);
+    reserved();
+    await barrier;
+  });
+  const response = request(app)
+    .post("/session")
+    .set({ Origin: origin, "Sec-Fetch-Site": "same-origin" })
+    .send({ startNonce: randomUUID(), turnstileToken: "synthetic-proof" })
+    .then((value) => value);
+  await entered;
+  await flow.close();
+  release();
+  expect((await response).status).toBe(503);
+  expect(media).not.toHaveBeenCalled();
+  expect(plan).not.toHaveBeenCalled();
 });

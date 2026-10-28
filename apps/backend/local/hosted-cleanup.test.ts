@@ -12,6 +12,7 @@ import {
 } from "./hosted-workflow.ts";
 import { HostedUpload } from "./hosted-upload.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
+import { demoUsageFixture } from "../../../test/demo-usage-fixture.ts";
 
 const hostFailure = vi.hoisted(() => ({ remaining: 0, closes: 0 }));
 vi.mock("./server.ts", async (original) => {
@@ -48,6 +49,7 @@ it("discards an independent staged upload when host close fails and retries host
   const lines: string[] = [];
   const origin = "https://frontend.run.app";
   const flow = createHostedEditingWorkflow({
+    usage: demoUsageFixture(() => now).usage,
     root,
     origin,
     ttlMs: 5000,
@@ -62,6 +64,7 @@ it("discards an independent staged upload when host close fails and retries host
     diagnostics: new LocalDiagnostics((line) => lines.push(line)),
   });
   const app = createServer((req, res) => {
+    req.headers["x-clipbuilder-client-ip"] = "192.0.2.1";
     void flow.dispatch(req, res);
   });
   try {
@@ -94,6 +97,8 @@ it("discards an independent staged upload when host close fails and retries host
     now = 7000;
     expect((await request(app).get("/session").set(headers)).body).toEqual({
       active: false,
+      limited: false,
+      retryAt: null,
     });
     await vi.waitFor(() => expect(discard).toHaveBeenCalledTimes(1));
     await vi.waitFor(async () => expect(await readdir(root)).toEqual([]), {
