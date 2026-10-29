@@ -8,6 +8,12 @@ import { PictureTiming } from "./picture-timing.tsx";
 import { CaptionTextEditor } from "./caption-text-editor.tsx";
 import { CaptionSpeakers } from "./caption-speakers.tsx";
 import { HookControls } from "./hook-controls.tsx";
+import { AudioInspector } from "./audio-inspector.tsx";
+import { OwnerAudioPreview } from "./audio-preview.tsx";
+import {
+  OWNER_AUDIO_LIMITS,
+  type OwnerAudioCue,
+} from "../../../../../packages/contracts/local/audio.ts";
 import { EditorHookClock } from "./editor-clock.ts";
 import {
   ownerSourceFrame,
@@ -268,6 +274,7 @@ function SelectionBox({
 
 function Review({
   overlay,
+  workspaceId,
   assets,
   sourceUrl,
   selection,
@@ -280,6 +287,7 @@ function Review({
   setting,
 }: {
   overlay: OwnerOverlay;
+  workspaceId: string;
   assets: Record<string, string>;
   sourceUrl: string;
   onPlaybackError: () => void;
@@ -322,6 +330,7 @@ function Review({
           >
             <Html5Video
               src={sourceUrl}
+              volume={(overlay.audio?.originalVolume ?? 100) / 100}
               trimBefore={part.start}
               trimAfter={part.end}
               style={
@@ -348,6 +357,11 @@ function Review({
           </Sequence>
         ))}
       </OwnerVideoLookLayer>
+      <OwnerAudioPreview
+        overlay={overlay}
+        workspaceId={workspaceId}
+        onError={onPlaybackError}
+      />
       <OwnerAutomaticOverlay
         overlay={overlay}
         assets={assets}
@@ -459,12 +473,14 @@ export function ClipEditor({
   });
   const [selection, setSelection] = useState("captions");
   const [setting, setSetting] = useState<EditorSetting>("captions");
+  const [mediaTab, setMediaTab] = useState("pictures");
   const [captionTab, setCaptionTab] = useState("style");
   const [textTab, setTextTab] = useState("content");
   const [pictureTab, setPictureTab] = useState("image");
   const tabsId = useId();
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [audioUploading, setAudioUploading] = useState(false);
   const [forcedStale, setForcedStale] = useState(false);
   const [captionConfirm, setCaptionConfirm] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -506,7 +522,7 @@ export function ClipEditor({
   let overlay: OwnerOverlay = base.overlay;
   try {
     ownerEditDocumentSchema.parse(draft);
-    overlay = compileOwnerOverlay(base, draft, clip.assets);
+    overlay = compileOwnerOverlay(base, draft, clip.assets, clip.audioAssets);
   } catch {
     error =
       draft.hook &&
@@ -549,7 +565,12 @@ export function ClipEditor({
                       ? "Use a font size from 24 to 120."
                       : "Keep layers inside the preview and check their size.";
     try {
-      overlay = compileOwnerOverlay(base, original, clip.assets);
+      overlay = compileOwnerOverlay(
+        base,
+        original,
+        clip.assets,
+        clip.audioAssets,
+      );
     } catch {
       previewUnavailable = true;
     }
@@ -565,9 +586,9 @@ export function ClipEditor({
     };
   }, []);
   useEffect(() => {
-    onDirty(clip.id, dirty || captionConfirm || generating);
+    onDirty(clip.id, dirty || captionConfirm || generating || audioUploading);
     return () => onDirty(clip.id, false);
-  }, [clip.id, dirty, captionConfirm, generating, onDirty]);
+  }, [clip.id, dirty, captionConfirm, generating, audioUploading, onDirty]);
   useEffect(() => {
     if (captionConfirm) {
       const target = footerTarget ?? document.querySelector(".clip-editor");
@@ -627,6 +648,7 @@ export function ClipEditor({
     }
   }
   function selectLayer(id: string) {
+    setMediaTab("pictures");
     setSelection(id);
     setSetting(
       id === "captions"
@@ -713,11 +735,15 @@ export function ClipEditor({
       ),
     );
   }
-  async function perform(kind: "edit" | "picture" | "reload", file?: File) {
+  async function perform(
+    kind: "edit" | "picture" | "reload" | "audio",
+    file?: File,
+  ) {
     if (request.current) return;
     const controller = new AbortController();
     request.current = controller;
     setPending(true);
+    setAudioUploading(kind === "audio");
     try {
       const body =
         kind === "edit"
@@ -740,9 +766,19 @@ export function ClipEditor({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
               }
-            : kind === "picture"
+            : kind === "picture" || kind === "audio"
               ? {
-                  headers: { "Content-Type": file?.type ?? "" },
+                  headers: {
+                    "Content-Type":
+                      file?.type ||
+                      (kind === "audio"
+                        ? file?.name.toLowerCase().endsWith(".mp3")
+                          ? "audio/mpeg"
+                          : file?.name.toLowerCase().endsWith(".m4a")
+                            ? "audio/mp4"
+                            : "audio/wav"
+                        : ""),
+                  },
                   body: file ?? null,
                 }
               : {}),
@@ -750,6 +786,7 @@ export function ClipEditor({
       );
       if (!alive.current || controller.signal.aborted) return;
       if (response.status === 409) {
+        if (kind === "audio") throw new Error("audio_busy");
         setForcedStale(true);
         throw new Error("stale");
       }
@@ -759,7 +796,26 @@ export function ClipEditor({
       if (!acknowledged?.base) throw new Error("unacknowledged");
       if (!alive.current) return;
       onAccepted(value);
-      if (kind !== "picture") {
+      if (kind === "audio") {
+        const asset = acknowledged.audioAssets?.find(
+          (item) => item.id === value.audioAssetId,
+        );
+        if (!asset) throw new Error("unacknowledged");
+        const cue: OwnerAudioCue = {
+          id: crypto.randomUUID(),
+          source: { kind: "upload", id: asset.id },
+          placement: "video",
+          startFrame: 0,
+          endFrame: base.overlay.frames,
+          offsetFrame: 0,
+          volume: 20,
+          loop: true,
+        };
+        const audio = draft.audio ?? { originalVolume: 100, cues: [] };
+        update({ ...draft, audio: { ...audio, cues: [...audio.cues, cue] } });
+        setMessage("");
+        return asset.id;
+      } else if (kind !== "picture") {
         const accepted = initialOwnerEdit(acknowledged);
         setForm({ original: accepted, draft: structuredClone(accepted) });
         setForcedStale(false);
@@ -783,11 +839,16 @@ export function ClipEditor({
             ? "This clip changed elsewhere. Reload it to continue."
             : kind === "picture"
               ? "Couldn’t add this image. Use a static JPEG, PNG or WebP under 4 MB."
-              : "Couldn’t save these changes. Try again.",
+              : kind === "audio"
+                ? "Couldn’t add this audio. Use MP3, WAV or M4A under 12 MB and 2 minutes."
+                : "Couldn’t save these changes. Try again.",
         );
     } finally {
       request.current = null;
-      if (alive.current) setPending(false);
+      if (alive.current) {
+        setPending(false);
+        setAudioUploading(false);
+      }
     }
   }
   function upload(file: File | undefined) {
@@ -897,6 +958,7 @@ export function ClipEditor({
               component={Review}
               inputProps={{
                 overlay,
+                workspaceId,
                 sourceUrl: `${endpoint}/source`,
                 assets: Object.fromEntries(
                   clip.assets.map((asset) => [
@@ -911,11 +973,15 @@ export function ClipEditor({
                 onPlaybackError: playbackError,
                 onPreviewReady: previewReady,
                 interactive: previewLoaded,
-                setting,
+                setting:
+                  setting === "pictures" && mediaTab === "audio"
+                    ? "filters"
+                    : setting,
               }}
               durationInFrames={ownerPresentationFrames(overlay)}
               compositionWidth={1080}
               compositionHeight={1920}
+              numberOfSharedAudioTags={OWNER_AUDIO_LIMITS.cues}
               fps={OWNER_FPS}
               initialFrame={Math.min(
                 previewFrame,
@@ -977,7 +1043,7 @@ export function ClipEditor({
                     captions: "Captions",
                     text: "Text",
                     filters: "Filters",
-                    pictures: "Pictures",
+                    pictures: "Media",
                     focus: "Focus",
                     hook: "Hook",
                   }[value]
@@ -1362,334 +1428,397 @@ export function ClipEditor({
             hidden={setting !== "pictures"}
             tabIndex={0}
           >
-            <fieldset disabled={pending}>
-              <legend className="local-sr-only">Pictures</legend>
-              <div
-                className="picture-picker"
-                role="group"
-                aria-label="Pictures"
-              >
-                {draft.visuals.map((cue, index) => (
+            <ControlTabs
+              id={`${tabsId}-media`}
+              label="Media controls"
+              items={[
+                { value: "pictures", label: "Pictures" },
+                { value: "audio", label: "Audio" },
+              ]}
+              value={mediaTab}
+              onChange={setMediaTab}
+            />
+            <div
+              role="tabpanel"
+              id={`${tabsId}-media-pictures-panel`}
+              aria-labelledby={`${tabsId}-media-pictures`}
+              hidden={mediaTab !== "pictures"}
+            >
+              <fieldset disabled={pending}>
+                <legend className="local-sr-only">Pictures</legend>
+                <div
+                  className="picture-picker"
+                  role="group"
+                  aria-label="Pictures"
+                >
+                  {draft.visuals.map((cue, index) => (
+                    <Button
+                      key={cue.id}
+                      variant="secondary"
+                      className="picture-choice"
+                      aria-label={`Edit picture ${index + 1}`}
+                      aria-pressed={selection === cue.id}
+                      onClick={() => choosePicture(cue)}
+                    >
+                      <span
+                        className="picture-thumb"
+                        aria-hidden="true"
+                        style={{
+                          backgroundImage: `url(/api/local/workspace/${workspaceId}/assets/${cue.assetId})`,
+                        }}
+                      />
+                      <span>Picture {index + 1}</span>
+                    </Button>
+                  ))}
+                </div>
+                <div className="picture-tools">
                   <Button
-                    key={cue.id}
                     variant="secondary"
-                    className="picture-choice"
-                    aria-label={`Edit picture ${index + 1}`}
-                    aria-pressed={selection === cue.id}
-                    onClick={() => choosePicture(cue)}
+                    disabled={
+                      pending ||
+                      clip.assets.length >=
+                        OWNER_PICTURE_LIMITS.assetsPerClip ||
+                      draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
+                    }
+                    onClick={() => pictureInput.current?.click()}
                   >
-                    <span
-                      className="picture-thumb"
-                      aria-hidden="true"
-                      style={{
-                        backgroundImage: `url(/api/local/workspace/${workspaceId}/assets/${cue.assetId})`,
-                      }}
-                    />
-                    <span>Picture {index + 1}</span>
+                    {pending ? (
+                      <LoaderCircle
+                        size={18}
+                        className="acquisition-spinner"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <Upload size={18} aria-hidden="true" />
+                    )}
+                    {pending ? "Uploading…" : "Upload image"}
                   </Button>
-                ))}
-              </div>
-              <div className="picture-tools">
-                <Button
-                  variant="secondary"
+                  <Button
+                    variant="quiet"
+                    disabled={
+                      !clip.assets.length ||
+                      draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
+                    }
+                    onClick={() => {
+                      const cue = newPicture(
+                        selectedCue?.assetId ?? clip.assets[0]!.id,
+                      );
+                      update({ ...draft, visuals: [...draft.visuals, cue] });
+                      choosePicture(cue);
+                    }}
+                  >
+                    Add picture
+                  </Button>
+                </div>
+                <input
+                  ref={pictureInput}
+                  className="local-file-input"
+                  aria-label="Upload picture"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
                   disabled={
                     pending ||
                     clip.assets.length >= OWNER_PICTURE_LIMITS.assetsPerClip ||
                     draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
                   }
-                  onClick={() => pictureInput.current?.click()}
-                >
-                  {pending ? (
-                    <LoaderCircle
-                      size={18}
-                      className="acquisition-spinner"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <Upload size={18} aria-hidden="true" />
-                  )}
-                  {pending ? "Uploading…" : "Upload image"}
-                </Button>
-                <Button
-                  variant="quiet"
-                  disabled={
-                    !clip.assets.length ||
-                    draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
-                  }
-                  onClick={() => {
-                    const cue = newPicture(
-                      selectedCue?.assetId ?? clip.assets[0]!.id,
-                    );
-                    update({ ...draft, visuals: [...draft.visuals, cue] });
-                    choosePicture(cue);
+                  onChange={(event) => {
+                    upload(event.currentTarget.files?.[0]);
+                    event.currentTarget.value = "";
                   }}
-                >
-                  Add picture
-                </Button>
-              </div>
-              <input
-                ref={pictureInput}
-                className="local-file-input"
-                aria-label="Upload picture"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                disabled={
-                  pending ||
-                  clip.assets.length >= OWNER_PICTURE_LIMITS.assetsPerClip ||
-                  draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
-                }
-                onChange={(event) => {
-                  upload(event.currentTarget.files?.[0]);
-                  event.currentTarget.value = "";
-                }}
-              />
-              <p className="source-hint">JPEG, PNG, WebP · Max 4 MB</p>
-              {selectedCue && (
-                <>
-                  <ControlTabs
-                    id={`${tabsId}-picture`}
-                    label="Picture controls"
-                    items={[
-                      { value: "image", label: "Image" },
-                      { value: "timing", label: "Timing" },
-                      { value: "motion", label: "Motion" },
-                      { value: "position", label: "Position" },
-                    ]}
-                    value={pictureTab}
-                    onChange={setPictureTab}
-                  />
-                  <div
-                    role="tabpanel"
-                    id={`${tabsId}-picture-image-panel`}
-                    aria-labelledby={`${tabsId}-picture-image`}
-                    hidden={pictureTab !== "image"}
-                    tabIndex={0}
-                  >
-                    <div className="editor-fields">
-                      <label>
-                        Image
-                        <select
-                          className="select-control"
-                          value={selectedCue.assetId}
-                          onChange={(event) =>
-                            setCue({
-                              ...selectedCue,
-                              assetId: event.currentTarget.value,
-                            })
-                          }
-                        >
-                          {clip.assets.map((asset, index) => (
-                            <option key={asset.id} value={asset.id}>
-                              Image {index + 1}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        Fit
-                        <select
-                          className="select-control"
-                          value={selectedCue.fit}
-                          onChange={(event) =>
-                            setCue({
-                              ...selectedCue,
-                              fit: event.currentTarget
-                                .value as OwnerVisualEdit["fit"],
-                            })
-                          }
-                        >
-                          <option value="contain">Fit</option>
-                          <option value="cover">Fill</option>
-                        </select>
-                      </label>
-                    </div>
-                    <Button
-                      variant="quiet"
-                      onClick={() => {
-                        update({
-                          ...draft,
-                          visuals: draft.visuals.filter(
-                            (cue) => cue.id !== selectedCue.id,
-                          ),
-                        });
-                        setSelection(
-                          draft.visuals.find((cue) => cue.id !== selectedCue.id)
-                            ?.id ?? "captions",
-                        );
-                      }}
-                    >
-                      Remove picture
-                    </Button>
-                  </div>
-                  <div
-                    role="tabpanel"
-                    id={`${tabsId}-picture-timing-panel`}
-                    aria-labelledby={`${tabsId}-picture-timing`}
-                    hidden={pictureTab !== "timing"}
-                    tabIndex={0}
-                  >
-                    <PictureTiming
-                      key={selectedCue.id}
-                      cue={selectedCue}
-                      frames={base.overlay.frames}
-                      player={player}
-                      available={
-                        setting === "pictures" &&
-                        pictureTab === "timing" &&
-                        previewLoaded &&
-                        !playbackFailed &&
-                        !pending
-                      }
-                      attempt={previewAttempt}
-                      onChange={setCue}
+                />
+                <p className="source-hint">JPEG, PNG, WebP · Max 4 MB</p>
+                {selectedCue && (
+                  <>
+                    <ControlTabs
+                      id={`${tabsId}-picture`}
+                      label="Picture controls"
+                      items={[
+                        { value: "image", label: "Image" },
+                        { value: "timing", label: "Timing" },
+                        { value: "motion", label: "Motion" },
+                        { value: "position", label: "Position" },
+                      ]}
+                      value={pictureTab}
+                      onChange={setPictureTab}
                     />
-                  </div>
-                  <div
-                    role="tabpanel"
-                    id={`${tabsId}-picture-motion-panel`}
-                    aria-labelledby={`${tabsId}-picture-motion`}
-                    hidden={pictureTab !== "motion"}
-                    tabIndex={0}
-                  >
-                    <div className="editor-fields">
-                      {(["entrance", "exit"] as const).map((key) => (
-                        <label key={key}>
-                          {key === "entrance" ? "Entrance" : "Exit"}
+                    <div
+                      role="tabpanel"
+                      id={`${tabsId}-picture-image-panel`}
+                      aria-labelledby={`${tabsId}-picture-image`}
+                      hidden={pictureTab !== "image"}
+                      tabIndex={0}
+                    >
+                      <div className="editor-fields">
+                        <label>
+                          Image
                           <select
                             className="select-control"
-                            value={selectedCue[key] ?? "none"}
+                            value={selectedCue.assetId}
                             onChange={(event) =>
                               setCue({
                                 ...selectedCue,
-                                [key]: event.currentTarget.value as NonNullable<
-                                  OwnerVisualEdit[typeof key]
-                                >,
+                                assetId: event.currentTarget.value,
                               })
                             }
                           >
-                            {OWNER_VISUAL_ANIMATIONS.map((animation) => (
-                              <option key={animation} value={animation}>
-                                {
-                                  {
-                                    none: "None",
-                                    fade: "Fade",
-                                    pop: "Pop",
-                                    slide: "Slide",
-                                  }[animation]
-                                }
+                            {clip.assets.map((asset, index) => (
+                              <option key={asset.id} value={asset.id}>
+                                Image {index + 1}
                               </option>
                             ))}
                           </select>
                         </label>
-                      ))}
-                      <label>
-                        Duration (s)
-                        <input
-                          type="number"
-                          min="0.1"
-                          max="1"
-                          step="0.1"
-                          value={
-                            Number.isFinite(selectedCue.animationFrames ?? 9)
-                              ? Number(
-                                  (
-                                    (selectedCue.animationFrames ?? 9) /
-                                    OWNER_FPS
-                                  ).toFixed(2),
-                                )
-                              : ""
-                          }
-                          onChange={(event) =>
-                            setCue({
-                              ...selectedCue,
-                              animationFrames:
-                                event.currentTarget.value === ""
-                                  ? NaN
-                                  : Math.round(
-                                      Number(event.currentTarget.value) *
-                                        OWNER_FPS,
-                                    ),
-                            })
-                          }
-                        />
-                      </label>
+                        <label>
+                          Fit
+                          <select
+                            className="select-control"
+                            value={selectedCue.fit}
+                            onChange={(event) =>
+                              setCue({
+                                ...selectedCue,
+                                fit: event.currentTarget
+                                  .value as OwnerVisualEdit["fit"],
+                              })
+                            }
+                          >
+                            <option value="contain">Fit</option>
+                            <option value="cover">Fill</option>
+                          </select>
+                        </label>
+                      </div>
+                      <Button
+                        variant="quiet"
+                        onClick={() => {
+                          update({
+                            ...draft,
+                            visuals: draft.visuals.filter(
+                              (cue) => cue.id !== selectedCue.id,
+                            ),
+                          });
+                          setSelection(
+                            draft.visuals.find(
+                              (cue) => cue.id !== selectedCue.id,
+                            )?.id ?? "captions",
+                          );
+                        }}
+                      >
+                        Remove picture
+                      </Button>
                     </div>
-                    <Button
-                      variant="secondary"
-                      disabled={!!error || playbackFailed}
-                      onClick={() => {
-                        player.current?.seekTo(
-                          ownerPresentationFrame(
-                            overlay,
-                            selectedCue.startFrame,
-                          ),
-                        );
-                        player.current?.play();
-                      }}
-                    >
-                      Preview motion
-                    </Button>
-                  </div>
-                  <div
-                    role="tabpanel"
-                    id={`${tabsId}-picture-position-panel`}
-                    aria-labelledby={`${tabsId}-picture-position`}
-                    hidden={pictureTab !== "position"}
-                    tabIndex={0}
-                  >
                     <div
-                      className="position-presets"
-                      role="group"
-                      aria-label="Picture position"
+                      role="tabpanel"
+                      id={`${tabsId}-picture-timing-panel`}
+                      aria-labelledby={`${tabsId}-picture-timing`}
+                      hidden={pictureTab !== "timing"}
+                      tabIndex={0}
                     >
-                      {(
-                        [
-                          { center: 0.25, label: "Upper half" },
-                          { center: 0.5, label: "Center" },
-                          { center: 0.75, label: "Lower half" },
-                        ] as const
-                      ).map((item) => (
-                        <Button
-                          key={item.center}
-                          variant="secondary"
-                          aria-pressed={
-                            Math.abs(
-                              selectedCue.box.x +
-                                selectedCue.box.width / 2 -
-                                0.5,
-                            ) < 0.00001 &&
-                            Math.abs(
-                              selectedCue.box.y +
-                                selectedCue.box.height / 2 -
-                                item.center,
-                            ) < 0.00001
-                          }
-                          onClick={() =>
-                            setCue({
-                              ...selectedCue,
-                              box: centeredOwnerBox(
-                                selectedCue.box,
-                                item.center,
-                                null,
-                              ),
-                            })
-                          }
-                        >
-                          {item.label}
-                        </Button>
-                      ))}
+                      <PictureTiming
+                        key={selectedCue.id}
+                        cue={selectedCue}
+                        frames={base.overlay.frames}
+                        player={player}
+                        available={
+                          setting === "pictures" &&
+                          pictureTab === "timing" &&
+                          previewLoaded &&
+                          !playbackFailed &&
+                          !pending
+                        }
+                        attempt={previewAttempt}
+                        onChange={setCue}
+                      />
                     </div>
-                    <BoxFields
-                      label="Picture"
-                      box={selectedCue.box}
-                      onChange={(box) => setCue({ ...selectedCue, box })}
-                    />
-                  </div>
-                </>
+                    <div
+                      role="tabpanel"
+                      id={`${tabsId}-picture-motion-panel`}
+                      aria-labelledby={`${tabsId}-picture-motion`}
+                      hidden={pictureTab !== "motion"}
+                      tabIndex={0}
+                    >
+                      <div className="editor-fields">
+                        {(["entrance", "exit"] as const).map((key) => (
+                          <label key={key}>
+                            {key === "entrance" ? "Entrance" : "Exit"}
+                            <select
+                              className="select-control"
+                              value={selectedCue[key] ?? "none"}
+                              onChange={(event) =>
+                                setCue({
+                                  ...selectedCue,
+                                  [key]: event.currentTarget
+                                    .value as NonNullable<
+                                    OwnerVisualEdit[typeof key]
+                                  >,
+                                })
+                              }
+                            >
+                              {OWNER_VISUAL_ANIMATIONS.map((animation) => (
+                                <option key={animation} value={animation}>
+                                  {
+                                    {
+                                      none: "None",
+                                      fade: "Fade",
+                                      pop: "Pop",
+                                      slide: "Slide",
+                                    }[animation]
+                                  }
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ))}
+                        <label>
+                          Duration (s)
+                          <input
+                            type="number"
+                            min="0.1"
+                            max="1"
+                            step="0.1"
+                            value={
+                              Number.isFinite(selectedCue.animationFrames ?? 9)
+                                ? Number(
+                                    (
+                                      (selectedCue.animationFrames ?? 9) /
+                                      OWNER_FPS
+                                    ).toFixed(2),
+                                  )
+                                : ""
+                            }
+                            onChange={(event) =>
+                              setCue({
+                                ...selectedCue,
+                                animationFrames:
+                                  event.currentTarget.value === ""
+                                    ? NaN
+                                    : Math.round(
+                                        Number(event.currentTarget.value) *
+                                          OWNER_FPS,
+                                      ),
+                              })
+                            }
+                          />
+                        </label>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        disabled={!!error || playbackFailed}
+                        onClick={() => {
+                          player.current?.seekTo(
+                            ownerPresentationFrame(
+                              overlay,
+                              selectedCue.startFrame,
+                            ),
+                          );
+                          player.current?.play();
+                        }}
+                      >
+                        Preview motion
+                      </Button>
+                    </div>
+                    <div
+                      role="tabpanel"
+                      id={`${tabsId}-picture-position-panel`}
+                      aria-labelledby={`${tabsId}-picture-position`}
+                      hidden={pictureTab !== "position"}
+                      tabIndex={0}
+                    >
+                      <div
+                        className="position-presets"
+                        role="group"
+                        aria-label="Picture position"
+                      >
+                        {(
+                          [
+                            { center: 0.25, label: "Upper half" },
+                            { center: 0.5, label: "Center" },
+                            { center: 0.75, label: "Lower half" },
+                          ] as const
+                        ).map((item) => (
+                          <Button
+                            key={item.center}
+                            variant="secondary"
+                            aria-pressed={
+                              Math.abs(
+                                selectedCue.box.x +
+                                  selectedCue.box.width / 2 -
+                                  0.5,
+                              ) < 0.00001 &&
+                              Math.abs(
+                                selectedCue.box.y +
+                                  selectedCue.box.height / 2 -
+                                  item.center,
+                              ) < 0.00001
+                            }
+                            onClick={() =>
+                              setCue({
+                                ...selectedCue,
+                                box: centeredOwnerBox(
+                                  selectedCue.box,
+                                  item.center,
+                                  null,
+                                ),
+                              })
+                            }
+                          >
+                            {item.label}
+                          </Button>
+                        ))}
+                      </div>
+                      <BoxFields
+                        label="Picture"
+                        box={selectedCue.box}
+                        onChange={(box) => setCue({ ...selectedCue, box })}
+                      />
+                    </div>
+                  </>
+                )}
+              </fieldset>
+            </div>
+            <div
+              role="tabpanel"
+              id={`${tabsId}-media-audio-panel`}
+              aria-labelledby={`${tabsId}-media-audio`}
+              hidden={mediaTab !== "audio"}
+            >
+              {setting === "pictures" && mediaTab === "audio" && (
+                <AudioInspector
+                  audio={draft.audio}
+                  assets={clip.audioAssets ?? []}
+                  frames={base.overlay.frames}
+                  hook={draft.hook}
+                  player={player}
+                  available={!playbackFailed && previewLoaded}
+                  attempt={previewAttempt}
+                  pending={pending}
+                  onChange={(audio) => update({ ...draft, audio })}
+                  onUpload={async (file) => {
+                    if (
+                      file.size < 1 ||
+                      file.size > OWNER_AUDIO_LIMITS.inputBytes ||
+                      (clip.audioAssets?.length ?? 0) >=
+                        OWNER_AUDIO_LIMITS.assets ||
+                      (draft.audio?.cues.length ?? 0) >= OWNER_AUDIO_LIMITS.cues
+                    ) {
+                      setMessage("Choose audio under 12 MB and 2 minutes.");
+                      return null;
+                    }
+                    return (await perform("audio", file)) ?? null;
+                  }}
+                />
               )}
-            </fieldset>
+            </div>
           </div>
-          {actionsVisible && captionConfirm && (
+          {actionsVisible && audioUploading && (
+            <WorkflowActions target={footerTarget} label="Audio upload actions">
+              <Button
+                variant="secondary"
+                onClick={() => request.current?.abort()}
+              >
+                Cancel upload
+              </Button>
+            </WorkflowActions>
+          )}
+          {actionsVisible && !audioUploading && captionConfirm && (
             <WorkflowActions
               target={footerTarget}
               label="Caption generation actions"
@@ -1717,6 +1846,7 @@ export function ClipEditor({
           )}
           {actionsVisible &&
             !captionConfirm &&
+            !audioUploading &&
             (dirty || stale || previewUnavailable) && (
               <WorkflowActions target={footerTarget} label="Edit actions">
                 <Button

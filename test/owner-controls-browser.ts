@@ -119,7 +119,7 @@ export async function reviewFreshLocalFlow(
         await change(control('Style'),'boxed');await change(control('Animation'),'bounce');
         [...document.querySelectorAll('[aria-label="Caption controls"] button')].find(n=>n.textContent==='Position').click();await new Promise(requestAnimationFrame);
         [...document.querySelectorAll('[aria-label="Caption position"] button')].find(n=>n.textContent==='Lower half').click();await new Promise(requestAnimationFrame);
-        [...document.querySelectorAll('.editor-tabs button')].find(n=>n.textContent==='Pictures').click();await new Promise(requestAnimationFrame);
+        [...document.querySelectorAll('.editor-tabs button')].find(n=>n.textContent==='Media').click();await new Promise(requestAnimationFrame);
         document.querySelector('.picture-choice').click();await new Promise(requestAnimationFrame);
         [...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Motion').click();await new Promise(requestAnimationFrame);
         await change(control('Entrance'),'slide');await change(control('Exit'),'pop');
@@ -387,7 +387,7 @@ globalThis.clipbuilderExpandedEditorScroll = async () => {
 };
 
 globalThis.clipbuilderPictureCapture=async()=>{
-  [...document.querySelectorAll('.editor-tabs button')].find(n=>n.textContent==='Pictures').click();
+  [...document.querySelectorAll('.editor-tabs button')].find(n=>n.textContent==='Media').click();
   await new Promise(requestAnimationFrame);
   document.querySelector('.picture-choice').click();
   await new Promise(requestAnimationFrame);
@@ -452,7 +452,7 @@ globalThis.clipbuilderReviewControls = async () => {
           if (visiblePanels().length !== 1 || document.querySelectorAll('.clip-editor').length !== 1) throw new Error('editor_not_focused');
           const captions=document.querySelector('[aria-label="Select and move captions"]');
           const pictures=document.querySelectorAll('[aria-label^="Select and move picture"]');
-          if(Boolean(captions)!==(label==='Captions') || (pictures.length && label!=='Pictures') || (label==='Filters' && document.querySelector('.editor-interaction button')))throw new Error('inactive_preview_guides_visible');
+          if(Boolean(captions)!==(label==='Captions') || (pictures.length && label!=='Media') || (label==='Filters' && document.querySelector('.editor-interaction button')))throw new Error('inactive_preview_guides_visible');
           if(document.querySelector('.editor-preview video')!==video)throw new Error('tab_switch_reloaded_preview');
         };
         const review = await wait(() => clip(1));
@@ -518,7 +518,7 @@ globalThis.clipbuilderReviewControls = async () => {
           await wait(() => document.activeElement === tab(expected) && tab(expected).getAttribute('aria-selected') === 'true');
           if (visiblePanels().length !== 1 || [...document.querySelectorAll('.editor-tabs > [role="tab"]')].filter(node => node.tabIndex === 0).length !== 1) throw new Error('tab_keyboard_failed');
         }
-        await chooseTab('Pictures');
+        await chooseTab('Media');
         if (!visiblePanels()[0].querySelector('input[type="file"]')) throw new Error('picture_controls_missing');
         const pictures=[...document.querySelectorAll('.picture-choice')];
         if(pictures.length) {

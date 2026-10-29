@@ -84,6 +84,7 @@ export function sameOwnerEdit(
 ): boolean {
   return (
     JSON.stringify(left.hook) === JSON.stringify(right.hook) &&
+    JSON.stringify(left.audio) === JSON.stringify(right.audio) &&
     JSON.stringify(left.captions) === JSON.stringify(right.captions) &&
     JSON.stringify(left.captionSpeakers) ===
       JSON.stringify(right.captionSpeakers) &&
@@ -102,6 +103,11 @@ export function ownerEditOperations(
   clip: OwnerClip,
 ): OwnerEditRequest["operations"] {
   const operations: OwnerEditRequest["operations"] = [];
+  if (JSON.stringify(original.audio) !== JSON.stringify(draft.audio))
+    operations.push({
+      kind: "audio",
+      audio: draft.audio ?? { originalVolume: 100, cues: [] },
+    });
   if (JSON.stringify(original.hook) !== JSON.stringify(draft.hook))
     operations.push({ kind: "hook", hook: draft.hook ?? null });
   if (

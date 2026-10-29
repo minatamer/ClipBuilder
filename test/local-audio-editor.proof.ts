@@ -1,0 +1,389 @@
+import { expect, it, vi } from "vitest";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { isAbsolute, join, relative, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
+import { createOwnerHost } from "../apps/backend/local/server.ts";
+import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
+import { fakeOwnerClipPreparation } from "../apps/backend/local/fake-clips.ts";
+import { createOwnerWorker } from "../apps/renderer/local/server.ts";
+import { localWorkerPort } from "../apps/backend/local/worker-port.ts";
+import { ownerNativeTools } from "../scripts/native-tools.ts";
+import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
+import { ownerClipListSchema } from "../packages/contracts/local/clips.ts";
+import { openBrowser } from "../apps/renderer/node_modules/@remotion/renderer/dist/index.js";
+import { listenOwner, ownerRequest } from "./owner-http.ts";
+import {
+  prepareLocalControlsFixture,
+  prepareLocalOverlayFixture,
+} from "./owner-controls-browser.ts";
+
+async function cleanAudioEditor(root: string) {
+  const actual = await realpath(root),
+    rel = relative(await realpath(tmpdir()), actual);
+  if (
+    !rel ||
+    isAbsolute(rel) ||
+    rel.startsWith("..") ||
+    !rel.startsWith("clipbuilder-audio-editor-")
+  )
+    throw new Error("invalid_audio_cleanup");
+  await rm(actual, { recursive: true, force: true });
+}
+it("edits Media audio through the real authenticated API/worker with audition, upload retry, Apply/Discard, playback and saved reload", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "clipbuilder-audio-editor-")),
+    root = join(directory, "workspaces");
+  await mkdir(root);
+  const tools = await ownerNativeTools(resolve(".")),
+    signal = AbortSignal.timeout(180000);
+  const worker = createOwnerWorker({
+    root,
+    token: "synthetic-audio-worker",
+    tools,
+    chromium: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+    overlayBundle: await prepareLocalOverlayFixture(directory),
+  });
+  const workerPort = await listenOwner(worker.server);
+  const transport: typeof fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.origin !== `http://127.0.0.1:${workerPort}`)
+      throw new Error("unexpected_transport");
+    const result = await ownerRequest(workerPort, url.pathname, {
+      method: init?.method ?? "GET",
+      headers: Object.fromEntries(new Headers(init?.headers)),
+      ...(typeof init?.body === "string" ? { body: init.body } : {}),
+    });
+    return new Response(result.status === 204 ? null : result.body.toString(), {
+      status: result.status,
+    });
+  };
+  const rpc = localWorkerPort(workerPort, "synthetic-audio-worker", transport);
+  let holdAudio = false,
+    canceledUploads = 0;
+  const media = vi.fn(async (...args: Parameters<typeof rpc>) => {
+    const [job, requestSignal] = args;
+    if (holdAudio && job.operation === "normalize-audio") {
+      holdAudio = false;
+      await new Promise<never>((_done, reject) => {
+        const cancel = () => {
+          canceledUploads++;
+          reject(new Error("canceled"));
+        };
+        if (requestSignal.aborted) cancel();
+        else requestSignal.addEventListener("abort", cancel, { once: true });
+      });
+    }
+    return rpc(...args);
+  });
+  const transcribe = vi.fn(fakeOwnerAnalysis.transcribe),
+    select = vi.fn(fakeOwnerAnalysis.select),
+    plan = vi.fn(fakeOwnerClipPreparation.plan),
+    image = vi.fn(fakeOwnerClipPreparation.image);
+  const ui = await prepareLocalControlsFixture(directory);
+  await writeFile(
+    join(ui, "index.html"),
+    '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>',
+  );
+  const host = createOwnerHost({
+    root,
+    ui,
+    storageRoot: join(directory, "library"),
+    port: 0,
+    token: "a".repeat(64),
+    analysis: { ...fakeOwnerAnalysis, transcribe, select },
+    clipPreparation: { ...fakeOwnerClipPreparation, plan, image },
+    media,
+    capacity: async () => {},
+  });
+  host.server.prependListener("request", (req) => {
+    if (req.url?.startsWith("/api/local/"))
+      req.url = req.url.replace("/api/local/", "/api/");
+  });
+  const port = await listenOwner(host.server),
+    auth = { Authorization: `Bearer ${"a".repeat(64)}` },
+    json = { ...auth, "Content-Type": "application/json" };
+  let browser: Awaited<ReturnType<typeof openBrowser>> | undefined;
+  try {
+    const source = join(directory, "synthetic.mp4"),
+      wave = join(directory, "synthetic.wav");
+    await runOwnedProcess(
+      tools.ffmpeg,
+      [
+        "-nostdin",
+        "-v",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=navy:s=240x320:r=30:d=4",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=440:sample_rate=48000:duration=4",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        source,
+      ],
+      signal,
+    );
+    await runOwnedProcess(
+      tools.ffmpeg,
+      [
+        "-nostdin",
+        "-v",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=880:sample_rate=44100:duration=0.473",
+        "-c:a",
+        "pcm_s16le",
+        wave,
+      ],
+      signal,
+    );
+    const uploaded = await ownerRequest(port, "/api/source", {
+      method: "POST",
+      headers: { ...auth, "Content-Type": "video/mp4" },
+      body: await readFile(source),
+    });
+    expect(uploaded.status).toBe(200);
+    const workspace = JSON.parse(uploaded.body.toString()),
+      endpoint = `/api/workspace/${workspace.id}`;
+    const analyzed = await ownerRequest(port, `${endpoint}/analysis`, {
+      method: "POST",
+      headers: json,
+      body: JSON.stringify({
+        sourceRevision: 0,
+        policyRevision: 1,
+        ranges: [{ id: randomUUID(), startMs: 0, endMs: 3000 }],
+        aiDuration: { minMs: 10000, maxMs: 10000 },
+        manualOnly: true,
+      }),
+    });
+    expect(analyzed.status).toBe(200);
+    const analysis = JSON.parse(analyzed.body.toString());
+    expect(
+      (
+        await ownerRequest(port, `${endpoint}/clips`, {
+          method: "POST",
+          headers: json,
+          body: JSON.stringify({
+            operationId: randomUUID(),
+            analysisId: analysis.id,
+            sourceRevision: 0,
+            policyRevision: 1,
+            momentIds: [analysis.manual[0].id],
+          }),
+        })
+      ).status,
+    ).toBe(202);
+    let list = ownerClipListSchema.parse({
+      clips: [],
+      active: false,
+      workers: 1,
+    });
+    for (let i = 0; i < 600; i++) {
+      list = ownerClipListSchema.parse(
+        JSON.parse(
+          (
+            await ownerRequest(port, `${endpoint}/clips`, { headers: auth })
+          ).body.toString(),
+        ),
+      );
+      if (list.clips[0]?.base && !list.active) break;
+      await new Promise((done) => setTimeout(done, 25));
+    }
+    const clip = list.clips[0]!;
+    expect(clip.base).toBeTruthy();
+    expect(
+      (
+        await ownerRequest(port, `${endpoint}/clips/${clip.id}/edit`, {
+          method: "POST",
+          headers: json,
+          body: JSON.stringify({
+            operationId: randomUUID(),
+            expectedRevision: clip.revision,
+            baseHash: clip.baseHash,
+            operations: [
+              { kind: "hook", hook: { startFrame: 30, endFrame: 53 } },
+            ],
+          }),
+        })
+      ).status,
+    ).toBe(200);
+    // The shared hosted allowlist and actual workspace authentication stay closed.
+    expect(
+      (await ownerRequest(port, `${endpoint}/audio-assets/${randomUUID()}`))
+        .status,
+    ).toBe(403);
+    browser = await openBrowser("chrome", {
+      browserExecutable:
+        "C:/Program Files/Google/Chrome/Application/chrome.exe",
+      chromiumOptions: { headless: true },
+      logLevel: "error",
+    });
+    const page = await browser.newPage({
+      context: () => null,
+      logLevel: "error",
+      indent: false,
+      pageIndex: 0,
+      onBrowserLog: null,
+      onLog: () => {},
+    });
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+    await page.goto({ url: `http://localhost:${port}/`, timeout: 10000 });
+    const driver = `globalThis.audioRun=async action=>{
+      const wait=async(fn,label)=>{for(let i=0;i<1200;i++){if(fn())return;await new Promise(r=>setTimeout(r,25));}throw new Error('audio_ui_'+label);};
+      const button=text=>[...document.querySelectorAll('button,a')].find(n=>n.getClientRects().length&&n.textContent.trim()===text), named=label=>document.querySelector('[aria-label="'+label+'"]');
+      const tab=async(root,label)=>{[...document.querySelectorAll('[aria-label="'+root+'"] [role=tab]')].find(n=>n.textContent===label).click();await new Promise(requestAnimationFrame);};
+      const set=async(label,value)=>{const n=named(label),type=n.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(type.prototype,'value').set.call(n,value);n.dispatchEvent(new Event(n.tagName==='SELECT'?'change':'input',{bubbles:true}));await new Promise(r=>setTimeout(r,60));};
+      await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'ready');
+      if(action==='library'){await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Sound library');document.querySelector('.audio-inspector').scrollIntoView({block:'start'});await new Promise(r=>setTimeout(r,180));
+        const frame=document.querySelector('#sample-main').getBoundingClientRect(),footer=document.querySelector('#sample-main > footer').getBoundingClientRect();
+        if(footer.bottom>innerHeight+1||footer.top<0||document.documentElement.scrollWidth>innerWidth||[...document.querySelectorAll('.sound-card')].some(n=>n.getBoundingClientRect().right>frame.right))throw new Error('audio_layout');
+      }
+      if(action==='audition-ready'){const n=document.querySelector('.audio-inspector > audio');globalThis.auditions=0;n.addEventListener('play',()=>globalThis.auditions++);const r=named('Preview Pop').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};}
+      if(action==='audition-check'){await wait(()=>globalThis.auditions===1,'audition');if(button('Apply changes'))throw new Error('audition_changed_edit');}
+      if(action==='discard'){
+        for(let i=0;i<12;i++){await tab('Audio views','Sound library');named('Add Background pulse').click();await new Promise(r=>setTimeout(r,30));}
+        await wait(()=>[...document.querySelectorAll('audio')].filter(n=>n.src.startsWith('blob:')&&!n.closest('.audio-inspector')).length===12,'twelve_simultaneous_tracks');
+        if(button('Reload preview')||document.body.textContent.includes('Preview unavailable'))throw new Error('track_capacity');
+        await wait(()=>button('Apply changes'),'dirty');button('Discard changes').click();await wait(()=>!button('Apply changes'),'discard');
+      }
+      if(action==='upload-bad'||action==='upload-good'||action==='upload-cancel'){
+        await tab('Audio views','Sound library');const n=named('Upload audio'),transfer=new DataTransfer();
+        const bytes=action==='upload-bad'?new Uint8Array([1,2,3]):Uint8Array.from(atob('${(await readFile(wave)).toString("base64")}'),c=>c.charCodeAt(0));
+        transfer.items.add(new File([bytes],'synthetic.wav',{type:'audio/wav'}));n.files=transfer.files;n.dispatchEvent(new Event('change',{bubbles:true}));
+        if(action==='upload-cancel'){
+          await wait(()=>button('Cancel upload'),'cancel_ready');const footer=document.querySelector('#sample-main > footer').getBoundingClientRect();if(footer.height>76||footer.bottom>innerHeight+1)throw new Error('upload_footer');
+          button('Cancel upload').click();await wait(()=>!button('Cancel upload'),'canceled');
+        }
+        else if(action==='upload-bad')await wait(()=>document.querySelector('.clip-editor > .flow-notice')?.textContent.includes('Couldn’t add this audio'),'upload_failure');
+        else await wait(()=>button('Apply changes')&&document.querySelector('.audio-cue')&&!button('Uploading…'),'uploaded');
+      }
+      if(action==='add-tension'){await tab('Audio views','Sound library');named('Add Hook tension').click();await wait(()=>button('Apply changes'),'tension');if(named('Audio placement').value!=='hook')throw new Error('hook_placement');button('Apply changes').click();await wait(()=>!button('Apply changes')&&!named('Audio placement').disabled,'apply');}
+      if(action==='play-ready'){const r=named('Play video').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};}
+      if(action==='play-check'){
+        const tracks=()=>[...document.querySelectorAll('audio')].filter(n=>!n.closest('.audio-inspector')&&(n.src.startsWith('blob:')||n.src.includes('/audio-assets/')));
+        await wait(()=>named('Pause video'),'playing');await wait(()=>tracks().some(n=>!n.paused&&n.currentTime>.03),'added_audio_playing');
+        named('Mute sound').click();await wait(()=>tracks().every(n=>n.muted||n.volume===0),'mute_all');named('Unmute sound').click();
+        named('Pause video').click();await new Promise(r=>setTimeout(r,100));if(tracks().some(n=>!n.paused))throw new Error('added_audio_not_paused');
+        await tab('Clip settings','Focus');await tab('Focus controls','Camera');await tab('Camera controls','Advanced');await set('Focus playhead seconds','1.5');
+        await wait(()=>Math.abs(document.querySelector('.editor-preview video').currentTime-1.5)<.08,'video_seek');
+        await wait(()=>tracks().some(n=>n.src.includes('/audio-assets/')&&n.currentTime>.18&&n.currentTime<.38),'music_seek_phase');
+        if(tracks().some(n=>!n.paused))throw new Error('seek_started_audio');
+      }
+      if(action==='tracks'){[...document.querySelectorAll('[aria-label="Audio views"] button')].find(n=>n.textContent.startsWith('Your audio')).click();await new Promise(requestAnimationFrame);document.querySelector('.audio-inspector').scrollIntoView({block:'start'});await new Promise(r=>setTimeout(r,180));}
+      if(action==='export'){button('Export clip').click();await wait(()=>named('Download clip'),'export');}
+      return {x:0,y:0};
+    };`;
+    await page._client().send("Runtime.evaluate", { expression: driver });
+    const run = async (action: string) => {
+      const result = await page._client().send("Runtime.evaluate", {
+        expression: `globalThis.audioRun(${JSON.stringify(action)})`,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      if (result.value.exceptionDetails)
+        throw new Error(JSON.stringify(result.value.exceptionDetails));
+      return result.value.result.value;
+    };
+    const click = async (position: { x: number; y: number }) => {
+      await page._client().send("Input.dispatchMouseEvent", {
+        type: "mousePressed",
+        ...position,
+        button: "left",
+        clickCount: 1,
+      });
+      await page._client().send("Input.dispatchMouseEvent", {
+        type: "mouseReleased",
+        ...position,
+        button: "left",
+        clickCount: 1,
+      });
+    };
+    await run("library");
+    await click(await run("audition-ready"));
+    await run("audition-check");
+    await run("discard");
+    await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+    await run("library");
+    holdAudio = true;
+    await run("upload-cancel");
+    for (let i = 0; i < 200 && canceledUploads === 0; i++)
+      await new Promise((done) => setTimeout(done, 10));
+    expect(canceledUploads).toBe(1);
+    await run("upload-bad");
+    await run("upload-good");
+    await run("add-tension");
+    // Capture/inspect actual Audio library and controls at all relevant geometries.
+    await mkdir(resolve(".local-build/evidence"), { recursive: true });
+    for (const viewport of [
+      { width: 1440, height: 900 },
+      { width: 834, height: 1194 },
+      { width: 390, height: 844 },
+      { width: 320, height: 568 },
+    ]) {
+      await page.setViewport({ ...viewport, deviceScaleFactor: 1 });
+      await run("library");
+      const shot = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        resolve(`.local-build/evidence/cl133-library-${viewport.width}.png`),
+        Buffer.from(shot.value.data, "base64"),
+      );
+      await run("tracks");
+      const controls = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        resolve(`.local-build/evidence/cl133-tracks-${viewport.width}.png`),
+        Buffer.from(controls.value.data, "base64"),
+      );
+    }
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+    await page._client().send("Runtime.evaluate", {
+      expression:
+        "document.querySelector('.editor-preview').scrollIntoView({block:'start'})",
+    });
+    await click(await run("play-ready"));
+    await run("play-check");
+    await run("export");
+    const final = ownerClipListSchema.parse(
+      JSON.parse(
+        (
+          await ownerRequest(port, `${endpoint}/clips`, { headers: auth })
+        ).body.toString(),
+      ),
+    );
+    expect(final.clips[0]!.edit!.audio!.cues).toHaveLength(2);
+    expect(final.clips[0]!.audioAssets).toHaveLength(1);
+    expect(final.clips[0]!.outputs.at(-1)!.frames).toBe(113);
+    await page.goto({ url: `http://localhost:${port}/`, timeout: 10000 });
+    await page._client().send("Runtime.evaluate", { expression: driver });
+    await run("library");
+    expect(
+      media.mock.calls.filter(([job]) => job.operation === "normalize-audio"),
+    ).toHaveLength(3);
+    expect(image).not.toHaveBeenCalled();
+    expect(select).not.toHaveBeenCalled();
+  } finally {
+    await browser?.close({ silent: true });
+    await host.close();
+    await worker.close();
+    await cleanAudioEditor(directory);
+  }
+}, 190000);

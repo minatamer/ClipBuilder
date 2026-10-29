@@ -741,6 +741,46 @@
   .editor-panels {
     min-width: 0;
   }
+  .audio-inspector > audio {
+    display: none;
+  }
+  .sound-library,
+  .audio-settings,
+  .audio-cue-list {
+    display: grid;
+    gap: 0.65rem;
+    margin-block: 0.75rem;
+  }
+  .sound-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--cb-target) auto;
+    align-items: center;
+    gap: 0.35rem;
+    padding-block: 0.35rem;
+    border-bottom: 1px solid var(--cb-border);
+  }
+  .sound-card > span {
+    min-width: 0;
+  }
+  .sound-card strong,
+  .sound-card small {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+  .sound-card strong {
+    font-size: 0.875rem;
+  }
+  .sound-card small {
+    color: var(--cb-ink-soft);
+    font-size: 0.75rem;
+  }
+  .sound-card > button:last-child {
+    padding-inline: 0.65rem;
+  }
+  .audio-cue[aria-pressed="true"] {
+    outline: 2px solid var(--cb-brand);
+    outline-offset: -2px;
+  }
   @media (min-width: 47.501rem) {
     .editor-panels {
       max-height: calc(100cqh - var(--local-editor-navigation-height, 0.5rem));
@@ -972,18 +1012,13 @@
     min-width: 0;
     padding: 0.75rem;
   }
-  .speaker-words {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
-    gap: 0.5rem;
-  }
-  .speaker-words label {
+  .speaker-caption {
     display: grid;
     gap: 0.25rem;
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  .speaker-words select {
+  .speaker-caption select {
     width: 100%;
     min-width: 0;
   }
