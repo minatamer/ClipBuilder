@@ -249,6 +249,8 @@ export function createLocalCodexInference(options: {
         flag: "wx",
         mode: 0o600,
       });
+      // Built-in IDs are reserved; a private ID keeps ChatGPT auth and fixed
+      // retry policy without redefining the CLI's built-in OpenAI provider.
       const args = [
         "exec",
         "--ignore-user-config",
@@ -264,13 +266,13 @@ export function createLocalCodexInference(options: {
         "--output-last-message",
         output,
         "-c",
-        'model_provider="openai"',
+        'model_provider="clipbuilder_subscription"',
         "-c",
-        'model_providers.openai.name="OpenAI"',
+        'model_providers.clipbuilder_subscription.name="OpenAI"',
         "-c",
-        "model_providers.openai.requires_openai_auth=true",
+        "model_providers.clipbuilder_subscription.requires_openai_auth=true",
         "-c",
-        'model_providers.openai.wire_api="responses"',
+        'model_providers.clipbuilder_subscription.wire_api="responses"',
         "-c",
         'web_search="disabled"',
         "-c",
@@ -282,9 +284,9 @@ export function createLocalCodexInference(options: {
         "-c",
         'model_reasoning_effort="medium"',
         "-c",
-        "model_providers.openai.request_max_retries=0",
+        "model_providers.clipbuilder_subscription.request_max_retries=0",
         "-c",
-        "model_providers.openai.stream_max_retries=0",
+        "model_providers.clipbuilder_subscription.stream_max_retries=0",
         "--disable",
         "unbounded_connection_retries",
       ];
@@ -315,18 +317,31 @@ export function createLocalCodexInference(options: {
       let completed = false;
       for (const line of events.split(/\r?\n/u).filter(Boolean)) {
         const event: unknown = JSON.parse(line);
-        if (typeof event !== "object" || event === null || !("type" in event))
+        if (
+          typeof event !== "object" ||
+          event === null ||
+          !("type" in event) ||
+          typeof event.type !== "string"
+        )
           throw new Error("codex_response_invalid");
         if (event.type === "turn.completed") completed = true;
         if (event.type === "turn.failed" || event.type === "error")
           throw new Error("codex_response_invalid");
-        if (event.type === "item.started" || event.type === "item.completed") {
+        if (
+          event.type === "item.started" ||
+          event.type === "item.updated" ||
+          event.type === "item.completed"
+        ) {
           const item = "item" in event ? event.item : null;
+          // The CLI emits non-fatal configuration warnings as completed error
+          // items. Fatal errors are top-level error/turn.failed events above.
           if (
-            typeof item === "object" &&
-            item !== null &&
-            "type" in item &&
-            !["agent_message", "reasoning"].includes(String(item.type))
+            typeof item !== "object" ||
+            item === null ||
+            !("type" in item) ||
+            typeof item.type !== "string" ||
+            (!(event.type === "item.completed" && item.type === "error") &&
+              !["agent_message", "reasoning"].includes(item.type))
           )
             throw new Error("codex_response_invalid");
         }

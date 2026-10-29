@@ -29,6 +29,19 @@ it("uses ChatGPT-only preflight, stdin and isolated no-tool flags without copyin
   const execute = vi.fn<CodexProcess>(async (call) => {
     if (call.statusOnly) return "Logged in using ChatGPT\n";
     expect(call.input).toBe(request.prompt);
+    expect(call.args).toContain('model_provider="clipbuilder_subscription"');
+    expect(call.args).toContain(
+      "model_providers.clipbuilder_subscription.requires_openai_auth=true",
+    );
+    expect(call.args).toContain(
+      "model_providers.clipbuilder_subscription.request_max_retries=0",
+    );
+    expect(call.args).toContain(
+      "model_providers.clipbuilder_subscription.stream_max_retries=0",
+    );
+    expect(
+      call.args.some((arg) => arg.startsWith("model_providers.openai.")),
+    ).toBe(false);
     expect(call.args).toEqual(
       expect.arrayContaining([
         "--ignore-user-config",
@@ -98,6 +111,81 @@ it.each(["Not logged in", "Logged in using an API key"])(
     expect(await readdir(root)).toEqual([]);
   },
 );
+it("accepts non-fatal completed warning items with a completed turn and safe result", async () => {
+  const execute = vi.fn<CodexProcess>(async (call) => {
+    if (call.statusOnly) return "Logged in using ChatGPT";
+    await writeFile(
+      call.args[call.args.indexOf("--output-last-message") + 1]!,
+      JSON.stringify({ value: "synthetic" }),
+    );
+    return [
+      { type: "thread.started" },
+      {
+        type: "item.completed",
+        item: { type: "error", message: "Synthetic configuration warning" },
+      },
+      { type: "turn.started" },
+      { type: "item.completed", item: { type: "agent_message" } },
+      { type: "turn.completed" },
+    ]
+      .map((event) => JSON.stringify(event))
+      .join("\n");
+  });
+  await expect(
+    createLocalCodexInference({
+      root,
+      executable: "synthetic-codex",
+      process: execute,
+    })(request, AbortSignal.timeout(2000)),
+  ).resolves.toEqual({ value: "synthetic" });
+  expect(execute).toHaveBeenCalledTimes(2);
+  expect(await readdir(root)).toEqual([]);
+});
+it.each([
+  [{ type: "error", message: "Synthetic fatal failure" }],
+  [{ type: "turn.failed", error: { message: "Synthetic failed turn" } }],
+  [{ type: "item.started", item: { type: "command_execution" } }],
+  [{ type: "item.updated", item: { type: "command_execution" } }],
+  [{ type: "item.completed", item: { type: "mcp_tool_call" } }],
+  [{ type: "item.completed", item: null }],
+  [{ type: "item.updated", item: {} }],
+])(
+  "refuses fatal, unsafe or malformed events even with a safe final result: %j",
+  async (event) => {
+    const execute = vi.fn<CodexProcess>(async (call) => {
+      if (call.statusOnly) return "Logged in using ChatGPT";
+      await writeFile(
+        call.args[call.args.indexOf("--output-last-message") + 1]!,
+        JSON.stringify({ value: "synthetic" }),
+      );
+      return `${JSON.stringify(event)}\n{"type":"turn.completed"}`;
+    });
+    await expect(
+      createLocalCodexInference({
+        root,
+        executable: "synthetic-codex",
+        process: execute,
+      })(request, AbortSignal.timeout(2000)),
+    ).rejects.toThrow("codex_response_invalid");
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(await readdir(root)).toEqual([]);
+  },
+);
+it("does not accept a warning as turn completion", async () => {
+  const execute = vi.fn<CodexProcess>(async (call) => {
+    if (call.statusOnly) return "Logged in using ChatGPT";
+    return '{"type":"item.completed","item":{"type":"error","message":"Synthetic warning"}}';
+  });
+  await expect(
+    createLocalCodexInference({
+      root,
+      executable: "synthetic-codex",
+      process: execute,
+    })(request, AbortSignal.timeout(2000)),
+  ).rejects.toThrow("codex_response_invalid");
+  expect(execute).toHaveBeenCalledTimes(2);
+  expect(await readdir(root)).toEqual([]);
+});
 it("rejects tool execution events and linked result files while preserving the outside target", async () => {
   const outside = join(root, "outside.json");
   await writeFile(outside, '{"value":"outside"}');

@@ -20,7 +20,7 @@ export async function localCodexError(response: Response) {
       "Your Codex allowance is unavailable. Check its limit and retry later.",
     codex_response_invalid:
       "Codex did not return a usable result. Retry when ready.",
-    codex_process_failed: "Check Codex sign-in and its allowance, then retry.",
+    codex_process_failed: "Codex couldn’t complete this request. Try again.",
     local_speech_unavailable:
       "Finish local speech setup and restart the backend, then retry.",
   };
