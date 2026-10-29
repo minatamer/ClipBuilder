@@ -1,5 +1,30 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Hosted eight-GiB scratch target — CL-130, 2026-10-29
+
+The owner selects 2 CPUs / 8 GiB for the next hosted processing target and
+authorizes local execute/validate with fake AI, synthetic media and zero paid
+calls; no deployment or cloud change. Existing public 500 MiB / 20-minute
+source bounds already constrain the long upload. Preserve three demo clips,
+manual/AI duration bounds, native source height/cadence, CRF/preset/audio, twenty
+export revisions, completed output/history and local owner limits.
+
+Replace the historical 12 GiB scratch allowance with a 5 GiB admitted media
+budget on a dedicated 5376 MiB temporary RAM volume (including the existing
+256 MiB free-space reserve). At 8 GiB this leaves 2.75 GiB outside the volume
+for processes/shared memory. Count actual retained preview/export/asset bytes,
+reserve pending work and a single 2 GiB overlay workspace, and check additional
+filesystem/cgroup demand without double-counting retained files. Fail before
+dispatch when capacity is unavailable; do not delete old exports, reduce quality,
+silently change clip limits or retry providers. Hosted startup must verify the
+bounded mount and memory contract before any native/provider composition.
+
+[CL-130](tickets/CL-130-hosted-eight-gib-scratch-budget.md) owns implementation
+and produced evidence. Current Linux max-combination, actual hosted mount/CPU
+lifecycle and owner real-AI/rights/visual/release acceptance remain separate.
+The capacity ceiling is finite, as before; keeping twenty revision IDs does not
+promise every combination of maximum-size retained files fits simultaneously.
+
 ## Speaker captions and manual hooks — CL-128/129, 2026-10-28
 
 The owner requests caption colors keyed to existing anonymous transcript speaker

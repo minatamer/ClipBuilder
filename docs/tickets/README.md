@@ -1,5 +1,21 @@
 # ClipBuilder canonical ticket index
 
+## Eight-GiB hosted scratch budget — 2026-10-29
+
+[CL-130](CL-130-hosted-eight-gib-scratch-budget.md) implements the owner's
+2-CPU/8-GiB target with bounded RAM scratch and actual retained-byte admission.
+Local execution/validation is complete with no actionable findings: 50 focused
+tests, types/lint/format, a current packaged Linux proof at 2 CPUs/8 GiB with a
+500-MiB generated upload, bounded-volume failure and zero OOM/external attempts.
+Existing clip/source/quality/revision limits and local storage remain. Actual
+hosted/max-combination and owner acceptance gates are open. Validation performed
+no deployment/cloud setting change or paid call.
+
+The owner subsequently authorized a file-level plan and local staging/commits
+on 2026-10-29, followed by a full normal-app restart for manual Hook testing.
+The [seventeen-file plan](../operations/CL130_COMMIT_PLAN.md) owns packaging;
+no push, deployment or paid testing is included.
+
 ## Speaker captions and manual hook — 2026-10-28
 
 [CL-128](CL-128-speaker-caption-colors.md) and

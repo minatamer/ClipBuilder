@@ -1,5 +1,13 @@
 # Offline native capacity benchmark — CL-125
 
+CL-130 follow-up, 2026-10-29: the owner now targets **2 CPUs / 8 GiB** with a
+bounded 5376-MiB RAM volume and actual retained-byte admission. The 4-GiB
+processing recommendation and 12-GiB scratch blocker below describe the
+historical benchmark outcome. They are not the current resource contract.
+See [current release preparation](HOSTED_EDITOR_RELEASE_PREPARATION.md#current-resource-contract--cl-130-2026-10-29)
+and [CL-130](../tickets/CL-130-hosted-eight-gib-scratch-budget.md) for actual
+implementation/verification and remaining owner/hosted acceptance gates.
+
 **Recommended processing target: 2 vCPU / 4 GiB for this low-traffic demo.**
 Halving RAM preserves the output profile and comparable export speed in the
 measured workloads. One CPU makes the full-minute HD case 84.5% slower. Four

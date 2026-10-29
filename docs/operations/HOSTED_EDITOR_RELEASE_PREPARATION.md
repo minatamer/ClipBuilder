@@ -1,5 +1,46 @@
 # Shared upload/editor release preparation
 
+## Current resource contract — CL-130, 2026-10-29
+
+The owner selects **2 CPUs / 8 GiB** for the next release candidate. The older
+16-GiB proposal and CL-125's provisional 4-GiB target below are historical, not
+current deployment instructions. No resource or deployment change is performed.
+
+The backend now requires a dedicated **5376 MiB in-memory volume mounted at
+`/tmp`**, with an 8-GiB-or-larger cgroup memory limit. This is 5 GiB admitted
+media plus the existing 256 MiB filesystem reserve, leaving 2.75 GiB outside the
+volume at the target allocation. Normal unbounded root scratch and incompatible
+mounts/cgroups fail before the hosted worker/provider composition. Both cgroup
+v2 and v1 readings are supported; unavailable/unbounded readings fail closed.
+Actual Cloud Run mount behavior remains a release check; fake-mode health does
+not activate or certify production hosted composition.
+
+Admission counts existing preview/export/asset bytes, reserves every queued
+export at its existing maximum and shares one unchanged 2-GiB overlay allowance.
+The runtime measures filesystem allocation with hardlink deduplication, counts
+browser/private-state overhead against the same ceiling, and checks only the
+additional filesystem/RAM demand. A full volume or low memory rejects work
+without pruning completed exports or retrying providers. The hard volume limit
+protects process memory if a write runs out of space after admission.
+
+The existing public 500-MiB / 20-minute source bounds, three trial clips,
+manual/AI duration bounds, twenty export revision IDs, native height/cadence,
+CRF 18/veryfast/AAC settings and all local owner limits remain. The finite
+aggregate storage ceiling still applies: twenty revisions do not guarantee
+twenty maximum-sized files for every clip simultaneously. This work does not
+silently discard history to fit the budget. Keep existing min-zero/max-one and
+the separate background-CPU/lifecycle release gate; do not switch billing or
+deploy from this document. [CL-130](../tickets/CL-130-hosted-eight-gib-scratch-budget.md)
+owns current checks and limitations.
+
+Local verification is complete: 50 focused regressions plus types/lint/format,
+the current packaged Linux upload/editor/export/cancel/retry/expiry proof with
+a 500-MiB disk-selected synthetic upload, and a small ENOSPC volume test that
+preserves retained output. Sampled container RAM peaks near 1.85 GiB with no OOM
+or external/provider attempts. The export fixture is short/low-resolution;
+neither full-duration 4K nor every maximum retained-history combination is
+certified. All actual hosted settings remain unapplied.
+
 ## Measured native sizing — CL-125–127, 2026-10-28
 
 [Offline benchmark and limits](HOSTED_NATIVE_BENCHMARK.md) supersedes treating
@@ -13,14 +54,13 @@ the latter costs 43% more allocated CPU seconds. Short archived 4K controls are
 byte-identical at both RAM caps (SSIM 1.000000), and maximum-frame-size portrait
 testing peaks at 1.48 GiB. Full-minute 4K runs are not claimed bit-identical.
 
-No deployed allocation changed. **Do not apply 4 GiB as a RAM-only reduction**:
-the unchanged 12 GiB scratch ceiling and slot/history/overlay reservations must
-be reconciled with bounded RAM-backed storage while preserving hosted/local
-behavior. Steady CPU for background work, lifecycle and maximum accepted
-workload gates remain; these local caps do not model Cloud Run throttling or
-prove every permitted source/history combination. Owner real-AI, rights, visual
-and release acceptance remain separate. Older larger-resource language below
-documents the conservative storage-envelope proposal, not measured CPU/RAM need.
+At CL-125 completion, the unchanged 12-GiB scratch ceiling blocked a RAM-only
+reduction. CL-130 now supplies the bounded 8-GiB contract above. No deployed
+allocation changed. Steady CPU for background work, lifecycle and maximum
+accepted workload gates remain; these local caps do not model Cloud Run
+throttling or prove every permitted source/history combination. Owner real-AI,
+rights, visual and release acceptance remain separate. Older larger-resource
+language below records the conservative historical storage proposal.
 
 ## Actual ingress verification — CL-124, 2026-10-28
 
@@ -264,7 +304,7 @@ authorized. Source now separates preview preparation from final export: real AI
 preparation remains; finished MP4s are created only on explicit Export. Linux
 image/current-feature and owner real-mode acceptance remain release gates.
 
-Resource proposal for owner review only: retain min zero/max one; benchmark a
+Historical CL-084 proposal, superseded by CL-125/130: retain min zero/max one; benchmark a
 **4 vCPU / 8 GiB** demo profile before considering any change from the proposed
 4 vCPU / 16 GiB profile. This would require a smaller temporary-media allowance
 (candidate at most 5 GiB, leaving processing headroom) and explicit capacity
@@ -287,8 +327,9 @@ establish billed CPU/GiB or dollar savings. See CL-084's explicit acceptance gat
 The owner is not deploying now. Revisit these items with the owner before a
 future deployment decision; this note authorizes no cloud changes or deployment.
 
-- [ ] Prepare the shared editor backend allocation: **4 CPUs, 16 GiB RAM and
-      always-allocated CPU**, retaining **minimum zero / maximum one instance**.
+- [ ] Prepare the shared editor backend allocation: **2 CPUs, 8 GiB RAM**, a
+      **5376-MiB `/tmp` in-memory volume**, and background CPU allocation,
+      retaining **minimum zero / maximum one instance**.
       The read-only inspection found the older backend at one CPU, 512 MiB and
       request-only CPU allocation. The larger profile remains unapplied and its
       maximum workload capacity remains unverified.
@@ -347,16 +388,13 @@ current fixed worker/overlay compiled at build time. The local YouTube downloade
 Python distribution is excluded; no runtime tool download is performed. The frontend/backend
 closed context builder excludes ignored configuration, private media and tests.
 
-The old lightweight backend allocation is insufficient for native encoding and
-in-memory ephemeral scratch. This profile reserves up to 12 GiB scratch plus
-256 MiB free space, with up to 2 GiB overlay scratch included in the existing
-reservation accounting. Before release, the owner must choose/approve a backend
-allocation with at least 16 GiB memory and appropriate CPU, request duration and
-always-allocated CPU for background preparation/expiry. Preserve a single API
-instance (no cross-instance routing or durable session recovery is implemented).
-Frontend request concurrency remains bounded at eight. These are release
-requirements, not claimed resource changes. No resource or cloud setting was
-changed by the agent.
+The old lightweight backend allocation is insufficient for native encoding.
+The current candidate is the 2-CPU/8-GiB bounded-volume contract above. Before
+release, verify that exact mount, memory, request duration and background CPU
+lifecycle on the actual hosted platform. Preserve a single API instance (no
+cross-instance routing or durable session recovery is implemented). Frontend
+request concurrency remains bounded at eight. These are release requirements,
+not claimed resource changes; no resource/cloud setting was changed here.
 
 Keep normal injected Gemini/Turnstile/approval configuration. No new AI mode or
 second environment file is introduced. Paid-off/fake/test/preview or missing
@@ -390,9 +428,12 @@ with pinned esbuild into owned temporary scratch and mounted at
 `/app/media/dist/editing-worker.js` and image-owned native tools, rather than a
 Windows binary or stale overlay. Use a read-only root with writable temporary
 scratch/home, at least 512 process slots for the proof's two Chromium instances,
-four CPUs and 4 GiB memory. Do not mount configuration, owner media or cloud
-credentials. The tested sample uses about 930 MiB memory and 25 MiB scratch;
-the 16 GiB hosted requirement is unchanged.
+two CPUs and 8 GiB memory/no swap. Mount `/tmp` as a 5376-MiB tmpfs, home as
+128 MiB and shared memory as 256 MiB. The CL-130 probe also requires a separate
+32-MiB `/capacity-proof` tmpfs, writable by UID/GID 1000, to test ENOSPC safely.
+Pass `--maximum-upload` for the 500-MiB disk-selected synthetic fixture. Do not
+mount configuration, owner media or cloud credentials. CL-063's earlier 930-MiB
+sample and its historical allocation rationale are not current capacity proof.
 
 Still unchecked before release:
 
@@ -401,7 +442,7 @@ Still unchecked before release:
 | Real frontend identity, HTTPS/origin forwarding and Secure cookies | Requires the actual hosted frontend/backend and identity configuration. |
 | Turnstile and genuine provider responses | Needs real keys and a separately approved live test. |
 | Single-instance routing and always-allocated CPU | Actual hosting settings and behavior have not been changed or exercised. |
-| Maximum memory/scratch/source/batch capacity | The local Docker allocation is below the documented 16 GiB target; the small sample is not a worst-case load test. |
+| Maximum memory/scratch/source/batch capacity | CL-130 tests the 500-MiB source-byte ceiling with a short synthetic clip. Full-duration 4K/manual-cut/history combinations remain untested; Docker has only 7.56 GiB physical RAM despite the 8-GiB cgroup cap. |
 | Owner media/quality acceptance | Deliberate owner-only manual paid review remains separate from synthetic processing. |
 
 Do not deploy or infer approval for credit-consuming tests from this local proof.

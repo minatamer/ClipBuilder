@@ -526,6 +526,18 @@ no keys, only labelled fixtures and injected synthetic checks work; real AI
 requires provider credentials and enabled live prerequisites. No local AI
 weights/runtime are used or introduced.
 
+## Hosted scratch resource contract
+
+Hosted scratch preparation (CL-130): the next processing target is 2 CPUs /
+8 GiB with a dedicated 5376-MiB tmpfs at `/tmp`. Hosted composition verifies that
+bounded mount and cgroup memory before worker/provider startup; it cannot use
+the ordinary unbounded writable root. The 5-GiB media allowance and 256-MiB
+filesystem reserve preserve the existing upload/clip/revision/quality bounds,
+with capacity rejection instead of deleting completed results or reducing
+quality. Local startup/storage is unchanged. See the
+[current release resource contract](../../docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md#current-resource-contract--cl-130-2026-10-29)
+for exact admission behavior and unperformed deployment/real-AI gates.
+
 ## Run locally
 
 Use Node.js `^22.13.0` or `^24.0.0` and the pinned pnpm `11.19.0`.
