@@ -2,6 +2,7 @@
 import "../test/deterministic.environment.ts";
 import assert from "node:assert/strict";
 import net from "node:net";
+import { createReadStream } from "node:fs";
 import { createServer } from "node:http";
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -15,6 +16,8 @@ import {
   readdir,
   rm,
   stat,
+  open,
+  statfs,
 } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -74,6 +77,10 @@ const { ownerOutputProfile } =
   await import("../apps/renderer/local/export-profile.ts");
 const { OWNER_SOCIAL_TEXT_PRESETS } =
   await import("../packages/contracts/local/text-style.ts");
+const { createHostedScratchCapacity, HOSTED_SCRATCH_VOLUME_BYTES } =
+  await import("../apps/backend/local/hosted-capacity.ts");
+const { PUBLIC_LIMITS } =
+  await import("../packages/contracts/src/constants.ts");
 const expectedProfile = ownerOutputProfile(
   { width: 160, height: 90, fps: 30 },
   30,
@@ -83,6 +90,7 @@ const run = promisify(execFile),
 const directory = await mkdtemp(join(tmpdir(), "clipbuilder-hosted-linux-")),
   root = join(directory, "workspaces");
 await mkdir(root);
+const capacity = await createHostedScratchCapacity(directory, root);
 const state = join(directory, "worker.json"),
   token = randomBytes(32).toString("hex");
 await writeFile(
@@ -119,6 +127,36 @@ const counts = {
   "clip-preview": 0,
 };
 const metrics = {};
+const scratchVolume = await statfs(directory);
+assert.equal(
+  scratchVolume.blocks * scratchVolume.bsize,
+  HOSTED_SCRATCH_VOLUME_BYTES,
+);
+// This small separate tmpfs proves mount-bound failure without a multi-GiB
+// pressure test on the owner's 7.56-GiB Docker VM.
+const preserved = "/capacity-proof/retained.mp4";
+const filling = "/capacity-proof/derived.partial.mp4";
+await writeFile(preserved, "synthetic-retained-output", { flag: "wx" });
+let written = 0;
+const file = await open(filling, "wx");
+try {
+  const buffer = Buffer.alloc(1024 ** 2, 7);
+  await assert.rejects(
+    async () => {
+      for (let index = 0; index < 64; index++) {
+        const part = await file.write(buffer);
+        written += part.bytesWritten;
+      }
+    },
+    { code: "ENOSPC" },
+  );
+} finally {
+  await file.close();
+  assert.equal(await readFile(preserved, "utf8"), "synthetic-retained-output");
+  await rm(filling);
+  await rm(preserved);
+}
+metrics.boundedWriteBytes = written;
 async function wait(read, label, timeout = 120000) {
   const until = Date.now() + timeout;
   while (Date.now() < until) {
@@ -202,11 +240,30 @@ try {
     { timeout: 20000 },
   );
   const bytes = await readFile(source),
-    total = HOSTED_EDITING_POLICY.chunkBytes + 123;
-  const padding = Buffer.alloc(total - bytes.length);
-  padding.writeUInt32BE(padding.length);
-  padding.write("free", 4);
-  const uploaded = Buffer.concat([bytes, padding]);
+    total = process.argv.includes("--maximum-upload")
+      ? PUBLIC_LIMITS.maxSourceBytes
+      : HOSTED_EDITING_POLICY.chunkBytes + 123;
+  const paddingLength = total - bytes.length;
+  const paddingHeader = Buffer.alloc(8);
+  paddingHeader.writeUInt32BE(paddingLength);
+  paddingHeader.write("free", 4);
+  const expectedHash = createHash("sha256").update(bytes).update(paddingHeader);
+  const zeros = Buffer.alloc(1024 ** 2);
+  const fixture = await open(source, "a");
+  try {
+    await fixture.writeFile(paddingHeader);
+    for (
+      let remaining = paddingLength - 8;
+      remaining > 0;
+      remaining -= zeros.length
+    ) {
+      const chunk = zeros.subarray(0, Math.min(remaining, zeros.length));
+      expectedHash.update(chunk);
+      await fixture.writeFile(chunk);
+    }
+  } finally {
+    await fixture.close();
+  }
   const native = localWorkerPort(4200, token);
   let origin = "",
     clientIp = "192.0.2.1";
@@ -259,10 +316,13 @@ try {
     siteKey: "synthetic-site",
     aiMode: "synthetic-ai",
     captionGeneration: true,
-    sourceLimits: { bytes: 20 * 1024 ** 2, durationMs: 60000 },
+    sourceLimits: {
+      bytes: PUBLIC_LIMITS.maxSourceBytes,
+      durationMs: PUBLIC_LIMITS.maxSourceSeconds * 1000,
+    },
     abuse: { verify: async () => true },
     capacity: async (_directory, peak) => {
-      assert.ok(peak >= 0 && peak <= HOSTED_EDITING_POLICY.scratchBytes);
+      await capacity(_directory, peak);
       metrics.reservationBytes = Math.max(metrics.reservationBytes ?? 0, peak);
     },
     media: async (job, signal) => {
@@ -321,6 +381,27 @@ try {
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
   await page.goto({ url: origin + "/", timeout: 10000 });
   stage = "shared-browser-editor";
+  await page._client().send("Runtime.evaluate", {
+    expression:
+      "window.turnstile={render(_node,options){queueMicrotask(()=>options.callback('synthetic-proof'));return 'synthetic';},remove(){}};",
+  });
+  await wait(async () => {
+    const ready = await page._client().send("Runtime.evaluate", {
+      returnByValue: true,
+      expression:
+        'Boolean(document.querySelector(".upload-card input:not(:disabled)"))',
+    });
+    return ready.value.result.value;
+  }, "upload_input");
+  const documentNode = await page._client().send("DOM.getDocument");
+  const inputNode = await page._client().send("DOM.querySelector", {
+    nodeId: documentNode.value.root.nodeId,
+    selector: ".upload-card input:not(:disabled)",
+  });
+  await page._client().send("DOM.setFileInputFiles", {
+    nodeId: inputNode.value.nodeId,
+    files: [source],
+  });
   const evaluated = await page._client().send("Runtime.evaluate", {
     awaitPromise: true,
     returnByValue: true,
@@ -328,10 +409,7 @@ try {
     window.turnstile={render(_node,options){queueMicrotask(()=>options.callback('synthetic-proof'));return 'synthetic';},remove(){}};
     const wait=async(fn,label='step')=>{for(let i=0;i<2400;i++){const value=fn();if(value)return value;await new Promise(done=>setTimeout(done,50));}throw new Error('linux_ui_timeout_'+label+'_'+[...document.querySelectorAll('.clip-state')].map(n=>n.textContent).join('_'));};
     const button=text=>[...document.querySelectorAll('button')].find(n=>n.textContent.trim()===text);
-    const input=await wait(()=>document.querySelector('.upload-card input:not(:disabled)'));
     if(document.body.textContent.includes('YouTube'))throw new Error('hosted_youtube_visible');
-    const bytes=Uint8Array.from(atob(${JSON.stringify(bytes.toString("base64"))}),c=>c.charCodeAt(0)),padding=new Uint8Array(${padding.length});new DataView(padding.buffer).setUint32(0,padding.length);padding.set([102,114,101,101],4);
-    const transfer=new DataTransfer();transfer.items.add(new File([bytes,padding],'synthetic.mp4',{type:'video/mp4'}));input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));
     await wait(()=>button('Add clip')&&!button('Add clip').matches(':disabled'),'upload');button('Add clip').click();
     const change=async(node,value)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(node,value);node.dispatchEvent(new Event('input',{bubbles:true}));await new Promise(requestAnimationFrame);};
     await wait(()=>document.querySelector('[aria-label="Clip 1 end"]'));
@@ -361,12 +439,10 @@ try {
   assert.ok(result.firstBytes > 1000 && result.lastBytes > 1000);
   assert.equal(result.edit.captions.fontSize, 72);
   const workspace = join(root, result.workspaceId);
-  assert.equal(
-    createHash("sha256")
-      .update(await readFile(join(workspace, "source.mp4")))
-      .digest("hex"),
-    createHash("sha256").update(uploaded).digest("hex"),
-  );
+  const actualHash = createHash("sha256");
+  for await (const chunk of createReadStream(join(workspace, "source.mp4")))
+    actualHash.update(chunk);
+  assert.equal(actualHash.digest("hex"), expectedHash.digest("hex"));
   const video = join(
     workspace,
     result.clipId + `.r${result.outputRevision}.mp4`,
@@ -640,5 +716,8 @@ if (metrics.result)
       peakScratchBytes: peakScratch,
       peakContainerMemoryBytes: peakMemory,
       reservationBytes: metrics.reservationBytes,
+      scratchVolumeBytes: HOSTED_SCRATCH_VOLUME_BYTES,
+      boundedWriteBytes: metrics.boundedWriteBytes,
+      memoryEvents: await readFile("/sys/fs/cgroup/memory.events", "utf8"),
     }) + "\n",
   );
