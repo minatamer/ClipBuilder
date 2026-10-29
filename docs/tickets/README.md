@@ -1,5 +1,14 @@
 # ClipBuilder canonical ticket index
 
+## Media and audio — 2026-10-29
+
+[CL-133](CL-133-media-audio.md) is executing the owner's Media/audio request
+under the [documented design/research](../architecture/MEDIA_AUDIO.md), after
+committing CL-131/132 through `54d208b`. Manual built-ins/uploads, music and
+sound effects share preview/export and Hook clocks. Checks remain synthetic,
+fake/paid-off; no deployment. The plan is committed separately; implementation
+changes remain uncommitted.
+
 ## Hook edit fidelity — 2026-10-29
 
 [CL-132](CL-132-hook-edit-fidelity.md) confirms the owner's requirement that

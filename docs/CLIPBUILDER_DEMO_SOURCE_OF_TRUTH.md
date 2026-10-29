@@ -1,5 +1,20 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Media and manual audio — CL-133, 2026-10-29
+
+The owner expands Pictures into Media, retaining images and adding manually
+placed sound effects/music. Pictures / Audio replace the active settings slot.
+Use a small original previewable sound catalogue and bounded owner uploads.
+Timed clip sounds inherit the Hook's repeated source range; Hook-only music
+ends with the introduction and whole-video music continues over Hook/body.
+Original speech is retained by default. Apply/Discard, saved drafts, shared
+preview/export clocks and existing video/clip/revision limits remain. No
+automatic sound insertion, AI music, remote sound URLs or general timeline.
+The [design/research](architecture/MEDIA_AUDIO.md) and [CL-133](tickets/CL-133-media-audio.md)
+own implementation, finite audio bounds and actual fake/API-free evidence.
+Real AI remains separately key/live/approval gated. Owner listening/visual,
+physical-device/rights/hosted/release acceptance remains open; no deployment.
+
 ## Responsive editing — CL-131, 2026-10-29
 
 On phones and tablets, clip navigation is a horizontal touch-scrollable strip
