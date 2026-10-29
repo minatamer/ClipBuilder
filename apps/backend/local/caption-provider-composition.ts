@@ -16,6 +16,7 @@ export function composeLocalCaptionProvider(
   if (
     config.appEnv !== "local" ||
     config.nodeEnv === "test" ||
+    config.aiProvider !== "gemini" ||
     !config.gemini.apiKey
   )
     return {};

@@ -10,3 +10,6 @@ export const ownerCaptionGenerationRequestSchema = z
   .strict();
 export const ownerFakeCaptionGenerationRequestSchema =
   ownerCaptionGenerationRequestSchema.omit({ paidConsent: true });
+/** Explicit local CPU transcription has no provider-spend consent field. */
+export const ownerLocalCaptionGenerationRequestSchema =
+  ownerFakeCaptionGenerationRequestSchema;

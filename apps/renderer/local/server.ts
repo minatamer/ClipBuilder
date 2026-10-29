@@ -31,12 +31,17 @@ import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/lo
 import { ownerAcquisitionFailureCodeSchema } from "../../../packages/contracts/local/acquisition.ts";
 import { prepareOwnerProviderMedia } from "./provider-media.ts";
 import { normalizeOwnerAudio } from "./audio-media.ts";
+import { prepareLocalCodexInput } from "./codex-media.ts";
+import { LOCAL_CODEX_POLICY } from "../../../packages/contracts/local/codex.ts";
+import type { LocalSpeechTools } from "../../../scripts/local-speech-tools.ts";
 
 export function createOwnerWorker(options: {
   diagnostic?: (line: string) => void;
   root: string;
   token: string;
   tools: OwnerNativeTools;
+  speech?: LocalSpeechTools;
+  runSpeech?: Parameters<typeof prepareLocalCodexInput>[0]["runSpeech"];
   chromium?: string;
   overlayBundle?: string;
   execute?: (
@@ -178,86 +183,103 @@ export function createOwnerWorker(options: {
       );
       const signal = AbortSignal.any([
         controller.signal,
-        AbortSignal.timeout(10 * 60_000),
+        AbortSignal.timeout(
+          job.operation === "codex-input"
+            ? job.kind === "speech"
+              ? LOCAL_CODEX_POLICY.speechTimeoutMs
+              : LOCAL_CODEX_POLICY.frameTimeoutMs
+            : 10 * 60_000,
+        ),
       ]);
       signal.throwIfAborted();
       const result = options.execute
         ? await options.execute(job, signal)
-        : job.operation === "normalize-audio"
-          ? await normalizeOwnerAudio(options.root, job, options.tools, signal)
-          : job.operation === "inspect"
-            ? {
-                operation: "inspect",
-                source: await inspectOwnerSource(source, options.tools, signal),
-              }
-            : job.operation === "prepare-owner-audio" ||
-                job.operation === "prepare-owner-video"
-              ? await prepareOwnerProviderMedia(
-                  options.root,
-                  job,
-                  options.tools,
-                  signal,
-                )
-              : job.operation === "prepare-acquisition"
-                ? {
-                    operation: job.operation,
-                    ...(await prepareOwnerAcquisition(
-                      options.root,
-                      job.workspaceId,
-                      job.expected,
-                      options.tools,
-                      signal,
-                      job.combined ?? false,
-                      stage,
-                    )),
-                  }
-                : job.operation === "synthesize-acquisition" ||
-                    job.operation === "inspect-acquisition"
+        : job.operation === "codex-input"
+          ? await prepareLocalCodexInput(options, job, signal)
+          : job.operation === "normalize-audio"
+            ? await normalizeOwnerAudio(
+                options.root,
+                job,
+                options.tools,
+                signal,
+              )
+            : job.operation === "inspect"
+              ? {
+                  operation: "inspect",
+                  source: await inspectOwnerSource(
+                    source,
+                    options.tools,
+                    signal,
+                  ),
+                }
+              : job.operation === "prepare-owner-audio" ||
+                  job.operation === "prepare-owner-video"
+                ? await prepareOwnerProviderMedia(
+                    options.root,
+                    job,
+                    options.tools,
+                    signal,
+                  )
+                : job.operation === "prepare-acquisition"
                   ? {
                       operation: job.operation,
-                      ...(await (
-                        job.operation === "synthesize-acquisition"
-                          ? synthesizeOwnerAcquisition
-                          : inspectOwnerAcquisition
-                      )(
+                      ...(await prepareOwnerAcquisition(
                         options.root,
                         job.workspaceId,
                         job.expected,
                         options.tools,
                         signal,
+                        job.combined ?? false,
                         stage,
                       )),
                     }
-                  : job.operation === "clip-preview"
-                    ? await prepareOwnerClipPreview(
-                        { root: options.root, tools: options.tools, cache },
-                        job,
-                        signal,
-                      )
-                    : job.operation === "clip"
-                      ? await renderOwnerClip(
-                          {
-                            root: options.root,
-                            tools: options.tools,
-                            chromium: options.chromium ?? "",
-                            bundle: options.overlayBundle ?? "",
-                            cache,
-                          },
+                  : job.operation === "synthesize-acquisition" ||
+                      job.operation === "inspect-acquisition"
+                    ? {
+                        operation: job.operation,
+                        ...(await (
+                          job.operation === "synthesize-acquisition"
+                            ? synthesizeOwnerAcquisition
+                            : inspectOwnerAcquisition
+                        )(
+                          options.root,
+                          job.workspaceId,
+                          job.expected,
+                          options.tools,
+                          signal,
+                          stage,
+                        )),
+                      }
+                    : job.operation === "clip-preview"
+                      ? await prepareOwnerClipPreview(
+                          { root: options.root, tools: options.tools, cache },
                           job,
                           signal,
                         )
-                      : await ownerPortrait(
-                          source,
-                          await ownerMediaPath(
-                            options.root,
-                            job.workspaceId,
-                            "portrait.mp4",
-                          ),
-                          options.tools,
-                          signal,
-                          job.cut,
-                          job.fingerprint,
-                        );
+                      : job.operation === "clip"
+                        ? await renderOwnerClip(
+                            {
+                              root: options.root,
+                              tools: options.tools,
+                              chromium: options.chromium ?? "",
+                              bundle: options.overlayBundle ?? "",
+                              cache,
+                            },
+                            job,
+                            signal,
+                          )
+                        : await ownerPortrait(
+                            source,
+                            await ownerMediaPath(
+                              options.root,
+                              job.workspaceId,
+                              "portrait.mp4",
+                            ),
+                            options.tools,
+                            signal,
+                            job.cut,
+                            job.fingerprint,
+                          );
       report("succeeded");
       res
         .writeHead(200, {

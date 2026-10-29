@@ -38,6 +38,12 @@ import type { OwnerAnalysisPorts } from "./analysis.ts";
 import type { ClipCaptionTranscription } from "./clip-caption-port.ts";
 import { ownerClipPlanSchema, type OwnerClipPorts } from "./clip-batch.ts";
 import type { WorkspaceFiles } from "./workspace-files.ts";
+import { HOOK_SUGGESTION_POLICY } from "./hook-suggestion-policy.ts";
+import {
+  ownerHookSchema,
+  decodeOwnerHookSuggestion,
+  type OwnerHook,
+} from "../../../packages/contracts/local/hook.ts";
 import {
   compileAutomaticOwnerFocus,
   ownerFocusPersonSchema,
@@ -57,6 +63,7 @@ type Options = {
 const planSchema = z
   .object({
     pictures: ownerClipPlanSchema,
+    hookSuggestion: ownerHookSchema.nullable(),
     focus: z
       .object({
         people: z.array(ownerFocusPersonSchema).max(8),
@@ -99,7 +106,7 @@ export function createOwnerProviderAi(options: Options): {
   analysis: OwnerAnalysisPorts;
   clipPreparation: Pick<
     OwnerClipPorts,
-    "mode" | "plan" | "image" | "resume" | "focus"
+    "mode" | "plan" | "image" | "resume" | "focus" | "hookSuggestion"
   >;
   cleanupWorkspace(id: string, signal: AbortSignal): Promise<void>;
   close(signal: AbortSignal): Promise<void>;
@@ -130,6 +137,7 @@ export function createOwnerProviderAi(options: Options): {
       frames: number;
       cues: string[];
       focus?: OwnerFocus;
+      hookSuggestion?: OwnerHook | undefined;
     }
   >();
   let busy = false,
@@ -355,6 +363,9 @@ export function createOwnerProviderAi(options: Options): {
             ).focus,
         );
       },
+      hookSuggestion({ clipId }) {
+        return structuredClone(plans.get(clipId)?.hookSuggestion);
+      },
       plan(current, signal) {
         return run("visual_plan", signal, async () => {
           const workspace = ownerWorkspaceSchema.parse(current.workspace),
@@ -386,7 +397,7 @@ export function createOwnerProviderAi(options: Options): {
             signal,
             (input) =>
               provider.analyze(input, signal, workspace.id, {
-                policy: visualPolicy,
+                policy: `${visualPolicy} ${HOOK_SUGGESTION_POLICY}`,
                 prompt: JSON.stringify({
                   frames,
                   fps: OWNER_FPS,
@@ -427,6 +438,14 @@ export function createOwnerProviderAi(options: Options): {
               frames,
               cues: admitted.map(hash),
               focus: camera.focus,
+              hookSuggestion: decodeOwnerHookSuggestion(
+                typeof result === "object" &&
+                  result !== null &&
+                  "hookSuggestion" in result
+                  ? result.hookSuggestion
+                  : undefined,
+                frames,
+              ),
             });
             return admitted;
           });

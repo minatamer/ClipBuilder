@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ownerAudioAssetSchema } from "./audio.ts";
+import { localCodexJobSchema, localCodexReceiptSchema } from "./codex.ts";
 import { OWNER_PRESENTATION_MAX_FRAMES } from "./hook.ts";
 
 import {
@@ -56,6 +57,7 @@ export const OWNER_PROVIDER_MEDIA = {
 } as const;
 
 export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
+  localCodexJobSchema,
   z
     .object({
       operation: z.literal("normalize-audio"),
@@ -154,6 +156,7 @@ export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
 ]);
 export type OwnerMediaJob = z.infer<typeof ownerMediaJobSchema>;
 export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
+  localCodexReceiptSchema,
   z
     .object({
       operation: z.literal("normalize-audio"),

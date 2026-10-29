@@ -1,5 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  realpath,
+  rm,
+  readFile,
+} from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { z } from "zod";
 import {
@@ -7,6 +14,8 @@ import {
   type OwnerYoutubeOffer,
 } from "../../../packages/contracts/local/acquisition.ts";
 import { OWNER_LIMITS } from "../../../packages/contracts/local/policy.ts";
+import { OWNER_AUDIO_LIMITS } from "../../../packages/contracts/local/audio.ts";
+import { selectYoutubeAudio } from "./youtube-audio.ts";
 import { fetchYoutubeThumbnail } from "./youtube-thumbnail.ts";
 import {
   buildOwnerYoutubeOffer,
@@ -43,6 +52,7 @@ type SessionRun = (
     action: "metadata" | "video" | "audio";
     formatId?: string;
     output?: string;
+    maxBytes?: number;
   },
   line: (value: string) => void,
 ) => Promise<void>;
@@ -66,6 +76,7 @@ export function ytDlpAcquisitionInput(input: {
   action: "metadata" | "video" | "audio";
   formatId?: string;
   output?: string;
+  maxBytes?: number;
 }): string {
   if (
     !/^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(
@@ -144,7 +155,7 @@ export function ytDlpAcquisitionInput(input: {
       "--limit-rate",
       String(48 * 1024 ** 2),
       "--max-filesize",
-      String(OWNER_LIMITS.sourceBytes),
+      String(input.maxBytes ?? OWNER_LIMITS.sourceBytes),
       "--format",
       input.formatId,
       "--output",
@@ -153,6 +164,13 @@ export function ytDlpAcquisitionInput(input: {
       "after_move:%(id&CB_DONE|CB_DONE)s",
     );
   }
+  if (
+    input.maxBytes !== undefined &&
+    (!Number.isSafeInteger(input.maxBytes) ||
+      input.maxBytes < 1 ||
+      input.maxBytes > OWNER_LIMITS.sourceBytes)
+  )
+    throw new Error("acquisition_config_invalid");
   args.push(input.canonicalUrl);
   return args.map(quote).join("\n") + "\n";
 }
@@ -281,10 +299,7 @@ export function createYtDlpAcquisitionPort(
       }
     }
   }
-  async function readMetadata(
-    identity: OwnerLinkedIdentity,
-    run: SessionRun,
-  ): Promise<OwnerYoutubeOffer> {
+  async function readProjection(run: SessionRun) {
     let meta: unknown;
     let formats: unknown;
     await run({ action: "metadata" }, (line) => {
@@ -298,19 +313,90 @@ export function createYtDlpAcquisitionPort(
         throw new Error("acquisition_metadata_invalid");
       }
     });
+    return { meta, formats };
+  }
+  async function readMetadata(
+    identity: OwnerLinkedIdentity,
+    run: SessionRun,
+  ): Promise<OwnerYoutubeOffer> {
     return buildOwnerYoutubeOffer(
-      normalizeOwnerYoutubeMetadata(
-        { meta, formats },
-        {
-          videoId: identity.videoId,
-          revision: randomUUID(),
-          mode: "provider-source",
-        },
-      ),
+      normalizeOwnerYoutubeMetadata(await readProjection(run), {
+        videoId: identity.videoId,
+        revision: randomUUID(),
+        mode: "provider-source",
+      }),
     );
   }
   return {
     mode: "provider-source",
+    audio(identity, directory, signal) {
+      return session(
+        identity,
+        signal,
+        async (run) => {
+          const metadata = normalizeOwnerYoutubeMetadata(
+            await readProjection(run),
+            {
+              videoId: identity.videoId,
+              revision: randomUUID(),
+              mode: "provider-source",
+            },
+          );
+          const format = selectYoutubeAudio(metadata),
+            output = join(directory, `sound-${randomUUID()}.m4a`);
+          let last = 0,
+            done = false;
+          try {
+            await run(
+              {
+                action: "audio",
+                formatId: format.formatId,
+                output,
+                maxBytes: OWNER_AUDIO_LIMITS.inputBytes,
+              },
+              (line) => {
+                if (line === "CB_DONE" && !done) {
+                  done = true;
+                  return;
+                }
+                if (!line.startsWith("CB_PROGRESS:"))
+                  throw new Error("acquisition_progress_invalid");
+                const progress = progressSchema.parse(
+                  JSON.parse(line.slice(12)),
+                );
+                if (
+                  progress.downloaded_bytes < last ||
+                  progress.downloaded_bytes > OWNER_AUDIO_LIMITS.inputBytes ||
+                  (progress.total_bytes !== undefined &&
+                    progress.total_bytes > OWNER_AUDIO_LIMITS.inputBytes) ||
+                  (progress.total_bytes_estimate !== undefined &&
+                    progress.total_bytes_estimate >
+                      OWNER_AUDIO_LIMITS.inputBytes)
+                )
+                  throw new Error("acquisition_bytes_invalid");
+                last = progress.downloaded_bytes;
+              },
+            );
+            const info = await lstat(output);
+            if (
+              !done ||
+              !info.isFile() ||
+              info.isSymbolicLink() ||
+              info.nlink !== 1 ||
+              info.size < 1 ||
+              info.size !== last ||
+              info.size > OWNER_AUDIO_LIMITS.inputBytes
+            )
+              throw new Error("acquisition_transfer_incomplete");
+            signal.throwIfAborted();
+            return new Uint8Array(await readFile(output));
+          } finally {
+            await rm(output, { force: true });
+          }
+        },
+        directory,
+      );
+    },
     thumbnail: (identity, signal) =>
       fetchYoutubeThumbnail(identity.videoId, signal),
     metadata: (identity, signal) =>

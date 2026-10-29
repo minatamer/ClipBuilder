@@ -104,11 +104,15 @@ export const ownerClipBaseSchema = z
     processingIdentity: ownerAssetSchema.shape.digest,
     cut: ownerCutSchema,
     words: ownerWordsSchema,
+    hookSuggestion: ownerHookSchema.optional(),
     overlay: ownerOverlaySchema,
   })
   .strict()
   .refine(
-    (base) => base.overlay.frames === base.cut.endFrame - base.cut.startFrame,
+    (base) =>
+      base.overlay.frames === base.cut.endFrame - base.cut.startFrame &&
+      (!base.hookSuggestion ||
+        base.hookSuggestion.endFrame <= base.overlay.frames),
   );
 export type OwnerClipBase = z.infer<typeof ownerClipBaseSchema>;
 export const ownerClipOutputSchema = z
@@ -143,6 +147,7 @@ export const ownerClipPreparationSchema = z
   .object({
     moment: ownerMomentSchema,
     focus: ownerFocusSchema.optional(),
+    hookSuggestion: ownerHookSchema.optional(),
     plan: ownerClipPlanSchema.nullable(),
     // Decode legacy partial drafts only; new preparation never generates titles.
     title: ownerClipTitleSchema.optional(),

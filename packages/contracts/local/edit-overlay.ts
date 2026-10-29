@@ -12,7 +12,11 @@ import {
   type OwnerClipBase,
   type OwnerOverlay,
 } from "./clips.ts";
-import { ownerAudioTrackSchema, type OwnerAudioAsset } from "./audio.ts";
+import {
+  ownerAudioTrackSchema,
+  resolveOwnerAudioCues,
+  type OwnerAudioAsset,
+} from "./audio.ts";
 
 export function automaticOwnerEdit(
   base: OwnerClipBase,
@@ -89,6 +93,10 @@ export function compileOwnerOverlay(
       )
     )
       throw new Error("missing_edit_asset");
+  const audio = edit?.audio ?? base.overlay.audio;
+  const audioCues = audio
+    ? resolveOwnerAudioCues(audio.cues, visuals, base.overlay.frames)
+    : [];
   return ownerOverlaySchema.parse({
     ...base.overlay,
     captions: correctedOwnerCaptions(base.overlay.captions, edit?.captionText),
@@ -103,16 +111,20 @@ export function compileOwnerOverlay(
     ...(edit?.captions ? { captionStyle: edit.captions } : {}),
     ...(edit?.videoLook ? { videoLook: edit.videoLook } : {}),
     ...(edit?.focus ? { focus: edit.focus } : {}),
-    ...(edit?.audio
+    ...(audio
       ? {
           audio: ownerAudioTrackSchema.parse({
-            ...edit.audio,
-            assets: audioAssets.filter((asset) =>
-              edit.audio!.cues.some(
-                (cue) =>
-                  cue.source.kind === "upload" && cue.source.id === asset.id,
-              ),
-            ),
+            ...audio,
+            cues: audioCues,
+            assets: edit?.audio
+              ? audioAssets.filter((asset) =>
+                  audioCues.some(
+                    (cue) =>
+                      cue.source.kind === "upload" &&
+                      cue.source.id === asset.id,
+                  ),
+                )
+              : (base.overlay.audio?.assets ?? []),
           }),
         }
       : {}),

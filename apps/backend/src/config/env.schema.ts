@@ -95,6 +95,10 @@ const environmentShape = {
   RETAINED_SAMPLE_BYTES: integerValue(0, 0, PUBLIC_LIMITS.maxSourceBytes),
 
   FAKE_MODE: booleanValue(false),
+  AI_PROVIDER: z.preprocess(
+    (value) => (value === "" || value === undefined ? "gemini" : value),
+    z.enum(["gemini", "codex"]),
+  ),
   PAID_DEMO_ENABLED: booleanValue(true),
   GEMINI_IMAGE_GENERATION_APPROVED: booleanValue(true),
   LIVE_ANALYSIS_ENABLED: booleanValue(false),
@@ -182,6 +186,7 @@ const rawEnvironmentSchema = z.object(environmentShape).strict();
 
 export const ENVIRONMENT_KEYS = Object.freeze([
   "FAKE_MODE",
+  "AI_PROVIDER",
   "PAID_DEMO_ENABLED",
   "GEMINI_API_KEY",
   "TURNSTILE_SITE_KEY",
@@ -241,6 +246,12 @@ export const environmentSchema = rawEnvironmentSchema
         },
   )
   .superRefine((environment, context) => {
+    if (environment.APP_ENV !== "local" && environment.AI_PROVIDER === "codex")
+      context.addIssue({
+        code: "custom",
+        path: ["AI_PROVIDER"],
+        message: "Codex is available only in local composition.",
+      });
     const liveFlags = [
       environment.LIVE_ANALYSIS_ENABLED,
       environment.LIVE_ASSEMBLY_ENABLED,
@@ -565,6 +576,7 @@ export const environmentSchema = rawEnvironmentSchema
       bytes: environment.RETAINED_SAMPLE_BYTES,
     },
     providerMode: environment.FAKE_MODE ? ("fake" as const) : ("live" as const),
+    aiProvider: environment.AI_PROVIDER,
     paidDemoEnabled: environment.PAID_DEMO_ENABLED,
     features: {
       liveAnalysis: environment.LIVE_ANALYSIS_ENABLED,

@@ -5,8 +5,31 @@ import {
   ownerPresentationFrame,
   ownerPresentationFrames,
   ownerSourceFrame,
+  decodeOwnerHookSuggestion,
 } from "./hook.ts";
 import { ownerOverlaySchema } from "./clips.ts";
+it("fits optional AI advice to physical Hook bounds without rejecting usable plans", () => {
+  expect(
+    decodeOwnerHookSuggestion({ startFrame: 30.4, endFrame: 600 }, 120),
+  ).toEqual({ startFrame: 30, endFrame: 120 });
+  expect(
+    decodeOwnerHookSuggestion({ startFrame: -2, endFrame: 900 }, 1000),
+  ).toEqual({ startFrame: 0, endFrame: 300 });
+  expect(decodeOwnerHookSuggestion({ startFrame: 0, endFrame: 1 }, 1)).toEqual({
+    startFrame: 0,
+    endFrame: 1,
+  });
+  for (const value of [
+    null,
+    undefined,
+    {},
+    { startFrame: 40, endFrame: 30 },
+    { startFrame: 120, endFrame: 150 },
+    { startFrame: NaN, endFrame: 10 },
+    { startFrame: 0, endFrame: Infinity },
+  ])
+    expect(decodeOwnerHookSuggestion(value, 120)).toBeUndefined();
+});
 it("bounds a single source-contained hook and maps prefix and complete body without changing source clocks", () => {
   const overlay = {
     version: 1 as const,

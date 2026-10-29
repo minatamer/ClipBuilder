@@ -8,6 +8,7 @@ import {
   compileOwnerOverlay,
 } from "../../../packages/contracts/local/edit-overlay.ts";
 import type { OwnerClip } from "../../../packages/contracts/local/clips.ts";
+import { resolveOwnerAudioCues } from "../../../packages/contracts/local/audio.ts";
 
 export function applyOwnerEdit(
   clip: OwnerClip,
@@ -86,6 +87,12 @@ export function applyOwnerEdit(
         break;
     }
   }
+  if (next.audio)
+    next.audio.cues = resolveOwnerAudioCues(
+      next.audio.cues,
+      next.visuals,
+      clip.base.overlay.frames,
+    );
   next.revision = clip.revision + 1;
   const validated = ownerEditDocumentSchema.parse(next);
   compileOwnerOverlay(clip.base, validated, clip.assets, clip.audioAssets);

@@ -41,6 +41,7 @@ it("provides only explicit clip transcription in local fake/paid-off mode withou
   await ports.close?.(new AbortController().signal);
   expect(unused).toHaveBeenCalledTimes(0);
   for (const guarded of [
+    { ...config, aiProvider: "codex" as const },
     { ...config, nodeEnv: "test" as const },
     { ...config, appEnv: "production" as const },
     { ...config, gemini: { ...config.gemini, apiKey: null } },

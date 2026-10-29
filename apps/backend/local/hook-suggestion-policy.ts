@@ -1,0 +1,2 @@
+export const HOOK_SUGGESTION_POLICY =
+  "HOOK: Return hookSuggestion as one optional compelling excerpt from inside this clip, using clip-relative integer startFrame/endFrame at 30fps, lasting at most ten seconds. Prefer a self-contained intriguing statement or question that draws attention without inventing dialogue. Use null when no useful excerpt exists. This is advice for a manual editor: never activate a hook, repeat content or change the original clip.";

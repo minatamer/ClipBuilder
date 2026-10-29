@@ -71,6 +71,39 @@ const cue = {
     avoidTerms: ["logos"],
   },
 };
+it.each([
+  { startFrame: 60, endFrame: 150 },
+  null,
+  { startFrame: "bad", endFrame: 150 },
+])(
+  "retains optional Hook advice from the single planning request without adding image or inference work (%j)",
+  async (suggestion) => {
+    const f = fixture(),
+      request = { workspace: f.workspace, clipId: f.clipId, moment: f.moment };
+    f.transport.generate.mockResolvedValue({
+      finished: true,
+      text: JSON.stringify({
+        pictures: [cue],
+        focus: { people: [], decisions: [] },
+        hookSuggestion: suggestion,
+      }),
+    });
+    expect(await f.ports.clipPreparation.plan(request, f.signal)).toEqual([
+      cue,
+    ]);
+    expect(f.ports.clipPreparation.hookSuggestion?.(request)).toEqual(
+      suggestion && typeof suggestion.startFrame === "number"
+        ? suggestion
+        : undefined,
+    );
+    expect(f.transport.generate).toHaveBeenCalledTimes(1);
+    expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
+      "never activate a hook",
+    );
+    expect(f.pictures.find).not.toHaveBeenCalled();
+    await f.ports.close(f.signal);
+  },
+);
 
 it.each([
   "A grounded clip headline",
@@ -436,6 +469,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     expect(
       task.schema.safeParse({
         pictures: [cue],
+        hookSuggestion: null,
         focus: { people: [], decisions: [] },
       }).success,
     ).toBe(true);

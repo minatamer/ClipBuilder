@@ -135,6 +135,7 @@ it("rejects every hosted YouTube/library/agent path before proof verification, m
     "/agent/status",
     "/shutdown",
     `/workspace/${randomUUID()}/portrait`,
+    `/workspace/${randomUUID()}/clips/${randomUUID()}/youtube-audio`,
   ]) {
     expect(
       (

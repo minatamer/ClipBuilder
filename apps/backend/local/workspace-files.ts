@@ -13,6 +13,11 @@ import {
   ownerPictureExtension,
   type OwnerPictureFormat,
 } from "../../../packages/contracts/local/assets.ts";
+import {
+  LOCAL_CODEX_POLICY,
+  localCodexArtifactSchema,
+  type LocalCodexReceipt,
+} from "../../../packages/contracts/local/codex.ts";
 
 export async function confinedPath(
   root: string,
@@ -90,6 +95,57 @@ export class WorkspaceFiles {
       id,
       `${assetId}.${input ? "audio-input" : "wav"}`,
     );
+  }
+  async codexInput(id: string, jobId: string): Promise<string> {
+    ownerIdSchema.parse(jobId);
+    await this.file(id, "source.mp4");
+    return confinedPath(this.root, id, `${jobId}.codex.json`);
+  }
+  async readCodexInput(
+    id: string,
+    receipt: LocalCodexReceipt,
+    signal: AbortSignal,
+  ) {
+    const path = await this.codexInput(id, receipt.jobId);
+    const handle = await open(path, constants.O_RDONLY);
+    try {
+      signal.throwIfAborted();
+      const info = await handle.stat();
+      if (
+        !info.isFile() ||
+        info.nlink !== 1 ||
+        info.size !== receipt.bytes ||
+        info.size > LOCAL_CODEX_POLICY.artifactBytes
+      )
+        throw new Error("codex_input_invalid");
+      const bytes = Buffer.alloc(receipt.bytes + 1);
+      let offset = 0;
+      while (offset < bytes.length) {
+        signal.throwIfAborted();
+        const result = await handle.read(
+          bytes,
+          offset,
+          bytes.length - offset,
+          null,
+        );
+        if (!result.bytesRead) break;
+        offset += result.bytesRead;
+      }
+      const admitted = bytes.subarray(0, offset);
+      if (
+        offset !== receipt.bytes ||
+        createHash("sha256").update(admitted).digest("hex") !== receipt.digest
+      )
+        throw new Error("codex_input_invalid");
+      const artifact = localCodexArtifactSchema.parse(
+        JSON.parse(admitted.toString("utf8")),
+      );
+      if (artifact.kind !== receipt.kind)
+        throw new Error("codex_input_invalid");
+      return artifact;
+    } finally {
+      await handle.close();
+    }
   }
   async clipSource(id: string, clipId: string): Promise<string> {
     ownerIdSchema.parse(clipId);

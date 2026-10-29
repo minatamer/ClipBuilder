@@ -12,6 +12,7 @@ export function localProviderReadiness(
     config.appEnv !== "local" ||
     config.nodeEnv === "test" ||
     config.providerMode !== "live" ||
+    config.aiProvider !== "gemini" ||
     !config.paidDemoEnabled ||
     !config.gemini.apiKey ||
     !config.renderer.spendApproved ||

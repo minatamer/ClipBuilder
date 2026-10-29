@@ -7,10 +7,10 @@ import {
   OWNER_AUDIO_LIMITS,
 } from "../../../packages/contracts/local/audio.ts";
 import type { OwnerOverlay } from "../../../packages/contracts/local/clips.ts";
-import { ownerBuiltinWav } from "../../../packages/composition/local/audio-synthesis.ts";
+import { ownerSoundAudio } from "../../../packages/composition/local/audio-sources.ts";
 import { ownerAudioMediaPath } from "./media.ts";
 
-/** Closed PCM inputs and bounded segments only; no user path or filter syntax. */
+/** Closed catalogue/PCM inputs and bounded segments; no user path or filter syntax. */
 export async function prepareOwnerAudioMix(options: {
   root: string;
   workspaceId: string;
@@ -32,7 +32,7 @@ export async function prepareOwnerAudioMix(options: {
   );
   if (!segments.length && (audio?.originalVolume ?? 100) === 100)
     return { inputs: [] as string[], graph: "", label: "audio" };
-  const files = new Map<string, string>(),
+  const files = new Map<string, { file: string; format: "wav" | "flac" }>(),
     inputs: string[] = [],
     filters: string[] = [];
   const duration = options.hookSeconds + options.bodySeconds;
@@ -40,18 +40,23 @@ export async function prepareOwnerAudioMix(options: {
     options.signal.throwIfAborted();
     const source = segment.cue.source;
     const key = `${source.kind}:${source.id}`;
-    let file = files.get(key);
-    if (!file) {
+    let prepared = files.get(key);
+    if (!prepared) {
       if (source.kind === "builtin") {
-        file = join(options.scratch, `audio-${source.id}.wav`);
-        await writeFile(file, new Uint8Array(ownerBuiltinWav(source.id)), {
+        const sample = ownerSoundAudio(source.id);
+        const file = join(
+          options.scratch,
+          `audio-${source.id}.${sample.extension}`,
+        );
+        await writeFile(file, new Uint8Array(sample.bytes), {
           flag: "wx",
           mode: 0o600,
         });
+        prepared = { file, format: sample.extension };
       } else {
         const asset = audio!.assets.find((item) => item.id === source.id);
         if (!asset) throw new Error("invalid_audio_asset");
-        file = await ownerAudioMediaPath(
+        const file = await ownerAudioMediaPath(
           options.root,
           options.workspaceId,
           source.id,
@@ -70,21 +75,22 @@ export async function prepareOwnerAudioMix(options: {
             .digest("hex") !== asset.digest
         )
           throw new Error("invalid_audio_asset");
+        prepared = { file, format: "wav" };
       }
-      files.set(key, file);
+      files.set(key, prepared);
     }
     inputs.push(
       ...(segment.cue.loop ? ["-stream_loop", "-1"] : []),
       "-protocol_whitelist",
       "file,pipe",
       "-format_whitelist",
-      "wav",
+      prepared.format,
       "-codec_whitelist",
-      "pcm_s16le",
+      prepared.format === "flac" ? "flac" : "pcm_s16le",
       "-threads",
       "1",
       "-i",
-      file,
+      prepared.file,
     );
     const span = segment.end - segment.start,
       fade = Math.min(OWNER_AUDIO_LIMITS.fadeSeconds, span / 2);

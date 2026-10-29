@@ -28,6 +28,59 @@ const retained = {
 };
 
 describe("backend environment configuration", () => {
+  it("defaults to Gemini and rejects unsupported or hosted Codex selection", () => {
+    expect(loadConfig({ NODE_ENV: "development" }).aiProvider).toBe("gemini");
+    expect(() => loadConfig({ AI_PROVIDER: "other" })).toThrow();
+    for (const APP_ENV of ["preview", "production"])
+      expect(() =>
+        loadConfig({
+          APP_ENV,
+          AI_PROVIDER: "codex",
+          FAKE_MODE: "true",
+          PAID_DEMO_ENABLED: "false",
+        }),
+      ).toThrow();
+  });
+  it.each([
+    { FAKE_MODE: "false", PAID_DEMO_ENABLED: "true" },
+    { FAKE_MODE: "true", PAID_DEMO_ENABLED: "false" },
+    { FAKE_MODE: "false", PAID_DEMO_ENABLED: "false" },
+  ])(
+    "isolates every Gemini capability when local Codex is selected (%j)",
+    async (switches) => {
+      const google = vi.spyOn(gemini, "composeGeminiTransport"),
+        cloud = vi.spyOn(renderer, "rendererIdentity");
+      try {
+        const { application, config } = composeBackend({
+          NODE_ENV: "development",
+          APP_ENV: "local",
+          AI_PROVIDER: "codex",
+          GEMINI_API_KEY: "synthetic-unused-key",
+          ...switches,
+        });
+        expect(config.aiProvider).toBe("codex");
+        expect(config.gemini.apiKey).toBeNull();
+        expect(config.features).toMatchObject({
+          liveAnalysis: false,
+          liveAssembly: false,
+          liveRender: false,
+          liveImageGeneration: false,
+        });
+        expect(config.renderer.environment).toBe("disabled");
+        expect(config.admission.maxProcessDispatches).toBe(0);
+        await request(application).get("/v1/health").expect(200);
+        await request(application)
+          .post("/v1/analysis/run")
+          .send({})
+          .expect(404);
+        expect(google).not.toHaveBeenCalled();
+        expect(cloud).not.toHaveBeenCalled();
+      } finally {
+        google.mockRestore();
+        cloud.mockRestore();
+      }
+    },
+  );
   it("defaults to real mode, paid enabled and four approvals without dispatching incomplete setup", async () => {
     const google = vi.spyOn(gemini, "composeGeminiTransport");
     const media = vi.spyOn(renderer, "rendererIdentity");

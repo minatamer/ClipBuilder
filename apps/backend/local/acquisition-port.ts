@@ -17,6 +17,11 @@ export type AcquisitionTransferProgress = {
 };
 export type OwnerAcquisitionPort = {
   mode: OwnerAcquisitionMode;
+  audio?(
+    identity: OwnerLinkedIdentity,
+    directory: string,
+    signal: AbortSignal,
+  ): Promise<Uint8Array>;
   thumbnail?(
     identity: OwnerLinkedIdentity,
     signal: AbortSignal,

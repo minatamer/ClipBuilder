@@ -1,4 +1,5 @@
 import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
+import { LOCAL_CODEX_POLICY } from "../../../packages/contracts/local/codex.ts";
 import {
   ownerMediaResultSchema,
   OWNER_FPS,
@@ -123,7 +124,11 @@ export function localWorkerPort(
             method: "POST",
             headers,
             body,
-            signal: AbortSignal.timeout(11 * 60_000),
+            signal: AbortSignal.timeout(
+              job.operation === "codex-input" && job.kind === "speech"
+                ? LOCAL_CODEX_POLICY.speechTimeoutMs + 60_000
+                : 11 * 60_000,
+            ),
             redirect: "error",
           });
           if (

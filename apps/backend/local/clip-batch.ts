@@ -1,5 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
-import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
+import {
+  ownerPresentationFrames,
+  decodeOwnerHookSuggestion,
+  type OwnerHook,
+} from "../../../packages/contracts/local/hook.ts";
 import { writeFile, rm } from "node:fs/promises";
 import { z } from "zod";
 import {
@@ -35,6 +39,7 @@ import { ownerAgentValidation } from "./agent-view.ts";
 import { normalizeOwnerPicture } from "./personal-picture.ts";
 import {
   OWNER_AUDIO_LIMITS,
+  ownerAudioDuration,
   ownerAudioAssetSchema,
 } from "../../../packages/contracts/local/audio.ts";
 import {
@@ -54,6 +59,7 @@ import { FAKE_CAPTIONS_ENABLED } from "./fake-content.ts";
 import {
   ownerCaptionGenerationRequestSchema,
   ownerFakeCaptionGenerationRequestSchema,
+  ownerLocalCaptionGenerationRequestSchema,
   OWNER_CAPTION_GENERATION_ATTEMPTS,
 } from "../../../packages/contracts/local/caption-generation.ts";
 import { ownerWordsSchema } from "../../../packages/contracts/local/selection.ts";
@@ -74,6 +80,11 @@ export type OwnerClipPorts = {
     clipId: string;
     moment: OwnerMoment;
   }): OwnerFocus;
+  hookSuggestion?(request: {
+    workspace: OwnerWorkspace;
+    clipId: string;
+    moment: OwnerMoment;
+  }): OwnerHook | undefined;
   plan(
     request: { workspace: OwnerWorkspace; clipId: string; moment: OwnerMoment },
     signal: AbortSignal,
@@ -262,14 +273,17 @@ export class OwnerClipBatch {
     transcribe: ClipCaptionTranscription,
     signal: AbortSignal,
     fake = false,
+    local = false,
   ) {
     const request = (
-      fake
-        ? ownerFakeCaptionGenerationRequestSchema
-        : ownerCaptionGenerationRequestSchema
+      local
+        ? ownerLocalCaptionGenerationRequestSchema
+        : fake
+          ? ownerFakeCaptionGenerationRequestSchema
+          : ownerCaptionGenerationRequestSchema
     ).parse(value);
     return this.serialize(async () => {
-      const key = `captions:${fake ? "fake" : "gemini"}:${id}:${request.operationId}`;
+      const key = `captions:${fake ? "fake" : local ? "local" : "gemini"}:${id}:${request.operationId}`;
       if (this.receipt(key, request)) {
         if (this.failedCaptionAttempts.has(key))
           throw new Error("caption_attempt_failed");
@@ -742,6 +756,15 @@ export class OwnerClipBatch {
           clipId: clip.id,
           moment: structuredClone(moment),
         }) ?? defaultOwnerFocus(this.workspace.source, frames);
+      const suggested = decodeOwnerHookSuggestion(
+        this.ports.hookSuggestion?.({
+          workspace: structuredClone(this.workspace),
+          clipId: clip.id,
+          moment: structuredClone(moment),
+        }),
+        frames,
+      );
+      if (suggested) preparation.hookSuggestion = suggested;
       this.diagnostics.focus(
         "focus_compile",
         ownerFocusCounts(preparation.focus),
@@ -853,6 +876,9 @@ export class OwnerClipBatch {
       processingIdentity: moment.processingIdentity,
       cut: moment.cut,
       words: moment.cues,
+      ...(preparation.hookSuggestion
+        ? { hookSuggestion: preparation.hookSuggestion }
+        : {}),
       overlay: {
         version: 1,
         frames,
@@ -862,6 +888,32 @@ export class OwnerClipBatch {
           : {}),
         texts: [],
         visuals,
+        ...(visuals.length
+          ? {
+              audio: {
+                originalVolume: 100,
+                assets: [],
+                cues: visuals.map((visual) => ({
+                  id: randomUUID(),
+                  visualId: visual.id,
+                  source: { kind: "builtin", id: "pop" },
+                  placement: "clip",
+                  startFrame: visual.startFrame,
+                  endFrame: Math.min(
+                    frames,
+                    visual.startFrame +
+                      Math.round(
+                        ownerAudioDuration({ kind: "builtin", id: "pop" }, []) *
+                          OWNER_FPS,
+                      ),
+                  ),
+                  offsetFrame: 0,
+                  volume: 35,
+                  loop: false,
+                })),
+              },
+            }
+          : {}),
         focus:
           preparation.focus ?? defaultOwnerFocus(this.workspace.source, frames),
       },

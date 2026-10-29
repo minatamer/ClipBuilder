@@ -4,8 +4,10 @@ import {
   OWNER_SOUNDS,
   OWNER_AUDIO_LIMITS,
 } from "../../contracts/local/audio.ts";
-it("creates deterministic finite stereo PCM with audible energy, bounded peaks and silent edges for every original sound", () => {
-  for (const sound of OWNER_SOUNDS) {
+it("keeps retired original sounds as deterministic stereo PCM with audible energy, bounded peaks and silent edges", () => {
+  for (const sound of OWNER_SOUNDS.filter(
+    (sound) => sound.retired && !sound.recordingDigest,
+  )) {
     const value = ownerBuiltinWav(sound.id),
       view = new DataView(value);
     const first = new Uint8Array(value),

@@ -119,7 +119,10 @@ export function loadConfig(
 
   const fakeMode = environment.FAKE_MODE === "true";
   const paid = environment.PAID_DEMO_ENABLED !== "false";
-  const processingEnabled = !fakeMode && paid;
+  const localCodex =
+    (environment.APP_ENV ?? "local") === "local" &&
+    environment.AI_PROVIDER === "codex";
+  const processingEnabled = !fakeMode && paid && !localCodex;
   const imagesEnabled =
     processingEnabled &&
     environment.GEMINI_IMAGE_GENERATION_APPROVED !== "false";
@@ -138,6 +141,9 @@ export function loadConfig(
   );
   const grantKey = configuredGrantKey(environment);
   if (grantKey !== undefined) selected.PROCESSING_GRANT_KEY = grantKey;
+  // The selected local provider cannot dispatch Gemini through any legacy port,
+  // including the explicit fake-mode caption exception. Owner files stay intact.
+  if (localCodex) delete selected.GEMINI_API_KEY;
 
   let values: Record<string, unknown> = {
     ...selected,
@@ -145,9 +151,12 @@ export function loadConfig(
     CSRF_ALLOWED_ORIGINS:
       environment.FRONTEND_ORIGIN || "http://localhost:3000",
     CLOUD_RENDER_ENVIRONMENT:
-      paid && environment.PRIVATE_RENDERER_ORIGIN ? "cloud" : "disabled",
+      paid && !localCodex && environment.PRIVATE_RENDERER_ORIGIN
+        ? "cloud"
+        : "disabled",
     RETAINED_SAMPLE_ENABLED: String(
       !fakeMode &&
+        !localCodex &&
         (environment.APP_ENV ?? "local") === "local" &&
         paid &&
         [

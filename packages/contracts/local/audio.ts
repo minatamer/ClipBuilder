@@ -20,6 +20,9 @@ export const OWNER_SOUND_IDS = [
   "ding",
   "tension",
   "pulse",
+  "bamboo",
+  "boom",
+  "discord",
 ] as const;
 export type OwnerSoundId = (typeof OWNER_SOUND_IDS)[number];
 export const OWNER_SOUNDS: readonly {
@@ -27,13 +30,78 @@ export const OWNER_SOUNDS: readonly {
   label: string;
   seconds: number;
   music: boolean;
+  retired?: true;
+  recordingDigest?: string;
 }[] = [
-  { id: "pop", label: "Pop", seconds: 6 / OWNER_FPS, music: false },
-  { id: "snap", label: "Snap", seconds: 4 / OWNER_FPS, music: false },
-  { id: "whoosh", label: "Whoosh", seconds: 14 / OWNER_FPS, music: false },
-  { id: "ding", label: "Ding", seconds: 20 / OWNER_FPS, music: false },
-  { id: "tension", label: "Hook tension", seconds: 10, music: true },
-  { id: "pulse", label: "Background pulse", seconds: 4, music: true },
+  {
+    id: "pop",
+    label: "Pop SFX",
+    seconds: 9 / OWNER_FPS,
+    music: false,
+    recordingDigest:
+      "d46fb1fd3d2718b99b133c1a13b17f3d1a4b7886eee8b849739a1f440a43f0dd",
+  },
+  {
+    id: "discord",
+    label: "Discord notification",
+    seconds: 15 / OWNER_FPS,
+    music: false,
+    recordingDigest:
+      "8a0183278548b8b507bf741a5b633c5fadb316b9f0063fbe0abe360cbd7312d3",
+  },
+  {
+    id: "bamboo",
+    label: "Bamboo hit",
+    seconds: 19 / OWNER_FPS,
+    music: false,
+    recordingDigest:
+      "f2c49b6a01d2bc405947dc4c0f2e1bff41052cc204129dafee1cf704a9395c0b",
+  },
+  {
+    id: "boom",
+    label: "Vine boom",
+    seconds: 38 / OWNER_FPS,
+    music: false,
+    recordingDigest:
+      "e6bdddf69536e45d0c97181b9c4f108d40572b115e5990e5fc2078d49f87b73e",
+  },
+  {
+    id: "tension",
+    label: "Sator suspense",
+    seconds: 123 / OWNER_FPS,
+    music: true,
+    retired: true,
+    recordingDigest:
+      "af916117498f9621d58f88ef324b42af2319c66c3a7bcb61ff8b292dd3f64385",
+  },
+  {
+    id: "snap",
+    label: "Snap",
+    seconds: 4 / OWNER_FPS,
+    music: false,
+    retired: true,
+  },
+  {
+    id: "whoosh",
+    label: "Whoosh",
+    seconds: 14 / OWNER_FPS,
+    music: false,
+    retired: true,
+  },
+  {
+    id: "ding",
+    label: "Ding",
+    seconds: 20 / OWNER_FPS,
+    music: false,
+    retired: true,
+  },
+  {
+    id: "pulse",
+    label: "Background pulse",
+    seconds: 4,
+    music: true,
+    retired: true,
+  },
 ];
 export const ownerAudioAssetSchema = z
   .object({
@@ -76,6 +144,7 @@ export const ownerAudioCueSchema = z
       .max((OWNER_AUDIO_LIMITS.durationMs * OWNER_FPS) / 1000),
     volume: z.number().int().min(0).max(100),
     loop: z.boolean(),
+    visualId: ownerIdSchema.optional(),
   })
   .strict()
   .refine((cue) => cue.endFrame > cue.startFrame);
@@ -92,6 +161,31 @@ export const ownerAudioEditSchema = z
   })
   .strict();
 export type OwnerAudioEdit = z.infer<typeof ownerAudioEditSchema>;
+
+/** Anchored accents follow an edited visual; removing it removes only its accent. */
+export function resolveOwnerAudioCues(
+  cues: readonly OwnerAudioCue[],
+  visuals: readonly { id: string; startFrame: number }[],
+  frames: number,
+): OwnerAudioCue[] {
+  return cues.flatMap((cue) => {
+    if (!cue.visualId) return [cue];
+    const visual = visuals.find((item) => item.id === cue.visualId);
+    if (!visual) return [];
+    const length =
+      cue.source.kind === "builtin"
+        ? Math.round(ownerAudioDuration(cue.source, []) * OWNER_FPS)
+        : cue.endFrame - cue.startFrame;
+    return [
+      {
+        ...cue,
+        placement: "clip" as const,
+        startFrame: visual.startFrame,
+        endFrame: Math.min(frames, visual.startFrame + length),
+      },
+    ];
+  });
+}
 export const ownerAudioTrackSchema = ownerAudioEditSchema
   .extend({
     assets: z.array(ownerAudioAssetSchema).max(OWNER_AUDIO_LIMITS.assets),

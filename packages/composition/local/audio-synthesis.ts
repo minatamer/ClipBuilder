@@ -4,10 +4,10 @@ import {
   type OwnerSoundId,
 } from "../../contracts/local/audio.ts";
 
-/** Original oscillator/noise designs, no recordings or third-party melodies. */
+/** Retired original designs remain playable in saved owner drafts. */
 export function ownerBuiltinWav(id: OwnerSoundId): ArrayBuffer {
   const sound = OWNER_SOUNDS.find((item) => item.id === id);
-  if (!sound) throw new Error("invalid_audio_asset");
+  if (!sound?.retired) throw new Error("invalid_audio_asset");
   const rate = OWNER_AUDIO_LIMITS.sampleRate,
     frames = Math.round(sound.seconds * rate);
   const buffer = new ArrayBuffer(44 + frames * 4),
@@ -38,12 +38,6 @@ export function ownerBuiltinWav(id: OwnerSoundId): ArrayBuffer {
     const sine = (frequency: number) => Math.sin(2 * Math.PI * frequency * t);
     let value: number;
     switch (id) {
-      case "pop":
-        value =
-          0.6 *
-          Math.sin(2 * Math.PI * (650 * t - 1400 * t * t)) *
-          Math.exp(-t * 38);
-        break;
       case "snap":
         value = (noise - filtered) * 0.45 * Math.exp(-t * 65);
         break;
@@ -53,18 +47,6 @@ export function ownerBuiltinWav(id: OwnerSoundId): ArrayBuffer {
       case "ding":
         value = 0.32 * (sine(1320) + 0.35 * sine(2640)) * Math.exp(-t * 9);
         break;
-      case "tension": {
-        const phase = (t * (2 + t * 0.08)) % 1;
-        const pulse = Math.exp(-phase * 12) * Math.min(1, phase / 0.02);
-        value =
-          (0.16 * sine(55) +
-            0.07 * sine(82.4) +
-            0.06 * sine(113) +
-            0.12 * pulse * sine(110) +
-            filtered * t * 0.018) *
-          (0.45 + t / 15);
-        break;
-      }
       case "pulse": {
         const notes = [110, 130.8128, 164.8138, 146.8324],
           phase = t % 1;
@@ -76,6 +58,8 @@ export function ownerBuiltinWav(id: OwnerSoundId): ArrayBuffer {
             0.18;
         break;
       }
+      default:
+        throw new Error("invalid_audio_asset");
     }
     const edge = Math.min(1, t / 0.004, (sound.seconds - t) / 0.012);
     const sample = Math.round(

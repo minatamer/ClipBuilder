@@ -5,7 +5,12 @@ import {
 } from "node:http";
 import { createReadStream } from "node:fs";
 import { open, stat } from "node:fs/promises";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { canonicalOwnerYoutubeSource } from "./youtube-url.ts";
+import {
+  ownerYoutubeAudioImportSchema,
+  OWNER_YOUTUBE_AUDIO_TIMEOUT_MS,
+} from "../../../packages/contracts/local/youtube-audio.ts";
 import { createHash } from "node:crypto";
 import {
   OWNER_LIMITS,
@@ -27,6 +32,7 @@ import {
 import { readOwnerJson } from "./request-body.ts";
 import { OwnerClipBatch, type OwnerClipPorts } from "./clip-batch.ts";
 import { OWNER_AUDIO_LIMITS } from "../../../packages/contracts/local/audio.ts";
+import { localCodexFailureSchema } from "../../../packages/contracts/local/codex.ts";
 import { OwnerDraftStore } from "./draft-store.ts";
 import { OwnerWorkspaceDrafts } from "./workspace-drafts.ts";
 import {
@@ -57,11 +63,16 @@ import { fakeOwnerCaptionWords } from "./fake-analysis.ts";
 import { limitHostedDemoInputs } from "../../../packages/contracts/local/hosted-editing.ts";
 
 export type OwnerHostProviders = {
+  localAi?: {
+    aiProvider: "codex";
+    aiSetup: "ready" | "speech-missing" | "codex-missing" | "disabled";
+    captionProvider: "local-speech";
+  };
   captionTranscription?: ClipCaptionTranscription;
   analysis?: OwnerAnalysisPorts;
   clipPreparation?: Pick<
     OwnerClipPorts,
-    "mode" | "plan" | "image" | "resume" | "focus"
+    "mode" | "plan" | "image" | "resume" | "focus" | "hookSuggestion"
   >;
   close?: (signal: AbortSignal) => Promise<void>;
   cleanupWorkspace?: (id: string, signal: AbortSignal) => Promise<void>;
@@ -115,7 +126,12 @@ export function createOwnerHost(options: OwnerHostOptions) {
     captionGeneration: Boolean(providers?.captionTranscription),
     ...(options.hosted
       ? { execution: "hosted", localMedia: false, cloud: true }
-      : { localMedia: true, cloud: false }),
+      : {
+          localMedia: true,
+          cloud: false,
+          ...(options.acquisition?.audio ? { youtubeAudio: true } : {}),
+          ...providers?.localAi,
+        }),
   });
   const workspaces = new Map<string, OwnerWorkspace>();
   const analyses = new Map<string, OwnerAnalysis>();
@@ -797,7 +813,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           ? req.url?.replace("/api/agent/workspace/", "/api/workspace/")
           : req.url
       )?.match(
-        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets|audio-assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|picture|audio|validate|captions|fake-captions)(?:\/(\d+))?)?)?)?$/,
+        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets|audio-assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|picture|audio|youtube-audio|validate|captions|fake-captions)(?:\/(\d+))?)?)?)?$/,
       );
       if (
         agent &&
@@ -1003,6 +1019,9 @@ export function createOwnerHost(options: OwnerHostOptions) {
               await readOwnerJson(req),
               providers.captionTranscription,
               controller.signal,
+              false,
+              !options.hosted &&
+                providers.localAi?.captionProvider === "local-speech",
             );
             res
               .writeHead(200, { "Content-Type": "application/json" })
@@ -1031,6 +1050,65 @@ export function createOwnerHost(options: OwnerHostOptions) {
             res
               .writeHead(200, { "Content-Type": "application/json" })
               .end(JSON.stringify(result));
+            return;
+          } finally {
+            busy.delete(workspace.id);
+          }
+        }
+        if (
+          req.method === "POST" &&
+          batch &&
+          route[3] &&
+          route[4] === "youtube-audio"
+        ) {
+          if (options.hosted || !options.acquisition?.audio) {
+            res.writeHead(404).end();
+            return;
+          }
+          if (busy.has(workspace.id) || batch.active) {
+            res.writeHead(409).end();
+            return;
+          }
+          const clip = batch
+            .snapshot()
+            .clips.find((item) => item.id === route[3]);
+          if (
+            !clip?.base ||
+            (clip.audioAssets?.length ?? 0) >= OWNER_AUDIO_LIMITS.assets
+          )
+            throw new Error("audio_unavailable");
+          busy.add(workspace.id);
+          try {
+            const request = ownerYoutubeAudioImportSchema.parse(
+              await readOwnerJson(req),
+            );
+            const identity = canonicalOwnerYoutubeSource(request.url);
+            await (options.capacity ?? requireDisk)(
+              options.root,
+              OWNER_AUDIO_LIMITS.inputBytes + OWNER_AUDIO_LIMITS.bytes,
+            );
+            const signal = AbortSignal.any([
+              controller.signal,
+              AbortSignal.timeout(OWNER_YOUTUBE_AUDIO_TIMEOUT_MS),
+            ]);
+            const bytes = await options.acquisition.audio(
+              identity,
+              dirname(await files.file(workspace.id, "source.mp4")),
+              signal,
+            );
+            if (
+              bytes.byteLength < 1 ||
+              bytes.byteLength > OWNER_AUDIO_LIMITS.inputBytes
+            )
+              throw new Error("invalid_audio_asset");
+            const result = await batch.audio(
+              clip.id,
+              Buffer.from(bytes),
+              signal,
+            );
+            res
+              .writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify(clipReply(result)));
             return;
           } finally {
             busy.delete(workspace.id);
@@ -1410,7 +1488,17 @@ export function createOwnerHost(options: OwnerHostOptions) {
               : 400,
             { "Content-Type": "application/json" },
           )
-          .end('{"error":"local_operation_unavailable"}');
+          .end(
+            JSON.stringify({
+              error: "local_operation_unavailable",
+              ...(!options.hosted &&
+              providers?.localAi &&
+              error instanceof Error &&
+              localCodexFailureSchema.safeParse(error.message).success
+                ? { reason: error.message }
+                : {}),
+            }),
+          );
     } finally {
       controllers.delete(controller);
     }

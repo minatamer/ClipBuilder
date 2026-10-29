@@ -17,6 +17,7 @@ it("uses the normal config without a second provider flag or cloud renderer prer
   expect(readiness.config.gemini.model).toBe("gemini-3.8-flash");
   expect(readiness.config.gemini.timeoutMs).toBe(180_000);
   for (const change of [
+    { AI_PROVIDER: "codex" },
     { GEMINI_API_KEY: undefined },
     { FAKE_MODE: "true", PAID_DEMO_ENABLED: "false" },
     { PAID_DEMO_ENABLED: "false" },

@@ -33,8 +33,11 @@ import { localWorkerPort } from "./worker-port.ts";
 import { fakeOwnerAnalysis } from "./fake-analysis.ts";
 import { fakeOwnerClipPreparation } from "./fake-clips.ts";
 import { resolveOwnerStorage } from "./owner-storage.ts";
+import { composeLocalCodex } from "./codex-composition.ts";
 import { composeOwnerProviders } from "./provider-composition.ts";
 import { localProviderReadiness } from "./provider-readiness.ts";
+import { findLocalCodex } from "./codex-exec.ts";
+import { localSpeechTools } from "../../../scripts/local-speech-tools.ts";
 import { composeLocalCaptionProvider } from "./caption-provider-composition.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
 
@@ -98,6 +101,16 @@ async function composeLocalWorkflow(
     },
   );
   const runtime = await mkdtemp(join(tmpdir(), "clipbuilder-local-runtime-"));
+  // Read local prerequisites only in normal real composition; no CLI auth or
+  // inference occurs during startup, and fake mode never loads a speech model.
+  const speech =
+    config.providerMode === "live" && config.aiProvider === "codex"
+      ? await localSpeechTools(repository).catch(() => undefined)
+      : undefined;
+  const codex =
+    config.providerMode === "live" && config.aiProvider === "codex"
+      ? await findLocalCodex()
+      : null;
   const root = join(runtime, "workspaces");
   const state = {
     root,
@@ -107,6 +120,7 @@ async function composeLocalWorkflow(
     overlayBundle,
     chromium,
     storageRoot,
+    ...(speech ? { speech } : {}),
   };
   const stateFile = join(runtime, "state.json");
   const clearScratch = async () => {
@@ -256,7 +270,12 @@ async function composeLocalWorkflow(
       }
       if (!ready) throw new Error("local_worker_unavailable");
     });
-    const media = localWorkerPort(4200, state.workerToken, fetch, diagnostics);
+    const media = localWorkerPort(
+      4200,
+      state.workerToken,
+      undefined,
+      diagnostics,
+    );
     host = createOwnerHost({
       root,
       diagnostics,
@@ -271,6 +290,16 @@ async function composeLocalWorkflow(
         tools: acquisition,
       }),
       providers: (files) => {
+        if (config.providerMode === "live" && config.aiProvider === "codex")
+          return composeLocalCodex({
+            enabled: config.paidDemoEnabled,
+            executable: codex,
+            speechReady: !!speech,
+            root,
+            files,
+            media,
+            diagnostics,
+          });
         const normal =
           config.providerMode === "fake"
             ? {
@@ -284,12 +313,20 @@ async function composeLocalWorkflow(
                 undefined,
                 diagnostics,
               );
-        return "captionTranscription" in normal
-          ? normal
-          : {
-              ...normal,
-              ...composeLocalCaptionProvider(config, files, media, diagnostics),
-            };
+        if (config.aiProvider === "codex")
+          return {
+            ...normal,
+            localAi: {
+              aiProvider: "codex",
+              aiSetup: "disabled",
+              captionProvider: "local-speech",
+            },
+          };
+        if ("captionTranscription" in normal) return normal;
+        return {
+          ...normal,
+          ...composeLocalCaptionProvider(config, files, media, diagnostics),
+        };
       },
     });
     return {

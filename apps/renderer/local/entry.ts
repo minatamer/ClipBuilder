@@ -22,6 +22,13 @@ async function main() {
         ffmpeg: z.string().min(1),
         ffprobe: z.string().min(1),
       }),
+      speech: z
+        .object({
+          executable: z.string().min(1),
+          model: z.string().min(1),
+          directory: z.string().min(1),
+        })
+        .optional(),
       overlayBundle: z.string().min(1),
       chromium: z.string().min(1),
     })
@@ -31,6 +38,7 @@ async function main() {
     root: state.root,
     token: state.workerToken,
     tools: state.tools,
+    ...(state.speech ? { speech: state.speech } : {}),
     overlayBundle: state.overlayBundle,
     chromium: state.chromium,
   });

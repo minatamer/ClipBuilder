@@ -23,6 +23,7 @@ import {
 import { canonicalOwnerYoutubeSource } from "./youtube-url.ts";
 import { selectOwnerYoutubeFormat } from "./youtube-formats.ts";
 import { OWNER_LIMITS } from "../../../packages/contracts/local/policy.ts";
+import { OWNER_AUDIO_LIMITS } from "../../../packages/contracts/local/audio.ts";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -231,6 +232,74 @@ async function fixture(muxed = false) {
 }
 
 describe("owner yt-dlp adapter with injected synthetic ports", () => {
+  it("imports bounded audio-only music without language/video requirements and reaps its output", async () => {
+    const setup = await fixture();
+    setup.raw.formats = setup.raw.formats.filter(
+      (format) => format.vcodec === "none",
+    );
+    delete setup.raw.formats[0]!.language;
+    const bytes = await setup.port.audio!(
+      identity,
+      setup.directory,
+      controller().signal,
+    );
+    expect(Buffer.from(bytes).toString()).toBe("synthetic-audio");
+    expect(setup.run).toHaveBeenCalledTimes(2);
+    expect(option(tokens(setup.requests[1]!.input), "--max-filesize")).toBe(
+      String(OWNER_AUDIO_LIMITS.inputBytes),
+    );
+    expect(option(tokens(setup.requests[1]!.input), "--format")).toBe("140");
+    expect(await readdir(setup.directory)).toEqual([]);
+    expect(
+      (await readdir(setup.scratchRoot)).filter((name) =>
+        name.startsWith("acquisition-"),
+      ),
+    ).toEqual([]);
+    expect(setup.close).toHaveBeenCalledTimes(1);
+  });
+  it.each(["long", "private", "drm", "oversize", "muxed"])(
+    "rejects %s sound metadata before downloading",
+    async (kind) => {
+      const setup = await fixture(kind === "muxed");
+      if (kind === "long") setup.raw.meta.duration = 121;
+      if (kind === "private") setup.raw.meta.availability = "private";
+      for (const format of setup.raw.formats) {
+        if (kind === "drm") format.has_drm = true;
+        if (kind === "oversize")
+          format.filesize = OWNER_AUDIO_LIMITS.inputBytes + 1;
+      }
+      await expect(
+        setup.port.audio!(identity, setup.directory, controller().signal),
+      ).rejects.toThrow();
+      expect(setup.run).toHaveBeenCalledTimes(1);
+      expect(await readdir(setup.directory)).toEqual([]);
+      expect(setup.close).toHaveBeenCalledTimes(1);
+    },
+  );
+  it("reaps a canceled sound download and its private output before returning", async () => {
+    const setup = await fixture(),
+      original = setup.run.getMockImplementation()!;
+    setup.run.mockImplementation(async (request, line, signal) => {
+      if (tokens(request.input).includes("--skip-download"))
+        return original(request, line, signal);
+      await writeFile(option(tokens(request.input), "--output"), "partial");
+      await new Promise<never>((_done, fail) => {
+        if (signal.aborted) fail(new Error("canceled"));
+        else
+          signal.addEventListener("abort", () => fail(new Error("canceled")), {
+            once: true,
+          });
+      });
+    });
+    const abort = controller(),
+      result = setup.port.audio!(identity, setup.directory, abort.signal);
+    const rejected = expect(result).rejects.toThrow("canceled");
+    await vi.waitFor(() => expect(setup.run).toHaveBeenCalledTimes(2));
+    abort.abort();
+    await rejected;
+    expect(await readdir(setup.directory)).toEqual([]);
+    expect(setup.close).toHaveBeenCalledTimes(1);
+  });
   it("is inert and rejects a noncanonical identity before tools, broker or metadata", async () => {
     const setup = await fixture();
     expect(setup.run).toHaveBeenCalledTimes(0);

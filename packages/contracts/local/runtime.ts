@@ -9,6 +9,12 @@ const localRuntimeCapabilitiesSchema = z
     sourceMode: ownerAcquisitionModeSchema.nullable(),
     planningAvailable: z.boolean(),
     captionGeneration: z.boolean().optional(),
+    youtubeAudio: z.boolean().optional(),
+    aiProvider: z.enum(["gemini", "codex"]).optional(),
+    aiSetup: z
+      .enum(["ready", "speech-missing", "codex-missing", "disabled"])
+      .optional(),
+    captionProvider: z.enum(["gemini", "local-speech"]).optional(),
     localMedia: z.literal(true),
     cloud: z.literal(false),
   })

@@ -17,6 +17,25 @@ export const ownerHookSchema = z
       h.endFrame - h.startFrame <= OWNER_HOOK_MAX_FRAMES,
   );
 export type OwnerHook = z.infer<typeof ownerHookSchema>;
+
+/** Optional editorial advice cannot reject an otherwise usable plan. */
+export function decodeOwnerHookSuggestion(
+  value: unknown,
+  frames: number,
+): OwnerHook | undefined {
+  const parsed = z
+    .object({ startFrame: z.number().finite(), endFrame: z.number().finite() })
+    .safeParse(value);
+  if (!parsed.success || !Number.isSafeInteger(frames) || frames < 1)
+    return undefined;
+  const startFrame = Math.max(0, Math.round(parsed.data.startFrame)),
+    endFrame = Math.min(
+      frames,
+      startFrame + OWNER_HOOK_MAX_FRAMES,
+      Math.round(parsed.data.endFrame),
+    );
+  return endFrame > startFrame ? { startFrame, endFrame } : undefined;
+}
 type Clock = { frames: number; hook?: OwnerHook | undefined };
 export function ownerHookFrames(value: Pick<Clock, "hook">) {
   return value.hook ? value.hook.endFrame - value.hook.startFrame : 0;

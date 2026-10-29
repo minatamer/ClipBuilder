@@ -4,6 +4,7 @@ export function installTestEnvironment(): void {
     NODE_ENV: "test",
     APP_ENV: "local",
     FAKE_MODE: "true",
+    AI_PROVIDER: "gemini",
     PROVIDER_MODE: "fake",
     PAID_DEMO_ENABLED: "false",
     PROCESSING_GRANTS_ENABLED: "false",

@@ -4,6 +4,7 @@ import {
   ownerAudioEditSchema,
   ownerAudioTrackSchema,
   ownerAudioSegments,
+  resolveOwnerAudioCues,
   type OwnerAudioCue,
 } from "./audio.ts";
 import { ownerOverlaySchema } from "./clips.ts";
@@ -19,6 +20,56 @@ const cue = (
   offsetFrame: 15,
   volume: 20,
   loop: true,
+});
+it("allows twelve concurrent independent gains and anchors accents only to visual starts", () => {
+  const visualId = crypto.randomUUID(),
+    snap: OwnerAudioCue = {
+      ...cue(),
+      visualId,
+      source: { kind: "builtin", id: "snap" },
+      startFrame: 0,
+      endFrame: 4,
+      loop: false,
+      offsetFrame: 0,
+      volume: 35,
+    };
+  const layers = Array.from({ length: 11 }, (_, i) => ({
+    ...cue(),
+    startFrame: 10,
+    endFrame: 80,
+    volume: i * 9,
+  }));
+  const resolved = resolveOwnerAudioCues(
+    [snap, ...layers],
+    [{ id: visualId, startFrame: 10 }],
+    90,
+  );
+  expect(
+    ownerAudioEditSchema.parse({ originalVolume: 73, cues: resolved }).cues,
+  ).toHaveLength(12);
+  expect(resolved[0]).toMatchObject({
+    startFrame: 10,
+    endFrame: 14,
+    volume: 35,
+  });
+  expect(resolved.slice(1)).toEqual(layers);
+  const moved = resolveOwnerAudioCues(
+    resolved,
+    [{ id: visualId, startFrame: 89 }],
+    90,
+  );
+  expect(moved[0]).toMatchObject({ startFrame: 89, endFrame: 90 });
+  expect(
+    resolveOwnerAudioCues(moved, [{ id: visualId, startFrame: 20 }], 90)[0],
+  ).toMatchObject({ startFrame: 20, endFrame: 24 });
+  expect(resolveOwnerAudioCues(resolved, [], 90)).toEqual(layers);
+  const segments = ownerAudioSegments(
+    { originalVolume: 100, assets: [], cues: [resolved[0]!] },
+    90,
+  );
+  expect(segments).toHaveLength(1);
+  expect(segments[0]!.start).toBeCloseTo(10 / 30);
+  expect(segments[0]!.end).toBeCloseTo(14 / 30);
 });
 it("projects timed sounds into both edited occurrences with the same audio offset, while hook and background windows stay distinct", () => {
   const timed = cue(),
@@ -63,7 +114,7 @@ it("clips one-shots to remaining samples and preserves full-file looping phase a
     cues: [value],
     assets: [],
   });
-  expect(ownerAudioSegments(audio, 90)[0]?.end).toBeCloseTo(0.1);
+  expect(ownerAudioSegments(audio, 90)[0]?.end).toBeCloseTo(0.2);
   expect(
     ownerAudioSegments(audio, 90, { startFrame: 30, endFrame: 60 }),
   ).toHaveLength(1);
@@ -73,7 +124,7 @@ it("clips one-shots to remaining samples and preserves full-file looping phase a
     endFrame: 60,
   });
   expect(segments).toHaveLength(2);
-  expect(segments[0]!.offset).toBeCloseTo(1.1 % 0.2);
+  expect(segments[0]!.offset).toBeCloseTo(1.1 % 0.3);
   expect(ownerAudioSegments(undefined, 90)).toEqual([]);
 });
 it("bounds audio sources, gains, offsets, duplicates, count and upload bindings without changing legacy overlays", () => {

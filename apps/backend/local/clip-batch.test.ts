@@ -17,6 +17,7 @@ import {
 import { type OwnerAnalysis } from "../../../packages/contracts/local/selection.ts";
 import { OWNER_BATCH_POLICY } from "../../../packages/contracts/local/clips.ts";
 import { PUBLIC_LIMITS } from "@clipbuilder/contracts";
+import { compileOwnerOverlay } from "../../../packages/contracts/local/edit-overlay.ts";
 import {
   checkHostedScratch,
   HOSTED_MEMORY_BYTES,
@@ -133,6 +134,73 @@ const gate = () => {
   });
   return { wait, release };
 };
+it("adds one editable recorded Pop per planned visual without additional planning and follows moved/deleted visual edits", async () => {
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const clip = batch.snapshot().clips[0]!,
+    visual = clip.base!.overlay.visuals[0]!;
+  const cues = clip.base!.overlay.audio!.cues;
+  expect(cues).toHaveLength(1);
+  expect(cues[0]).toMatchObject({
+    visualId: visual.id,
+    source: { kind: "builtin", id: "pop" },
+    startFrame: visual.startFrame,
+    endFrame: visual.startFrame + 9,
+    volume: 35,
+    loop: false,
+  });
+  expect(clip.edit!.audio!.cues).toEqual(cues);
+  const changed = structuredClone(clip.edit!);
+  changed.visuals[0]!.startFrame = 10;
+  changed.audio!.cues[0]!.volume = 12;
+  expect(
+    compileOwnerOverlay(clip.base!, changed, clip.assets).audio!.cues[0],
+  ).toMatchObject({ startFrame: 10, endFrame: 19, volume: 12 });
+  changed.visuals = [];
+  expect(
+    compileOwnerOverlay(clip.base!, changed, clip.assets).audio!.cues,
+  ).toEqual([]);
+  const acknowledged = await batch.edit(clip.id, {
+    operationId: randomUUID(),
+    expectedRevision: clip.revision,
+    baseHash: clip.baseHash,
+    operations: [{ kind: "visual-remove", cueId: visual.id }],
+  });
+  expect(acknowledged.clips[0]!.edit!.audio!.cues).toEqual([]);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.image).toHaveBeenCalledTimes(1);
+  expect(ports.render).toHaveBeenCalledTimes(1);
+});
+it("checkpoints an optional Hook independently of active edits and preserves it through restore without planning again", async () => {
+  const hookSuggestion = vi.fn(() => ({ startFrame: 3, endFrame: 21 }));
+  Object.assign(ports, { hookSuggestion });
+  await batch.submit(request(), analysis);
+  await batch.drain();
+  const clips = batch.snapshot().clips;
+  expect(
+    clips.every((clip) => clip.base?.hookSuggestion?.startFrame === 3),
+  ).toBe(true);
+  expect(
+    clips.every(
+      (clip) =>
+        !clip.base?.overlay.hook &&
+        !clip.edit?.hook &&
+        clip.outputs.length === 0,
+    ),
+  ).toBe(true);
+  expect(ports.plan).toHaveBeenCalledTimes(3);
+  expect(hookSuggestion).toHaveBeenCalledTimes(3);
+  await batch.close();
+  batch = new OwnerClipBatch(workspace, files, ports);
+  batch.restore(clips);
+  expect(
+    batch.snapshot().clips.map((clip) => clip.base?.hookSuggestion),
+  ).toEqual(clips.map((clip) => clip.base?.hookSuggestion));
+  expect(ports.plan).toHaveBeenCalledTimes(3);
+});
 
 it("keeps three maximum-source clips and all twenty export revisions with actual retained-byte reservations", async () => {
   await batch.close();
@@ -630,7 +698,12 @@ it("saves manual focus, preserves the automatic plan and restores snapshots with
 it("retains detected people through cancel, saved checkpoint restore and explicit retry without another plan request", async () => {
   await batch.close();
   const focusPort = vi.fn(fakeOwnerClipPreparation.focus!);
-  batch = new OwnerClipBatch(workspace, files, { ...ports, focus: focusPort });
+  const hookSuggestion = vi.fn(() => ({ startFrame: 3, endFrame: 21 }));
+  batch = new OwnerClipBatch(workspace, files, {
+    ...ports,
+    focus: focusPort,
+    hookSuggestion,
+  });
   const release = gate(),
     image = ports.image.getMockImplementation()!;
   ports.image.mockImplementationOnce(async (input, signal) => {
@@ -648,8 +721,16 @@ it("retains detected people through cancel, saved checkpoint restore and explici
   release.release();
   await batch.drain();
   const saved = JSON.parse(JSON.stringify(batch.snapshot().clips));
+  expect(saved[0].preparation.hookSuggestion).toEqual({
+    startFrame: 3,
+    endFrame: 21,
+  });
   await batch.close();
-  batch = new OwnerClipBatch(workspace, files, { ...ports, focus: focusPort });
+  batch = new OwnerClipBatch(workspace, files, {
+    ...ports,
+    focus: focusPort,
+    hookSuggestion,
+  });
   batch.restore(saved);
   const clip = batch.snapshot().clips[0]!;
   expect(clip.state).toBe("canceled");
@@ -663,6 +744,11 @@ it("retains detected people through cancel, saved checkpoint restore and explici
   );
   expect(ports.plan).toHaveBeenCalledTimes(1);
   expect(focusPort).toHaveBeenCalledTimes(1);
+  expect(hookSuggestion).toHaveBeenCalledTimes(1);
+  expect(batch.snapshot().clips[0]!.base!.hookSuggestion).toEqual({
+    startFrame: 3,
+    endFrame: 21,
+  });
   expect(ports.image).toHaveBeenCalledTimes(2);
   expect(ports.render).toHaveBeenCalledTimes(1);
 });

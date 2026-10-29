@@ -32,6 +32,14 @@ import {
 } from "./export-profile.ts";
 
 export type OwnerNativeTools = { ffmpeg: string; ffprobe: string };
+export async function ownerCodexMediaPath(
+  root: string,
+  id: string,
+  jobId: string,
+) {
+  ownerIdSchema.parse(jobId);
+  return admittedMediaPath(root, id, `${jobId}.codex.json`);
+}
 export async function ownerMediaPath(
   root: string,
   id: string,
