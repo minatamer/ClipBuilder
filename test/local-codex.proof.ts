@@ -21,6 +21,7 @@ import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
 import { ownerClipListSchema } from "../packages/contracts/local/clips.ts";
 import { ownerDraftStatusSchema } from "../packages/contracts/local/drafts.ts";
 import { ownerWorkspaceSchema } from "../packages/contracts/local/index.ts";
+import { browserSecurityPolicy } from "../apps/frontend/src/browser-security-policy.ts";
 import { openBrowser } from "../apps/renderer/node_modules/@remotion/renderer/dist/index.js";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 import {
@@ -85,6 +86,9 @@ it("runs the local Codex workflow through real controls/native worker with injec
     },
   );
   const bundle = await prepareLocalOverlayFixture(directory);
+  const diarize = vi.fn(
+    async () => "0.000 -- 5.000 speaker_00\n5.000 -- 10.000 speaker_01\n",
+  );
   const worker = createOwnerWorker({
     root,
     token: "synthetic-codex-worker",
@@ -95,8 +99,15 @@ it("runs the local Codex workflow through real controls/native worker with injec
       executable: "synthetic-whisper",
       model: "synthetic-model",
       directory,
+      speakers: {
+        executable: "synthetic-speakers",
+        segmentation: "synthetic-segmentation",
+        embedding: "synthetic-embedding",
+        directory,
+      },
     },
     runSpeech: speech,
+    runSpeakers: diarize,
   });
   const workerPort = await listenOwner(worker.server);
   const transport: typeof fetch = async (input, init) => {
@@ -130,9 +141,8 @@ it("runs the local Codex workflow through real controls/native worker with injec
           {
             startWordId: "w_000001",
             endWordId: "w_000010",
-            title: "Synthetic moment",
-            hook: "Synthetic hook",
-            rationale: "Synthetic test evidence",
+            titleWordIds: ["w_000001", "w_000002"],
+            hookWordIds: ["w_000001", "w_000002"],
             evidence: [],
             caveats: [],
           },
@@ -151,39 +161,84 @@ it("runs the local Codex workflow through real controls/native worker with injec
     const match = /\n(\{.*\})$/su.exec(request.prompt),
       context = JSON.parse(match![1]!);
     return {
+      texts: context.words.length
+        ? [
+            {
+              startFrame: 0,
+              endFrame: Math.min(context.frames, 90),
+              wordIds: context.words
+                .slice(0, 2)
+                .map((word: { id: string }) => word.id),
+            },
+          ]
+        : [],
+      pictures: context.words.length
+        ? [
+            {
+              startFrame: 30,
+              endFrame: Math.min(context.frames, 120),
+              evidenceWordIds: context.words
+                .slice(0, 2)
+                .map((word: { id: string }) => word.id),
+              brief: {
+                scene: "A simple local computer processing concept",
+                searchQuery: "local processing",
+                requiredTerms: ["processing"],
+                avoidTerms: [],
+              },
+              illustration: {
+                layout: "process",
+                heading: "Local processing",
+                items: [
+                  { label: "Input", icon: "computer" },
+                  { label: "Finished", icon: "check" },
+                ],
+              },
+            },
+          ]
+        : [],
       hookSuggestion:
         context.frames < 100
           ? { startFrame: "invalid", endFrame: 20 }
           : { startFrame: 0, endFrame: Math.min(context.frames, 60) },
-      people: [
-        {
-          id: "person_1",
-          observations: [
-            {
-              startFrame: 0,
-              endFrame: context.frames,
-              box: { x: 0.25, y: 0.15, width: 0.4, height: 0.45 },
+      people: [1, 2].map((number) => ({
+        id: `person_${number}`,
+        observations: [
+          {
+            startFrame: 0,
+            endFrame: context.frames,
+            box: {
+              x: number === 1 ? 0.1 : 0.6,
+              y: 0.15,
+              width: 0.25,
+              height: 0.45,
             },
-          ],
-        },
-      ],
-      decisions: [
-        {
-          startFrame: 0,
-          endFrame: context.frames,
-          personId: null,
-          speakerId: null,
-          evidenceWordIds: [],
-          confidence: 0,
-          shotStart: true,
-        },
-      ],
+          },
+        ],
+      })),
+      decisions: [0, 1]
+        .filter((index) => index * 150 < context.frames)
+        .map((index) => ({
+          startFrame: index * 150,
+          endFrame: Math.min(context.frames, (index + 1) * 150),
+          personId: `person_${index + 1}`,
+          speakerId: `spk_${index}`,
+          evidenceWordIds: context.words
+            .filter(
+              (word: { speakerId: string | null }) =>
+                word.speakerId === `spk_${index}`,
+            )
+            .slice(0, 8)
+            .map((word: { id: string }) => word.id),
+          confidence: 0.99,
+          shotStart: index === 0,
+        })),
     };
   });
   const ui = await prepareLocalControlsFixture(directory);
   await writeFile(
     join(ui, "index.html"),
-    '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>',
+    '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script nonce="synthetic" type="module" src="/app.js"></script></body></html>',
   );
   const host = createOwnerHost({
     root,
@@ -195,7 +250,16 @@ it("runs the local Codex workflow through real controls/native worker with injec
     capacity: async () => {},
     providers: (files) => createLocalCodexAi({ files, media, infer }),
   });
-  host.server.prependListener("request", (req) => {
+  host.server.prependListener("request", (req, response) => {
+    // Match the normal frontend policy; the retired host UI predates audio.
+    const setHeader = response.setHeader.bind(response);
+    response.setHeader = (name, value) =>
+      setHeader(
+        name,
+        name.toLowerCase() === "content-security-policy"
+          ? browserSecurityPolicy("synthetic", true)
+          : value,
+      );
     if (req.url?.startsWith("/api/local/"))
       req.url = req.url.replace("/api/local/", "/api/");
   });
@@ -203,7 +267,21 @@ it("runs the local Codex workflow through real controls/native worker with injec
     auth = { Authorization: `Bearer ${"a".repeat(64)}` },
     json = { ...auth, "Content-Type": "application/json" };
   let browser: Awaited<ReturnType<typeof openBrowser>> | undefined;
+  let verified = false;
+  await mkdir(resolve(".local-build/evidence"), { recursive: true });
+  const note = async (phase: string) =>
+    writeFile(
+      resolve(".local-build/evidence/cl151-progress.json"),
+      JSON.stringify({
+        phase,
+        verified,
+        inferences: infer.mock.calls.length,
+        mediaCalls: media.mock.calls.length,
+        lastMedia: media.mock.lastCall?.[0].operation,
+      }),
+    );
   try {
+    await note("source");
     const source = join(directory, "synthetic.mp4");
     await runOwnedProcess(
       tools.ffmpeg,
@@ -246,7 +324,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
     await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
     await page.goto({ url: `http://localhost:${port}/`, timeout: 10000 });
     const driver = `globalThis.codexRun=async action=>{
-      const wait=async(fn,label)=>{for(let i=0;i<2400;i++){if(fn())return;await new Promise(r=>setTimeout(r,25));}throw new Error('codex_ui_'+label);};
+      const wait=async(fn,label)=>{const limit=/content|planned_|text_control|picture_control/u.test(label)?400:2400;for(let i=0;i<limit;i++){if(fn())return;await new Promise(r=>setTimeout(r,25));}throw new Error('codex_ui_'+label+JSON.stringify({videos:[...document.querySelectorAll('.editor-preview video')].map(v=>({time:v.currentTime,ready:v.readyState,active:v.dataset.editorActive})),textCount:document.querySelectorAll('.editor-preview [data-text-layer]').length,imageCount:document.querySelectorAll('.editor-preview img').length}));};
       const button=text=>[...document.querySelectorAll('button,a')].find(n=>n.getClientRects().length&&n.textContent.trim()===text),named=label=>document.querySelector('[aria-label="'+label+'"]');
       if(action==='start'){
         await wait(()=>document.querySelector('.upload-card input:not(:disabled)'),'upload_ready');
@@ -268,14 +346,25 @@ it("runs the local Codex workflow through real controls/native worker with injec
       if(action==='fits'){
         await wait(()=>document.querySelector('.editor-preview video'),'fits_ready');const footer=document.querySelector('#sample-main > footer').getBoundingClientRect();return document.documentElement.scrollWidth<=innerWidth&&footer.top>=0&&footer.bottom<=innerHeight+1;
       }
+      if(action==='first-content'){
+        const clip=[...document.querySelectorAll('[role=tab]')].find(n=>n.textContent.trim().startsWith('Clip 1'));if(!clip)throw new Error('clip_1');clip.click();
+        await wait(()=>[...document.querySelectorAll('.editor-preview video')].some(video=>video.src.includes(globalThis.firstClipId))&&button('Text')&&!button('Text').disabled,'content_ready');
+        await wait(()=>{const node=button('Text');if(!node||node.disabled)return false;node.click();return true;},'text_control');await wait(()=>named('Edit text 1')&&named('Edit text 1').getClientRects().length,'text_control');named('Edit text 1').click();
+        await wait(()=>document.querySelector('.editor-preview [data-text-layer]'),'planned_text');
+        button('Media').click();button('Pictures')?.click();await wait(()=>named('Edit picture 1')&&named('Edit picture 1').getClientRects().length,'picture_control');named('Edit picture 1').click();
+        await wait(()=>[...document.querySelectorAll('.editor-preview img')].some(image=>image.naturalWidth>0),'planned_visual');
+        return document.querySelector('.editor-preview [data-text-layer]').textContent.includes('Synthetic1');
+      }
       return false;
     };`;
     await page._client().send("Runtime.evaluate", { expression: driver });
     const run = async (action: string) => {
+      await note(`ui_${action}`);
       const result = await page._client().send("Runtime.evaluate", {
         expression: `globalThis.codexRun(${JSON.stringify(action)})`,
         awaitPromise: true,
         returnByValue: true,
+        userGesture: true,
       });
       if (result.value.exceptionDetails)
         throw new Error(JSON.stringify(result.value.exceptionDetails));
@@ -285,6 +374,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
     expect(speech).toHaveBeenCalledTimes(1);
     expect(infer).toHaveBeenCalledTimes(3);
     expect(await run("export")).toBe(true);
+    await note("exported");
     const workspace = JSON.parse(
         (
           await ownerRequest(port, "/api/workspace", { headers: auth })
@@ -309,13 +399,31 @@ it("runs the local Codex workflow through real controls/native worker with injec
       );
     }
     expect(clips.clips[0]!.outputs).toHaveLength(1);
-    expect(clips.clips[0]!.base!.overlay.focus!.people).toHaveLength(1);
+    expect(clips.clips[0]!.base!.overlay.focus!.people).toHaveLength(2);
+    expect(
+      new Set(clips.clips[0]!.base!.words.map((word) => word.speakerId)),
+    ).toEqual(new Set(["spk_0", "spk_1"]));
+    expect(
+      clips.clips[0]!.base!.overlay.focus!.shots.some(
+        (shot) => shot.personId === "person_2" && shot.reason === "speaker",
+      ),
+    ).toBe(true);
     expect(clips.clips[0]!.base!.hookSuggestion).toEqual({
       startFrame: 0,
       endFrame: 60,
     });
     expect(clips.clips[0]!.edit?.hook).toBeUndefined();
-    expect(clips.clips[0]!.assets).toHaveLength(0);
+    expect(clips.clips[0]!.assets).toHaveLength(1);
+    expect(clips.clips[0]!.base!.overlay.texts).toMatchObject([
+      { text: "Synthetic1 Synthetic2", startFrame: 0, endFrame: 90 },
+    ]);
+    expect(clips.clips[0]!.edit!.texts).toEqual(
+      clips.clips[0]!.base!.overlay.texts,
+    );
+    expect(clips.clips[0]!.base!.overlay.visuals).toHaveLength(1);
+    expect(clips.clips[0]!.base!.overlay.audio!.cues).toMatchObject([
+      { source: { kind: "builtin", id: "pop" }, startFrame: 30, loop: false },
+    ]);
     expect(clips.clips[0]!.base!.overlay.captions.length).toBeGreaterThan(0);
     // A manual clip with no transcript tests explicit local caption generation.
     const previous = JSON.parse(
@@ -370,6 +478,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
     expect(await run("local-captions")).toBe(true);
     expect(speech).toHaveBeenCalledTimes(2);
     expect(infer).toHaveBeenCalledTimes(4);
+    verified = true;
     clips = ownerClipListSchema.parse(
       JSON.parse(
         (
@@ -386,6 +495,10 @@ it("runs the local Codex workflow through real controls/native worker with injec
     for (const name of await readdir(join(root, workspace.id)))
       expect(name).not.toMatch(/codex/);
     await mkdir(resolve(".local-build/evidence"), { recursive: true });
+    await page._client().send("Runtime.evaluate", {
+      expression: `globalThis.firstClipId=${JSON.stringify(clips.clips[0]!.id)}`,
+    });
+    expect(await run("first-content")).toBe(true);
     for (const width of [1440, 390, 320]) {
       await page.setViewport({
         width,
@@ -413,17 +526,26 @@ it("runs the local Codex workflow through real controls/native worker with injec
       JSON.parse(savedResponse.body.toString()),
     );
     expect(saved.state).toBe("saved");
+    await note("saved");
+    // Stop old-workspace media/polling before the API-owned clear/restore cycle.
+    await page.goto({ url: "about:blank", timeout: 10000 });
     const mediaCount = media.mock.calls.length;
     expect(
-      (await ownerRequest(port, endpoint, { method: "DELETE", headers: auth }))
-        .status,
+      (
+        await ownerRequest(port, endpoint, {
+          method: "DELETE",
+          headers: auth,
+          signal: AbortSignal.timeout(30000),
+        })
+      ).status,
     ).toBe(204);
     const reopenedResponse = await ownerRequest(
       port,
       `/api/drafts/${saved.id}/open`,
-      { method: "POST", headers: auth },
+      { method: "POST", headers: auth, signal: AbortSignal.timeout(30000) },
     );
     expect(reopenedResponse.status).toBe(200);
+    await note("reopened");
     const reopened = ownerWorkspaceSchema.parse(
       JSON.parse(reopenedResponse.body.toString()),
     );
@@ -442,6 +564,9 @@ it("runs the local Codex workflow through real controls/native worker with injec
         focus: clip.base?.overlay.focus,
         suggestion: clip.base?.hookSuggestion,
         captions: clip.base?.overlay.captions,
+        texts: clip.base?.overlay.texts,
+        visuals: clip.base?.overlay.visuals,
+        audio: clip.base?.overlay.audio,
         edit: clip.edit,
         outputs: clip.outputs,
       })),
@@ -450,6 +575,9 @@ it("runs the local Codex workflow through real controls/native worker with injec
         focus: clip.base?.overlay.focus,
         suggestion: clip.base?.hookSuggestion,
         captions: clip.base?.overlay.captions,
+        texts: clip.base?.overlay.texts,
+        visuals: clip.base?.overlay.visuals,
+        audio: clip.base?.overlay.audio,
         edit: clip.edit,
         outputs: clip.outputs,
       })),
@@ -459,11 +587,17 @@ it("runs the local Codex workflow through real controls/native worker with injec
     expect(await run("fits")).toBe(true);
     expect(media).toHaveBeenCalledTimes(mediaCount);
     expect(speech).toHaveBeenCalledTimes(2);
+    expect(diarize).toHaveBeenCalledTimes(2);
     expect(infer).toHaveBeenCalledTimes(4);
+    await note("verified");
   } finally {
+    await note("cleanup_browser");
     await browser?.close({ silent: true });
+    await note("cleanup_host");
     await host.close();
+    await note("cleanup_worker");
     await worker.close();
     await cleanup(directory);
+    await note("complete");
   }
 }, 250000);
