@@ -111,3 +111,11 @@ change; desktop/phone proof passes after the final UI change. Git whitespace
 check passes; the pre-packaging snapshot had 32 modified and 10 new ticket-owned
 files. The owner subsequently authorized the file-level plan and local commits
 on 2026-10-29; review/acceptance gates remain unchanged.
+
+Owner follow-up, 2026-10-29: [CL-132](CL-132-hook-edit-fidelity.md) specifically
+rechecks that a captured Hook retains current manual/automatic camera framing
+and every timestamped edit. No production defect found. Native spatial targets
+and landmarks now prove crop/zoom/Y in both occurrences, including a camera
+change inside the Hook; richer shared React checks cover timed text, motion
+and speaker styling. Two native proofs and four focused tests pass without
+keys/provider calls. Owner fake-mode visual acceptance remains open.

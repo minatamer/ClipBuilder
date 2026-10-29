@@ -287,6 +287,7 @@ it("prefixes original video/audio with native cadence, camera/filter edits and i
     const bundle = await prepareLocalOverlayFixture(root);
     for (const sample of [
       { rate: "30", start: 30, end: 60 },
+      { rate: "30", start: 15, end: 45 },
       { rate: "30000/1001", start: 31, end: 32 },
       { rate: "24", start: 15, end: 31 },
       { rate: "12", start: 31, end: 32 },
@@ -300,7 +301,9 @@ it("prefixes original video/audio with native cadence, camera/filter edits and i
         "-f",
         "lavfi",
         "-i",
-        `color=red:s=240x320:r=${sample.rate}:d=2,drawbox=x=0:y=0:w=iw:h=ih:color=blue:t=fill:enable='gte(t,1)'`,
+        // The source never changes colour: only the edited camera can select
+        // the red/blue subject. White landmarks independently prove zoom/Y.
+        `color=red:s=640x360:r=${sample.rate}:d=2,drawbox=x=320:y=0:w=320:h=360:color=blue:t=fill,drawbox=x=144:y=150:w=32:h=60:color=white:t=fill,drawbox=x=464:y=150:w=32:h=60:color=white:t=fill`,
         "-f",
         "lavfi",
         "-i",
@@ -325,8 +328,9 @@ it("prefixes original video/audio with native cadence, camera/filter edits and i
           ...focus.shots[0]!,
           startFrame: 30,
           endFrame: 60,
-          centerX: 0.6,
-          zoom: 1.2,
+          centerX: 0.75,
+          centerY: 0.65,
+          zoom: 1.6,
         },
       ];
       const overlay: OwnerOverlay = {
@@ -379,7 +383,7 @@ it("prefixes original video/audio with native cadence, camera/filter edits and i
           signal,
         ),
       ).streams[0];
-      expect(probe.height).toBe(320);
+      expect(probe.height).toBe(360);
       expect(Number(probe.nb_read_frames)).toBe(
         Math.round((overlay.frames * metadata.fps) / 30) +
           Math.max(
@@ -401,12 +405,19 @@ it("prefixes original video/audio with native cadence, camera/filter edits and i
         audio,
       ]);
       const pcm = await readFile(audio);
+      const captured: { blue: boolean; pixels: Buffer }[] = [];
       for (const [time, blue, freq] of [
-        [
-          hookSeconds < 0.1 ? 0 : hookSeconds / 2,
-          sample.start >= 30,
-          sample.start >= 30 ? 880 : 440,
-        ],
+        ...(hookSeconds < 0.1
+          ? [0]
+          : [hookSeconds * 0.2, hookSeconds * 0.8]
+        ).map(
+          (time) =>
+            [
+              time,
+              sample.start / 30 + time >= 1,
+              sample.start / 30 + time >= 1 ? 880 : 440,
+            ] as const,
+        ),
         [hookSeconds + 0.5, false, 440],
         [hookSeconds + 1.5, true, 880],
       ] as const) {
@@ -425,16 +436,39 @@ it("prefixes original video/audio with native cadence, camera/filter edits and i
           raw,
         ]);
         const pixels = await readFile(raw);
+        captured.push({ blue, pixels });
         let red = 0,
-          blueSum = 0;
+          blueSum = 0,
+          whiteTop = probe.height,
+          whiteBottom = -1,
+          whiteLeft = probe.width,
+          whiteRight = -1;
         for (let i = 0; i < pixels.length; i += 3) {
           red += pixels[i]!;
           blueSum += pixels[i + 2]!;
+          if (
+            pixels[i]! > 220 &&
+            pixels[i + 1]! > 220 &&
+            pixels[i + 2]! > 220
+          ) {
+            const x = (i / 3) % probe.width,
+              y = Math.floor(i / 3 / probe.width);
+            whiteTop = Math.min(whiteTop, y);
+            whiteBottom = Math.max(whiteBottom, y);
+            whiteLeft = Math.min(whiteLeft, x);
+            whiteRight = Math.max(whiteRight, x);
+          }
         }
         expect(
           blue ? blueSum : red,
           JSON.stringify({ rate: sample.rate, time, blue, red, blueSum }),
         ).toBeGreaterThan((blue ? red : blueSum) * 2);
+        expect(whiteBottom - whiteTop).toBeGreaterThan(blue ? 85 : 54);
+        expect(whiteBottom - whiteTop).toBeLessThan(blue ? 110 : 66);
+        expect(whiteRight - whiteLeft).toBeGreaterThan(blue ? 45 : 27);
+        expect(whiteRight - whiteLeft).toBeLessThan(blue ? 58 : 37);
+        expect(whiteTop).toBeGreaterThan(blue ? 25 : 143);
+        expect(whiteTop).toBeLessThan(blue ? 50 : 157);
         if (hookSeconds < 0.1 && time < hookSeconds) continue;
         const start = Math.round((time - 0.05) * 48000),
           end = start + 4800;
@@ -443,6 +477,16 @@ it("prefixes original video/audio with native cadence, camera/filter edits and i
           if (pcm.readInt16LE((i - 1) * 2) < 0 && pcm.readInt16LE(i * 2) >= 0)
             crossings++;
         expect(Math.abs(crossings * 10 - freq)).toBeLessThan(35);
+      }
+      for (const prefix of captured.slice(0, -2)) {
+        const body = captured
+          .slice(-2)
+          .find((item) => item.blue === prefix.blue)!;
+        let difference = 0;
+        for (let i = 0; i < prefix.pixels.length; i++)
+          difference += Math.abs(prefix.pixels[i]! - body.pixels[i]!);
+        // Separate encoded occurrences may have tiny compression differences.
+        expect(difference / prefix.pixels.length).toBeLessThan(4);
       }
     }
   } finally {
