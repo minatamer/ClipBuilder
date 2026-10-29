@@ -22,6 +22,15 @@ session checks and backend media/resource bounds still apply. See
 in the workspace footer, including dirty edits. It resets the current session to
 fresh intake through existing protected cleanup; saved library files remain.
 
+[CL-131](../../docs/tickets/CL-131-responsive-clip-editor.md) uses a touch-scrollable
+horizontal clip strip on phones/tablets (up to 75rem or a coarse primary pointer).
+Left/Right/Home/End switch clips; desktop retains the Up/Down left rail. Phones
+show a full-width portrait preview above controls and an accessible reset icon
+in the compact footer. Tablets keep a larger preview beside one settings panel.
+Reset failures expose Retry/Discard in a dismissible popover. Synthetic fake/no-key
+browser checks verify these layouts and guards; real-device/owner visual and
+live AI acceptance remain separate. AI still requires keys/live flags/approvals.
+
 CL-068/069/072 add Focus to the shared completed-clip editor: Camera/People
 tabs, numbered position handles, explicit person removal and playback-based
 Start/End Capture. Camera contains Timing/Advanced for the selected position;

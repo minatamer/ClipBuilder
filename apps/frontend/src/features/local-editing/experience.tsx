@@ -12,6 +12,7 @@ import "./style.css";
 import { OwnerSelectionPanel } from "./selection-panel.tsx";
 import type { OwnerMomentExport } from "../../../../../packages/contracts/local/selection.ts";
 import { OwnerClipBatchPanel } from "./clip-batch-panel.tsx";
+import { SessionControls } from "./session-controls.tsx";
 import { openPickedFile } from "./open-local-file.ts";
 import { OwnerAcquisitionPanel } from "./acquisition-panel.tsx";
 import { capturePreviewTime } from "./manual-time.ts";
@@ -315,24 +316,11 @@ export function LocalEditingExperience({
         footer={
           workspace ? (
             <>
-              <div className="session-controls">
-                <Button
-                  variant="quiet"
-                  disabled={blocked || clipWork}
-                  onClick={() => void clear()}
-                >
-                  {clearBlocked ? "Retry reset" : "Start over"}
-                </Button>
-                {clearBlocked && (
-                  <Button
-                    variant="quiet"
-                    disabled={blocked || clipWork}
-                    onClick={() => void clear(true)}
-                  >
-                    Discard session
-                  </Button>
-                )}
-              </div>
+              <SessionControls
+                recovery={clearBlocked}
+                disabled={blocked || clipWork}
+                onClear={(discard) => void clear(discard)}
+              />
               <div className="local-footer-actions">
                 {hasClips && !unapplied && !clipWork && !blocked && (
                   <Button
@@ -342,7 +330,14 @@ export function LocalEditingExperience({
                       setView(view === "editor" ? "moments" : "editor")
                     }
                   >
-                    {view === "editor" ? "Add more clips" : "Back to editor"}
+                    {view === "editor" ? (
+                      <span>
+                        Add<span className="local-action-detail"> more</span>{" "}
+                        clips
+                      </span>
+                    ) : (
+                      "Back to editor"
+                    )}
                   </Button>
                 )}
                 <div className="workflow-footer-slot" ref={setFooterTarget} />

@@ -926,7 +926,7 @@ export function ClipEditor({
               clickToPlay={false}
               doubleClickToFullscreen={false}
               spaceKeyToPlayOrPause={false}
-              style={{ width: "100%", maxWidth: 360 }}
+              style={{ width: "100%" }}
             />
           )}
         </div>
@@ -1735,7 +1735,9 @@ export function ClipEditor({
                       Working…
                     </>
                   ) : (
-                    "Apply changes"
+                    <span>
+                      Apply<span className="local-action-detail"> changes</span>
+                    </span>
                   )}
                 </Button>
                 <Button
@@ -1746,9 +1748,14 @@ export function ClipEditor({
                   }
                   onClick={() => void perform("reload")}
                 >
-                  {(previewUnavailable && !dirty) || stale
-                    ? "Reload clip"
-                    : "Discard changes"}
+                  {(previewUnavailable && !dirty) || stale ? (
+                    "Reload clip"
+                  ) : (
+                    <span>
+                      Discard
+                      <span className="local-action-detail"> changes</span>
+                    </span>
+                  )}
                 </Button>
               </WorkflowActions>
             )}

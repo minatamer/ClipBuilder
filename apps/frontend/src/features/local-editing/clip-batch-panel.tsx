@@ -1,6 +1,13 @@
 import { Button } from "../../shared/ui/button";
 import buttonStyles from "../../shared/ui/workflow.module.css";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { ClipEditor } from "./clip-editor.tsx";
 import { isLocalClipEditable } from "./clip-readiness.ts";
 import { clipStageLabel } from "./clip-stage.ts";
@@ -22,6 +29,16 @@ import { DemoLimitToast } from "./demo-limit-toast.tsx";
 
 const initial: OwnerClipList = { clips: [], active: false, workers: 1 };
 const STATUS_UNAVAILABLE = "Reconnecting…";
+// Keep aligned with the clip-strip media query in style.css, including large tablets.
+const clipStripQuery =
+  "(max-width: 75rem), (hover: none) and (pointer: coarse)";
+function subscribeClipLayout(update: () => void) {
+  const media = window.matchMedia(clipStripQuery);
+  media.addEventListener("change", update);
+  return () => media.removeEventListener("change", update);
+}
+const horizontalClipLayout = () => window.matchMedia(clipStripQuery).matches;
+const serverClipLayout = () => false;
 export function OwnerClipBatchPanel({
   workspace,
   capabilities,
@@ -60,13 +77,21 @@ export function OwnerClipBatchPanel({
     [review, setReview] = useState<string | null>(initialReviewId ?? null);
   const [dirtyClip, setDirtyClip] = useState<string | null>(null);
   const tabsId = useId();
+  const clipList = useRef<HTMLDivElement>(null);
+  const horizontal = useSyncExternalStore(
+    subscribeClipLayout,
+    horizontalClipLayout,
+    serverClipLayout,
+  );
   const keyboardClip = useRef<string | null>(null);
   useEffect(() => {
     if (keyboardClip.current) {
-      document.getElementById(`${tabsId}-${keyboardClip.current}`)?.focus();
+      document
+        .getElementById(`${tabsId}-${keyboardClip.current}`)
+        ?.focus({ preventScroll: horizontal });
       keyboardClip.current = null;
     }
-  }, [review, tabsId]);
+  }, [review, tabsId, horizontal]);
   useEffect(() => {
     onDirtyChange?.(Boolean(dirtyClip));
   }, [dirtyClip, onDirtyChange]);
@@ -186,6 +211,26 @@ export function OwnerClipBatchPanel({
   }
   const current =
     list.clips.find((clip) => clip.id === review) ?? list.clips[0];
+  const currentId = current?.id;
+  useEffect(() => {
+    const rail = clipList.current;
+    if (!horizontal || !rail || showProcessing) return;
+    // Scroll only this strip: switching clips must not jump the page vertically.
+    const reveal = () => {
+      const tab = document.getElementById(`${tabsId}-${currentId}`);
+      if (!tab) return;
+      const bounds = rail.getBoundingClientRect(),
+        selected = tab.getBoundingClientRect();
+      if (selected.left < bounds.left + 4)
+        rail.scrollLeft += selected.left - bounds.left - 4;
+      else if (selected.right > bounds.right - 4)
+        rail.scrollLeft += selected.right - bounds.right + 4;
+    };
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    observer.observe(rail);
+    return () => observer.disconnect();
+  }, [currentId, horizontal, showProcessing, tabsId]);
   const currentIndex =
     list.clips.findIndex((clip) => clip.id === current?.id) + 1;
   const latest = current?.outputs.at(-1);
@@ -263,10 +308,11 @@ export function OwnerClipBatchPanel({
       )}
       <div className="clip-workspace" hidden={showProcessing}>
         <div
+          ref={clipList}
           className="clip-list"
           role="tablist"
           aria-label="Choose a clip"
-          aria-orientation="vertical"
+          aria-orientation={horizontal ? "horizontal" : "vertical"}
         >
           {list.clips.map((clip, index) => (
             <Button
@@ -282,9 +328,11 @@ export function OwnerClipBatchPanel({
               disabled={!!dirtyClip && dirtyClip !== clip.id}
               onClick={() => setReview(clip.id)}
               onKeyDown={(event) => {
+                const previous = horizontal ? "ArrowLeft" : "ArrowUp",
+                  following = horizontal ? "ArrowRight" : "ArrowDown";
                 if (
                   dirtyClip ||
-                  !["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)
+                  ![previous, following, "Home", "End"].includes(event.key)
                 )
                   return;
                 event.preventDefault();
@@ -295,7 +343,7 @@ export function OwnerClipBatchPanel({
                       : event.key === "End"
                         ? list.clips.length - 1
                         : (index +
-                            (event.key === "ArrowDown" ? 1 : -1) +
+                            (event.key === following ? 1 : -1) +
                             list.clips.length) %
                           list.clips.length
                   ]!;

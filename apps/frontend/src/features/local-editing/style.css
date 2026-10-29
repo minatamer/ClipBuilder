@@ -1,3 +1,6 @@
+#sample-main:has(.local-editor) {
+  grid-template-columns: minmax(0, 1fr);
+}
 #sample-main:has(.local-editor) > header {
   padding-block: clamp(0.75rem, 1.8svh, 1.25rem) 0.5rem;
 }
@@ -20,6 +23,7 @@
     justify-content: flex-start;
   }
   &.local-editor {
+    --local-editor-navigation-height: 0.5rem;
     --local-preview-width: min(16rem, calc((100cqh - 0.5rem) * 9 / 16));
     --local-editor-spacing: clamp(0.5rem, 1.5cqh, 1rem);
     --local-editor-panel-padding: clamp(0.75rem, 2cqh, 1.1rem);
@@ -720,7 +724,6 @@
   }
   .editor-preview-failure[role="alert"] {
     width: 100%;
-    max-width: 360px;
     aspect-ratio: 9 / 16;
     display: grid;
     align-content: center;
@@ -740,7 +743,7 @@
   }
   @media (min-width: 47.501rem) {
     .editor-panels {
-      max-height: calc(100cqh - 0.5rem);
+      max-height: calc(100cqh - var(--local-editor-navigation-height, 0.5rem));
       overflow-y: auto;
       overscroll-behavior-y: contain;
       scrollbar-width: thin;
@@ -1259,9 +1262,39 @@
       max-height: 18rem;
     }
   }
+  /* Match clipStripQuery in clip-batch-panel.tsx. */
+  @media (max-width: 75rem), (hover: none) and (pointer: coarse) {
+    &.local-editor {
+      --local-editor-navigation-height: 5.5rem;
+      --local-preview-width: min(
+        calc(100cqw - 17rem - var(--local-editor-spacing)),
+        calc((100cqh - var(--local-editor-navigation-height)) * 9 / 16)
+      );
+    }
+    .clip-workspace {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.75rem;
+    }
+    .clip-list {
+      position: static;
+      flex-direction: row;
+      max-height: none;
+      overflow-x: auto;
+      overflow-y: hidden;
+      overscroll-behavior-x: contain;
+      scrollbar-width: none;
+    }
+    .clip-list::-webkit-scrollbar {
+      display: none;
+    }
+    .clip-choice {
+      width: auto;
+      min-width: 7.5rem;
+      white-space: nowrap;
+    }
+  }
   @media (max-width: 47.5rem) {
     .clip-workspace {
-      grid-template-columns: 4.75rem minmax(0, 1fr);
       gap: 0.65rem;
     }
     .clip-choice {
@@ -1337,8 +1370,7 @@
     }
     .editor-preview {
       position: static;
-      width: min(100%, 11rem);
-      margin-inline: auto;
+      width: 100%;
     }
     .clip-review {
       padding: 0;
@@ -1396,10 +1428,28 @@
   }
 }
 .session-controls {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
+}
+.session-recovery {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 0.75rem);
+  left: 0;
+  display: grid;
+  gap: 0.5rem;
+  width: max-content;
+  padding: 0.75rem;
+  border: 1px solid var(--cb-border);
+  border-radius: var(--cb-radius-card);
+  background: var(--cb-surface);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 8 26 / 35%);
+}
+.session-reset > svg {
+  display: none;
 }
 .local-footer-actions,
 .workflow-footer-slot,
@@ -1420,6 +1470,40 @@
   animation: local-acquisition-spin 0.9s linear infinite;
 }
 @media (max-width: 599px) {
+  #sample-main:has(.local-editor) > footer {
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+    padding-inline: 0.75rem;
+  }
+  #sample-main:has(.local-editor) .session-controls {
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+  }
+  #sample-main:has(.local-editor) .session-reset {
+    flex: 0 0 var(--cb-target);
+    width: var(--cb-target);
+    padding: 0;
+  }
+  #sample-main:has(.local-editor) .session-reset > svg {
+    display: block;
+  }
+  #sample-main:has(.local-editor) .session-reset > span,
+  #sample-main:has(.local-editor) .local-action-detail {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    clip-path: inset(50%);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  #sample-main:has(.local-editor) .local-footer-actions,
+  #sample-main:has(.local-editor) .workflow-footer-slot,
+  #sample-main:has(.local-editor) .workflow-actions {
+    flex-wrap: nowrap;
+    min-width: 0;
+    white-space: nowrap;
+  }
   .local-footer-actions {
     gap: 0.4rem;
   }
