@@ -31,8 +31,28 @@ const words = caption.wordCues.map((w, i) => ({
   confidence: 1,
 }));
 
-it("uses existing anonymous labels, splits turns, retains lines and clocks, and falls back for unknown labels", () => {
-  const config = resolveCaptionSpeakers([caption], words);
+it("enables coloring automatically when complete captions have different known speakers", () => {
+  const captions = [0, 2].map((offset) => ({
+    ...caption,
+    wordIds: caption.wordIds.slice(offset, offset + 2),
+    wordCues: caption.wordCues.slice(offset, offset + 2),
+  }));
+  const result = resolveCaptionSpeakers(captions, words);
+  expect(result.enabled).toBe(true);
+  expect(result.assignments.map((word) => word.speakerId)).toEqual([
+    "spk_0",
+    "spk_0",
+    "spk_1",
+    "spk_1",
+  ]);
+});
+
+it("assigns one stable speaker to the full caption, breaks ties by word order, and falls back for unknown labels", () => {
+  const config = resolveCaptionSpeakers([caption], words, {
+    enabled: true,
+    colors: [],
+    assignments: [],
+  });
   expect(config.enabled).toBe(true);
   const first = captionSpeakerFrame(
     caption,
@@ -46,14 +66,17 @@ it("uses existing anonymous labels, splits turns, retains lines and clocks, and 
     config,
     OWNER_CAPTION_PRESETS.clean,
   );
-  expect(first.caption?.text).toBe("One two");
-  expect(next.caption?.text).toBe("three four");
-  expect(first.colors?.color).not.toBe(next.colors?.color);
-  expect(next.caption?.wordCues).toEqual(caption.wordCues.slice(2));
+  expect(first.caption).toBe(caption);
+  expect(next.caption).toBe(caption);
+  expect(first.colors?.speakerId).toBe("spk_0");
+  expect(first.colors).toEqual(next.colors);
+  expect(config.assignments.map((word) => word.speakerId)).toEqual(
+    Array(4).fill("spk_0"),
+  );
   expect(
     captionSpeakerFrame(caption, 1450, config, OWNER_CAPTION_PRESETS.clean)
       .caption?.text,
-  ).toBe("three four");
+  ).toBe(caption.text);
   expect(resolveCaptionSpeakers([caption], []).enabled).toBe(false);
   expect(
     captionSpeakerFrame(
@@ -72,7 +95,7 @@ it("uses existing anonymous labels, splits turns, retains lines and clocks, and 
       .colors,
   ).toBeUndefined();
 });
-it("honors manual word corrections and all color roles without changing IDs/timing", () => {
+it("honors whole-caption correction and all color roles without changing IDs/timing", () => {
   const config = resolveCaptionSpeakers([caption], words, {
     enabled: true,
     colors: [
@@ -118,4 +141,31 @@ it("honors manual word corrections and all color roles without changing IDs/timi
       ),
     ).size,
   ).toBe(16);
+});
+
+it("uses a known majority for legacy mixed edits, including when the first word is unknown", () => {
+  const legacy = {
+    enabled: true,
+    colors: [],
+    assignments: caption.wordIds.map((wordId, i) => ({
+      wordId,
+      speakerId: i === 0 ? null : i === 1 ? "spk_0" : "spk_1",
+    })),
+  };
+  const before = structuredClone(caption);
+  const resolved = resolveCaptionSpeakers([caption], words, legacy);
+  expect(resolved.assignments.every((word) => word.speakerId === "spk_1")).toBe(
+    true,
+  );
+  for (const ms of [0, 400, 800, 1450]) {
+    const frame = captionSpeakerFrame(
+      caption,
+      ms,
+      legacy,
+      OWNER_CAPTION_PRESETS.clean,
+    );
+    expect(frame.caption).toBe(caption);
+    expect(frame.colors?.speakerId).toBe("spk_1");
+  }
+  expect(caption).toEqual(before);
 });

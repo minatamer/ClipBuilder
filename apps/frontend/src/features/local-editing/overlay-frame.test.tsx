@@ -117,7 +117,7 @@ it("repeats speaker colors, captions and animated pictures/text using source tim
   expect(ownerOverlayFrame(overlay, 0).caption?.startMs).toBe(800);
   expect(ownerOverlayFrame(overlay, 8).caption?.endMs).toBe(1200);
   expect(ownerOverlayFrame(overlay, 0).colors?.speakerId).toBe("spk_0");
-  expect(ownerOverlayFrame(overlay, 8).colors?.speakerId).toBe("spk_1");
+  expect(ownerOverlayFrame(overlay, 8).colors?.speakerId).toBe("spk_0");
   expect(ownerOverlayFrame(overlay, 36).ms).toBe(
     ownerOverlayFrame(overlay, 0).ms,
   );
@@ -155,7 +155,7 @@ it("repeats speaker colors, captions and animated pictures/text using source tim
     expect(paint(frame)).toBe(paint(bodyFrame));
   }
   expect(ownerOverlayFrame(overlay, 0).colors?.color).toBe("#ff0000");
-  expect(ownerOverlayFrame(overlay, 8).colors?.color).toBe("#0000ff");
+  expect(ownerOverlayFrame(overlay, 8).colors?.color).toBe("#ff0000");
   expect(ownerOverlayFrame(overlay, 0).texts).toHaveLength(0);
   expect(ownerOverlayFrame(overlay, 4).texts).toHaveLength(1);
   expect(ownerOverlayFrame(overlay, 10).texts).toHaveLength(0);

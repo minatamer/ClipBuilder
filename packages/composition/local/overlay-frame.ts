@@ -18,14 +18,16 @@ export function ownerOverlayFrame(overlay: OwnerOverlay, frame: number) {
   const captionIndex = overlay.captions.findIndex(
     (cue) => cue.startMs <= ms && ms < cue.endMs,
   );
-  const { caption, colors } = captionSpeakerFrame(
-    inHook
-      ? ownerHookCaption(overlay.captions[captionIndex], overlay.hook!)
-      : overlay.captions[captionIndex],
+  const resolved = captionSpeakerFrame(
+    overlay.captions[captionIndex],
     ms,
     overlay.captionSpeakers,
     overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean,
   );
+  const caption = inHook
+    ? ownerHookCaption(resolved.caption, overlay.hook!)
+    : resolved.caption;
+  const colors = resolved.colors;
   const visuals = overlay.visuals.filter(
     (cue) => cue.startFrame <= frame && frame < cue.endFrame,
   );

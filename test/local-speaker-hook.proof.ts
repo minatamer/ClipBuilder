@@ -141,9 +141,9 @@ it("renders speaker turns and manual colors into a real native MP4 using current
     expect(result.frames).toBe(60);
     for (const [time, channel] of [
       [0.5, 0],
-      [1.5, 2],
+      [1.5, 0],
     ] as const) {
-      const raw = join(directory, `color-${channel}.rgb`);
+      const raw = join(directory, `color-${time}.rgb`);
       await run([
         "-ss",
         String(time),
@@ -226,9 +226,9 @@ it("renders speaker turns and manual colors into a real native MP4 using current
     );
     expect(hooked.frames).toBe(90);
     for (const [time, channel] of [
-      [0.5, 2],
+      [0.5, 0],
       [1.5, 0],
-      [2.5, 2],
+      [2.5, 0],
     ] as const) {
       const raw = join(directory, `hook-${time}.rgb`);
       await run([

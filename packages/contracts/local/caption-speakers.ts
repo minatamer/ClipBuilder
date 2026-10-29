@@ -40,6 +40,26 @@ export const ownerCaptionSpeakersSchema = z
 export type OwnerCaptionSpeakers = z.infer<typeof ownerCaptionSpeakersSchema>;
 export type OwnerSpeakerColor = z.infer<typeof ownerSpeakerColorSchema>;
 
+/** Caption-level attribution: majority of known words, then first spoken tie. */
+export function captionSpeakerId(
+  caption: OwnerOverlay["captions"][number],
+  labels: ReadonlyMap<string, string | null>,
+): string | null {
+  const counts = new Map<string, number>();
+  for (const word of caption.wordCues) {
+    const id = labels.get(word.wordId);
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  let speaker: string | null = null,
+    most = 0;
+  for (const [id, count] of counts)
+    if (count > most) {
+      speaker = id;
+      most = count;
+    }
+  return speaker;
+}
+
 export function resolveCaptionSpeakers(
   captions: OwnerOverlay["captions"],
   words: readonly OwnerWord[],
@@ -52,11 +72,22 @@ export function resolveCaptionSpeakers(
   const overrides = new Map(
     edits?.assignments.map((w) => [w.wordId, w.speakerId]),
   );
-  const assignments = [...ids].map((wordId) => ({
+  const labels = new Map(
+    [...ids].map((wordId) => [
+      wordId,
+      overrides.has(wordId)
+        ? overrides.get(wordId)!
+        : (original.get(wordId) ?? null),
+    ]),
+  );
+  const resolved = new Map(labels);
+  for (const caption of captions) {
+    const speakerId = captionSpeakerId(caption, labels);
+    for (const word of caption.wordCues) resolved.set(word.wordId, speakerId);
+  }
+  const assignments = [...resolved].map(([wordId, speakerId]) => ({
     wordId,
-    speakerId: overrides.has(wordId)
-      ? overrides.get(wordId)!
-      : (original.get(wordId) ?? null),
+    speakerId,
   }));
   return {
     enabled:
@@ -99,14 +130,14 @@ export function defaultSpeakerColor(
   };
 }
 
-/** Split a mixed caption at speaker turns, retaining the original word clocks. */
+/** One stable speaker color for the complete caption, including legacy edits. */
 const labelCache = new WeakMap<
   OwnerCaptionSpeakers,
   Map<string, string | null>
 >();
 export function captionSpeakerFrame(
   caption: OwnerOverlay["captions"][number] | undefined,
-  ms: number,
+  _ms: number,
   config: OwnerCaptionSpeakers | undefined,
   style: OwnerCaptionStyle,
 ) {
@@ -116,51 +147,9 @@ export function captionSpeakerFrame(
     labels = new Map(config.assignments.map((w) => [w.wordId, w.speakerId]));
     labelCache.set(config, labels);
   }
-  let index = caption.wordCues.findIndex(
-    (w) => w.startMs <= ms && ms < w.endMs,
-  );
-  if (index < 0) {
-    const next = caption.wordCues.findIndex((w) => w.startMs > ms);
-    index = next < 0 ? caption.wordCues.length - 1 : Math.max(0, next - 1);
-  }
-  const id = labels.get(caption.wordCues[index]?.wordId ?? "") ?? null;
-  let start = index,
-    end = index + 1;
-  while (
-    start > 0 &&
-    (labels.get(caption.wordCues[start - 1]!.wordId) ?? null) === id
-  )
-    start--;
-  while (
-    end < caption.wordCues.length &&
-    (labels.get(caption.wordCues[end]!.wordId) ?? null) === id
-  )
-    end++;
-  const wordCues = caption.wordCues.slice(start, end);
-  if (!wordCues.length) return { caption, colors: undefined };
-  const text = wordCues.map((w) => w.text).join(" ");
-  const offset = caption.wordCues
-    .slice(0, start)
-    .reduce((n, w) => n + w.text.split(" ").length, 0);
-  const tokens = wordCues.flatMap((w) => w.text.split(" "));
-  const first =
-    caption.lines.length === 1
-      ? tokens.length
-      : Math.max(0, caption.lines[0]!.split(" ").length - offset);
-  const lines = [
-    tokens.slice(0, first).join(" "),
-    tokens.slice(first).join(" "),
-  ].filter(Boolean);
+  const id = captionSpeakerId(caption, labels);
   return {
-    caption: {
-      ...caption,
-      startMs: Math.max(caption.startMs, wordCues[0]!.startMs),
-      endMs: Math.min(caption.endMs, wordCues.at(-1)!.endMs),
-      text,
-      lines,
-      wordIds: wordCues.map((w) => w.wordId),
-      wordCues,
-    },
+    caption,
     colors: id
       ? (config.colors.find((c) => c.speakerId === id) ??
         defaultSpeakerColor(id, style))

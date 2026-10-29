@@ -2,6 +2,7 @@ import type { OwnerOverlay } from "../../../../../packages/contracts/local/clips
 import type { OwnerCaptionStyle } from "../../../../../packages/contracts/local/editor.ts";
 import {
   defaultSpeakerColor,
+  captionSpeakerId,
   type OwnerCaptionSpeakers,
 } from "../../../../../packages/contracts/local/caption-speakers.ts";
 import { Button } from "../../shared/ui/button";
@@ -99,39 +100,35 @@ export function CaptionSpeakers({
             className="caption-word-group"
           >
             <legend>Caption {index + 1}</legend>
-            <div className="speaker-words">
-              {caption.wordCues.map((word) => (
-                <label key={word.wordId}>
-                  <span>{word.text}</span>
-                  <select
-                    className="select-control"
-                    aria-label={`Speaker for ${word.wordId}`}
-                    value={labels.get(word.wordId) ?? ""}
-                    onChange={(e) =>
-                      onChange({
-                        ...value,
-                        assignments: [
-                          ...value.assignments.filter(
-                            (w) => w.wordId !== word.wordId,
-                          ),
-                          {
-                            wordId: word.wordId,
-                            speakerId: e.currentTarget.value || null,
-                          },
-                        ],
-                      })
-                    }
-                  >
-                    <option value="">Unassigned</option>
-                    {ids.map((id) => (
-                      <option key={id} value={id}>
-                        Speaker {Number(id.slice(4))}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-            </div>
+            <label className="speaker-caption">
+              <span>{caption.text}</span>
+              <select
+                className="select-control"
+                aria-label={`Speaker for caption ${index + 1}`}
+                value={captionSpeakerId(caption, labels) ?? ""}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    assignments: [
+                      ...value.assignments.filter(
+                        (w) => !caption.wordIds.includes(w.wordId),
+                      ),
+                      ...caption.wordIds.map((wordId) => ({
+                        wordId,
+                        speakerId: e.currentTarget.value || null,
+                      })),
+                    ],
+                  })
+                }
+              >
+                <option value="">Unassigned</option>
+                {ids.map((id) => (
+                  <option key={id} value={id}>
+                    Speaker {Number(id.slice(4))}
+                  </option>
+                ))}
+              </select>
+            </label>
           </fieldset>
         ))}
       </div>

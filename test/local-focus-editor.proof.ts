@@ -445,16 +445,18 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
           [...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Captions').click();await new Promise(requestAnimationFrame);
           const tabs=[...document.querySelectorAll('[aria-label="Caption controls"] [role="tab"]')];
           const speakers=tabs.find(n=>n.textContent==='Speakers');if(!speakers)throw new Error('missing_speakers_tab');
-          speakers.focus();speakers.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));speakers.click();await wait(()=>named('Speaker for w_000001'));
-          const enabled=document.querySelector('.speaker-toggle input');if(!enabled.checked)return false;
+          speakers.focus();speakers.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));speakers.click();await wait(()=>named('Speaker for caption 1'));
+          const enabled=document.querySelector('.speaker-toggle input');if(!enabled.checked){enabled.click();await new Promise(requestAnimationFrame);}
           const set=async(label,text)=>{const n=named(label);Object.getOwnPropertyDescriptor(n.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype,'value').set.call(n,text);n.dispatchEvent(new Event(n.tagName==='SELECT'?'change':'input',{bubbles:true}));await new Promise(r=>setTimeout(r,40));};
-          await set('Speaker 0 text color','#ff0000');await set('Speaker for w_000002','spk_0');
+          await set('Speaker 0 text color','#ff0000');await set('Speaker for caption 1','spk_0');
           await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>!button('Apply changes')&&!button('Reset speakers').matches(':disabled'));
-          const n=named('Speaker for w_000002');n.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const r=n.getBoundingClientRect(),f=document.querySelector('footer').getBoundingClientRect();
+          const n=named('Speaker for caption 1');n.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const r=n.getBoundingClientRect(),f=document.querySelector('footer').getBoundingClientRect();
           const fits=r.left>=0&&r.right<=innerWidth+1&&r.height>=44&&document.documentElement.scrollWidth<=innerWidth&&f.top>=0&&f.bottom<=innerHeight+1;
           const saved=await fetch('/seed').then(r=>r.json());if(!saved.edit?.captionSpeakers)throw new Error('speakers_not_saved_'+JSON.stringify(saved.edit));
+          if(document.querySelectorAll('.speaker-caption select').length!==saved.base.overlay.captions.length)throw new Error('caption_selector_count');
+          const assigned=new Map(saved.edit.captionSpeakers.assignments.map(w=>[w.wordId,w.speakerId]));if(!saved.base.overlay.captions[0].wordIds.every(id=>assigned.get(id)==='spk_0'))throw new Error('caption_assignment_incomplete');
           button('Reset speakers').click();await wait(()=>button('Apply changes'),'speaker_reset_'+JSON.stringify({disabled:button('Reset speakers').disabled,buttons:[...document.querySelectorAll('footer button')].map(n=>n.textContent)}));button('Discard changes').click();await wait(()=>!button('Apply changes'));
-          await new Promise(r=>setTimeout(r,80));const retained=fits&&named('Speaker for w_000002').value==='spk_0';button('Reset speakers').click();await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>!button('Apply changes')&&!button('Reset speakers').matches(':disabled'));return retained;
+          await new Promise(r=>setTimeout(r,80));const retained=fits&&named('Speaker for caption 1').value==='spk_0';button('Reset speakers').click();await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>!button('Apply changes')&&!button('Reset speakers').matches(':disabled'));return retained;
         }
         if(action==='hook'){
           const setting=async label=>{[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent===label).click();await new Promise(requestAnimationFrame);};
