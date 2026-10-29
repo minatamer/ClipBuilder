@@ -1,5 +1,59 @@
 # Local editing backend
 
+CL-142 supersedes CL-138's initial sound choice: each new prepared visual gets
+the recorded Pop SFX (nine logical frames), at its start only. No new provider
+call, generation or runtime sample download is added. Stable anchors, independent
+gain/layers, source quality and existing bounds remain. Fake plans normally omit
+images; injected plans prove the behavior. Catalogue provenance/normalization is
+in [Media/audio design](../../../docs/architecture/MEDIA_AUDIO.md).
+
+CL-139 adds authenticated local-only `clips/:id/youtube-audio`, backed by the
+existing pinned yt-dlp/Deno session and bounded CONNECT egress. Audio-only AAC
+imports do not require English speech or video resolution. Source duration is
+at most two minutes, transfer at most 12 MiB; normal worker normalization,
+asset/draft accounting and cleanup remain. Workspace locking prevents parallel
+imports; cancellation/deadline closes the downloader and removes scratch.
+Hosted rejects this route before acquisition. Fake AI permits owner local
+downloads without API keys; agent tests inject every download and use synthetic
+media. Actual online/rights/owner acceptance is not established by those checks.
+
+CL-138 originally added a bounded editable Snap cue to the initial audio track for each
+prepared AI visual. It uses the existing original synthesized library, without
+AI/audio generation or another picture request. Stable visual anchors survive
+drafts and follow shared timing/removal compilation. Overlapping cues and
+independent original/cue volumes remain supported within existing bounds.
+Fake normal plans remain image-free; injected synthetic plans/native media prove
+the accent without API keys. Real AI and owner listening remain separately gated.
+
+CL-137 makes `AI_PROVIDER=gemini` the default and permits explicit local `codex`.
+Local Codex selection removes Gemini credentials/capabilities from parsed
+composition and blocks the old fake-mode Gemini caption exception as well.
+Fake editing remains synthetic and key-free. Gemini selection keeps its normal
+keys/approvals and existing local controls; hosted rejects Codex. Startup never
+infers. The owner authorized changing only the private provider selector; fake,
+master and approval switches remain unchanged.
+
+CL-136 adds optional clip-relative Hook advice to the existing Gemini/Codex
+selected-clip planning response, without another request. Safe normalization
+fits the ten-second/source bounds or omits unusable advice; usable plans are
+never rejected for this optional field. Checkpoint/base metadata retains the
+recommendation through retry/save/reopen, independently of active Hook edits.
+Fake mode simulates a varied stable range with no keys. Real editorial quality
+remains owner-only under the configured provider's normal auth/spend gates.
+
+CL-135 composes local real AI through bounded `codex exec` jobs using existing
+ChatGPT sign-in, with CPU Whisper for source/clip transcription. No API-key
+billing or Gemini fallback. Startup checks executable/model availability without
+authentication or inference; the existing master off switch disables it. Hosted
+Gemini composition is unchanged. Each local job uses a private temporary cwd,
+fixed structured schema, disabled tools/config/hooks, stdin content, explicit
+deadline and owned-tree cancellation. Raw output is never logged. Worker media
+jobs return small hash/byte receipts for confined artifacts read once and removed.
+The browser bridge admits long local analysis/caption requests with bounded
+JSON and explicit cancellation; uploads/media/hosted transport are unchanged.
+See [local Codex setup](../../../docs/architecture/LOCAL_CODEX_AI.md). Tests inject
+Codex/speech results; real ASR/AI quality and account allowance remain owner-only.
+
 CL-086 adds a bounded text-layers edit operation to the existing source/revision
 bound patch. Shared compilation validates plain text, safe typography/geometry
 and clip-relative timing before acknowledgment or native dispatch. Optional text
@@ -80,7 +134,7 @@ validated bundle loader without AI, acquisition or render dispatch. Unknown vide
 bytes use normal intake; unavailable drafts fail without reprocessing.
 
 Fake AI requires no keys; real downloads/native media are independent. Real AI
-uses normal Gemini configuration/approvals and stays owner-manual. Synthetic
+uses local Codex setup or hosted Gemini configuration/approvals and stays owner-manual. Synthetic
 checks never call YouTube, Gemini or cloud resources.
 
 Manual timestamps reserve canonical 30fps intervals before discovery (CL-057).

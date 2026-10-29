@@ -1,5 +1,90 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Clean Hook cut and Sator removal — CL-145, 2026-10-29
+
+Remove Sator suspense from new sound selection, retaining saved cue decoding.
+Hook-to-body playback is a hard cut: prepare the next video before its first
+frame without showing/playing it early, and derive Capture readiness from active
+source media. Native Hook video/audio share the same rounded source-frame start
+and duration, preventing inserted silence when native cadence differs from the
+editor's logical clock. Keep the intact body, copied edits, pitch, quality and
+limits. No crossfade, added transition or new provider request.
+
+## Passive provider copy removal — CL-144, 2026-10-29
+
+Do not add passive fake/real-mode or selected-provider banners and implementation
+explanations to intake or AI moments. Remove the unsolicited status under the
+intake heading and the matching Codex explanation in selection. Keep normal
+action labels and actionable errors. Configuration, provider isolation and
+fake/live gates are unchanged; operational details belong in service guides.
+
+## Discord notification follow-up — CL-143, 2026-10-29
+
+Add the classic Discord message notification recording as a manual Media / Audio
+choice with independent volume, timing, layering and the shared preview/export
+path. Keep recorded Pop as the automatic visual-start accent. No API key is
+needed for sound playback in fake mode. The owner rejected Sator as the intended
+suspense music; identifying its replacement is deferred, with existing saved
+cues preserved. This does not authorize provider calls, cloud or deployment.
+
+## Recorded sound revision — CL-141–142, 2026-10-29
+
+The owner rejects the generic synthesized Snap/Whoosh/Ding and inaccurate Pop.
+Replace new picker choices with actual community-researched public recordings:
+Pop SFX, Bamboo Hit, Vine Boom and Sator suspense. The explicit request authorizes
+bounded anonymous curation downloads, superseding the original-synthesis-only
+catalogue decision. Retired IDs remain playable in saved clips but are absent
+from new selection. Pop/Sator now resolve to the real recordings. New planned
+visuals receive the recorded Pop once at their start; no end cue or extra AI call.
+Preserve layering, independent volume, quality, limits and private owner assets.
+
+Selected audio has Preview in clip at its actual presentation window. Adding a
+cue pauses and seeks there without auto-playing; Hook-only preview starts at
+zero and stops its sound at the prefix boundary. Recordings are fixed, compact
+frame-padded lossless bytes shared by browser/native composition, with content
+hashes to prevent stale preview cache reuse. No runtime download, AI sound
+generation or external playback request. Manual/fake use needs no API keys.
+Tests use fake/injected AI and synthetic source media. Existing real provider
+setup/live gates remain; no agent AI, cloud, deployment or Git action is enabled.
+Personal exact-version/listening/device and release acceptance remain owner-only.
+
+## Provider choice and audio follow-up — CL-137–139, 2026-10-29
+
+The owner chooses `AI_PROVIDER=gemini` by default, with `codex` as an explicit
+local-only backend setting. This supersedes automatic local Codex selection.
+Codex selection prevents every Gemini dispatch, including the older explicit
+local caption exception; fake mode still uses fictional providers. Hosted stays
+Gemini and excludes Codex. Only the provider key in the owner's private local
+configuration may be updated under this request; preserve other settings.
+
+Automatically planned visuals receive one short original Snap at their start,
+with no sound at their end and no additional AI call. Audio layers may overlap;
+original speech and every sound/music cue keep independent editable volume.
+Anchored accents follow visual timing/removal and can be detached for manual
+timing. Media → Audio additionally admits local-only YouTube sound URLs using
+the existing two-minute/12-MiB import bounds. Hosted remains upload-only for
+remote sound acquisition and rejects these routes. Preserve source-quality
+exports, existing bounds, privacy, explicit actions and normal cleanup.
+CL-137, CL-138 and CL-139 own sequential execute/validate evidence. Tests use
+synthetic media/fake transports only; no paid/live/provider/download/cloud or
+deployment verification is authorized. Owner listening/editorial/rights/device
+and release acceptance remain open.
+
+## Optional AI Hook suggestion — CL-136, 2026-10-29
+
+The existing selected-clip planning response may recommend one source-relative
+Hook range, at most ten seconds and contained in the clip. Gemini/Codex use
+their existing call; no extra generation or automatic retry. Retain this as
+optional metadata, never an automatically enabled Hook. Hook displays the range
+with an AI sparkles badge and an explicit Use suggestion action. Choosing it
+updates the draft; normal Apply/Discard and all timestamped edit-copying behavior
+remain. Manual Hook controls work with or without a suggestion. Fake mode
+supplies a varied stable simulated range, labelled simulated, without keys or
+inference. Missing/bad optional data cannot veto usable paid plans or old drafts.
+[CL-136](tickets/CL-136-optional-ai-hook-suggestion.md) owns implementation and
+verification. Real editorial/AI quality and device/release acceptance remain
+owner-only; no paid agent tests or deployment.
+
 ## Local Codex subscription provider — CL-135, 2026-10-29
 
 The owner requests Codex for personal local real-mode clipping and Gemini for
@@ -9,6 +94,8 @@ sampled selected-clip frames. No copied tokens, OpenAI API-key billing, hidden
 Gemini fallback, second app or chatbot. Fake mode remains synthetic/key-free and
 agent verification uses injected inference only. Real local Codex consumes plan
 allowance and requires installed tools, login and explicit processing actions.
+The existing paid-master off switch disables this provider too; never enable
+or migrate owner configuration automatically.
 Raw audio/video and generated pictures are not supported by the subscription
 route; local speech supplies timestamps, unproven speakers stay neutral, sampled
 focus is conservative and pictures remain manual. Hosted Gemini is unchanged.

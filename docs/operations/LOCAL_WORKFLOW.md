@@ -11,6 +11,29 @@ Use the normal application at `http://localhost:3000/start`. The frontend runs
 on 3000 and backend on 4000 using their normal commands and existing app-local
 `.env.local` files. There is no separate owner app or startup mode.
 
+CL-137 defaults to Gemini and selects the installed Codex CLI's ChatGPT
+subscription only with `AI_PROVIDER=codex` in the local backend configuration.
+Use `AI_PROVIDER=gemini` to choose Gemini locally again. Hosted real mode keeps
+Gemini and rejects an explicit Codex choice. Prepare speech tools once with
+`corepack pnpm local:prepare:speech` on Windows x64, sign in using `codex login`
+with ChatGPT, and restart the normal backend. Existing `FAKE_MODE=false` and
+`PAID_DEMO_ENABLED=true` must be set by the owner in the backend's ignored
+configuration; this implementation never changes them. No new API key or
+frontend mode is needed. Codex selection blocks all Gemini paths, including the
+older explicit Gemini captions action in fake mode. A missing tool or the master off switch disables the
+local provider without falling back to Gemini. Setup readiness never infers.
+
+Find moments runs local CPU Whisper transcription, then sends the transcript to
+Codex. Process clips sends at most sixty small selected-clip JPEGs for camera
+planning. The original audio/video stays local; Codex uses plan allowance and
+needs a connection. Local Generate captions uses offline speech without a
+provider transfer. It still requires the normal real-mode setup; only the
+separately labelled Gemini caption action in fake mode retains CL-078's paid
+exception. No automatic retry, AI picture generation or reliable diarization is
+provided by this subscription bridge. Pictures and caption speakers remain
+manually editable. ASR/camera quality needs owner review; injected tests do not
+prove it. See [the design and setup limits](../architecture/LOCAL_CODEX_AI.md).
+
 Processing opens a clean editor with clip tabs. Captions/Filters/Media/Focus show
 one inspector at a time; caption Style/Position/Text and picture Image/Timing/Motion/
 Position keep related controls separate. Add more clips returns to selection;
@@ -20,6 +43,15 @@ edits; it clears the current workspace and returns to fresh upload/YouTube
 intake. Active processing disables reset, and failed cleanup offers retry or
 explicit discard. Existing saved drafts/exports and downloaded/retained sources
 are preserved. No Save draft or permanent export-history panel is shown.
+
+Hook may show an AI suggested hook with a sparkles badge and timestamp range.
+Use suggestion fills its Start/End fields; Apply or Discard decides whether it
+becomes an active prefix. You can still choose any manual range or remove it.
+Advice shares the existing planning call, so opening Hook or using a suggestion
+never starts AI. Existing clips without advice remain manually editable; new
+processing can supply it. Fake mode labels its varied range Simulated and needs
+no keys. Real Gemini/Codex recommendations require their normal setup/approval
+and owner action; their actual editorial quality is not established by mocks.
 
 Caption positions center at the upper quarter, center or lower quarter. Drag,
 resize and keyboard placement use the actual scaled preview. Social caption
@@ -38,7 +70,7 @@ known speaker breaks ties). The whole caption keeps that speaker/color, includin
 when excerpted into a Hook. Word IDs, text and timing are preserved. These manual
 controls work without keys in fake mode; real diarization remains provider-gated.
 The fake action restores fictional captions on demand without keys or spend.
-The Gemini action confirms sending only this clip's audio and using credits.
+In fake mode the real Gemini action confirms sending only this clip's audio and using credits.
 CL-078 authorizes this narrow local paid port even with FAKE_MODE=true and
 PAID_DEMO_ENABLED=false; an existing configured Gemini key is still required.
 It enables no other paid feature and changes no configuration. Hosted retains
@@ -57,15 +89,36 @@ For fake AI with actual local video processing and downloads, set
 No API key or gcloud service is needed. The agent never reads that ignored file.
 The frontend has no separate AI setting. Next loads its existing configuration.
 
-Media contains Pictures and Audio (CL-133). Audio offers six original synthesized
-sounds with explicit previews, plus MP3/WAV/M4A uploads up to 12 MiB and two
+Media contains Pictures and Audio (CL-133/142). Audio offers recorded Pop SFX,
+Bamboo Hit, Vine Boom and Discord notification with explicit previews, plus MP3/WAV/M4A uploads up to 12 MiB and two
 minutes. Up to eight uploads and twelve cues per clip support source-timed effects,
 Hook-only music or continuous whole-video music, volume, offset and looping.
 Timed effects repeat the captured Hook range; Hook-only music stops at its end.
 Original speech stays at 100% until edited. Apply/Discard, saved drafts, playback
-and native exports share these manual edits without an AI call. This works with
-fake mode and no keys; fresh real AI still needs configured keys, live flags,
-applicable approvals and owner action. See [audio design and bounds](../architecture/MEDIA_AUDIO.md)
+and native exports share these manual edits without an AI call.
+Automatically planned pictures also receive one recorded Pop at their start,
+never at the end (CL-138/142). In Your audio it is marked Visual; change its volume,
+mute or remove it like any sound. It follows the picture's start/removal until
+Edit timing detaches it. Sounds/music may overlap, each with its own volume;
+original speech has a separate control. Up to twelve concurrent cues remain.
+Preview in clip starts the selected sound at its actual active window, including
+frame zero for Hook-only sounds. Adding a library cue pauses/seeks without
+auto-playing; an already advanced playhead no longer skips its opening sound.
+Snap/Whoosh/Ding/Background pulse are retired picker entries; existing saved
+cues stay playable. Sator is also retired by CL-145; its recording remains for
+saved cues. Active catalogue effects use actual recordings.
+Locally, From YouTube replaces Audio with a URL input and Download sound/Cancel
+in the footer (CL-139). Use a sound whose whole video is at most two minutes and
+whose audio stream fits 12 MiB. The prepared local downloader tools must be
+available; import uses no AI or API key. Cancel stops the operation, errors keep
+the URL for an explicit retry, and success opens the new sound's volume/timing
+controls. Imported audio shares upload asset limits and saved/native mixing.
+Hosted offers upload/catalogue instead and rejects URL imports. Agent checks
+use injected downloads only; actual online availability/rights remain owner checks.
+These manual controls and the fixed recorded library work in
+fake mode without keys; local Codex AI needs sign-in/tools and the enabled
+master switch, while selected local/hosted Gemini needs configured keys/live flags and
+applicable approvals. Both require owner action. See [audio design and bounds](../architecture/MEDIA_AUDIO.md)
 and [verification](../tickets/CL-133-media-audio.md). Owner listening/real-media,
 physical-device and hosted acceptance remain separate; no deployment occurred.
 

@@ -32,7 +32,8 @@ need to show the video in chat or copy moments back. No whole original video or
 audio goes to Codex. Transcript and sampled frames are sent only by an explicit
 local processing action. Existing exports still use original source quality.
 
-Use [whisper.cpp](https://github.com/ggml-org/whisper.cpp/tree/v1.9.5) v1.9.5 and
+Use [whisper.cpp](https://github.com/ggml-org/whisper.cpp/releases/tag/b5454)'s
+official b5454 CPU binary (current v1.9.5 line; stable tags have no Windows assets) and
 the multilingual small model (roughly 466 MiB), preserving source language,
 with bounded word timestamps. Both projects provide MIT-licensed components;
 retain exact licenses with ignored tooling. Pin official binary/model digests,
@@ -55,10 +56,45 @@ Gemini keeps its existing generated-picture behavior.
 
 Keep the backend's single fake/real mode. Fake always uses existing fictional
 providers and cannot launch Codex/Whisper inference. Normal local real mode uses
-the Codex provider; hosted real mode continues using Gemini. No second app,
+the chosen provider: CL-137 defaults to `AI_PROVIDER=gemini`, and local
+`AI_PROVIDER=codex` opts into this bridge; hosted real mode continues using Gemini
+and rejects explicit Codex selection. No second app,
 frontend mode toggle, accounts, chatbot, new credential or ignored-env migration.
+The existing paid-master off switch also disables local real AI. The owner must
+enable normal real mode/master explicitly; the bridge never enables flags.
 The local capability response names the provider and setup availability; normal
 selection/caption/editor controls use the existing authenticated routes.
+
+### Activate locally
+
+The CLI command is installed on this workstation, and the speech tools/model
+were prepared and verified during CL-135. From a normal local terminal, run
+`codex login status`. If it reports ChatGPT authentication, the bridge reuses
+that saved login. Otherwise run `codex login` and complete ChatGPT sign-in;
+an API-key login is rejected by this bridge. See the official
+[authentication instructions](https://learn.chatgpt.com/docs/auth).
+
+In the owner's ignored `apps/backend/.env.local`, manually set these existing
+entries; leave other values untouched:
+
+```dotenv
+AI_PROVIDER=codex
+FAKE_MODE=false
+PAID_DEMO_ENABLED=true
+```
+
+The processing master is also required for local Codex. With Codex selected,
+all Gemini/cloud composition stays blocked even when that master is on. No
+Gemini or OpenAI API key is needed for the subscription bridge. Restart the
+normal backend, then use Find moments / Process clips as usual. Those explicit
+actions consume Codex plan allowance; actual inference/ASR quality remains owner
+acceptance. FAKE_MODE=true continues to return simulated AI without inference.
+Gemini remains the default when AI_PROVIDER is absent or set to gemini.
+
+If preparing another Windows workstation, run the documented
+`corepack pnpm local:prepare:speech` once before the restart. Startup does not
+download tools or sign in. The packaging handoff changes no private settings,
+does not inspect login credentials/status and does not start real processing.
 
 An explicit local analysis prepares 16-kHz mono speech in the private worker,
 runs pinned Whisper and returns bounded words with stable IDs. Codex receives
@@ -69,7 +105,17 @@ words; return bounded camera decisions, never commands/paths/URLs. Existing
 focus compilation, caption grouping, revisions, Apply/Discard, retries, drafts
 and native rendering remain authoritative. Explicit local caption generation
 uses the same local speech path without a Gemini transfer. Fake caption and the
-earlier explicitly labelled local Gemini caption exception remain in fake mode.
+earlier explicitly labelled local Gemini caption exception remain in fake mode
+only when Gemini is selected. Codex selection blocks every Gemini path and never
+falls back, including when Codex prerequisites are unavailable.
+
+Windows x64 setup: `corepack pnpm local:prepare:speech`, installed Codex CLI with
+ChatGPT `codex login`, then normal backend restart. Prepare command checks pinned
+binary/DLL/model hashes and preserves license files under ignored local tooling;
+startup never downloads or signs in. Other operating systems need an explicitly
+reviewed speech build, rather than accepting arbitrary paths. This workstation's
+free tools are prepared and hash-verified; live CLI auth/inference, actual ASR
+and a clean-machine setup remain owner acceptance, not inferred from mocks.
 
 Each Codex call has a private owned temporary cwd, fixed JSON schema, content on
 stdin and fixed absolute admitted images. Use saved ChatGPT login with a status

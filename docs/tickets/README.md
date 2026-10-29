@@ -1,12 +1,116 @@
 # ClipBuilder canonical ticket index
 
+## Owner-authorized commit packaging — 2026-10-29
+
+The owner now requests local staging/commits under
+[the whole-file plan](../operations/CL135_145_COMMIT_PLAN.md). This supersedes
+the earlier uncommitted handoff status below; their evidence records remain
+historical. Plan commit bebe1c6 precedes the 60-file shared/backend runtime
+commit a201940, then the 28-file frontend/integration commit 086c6ac. This closing
+23-file documentation group records validation/setup without splitting interwoven
+file versions. All 111 pending files are allocated once, plus the standalone
+plan. No private configuration/media, push or deploy.
+
+A fresh 10-file / 47-check fake Codex/provider-isolation set, two frontend route
+files / 11 checks and two closed app-context checks pass (60 total), supplementing
+the completed packet gates below. Exact staged manifests, credential-indicator
+and whitespace checks pass for the implementation groups; docs receive the same
+preflight before commit. Codex activation steps are in the
+[local provider guide](../architecture/LOCAL_CODEX_AI.md#activate-locally).
+The command is installed; actual CLI login and real inference were not checked
+or activated. The current healthy app and owner configuration are preserved.
+
+## Clean Hook cut and remove Sator — 2026-10-29
+
+[CL-145](CL-145-clean-hook-cut-and-retire-sator.md) records the plan to remove
+Sator from new selection and fixes the uneven Hook/body cut: decoded body
+premount, explicit active-video capture and matching native audio/video bounds.
+Nine unit checks, two final browser proofs and five native cut cases pass with
+synthetic/fake inputs, plus scoped static/review gates. Current worker refreshed;
+frontend/config preserved. No paid calls, Git or deployment. Personal listening,
+real media/devices, hosted and release acceptance remain open.
+
+## Remove provider status copy — 2026-10-29
+
+[CL-144](CL-144-remove-provider-status-copy.md) records the owner's correction
+and removes passive fake-mode/provider status and implementation explanation
+from intake/AI moments. Frontend typecheck, scoped lint/format and live intake
+inspection pass. Provider behavior and configuration remain unchanged. No paid
+calls, staging, commit or deployment.
+
+## Discord notification — 2026-10-29
+
+[CL-143](CL-143-discord-notification-sound.md) adds the classic Discord message
+notification to Media / Audio after recording the plan. Five focused checks,
+two settled browser/native proofs, two package checks and scoped static/review
+gates pass. The current backend/worker is refreshed and the frontend preserved.
+Music identification is deferred; Sator is not the owner's intended suspense
+track. No provider spend, cloud, deployment or Git action occurred. Personal
+listening/device/release acceptance stays open.
+
+## Audible audio and researched recordings — 2026-10-29
+
+Implemented/validated [CL-141](CL-141-audible-added-audio-preview.md) for
+cue-aware audible playback, then [CL-142](CL-142-researched-recorded-sound-library.md)
+for actual Pop SFX/Bamboo Hit/Vine Boom/Sator recordings and retired generic
+picker entries. Both packets recorded before code. Browser audio-energy/native
+MP4 proofs, 39 focused checks, two package checks and scoped static/review gates
+pass; current backend/worker refreshed with verified ownership. Fake/Codex and
+healthy app preserved. Public curation downloads authorized; tests have no paid
+or external calls. No Git/deploy; personal listening/device/release remains open.
+
+## Hook capture playback fix — 2026-10-29
+
+[CL-140](CL-140-stable-hook-capture-and-suggestion-playback.md) fixes Capture
+button stutter at the Hook/body boundary and aligns source time once on capture.
+AI Use pauses and copies the exact range into the draft. Three Hook checks and
+two browser/native proofs pass, including playing-prefix/body capture, late-event
+cancellation, Apply/Discard, responsive controls and picture export. Types/lint/
+format/validate pass; app healthy and fake with Codex selected. Prior work and
+media preserved. No Git action/deployment; owner real/device/AI acceptance open.
+
+## Provider choice and audio follow-up — 2026-10-29
+
+Implemented and locally validated in order: [CL-137](CL-137-explicit-ai-provider-switch.md) makes
+Gemini the default and Codex an explicit isolated local setting, including the
+authorized private selection; [CL-138](CL-138-visual-start-sounds-and-audio-layers.md)
+adds editable start-only visual accents and verifies concurrent audio volumes;
+[CL-139](CL-139-local-youtube-audio-import.md) adds bounded local-only YouTube
+sound import while hosted retains uploads. All tickets documented before code.
+CL-137 passed 50 focused checks; CL-138 passed 59 focused checks plus native and
+browser audio proofs. CL-139 passed 37 focused checks, seven proxy checks and
+the final 27.28s browser/native import/mixing/export/reload proof, including
+concurrent rejection, abort/retry and desktop/tablet/phone geometry. Scoped
+types/lint/format/validate pass. Backend/worker refreshed with verified ownership;
+safe normal capabilities remain fake with Codex selected and local sound import
+available. No actionable findings; actual online/listening/AI/device/hosted
+acceptance remains owner-only.
+Prior uncommitted CL-135/136 stays preserved. No paid calls, deployment or Git
+action; owner live/listening/rights/device/release acceptance remains separate.
+
+## Optional AI Hook suggestion — 2026-10-29
+
+[CL-136](CL-136-optional-ai-hook-suggestion.md) implements and locally validates the owner's optional
+timestamp suggestion in the Hook tab. Reuse the existing Gemini/Codex planning
+call, preserve manual activation/edits and simulate a range in fake mode. Prior
+CL-135 work remains uncommitted and preserved. 93 focused units, 13 native RPC
+regressions and two browser/native proofs pass, including pointer/keyboard use
+at desktop/390/320, no automatic insertion, save/retry/reopen and exact call
+counts. Scoped types/lint/format/validate pass; normal worker refreshed and app
+healthy. No staging/commit/deployment. Synthetic/fake validation only;
+real editorial/AI/device/release acceptance remains owner-only.
+
 ## Local Codex provider — 2026-10-29
 
-[CL-135](CL-135-local-codex-provider.md) is planned under the owner's AFK request
+[CL-135](CL-135-local-codex-provider.md) is implemented and locally validated under the owner's AFK request
 to use Codex subscription inference in normal local real mode, preserving hosted
 Gemini. Prior Media/audio and caption-level tasks are committed through `472479e`.
 The [design](../architecture/LOCAL_CODEX_AI.md), this packet and authority/index
-are committed before implementation. Fake/injected checks only; no real provider
+were committed first as `04450d6`. The implementation uses bounded CLI jobs,
+offline speech and the existing editor/export flow; 52 focused local tests,
+11 frontend transport tests, two closed build-context tests and a real synthetic
+browser/native/save-reopen proof pass, plus types/lint/format and worker refresh.
+New implementation remains uncommitted for owner review. Fake/injected checks only; no real provider
 call, API billing, cloud change, push or deployment. Actual ASR/AI/device/rights
 and release acceptance remain owner-only.
 

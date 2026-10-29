@@ -1,5 +1,25 @@
 # Google and Node media software readiness
 
+## Local subscription and speech tooling — CL-135, 2026-10-29
+
+Normal local real mode invokes the installed Codex CLI with saved ChatGPT login;
+no CLI/auth files are copied into the repository or hosted image. This workstation
+has CLI `0.165.0-alpha.1.2`; help/protocol inspection used no inference. Subscription
+allowance, account sign-in and actual AI quality remain owner checks.
+
+The explicit `corepack pnpm local:prepare:speech` command prepares ignored Windows
+x64 CPU [whisper.cpp b5454](https://github.com/ggml-org/whisper.cpp/releases/tag/b5454)
+and the [multilingual small model](https://huggingface.co/ggerganov/whisper.cpp).
+The official archive digest and every admitted executable/DLL digest are pinned
+in `scripts/local-speech-tools.ts`. The model is 487,601,967 bytes, SHA-256
+`1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b`.
+MIT license files for whisper.cpp and OpenAI Whisper are retained alongside
+`.local-build/tools/speech`; binaries/weights stay outside Git and hosted inputs.
+No runtime download, Python dependency or provider API key is needed for speech.
+This installation's hashes, repeated admission and `whisper-cli --help` passed.
+No actual speech inference was run: tests inject synthetic output. Fresh-machine installation,
+actual transcription accuracy, CPU latency and owner-media rights remain open.
+
 CL-009 uses existing pinned contracts/React/Remotion/Google SDK for fixed text
 cards and captions. No MathJax, SVG rasterizer, image SDK, font, dependency or
 runtime download was added. Equations remain escaped literal text. Existing

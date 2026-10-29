@@ -6,6 +6,23 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Owner sound revision (2026-10-29, CL-141–142): fix audible cue preview and
+  replace the rejected generic sound picker with actual researched recordings.
+  Anonymous bounded public-sample downloads for curation are expressly requested;
+  no generated approximation or licensing approval question substitutes for them.
+  This is separate from fake/paid-off app verification and does not authorize
+  inference, actual YouTube pipeline tests, cloud, Git actions or deployment.
+  Preserve saved/private media and legacy cue decoding.
+
+- Owner provider/audio follow-up (2026-10-29, CL-137–139): execute/validate the
+  documented packets sequentially with synthetic/fake/paid-off checks. The
+  owner expressly authorizes a secret-free edit of only AI_PROVIDER=codex in
+  apps/backend/.env.local, preserving all other settings without displaying or
+  inspecting their contents. Gemini is the default; Codex selection isolates
+  every Gemini path, including the earlier fake-mode caption exception. This
+  narrow config edit does not authorize changing fake/master/approval switches,
+  real inference/download testing, cloud, deployment, push or new Git actions.
+
 - Current owner AFK audit authorization (2026-10-26, CL-088–090): fully verify
   pending CL-084–087 work using fake AI/paid-off checks, document confirmed fixes,
   prepare whole-file plans and make local staging/commits; then renew quality

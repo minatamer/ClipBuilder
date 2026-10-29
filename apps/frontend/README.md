@@ -1,5 +1,11 @@
 # ClipBuilder frontend
 
+CL-135 keeps the same local controls with backend-owned Codex subscription
+selection and local speech captions in real mode. Setup/login/allowance errors
+are fixed safe messages. Hosted retains Gemini and no local setup fields;
+fake mode remains fictional and key-free. No browser token, CLI path, new
+frontend mode or provider chooser. See [local setup and limits](../../docs/operations/LOCAL_WORKFLOW.md).
+
 CL-114 shares three hosted manual/AI clip slots, corrects excess with a visible accessible toast, and replaces exhausted intake with a timed free-demo screen. Existing active editors/downloads remain available. The server enforces cumulative limits; the authenticated bridge requires verified native Cloud Run client-IP ingress. CL-124 confirms the platform appends one final client address on both current entry points; preceding values and alternative visitor headers are untrusted. Reverify after topology changes. See [release preparation](../../docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md). Localhost retains existing owner limits.
 
 The normal `/start` route now shares upload, moments and the caption/picture/filter
@@ -13,7 +19,7 @@ acceptance. No deployment or paid test is authorized.
 Local controls use the normal `/start` flow and app shell. See the [local workflow guide](../../docs/operations/LOCAL_WORKFLOW.md). The backend owns AI mode; no separate frontend mode or app is needed. Fake AI is key-free and fictional; real downloads/native media are available independently.
 
 [CL-133](../../docs/tickets/CL-133-media-audio.md) renames Pictures to Media and
-adds an Audio subview with original sound previews, bounded MP3/WAV/M4A uploads,
+adds an Audio subview with recorded sound previews, bounded MP3/WAV/M4A uploads,
 timed effects, Hook-only and whole-video music. Manual preview/edit/export needs
 no provider key in fake mode; fresh real AI retains its key/live/approval gates.
 See the local workflow guide for bounds and controls. Owner listening/device and

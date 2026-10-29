@@ -1,5 +1,70 @@
 # Local editing controls
 
+CL-145 removes Sator from new sound selection while keeping saved audio playable.
+The body video is prepared with a hidden/frozen one-second Remotion premount,
+so the Hook ends with a normal hard cut into an already decoded video element.
+Stable Hook/body identities preserve the prepared element. Capture readiness
+ignores hidden preloaded media and added-audio events, with active video guards
+unchanged. Native export trims Hook audio to the same whole source-frame bounds
+as its video, avoiding cadence-rounding silence without a fade or time stretch.
+These controls/playback work in fake mode without API keys; real AI still needs
+the chosen provider's existing setup and live approvals.
+
+CL-143 adds the classic Discord notification to Media / Audio / Sound library.
+Preview auditions its fixed recording; Add creates an independently editable
+half-second effect. Sound playback and export need no API keys in fake mode.
+The requested suspense-music replacement is deferred; Sator is not owner accepted.
+
+CL-142 replaces new library choices with actual Pop SFX, Bamboo Hit, Vine Boom
+and Sator suspense recordings. Snap/Whoosh/Ding/Background pulse remain only
+for saved-cue compatibility. Pop/Sator now use the recorded bytes, including
+existing cues. New AI visual accents use recorded Pop. Preview/cache identities
+include the fixed recording hash, so development refresh cannot retain an old
+synthetic Blob under the same sound ID. Playback/upload/editing still needs no
+API key; real AI planning keeps its existing selected-provider requirements.
+
+CL-141 adds Preview in clip to selected audio. It seeks to the cue's first
+actual presentation window, including frame zero for Hook-only audio, before
+playing the mix. Adding a catalogue cue pauses and seeks without auto-playing.
+Independent volume/layers and normal Apply/Discard remain; a missing Hook or
+out-of-range nonlooping offset disables an inaudible preview. Synthetic browser
+checks measure rendered audio energy and silence after the Hook, with no keys.
+
+CL-140 keeps Capture buttons stable through Hook/body playback by following
+decoded-media readiness. Capture pauses, aligns the media to the chosen source
+frame if needed, and verifies it before editing. The wait is bounded to one
+second and cancels on a changed editing target, Hook, preview or manual seek.
+Unavailable/seeking/error states retain their guards and concise feedback.
+Hook range changes, including Use suggestion, pause playback before editing;
+the exact suggested range remains a draft until Apply. Fake/simulated Hook
+editing needs no API key. Fresh real suggestions retain provider setup and gates.
+
+CL-139 exposes From YouTube only with the local audio acquisition capability.
+URL intake replaces Audio's content and owns Download sound/Cancel in the
+persistent footer. Pending import disables tab navigation and offers Cancel
+import; failure retains the URL for an explicit retry. Success selects the new
+cue's independent volume/timing controls. Sources must fit two minutes/12 MiB.
+Hosted keeps upload/catalogue only. Synthetic browser checks cover this flow
+without API keys or real downloads; online/device/rights acceptance stays open.
+
+CL-138 creates one editable Snap at each automatically planned visual start.
+Media → Audio marks it Visual and shows At visual start. Its volume can change
+independently; mute/remove, Apply/Discard and save/reopen stay normal. Moving or
+removing the visual moves/removes its accent. Edit timing or looping detaches
+it for manual placement. Up to twelve sound/music layers may overlap, with
+independent cue and original-speech volume. Fake/injected checks need no key;
+real AI visual planning retains the selected provider's normal gates.
+
+CL-135 local real-mode capabilities identify Codex and local speech, with concise
+setup/transfer wording and actionable closed login/allowance errors. Captions
+confirms local audio transcription and submits without Gemini paid consent;
+the server's composed provider selects the contract. Fake captions need no keys.
+The explicitly confirmed local Gemini action in fake mode is available only
+when Gemini is selected; Codex blocks it. Hosted receives no Codex fields.
+Manual edits work without keys;
+local real AI needs installed tools, ChatGPT sign-in, an enabled master switch
+and owner action. Injected browser checks do not prove real ASR/AI quality.
+
 CL-114 hosted limits: manual rows and AI count share three slots; manual rows take priority, and excess input is corrected with a body-portal status toast. Server admission and cumulative batch limits remain authoritative. Hosted Start over clears the session and rechecks its network allowance; exhausted intake replaces upload. Localhost retains its current ten-clip safety limits. Quota UI checks use fake ports/no keys; real AI and durable hosted setup remain separately gated.
 
 This client feature is rendered inside the existing application shell at
@@ -212,6 +277,14 @@ keys; real transcription quality requires configured provider keys, live flags
 and owner approvals. New fake clips still start without captions.
 
 Hook adds one manual prefix of up to ten seconds from inside this clip.
+CL-136 optionally shows an AI suggested hook with a sparkles badge and a
+clip-relative time range. Use suggestion fills the draft; Apply/Discard remains
+explicit and nothing is inserted automatically. Suggestions share the existing
+Gemini/Codex planning call and survive saved drafts/retries separately from
+manual edits. Fake mode provides a stable simulated range per clip without keys
+or inference. Legacy clips without advice keep the manual controls. Real
+recommendation quality needs owner testing with Gemini keys/live approvals or
+local Codex ChatGPT sign-in/allowance and prepared speech tools.
 Start/End seconds accept frame precision; Capture uses the decoded preview
 frame (End includes that frame). Preview hook plays the prefix then the intact
 body. Captions, speaker colors, text, pictures, focus, filters and audio follow
