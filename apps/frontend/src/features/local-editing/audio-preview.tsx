@@ -11,7 +11,10 @@ import {
   ownerAudioSegments,
 } from "../../../../../packages/contracts/local/audio.ts";
 import type { OwnerOverlay } from "../../../../../packages/contracts/local/clips.ts";
-import { ownerBuiltinWav } from "../../../../../packages/composition/local/audio-synthesis.ts";
+import {
+  ownerSoundAudio,
+  ownerAudioSourceKey,
+} from "../../../../../packages/composition/local/audio-sources.ts";
 
 /** Player-owned audio follows playback, seeking, muting and its presentation clock. */
 export function OwnerAudioPreview({
@@ -30,9 +33,7 @@ export function OwnerAudioPreview({
   const audio = overlay.audio;
   const key = JSON.stringify(
     [
-      ...new Set(
-        audio?.cues.map((cue) => `${cue.source.kind}:${cue.source.id}`),
-      ),
+      ...new Set(audio?.cues.map((cue) => ownerAudioSourceKey(cue.source))),
     ].sort(),
   );
   useEffect(() => {
@@ -42,11 +43,12 @@ export function OwnerAudioPreview({
     const timer = window.setTimeout(() => {
       for (const cue of audio?.cues ?? []) {
         const source = cue.source,
-          id = `${source.kind}:${source.id}`;
+          id = ownerAudioSourceKey(source);
         if (next[id]) continue;
         if (source.kind === "builtin") {
+          const sample = ownerSoundAudio(source.id);
           next[id] = URL.createObjectURL(
-            new Blob([ownerBuiltinWav(source.id)], { type: "audio/wav" }),
+            new Blob([sample.bytes], { type: sample.mimeType }),
           );
         } else
           next[id] =
@@ -74,8 +76,7 @@ export function OwnerAudioPreview({
     <>
       {ownerAudioSegments(audio, overlay.frames, overlay.hook).map(
         (segment, index) => {
-          const src =
-            sources[`${segment.cue.source.kind}:${segment.cue.source.id}`];
+          const src = sources[ownerAudioSourceKey(segment.cue.source)];
           if (!src || !audio) return null;
           // Remotion pools tags by URL and clock. Distinct cues must still mix
           // independently when they use the same source at the same time.

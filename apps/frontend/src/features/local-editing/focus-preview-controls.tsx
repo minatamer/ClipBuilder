@@ -23,6 +23,7 @@ export function FocusPreviewControls({
     available: available && !props.disabled,
     attempt,
     frames: props.focus.frames,
+    captureTarget: props.focus,
   });
   return (
     <FocusEditor

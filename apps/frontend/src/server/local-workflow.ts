@@ -2,6 +2,8 @@ import { hostedEditingPath as admittedHostedPath } from "../../../../packages/co
 import { env } from "node:process";
 import { hostedDemoClientIp } from "./demo-client-ip";
 import { discoverOwnerHost } from "../../../../scripts/local-discovery.mjs";
+import { fetchLocalAi, localAiRequestPath } from "./local-ai-request";
+import { LOCAL_CODEX_POLICY } from "../../../../packages/contracts/local/codex.ts";
 import {
   acquireControlRequest,
   controlIsLocal,
@@ -33,7 +35,15 @@ export async function proxyLocalWorkflow(request: Request, segments: string[]) {
   const controller = new AbortController();
   const abort = () => controller.abort();
   request.signal.addEventListener("abort", abort, { once: true });
-  const timer = setTimeout(abort, 30 * 60_000);
+  const localAi = local && localAiRequestPath(request.method, segments);
+  const timer = setTimeout(
+    abort,
+    localAi
+      ? LOCAL_CODEX_POLICY.speechTimeoutMs +
+          LOCAL_CODEX_POLICY.inferenceTimeoutMs +
+          60_000
+      : 30 * 60_000,
+  );
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   let done = false;
   const finish = async () => {
@@ -99,10 +109,12 @@ export async function proxyLocalWorkflow(request: Request, segments: string[]) {
     if (local) {
       const host = await discoverOwnerHost();
       headers.set("Authorization", `Bearer ${host.token}`);
-      response = await fetch(
-        `http://127.0.0.1:4000/v1/local/${segments.join("/")}`,
-        options,
-      );
+      response = localAi
+        ? await fetchLocalAi(segments, options)
+        : await fetch(
+            `http://127.0.0.1:4000/v1/local/${segments.join("/")}`,
+            options,
+          );
     } else
       response = await fetchControlApi(
         `/v1/editing/${segments.join("/")}`,

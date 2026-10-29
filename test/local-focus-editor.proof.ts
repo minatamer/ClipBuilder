@@ -142,6 +142,7 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
     processingIdentity: "b".repeat(64),
     cut: { startFrame: 0, endFrame: 120 },
     words: [],
+    hookSuggestion: { startFrame: 15, endFrame: 75 },
     overlay: { version: 1, frames: 120, captions: [], visuals: [], focus },
   };
   const baseHash = createHash("sha256")
@@ -396,7 +397,7 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
       const change=async(label,value)=>{const n=field(label);if(!n)throw new Error('missing_control_'+label);Object.getOwnPropertyDescriptor(n.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype,'value').set.call(n,value);n.dispatchEvent(new Event(n.tagName==='SELECT'?'change':'input',{bubbles:true}));await new Promise(r=>setTimeout(r,50));};
       const settle=async()=>{await wait(()=>!document.querySelector('.focus-editor').disabled&&!button('Apply changes'),'saved');};
       const person=n=>[...document.querySelectorAll('.focus-person-select')].find(b=>b.textContent.trim()==='Person '+n);
-      const sourceVideo=()=>document.querySelector('.editor-preview video');
+      const sourceVideo=()=>document.querySelector('.editor-preview video[data-editor-active="true"]');
       const frameReady=async()=>{await wait(()=>sourceVideo()?.readyState>=2&&!sourceVideo().seeking&&(!named('Capture camera end').disabled||!named('Capture camera start').disabled),'seeked');};
       globalThis.focusReady=async()=>{await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'preview');[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Focus').click();await wait(()=>document.querySelector('.focus-editor'));await frameReady();};
       globalThis.focusUiState=()=>{const f=document.querySelector('footer').getBoundingClientRect();return {shots:[...document.querySelectorAll('.focus-shot')].map(n=>n.firstChild.textContent),selected:[...document.querySelectorAll('.focus-shot')].findIndex(n=>n.getAttribute('aria-pressed')==='true'),dirty:!!button('Apply changes'),footer:f.top>=0&&f.bottom<=innerHeight+1,overflow:document.documentElement.scrollWidth>innerWidth,cropCount:document.querySelectorAll('.focus-crop').length,oldBoxes:document.querySelectorAll('.focus-person-box').length};};
@@ -457,6 +458,55 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
           const assigned=new Map(saved.edit.captionSpeakers.assignments.map(w=>[w.wordId,w.speakerId]));if(!saved.base.overlay.captions[0].wordIds.every(id=>assigned.get(id)==='spk_0'))throw new Error('caption_assignment_incomplete');
           button('Reset speakers').click();await wait(()=>button('Apply changes'),'speaker_reset_'+JSON.stringify({disabled:button('Reset speakers').disabled,buttons:[...document.querySelectorAll('footer button')].map(n=>n.textContent)}));button('Discard changes').click();await wait(()=>!button('Apply changes'));
           await new Promise(r=>setTimeout(r,80));const retained=fits&&named('Speaker for caption 1').value==='spk_0';button('Reset speakers').click();await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>!button('Apply changes')&&!button('Reset speakers').matches(':disabled'));return retained;
+        }
+        if(action==='hook-suggestion-focus'){
+          [...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Hook').click();
+          await wait(()=>button('Use suggestion')&&!button('Use suggestion').disabled,'suggestion_ready');
+          if(named('Hook start seconds')||button('Apply changes'))throw new Error('suggestion_auto_applied');
+          const card=document.querySelector('[aria-label="Simulated AI hook suggestion"]');if(!card?.textContent.includes('0.50s – 2.50s')||!card.querySelector('svg'))throw new Error('suggestion_badge');
+          if(value==='playing'){named('Play video').click();await wait(()=>named('Pause video')&&sourceVideo().currentTime>.2,'suggestion_playing');}
+          const use=button('Use suggestion');use.scrollIntoView({block:'center'});use.focus();await new Promise(requestAnimationFrame);const r=use.getBoundingClientRect(),f=document.querySelector('footer').getBoundingClientRect();
+          if(r.width<44||r.height<44||r.left<0||r.right>innerWidth+1||r.bottom>f.top+1)throw new Error('suggestion_touch_geometry');
+          return {x:r.x+r.width/2,y:r.y+r.height/2};
+        }
+        if(action==='hook-suggestion-check'){
+          await wait(()=>named('Hook start seconds')&&button('Apply changes'),'suggestion_draft');
+          if(Number(named('Hook start seconds').value)!==.5||Number(named('Hook end seconds').value)!==2.5||!button('Use suggestion').disabled||named('Pause video'))throw new Error('suggestion_range');
+          const before=await fetch('/seed').then(r=>r.json());if(before.edit?.hook)throw new Error('suggestion_saved_early');
+          if(value==='apply'){
+            button('Apply changes').click();await wait(()=>!button('Apply changes')&&!button('Remove hook').matches(':disabled'),'suggestion_saved');
+            const saved=await fetch('/seed').then(r=>r.json());if(saved.edit?.hook?.startFrame!==15||saved.edit?.hook?.endFrame!==75||saved.base.hookSuggestion.startFrame!==15)throw new Error('suggestion_not_saved');
+            let toggles=0,seeks=0,crossed=false,lastTime=-1,preparedBody=null,readyBeforeCut=false;
+            const controls=document.querySelector('.picture-timing'),observer=new MutationObserver(changes=>{toggles+=changes.filter(change=>change.attributeName==='disabled').length;});
+            observer.observe(controls,{attributes:true,subtree:true,attributeFilter:['disabled']});
+            const seeking=()=>seeks++;document.querySelector('.editor-preview').addEventListener('seeking',seeking,true);
+            button('Preview hook').click();
+            for(let tick=0;tick<260;tick++){const time=sourceVideo()?.currentTime??-1;if(!crossed&&time>2&&time<2.5){preparedBody=document.querySelector('.editor-preview video[data-editor-video="body"]');readyBeforeCut=!!preparedBody&&preparedBody.readyState>=2&&!preparedBody.seeking&&preparedBody.paused&&preparedBody.currentTime<1/30;}if(lastTime>2&&time>=0&&time<.5)crossed=true;lastTime=time;await new Promise(r=>setTimeout(r,12));}
+            observer.disconnect();document.querySelector('.editor-preview').removeEventListener('seeking',seeking,true);named('Pause video')?.click();
+            if(!crossed||toggles>4)throw new Error('hook_boundary_'+JSON.stringify({toggles,seeks,crossed}));
+            if(!readyBeforeCut||sourceVideo()!==preparedBody)throw new Error('hook_body_cold_mount_'+JSON.stringify({readyBeforeCut,reusedPreparedBody:sourceVideo()===preparedBody,connected:preparedBody?.isConnected,videos:[...document.querySelectorAll('.editor-preview video')].map(n=>({part:n.dataset.editorVideo,active:n.dataset.editorActive,time:n.currentTime,ready:n.readyState,paused:n.paused}))}));
+            if(Number(named('Hook start seconds').value)!==.5||Number(named('Hook end seconds').value)!==2.5||button('Apply changes'))throw new Error('playback_changed_hook');
+            await new Promise(requestAnimationFrame);
+            await wait(()=>sourceVideo().readyState>=2&&!sourceVideo().seeking&&!named('Capture hook end').matches(':disabled'),'body_capture_ready');
+            named('Capture hook end').click();const bodyTime=sourceVideo().currentTime;await wait(()=>button('Apply changes'),'body_captured');
+            if(named('Pause video')||Math.abs(Number(named('Hook end seconds').value)-(bodyTime+1/30))>1.1/30)throw new Error('body_capture_clock');
+            button('Discard changes').click();await wait(()=>!button('Apply changes')&&!button('Preview hook').matches(':disabled'),'body_capture_discard');
+            button('Preview hook').click();await new Promise(requestAnimationFrame);await wait(()=>sourceVideo().readyState>=2&&!sourceVideo().seeking&&sourceVideo().currentTime>.8&&sourceVideo().currentTime<1.3&&!named('Capture hook start').matches(':disabled'),'prefix_capture_ready');
+            named('Capture hook start').click();const prefixTime=sourceVideo().currentTime;await wait(()=>button('Apply changes'),'prefix_captured');
+            if(named('Pause video')||Math.abs(Number(named('Hook start seconds').value)-prefixTime)>1.1/30)throw new Error('prefix_capture_clock');
+            button('Discard changes').click();await wait(()=>!button('Apply changes')&&!button('Remove hook').matches(':disabled'),'prefix_capture_discard');
+            await new Promise(requestAnimationFrame);await wait(()=>sourceVideo().readyState>=2&&!sourceVideo().seeking&&!named('Capture hook end').matches(':disabled'),'cancel_capture_ready');
+            const heldVideo=sourceVideo(),heldTime=heldVideo.currentTime+.2;let requestedTime;
+            Object.defineProperty(heldVideo,'currentTime',{configurable:true,get:()=>heldTime,set:time=>{requestedTime=time;}});
+            try{
+              named('Capture hook end').click();if(typeof requestedTime!=='number')throw new Error('capture_not_pending');
+              button('Remove hook').click();await wait(()=>!named('Hook start seconds')&&button('Apply changes'),'capture_target_removed');
+            }finally{delete heldVideo.currentTime;}
+            heldVideo.currentTime=requestedTime;heldVideo.dispatchEvent(new Event('seeked'));await new Promise(requestAnimationFrame);
+            if(named('Hook start seconds'))throw new Error('late_capture_restored_hook');
+            button('Apply changes').click();
+          }else button('Discard changes').click();
+          await wait(()=>!button('Apply changes')&&button('Add hook')&&!button('Use suggestion').disabled,'suggestion_restored');return true;
         }
         if(action==='hook'){
           const setting=async label=>{[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent===label).click();await new Promise(requestAnimationFrame);};
@@ -579,6 +629,48 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
             resolve(`.local-build/evidence/cl128-speakers-${width}.png`),
             Buffer.from(speakerShot.value.data, "base64"),
           );
+          await run("hook-suggestion-focus");
+          const suggestedShot = await page
+            ._client()
+            .send("Page.captureScreenshot", {
+              format: "png",
+              fromSurface: true,
+            });
+          await writeFile(
+            resolve(`.local-build/evidence/cl136-hook-suggestion-${width}.png`),
+            Buffer.from(suggestedShot.value.data, "base64"),
+          );
+          await page._client().send("Input.dispatchKeyEvent", {
+            type: "keyDown",
+            key: "Enter",
+            code: "Enter",
+            windowsVirtualKeyCode: 13,
+            text: "\r",
+          });
+          await page._client().send("Input.dispatchKeyEvent", {
+            type: "keyUp",
+            key: "Enter",
+            code: "Enter",
+            windowsVirtualKeyCode: 13,
+          });
+          expect(await run("hook-suggestion-check", "discard")).toBe(true);
+          const point = (await run("hook-suggestion-focus", "playing")) as {
+            x: number;
+            y: number;
+          };
+          await page._client().send("Input.dispatchMouseEvent", {
+            type: "mousePressed",
+            ...point,
+            button: "left",
+            clickCount: 1,
+          });
+          await page._client().send("Input.dispatchMouseEvent", {
+            type: "mouseReleased",
+            ...point,
+            button: "left",
+            clickCount: 1,
+          });
+          expect(await run("hook-suggestion-check", "apply")).toBe(true);
           expect(await run("hook")).toBe(true);
           expect(clip.edit?.hook).toBeUndefined();
           await run("hook-shot");
@@ -916,7 +1008,8 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
       1,
     );
     expect(clip.calls).toEqual({ plan: 0, image: 0, render: 0 });
-    expect(edits).toBe(37);
+    // Two explicit Hook edits (use and remove) at each of three responsive widths.
+    expect(edits).toBe(43);
   } finally {
     await stop();
     await browser?.close({ silent: true });

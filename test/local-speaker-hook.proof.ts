@@ -405,6 +405,55 @@ it("prefixes original video/audio with native cadence, camera/filter edits and i
         audio,
       ]);
       const pcm = await readFile(audio);
+      const cutFrame = Math.max(
+        1,
+        Math.round(((sample.end - sample.start) * metadata.fps) / 30),
+      );
+      const boundary = join(directory, "cut.rgb");
+      await run([
+        "-i",
+        output,
+        "-vf",
+        `select=between(n\\,${cutFrame - 1}\\,${cutFrame + 1})`,
+        "-fps_mode",
+        "passthrough",
+        "-frames:v",
+        "3",
+        "-pix_fmt",
+        "rgb24",
+        "-f",
+        "rawvideo",
+        boundary,
+      ]);
+      const cutPixels = await readFile(boundary),
+        frameBytes = probe.width * probe.height * 3;
+      expect(cutPixels.length).toBe(frameBytes * 3);
+      for (let frame = 0; frame < 3; frame++) {
+        let red = 0,
+          blue = 0;
+        for (
+          let index = frame * frameBytes;
+          index < (frame + 1) * frameBytes;
+          index += 3
+        ) {
+          red += cutPixels[index]!;
+          blue += cutPixels[index + 2]!;
+        }
+        expect(
+          frame === 0 ? blue : red,
+          JSON.stringify({ rate: sample.rate, frame }),
+        ).toBeGreaterThan((frame === 0 ? red : blue) * 2);
+      }
+      for (const offset of [-0.005, 0, 0.005]) {
+        const start = Math.round((cutFrame / metadata.fps + offset) * 48000);
+        let energy = 0;
+        for (let index = start; index < start + 240; index++)
+          energy += (pcm.readInt16LE(index * 2) / 32768) ** 2;
+        expect(
+          Math.sqrt(energy / 240),
+          JSON.stringify({ rate: sample.rate, offset, cutFrame }),
+        ).toBeGreaterThan(0.05);
+      }
       const captured: { blue: boolean; pixels: Buffer }[] = [];
       for (const [time, blue, freq] of [
         ...(hookSeconds < 0.1

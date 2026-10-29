@@ -18,7 +18,11 @@ import { normalizeOwnerAudio } from "../apps/renderer/local/audio-media.ts";
 import { renderOwnerClip } from "../apps/renderer/local/clip-render.ts";
 import { prepareLocalOverlayFixture } from "./owner-controls-browser.ts";
 import { WorkspaceFiles } from "../apps/backend/local/workspace-files.ts";
-import type { OwnerAudioAsset } from "../packages/contracts/local/audio.ts";
+import {
+  resolveOwnerAudioCues,
+  ownerAudioDuration,
+  type OwnerAudioAsset,
+} from "../packages/contracts/local/audio.ts";
 import type { OwnerOverlay } from "../packages/contracts/local/clips.ts";
 
 function amplitude(bytes: Buffer, at: number, frequency: number) {
@@ -239,6 +243,88 @@ it("normalizes bounded music formats and mixes speech, continuous music, hook-on
     ).streams[0];
     expect(probe.height).toBe(320);
     expect(probe.avg_frame_rate).toBe("30/1");
+    for (const [index, soundId] of (["pop", "discord"] as const).entries()) {
+      const visualId = randomUUID();
+      const pointOverlay: OwnerOverlay = {
+        version: 1,
+        frames: 90,
+        captions: [],
+        visuals: [],
+        audio: {
+          originalVolume: 0,
+          assets: [],
+          cues: resolveOwnerAudioCues(
+            [
+              {
+                id: randomUUID(),
+                visualId,
+                source: { kind: "builtin", id: soundId },
+                placement: "clip",
+                startFrame: 0,
+                endFrame: Math.round(
+                  ownerAudioDuration({ kind: "builtin", id: soundId }, []) * 30,
+                ),
+                offsetFrame: 0,
+                volume: 35,
+                loop: false,
+              },
+            ],
+            [{ id: visualId, startFrame: 30 }],
+            90,
+          ),
+        },
+      };
+      await renderOwnerClip(
+        {
+          root: storage,
+          tools,
+          bundle,
+          chromium: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+          cache: new Map(),
+        },
+        {
+          operation: "clip",
+          workspaceId,
+          clipId,
+          jobId: randomUUID(),
+          renderRevision: 2 + index,
+          cut: { startFrame: 0, endFrame: 90 },
+          fingerprint: metadata.fingerprint,
+          overlay: pointOverlay,
+        },
+        signal,
+      );
+      const pointPcm = join(root, `${soundId}.pcm`);
+      await run([
+        "-i",
+        await files.output(workspaceId, clipId, 2 + index),
+        "-vn",
+        "-ar",
+        "48000",
+        "-ac",
+        "1",
+        "-f",
+        "s16le",
+        pointPcm,
+      ]);
+      const samples = await readFile(pointPcm),
+        rms = (time: number) => {
+          let energy = 0;
+          const start = Math.round(time * 48000);
+          for (let index = 0; index < 1200; index++)
+            energy += (samples.readInt16LE((start + index) * 2) / 32768) ** 2;
+          return Math.sqrt(energy / 1200);
+        };
+      const seconds = ownerAudioDuration({ kind: "builtin", id: soundId }, []);
+      const peak = Math.max(
+        ...Array.from({ length: Math.floor(seconds / 0.025) }, (_, tick) =>
+          rms(1 + tick * 0.025),
+        ),
+      );
+      expect(peak).toBeGreaterThan(0.01);
+      for (const time of [0.5, soundId === "pop" ? 1.4 : 1.6, 2, 2.7])
+        expect(rms(time)).toBeLessThan(0.001);
+    }
     // A nonexistent source is rejected before a final output can be produced.
     overlay.audio!.cues[0]!.source = { kind: "upload", id: randomUUID() };
     await expect(

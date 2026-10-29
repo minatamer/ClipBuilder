@@ -4,7 +4,10 @@ import { Play, Square, Upload } from "lucide-react";
 import { Button, IconButton } from "../../shared/ui/button";
 import { ControlTabs } from "./control-tabs.tsx";
 import { PictureTiming } from "./picture-timing.tsx";
-import { ownerBuiltinWav } from "../../../../../packages/composition/local/audio-synthesis.ts";
+import {
+  ownerSoundAudio,
+  ownerAudioSourceKey,
+} from "../../../../../packages/composition/local/audio-sources.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import {
   ownerSourceFrame,
@@ -14,6 +17,8 @@ import {
   OWNER_AUDIO_LIMITS,
   OWNER_SOUNDS,
   ownerAudioDuration,
+  ownerAudioSegments,
+  resolveOwnerAudioCues,
   type OwnerAudioAsset,
   type OwnerAudioCue,
   type OwnerAudioEdit,
@@ -22,6 +27,7 @@ import {
 export function AudioInspector({
   audio,
   assets,
+  visuals = [],
   frames,
   hook,
   player,
@@ -30,9 +36,12 @@ export function AudioInspector({
   pending,
   onChange,
   onUpload,
+  onYoutube,
+  initialCueId,
 }: {
   audio: OwnerAudioEdit | undefined;
   assets: readonly OwnerAudioAsset[];
+  visuals?: readonly { id: string; startFrame: number }[];
   frames: number;
   hook: OwnerHook | undefined;
   player: RefObject<PlayerRef | null>;
@@ -41,10 +50,12 @@ export function AudioInspector({
   pending: boolean;
   onChange: (audio: OwnerAudioEdit) => void;
   onUpload: (file: File) => Promise<string | null>;
+  onYoutube?: (() => void) | undefined;
+  initialCueId?: string | undefined;
 }) {
   const current = audio ?? { originalVolume: 100, cues: [] };
-  const [view, setView] = useState("library"),
-    [selection, setSelection] = useState<string | null>(null),
+  const [view, setView] = useState(initialCueId ? "tracks" : "library"),
+    [selection, setSelection] = useState<string | null>(initialCueId ?? null),
     [playing, setPlaying] = useState<string | null>(null),
     [message, setMessage] = useState("");
   const id = useId(),
@@ -60,17 +71,36 @@ export function AudioInspector({
       owned.clear();
     };
   }, []);
+  const activeCues = resolveOwnerAudioCues(current.cues, visuals, frames);
   const selected =
-    current.cues.find((cue) => cue.id === selection) ?? current.cues[0];
+    activeCues.find((cue) => cue.id === selection) ?? activeCues[0];
+  const cueStart = (cue: OwnerAudioCue) =>
+    ownerAudioSegments(
+      { ...current, cues: [cue], assets: [...assets] },
+      frames,
+      hook,
+    )[0]?.start;
+  const selectedStart = selected ? cueStart(selected) : undefined;
+  const seekCue = (cue: OwnerAudioCue) => {
+    const start = cueStart(cue);
+    player.current?.pause();
+    if (start !== undefined)
+      player.current?.seekTo(Math.round(start * OWNER_FPS));
+  };
   const label = (source: OwnerAudioCue["source"]) =>
     source.kind === "builtin"
       ? OWNER_SOUNDS.find((sound) => sound.id === source.id)!.label
       : `Uploaded audio ${assets.findIndex((asset) => asset.id === source.id) + 1}`;
-  const change = (cue: OwnerAudioCue) =>
+  const change = (cue: OwnerAudioCue) => {
+    if (cue.loop && cue.visualId) {
+      cue = { ...cue };
+      delete cue.visualId;
+    }
     onChange({
       ...current,
       cues: current.cues.map((item) => (item.id === cue.id ? cue : item)),
     });
+  };
   const stop = () => {
     audition.current?.pause();
     setPlaying(null);
@@ -115,6 +145,7 @@ export function AudioInspector({
       loop: !!sound?.music || source.kind === "upload",
     };
     stop();
+    seekCue(cue);
     onChange({ ...current, cues: [...current.cues, cue] });
     setSelection(cue.id);
     setView("tracks");
@@ -127,12 +158,14 @@ export function AudioInspector({
     const element = audition.current;
     if (!element) return;
     player.current?.pause();
-    let url = urls.current.get(sound.id);
+    const key = ownerAudioSourceKey({ kind: "builtin", id: sound.id });
+    let url = urls.current.get(key);
     if (!url) {
+      const sample = ownerSoundAudio(sound.id);
       url = URL.createObjectURL(
-        new Blob([ownerBuiltinWav(sound.id)], { type: "audio/wav" }),
+        new Blob([sample.bytes], { type: sample.mimeType }),
       );
-      urls.current.set(sound.id, url);
+      urls.current.set(key, url);
     }
     element.src = url;
     element.volume = 0.35;
@@ -174,7 +207,7 @@ export function AudioInspector({
         hidden={view !== "library"}
       >
         <div className="sound-library">
-          {OWNER_SOUNDS.map((sound) => (
+          {OWNER_SOUNDS.filter((sound) => !sound.retired).map((sound) => (
             <div className="sound-card" key={sound.id}>
               <span>
                 <strong>{sound.label}</strong>
@@ -256,9 +289,25 @@ export function AudioInspector({
             });
           }}
         />
+        {onYoutube && (
+          <Button
+            variant="secondary"
+            disabled={
+              pending ||
+              assets.length >= OWNER_AUDIO_LIMITS.assets ||
+              current.cues.length >= OWNER_AUDIO_LIMITS.cues
+            }
+            onClick={() => {
+              stop();
+              onYoutube();
+            }}
+          >
+            From YouTube
+          </Button>
+        )}
         <p className="source-hint">MP3, WAV or M4A · 12 MB · 2 minutes</p>
         {!hook && (
-          <p className="source-hint">Add a hook to use Hook tension.</p>
+          <p className="source-hint">Add a hook to use suspense audio.</p>
         )}
       </div>
       <div
@@ -284,9 +333,9 @@ export function AudioInspector({
             }
           />
         </label>
-        {!current.cues.length && <p className="focus-empty">No added audio.</p>}
+        {!activeCues.length && <p className="focus-empty">No added audio.</p>}
         <div className="audio-cue-list" role="group" aria-label="Added audio">
-          {current.cues.map((cue, index) => (
+          {activeCues.map((cue, index) => (
             <Button
               variant="secondary"
               className="audio-cue"
@@ -295,12 +344,30 @@ export function AudioInspector({
               onClick={() => setSelection(cue.id)}
             >
               {index + 1}. {label(cue.source)}
+              {cue.visualId ? " · Visual" : ""}
             </Button>
           ))}
         </div>
         {selected && (
           <fieldset disabled={pending} className="audio-settings">
             <legend className="local-sr-only">Audio settings</legend>
+            <Button
+              variant="secondary"
+              icon={Play}
+              disabled={!available || selectedStart === undefined}
+              title={
+                selectedStart === undefined
+                  ? "Choose an audible placement and audio offset."
+                  : undefined
+              }
+              onClick={() => {
+                stop();
+                seekCue(selected);
+                player.current?.play();
+              }}
+            >
+              Preview in clip
+            </Button>
             <label>
               Placement
               <select
@@ -312,13 +379,16 @@ export function AudioInspector({
                     placement === "clip" ||
                     placement === "hook" ||
                     placement === "video"
-                  )
-                    change({
+                  ) {
+                    const next: OwnerAudioCue = {
                       ...selected,
                       placement,
                       startFrame: 0,
                       endFrame: frames,
-                    });
+                    };
+                    delete next.visualId;
+                    change(next);
+                  }
                 }}
               >
                 <option value="clip">Timed clip</option>
@@ -331,7 +401,25 @@ export function AudioInspector({
                 This sound is silent until a hook is added.
               </p>
             )}
-            {selected.placement === "clip" && (
+            {selected.visualId && (
+              <div className="caption-empty-actions">
+                <span>
+                  At visual start ·{" "}
+                  {(selected.startFrame / OWNER_FPS).toFixed(2)}s
+                </span>
+                <Button
+                  variant="quiet"
+                  onClick={() => {
+                    const next = { ...selected };
+                    delete next.visualId;
+                    change(next);
+                  }}
+                >
+                  Edit timing
+                </Button>
+              </div>
+            )}
+            {selected.placement === "clip" && !selected.visualId && (
               <PictureTiming
                 label="Sound"
                 cue={selected}

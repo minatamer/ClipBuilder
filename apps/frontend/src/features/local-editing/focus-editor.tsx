@@ -57,7 +57,7 @@ export function FocusEditor({
   playing: boolean;
   onChange: (focus: OwnerFocus | undefined) => void;
   onSeek: (frame: number) => void;
-  onCaptureFrame: () => number | null;
+  onCaptureFrame: () => Promise<number | null>;
   captureReady: boolean;
   disabled: boolean;
 }) {
@@ -259,8 +259,8 @@ export function FocusEditor({
     );
     setMessage("");
   }
-  function capture(key: "startFrame" | "endFrame") {
-    const at = onCaptureFrame();
+  async function capture(key: "startFrame" | "endFrame") {
+    const at = await onCaptureFrame();
     const next =
       at === null ? null : captureFocusBoundary(focus, index, key, at);
     if (!next) {
@@ -600,12 +600,13 @@ export function FocusEditor({
                   ? "Make this position longer before adding another."
                   : "Insert below the selected position"
             }
-            onClick={() => {
+            onClick={async () => {
+              const frame = await onCaptureFrame();
               setAdding({
                 signature,
                 index,
                 personId: shot.personId,
-                frame: onCaptureFrame(),
+                frame,
               });
               setMessage("");
             }}

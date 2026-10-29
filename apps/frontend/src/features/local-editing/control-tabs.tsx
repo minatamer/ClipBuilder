@@ -7,14 +7,17 @@ export function ControlTabs({
   items,
   value,
   onChange,
+  disabled = false,
 }: {
   id: string;
   label: string;
   items: readonly { value: string; label: string }[];
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }) {
   function key(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (disabled) return;
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
     const next =
@@ -36,6 +39,7 @@ export function ControlTabs({
           type="button"
           key={item.value}
           role="tab"
+          disabled={disabled}
           id={`${id}-${item.value}`}
           aria-controls={`${id}-${item.value}-panel`}
           aria-selected={value === item.value}

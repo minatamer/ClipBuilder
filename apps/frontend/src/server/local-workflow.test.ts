@@ -6,9 +6,14 @@ vi.mock("./control-api", async (original) => ({
 vi.mock("../../../../scripts/local-discovery.mjs", () => ({
   discoverOwnerHost: vi.fn(),
 }));
+vi.mock("./local-ai-request", async (original) => ({
+  ...(await original<typeof import("./local-ai-request")>()),
+  fetchLocalAi: vi.fn(),
+}));
 import { discoverOwnerHost } from "../../../../scripts/local-discovery.mjs";
 import { proxyLocalWorkflow } from "./local-workflow";
 import { fetchControlApi } from "./control-api";
+import { fetchLocalAi } from "./local-ai-request";
 const fetcher = vi.fn<typeof fetch>();
 beforeEach(() => {
   vi.stubEnv("APP_ENV", "local");
@@ -25,6 +30,7 @@ afterEach(() => {
   fetcher.mockReset();
   vi.mocked(discoverOwnerHost).mockReset();
   vi.mocked(fetchControlApi).mockReset();
+  vi.mocked(fetchLocalAi).mockReset();
 });
 const input = (method = "GET", headers: Record<string, string> = {}) =>
   new Request("http://localhost:3000/api/local/capabilities", {
@@ -100,6 +106,21 @@ it("rejects hosted acquisition without capability discovery or upstream I/O", as
   ).toBe(404);
   expect(discoverOwnerHost).toHaveBeenCalledTimes(0);
   expect(fetcher).toHaveBeenCalledTimes(0);
+  expect(
+    (
+      await proxyLocalWorkflow(
+        input("POST", { Origin: "http://localhost:3000" }),
+        [
+          "workspace",
+          "00000000-0000-4000-8000-000000000001",
+          "clips",
+          "00000000-0000-4000-8000-000000000002",
+          "youtube-audio",
+        ],
+      )
+    ).status,
+  ).toBe(404);
+  expect(fetchControlApi).not.toHaveBeenCalled();
 });
 it("forwards hosted editor requests through authenticated control transport with session cookies and CSRF", async () => {
   vi.stubEnv("HOSTED_DEMO_IP_VERIFIED", "true");
@@ -171,4 +192,21 @@ it("propagates browser cancellation into the upstream stream", async () => {
   const result = await proxyLocalWorkflow(input(), ["capabilities"]);
   await result.body!.cancel();
   expect(fetcher.mock.calls[0]![1]?.signal?.aborted).toBe(true);
+});
+it("uses the bounded long-running transport only for authenticated local AI writes", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  vi.mocked(fetchLocalAi).mockResolvedValue(Response.json({ synthetic: true }));
+  const result = await proxyLocalWorkflow(
+    input("POST", { Origin: "http://localhost:3000" }),
+    ["workspace", id, "analysis"],
+  );
+  expect(await result.json()).toEqual({ synthetic: true });
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(fetchLocalAi).toHaveBeenCalledTimes(1);
+  const [segments, options] = vi.mocked(fetchLocalAi).mock.calls[0]!;
+  expect(segments).toEqual(["workspace", id, "analysis"]);
+  expect(new Headers(options.headers).get("authorization")).toBe(
+    "Bearer synthetic-private-token",
+  );
+  expect(options.signal?.aborted).toBe(true);
 });

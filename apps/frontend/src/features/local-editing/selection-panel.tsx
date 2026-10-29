@@ -3,6 +3,7 @@ import { Play, Trash2, Clock3 } from "lucide-react";
 import { ProcessingState } from "../../shared/ui/processing-state";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { localCodexError, LocalCodexError } from "./codex-errors.ts";
 import {
   OWNER_LIMITS,
   type OwnerWorkspace,
@@ -297,7 +298,11 @@ export function OwnerSelectionPanel({
           signal: controller.signal,
         },
       );
-      if (!response.ok) throw new Error("unavailable");
+      if (!response.ok)
+        throw "aiProvider" in capabilities &&
+          capabilities.aiProvider === "codex"
+          ? await localCodexError(response)
+          : new Error("unavailable");
       const result = ownerAnalysisSchema.parse(await response.json());
       if (!controller.signal.aborted && mounted.current) {
         acceptAnalysis(result);
@@ -310,12 +315,16 @@ export function OwnerSelectionPanel({
             : "",
         );
       }
-    } catch {
+    } catch (failure) {
       if (mounted.current)
         setMessage(
           controller.signal.aborted
             ? "Canceled."
-            : "Couldn’t find moments. Try again.",
+            : "aiProvider" in capabilities &&
+                capabilities.aiProvider === "codex" &&
+                failure instanceof LocalCodexError
+              ? failure.message
+              : "Couldn’t find moments. Try again.",
         );
     } finally {
       pending.current = null;

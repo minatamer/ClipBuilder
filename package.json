@@ -25,6 +25,7 @@
     "typecheck": "pnpm --filter @clipbuilder/contracts build && pnpm --filter @clipbuilder/composition build && tsc --noEmit -p tsconfig.tests.json && pnpm --filter @clipbuilder/backend typecheck && pnpm --filter @clipbuilder/renderer typecheck && pnpm --filter @clipbuilder/frontend typecheck && pnpm local:typecheck",
     "local:media:build": "node scripts/local-media-build.mjs",
     "local:prepare:youtube": "node scripts/prepare-youtube.mjs",
+    "local:prepare:speech": "node scripts/prepare-local-speech.mjs",
     "local:test": "vitest run --config scripts/local-test.config.ts",
     "local:proof": "vitest run --config scripts/local-proof.config.ts",
     "local:artifacts": "node scripts/local-artifacts.mjs",

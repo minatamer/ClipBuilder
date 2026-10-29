@@ -35,6 +35,10 @@ describe("closed frontend/backend image inputs", () => {
         await inventory(directory);
         expect(paths).toContain(`apps/${application}/Dockerfile`);
         expect(paths).toContain(
+          "packages/composition/local/sound-recordings.ts",
+        );
+        expect(paths).toContain("packages/composition/local/audio-sources.ts");
+        expect(paths).toContain(
           `apps/${application}/src/${application === "frontend" ? "server/control-api.ts" : "server.ts"}`,
         );
         expect(
@@ -58,7 +62,7 @@ describe("closed frontend/backend image inputs", () => {
           expect(
             paths.filter((path) => path.startsWith("apps/frontend/public/"))
               .length,
-          ).toBe(12);
+          ).toBe(15);
           expect(
             paths.some((path) =>
               /capture-index|capture-product-film|studio/.test(path),
@@ -67,9 +71,10 @@ describe("closed frontend/backend image inputs", () => {
         } else {
           expect(paths).toContain("apps/renderer/local/entry.ts");
           expect(paths).toContain("scripts/editing-worker-build.mjs");
+          expect(paths).toContain("scripts/local-speech-tools.ts");
           expect(
             paths.some((path) =>
-              /(?:yt-dlp|python)\.exe|cookiejar|(?:^|\/)\.env(?:\.|$)/u.test(
+              /(?:yt-dlp|python|codex|whisper-cli)\.exe|ggml-.*\.bin|cookiejar|(?:^|\/)\.env(?:\.|$)/u.test(
                 path,
               ),
             ),

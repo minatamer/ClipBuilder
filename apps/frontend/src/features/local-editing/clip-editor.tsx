@@ -7,11 +7,15 @@ import { FocusPreviewControls } from "./focus-preview-controls.tsx";
 import { PictureTiming } from "./picture-timing.tsx";
 import { CaptionTextEditor } from "./caption-text-editor.tsx";
 import { CaptionSpeakers } from "./caption-speakers.tsx";
+import { localCodexError, LocalCodexError } from "./codex-errors.ts";
 import { HookControls } from "./hook-controls.tsx";
 import { AudioInspector } from "./audio-inspector.tsx";
+import { YoutubeAudioIntake } from "./youtube-audio-intake.tsx";
+import { ownerYoutubeAudioImportSchema } from "../../../../../packages/contracts/local/youtube-audio.ts";
 import { OwnerAudioPreview } from "./audio-preview.tsx";
 import {
   OWNER_AUDIO_LIMITS,
+  resolveOwnerAudioCues,
   type OwnerAudioCue,
 } from "../../../../../packages/contracts/local/audio.ts";
 import { EditorHookClock } from "./editor-clock.ts";
@@ -54,6 +58,7 @@ import {
   Sequence,
   useCurrentFrame,
   useCurrentScale,
+  useVideoConfig,
 } from "remotion";
 import { OwnerAutomaticOverlay } from "../../../../../packages/composition/local/automatic-overlay.tsx";
 import { OwnerVideoLookLayer } from "../../../../../packages/composition/local/video-look.tsx";
@@ -296,6 +301,7 @@ function Review({
   setting: EditorSetting;
 } & LayerControls) {
   const presentationFrame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const frame = ownerSourceFrame(overlay, presentationFrame);
   const caption = overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean;
   const crop = overlay.focus
@@ -308,6 +314,7 @@ function Review({
           ...(overlay.hook
             ? [
                 {
+                  kind: "hook",
                   from: 0,
                   duration: ownerHookFrames(overlay),
                   start: overlay.hook.startFrame,
@@ -316,20 +323,29 @@ function Review({
               ]
             : []),
           {
+            kind: "body",
             from: ownerHookFrames(overlay),
             duration: overlay.frames,
             start: 0,
             end: overlay.frames,
           },
-        ].map((part, index) => (
+        ].map((part) => (
           <Sequence
-            key={index}
+            key={part.kind}
             from={part.from}
             durationInFrames={part.duration}
-            layout="none"
+            premountFor={fps}
           >
             <Html5Video
+              data-editor-video={part.kind}
+              data-editor-active={
+                part.kind ===
+                (overlay.hook && presentationFrame < ownerHookFrames(overlay)
+                  ? "hook"
+                  : "body")
+              }
               src={sourceUrl}
+              preload="auto"
               volume={(overlay.audio?.originalVolume ?? 100) / 100}
               trimBefore={part.start}
               trimAfter={part.end}
@@ -453,7 +469,9 @@ export function ClipEditor({
   footerTarget,
   actionsVisible = true,
   captionGeneration = false,
+  captionProvider = "gemini",
   fakeCaptionGeneration = false,
+  youtubeAudio = false,
   onBusy,
 }: {
   clip: OwnerClip;
@@ -464,7 +482,9 @@ export function ClipEditor({
   footerTarget?: HTMLElement | null | undefined;
   actionsVisible?: boolean;
   captionGeneration?: boolean;
+  captionProvider?: "gemini" | "local-speech" | undefined;
   fakeCaptionGeneration?: boolean;
+  youtubeAudio?: boolean;
   onBusy?: (busy: boolean) => void;
 }) {
   const [form, setForm] = useState(() => {
@@ -481,6 +501,10 @@ export function ClipEditor({
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [audioUploading, setAudioUploading] = useState(false);
+  const [audioImport, setAudioImport] = useState<string | null>(null);
+  const [importedAudioCue, setImportedAudioCue] = useState<
+    string | undefined
+  >();
   const [forcedStale, setForcedStale] = useState(false);
   const [captionConfirm, setCaptionConfirm] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -586,9 +610,24 @@ export function ClipEditor({
     };
   }, []);
   useEffect(() => {
-    onDirty(clip.id, dirty || captionConfirm || generating || audioUploading);
+    onDirty(
+      clip.id,
+      dirty ||
+        captionConfirm ||
+        generating ||
+        audioUploading ||
+        audioImport !== null,
+    );
     return () => onDirty(clip.id, false);
-  }, [clip.id, dirty, captionConfirm, generating, audioUploading, onDirty]);
+  }, [
+    clip.id,
+    dirty,
+    captionConfirm,
+    generating,
+    audioUploading,
+    audioImport,
+    onDirty,
+  ]);
   useEffect(() => {
     if (captionConfirm) {
       const target = footerTarget ?? document.querySelector(".clip-editor");
@@ -617,6 +656,18 @@ export function ClipEditor({
   }, [dirty]);
 
   function update(next: OwnerEditDocument) {
+    if (next.audio)
+      next = {
+        ...next,
+        audio: {
+          ...next.audio,
+          cues: resolveOwnerAudioCues(
+            next.audio.cues,
+            next.visuals,
+            base.overlay.frames,
+          ),
+        },
+      };
     setForm({ original, draft: next });
   }
   function setCaption(next: OwnerCaptionStyle) {
@@ -736,24 +787,26 @@ export function ClipEditor({
     );
   }
   async function perform(
-    kind: "edit" | "picture" | "reload" | "audio",
+    kind: "edit" | "picture" | "reload" | "audio" | "youtube-audio",
     file?: File,
   ) {
     if (request.current) return;
     const controller = new AbortController();
     request.current = controller;
     setPending(true);
-    setAudioUploading(kind === "audio");
+    setAudioUploading(kind === "audio" || kind === "youtube-audio");
     try {
       const body =
-        kind === "edit"
-          ? ownerEditRequestSchema.parse({
-              operationId: crypto.randomUUID(),
-              expectedRevision: original.revision,
-              baseHash: original.baseHash,
-              operations: ownerEditOperations(original, draft, clip),
-            })
-          : null;
+        kind === "youtube-audio"
+          ? ownerYoutubeAudioImportSchema.parse({ url: audioImport ?? "" })
+          : kind === "edit"
+            ? ownerEditRequestSchema.parse({
+                operationId: crypto.randomUUID(),
+                expectedRevision: original.revision,
+                baseHash: original.baseHash,
+                operations: ownerEditOperations(original, draft, clip),
+              })
+            : null;
       const response = await fetch(
         kind === "reload"
           ? `/api/local/workspace/${workspaceId}/clips`
@@ -761,7 +814,7 @@ export function ClipEditor({
         {
           method: kind === "reload" ? "GET" : "POST",
           signal: controller.signal,
-          ...(kind === "edit"
+          ...(kind === "edit" || kind === "youtube-audio"
             ? {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
@@ -786,7 +839,8 @@ export function ClipEditor({
       );
       if (!alive.current || controller.signal.aborted) return;
       if (response.status === 409) {
-        if (kind === "audio") throw new Error("audio_busy");
+        if (kind === "audio" || kind === "youtube-audio")
+          throw new Error("audio_busy");
         setForcedStale(true);
         throw new Error("stale");
       }
@@ -796,7 +850,7 @@ export function ClipEditor({
       if (!acknowledged?.base) throw new Error("unacknowledged");
       if (!alive.current) return;
       onAccepted(value);
-      if (kind === "audio") {
+      if (kind === "audio" || kind === "youtube-audio") {
         const asset = acknowledged.audioAssets?.find(
           (item) => item.id === value.audioAssetId,
         );
@@ -814,6 +868,10 @@ export function ClipEditor({
         const audio = draft.audio ?? { originalVolume: 100, cues: [] };
         update({ ...draft, audio: { ...audio, cues: [...audio.cues, cue] } });
         setMessage("");
+        if (kind === "youtube-audio") {
+          setImportedAudioCue(cue.id);
+          setAudioImport(null);
+        }
         return asset.id;
       } else if (kind !== "picture") {
         const accepted = initialOwnerEdit(acknowledged);
@@ -839,9 +897,11 @@ export function ClipEditor({
             ? "This clip changed elsewhere. Reload it to continue."
             : kind === "picture"
               ? "Couldn’t add this image. Use a static JPEG, PNG or WebP under 4 MB."
-              : kind === "audio"
-                ? "Couldn’t add this audio. Use MP3, WAV or M4A under 12 MB and 2 minutes."
-                : "Couldn’t save these changes. Try again.",
+              : kind === "youtube-audio"
+                ? "Couldn’t import this sound. Use a public YouTube audio clip under 2 minutes and 12 MB."
+                : kind === "audio"
+                  ? "Couldn’t add this audio. Use MP3, WAV or M4A under 12 MB and 2 minutes."
+                  : "Couldn’t save these changes. Try again.",
         );
     } finally {
       request.current = null;
@@ -889,11 +949,16 @@ export function ClipEditor({
           body: JSON.stringify({
             operationId: crypto.randomUUID(),
             expectedRevision: clip.revision,
-            ...(!fake ? { paidConsent: true } : {}),
+            ...(!fake && captionProvider !== "local-speech"
+              ? { paidConsent: true }
+              : {}),
           }),
         },
       );
-      if (!response.ok) throw new Error("caption_generation_failed");
+      if (!response.ok)
+        throw captionProvider === "local-speech"
+          ? await localCodexError(response)
+          : new Error("caption_generation_failed");
       const list = ownerClipListSchema.parse(await response.json()),
         accepted = list.clips.find((item) => item.id === clip.id);
       if (!accepted?.base || !alive.current) return;
@@ -904,12 +969,16 @@ export function ClipEditor({
       setCaptionTab("text");
       if (!accepted.base.overlay.captions.length)
         setMessage("No speech found in this clip.");
-    } catch {
+    } catch (failure) {
       if (alive.current && !controller.signal.aborted)
         setMessage(
           fake
             ? "Couldn’t add fake captions. Try again."
-            : "Couldn’t generate captions. Check Gemini setup and try again explicitly.",
+            : captionProvider === "local-speech"
+              ? failure instanceof LocalCodexError
+                ? failure.message
+                : "Couldn’t generate captions. Check local speech setup and try again."
+              : "Couldn’t generate captions. Check Gemini setup and try again explicitly.",
         );
     } finally {
       request.current = null;
@@ -1008,7 +1077,7 @@ export function ClipEditor({
                 id={`${tabsId}-${value}`}
                 type="button"
                 role="tab"
-                disabled={pending}
+                disabled={pending || audioImport !== null}
                 aria-selected={setting === value}
                 aria-controls={`${tabsId}-${value}-panel`}
                 tabIndex={setting === value ? 0 : -1}
@@ -1016,6 +1085,7 @@ export function ClipEditor({
                   selectSetting(value);
                 }}
                 onKeyDown={(event) => {
+                  if (pending || audioImport !== null) return;
                   if (
                     !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
                       event.key,
@@ -1063,12 +1133,17 @@ export function ClipEditor({
                 <legend className="local-sr-only">Hook</legend>
                 <HookControls
                   hook={draft.hook}
+                  suggestion={base.hookSuggestion}
+                  simulated={clip.mode === "synthetic-ai"}
                   frames={base.overlay.frames}
                   player={player}
                   available={!playbackFailed && previewLoaded && !pending}
                   attempt={previewAttempt}
                   valid={!error}
-                  onChange={(hook) => update({ ...draft, hook })}
+                  onChange={(hook) => {
+                    player.current?.pause();
+                    update({ ...draft, hook });
+                  }}
                 />
               </fieldset>
             )}
@@ -1145,8 +1220,9 @@ export function ClipEditor({
                   <ProcessingState label="Generating captions" />
                 ) : captionConfirm ? (
                   <p>
-                    Send this clip’s audio to Gemini to generate captions? This
-                    uses Gemini credits, including in fake mode.
+                    {captionProvider === "local-speech"
+                      ? "Generate captions on this computer? This clip’s audio stays local."
+                      : "Send this clip’s audio to Gemini to generate captions? This uses Gemini credits, including in fake mode."}
                   </p>
                 ) : (
                   <>
@@ -1179,7 +1255,11 @@ export function ClipEditor({
                       )}
                     </div>
                     {!captionGeneration && (
-                      <p>Gemini setup is required to generate captions.</p>
+                      <p>
+                        {captionProvider === "local-speech"
+                          ? "Local captions are unavailable. Check backend setup."
+                          : "Gemini setup is required to generate captions."}
+                      </p>
                     )}
                     {(clip.captionAttempts ?? 0) >=
                       OWNER_CAPTION_GENERATION_ATTEMPTS && (
@@ -1437,6 +1517,7 @@ export function ClipEditor({
               ]}
               value={mediaTab}
               onChange={setMediaTab}
+              disabled={pending || audioImport !== null}
             />
             <div
               role="tabpanel"
@@ -1780,32 +1861,57 @@ export function ClipEditor({
               aria-labelledby={`${tabsId}-media-audio`}
               hidden={mediaTab !== "audio"}
             >
-              {setting === "pictures" && mediaTab === "audio" && (
-                <AudioInspector
-                  audio={draft.audio}
-                  assets={clip.audioAssets ?? []}
-                  frames={base.overlay.frames}
-                  hook={draft.hook}
-                  player={player}
-                  available={!playbackFailed && previewLoaded}
-                  attempt={previewAttempt}
-                  pending={pending}
-                  onChange={(audio) => update({ ...draft, audio })}
-                  onUpload={async (file) => {
-                    if (
-                      file.size < 1 ||
-                      file.size > OWNER_AUDIO_LIMITS.inputBytes ||
-                      (clip.audioAssets?.length ?? 0) >=
-                        OWNER_AUDIO_LIMITS.assets ||
-                      (draft.audio?.cues.length ?? 0) >= OWNER_AUDIO_LIMITS.cues
-                    ) {
-                      setMessage("Choose audio under 12 MB and 2 minutes.");
-                      return null;
+              {setting === "pictures" &&
+                mediaTab === "audio" &&
+                audioImport !== null && (
+                  <YoutubeAudioIntake
+                    value={audioImport}
+                    pending={pending}
+                    onChange={setAudioImport}
+                  />
+                )}
+              {setting === "pictures" &&
+                mediaTab === "audio" &&
+                audioImport === null && (
+                  <AudioInspector
+                    audio={draft.audio}
+                    visuals={overlay.visuals}
+                    assets={clip.audioAssets ?? []}
+                    frames={base.overlay.frames}
+                    hook={draft.hook}
+                    player={player}
+                    available={!playbackFailed && previewLoaded}
+                    attempt={previewAttempt}
+                    pending={pending}
+                    initialCueId={importedAudioCue}
+                    onYoutube={
+                      youtubeAudio
+                        ? () => {
+                            setMessage("");
+                            setCaptionConfirm(false);
+                            setImportedAudioCue(undefined);
+                            player.current?.pause();
+                            setAudioImport("");
+                          }
+                        : undefined
                     }
-                    return (await perform("audio", file)) ?? null;
-                  }}
-                />
-              )}
+                    onChange={(audio) => update({ ...draft, audio })}
+                    onUpload={async (file) => {
+                      if (
+                        file.size < 1 ||
+                        file.size > OWNER_AUDIO_LIMITS.inputBytes ||
+                        (clip.audioAssets?.length ?? 0) >=
+                          OWNER_AUDIO_LIMITS.assets ||
+                        (draft.audio?.cues.length ?? 0) >=
+                          OWNER_AUDIO_LIMITS.cues
+                      ) {
+                        setMessage("Choose audio under 12 MB and 2 minutes.");
+                        return null;
+                      }
+                      return (await perform("audio", file)) ?? null;
+                    }}
+                  />
+                )}
             </div>
           </div>
           {actionsVisible && audioUploading && (
@@ -1814,39 +1920,60 @@ export function ClipEditor({
                 variant="secondary"
                 onClick={() => request.current?.abort()}
               >
-                Cancel upload
+                {audioImport !== null ? "Cancel import" : "Cancel upload"}
               </Button>
             </WorkflowActions>
           )}
-          {actionsVisible && !audioUploading && captionConfirm && (
+          {actionsVisible && audioImport !== null && !audioUploading && (
             <WorkflowActions
               target={footerTarget}
-              label="Caption generation actions"
+              label="YouTube audio actions"
             >
               <Button
                 variant="primary"
-                disabled={
-                  pending ||
-                  generating ||
-                  (clip.captionAttempts ?? 0) >=
-                    OWNER_CAPTION_GENERATION_ATTEMPTS
-                }
-                onClick={() => void generateCaptions()}
+                disabled={pending || !audioImport.trim()}
+                onClick={() => void perform("youtube-audio")}
               >
-                {generating ? "Generating…" : "Generate captions"}
+                Download sound
               </Button>
-              <Button
-                variant="quiet"
-                disabled={pending || generating}
-                onClick={() => setCaptionConfirm(false)}
-              >
+              <Button variant="quiet" onClick={() => setAudioImport(null)}>
                 Cancel
               </Button>
             </WorkflowActions>
           )}
           {actionsVisible &&
+            audioImport === null &&
+            !audioUploading &&
+            captionConfirm && (
+              <WorkflowActions
+                target={footerTarget}
+                label="Caption generation actions"
+              >
+                <Button
+                  variant="primary"
+                  disabled={
+                    pending ||
+                    generating ||
+                    (clip.captionAttempts ?? 0) >=
+                      OWNER_CAPTION_GENERATION_ATTEMPTS
+                  }
+                  onClick={() => void generateCaptions()}
+                >
+                  {generating ? "Generating…" : "Generate captions"}
+                </Button>
+                <Button
+                  variant="quiet"
+                  disabled={pending || generating}
+                  onClick={() => setCaptionConfirm(false)}
+                >
+                  Cancel
+                </Button>
+              </WorkflowActions>
+            )}
+          {actionsVisible &&
             !captionConfirm &&
             !audioUploading &&
+            audioImport === null &&
             (dirty || stale || previewUnavailable) && (
               <WorkflowActions target={footerTarget} label="Edit actions">
                 <Button

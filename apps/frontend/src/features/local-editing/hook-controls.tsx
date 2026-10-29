@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import type { PlayerRef } from "@remotion/player";
+import { Sparkles } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 import { PictureTiming } from "./picture-timing.tsx";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
@@ -7,6 +8,8 @@ import type { OwnerHook } from "../../../../../packages/contracts/local/hook.ts"
 
 export function HookControls({
   hook,
+  suggestion,
+  simulated = false,
   frames,
   player,
   available,
@@ -15,6 +18,8 @@ export function HookControls({
   onChange,
 }: {
   hook: OwnerHook | undefined;
+  suggestion?: OwnerHook | undefined;
+  simulated?: boolean;
   frames: number;
   player: RefObject<PlayerRef | null>;
   available: boolean;
@@ -25,6 +30,37 @@ export function HookControls({
   return (
     <div className="hook-controls">
       <p>Repeat a moment, then play the full clip.</p>
+      {suggestion && (
+        <div
+          className="hook-suggestion"
+          role="group"
+          aria-label={
+            simulated ? "Simulated AI hook suggestion" : "AI hook suggestion"
+          }
+        >
+          <div className="hook-suggestion-copy">
+            <span className="hook-suggestion-label">
+              <Sparkles size={16} aria-hidden="true" />
+              AI suggested hook{simulated && <small>Simulated</small>}
+            </span>
+            <span>
+              {(suggestion.startFrame / OWNER_FPS).toFixed(2)}s –{" "}
+              {(suggestion.endFrame / OWNER_FPS).toFixed(2)}s
+            </span>
+          </div>
+          <Button
+            variant="secondary"
+            disabled={
+              !available ||
+              (hook?.startFrame === suggestion.startFrame &&
+                hook.endFrame === suggestion.endFrame)
+            }
+            onClick={() => onChange({ ...suggestion })}
+          >
+            Use suggestion
+          </Button>
+        </div>
+      )}
       {hook ? (
         <>
           <PictureTiming

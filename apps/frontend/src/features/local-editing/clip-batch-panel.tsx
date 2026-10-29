@@ -450,7 +450,16 @@ export function OwnerClipBatchPanel({
                 footerTarget={footerTarget}
                 actionsVisible={!showProcessing}
                 captionGeneration={capabilities.captionGeneration ?? false}
+                captionProvider={
+                  "captionProvider" in capabilities
+                    ? capabilities.captionProvider
+                    : undefined
+                }
                 fakeCaptionGeneration={capabilities.localMedia}
+                youtubeAudio={
+                  "youtubeAudio" in capabilities &&
+                  capabilities.youtubeAudio === true
+                }
                 onBusy={onActive}
               />
             )}

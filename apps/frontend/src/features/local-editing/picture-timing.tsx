@@ -25,11 +25,20 @@ export function PictureTiming<
   onChange: (cue: T) => void;
   label?: string;
 }) {
-  const preview = useEditorPreview({ player, available, attempt, frames });
+  const preview = useEditorPreview({
+    player,
+    available,
+    attempt,
+    frames,
+    captureTarget: cue,
+  });
   const [error, setError] = useState("");
-  function capture(key: "startFrame" | "endFrame") {
-    const at = preview.captureFrame();
-    if (at === null) return;
+  async function capture(key: "startFrame" | "endFrame") {
+    const at = await preview.captureFrame();
+    if (at === null) {
+      setError("Wait for the preview to finish seeking.");
+      return;
+    }
     const next = { ...cue, [key]: key === "startFrame" ? at : at + 1 };
     if (
       !Number.isFinite(next.startFrame) ||
