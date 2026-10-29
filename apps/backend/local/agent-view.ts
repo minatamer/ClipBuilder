@@ -12,7 +12,7 @@ const hash = (value: unknown) =>
 /** Explicit allowlist: this surface cannot serialize timed dialogue or paths. */
 export function ownerAgentClip(clip: OwnerClip) {
   const overlay = clip.base
-    ? compileOwnerOverlay(clip.base, clip.edit, clip.assets)
+    ? compileOwnerOverlay(clip.base, clip.edit, clip.assets, clip.audioAssets)
     : null;
   return ownerAgentClipSchema.parse({
     id: clip.id,
@@ -35,7 +35,12 @@ export function ownerAgentClip(clip: OwnerClip) {
 }
 export function ownerAgentValidation(clip: OwnerClip, edit: OwnerEditDocument) {
   if (!clip.base || !clip.baseHash) throw new Error("clip_unavailable");
-  const overlay = compileOwnerOverlay(clip.base, edit, clip.assets);
+  const overlay = compileOwnerOverlay(
+    clip.base,
+    edit,
+    clip.assets,
+    clip.audioAssets,
+  );
   return ownerAgentValidationSchema.parse({
     clipId: clip.id,
     sourceRevision: clip.sourceRevision,

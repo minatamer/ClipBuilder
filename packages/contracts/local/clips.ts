@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  OWNER_AUDIO_LIMITS,
+  ownerAudioAssetSchema,
+  ownerAudioTrackSchema,
+} from "./audio.ts";
 import { compositionManifestV3Schema } from "@clipbuilder/contracts";
 import {
   ownerAssetSchema,
@@ -52,6 +57,7 @@ export const ownerOverlaySchema = z
       .min(1)
       .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
     captions: compositionManifestV3Schema.shape.captions,
+    audio: ownerAudioTrackSchema.optional(),
     captionStyle: ownerCaptionStyleSchema.optional(),
     captionSpeakers: ownerCaptionSpeakersSchema.optional(),
     hook: ownerHookSchema.optional(),
@@ -65,6 +71,9 @@ export const ownerOverlaySchema = z
     if (
       (overlay.hook && overlay.hook.endFrame > overlay.frames) ||
       (overlay.focus && overlay.focus.frames !== overlay.frames) ||
+      overlay.audio?.cues.some(
+        (cue) => cue.placement === "clip" && cue.endFrame > overlay.frames,
+      ) ||
       overlay.captions.some(
         (caption) =>
           caption.startMs < 0 ||
@@ -189,6 +198,10 @@ export const ownerClipSchema = z
     preparation: ownerClipPreparationSchema.optional(),
     edit: ownerEditDocumentSchema.nullable().default(null),
     assets: z.array(ownerAssetSchema).max(OWNER_PICTURE_LIMITS.assetsPerClip),
+    audioAssets: z
+      .array(ownerAudioAssetSchema)
+      .max(OWNER_AUDIO_LIMITS.assets)
+      .optional(),
     outputs: z.array(ownerClipOutputSchema).max(OWNER_BATCH_POLICY.outputs),
     calls: z
       .object({
@@ -214,6 +227,7 @@ export const ownerClipListSchema = z
     active: z.boolean(),
     workers: z.literal(1),
     pictureAssetId: ownerIdSchema.optional(),
+    audioAssetId: ownerIdSchema.optional(),
   })
   .strict();
 export type OwnerClipList = z.infer<typeof ownerClipListSchema>;

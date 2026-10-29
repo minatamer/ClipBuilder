@@ -22,9 +22,14 @@ import {
 } from "../../../packages/contracts/local/policy.ts";
 import {
   ownerDigestSchema,
-  ownerPictureFormatSchema,
+  OWNER_PICTURE_LIMITS,
   ownerPictureExtension,
 } from "../../../packages/contracts/local/assets.ts";
+import {
+  OWNER_AUDIO_LIMITS,
+  type OwnerAudioAsset,
+} from "../../../packages/contracts/local/audio.ts";
+import { compileOwnerOverlay } from "../../../packages/contracts/local/edit-overlay.ts";
 import {
   confinedPath,
   requireDisk,
@@ -43,7 +48,10 @@ const fileSchema = z
 type StoredFile = z.infer<typeof fileSchema>;
 type FileCache = Map<string, { identity: string; file: StoredFile }>;
 const assetFileSchema = fileSchema
-  .extend({ id: ownerIdSchema, format: ownerPictureFormatSchema.optional() })
+  .extend({
+    id: ownerIdSchema,
+    format: z.enum(["jpeg", "png", "wav"]).optional(),
+  })
   .strict();
 const rawFileSchema = fileSchema.extend({ clipId: ownerIdSchema }).strict();
 const outputFileSchema = fileSchema
@@ -60,13 +68,29 @@ const recordSchema = z
     savedAt: z.string().datetime(),
     snapshot: ownerDraftSnapshotSchema,
     source: fileSchema,
-    assets: z.array(assetFileSchema).max(200),
+    assets: z
+      .array(assetFileSchema)
+      .max(
+        OWNER_LIMITS.clips *
+          (OWNER_PICTURE_LIMITS.assetsPerClip + OWNER_AUDIO_LIMITS.assets),
+      ),
     raw: z.array(rawFileSchema).max(OWNER_LIMITS.clips),
     outputs: z.array(outputFileSchema).max(200),
   })
   .strict();
 type DraftRecord = z.infer<typeof recordSchema>;
 type Copy = { from: string; to: string; file: StoredFile };
+const assetExtension = (format?: "jpeg" | "png" | "wav") =>
+  format === "wav" ? "wav" : ownerPictureExtension(format);
+const draftAssetPath = (
+  files: WorkspaceFiles,
+  workspaceId: string,
+  id: string,
+  format?: "jpeg" | "png" | "wav",
+) =>
+  format === "wav"
+    ? files.audio(workspaceId, id)
+    : files.asset(workspaceId, id, format);
 const digest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const missing = (error: unknown) =>
@@ -274,7 +298,8 @@ function validateRelations(record: DraftRecord): void {
   const admitted = new Map(assets.map((asset) => [asset.id, asset]));
   const expectedAssets = new Map<
     string,
-    OwnerDraftSnapshot["clips"][number]["assets"][number]
+    | OwnerDraftSnapshot["clips"][number]["assets"][number]
+    | (OwnerAudioAsset & { format: "wav" })
   >();
   for (const clip of snapshot.clips) {
     if (
@@ -291,7 +316,13 @@ function validateRelations(record: DraftRecord): void {
       new Set(clip.assets.map((asset) => asset.id)).size !== clip.assets.length
     )
       throw new Error("draft_document_invalid");
-    for (const asset of clip.assets) {
+    for (const asset of [
+      ...clip.assets,
+      ...(clip.audioAssets ?? []).map((asset) => ({
+        ...asset,
+        format: "wav" as const,
+      })),
+    ]) {
       const prior = expectedAssets.get(asset.id);
       if (prior && JSON.stringify(prior) !== JSON.stringify(asset))
         throw new Error("draft_document_invalid");
@@ -363,6 +394,8 @@ function validateRelations(record: DraftRecord): void {
       if (!clip.assets.some((asset) => asset.id === cue.assetId))
         throw new Error("draft_document_invalid");
     }
+    if (clip.base)
+      compileOwnerOverlay(clip.base, clip.edit, clip.assets, clip.audioAssets);
     for (const output of clip.outputs) {
       if (
         !outputs.some(
@@ -455,7 +488,7 @@ export class OwnerDraftStore {
           from: "",
           to: await entry(
             "assets",
-            `${file.id}.${file.digest}.${ownerPictureExtension(file.format)}`,
+            `${file.id}.${file.digest}.${assetExtension(file.format)}`,
           ),
           file,
         })),
@@ -536,7 +569,13 @@ export class OwnerDraftStore {
     const assets = [
       ...new Map(
         snapshot.clips.flatMap((clip) =>
-          clip.assets.map((asset) => [asset.id, asset] as const),
+          [
+            ...clip.assets,
+            ...(clip.audioAssets ?? []).map((asset) => ({
+              ...asset,
+              format: "wav" as const,
+            })),
+          ].map((asset) => [asset.id, asset] as const),
         ),
       ).values(),
     ].map((asset) => ({
@@ -606,7 +645,8 @@ export class OwnerDraftStore {
       for (let index = 0; index < assets.length; index++)
         copies.push({
           ...paths.assets[index]!,
-          from: await files.asset(
+          from: await draftAssetPath(
+            files,
             snapshot.workspace.id,
             assets[index]!.id,
             assets[index]!.format,
@@ -806,7 +846,8 @@ export class OwnerDraftStore {
         for (let index = 0; index < record.assets.length; index++)
           copies.push({
             from: paths.assets[index]!.to,
-            to: await files.asset(
+            to: await draftAssetPath(
+              files,
               workspaceId,
               record.assets[index]!.id,
               record.assets[index]!.format,

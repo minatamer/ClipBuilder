@@ -66,6 +66,19 @@ export async function ownerAssetMediaPath(
     `${assetId}.${ownerPictureExtension(ownerPictureFormatSchema.parse(format))}`,
   );
 }
+export async function ownerAudioMediaPath(
+  root: string,
+  id: string,
+  assetId: string,
+  input = false,
+) {
+  ownerIdSchema.parse(assetId);
+  return admittedMediaPath(
+    root,
+    id,
+    `${assetId}.${input ? "audio-input" : "wav"}`,
+  );
+}
 export async function ownerAcquisitionMediaPath(
   root: string,
   id: string,

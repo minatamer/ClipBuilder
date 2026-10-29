@@ -5,6 +5,9 @@ import { ownerMediaJobSchema } from "./index.ts";
 
 // Fixed code-owned reasons only. Never serialize an arbitrary message or cause.
 export const ownerDiagnosticReasonSchema = z.enum([
+  "invalid_audio_asset",
+  "audio_output_exists",
+  "audio_unavailable",
   "acquisition_bytes_invalid",
   "acquisition_component_invalid",
   "acquisition_config_invalid",

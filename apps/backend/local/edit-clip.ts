@@ -26,6 +26,9 @@ export function applyOwnerEdit(
   const next = ownerEditDocumentSchema.parse(clip.edit ?? automatic);
   for (const operation of request.operations) {
     switch (operation.kind) {
+      case "audio":
+        next.audio = operation.audio;
+        break;
       case "hook":
         if (operation.hook) next.hook = operation.hook;
         else delete next.hook;
@@ -85,6 +88,6 @@ export function applyOwnerEdit(
   }
   next.revision = clip.revision + 1;
   const validated = ownerEditDocumentSchema.parse(next);
-  compileOwnerOverlay(clip.base, validated, clip.assets);
+  compileOwnerOverlay(clip.base, validated, clip.assets, clip.audioAssets);
   return validated;
 }

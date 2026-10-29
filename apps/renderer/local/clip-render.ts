@@ -33,6 +33,7 @@ import {
 } from "./export-profile.ts";
 import { SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
+import { prepareOwnerAudioMix } from "./audio-mix.ts";
 
 import { prepareOwnerClipPreview, type OwnerCutCache } from "./clip-preview.ts";
 export type { OwnerCutCache } from "./clip-preview.ts";
@@ -133,6 +134,16 @@ export async function renderOwnerClip(
   const frames = await mkdtemp(join(dirname(output), "overlay-"));
   try {
     signal.throwIfAborted();
+    const mix = await prepareOwnerAudioMix({
+      root: options.root,
+      workspaceId: job.workspaceId,
+      overlay: job.overlay,
+      scratch: frames,
+      firstInput: hook ? 3 : 2,
+      hookSeconds: (hookProfile?.frames ?? 0) / profile.fps,
+      bodySeconds: bodyProfile.frames / profile.fps,
+      signal,
+    });
     await rasterizeOwnerOverlay(
       {
         bundle: options.bundle,
@@ -174,8 +185,9 @@ export async function renderOwnerClip(
         "2",
         "-i",
         join(frames, "%06d.png"),
+        ...mix.inputs,
         "-filter_complex",
-        `${sourceGraph};[${hook ? 2 : 1}:v:0]scale=${profile.width}:${profile.height},tpad=stop_mode=clone:stop_duration=${1 / OWNER_FPS + (hook ? 2 / profile.fps : 0)}[art];[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`,
+        `${sourceGraph}${mix.graph ? `;${mix.graph}` : ""};[${hook ? 2 : 1}:v:0]scale=${profile.width}:${profile.height},tpad=stop_mode=clone:stop_duration=${1 / OWNER_FPS + (hook ? 2 / profile.fps : 0)}[art];[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`,
         "-filter_complex_threads",
         "2",
         "-filter_threads",
@@ -183,7 +195,7 @@ export async function renderOwnerClip(
         "-map",
         "[v]",
         "-map",
-        "[audio]",
+        `[${mix.label}]`,
         "-t",
         String(
           hook ? profile.frames / profile.fps : presentationFrames / OWNER_FPS,

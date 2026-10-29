@@ -34,6 +34,10 @@ import { OWNER_CAPTION_PRESETS } from "../../../packages/contracts/local/editor.
 import { ownerAgentValidation } from "./agent-view.ts";
 import { normalizeOwnerPicture } from "./personal-picture.ts";
 import {
+  OWNER_AUDIO_LIMITS,
+  ownerAudioAssetSchema,
+} from "../../../packages/contracts/local/audio.ts";
+import {
   ownerAnalysisSchema,
   type OwnerAnalysis,
   type OwnerMoment,
@@ -120,6 +124,7 @@ export class OwnerClipBatch {
   private cancelVersion = 0;
   private readonly failedCaptionAttempts = new Set<string>();
   private captionProcessing = false;
+  private audioProcessing = false;
   constructor(
     private readonly workspace: OwnerWorkspace,
     private readonly files: WorkspaceFiles,
@@ -134,7 +139,10 @@ export class OwnerClipBatch {
   }
   get active() {
     return (
-      this.queue.length > 0 || Boolean(this.current) || this.captionProcessing
+      this.queue.length > 0 ||
+      Boolean(this.current) ||
+      this.captionProcessing ||
+      this.audioProcessing
     );
   }
   snapshot(): OwnerClipList {
@@ -199,7 +207,12 @@ export class OwnerClipBatch {
           clip.edit.revision !== clip.revision
         )
           throw new Error("stale_saved_edit");
-        compileOwnerOverlay(clip.base, clip.edit, clip.assets);
+        compileOwnerOverlay(
+          clip.base,
+          clip.edit,
+          clip.assets,
+          clip.audioAssets,
+        );
       }
       if (working(clip)) {
         clip.state = "canceled";
@@ -320,7 +333,7 @@ export class OwnerClipBatch {
             ? { ...clip.edit.captionSpeakers, assignments: [] }
             : undefined,
         });
-        compileOwnerOverlay(base, edit, clip.assets);
+        compileOwnerOverlay(base, edit, clip.assets, clip.audioAssets);
         clip.base = base;
         clip.baseHash = baseHash;
         clip.edit = edit;
@@ -378,6 +391,58 @@ export class OwnerClipBatch {
       }
       this.changed();
       return { ...this.snapshot(), pictureAssetId: asset.id };
+    });
+  }
+  async audio(id: string, bytes: Buffer, signal: AbortSignal) {
+    return this.serialize(async () => {
+      const clip = this.clips.get(id);
+      if (
+        this.closing ||
+        this.active ||
+        !clip?.base ||
+        bytes.length < 1 ||
+        bytes.length > OWNER_AUDIO_LIMITS.inputBytes ||
+        (clip.audioAssets?.length ?? 0) >= OWNER_AUDIO_LIMITS.assets
+      )
+        throw new Error("audio_unavailable");
+      await this.reserve(0, 0, bytes.length + OWNER_AUDIO_LIMITS.bytes);
+      const assetId = randomUUID(),
+        input = await this.files.audio(this.workspace.id, assetId, true),
+        output = await this.files.audio(this.workspace.id, assetId);
+      this.audioProcessing = true;
+      this.changed();
+      let accepted = false;
+      try {
+        signal.throwIfAborted();
+        await writeFile(input, bytes, { flag: "wx", mode: 0o600 });
+        const result = await this.ports.render(
+          {
+            operation: "normalize-audio",
+            workspaceId: this.workspace.id,
+            jobId: randomUUID(),
+            assetId,
+          },
+          signal,
+        );
+        signal.throwIfAborted();
+        if (
+          this.closing ||
+          result.operation !== "normalize-audio" ||
+          result.asset.id !== assetId
+        )
+          throw new Error("audio_unavailable");
+        const asset = ownerAudioAssetSchema.parse(result.asset);
+        clip.audioAssets ??= [];
+        clip.audioAssets.push(asset);
+        accepted = true;
+        this.audioProcessing = false;
+        return { ...this.snapshot(), audioAssetId: asset.id };
+      } finally {
+        await rm(input, { force: true });
+        if (!accepted) await rm(output, { force: true });
+        this.audioProcessing = false;
+        this.changed();
+      }
     });
   }
   private receipt(key: string, value: unknown) {
@@ -500,7 +565,12 @@ export class OwnerClipBatch {
         assets +
         [...this.clips.values()].reduce(
           (sum, clip) =>
-            sum + clip.assets.reduce((total, asset) => total + asset.bytes, 0),
+            sum +
+            clip.assets.reduce((total, asset) => total + asset.bytes, 0) +
+            (clip.audioAssets ?? []).reduce(
+              (total, asset) => total + asset.bytes,
+              0,
+            ),
           0,
         ) +
         retained +
@@ -598,7 +668,12 @@ export class OwnerClipBatch {
       clip,
       renderRevision,
       snapshot: ownerClipBaseSchema.parse(clip.base),
-      overlay: compileOwnerOverlay(clip.base, clip.edit, clip.assets),
+      overlay: compileOwnerOverlay(
+        clip.base,
+        clip.edit,
+        clip.assets,
+        clip.audioAssets,
+      ),
       editRevision: clip.revision,
     });
     this.start();

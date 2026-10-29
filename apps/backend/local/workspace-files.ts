@@ -82,6 +82,15 @@ export class WorkspaceFiles {
     await this.file(id, "source.mp4");
     return confinedPath(this.root, id, `${clipId}.r${revision}.mp4`);
   }
+  async audio(id: string, assetId: string, input = false): Promise<string> {
+    ownerIdSchema.parse(assetId);
+    await this.file(id, "source.mp4");
+    return confinedPath(
+      this.root,
+      id,
+      `${assetId}.${input ? "audio-input" : "wav"}`,
+    );
+  }
   async clipSource(id: string, clipId: string): Promise<string> {
     ownerIdSchema.parse(clipId);
     await this.file(id, "source.mp4");

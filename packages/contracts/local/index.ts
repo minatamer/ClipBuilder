@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownerAudioAssetSchema } from "./audio.ts";
 import { OWNER_PRESENTATION_MAX_FRAMES } from "./hook.ts";
 
 import {
@@ -55,6 +56,14 @@ export const OWNER_PROVIDER_MEDIA = {
 } as const;
 
 export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
+  z
+    .object({
+      operation: z.literal("normalize-audio"),
+      workspaceId: ownerIdSchema,
+      jobId: ownerIdSchema,
+      assetId: ownerIdSchema,
+    })
+    .strict(),
   z
     .object({
       workspaceId: ownerIdSchema,
@@ -145,6 +154,12 @@ export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
 ]);
 export type OwnerMediaJob = z.infer<typeof ownerMediaJobSchema>;
 export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
+  z
+    .object({
+      operation: z.literal("normalize-audio"),
+      asset: ownerAudioAssetSchema,
+    })
+    .strict(),
   ownerClipPreviewSchema
     .extend({
       operation: z.literal("clip-preview"),

@@ -40,6 +40,49 @@ const pictureBytes = Buffer.from("synthetic canonical JPEG");
 const rawBytes = Buffer.from("synthetic normalized clip");
 const outputBytes = Buffer.from("synthetic native output");
 
+it("round-trips admitted audio files and cue bindings, rejects missing references, and retains old silent drafts", async () => {
+  const original = await fixture(),
+    clip = original.clips[0]!;
+  const bytes = Buffer.from("synthetic normalized audio"),
+    id = randomUUID();
+  const asset = {
+    id,
+    digest: hash(bytes),
+    bytes: bytes.length,
+    durationMs: 1000,
+    frames: 30,
+  };
+  await writeFile(await files.audio(original.workspace.id, id), bytes);
+  clip.audioAssets = [asset];
+  clip.edit = {
+    ...automaticOwnerEdit(clip.base!, clip.id, clip.baseHash!),
+    audio: {
+      originalVolume: 90,
+      cues: [
+        {
+          id: randomUUID(),
+          source: { kind: "upload", id },
+          placement: "video",
+          startFrame: 0,
+          endFrame: 30,
+          offsetFrame: 0,
+          volume: 20,
+          loop: true,
+        },
+      ],
+    },
+  };
+  const saved = await store.save(undefined, original, files),
+    restored = await store.load(saved.id, files);
+  expect(restored.clips[0]!.audioAssets).toEqual([asset]);
+  expect(restored.clips[0]!.edit!.audio).toEqual(clip.edit.audio);
+  expect(await readFile(await files.audio(restored.workspace.id, id))).toEqual(
+    bytes,
+  );
+  clip.audioAssets = [];
+  await expect(store.save(undefined, original, files)).rejects.toThrow();
+});
+
 it("round-trips hook edits and longer exports, retains historical lengths, and rejects rebound current lengths", async () => {
   const original = await fixture(),
     clip = original.clips[0]!;

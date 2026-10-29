@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownerAudioEditSchema } from "./audio.ts";
 import { normalizedBoxSchema } from "@clipbuilder/contracts";
 import { ownerIdSchema } from "./policy.ts";
 import {
@@ -147,6 +148,7 @@ export const ownerEditDocumentSchema = z
     baseHash: ownerDigestSchema,
     revision: z.number().int().nonnegative(),
     captions: ownerCaptionStyleSchema.nullable(),
+    audio: ownerAudioEditSchema.optional(),
     captionText: ownerCaptionTextSchema.optional(),
     captionSpeakers: ownerCaptionSpeakersSchema.optional(),
     hook: ownerHookSchema.optional(),
@@ -165,6 +167,7 @@ export const ownerEditDocumentSchema = z
   );
 export type OwnerEditDocument = z.infer<typeof ownerEditDocumentSchema>;
 export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("audio"), audio: ownerAudioEditSchema }).strict(),
   z
     .object({ kind: z.literal("hook"), hook: ownerHookSchema.nullable() })
     .strict(),
@@ -206,7 +209,7 @@ export const ownerEditRequestSchema = z
     operations: z
       .array(ownerEditOperationSchema)
       .min(1)
-      .max(2 * OWNER_PICTURE_LIMITS.cuesPerClip + 7),
+      .max(2 * OWNER_PICTURE_LIMITS.cuesPerClip + 8),
   })
   .strict();
 export type OwnerEditRequest = z.infer<typeof ownerEditRequestSchema>;

@@ -12,6 +12,7 @@ import {
   type OwnerClipBase,
   type OwnerOverlay,
 } from "./clips.ts";
+import { ownerAudioTrackSchema, type OwnerAudioAsset } from "./audio.ts";
 
 export function automaticOwnerEdit(
   base: OwnerClipBase,
@@ -25,6 +26,14 @@ export function automaticOwnerEdit(
     baseHash,
     revision: 0,
     captions: null,
+    ...(base.overlay.audio
+      ? {
+          audio: {
+            originalVolume: base.overlay.audio.originalVolume,
+            cues: base.overlay.audio.cues,
+          },
+        }
+      : {}),
     ...(base.overlay.texts ? { texts: base.overlay.texts } : {}),
     ...(base.overlay.focus ? { focus: base.overlay.focus } : {}),
     visuals: base.overlay.visuals.map((cue) =>
@@ -48,6 +57,7 @@ export function compileOwnerOverlay(
   value: OwnerClipBase,
   document: OwnerEditDocument | null,
   admitted: readonly OwnerAsset[],
+  audioAssets: readonly OwnerAudioAsset[] = [],
 ): OwnerOverlay {
   const base = ownerClipBaseSchema.parse(value),
     edit = document ? ownerEditDocumentSchema.parse(document) : null;
@@ -93,5 +103,18 @@ export function compileOwnerOverlay(
     ...(edit?.captions ? { captionStyle: edit.captions } : {}),
     ...(edit?.videoLook ? { videoLook: edit.videoLook } : {}),
     ...(edit?.focus ? { focus: edit.focus } : {}),
+    ...(edit?.audio
+      ? {
+          audio: ownerAudioTrackSchema.parse({
+            ...edit.audio,
+            assets: audioAssets.filter((asset) =>
+              edit.audio!.cues.some(
+                (cue) =>
+                  cue.source.kind === "upload" && cue.source.id === asset.id,
+              ),
+            ),
+          }),
+        }
+      : {}),
   });
 }

@@ -30,6 +30,7 @@ import {
 import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/local/acquisition-profile.ts";
 import { ownerAcquisitionFailureCodeSchema } from "../../../packages/contracts/local/acquisition.ts";
 import { prepareOwnerProviderMedia } from "./provider-media.ts";
+import { normalizeOwnerAudio } from "./audio-media.ts";
 
 export function createOwnerWorker(options: {
   diagnostic?: (line: string) => void;
@@ -182,79 +183,81 @@ export function createOwnerWorker(options: {
       signal.throwIfAborted();
       const result = options.execute
         ? await options.execute(job, signal)
-        : job.operation === "inspect"
-          ? {
-              operation: "inspect",
-              source: await inspectOwnerSource(source, options.tools, signal),
-            }
-          : job.operation === "prepare-owner-audio" ||
-              job.operation === "prepare-owner-video"
-            ? await prepareOwnerProviderMedia(
-                options.root,
-                job,
-                options.tools,
-                signal,
-              )
-            : job.operation === "prepare-acquisition"
-              ? {
-                  operation: job.operation,
-                  ...(await prepareOwnerAcquisition(
-                    options.root,
-                    job.workspaceId,
-                    job.expected,
-                    options.tools,
-                    signal,
-                    job.combined ?? false,
-                    stage,
-                  )),
-                }
-              : job.operation === "synthesize-acquisition" ||
-                  job.operation === "inspect-acquisition"
+        : job.operation === "normalize-audio"
+          ? await normalizeOwnerAudio(options.root, job, options.tools, signal)
+          : job.operation === "inspect"
+            ? {
+                operation: "inspect",
+                source: await inspectOwnerSource(source, options.tools, signal),
+              }
+            : job.operation === "prepare-owner-audio" ||
+                job.operation === "prepare-owner-video"
+              ? await prepareOwnerProviderMedia(
+                  options.root,
+                  job,
+                  options.tools,
+                  signal,
+                )
+              : job.operation === "prepare-acquisition"
                 ? {
                     operation: job.operation,
-                    ...(await (
-                      job.operation === "synthesize-acquisition"
-                        ? synthesizeOwnerAcquisition
-                        : inspectOwnerAcquisition
-                    )(
+                    ...(await prepareOwnerAcquisition(
                       options.root,
                       job.workspaceId,
                       job.expected,
                       options.tools,
                       signal,
+                      job.combined ?? false,
                       stage,
                     )),
                   }
-                : job.operation === "clip-preview"
-                  ? await prepareOwnerClipPreview(
-                      { root: options.root, tools: options.tools, cache },
-                      job,
-                      signal,
-                    )
-                  : job.operation === "clip"
-                    ? await renderOwnerClip(
-                        {
-                          root: options.root,
-                          tools: options.tools,
-                          chromium: options.chromium ?? "",
-                          bundle: options.overlayBundle ?? "",
-                          cache,
-                        },
+                : job.operation === "synthesize-acquisition" ||
+                    job.operation === "inspect-acquisition"
+                  ? {
+                      operation: job.operation,
+                      ...(await (
+                        job.operation === "synthesize-acquisition"
+                          ? synthesizeOwnerAcquisition
+                          : inspectOwnerAcquisition
+                      )(
+                        options.root,
+                        job.workspaceId,
+                        job.expected,
+                        options.tools,
+                        signal,
+                        stage,
+                      )),
+                    }
+                  : job.operation === "clip-preview"
+                    ? await prepareOwnerClipPreview(
+                        { root: options.root, tools: options.tools, cache },
                         job,
                         signal,
                       )
-                    : await ownerPortrait(
-                        source,
-                        await ownerMediaPath(
-                          options.root,
-                          job.workspaceId,
-                          "portrait.mp4",
-                        ),
-                        options.tools,
-                        signal,
-                        job.cut,
-                        job.fingerprint,
-                      );
+                    : job.operation === "clip"
+                      ? await renderOwnerClip(
+                          {
+                            root: options.root,
+                            tools: options.tools,
+                            chromium: options.chromium ?? "",
+                            bundle: options.overlayBundle ?? "",
+                            cache,
+                          },
+                          job,
+                          signal,
+                        )
+                      : await ownerPortrait(
+                          source,
+                          await ownerMediaPath(
+                            options.root,
+                            job.workspaceId,
+                            "portrait.mp4",
+                          ),
+                          options.tools,
+                          signal,
+                          job.cut,
+                          job.fingerprint,
+                        );
       report("succeeded");
       res
         .writeHead(200, {
