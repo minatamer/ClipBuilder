@@ -8,6 +8,24 @@ under the plan committed first at `85563c8`; implementation starts clean.
 
 ## Supported integration and limits
 
+Latest owner parity revision CL-150 replaces the original unassigned-speaker
+limitation below with pinned local CPU Sherpa-ONNX v2.0.1, pyannote segmentation
+3.0 and NeMo TitaNet-small speaker embeddings. Only anonymous within-source turns
+are retained; voice embeddings stay in the native process and are never saved
+or sent. Align word overlap conservatively, keeping overlap/unknown neutral.
+Codex receives the timed labels and up to sixty JPEGs, each containing three
+5-fps temporal panels (0/0.2/0.4 seconds at uniformly distributed anchors).
+This is sampled evidence, not continuous native video/audio perception. Keep
+speaker associations when supported, refusing invented labels. Existing focus
+compiler owns sustained switching, holds, confidence and shot resets.
+
+Prepare speaker assets explicitly with `corepack pnpm local:prepare:speakers`
+in addition to speech preparation. Startup validates hashes without inference;
+real Codex readiness requires both installations. No GPU, provider API key,
+cloud upload or runtime download is used for diarization. Model quality and
+speaker-to-face association remain owner-tested. Original exports are untouched;
+analysis JPEGs alone are resized/compressed within their existing byte bound.
+
 This is a local provider bridge. MCP exposes tools to an assistant; it is not
 necessary just to request Codex inference. The official
 [app server](https://learn.chatgpt.com/docs/app-server) supports custom clients,
@@ -42,17 +60,20 @@ The AFK request authorizes preparing these free local prerequisites from officia
 sources; no provider calls, cloud resources or owner-media inference are included.
 If preparation cannot be verified, expose unavailable setup and record it.
 
-Whisper does not provide reliable anonymous speaker diarization here. Leave
-unproven labels neutral; manual caption-level assignment remains available.
-Codex can select moments and plan camera positions from transcript/frames, but
-sampled stills do not establish audible-speaker association. Use conservative
-uncertainty/held focus and allow normal manual correction. Real diarization,
-camera/editorial and ASR accuracy remain owner-only acceptance. Image generation
-is not supported through this route: keep contextual pictures manual in local
-Codex mode, with no hidden Gemini generation or fabricated fixture art. Hosted
+Whisper supplies words/timing; CL-150's separate local diarizer supplies anonymous
+audio speaker labels. Codex associates these with temporal images, retaining
+uncertainty and held focus when the evidence cannot establish a visible speaker.
+Manual caption-level assignment remains available. Real diarization, camera/
+editorial and ASR accuracy remain owner-only acceptance. Image generation is not
+supported through this transport; CL-151 owns the local structured-illustration
+alternative, with no hidden Gemini generation or fabricated fixture art. Hosted
 Gemini keeps its existing generated-picture behavior.
 
 ## Composition and flow
+
+CL-149 aligns Codex's selection schema with the shared reference-only prompt.
+The existing bounded Gemini normalizer resolves title/hook word references into
+spoken text; internal word IDs are never used as the title copy.
 
 Keep the backend's single fake/real mode. Fake always uses existing fictional
 providers and cannot launch Codex/Whisper inference. Normal local real mode uses
@@ -66,6 +87,25 @@ The local capability response names the provider and setup availability; normal
 selection/caption/editor controls use the existing authenticated routes.
 
 ### Activate locally
+
+CL-148 distinguishes the CLI's non-fatal completed error items (configuration
+warnings) from fatal error/turn.failed events. A warning cannot replace turn
+completion or the bounded safe result file. Tool and malformed-item events stay
+rejected, including item.updated. Installed-CLI validation against an isolated
+loopback fake Responses endpoint reproduces the old rejection and passes with
+the fix; it uses no saved credentials or real inference. See the
+[protocol packet](../tickets/CL-148-codex-result-protocol.md).
+
+CL-147 uses a private CLI provider ID, clipbuilder_subscription, because the
+installed CLI reserves builtin IDs such as openai. The private configuration
+retains saved ChatGPT authentication, response output, zero request/stream retries
+and no provider fallback. The backend AI_PROVIDER setting remains codex; this
+private CLI ID is not another user setting. Generic process failures no longer
+claim that sign-in or allowance is the cause without evidence.
+
+CL-146 fixes startup registration for the optional prepared speech metadata.
+Discovery validates its exact keys and bounded absolute paths without exposing
+them in the public runtime pointer or running speech/AI inference.
 
 The CLI command is installed on this workstation, and the speech tools/model
 were prepared and verified during CL-135. From a normal local terminal, run
@@ -91,17 +131,20 @@ actions consume Codex plan allowance; actual inference/ASR quality remains owner
 acceptance. FAKE_MODE=true continues to return simulated AI without inference.
 Gemini remains the default when AI_PROVIDER is absent or set to gemini.
 
-If preparing another Windows workstation, run the documented
-`corepack pnpm local:prepare:speech` once before the restart. Startup does not
-download tools or sign in. The packaging handoff changes no private settings,
-does not inspect login credentials/status and does not start real processing.
+On another Windows workstation, explicitly run `corepack pnpm local:prepare:speech`
+and `corepack pnpm local:prepare:speakers` before restarting. Startup never
+downloads tools, signs in or processes media. The preparation commands change
+no private configuration and do not inspect credentials.
 
 An explicit local analysis prepares 16-kHz mono speech in the private worker,
-runs pinned Whisper and returns bounded words with stable IDs. Codex receives
+runs pinned Whisper plus local diarization and returns bounded words with stable
+IDs and anonymous speaker labels. Codex receives
 the admitted transcript and existing selection policy and returns structured
-moment evidence. Selected-clip planning uses at most sixty bounded JPEG frames
-sampled uniformly (at most one per second), upright source geometry and clipped
-words; return bounded camera decisions, never commands/paths/URLs. Existing
+moment evidence. Selected-clip planning uses at most sixty bounded temporal JPEG
+panels, upright source geometry and clipped speaker-tagged words; returns bounded
+camera decisions, optional source-reference timed text and structured contextual
+illustrations. The local renderer creates admitted image assets without another
+AI request. No model-authored commands, paths, URLs or SVG/HTML are executed. Existing
 focus compilation, caption grouping, revisions, Apply/Discard, retries, drafts
 and native rendering remain authoritative. Explicit local caption generation
 uses the same local speech path without a Gemini transfer. Fake caption and the
@@ -109,13 +152,15 @@ earlier explicitly labelled local Gemini caption exception remain in fake mode
 only when Gemini is selected. Codex selection blocks every Gemini path and never
 falls back, including when Codex prerequisites are unavailable.
 
-Windows x64 setup: `corepack pnpm local:prepare:speech`, installed Codex CLI with
+Windows x64 setup: `corepack pnpm local:prepare:speech` and
+`corepack pnpm local:prepare:speakers`, installed Codex CLI with
 ChatGPT `codex login`, then normal backend restart. Prepare command checks pinned
 binary/DLL/model hashes and preserves license files under ignored local tooling;
 startup never downloads or signs in. Other operating systems need an explicitly
 reviewed speech build, rather than accepting arbitrary paths. This workstation's
-free tools are prepared and hash-verified; live CLI auth/inference, actual ASR
-and a clean-machine setup remain owner acceptance, not inferred from mocks.
+free tools are prepared and hash-verified. The owner confirmed basic real Codex
+flow after CL-148; new ASR/diarization/camera/editorial/visual quality and a clean-
+machine setup remain owner acceptance, not inferred from mocks.
 
 Each Codex call has a private owned temporary cwd, fixed JSON schema, content on
 stdin and fixed absolute admitted images. Use saved ChatGPT login with a status

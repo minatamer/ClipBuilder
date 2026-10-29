@@ -1,5 +1,26 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Codex speaker and editor parity revision — CL-149–151, 2026-10-29
+
+Owner real-flow feedback requests human moment titles, audio-backed speaker
+labels/camera changes, planned text and contextual visuals through local Codex.
+Match selection schema to the existing reference-only prompt and normalize its
+word references as Gemini does. Add local CPU anonymous speaker diarization to
+Whisper timestamps, preserving unknown/overlapping speech as neutral. Let Codex
+associate those audio-backed speaker IDs with visible people from bounded
+temporal frame panels; keep sustained-switch/uncertainty/shot-reset camera rules.
+Never invent speaker identity or silently clear supported labels.
+
+This supersedes CL-135's permanently unassigned-speaker/manual-picture omission.
+The subscription transport still accepts text/images, not raw audio/video or
+image generation. CL-151 supplies optional editable timed text and bounded
+structured illustrations rendered locally, with no hidden Gemini fallback or
+claim of identical multimodal/image quality. Preserve existing source/export
+quality, clip limits, manual edits, Hook copying and provider isolation. Agent
+checks remain synthetic/fake/paid-off; local model preparation uses pinned free
+public upstream assets, never runtime downloads or provider credentials. Real
+ASR/diarization/camera/editorial/visual acceptance remains owner-only.
+
 ## Clean Hook cut and Sator removal — CL-145, 2026-10-29
 
 Remove Sator suspense from new sound selection, retaining saved cue decoding.

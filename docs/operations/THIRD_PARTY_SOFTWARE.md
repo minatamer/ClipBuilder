@@ -1,5 +1,15 @@
 # Google and Node media software readiness
 
+## Local speaker tools — CL-150
+
+Anonymous diarization uses [Sherpa-ONNX v2.0.1](https://github.com/k2-fsa/sherpa-onnx/releases/tag/v2.0.1)
+(Apache-2.0), its official pyannote segmentation-3.0 ONNX conversion (MIT license
+retained), and NVIDIA NeMo TitaNet-small ONNX embedding. Exact artifact/per-file
+SHA-256 pins are in scripts/local-speaker-tools.ts. The explicit preparation
+command retains upstream license/attribution and model-card links beside assets
+under ignored .local-build/tools/speakers. No binaries, weights, voices or
+embeddings enter Git or hosted build inputs. See [upstream diarization setup](https://k2-fsa.github.io/sherpa/onnx/speaker-diarization/models.html).
+
 ## Local subscription and speech tooling — CL-135, 2026-10-29
 
 Normal local real mode invokes the installed Codex CLI with saved ChatGPT login;

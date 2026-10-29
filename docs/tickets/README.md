@@ -1,5 +1,81 @@
 # ClipBuilder canonical ticket index
 
+## Owner-authorized CL-146–151 commit packaging — 2026-10-29
+
+The owner requested a filed plan and multiple ticket-prefixed local commits for
+review tomorrow. Follow the
+[47-file whole-file plan](../operations/CL146_151_COMMIT_PLAN.md). This supersedes
+the earlier unstaged/uncommitted handoff notes for CL-146–151 below; those notes
+describe the implementation handoff before this Git authorization.
+
+- `9b55473` — CL-146: standalone commit plan (1 file).
+- `4bd7ff5` — CL-147: CLI launch and CL-148 warning handling (4 files).
+- `6548bb4` — CL-149: connected CL-149–151 contracts/editor planning (16 files).
+- `3847c3b` — CL-150: speaker/media tools and CL-146 discovery (14 files).
+- `91fb1a8` — CL-151: synthetic preview/export/restore proof (1 file).
+
+The closing CL-151 documentation commit contains the remaining 11 files. Every
+file is allocated once. Exact staged manifests, whitespace, binary/path exclusion
+and credential-indicator checks pass for the five preceding commits; the final
+documentation group receives the same checks before commit. Existing validation
+applies to the complete combined tree, not independently to intermediate commits.
+No implementation behavior changed during packaging.
+
+The existing 76 focused fake/no-key checks and final 40.64-second synthetic
+browser/native proof remain the evidence for implementation. Prepared CPU
+speech/speaker assets stay ignored. Real Codex uses saved ChatGPT sign-in and
+allowance; default Gemini requires its normal keys, live flags and approvals.
+Actual ASR, speaker/face, editorial/visual/listening/device/rights/clean-machine
+and hosted/release acceptance remain owner-only. No provider/cloud requests,
+configuration change, push or deployment. Preserve the running normal app.
+
+## Codex editor outcomes — 2026-10-29
+
+Owner reports the real flow works and requests meaningful titles, speaker/camera
+behavior, text and visuals. Sequential plans: [CL-149](CL-149-codex-moment-copy.md)
+fixes shared-prompt/schema mismatch (three fake checks and static/review passed);
+[CL-150](CL-150-local-speaker-camera.md) adds local audio-backed speakers/camera;
+[CL-151](CL-151-codex-editor-content.md) adds bounded planned text/local visuals.
+Raw audio/video and image generation remain unsupported on the subscription
+transport; document local processing separately. No paid agent tests or deploy.
+
+Implemented locally: 76 focused fake checks, speaker/discovery and build-input
+checks, and the final 40.64-second browser/native/export/restore proof pass.
+Desktop/phone preview shows editable text, local illustration and retained
+speaker/camera results with no additional inference on restore. Local speech/
+speaker assets are hash-verified; new real quality remains owner-only. Normal
+backend/worker refreshed; capability reports Codex ready. No stage/commit, push,
+cloud change or deployment.
+
+## Codex result protocol — 2026-10-29
+
+[CL-148](CL-148-codex-result-protocol.md) fixes rejection of the installed CLI's
+non-fatal configuration warning after an otherwise successful turn. A synthetic
+loopback proof reproduces the old failure and passes with the fix, with no
+credentials, advertised tools or external provider calls. Sixteen focused fake
+checks pass, including fatal/tool/malformed-event refusal and output cleanup.
+Static/review and normal-backend refresh evidence are recorded in the packet;
+real model output/quality remains owner-only. No checkpoint or automatic retry.
+
+## Codex launch failure — 2026-10-29
+
+[CL-147](CL-147-codex-cli-launch-failure.md) investigates the first owner run's
+immediate Codex process failure after successful transcription and fixes the
+reserved builtin CLI provider ID. Installed-CLI offline config probe, eight fake
+checks and scoped static/review gates pass. Owner declined a checkpoint and
+requested a fresh flow; backend restarted, frontend/saved media preserved.
+No automatic retry or agent inference. Real-flow verification remains owner-only;
+the fix and CL-146 stay uncommitted.
+
+## Real Codex startup registration — 2026-10-29
+
+[CL-146](CL-146-codex-speech-discovery-startup.md) records the narrowly scoped
+fix for prepared speech metadata rejected during the owner's requested restart.
+Eight fake discovery checks and scoped static/review gates pass. Both services
+restarted with verified ownership; public capability reports real Codex/setup
+ready. No inference, credential/configuration change or paid/cloud call. The
+startup fix remains uncommitted; earlier packaged CL-135–145 commits are intact.
+
 ## Owner-authorized commit packaging — 2026-10-29
 
 The owner now requests local staging/commits under

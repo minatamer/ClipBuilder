@@ -20,6 +20,12 @@ The new profile requires resource/lifecycle acceptance before release; the old
 lightweight backend allocation is insufficient. See [hosted editor preparation](../../docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md).
 No cloud build/deployment or credit-consuming verification was performed.
 
+Local Codex speaker/camera planning additionally needs the fixed free CPU assets
+from `corepack pnpm local:prepare:speakers`, alongside existing speech preparation.
+Both are verified on this workstation; startup checks hashes without inference.
+See [local Codex setup](../../docs/architecture/LOCAL_CODEX_AI.md). Fake tests inject
+speaker/model results without API keys; real speech/camera quality is owner-tested.
+
 Local editing is part of this same backend and its normal startup. See the [local workflow guide](../../docs/operations/LOCAL_WORKFLOW.md). Fake AI needs no key; actual downloads/native media are local. Gemini is the default; local AI_PROVIDER=codex selects installed Codex with ChatGPT sign-in and local speech tools, with no Gemini fallback. Hosted real mode retains Gemini keys/approvals and rejects Codex selection. Real quality testing remains owner-manual.
 
 [CL-133](../../docs/tickets/CL-133-media-audio.md) admits bounded audio uploads
