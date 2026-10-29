@@ -31,6 +31,12 @@ it("admits only bounded speech/frame jobs and keeps local provider metadata out 
   expect(
     localCodexArtifactSchema.safeParse({
       kind: "frames",
+      frames: [{ frame: 0, sampleFrames: [0, 6], jpeg: "AAAA" }],
+    }).success,
+  ).toBe(false);
+  expect(
+    localCodexArtifactSchema.safeParse({
+      kind: "frames",
       frames: Array.from({ length: LOCAL_CODEX_POLICY.frames + 1 }, () => ({
         frame: 0,
         jpeg: "AAAA",

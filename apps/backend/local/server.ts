@@ -72,7 +72,7 @@ export type OwnerHostProviders = {
   analysis?: OwnerAnalysisPorts;
   clipPreparation?: Pick<
     OwnerClipPorts,
-    "mode" | "plan" | "image" | "resume" | "focus" | "hookSuggestion"
+    "mode" | "plan" | "image" | "resume" | "focus" | "hookSuggestion" | "texts"
   >;
   close?: (signal: AbortSignal) => Promise<void>;
   cleanupWorkspace?: (id: string, signal: AbortSignal) => Promise<void>;

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizedBoxSchema } from "@clipbuilder/contracts";
+import { wordIdSchema } from "@clipbuilder/contracts";
 import { boundedPlainTextSchema } from "../src/text.schema.ts";
 import { OWNER_FPS, OWNER_LIMITS, ownerIdSchema } from "./policy.ts";
 import { ownerTypographySchema } from "./text-style.ts";
@@ -10,6 +11,26 @@ export const OWNER_TEXT_LIMITS = {
   lines: 10,
   titleCharacters: 80,
 } as const;
+export const OWNER_PLANNED_TEXT_LIMIT = 3;
+export const ownerPlannedTextSchema = z
+  .array(
+    z
+      .object({
+        startFrame: z
+          .number()
+          .int()
+          .nonnegative()
+          .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
+        endFrame: z
+          .number()
+          .int()
+          .positive()
+          .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
+        wordIds: z.array(wordIdSchema).min(1).max(12),
+      })
+      .strict(),
+  )
+  .max(OWNER_PLANNED_TEXT_LIMIT);
 export const ownerClipTitleSchema = boundedPlainTextSchema(
   OWNER_TEXT_LIMITS.titleCharacters,
 );

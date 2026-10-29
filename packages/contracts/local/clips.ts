@@ -26,6 +26,7 @@ import {
 import { ownerWordsSchema, ownerMomentSchema } from "./selection.ts";
 import { ownerVideoLookSchema } from "./video-look.ts";
 import { ownerFocusSchema } from "./focus.ts";
+import { ownerIllustrationSchema } from "./illustration.ts";
 import { ownerTextLayersSchema, ownerClipTitleSchema } from "./text-layers.ts";
 import { OWNER_CAPTION_GENERATION_ATTEMPTS } from "./caption-generation.ts";
 import { ownerCaptionSpeakersSchema } from "./caption-speakers.ts";
@@ -137,6 +138,7 @@ export const ownerClipPlanSchema = z
       startFrame: z.number().finite(),
       endFrame: z.number().finite(),
       brief: contextualPictureBriefSchema,
+      illustration: ownerIllustrationSchema.optional(),
       evidenceWordIds: z
         .array(z.string().max(64))
         .max(CONTEXTUAL_PICTURE_POLICY.maxSupportingPhraseWords),
@@ -149,6 +151,7 @@ export const ownerClipPreparationSchema = z
     focus: ownerFocusSchema.optional(),
     hookSuggestion: ownerHookSchema.optional(),
     plan: ownerClipPlanSchema.nullable(),
+    texts: ownerTextLayersSchema.optional(),
     // Decode legacy partial drafts only; new preparation never generates titles.
     title: ownerClipTitleSchema.optional(),
     pictures: z

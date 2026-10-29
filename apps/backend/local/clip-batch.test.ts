@@ -17,6 +17,7 @@ import {
 import { type OwnerAnalysis } from "../../../packages/contracts/local/selection.ts";
 import { OWNER_BATCH_POLICY } from "../../../packages/contracts/local/clips.ts";
 import { PUBLIC_LIMITS } from "@clipbuilder/contracts";
+import { OWNER_SOCIAL_TEXT_PRESETS } from "../../../packages/contracts/local/text-style.ts";
 import { compileOwnerOverlay } from "../../../packages/contracts/local/edit-overlay.ts";
 import {
   checkHostedScratch,
@@ -429,6 +430,45 @@ it("applies, exports, restores and removes a bounded manual hook without another
   expect(JSON.stringify(clip.base)).toBe(base);
   expect(ports.plan).toHaveBeenCalledTimes(planCalls);
   expect(ports.image).toHaveBeenCalledTimes(imageCalls);
+});
+
+it("retains optional planned editable text through preparation failure, restore and explicit retry without another plan", async () => {
+  const layer = {
+    id: randomUUID(),
+    text: "Synthetic grounded title",
+    startFrame: 0,
+    endFrame: 30,
+    style: {
+      ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
+      box: { x: 0.08, y: 0.08, width: 0.84, height: 0.18 },
+    },
+  };
+  const texts = vi.fn(() => [layer]);
+  Object.assign(ports, { texts });
+  ports.image.mockRejectedValueOnce(new Error("synthetic_picture_failure"));
+  await batch.submit(
+    { ...request(), momentIds: [analysis.manual[1]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const failed = batch.snapshot().clips[0]!;
+  expect(failed.state).toBe("failed");
+  expect(failed.base).toBeNull();
+  expect(failed.preparation?.texts).toEqual([layer]);
+  await batch.close();
+  batch = new OwnerClipBatch(workspace, files, ports);
+  batch.restore([failed]);
+  await batch.retry(failed.id, {
+    operationId: randomUUID(),
+    expectedRevision: 0,
+  });
+  await batch.drain();
+  const ready = batch.snapshot().clips[0]!;
+  expect(ready.state).toBe("review-ready");
+  expect(ready.base?.overlay.texts).toEqual([layer]);
+  expect(ready.edit?.texts).toEqual([layer]);
+  expect(texts).toHaveBeenCalledTimes(1);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
 });
 
 it.each(["synthetic-ai", "provider-ai"] as const)(

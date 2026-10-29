@@ -134,7 +134,7 @@ it.each([
     expect(f.transport.transcribe).toHaveBeenCalledTimes(0);
     expect(f.pictures.find).toHaveBeenCalledTimes(0);
     expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
-      "Do not generate titles or text overlays.",
+      "TEXT: zero to three optional",
     );
     expect(
       z.toJSONSchema(f.transport.generate.mock.calls[0]![2].schema, {
@@ -149,6 +149,33 @@ it.each([
     await f.ports.close(f.signal);
   },
 );
+
+it("decodes optional timed text from the existing Gemini planning call without an extra provider request", async () => {
+  const f = fixture(),
+    request = { workspace: f.workspace, clipId: f.clipId, moment: f.moment };
+  f.transport.generate.mockResolvedValue({
+    finished: true,
+    text: JSON.stringify({
+      pictures: [cue],
+      texts: [
+        {
+          startFrame: 0,
+          endFrame: 60,
+          wordIds: words.slice(0, 2).map((word) => word.id),
+        },
+        { wordIds: ["w_999999"] },
+      ],
+      focus: { people: [], decisions: [] },
+    }),
+  });
+  expect(await f.ports.clipPreparation.plan(request, f.signal)).toEqual([cue]);
+  expect(f.ports.clipPreparation.texts!(request)).toMatchObject([
+    { text: "Coral reefs.", startFrame: 0, endFrame: 60 },
+  ]);
+  expect(f.transport.generate).toHaveBeenCalledTimes(1);
+  expect(f.pictures.find).not.toHaveBeenCalled();
+  await f.ports.close(f.signal);
+});
 
 it("retains anonymous camera observations from the existing single video request while malformed focus leaves usable pictures intact", async () => {
   const f = fixture();

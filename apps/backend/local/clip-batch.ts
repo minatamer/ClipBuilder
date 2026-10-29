@@ -65,6 +65,10 @@ import {
 import { ownerWordsSchema } from "../../../packages/contracts/local/selection.ts";
 import { ownerEditDocumentSchema } from "../../../packages/contracts/local/editor.ts";
 import type { ClipCaptionTranscription } from "./clip-caption-port.ts";
+import {
+  ownerTextLayersSchema,
+  type OwnerTextLayer,
+} from "../../../packages/contracts/local/text-layers.ts";
 import { critiqueOwnerVisualCue, ownerVisualClock } from "./gemini-critique.ts";
 import {
   defaultOwnerFocus,
@@ -85,6 +89,11 @@ export type OwnerClipPorts = {
     clipId: string;
     moment: OwnerMoment;
   }): OwnerHook | undefined;
+  texts?(request: {
+    workspace: OwnerWorkspace;
+    clipId: string;
+    moment: OwnerMoment;
+  }): OwnerTextLayer[];
   plan(
     request: { workspace: OwnerWorkspace; clipId: string; moment: OwnerMoment },
     signal: AbortSignal,
@@ -196,6 +205,7 @@ export class OwnerClipBatch {
               .digest("hex") ||
           new Set(preparation.pictures.map((picture) => picture.index)).size !==
             preparation.pictures.length ||
+          preparation.texts?.some((layer) => layer.endFrame > frames) ||
           preparation.pictures.some(
             (picture) =>
               !preparation.plan?.[picture.index] ||
@@ -756,6 +766,13 @@ export class OwnerClipBatch {
           clipId: clip.id,
           moment: structuredClone(moment),
         }) ?? defaultOwnerFocus(this.workspace.source, frames);
+      preparation.texts = ownerTextLayersSchema.parse(
+        this.ports.texts?.({
+          workspace: structuredClone(this.workspace),
+          clipId: clip.id,
+          moment: structuredClone(moment),
+        }) ?? [],
+      );
       const suggested = decodeOwnerHookSuggestion(
         this.ports.hookSuggestion?.({
           workspace: structuredClone(this.workspace),
@@ -886,7 +903,7 @@ export class OwnerClipBatch {
         ...(captions.length
           ? { captionStyle: OWNER_CAPTION_PRESETS.tiktok }
           : {}),
-        texts: [],
+        texts: preparation.texts ?? [],
         visuals,
         ...(visuals.length
           ? {

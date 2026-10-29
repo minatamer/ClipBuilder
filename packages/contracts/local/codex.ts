@@ -1,13 +1,21 @@
 import { z } from "zod";
 import {
+  wordIdSchema,
+  candidateEvidenceSchema,
+  candidateCaveatSchema,
+} from "@clipbuilder/contracts";
+import {
   ownerCutSchema,
   ownerIdSchema,
   OWNER_FPS,
   OWNER_LIMITS,
 } from "./policy.ts";
-import { ownerWordsSchema, ownerAiEvidenceSchema } from "./selection.ts";
+import { ownerWordsSchema } from "./selection.ts";
 import { ownerFocusPersonSchema, ownerFocusDecisionSchema } from "./focus.ts";
 import { ownerHookSchema } from "./hook.ts";
+import { ownerClipPlanSchema, OWNER_BATCH_POLICY } from "./clips.ts";
+import { ownerIllustrationSchema } from "./illustration.ts";
+import { ownerPlannedTextSchema } from "./text-layers.ts";
 
 export const LOCAL_CODEX_POLICY = {
   frames: 60,
@@ -52,6 +60,16 @@ export const localCodexReceiptSchema = z
 export type LocalCodexReceipt = z.infer<typeof localCodexReceiptSchema>;
 export const localCodexFrameSchema = z
   .object({
+    sampleFrames: z
+      .array(
+        z
+          .number()
+          .int()
+          .nonnegative()
+          .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
+      )
+      .length(3)
+      .optional(),
     frame: z
       .number()
       .int()
@@ -80,7 +98,22 @@ export type LocalCodexArtifact = z.infer<typeof localCodexArtifactSchema>;
 export const localCodexCandidatesSchema = z
   .object({
     candidates: z
-      .array(ownerAiEvidenceSchema)
+      .array(
+        z
+          .object({
+            startWordId: wordIdSchema,
+            endWordId: wordIdSchema,
+            titleWordIds: z.array(wordIdSchema).min(1).max(40),
+            hookWordIds: z.array(wordIdSchema).min(1).max(40),
+            evidence: z
+              .array(
+                candidateEvidenceSchema.pick({ signal: true, wordIds: true }),
+              )
+              .max(8),
+            caveats: z.array(candidateCaveatSchema.shape.code).max(3),
+          })
+          .strict(),
+      )
       .max(OWNER_LIMITS.suggestions + OWNER_LIMITS.ranges),
   })
   .strict();
@@ -89,5 +122,13 @@ export const localCodexFocusSchema = z
     people: z.array(ownerFocusPersonSchema).max(8),
     decisions: z.array(ownerFocusDecisionSchema).max(120),
     hookSuggestion: ownerHookSchema.nullable(),
+    pictures: z
+      .array(
+        ownerClipPlanSchema.element
+          .extend({ illustration: ownerIllustrationSchema })
+          .strict(),
+      )
+      .max(OWNER_BATCH_POLICY.imageAttemptsPerClip),
+    texts: ownerPlannedTextSchema,
   })
   .strict();
