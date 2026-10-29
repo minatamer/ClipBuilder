@@ -1,5 +1,22 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Local Codex subscription provider — CL-135, 2026-10-29
+
+The owner requests Codex for personal local real-mode clipping and Gemini for
+the deployed app. Keep one fake/real mode and normal 3000/4000 UI; add a local
+provider bridge using saved ChatGPT Codex login, local CPU transcription and
+sampled selected-clip frames. No copied tokens, OpenAI API-key billing, hidden
+Gemini fallback, second app or chatbot. Fake mode remains synthetic/key-free and
+agent verification uses injected inference only. Real local Codex consumes plan
+allowance and requires installed tools, login and explicit processing actions.
+Raw audio/video and generated pictures are not supported by the subscription
+route; local speech supplies timestamps, unproven speakers stay neutral, sampled
+focus is conservative and pictures remain manual. Hosted Gemini is unchanged.
+The [design](architecture/LOCAL_CODEX_AI.md) and [CL-135](tickets/CL-135-local-codex-provider.md)
+own bounds, setup, exact implementation allocation and evidence. This supersedes
+earlier local Gemini-only composition, not hosted/live/spend/release controls.
+No deployment or agent real-AI inference is authorized; owner acceptance stays open.
+
 ## One speaker per caption — CL-134, 2026-10-29
 
 The owner simplifies Captions → Speakers to one selector for each full caption,

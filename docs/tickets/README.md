@@ -1,5 +1,15 @@
 # ClipBuilder canonical ticket index
 
+## Local Codex provider — 2026-10-29
+
+[CL-135](CL-135-local-codex-provider.md) is planned under the owner's AFK request
+to use Codex subscription inference in normal local real mode, preserving hosted
+Gemini. Prior Media/audio and caption-level tasks are committed through `472479e`.
+The [design](../architecture/LOCAL_CODEX_AI.md), this packet and authority/index
+are committed before implementation. Fake/injected checks only; no real provider
+call, API billing, cloud change, push or deployment. Actual ASR/AI/device/rights
+and release acceptance remain owner-only.
+
 ## Caption-level speakers — 2026-10-29
 
 [CL-134](CL-134-caption-level-speakers.md) simplifies attribution to one selector
