@@ -27,6 +27,15 @@ async function main() {
           executable: z.string().min(1),
           model: z.string().min(1),
           directory: z.string().min(1),
+          speakers: z
+            .object({
+              executable: z.string().min(1),
+              segmentation: z.string().min(1),
+              embedding: z.string().min(1),
+              directory: z.string().min(1),
+            })
+            .strict()
+            .optional(),
         })
         .optional(),
       overlayBundle: z.string().min(1),

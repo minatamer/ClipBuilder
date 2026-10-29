@@ -26,6 +26,7 @@
     "local:media:build": "node scripts/local-media-build.mjs",
     "local:prepare:youtube": "node scripts/prepare-youtube.mjs",
     "local:prepare:speech": "node scripts/prepare-local-speech.mjs",
+    "local:prepare:speakers": "node scripts/prepare-local-speakers.mjs",
     "local:test": "vitest run --config scripts/local-test.config.ts",
     "local:proof": "vitest run --config scripts/local-proof.config.ts",
     "local:artifacts": "node scripts/local-artifacts.mjs",

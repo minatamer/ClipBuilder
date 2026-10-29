@@ -42,6 +42,7 @@ export function createOwnerWorker(options: {
   tools: OwnerNativeTools;
   speech?: LocalSpeechTools;
   runSpeech?: Parameters<typeof prepareLocalCodexInput>[0]["runSpeech"];
+  runSpeakers?: Parameters<typeof prepareLocalCodexInput>[0]["runSpeakers"];
   chromium?: string;
   overlayBundle?: string;
   execute?: (

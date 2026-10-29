@@ -294,7 +294,7 @@ async function composeLocalWorkflow(
           return composeLocalCodex({
             enabled: config.paidDemoEnabled,
             executable: codex,
-            speechReady: !!speech,
+            speechReady: !!speech?.speakers,
             root,
             files,
             media,

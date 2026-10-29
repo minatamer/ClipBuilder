@@ -142,6 +142,55 @@ it("publishes only opaque discovery metadata after validating the stable process
   ).toEqual([]);
 });
 
+it("admits prepared speech metadata without exposing it and rejects malformed speech state", async () => {
+  const stateFile = join(runtime, "state.json");
+  const state = JSON.parse(await readFile(stateFile, "utf8"));
+  const speech = {
+    executable: join(temporary, "synthetic-speech.exe"),
+    model: join(temporary, "synthetic-model.bin"),
+    directory: join(temporary, "synthetic-speech-tools"),
+    speakers: {
+      executable: join(temporary, "synthetic-speakers.exe"),
+      segmentation: join(temporary, "segmentation.onnx"),
+      embedding: join(temporary, "embedding.onnx"),
+      directory: join(temporary, "synthetic-speakers"),
+    },
+  };
+  await writeFile(stateFile, JSON.stringify({ ...state, speech }));
+  await publishOwnerDiscovery(runtime, options());
+  expect(await discoverOwnerHost(options())).toEqual({
+    token: "a".repeat(64),
+    runtime,
+  });
+  const published = JSON.parse(await readFile(pointer(), "utf8"));
+  expect(Object.keys(published).sort()).toEqual([
+    "publishedAt",
+    "runtime",
+    "supervisor",
+    "version",
+  ]);
+  expect(JSON.stringify(published)).not.toContain("synthetic-speech");
+  for (const invalid of [
+    null,
+    { executable: speech.executable, directory: speech.directory },
+    { ...speech, model: "relative-model.bin" },
+    { ...speech, executable: "x".repeat(4097) },
+    { ...speech, directory: speech.directory + "\n" },
+    { ...speech, arguments: ["not-admitted"] },
+    { ...speech, speakers: null },
+    { ...speech, speakers: { ...speech.speakers, embedding: "relative.onnx" } },
+    { ...speech, speakers: { ...speech.speakers, command: "not-admitted" } },
+  ]) {
+    await writeFile(stateFile, JSON.stringify({ ...state, speech: invalid }));
+    await expect(discoverOwnerHost(options())).rejects.toThrow(
+      /^owner_host_unavailable$/,
+    );
+    await expect(publishOwnerDiscovery(runtime, options())).rejects.toThrow(
+      /^owner_host_unavailable$/,
+    );
+  }
+});
+
 it("rejects unknown fields, escaped paths, malformed or oversized records with only a safe error", async () => {
   await publishOwnerDiscovery(runtime, options());
   const good = JSON.parse(await readFile(pointer(), "utf8"));

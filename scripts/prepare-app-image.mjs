@@ -70,6 +70,7 @@ export async function prepareAppImage(root, application) {
         "scripts/backend-build.mjs",
         "scripts/native-tools.ts",
         "scripts/local-speech-tools.ts",
+        "scripts/local-speaker-tools.ts",
         "scripts/editing-worker-build.mjs",
         "apps/renderer/package.json",
         "apps/renderer/src",

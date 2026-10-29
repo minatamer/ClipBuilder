@@ -216,9 +216,29 @@ async function readRuntime(ctx, runtime) {
   shape(
     state,
     ["root", "token", "workerToken", "tools", "overlayBundle", "chromium"],
-    ["storageRoot", "desktopStorageRoot"],
+    ["storageRoot", "desktopStorageRoot", "speech"],
   );
   shape(state.tools, ["ffmpeg", "ffprobe"]);
+  if (state.speech !== undefined) {
+    shape(state.speech, ["executable", "model", "directory"], ["speakers"]);
+    if (
+      ![
+        state.speech.executable,
+        state.speech.model,
+        state.speech.directory,
+      ].every(pathValue)
+    )
+      throw error();
+    if (state.speech.speakers !== undefined) {
+      shape(state.speech.speakers, [
+        "executable",
+        "segmentation",
+        "embedding",
+        "directory",
+      ]);
+      if (!Object.values(state.speech.speakers).every(pathValue)) throw error();
+    }
+  }
   if (
     !TOKEN.test(state.token) ||
     !TOKEN.test(state.workerToken) ||

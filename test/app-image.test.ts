@@ -72,6 +72,7 @@ describe("closed frontend/backend image inputs", () => {
           expect(paths).toContain("apps/renderer/local/entry.ts");
           expect(paths).toContain("scripts/editing-worker-build.mjs");
           expect(paths).toContain("scripts/local-speech-tools.ts");
+          expect(paths).toContain("scripts/local-speaker-tools.ts");
           expect(
             paths.some((path) =>
               /(?:yt-dlp|python|codex|whisper-cli)\.exe|ggml-.*\.bin|cookiejar|(?:^|\/)\.env(?:\.|$)/u.test(

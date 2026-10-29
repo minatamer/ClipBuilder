@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { lstat, realpath, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import {
+  localSpeakerTools,
+  type LocalSpeakerTools,
+} from "./local-speaker-tools.ts";
 
 export const LOCAL_SPEECH_PIN = {
   build: "b5454",
@@ -44,6 +48,7 @@ export type LocalSpeechTools = {
   executable: string;
   model: string;
   directory: string;
+  speakers?: LocalSpeakerTools | undefined;
 };
 export async function localSpeechTools(
   repository: string,
@@ -84,9 +89,11 @@ export async function localSpeechTools(
     if (hash.digest("hex") !== expected)
       throw new Error("local_speech_unavailable");
   }
+  const speakers = await localSpeakerTools(repository);
   return {
     executable: join(directory, "whisper-cli.exe"),
     model: join(directory, LOCAL_SPEECH_PIN.model),
     directory,
+    ...(speakers ? { speakers } : {}),
   };
 }

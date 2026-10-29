@@ -28,6 +28,7 @@ import {
 import { SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { runOwnedProcess } from "../src/media/process-runner.ts";
 import type { LocalSpeechTools } from "../../../scripts/local-speech-tools.ts";
+import { assignLocalSpeakers } from "./speaker-turns.ts";
 
 const speechOutput = z.object({
   transcription: z
@@ -84,6 +85,7 @@ export async function prepareLocalCodexInput(
     tools: OwnerNativeTools;
     speech?: LocalSpeechTools;
     runSpeech?: typeof runOwnedProcess | undefined;
+    runSpeakers?: typeof runOwnedProcess | undefined;
   },
   current: LocalCodexJob,
   signal: AbortSignal,
@@ -153,6 +155,33 @@ export async function prepareLocalCodexInput(
         ],
         signal,
       );
+      const speakers = options.speech.speakers;
+      const speakerOutput = speakers
+        ? await (options.runSpeakers ?? runOwnedProcess)(
+            speakers.executable,
+            [
+              `--segmentation.pyannote-model=${speakers.segmentation}`,
+              `--embedding.model=${speakers.embedding}`,
+              "--segmentation.provider=cpu",
+              "--embedding.provider=cpu",
+              "--segmentation.num-threads=2",
+              "--embedding.num-threads=2",
+              "--clustering.cluster-threshold=0.5",
+              wav,
+            ],
+            signal,
+            {
+              cwd: scratch,
+              env: {
+                SystemRoot: process.env.SystemRoot,
+                PATH: `${speakers.directory};${process.env.SystemRoot}\\System32`,
+                TEMP: scratch,
+                TMP: scratch,
+              },
+              maxStdout: 1024 ** 2,
+            },
+          )
+        : "";
       await (options.runSpeech ?? runOwnedProcess)(
         options.speech.executable,
         [
@@ -199,8 +228,12 @@ export async function prepareLocalCodexInput(
         throw new Error("codex_input_invalid");
       artifact = {
         kind: "speech",
-        words: parseLocalSpeech(
-          JSON.parse(await readFile(result, "utf8")),
+        words: assignLocalSpeakers(
+          parseLocalSpeech(
+            JSON.parse(await readFile(result, "utf8")),
+            Math.round(duration * 1000),
+          ),
+          speakerOutput,
           Math.round(duration * 1000),
         ),
       };
@@ -225,6 +258,8 @@ export async function prepareLocalCodexInput(
             "2",
             "-ss",
             String(start + offset),
+            "-t",
+            String(Math.min(0.6, duration - offset)),
             "-i",
             source,
             "-map",
@@ -233,11 +268,11 @@ export async function prepareLocalCodexInput(
             "-sn",
             "-dn",
             "-vf",
-            "scale=480:480:force_original_aspect_ratio=decrease:force_divisible_by=2",
+            "fps=5:start_time=0,scale=640:640:force_original_aspect_ratio=decrease:force_divisible_by=2,tpad=stop_mode=clone:stop_duration=0.6,tile=3x1",
             "-frames:v",
             "1",
             "-q:v",
-            "5",
+            "8",
             file,
           ],
           signal,
@@ -246,12 +281,54 @@ export async function prepareLocalCodexInput(
         if (
           !info.isFile() ||
           info.isSymbolicLink() ||
-          info.size > LOCAL_CODEX_POLICY.imageBytes
+          info.nlink !== 1 ||
+          info.size > 2 * 1024 ** 2
         )
+          throw new Error("codex_input_invalid");
+        let jpeg = await readFile(file);
+        for (const width of [960, 720]) {
+          if (jpeg.length <= LOCAL_CODEX_POLICY.imageBytes) break;
+          const compressed = join(scratch, `${index}-${width}.jpg`);
+          await runOwnedProcess(
+            options.tools.ffmpeg,
+            [
+              "-nostdin",
+              "-n",
+              "-v",
+              "error",
+              "-i",
+              file,
+              "-vf",
+              `scale=${width}:-2`,
+              "-frames:v",
+              "1",
+              "-q:v",
+              "15",
+              compressed,
+            ],
+            signal,
+          );
+          const compressedInfo = await lstat(compressed);
+          if (
+            !compressedInfo.isFile() ||
+            compressedInfo.isSymbolicLink() ||
+            compressedInfo.nlink !== 1 ||
+            compressedInfo.size > 2 * 1024 ** 2
+          )
+            throw new Error("codex_input_invalid");
+          jpeg = await readFile(compressed);
+        }
+        if (jpeg.length > LOCAL_CODEX_POLICY.imageBytes)
           throw new Error("codex_input_invalid");
         frames.push({
           frame: Math.round(offset * OWNER_FPS),
-          jpeg: (await readFile(file)).toString("base64"),
+          sampleFrames: [0, 6, 12].map((delta) =>
+            Math.min(
+              Math.round(duration * OWNER_FPS) - 1,
+              Math.round(offset * OWNER_FPS) + delta,
+            ),
+          ),
+          jpeg: jpeg.toString("base64"),
         });
       }
       artifact = { kind: "frames", frames };
