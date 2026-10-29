@@ -294,6 +294,7 @@ export function createHostedEditingWorkflow(options: Options) {
         const upload = new HostedUpload(
           options.root,
           options.sourceLimits.bytes,
+          (bytes) => options.capacity(options.root, bytes * 2),
         );
         const charge = async () => {
           if (

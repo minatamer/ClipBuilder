@@ -36,6 +36,7 @@ export class HostedUpload {
   constructor(
     private readonly root: string,
     private readonly maximum: number,
+    private readonly reserve: (bytes: number) => Promise<void> = async () => {},
   ) {}
   async start(req: UploadBody) {
     if (this.busy) throw new Error("upload_busy");
@@ -45,6 +46,7 @@ export class HostedUpload {
         .object({ bytes: z.number().int().positive().max(this.maximum) })
         .strict()
         .parse(await hostedJson(req));
+      await this.reserve(bytes);
       await this.discard();
       const directory = await mkdtemp(join(this.root, "upload-"));
       this.stage = {

@@ -15,6 +15,13 @@ import {
   OWNER_FPS,
 } from "../../../packages/contracts/local/index.ts";
 import { type OwnerAnalysis } from "../../../packages/contracts/local/selection.ts";
+import { OWNER_BATCH_POLICY } from "../../../packages/contracts/local/clips.ts";
+import { PUBLIC_LIMITS } from "@clipbuilder/contracts";
+import {
+  checkHostedScratch,
+  HOSTED_MEMORY_BYTES,
+  HOSTED_SCRATCH_VOLUME_BYTES,
+} from "./hosted-capacity.ts";
 
 let directory: string,
   files: WorkspaceFiles,
@@ -126,6 +133,176 @@ const gate = () => {
   });
   return { wait, release };
 };
+
+it("keeps three maximum-source clips and all twenty export revisions with actual retained-byte reservations", async () => {
+  await batch.close();
+  workspace.source.bytes = PUBLIC_LIMITS.maxSourceBytes;
+  const peaks: number[] = [];
+  const capacity = vi.fn(async (_root: string, peak: number) => {
+    peaks.push(peak);
+    checkHostedScratch(peak, {
+      volume: HOSTED_SCRATCH_VOLUME_BYTES,
+      free: HOSTED_SCRATCH_VOLUME_BYTES,
+      retained: 0,
+      memoryLimit: HOSTED_MEMORY_BYTES,
+      memoryUsed: 512 * 1024 ** 2,
+    });
+  });
+  batch = new OwnerClipBatch(
+    workspace,
+    files,
+    ports,
+    undefined,
+    undefined,
+    capacity,
+    3,
+  );
+  await batch.submit(request(), analysis);
+  await batch.drain();
+  const clips = batch.snapshot().clips;
+  expect(clips).toHaveLength(3);
+  expect(
+    clips.every((clip) => clip.preview && clip.state === "review-ready"),
+  ).toBe(true);
+  expect(peaks[0]).toBe(
+    PUBLIC_LIMITS.maxSourceBytes +
+      3 * OWNER_BATCH_POLICY.clipReservationBytes +
+      OWNER_BATCH_POLICY.overlayBytes,
+  );
+  const clip = clips[0]!;
+  for (let index = 0; index < OWNER_BATCH_POLICY.outputs; index++) {
+    await batch.render(clip.id, {
+      operationId: randomUUID(),
+      expectedRevision: clip.revision,
+    });
+    await batch.drain();
+  }
+  const completed = batch.snapshot().clips[0]!;
+  expect(completed.outputs).toHaveLength(20);
+  for (const output of completed.outputs)
+    expect(
+      (
+        await readFile(
+          await files.output(workspace.id, clip.id, output.revision),
+        )
+      ).length,
+    ).toBe(output.bytes);
+  expect(ports.plan).toHaveBeenCalledTimes(3);
+  expect(ports.render).toHaveBeenCalledTimes(23);
+  const retained = batch
+    .snapshot()
+    .clips.reduce(
+      (total, item) =>
+        total +
+        item.preview!.bytes +
+        item.outputs.reduce((sum, output) => sum + output.bytes, 0) +
+        item.assets.reduce((sum, asset) => sum + asset.bytes, 0),
+      0,
+    );
+  expect(peaks.at(-1)).toBe(
+    workspace.source.bytes +
+      retained -
+      completed.outputs.at(-1)!.bytes +
+      OWNER_BATCH_POLICY.clipReservationBytes +
+      OWNER_BATCH_POLICY.overlayBytes,
+  );
+  await expect(
+    batch.render(clip.id, {
+      operationId: randomUUID(),
+      expectedRevision: clip.revision,
+    }),
+  ).rejects.toThrow("output_limit");
+  capacity.mockRejectedValueOnce(new Error("disk_unavailable"));
+  await expect(
+    batch.render(clips[1]!.id, {
+      operationId: randomUUID(),
+      expectedRevision: 0,
+    }),
+  ).rejects.toThrow("disk_unavailable");
+  expect(ports.render).toHaveBeenCalledTimes(23);
+  expect(batch.snapshot().clips[0]!.outputs).toEqual(completed.outputs);
+});
+
+it("reserves every queued export before dispatch while keeping a single overlay workspace", async () => {
+  await batch.close();
+  const capacity = vi.fn<(root: string, peak: number) => Promise<void>>(
+    async () => {},
+  );
+  batch = new OwnerClipBatch(
+    workspace,
+    files,
+    ports,
+    undefined,
+    undefined,
+    capacity,
+    3,
+  );
+  await batch.submit(request(), analysis);
+  await batch.drain();
+  const clips = batch.snapshot().clips;
+  const retained = clips.reduce(
+    (sum, clip) =>
+      sum +
+      clip.preview!.bytes +
+      clip.assets.reduce((total, asset) => total + asset.bytes, 0),
+    0,
+  );
+  const stop = gate();
+  const render = ports.render.getMockImplementation()!;
+  ports.render.mockImplementation(async (...args) => {
+    if (args[0].operation === "clip") await stop.wait;
+    return render(...args);
+  });
+  try {
+    for (let index = 0; index < 3; index++) {
+      await batch.render(clips[index]!.id, {
+        operationId: randomUUID(),
+        expectedRevision: 0,
+      });
+      expect(capacity.mock.calls.at(-1)![1]).toBe(
+        workspace.source.bytes +
+          retained +
+          (index + 1) * OWNER_BATCH_POLICY.clipReservationBytes +
+          OWNER_BATCH_POLICY.overlayBytes,
+      );
+    }
+  } finally {
+    stop.release();
+    await batch.drain();
+  }
+  expect(
+    batch.snapshot().clips.every((clip) => clip.outputs.length === 1),
+  ).toBe(true);
+});
+
+it("dispatches no planning, images or native work when cgroup headroom denies preparation", async () => {
+  await batch.close();
+  const capacity = async (_root: string, peak: number) =>
+    checkHostedScratch(peak, {
+      volume: HOSTED_SCRATCH_VOLUME_BYTES,
+      free: HOSTED_SCRATCH_VOLUME_BYTES,
+      retained: 0,
+      memoryLimit: HOSTED_MEMORY_BYTES,
+      memoryUsed: HOSTED_MEMORY_BYTES - 1,
+    });
+  batch = new OwnerClipBatch(
+    workspace,
+    files,
+    ports,
+    undefined,
+    undefined,
+    capacity,
+    3,
+  );
+  await expect(batch.submit(request(), analysis)).rejects.toThrow(
+    "disk_unavailable",
+  );
+  await batch.drain();
+  expect(batch.snapshot().clips).toEqual([]);
+  expect(ports.plan).toHaveBeenCalledTimes(0);
+  expect(ports.image).toHaveBeenCalledTimes(0);
+  expect(ports.render).toHaveBeenCalledTimes(0);
+});
 
 it("applies, exports, restores and removes a bounded manual hook without another AI request", async () => {
   await batch.submit(

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
-import { mkdtemp, mkdir, stat, statfs, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, stat, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { BackendConfig } from "../src/config/env.schema.js";
@@ -15,6 +15,7 @@ import { nativeEnvironment } from "./local-mode.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
 import { HostedDemoUsage } from "./demo-usage.ts";
 import { composeDemoUsageStore } from "./demo-usage.gcs.ts";
+import { createHostedScratchCapacity } from "./hosted-capacity.ts";
 
 /** Explicit executable composition only. Hosted imports/tests never spawn media. */
 export function hostedEditingReady(config: BackendConfig) {
@@ -69,14 +70,26 @@ export async function startHostedEditingWorkflow(
     await stat(file);
   const runtime = await mkdtemp(join(tmpdir(), "clipbuilder-editing-")),
     root = join(runtime, "workspaces");
-  await mkdir(root);
+  let capacity;
+  try {
+    await mkdir(root);
+    capacity = await createHostedScratchCapacity(runtime, root);
+  } catch (error) {
+    await rm(runtime, { recursive: true, force: true });
+    throw error;
+  }
   const workerToken = randomBytes(32).toString("hex"),
     state = join(runtime, "worker.json");
-  await writeFile(
-    state,
-    JSON.stringify({ root, workerToken, tools, overlayBundle, chromium }),
-    { flag: "wx", mode: 0o600 },
-  );
+  try {
+    await writeFile(
+      state,
+      JSON.stringify({ root, workerToken, tools, overlayBundle, chromium }),
+      { flag: "wx", mode: 0o600 },
+    );
+  } catch (error) {
+    await rm(runtime, { recursive: true, force: true });
+    throw error;
+  }
   const worker = spawn(process.execPath, [workerFile], {
     windowsHide: true,
     stdio: ["ignore", "ignore", "inherit", "ipc"],
@@ -147,15 +160,7 @@ export async function startHostedEditingWorkflow(
       abuse: composeAbuseVerifier(config),
       diagnostics,
       media,
-      async capacity(directory, peak) {
-        const disk = await statfs(directory);
-        if (
-          peak < 0 ||
-          peak > HOSTED_EDITING_POLICY.scratchBytes ||
-          disk.bavail * disk.bsize - peak < HOSTED_EDITING_POLICY.reserveBytes
-        )
-          throw new Error("disk_unavailable");
-      },
+      capacity,
       providers: (files, scopedMedia) =>
         composeOwnerProviders(
           {

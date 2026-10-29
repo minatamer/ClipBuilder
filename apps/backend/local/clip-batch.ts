@@ -111,7 +111,9 @@ export class OwnerClipBatch {
   private readonly clips = new Map<string, OwnerClip>();
   private readonly receipts = new Map<string, string>();
   private queue: Work[] = [];
-  private current: { clip: OwnerClip; controller: AbortController } | undefined;
+  private current:
+    | { clip: OwnerClip; controller: AbortController; kind: Work["kind"] }
+    | undefined;
   private pumping: Promise<void> | undefined;
   private closing = false;
   private admission = Promise.resolve();
@@ -482,12 +484,16 @@ export class OwnerClipBatch {
     return this.snapshot();
   }
   private async reserve(additional: number, outputs = 0, assets = 0) {
-    const retained =
-      this.clips.size +
-      [...this.clips.values()].reduce(
-        (sum, clip) => sum + Math.max(1, clip.outputs.length),
-        0,
-      );
+    const retained = [...this.clips.values()].reduce(
+      (sum, clip) =>
+        sum +
+        (clip.preview?.bytes ?? OWNER_BATCH_POLICY.clipReservationBytes) +
+        clip.outputs.reduce((bytes, output) => bytes + output.bytes, 0),
+      0,
+    );
+    const pendingExports =
+      this.queue.filter((work) => work.kind === "export").length +
+      (this.current?.kind === "export" ? 1 : 0);
     await this.capacity(
       this.files.root,
       this.workspace.source.bytes +
@@ -497,7 +503,8 @@ export class OwnerClipBatch {
             sum + clip.assets.reduce((total, asset) => total + asset.bytes, 0),
           0,
         ) +
-        (retained + additional * 2 + outputs) *
+        retained +
+        (additional + pendingExports + outputs) *
           OWNER_BATCH_POLICY.clipReservationBytes +
         OWNER_BATCH_POLICY.overlayBytes,
     );
@@ -535,7 +542,7 @@ export class OwnerClipBatch {
             )
           : undefined);
       if (!clip.base && !moment) throw new Error("moment_missing");
-      await this.reserve(0, 1);
+      await this.reserve(0);
       this.receipts.set(key, digest(request));
       if (cancelVersion !== this.cancelVersion) return this.snapshot();
       if (moment)
@@ -790,7 +797,7 @@ export class OwnerClipBatch {
       const work = this.queue.shift()!,
         { clip } = work;
       const controller = new AbortController();
-      this.current = { clip, controller };
+      this.current = { clip, controller, kind: work.kind };
       try {
         await this.diagnostics.run(
           "clip_build",

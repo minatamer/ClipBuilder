@@ -47,7 +47,7 @@ export const HOSTED_EDITING_POLICY = {
   nativeCalls: 64,
   reads: 1024,
   readBytes: 2 * 1024 ** 3,
-  scratchBytes: 12 * 1024 ** 3,
+  scratchBytes: 5 * 1024 ** 3,
   reserveBytes: 256 * 1024 ** 2,
   chunkBytes: 8 * 1024 ** 2,
 } as const;

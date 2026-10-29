@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { HostedUpload } from "./hosted-upload.ts";
 import { WorkspaceFiles } from "./workspace-files.ts";
 import { HOSTED_EDITING_POLICY } from "../../../packages/contracts/local/hosted-editing.ts";
+import { PUBLIC_LIMITS } from "@clipbuilder/contracts";
 const failure = vi.hoisted(() => ({ remove: false }));
 vi.mock("node:fs/promises", async (original) => {
   const fs = await original<typeof import("node:fs/promises")>();
@@ -22,6 +23,33 @@ vi.mock("node:fs/promises", async (original) => {
       return fs.rm(...args);
     },
   };
+});
+
+it("reserves the unchanged maximum upload before creating files and preserves an existing stage on denial", async () => {
+  const root = await mkdtemp(join(tmpdir(), "clipbuilder-upload-capacity-"));
+  const reserve = vi.fn<(bytes: number) => Promise<void>>(async () => {});
+  const upload = new HostedUpload(root, PUBLIC_LIMITS.maxSourceBytes, reserve);
+  const body = (bytes: number) =>
+    Object.assign(Readable.from([Buffer.from(JSON.stringify({ bytes }))]), {
+      headers: { "content-type": "application/json" },
+    });
+  try {
+    await upload.start(body(PUBLIC_LIMITS.maxSourceBytes));
+    expect(reserve).toHaveBeenCalledExactlyOnceWith(
+      PUBLIC_LIMITS.maxSourceBytes,
+    );
+    const before = await readdir(root);
+    reserve.mockRejectedValueOnce(new Error("disk_unavailable"));
+    await expect(upload.start(body(9))).rejects.toThrow("disk_unavailable");
+    expect(await readdir(root)).toEqual(before);
+    await expect(
+      upload.start(body(PUBLIC_LIMITS.maxSourceBytes + 1)),
+    ).rejects.toThrow();
+    expect(reserve).toHaveBeenCalledTimes(2);
+  } finally {
+    await upload.discard();
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 it("retains staged upload ownership after removal fails so an explicit cleanup retry removes the same bytes", async () => {
