@@ -1,5 +1,27 @@
 # ClipBuilder canonical ticket index
 
+## Hook edit fidelity — 2026-10-29
+
+[CL-132](CL-132-hook-edit-fidelity.md) confirms the owner's requirement that
+a Hook repeats every timestamped edit, especially the same camera/person and
+zoom. No production defect found. Stronger spatial native MP4 checks and shared
+React regressions pass: two native proofs, four focused tests, types/lint/format,
+and clean validation. Verification is synthetic/fake/paid-off, with no deployment;
+owner visual/live-AI/physical-device/release acceptance remains open.
+
+## Responsive editor — 2026-10-29
+
+[CL-131](CL-131-responsive-clip-editor.md) implements the owner's phone/tablet
+clip strip, larger preview and compact phone footer request. Desktop retains
+the left rail. Two current-source browser proofs, fourteen editor unit tests,
+types/lint/format and synthetic visual review pass with fake AI/no paid calls.
+Final focused validation has no actionable findings. The normal app remains
+healthy; owner visual/real-device and release acceptance remain separate.
+
+The owner subsequently authorized local staging/commits of CL-131/132 before
+new Media/audio work; the [whole-file plan](../operations/CL131_132_COMMIT_PLAN.md)
+owns all fifteen paths. No push, deployment or paid action is included.
+
 ## Eight-GiB hosted scratch budget — 2026-10-29
 
 [CL-130](CL-130-hosted-eight-gib-scratch-budget.md) implements the owner's

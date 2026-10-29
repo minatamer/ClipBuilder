@@ -1,5 +1,22 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Responsive editing — CL-131, 2026-10-29
+
+On phones and tablets, clip navigation is a horizontal touch-scrollable strip
+immediately below the Review and edit clips title, with no visible scrollbar.
+Use Left/Right/Home/End keyboard navigation and keep the selected clip visible.
+Desktop retains the vertical left rail with Up/Down/Home/End. Both preserve
+dirty-edit and readiness guards. Phones show a full-width, naturally tall
+portrait preview, then controls in normal content scrolling. Keep the phone
+footer compact, with an accessible reset icon beside the contextual actions.
+Use concise visible phone labels while retaining full accessible names. Reset
+failure recovery belongs in a dismissible popover anchored to that reset control.
+Tablets use the freed width for a larger preview beside one coherent settings
+panel. Preserve portrait aspect ratio, preview gestures and existing exports.
+This supersedes the universal left-rail geometry below, not its state gates.
+Local synthetic/fake checks need no keys; real AI still needs keys/live flags,
+approvals and owner action. Owner visual/device/release acceptance is separate.
+
 ## Hosted eight-GiB scratch target — CL-130, 2026-10-29
 
 The owner selects 2 CPUs / 8 GiB for the next hosted processing target and
@@ -493,7 +510,7 @@ Real processing still requires configured keys/live approvals and owner action.
 ## Loading-state presentation — 2026-10-24
 
 CL-062: full-content waits use a centered branded animated treatment with a
-readable stage title. Preserve the active content slot, vertical clip rail,
+readable stage title. Preserve the active content slot, responsive clip navigation,
 readiness gate and persistent footer actions. Show determinate progress only
 from measured work (for example acknowledged upload bytes). Queueing, Gemini,
 native export and preview readiness stay indeterminate until a genuine metric
@@ -583,8 +600,9 @@ in Filters. Actual caption/image layers and edits persist while switching;
 inactive guides cannot capture input. Tab switching never reloads the video
 or starts processing, AI or export work.
 
-CL-054: clip switching uses a vertical left rail, with Up/Down/Home/End keyboard
-navigation and the existing dirty-edit guard. Editing is visible only after a
+CL-054: desktop clip switching uses a vertical left rail, with Up/Down/Home/End
+keyboard navigation (CL-131 owns phone/tablet geometry), and the existing
+dirty-edit guard. Editing is visible only after a
 clip reaches ready/validated-revision with prepared data and a completed output,
 or CL-084 review-ready/validated-revision with a validated preview receipt;
 queued, preparing, exporting, canceling, failed or canceled clips never expose
