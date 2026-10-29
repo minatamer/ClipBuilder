@@ -3,7 +3,9 @@
 Owner request, 2026-10-29: rename Pictures to Media, retain image editing and add
 music/sound effects. Research and document the approach, then execute/validate.
 Current work was committed first under `CL131_132_COMMIT_PLAN.md` through
-`54d208b`; new work has separate local changes. No deployment or paid calls.
+`54d208b`; subsequent AFK authorization packages implementation under the
+[CL-133/134 whole-file plan](../operations/CL133_134_COMMIT_PLAN.md), `85563c8`.
+No deployment or paid calls.
 
 ## Research and sound choice
 
@@ -73,6 +75,9 @@ unsupported codecs, malformed/nonfinite metadata, oversized/long files, unsafe
 paths and unbound assets. Return content-free errors. Preserve existing clip,
 source, picture, revision and quality limits. Resource admission accounts for
 pending normalization and retained audio; no cloud configuration change.
+Normalized uploads pad only their tail to the next logical 30-fps frame (less
+than 34 ms), retaining sample content and an exact frame duration so browser and
+native looping use the same period.
 
 Private same-origin upload/range-playback follows existing workspace ownership,
 origin/auth/session checks. Local drafts copy/hash audio with other assets;
@@ -85,8 +90,10 @@ No filenames, waveforms, audio content, keys or signed URLs go into logs/Git.
 Generate the same catalogue PCM in browser and renderer from pure shared code.
 Project source-timed cues into Hook/body occurrences, preserving offset and loop
 phase. Whole-video and Hook-only cues use presentation windows. Preview follows
-the Player clock and pause/seek/mute state. Short cue-boundary fades remain
-inside each window. Match native segment clocks to physical prefix/body lengths
+the Player clock and pause/seek/mute state. Native five-millisecond boundary
+fades remain inside each window; synthesized sources also contain their own edge
+envelopes. Preview controls use the logical frame clock rather than promising
+sample-exact browser gain ramps. Match native segment clocks to physical prefix/body lengths
 at fractional/low cadence; keep native output resolution/cadence/encode settings.
 Mix original audio and admitted/generated tracks with bounded headroom/limiting
 and a fixed final AAC encode. The worker raster page must not play audio.
@@ -104,5 +111,5 @@ Do not trigger owner processing or read ignored env/media. New functionality
 works API-free in fake mode; fresh real AI still needs keys/live approvals and
 owner action. Personal listening/visual, physical iOS/Safari, real media/rights,
 hosted and release acceptance remain owner-only. The owner authorized a separate
-plan commit. Leave new implementation changes uncommitted unless separately
-authorized.
+plan commit, then later AFK packaging of all Media/audio and caption changes
+before Codex integration. No push or release is included.

@@ -12,6 +12,13 @@ acceptance. No deployment or paid test is authorized.
 
 Local controls use the normal `/start` flow and app shell. See the [local workflow guide](../../docs/operations/LOCAL_WORKFLOW.md). The backend owns AI mode; no separate frontend mode or app is needed. Fake AI is key-free and fictional; real downloads/native media are available independently.
 
+[CL-133](../../docs/tickets/CL-133-media-audio.md) renames Pictures to Media and
+adds an Audio subview with original sound previews, bounded MP3/WAV/M4A uploads,
+timed effects, Hook-only and whole-video music. Manual preview/edit/export needs
+no provider key in fake mode; fresh real AI retains its key/live/approval gates.
+See the local workflow guide for bounds and controls. Owner listening/device and
+hosted acceptance remain open; no deployment.
+
 Picked MP4 uploads stream through their protected route instead of the document
 Proxy, whose default body clone truncates requests above 10 MB. This preserves
 large local uploads without raising a global memory-buffer limit. Origin/caller/

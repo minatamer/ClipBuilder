@@ -11,6 +11,13 @@ the hosted editor profile has its own [release preparation](../../docs/operation
 The independent [local owner worker](owner/README.md) uses admitted local native
 tools and no cloud fallback; it is excluded from this deployed renderer build.
 
+[CL-133](../../docs/tickets/CL-133-media-audio.md) extends the normal backend's
+internal worker with bounded MP3/WAV/M4A normalization and manual audio mixing.
+Original synthesized sounds and admitted stereo PCM uploads use shared Hook/body
+clocks; native encoding preserves current video settings. Synthetic fake/no-key
+proofs verify audio frequencies and timing locally. Owner listening/real-media,
+Linux-hosted and release acceptance remain open; no cloud rollout occurred.
+
 Hosted upload compatibility (CL-015, 2026-10-07): retain `FRONTEND_ORIGIN` for the
 existing local caller and optionally configure one exact HTTPS
 `HOSTED_FRONTEND_ORIGIN`. After private caller verification, `/internal/upload`

@@ -11,7 +11,7 @@ Use the normal application at `http://localhost:3000/start`. The frontend runs
 on 3000 and backend on 4000 using their normal commands and existing app-local
 `.env.local` files. There is no separate owner app or startup mode.
 
-Processing opens a clean editor with clip tabs. Captions/Filters/Pictures/Focus show
+Processing opens a clean editor with clip tabs. Captions/Filters/Media/Focus show
 one inspector at a time; caption Style/Position/Text and picture Image/Timing/Motion/
 Position keep related controls separate. Add more clips returns to selection;
 Back to editor preserves the work. Apply/Discard replace navigation while edits
@@ -32,6 +32,11 @@ owns `FAKE_CAPTIONS_ENABLED=false`, a hardcoded switch rather than an env entry.
 The automatic Earth picture is permanently retired. Existing saved media stays.
 
 Empty Captions offers Generate captions and, locally only, Generate fake captions.
+Captions → Speakers has one selector per full caption. A selection applies to
+all its words; automatic attribution uses the most frequent known speaker (first
+known speaker breaks ties). The whole caption keeps that speaker/color, including
+when excerpted into a Hook. Word IDs, text and timing are preserved. These manual
+controls work without keys in fake mode; real diarization remains provider-gated.
 The fake action restores fictional captions on demand without keys or spend.
 The Gemini action confirms sending only this clip's audio and using credits.
 CL-078 authorizes this narrow local paid port even with FAKE_MODE=true and
@@ -51,6 +56,18 @@ For fake AI with actual local video processing and downloads, set
 `FAKE_MODE=true` and `PAID_DEMO_ENABLED=false` in `apps/backend/.env.local`.
 No API key or gcloud service is needed. The agent never reads that ignored file.
 The frontend has no separate AI setting. Next loads its existing configuration.
+
+Media contains Pictures and Audio (CL-133). Audio offers six original synthesized
+sounds with explicit previews, plus MP3/WAV/M4A uploads up to 12 MiB and two
+minutes. Up to eight uploads and twelve cues per clip support source-timed effects,
+Hook-only music or continuous whole-video music, volume, offset and looping.
+Timed effects repeat the captured Hook range; Hook-only music stops at its end.
+Original speech stays at 100% until edited. Apply/Discard, saved drafts, playback
+and native exports share these manual edits without an AI call. This works with
+fake mode and no keys; fresh real AI still needs configured keys, live flags,
+applicable approvals and owner action. See [audio design and bounds](../architecture/MEDIA_AUDIO.md)
+and [verification](../tickets/CL-133-media-audio.md). Owner listening/real-media,
+physical-device and hosted acceptance remain separate; no deployment occurred.
 
 From the repository root:
 

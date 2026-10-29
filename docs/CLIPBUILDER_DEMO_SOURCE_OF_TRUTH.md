@@ -1,5 +1,17 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## One speaker per caption — CL-134, 2026-10-29
+
+The owner simplifies Captions → Speakers to one selector for each full caption,
+showing its complete text. Select the most frequent known anonymous speaker;
+ties use the first known speaker in caption word order and entirely unknown
+captions stay neutral. A manual change assigns every word in that caption.
+Keep the full caption and speaker color stable throughout, preserving original
+word IDs/timing, corrections, saved edits, colors and Hook repetitions. This
+supersedes CL-128's per-word controls and mixed-speaker caption splitting.
+No additional AI call. Fake captions/manual controls work without keys; actual
+diarization quality remains owner-tested with provider keys/live approvals.
+
 ## Media and manual audio — CL-133, 2026-10-29
 
 The owner expands Pictures into Media, retaining images and adding manually

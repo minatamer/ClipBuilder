@@ -22,6 +22,12 @@ No cloud build/deployment or credit-consuming verification was performed.
 
 Local editing is part of this same backend and its normal startup. See the [local workflow guide](../../docs/operations/LOCAL_WORKFLOW.md). Fake AI needs no key; actual downloads/native media are local. Real AI uses normal Gemini settings and approvals; owner-manual testing remains required.
 
+[CL-133](../../docs/tickets/CL-133-media-audio.md) admits bounded audio uploads
+through the existing authenticated workspace bridge and internal native worker.
+Admitted audio joins scratch accounting, private range playback and hashed saved
+drafts. Manual sound/music edits and local exports work in fake mode with no API
+keys or paid calls; real AI and hosted release retain their separate gates.
+
 Permanent local Gemini acceptance (CL-060): quality checks emit safe critiques
 and continue with usable responses. Timing/grounding/evidence/overlap/visual
 judgments cannot veto a result. Failed clips support an explicit footer Retry,

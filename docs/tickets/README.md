@@ -1,13 +1,27 @@
 # ClipBuilder canonical ticket index
 
+## Caption-level speakers — 2026-10-29
+
+[CL-134](CL-134-caption-level-speakers.md) simplifies attribution to one selector
+and one stable speaker color per full caption. Shared resolution uses a known
+majority, with first-word tie breaking, preserving clocks, saved edits and Hook
+repetitions. Implemented/validated with 62 focused tests, two native proofs and
+the desktop/phone browser proof, types/lint/format and clean scoped validation.
+Fake/no-key only; no paid/cloud actions. Packaging follows
+[the CL-133/134 plan](../operations/CL133_134_COMMIT_PLAN.md), committed first as
+`85563c8`; owner personal/device/live/hosted/release acceptance remains open.
+
 ## Media and audio — 2026-10-29
 
-[CL-133](CL-133-media-audio.md) is executing the owner's Media/audio request
+[CL-133](CL-133-media-audio.md) implements and locally validates the owner's Media/audio request
 under the [documented design/research](../architecture/MEDIA_AUDIO.md), after
 committing CL-131/132 through `54d208b`. Manual built-ins/uploads, music and
 sound effects share preview/export and Hook clocks. Checks remain synthetic,
-fake/paid-off; no deployment. The plan is committed separately; implementation
-changes remain uncommitted.
+fake/paid-off: 70 focused unit checks, native/browser audio proofs, types/lint/
+format and clean scoped validation. The design plan is `c8729c9`; subsequent
+AFK packaging follows `85563c8`, with code in `a4c50a1` and `99bca8d` and its
+final documentation group. No deployment; owner listening,
+physical-device, real-media/rights, hosted and release acceptance remain open.
 
 ## Hook edit fidelity — 2026-10-29
 
