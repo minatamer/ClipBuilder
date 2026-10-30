@@ -74,57 +74,61 @@ export function OwnerAudioPreview({
   }, []);
   return (
     <>
-      {ownerAudioSegments(audio, overlay.frames, overlay.hook).map(
-        (segment, index) => {
-          const src = sources[ownerAudioSourceKey(segment.cue.source)];
-          if (!src || !audio) return null;
-          // Remotion pools tags by URL and clock. Distinct cues must still mix
-          // independently when they use the same source at the same time.
-          const cueSource = `${src}#${segment.cue.id}`;
-          const offset = Math.round(segment.offset * fps),
-            duration = Math.max(
+      {ownerAudioSegments(
+        audio,
+        overlay.frames,
+        overlay.hook,
+        undefined,
+        overlay.visuals,
+      ).map((segment, index) => {
+        const src = sources[ownerAudioSourceKey(segment.cue.source)];
+        if (!src || !audio) return null;
+        // Remotion pools tags by URL and clock. Distinct cues must still mix
+        // independently when they use the same source at the same time.
+        const cueSource = `${src}#${segment.cue.id}`;
+        const offset = Math.round(segment.offset * fps),
+          duration = Math.max(
+            1,
+            Math.round(
+              ownerAudioDuration(segment.cue.source, audio.assets) * fps,
+            ),
+          );
+        const track = (
+          <Html5Audio
+            src={cueSource}
+            volume={segment.cue.volume / 100}
+            pauseWhenBuffering
+            onError={onError}
+          />
+        );
+        return (
+          <Sequence
+            key={`${segment.cue.id}-${index}`}
+            from={Math.round(segment.start * fps)}
+            durationInFrames={Math.max(
               1,
-              Math.round(
-                ownerAudioDuration(segment.cue.source, audio.assets) * fps,
-              ),
-            );
-          const track = (
-            <Html5Audio
-              src={cueSource}
-              volume={segment.cue.volume / 100}
-              pauseWhenBuffering
-              onError={onError}
-            />
-          );
-          return (
-            <Sequence
-              key={`${segment.cue.id}-${index}`}
-              from={Math.round(segment.start * fps)}
-              durationInFrames={Math.max(
-                1,
-                Math.round((segment.end - segment.start) * fps),
-              )}
-              layout="none"
-            >
-              {segment.cue.loop ? (
-                <Sequence from={-offset} layout="none">
-                  <Loop durationInFrames={duration} layout="none">
-                    {track}
-                  </Loop>
-                </Sequence>
-              ) : (
-                <Html5Audio
-                  src={cueSource}
-                  trimBefore={offset}
-                  volume={segment.cue.volume / 100}
-                  pauseWhenBuffering
-                  onError={onError}
-                />
-              )}
-            </Sequence>
-          );
-        },
-      )}
+              Math.round((segment.end - segment.start) * fps),
+            )}
+            layout="none"
+          >
+            {segment.cue.loop ? (
+              <Sequence from={-offset} layout="none">
+                <Loop durationInFrames={duration} layout="none">
+                  {track}
+                </Loop>
+              </Sequence>
+            ) : (
+              <Html5Audio
+                src={cueSource}
+                trimBefore={offset}
+                volume={segment.cue.volume / 100}
+                pauseWhenBuffering
+                onError={onError}
+              />
+            )}
+          </Sequence>
+        );
+      })}
     </>
   );
 }

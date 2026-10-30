@@ -92,7 +92,7 @@ export function OwnerSelectionPanel({
     ),
     [policyRevision, setPolicyRevision] = useState(0);
   const [count, setCount] = useState(
-    String(demoLimit ?? OWNER_DEFAULT_AI_COUNT),
+    String(Math.min(OWNER_DEFAULT_AI_COUNT, clipLimit)),
   );
   const [analysis, setAnalysis] = useState<OwnerAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false),

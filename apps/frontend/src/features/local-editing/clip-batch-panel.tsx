@@ -26,9 +26,10 @@ import type { OwnerMomentExport } from "../../../../../packages/contracts/local/
 import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts/local/runtime.ts";
 import { HOSTED_DEMO_POLICY } from "../../../../../packages/contracts/local/hosted-editing.ts";
 import { DemoLimitToast } from "./demo-limit-toast.tsx";
+import { LoaderCircle } from "lucide-react";
+import { pollClipConnection, type ClipConnection } from "./clip-connection.ts";
 
 const initial: OwnerClipList = { clips: [], active: false, workers: 1 };
-const STATUS_UNAVAILABLE = "Reconnecting…";
 // Keep aligned with the clip-strip media query in style.css, including large tablets.
 const clipStripQuery =
   "(max-width: 75rem), (hover: none) and (pointer: coarse)";
@@ -51,6 +52,9 @@ export function OwnerClipBatchPanel({
   showProcessing = true,
   selectionReady = selected.length > 0,
   footerTarget,
+  onRecovered,
+  onStartOver,
+  onConnected,
 }: {
   workspace: OwnerWorkspace;
   capabilities: OwnerRuntimeCapabilities;
@@ -63,12 +67,17 @@ export function OwnerClipBatchPanel({
   showProcessing?: boolean;
   selectionReady?: boolean;
   footerTarget?: HTMLElement | null | undefined;
+  onRecovered?: ((workspace: OwnerWorkspace) => void) | undefined;
+  onStartOver?: (() => void) | undefined;
+  onConnected?: ((connected: boolean) => void) | undefined;
 }) {
   const clipLimit =
     "execution" in capabilities && capabilities.demoClipLimit !== null
       ? HOSTED_DEMO_POLICY.clips
       : OWNER_LIMITS.clips;
   const [limitNotice, setLimitNotice] = useState(0);
+  const [connection, setConnection] = useState<ClipConnection>("connected");
+  const [connectionAttempt, setConnectionAttempt] = useState(0);
   const planningAvailable =
     capabilities.planningAvailable && workspace.mode === capabilities.aiMode;
   const [list, setList] = useState(initial),
@@ -76,6 +85,7 @@ export function OwnerClipBatchPanel({
   const [pending, setPending] = useState(false),
     [review, setReview] = useState<string | null>(initialReviewId ?? null);
   const [dirtyClip, setDirtyClip] = useState<string | null>(null);
+  const [editorPending, setEditorPending] = useState(false);
   const tabsId = useId();
   const clipList = useRef<HTMLDivElement>(null);
   const horizontal = useSyncExternalStore(
@@ -130,38 +140,29 @@ export function OwnerClipBatchPanel({
   }, [endpoint]);
   useEffect(() => {
     const controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const refresh = async () => {
-      let delay = 1000;
-      const atMutation = mutationRevision.current;
-      try {
-        const response = await fetch(endpoint, { signal: controller.signal });
-        if (!response.ok) throw new Error("unavailable");
-        const result = ownerClipListSchema.parse(await response.json());
-        if (
-          !controller.signal.aborted &&
-          atMutation === mutationRevision.current
-        ) {
-          accept(result);
-          setMessage((current) =>
-            current === STATUS_UNAVAILABLE ? "" : current,
-          );
-        }
-        delay =
-          atMutation !== mutationRevision.current || result.active ? 750 : 1000;
-      } catch {
-        if (!controller.signal.aborted) setMessage(STATUS_UNAVAILABLE);
-      }
-      // Another local client can edit an idle bundle; reads never dispatch work.
-      if (!controller.signal.aborted)
-        timer = setTimeout(() => void refresh(), delay);
-    };
-    void refresh();
-    return () => {
-      controller.abort();
-      if (timer) clearTimeout(timer);
-    };
-  }, [endpoint, accept, list.active]);
+    void pollClipConnection({
+      workspaceId: workspace.id,
+      signal: controller.signal,
+      revision: () => mutationRevision.current,
+      list: (value, revision) => {
+        if (revision === mutationRevision.current) accept(value);
+      },
+      state: (value) => {
+        setConnection(value);
+        onConnected?.(value === "connected");
+        if (value === "missing") onActive(false);
+      },
+      recovered: onRecovered,
+    });
+    return () => controller.abort();
+  }, [
+    workspace.id,
+    accept,
+    connectionAttempt,
+    onRecovered,
+    onActive,
+    onConnected,
+  ]);
   async function action(path: string, body?: unknown) {
     if (requesting.current) return;
     requesting.current = true;
@@ -261,51 +262,91 @@ export function OwnerClipBatchPanel({
       {!planningAvailable && (hasClips || selected.length > 0) && (
         <p role="status">AI unavailable. Prepared clips still work.</p>
       )}
-      {((showProcessing && selectionReady) ||
-        (!showProcessing && list.active && !dirtyClip)) && (
-        <WorkflowActions target={footerTarget} label="Clip processing">
-          {showProcessing && selectionReady && !list.active && (
-            <Button
-              variant="primary"
-              disabled={
-                !planningAvailable ||
-                !selected.length ||
-                selected.length > clipLimit ||
-                pending ||
-                list.active ||
-                !!dirtyClip
-              }
-              onClick={() => {
-                if (
-                  !planningAvailable ||
-                  !selected.length ||
-                  selected.length > clipLimit
-                )
-                  return;
-                const first = selected[0]!;
-                void action(endpoint, {
-                  operationId: crypto.randomUUID(),
-                  analysisId: first.analysisId,
-                  policyRevision: first.policyRevision,
-                  sourceRevision: workspace.revision,
-                  momentIds: selected.map((item) => item.momentId),
-                });
-              }}
-            >
-              Process clips
-            </Button>
-          )}
-          {!showProcessing && list.active && (
+      {connection !== "connected" && (
+        <WorkflowActions target={footerTarget} label="Session connection">
+          <span
+            className="connection-status"
+            data-missing={connection === "missing" || undefined}
+            role="status"
+            aria-live="polite"
+          >
+            {connection === "reconnecting" && (
+              <LoaderCircle
+                size={16}
+                className="acquisition-spinner"
+                aria-hidden="true"
+              />
+            )}
+            {connection === "reconnecting"
+              ? "Reconnecting…"
+              : connection === "missing"
+                ? "This session is no longer available."
+                : "Couldn’t reconnect."}
+          </span>
+          {connection !== "reconnecting" && (
             <Button
               variant="secondary"
-              disabled={!list.active || pending}
-              onClick={() => void action(`${endpoint}/cancel`)}
+              onClick={() => {
+                setConnection("reconnecting");
+                setConnectionAttempt((value) => value + 1);
+              }}
             >
-              Cancel processing
+              Try again
+            </Button>
+          )}
+          {connection === "missing" && onStartOver && (
+            <Button variant="primary" onClick={onStartOver}>
+              Start new session
             </Button>
           )}
         </WorkflowActions>
       )}
+      {connection === "connected" &&
+        ((showProcessing && selectionReady) ||
+          (!showProcessing && list.active && !dirtyClip)) && (
+          <WorkflowActions target={footerTarget} label="Clip processing">
+            {showProcessing && selectionReady && !list.active && (
+              <Button
+                variant="primary"
+                disabled={
+                  !planningAvailable ||
+                  !selected.length ||
+                  selected.length > clipLimit ||
+                  pending ||
+                  list.active ||
+                  !!dirtyClip
+                }
+                onClick={() => {
+                  if (
+                    !planningAvailable ||
+                    !selected.length ||
+                    selected.length > clipLimit
+                  )
+                    return;
+                  const first = selected[0]!;
+                  void action(endpoint, {
+                    operationId: crypto.randomUUID(),
+                    analysisId: first.analysisId,
+                    policyRevision: first.policyRevision,
+                    sourceRevision: workspace.revision,
+                    momentIds: selected.map((item) => item.momentId),
+                  });
+                }}
+              >
+                Process clips
+              </Button>
+            )}
+            {!showProcessing && list.active && (
+              <Button
+                variant="secondary"
+                disabled={!list.active || pending}
+                onClick={() => void action(`${endpoint}/cancel`)}
+              >
+                Cancel processing
+              </Button>
+            )}
+          </WorkflowActions>
+        )}
       <div className="clip-workspace" hidden={showProcessing}>
         <div
           ref={clipList}
@@ -372,58 +413,61 @@ export function OwnerClipBatchPanel({
               <div>
                 <h3 className="local-sr-only">Clip {currentIndex}</h3>
               </div>
-              {!showProcessing && (!list.active || retryable) && (
-                <WorkflowActions
-                  target={footerTarget}
-                  label={`Clip ${currentIndex} actions`}
-                >
-                  {(retryable ||
-                    (current.base &&
+              {connection === "connected" &&
+                !showProcessing &&
+                (!list.active || retryable) && (
+                  <WorkflowActions
+                    target={footerTarget}
+                    label={`Clip ${currentIndex} actions`}
+                  >
+                    {(retryable ||
+                      (current.base &&
+                        editable &&
+                        latest?.editRevision !== current.revision)) &&
+                      !dirtyClip && (
+                        <Button
+                          variant="primary"
+                          disabled={
+                            working(current) ||
+                            pending ||
+                            editorPending ||
+                            (!current.base && !planningAvailable) ||
+                            dirtyClip === current.id
+                          }
+                          onClick={() =>
+                            void action(
+                              `${endpoint}/${current.id}/${retryable ? "retry" : "render"}`,
+                              {
+                                operationId: crypto.randomUUID(),
+                                expectedRevision: current.revision,
+                              },
+                            )
+                          }
+                        >
+                          {retryable ? "Retry clip" : "Export clip"}
+                        </Button>
+                      )}
+                    {latest &&
                       editable &&
-                      latest?.editRevision !== current.revision)) &&
-                    !dirtyClip && (
-                      <Button
-                        variant="primary"
-                        disabled={
-                          working(current) ||
-                          pending ||
-                          (!current.base && !planningAvailable) ||
-                          dirtyClip === current.id
-                        }
-                        onClick={() =>
-                          void action(
-                            `${endpoint}/${current.id}/${retryable ? "retry" : "render"}`,
-                            {
-                              operationId: crypto.randomUUID(),
-                              expectedRevision: current.revision,
-                            },
-                          )
-                        }
-                      >
-                        {retryable ? "Retry clip" : "Export clip"}
-                      </Button>
-                    )}
-                  {latest &&
-                    editable &&
-                    !dirtyClip &&
-                    latest.editRevision === current.revision && (
-                      <a
-                        className={`${buttonStyles.button} ${buttonStyles.primary}`}
-                        aria-label={
-                          latest.editRevision === current.revision
+                      !dirtyClip &&
+                      latest.editRevision === current.revision && (
+                        <a
+                          className={`${buttonStyles.button} ${buttonStyles.primary}`}
+                          aria-label={
+                            latest.editRevision === current.revision
+                              ? "Download clip"
+                              : "Download previous export"
+                          }
+                          href={`${endpoint}/${current.id}/output/${latest.revision}`}
+                          download={`clip-${currentIndex}-r${latest.revision}.mp4`}
+                        >
+                          {latest.editRevision === current.revision
                             ? "Download clip"
-                            : "Download previous export"
-                        }
-                        href={`${endpoint}/${current.id}/output/${latest.revision}`}
-                        download={`clip-${currentIndex}-r${latest.revision}.mp4`}
-                      >
-                        {latest.editRevision === current.revision
-                          ? "Download clip"
-                          : "Previous export"}
-                      </a>
-                    )}
-                </WorkflowActions>
-              )}
+                            : "Previous export"}
+                        </a>
+                      )}
+                  </WorkflowActions>
+                )}
             </div>
             {current.error &&
               ["canceled", "failed"].includes(current.state) && (
@@ -461,6 +505,7 @@ export function OwnerClipBatchPanel({
                   capabilities.youtubeAudio === true
                 }
                 onBusy={onActive}
+                onPending={setEditorPending}
               />
             )}
           </article>

@@ -1,15 +1,22 @@
 import { ProcessingState } from "../../shared/ui/processing-state";
+import { Button } from "../../shared/ui/button";
 export function YoutubeAudioIntake({
   value,
   pending,
   onChange,
+  onDownload,
+  onBack,
+  message,
 }: {
   value: string;
   pending: boolean;
   onChange: (value: string) => void;
+  onDownload: () => void;
+  onBack: () => void;
+  message: string;
 }) {
   return (
-    <div className="caption-empty" aria-busy={pending}>
+    <div className="caption-empty youtube-audio-card" aria-busy={pending}>
       <h4>Sound from YouTube</h4>
       {pending ? (
         <ProcessingState label="Importing audio" />
@@ -29,6 +36,23 @@ export function YoutubeAudioIntake({
           <p className="source-hint">Audio up to 2 minutes · 12 MB</p>
         </>
       )}
+      {message && (
+        <p className="local-error" role="alert">
+          {message}
+        </p>
+      )}
+      <div className="audio-intake-actions youtube-audio-card-actions">
+        <Button
+          variant="primary"
+          disabled={pending || !value.trim()}
+          onClick={onDownload}
+        >
+          Download sound
+        </Button>
+        <Button variant="quiet" onClick={onBack}>
+          Back to sounds
+        </Button>
+      </div>
     </div>
   );
 }

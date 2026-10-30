@@ -56,6 +56,9 @@ export function LocalEditingExperience({
   const [acquisitionBusy, setAcquisitionBusy] = useState(false);
   const blocked = busy || acquisitionBusy || !capabilities;
   const [message, setMessage] = useState("");
+  const [connectAttempt, setConnectAttempt] = useState(0);
+  const [startupFailed, setStartupFailed] = useState(false);
+  const [sessionConnected, setSessionConnected] = useState(true);
   const fileInput = useRef<HTMLInputElement>(null);
   const sourcePreview = useRef<HTMLVideoElement>(null);
   const [previewReadyFor, setPreviewReadyFor] = useState<string | null>(null);
@@ -89,6 +92,14 @@ export function LocalEditingExperience({
   const choose = useCallback((value: OwnerMomentExport[]) => {
     setSelection(value);
   }, []);
+  const workspaceRecovered = useCallback((value: OwnerWorkspace) => {
+    setWorkspace(value);
+    setSelection([]);
+    setInitialClip(null);
+    setUnapplied(false);
+    setClearBlocked(false);
+    setClipWork(false);
+  }, []);
   const sourceOpened = useCallback(
     (value: OwnerWorkspace) => {
       setWorkspace(value);
@@ -106,16 +117,20 @@ export function LocalEditingExperience({
   );
   useEffect(() => {
     const controller = new AbortController();
+    const requestSignal = AbortSignal.any([
+      controller.signal,
+      AbortSignal.timeout(10_000),
+    ]);
     void (async () => {
       try {
         const capabilitiesReady = fetch("/api/local/capabilities", {
-          signal: controller.signal,
+          signal: requestSignal,
         }).then(async (response) => {
           if (!response.ok) throw new Error("unavailable");
           return ownerRuntimeCapabilitiesSchema.parse(await response.json());
         });
         const workspaceReady = fetch("/api/local/workspace", {
-          signal: controller.signal,
+          signal: requestSignal,
         }).then(async (response) => {
           if (!response.ok) throw new Error("unavailable");
           return ownerWorkspaceSchema.nullable().parse(await response.json());
@@ -124,7 +139,7 @@ export function LocalEditingExperience({
           capabilitiesReady,
           workspaceReady,
           hosted
-            ? fetch("/api/local/session", { signal: controller.signal }).then(
+            ? fetch("/api/local/session", { signal: requestSignal }).then(
                 async (response) => {
                   if (!response.ok) throw new Error("demo_unavailable");
                   return hostedDemoStatusSchema.parse(await response.json());
@@ -142,15 +157,11 @@ export function LocalEditingExperience({
         if (controller.signal.aborted) return;
         controller.abort();
         setBusy(false);
-        setMessage(
-          hosted
-            ? "We couldn’t connect. Refresh the page to try again."
-            : "We couldn’t connect to the local service. Check the backend and refresh to try again.",
-        );
+        setStartupFailed(true);
       }
     })();
     return () => controller.abort();
-  }, [hosted]);
+  }, [hosted, connectAttempt]);
   async function upload(file: File | undefined) {
     if (!file || blocked || opening.current) return;
     const controller = new AbortController();
@@ -318,7 +329,7 @@ export function LocalEditingExperience({
             <>
               <SessionControls
                 recovery={clearBlocked}
-                disabled={blocked || clipWork}
+                disabled={blocked || clipWork || !sessionConnected}
                 onClear={(discard) => void clear(discard)}
               />
               <div className="local-footer-actions">
@@ -343,6 +354,22 @@ export function LocalEditingExperience({
                 <div className="workflow-footer-slot" ref={setFooterTarget} />
               </div>
             </>
+          ) : startupFailed ? (
+            <div className="workflow-actions">
+              <span className="connection-status" role="status">
+                Couldn’t connect.
+              </span>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setBusy(true);
+                  setStartupFailed(false);
+                  setConnectAttempt((value) => value + 1);
+                }}
+              >
+                Try again
+              </Button>
+            </div>
           ) : null
         }
       >
@@ -557,6 +584,17 @@ export function LocalEditingExperience({
                   showProcessing={view === "moments"}
                   selectionReady={showMomentResults}
                   footerTarget={footerTarget}
+                  onRecovered={workspaceRecovered}
+                  onConnected={setSessionConnected}
+                  onStartOver={() => {
+                    setWorkspace(null);
+                    setSelection([]);
+                    setHasClips(false);
+                    setUnapplied(false);
+                    setClipWork(false);
+                    setView("moments");
+                    setSessionConnected(true);
+                  }}
                 />
               )}
             </>

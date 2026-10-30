@@ -16,6 +16,8 @@ export function HookControls({
   attempt,
   valid,
   onChange,
+  onUseSuggestion,
+  suggestedAudio = false,
 }: {
   hook: OwnerHook | undefined;
   suggestion?: OwnerHook | undefined;
@@ -26,6 +28,8 @@ export function HookControls({
   attempt: number;
   valid: boolean;
   onChange: (hook: OwnerHook | undefined) => void;
+  onUseSuggestion: (hook: OwnerHook) => void;
+  suggestedAudio?: boolean;
 }) {
   return (
     <div className="hook-controls">
@@ -52,10 +56,11 @@ export function HookControls({
             variant="secondary"
             disabled={
               !available ||
-              (hook?.startFrame === suggestion.startFrame &&
+              (suggestedAudio &&
+                hook?.startFrame === suggestion.startFrame &&
                 hook.endFrame === suggestion.endFrame)
             }
-            onClick={() => onChange({ ...suggestion })}
+            onClick={() => onUseSuggestion({ ...suggestion })}
           >
             Use suggestion
           </Button>

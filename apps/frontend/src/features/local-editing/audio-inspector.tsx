@@ -9,6 +9,7 @@ import {
   ownerAudioSourceKey,
 } from "../../../../../packages/composition/local/audio-sources.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
+import type { OwnerVisualTiming } from "../../../../../packages/contracts/local/visual-clock.ts";
 import {
   ownerSourceFrame,
   type OwnerHook,
@@ -41,7 +42,7 @@ export function AudioInspector({
 }: {
   audio: OwnerAudioEdit | undefined;
   assets: readonly OwnerAudioAsset[];
-  visuals?: readonly { id: string; startFrame: number }[];
+  visuals?: readonly OwnerVisualTiming[];
   frames: number;
   hook: OwnerHook | undefined;
   player: RefObject<PlayerRef | null>;
@@ -79,6 +80,8 @@ export function AudioInspector({
       { ...current, cues: [cue], assets: [...assets] },
       frames,
       hook,
+      undefined,
+      visuals,
     )[0]?.start;
   const selectedStart = selected ? cueStart(selected) : undefined;
   const seekCue = (cue: OwnerAudioCue) => {
@@ -92,7 +95,24 @@ export function AudioInspector({
       ? OWNER_SOUNDS.find((sound) => sound.id === source.id)!.label
       : `Uploaded audio ${assets.findIndex((asset) => asset.id === source.id) + 1}`;
   const change = (cue: OwnerAudioCue) => {
-    if (cue.loop && cue.visualId) {
+    const previous = current.cues.find((item) => item.id === cue.id);
+    if (
+      cue.suggestedHook &&
+      previous &&
+      (cue.placement !== previous.placement ||
+        cue.offsetFrame !== previous.offsetFrame ||
+        cue.loop !== previous.loop)
+    ) {
+      cue = { ...cue };
+      delete cue.suggestedHook;
+    }
+    if (
+      cue.visualId &&
+      previous &&
+      (cue.placement !== previous.placement ||
+        cue.offsetFrame !== previous.offsetFrame ||
+        cue.loop !== previous.loop)
+    ) {
       cue = { ...cue };
       delete cue.visualId;
     }
@@ -114,7 +134,7 @@ export function AudioInspector({
     const placement =
       source.kind === "upload" || sound?.id === "pulse"
         ? "video"
-        : sound?.id === "tension"
+        : sound?.id === "tension" || sound?.hookOnly
           ? "hook"
           : "clip";
     const frame = Math.max(
@@ -142,7 +162,7 @@ export function AudioInspector({
           : frames,
       offsetFrame: 0,
       volume: sound?.music || source.kind === "upload" ? 20 : 35,
-      loop: !!sound?.music || source.kind === "upload",
+      loop: (!!sound?.music && !sound.hookOnly) || source.kind === "upload",
     };
     stop();
     seekCue(cue);
@@ -225,7 +245,7 @@ export function AudioInspector({
                 disabled={
                   pending ||
                   current.cues.length >= OWNER_AUDIO_LIMITS.cues ||
-                  (sound.id === "tension" && !hook)
+                  ((sound.id === "tension" || sound.hookOnly) && !hook)
                 }
                 onClick={() => add({ kind: "builtin", id: sound.id })}
               >
@@ -252,62 +272,64 @@ export function AudioInspector({
             </div>
           ))}
         </div>
-        <Button
-          variant="secondary"
-          icon={Upload}
-          disabled={
-            pending ||
-            assets.length >= OWNER_AUDIO_LIMITS.assets ||
-            current.cues.length >= OWNER_AUDIO_LIMITS.cues
-          }
-          onClick={() => input.current?.click()}
-        >
-          {pending ? "Uploading…" : "Upload audio"}
-        </Button>
-        <input
-          ref={input}
-          className="local-file-input"
-          type="file"
-          accept="audio/mpeg,audio/wav,audio/mp4,.mp3,.wav,.m4a"
-          aria-label="Upload audio"
-          disabled={pending}
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0];
-            event.currentTarget.value = "";
-            if (!file) return;
-            if (file.size < 1 || file.size > OWNER_AUDIO_LIMITS.inputBytes) {
-              setMessage("Choose audio under 12 MB and 2 minutes.");
-              return;
-            }
-            setMessage("");
-            stop();
-            void onUpload(file).then((assetId) => {
-              if (assetId) {
-                setView("tracks");
-                setSelection(null);
-              }
-            });
-          }}
-        />
-        {onYoutube && (
+        <div className="audio-intake-actions">
           <Button
             variant="secondary"
+            icon={Upload}
             disabled={
               pending ||
               assets.length >= OWNER_AUDIO_LIMITS.assets ||
               current.cues.length >= OWNER_AUDIO_LIMITS.cues
             }
-            onClick={() => {
-              stop();
-              onYoutube();
-            }}
+            onClick={() => input.current?.click()}
           >
-            From YouTube
+            {pending ? "Uploading…" : "Upload audio"}
           </Button>
-        )}
+          <input
+            ref={input}
+            className="local-file-input"
+            type="file"
+            accept="audio/mpeg,audio/wav,audio/mp4,.mp3,.wav,.m4a"
+            aria-label="Upload audio"
+            disabled={pending}
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = "";
+              if (!file) return;
+              if (file.size < 1 || file.size > OWNER_AUDIO_LIMITS.inputBytes) {
+                setMessage("Choose audio under 12 MB and 2 minutes.");
+                return;
+              }
+              setMessage("");
+              stop();
+              void onUpload(file).then((assetId) => {
+                if (assetId) {
+                  setView("tracks");
+                  setSelection(null);
+                }
+              });
+            }}
+          />
+          {onYoutube && (
+            <Button
+              variant="secondary"
+              disabled={
+                pending ||
+                assets.length >= OWNER_AUDIO_LIMITS.assets ||
+                current.cues.length >= OWNER_AUDIO_LIMITS.cues
+              }
+              onClick={() => {
+                stop();
+                onYoutube();
+              }}
+            >
+              From YouTube
+            </Button>
+          )}
+        </div>
         <p className="source-hint">MP3, WAV or M4A · 12 MB · 2 minutes</p>
         {!hook && (
-          <p className="source-hint">Add a hook to use suspense audio.</p>
+          <p className="source-hint">Add a hook to use hook-only audio.</p>
         )}
       </div>
       <div

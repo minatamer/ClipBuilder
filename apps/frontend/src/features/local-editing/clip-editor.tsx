@@ -1,6 +1,16 @@
 import { Button } from "../../shared/ui/button";
 import { ProcessingState } from "../../shared/ui/processing-state";
-import { LoaderCircle, RotateCw, Upload } from "lucide-react";
+import {
+  Captions,
+  Images,
+  LoaderCircle,
+  Magnet,
+  RotateCw,
+  ScanFace,
+  SlidersHorizontal,
+  Type,
+  Upload,
+} from "lucide-react";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { ControlTabs } from "./control-tabs.tsx";
 import { FocusPreviewControls } from "./focus-preview-controls.tsx";
@@ -9,6 +19,10 @@ import { CaptionTextEditor } from "./caption-text-editor.tsx";
 import { CaptionSpeakers } from "./caption-speakers.tsx";
 import { localCodexError, LocalCodexError } from "./codex-errors.ts";
 import { HookControls } from "./hook-controls.tsx";
+import {
+  changeManualOwnerHook,
+  acceptSuggestedOwnerHook,
+} from "./hook-edit.ts";
 import { AudioInspector } from "./audio-inspector.tsx";
 import { YoutubeAudioIntake } from "./youtube-audio-intake.tsx";
 import { ownerYoutubeAudioImportSchema } from "../../../../../packages/contracts/local/youtube-audio.ts";
@@ -25,6 +39,7 @@ import {
   ownerPresentationFrames,
   ownerHookFrames,
   ownerHookSchema,
+  decodeOwnerHookSuggestion,
 } from "../../../../../packages/contracts/local/hook.ts";
 import { TypographyFields } from "./typography-fields.tsx";
 import { TextInspector } from "./text-inspector.tsx";
@@ -55,12 +70,20 @@ import { Player, type PlayerRef } from "@remotion/player";
 import {
   AbsoluteFill,
   Html5Video,
+  Img,
   Sequence,
   useCurrentFrame,
   useCurrentScale,
   useVideoConfig,
 } from "remotion";
-import { OwnerAutomaticOverlay } from "../../../../../packages/composition/local/automatic-overlay.tsx";
+import {
+  OwnerAutomaticOverlay,
+  type OwnerOverlayImageProps,
+} from "../../../../../packages/composition/local/automatic-overlay.tsx";
+
+export const bufferedOverlayImage = (props: OwnerOverlayImageProps) => (
+  <Img {...props} pauseWhenLoading maxRetries={0} />
+);
 import { OwnerVideoLookLayer } from "../../../../../packages/composition/local/video-look.tsx";
 import {
   OWNER_VIDEO_LOOKS,
@@ -84,6 +107,7 @@ import {
 import {
   OWNER_PICTURE_LIMITS,
   OWNER_VISUAL_ANIMATIONS,
+  OWNER_VISUAL_DEFAULT_MOTION,
   type OwnerVisualEdit,
 } from "../../../../../packages/contracts/local/assets.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/index.ts";
@@ -116,6 +140,14 @@ const SETTINGS = [
   "hook",
 ] as const;
 type EditorSetting = (typeof SETTINGS)[number];
+const SETTING_ICONS = {
+  captions: Captions,
+  text: Type,
+  filters: SlidersHorizontal,
+  pictures: Images,
+  focus: ScanFace,
+  hook: Magnet,
+} as const;
 
 function SelectionBox({
   id,
@@ -382,6 +414,8 @@ function Review({
         overlay={overlay}
         assets={assets}
         frame={presentationFrame}
+        renderImage={bufferedOverlayImage}
+        onImageError={onPlaybackError}
       />
       <AbsoluteFill
         className="editor-interaction"
@@ -473,6 +507,7 @@ export function ClipEditor({
   fakeCaptionGeneration = false,
   youtubeAudio = false,
   onBusy,
+  onPending,
 }: {
   clip: OwnerClip;
   workspaceId: string;
@@ -486,6 +521,7 @@ export function ClipEditor({
   fakeCaptionGeneration?: boolean;
   youtubeAudio?: boolean;
   onBusy?: (busy: boolean) => void;
+  onPending?: (pending: boolean) => void;
 }) {
   const [form, setForm] = useState(() => {
     const original = initialOwnerEdit(clip);
@@ -610,13 +646,16 @@ export function ClipEditor({
     };
   }, []);
   useEffect(() => {
+    onPending?.(pending);
+    return () => onPending?.(false);
+  }, [pending, onPending]);
+  useEffect(() => {
     onDirty(
       clip.id,
       dirty ||
         captionConfirm ||
         generating ||
-        audioUploading ||
-        audioImport !== null,
+        (audioUploading && audioImport === null),
     );
     return () => onDirty(clip.id, false);
   }, [
@@ -767,9 +806,7 @@ export function ClipEditor({
       endFrame: Math.min(base.overlay.frames, startFrame + 4 * OWNER_FPS),
       box: { x: 0.1, y: 0.1, width: 0.8, height: 0.3 },
       fit: "contain",
-      entrance: "fade",
-      exit: "fade",
-      animationFrames: 9,
+      ...OWNER_VISUAL_DEFAULT_MOTION,
     };
   }
   function choosePicture(cue: OwnerVisualEdit) {
@@ -994,7 +1031,7 @@ export function ClipEditor({
   const content = (
     <section className="clip-editor" aria-label="Clip editor">
       <p className="flow-notice" role="status" aria-live="polite">
-        {!stale && message}
+        {!stale && audioImport === null && message}
       </p>
       {stale && (
         <p className="editor-warning" role="alert">
@@ -1071,55 +1108,65 @@ export function ClipEditor({
             role="tablist"
             aria-label="Clip settings"
           >
-            {SETTINGS.map((value, index) => (
-              <button
-                key={value}
-                id={`${tabsId}-${value}`}
-                type="button"
-                role="tab"
-                disabled={pending || audioImport !== null}
-                aria-selected={setting === value}
-                aria-controls={`${tabsId}-${value}-panel`}
-                tabIndex={setting === value ? 0 : -1}
-                onClick={() => {
-                  selectSetting(value);
-                }}
-                onKeyDown={(event) => {
-                  if (pending || audioImport !== null) return;
-                  if (
-                    !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
-                      event.key,
+            {SETTINGS.map((value, index) => {
+              const Icon = SETTING_ICONS[value];
+              return (
+                <button
+                  key={value}
+                  id={`${tabsId}-${value}`}
+                  type="button"
+                  role="tab"
+                  disabled={pending || audioImport !== null}
+                  aria-selected={setting === value}
+                  aria-controls={`${tabsId}-${value}-panel`}
+                  tabIndex={setting === value ? 0 : -1}
+                  onClick={() => {
+                    selectSetting(value);
+                  }}
+                  onKeyDown={(event) => {
+                    if (pending || audioImport !== null) return;
+                    if (
+                      !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                        event.key,
+                      )
                     )
-                  )
-                    return;
-                  event.preventDefault();
-                  const next =
-                    SETTINGS[
-                      event.key === "Home"
-                        ? 0
-                        : event.key === "End"
-                          ? SETTINGS.length - 1
-                          : (index +
-                              (event.key === "ArrowRight" ? 1 : -1) +
-                              SETTINGS.length) %
-                            SETTINGS.length
-                    ]!;
-                  selectSetting(next);
-                  document.getElementById(`${tabsId}-${next}`)?.focus();
-                }}
-              >
-                {
+                      return;
+                    event.preventDefault();
+                    const next =
+                      SETTINGS[
+                        event.key === "Home"
+                          ? 0
+                          : event.key === "End"
+                            ? SETTINGS.length - 1
+                            : (index +
+                                (event.key === "ArrowRight" ? 1 : -1) +
+                                SETTINGS.length) %
+                              SETTINGS.length
+                      ]!;
+                    selectSetting(next);
+                    document.getElementById(`${tabsId}-${next}`)?.focus();
+                  }}
+                >
+                  <Icon
+                    className="editor-section-icon"
+                    size={16}
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                    focusable="false"
+                  />
                   {
-                    captions: "Captions",
-                    text: "Text",
-                    filters: "Filters",
-                    pictures: "Media",
-                    focus: "Focus",
-                    hook: "Hook",
-                  }[value]
-                }
-              </button>
-            ))}
+                    {
+                      captions: "Captions",
+                      text: "Text",
+                      filters: "Filters",
+                      pictures: "Media",
+                      focus: "Focus",
+                      hook: "Hook",
+                    }[value]
+                  }
+                </button>
+              );
+            })}
           </div>
           <div
             id={`${tabsId}-hook-panel`}
@@ -1133,8 +1180,14 @@ export function ClipEditor({
                 <legend className="local-sr-only">Hook</legend>
                 <HookControls
                   hook={draft.hook}
-                  suggestion={base.hookSuggestion}
+                  suggestion={decodeOwnerHookSuggestion(
+                    base.hookSuggestion,
+                    base.overlay.frames,
+                  )}
                   simulated={clip.mode === "synthetic-ai"}
+                  suggestedAudio={
+                    draft.audio?.cues.some((cue) => cue.suggestedHook) ?? false
+                  }
                   frames={base.overlay.frames}
                   player={player}
                   available={!playbackFailed && previewLoaded && !pending}
@@ -1142,7 +1195,25 @@ export function ClipEditor({
                   valid={!error}
                   onChange={(hook) => {
                     player.current?.pause();
-                    update({ ...draft, hook });
+                    setMessage("");
+                    update(changeManualOwnerHook(draft, hook));
+                  }}
+                  onUseSuggestion={(hook) => {
+                    player.current?.pause();
+                    try {
+                      update(
+                        acceptSuggestedOwnerHook(
+                          draft,
+                          hook,
+                          crypto.randomUUID(),
+                        ),
+                      );
+                      setMessage("");
+                    } catch {
+                      setMessage(
+                        "Remove an audio layer to make room for the hook’s riser.",
+                      );
+                    }
                   }}
                 />
               </fieldset>
@@ -1868,6 +1939,14 @@ export function ClipEditor({
                     value={audioImport}
                     pending={pending}
                     onChange={setAudioImport}
+                    message={message}
+                    onDownload={() => void perform("youtube-audio")}
+                    onBack={() => {
+                      request.current?.abort();
+                      setAudioUploading(false);
+                      setAudioImport(null);
+                      setMessage("");
+                    }}
                   />
                 )}
               {setting === "pictures" &&
@@ -1914,30 +1993,13 @@ export function ClipEditor({
                 )}
             </div>
           </div>
-          {actionsVisible && audioUploading && (
+          {actionsVisible && audioUploading && audioImport === null && (
             <WorkflowActions target={footerTarget} label="Audio upload actions">
               <Button
                 variant="secondary"
                 onClick={() => request.current?.abort()}
               >
-                {audioImport !== null ? "Cancel import" : "Cancel upload"}
-              </Button>
-            </WorkflowActions>
-          )}
-          {actionsVisible && audioImport !== null && !audioUploading && (
-            <WorkflowActions
-              target={footerTarget}
-              label="YouTube audio actions"
-            >
-              <Button
-                variant="primary"
-                disabled={pending || !audioImport.trim()}
-                onClick={() => void perform("youtube-audio")}
-              >
-                Download sound
-              </Button>
-              <Button variant="quiet" onClick={() => setAudioImport(null)}>
-                Cancel
+                Cancel upload
               </Button>
             </WorkflowActions>
           )}
@@ -1972,8 +2034,7 @@ export function ClipEditor({
             )}
           {actionsVisible &&
             !captionConfirm &&
-            !audioUploading &&
-            audioImport === null &&
+            (!audioUploading || audioImport !== null) &&
             (dirty || stale || previewUnavailable) && (
               <WorkflowActions target={footerTarget} label="Edit actions">
                 <Button
@@ -1982,7 +2043,7 @@ export function ClipEditor({
                   disabled={!dirty || !!error || stale || pending}
                   onClick={() => void perform("edit")}
                 >
-                  {pending ? (
+                  {pending && audioImport === null ? (
                     <>
                       <LoaderCircle
                         size={18}
