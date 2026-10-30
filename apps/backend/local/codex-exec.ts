@@ -11,6 +11,7 @@ import {
 import { join, resolve, dirname, relative, isAbsolute } from "node:path";
 import { LOCAL_CODEX_POLICY } from "../../../packages/contracts/local/codex.ts";
 import { nativeEnvironment } from "./local-mode.ts";
+import { codexOutputSchema } from "./codex-schema.ts";
 
 export type CodexProcessRequest = {
   executable: string;
@@ -245,10 +246,14 @@ export function createLocalCodexInference(options: {
         );
       const schema = join(directory, "schema.json"),
         output = join(directory, "result.json");
-      await writeFile(schema, JSON.stringify(request.schema), {
-        flag: "wx",
-        mode: 0o600,
-      });
+      await writeFile(
+        schema,
+        JSON.stringify(codexOutputSchema(request.schema)),
+        {
+          flag: "wx",
+          mode: 0o600,
+        },
+      );
       // Built-in IDs are reserved; a private ID keeps ChatGPT auth and fixed
       // retry policy without redefining the CLI's built-in OpenAI provider.
       const args = [
