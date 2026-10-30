@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import sharp from "../apps/backend/node_modules/sharp/dist/index.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import {
   mkdtemp,
@@ -243,13 +244,38 @@ it("normalizes bounded music formats and mixes speech, continuous music, hook-on
     ).streams[0];
     expect(probe.height).toBe(320);
     expect(probe.avg_frame_rate).toBe("30/1");
-    for (const [index, soundId] of (["pop", "discord"] as const).entries()) {
+    for (const [index, soundId] of (
+      ["pop", "discord", "riser", "rising-tension"] as const
+    ).entries()) {
+      const hookSound = soundId === "riser" || soundId === "rising-tension";
       const visualId = randomUUID();
+      const assetId = randomUUID(),
+        picture = await sharp({
+          create: { width: 32, height: 32, channels: 3, background: "#00ff00" },
+        })
+          .png()
+          .toBuffer();
+      await writeFile(await files.asset(workspaceId, assetId, "png"), picture);
       const pointOverlay: OwnerOverlay = {
         version: 1,
         frames: 90,
+        ...(hookSound ? { hook: { startFrame: 30, endFrame: 60 } } : {}),
         captions: [],
-        visuals: [],
+        visuals: hookSound
+          ? []
+          : [
+              {
+                id: visualId,
+                assetId,
+                digest: createHash("sha256").update(picture).digest("hex"),
+                origin: "synthetic",
+                format: "png",
+                startFrame: 30,
+                endFrame: 60,
+                fit: "contain",
+                box: { x: 0.1, y: 0.1, width: 0.5, height: 0.5 },
+              },
+            ],
         audio: {
           originalVolume: 0,
           assets: [],
@@ -257,14 +283,19 @@ it("normalizes bounded music formats and mixes speech, continuous music, hook-on
             [
               {
                 id: randomUUID(),
-                visualId,
+                ...(!hookSound ? { visualId } : {}),
                 source: { kind: "builtin", id: soundId },
-                placement: "clip",
+                placement: hookSound ? "hook" : "clip",
                 startFrame: 0,
                 endFrame: Math.round(
                   ownerAudioDuration({ kind: "builtin", id: soundId }, []) * 30,
                 ),
-                offsetFrame: 0,
+                offsetFrame: hookSound
+                  ? Math.round(
+                      ownerAudioDuration({ kind: "builtin", id: soundId }, []) *
+                        30,
+                    ) - 30
+                  : 0,
                 volume: 35,
                 loop: false,
               },
@@ -315,14 +346,18 @@ it("normalizes bounded music formats and mixes speech, continuous music, hook-on
             energy += (samples.readInt16LE((start + index) * 2) / 32768) ** 2;
           return Math.sqrt(energy / 1200);
         };
-      const seconds = ownerAudioDuration({ kind: "builtin", id: soundId }, []);
+      const seconds = hookSound
+        ? 1
+        : ownerAudioDuration({ kind: "builtin", id: soundId }, []);
       const peak = Math.max(
         ...Array.from({ length: Math.floor(seconds / 0.025) }, (_, tick) =>
-          rms(1 + tick * 0.025),
+          rms((hookSound ? 0 : 1) + tick * 0.025),
         ),
       );
       expect(peak).toBeGreaterThan(0.01);
-      for (const time of [0.5, soundId === "pop" ? 1.4 : 1.6, 2, 2.7])
+      for (const time of hookSound
+        ? [1.1, 1.5, 2, 3.5]
+        : [0.5, soundId === "pop" ? 1.4 : 1.6, 2, 2.7])
         expect(rms(time)).toBeLessThan(0.001);
     }
     // A nonexistent source is rejected before a final output can be produced.

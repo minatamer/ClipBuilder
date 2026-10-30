@@ -191,11 +191,11 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         "-f",
         "lavfi",
         "-i",
-        "color=navy:s=240x320:r=30:d=4",
+        "color=navy:s=240x320:r=30:d=15",
         "-f",
         "lavfi",
         "-i",
-        "sine=frequency=440:sample_rate=48000:duration=4",
+        "sine=frequency=440:sample_rate=48000:duration=15",
         "-c:v",
         "libx264",
         "-pix_fmt",
@@ -236,7 +236,7 @@ it("edits Media audio through the real authenticated API/worker with audition, u
       body: JSON.stringify({
         sourceRevision: 0,
         policyRevision: 1,
-        ranges: [{ id: randomUUID(), startMs: 0, endMs: 3000 }],
+        ranges: [{ id: randomUUID(), startMs: 0, endMs: 15000 }],
         aiDuration: { minMs: 10000, maxMs: 10000 },
         manualOnly: true,
       }),
@@ -276,6 +276,10 @@ it("edits Media audio through the real authenticated API/worker with audition, u
     }
     const clip = list.clips[0]!;
     expect(clip.base).toBeTruthy();
+    expect(clip.base!.hookSuggestion).toEqual({
+      startFrame: 300,
+      endFrame: 450,
+    });
     expect(
       (
         await ownerRequest(port, `${endpoint}/clips/${clip.id}/youtube-audio`, {
@@ -326,12 +330,14 @@ it("edits Media audio through the real authenticated API/worker with audition, u
     const driver = `globalThis.audioRun=async action=>{
       const wait=async(fn,label)=>{for(let i=0;i<1200;i++){if(fn())return;await new Promise(r=>setTimeout(r,25));}throw new Error('audio_ui_'+label);};
       const button=text=>[...document.querySelectorAll('button,a')].find(n=>n.getClientRects().length&&n.textContent.trim()===text), named=label=>document.querySelector('[aria-label="'+label+'"]');
-      const tab=async(root,label)=>{[...document.querySelectorAll('[aria-label="'+root+'"] [role=tab]')].find(n=>n.textContent===label||n.textContent.startsWith(label+' (')).click();await new Promise(requestAnimationFrame);};
+      const tab=async(root,label)=>{const node=[...document.querySelectorAll('[aria-label="'+root+'"] [role=tab]')].find(n=>n.textContent===label||n.textContent.startsWith(label+' ('));await wait(()=>!node.matches(':disabled'),'tab_ready_'+label);node.click();await wait(()=>node.getAttribute('aria-selected')==='true'&&!document.getElementById(node.getAttribute('aria-controls'))?.hidden,'tab_'+label);};
       const set=async(label,value)=>{const n=named(label),type=n.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(type.prototype,'value').set.call(n,value);n.dispatchEvent(new Event(n.tagName==='SELECT'?'change':'input',{bubbles:true}));await new Promise(r=>setTimeout(r,60));};
       await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'ready');
       if(action==='library'){await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Sound library');document.querySelector('.audio-inspector').scrollIntoView({block:'start'});await new Promise(r=>setTimeout(r,180));
         const frame=document.querySelector('#sample-main').getBoundingClientRect(),footer=document.querySelector('#sample-main > footer').getBoundingClientRect();
         if(footer.bottom>innerHeight+1||footer.top<0||document.documentElement.scrollWidth>innerWidth||[...document.querySelectorAll('.sound-card')].some(n=>n.getBoundingClientRect().right>frame.right))throw new Error('audio_layout');
+        const actions=[...document.querySelectorAll('.audio-intake-actions button')].filter(n=>n.getClientRects().length).map(n=>n.getBoundingClientRect());
+        if(actions.length!==2||Math.abs(actions[0].height-actions[1].height)>1||(Math.abs(actions[0].top-actions[1].top)<1&&actions[1].left-actions[0].right<7))throw Error('audio_action_alignment');
       }
       if(action==='audition-ready'){const n=document.querySelector('.audio-inspector > audio');globalThis.auditions=0;n.addEventListener('play',()=>globalThis.auditions++);const r=named('Preview Discord notification').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};}
       if(action==='audition-check'){await wait(()=>globalThis.auditions===1,'audition');const n=document.querySelector('.audio-inspector > audio');await wait(()=>n.duration===.5,'discord_decoded');if(button('Apply changes'))throw new Error('audition_changed_edit');}
@@ -344,6 +350,8 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         button('Discard changes').click();await wait(()=>!button('Apply changes')&&named('Added audio volume').value==='35','volume_discard');
         button('Edit timing').click();await wait(()=>named('Sound start seconds'),'detached');await set('Sound start seconds','.5');
         button('Discard changes').click();await wait(()=>!button('Apply changes')&&!named('Sound start seconds'),'anchor_restore');
+        await set('Audio offset seconds','.1');await wait(()=>named('Sound start seconds')&&!button('Edit timing'),'offset_detaches');
+        button('Discard changes').click();await wait(()=>!button('Apply changes')&&!named('Sound start seconds'),'offset_anchor_restore');
         document.querySelector('.audio-settings').scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);
         const footer=document.querySelector('#sample-main > footer').getBoundingClientRect();if(footer.bottom>innerHeight+1||document.documentElement.scrollWidth>innerWidth)throw new Error('anchor_layout');
       }
@@ -368,6 +376,18 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         else await wait(()=>button('Apply changes')&&document.querySelector('.audio-cue')&&!button('Uploading…'),'uploaded');
       }
       if(action==='add-hook-sound'){await tab('Audio views','Sound library');if(named('Add Sator suspense'))throw new Error('retired_sator_visible');named('Add Vine boom').click();await wait(()=>button('Apply changes'),'hook_sound');await set('Audio placement','hook');button('Apply changes').click();await wait(()=>!button('Apply changes')&&!named('Audio placement').matches(':disabled'),'apply');}
+      if(action==='manual-hook'){
+        await tab('Clip settings','Hook');await wait(()=>button('Remove hook'),'manual_controls');button('Remove hook').click();await wait(()=>button('Add hook'),'manual_empty');button('Add hook').click();await wait(()=>named('Hook end seconds'),'manual_added');
+        await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Your audio');
+        if(!document.querySelector('.audio-inspector').textContent.includes('No added audio.'))throw Error('manual_hook_added_music');button('Discard changes').click();await wait(()=>!button('Apply changes'),'manual_discard');
+      }
+      if(action==='suggest-hook'||action==='suggest-hook-save'){
+        await tab('Clip settings','Hook');await wait(()=>button('Use suggestion')&&!button('Use suggestion').disabled,'suggestion_ready');button('Use suggestion').click();await wait(()=>button('Apply changes')&&button('Use suggestion').disabled,'suggestion_added');
+        await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Your audio');const cues=[...document.querySelectorAll('.audio-cue')].filter(n=>n.textContent.includes('Riser'));if(cues.length!==1)throw Error('suggestion_duplicate_music');cues[0].click();await new Promise(requestAnimationFrame);
+        if(named('Audio placement').value!=='hook'||named('Audio offset seconds').value!=='0.3'||named('Added audio volume').value!=='35'||[...document.querySelectorAll('.audio-settings label')].find(n=>n.textContent.includes('Loop audio'))?.querySelector('input').checked)throw Error('suggestion_sound_defaults');
+        if(action==='suggest-hook-save'){await set('Added audio volume','27');button('Apply changes').click();await wait(()=>!button('Apply changes'),'suggestion_saved');}
+        else {button('Discard changes').click();await wait(()=>!button('Apply changes'),'suggestion_discard');}
+      }
       if(action==='add-discord'){await tab('Audio views','Sound library');named('Add Discord notification').click();await wait(()=>button('Apply changes'),'discord_added');if(named('Audio placement').value!=='clip'||named('Added audio volume').value!=='35')throw new Error('discord_defaults');await set('Added audio volume','42');button('Apply changes').click();await wait(()=>!button('Apply changes')&&!named('Audio placement').matches(':disabled'),'discord_saved');}
       if(action==='cue-preview-ready'){
         await tab('Clip settings','Focus');await tab('Focus controls','Camera');await tab('Camera controls','Advanced');await set('Focus playhead seconds','1.5');
@@ -391,8 +411,14 @@ it("edits Media audio through the real authenticated API/worker with audition, u
       }
       if(action==='play-ready'){const r=named('Play video').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};}
       if(action==='youtube-open'){
-        await tab('Audio views','Sound library');await wait(()=>button('From YouTube')&&!button('From YouTube').matches(':disabled'),'youtube_available');button('From YouTube').click();await wait(()=>named('YouTube audio URL')&&button('Download sound')&&!button('Export clip'),'youtube_form');
-        if(![...document.querySelectorAll('#sample-main > footer button')].some(n=>n.textContent==='Download sound'))throw new Error('youtube_footer');
+        await tab('Audio views','Sound library');await wait(()=>button('From YouTube')&&!button('From YouTube').matches(':disabled'),'youtube_available');await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));globalThis.youtubeFooter=document.querySelector('#sample-main > footer').textContent.trim();button('From YouTube').click();await wait(()=>named('YouTube audio URL')&&button('Download sound')&&button('Export clip'),'youtube_form');
+        if(document.querySelector('#sample-main > footer').textContent.trim()!==globalThis.youtubeFooter||!document.querySelector('.youtube-audio-card button'))throw new Error('youtube_footer'+JSON.stringify({before:globalThis.youtubeFooter,after:document.querySelector('#sample-main > footer').textContent.trim()}));
+      }
+      if(action==='youtube-dirty'){
+        await tab('Audio views','Your audio');await set('Original audio volume','87');await wait(()=>button('Apply changes'),'youtube_dirty');await tab('Audio views','Sound library');
+        await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));const before=document.querySelector('#sample-main > footer').textContent.trim();button('From YouTube').click();await wait(()=>named('YouTube audio URL'),'youtube_dirty_open');
+        if(document.querySelector('#sample-main > footer').textContent.trim()!==before||!button('Apply changes')||!button('Discard changes'))throw Error('youtube_dirty_footer');
+        button('Back to sounds').click();await wait(()=>button('From YouTube'),'youtube_dirty_back');button('Discard changes').click();await wait(()=>button('Export clip'),'youtube_dirty_discard');
       }
       if(action==='youtube-layout'){
         named('YouTube audio URL').scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);
@@ -400,13 +426,13 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         if(footer.top<0||footer.bottom>innerHeight+1||input.left<0||input.right>innerWidth+1||document.documentElement.scrollWidth>innerWidth)throw new Error('youtube_layout');
       }
       if(action==='youtube-cancel'){
-        button('Cancel import').click();await wait(()=>named('YouTube audio URL')&&!button('Cancel import'),'youtube_canceled');
+        button('Back to sounds').click();await wait(()=>!named('YouTube audio URL')&&button('From YouTube')&&!button('From YouTube').disabled,'youtube_canceled');
       }
       if(action==='youtube-invalid'||action==='youtube-pending'||action==='youtube-fail'||action==='youtube-good'){
         await set('YouTube audio URL',action==='youtube-invalid'?'https://example.invalid/sound':'https://youtu.be/SYNTHETIC01');button('Download sound').click();
-        if(action==='youtube-pending')await wait(()=>button('Cancel import'),'youtube_pending');
+        if(action==='youtube-pending'){await wait(()=>document.querySelector('.youtube-audio-card[aria-busy=true]'),'youtube_pending');if(!button('Export clip').disabled||document.querySelector('#sample-main > footer').textContent.trim()!==globalThis.youtubeFooter)throw Error('youtube_busy_footer');}
         else if(action==='youtube-good'){await wait(()=>!named('YouTube audio URL')&&button('Apply changes'),'youtube_added');button('Apply changes').click();await wait(()=>!button('Apply changes'),'youtube_saved');}
-        else await wait(()=>named('YouTube audio URL')&&!button('Cancel import')&&document.querySelector('.clip-editor > .flow-notice')?.textContent.includes('Couldn’t import this sound'),'youtube_error');
+        else await wait(()=>named('YouTube audio URL')&&!button('Download sound').disabled&&document.querySelector('.youtube-audio-card [role=alert]')?.textContent.includes('Couldn’t import this sound'),'youtube_error');
       }
       if(action==='play-check'){
         const tracks=()=>[...document.querySelectorAll('audio')].filter(n=>!n.closest('.audio-inspector')&&(n.src.startsWith('blob:')||n.src.includes('/audio-assets/')));
@@ -419,8 +445,8 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         if(tracks().some(n=>!n.paused))throw new Error('seek_started_audio');
       }
       if(action==='tracks'){[...document.querySelectorAll('[aria-label="Audio views"] button')].find(n=>n.textContent.startsWith('Your audio')).click();await new Promise(requestAnimationFrame);document.querySelector('.audio-inspector').scrollIntoView({block:'start'});await new Promise(r=>setTimeout(r,180));}
-      if(action==='discord-restored'){await tab('Audio views','Your audio');const cue=[...document.querySelectorAll('.audio-cue')].find(n=>n.textContent.includes('Discord notification'));if(!cue)throw new Error('discord_not_restored');cue.click();await new Promise(requestAnimationFrame);if(named('Added audio volume').value!=='42')throw new Error('discord_volume_not_restored');}
-      if(action==='export'){button('Export clip').click();await wait(()=>named('Download clip'),'export');}
+      if(action==='discord-restored'){await tab('Audio views','Your audio');const cue=[...document.querySelectorAll('.audio-cue')].find(n=>n.textContent.includes('Discord notification'));if(!cue)throw new Error('discord_not_restored');cue.click();await new Promise(requestAnimationFrame);if(named('Added audio volume').value!=='42')throw new Error('discord_volume_not_restored');const riser=[...document.querySelectorAll('.audio-cue')].find(n=>n.textContent.includes('Riser'));if(!riser)throw Error('riser_not_restored');riser.click();await new Promise(requestAnimationFrame);if(named('Added audio volume').value!=='27'||named('Audio offset seconds').value!=='0.3')throw Error('riser_edit_not_restored');}
+      if(action==='export'){await wait(()=>button('Export clip')&&!button('Export clip').disabled,'export_ready');button('Export clip').click();await wait(()=>named('Download clip'),'export');}
       return {x:0,y:0};
     };`;
     await page._client().send("Runtime.evaluate", { expression: driver });
@@ -461,6 +487,8 @@ it("edits Media audio through the real authenticated API/worker with audition, u
       );
     }
     await run("remove-accent");
+    await run("manual-hook");
+    await run("suggest-hook");
     await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
     await run("library");
     await click(await run("audition-ready"));
@@ -481,6 +509,7 @@ it("edits Media audio through the real authenticated API/worker with audition, u
     expect(energy.peak).toBeGreaterThan(0.003);
     expect(energy.after).toBeLessThan(0.001);
     await run("add-discord");
+    await run("youtube-dirty");
     await run("youtube-open");
     await mkdir(resolve(".local-build/evidence"), { recursive: true });
     for (const width of [1440, 834, 390, 320]) {
@@ -524,6 +553,7 @@ it("edits Media audio through the real authenticated API/worker with audition, u
     for (let index = 0; index < 200 && canceledYoutube === 0; index++)
       await new Promise((done) => setTimeout(done, 10));
     expect(canceledYoutube).toBe(1);
+    await run("youtube-open");
     failYoutube = true;
     await run("youtube-fail");
     await run("youtube-good");
@@ -560,6 +590,7 @@ it("edits Media audio through the real authenticated API/worker with audition, u
     });
     await click(await run("play-ready"));
     await run("play-check");
+    await run("suggest-hook-save");
     await run("export");
     const final = ownerClipListSchema.parse(
       JSON.parse(
@@ -568,7 +599,10 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         ).body.toString(),
       ),
     );
-    expect(final.clips[0]!.edit!.audio!.cues).toHaveLength(4);
+    expect(final.clips[0]!.edit!.audio!.cues).toHaveLength(5);
+    expect(
+      final.clips[0]!.edit!.audio!.cues.filter((cue) => cue.suggestedHook),
+    ).toHaveLength(1);
     expect(final.clips[0]!.edit!.audio!.cues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -580,7 +614,7 @@ it("edits Media audio through the real authenticated API/worker with audition, u
       ]),
     );
     expect(final.clips[0]!.audioAssets).toHaveLength(2);
-    expect(final.clips[0]!.outputs.at(-1)!.frames).toBe(113);
+    expect(final.clips[0]!.outputs.at(-1)!.frames).toBe(600);
     await page.goto({ url: `http://localhost:${port}/`, timeout: 10000 });
     await page._client().send("Runtime.evaluate", { expression: driver });
     await run("library");
