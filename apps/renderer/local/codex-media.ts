@@ -29,6 +29,7 @@ import { SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { runOwnedProcess } from "../src/media/process-runner.ts";
 import type { LocalSpeechTools } from "../../../scripts/local-speech-tools.ts";
 import { assignLocalSpeakers } from "./speaker-turns.ts";
+import { planCodexFrameSamples } from "../../../packages/contracts/local/codex-sampling.ts";
 
 const speechOutput = z.object({
   transcription: z
@@ -238,13 +239,13 @@ export async function prepareLocalCodexInput(
         ),
       };
     } else {
-      const count = Math.min(
-        LOCAL_CODEX_POLICY.frames,
-        Math.max(1, Math.floor(duration)),
+      const samples = planCodexFrameSamples(
+        job.cut!.endFrame - job.cut!.startFrame,
+        job.speakerChanges,
       );
       const frames = [];
-      for (let index = 0; index < count; index++) {
-        const offset = (index * duration) / count,
+      for (const [index, frame] of samples.entries()) {
+        const offset = frame / OWNER_FPS,
           file = join(scratch, `${index}.jpg`);
         await runOwnedProcess(
           options.tools.ffmpeg,
@@ -321,12 +322,9 @@ export async function prepareLocalCodexInput(
         if (jpeg.length > LOCAL_CODEX_POLICY.imageBytes)
           throw new Error("codex_input_invalid");
         frames.push({
-          frame: Math.round(offset * OWNER_FPS),
+          frame,
           sampleFrames: [0, 6, 12].map((delta) =>
-            Math.min(
-              Math.round(duration * OWNER_FPS) - 1,
-              Math.round(offset * OWNER_FPS) + delta,
-            ),
+            Math.min(Math.round(duration * OWNER_FPS) - 1, frame + delta),
           ),
           jpeg: jpeg.toString("base64"),
         });
