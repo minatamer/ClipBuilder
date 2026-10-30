@@ -8,7 +8,7 @@ import {
 it("serves deterministic real recordings with exact catalogue sample clocks and keeps retired drafts playable", async () => {
   expect(
     OWNER_SOUNDS.filter((sound) => !sound.retired).map((sound) => sound.id),
-  ).toEqual(["pop", "discord", "bamboo", "boom"]);
+  ).toEqual(["riser", "rising-tension", "pop", "discord", "bamboo", "boom"]);
   for (const sound of OWNER_SOUNDS) {
     const sample = ownerSoundAudio(sound.id);
     expect(new Uint8Array(sample.bytes)).toEqual(
@@ -40,7 +40,9 @@ it("serves deterministic real recordings with exact catalogue sample clocks and 
           ownerAudioDuration({ kind: "builtin", id: sound.id }, []) * 48000,
         ),
       );
-      expect(sample.bytes.byteLength).toBeLessThan(400_000);
+      expect(sample.bytes.byteLength).toBeLessThan(
+        sound.id === "rising-tension" ? 650_000 : 400_000,
+      );
     }
   }
 });
