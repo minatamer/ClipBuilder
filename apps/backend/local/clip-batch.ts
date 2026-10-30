@@ -32,7 +32,15 @@ import {
   automaticOwnerEdit,
   compileOwnerOverlay,
 } from "../../../packages/contracts/local/edit-overlay.ts";
-import { OWNER_PICTURE_LIMITS } from "../../../packages/contracts/local/assets.ts";
+import {
+  OWNER_PICTURE_LIMITS,
+  OWNER_VISUAL_DEFAULT_MOTION,
+} from "../../../packages/contracts/local/assets.ts";
+import { placeOwnerPlannedVisual } from "../../../packages/contracts/local/visual-placement.ts";
+import {
+  hasPlannedVisualCoverage,
+  timePlannedVisuals,
+} from "./planned-visuals.ts";
 import { applyOwnerEdit } from "./edit-clip.ts";
 import { OWNER_CAPTION_PRESETS } from "../../../packages/contracts/local/editor.ts";
 import { ownerAgentValidation } from "./agent-view.ts";
@@ -105,7 +113,10 @@ export type OwnerClipPorts = {
       words: OwnerWord[];
     },
     signal: AbortSignal,
-  ): Promise<{ bytes: Buffer; origin: "synthetic" | "generated" } | null>;
+  ): Promise<{
+    bytes: Buffer;
+    origin: "synthetic" | "generated" | "retrieved";
+  } | null>;
   resume?(request: {
     workspaceId: string;
     clipId: string;
@@ -750,16 +761,21 @@ export class OwnerClipBatch {
       clip.preparationStage = "planning";
       this.changed();
       clip.calls.plan++;
-      preparation.plan = ownerClipPlanSchema.parse(
-        await this.ports.plan(
-          {
-            workspace: structuredClone(this.workspace),
-            clipId: clip.id,
-            moment: structuredClone(moment),
-          },
-          signal,
+      preparation.plan = timePlannedVisuals(
+        ownerClipPlanSchema.parse(
+          await this.ports.plan(
+            {
+              workspace: structuredClone(this.workspace),
+              clipId: clip.id,
+              moment: structuredClone(moment),
+            },
+            signal,
+          ),
         ),
+        frames,
       );
+      if (!hasPlannedVisualCoverage(preparation.plan, frames))
+        this.diagnostics.critique("visual_validate", "visual_plan_shortfall");
       preparation.focus =
         this.ports.focus?.({
           workspace: structuredClone(this.workspace),
@@ -826,8 +842,9 @@ export class OwnerClipBatch {
         continue;
       }
       if (
-        picture.origin !==
-        (this.ports.mode === "synthetic-ai" ? "synthetic" : "generated")
+        this.ports.mode === "synthetic-ai"
+          ? picture.origin !== "synthetic"
+          : picture.origin !== "generated" && picture.origin !== "retrieved"
       )
         throw new Error("invalid_picture_provenance");
       if (picture.bytes.length > CONTEXTUAL_PICTURE_POLICY.maxDownloadBytes)
@@ -853,22 +870,20 @@ export class OwnerClipBatch {
         assetId: asset.id,
         digest: asset.digest,
         ...ownerVisualClock(cue, frames),
-        box: {
-          x: 80 / 1080,
-          y: 900 / 1920,
-          width: 920 / 1080,
-          height: 520 / 1920,
-        },
+        box: placeOwnerPlannedVisual(
+          preparation.focus,
+          ownerVisualClock(cue, frames),
+        ),
         fit: "contain" as const,
-        entrance: "fade" as const,
-        exit: "fade" as const,
-        animationFrames: 9,
+        ...OWNER_VISUAL_DEFAULT_MOTION,
         origin: picture.origin,
       };
       visuals.push(visual);
       preparation.pictures.push({ index, visual });
       this.changed();
     }
+    if (!hasPlannedVisualCoverage(visuals, frames))
+      this.diagnostics.critique("image_validate", "visual_coverage_shortfall");
     const captionWords =
       this.ports.mode === "synthetic-ai" && !FAKE_CAPTIONS_ENABLED
         ? []

@@ -49,8 +49,9 @@ export class CommonsPictureSource implements ContextualPictureSource {
   async find(request: ContextualPictureRequest, signal: AbortSignal) {
     const brief = contextualPictureBriefSchema.safeParse(request.brief);
     if (!brief.success) return null;
-    // Essential concepts retrieve broadly; the complete brief still ranks results.
-    const query = brief.data.requiredTerms.join(" ").trim();
+    // Preserve the planned depiction; broader same-subject alternatives are
+    // supplied by the bounded caller, while required concepts still rank results.
+    const query = brief.data.searchQuery;
     const deadline = AbortSignal.any([
       signal,
       AbortSignal.timeout(policy.timeoutMs),

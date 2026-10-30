@@ -35,6 +35,7 @@ import { OWNER_AUDIO_LIMITS } from "../../../packages/contracts/local/audio.ts";
 import { localCodexFailureSchema } from "../../../packages/contracts/local/codex.ts";
 import { OwnerDraftStore } from "./draft-store.ts";
 import { OwnerWorkspaceDrafts } from "./workspace-drafts.ts";
+import { OwnerSessionRecovery } from "./session-recovery.ts";
 import {
   ownerDraftSnapshotSchema,
   ownerWorkspaceClearRequestSchema,
@@ -99,6 +100,7 @@ export type OwnerHostOptions = {
   port: number;
   frontendOrigin?: string;
   storageRoot?: string;
+  recoverSession?: boolean;
   desktopStorageRoot?: string;
   acquisition?: OwnerAcquisitionPort;
   shutdown?: () => void;
@@ -140,20 +142,29 @@ export function createOwnerHost(options: OwnerHostOptions) {
   const storage = options.storageRoot
     ? new OwnerDraftStore(options.storageRoot)
     : undefined;
+  const snapshot = (id: string) =>
+    ownerDraftSnapshotSchema.parse({
+      version: 1,
+      workspace: workspaces.get(id),
+      analysis: analyses.get(id) ?? null,
+      clips: batches.get(id)?.snapshot().clips ?? [],
+    });
+  const recovery =
+    options.recoverSession && !options.hosted && options.storageRoot
+      ? new OwnerSessionRecovery(
+          options.storageRoot,
+          files,
+          snapshot,
+          diagnostics,
+        )
+      : undefined;
   const drafts = storage
-    ? new OwnerWorkspaceDrafts(
-        storage,
-        files,
-        (id) =>
-          ownerDraftSnapshotSchema.parse({
-            version: 1,
-            workspace: workspaces.get(id),
-            analysis: analyses.get(id) ?? null,
-            clips: batches.get(id)?.snapshot().clips ?? [],
-          }),
-        diagnostics,
-      )
+    ? new OwnerWorkspaceDrafts(storage, files, snapshot, diagnostics)
     : undefined;
+  const changed = (id: string) => {
+    drafts?.changed(id);
+    recovery?.changed(id);
+  };
   const createBatch = (workspace: OwnerWorkspace) =>
     new OwnerClipBatch(
       workspace,
@@ -170,7 +181,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         }),
         render: options.media,
       },
-      () => drafts?.changed(workspace.id),
+      () => changed(workspace.id),
       diagnostics,
       options.capacity,
       options.clipLimit,
@@ -213,6 +224,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       };
       workspaces.set(id, workspace);
       expires.set(id, Date.now() + OWNER_LIMITS.workspaceMs);
+      recovery?.changed(id);
       return workspace;
     },
   });
@@ -274,6 +286,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
     signal.throwIfAborted();
     workspaces.set(id, workspace);
     expires.set(id, Date.now() + OWNER_LIMITS.workspaceMs);
+    recovery?.changed(id);
     return workspace;
   }
   async function reopenDraft(
@@ -308,6 +321,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       signal.throwIfAborted();
       if (!saved) throw new Error("saved_draft_missing");
       drafts.bind(workspace.id, id, saved.savedAt);
+      recovery?.changed(workspace.id);
       restoredId = undefined;
       return workspace;
     } finally {
@@ -321,6 +335,49 @@ export function createOwnerHost(options: OwnerHostOptions) {
         await files.remove(restoredId);
       }
     }
+  }
+  const recoveryController = new AbortController();
+  let recoveryTask: Promise<void> | undefined,
+    recoveryAttempted = false;
+  function recover() {
+    if (!recovery || recoveryAttempted || workspaces.size || closing)
+      return Promise.resolve();
+    if (recoveryTask) return recoveryTask;
+    uploading = true;
+    recoveryTask = (async () => {
+      const loaded = await recovery.restore(
+        AbortSignal.any([
+          recoveryController.signal,
+          AbortSignal.timeout(120_000),
+        ]),
+      );
+      if (loaded) {
+        const workspace: OwnerWorkspace = {
+          ...loaded.workspace,
+          mode: analysis?.mode ?? "unavailable",
+        };
+        const batch = createBatch(workspace);
+        batch.restore(loaded.clips);
+        workspaces.set(workspace.id, workspace);
+        batches.set(workspace.id, batch);
+        if (loaded.analysis) {
+          analyses.set(workspace.id, loaded.analysis);
+          transcripts.set(workspace.id, {
+            fingerprint: workspace.source.fingerprint,
+            sourceRevision: loaded.analysis.inputs.sourceRevision,
+            mode: loaded.analysis.mode,
+            words: loaded.analysis.words,
+          });
+        }
+        expires.set(workspace.id, Date.now() + OWNER_LIMITS.workspaceMs);
+        recovery.changed(workspace.id);
+      }
+      recoveryAttempted = true;
+    })().finally(() => {
+      uploading = false;
+      recoveryTask = undefined;
+    });
+    return recoveryTask;
   }
   let expiryTask = Promise.resolve();
   function expire() {
@@ -346,6 +403,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
               AbortSignal.timeout(30_000),
             );
             await drafts?.forget(id);
+            await recovery?.clear();
             batches.delete(id);
             await files.remove(id);
             workspaces.delete(id);
@@ -444,6 +502,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
     const owned = {
       id: workspaceId ?? "",
       close: () => {
+        input.destroy();
         res.destroy();
         return closed;
       },
@@ -458,7 +517,8 @@ export function createOwnerHost(options: OwnerHostOptions) {
       res.once("close", () => {
         input.destroy();
       });
-      input.pipe(res);
+      if (res.destroyed) input.destroy();
+      else input.pipe(res);
       await closed;
     } finally {
       streams.delete(owned);
@@ -506,6 +566,9 @@ export function createOwnerHost(options: OwnerHostOptions) {
         res.writeHead(403).end();
         return;
       }
+      // A direct source/open request must not overwrite an older recoverable
+      // session merely because this process has not served its first GET yet.
+      if (recovery && req.method === "POST") await recover();
       if (req.method === "GET" && req.url === "/health") {
         res.writeHead(200, { "Content-Type": "application/json" }).end(
           JSON.stringify({
@@ -553,6 +616,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         return;
       }
       if (req.method === "GET" && req.url === "/api/workspace") {
+        await recover();
         const current = [...workspaces.values()].find(
           (workspace) => !closingWorkspaces.has(workspace.id),
         );
@@ -1348,7 +1412,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           );
           controller.signal.throwIfAborted();
           analyses.set(workspace.id, result);
-          drafts?.changed(workspace.id);
+          changed(workspace.id);
           res
             .writeHead(200, { "Content-Type": "application/json" })
             .end(JSON.stringify(result));
@@ -1452,6 +1516,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           throw error;
         }
         await drafts?.forget(workspace.id);
+        await recovery?.clear();
         batches.delete(workspace.id);
         await files.remove(workspace.id);
         workspaces.delete(workspace.id);
@@ -1512,8 +1577,12 @@ export function createOwnerHost(options: OwnerHostOptions) {
         closing = true;
         clearInterval(expiryTimer);
         for (const c of controllers) c.abort();
+        recoveryController.abort();
+        const stopped = new Promise<void>((done) => server.close(() => done()));
         server.closeAllConnections();
         try {
+          await Promise.all([...streams].map((stream) => stream.close()));
+          await recoveryTask?.catch(() => undefined);
           await sources.close();
           await storage?.cancelPending();
           await Promise.allSettled([...tasks]);
@@ -1522,6 +1591,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             [...batches.values()].map((batch) => batch.close()),
           );
           await drafts?.close();
+          await recovery?.close();
           batches.clear();
           await providers?.close?.(AbortSignal.timeout(30_000));
           await files.close();
@@ -1530,7 +1600,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           workspaces.clear();
           expires.clear();
         } finally {
-          await new Promise<void>((resolve) => server.close(() => resolve()));
+          await stopped;
         }
       });
     },

@@ -2,6 +2,7 @@ import { OWNER_FPS } from "../../../packages/contracts/local/policy.ts";
 import { createHash } from "node:crypto";
 import type { OwnerClipPorts } from "./clip-batch.ts";
 import { compileAutomaticOwnerFocus } from "../../../packages/contracts/local/focus.ts";
+import { OWNER_AI_HOOK_POLICY } from "../../../packages/contracts/local/hook-sounds.ts";
 
 export const fakeOwnerClipPreparation: Pick<
   OwnerClipPorts,
@@ -10,9 +11,13 @@ export const fakeOwnerClipPreparation: Pick<
   mode: "synthetic-ai",
   hookSuggestion({ clipId, moment }) {
     const frames = moment.cut.endFrame - moment.cut.startFrame,
-      length = Math.min(frames, 3 * OWNER_FPS),
+      first = OWNER_AI_HOOK_POLICY.earliestStartFrame,
+      available = frames - first;
+    if (available < OWNER_AI_HOOK_POLICY.minimumPreferredFrames)
+      return undefined;
+    const length = Math.min(available, OWNER_AI_HOOK_POLICY.preferredFrames),
       seed = createHash("sha256").update(clipId).digest().readUInt32BE(0),
-      startFrame = seed % (frames - length + 1);
+      startFrame = first + (seed % (available - length + 1));
     return { startFrame, endFrame: startFrame + length };
   },
   focus({ workspace, moment }) {

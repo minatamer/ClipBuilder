@@ -7,6 +7,7 @@ import type {
 import type { LocalDiagnostics } from "./diagnostics.ts";
 import { createLocalCodexInference } from "./codex-exec.ts";
 import { createLocalCodexAi } from "./codex-ai.ts";
+import { CommonsPictureSource } from "../src/assembly/commons-pictures.ts";
 
 /** Local-only composition. Checking prerequisites never logs in or infers. */
 export function composeLocalCodex(options: {
@@ -36,6 +37,7 @@ export function composeLocalCodex(options: {
     };
   return createLocalCodexAi({
     ...options,
+    pictures: new CommonsPictureSource(),
     infer: createLocalCodexInference({
       executable: options.executable!,
       root: options.root,

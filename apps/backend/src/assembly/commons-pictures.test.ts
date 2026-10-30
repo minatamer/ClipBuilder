@@ -44,7 +44,7 @@ function metadata(
   };
 }
 describe("bounded rights-cleared Commons pictures", () => {
-  it("searches essential concepts and treats completed empty results as a normal miss", async () => {
+  it("searches the precise planned depiction and treats completed empty results as a normal miss", async () => {
     const request = vi
       .fn<typeof fetch>()
       .mockResolvedValue(Response.json({ batchcomplete: "" }));
@@ -58,7 +58,7 @@ describe("bounded rights-cleared Commons pictures", () => {
     ).toBeNull();
     expect(
       new URL(String(request.mock.calls[0]![0])).searchParams.get("gsrsearch"),
-    ).toBe("planet filetype:bitmap");
+    ).toBe("Mars planet photograph filetype:bitmap");
     expect(request).toHaveBeenCalledOnce();
     expect(critique).not.toHaveBeenCalled();
     expect(report).toHaveBeenCalledExactlyOnceWith({
@@ -220,7 +220,7 @@ describe("bounded rights-cleared Commons pictures", () => {
     });
     expect(
       new URL(String(request.mock.calls[0]![0])).searchParams.get("gsrsearch"),
-    ).toBe("planet filetype:bitmap");
+    ).toBe("Mars planet photograph filetype:bitmap");
     expect(asset).toMatchObject({
       repository: "wikimedia-commons",
       license: "CC0",

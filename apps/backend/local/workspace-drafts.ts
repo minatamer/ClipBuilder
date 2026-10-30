@@ -25,6 +25,7 @@ export class OwnerWorkspaceDrafts {
     private readonly files: WorkspaceFiles,
     private readonly snapshot: (id: string) => OwnerDraftSnapshot,
     private readonly diagnostics = new LocalDiagnostics(),
+    private readonly automatic = false,
   ) {}
   status(id: string): OwnerDraftStatus {
     const entry = this.bindings.get(id);
@@ -43,7 +44,11 @@ export class OwnerWorkspaceDrafts {
     });
   }
   changed(id: string) {
-    const entry = this.bindings.get(id);
+    let entry = this.bindings.get(id);
+    if (!entry && this.automatic && !this.closing) {
+      entry = { id: null, savedAt: null, state: "unsaved", generation: 0 };
+      this.bindings.set(id, entry);
+    }
     if (!entry || this.closing) return;
     entry.generation++;
     entry.state = "unsaved";
@@ -119,7 +124,7 @@ export class OwnerWorkspaceDrafts {
     this.closing = true;
     for (const [id, entry] of this.bindings) {
       if (entry.timer) clearTimeout(entry.timer);
-      if (entry.id) await this.flush(id);
+      if (entry.id || this.automatic) await this.flush(id);
       else await entry.running;
       if (entry.timer) clearTimeout(entry.timer);
     }

@@ -12,6 +12,7 @@ import {
 } from "./gemini-pictures.js";
 import { loadConfig } from "../config/loadConfig.js";
 import { AnalysisDiagnostics } from "../analysis/analysis.diagnostics.js";
+import { VISUAL_STORY_POLICY } from "./visual-story-policy.js";
 import {
   createLiveValidationEnvironment,
   createSafeTestEnvironment,
@@ -59,6 +60,9 @@ describe("bounded ungrounded Gemini picture generation", () => {
       credentials: "omit",
     });
     const body = JSON.parse(String(options.body)) as Record<string, unknown>;
+    expect(String(options.body)).toContain(
+      VISUAL_STORY_POLICY.replace(/\n/g, "\\n"),
+    );
     expect(body).toMatchObject({
       tools: [],
       generationConfig: {

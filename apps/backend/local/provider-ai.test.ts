@@ -72,6 +72,7 @@ const cue = {
   },
 };
 it.each([
+  { startFrame: 300, endFrame: 450 },
   { startFrame: 60, endFrame: 150 },
   null,
   { startFrame: "bad", endFrame: 150 },
@@ -92,13 +93,33 @@ it.each([
       cue,
     ]);
     expect(f.ports.clipPreparation.hookSuggestion?.(request)).toEqual(
-      suggestion && typeof suggestion.startFrame === "number"
+      suggestion &&
+        typeof suggestion.startFrame === "number" &&
+        suggestion.startFrame >= 300
         ? suggestion
         : undefined,
     );
     expect(f.transport.generate).toHaveBeenCalledTimes(1);
     expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
       "never activate a hook",
+    );
+    expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
+      "7.4 seconds (222 frames)",
+    );
+    expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
+      "5.3 seconds (159 frames)",
+    );
+    expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
+      "each AI-planned picture lasts at most 5 seconds",
+    );
+    expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
+      "Leave at least 2 seconds",
+    );
+    expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
+      "different explanatory detail of the same passage",
+    );
+    expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
+      "No fixed palette",
     );
     expect(f.pictures.find).not.toHaveBeenCalled();
     await f.ports.close(f.signal);
@@ -111,7 +132,7 @@ it.each([
   null,
   { bad: true },
 ])(
-  "ignores unsolicited title data without rejecting usable pictures/focus or adding a request (%j)",
+  "ignores unsolicited top-level title data without rejecting usable pictures/focus or adding a request (%j)",
   async (title) => {
     const f = fixture();
     f.transport.generate.mockResolvedValue({
@@ -134,7 +155,7 @@ it.each([
     expect(f.transport.transcribe).toHaveBeenCalledTimes(0);
     expect(f.pictures.find).toHaveBeenCalledTimes(0);
     expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
-      "TEXT: zero to three optional",
+      "TEXT: Write zero or one compelling opening title",
     );
     expect(
       z.toJSONSchema(f.transport.generate.mock.calls[0]![2].schema, {
@@ -150,32 +171,49 @@ it.each([
   },
 );
 
-it("decodes optional timed text from the existing Gemini planning call without an extra provider request", async () => {
-  const f = fixture(),
-    request = { workspace: f.workspace, clipId: f.clipId, moment: f.moment };
-  f.transport.generate.mockResolvedValue({
-    finished: true,
-    text: JSON.stringify({
-      pictures: [cue],
-      texts: [
-        {
-          startFrame: 0,
-          endFrame: 60,
-          wordIds: words.slice(0, 2).map((word) => word.id),
-        },
-        { wordIds: ["w_999999"] },
-      ],
-      focus: { people: [], decisions: [] },
-    }),
-  });
-  expect(await f.ports.clipPreparation.plan(request, f.signal)).toEqual([cue]);
-  expect(f.ports.clipPreparation.texts!(request)).toMatchObject([
-    { text: "Coral reefs.", startFrame: 0, endFrame: 60 },
-  ]);
-  expect(f.transport.generate).toHaveBeenCalledTimes(1);
-  expect(f.pictures.find).not.toHaveBeenCalled();
-  await f.ports.close(f.signal);
-});
+it.each([false, true])(
+  "decodes legacy or authored opening copy from the existing Gemini call without another request (authored: %s)",
+  async (authored) => {
+    const f = fixture(),
+      request = { workspace: f.workspace, clipId: f.clipId, moment: f.moment };
+    f.transport.generate.mockResolvedValue({
+      finished: true,
+      text: JSON.stringify({
+        pictures: [cue],
+        texts: [
+          {
+            startFrame: 0,
+            endFrame: 60,
+            wordIds: words.slice(0, 2).map((word) => word.id),
+            ...(authored
+              ? {
+                  title: "POV: Coral reefs get a second chance",
+                  hookStyle: "pov",
+                }
+              : {}),
+          },
+          { wordIds: ["w_999999"] },
+        ],
+        focus: { people: [], decisions: [] },
+      }),
+    });
+    expect(await f.ports.clipPreparation.plan(request, f.signal)).toEqual([
+      cue,
+    ]);
+    expect(f.ports.clipPreparation.texts!(request)).toMatchObject([
+      {
+        text: authored
+          ? "POV: Coral reefs get a second chance"
+          : "Coral reefs.",
+        startFrame: 0,
+        endFrame: authored ? 93 : 60,
+      },
+    ]);
+    expect(f.transport.generate).toHaveBeenCalledTimes(1);
+    expect(f.pictures.find).not.toHaveBeenCalled();
+    await f.ports.close(f.signal);
+  },
+);
 
 it("retains anonymous camera observations from the existing single video request while malformed focus leaves usable pictures intact", async () => {
   const f = fixture();
@@ -390,7 +428,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
       await f.ports.close(f.signal);
     },
   );
-  it("is inert and preserves complete-source words, custom ranges and fourteen proposals", async () => {
+  it("is inert and preserves complete-source words, custom ranges and bounded proposals", async () => {
     const f = fixture();
     expect(f.media).not.toHaveBeenCalled();
     expect(f.transport.upload).not.toHaveBeenCalled();
@@ -416,7 +454,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
       { startFrame: 0, endFrame: 30 },
       { startFrame: 9000, endFrame: 10800 },
     ]);
-    expect(result.suggestions).toHaveLength(4);
+    expect(result.suggestions).toHaveLength(2);
     expect(result.suggestions[0]!.evidence!.title).toBe("Restoration");
     expect(result.calls).toEqual({ transcription: 1, selection: 1 });
     expect(f.media).toHaveBeenCalledExactlyOnceWith(
@@ -447,7 +485,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     );
     expect(
       await f.ports.analysis.select(words, policy, f.signal, instructions),
-    ).toHaveLength(14);
+    ).toHaveLength(12);
     expect(f.transport.upload).toHaveBeenCalledTimes(1);
     await f.ports.close(f.signal);
     expect(f.transport.delete).toHaveBeenCalledTimes(1);
@@ -488,6 +526,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     expect(JSON.parse(task.prompt)).toEqual({
       frames: 9000,
       fps: 30,
+      visualCoverage: expect.objectContaining({ minimumCount: 3 }),
       coordinateSpace: "upright-display",
       source: { width: 1920, height: 1080 },
       words,
@@ -495,7 +534,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     expect(task.policy).toContain("untrusted data");
     expect(
       task.schema.safeParse({
-        pictures: [cue],
+        pictures: [cue, cue, cue],
         hookSuggestion: null,
         focus: { people: [], decisions: [] },
       }).success,
@@ -767,7 +806,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
       await expect(
         f.ports.analysis.select(words, policy, f.signal, instructions),
       ).resolves.toHaveLength(
-        kind === "malformed" ? 0 : kind === "over-limit" ? 14 : 1,
+        kind === "malformed" ? 0 : kind === "over-limit" ? 12 : 1,
       );
       expect(f.transport.candidates).toHaveBeenCalledTimes(1);
       expect(f.transport.upload).not.toHaveBeenCalled();

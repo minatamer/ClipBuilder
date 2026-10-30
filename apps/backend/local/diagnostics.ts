@@ -121,6 +121,10 @@ export class LocalDiagnostics {
       | "gemini_output_unusable"
       | "gemini_clock_converted"
       | "gemini_evidence_critique"
+      | "visual_plan_shortfall"
+      | "visual_lookup_no_match"
+      | "visual_lookup_failed"
+      | "visual_coverage_shortfall"
       | "gemini_candidate_critique" = "gemini_quality_critique",
   ) {
     const error = new Error(reason);

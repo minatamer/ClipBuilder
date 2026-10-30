@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { rm } from "node:fs/promises";
 import { z } from "zod";
 import {
@@ -34,10 +34,24 @@ import type { OwnerHostProviders } from "./server.ts";
 import type { WorkspaceFiles } from "./workspace-files.ts";
 import type { CodexInference } from "./codex-exec.ts";
 import { HOOK_SUGGESTION_POLICY } from "./hook-suggestion-policy.ts";
+import {
+  PLANNED_VISUAL_POLICY,
+  plannedVisualGuide,
+  plannedVisualSearchBriefs,
+} from "./planned-visuals.ts";
 import { normalizeCandidateSelection } from "../src/analysis/analysis.provider-shape.ts";
 import { decodePlannedText, PLANNED_TEXT_POLICY } from "./planned-text.ts";
 import { renderCodexIllustration } from "./codex-visual.ts";
-import { OWNER_BATCH_POLICY } from "../../../packages/contracts/local/clips.ts";
+import {
+  commonsPictureAssetSchema,
+  CONTEXTUAL_PICTURE_POLICY,
+} from "@clipbuilder/contracts";
+import type { ContextualPictureSource } from "../src/assembly/commons-pictures.ts";
+import { codexSpeakerChangeFrames } from "../../../packages/contracts/local/codex-sampling.ts";
+import {
+  OWNER_BATCH_POLICY,
+  ownerClipPlanSchema,
+} from "../../../packages/contracts/local/clips.ts";
 import type { OwnerTextLayer } from "../../../packages/contracts/local/text-layers.ts";
 import {
   decodeOwnerHookSuggestion,
@@ -52,6 +66,7 @@ export function createLocalCodexAi(options: {
   files: WorkspaceFiles;
   media: (job: OwnerMediaJob, signal: AbortSignal) => Promise<OwnerMediaResult>;
   infer: CodexInference;
+  pictures?: Pick<ContextualPictureSource, "find"> | undefined;
   diagnostics?: LocalDiagnostics;
 }): OwnerHostProviders {
   const diagnostics = options.diagnostics ?? new LocalDiagnostics(),
@@ -94,6 +109,7 @@ export function createLocalCodexAi(options: {
     kind: "speech" | "frames",
     signal: AbortSignal,
     cut?: OwnerCut,
+    speakerChanges?: readonly number[],
   ) {
     const current = ownerWorkspaceSchema.parse(workspace);
     if (current.mode !== "provider-ai")
@@ -105,6 +121,7 @@ export function createLocalCodexAi(options: {
       kind,
       fingerprint: current.source.fingerprint,
       ...(cut ? { cut } : {}),
+      ...(speakerChanges?.length ? { speakerChanges } : {}),
     });
     try {
       const result = await options.media(job, signal);
@@ -202,14 +219,26 @@ export function createLocalCodexAi(options: {
             moment = ownerMomentSchema.parse(current.moment),
             frames = moment.cut.endFrame - moment.cut.startFrame;
           focus.delete(current.clipId);
-          const artifact = await input(workspace, "frames", signal, moment.cut);
+          const artifact = await input(
+            workspace,
+            "frames",
+            signal,
+            moment.cut,
+            codexSpeakerChangeFrames(moment.cues, frames),
+          );
           if (artifact.kind !== "frames")
             throw new Error("codex_input_invalid");
           const value = await options.infer(
             {
-              schema: jsonSchema(localCodexFocusSchema),
+              schema: jsonSchema(
+                localCodexFocusSchema.extend({
+                  pictures: localCodexFocusSchema.shape.pictures.min(
+                    plannedVisualGuide(frames).minimumCount,
+                  ),
+                }),
+              ),
               images: artifact.frames.map((frame) => frame.jpeg),
-              prompt: `${untrusted}\n${HOOK_SUGGESTION_POLICY}\n${PLANNED_TEXT_POLICY}\nPlan portrait camera framing and useful contextual illustrations from the ordered temporal images and timed transcript. Each image contains three left-to-right panels at its supplied sampleFrames, or one frame for legacy images. All times are clip-relative integer frames at 30 fps. List every visible person anonymously person_1..person_8 with normalized face/upper-body boxes relative to ONE panel, never the whole sheet. Preserve stable left-to-right opening person IDs within a shot. Word speakerId values come from local audio diarization; reuse them exactly. Associate a supplied anonymous speaker with a visible person only when temporal mouth movement, shot context and the timed speech support it. Cite up to eight intersecting evidenceWordIds for that speaker spanning at least one second of sustained speech. Cover speaker changes with timed decisions, but hold through uncertain/overlapping speech; reset on visible shot changes. Never invent speaker IDs or infer sensitive traits/identity. Use null personId/speakerId and empty evidence when association is uncertain. PICTURES: zero to three useful grounded illustrations of concepts, relationships, comparisons or processes in the speech. Choose relevant moments instead of filler. Each has startFrame/endFrame, evidenceWordIds, a generic brief (scene, searchQuery, requiredTerms, avoidTerms) and an illustration with layout concept/process/comparison, short heading and one to four labelled icon items. Supported icons: person, globe, idea, computer, chart, clock, box, check, leaf. Diagrams are rendered locally from those primitives, not downloaded or photorealistic. Use source concepts/terms, no invented facts/statistics, URLs, markup, brands, identity or likenesses. Return pictures/texts arrays, empty only when no useful grounded content fits.\n${JSON.stringify({ frames, fps: OWNER_FPS, source: { width: workspace.source.width, height: workspace.source.height }, images: artifact.frames.map((frame) => ({ frame: frame.frame, sampleFrames: frame.sampleFrames })), words: moment.cues })}`,
+              prompt: `${untrusted}\n${HOOK_SUGGESTION_POLICY}\n${PLANNED_TEXT_POLICY}\n${PLANNED_VISUAL_POLICY}\nPlan portrait camera framing and useful contextual illustrations from the ordered temporal images and timed transcript. Each image contains three left-to-right panels at its supplied sampleFrames, or one frame for legacy images. All times are clip-relative integer frames at 30 fps. List every visible person anonymously person_1..person_8 with tight normalized face/head boxes including the chin and hair but excluding the torso, relative to ONE panel, never the whole sheet. Preserve stable left-to-right opening person IDs within a shot. Word speakerId values come from local audio diarization; reuse them exactly. Associate a supplied anonymous speaker with a visible person only when temporal mouth movement, shot context and the timed speech support it. Cite up to eight intersecting evidenceWordIds for that speaker spanning at least one second of sustained speech. Cover speaker changes with timed decisions, but hold through uncertain/overlapping speech; reset on visible shot changes. Never invent speaker IDs or infer sensitive traits/identity. OPENING: explicitly inspect the first speaking person at frame 0 and each real shot start; do not choose the left person by default. If temporal mouth movement and at least one second of intersecting unassigned words clearly support a visible opening person while audio speaker labels are null, return that personId with speakerId null, confidence at least 0.95, those unassigned evidenceWordIds and a decision starting at the shot opening. This visual-only evidence controls the opening crop, never audio labels or later camera switches. If visual evidence is weak or people talk over each other, keep null personId/speakerId and empty evidence. Use null personId/speakerId and empty evidence for other uncertain associations. PICTURES: plan the visualCoverage minimum, at least one per started thirty-second portion, up to three useful contextual images. Each has startFrame/endFrame, evidenceWordIds and a generic brief (scene, searchQuery, requiredTerms, avoidTerms) and alternateBriefs with up to two alternative depictions/search phrases for the SAME precise script idea if the primary image cannot be found. Keep the primary scene meaning and every essential requiredTerm in all alternatives. Vary the angle or query specificity, never substitute a different subject or an unrelated metaphor. Use specific searchable subject/concept nouns rather than generic props; never duplicate a search. Choose the clearest explanatory beat from the timed words, use those evidenceWordIds and begin near the key spoken subject/action. The brief must explain what the viewer learns from the scene. Use literal scenes first; an analogy needs explicit support in the source. Relevant diagrams/illustrations are allowed without a fixed template. The app performs bounded public-image lookup. You do not generate images or render diagrams. Do not return illustration objects, fixed icon layouts, image bytes, URLs, SVG/HTML, code, brands, source-speaker likenesses or invented facts. Use short generic searchable scene terms; no transcript quotations or private details in search terms. Return pictures/texts arrays, meeting visualCoverage; text remains optional.\n${JSON.stringify({ frames, fps: OWNER_FPS, visualCoverage: plannedVisualGuide(frames), source: { width: workspace.source.width, height: workspace.source.height }, images: artifact.frames.map((frame) => ({ frame: frame.frame, sampleFrames: frame.sampleFrames })), words: moment.cues })}`,
             },
             signal,
           );
@@ -242,7 +271,10 @@ export function createLocalCodexAi(options: {
                       ...decision,
                       speakerId,
                       evidenceWordIds:
-                        speakerId && "evidenceWordIds" in decision
+                        (speakerId ||
+                          ("speakerId" in decision &&
+                            decision.speakerId === null)) &&
+                        "evidenceWordIds" in decision
                           ? decision.evidenceWordIds
                           : [],
                     };
@@ -263,7 +295,12 @@ export function createLocalCodexAi(options: {
           focus.set(current.clipId, {
             workspaceId: workspace.id,
             value: camera.focus,
-            texts: decodePlannedText(value, moment.cues, frames),
+            texts: decodePlannedText(value, moment.cues, frames, () =>
+              diagnostics.critique(
+                "visual_validate",
+                "gemini_evidence_critique",
+              ),
+            ),
             hookSuggestion: decodeOwnerHookSuggestion(
               typeof value === "object" &&
                 value !== null &&
@@ -280,15 +317,29 @@ export function createLocalCodexAi(options: {
             ? rawPictures.data.pictures
                 .slice(0, OWNER_BATCH_POLICY.imageAttemptsPerClip)
                 .flatMap((picture) => {
-                  const parsed =
-                    localCodexFocusSchema.shape.pictures.element.safeParse(
-                      picture,
-                    );
+                  const parsed = localCodexFocusSchema.shape.pictures.element
+                    .omit({ alternateBriefs: true })
+                    .strip()
+                    .safeParse(picture);
                   if (!parsed.success) {
                     diagnostics.critique("visual_validate");
                     return [];
                   }
-                  return [parsed.data];
+                  const alternates = z
+                    .object({
+                      alternateBriefs:
+                        ownerClipPlanSchema.element.shape.alternateBriefs,
+                    })
+                    .safeParse(picture);
+                  return [
+                    {
+                      ...parsed.data,
+                      ...(alternates.success &&
+                      alternates.data.alternateBriefs?.length
+                        ? { alternateBriefs: alternates.data.alternateBriefs }
+                        : {}),
+                    },
+                  ];
                 })
             : [];
         });
@@ -315,10 +366,50 @@ export function createLocalCodexAi(options: {
       image(current, signal) {
         return run(signal, async (signal) => {
           signal.throwIfAborted();
-          if (!current.cue.illustration) return null;
-          const bytes = await renderCodexIllustration(current.cue.illustration);
+          // Only retained pre-CL-159 plans carry a local illustration. New
+          // planning has no fixed icon/card grammar and uses real image lookup.
+          if (current.cue.illustration) {
+            const bytes = await renderCodexIllustration(
+              current.cue.illustration,
+            );
+            signal.throwIfAborted();
+            return { bytes, origin: "generated" as const };
+          }
+          if (!options.pictures) return null;
+          const deadline = AbortSignal.any([
+            signal,
+            AbortSignal.timeout(CONTEXTUAL_PICTURE_POLICY.timeoutMs),
+          ]);
+          let raw: Awaited<ReturnType<ContextualPictureSource["find"]>> = null;
+          for (const brief of plannedVisualSearchBriefs(current.cue)) {
+            signal.throwIfAborted();
+            if (deadline.aborted) break;
+            try {
+              raw = await options.pictures.find(
+                { kind: "object", brief },
+                deadline,
+              );
+              signal.throwIfAborted();
+              deadline.throwIfAborted();
+              if (raw) break;
+              diagnostics.critique("image_generate", "visual_lookup_no_match");
+            } catch {
+              signal.throwIfAborted();
+              raw = null;
+              diagnostics.critique("image_generate", "visual_lookup_failed");
+            }
+          }
           signal.throwIfAborted();
-          return { bytes, origin: "generated" as const };
+          if (!raw) return null;
+          const asset = commonsPictureAssetSchema.parse(raw);
+          const bytes = Buffer.from(
+            asset.dataUri.slice("data:image/jpeg;base64,".length),
+            "base64",
+          );
+          if (createHash("sha256").update(bytes).digest("hex") !== asset.sha256)
+            throw new Error("owner_picture_digest_rejected");
+          signal.throwIfAborted();
+          return { bytes, origin: "retrieved" as const };
         });
       },
     },

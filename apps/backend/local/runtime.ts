@@ -253,12 +253,19 @@ async function composeLocalWorkflow(
     if (!identity) throw new Error("local_worker_identity_missing");
     await diagnostics.run("worker_ready", async () => {
       let ready = false;
-      for (let attempt = 0; attempt < 50; attempt++) {
+      // Bound cold Windows module/binary loading by elapsed time, not probe count.
+      const deadline = performance.now() + 30_000;
+      while (performance.now() < deadline) {
         if (workerError || worker.exitCode !== null) break;
         try {
           const response = await fetch("http://127.0.0.1:4200/health", {
             headers: { Authorization: `Bearer ${state.workerToken}` },
-            signal: AbortSignal.timeout(1000),
+            signal: AbortSignal.timeout(
+              Math.max(
+                1,
+                Math.min(1000, Math.ceil(deadline - performance.now())),
+              ),
+            ),
           });
           ready = response.ok;
           await response.body?.cancel();
@@ -266,7 +273,12 @@ async function composeLocalWorkflow(
           /* Bounded readiness probe, no media or provider requests. */
         }
         if (ready) break;
-        await new Promise((done) => setTimeout(done, 100));
+        await new Promise((done) =>
+          setTimeout(
+            done,
+            Math.min(100, Math.max(0, deadline - performance.now())),
+          ),
+        );
       }
       if (!ready) throw new Error("local_worker_unavailable");
     });
@@ -283,6 +295,7 @@ async function composeLocalWorkflow(
       port: 4000,
       frontendOrigin: config.frontendOrigin,
       storageRoot: state.storageRoot,
+      recoverSession: true,
       ...(desktopStorageRoot ? { desktopStorageRoot } : {}),
       media,
       acquisition: createYtDlpAcquisitionPort({

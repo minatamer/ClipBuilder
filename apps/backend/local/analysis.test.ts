@@ -486,7 +486,7 @@ describe("owner manual ranges and independent discovery", () => {
     const result = await analyzeOwner(current, request, provider, signal());
     expect(result.inputs.ranges).toHaveLength(2);
     expect(result.manual).toHaveLength(2);
-    expect(result.suggestions).toHaveLength(4);
+    expect(result.suggestions).toHaveLength(2);
   });
   it.each([
     [30_000, 30_000],
@@ -530,14 +530,14 @@ describe("owner manual ranges and independent discovery", () => {
     expect(result.manual).toHaveLength(2);
     expect(result.manual[0]?.rangeIds).toHaveLength(2);
     expect(result.manual[0]?.evidence).toBeNull();
-    expect(result.suggestions).toHaveLength(4);
+    expect(result.suggestions).toHaveLength(2);
     expect(
       new Set(
         [...result.manual, ...result.suggestions].map(
           (moment) => moment.processingIdentity,
         ),
       ).size,
-    ).toBe(6);
+    ).toBe(4);
     expect(result.inputs.ranges).toHaveLength(3);
   });
   it("logs overlapping proposals as advice and retains the requested usable results", async () => {

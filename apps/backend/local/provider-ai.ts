@@ -39,9 +39,13 @@ import type { ClipCaptionTranscription } from "./clip-caption-port.ts";
 import { ownerClipPlanSchema, type OwnerClipPorts } from "./clip-batch.ts";
 import type { WorkspaceFiles } from "./workspace-files.ts";
 import { HOOK_SUGGESTION_POLICY } from "./hook-suggestion-policy.ts";
+import {
+  PLANNED_VISUAL_POLICY,
+  plannedVisualGuide,
+} from "./planned-visuals.ts";
 import { decodePlannedText, PLANNED_TEXT_POLICY } from "./planned-text.ts";
 import {
-  ownerPlannedTextSchema,
+  ownerAuthoredTextPlanSchema,
   type OwnerTextLayer,
 } from "../../../packages/contracts/local/text-layers.ts";
 import {
@@ -68,7 +72,7 @@ type Options = {
 const planSchema = z
   .object({
     pictures: ownerClipPlanSchema,
-    texts: ownerPlannedTextSchema.optional(),
+    texts: ownerAuthoredTextPlanSchema.optional(),
     hookSuggestion: ownerHookSchema.nullable(),
     focus: z
       .object({
@@ -407,10 +411,11 @@ export function createOwnerProviderAi(options: Options): {
             signal,
             (input) =>
               provider.analyze(input, signal, workspace.id, {
-                policy: `${visualPolicy} ${HOOK_SUGGESTION_POLICY} ${PLANNED_TEXT_POLICY}`,
+                policy: `${visualPolicy} ${HOOK_SUGGESTION_POLICY} ${PLANNED_TEXT_POLICY} ${PLANNED_VISUAL_POLICY}`,
                 prompt: JSON.stringify({
                   frames,
                   fps: OWNER_FPS,
+                  visualCoverage: plannedVisualGuide(frames),
                   coordinateSpace: "upright-display",
                   source: {
                     width: workspace.source.width,
@@ -418,7 +423,11 @@ export function createOwnerProviderAi(options: Options): {
                   },
                   words: cues,
                 }),
-                schema: planSchema,
+                schema: planSchema.extend({
+                  pictures: ownerClipPlanSchema.min(
+                    plannedVisualGuide(frames).minimumCount,
+                  ),
+                }),
                 videoFps: 5,
               }),
           );
@@ -448,7 +457,12 @@ export function createOwnerProviderAi(options: Options): {
               frames,
               cues: admitted.map(hash),
               focus: camera.focus,
-              texts: decodePlannedText(result, cues, frames),
+              texts: decodePlannedText(result, cues, frames, () =>
+                diagnostics.critique(
+                  "visual_validate",
+                  "gemini_evidence_critique",
+                ),
+              ),
               hookSuggestion: decodeOwnerHookSuggestion(
                 typeof result === "object" &&
                   result !== null &&
