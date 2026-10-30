@@ -11,6 +11,7 @@ import {
 import { ownerOverlayFrame } from "../../../packages/composition/local/overlay-frame.ts";
 import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 import type {} from "./overlay-protocol.ts";
+import type { OwnerOverlayClock } from "../../../packages/contracts/local/visual-clock.ts";
 
 // Keep each shared PNG below Windows' per-file hardlink limit.
 const OVERLAY_LINKS_PER_FILE = 512;
@@ -24,6 +25,8 @@ export async function rasterizeOwnerOverlay(
     assets: Record<string, string>;
     frames: string;
     pixelRatio?: number;
+    clock?: OwnerOverlayClock;
+    budget?: { bytes: number };
   },
   signal: AbortSignal,
 ) {
@@ -129,16 +132,18 @@ export async function rasterizeOwnerOverlay(
       JSON.stringify({
         overlay: options.overlay,
         assets: options.assets,
+        ...(options.clock ? { clock: options.clock } : {}),
       }),
     );
-    let bytes = 0;
+    const budget = options.budget ?? { bytes: 0 };
     const cache = new Map<
       string,
       { file: string; links: number; bytes: number }
     >();
     for (
       let frame = 0;
-      frame < ownerPresentationFrames(options.overlay);
+      frame <
+      (options.clock?.frames ?? ownerPresentationFrames(options.overlay));
       frame++
     ) {
       signal.throwIfAborted();
@@ -146,17 +151,17 @@ export async function rasterizeOwnerOverlay(
         options.frames,
         `${String(frame).padStart(6, "0")}.png`,
       );
-      const key = ownerOverlayFrame(options.overlay, frame).key,
+      const key = ownerOverlayFrame(options.overlay, frame, options.clock).key,
         cached = cache.get(key);
       if (cached) {
         if (cached.links < OVERLAY_LINKS_PER_FILE) {
           await link(cached.file, frameFile);
           cached.links++;
         } else {
-          if (bytes + cached.bytes > OWNER_BATCH_POLICY.overlayBytes)
+          if (budget.bytes + cached.bytes > OWNER_BATCH_POLICY.overlayBytes)
             throw new Error("overlay_capacity");
           await copyFile(cached.file, frameFile, constants.COPYFILE_EXCL);
-          bytes += cached.bytes;
+          budget.bytes += cached.bytes;
           cached.file = frameFile;
           cached.links = 1;
         }
@@ -169,8 +174,8 @@ export async function rasterizeOwnerOverlay(
         ._client()
         .send("Page.captureScreenshot", { format: "png", fromSurface: true });
       const buffer = Buffer.from(captured.value.data, "base64");
-      bytes += buffer.length;
-      if (bytes > OWNER_BATCH_POLICY.overlayBytes)
+      budget.bytes += buffer.length;
+      if (budget.bytes > OWNER_BATCH_POLICY.overlayBytes)
         throw new Error("overlay_capacity");
       await writeFile(frameFile, buffer, { flag: "wx", mode: 0o600 });
       cache.set(key, { file: frameFile, links: 1, bytes: buffer.length });

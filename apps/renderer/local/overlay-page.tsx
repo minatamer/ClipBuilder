@@ -8,14 +8,24 @@ import {
 import { OwnerAutomaticOverlay } from "../../../packages/composition/local/automatic-overlay.tsx";
 import type {} from "./overlay-protocol.ts";
 import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
+import {
+  ownerOverlayClockSchema,
+  type OwnerOverlayClock,
+} from "../../../packages/contracts/local/visual-clock.ts";
 const root = createRoot(document.getElementById("root")!);
 let current:
-  { overlay: OwnerOverlay; assets: Record<string, string> } | undefined;
+  | {
+      overlay: OwnerOverlay;
+      assets: Record<string, string>;
+      clock?: OwnerOverlayClock | undefined;
+    }
+  | undefined;
 globalThis.clipbuilderOwnerPrepare = (value) => {
   current = z
     .object({
       overlay: ownerOverlaySchema,
       assets: z.record(z.uuid(), z.string()),
+      clock: ownerOverlayClockSchema.optional(),
     })
     .strict()
     .parse(JSON.parse(value));
@@ -25,7 +35,7 @@ globalThis.clipbuilderOwnerPaint = async (frame) => {
     !current ||
     !Number.isInteger(frame) ||
     frame < 0 ||
-    frame >= ownerPresentationFrames(current.overlay)
+    frame >= (current.clock?.frames ?? ownerPresentationFrames(current.overlay))
   )
     throw new Error("invalid_frame");
   flushSync(() =>

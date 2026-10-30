@@ -19,6 +19,8 @@ export async function prepareOwnerAudioMix(options: {
   firstInput: number;
   hookSeconds: number;
   bodySeconds: number;
+  hookSourceSeconds: number;
+  fps: number;
   signal: AbortSignal;
 }) {
   const audio = options.overlay.audio
@@ -29,6 +31,7 @@ export async function prepareOwnerAudioMix(options: {
     options.overlay.frames,
     options.overlay.hook,
     options,
+    options.overlay.visuals,
   );
   if (!segments.length && (audio?.originalVolume ?? 100) === 100)
     return { inputs: [] as string[], graph: "", label: "audio" };
@@ -95,7 +98,7 @@ export async function prepareOwnerAudioMix(options: {
     const span = segment.end - segment.start,
       fade = Math.min(OWNER_AUDIO_LIMITS.fadeSeconds, span / 2);
     filters.push(
-      `[${options.firstInput + index}:a:0]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,atrim=start=${segment.offset}:duration=${span},asetpts=PTS-STARTPTS,afade=t=in:d=${fade},afade=t=out:st=${span - fade}:d=${fade},volume=${segment.cue.volume / 100},adelay=${Math.round(segment.start * 1000)}:all=1,apad,atrim=duration=${duration}[added${index}]`,
+      `[${options.firstInput + index}:a:0]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,atrim=start=${segment.offset}:duration=${span},asetpts=PTS-STARTPTS,afade=t=in:d=${fade},afade=t=out:st=${span - fade}:d=${fade},volume=${segment.cue.volume / 100},adelay=${Math.round(segment.start * OWNER_AUDIO_LIMITS.sampleRate)}S:all=1,apad,atrim=duration=${duration}[added${index}]`,
     );
   }
   filters.push(

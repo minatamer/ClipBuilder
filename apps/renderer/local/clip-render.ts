@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import {
   lstat,
   mkdtemp,
+  mkdir,
   readFile,
   rename,
   rm,
@@ -139,27 +140,69 @@ export async function renderOwnerClip(
   const frames = await mkdtemp(join(dirname(output), "overlay-"));
   try {
     signal.throwIfAborted();
+    const bodyFrames = join(frames, "body"),
+      hookFrames = join(frames, "hook");
+    await mkdir(bodyFrames);
+    if (hook) await mkdir(hookFrames);
     const mix = await prepareOwnerAudioMix({
       root: options.root,
       workspaceId: job.workspaceId,
       overlay: job.overlay,
       scratch: frames,
-      firstInput: hook ? 3 : 2,
+      firstInput: hook ? 4 : 2,
       hookSeconds: (hookProfile?.frames ?? 0) / profile.fps,
       bodySeconds: bodyProfile.frames / profile.fps,
+      hookSourceSeconds: hookStartFrame / profile.fps,
+      fps: profile.fps,
       signal,
     });
+    const raster = {
+      bundle: options.bundle,
+      chromium: options.chromium,
+      overlay: job.overlay,
+      assets,
+      pixelRatio: Math.max(1, profile.width / 1080, profile.height / 1920),
+      budget: { bytes: 0 },
+    };
     await rasterizeOwnerOverlay(
       {
-        bundle: options.bundle,
-        chromium: options.chromium,
-        overlay: job.overlay,
-        assets,
-        frames,
-        pixelRatio: Math.max(1, profile.width / 1080, profile.height / 1920),
+        ...raster,
+        frames: bodyFrames,
+        clock: {
+          hook: false,
+          sourceStartFrame: 0,
+          sourceEndFrame: job.overlay.frames,
+          frames: job.overlay.frames,
+        },
       },
       signal,
     );
+    if (hook)
+      await rasterizeOwnerOverlay(
+        {
+          ...raster,
+          frames: hookFrames,
+          clock: {
+            hook: true,
+            sourceStartFrame: (hookStartFrame / profile.fps) * OWNER_FPS,
+            sourceEndFrame:
+              ((hookStartFrame + hookProfile!.frames) / profile.fps) *
+              OWNER_FPS,
+            frames: Math.max(
+              1,
+              Math.ceil((hookProfile!.frames / profile.fps) * OWNER_FPS - 1e-9),
+            ),
+          },
+        },
+        signal,
+      );
+    // Each branch changes art on the first native frame at/after its raster PTS.
+    // Join on the same whole native Hook boundary as the source and audio.
+    const artBranch = (input: number, length: number, label: string) =>
+      `[${input}:v:0]fps=fps=${profile.fps}:start_time=0:round=up,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${length},setpts=PTS-STARTPTS[${label}]`;
+    const artGraph = hook
+      ? `${artBranch(2, hookProfile!.frames, "hookArt")};${artBranch(3, bodyProfile.frames, "bodyArt")};[hookArt][bodyArt]concat=n=2:v=1:a=0,fps=fps=${profile.fps}:start_time=0:round=near,trim=end_frame=${profile.frames},scale=${profile.width}:${profile.height}[art]`
+      : `${artBranch(1, bodyProfile.frames, "bodyArt")};[bodyArt]scale=${profile.width}:${profile.height}[art]`;
     signal.throwIfAborted();
     await runOwnedProcess(
       options.tools.ffmpeg,
@@ -184,15 +227,17 @@ export async function renderOwnerClip(
               original,
             ]
           : []),
-        "-framerate",
-        String(OWNER_FPS),
-        "-threads",
-        "2",
-        "-i",
-        join(frames, "%06d.png"),
+        ...[...(hook ? [hookFrames] : []), bodyFrames].flatMap((directory) => [
+          "-framerate",
+          String(OWNER_FPS),
+          "-threads",
+          "2",
+          "-i",
+          join(directory, "%06d.png"),
+        ]),
         ...mix.inputs,
         "-filter_complex",
-        `${sourceGraph}${mix.graph ? `;${mix.graph}` : ""};[${hook ? 2 : 1}:v:0]scale=${profile.width}:${profile.height},tpad=stop_mode=clone:stop_duration=${1 / OWNER_FPS + (hook ? 2 / profile.fps : 0)}[art];[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`,
+        `${sourceGraph}${mix.graph ? `;${mix.graph}` : ""};${artGraph};[source][art]overlay=0:0:shortest=1:format=auto:ts_sync_mode=default,format=yuv420p[v]`,
         "-filter_complex_threads",
         "2",
         "-filter_threads",
@@ -202,9 +247,7 @@ export async function renderOwnerClip(
         "-map",
         `[${mix.label}]`,
         "-t",
-        String(
-          hook ? profile.frames / profile.fps : presentationFrames / OWNER_FPS,
-        ),
+        String(profile.frames / profile.fps),
         "-frames:v",
         String(profile.frames),
         "-r",

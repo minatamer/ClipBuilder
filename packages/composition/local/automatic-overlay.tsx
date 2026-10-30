@@ -6,22 +6,38 @@ import { OwnerStyledCaption } from "./styled-caption.tsx";
 import { OwnerTextLayerView } from "./text-layer.tsx";
 import { ownerVisualMotion } from "./visual-motion.ts";
 import { OWNER_CAPTION_PRESETS } from "../../contracts/local/editor.ts";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
+import type { OwnerOverlayClock } from "../../contracts/local/visual-clock.ts";
+
+export type OwnerOverlayImageProps = {
+  src: string;
+  alt: string;
+  style: CSSProperties;
+  onError?: (() => void) | undefined;
+};
 
 /** The same fixed overlay tree runs in local review and transparent export. */
 export function OwnerAutomaticOverlay({
   overlay,
   assets,
   frame: presentationFrame,
+  clock,
+  renderImage,
+  onImageError,
 }: {
   overlay: OwnerOverlay;
   assets: Record<string, string>;
   frame: number;
+  clock?: OwnerOverlayClock | undefined;
+  renderImage?: ((props: OwnerOverlayImageProps) => ReactNode) | undefined;
+  onImageError?: (() => void) | undefined;
 }) {
   const width = 1080,
     height = 1920;
   const { ms, frame, caption, colors, visuals, texts } = ownerOverlayFrame(
     overlay,
     presentationFrame,
+    clock,
   );
   return (
     <div
@@ -33,18 +49,17 @@ export function OwnerAutomaticOverlay({
         overflow: "hidden",
       }}
     >
-      {visuals.map((cue) => (
-        <img
-          key={cue.id}
-          src={assets[cue.assetId]!}
-          alt={
+      {visuals.map((cue) => {
+        const props: OwnerOverlayImageProps = {
+          src: assets[cue.assetId]!,
+          onError: onImageError,
+          alt:
             cue.origin === "synthetic"
               ? "Sample picture"
               : cue.origin === "generated"
                 ? "Generated illustration"
-                : "Owner picture"
-          }
-          style={{
+                : "Owner picture",
+          style: {
             position: "absolute",
             left: cue.box.x * width,
             top: cue.box.y * height,
@@ -53,9 +68,18 @@ export function OwnerAutomaticOverlay({
             objectFit: cue.fit,
             borderRadius: 20,
             ...ownerVisualMotion(cue, frame),
-          }}
-        />
-      ))}
+          },
+        };
+        return (
+          <Fragment key={cue.id}>
+            {renderImage ? (
+              renderImage(props)
+            ) : (
+              <img {...props} alt={props.alt} />
+            )}
+          </Fragment>
+        );
+      })}
       {texts.map((layer) => (
         <OwnerTextLayerView key={layer.id} layer={layer} />
       ))}

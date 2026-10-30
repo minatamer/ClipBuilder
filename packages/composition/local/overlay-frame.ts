@@ -4,6 +4,7 @@ import type { OwnerOverlay } from "../../contracts/local/clips.ts";
 import { ownerVisualMotion } from "./visual-motion.ts";
 import { captionSpeakerFrame } from "../../contracts/local/caption-speakers.ts";
 import { OWNER_CAPTION_PRESETS } from "../../contracts/local/editor.ts";
+import type { OwnerOverlayClock } from "../../contracts/local/visual-clock.ts";
 import {
   ownerSourceFrame,
   ownerHookFrames,
@@ -11,9 +12,16 @@ import {
 } from "../../contracts/local/hook.ts";
 
 /** Exact frame-driven overlay state, including owner caption animation. */
-export function ownerOverlayFrame(overlay: OwnerOverlay, frame: number) {
-  const inHook = !!overlay.hook && frame < ownerHookFrames(overlay);
-  frame = ownerSourceFrame(overlay, frame);
+export function ownerOverlayFrame(
+  overlay: OwnerOverlay,
+  frame: number,
+  clock?: OwnerOverlayClock,
+) {
+  const inHook =
+    clock?.hook ?? (!!overlay.hook && frame < ownerHookFrames(overlay));
+  frame = clock
+    ? clock.sourceStartFrame + frame
+    : ownerSourceFrame(overlay, frame);
   const ms = (frame * 1000) / OWNER_FPS;
   const captionIndex = overlay.captions.findIndex(
     (cue) => cue.startMs <= ms && ms < cue.endMs,
@@ -25,7 +33,15 @@ export function ownerOverlayFrame(overlay: OwnerOverlay, frame: number) {
     overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean,
   );
   const caption = inHook
-    ? ownerHookCaption(resolved.caption, overlay.hook!)
+    ? ownerHookCaption(
+        resolved.caption,
+        clock
+          ? {
+              startFrame: clock.sourceStartFrame,
+              endFrame: clock.sourceEndFrame,
+            }
+          : overlay.hook!,
+      )
     : resolved.caption;
   const colors = resolved.colors;
   const visuals = overlay.visuals.filter(
