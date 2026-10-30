@@ -6,6 +6,16 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Owner recovery revision (2026-10-30, CL-158): automatically preserve the local
+  working session through existing safe draft mechanisms in one separate rolling
+  recovery store. No per-checkpoint Save opt-in or visible saved project per edit.
+  Recover acknowledged clips/applied edits/assets/exports without new AI/render
+  calls; interrupted work requires explicit retry. Keep two-hour expiry and
+  explicit Start over cleanup, preserving owner-saved drafts/retained sources/
+  exports. Hosted remains temporary with no durable recovery library. Tests stay
+  synthetic/fake/paid-off; no real processing, configuration, cloud, deployment or
+  Git action is authorized by this revision.
+
 - Owner sound revision (2026-10-29, CL-141–142): fix audible cue preview and
   replace the rejected generic sound picker with actual researched recordings.
   Anonymous bounded public-sample downloads for curation are expressly requested;

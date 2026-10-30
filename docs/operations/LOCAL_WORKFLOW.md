@@ -1,5 +1,24 @@
 # Local editing in ClipBuilder
 
+CL-158 automatically preserves the local working session in a separate rolling
+recovery draft under the private library's `.recovery` directory. It uses the
+existing incremental source/asset hashes rather than making a new project or
+whole-media copy per edit. Applied changes/completed work are recoverable after
+restart; unapplied browser drafts and changes not yet written are not guaranteed.
+Restore never repeats AI/image/render calls; interrupted jobs show canceled and
+need explicit retry. A two-hour-old snapshot expires; Start over clears recovery
+without deleting explicit saved projects or retained media. Hosted sessions keep
+their temporary lifecycle and have no durable recovery library.
+
+Reconnection is shown in the workspace footer, tries automatically for thirty
+seconds with bounded requests, then offers Try again. It rebinds to a recovered
+workspace rather than polling an obsolete ID forever. A missing/expired session
+offers a fresh start. This works with fake inputs/no keys; real AI still needs
+the existing provider setup and explicit processing action. Recovery itself
+does not call providers. CL-156 additionally caps new AI pictures at five seconds
+with two-second gaps; CL-157 places optional AI text at zero with wording-based
+reading time. Manual picture/text timing stays editable.
+
 CL-061 makes upload → moments → editor the shared normal workflow locally and
 when hosted. Only YouTube acquisition is local-only. The local commands and
 configuration below remain; hosted session/native packaging and owner-only

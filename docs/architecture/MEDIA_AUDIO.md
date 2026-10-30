@@ -1,13 +1,51 @@
 # Media and manual audio design — CL-133
 
+## Owner-selected hook risers — CL-162, 2026-10-30
+
+The owner supplied MP3s for the exact public [Riser](https://www.youtube.com/watch?v=Am4wYTiHHx8)
+and [Rising tension](https://www.youtube.com/watch?v=rjoEQSTBgW8) recordings.
+Reuse the fixed FLAC catalogue, with no runtime fetch or AI-generated substitute.
+Decode/normalize locally to stereo 48-kHz/16-bit PCM and pad the tail to whole
+30-fps frames. Re-decoding each FLAC proved every original normalized PCM sample
+identical; only less than one frame of silent padding is added. Original files
+remain untouched. No release-clearance claim or real YouTube pipeline test.
+
+| Sound | Decoded seconds | Catalogue frames / seconds | FLAC bytes | SHA-256 |
+| --- | --- | --- | --- | --- |
+| Riser | 5.294167 | 159 / 5.3 | 242972 | `63de3e2a3f6bb71372f2d2deeb1b3b2df3bae54eb7085ec1eff07b5a8f257c71` |
+| Rising tension | 7.383958 | 222 / 7.4 | 613877 | `dbe3a51423f692691beaae06b4ff586915dacd00e0dc9bab9cc87dea0a9e19e2` |
+
+Shared Gemini/Codex advice prefers at least 3–4 seconds, ideally a natural
+5.3-second excerpt; longer useful thoughts can use up to 7.4 seconds. Do not
+invent/stretch speech just to fill music. The decoder caps AI suggestions at
+222 frames without retrying/rejecting usable clips. Fake mode simulates the
+short recording's duration. AI processing never activates a hook or sound.
+
+Explicit Use suggestion adds the hook plus one editable Hook-only riser at 35%
+volume, choosing the shortest covering recording. Offset trims the lead-in to
+align the rise's end with the cut; no looping or body spill. Preserve independent
+gain and other layers. A managed optional cue marker allows repeat acceptance
+to reuse its ID/gain, never erase user cues or exceed twelve layers. Manual
+placement/offset/loop changes detach management; removing the hook removes only
+its managed default. Full layers produce an actionable make-room message.
+Normal Apply/Discard, saved restore and native export own persistence.
+
+Manual Add hook adds no sound. The owner confirmed keeping its existing
+ten-second limit, independent of the recordings. Users can still add, layer,
+adjust or remove sound themselves through Media. Legacy catalogue IDs/assets
+remain playable. Fake/no-key/native checks prove mechanics, not real AI hook
+quality or personal listening/device acceptance. Real Codex uses its saved
+ChatGPT login/local speech/master; Gemini retains its keys/live approvals.
+
 ## Current recorded catalogue — CL-141–145
 
 The owner's 2026-10-29 correction supersedes the original-synthesis-only choices
 below. Snap/Whoosh/Ding, Background pulse and Sator suspense are retired from new
-selection; saved IDs still decode and play. Current choices are recorded Pop SFX,
+selection; saved IDs still decode and play. CL-141–145 choices are recorded Pop SFX,
 Bamboo Hit, Vine Boom and the classic Discord message notification. The owner
 rejected Sator and requested its removal; its recording is retained solely for
-saved-cue compatibility. No substitute suspense track is selected automatically.
+saved-cue compatibility. That revision selected no substitute suspense track;
+CL-162 above adds the owner's risers only when a suggestion is explicitly used.
 New automatic visual accents use recorded Pop, at the visual start only. All
 existing layers/volumes, Hook timing, private assets and video quality stay intact.
 
@@ -63,6 +101,37 @@ or fixed FLAC/FLAC recordings, still with file/pipe protocols and owned scratch.
 These are actual identified samples; the owner's exact intended version and
 personal listening acceptance are unconfirmed. No licensed/cleared-release claim.
 
+## Frame-bound automatic accents — CL-166
+
+CL-167 shares meaning-first scene direction across Gemini/Codex planners and
+Gemini generation. Visuals explain the actual timed script idea with a clear
+focal detail, reveal or contrast; alternate public searches preserve that exact
+subject/meaning. Commons uses full validated depiction queries. No random-prop
+fallback, additional AI request, budget increase, quality rejection or retry.
+Synthetic checks prove query/call mechanics; real relevance remains owner review.
+
+Preview and native mixing receive actual visual timing/motion from the overlay.
+The contracts visual clock owns motion and first-visible occurrence windows.
+Linked cues restart from offset zero for each Hook/body appearance, including a
+Hook beginning inside an image, and stop within its visible window. Missing
+anchors produce no sound. Source-relative cue fields remain editable/saveable;
+changing timing/placement/offset/loop explicitly detaches the anchor. Gains,
+mute/removal, ordinary tracks and Hook risers retain independent layering.
+
+Player uses Remotion Img buffering and its existing preview-error recovery.
+Native separately rasterizes Hook/body source clocks at 30fps, shares the 2GiB
+PNG budget, resamples with fps round=up and joins on the same native boundary as
+video/audio. Accents delay by 48kHz samples from that displayed native frame,
+avoiding millisecond rounding. Native code never uses Player image buffering;
+its admitted static images still decode before screenshot capture.
+
+CL-166 synthetic native proof compares decoded pixels and audio onsets at
+24/25/29.97/30/60fps, including a Hook starting inside an image. Browser proof
+holds an image response: frames/audio wait; decode releases playback; a missing
+image stops it without retry/inference. Fixed-recording audibility and real
+editor save/export are covered by synthetic proofs. Physical-device listening
+and live AI editorial choices remain owner review. No paid calls.
+
 ## Historical synthesized catalogue
 
 CL-138 originally added one built-in Snap (about 133 ms, initial volume 35%) at the start
@@ -80,8 +149,9 @@ CL-139 adds local-only Media → Audio → From YouTube. A canonical YouTube URL
 selects a clear audio-only AAC/M4A stream without a speech-language requirement.
 The whole source must fit two minutes and 12 MiB; normalization keeps the same
 24-MiB asset, eight-asset and twelve-cue limits. A new cue opens in its controls
-with an independent volume and can overlap existing layers. Download/Cancel
-replaces the active footer; cancellation stops acquisition/normalization. The
+with an independent volume and can overlap existing layers. CL-161 keeps the
+editor footer unchanged and puts Download sound / Back to sounds, progress and
+errors inside the intake card. Back stops acquisition/normalization. The
 existing pinned, isolated downloader and CONNECT broker own bounded metadata,
 transfer, deadline, zero retries and scratch cleanup. Hosted capabilities,
 browser proxy and server reject URL import before acquisition; uploads remain.

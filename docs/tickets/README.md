@@ -1,5 +1,145 @@
 # ClipBuilder canonical ticket index
 
+## Current owner editor follow-ups — 2026-10-30
+
+Owner requested and authorized packaging all CL-152–167 work on 2026-10-30.
+Whole-file allocation and gates: [commit plan](../operations/CL152_167_COMMIT_PLAN.md).
+Plan committed first; the following local ticket-prefixed series preserves the
+completed fake/synthetic evidence and earlier bounded CL-153 acceptance.
+
+| Commit | Scope | Files |
+| --- | --- | ---: |
+| `0235a41` | CL-152-167: plan current-work commit packaging | 1 |
+| `2f91539` | CL-152-166: define sampling focus hook and visual clocks | 18 |
+| `71dd4d5` | CL-153: adapt Codex output schemas for the CLI | 4 |
+| `cdc5a22` | CL-152: sample frames around speaker changes | 2 |
+| `b71685a` | CL-153-167: connect grounded planning and local session recovery | 27 |
+| `0ab5dd0` | CL-162: add the selected hook riser recordings | 2 |
+| `288b880` | CL-158-166: update editor recovery hooks and media controls | 13 |
+| `7324504` | CL-166: synchronize native visual and audio presentation | 8 |
+| `8ef2c43` | CL-152-167: verify synthetic editor export and recovery flows | 5 |
+| Final commit containing this record | CL-152-167: record decisions validation and commit evidence | 22 |
+
+The ten-commit series allocates 102 distinct paths, including its plan, once each.
+Exact staged manifests/content, UTF-8, whitespace and credential-pattern checks
+pass; fixed catalogue recordings are intentional source data. Private media,
+ignored configuration, build outputs and runtime logs remain excluded.
+Packaging changes no feature behavior. Real taste/voice/face/device/rights/
+hosted/release gates remain owner-only. No new AI/download/cloud/paid request,
+push or deployment. Final baseline-to-HEAD allocation and clean-worktree checks
+are performed after the closing documentation commit. Earlier unstaged/no-Git
+notes are historical handoffs superseded by this owner instruction.
+
+
+- [CL-166](CL-166-visual-accent-synchronization.md): frame-bound automatic
+  accents, fresh Hook/body occurrences and image-load buffering. Synthetic
+  decoded MP4/audio onsets match across five frame rates; delayed/missing image
+  preview, independent audio/editor/export/save regressions pass. No paid calls.
+- [CL-167](CL-167-script-grounded-attention-visuals.md): shared explanation-first
+  Gemini/Codex prompts, precise queries and same-subject fallback searches.
+  Ninety-six fake local/67 mocked source cases and three synthetic CLI/native/
+  browser/export/recovery cases pass. Real relevance remains owner review.
+
+- [CL-163](CL-163-later-ai-hook-suggestions.md): AI-only start >=10 seconds,
+  no relocated opening quotes, short clips can omit advice; manual hooks intact.
+  Eighty-four fake checks and 55.47-second synthetic editor/export/restore proof pass.
+- [CL-164](CL-164-visual-coverage-and-search-fallbacks.md): visual coverage per
+  thirty seconds, bounded alternate public searches and distinct safe diagnostics.
+  Ninety-eight fake checks and three CLI/native/browser cases (79.10s) pass;
+  real lookup failure remains non-fatal and is recorded. Existing budgets intact.
+- [CL-165](CL-165-creative-opening-title-hooks.md): nine researched headline
+  approaches, newly authored source-grounded copy, one opening title with existing
+  reading-time/manual behavior. Ninety-two fake checks and three CLI/native/
+  browser cases (88.89s) pass. Actual taste/performance remains owner review.
+- [CL-161](CL-161-audio-intake-card-actions.md): aligned audio acquisition CTAs;
+  YouTube card owns download/back/progress/errors, preserving normal clean/dirty
+  footer. Synthetic browser/native proof passes (23.24s), including cancellation,
+  retry, save/export and desktop/tablet/phone layout. No real download/AI calls.
+- [CL-162](CL-162-ai-hook-risers.md): supplied Riser/Rising tension recordings
+  (5.3/7.4s); AI prefers 3–4s or the full short rise and caps at 7.4s. Explicit
+  Use suggestion adds editable Hook-only music; manual hooks keep 10s/no default
+  sound. Ninety-six fake checks plus native audibility/cutoff and 39.73-second
+  editor/export/restore proof pass. No real inference/download/deployment.
+- [CL-159](CL-159-visual-motion-and-variety.md): new manual/AI pictures use
+  None → Fade. Codex plans real-image briefs and uses bounded Commons retrieval
+  instead of forced icon diagrams; old saved art stays usable, no Gemini
+  fallback. Shared art direction encourages varied relevant scenes/metaphors.
+  Eighty-five fake cases, 23 mocked source cases, two isolated CLI cases and
+  79.73-second synthetic preview/native/export/restore/recovery proof pass.
+  Actual search hit rate and editorial taste remain owner review.
+- [CL-160](CL-160-editor-section-icons.md): matching decorative Lucide icons for
+  all six editor sections. Synthetic browser/native proof passes in 86.37 seconds,
+  including keyboard navigation and desktop/tablet/phone geometry. Frontend/test
+  types, scoped lint/format pass; normal backend/native artifacts refreshed with
+  verified ownership and 200 health/page/bridge checks. No real/paid calls.
+- [CL-156](CL-156-ai-picture-duration-and-gaps.md): implemented five-second AI
+  pictures/two-second gaps for Gemini/Codex, preserving manual timing and budgets.
+  Eighty focused fake checks, local/test types and scoped lint pass; synthetic
+  browser/native/export/restore proof passes in 39.99 seconds. One earlier proof
+  teardown stalled; an instrumented retry completed and temporary probes were
+  removed. Normal lifecycle/continuity is investigated in CL-158.
+- [CL-157](CL-157-ai-opening-text.md): implemented optional AI opening title at
+  zero with wording-based reading time, manual timing preserved. Eighty focused
+  fake checks and the uninstrumented 64.34-second synthetic native/browser proof
+  pass, including title frames 0–63 and five-second picture timing/restore.
+- [CL-158](CL-158-session-recovery-and-reconnect.md): implemented automatic local
+  recovery with the existing private draft machinery and bounded footer reconnect/
+  timeout/Try again. Fifty focused fake checks and final 69.40-second synthetic
+  browser/native restart, recovered-ID rebind, saved edit/export/counter parity,
+  reset and desktop/phone footer states pass. Fixed an actual closed-response
+  stream/shutdown race; local/test types and scoped lint pass. Hosted remains
+  temporary. No AI/render call occurs during recovery; interrupted work requires
+  explicit retry. Owner authorizes automatic local recovery persistence.
+
+All agent checks are synthetic/fake/paid-off, no provider calls or deployment.
+The owner declined saving temporary test clips before these source reloads and
+wants fresh manual tests; existing saved/retained media remain protected.
+
+## Default to two clips — 2026-10-30
+
+[CL-155](CL-155-default-two-clips.md) changes fresh local and hosted AI suggestion
+counts to two. Explicit/restored choices and local/hosted clip limits remain.
+Verification is synthetic/fake/paid-off; no provider calls, deployment or Git
+actions are authorized.
+
+## Opening camera and face-safe pictures — 2026-10-30
+
+[CL-154](CL-154-opening-focus-and-face-safe-visuals.md) follows the completed
+CL-153 real sample with synthetic/fake-only fixes. Strong grounded visual-only
+opening decisions can initialize the correct person while audio labels remain
+unknown; normal later speaker-switch gates stay intact. Newly planned pictures
+use projected face bounds across their full interval, with stable clear-slot
+placement and a non-fatal fallback. Saved/manual boxes are preserved. Focused
+fake tests, static checks and a current-source browser/native export/restore
+proof pass; real opening/editorial quality is not re-tested. No paid/provider
+calls, configuration changes, cloud, deployment or Git mutation are authorized.
+
+## Authorized real Codex failure investigation — 2026-10-30
+
+[CL-153](CL-153-real-codex-clip-acceptance.md) records the owner's explicit
+approval to fix and test the existing sample in real Codex mode until one clip
+processes, then inspect speaker/face camera behavior. Fixed an actual provider
+rejection of a picture-brief Unicode regex in the CLI output schema, preserving
+runtime validation, and bounded worker readiness by thirty seconds. Sixteen fake
+checks and two installed-CLI before/after cases pass, plus scoped static checks.
+One real 30-second sample clip now processes and exports through the normal app;
+source/output inspection confirms the left-to-right speaker cut at 9 seconds.
+Opening uncertainty and illustration overlap remain recorded visual limits.
+CL-152/private/saved/retained media are preserved. The one-clip approval stop
+condition is reached; no further agent inference, Gemini, cloud, deployment or
+Git action is included. Broader personal/media/release acceptance remains open.
+
+## Codex speaker-change sampling — 2026-10-30
+
+[CL-152](CL-152-codex-speaker-change-sampling.md) implements transition-centred
+temporal bursts alongside uniform coverage, within the existing image count and
+60-image ceiling. Plan filed first; 30 focused fake checks, the 60.24-second
+synthetic browser/native export/restore proof and scoped static/review gates pass.
+No additional inference/speech/diarization calls. Current backend/worker rebuilt
+and refreshed, frontend preserved; health/page/bridge return 200 and Codex reports
+ready. Real speaker/face quality remains owner-tested. Work is unstaged/uncommitted;
+no paid/provider/cloud/Git/deploy action.
+
 ## Owner-authorized CL-146–151 commit packaging — 2026-10-29
 
 The owner requested a filed plan and multiple ticket-prefixed local commits for

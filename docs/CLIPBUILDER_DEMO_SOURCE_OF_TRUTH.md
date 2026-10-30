@@ -1,5 +1,241 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Script-grounded visual explanation — CL-167, 2026-10-30
+
+Both planners and Gemini image generation use one meaning-first visual policy.
+Explain the precise spoken subject/action/relationship/contrast at a meaningful
+beat, preferring a literal depiction. An analogy needs source support and an
+immediately clear connection. Attention comes from an explanatory focal detail,
+reveal or contrast, with readable phone-size composition. No random props or
+generic technical filler. Diagrams are allowed when helpful; no mandatory art
+style, palette, white card or template. Cite the explained words and time the
+image to the key spoken beat, retaining five-second maximum/two-second gaps,
+coverage targets, face-safe placement and existing budgets.
+
+Codex search alternatives retain the primary scene meaning and essential
+subject terms. Vary depiction/query detail, never replace the script concept.
+An alternate missing its essential terms broadens to those same subject terms;
+deduplicate actual search phrases. Commons searches the full validated phrase,
+then ranks with essential concepts/scene. Existing three lookups/eight seconds,
+admission, no Gemini fallback and non-fatal misses remain. No additional AI
+request, new quality rejection or automatic retry. Fake/synthetic verification
+proves mechanics; fresh real editorial quality remains owner review.
+
+## Automatic visual accent synchronization — CL-166, 2026-10-30
+
+An AI image's linked accent derives from its first actually visible frame, never
+an independently authored sound timestamp. Each Hook/body appearance starts a
+fresh sound at offset zero, including a Hook that begins inside an image. Keep
+the sound within that occurrence. Moving/removing the image follows/removes its
+linked cue; volume/mute/removal stay editable. Deliberate timing, placement,
+offset or loop edits make it manual. Preserve independent manual layers/risers.
+
+Preview buffers on image loading and stops in existing recovery on image error.
+Native art branches and PCM delays use the same whole native-frame Hook/body
+clock, retaining source cadence/quality, 30fps art sampling and the shared scratch
+budget. Synthetic decoded image/audio onsets match at 24/25/29.97/30/60fps;
+fake/no-key browser checks cover delayed/missing images and editor/save/export.
+Physical-device listening remains owner acceptance, with no paid agent calls.
+
+## Authored opening title hooks — CL-165, 2026-10-30
+
+Gemini/Codex may write a creative opening headline from the clip's meaning;
+titles are no longer limited to concatenated transcript words. In the existing
+planning call consider POV, curiosity gap, surprising reveal, myth-busting,
+pointed question, challenge, pain-to-payoff, before/after and a useful promise.
+Select the strongest accurate fit for the source payoff, not a random rotation
+or an ungrounded viral promise. No invented quotations, claims, numbers or
+personal experiences; use the source language and source-word evidence.
+
+Request zero/one authored title, at most 80 characters, with its chosen style
+and evidence. Preserve usable returned copy with advisory evidence critique;
+never make grounding/editorial quality an automatic paid retry prerequisite.
+Keep legacy reference-only decoding, frame-zero display and existing 2–8s
+word/character-based reading time. Manual/saved text remains editable with its
+existing limits. No new inference, style-picker workflow or visible viral score.
+The nine-style taxonomy synthesizes cited TikTok creative guidance, not measured
+performance or a platform guarantee. Fake/native checks prove mechanics; live
+editorial taste remains owner review with no new agent paid-test approval.
+
+## Visual coverage — CL-164, 2026-10-30
+
+Manual and AI-selected clips request at least one distinct relevant visual per
+started thirty-second portion, using explicit coverage windows and structured
+planning minimums. Current <=60s intake needs one/two images within the existing
+three-image ceiling. Preserve saved plans and legacy resource limits. Keep
+five-second displays/two-second gaps, face-safe placement and None → Fade.
+
+CL-167 supersedes the earlier different-subject fallback direction: Codex plans
+up to two alternate depictions of the same script concept in the same AI call.
+Try at most three distinct public lookups under one eight-
+second deadline, with existing host/redirect/byte/rights admission, no transcript
+quotes/private details in queries and no Gemini fallback. Never force the old
+diagram template or unrelated fixture art. Record content-free reasons for
+insufficient plans, no match, lookup failure and actual coverage shortfall.
+External failure cannot guarantee art: preserve usable paid work, keep editorial
+checks advisory and never automatically retry AI. Agent checks stay fake/no-key/
+paid-off; real retrieval and editorial quality remain owner acceptance.
+
+## Later AI hook excerpts — CL-163, 2026-10-30
+
+AI hook suggestions must start at or after clip-relative ten seconds (frame
+300). Never repeat an excerpt from the opening ten seconds as suggested advice;
+omit it rather than relocate its timestamp to unrelated speech. Return no advice
+for clips without a useful later excerpt. Enforce the shared decoder and explicit
+acceptance path as well as Gemini/Codex prompts; fake sampling stays eligible.
+Manual hooks may still start at zero and retain their ten-second duration limit.
+Keep the 5.3/7.4-second risers and explicit suggestion-only application, no extra
+inference/automatic retries and no change to saved applied edits. Fake/native
+validation proves mechanics; real AI excerpt quality remains owner review.
+
+## Suggested-hook risers — CL-162, 2026-10-30
+
+Use the owner's exact supplied Riser and Rising tension recordings in the
+existing fixed sound catalogue (159/222 frames, 5.3/7.4 seconds). Preserve the
+full decoded recording, padding only to whole video frames; no generated
+approximation or runtime download. Both Gemini/Codex suggest optional natural
+hooks, preferring at least 3–4 seconds and ideally 5.3 seconds, with an AI-only
+maximum of 7.4 seconds. Shorter useful speech remains allowed; never invent
+dialogue or add another inference just to fill music. Fake mode simulates this.
+
+AI processing does not activate the hook. Explicit Use suggestion applies it
+with one editable non-looping Hook-only riser, choosing the shortest recording
+that covers it, at 35% volume. Trim the audio lead-in to end the rise at the cut;
+never leak it into the main clip. Repeated use reuses only its managed cue and
+preserves independent gain/other layers. Manual placement/offset/loop changes
+detach management. Removing a hook removes only its managed default. Preserve
+the twelve-layer limit with an actionable make-room state, plus Apply/Discard,
+saved restore and native mixing. No restriction on concurrent user audio.
+
+Manual Add hook adds no sound. The owner explicitly confirms retaining the
+existing ten-second manual-hook limit, independent of the riser durations.
+Users can add/change/remove audio themselves. Preserve legacy saved sounds,
+source/export quality, budgets and provider isolation. Agent checks remain
+synthetic/fake/paid-off except the explicitly supplied sound curation; no real
+AI/YouTube pipeline, configuration, cloud, deployment or Git authorization.
+
+## Audio acquisition controls — CL-161, 2026-10-30
+
+Upload audio and From YouTube share an aligned wrapping row with a small gap.
+The local YouTube sound card owns Download sound / Back to sounds, its progress
+and errors. Back aborts any owned import and returns to the sound library.
+Keep the workspace's normal clean or dirty footer actions visible; disable
+conflicting actions during download. This owner revision supersedes prior
+footer replacement for this nested intake only. Preserve uploads, limits and
+hosted exclusion of remote acquisition. Fake/no-key synthetic transports
+verify mechanics; no actual download or paid AI test is authorized.
+
+## Editor section icons — CL-160, 2026-10-30
+
+The six editor sections retain their text labels with small consistent Lucide
+outline icons: Captions, Type, SlidersHorizontal, Images, ScanFace and Magnet
+for Captions, Text, Filters, Media, Focus and Hook respectively. Icons inherit
+the existing selected/focus colors and are decorative, hidden from accessible
+names. Preserve keyboard navigation, responsive grids, touch targets and footer
+actions. This presentation works in fake mode without keys and changes no AI
+processing or provider prerequisites.
+
+## Visual motion and variety — CL-159, 2026-10-30
+
+Fresh manual and AI pictures use Entrance None / Exit Fade (nine frames).
+Saved motion and later manual choices remain authoritative. Both Gemini and
+Codex request varied relevant imagery. CL-167 requires source-faithful scenes
+and only source-supported analogies; no required white card, palette, icon row
+or diagram.
+
+New Codex plans request contextual image briefs instead of a fixed illustration
+grammar. Normal real Codex processing uses the existing bounded Commons lookup
+for actual photos/illustrations, with truthful retrieved provenance and no
+Gemini/image-generation fallback. Only generic scene-specific search terms reach the
+allowlisted public lookup; source media, transcripts and authentication do not.
+No match or lookup failure leaves optional art absent without failing/retrying
+the clip. Preserve old saved assets and legacy partial illustration plans.
+Gemini retains its own existing generation path. Existing image/call budgets,
+five-second AI timing/two-second gaps, face-safe placement and quality remain.
+Fake/no-key checks inject image results; actual search hit rate and editorial
+quality remain owner review, with no new paid/provider test authorization.
+
+## Automatic local session recovery — CL-158, 2026-10-30
+
+The owner requests automatic session preservation and useful reconnection.
+Normal local composition keeps one debounced recovery draft under the private
+library's `.recovery` directory, reusing safe snapshot/hash/asset mechanisms and
+leaving explicit saved projects independent. No per-checkpoint Save question.
+Preserve acknowledged clips, applied edits, assets, completed analysis/exports
+and counters across restart. Recovery never launches AI/rendering; interrupted
+jobs become canceled and require explicit retry. Only the last successfully
+written snapshot is recoverable; unapplied browser edits are not acknowledged.
+
+Keep the two-hour recovery window. Explicit Start over and normal expiry clear
+only dedicated recovery data, preserving saved/retained media. Hosted sessions
+remain temporary and never enable this local persistent store. Browser
+reconnection uses GET-only bounded requests for up to thirty seconds, rebinds to
+the restored workspace, and has a designed footer status/timeout/Try again.
+Missing/expired sessions offer a fresh start instead of endless reconnecting.
+Initial connection also has a bounded request and footer Retry. Preserve shared
+design, normal motion, explicit paid retries, provider isolation and source
+quality. Tests are synthetic/fake/paid-off; no new real-provider authorization.
+
+## AI opening title — CL-157, 2026-10-30
+
+Optional Gemini/Codex text is one useful opening title at frame zero, grounded
+in supplied source words. Do not scatter AI emphasis text later in the clip or
+add a separate title workflow/call. Display duration uses the slower of three
+words/second or fifteen non-space characters/second plus 0.75 seconds, bounded
+to 2–8 seconds and clip length. Preserve later/longer manual text and all saved
+layers. Keep older three-candidate input decoding tolerant, selecting the first
+usable candidate for one opening layer. Fake checks prove clocks/edit freedom;
+actual editorial quality remains owner-tested, with no new paid authorization.
+
+## AI picture timing — CL-156, 2026-10-30
+
+Newly AI-planned pictures last at most five seconds, with at least two seconds
+of picture-free conversation between them, for both normal Gemini and Codex
+shared-editor flows. If a thought stays relevant longer, request a different
+useful related image after the gap within the existing three-picture budget.
+Do not duplicate one image, create extra inference/image calls or add filler.
+Initial plan normalization may shorten/space optional cues within their original
+relevance windows, omitting one that cannot fit before image dispatch rather
+than rejecting/retrying the clip. This is the owner's explicit timing revision;
+other provider quality checks remain advisory. Manual and restored/retained
+timing remains unrestricted by this AI cap. Existing export quality and limits
+remain. Tests use injected/fake inputs only, with no new paid authorization.
+
+## Opening focus and face-safe pictures — CL-154, 2026-10-30
+
+The owner requests fixes for CL-153's opening camera uncertainty and face-covering
+illustration, with a filed plan and synthetic/fake/paid-off validation only. The
+prior one-clip real approval is exhausted; no new inference is authorized.
+Allow a strongly supported visual-only shot opening to select an anonymous
+visible person when opening audio labels are null. Require confidence >=0.95,
+one second of intersecting unassigned-word evidence starting within half a second
+of the shot opening, continuous visibility through confirmation and no conflicting
+known speech. Keep audio labels unknown; later switches still require the normal
+audio-backed sustained evidence. Genuine uncertainty retains the held crop.
+
+New planned pictures use observed face/head bounds projected through every
+intersecting portrait camera crop, with a safe margin. Try readable clear slots
+and smaller alternatives over the full cue; keep one stable placement. Fully
+occupied frames retain a bounded least-overlap editable fallback, never reject
+usable paid work or request another inference. Ask Codex for tight complete
+face/head bounds including chin/hair and excluding torso. Existing saved/manual
+boxes, Hook copies, source/export quality, limits and image/call budgets remain.
+Fake checks prove mechanics, not new real-media voice/face/editorial accuracy.
+
+## Owner local Codex acceptance exception — CL-153, 2026-10-30
+
+The owner explicitly authorizes agent-run fixes and real paid Codex processing
+of the existing sample until one clip completes, including private speaker/face
+camera inspection. This narrowly supersedes earlier owner-only/no-paid agent
+testing gates for CL-153. Prefer reuse of completed work, synthetic diagnosis
+first and one selected clip at a time; no new automatic retry policy. Preserve
+the master, saved/private media and configuration. Keep actual source content
+and results outside Git/normal diagnostics. No Gemini fallback, cloud action,
+deployment, Git mutation or broader release/quality acceptance is included.
+CL-153 subsequently completed one real 30-second clip/export and inspected its
+speaker camera switch. This reaches the approval's stop condition; do not carry
+this bounded consent forward as general agent permission for more real calls.
+
 ## Codex speaker and editor parity revision — CL-149–151, 2026-10-29
 
 Owner real-flow feedback requests human moment titles, audio-backed speaker
@@ -10,6 +246,14 @@ Whisper timestamps, preserving unknown/overlapping speech as neutral. Let Codex
 associate those audio-backed speaker IDs with visible people from bounded
 temporal frame panels; keep sustained-switch/uncertainty/shot-reset camera rules.
 Never invent speaker identity or silently clear supported labels.
+
+CL-152 owner refinement (2026-10-30): combine uniform coverage with bursts around
+known speaker changes, keeping the existing per-duration image count, 60-JPEG /
+180-panel ceiling and all byte bounds. Use up to half the slots for transitions,
+with a burst starting 0.2 seconds before each selected change; retain at least
+half for uniform coverage including the opening. Spread excess hints across the
+clip, deduplicate/refill anchors, and keep unknown/overlapping labels neutral.
+No new speech/diarization/provider call, retry or camera/export limit change.
 
 This supersedes CL-135's permanently unassigned-speaker/manual-picture omission.
 The subscription transport still accepts text/images, not raw audio/video or
@@ -1002,8 +1246,8 @@ contiguous window fits the minimum. No automatic retries or added provider calls
 See [CL-057](tickets/CL-057-reserve-manual-clips-before-ai-discovery.md).
 
 The owner requests an independent count of 1–10 additional AI suggestions
-(default four), keeping manual ranges and AI min/max duration separate. This
-supersedes the owner-only four-suggestion ceiling; ten selected clips and the
+(default two, revised by CL-155), keeping manual ranges and AI min/max duration
+separate. This supersedes the owner-only four-suggestion ceiling; ten selected clips and the
 one-transcription/one-selection budget remain. Report a shortfall if fewer
 grounded moments qualify, with no automatic retry or invented content.
 Caption customization adds fixed local fonts, independent animation and

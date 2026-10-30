@@ -8,13 +8,65 @@ under the plan committed first at `85563c8`; implementation starts clean.
 
 ## Supported integration and limits
 
+CL-157 makes optional AI text one source-grounded opening title at frame zero.
+The shared prompt/decoder uses the slower of 3 words/s or 15 non-space characters/s
+plus 0.75 s, capped to 2–8 s and clip length. The decoder tolerates the prior
+three-candidate input but emits only the first usable title. No separate title
+field/inference, repeated captions or later AI emphasis. Manual/saved text
+positions and times remain editable and bypass initial planning normalization.
+
+CL-156 gives Gemini/Codex one shared initial-picture policy: at most five seconds
+per picture and at least two clear seconds between pictures. Request distinct,
+useful related alternatives for long-running ideas within the same three-picture
+allowance and single planning call. The shared batch normalizes fresh plans
+before image dispatch/storage, never regenerating split/duplicate art. Later
+cues may move only inside their original relevance window; a cue that cannot fit
+is omitted before spend rather than failing the clip. Existing partial/base
+retries and manual/saved timing bypass this initial-plan normalization. The
+provider's existing resume binding admits the stored normalized plan for images.
+
+CL-154 retains grounded visual-only opening evidence even when the opening audio
+words have no diarization label. Only shot-start decisions at confidence >=0.95
+with at least one second of intersecting unassigned speech, evidence beginning
+within 0.5 seconds of the cut, continuous person visibility and no conflicting
+known speech may initialize that crop. It does not invent audio speaker labels
+or authorize later visual-only switches. Ordinary audio-backed switches and
+uncertain holds retain their existing gates. The same single planning request
+explicitly asks for this opening evidence and tight face/head boxes including
+chin/hair, excluding torso; image and byte budgets do not change.
+
+Initial planned pictures project the compiled person observations through the
+shared integer portrait camera crop for every intersecting shot/observation.
+Protect the full supplied rectangle plus a margin; choose a stable readable
+clear slot across the cue, trying smaller alternatives if needed. A bounded
+least-overlap fallback keeps fully occupied portraits editable without another
+call or quality rejection. This runs only when creating a new planned picture;
+retained/saved/manual positions and Hook copies keep their stored coordinates.
+It works with injected fake plans without keys; actual visual/mouth association
+quality remains unverified by synthetic checks.
+
+CL-153 adapts only the output-schema wire copy before invoking the CLI. Shared
+picture briefs use JavaScript Unicode-property regexes requiring a `u` flag,
+which the provider rejects as JSON Schema regex syntax. Omit those property
+patterns in the wire copy, retaining ordinary ID patterns, structure/bounds and
+the original multilingual/runtime validation. No prompt/quality gate, automatic
+retry or provider fallback is added. An isolated installed-CLI fake-provider
+proof must reject the old schema and accept the adapted schema with images.
+
 Latest owner parity revision CL-150 replaces the original unassigned-speaker
 limitation below with pinned local CPU Sherpa-ONNX v2.0.1, pyannote segmentation
 3.0 and NeMo TitaNet-small speaker embeddings. Only anonymous within-source turns
 are retained; voice embeddings stay in the native process and are never saved
 or sent. Align word overlap conservatively, keeping overlap/unknown neutral.
 Codex receives the timed labels and up to sixty JPEGs, each containing three
-5-fps temporal panels (0/0.2/0.4 seconds at uniformly distributed anchors).
+5-fps temporal panels (0/0.2/0.4 seconds). CL-152 retains the existing per-duration
+image count and reserves at most half its slots for known speaker changes,
+anchoring bursts 0.2 seconds before selected transitions. At least half retain
+uniform coverage, including the opening. Excess changes are spread across the
+clip; duplicate anchors are refilled from the uniform grid. Unknown/overlapping
+word labels break transition inference; no-hint jobs keep uniform sampling.
+Only bounded, sorted, clip-relative numeric hints cross the media job boundary;
+no new speech/model/provider call or image/byte allowance is added.
 This is sampled evidence, not continuous native video/audio perception. Keep
 speaker associations when supported, refusing invented labels. Existing focus
 compiler owns sustained switching, holds, confidence and shot resets.
@@ -65,9 +117,12 @@ audio speaker labels. Codex associates these with temporal images, retaining
 uncertainty and held focus when the evidence cannot establish a visible speaker.
 Manual caption-level assignment remains available. Real diarization, camera/
 editorial and ASR accuracy remain owner-only acceptance. Image generation is not
-supported through this transport; CL-151 owns the local structured-illustration
-alternative, with no hidden Gemini generation or fabricated fixture art. Hosted
-Gemini keeps its existing generated-picture behavior.
+supported through this transport. CL-159 replaces CL-151's forced structured
+diagram output for new plans with contextual image briefs and bounded Commons
+retrieval. Real photos/illustrations can be used without a fixed card/diagram
+template. Old saved assets and partial diagram plans remain usable; missing
+optional lookup results do not fail/retry a clip. No hidden Gemini generation
+or fabricated fixture art. Hosted Gemini keeps its existing generated pictures.
 
 ## Composition and flow
 
@@ -142,9 +197,40 @@ IDs and anonymous speaker labels. Codex receives
 the admitted transcript and existing selection policy and returns structured
 moment evidence. Selected-clip planning uses at most sixty bounded temporal JPEG
 panels, upright source geometry and clipped speaker-tagged words; returns bounded
-camera decisions, optional source-reference timed text and structured contextual
-illustrations. The local renderer creates admitted image assets without another
-AI request. No model-authored commands, paths, URLs or SVG/HTML are executed. Existing
+camera decisions, optional authored opening title text and generic contextual
+image briefs. CL-167 makes those briefs explain the precise spoken idea, with
+literal depictions first and attention from a meaningful focal detail/reveal/
+contrast. Analogies need source support; no random props or generic technical
+filler. The policy is shared with Gemini planning/image generation and preserves
+free choice of art style. Time the image to the cited key words. Commons searches
+the full validated generic scene phrase, admits up to eight metadata candidates
+and downloads at most one raster
+per lookup. CL-164 supplies per-thirty-second visual windows/minimums to both
+planners (one/two for current <=60s intake, existing three-image maximum).
+Codex includes up to two alternate depictions of the SAME subject in that call;
+runtime scopes them to the primary scene/essential terms, broadens a drifting
+query back to those terms and deduplicates actual phrases. Raw plans remain
+retained; no extra inference or editorial rejection is introduced. Then
+try at most three distinct public lookups within one eight-second total deadline,
+keeping one normalized asset and no extra inference. Per-lookup bounds are
+256 KiB metadata, 4 MiB
+download and a normalized JPEG at most 96 KiB / 920×520, with allowlisted hosts,
+redirect rejection and existing CC0/public-domain admission. No transcript,
+media or authentication is sent to lookup. Admitted assets are digest-verified
+and marked retrieved. Fixed content-free diagnostic reasons distinguish missing
+plan coverage, no match, lookup failure and final coverage shortfall. Failed
+external retrieval omits art without rejecting/retrying the clip; cancellation
+still cancels. New plans cannot request the legacy fixed icon/card renderer;
+only retained old partial plans use it. No additional AI request or Gemini
+fallback. Both planners request varied source-faithful art; fresh manual/AI pictures
+use None → Fade without changing saved/manual choices. No model-authored
+commands, paths, URLs or SVG/HTML are executed. Existing
+CL-165 supplies nine creative title-hook approaches and source-word evidence in
+the same planning response, selecting one source-grounded headline rather than
+requiring verbatim transcript copy. New wire copy is bounded to 80 characters;
+legacy reference-only results remain decodable. Titles start at zero and retain
+word/character-based reading time; evidence quality remains advisory. No extra
+inference or guarantee of viral performance. Existing
 focus compilation, caption grouping, revisions, Apply/Discard, retries, drafts
 and native rendering remain authoritative. Explicit local caption generation
 uses the same local speech path without a Gemini transfer. Fake caption and the
