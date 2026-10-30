@@ -39,6 +39,7 @@ import {
 export const OWNER_BATCH_POLICY = {
   workers: 1,
   imageAttemptsPerClip: CONTEXTUAL_PICTURE_POLICY.maxPictures,
+  imageSearchAlternatives: 2,
   overlayBytes: 2 * 1024 ** 3,
   clipReservationBytes: 384 * 1024 ** 2,
   outputs: 20,
@@ -138,6 +139,10 @@ export const ownerClipPlanSchema = z
       startFrame: z.number().finite(),
       endFrame: z.number().finite(),
       brief: contextualPictureBriefSchema,
+      alternateBriefs: z
+        .array(contextualPictureBriefSchema)
+        .max(OWNER_BATCH_POLICY.imageSearchAlternatives)
+        .optional(),
       illustration: ownerIllustrationSchema.optional(),
       evidenceWordIds: z
         .array(z.string().max(64))

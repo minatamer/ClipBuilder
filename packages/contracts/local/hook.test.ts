@@ -10,14 +10,16 @@ import {
 import { ownerOverlaySchema } from "./clips.ts";
 it("fits optional AI advice to physical Hook bounds without rejecting usable plans", () => {
   expect(
-    decodeOwnerHookSuggestion({ startFrame: 30.4, endFrame: 600 }, 120),
-  ).toEqual({ startFrame: 30, endFrame: 120 });
+    decodeOwnerHookSuggestion({ startFrame: 300.4, endFrame: 600 }, 420),
+  ).toEqual({ startFrame: 300, endFrame: 420 });
   expect(
-    decodeOwnerHookSuggestion({ startFrame: -2, endFrame: 900 }, 1000),
-  ).toEqual({ startFrame: 0, endFrame: 300 });
-  expect(decodeOwnerHookSuggestion({ startFrame: 0, endFrame: 1 }, 1)).toEqual({
-    startFrame: 0,
-    endFrame: 1,
+    decodeOwnerHookSuggestion({ startFrame: 300, endFrame: 900 }, 1000),
+  ).toEqual({ startFrame: 300, endFrame: 522 });
+  expect(
+    decodeOwnerHookSuggestion({ startFrame: 300, endFrame: 301 }, 301),
+  ).toEqual({
+    startFrame: 300,
+    endFrame: 301,
   });
   for (const value of [
     null,
@@ -29,6 +31,13 @@ it("fits optional AI advice to physical Hook bounds without rejecting usable pla
     { startFrame: 0, endFrame: Infinity },
   ])
     expect(decodeOwnerHookSuggestion(value, 120)).toBeUndefined();
+  for (const startFrame of [-1, 0, 150, 299, 299.99])
+    expect(
+      decodeOwnerHookSuggestion({ startFrame, endFrame: 600 }, 900),
+    ).toBeUndefined();
+  expect(
+    decodeOwnerHookSuggestion({ startFrame: 300, endFrame: 330 }, 300),
+  ).toBeUndefined();
 });
 it("bounds a single source-contained hook and maps prefix and complete body without changing source clocks", () => {
   const overlay = {

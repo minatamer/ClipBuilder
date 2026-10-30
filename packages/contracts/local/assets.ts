@@ -16,6 +16,11 @@ export const OWNER_VISUAL_ANIMATIONS = [
   "pop",
   "slide",
 ] as const;
+export const OWNER_VISUAL_DEFAULT_MOTION = {
+  entrance: "none",
+  exit: "fade",
+  animationFrames: 9,
+} as const;
 export const ownerDigestSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export const ownerPictureFormatSchema = z.enum(["jpeg", "png"]);
 export type OwnerPictureFormat = z.infer<typeof ownerPictureFormatSchema>;
@@ -30,7 +35,7 @@ export const ownerAssetSchema = z
     width: z.number().int().positive().max(OWNER_PICTURE_LIMITS.dimension),
     height: z.number().int().positive().max(OWNER_PICTURE_LIMITS.dimension),
     bytes: z.number().int().positive().max(OWNER_PICTURE_LIMITS.bytes),
-    origin: z.enum(["synthetic", "generated", "owner-supplied"]),
+    origin: z.enum(["synthetic", "generated", "retrieved", "owner-supplied"]),
     format: ownerPictureFormatSchema.optional(),
   })
   .strict();

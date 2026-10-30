@@ -2,6 +2,12 @@ import { z } from "zod";
 import { OWNER_FPS, OWNER_LIMITS, ownerIdSchema } from "./policy.ts";
 import { ownerDigestSchema } from "./assets.ts";
 import { ownerHookFrames, type OwnerHook } from "./hook.ts";
+import { OWNER_HOOK_SOUNDS } from "./hook-sounds.ts";
+import {
+  ownerVisualOccurrences,
+  type OwnerPlaybackClock,
+  type OwnerVisualTiming,
+} from "./visual-clock.ts";
 
 export const OWNER_AUDIO_LIMITS = {
   inputBytes: 12 * 1024 ** 2,
@@ -23,6 +29,8 @@ export const OWNER_SOUND_IDS = [
   "bamboo",
   "boom",
   "discord",
+  "riser",
+  "rising-tension",
 ] as const;
 export type OwnerSoundId = (typeof OWNER_SOUND_IDS)[number];
 export const OWNER_SOUNDS: readonly {
@@ -30,9 +38,18 @@ export const OWNER_SOUNDS: readonly {
   label: string;
   seconds: number;
   music: boolean;
+  hookOnly?: true;
   retired?: true;
   recordingDigest?: string;
 }[] = [
+  ...OWNER_HOOK_SOUNDS.map((sound) => ({
+    id: sound.id,
+    label: sound.label,
+    seconds: sound.frames / OWNER_FPS,
+    recordingDigest: sound.recordingDigest,
+    music: true,
+    hookOnly: true as const,
+  })),
   {
     id: "pop",
     label: "Pop SFX",
@@ -145,6 +162,7 @@ export const ownerAudioCueSchema = z
     volume: z.number().int().min(0).max(100),
     loop: z.boolean(),
     visualId: ownerIdSchema.optional(),
+    suggestedHook: z.literal(true).optional(),
   })
   .strict()
   .refine((cue) => cue.endFrame > cue.startFrame);
@@ -180,6 +198,8 @@ export function resolveOwnerAudioCues(
       {
         ...cue,
         placement: "clip" as const,
+        offsetFrame: 0,
+        loop: false,
         startFrame: visual.startFrame,
         endFrame: Math.min(frames, visual.startFrame + length),
       },
@@ -226,7 +246,8 @@ export function ownerAudioSegments(
   audio: OwnerAudioTrack | undefined,
   frames: number,
   hook?: OwnerHook,
-  clock?: { hookSeconds: number; bodySeconds: number },
+  clock?: OwnerPlaybackClock,
+  visuals?: readonly OwnerVisualTiming[],
 ): OwnerAudioSegment[] {
   if (!audio) return [];
   const prefix = clock?.hookSeconds ?? ownerHookFrames({ hook }) / OWNER_FPS,
@@ -244,6 +265,23 @@ export function ownerAudioSegments(
     if (end > start) segments.push({ cue, start, end, offset });
   };
   for (const cue of audio.cues) {
+    if (cue.visualId && visuals !== undefined) {
+      const visual = visuals.find((item) => item.id === cue.visualId);
+      if (visual)
+        for (const occurrence of ownerVisualOccurrences(
+          visual,
+          frames,
+          hook,
+          clock,
+        ))
+          add(
+            { ...cue, offsetFrame: 0, loop: false },
+            occurrence.start,
+            occurrence.end,
+            0,
+          );
+      continue;
+    }
     const offset = cue.offsetFrame / OWNER_FPS;
     if (cue.placement === "video") add(cue, 0, prefix + body, offset);
     else if (cue.placement === "hook") {
@@ -252,12 +290,14 @@ export function ownerAudioSegments(
       const from = cue.startFrame / OWNER_FPS,
         to = Math.min(body, cue.endFrame / OWNER_FPS);
       if (hook) {
-        const start = Math.max(from, hook.startFrame / OWNER_FPS),
-          end = Math.min(to, hook.endFrame / OWNER_FPS);
+        const hookStart =
+          clock?.hookSourceSeconds ?? hook.startFrame / OWNER_FPS;
+        const start = Math.max(from, hookStart),
+          end = Math.min(to, hookStart + prefix);
         add(
           cue,
-          Math.max(0, start - hook.startFrame / OWNER_FPS),
-          Math.min(prefix, end - hook.startFrame / OWNER_FPS),
+          Math.max(0, start - hookStart),
+          Math.min(prefix, end - hookStart),
           offset + start - from,
         );
       }

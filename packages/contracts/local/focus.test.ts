@@ -81,6 +81,90 @@ it("prefers the confirmed opening speaker over the left-most person", () => {
   );
   expect(focus.shots[0]!.personId).toBe("person_2");
 });
+it("uses sustained visual evidence for a right-hand opening without inventing an audio speaker", () => {
+  const openingWord = { ...word, startMs: 0, endMs: 1800, speakerId: null };
+  const { focus } = compileAutomaticOwnerFocus(
+    {
+      people,
+      decisions: [{ ...decision, startFrame: 0, speakerId: null }],
+    },
+    source,
+    frames,
+    [openingWord],
+  );
+  expect(focus.shots).toMatchObject([
+    {
+      startFrame: 0,
+      endFrame: frames,
+      personId: "person_2",
+      reason: "opening",
+    },
+  ]);
+  expect(focus.decisions[0]!.speakerId).toBeNull();
+  expect(openingWord.speakerId).toBeNull();
+});
+it("keeps visual-only opening evidence conservative and never uses it for later switches", () => {
+  const opening = { ...decision, startFrame: 0, speakerId: null };
+  const unknown = { ...word, startMs: 0, endMs: 1800, speakerId: null };
+  for (const [current, cues] of [
+    [{ ...opening, confidence: 0.94 }, [unknown]],
+    [{ ...opening, evidenceWordIds: ["invented"] }, [unknown]],
+    [opening, [{ ...unknown, endMs: 900 }]],
+    [opening, [{ ...unknown, speakerId: "spk_1" }]],
+    [opening, [unknown, { ...unknown, id: "other", speakerId: "spk_0" }]],
+    [
+      { ...opening, startFrame: 60 },
+      [{ ...unknown, startMs: 2000, endMs: 3800 }],
+    ],
+    [opening, [{ ...unknown, startMs: 1000, endMs: 2800 }]],
+  ] as const) {
+    const { focus } = compileAutomaticOwnerFocus(
+      { people, decisions: [current] },
+      source,
+      frames,
+      cues,
+    );
+    expect(focus.shots.every((s) => s.personId === "person_1")).toBe(true);
+  }
+});
+it("does not choose between contradictory visible opening speakers", () => {
+  const { focus } = compileAutomaticOwnerFocus(
+    {
+      people,
+      decisions: ["person_1", "person_2"].map((personId) => ({
+        ...decision,
+        startFrame: 0,
+        personId,
+        speakerId: null,
+      })),
+    },
+    source,
+    frames,
+    [{ ...word, startMs: 0, speakerId: null }],
+  );
+  expect(focus.shots[0]!.personId).toBe("person_1");
+});
+it("permits visual-only re-establishment at a real shot boundary", () => {
+  const { focus } = compileAutomaticOwnerFocus(
+    {
+      people,
+      decisions: [
+        {
+          ...decision,
+          startFrame: 120,
+          endFrame: 240,
+          speakerId: null,
+          shotStart: true,
+        },
+      ],
+    },
+    source,
+    frames,
+    [{ ...word, startMs: 4000, endMs: 6000, speakerId: null }],
+  );
+  expect(ownerFocusAt(focus, 119).personId).toBe("person_1");
+  expect(ownerFocusAt(focus, 120).personId).toBe("person_2");
+});
 it("waits for the actual supporting words rather than switching early at the decision's start", () => {
   const { focus } = compileAutomaticOwnerFocus(
     { people, decisions: [{ ...decision, startFrame: 0 }] },

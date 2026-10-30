@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { OWNER_FPS, OWNER_LIMITS } from "./policy.ts";
 import type { OwnerOverlay } from "./clips.ts";
+import { OWNER_AI_HOOK_POLICY } from "./hook-sounds.ts";
 
 export const OWNER_HOOK_MAX_FRAMES = 10 * OWNER_FPS;
 export const OWNER_PRESENTATION_MAX_FRAMES =
@@ -28,10 +29,13 @@ export function decodeOwnerHookSuggestion(
     .safeParse(value);
   if (!parsed.success || !Number.isSafeInteger(frames) || frames < 1)
     return undefined;
+  // Do not relocate an opening excerpt to unrelated later speech.
+  if (parsed.data.startFrame < OWNER_AI_HOOK_POLICY.earliestStartFrame)
+    return undefined;
   const startFrame = Math.max(0, Math.round(parsed.data.startFrame)),
     endFrame = Math.min(
       frames,
-      startFrame + OWNER_HOOK_MAX_FRAMES,
+      startFrame + OWNER_AI_HOOK_POLICY.maxFrames,
       Math.round(parsed.data.endFrame),
     );
   return endFrame > startFrame ? { startFrame, endFrame } : undefined;

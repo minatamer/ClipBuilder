@@ -288,7 +288,14 @@ export function compileAutomaticOwnerFocus(
     ]),
   ].sort((a, b) => a - b);
   const byWord = new Map(words.map((w) => [w.id, w]));
-  function supportedDecision(decision: OwnerFocus["decisions"][number]) {
+  function supportedDecision(
+    decision: OwnerFocus["decisions"][number],
+    openingStart?: number,
+  ) {
+    // Visual evidence can establish the opening crop without inventing an
+    // audio label. It cannot authorize a later speaker switch.
+    const visualOpening =
+      decision.speakerId === null && decision.startFrame === openingStart;
     const target = focus.people.find(
       (p) =>
         p.id === decision.personId &&
@@ -339,11 +346,16 @@ export function compileAutomaticOwnerFocus(
             ),
       );
     return target &&
-      decision.confidence >= 0.85 &&
-      decision.speakerId &&
+      decision.confidence >= (visualOpening ? 0.95 : 0.85) &&
+      (decision.speakerId || visualOpening) &&
       confirmedMs !== null &&
       confirmedFrame !== null &&
       !overlap &&
+      (!visualOpening ||
+        target.observations.some(
+          (o) =>
+            o.startFrame <= decision.startFrame && o.endFrame > confirmedFrame,
+        )) &&
       target.observations.some(
         (o) => o.startFrame <= confirmedFrame && o.endFrame > confirmedFrame,
       )
@@ -361,16 +373,20 @@ export function compileAutomaticOwnerFocus(
   for (const [index, start] of shotStarts.entries()) {
     const end = shotStarts[index + 1] ?? frames;
     if (end <= start) continue;
-    const openingDecision = focus.decisions.find((d) => {
-      const supported = supportedDecision(d);
-      return (
-        d.startFrame === start &&
-        supported &&
-        supported.firstFrame - start <= OWNER_FPS / 2
-      );
-    });
+    const openingTargets = focus.decisions
+      .filter((d) => d.startFrame === start)
+      .flatMap((d) => {
+        const supported = supportedDecision(d, start);
+        return supported && supported.firstFrame - start <= OWNER_FPS / 2
+          ? [supported.person]
+          : [];
+      });
+    const openingPerson =
+      new Set(openingTargets.map((p) => p.id)).size === 1
+        ? openingTargets[0]
+        : null;
     const person =
-      (openingDecision ? supportedDecision(openingDecision)?.person : null) ??
+      openingPerson ??
       focus.people.find((p) =>
         p.observations.some((o) => o.startFrame <= start && o.endFrame > start),
       );

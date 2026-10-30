@@ -14,8 +14,7 @@ import { ownerWordsSchema } from "./selection.ts";
 import { ownerFocusPersonSchema, ownerFocusDecisionSchema } from "./focus.ts";
 import { ownerHookSchema } from "./hook.ts";
 import { ownerClipPlanSchema, OWNER_BATCH_POLICY } from "./clips.ts";
-import { ownerIllustrationSchema } from "./illustration.ts";
-import { ownerPlannedTextSchema } from "./text-layers.ts";
+import { ownerAuthoredTextPlanSchema } from "./text-layers.ts";
 
 export const LOCAL_CODEX_POLICY = {
   frames: 60,
@@ -44,9 +43,30 @@ export const localCodexJobSchema = z
     kind: z.enum(["speech", "frames"]),
     fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
     cut: ownerCutSchema.optional(),
+    speakerChanges: z
+      .array(
+        z
+          .number()
+          .int()
+          .positive()
+          .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
+      )
+      .max(LOCAL_CODEX_POLICY.frames)
+      .optional(),
   })
   .strict()
-  .refine((job) => job.kind === "speech" || !!job.cut);
+  .refine((job) => job.kind === "speech" || !!job.cut)
+  .refine(
+    (job) =>
+      job.speakerChanges === undefined ||
+      (job.kind === "frames" &&
+        !!job.cut &&
+        job.speakerChanges.every(
+          (frame, index, changes) =>
+            frame < job.cut!.endFrame - job.cut!.startFrame &&
+            (index === 0 || frame > changes[index - 1]!),
+        )),
+  );
 export type LocalCodexJob = z.infer<typeof localCodexJobSchema>;
 export const localCodexReceiptSchema = z
   .object({
@@ -125,10 +145,14 @@ export const localCodexFocusSchema = z
     pictures: z
       .array(
         ownerClipPlanSchema.element
-          .extend({ illustration: ownerIllustrationSchema })
+          .omit({ illustration: true })
+          .extend({
+            alternateBriefs:
+              ownerClipPlanSchema.element.shape.alternateBriefs.unwrap(),
+          })
           .strict(),
       )
       .max(OWNER_BATCH_POLICY.imageAttemptsPerClip),
-    texts: ownerPlannedTextSchema,
+    texts: ownerAuthoredTextPlanSchema,
   })
   .strict();

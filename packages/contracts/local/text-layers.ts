@@ -12,6 +12,20 @@ export const OWNER_TEXT_LIMITS = {
   titleCharacters: 80,
 } as const;
 export const OWNER_PLANNED_TEXT_LIMIT = 3;
+export const OWNER_TITLE_HOOK_STYLES = [
+  "pov",
+  "curiosity-gap",
+  "surprising-reveal",
+  "myth-bust",
+  "pointed-question",
+  "challenge",
+  "pain-to-payoff",
+  "before-after",
+  "useful-promise",
+] as const;
+export const ownerClipTitleSchema = boundedPlainTextSchema(
+  OWNER_TEXT_LIMITS.titleCharacters,
+);
 export const ownerPlannedTextSchema = z
   .array(
     z
@@ -27,13 +41,21 @@ export const ownerPlannedTextSchema = z
           .positive()
           .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
         wordIds: z.array(wordIdSchema).min(1).max(12),
+        title: ownerClipTitleSchema.optional(),
+        hookStyle: z.enum(OWNER_TITLE_HOOK_STYLES).optional(),
       })
       .strict(),
   )
   .max(OWNER_PLANNED_TEXT_LIMIT);
-export const ownerClipTitleSchema = boundedPlainTextSchema(
-  OWNER_TEXT_LIMITS.titleCharacters,
-);
+/** New wire output writes copy; the decoder still accepts old word-reference plans. */
+export const ownerAuthoredTextPlanSchema = z
+  .array(
+    ownerPlannedTextSchema.element.extend({
+      title: ownerClipTitleSchema,
+      hookStyle: z.enum(OWNER_TITLE_HOOK_STYLES),
+    }),
+  )
+  .max(1);
 export const ownerLayerTextSchema = z
   .string()
   .max(OWNER_TEXT_LIMITS.characters)
