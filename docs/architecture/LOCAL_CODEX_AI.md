@@ -1,5 +1,117 @@
 # Local Codex provider — CL-135
 
+CL-171 replaces mandatory Commons with broad provider web discovery. A separate
+Codex request receives only generic briefs/alternatives and enables live hosted
+web search; media/transcript planning keeps all tools disabled.
+
+CL-176 corrects the installed CLI's Code Mode requirement. Its default model
+advertises `tools.web__run` inside `functions.exec`; disabling the Code Mode host
+left that advertised function unusable. Enable Code Mode and its installed host
+only for the separate search request. Exclude the `functions`, `image_gen`,
+`clock` and `collaboration` namespaces from its executor, disable agents/plugins,
+and retain shell/apps/MCP/browser/file-tool isolation. The search prompt names
+the actual callable function. No model/catalog/auth/configuration change or
+experimental standalone feature is required. Completed searches still arrive
+as the existing CLI `web_search` events. A started-only search is diagnosed as
+`search_incomplete`; no invocation is `search_missing`. Both remain nonfatal
+discovery failures and cannot be counted as successful retrieval.
+
+The installed-CLI proof inspects the actual nested tool definition, invokes it
+through the real local host and fake loopback search service, and retrieves an
+injected raster. It fails with the old disabled host. Synthetic auth/queries,
+outbound-denying proxy and isolated profiles keep this paid-off; successful
+authenticated service availability and actual image quality remain owner-only.
+
+Each visual uses one discovery request asking for 2–3 distinct same-subject
+queries, up to 12 candidate URLs, four pages and 12 retrieval attempts. Provider
+search has a 90s deadline; retrieval has 25s total and 10s per public request.
+Actual query counts are managed by the provider; diagnostic `requests` counts
+app discovery requests, not billable searches. Extract page images, follow up to
+three checked redirects, pin public DNS to sockets, decode/re-encode within the
+existing 4 MiB/16M-pixel/96 KiB raster budgets. No minimum dimensions, license
+filter or brittle keyword rejection. Supported animated rasters use frame one.
+Fixed reasons/counts cover misses, blocked addresses, downloads and decoding.
+No queries, URLs, private values or raw CLI/provider output enter diagnostics.
+
+CL-177 fixes the native pinned lookup callback for Node's address-family
+selection: `all: true` receives the complete validated address list; a single
+lookup receives its selected address/family. Node can choose among those checked
+IPv4/IPv6 peers without another DNS query. Returning a single string to an
+all-address lookup previously failed every download with
+`ERR_INVALID_IP_ADDRESS` before headers/body. The fixed identifier is recognized
+in content-free DNS diagnostics. Native HTTP loopback proofs exercise both modes,
+image decoding and mid-body cancellation; test-only peer mapping never weakens
+production public-address or redirect validation.
+
+Fresh search hits win; a miss/failure uses CL-170's same-call planned local PNG
+illustration, with no additional generation inference and no Gemini fallback.
+Search itself is now a separate provider request. Existing usable-plan repairs
+and field/rule diagnostics remain. Optional art never fails the clip or retries
+inference automatically. Gemini uses Google Search grounding followed by its
+existing image generator only on a miss, under the existing key/live approvals.
+
+Media/Pictures exposes an AI-icon Find visuals action for the prepared clip.
+Transcript-only planning and retrieval use current provider ports; no repeated
+speech, diarization, video upload or native preview rebuild. Fresh AI art replaces
+the prior AI set only after success, preserving uploaded pictures, other edits,
+old assets and exports. Miss/failure retains existing art. Revision/operation and
+five-attempt bounds survive save/recovery; no automatic retry or resume. Both
+Codex and Gemini use provider-ai mode, so switching between them preserves the
+completed session. Fake/real mode isolation is retained. Owner acceptance tests
+Codex first, then an explicitly requested Gemini switch; agents stay fake/offline.
+
+CL-169 makes full-source Codex transcription ASR-only (`diarize=false`) for moment
+discovery. Native speech jobs retain combined ASR/diarization as their legacy
+default; fresh bounded manual cuts still use it. Explicit readiness on analyses,
+transcript caches and moments distinguishes unknown labels from deferred work.
+Absent legacy metadata means completed. Full-source words remain reusable after
+selection failure/policy changes and save/recovery; CL-168 partial coverage is
+still enforced. No persistent cross-session/global transcript cache is added.
+
+Only an explicitly chosen moment with deferred labels uses the optional clip
+word-preparation port. Its new closed `speakers` job admits a bounded source cut
+and clip-relative words, extracts that cut's WAV and runs only the existing
+anonymous diarizer. It cannot rerun ASR or Codex. The backend verifies all word
+fields except speakerId are unchanged; the existing partial preparation stores
+the enriched moment before planning. Retry/restore reuses it. Transition sampling,
+camera planning, picture evidence and caption/base words share that moment.
+Empty word lists require no diarizer. Legacy plans/saved clips remain usable.
+
+The observed speakers phase precedes frame/planning work; the same-clip transient
+progress run retains completed speaker ticks. Native timeout/byte/fingerprint/
+path/process/cleanup guards apply to the new job, with no new worker/provider
+concurrency, model download, quality tradeoff or automatic retry. Full-source
+ASR remains the first-discovery cost; real speed/selection quality requires the
+owner's manual run. The existing pinned CPU runtime has no verified accelerated
+implementation in this packet. A faster model/GPU path needs separate work and
+quality acceptance, rather than silently changing the installed model.
+
+CL-168 scopes manual-only speech work to the smallest continuous selected window
+within the existing five-minute native cut bound; widely separated ranges and
+AI moment discovery retain full-source transcription. Cut words are shifted to
+the source clock exactly once, then normal moment cue clipping stays local.
+`transcriptCut` records partial coverage in analysis/drafts/recovery; transcript
+reuse requires the requested window to be covered, and full-source discovery
+never reuses partial words. Existing full-source saved analyses remain compatible.
+
+After one WAV extraction, ASR (four CPU threads) and anonymous diarization (two)
+overlap only when at least six CPU threads are available. Constrained machines
+remain sequential. One admitted worker job owns both processes and waits for
+both to settle after failure/cancellation before removing scratch. Models,
+frame/image allowances, timeouts and provider call counts are unchanged.
+
+The authenticated worker progress channel carries a bounded Codex stage snapshot;
+the final receipt carries completed stage durations so a short phase cannot be
+lost between polls. The local backend exposes only fixed stages/states/durations
+and a transient run/clip correlation. UI polling aborts on unmount, stays serial
+and cannot start/retry media or AI. `codex_inspect`, `codex_audio`,
+`codex_transcription`, `codex_speakers`, `codex_frames`, `codex_selection`,
+`codex_planning` and `codex_pictures` measure their real boundaries. Existing
+`clip-preview`/`clip` records measure native preparation/export. No private native
+stdout/stderr, words, paths, prompts or credential values enter these records.
+The checklist appears only for local Codex; Gemini keeps existing presentation.
+Real before/after speed requires owner-run inference, not injected test timings.
+
 Owner AFK request, 2026-10-29: use the existing Codex subscription from normal
 local ClipBuilder controls instead of Gemini; keep deployed Gemini unchanged.
 Choose recommendations, plan/document/commit the plan, then execute/validate.
@@ -118,11 +230,12 @@ uncertainty and held focus when the evidence cannot establish a visible speaker.
 Manual caption-level assignment remains available. Real diarization, camera/
 editorial and ASR accuracy remain owner-only acceptance. Image generation is not
 supported through this transport. CL-159 replaces CL-151's forced structured
-diagram output for new plans with contextual image briefs and bounded Commons
+diagram output for new plans with contextual image briefs; CL-171 uses broad web
 retrieval. Real photos/illustrations can be used without a fixed card/diagram
-template. Old saved assets and partial diagram plans remain usable; missing
-optional lookup results do not fail/retry a clip. No hidden Gemini generation
-or fabricated fixture art. Hosted Gemini keeps its existing generated pictures.
+template. CL-170 adds a same-call illustration plan used only after search
+miss/failure, preserving old saved assets and partial plans. Optional visual
+failure does not fail/retry a clip. No hidden Gemini generation
+or fabricated fixture art. Hosted Gemini also searches before its existing generated fallback.
 
 ## Composition and flow
 
@@ -191,9 +304,10 @@ and `corepack pnpm local:prepare:speakers` before restarting. Startup never
 downloads tools, signs in or processes media. The preparation commands change
 no private configuration and do not inspect credentials.
 
-An explicit local analysis prepares 16-kHz mono speech in the private worker,
-runs pinned Whisper plus local diarization and returns bounded words with stable
-IDs and anonymous speaker labels. Codex receives
+An explicit local analysis prepares 16-kHz mono speech in the private worker and
+runs pinned Whisper, returning bounded words with stable IDs. CL-169 defers
+diarization for full-source discovery to chosen clips; bounded manual cuts retain
+their combined speech preparation. Codex receives
 the admitted transcript and existing selection policy and returns structured
 moment evidence. Selected-clip planning uses at most sixty bounded temporal JPEG
 panels, upright source geometry and clipped speaker-tagged words; returns bounded
@@ -209,19 +323,21 @@ per lookup. CL-164 supplies per-thirty-second visual windows/minimums to both
 planners (one/two for current <=60s intake, existing three-image maximum).
 Codex includes up to two alternate depictions of the SAME subject in that call;
 runtime scopes them to the primary scene/essential terms, broadens a drifting
-query back to those terms and deduplicates actual phrases. Raw plans remain
-retained; no extra inference or editorial rejection is introduced. Then
-try at most three distinct public lookups within one eight-second total deadline,
+query back to those terms and deduplicates actual phrases. CL-170 repairs fresh
+decoded fields and retains the bounded usable plan without logging raw values;
+no extra inference or editorial rejection is introduced. Then
+try at most three distinct public lookups within CL-170's twenty-second total deadline,
 keeping one normalized asset and no extra inference. Per-lookup bounds are
-256 KiB metadata, 4 MiB
+512 KiB metadata, 4 MiB
 download and a normalized JPEG at most 96 KiB / 920×520, with allowlisted hosts,
-redirect rejection and existing CC0/public-domain admission. No transcript,
+redirect rejection; CL-170 removes the local license filter and retains source metadata. No transcript,
 media or authentication is sent to lookup. Admitted assets are digest-verified
 and marked retrieved. Fixed content-free diagnostic reasons distinguish missing
 plan coverage, no match, lookup failure and final coverage shortfall. Failed
-external retrieval omits art without rejecting/retrying the clip; cancellation
-still cancels. New plans cannot request the legacy fixed icon/card renderer;
-only retained old partial plans use it. No additional AI request or Gemini
+external retrieval uses the same-call local illustration fallback or omits art
+without rejecting/retrying the clip; cancellation still cancels. The existing
+closed illustration renderer is a fallback, never a forced replacement for
+successful search. No additional AI request or Gemini
 fallback. Both planners request varied source-faithful art; fresh manual/AI pictures
 use None → Fade without changing saved/manual choices. No model-authored
 commands, paths, URLs or SVG/HTML are executed. Existing
@@ -251,7 +367,8 @@ machine setup remain owner acceptance, not inferred from mocks.
 Each Codex call has a private owned temporary cwd, fixed JSON schema, content on
 stdin and fixed absolute admitted images. Use saved ChatGPT login with a status
 check; no login/logout or account modification. No shell execution, browser,
-MCP/apps, skills/hooks, subagents, web search or file editing tools. Read-only
+MCP/apps, skills/hooks, subagents or file editing tools. Web search is enabled
+only for the separate generic-brief discovery request described above. Read-only
 sandbox, isolated environment, bounded stdout/result/stderr, deadline/abort and
 tree-aware cleanup. Keep prompts/media/raw provider output out of normal logs
 and Git. No automatic retry or provider fallback. Failures keep completed media

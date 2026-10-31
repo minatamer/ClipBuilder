@@ -1,5 +1,125 @@
 # ClipBuilder canonical ticket index
 
+## Current-work verification and commits — 2026-10-31
+
+[CL-179](CL-179-current-work-verification-and-commits.md) packages CL-168–178
+under the owner's explicit local stage/commit request. The
+[file-level plan](../operations/CL168_179_COMMIT_PLAN.md) allocates 101 whole files
+to eight commits. Plan `c58ddb2`, contracts `6d375aa`, native `07c6f6d`, backend
+`3061906`, frontend `8b61d0e`, proofs `c51c1db`, test-only verification `94b183a`;
+the closing documentation commit identifies itself in history. Root format/lint/
+types pass; 2,209 unit and 849 local fake tests pass. Stale harness failures are
+corrected without changing application behavior. No push/deployment/cloud/paid
+work; current Linux image, hosted Gemini and resource/cost release gates remain
+explicit in the [release handoff](../operations/HOSTED_EDITOR_RELEASE_PREPARATION.md).
+
+## Find visuals start sounds — 2026-10-31
+
+[CL-178](CL-178-find-visuals-start-sounds.md) gives the CTA the same recorded Pop
+defaults as initial visual preparation, preserving existing audio edits and the
+current clip. 51 fake audio/batch tests plus types/lint/format and read-only
+validation pass. Two missing Pops were added to the existing fetched images
+through an edit-only operation; no AI/render call. Backend refreshed and recovery
+confirmed both cues, all assets and five attempts preserved. Owner audition open.
+
+## Native image download lookup — 2026-10-31
+
+[CL-177](CL-177-native-image-download-lookup.md) fixes the pinned DNS callback
+after six real searches succeeded but all 22 image downloads failed with the same
+native lookup-shape error. The old all-address case fails; fixed native download/
+decode/cancel, 52 source and 38 local fake cases pass, plus types/lint/format and
+read-only validation. Backend/worker refreshed; clip, 12 assets and four attempts
+preserved. Ready for same-clip owner retry; no paid calls or real downloads.
+
+## Codex search tool availability — 2026-10-31
+
+[CL-176](CL-176-codex-search-tool-availability.md) fixes actual callable search
+execution: the bridge disabled the host required by the CLI's Code Mode search
+tool. Eleven installed-CLI, 92 local and 44 source fake cases pass, including real
+local host dispatch to a fake search service and image retrieval. Scoped types/
+lint/format and read-only validation pass; backend/worker refreshed with clip,
+assets and attempt history preserved. Ready for owner retry; no paid calls.
+
+## Explicit provider image search — 2026-10-31
+
+[CL-175](CL-175-explicit-provider-image-search.md) strengthens explicit Codex/
+Gemini search instructions. 26 web-picture, 82 local and five installed-CLI fake
+cases plus scoped types/lint/format pass. Backend/worker refreshed; owner clip
+and attempt history preserved. Offline CLI probing did not establish native
+search-tool exposure; CL-176 subsequently found the nested definition and fixed
+its disabled runtime host. Prompt revision implemented; no paid calls.
+
+## Strict Codex search schema — 2026-10-31
+
+[CL-174](CL-174-strict-codex-search-schema.md) fixes missing object closure in
+the actual image-search request and replaces the substituted-schema CLI search
+check with a production-request regression. Five installed-CLI/fake-provider,
+26 web-picture and 82 local cases plus scoped types/lint/format pass. Both old
+schema omissions fail independently; the fixed request retrieves a synthetic
+image. Normal backend/worker refreshed; owner clip/attempt history preserved.
+Ready for owner Find visuals retry; no paid calls.
+
+## Root-cause visual diagnostics — 2026-10-31
+
+[CL-173](CL-173-root-cause-visual-diagnostics.md) preserves structured original
+CLI/provider/search/retrieval failures before optional fallback. 135 local and
+47 source fake cases plus three installed-CLI/fake-provider cases pass; types,
+lint/format and read-only validation pass. Normal backend/worker refreshed,
+frontend and owner clip preserved. Ready for the owner's next Find visuals run.
+
+## Local Find all moments — 2026-10-31
+
+[CL-172](CL-172-local-find-all-moments.md) adds an explicitly local-only AI
+selection choice without a requested count. 142 scoped fake cases, 151 existing
+analysis cases, responsive keyboard/cancel/restore/browser proof and scoped
+static checks pass. Hosted/exempt requests are rejected before AI; review retains
+all results with the existing ten-clip processing guard. Normal worker refreshed
+and owner clip recovered; real-provider completeness/quality remain owner review.
+
+## Broad image discovery and Find visuals — 2026-10-31
+
+[CL-171](CL-171-broad-image-discovery-and-find-visuals.md) implements broad
+Codex/Gemini discovery, actual image retrieval before fallback and an AI Find
+visuals action on prepared/restored clips. Small images are admitted; optional
+art cannot fail the clip. 123 scoped local/98 source/four bridge cases, three fake
+installed-CLI cases, the 94.04s current-source native/browser/export/recovery and
+mocked Codex→Gemini switch pass. Receipt/lifecycle fixes pass 57 focused cases.
+Static checks and normal runtime refresh are recorded in the packet. Real
+Codex-first/Gemini search relevance/availability remain owner acceptance; no
+agent real calls, configuration changes or Git mutation.
+
+## Usable visual plans and search-first fallback — 2026-10-31
+
+[CL-170](CL-170-usable-visual-plans-and-search-first-fallback.md) repairs usable
+Codex visual entries and emits private-free field/rule rejection diagnostics.
+Search precedes the same-call local illustration fallback; local lookup admits
+source-reported licenses without exclusion and examines more bounded candidates.
+Optional visual failure cannot fail the clip. 68 local and 68 mocked source cases,
+current-source synthetic native export/recovery, two fake CLI schema cases,
+scoped static checks and normal backend/worker refresh pass.
+Real provider/search/generation taste remains owner review; no paid agent calls.
+
+## Deferred Codex speakers — 2026-10-31
+
+[CL-169](CL-169-defer-codex-speakers-until-clip-preparation.md) makes AI moment
+discovery ASR-only, deferring anonymous speaker work to explicitly chosen cuts
+without retranscription. Explicit readiness survives cache/save/recovery and
+completed labels are retained before planning. 133 fake cases and current-source
+browser/native export/recovery, scoped static checks and the normal backend/
+worker refresh pass. Models and Gemini remain unchanged; real AI-route speed/quality
+needs the owner's next manual run. CL-168 pending work is preserved.
+
+## Local Codex performance and progress — 2026-10-31
+
+[CL-168](CL-168-local-codex-performance-and-progress.md) investigates a measured
+453565 ms local speech job before Codex inference. Implements scoped manual
+transcription with saved coverage, bounded CPU overlap, private-free stage timings
+and a Codex-only stage checklist. Ninety-five fake cases, current-source native/
+browser export/recovery and desktop/phone checklist checks pass; types and scoped
+lint/format pass. Normal backend/worker refreshed with verified ownership and
+200 health/page/bridge checks; real speed/quality remains owner-manual. No new real processing,
+configuration, provider calls, cloud, deployment or Git mutation is authorized.
+
 ## Current owner editor follow-ups — 2026-10-30
 
 Owner requested and authorized packaging all CL-152–167 work on 2026-10-30.

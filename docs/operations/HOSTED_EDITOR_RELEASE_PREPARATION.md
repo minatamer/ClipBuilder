@@ -1,5 +1,49 @@
 # Shared upload/editor release preparation
 
+## Current change handoff — CL-168–179, 2026-10-31
+
+The owner reports the local Codex workflow works and has finished the desired
+editing changes. CL-168–178 adds scoped/deferred speech preparation, local-only
+stage progress and Find all moments, broad image discovery for both providers,
+explicit Find visuals, usable-art retention, detailed safe diagnostics, actual
+Codex tool-host execution, native HTTP retrieval and visual-start Pop parity.
+CL-179 packages verified whole-file local commits and fixes stale test harnesses.
+The current owner session/media/configuration remains preserved.
+
+Local Codex is never a hosted provider. Its speech tooling, progress checklist
+and Find all control stay local; the hosted Gemini path receives the shared
+visual retrieval/CTA/sound fixes with its existing authentication and spend
+gates. Fake/no-key checks verify orchestration and bounded native/browser/tool
+mechanics; the owner's real Codex image result does not establish Gemini's real
+grounded search behavior or this revision's Linux/hosted readiness.
+
+Remaining release work, before any public rollout:
+
+1. Build fresh closed, secret-free frontend/backend Linux images for the final
+   commit and rerun the packaged offline upload/editor/native export/recovery/
+   cancellation checks. Earlier CL-123/130 Linux evidence predates these edits.
+   Preserve the existing running Windows app; a normal Next build over its
+   `.next` directory is not a substitute for an isolated release build.
+2. Verify the selected 2-CPU/8-GiB backend profile with its 5376-MiB `/tmp` volume,
+   background CPU and min-zero/max-one lifecycle against current accepted work
+   and capacity. Review actual hosting cost/budget in Console. These are the
+   documented target settings, not a claim that live services were inspected or
+   changed today. Keep the current frontend allocation and private backend IAM.
+3. On a separately authorized protected candidate, have the owner check Gemini
+   upload → moments → processing → image search/fallback → edits/sounds → MP4
+   export, plus actual hosted quota/session/expiry behavior. Use existing keys,
+   live/transfer/master approvals and owner acceptance; agents make no paid call.
+4. Push the reviewed commit series and build/roll out the approved image digests
+   through the existing deployment process only with explicit authorization.
+   Verify non-processing health/configuration and approved serving traffic; keep
+   a rollback target. This handoff performs no push, cloud inspection/mutation,
+   image submission, deployment or DNS change.
+
+No new product feature is proposed as a release prerequisite. Current local
+commit/check evidence is in [the packaging ticket](../tickets/CL-179-current-work-verification-and-commits.md)
+and [file-level plan](CL168_179_COMMIT_PLAN.md). Historical sections below retain
+their original evidence; this handoff does not promote them to current proof.
+
 ## Current resource contract — CL-130, 2026-10-29
 
 The owner selects **2 CPUs / 8 GiB** for the next release candidate. The older

@@ -56,6 +56,17 @@ public traffic review remain separate. See the
 Fake/no-key tests are synthetic; real processing needs provider/cloud setup,
 live flags, applicable approvals and the owner's manual walkthrough.
 
+CL-171 supersedes mandatory Commons lookup: both providers discover broad web
+candidates, retrieve/decode them, then use generation only after a miss. Local
+Codex search uses a separate tool-enabled generic-brief request. Gemini uses
+Google Search grounding with its existing key/live approvals. Small images are
+accepted; public-address, byte/pixel, decoding and cancellation bounds remain.
+Media/Pictures has an explicit Find visuals action on prepared/restored clips,
+using current provider ports and existing words without retranscription or a
+native preview rebuild. Misses retain current art; fresh AI pictures preserve
+uploads, other edits, old assets and exports. Fake mode uses injected results
+without keys; real discovery/relevance is owner-tested, Codex first.
+
 Hosted visual correction (CL-015, 2026-10-07): approved production composes the
 same bounded Gemini picture fallback used locally when Commons cannot provide a
 usable image. Preview/test/fake/paid-off and unapproved production retain their
