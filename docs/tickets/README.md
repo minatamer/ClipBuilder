@@ -1,5 +1,58 @@
 # ClipBuilder canonical ticket index
 
+## Fresh Linux packaging and local commits — 2026-10-31
+
+[CL-183](CL-183-fresh-linux-and-commit-packaging.md) owns the exhaustive
+[40-path/five-commit plan](../operations/CL180_183_COMMIT_PLAN.md) for CL-180–182.
+Fresh current-source Linux frontend/backend production images, their packaged
+non-root offline entrypoints and the 500-MiB synthetic upload/editor/native
+export/cancel/retry/quota/cleanup walkthrough pass. Zero external attempts/OOM;
+normal Windows app and owner clips preserved. Image identities and exact limited
+capacity evidence are in the release handoff. Local commits are authorized;
+push, registry submission, provider spend, cloud changes and deployment are not.
+
+Local source commits: `190ef3e`, `f9024ea`, `b4dc8a7`, `b1212ec`.
+The fifth documentation commit carries the exact artifact/verification handoff;
+see CL-183 for the exhaustive series and remaining owner-only release gates.
+
+## Observable Gemini search execution — 2026-10-31
+
+[CL-182](CL-182-gemini-search-execution.md) replaces the optional legacy query-field
+gate with the documented stateless Search request and explicit call/result,
+usage and citation decoding. Originating safe logs separate skipped, incomplete,
+failed tools and missing metadata, preserving usable grounded candidates and
+nonfatal fallback. 84 focused cases, 118 local provider/batch/diagnostic cases
+and seven loopback protocol proofs pass with fake/paid-off/no external calls;
+installed Google SDK serialization and production request-to-raster retrieval
+are covered. Types/scoped lint/format and read-only validation pass. Backend and
+current worker refreshed; both owner clips match the pre-reload fingerprint and
+frontend is preserved. Owner live Google behavior remains
+unverified. No configuration, Git, cloud or deployment changes are authorized.
+
+## Gemini provider parity — 2026-10-31
+
+[CL-181](CL-181-gemini-provider-parity.md) implements the three CL-180
+recommendations: bounded Gemini manual transcription with cache/source clocks
+and hosted charging, one tolerant visual decoder retaining alternate briefs and
+detailed safe diagnostics, and shared opening-speaker/tight-head camera policy.
+859 local fake cases, three browser/native proofs, types/lint/format and read-only
+validation pass. Current backend Linux image and packaged 500-MiB synthetic
+upload/editor/export proof pass. Local Gemini is selected and planning/visual/
+caption capabilities are available; owner clip/art/audio/frontend preserved.
+No provider spend, cloud, Git mutation or deployment occurred. Owner real run open.
+
+## Current Linux preflight and provider comparison — 2026-10-31
+
+[CL-180](CL-180-current-linux-build-and-provider-parity-review.md) builds fresh
+frontend/backend Linux images and passes offline runtime plus packaged shared
+upload/editor/native export/cancel/retry/quota/cleanup checks, including the
+500-MiB synthetic upload-byte boundary. A reproduced FFmpeg 5.1 incompatibility
+is fixed by omitting an explicit default option; native visual/audio timing at
+24/25/29.97/30/60fps is retained. Normal backend/current worker refreshed; owner
+clip, assets and frontend preserved. Zero paid/external processing or deployment.
+Three read-only provider parity recommendations remain open; the owner intends
+one real Gemini session. Five scoped files remain unstaged/uncommitted.
+
 ## Current-work verification and commits — 2026-10-31
 
 [CL-179](CL-179-current-work-verification-and-commits.md) packages CL-168–178

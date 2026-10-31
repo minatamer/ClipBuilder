@@ -1,5 +1,59 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Observable Gemini image discovery — CL-182, 2026-10-31
+
+Gemini image discovery uses the configured model's documented Interactions
+Google Search tool with response storage disabled, one bounded nonstreaming
+request and no automatic retry. Observe matching search call/result steps or
+affirmative provider search usage. A missing optional query summary never proves
+that search was skipped. Distinguish completed, skipped, incomplete, failed-tool
+and missing-metadata responses in bounded content-free diagnostics, alongside
+HTTP/decode/size/cancellation and downstream retrieval/fallback facts.
+
+Retain usable candidate JSON and grounded URL citations after verified search,
+including when query metadata is absent. Existing broad public image/page
+retrieval, raster conversion and resource/address controls remain. Optional art
+failure preserves the clip and uses the existing provider-specific fallback.
+No forced-function-tool mode, extra model, hidden retry or history is added.
+
+Fake/no-key verification uses the installed SDK serializer, synthetic protocol
+endpoint and synthetic rasters, with paid calls and external networking blocked.
+It does not prove authenticated Google execution or live image relevance; those
+remain the owner's explicit test with configured Gemini key/live approvals.
+Preserve the local session, frontend and Gemini selection. No deployment.
+
+## Gemini provider parity — CL-181, 2026-10-31
+
+Both Gemini and local Codex manual-only analysis transcribe the smallest bounded
+continuous window covering the selected ranges. Reuse verified covered words;
+retain explicit partial transcript coverage so later AI discovery still obtains
+the full source. Empty manual selection dispatches no inference. Far-apart ranges
+keep the existing full-source fallback and fixed cut bound. Gemini uses its
+existing anonymous-speaker transcription and a transient private cut-audio proxy,
+not local speech models or another speaker call. Hosted charging applies equally
+to bounded/full transcription before dispatch, with unchanged resource budgets.
+
+Initial Gemini preparation, Codex and Find visuals share one tolerant visual-plan
+decoder. Preserve usable same-subject alternate briefs and repair ordinary fields
+locally; retain legacy Gemini array envelopes. Log bounded entry/field/rule facts
+for accepted/repaired/dropped output, never returned content. Search still precedes
+provider-specific fallback; unusable optional art cannot interrupt a usable clip,
+editorial critique never becomes a paid retry prerequisite, and no automatic
+provider retry is introduced.
+
+Both planners share tight full-head boxes excluding the torso, sustained anonymous
+speaker evidence, shot resets and strong visual-only opening evidence. Codex
+retains temporal-panel coordinates; Gemini uses upright video-frame coordinates.
+The existing camera compiler owns admission; visual-only evidence never invents
+audio labels or enables unsupported later speaker switches. Codex-only local
+progress and CPU speech, and Gemini raster-image generation remain intentional.
+
+The owner authorizes switching only local backend AI_PROVIDER to Gemini after
+fake/no-key validation, preserving every other setting, the idle completed session
+and frontend. The owner will perform one real test with configured key/live and
+transfer/image/master approvals. Agents make no paid call or deployment. CL-180
+provider findings describe the earlier baseline; CL-181 owns this implementation.
+
 ## Codex search tool availability — CL-176, 2026-10-31
 
 Use the installed CLI's actual search protocol. Search-only discovery enables

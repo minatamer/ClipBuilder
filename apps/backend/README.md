@@ -28,6 +28,16 @@ speaker/model results without API keys; real speech/camera quality is owner-test
 
 Local editing is part of this same backend and its normal startup. See the [local workflow guide](../../docs/operations/LOCAL_WORKFLOW.md). Fake AI needs no key; actual downloads/native media are local. Gemini is the default; local AI_PROVIDER=codex selects installed Codex with ChatGPT sign-in and local speech tools, with no Gemini fallback. Hosted real mode retains Gemini keys/approvals and rejects Codex selection. Real quality testing remains owner-manual.
 
+[CL-182](../../docs/tickets/CL-182-gemini-search-execution.md) makes Gemini image
+discovery observable through stateless Interactions Google Search call/result
+steps, usage and citations. Safe originating traces distinguish skipped search,
+missing metadata, incomplete/failed tools, HTTP/decode/size errors and successful
+retrieval; optional visual failures retain the clip and existing fallback.
+The fake/no-key protocol proof validates the actual production wire, installed
+SDK serialization and synthetic raster retrieval without contacting Google.
+Real search/relevance still needs the configured Gemini key/live approvals and
+an owner action; fake success is not live provider acceptance.
+
 [CL-133](../../docs/tickets/CL-133-media-audio.md) admits bounded audio uploads
 through the existing authenticated workspace bridge and internal native worker.
 Admitted audio joins scratch accounting, private range playback and hashed saved

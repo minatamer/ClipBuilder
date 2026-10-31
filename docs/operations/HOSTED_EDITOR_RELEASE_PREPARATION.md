@@ -1,5 +1,136 @@
 # Shared upload/editor release preparation
 
+## Fresh Linux verification and commit packaging — CL-183, 2026-10-31
+
+Owner authorizes the [whole-file plan](CL180_183_COMMIT_PLAN.md) and multiple
+local ticket-prefixed commits covering all CL-180/181/182 work. Fresh closed
+Linux/amd64 production images pass actual packaged non-root runtime checks:
+
+- Backend `sha256:f96bf4d78a0fcfc425bb67f50787d646b13b0256ce7d9dadd60cb24ae58d93f7` (61.49s build).
+- Frontend `sha256:7a6bc52f7bb3b4f924b2b71fdfcb7e6da975285c9930dd034c6d20cd83370298` (52.06s build).
+
+The current-source packaged browser/native walkthrough passes in 54.37s,
+including a 524,288,000-byte chunked synthetic disk upload, source hash binding,
+explicit fictional captions/uploaded image, caption and picture positioning/motion,
+timed text, decoded monochrome filter and H.264/AAC MP4 export. Cancellation,
+retry reuse, quota, exit/expiry cleanup and ENOSPC preservation all pass.
+Fake counts are transcription 1, captions 1, AI selection 0, plan 1, generated
+images 0, inspection 1, preview 1 and final-native attempts 4 (one canceled).
+External attempts 0; OOMKilled false and every memory event counter is zero.
+
+Profile: 2 CPU, 8 GiB/no swap, 5376-MiB scratch, 128-MiB home, 256-MiB shared
+memory and read-only root, no network/published ports/credentials/owner media.
+Peak sampled RAM 2,493,820,928 bytes (about 2.32 GiB),
+logical scratch 1,052,398,352 bytes and reservation 3,074,499,193 bytes.
+The source is four seconds at 160x90, exports one second at 52x90; the large
+source adds valid padding. This verifies the upload-byte boundary and feature
+flow, not maximum-duration 4K, all retained-history combinations or hosted cost.
+All 534 closed-context inputs match the current checkout. Three proof containers
+were removed, and the normal Windows app/session/Gemini selection is preserved.
+
+The owner's separate real Find visuals action is confirmed from existing safe
+logs: three actual Gemini searches, six matched tool call/results, twelve queries,
+three retrieved images, none dropped and no generated fallback. This packaging
+made no paid/provider call and does not imply owner image/editorial acceptance.
+
+These images supersede the older CL-181/182 packaging gate below. No registry
+submission, push, cloud inspection/change or deployment. Real hosted identity/
+Turnstile/resource/mount/lifecycle/capacity/cost and owner release acceptance
+remain separate. [CL-183](../tickets/CL-183-fresh-linux-and-commit-packaging.md)
+records exact evidence and local commit identities.
+
+All current work is packaged by the authorized five-commit, 40-path series;
+CL-183 records the first four IDs and this final documentation commit. The final
+HEAD and clean-worktree verification are reported in the execution handoff.
+
+## Gemini Search correction — CL-182, 2026-10-31
+
+The owner's real Gemini run generated fallback art; the old missing-query-field
+log could not establish whether a search occurred. The discovery adapter now
+uses documented stateless Interactions Search with actual call/result and usage
+evidence, grounded citation recovery and precise safe originating diagnostics.
+Model/key/gates, broad retrieval, optional fallback and one-request/no-retry
+budgets remain. 209 focused/local/protocol checks pass using fake transports and
+synthetic images, including installed SDK serialization. No paid call or real
+image download was made. Live authenticated behavior remains owner acceptance.
+
+CL-181's Linux image below predates this source correction. Fresh packaged
+verification of CL-182 is still required before any future release; these local
+checks do not update or certify that older image. No cloud or deployment action.
+
+## Gemini parity and current backend — CL-181, 2026-10-31
+
+The owner requests the three CL-180 parity fixes and one local Gemini test.
+Gemini manual-only analysis now uses bounded cut audio and source-relative
+partial/full transcript reuse; the hosted bounded path retains charging.
+Initial Gemini, Codex and Find visuals share the tolerant decoder preserving
+alternate image briefs and safe field/rule diagnostics. Both planners share
+tight-head and evidence-backed opening-speaker instructions. Codex progress/local
+speech and Gemini raster generation remain intentional differences.
+
+859 local fake cases, three current-source browser/native proofs, types/lint/
+format and read-only validation pass. Fresh backend image
+`sha256:22ef7b15ceb26e6ea032d06be1f10a7ba91d4794b3dfcd9e628fd9f0b7823da3`
+passes offline startup and the packaged 500-MiB synthetic upload/editor/native
+export/cancel/retry/quota/cleanup proof at 2 CPU/8 GiB/5376-MiB scratch. No external
+attempt/OOM event. Four-second low-resolution source and one-second exports
+remain limited evidence, not maximum-duration 4K or full retained-history proof.
+The unchanged frontend keeps the CL-180 image below.
+
+After fake verification only AI_PROVIDER was changed to Gemini, including both
+pre-existing identical assignments. Every other configuration byte is preserved.
+Normal backend/current worker refreshed; Gemini planning/visual/caption capability
+GETs pass, frontend and the owner's clip/art/audio remain. No upstream Gemini
+call was made. The owner refreshes and starts one fresh run for real acceptance.
+
+[CL-181](../tickets/CL-181-gemini-provider-parity.md) owns exact evidence/logs and
+supersedes CL-180's three open provider recommendations. These changes and the
+preserved CL-180 fix remain unstaged/uncommitted. No push, registry submission,
+cloud change or deployment. Actual hosted settings/cost/lifecycle/capacity and
+owner live Gemini/visual/release acceptance remain separate; deployment deferred.
+
+## Fresh Linux verification — CL-180, 2026-10-31
+
+The owner authorizes fresh local Linux production builds/offline packaged checks,
+with fake AI, no paid calls and no deployment, and now intends one real Gemini
+session after a read-only provider comparison. This supersedes the stale-image
+gate in the CL-168–179 handoff below for the exact current artifacts/checks here.
+
+Fresh frontend `sha256:82c020f1783c03a5b8216f1e5f3bb7d8e9e02167d3e5e8cda1c15c9540e32e24`
+and corrected backend `sha256:800b7992cadcd61282ccdd01a06b54cda948c1e51906e96d4063e4627ab4fbd6`
+build from closed secret-free contexts and pass actual non-root offline entry
+probes. Packaged upload/editor/native H.264/AAC export, position/motion/text/
+filter edits, cancellation/retry reuse, quota and cleanup pass at 2 CPU/8 GiB
+with the required 5376-MiB scratch volume. The 500-MiB upload-byte case passes
+with peak sampled RAM about 1.83 GiB, zero OOM events and zero external attempts.
+The generated video is four seconds at 160x90 and exports one second at 52x90;
+this does not certify full-duration 4K or every retained-history maximum.
+
+The first real export exposed a Windows/Linux binary compatibility defect:
+packaged FFmpeg 5.1.9 rejects the newer explicit `ts_sync_mode=default` option.
+Omitting that default fixes the real Linux export while current-source decoded
+visual/audio onset proofs retain parity at 24/25/29.97/30/60fps. The walkthrough's
+old Pictures selector was separately updated to Media/Caption Style. Production
+provider policy, codecs/quality and resource limits are unchanged. The normal
+Windows backend/current worker is refreshed and the owner session preserved.
+
+The provider review confirms shared search-first retrieval, Find visuals,
+Pop/title/hook/editor features and local Find all for either provider. Separate
+recommendations remain: scoped Gemini manual transcription, preserving its
+initial alternate image briefs/richer rejection diagnostics, and matching the
+Codex opening-speaker/tight-head framing instructions. None was silently changed.
+Codex CPU speech, temporal samples, CLI search and its local progress checklist
+remain intentional differences; Gemini retains its raster-generation fallback.
+
+[CL-180](../tickets/CL-180-current-linux-build-and-provider-parity-review.md) owns
+exact artifacts, red/green evidence, fixture/capacity limits, logs and validation.
+Its five-file compatibility/proof/documentation changes remain unstaged and
+uncommitted. No image was pushed or deployed. Remaining: owner real Gemini and
+visual acceptance with configured key/live approvals; actual hosted resource/
+mount/background-CPU/lifecycle/capacity/cost confirmation; authorized source
+packaging/push/rollout and serving/rollback verification. Fake/no-key success
+does not establish real Gemini search or editorial quality.
+
 ## Current change handoff — CL-168–179, 2026-10-31
 
 The owner reports the local Codex workflow works and has finished the desired
