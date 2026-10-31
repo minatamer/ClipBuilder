@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { classifyExecutionFailure } from "../src/diagnostics/execution-failure.ts";
 import { z } from "zod";
 import {
   OWNER_FPS,
@@ -13,6 +14,7 @@ import {
 } from "../../../packages/contracts/local/index.ts";
 import {
   ownerAiDurationSchema,
+  ownerAiResultLimit,
   ownerMomentSchema,
   ownerWordsSchema,
   type OwnerWord,
@@ -34,6 +36,11 @@ import { normalizeCandidateSelection } from "../src/analysis/analysis.provider-s
 import { ownerSelectionPolicy } from "./selection-policy.ts";
 import { OWNER_DEFAULT_AI_COUNT } from "../../../packages/contracts/local/policy.ts";
 import type { GeminiPictureGenerator } from "../src/assembly/gemini-pictures.ts";
+import type { ContextualPictureSource } from "../src/assembly/commons-pictures.ts";
+import { decodeSearchJson } from "../src/assembly/web-pictures.ts";
+import { visualDiscoveryPlanner } from "./visual-discovery.ts";
+import { normalizePicture } from "../src/assembly/picture-raster.ts";
+import type { VisualDiagnostic } from "../../../packages/contracts/local/visual-diagnostics.ts";
 import type { OwnerAnalysisPorts } from "./analysis.ts";
 import type { ClipCaptionTranscription } from "./clip-caption-port.ts";
 import { ownerClipPlanSchema, type OwnerClipPorts } from "./clip-batch.ts";
@@ -66,6 +73,7 @@ type Options = {
   media: (job: OwnerMediaJob, signal: AbortSignal) => Promise<OwnerMediaResult>;
   transport: GeminiTransport;
   pictures: Pick<GeminiPictureGenerator, "find">;
+  search?: ContextualPictureSource | undefined;
   timeoutMs?: number;
   diagnostics?: LocalDiagnostics;
 };
@@ -116,7 +124,14 @@ export function createOwnerProviderAi(options: Options): {
   analysis: OwnerAnalysisPorts;
   clipPreparation: Pick<
     OwnerClipPorts,
-    "mode" | "plan" | "image" | "resume" | "focus" | "hookSuggestion" | "texts"
+    | "mode"
+    | "plan"
+    | "planVisuals"
+    | "image"
+    | "resume"
+    | "focus"
+    | "hookSuggestion"
+    | "texts"
   >;
   cleanupWorkspace(id: string, signal: AbortSignal): Promise<void>;
   close(signal: AbortSignal): Promise<void>;
@@ -325,7 +340,8 @@ export function createOwnerProviderAi(options: Options): {
         excludedCuts = [],
       ) {
         return run("candidate_select", signal, async () => {
-          const proposalLimit = OWNER_LIMITS.ranges + requestedCount;
+          const proposalLimit =
+            OWNER_LIMITS.ranges + ownerAiResultLimit(requestedCount);
           const cues = words(current, diagnostics),
             policy = ownerAiDurationSchema.parse(duration);
           const expected = ownerSelectionPolicy(policy, requestedCount);
@@ -364,6 +380,16 @@ export function createOwnerProviderAi(options: Options): {
     },
     clipPreparation: {
       mode: "provider-ai",
+      planVisuals: visualDiscoveryPlanner(async (prompt, schema, signal) => {
+        return run("visual_plan", signal, async () => {
+          const result = await options.transport.candidates(
+            `${prompt}\nJSON schema: ${JSON.stringify(schema)}`,
+            signal,
+            "Plan only the requested clip visuals. Return JSON with a pictures array. No web tools in this planning call; the app separately searches before generation.",
+          );
+          return decodeSearchJson(result.text ?? "");
+        });
+      }, diagnostics),
       focus({ clipId, workspace, moment }) {
         return structuredClone(
           plans.get(clipId)?.focus ??
@@ -477,6 +503,7 @@ export function createOwnerProviderAi(options: Options): {
         });
       },
       resume(current) {
+        scopes.add(current.workspaceId);
         const clipId = ownerIdSchema.parse(current.clipId);
         const cues = words(current.words, diagnostics);
         plans.set(clipId, {
@@ -501,30 +528,66 @@ export function createOwnerProviderAi(options: Options): {
             throw new Error("owner_picture_not_admitted");
           critiqueOwnerVisualCue(cue, cues, plan.frames, diagnostics);
           plan.cues.splice(plan.cues.indexOf(key), 1);
-          // The existing generator uses the contextual brief; kind does not select a search backend.
-          const picture = await options.pictures.find(
-            { kind: "object", brief: cue.brief },
-            signal,
-          );
-          signal.throwIfAborted();
-          if (!picture) {
-            diagnostics.critique("image_generate", "gemini_output_unusable");
-            return null;
+          const request = {
+            kind: "object" as const,
+            brief: cue.brief,
+            alternateBriefs: cue.alternateBriefs ?? [],
+          };
+          for (const [source, generated] of [
+            [options.search, false],
+            [options.pictures, true],
+          ] as const) {
+            if (!source) continue;
+            const stage = generated ? "fallback" : "search";
+            let reason: VisualDiagnostic["reason"] = generated
+              ? "generation_failed"
+              : "search_failed";
+            try {
+              const picture = await source.find(request, signal);
+              signal.throwIfAborted();
+              if (!picture) continue;
+              reason = "asset_shape";
+              const asset = contextualPictureAssetSchema.parse(picture);
+              reason = "provenance";
+              if ((asset.repository === "google-gemini") !== generated)
+                throw new Error("owner_picture_provenance_rejected");
+              const bytes = Buffer.from(
+                asset.dataUri.slice("data:image/jpeg;base64,".length),
+                "base64",
+              );
+              reason = "digest_mismatch";
+              if (
+                createHash("sha256").update(bytes).digest("hex") !==
+                asset.sha256
+              )
+                throw new Error("owner_picture_digest_rejected");
+              reason = "decode_failed";
+              await normalizePicture(bytes);
+              signal.throwIfAborted();
+              diagnostics.visual({
+                stage,
+                outcome: generated ? "generated" : "found",
+              });
+              return {
+                bytes,
+                origin: generated
+                  ? ("generated" as const)
+                  : ("retrieved" as const),
+              };
+            } catch (error) {
+              diagnostics.trace({
+                boundary: "visual",
+                phase: generated ? "fallback" : "discovery",
+                outcome: signal.aborted ? "canceled" : "failed",
+                elapsedMs: 0,
+                error: classifyExecutionFailure(error),
+              });
+              signal.throwIfAborted();
+              diagnostics.visual({ stage, outcome: "failed", reason });
+            }
           }
-          const asset = contextualPictureAssetSchema.parse(picture);
-          return diagnostics.run("image_validate", async () => {
-            if (asset.repository !== "google-gemini")
-              throw new Error("owner_picture_provenance_rejected");
-            const bytes = Buffer.from(
-              asset.dataUri.slice("data:image/jpeg;base64,".length),
-              "base64",
-            );
-            if (
-              createHash("sha256").update(bytes).digest("hex") !== asset.sha256
-            )
-              throw new Error("owner_picture_digest_rejected");
-            return { bytes, origin: "generated" as const };
-          });
+          diagnostics.visual({ stage: "fallback", outcome: "omitted" });
+          return null;
         });
       },
     },

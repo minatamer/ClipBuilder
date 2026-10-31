@@ -9,12 +9,22 @@ import {
   type OwnerFocusDiagnostic,
 } from "../../../packages/contracts/local/diagnostics.ts";
 import { AnalysisDiagnostics } from "../src/analysis/analysis.diagnostics.ts";
+import type { VisualDiagnostic } from "../../../packages/contracts/local/visual-diagnostics.ts";
+import {
+  executionTraceSchema,
+  type ExecutionTrace,
+} from "../../../packages/contracts/local/execution-diagnostics.ts";
 
 export const LOCAL_DIAGNOSTIC_LIMIT = 128;
 type Context = {
   requestId: string;
   parentRequestId?: string;
-  budget: { records: number; dropped: number };
+  budget: {
+    records: number;
+    dropped: number;
+    traces: number;
+    tracesDropped: number;
+  };
 };
 
 /** Explicit safe sink. No private capture, request bodies or exception strings. */
@@ -27,8 +37,34 @@ export class LocalDiagnostics {
   private context(): Context {
     return {
       requestId: `req_${randomBytes(16).toString("hex")}`,
-      budget: { records: 0, dropped: 0 },
+      budget: { records: 0, dropped: 0, traces: 0, tracesDropped: 0 },
     };
+  }
+  trace(value: ExecutionTrace) {
+    const context = this.contexts.getStore() ?? this.context();
+    const terminal =
+      value.outcome === "failed" ||
+      value.outcome === "canceled" ||
+      value.phase === "complete";
+    if (context.budget.traces >= (terminal ? 2048 : 1920)) {
+      context.budget.tracesDropped++;
+      return;
+    }
+    try {
+      const detail = executionTraceSchema.parse(value);
+      context.budget.traces++;
+      this.write(
+        JSON.stringify({
+          event: "execution_trace",
+          at: new Date().toISOString(),
+          requestId: context.requestId,
+          ...detail,
+          droppedRecords: context.budget.tracesDropped,
+        }),
+      );
+    } catch {
+      /* Diagnostics never alter work or leak an unvalidated object. */
+    }
   }
   private emit(
     operation: OwnerDiagnosticOperation,
@@ -39,6 +75,7 @@ export class LocalDiagnostics {
     httpStatus?: number,
     transcriptTiming?: OwnerTranscriptTimingDiagnostic,
     focus?: OwnerFocusDiagnostic,
+    visual?: VisualDiagnostic,
   ) {
     const context = this.contexts.getStore() ?? this.context();
     const limit =
@@ -74,6 +111,7 @@ export class LocalDiagnostics {
             ...(httpStatus ? { httpStatus } : {}),
             ...(transcriptTiming ? { transcriptTiming } : {}),
             ...(focus ? { focus } : {}),
+            ...(visual ? { visual } : {}),
             droppedRecords: context.budget.dropped,
           }),
         ),
@@ -93,6 +131,19 @@ export class LocalDiagnostics {
       "transcript_validate",
       "succeeded",
       performance.now(),
+      undefined,
+      undefined,
+      undefined,
+      value,
+    );
+  }
+  visual(value: VisualDiagnostic) {
+    this.emit(
+      value.stage === "decode" ? "visual_validate" : "image_generate",
+      "critique",
+      performance.now(),
+      undefined,
+      undefined,
       undefined,
       undefined,
       undefined,

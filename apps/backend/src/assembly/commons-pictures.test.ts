@@ -44,6 +44,72 @@ function metadata(
   };
 }
 describe("bounded rights-cleared Commons pictures", () => {
+  it("local Codex can admit other source-reported licenses and try the next eligible raster", async () => {
+    const base = metadata("CC BY-SA").query.pages["1"];
+    const fixture = {
+      query: {
+        pages: {
+          "1": base,
+          "2": {
+            ...base,
+            pageid: 2,
+            title: "File:Synthetic planet second.png",
+            imageinfo: [
+              {
+                ...base.imageinfo[0]!,
+                thumburl:
+                  "https://upload.wikimedia.org/wikipedia/commons/a/ab/Synthetic-second.png",
+              },
+            ],
+          },
+        },
+      },
+    };
+    const png = await sharp({
+      create: { width: 640, height: 360, channels: 3, background: "blue" },
+    })
+      .png()
+      .toBuffer();
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json(fixture))
+      .mockResolvedValueOnce(
+        new Response("synthetic-invalid-raster", {
+          headers: { "Content-Type": "image/png" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(png, { headers: { "Content-Type": "image/png" } }),
+      );
+    const observed = vi.fn(() => {
+      throw Error("synthetic-private-observer-failure");
+    });
+    const asset = await new CommonsPictureSource(
+      request,
+      undefined,
+      undefined,
+      undefined,
+      {
+        licenseFilter: "none",
+        maxCandidates: 20,
+        maxDownloads: 3,
+        timeoutMs: 20000,
+        observed,
+      },
+    ).find(planetRequest, new AbortController().signal);
+    expect(asset).toMatchObject({
+      repository: "wikimedia-commons",
+      license: "CC BY-SA",
+      pageId: 2,
+    });
+    expect(request).toHaveBeenCalledTimes(3);
+    expect(
+      new URL(String(request.mock.calls[0]![0])).searchParams.get("gsrlimit"),
+    ).toBe("20");
+    expect(observed).toHaveBeenCalledWith({ candidates: 2, downloads: 2 });
+    for (const [, init] of request.mock.calls)
+      expect(init).toMatchObject({ redirect: "error", credentials: "omit" });
+  });
   it("searches the precise planned depiction and treats completed empty results as a normal miss", async () => {
     const request = vi
       .fn<typeof fetch>()
@@ -330,7 +396,7 @@ describe("bounded rights-cleared Commons pictures", () => {
           '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>',
         ),
       ),
-    ).rejects.toThrow("contextual_picture_unavailable");
+    ).rejects.toThrow("image_format_unsupported");
   });
   it("rejects a download over its byte cap and closes the body without retry", async () => {
     const cancel = vi.fn();

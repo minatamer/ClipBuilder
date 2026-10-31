@@ -281,6 +281,8 @@ export class SelectedAssembly {
                 ? {
                     source: this.generatedPictures,
                     reserve: () => this.admission.reserveImageCall(context),
+                    reserveSearch: () =>
+                      this.admission.reserveImageCall(context, "search"),
                   }
                 : undefined,
             );

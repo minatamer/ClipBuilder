@@ -57,6 +57,44 @@ const asset = {
   dataUri: "data:image/jpeg;base64,/9j/2Q==",
 };
 describe("grounded picture compilation", () => {
+  it("reserves a metered search before lookup and generation only after a miss", async () => {
+    const order: string[] = [];
+    const result = await compileContextualPictures(
+      { pictures: [picture] },
+      context,
+      manifest,
+      {
+        providerSearch: true,
+        find: async () => {
+          order.push("search");
+          return null;
+        },
+      },
+      AbortSignal.timeout(1000),
+      new AnalysisDiagnostics(),
+      {
+        reserveSearch: () => {
+          order.push("reserve-search");
+        },
+        reserve: () => {
+          order.push("reserve-generation");
+        },
+        source: {
+          find: async () => {
+            order.push("generate");
+            return asset;
+          },
+        },
+      },
+    );
+    expect(order).toEqual([
+      "reserve-search",
+      "search",
+      "reserve-generation",
+      "generate",
+    ]);
+    expect(result.manifest.pictures).toHaveLength(1);
+  });
   it("keeps scene notes only for retained pictures and leaves them out of the renderer manifest and safe logs", async () => {
     const next = {
       ...context.words[0]!,

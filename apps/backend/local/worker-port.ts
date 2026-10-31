@@ -1,6 +1,10 @@
 import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 import { LOCAL_CODEX_POLICY } from "../../../packages/contracts/local/codex.ts";
 import {
+  codexProgressStepsSchema,
+  type CodexProgressStep,
+} from "../../../packages/contracts/local/codex-progress.ts";
+import {
   ownerMediaResultSchema,
   OWNER_FPS,
   type OwnerMediaJob,
@@ -54,6 +58,7 @@ export function localWorkerPort(
     job: OwnerMediaJob,
     signal: AbortSignal,
     stage?: (value: OwnerAcquisitionNativeStage) => void,
+    codexProgress?: (steps: CodexProgressStep[]) => void,
   ) => {
     const jobId = job.jobId ?? randomUUID();
     return diagnostics.run(
@@ -82,11 +87,20 @@ export function localWorkerPort(
                   ]),
                 },
               );
-              if (response.ok)
-                stage?.(
-                  stageSchema.parse(await workerBody(response, 128)).stage,
+              if (response.ok) {
+                const value = await workerBody(
+                  response,
+                  job.operation === "codex-input" ? 4096 : 128,
                 );
-              else await response.body?.cancel();
+                if (job.operation === "codex-input")
+                  codexProgress?.(
+                    z
+                      .object({ codex: codexProgressStepsSchema })
+                      .strict()
+                      .parse(value).codex,
+                  );
+                else stage?.(stageSchema.parse(value).stage);
+              } else await response.body?.cancel();
             } catch {
               /* A missing progress sample cannot start or retry media work. */
             }
@@ -125,19 +139,20 @@ export function localWorkerPort(
             headers,
             body,
             signal: AbortSignal.timeout(
-              job.operation === "codex-input" && job.kind === "speech"
+              job.operation === "codex-input" && job.kind !== "frames"
                 ? LOCAL_CODEX_POLICY.speechTimeoutMs + 60_000
                 : 11 * 60_000,
             ),
             redirect: "error",
           });
           if (
-            stage &&
-            [
-              "prepare-acquisition",
-              "synthesize-acquisition",
-              "inspect-acquisition",
-            ].includes(job.operation)
+            (codexProgress && job.operation === "codex-input") ||
+            (stage &&
+              [
+                "prepare-acquisition",
+                "synthesize-acquisition",
+                "inspect-acquisition",
+              ].includes(job.operation))
           )
             progress = poll();
           const response = await requested;

@@ -22,6 +22,7 @@ let usage: HostedDemoUsage;
 const origin = "https://frontend.run.app";
 const media = vi.fn(),
   transcribe = vi.fn(fakeOwnerAnalysis.transcribe),
+  select = vi.fn(fakeOwnerAnalysis.select),
   plan = vi.fn(fakeOwnerClipPreparation.plan),
   image = vi.fn(fakeOwnerClipPreparation.image),
   abuse = vi.fn(async () => true);
@@ -82,7 +83,7 @@ beforeEach(async () => {
     capacity: async () => {},
     media,
     providers: () => ({
-      analysis: { ...fakeOwnerAnalysis, transcribe },
+      analysis: { ...fakeOwnerAnalysis, transcribe, select },
       clipPreparation: { ...fakeOwnerClipPreparation, plan, image },
     }),
   });
@@ -150,6 +151,46 @@ it("rejects every hosted YouTube/library/agent path before proof verification, m
   expect(transcribe).not.toHaveBeenCalled();
   expect(abuse).not.toHaveBeenCalled();
 });
+it.each([false, true])(
+  "refuses local-only all-moments requests before AI work, including hosted exemption (%s)",
+  async (exempt) => {
+    const identity = usage.identity.bind(usage);
+    vi.spyOn(usage, "identity").mockImplementation((ip) => ({
+      ...identity(ip),
+      exempt,
+    }));
+    const app = server(),
+      headers = await start(app);
+    const upload = await request(app)
+      .post("/upload")
+      .set(headers)
+      .send({ bytes: 9 });
+    await request(app)
+      .put(`/upload/${upload.body.uploadId}/0`)
+      .set(headers)
+      .set("Content-Type", "application/octet-stream")
+      .send(Buffer.from("synthetic"));
+    const opened = await request(app)
+      .post("/open/video")
+      .set(headers)
+      .send({ uploadId: upload.body.uploadId });
+    expect(opened.status).toBe(200);
+    const result = await request(app)
+      .post(`/workspace/${opened.body.workspace.id}/analysis`)
+      .set(headers)
+      .send({
+        sourceRevision: 0,
+        policyRevision: 0,
+        ranges: [],
+        aiDuration: { minMs: 10000, maxMs: 60000 },
+        manualOnly: false,
+        aiCount: "all",
+      });
+    expect(result.status).toBe(400);
+    expect(transcribe).not.toHaveBeenCalled();
+    expect(select).not.toHaveBeenCalled();
+  },
+);
 it("runs upload, preparation and explicit retry through isolated normal editing without repeating AI", async () => {
   const app = server(),
     headers = await start(app);
@@ -180,6 +221,19 @@ it("runs upload, preparation and explicit retry through isolated normal editing 
   expect(opened.status).toBe(200);
   const id = opened.body.workspace.id,
     base = `/workspace/${id}`;
+  const forbidden = await request(app)
+    .post(base + "/analysis")
+    .set(headers)
+    .send({
+      sourceRevision: 0,
+      policyRevision: 0,
+      ranges: [],
+      aiDuration: { minMs: 10000, maxMs: 60000 },
+      manualOnly: false,
+      aiCount: "all",
+    });
+  expect(forbidden.status).toBe(400);
+  expect(transcribe).not.toHaveBeenCalled();
   const firstAnalysis = await request(app)
     .post(base + "/analysis")
     .set(headers)

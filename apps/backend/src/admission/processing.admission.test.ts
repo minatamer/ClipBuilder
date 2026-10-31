@@ -187,6 +187,30 @@ describe("process-lifetime protected admission", () => {
     ).rejects.toThrow();
     expect(f.calls.text).not.toHaveBeenCalled();
   });
+  it("separately bounds three search and three fallback requests inside the same global budget", async () => {
+    const f = fixture({ maxDispatches: 7 });
+    expect(() => f.admission.reserveImageCall(f.context, "search")).toThrow();
+    await f.admission.run(
+      f.context,
+      { ...input, action: "visual-plan" },
+      () => {},
+      async () => {
+        for (let index = 0; index < 3; index++)
+          f.admission.reserveImageCall(f.context, "search");
+        expect(() =>
+          f.admission.reserveImageCall(f.context, "search"),
+        ).toThrow();
+        for (let index = 0; index < 3; index++)
+          f.admission.reserveImageCall(f.context);
+        expect(() => f.admission.reserveImageCall(f.context)).toThrow();
+        return "done";
+      },
+    );
+    await expect(
+      f.admission.run(f.context, input, () => {}, f.calls.text),
+    ).rejects.toThrow();
+    expect(f.calls.text).not.toHaveBeenCalled();
+  });
   it("does not reclaim uncertain image spend or dispatch another image after cancellation", async () => {
     const f = fixture({ maxDispatches: 2 });
     await f.admission.run(

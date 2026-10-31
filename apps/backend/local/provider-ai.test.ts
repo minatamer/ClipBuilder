@@ -19,6 +19,7 @@ import type {
 } from "../../../packages/contracts/local/index.ts";
 import type { OwnerMoment } from "../../../packages/contracts/local/selection.ts";
 import type { GeminiPictureGenerator } from "../src/assembly/gemini-pictures.ts";
+import type { ContextualPictureSource } from "../src/assembly/commons-pictures.ts";
 
 // All provider-shaped adapters below are synthetic injected doubles, with no SDK,
 // API key, source file, cloud resource or external request.
@@ -60,6 +61,37 @@ const proposal = {
   ],
   caveats: [],
 };
+it("retains more than twenty Gemini proposals in all mode with exactly one injected selection call", async () => {
+  const f = fixture();
+  f.transport.candidates.mockResolvedValue({
+    text: JSON.stringify({
+      candidates: Array.from({ length: 30 }, () => proposal),
+    }),
+    finished: true,
+  });
+  const instructions = ownerSelectionPolicy(policy, "all");
+  try {
+    expect(
+      await f.ports.analysis.select(
+        words,
+        policy,
+        f.signal,
+        instructions,
+        "all",
+      ),
+    ).toHaveLength(30);
+    expect(f.transport.candidates).toHaveBeenCalledExactlyOnceWith(
+      JSON.stringify({ words }),
+      expect.any(AbortSignal),
+      instructions,
+    );
+    expect(instructions).not.toContain("aiming for");
+    expect(f.transport.upload).not.toHaveBeenCalled();
+    expect(f.transport.transcribe).not.toHaveBeenCalled();
+  } finally {
+    await f.ports.close(f.signal);
+  }
+});
 const cue = {
   startFrame: 0,
   endFrame: 60,
@@ -284,7 +316,10 @@ it("retains anonymous camera observations from the existing single video request
   expect(f.media).toHaveBeenCalledTimes(1);
   await f.ports.close(f.signal);
 });
-function fixture(diagnostics?: LocalDiagnostics) {
+function fixture(
+  diagnostics?: LocalDiagnostics,
+  search?: ContextualPictureSource,
+) {
   const workspace: OwnerWorkspace = {
     id: randomUUID(),
     revision: 3,
@@ -365,6 +400,7 @@ function fixture(diagnostics?: LocalDiagnostics) {
     media,
     transport,
     pictures,
+    ...(search ? { search } : {}),
     ...(diagnostics ? { diagnostics } : {}),
   });
   return {
@@ -381,6 +417,66 @@ function fixture(diagnostics?: LocalDiagnostics) {
 }
 
 describe("dormant owner provider ports with synthetic transports", () => {
+  it.each([true, false])(
+    "searches before Gemini generation for explicit transcript-only visuals (hit=%s)",
+    async (hit) => {
+      const jpeg = await sharp({
+        create: { width: 24, height: 12, channels: 3, background: "#128fea" },
+      })
+        .jpeg()
+        .toBuffer();
+      const raster = {
+        width: 24,
+        height: 12,
+        sha256: createHash("sha256").update(jpeg).digest("hex"),
+        dataUri: `data:image/jpeg;base64,${jpeg.toString("base64")}`,
+      };
+      const search = {
+        find: vi.fn<ContextualPictureSource["find"]>(async () =>
+          hit ? { repository: "web", ...raster } : null,
+        ),
+      };
+      const f = fixture(undefined, search);
+      f.transport.candidates.mockResolvedValue({
+        text: JSON.stringify({ pictures: [cue] }),
+        finished: true,
+      });
+      f.pictures.find.mockResolvedValue({
+        repository: "google-gemini",
+        model: GENERATED_PICTURE_MODEL,
+        policy: "contextual-generated-v1",
+        ...raster,
+      });
+      const plan = await f.ports.clipPreparation.planVisuals!(
+        { workspace: f.workspace, clipId: f.clipId, moment: f.moment },
+        f.signal,
+      );
+      f.ports.clipPreparation.resume!({
+        workspaceId: f.workspace.id,
+        clipId: f.clipId,
+        words,
+        frames: 9000,
+        plan,
+      });
+      expect(
+        await f.ports.clipPreparation.image(
+          { clipId: f.clipId, cue: plan[0]!, words },
+          f.signal,
+        ),
+      ).toMatchObject({ origin: hit ? "retrieved" : "generated" });
+      expect(search.find).toHaveBeenCalledTimes(1);
+      expect(f.pictures.find).toHaveBeenCalledTimes(hit ? 0 : 1);
+      expect(f.transport.candidates).toHaveBeenCalledTimes(1);
+      expect(f.transport.transcribe).not.toHaveBeenCalled();
+      expect(f.media).not.toHaveBeenCalled();
+      expect(f.transport.upload).not.toHaveBeenCalled();
+      if (!hit)
+        expect(search.find.mock.invocationCallOrder[0]).toBeLessThan(
+          f.pictures.find.mock.invocationCallOrder[0]!,
+        );
+      await f.ports.close(f.signal);
+    },
+  );
   it("rejects malformed manual exclusions before contacting the injected transport", async () => {
     const f = fixture();
     for (const cuts of [
@@ -545,7 +641,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     );
     expect(output).toEqual({ bytes: jpeg, origin: "generated" });
     expect(f.pictures.find).toHaveBeenCalledExactlyOnceWith(
-      { kind: "object", brief: cue.brief },
+      { kind: "object", brief: cue.brief, alternateBriefs: [] },
       f.signal,
     );
     await expect(
@@ -689,7 +785,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
   );
 
   it.each(["provenance", "digest"])(
-    "rejects generated image %s mismatch with one attempt",
+    "omits generated image %s mismatch without failing the clip or retrying",
     async (kind) => {
       const f = fixture();
       await f.ports.clipPreparation.plan(
@@ -723,11 +819,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
           { clipId: f.clipId, cue, words },
           f.signal,
         ),
-      ).rejects.toThrow(
-        kind === "provenance"
-          ? "owner_picture_provenance_rejected"
-          : "owner_picture_digest_rejected",
-      );
+      ).resolves.toBeNull();
       await expect(
         f.ports.clipPreparation.image(
           { clipId: f.clipId, cue, words },
@@ -878,7 +970,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     expect(
       normalizeCandidateSelection(proposals, words, 14).candidates,
     ).toHaveLength(14);
-    expect(() => normalizeCandidateSelection(proposals, words, 21)).toThrow(
+    expect(() => normalizeCandidateSelection(proposals, words, 371)).toThrow(
       "candidate_policy_rejected",
     );
     expect(f.transport.transcribe).toHaveBeenCalledTimes(1);

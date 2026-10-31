@@ -6,9 +6,12 @@ import { OWNER_AI_HOOK_POLICY } from "../../../packages/contracts/local/hook-sou
 
 export const fakeOwnerClipPreparation: Pick<
   OwnerClipPorts,
-  "mode" | "plan" | "image" | "focus" | "hookSuggestion"
+  "mode" | "plan" | "planVisuals" | "image" | "focus" | "hookSuggestion"
 > = {
   mode: "synthetic-ai",
+  async planVisuals(request, signal) {
+    return fakeOwnerClipPreparation.plan(request, signal);
+  },
   hookSuggestion({ clipId, moment }) {
     const frames = moment.cut.endFrame - moment.cut.startFrame,
       first = OWNER_AI_HOOK_POLICY.earliestStartFrame,

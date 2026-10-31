@@ -15,6 +15,8 @@ import { OwnerSessionRecovery } from "./session-recovery.ts";
 import { OwnerDraftStore } from "./draft-store.ts";
 import { WorkspaceFiles } from "./workspace-files.ts";
 import type { OwnerDraftSnapshot } from "../../../packages/contracts/local/drafts.ts";
+import { analyzeOwner } from "./analysis.ts";
+import { fakeOwnerAnalysis } from "./fake-analysis.ts";
 
 let directory: string,
   library: string,
@@ -62,6 +64,38 @@ function recovery() {
   stores.push(value);
   return value;
 }
+it("recovers all-moments mode and more than twenty completed results without another AI call", async () => {
+  snapshot.workspace.source.durationMs = 900_000;
+  const analysis = {
+    ...fakeOwnerAnalysis,
+    transcribe: vi.fn(fakeOwnerAnalysis.transcribe),
+    select: vi.fn(fakeOwnerAnalysis.select),
+  };
+  snapshot.analysis = await analyzeOwner(
+    snapshot.workspace,
+    {
+      sourceRevision: 0,
+      policyRevision: 0,
+      ranges: [],
+      aiCount: "all",
+      aiDuration: { minMs: 10_000, maxMs: 30_000 },
+      manualOnly: false,
+    },
+    analysis,
+    AbortSignal.timeout(5000),
+  );
+  expect(snapshot.analysis.suggestions).toHaveLength(30);
+  const first = recovery();
+  first.changed(snapshot.workspace.id);
+  await first.close();
+  const restored = await recovery().restore(AbortSignal.timeout(5000));
+  expect(restored!.analysis!.inputs.aiCount).toBe("all");
+  expect(restored!.analysis!.suggestions.map((moment) => moment.cut)).toEqual(
+    snapshot.analysis.suggestions.map((moment) => moment.cut),
+  );
+  expect(analysis.transcribe).toHaveBeenCalledTimes(1);
+  expect(analysis.select).toHaveBeenCalledTimes(1);
+});
 it("publishes a debounced snapshot before shutdown and restores interrupted work without replay", async () => {
   snapshot.clips = [
     {

@@ -24,7 +24,11 @@ export async function compileContextualPictures(
   source: ContextualPictureSource | undefined,
   signal: AbortSignal,
   diagnostics: AnalysisDiagnostics,
-  fallback?: { source: ContextualPictureSource; reserve: () => void },
+  fallback?: {
+    source: ContextualPictureSource;
+    reserve: () => void;
+    reserveSearch?: () => void;
+  },
 ) {
   const record = z.record(z.string(), z.unknown()).safeParse(raw);
   const plans =
@@ -173,6 +177,11 @@ export async function compileContextualPictures(
       if (source) {
         searches++;
         try {
+          if (source.providerSearch) {
+            if (!fallback?.reserveSearch)
+              throw new Error("image_search_not_admitted");
+            fallback.reserveSearch();
+          }
           asset = await diagnostics.step("assembly_pictures", () =>
             source.find(request, signal),
           );

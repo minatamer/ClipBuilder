@@ -13,6 +13,61 @@ import {
 import { ApplicationError } from "../src/http/errorMapper.ts";
 
 const secret = "synthetic-private-key-filename-transcript-url";
+it("correlates detailed traces, retains causes after verbose records and refuses unvalidated/private fields", async () => {
+  const records: Record<string, unknown>[] = [],
+    diagnostics = new LocalDiagnostics((line) =>
+      records.push(JSON.parse(line)),
+    );
+  await diagnostics.run("codex_pictures", async () => {
+    for (let i = 0; i < 2000; i++)
+      diagnostics.trace({
+        boundary: "picture",
+        phase: "http",
+        outcome: "started",
+        elapsedMs: 0,
+      });
+    diagnostics.trace({
+      boundary: "codex",
+      phase: "process",
+      outcome: "failed",
+      elapsedMs: 12,
+      exitCode: 2,
+      error: { category: "cli_argument", cliOption: "standalone_web_search" },
+    });
+    const invalid = {
+      boundary: "codex" as const,
+      phase: "process" as const,
+      outcome: "failed" as const,
+      elapsedMs: 0,
+      raw: secret,
+    };
+    diagnostics.trace(invalid);
+  });
+  expect(new Set(records.map((entry) => entry.requestId)).size).toBe(1);
+  expect(records).toContainEqual(
+    expect.objectContaining({
+      event: "execution_trace",
+      exitCode: 2,
+      droppedRecords: 80,
+    }),
+  );
+  expect(
+    records.filter((entry) => entry.event === "execution_trace"),
+  ).toHaveLength(1921);
+  expect(JSON.stringify(records)).not.toContain(secret);
+  const broken = new LocalDiagnostics(() => {
+    throw Error(secret);
+  });
+  expect(() =>
+    broken.trace({
+      boundary: "search",
+      phase: "discovery",
+      outcome: "failed",
+      elapsedMs: 0,
+      error: { category: "dns" },
+    }),
+  ).not.toThrow();
+});
 it("logs only allowlisted aggregate focus decisions and drops content-bearing diagnostic objects", () => {
   const lines: string[] = [],
     diagnostics = new LocalDiagnostics((line) => lines.push(line));

@@ -12,6 +12,16 @@ import { join, resolve, dirname, relative, isAbsolute } from "node:path";
 import { LOCAL_CODEX_POLICY } from "../../../packages/contracts/local/codex.ts";
 import { nativeEnvironment } from "./local-mode.ts";
 import { codexOutputSchema } from "./codex-schema.ts";
+import { randomUUID, createHash } from "node:crypto";
+import {
+  classifyExecutionFailure,
+  ExecutionError,
+} from "../src/diagnostics/execution-failure.ts";
+import type {
+  ExecutionTrace,
+  ExecutionFailure,
+} from "../../../packages/contracts/local/execution-diagnostics.ts";
+import { executionTraceSchema } from "../../../packages/contracts/local/execution-diagnostics.ts";
 
 export type CodexProcessRequest = {
   executable: string;
@@ -21,6 +31,9 @@ export type CodexProcessRequest = {
   env: NodeJS.ProcessEnv;
   stdoutBytes: number;
   statusOnly?: boolean;
+  observe?: ((detail: ExecutionTrace) => void) | undefined;
+  callId?: string;
+  searchEnabled?: boolean;
 };
 export type CodexProcess = (
   request: CodexProcessRequest,
@@ -29,6 +42,29 @@ export type CodexProcess = (
 /** Stdin-only content, bounded output, no shell/logs and owned-tree cancellation. */
 export const runCodexProcess: CodexProcess = async (request, signal) => {
   signal.throwIfAborted();
+  const started = performance.now();
+  const report = (
+    detail: Omit<ExecutionTrace, "boundary" | "phase" | "elapsedMs">,
+  ) => {
+    try {
+      request.observe?.({
+        boundary: "codex",
+        phase: request.statusOnly ? "preflight" : "process",
+        callId: request.callId,
+        searchEnabled: request.searchEnabled,
+        elapsedMs: Math.round(performance.now() - started),
+        ...detail,
+      });
+    } catch {
+      /* Nonfatal sink. */
+    }
+  };
+  report({
+    outcome: "started",
+    inputBytes: Buffer.byteLength(request.input),
+    limitBytes: request.stdoutBytes,
+    stderrLimitBytes: request.statusOnly ? 8192 : 1024 ** 2,
+  });
   return new Promise((done, fail) => {
     const child = spawn(request.executable, request.args, {
       cwd: request.cwd,
@@ -41,6 +77,8 @@ export const runCodexProcess: CodexProcess = async (request, signal) => {
       stderr = 0,
       overflow = false,
       output: Buffer[] = [],
+      errorSample = Buffer.alloc(0),
+      processFault: ExecutionFailure | undefined,
       termination: Promise<void> | undefined;
     const stop = () => {
       if (
@@ -81,42 +119,119 @@ export const runCodexProcess: CodexProcess = async (request, signal) => {
       total += bytes.length;
       if (total > request.stdoutBytes) {
         overflow = true;
+        processFault = { category: "stdout_limit" };
         output = [];
         stop();
       } else if (!overflow) output.push(bytes);
     });
     child.stderr.on("data", (bytes: Buffer) => {
       stderr += bytes.length;
+      errorSample = Buffer.concat([errorSample, bytes]).subarray(-65_536);
       if (stderr > (request.statusOnly ? 8192 : 1024 ** 2)) {
         overflow = true;
+        processFault = { category: "stderr_limit" };
         stop();
       } else if (request.statusOnly) output.push(bytes);
     });
-    child.stdin.on("error", () => stop());
-    child.once("error", () => {
-      signal.removeEventListener("abort", stop);
-      fail(new Error("codex_unavailable"));
+    child.stdin.on("error", (error) => {
+      processFault = classifyExecutionFailure(error, "stdin");
+      stop();
     });
-    child.once("close", async (code) => {
+    child.once("error", (error) => {
+      signal.removeEventListener("abort", stop);
+      processFault = classifyExecutionFailure(error, "spawn");
+      report({
+        outcome: "failed",
+        error: processFault,
+        stdoutBytes: total,
+        stderrBytes: stderr,
+      });
+      fail(new ExecutionError("codex_unavailable", processFault));
+    });
+    child.once("close", async (code, terminatedBy) => {
       signal.removeEventListener("abort", stop);
       await termination;
-      if ((code !== 0 && !request.statusOnly) || overflow || signal.aborted)
+      const text = Buffer.concat(output).toString("utf8");
+      const classified: ExecutionFailure =
+        code !== 0 || overflow || processFault
+          ? classifyExecutionFailure(
+              errorSample.toString("utf8") + "\n" + codexErrorText(text),
+              "process_exit",
+            )
+          : { category: "process_exit" };
+      const diagnostic = signal.aborted
+        ? ({
+            category:
+              signal.reason?.name === "TimeoutError" ? "timeout" : "canceled",
+          } as const)
+        : processFault &&
+            ["stdout_limit", "stderr_limit", "spawn"].includes(
+              processFault.category,
+            )
+          ? processFault
+          : classified.category !== "process_exit"
+            ? classified
+            : (processFault ?? classified);
+      const failed =
+        (code !== 0 && !request.statusOnly) || overflow || signal.aborted;
+      const terminationSignal =
+        executionTraceSchema.shape.signal.safeParse(terminatedBy);
+      report({
+        outcome: signal.aborted
+          ? "canceled"
+          : failed || code !== 0
+            ? "failed"
+            : "succeeded",
+        exitCode: code,
+        ...(terminatedBy
+          ? {
+              signal: terminationSignal.success
+                ? terminationSignal.data
+                : "other",
+            }
+          : {}),
+        stdoutBytes: total,
+        stderrBytes: stderr,
+        ...(failed || code !== 0 ? { error: diagnostic } : {}),
+      });
+      errorSample = Buffer.alloc(0);
+      if (failed)
         fail(
-          new Error(
+          new ExecutionError(
             signal.aborted
               ? "canceled"
-              : /usage.limit|rate.limit|quota|out.of.credits/iu.test(
-                    Buffer.concat(output).toString("utf8"),
-                  )
+              : diagnostic.category === "rate_limit"
                 ? "codex_limit"
                 : "codex_process_failed",
+            diagnostic,
           ),
         );
-      else done(Buffer.concat(output).toString("utf8"));
+      else done(text);
     });
     child.stdin.end(request.input, "utf8");
   });
 };
+function codexErrorText(events: string) {
+  const errors: string[] = [];
+  for (const line of events.split(/\r?\n/u)) {
+    try {
+      const event = JSON.parse(line);
+      const value =
+        event.type === "error"
+          ? JSON.stringify({ message: event.message, error: event.error })
+          : event.type === "turn.failed"
+            ? JSON.stringify(event.error)
+            : event.type === "item.completed" && event.item?.type === "error"
+              ? JSON.stringify(event.item)
+              : undefined;
+      if (typeof value === "string") errors.push(value.slice(0, 8192));
+    } catch {
+      /* Only structured error fields are classified. */
+    }
+    if (errors.length >= 8) break;
+  }
+  return errors.join("\n");
+}
 
 export async function findLocalCodex(
   environment: NodeJS.ProcessEnv = process.env,
@@ -173,6 +288,7 @@ export type CodexRequest = {
   prompt: string;
   schema: Record<string, unknown>;
   images?: readonly string[];
+  webSearch?: boolean;
 };
 export type CodexInference = (
   request: CodexRequest,
@@ -187,8 +303,8 @@ const disabled = [
   "multi_agent_v2",
   "browser_use",
   "view_image",
-  "code_mode",
-  "code_mode_host",
+  "plugins",
+  "image_generation",
   "skill_search",
   "skill_mcp_dependency_install",
   "memories",
@@ -212,22 +328,109 @@ export function createLocalCodexInference(options: {
   root: string;
   environment?: NodeJS.ProcessEnv;
   process?: CodexProcess;
+  observe?: (detail: ExecutionTrace) => void;
 }): CodexInference {
   const execute = options.process ?? runCodexProcess;
+  let version: Promise<string | undefined> | undefined;
   return async (request, caller) => {
-    const signal = AbortSignal.any([
-      caller,
-      AbortSignal.timeout(LOCAL_CODEX_POLICY.inferenceTimeoutMs),
-    ]);
-    if (
-      Buffer.byteLength(request.prompt) > LOCAL_CODEX_POLICY.inputBytes ||
-      (request.images?.length ?? 0) > LOCAL_CODEX_POLICY.frames
-    )
-      throw new Error("codex_input_invalid");
-    const directory = await mkdtemp(join(options.root, "codex-call-"));
+    const callId = randomUUID(),
+      started = performance.now();
+    let phase: ExecutionTrace["phase"] = "input";
+    const counts = {
+      total: 0,
+      searchesStarted: 0,
+      searchesCompleted: 0,
+      warnings: 0,
+      completed: false,
+    };
+    const report = (
+      outcome: ExecutionTrace["outcome"],
+      extra: Partial<ExecutionTrace> = {},
+    ) => {
+      try {
+        options.observe?.({
+          boundary: "codex",
+          phase,
+          outcome,
+          callId,
+          elapsedMs: Math.round(performance.now() - started),
+          searchEnabled: !!request.webSearch,
+          timeoutMs: LOCAL_CODEX_POLICY.inferenceTimeoutMs,
+          ...extra,
+        });
+      } catch {
+        /* Nonfatal sink. */
+      }
+    };
+    function reject(
+      category: ExecutionFailure["category"],
+      message = "codex_response_invalid",
+      error?: unknown,
+    ): never {
+      throw new ExecutionError(message, {
+        ...classifyExecutionFailure(error, category),
+        category,
+      });
+    }
+    const timeout = AbortSignal.timeout(LOCAL_CODEX_POLICY.inferenceTimeoutMs);
+    const signal = AbortSignal.any([caller, timeout]);
+    let directory: string | undefined;
+    async function cleanup() {
+      phase = "cleanup";
+      try {
+        if (directory) {
+          await removeCodexCall(options.root, directory);
+          report("succeeded");
+        } else report("omitted");
+      } catch (error) {
+        report("failed", {
+          error: classifyExecutionFailure(error, "filesystem"),
+        });
+        throw error;
+      }
+    }
     try {
+      if (
+        Buffer.byteLength(request.prompt) > LOCAL_CODEX_POLICY.inputBytes ||
+        (request.images?.length ?? 0) > LOCAL_CODEX_POLICY.frames
+      )
+        reject("input_limit", "codex_input_invalid");
+      directory = await mkdtemp(join(options.root, "codex-call-"));
       const env = codexEnvironment(directory, options.environment),
-        common = { executable: options.executable, cwd: directory, env };
+        common = {
+          executable: options.executable,
+          cwd: directory,
+          env,
+          callId,
+          searchEnabled: !!request.webSearch,
+          observe: options.observe,
+        };
+      phase = "preflight";
+      if (!options.process) {
+        version ??= execute(
+          {
+            ...common,
+            args: ["--version"],
+            input: "",
+            stdoutBytes: 256,
+            statusOnly: true,
+          },
+          signal,
+        )
+          .then((text) => /codex-cli\s+(\d+\.\d+\.\d+)/u.exec(text)?.[1])
+          .catch((error: unknown) => {
+            report("failed", {
+              cliCheck: "version",
+              error: classifyExecutionFailure(error),
+            });
+            return undefined;
+          });
+        const cliVersion = await version;
+        report(cliVersion ? "succeeded" : "warning", {
+          cliCheck: "version",
+          ...(cliVersion ? { cliVersion } : {}),
+        });
+      }
       const status = await execute(
         {
           ...common,
@@ -238,12 +441,23 @@ export function createLocalCodexInference(options: {
         },
         signal,
       );
-      if (!/^Logged in using ChatGPT\s*$/im.test(status))
-        throw new Error(
-          /API.key/iu.test(status)
+      const authKind = /^Logged in using ChatGPT\s*$/im.test(status)
+        ? "chatgpt"
+        : /API.key/iu.test(status)
+          ? "api-key"
+          : "missing";
+      report(authKind === "chatgpt" ? "succeeded" : "failed", {
+        authKind,
+        cliCheck: "login",
+      });
+      if (authKind !== "chatgpt")
+        reject(
+          authKind === "api-key" ? "subscription" : "authentication",
+          authKind === "api-key"
             ? "codex_subscription_required"
             : "codex_login_required",
         );
+      phase = "input";
       const schema = join(directory, "schema.json"),
         output = join(directory, "result.json");
       await writeFile(
@@ -279,7 +493,15 @@ export function createLocalCodexInference(options: {
         "-c",
         'model_providers.clipbuilder_subscription.wire_api="responses"',
         "-c",
-        'web_search="disabled"',
+        request.webSearch ? 'web_search="live"' : 'web_search="disabled"',
+        "-c",
+        `features.code_mode.enabled=${!!request.webSearch}`,
+        "-c",
+        `features.code_mode_host=${!!request.webSearch}`,
+        "-c",
+        'features.code_mode.excluded_tool_namespaces=["functions","image_gen","clock","collaboration"]',
+        "-c",
+        "agents.enabled=false",
         "-c",
         "mcp_servers={}",
         "-c",
@@ -295,6 +517,13 @@ export function createLocalCodexInference(options: {
         "--disable",
         "unbounded_connection_retries",
       ];
+      if (request.webSearch)
+        args.push(
+          "-c",
+          "model_providers.clipbuilder_subscription.supports_standalone_web_search=true",
+          "--disable",
+          "standalone_web_search",
+        );
       for (const feature of disabled) args.push("--disable", feature);
       for (const [index, encoded] of (request.images ?? []).entries()) {
         const bytes = Buffer.from(encoded, "base64");
@@ -310,6 +539,7 @@ export function createLocalCodexInference(options: {
         args.push("--image", image);
       }
       args.push("-");
+      phase = "process";
       const events = await execute(
         {
           ...common,
@@ -319,25 +549,88 @@ export function createLocalCodexInference(options: {
         },
         signal,
       );
+      phase = "events";
       let completed = false;
       for (const line of events.split(/\r?\n/u).filter(Boolean)) {
-        const event: unknown = JSON.parse(line);
+        counts.total++;
+        let event: unknown;
+        try {
+          event = JSON.parse(line);
+        } catch (error) {
+          reject("event_json", "codex_response_invalid", error);
+        }
         if (
           typeof event !== "object" ||
           event === null ||
           !("type" in event) ||
           typeof event.type !== "string"
         )
-          throw new Error("codex_response_invalid");
-        if (event.type === "turn.completed") completed = true;
-        if (event.type === "turn.failed" || event.type === "error")
-          throw new Error("codex_response_invalid");
+          reject("event_shape");
+        if (event.type === "turn.completed") {
+          completed = true;
+          counts.completed = true;
+        }
+        if (
+          ![
+            "thread.started",
+            "turn.started",
+            "turn.completed",
+            "turn.failed",
+            "error",
+            "item.started",
+            "item.updated",
+            "item.completed",
+          ].includes(event.type)
+        )
+          report("warning", {
+            error: {
+              category: "event_type",
+              identifierFingerprint: createHash("sha256")
+                .update(event.type)
+                .digest("hex"),
+              eventType: "other",
+            },
+          });
+        if (event.type === "turn.failed" || event.type === "error") {
+          const detail = classifyExecutionFailure(
+            codexErrorText(line),
+            event.type === "turn.failed" ? "turn_failed" : "error_event",
+          );
+          throw new ExecutionError("codex_response_invalid", {
+            ...detail,
+            eventType: event.type,
+          });
+        }
         if (
           event.type === "item.started" ||
           event.type === "item.updated" ||
           event.type === "item.completed"
         ) {
           const item = "item" in event ? event.item : null;
+          if (
+            request.webSearch &&
+            item &&
+            typeof item === "object" &&
+            "type" in item &&
+            item.type === "web_search"
+          ) {
+            if (event.type === "item.completed") counts.searchesCompleted++;
+            else if (event.type === "item.started") counts.searchesStarted++;
+          }
+          if (
+            item &&
+            typeof item === "object" &&
+            "type" in item &&
+            item.type === "error"
+          ) {
+            counts.warnings++;
+            report("warning", {
+              error: {
+                ...classifyExecutionFailure(codexErrorText(line)),
+                eventType: "item.error",
+              },
+            });
+          }
           // The CLI emits non-fatal configuration warnings as completed error
           // items. Fatal errors are top-level error/turn.failed events above.
           if (
@@ -346,13 +639,34 @@ export function createLocalCodexInference(options: {
             !("type" in item) ||
             typeof item.type !== "string" ||
             (!(event.type === "item.completed" && item.type === "error") &&
-              !["agent_message", "reasoning"].includes(item.type))
+              ![
+                "agent_message",
+                "reasoning",
+                ...(request.webSearch ? ["web_search"] : []),
+              ].includes(item.type))
           )
-            throw new Error("codex_response_invalid");
+            reject(
+              "item_type",
+              "codex_response_invalid",
+              new Error(
+                item && typeof item === "object" && "type" in item
+                  ? String(item.type)
+                  : "missing",
+              ),
+            );
         }
       }
-      if (!completed) throw new Error("codex_response_invalid");
+      report("succeeded", { events: counts });
+      if (!completed) reject("turn_missing");
+      if (request.webSearch && counts.searchesCompleted === 0)
+        reject(
+          counts.searchesStarted ? "search_incomplete" : "search_missing",
+          counts.searchesStarted
+            ? "image_search_incomplete"
+            : "image_search_not_attempted",
+        );
       signal.throwIfAborted();
+      phase = "output";
       const info = await lstat(output);
       if (
         !info.isFile() ||
@@ -360,10 +674,38 @@ export function createLocalCodexInference(options: {
         info.nlink !== 1 ||
         info.size > LOCAL_CODEX_POLICY.responseBytes
       )
-        throw new Error("codex_response_invalid");
-      return JSON.parse(await readFile(output, "utf8"));
+        reject(
+          info.size > LOCAL_CODEX_POLICY.responseBytes
+            ? "output_limit"
+            : "output_shape",
+        );
+      let result: unknown;
+      try {
+        result = JSON.parse(await readFile(output, "utf8"));
+      } catch (error) {
+        reject("output_json", "codex_response_invalid", error);
+      }
+      report("succeeded", { outputBytes: info.size, events: counts });
+      return result;
+    } catch (error) {
+      const detail = classifyExecutionFailure(
+        error,
+        phase === "output"
+          ? "output_missing"
+          : phase === "input"
+            ? "filesystem"
+            : "unknown",
+      );
+      report(signal.aborted ? "canceled" : "failed", {
+        error: detail,
+        events: counts,
+        ...(signal.aborted
+          ? { deadlineSource: caller.aborted ? "caller" : "inference" }
+          : {}),
+      });
+      throw error;
     } finally {
-      await removeCodexCall(options.root, directory);
+      await cleanup();
     }
   };
 }

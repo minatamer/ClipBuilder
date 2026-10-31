@@ -12,6 +12,8 @@ import {
   ownerAnalysisSchema,
   ownerCut,
   ownerWordsSchema,
+  ownerAiResultLimit,
+  type OwnerAiCount,
   type OwnerAnalysisInputs,
   type OwnerAiEvidence,
   type OwnerCut,
@@ -26,9 +28,19 @@ import type { OwnerAiMode } from "../../../packages/contracts/local/policy.ts";
 /** Domain ports only; explicit owner composition supplies synthetic or provider AI. */
 export type OwnerAnalysisPorts = {
   readonly mode: OwnerAiMode;
+  readonly transcriptionSpeakersPrepared?: boolean;
+  started?(
+    workspace: OwnerWorkspace,
+    work: { transcription: boolean; selection: boolean; speakers: boolean },
+  ): void;
   critique?(): void;
   transcribe(
     workspace: OwnerWorkspace,
+    signal: AbortSignal,
+  ): Promise<OwnerWord[]>;
+  transcribeCut?(
+    workspace: OwnerWorkspace,
+    cut: OwnerCut,
     signal: AbortSignal,
   ): Promise<OwnerWord[]>;
   select(
@@ -36,7 +48,7 @@ export type OwnerAnalysisPorts = {
     policy: OwnerAnalysisInputs["aiDuration"],
     signal: AbortSignal,
     instructions: string,
-    requestedCount?: number,
+    requestedCount?: OwnerAiCount,
     excludedCuts?: readonly OwnerCut[],
   ): Promise<OwnerAiEvidence[]>;
 };
@@ -47,6 +59,8 @@ export type OwnerTranscript = {
   sourceRevision: number;
   mode: OwnerAiMode;
   words: OwnerWord[];
+  cut?: OwnerCut | undefined;
+  speakersPrepared?: boolean | undefined;
 };
 
 export function ownerLocalCues(
@@ -128,6 +142,7 @@ export async function analyzeOwner(
   if (workspace.mode !== ports.mode) throw new Error("analysis_mode_mismatch");
   const inputs = ownerAnalysisRequestSchema.parse(value);
   const requestedCount = inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT;
+  const resultLimit = ownerAiResultLimit(requestedCount);
   if (inputs.sourceRevision !== workspace.revision)
     throw new Error("stale_source_revision");
   const cuts = inputs.ranges.map((range) =>
@@ -136,13 +151,54 @@ export async function analyzeOwner(
   signal.throwIfAborted();
   // Parsing freezes a private input snapshot before any asynchronous dispatch.
   const cached = reuse?.transcript;
+  // Only Codex supplies this port. A continuous window keeps anonymous speaker
+  // labels consistent across multiple manual ranges without scanning the source.
+  const manualWindow =
+    inputs.manualOnly && ports.transcribeCut && cuts.length
+      ? {
+          startFrame: Math.min(...cuts.map((cut) => cut.startFrame)),
+          endFrame: Math.max(...cuts.map((cut) => cut.endFrame)),
+        }
+      : undefined;
+  // Far-apart rows may exceed the existing native cut bound. Preserve the
+  // full-source path instead of broadening that contract or dropping rows.
+  const requestedCut =
+    manualWindow &&
+    manualWindow.endFrame - manualWindow.startFrame <=
+      (OWNER_LIMITS.clipMs * OWNER_FPS) / 1000
+      ? manualWindow
+      : undefined;
+  const emptyManual =
+    inputs.manualOnly && cuts.length === 0 && !!ports.transcribeCut;
   const reused =
+    !emptyManual &&
     cached !== undefined &&
     cached.fingerprint === workspace.source.fingerprint &&
     cached.sourceRevision === workspace.revision &&
-    cached.mode === workspace.mode;
+    cached.mode === workspace.mode &&
+    (!cached.cut ||
+      (!!requestedCut &&
+        cached.cut.startFrame <= requestedCut.startFrame &&
+        cached.cut.endFrame >= requestedCut.endFrame));
+  const transcriptCut = reused ? cached.cut : requestedCut;
+  const speakersPrepared = reused
+    ? (cached.speakersPrepared ?? true)
+    : requestedCut
+      ? true
+      : (ports.transcriptionSpeakersPrepared ?? true);
+  ports.started?.(workspace, {
+    transcription: !reused && !emptyManual,
+    selection: !inputs.manualOnly,
+    speakers: speakersPrepared,
+  });
   const words = ownerWordsSchema.parse(
-    reused ? cached.words : await ports.transcribe(workspace, signal),
+    emptyManual
+      ? []
+      : reused
+        ? cached.words
+        : requestedCut && ports.transcribeCut
+          ? await ports.transcribeCut(workspace, requestedCut, signal)
+          : await ports.transcribe(workspace, signal),
   );
   const ids = new Set<string>();
   let previousStart = -1;
@@ -157,12 +213,14 @@ export async function analyzeOwner(
     ids.add(word.id);
     previousStart = word.startMs;
   }
-  if (!reused)
+  if (!reused && !emptyManual)
     reuse?.completed({
       fingerprint: workspace.source.fingerprint,
       sourceRevision: workspace.revision,
       mode: workspace.mode,
       words: ownerWordsSchema.parse(words),
+      ...(transcriptCut ? { cut: transcriptCut } : {}),
+      ...(!speakersPrepared ? { speakersPrepared: false } : {}),
     });
   signal.throwIfAborted();
   if (reused) reuse?.reused?.();
@@ -177,6 +235,7 @@ export async function analyzeOwner(
     rangeIds: [],
     evidence: null,
     cues: ownerLocalCues(words, cut),
+    ...(!speakersPrepared ? { speakersPrepared: false } : {}),
   });
   const manual: OwnerMoment[] = [];
   for (const [index, range] of inputs.ranges.entries()) {
@@ -206,7 +265,7 @@ export async function analyzeOwner(
   if (selected) {
     const proposals = z
       .array(ownerAiEvidenceSchema)
-      .max(OWNER_LIMITS.ranges + requestedCount)
+      .max(OWNER_LIMITS.ranges + resultLimit)
       .parse(
         await ports.select(
           words,
@@ -292,7 +351,7 @@ export async function analyzeOwner(
         );
         cut = { startFrame, endFrame };
       }
-      if (suggestions.length >= requestedCount) break;
+      if (suggestions.length >= resultLimit) break;
       if (
         byCut.has(key(cut)) ||
         suggestions.some(
@@ -321,8 +380,13 @@ export async function analyzeOwner(
     mode: ports.mode,
     inputs,
     words,
+    ...(transcriptCut ? { transcriptCut } : {}),
+    ...(!speakersPrepared ? { transcriptSpeakersPrepared: false } : {}),
     manual,
     suggestions,
-    calls: { transcription: reused ? 0 : 1, selection: selected ? 1 : 0 },
+    calls: {
+      transcription: reused || emptyManual ? 0 : 1,
+      selection: selected ? 1 : 0,
+    },
   });
 }

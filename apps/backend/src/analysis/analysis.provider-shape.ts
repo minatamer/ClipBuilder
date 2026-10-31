@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  OWNER_ALL_AI_MOMENTS_LIMIT,
+  OWNER_LIMITS,
+} from "../../../../packages/contracts/local/policy.ts";
+import {
   clipCandidateSchema,
   candidateEvidenceSchema,
   candidateCaveatSchema,
@@ -8,9 +12,9 @@ import {
 } from "@clipbuilder/contracts";
 
 export const CANDIDATE_GENERATION_SCHEMA_POLICY = "json_only";
-// Owner selection can propose ten manual overlaps plus ten additional moments.
-// Public callers retain the four-candidate default below.
-const MAX_CANDIDATE_PROPOSALS = 20;
+// Public callers keep their default; local exhaustive discovery has a larger ceiling.
+const MAX_CANDIDATE_PROPOSALS =
+  OWNER_ALL_AI_MOMENTS_LIMIT + OWNER_LIMITS.ranges;
 export const candidateNormalizationDiagnosticSchema = z
   .object({
     inputShape: z.enum(["array", "envelope", "unsupported"]),

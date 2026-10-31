@@ -25,15 +25,16 @@ export async function normalizePicture(bytes: Buffer) {
   const image = sharp(bytes, {
     limitInputPixels: policy.maxInputPixels,
     animated: false,
-    failOn: "warning",
+    failOn: "error",
   });
   try {
     const metadata = await image.metadata();
     if (
-      !["jpeg", "png", "webp"].includes(metadata.format ?? "") ||
-      (metadata.pages ?? 1) !== 1
+      !["jpeg", "png", "webp", "gif", "heif", "avif"].includes(
+        metadata.format ?? "",
+      )
     )
-      throw new Error("contextual_picture_unavailable");
+      throw new Error("image_format_unsupported");
     const normalized = await image
       .rotate()
       .resize({
@@ -46,7 +47,7 @@ export async function normalizePicture(bytes: Buffer) {
       .jpeg({ quality: 72 })
       .toBuffer({ resolveWithObject: true });
     if (normalized.data.length > policy.maxRasterBytes)
-      throw new Error("contextual_picture_unavailable");
+      throw new Error("image_raster_limit");
     return {
       bytes: normalized.data,
       width: normalized.info.width,

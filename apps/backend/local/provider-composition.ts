@@ -8,6 +8,8 @@ import type { OwnerHostProviders } from "./server.ts";
 import type { WorkspaceFiles } from "./workspace-files.ts";
 import type { OwnerProviderReadiness } from "./provider-readiness.ts";
 import { createOwnerProviderAi } from "./provider-ai.ts";
+import { WebPictureSource } from "../src/assembly/web-pictures.js";
+import { geminiImageDiscovery } from "../src/assembly/gemini-image-search.js";
 
 type ProviderAiOptions = Parameters<typeof createOwnerProviderAi>[0];
 
@@ -19,6 +21,7 @@ export function composeOwnerProviders(
   injected?: {
     transport: GeminiTransport;
     pictures: Pick<GeminiPictureGenerator, "find">;
+    search?: ProviderAiOptions["search"];
   },
   diagnostics = new LocalDiagnostics(),
 ): OwnerHostProviders {
@@ -27,6 +30,18 @@ export function composeOwnerProviders(
     files,
     media,
     diagnostics,
+    search: injected
+      ? injected.search
+      : new WebPictureSource(
+          geminiImageDiscovery(
+            readiness.config.gemini.apiKey!,
+            readiness.config.gemini.model,
+          ),
+          (facts) => diagnostics.visual({ stage: "search", ...facts }),
+          undefined,
+          undefined,
+          (detail) => diagnostics.trace(detail),
+        ),
     transport:
       injected?.transport ??
       composeGeminiTransport(

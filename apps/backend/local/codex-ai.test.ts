@@ -21,7 +21,295 @@ const words = ["Coral", "reefs", "recover."].map((text, index) => ({
   confidence: null,
 }));
 const policy = { minMs: 10_000, maxMs: 30_000 };
-it("tries alternate depictions of the same subject within one deadline, reports safe outcomes and never falls back to Gemini", async () => {
+it("retains more than twenty Codex proposals for all-moments selection in one injected request", async () => {
+  const candidate = {
+    startWordId: words[0]!.id,
+    endWordId: words[2]!.id,
+    titleWordIds: [words[0]!.id],
+    hookWordIds: [words[0]!.id],
+    evidence: [],
+    caveats: [],
+  };
+  const infer = vi.fn<CodexInference>(async () => ({
+    candidates: Array.from({ length: 30 }, () => candidate),
+  }));
+  const media = vi.fn();
+  const ai = createLocalCodexAi({
+    files: new WorkspaceFiles("unused-synthetic"),
+    media,
+    infer,
+  });
+  try {
+    expect(
+      await ai.analysis!.select(
+        words,
+        policy,
+        AbortSignal.timeout(2000),
+        ownerSelectionPolicy(policy, "all"),
+        "all",
+      ),
+    ).toHaveLength(30);
+    expect(infer).toHaveBeenCalledTimes(1);
+    expect(infer.mock.calls[0]![0].prompt).toContain('"requestedCount":"all"');
+    expect(infer.mock.calls[0]![0].prompt).not.toContain("aiming for");
+    expect(media).not.toHaveBeenCalled();
+  } finally {
+    await ai.close!(AbortSignal.timeout(2000));
+  }
+});
+it("owns and aborts transcript-only visual planning on close and refuses another dispatch", async () => {
+  const infer = vi.fn<CodexInference>(
+    async (_request, signal) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener(
+          "abort",
+          () => reject(Error("synthetic_abort")),
+          { once: true },
+        );
+      }),
+  );
+  const ai = createLocalCodexAi({
+    files: new WorkspaceFiles("unused-synthetic"),
+    media: vi.fn(),
+    infer,
+  });
+  const workspace: OwnerWorkspace = {
+    id: crypto.randomUUID(),
+    revision: 0,
+    mode: "provider-ai",
+    source: {
+      fingerprint: "a".repeat(64),
+      bytes: 100,
+      durationMs: 10000,
+      width: 640,
+      height: 360,
+      fps: 30,
+    },
+  };
+  const moment: OwnerMoment = {
+    id: crypto.randomUUID(),
+    processingIdentity: "a".repeat(64),
+    cut: { startFrame: 0, endFrame: 90 },
+    cues: words,
+    rangeIds: [],
+    evidence: null,
+  };
+  const request = { workspace, clipId: crypto.randomUUID(), moment };
+  const operation = ai.clipPreparation!.planVisuals!(
+    request,
+    AbortSignal.timeout(5000),
+  );
+  const outcome = operation.then(
+    () => "completed",
+    () => "aborted",
+  );
+  await vi.waitFor(() => expect(infer).toHaveBeenCalledTimes(1));
+  await ai.close!(AbortSignal.timeout(1000));
+  expect(await outcome).toBe("aborted");
+  await expect(
+    ai.clipPreparation!.planVisuals!(request, AbortSignal.timeout(1000)),
+  ).rejects.toThrow("codex_unavailable");
+  expect(infer).toHaveBeenCalledTimes(1);
+});
+it("searches before generated fallback and keeps optional visual failures nonfatal", async () => {
+  const fixture = await retrievedPictureFixture();
+  const pictures = {
+    find: vi.fn().mockResolvedValueOnce(fixture.asset).mockResolvedValue(null),
+  };
+  const infer = vi.fn<CodexInference>(),
+    lines: string[] = [];
+  const ai = createLocalCodexAi({
+    files: new WorkspaceFiles("unused-synthetic"),
+    media: vi.fn(),
+    infer,
+    pictures,
+    diagnostics: new LocalDiagnostics((line) => lines.push(line)),
+  });
+  const request = {
+    clipId: crypto.randomUUID(),
+    words,
+    cue: {
+      startFrame: 0,
+      endFrame: 90,
+      evidenceWordIds: [],
+      brief: {
+        scene: "Synthetic coral",
+        searchQuery: "coral reef",
+        requiredTerms: ["coral"],
+        avoidTerms: [],
+      },
+      alternateBriefs: [
+        {
+          scene: "Synthetic coral",
+          searchQuery: "coral reef habitat",
+          requiredTerms: ["coral"],
+          avoidTerms: [],
+        },
+      ],
+      illustration: {
+        layout: "concept" as const,
+        heading: "Coral recovery",
+        items: [{ label: "Healthy coral", icon: "leaf" as const }],
+      },
+    },
+  };
+  try {
+    expect(
+      (await ai.clipPreparation!.image(request, new AbortController().signal))
+        ?.origin,
+    ).toBe("retrieved");
+    expect(pictures.find).toHaveBeenCalledTimes(1);
+    const generated = await ai.clipPreparation!.image(
+      request,
+      new AbortController().signal,
+    );
+    expect(generated?.origin).toBe("generated");
+    expect(generated?.bytes.subarray(1, 4).toString()).toBe("PNG");
+    expect(pictures.find).toHaveBeenCalledTimes(2);
+    expect(infer).not.toHaveBeenCalled();
+    const outcomes = lines
+      .map((line) => JSON.parse(line))
+      .filter((entry) => entry.visual)
+      .map((entry) => [entry.visual.stage, entry.visual.outcome]);
+    expect(outcomes).toEqual([
+      ["search", "found"],
+      ["search", "miss"],
+      ["fallback", "generated"],
+    ]);
+  } finally {
+    await ai.close!(new AbortController().signal);
+  }
+});
+it("defers speaker work until a chosen cut and preserves the existing transcript without inference", async () => {
+  const root = await mkdtemp(
+      join(tmpdir(), "clipbuilder-codex-deferred-speakers-"),
+    ),
+    files = new WorkspaceFiles(root);
+  vi.spyOn(files, "codexInput").mockResolvedValue(
+    join(root, "synthetic-artifact.json"),
+  );
+  const enriched = words.map((word) => ({ ...word, speakerId: "spk_0" }));
+  vi.spyOn(files, "readCodexInput")
+    .mockResolvedValueOnce({ kind: "speech", words })
+    .mockResolvedValueOnce({ kind: "speakers", words: enriched });
+  const media = vi.fn<Parameters<typeof createLocalCodexAi>[0]["media"]>(
+    async (job) => {
+      if (job.operation !== "codex-input")
+        throw Error("unexpected_synthetic_job");
+      return {
+        operation: "codex-input",
+        jobId: job.jobId,
+        kind: job.kind,
+        bytes: 100,
+        digest: "a".repeat(64),
+      };
+    },
+  );
+  const infer = vi.fn<CodexInference>(),
+    ai = createLocalCodexAi({ files, media, infer });
+  const workspace: OwnerWorkspace = {
+    id: crypto.randomUUID(),
+    revision: 0,
+    mode: "provider-ai",
+    source: {
+      fingerprint: "a".repeat(64),
+      bytes: 100,
+      durationMs: 60000,
+      width: 640,
+      height: 360,
+      fps: 30,
+    },
+  };
+  const moment: OwnerMoment = {
+    id: crypto.randomUUID(),
+    processingIdentity: "b".repeat(64),
+    cut: { startFrame: 0, endFrame: 300 },
+    rangeIds: [],
+    evidence: null,
+    cues: words,
+    speakersPrepared: false,
+  };
+  try {
+    await ai.analysis!.transcribe(workspace, new AbortController().signal);
+    const labeled = await ai.clipPreparation!.prepareWords!(
+      { workspace, clipId: crypto.randomUUID(), moment },
+      new AbortController().signal,
+    );
+    expect(labeled).toEqual(enriched);
+    expect(media.mock.calls.map(([job]) => job)).toMatchObject([
+      { kind: "speech", diarize: false },
+      { kind: "speakers", cut: moment.cut, words },
+    ]);
+    expect(media).toHaveBeenCalledTimes(2);
+    expect(infer).not.toHaveBeenCalled();
+  } finally {
+    await ai.close!(new AbortController().signal);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+it("sends only the selected speech cut and returns source-relative words without a Codex call", async () => {
+  const root = await mkdtemp(join(tmpdir(), "clipbuilder-codex-cut-test-"));
+  const files = new WorkspaceFiles(root);
+  vi.spyOn(files, "codexInput").mockResolvedValue(
+    join(root, "synthetic-artifact.json"),
+  );
+  vi.spyOn(files, "readCodexInput").mockResolvedValue({
+    kind: "speech",
+    words,
+  });
+  const media = vi.fn<Parameters<typeof createLocalCodexAi>[0]["media"]>(
+    async (job) => {
+      if (job.operation !== "codex-input")
+        throw Error("unexpected_synthetic_job");
+      return {
+        operation: "codex-input",
+        jobId: job.jobId,
+        kind: "speech",
+        bytes: 100,
+        digest: "a".repeat(64),
+      };
+    },
+  );
+  const infer = vi.fn<CodexInference>();
+  const ai = createLocalCodexAi({ files, media, infer });
+  const workspace: OwnerWorkspace = {
+    id: crypto.randomUUID(),
+    revision: 0,
+    mode: "provider-ai",
+    source: {
+      fingerprint: "a".repeat(64),
+      bytes: 100,
+      durationMs: 480000,
+      width: 640,
+      height: 360,
+      fps: 30,
+    },
+  };
+  try {
+    const value = await ai.analysis!.transcribeCut!(
+      workspace,
+      { startFrame: 3600, endFrame: 5400 },
+      new AbortController().signal,
+    );
+    expect(media).toHaveBeenCalledTimes(1);
+    expect(media.mock.calls[0]![0]).toMatchObject({
+      kind: "speech",
+      cut: { startFrame: 3600, endFrame: 5400 },
+    });
+    expect(value.map((word) => [word.id, word.startMs, word.endMs])).toEqual(
+      words.map((word) => [
+        word.id,
+        word.startMs + 120000,
+        word.endMs + 120000,
+      ]),
+    );
+    expect(infer).not.toHaveBeenCalled();
+  } finally {
+    await ai.close!(new AbortController().signal);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+it("forwards distinct same-subject alternatives in one search request and never falls back to Gemini", async () => {
   const fixture = await retrievedPictureFixture(),
     lines: string[] = [];
   const brief = (subject: string) => ({
@@ -31,11 +319,7 @@ it("tries alternate depictions of the same subject within one deadline, reports 
     avoidTerms: [],
   });
   const pictures = {
-    find: vi
-      .fn()
-      .mockResolvedValueOnce(null)
-      .mockRejectedValueOnce(Error("synthetic-private-query-failure"))
-      .mockResolvedValueOnce(fixture.asset),
+    find: vi.fn().mockResolvedValueOnce(fixture.asset),
   };
   const ai = createLocalCodexAi({
     files: new WorkspaceFiles("unused-synthetic"),
@@ -68,34 +352,18 @@ it("tries alternate depictions of the same subject within one deadline, reports 
       },
       new AbortController().signal,
     );
-    expect(result?.bytes).toEqual(fixture.bytes);
-    expect(pictures.find).toHaveBeenCalledTimes(3);
-    expect(
-      pictures.find.mock.calls.map(
-        ([request]) => request.brief.requiredTerms[0],
-      ),
-    ).toEqual(["coral reef", "coral reef", "coral reef"]);
-    expect(
-      pictures.find.mock.calls.map(([request]) => request.brief.searchQuery),
-    ).toEqual([
-      "coral reef restoration photograph",
-      "coral reef underwater illustration",
-      "coral reef",
-    ]);
-    expect(
-      pictures.find.mock.calls.every(
-        ([request]) => request.brief.scene === "Synthetic coral reef",
-      ),
-    ).toBe(true);
-    expect(
-      new Set(pictures.find.mock.calls.map(([, signal]) => signal)).size,
-    ).toBe(1);
-    const reasons = lines
-      .map((line) => JSON.parse(line))
-      .filter((row) => row.event === "local_diagnostic")
-      .map((row) => row.error?.reason);
-    expect(reasons).toContain("visual_lookup_no_match");
-    expect(reasons).toContain("visual_lookup_failed");
+    expect(result?.bytes.equals(fixture.bytes)).toBe(true);
+    expect(pictures.find).toHaveBeenCalledTimes(1);
+    expect(pictures.find.mock.calls[0]![0]).toMatchObject({
+      brief: { searchQuery: "coral reef restoration photograph" },
+      alternateBriefs: [
+        {
+          searchQuery: "coral reef underwater illustration",
+          requiredTerms: ["coral reef"],
+        },
+        { searchQuery: "coral reef", requiredTerms: ["coral reef"] },
+      ],
+    });
     expect(lines.join("")).not.toContain("synthetic-private-query-failure");
   } finally {
     await ai.close?.(new AbortController().signal);
@@ -153,7 +421,7 @@ it("deduplicates searches and discards a result returned after its overall deadl
     await ai.close?.(new AbortController().signal);
   }
 });
-it("keeps lookup optional, bounded to one attempt, and legacy saved diagrams independent of lookup", async () => {
+it("keeps lookup optional and searches before rendering a retained illustration", async () => {
   const pictures = {
     find: vi
       .fn()
@@ -201,7 +469,7 @@ it("keeps lookup optional, bounded to one attempt, and legacy saved diagrams ind
     );
     expect(legacy?.origin).toBe("generated");
     expect(legacy?.bytes.subarray(1, 4).toString()).toBe("PNG");
-    expect(pictures.find).toHaveBeenCalledTimes(2);
+    expect(pictures.find).toHaveBeenCalledTimes(3);
   } finally {
     await ai.close?.(AbortSignal.timeout(2000));
   }
@@ -237,7 +505,7 @@ it("verifies retrieved-image digests and cancels lookup before exposing bytes", 
   try {
     await expect(
       ai.clipPreparation!.image(request, AbortSignal.timeout(2000)),
-    ).rejects.toThrow("owner_picture_digest_rejected");
+    ).resolves.toBeNull();
     const controller = new AbortController();
     pictures.find.mockImplementationOnce(async () => {
       controller.abort();
@@ -425,7 +693,10 @@ it.each(["audio", "invented", "visual-opening"])(
       expect(request.prompt).toContain(
         "MUST preserve the primary scene's meaning",
       );
-      expect(JSON.stringify(request.schema)).not.toContain('"illustration"');
+      expect(JSON.stringify(request.schema)).toContain('"illustration"');
+      expect(request.prompt).toContain(
+        "SEARCH FIRST, GENERATED FALLBACK SECOND",
+      );
       expect(request.prompt).not.toContain("speakerId must be null");
       expect(JSON.stringify(request.schema)).toContain('"texts"');
       expect(request.prompt).toContain(
@@ -516,7 +787,7 @@ it.each(["audio", "invented", "visual-opening"])(
         AbortSignal.timeout(2000),
       );
       expect(plan).toHaveLength(1);
-      expect(plan[0]).not.toHaveProperty("illustration");
+      expect(plan[0]).toHaveProperty("illustration");
       expect(ai.clipPreparation!.texts!(request)).toMatchObject([
         {
           text: "POV: Coral reefs get a second chance",

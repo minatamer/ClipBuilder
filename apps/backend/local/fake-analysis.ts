@@ -3,6 +3,7 @@ import {
   OWNER_LIMITS,
 } from "../../../packages/contracts/local/index.ts";
 import { OWNER_DEFAULT_AI_COUNT } from "../../../packages/contracts/local/policy.ts";
+import { ownerAiResultLimit } from "../../../packages/contracts/local/selection.ts";
 import { normalizeCandidateSelection } from "../src/analysis/analysis.provider-shape.ts";
 import type { OwnerAnalysisPorts } from "./analysis.ts";
 import { ownerAvailableWindows } from "./selection-windows.ts";
@@ -90,7 +91,10 @@ export const fakeOwnerAnalysis: OwnerAnalysisPorts = {
         cursor + minimum <= window.endFrame;
         cursor += duration
       ) {
-        if (candidates.length >= OWNER_LIMITS.ranges + requestedCount)
+        if (
+          candidates.length >=
+          OWNER_LIMITS.ranges + ownerAiResultLimit(requestedCount)
+        )
           return candidates;
         const endFrame = Math.min(cursor + duration, window.endFrame);
         const start = words.findIndex(

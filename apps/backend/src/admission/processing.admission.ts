@@ -31,6 +31,7 @@ type ActionRecord = {
 type GrantRecord = {
   grant: ProcessingGrant;
   imageCalls: number;
+  imageSearchCalls: number;
   actions: Record<ProcessingAction, ActionRecord>;
 };
 export type AdmissionPolicy = {
@@ -188,6 +189,7 @@ export class ProcessingAdmission {
     this.records.set(grant.sessionId, {
       grant,
       imageCalls: 0,
+      imageSearchCalls: 0,
       actions: {
         transcription: actions.transcription!,
         "candidate-analysis": actions["candidate-analysis"]!,
@@ -334,7 +336,10 @@ export class ProcessingAdmission {
     }
   }
 
-  reserveImageCall(context: AdmissionContext): void {
+  reserveImageCall(
+    context: AdmissionContext,
+    purpose: "generate" | "search" = "generate",
+  ): void {
     const record = this.current(context),
       action = record.actions["visual-plan"];
     if (
@@ -345,12 +350,14 @@ export class ProcessingAdmission {
     )
       this.reject("FEATURE_DISABLED");
     if (
-      record.imageCalls >= ASSEMBLY_LIMITS.maxGeneratedImageCalls ||
+      (purpose === "search" ? record.imageSearchCalls : record.imageCalls) >=
+        ASSEMBLY_LIMITS.maxGeneratedImageCalls ||
       this.dispatches >= this.policy.maxDispatches
     )
       this.reject("PROVIDER_BUDGET_EXHAUSTED");
     // A failed/uncertain provider attempt is consumed before its first await.
-    record.imageCalls++;
+    if (purpose === "search") record.imageSearchCalls++;
+    else record.imageCalls++;
     this.dispatches++;
   }
 

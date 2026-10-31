@@ -12,7 +12,8 @@ import {
 } from "./gemini.adapter.js";
 import { composeSelectedPlanProvider } from "../assembly/gemini-selected-plan.js";
 import { SelectedAssembly } from "../assembly/selected-assembly.usecase.js";
-import { CommonsPictureSource } from "../assembly/commons-pictures.js";
+import { WebPictureSource } from "../assembly/web-pictures.js";
+import { geminiImageDiscovery } from "../assembly/gemini-image-search.js";
 import { composeGeminiPictureGenerator } from "../assembly/gemini-pictures.js";
 import { PreviewPlayback } from "../media/preview-playback.js";
 import { FinalRender } from "../render/final-render.usecase.js";
@@ -67,11 +68,12 @@ export function composeAnalysis(
         planner,
         "google-gemini",
         diagnostics,
-        new CommonsPictureSource(
-          undefined,
-          undefined,
-          (error) => diagnostics.critique("assembly_pictures", error),
-          (facts) => diagnostics.assembly("assembly_pictures", facts),
+        new WebPictureSource(
+          geminiImageDiscovery(config.gemini.apiKey!, config.gemini.model),
+          (facts) =>
+            diagnostics.assembly("assembly_pictures", {
+              pictureCandidates: facts.candidates,
+            }),
         ),
         composeGeminiPictureGenerator(config, diagnostics),
       )

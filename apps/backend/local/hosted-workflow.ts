@@ -398,11 +398,29 @@ export function createHostedEditingWorkflow(options: Options) {
                 ? {
                     clipPreparation: {
                       ...ports.clipPreparation,
+                      ...(ports.clipPreparation.planVisuals
+                        ? {
+                            planVisuals: async (
+                              ...args: Parameters<
+                                NonNullable<
+                                  typeof ports.clipPreparation.planVisuals
+                                >
+                              >
+                            ) => {
+                              await charge();
+                              return ports.clipPreparation!.planVisuals!(
+                                ...args,
+                              );
+                            },
+                          }
+                        : {}),
                       async plan(...args) {
                         await charge();
                         return ports.clipPreparation!.plan(...args);
                       },
                       async image(...args) {
+                        await charge();
+                        // Reserve the bounded search + possible generation pair.
                         await charge();
                         return ports.clipPreparation!.image(...args);
                       },

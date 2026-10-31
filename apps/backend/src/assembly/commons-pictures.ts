@@ -11,6 +11,7 @@ import { pictureRelevance } from "./picture-relevance.js";
 import { boundedPictureBody, normalizePicture } from "./picture-raster.js";
 
 export interface ContextualPictureSource {
+  readonly providerSearch?: true;
   find(
     request: ContextualPictureRequest,
     signal: AbortSignal,
@@ -22,9 +23,9 @@ const infoSchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
   extmetadata: z.object({
-    LicenseShortName: z.object({ value: z.string() }),
-    Copyrighted: z.object({ value: z.string() }).optional(),
-    AttributionRequired: z.object({ value: z.string() }).optional(),
+    LicenseShortName: z.object({ value: z.unknown() }).optional(),
+    Copyrighted: z.object({ value: z.unknown() }).optional(),
+    AttributionRequired: z.object({ value: z.unknown() }).optional(),
     ImageDescription: z.object({ value: z.string().max(16000) }).optional(),
     Categories: z.object({ value: z.string().max(16000) }).optional(),
   }),
@@ -45,7 +46,22 @@ export class CommonsPictureSource implements ContextualPictureSource {
       relevanceRejected: number;
       rightsRejected: number;
     }) => void,
+    private readonly options: {
+      licenseFilter?: "cc0-public-domain" | "none";
+      maxCandidates?: number;
+      maxDownloads?: number;
+      timeoutMs?: number;
+      metadataBytes?: number;
+      observed?: (facts: { candidates: number; downloads: number }) => void;
+    } = {},
   ) {}
+  private observed(facts: { candidates: number; downloads: number }) {
+    try {
+      this.options.observed?.(facts);
+    } catch {
+      /* Observation cannot drop a usable image. */
+    }
+  }
   async find(request: ContextualPictureRequest, signal: AbortSignal) {
     const brief = contextualPictureBriefSchema.safeParse(request.brief);
     if (!brief.success) return null;
@@ -54,8 +70,18 @@ export class CommonsPictureSource implements ContextualPictureSource {
     const query = brief.data.searchQuery;
     const deadline = AbortSignal.any([
       signal,
-      AbortSignal.timeout(policy.timeoutMs),
+      AbortSignal.timeout(
+        Math.min(20_000, this.options.timeoutMs ?? policy.timeoutMs),
+      ),
     ]);
+    const maxCandidates = Math.max(
+      1,
+      Math.min(20, this.options.maxCandidates ?? policy.maxCandidates),
+    );
+    const maxDownloads = Math.max(
+      1,
+      Math.min(3, this.options.maxDownloads ?? 1),
+    );
     const url = new URL("https://commons.wikimedia.org/w/api.php");
     url.search = new URLSearchParams({
       action: "query",
@@ -63,7 +89,7 @@ export class CommonsPictureSource implements ContextualPictureSource {
       generator: "search",
       gsrsearch: `${query} filetype:bitmap`,
       gsrnamespace: "6",
-      gsrlimit: String(policy.maxCandidates),
+      gsrlimit: String(maxCandidates),
       prop: "imageinfo",
       iiprop: "url|mime|size|extmetadata",
       iiurlwidth: String(policy.width),
@@ -86,9 +112,15 @@ export class CommonsPictureSource implements ContextualPictureSource {
       });
       if (!response.ok) throw new Error("contextual_picture_unavailable");
       const decoded: unknown = JSON.parse(
-        (await boundedPictureBody(response, policy.maxMetadataBytes)).toString(
-          "utf8",
-        ),
+        (
+          await boundedPictureBody(
+            response,
+            Math.min(
+              512 * 1024,
+              this.options.metadataBytes ?? policy.maxMetadataBytes,
+            ),
+          )
+        ).toString("utf8"),
       );
       if (
         z.object({ batchcomplete: z.string() }).strict().safeParse(decoded)
@@ -112,13 +144,13 @@ export class CommonsPictureSource implements ContextualPictureSource {
       }
       const candidates: {
         page: z.infer<typeof pageSchema>;
-        license: "CC0" | "public-domain";
+        license: string;
         url: URL;
         score: number;
       }[] = [];
       const pages = Object.values(parsed.data.query.pages).slice(
         0,
-        policy.maxCandidates,
+        maxCandidates,
       );
       let rejected = 0,
         rightsRejected = 0;
@@ -131,13 +163,22 @@ export class CommonsPictureSource implements ContextualPictureSource {
         const info = page.data.imageinfo[0]!,
           metadata = info.extmetadata;
         const license =
-          metadata.LicenseShortName.value === "CC0"
-            ? ("CC0" as const)
-            : metadata.LicenseShortName.value === "Public domain" &&
-                metadata.Copyrighted?.value.toLowerCase() === "false" &&
-                metadata.AttributionRequired?.value.toLowerCase() === "false"
-              ? ("public-domain" as const)
-              : null;
+          this.options.licenseFilter === "none"
+            ? typeof metadata.LicenseShortName?.value === "string"
+              ? metadata.LicenseShortName.value
+                  .replace(/[\p{Cc}]/gu, " ")
+                  .trim()
+                  .slice(0, 120) || "unknown"
+              : "unknown"
+            : metadata.LicenseShortName?.value === "CC0"
+              ? ("CC0" as const)
+              : metadata.LicenseShortName?.value === "Public domain" &&
+                  typeof metadata.Copyrighted?.value === "string" &&
+                  metadata.Copyrighted.value.toLowerCase() === "false" &&
+                  typeof metadata.AttributionRequired?.value === "string" &&
+                  metadata.AttributionRequired.value.toLowerCase() === "false"
+                ? ("public-domain" as const)
+                : null;
         if (!license) {
           rightsRejected++;
           continue;
@@ -185,18 +226,21 @@ export class CommonsPictureSource implements ContextualPictureSource {
         relevanceRejected: rejected,
         rightsRejected,
       });
-      const best = candidates.sort(
-        (a, b) => b.score - a.score || a.page.pageid - b.page.pageid,
-      )[0];
-      if (best) {
-        // At most one raster download per subject. No retry or browser hotlink.
-        const imageResponse = await this.request(best.url, {
-          signal: deadline,
-          redirect: "error",
-          credentials: "omit",
-          headers: { ...headers, Accept: "image/jpeg,image/png,image/webp" },
-        });
+      const ranked = candidates
+        .sort((a, b) => b.score - a.score || a.page.pageid - b.page.pageid)
+        .slice(0, maxDownloads);
+      let downloads = 0;
+      for (const best of ranked) {
+        deadline.throwIfAborted();
+        downloads++;
+        let imageResponse: Response | undefined;
         try {
+          imageResponse = await this.request(best.url, {
+            signal: deadline,
+            redirect: "error",
+            credentials: "omit",
+            headers: { ...headers, Accept: "image/jpeg,image/png,image/webp" },
+          });
           if (
             !imageResponse.ok ||
             !/^(?:image\/jpeg|image\/png|image\/webp)(?:;|$)/iu.test(
@@ -208,6 +252,7 @@ export class CommonsPictureSource implements ContextualPictureSource {
             await boundedPictureBody(imageResponse, policy.maxDownloadBytes),
           );
           deadline.throwIfAborted();
+          this.observed({ candidates: pages.length, downloads });
           return commonsPictureAssetSchema.parse({
             repository: "wikimedia-commons",
             license: best.license,
@@ -218,10 +263,16 @@ export class CommonsPictureSource implements ContextualPictureSource {
             sha256: createHash("sha256").update(normalized.bytes).digest("hex"),
             dataUri: `data:image/jpeg;base64,${normalized.bytes.toString("base64")}`,
           });
+        } catch (error) {
+          signal.throwIfAborted();
+          if (maxDownloads === 1 || deadline.aborted)
+            throw new Error("contextual_picture_unavailable");
+          this.critique?.(error);
         } finally {
-          await imageResponse.body?.cancel().catch(() => undefined);
+          await imageResponse?.body?.cancel().catch(() => undefined);
         }
       }
+      this.observed({ candidates: pages.length, downloads });
       return null;
     } catch (error) {
       this.critique?.(error);

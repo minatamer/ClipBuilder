@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { classifyExecutionFailure } from "../src/diagnostics/execution-failure.ts";
 import {
   ownerPresentationFrames,
   decodeOwnerHookSuggestion,
@@ -49,6 +50,8 @@ import {
   OWNER_AUDIO_LIMITS,
   ownerAudioDuration,
   ownerAudioAssetSchema,
+  resolveOwnerAudioCues,
+  type OwnerAudioCue,
 } from "../../../packages/contracts/local/audio.ts";
 import {
   ownerAnalysisSchema,
@@ -87,6 +90,15 @@ import {
 export { ownerClipPlanSchema } from "../../../packages/contracts/local/clips.ts";
 export type OwnerClipPorts = {
   readonly mode: OwnerAiMode;
+  planVisuals?: OwnerClipPorts["plan"];
+  prepareWords?(
+    request: {
+      workspace: OwnerWorkspace;
+      clipId: string;
+      moment: OwnerMoment;
+    },
+    signal: AbortSignal,
+  ): Promise<OwnerWord[]>;
   focus?(request: {
     workspace: OwnerWorkspace;
     clipId: string;
@@ -141,6 +153,29 @@ type Work = { clip: OwnerClip } & (
 const working = (clip: OwnerClip) =>
   ["queued", "preparing", "rendering", "canceling"].includes(clip.state);
 
+function visualStartSound(
+  visual: { id: string; startFrame: number },
+  frames: number,
+): OwnerAudioCue {
+  return {
+    id: randomUUID(),
+    visualId: visual.id,
+    source: { kind: "builtin", id: "pop" },
+    placement: "clip",
+    startFrame: visual.startFrame,
+    endFrame: Math.min(
+      frames,
+      visual.startFrame +
+        Math.round(
+          ownerAudioDuration({ kind: "builtin", id: "pop" }, []) * OWNER_FPS,
+        ),
+    ),
+    offsetFrame: 0,
+    volume: 35,
+    loop: false,
+  };
+}
+
 /** An ephemeral, workspace-owned ordered work list; one native/provider job globally. */
 export class OwnerClipBatch {
   private readonly clips = new Map<string, OwnerClip>();
@@ -156,6 +191,7 @@ export class OwnerClipBatch {
   private readonly failedCaptionAttempts = new Set<string>();
   private captionProcessing = false;
   private audioProcessing = false;
+  private visualProcessing = false;
   constructor(
     private readonly workspace: OwnerWorkspace,
     private readonly files: WorkspaceFiles,
@@ -173,6 +209,7 @@ export class OwnerClipBatch {
       this.queue.length > 0 ||
       Boolean(this.current) ||
       this.captionProcessing ||
+      this.visualProcessing ||
       this.audioProcessing
     );
   }
@@ -189,6 +226,8 @@ export class OwnerClipBatch {
     const restored = ownerClipListSchema.shape.clips.parse(value);
     const ids = new Set<string>();
     for (const clip of restored) {
+      if (clip.visualDiscovery?.outcome === "pending")
+        clip.visualDiscovery.outcome = "failed";
       if (ids.has(clip.id)) throw new Error("duplicate_clip");
       ids.add(clip.id);
       if (
@@ -383,6 +422,216 @@ export class OwnerClipBatch {
       } finally {
         this.captionProcessing = false;
         this.changed();
+      }
+    });
+  }
+  async findVisuals(id: string, value: unknown, signal: AbortSignal) {
+    const request = ownerClipRenderRequestSchema.parse(value);
+    return this.serialize(async () => {
+      const clip = this.clips.get(id);
+      const receipt =
+        clip?.visualOperations?.find(
+          (value) => value.operationId === request.operationId,
+        ) ??
+        (clip?.visualDiscovery?.operationId === request.operationId
+          ? clip.visualDiscovery
+          : undefined);
+      if (receipt) {
+        if (receipt.requestHash !== digest(request))
+          throw new Error("operation_conflict");
+        return this.snapshot();
+      }
+      if (
+        this.closing ||
+        this.active ||
+        !clip?.base ||
+        !clip.baseHash ||
+        !["ready", "review-ready", "validated-revision"].includes(clip.state) ||
+        !this.ports.planVisuals ||
+        this.workspace.mode !== this.ports.mode ||
+        clip.mode !== this.ports.mode
+      )
+        throw new Error("clip_unavailable");
+      if (clip.revision !== request.expectedRevision)
+        throw new Error("stale_edit_revision");
+      const remaining = OWNER_PICTURE_LIMITS.assetsPerClip - clip.assets.length;
+      const prior =
+        clip.edit ?? automaticOwnerEdit(clip.base, clip.id, clip.baseHash);
+      const retainedVisuals = prior.visuals.filter(
+        (visual) =>
+          clip.assets.find((asset) => asset.id === visual.assetId)?.origin ===
+          "owner-supplied",
+      );
+      const available = Math.min(
+        remaining,
+        OWNER_PICTURE_LIMITS.cuesPerClip - retainedVisuals.length,
+      );
+      if (
+        !available ||
+        (clip.visualAttempts ?? 0) >= OWNER_BATCH_POLICY.visualDiscoveryAttempts
+      )
+        throw new Error("visual_discovery_limit");
+      signal.throwIfAborted();
+      clip.visualAttempts = (clip.visualAttempts ?? 0) + 1;
+      clip.visualDiscovery = {
+        operationId: request.operationId,
+        requestHash: digest(request),
+        outcome: "pending",
+      };
+      (clip.visualOperations ??= []).push({
+        operationId: request.operationId,
+        requestHash: digest(request),
+      });
+      this.visualProcessing = true;
+      this.changed();
+      const created: {
+        path: string;
+        asset: z.infer<typeof ownerAssetSchema>;
+        visual: OwnerOverlay["visuals"][number];
+      }[] = [];
+      let committed = false;
+      try {
+        const frames = clip.base.overlay.frames;
+        const moment: OwnerMoment = {
+          id: clip.momentId,
+          processingIdentity: clip.base.processingIdentity,
+          cut: clip.base.cut,
+          cues: clip.base.words,
+          rangeIds: [],
+          evidence: null,
+          speakersPrepared: true,
+        };
+        clip.calls.plan++;
+        const plan = timePlannedVisuals(
+          ownerClipPlanSchema.parse(
+            await this.ports.planVisuals(
+              {
+                workspace: structuredClone(this.workspace),
+                clipId: clip.id,
+                moment: structuredClone(moment),
+              },
+              signal,
+            ),
+          ),
+          frames,
+        ).slice(0, available);
+        signal.throwIfAborted();
+        this.ports.resume?.({
+          workspaceId: this.workspace.id,
+          clipId: clip.id,
+          words: moment.cues,
+          frames,
+          plan,
+        });
+        for (const cue of plan) {
+          signal.throwIfAborted();
+          clip.calls.image++;
+          try {
+            const picture = await this.ports.image(
+              { clipId: clip.id, cue, words: moment.cues },
+              signal,
+            );
+            signal.throwIfAborted();
+            if (!picture) continue;
+            const stored = await this.storeVisual(
+              picture,
+              cue,
+              frames,
+              clip.edit?.focus ?? clip.base.overlay.focus,
+              signal,
+            );
+            const existing = (clip.edit?.visuals ?? []).filter(
+              (visual) =>
+                clip.assets.find((asset) => asset.id === visual.assetId)
+                  ?.origin !== "owner-supplied",
+            );
+            stored.visual.id = existing[created.length]?.id ?? stored.visual.id;
+            created.push(stored);
+          } catch (error) {
+            this.diagnostics.trace({
+              boundary: "visual",
+              phase: "storage",
+              outcome: signal.aborted ? "canceled" : "failed",
+              elapsedMs: 0,
+              error: classifyExecutionFailure(error),
+            });
+            signal.throwIfAborted();
+            this.diagnostics.visual({
+              stage: "fallback",
+              outcome: "omitted",
+              reason: "decode_failed",
+            });
+          }
+        }
+        signal.throwIfAborted();
+        if (created.length) {
+          // Preserve owner pictures and their edits; replace the previous AI set
+          // only after fresh assets have been obtained. Keep old assets/exports.
+          const visuals = [
+            ...retainedVisuals,
+            ...created.map(({ visual }) => {
+              const { digest: _digest, origin: _origin, ...edit } = visual;
+              void _digest;
+              void _origin;
+              return edit;
+            }),
+          ].slice(0, OWNER_PICTURE_LIMITS.cuesPerClip);
+          const audio = prior.audio ?? clip.base.overlay.audio;
+          const cues = resolveOwnerAudioCues(
+            audio?.cues ?? [],
+            visuals,
+            frames,
+          );
+          const missing = created.filter(
+            ({ visual }) => !cues.some((cue) => cue.visualId === visual.id),
+          );
+          const edit = ownerEditDocumentSchema.parse({
+            ...prior,
+            revision: clip.revision + 1,
+            visuals,
+            audio: {
+              originalVolume: audio?.originalVolume ?? 100,
+              cues: [
+                ...cues,
+                ...missing
+                  .slice(0, Math.max(0, OWNER_AUDIO_LIMITS.cues - cues.length))
+                  .map(({ visual }) => visualStartSound(visual, frames)),
+              ],
+            },
+          });
+          const assets = [...clip.assets, ...created.map((item) => item.asset)];
+          compileOwnerOverlay(clip.base, edit, assets, clip.audioAssets);
+          clip.assets = assets;
+          clip.edit = edit;
+          clip.revision = edit.revision;
+          clip.state = "validated-revision";
+          committed = true;
+        }
+        clip.visualDiscovery.outcome = created.length ? "found" : "miss";
+        this.diagnostics.trace({
+          boundary: "visual",
+          phase: "complete",
+          outcome: created.length ? "succeeded" : "miss",
+          elapsedMs: 0,
+          received: plan.length,
+          retained: created.length,
+          dropped: plan.length - created.length,
+        });
+        this.visualProcessing = false;
+        return this.snapshot();
+      } catch (error) {
+        clip.visualDiscovery.outcome = "failed";
+        throw error;
+      } finally {
+        try {
+          if (!committed)
+            await Promise.all(
+              created.map((item) => rm(item.path, { force: true })),
+            );
+        } finally {
+          this.visualProcessing = false;
+          this.changed();
+        }
       }
     });
   }
@@ -745,6 +994,65 @@ export class OwnerClipBatch {
       this.start();
     });
   }
+  private async storeVisual(
+    picture: NonNullable<Awaited<ReturnType<OwnerClipPorts["image"]>>>,
+    cue: z.infer<typeof ownerClipPlanSchema>[number],
+    frames: number,
+    focus: OwnerFocus | undefined,
+    signal: AbortSignal,
+  ) {
+    const storageStarted = performance.now();
+    if (
+      this.ports.mode === "synthetic-ai"
+        ? picture.origin !== "synthetic"
+        : !["generated", "retrieved"].includes(picture.origin)
+    )
+      throw new Error("invalid_picture_provenance");
+    if (picture.bytes.length > CONTEXTUAL_PICTURE_POLICY.maxDownloadBytes)
+      throw new Error("picture_capacity");
+    const raster = await normalizePicture(picture.bytes);
+    signal.throwIfAborted();
+    const asset = ownerAssetSchema.parse({
+      id: randomUUID(),
+      digest: createHash("sha256").update(raster.bytes).digest("hex"),
+      width: raster.width,
+      height: raster.height,
+      bytes: raster.bytes.length,
+      origin: picture.origin,
+    });
+    const path = await this.files.asset(this.workspace.id, asset.id);
+    const clock = ownerVisualClock(cue, frames);
+    const visual: OwnerOverlay["visuals"][number] = {
+      id: randomUUID(),
+      assetId: asset.id,
+      digest: asset.digest,
+      ...clock,
+      box: placeOwnerPlannedVisual(focus, clock),
+      fit: "contain" as const,
+      ...OWNER_VISUAL_DEFAULT_MOTION,
+      origin: picture.origin,
+    };
+    try {
+      await writeFile(path, raster.bytes, { flag: "wx", mode: 0o600 });
+      signal.throwIfAborted();
+      this.diagnostics.trace({
+        boundary: "visual",
+        phase: "storage",
+        outcome: "succeeded",
+        elapsedMs: Math.round(performance.now() - storageStarted),
+        width: asset.width,
+        height: asset.height,
+        outputBytes: asset.bytes,
+        ...(asset.origin === "generated" || asset.origin === "retrieved"
+          ? { origin: asset.origin }
+          : {}),
+      });
+      return { path, asset, visual };
+    } catch (error) {
+      await rm(path, { force: true });
+      throw error;
+    }
+  }
   private async prepare(
     clip: OwnerClip,
     moment: OwnerMoment,
@@ -758,6 +1066,27 @@ export class OwnerClipBatch {
       pictures: [],
     });
     if (preparation.plan === null) {
+      // A completed partial checkpoint owns the refined words on retry/restore.
+      if (preparation.moment.speakersPrepared === true) {
+        moment = structuredClone(preparation.moment);
+      } else if (moment.speakersPrepared === false && this.ports.prepareWords) {
+        clip.preparationStage = "speakers";
+        this.changed();
+        const words = ownerWordsSchema.parse(
+          await this.ports.prepareWords(
+            {
+              workspace: structuredClone(this.workspace),
+              clipId: clip.id,
+              moment: structuredClone(moment),
+            },
+            signal,
+          ),
+        );
+        signal.throwIfAborted();
+        moment = { ...moment, cues: words, speakersPrepared: true };
+        preparation.moment = structuredClone(moment);
+        this.changed();
+      }
       clip.preparationStage = "planning";
       this.changed();
       clip.calls.plan++;
@@ -826,58 +1155,49 @@ export class OwnerClipBatch {
       clip.calls.image++;
       clip.preparationStage = "pictures";
       this.changed();
-      const picture = await this.ports.image(
-        {
-          clipId: clip.id,
-          cue: structuredClone(cue),
-          words: structuredClone(moment.cues),
-        },
-        signal,
-      );
-      signal.throwIfAborted();
-      if (!picture) {
+      let stored:
+        Awaited<ReturnType<OwnerClipBatch["storeVisual"]>> | undefined;
+      try {
+        const picture = await this.ports.image(
+          {
+            clipId: clip.id,
+            cue: structuredClone(cue),
+            words: structuredClone(moment.cues),
+          },
+          signal,
+        );
+        signal.throwIfAborted();
+        if (picture)
+          stored = await this.storeVisual(
+            picture,
+            cue,
+            frames,
+            preparation.focus,
+            signal,
+          );
+      } catch (error) {
+        this.diagnostics.trace({
+          boundary: "visual",
+          phase: "storage",
+          outcome: signal.aborted ? "canceled" : "failed",
+          elapsedMs: 0,
+          error: classifyExecutionFailure(error),
+        });
+        signal.throwIfAborted();
+        this.diagnostics.visual({
+          stage: "fallback",
+          outcome: "omitted",
+          reason: "asset_unavailable",
+        });
+      }
+      if (!stored) {
         this.diagnostics.critique("image_generate", "gemini_output_unusable");
         preparation.pictures.push({ index, visual: null });
         this.changed();
         continue;
       }
-      if (
-        this.ports.mode === "synthetic-ai"
-          ? picture.origin !== "synthetic"
-          : picture.origin !== "generated" && picture.origin !== "retrieved"
-      )
-        throw new Error("invalid_picture_provenance");
-      if (picture.bytes.length > CONTEXTUAL_PICTURE_POLICY.maxDownloadBytes)
-        throw new Error("picture_capacity");
-      const raster = await normalizePicture(picture.bytes);
-      signal.throwIfAborted();
-      const asset = ownerAssetSchema.parse({
-        id: randomUUID(),
-        digest: createHash("sha256").update(raster.bytes).digest("hex"),
-        width: raster.width,
-        height: raster.height,
-        bytes: raster.bytes.length,
-        origin: picture.origin,
-      });
-      await writeFile(
-        await this.files.asset(this.workspace.id, asset.id),
-        raster.bytes,
-        { flag: "wx", mode: 0o600 },
-      );
-      clip.assets.push(asset);
-      const visual = {
-        id: randomUUID(),
-        assetId: asset.id,
-        digest: asset.digest,
-        ...ownerVisualClock(cue, frames),
-        box: placeOwnerPlannedVisual(
-          preparation.focus,
-          ownerVisualClock(cue, frames),
-        ),
-        fit: "contain" as const,
-        ...OWNER_VISUAL_DEFAULT_MOTION,
-        origin: picture.origin,
-      };
+      clip.assets.push(stored.asset);
+      const visual = stored.visual;
       visuals.push(visual);
       preparation.pictures.push({ index, visual });
       this.changed();
@@ -925,24 +1245,7 @@ export class OwnerClipBatch {
               audio: {
                 originalVolume: 100,
                 assets: [],
-                cues: visuals.map((visual) => ({
-                  id: randomUUID(),
-                  visualId: visual.id,
-                  source: { kind: "builtin", id: "pop" },
-                  placement: "clip",
-                  startFrame: visual.startFrame,
-                  endFrame: Math.min(
-                    frames,
-                    visual.startFrame +
-                      Math.round(
-                        ownerAudioDuration({ kind: "builtin", id: "pop" }, []) *
-                          OWNER_FPS,
-                      ),
-                  ),
-                  offsetFrame: 0,
-                  volume: 35,
-                  loop: false,
-                })),
+                cues: visuals.map((visual) => visualStartSound(visual, frames)),
               },
             }
           : {}),

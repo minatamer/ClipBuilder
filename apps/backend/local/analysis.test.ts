@@ -55,6 +55,245 @@ const ports = () => ({
   select: vi.fn(fakeOwnerAnalysis.select),
 });
 const signal = () => new AbortController().signal;
+it("finds all moments beyond twenty, restores the choice and reuses full-source words on explicit count changes", async () => {
+  const current = workspace(900_000),
+    provider = ports();
+  const request = { ...input(10_000, 30_000), ranges: [] };
+  const checkpoint = {
+    transcript: undefined as OwnerTranscript | undefined,
+    completed(value: OwnerTranscript) {
+      this.transcript = value;
+    },
+  };
+  const numbered = await analyzeOwner(
+    current,
+    request,
+    provider,
+    signal(),
+    checkpoint,
+  );
+  expect(numbered.suggestions).toHaveLength(2);
+  const result = await analyzeOwner(
+    current,
+    { ...request, aiCount: "all" },
+    provider,
+    signal(),
+    checkpoint,
+  );
+  expect(result.suggestions).toHaveLength(30);
+  expect(result.suggestions.at(-1)!.cut.endFrame).toBe(27_000);
+  expect(result.calls).toEqual({ transcription: 0, selection: 1 });
+  expect(provider.transcribe).toHaveBeenCalledTimes(1);
+  expect(provider.select).toHaveBeenCalledTimes(2);
+  expect(provider.select.mock.calls[1]?.[4]).toBe("all");
+  expect(provider.select.mock.calls[1]?.[3]).toContain(
+    "without a target count",
+  );
+  expect(provider.select.mock.calls[1]?.[3]).not.toContain("aiming for");
+  const restored = ownerAnalysisSchema.parse(
+    JSON.parse(JSON.stringify(result)),
+  );
+  expect(restored.inputs.aiCount).toBe("all");
+  expect(restored.suggestions).toEqual(result.suggestions);
+  expect(
+    ownerAnalysisSchema.safeParse({
+      ...restored,
+      inputs: { ...restored.inputs, aiCount: 10 },
+    }).success,
+  ).toBe(false);
+  expect(
+    ownerAnalysisSchema.safeParse({
+      ...restored,
+      suggestions: Array.from({ length: 361 }, () => result.suggestions[0]),
+    }).success,
+  ).toBe(false);
+});
+it("accepts empty all-moments output without retry and cancels before dispatch", async () => {
+  const provider = ports();
+  provider.select.mockResolvedValue([]);
+  const request = { ...input(), ranges: [], aiCount: "all" as const };
+  const result = await analyzeOwner(workspace(), request, provider, signal());
+  expect(result.suggestions).toEqual([]);
+  expect(result.calls).toEqual({ transcription: 1, selection: 1 });
+  const controller = new AbortController();
+  controller.abort();
+  await expect(
+    analyzeOwner(workspace(), request, provider, controller.signal),
+  ).rejects.toThrow();
+  expect(provider.transcribe).toHaveBeenCalledTimes(1);
+  expect(provider.select).toHaveBeenCalledTimes(1);
+});
+it("preserves deferred-speaker provenance through cache/serialized analysis without retranscribing discovery", async () => {
+  const current = workspace(),
+    provider = { ...ports(), transcriptionSpeakersPrepared: false };
+  const checkpoint = {
+    transcript: undefined as OwnerTranscript | undefined,
+    completed(value: OwnerTranscript) {
+      this.transcript = value;
+    },
+  };
+  const first = await analyzeOwner(
+    current,
+    input(),
+    provider,
+    signal(),
+    checkpoint,
+  );
+  expect(first.transcriptSpeakersPrepared).toBe(false);
+  expect(
+    [...first.manual, ...first.suggestions].every(
+      (moment) => moment.speakersPrepared === false,
+    ),
+  ).toBe(true);
+  const restored = ownerAnalysisSchema.parse(JSON.parse(JSON.stringify(first)));
+  checkpoint.transcript = {
+    fingerprint: current.source.fingerprint,
+    sourceRevision: 0,
+    mode: provider.mode,
+    words: restored.words,
+    speakersPrepared: restored.transcriptSpeakersPrepared,
+  };
+  const reused = await analyzeOwner(
+    current,
+    input(),
+    provider,
+    signal(),
+    checkpoint,
+  );
+  expect(reused.calls.transcription).toBe(0);
+  expect(reused.transcriptSpeakersPrepared).toBe(false);
+  expect(provider.transcribe).toHaveBeenCalledTimes(1);
+});
+
+it("scopes Codex manual transcription, preserves coverage across serialization and never reuses partial words for AI", async () => {
+  const current = workspace(480_000),
+    provider = {
+      ...ports(),
+      transcribeCut: vi.fn<NonNullable<OwnerAnalysisPorts["transcribeCut"]>>(
+        async (_workspace, cut) => [
+          {
+            id: "w_000001",
+            text: "Synthetic",
+            punctuatedText: "Synthetic",
+            startMs: (cut.startFrame * 1000) / 30,
+            endMs: (cut.startFrame * 1000) / 30 + 500,
+            speakerId: null,
+            confidence: null,
+          },
+        ],
+      ),
+    };
+  const request = {
+    ...input(),
+    ranges: [range(120_000, 180_000)],
+    manualOnly: true,
+  };
+  const checkpoint = {
+    transcript: undefined as OwnerTranscript | undefined,
+    completed(value: OwnerTranscript) {
+      this.transcript = value;
+    },
+  };
+  const result = await analyzeOwner(
+    current,
+    request,
+    provider,
+    signal(),
+    checkpoint,
+  );
+  expect(provider.transcribeCut).toHaveBeenCalledExactlyOnceWith(
+    current,
+    { startFrame: 3600, endFrame: 5400 },
+    expect.any(AbortSignal),
+  );
+  expect(provider.transcribe).not.toHaveBeenCalled();
+  expect(provider.select).not.toHaveBeenCalled();
+  expect(result.manual[0]!.cues[0]!.startMs).toBe(0);
+  expect(result.words[0]!.startMs).toBe(120_000);
+  const restored = ownerAnalysisSchema.parse(
+    JSON.parse(JSON.stringify(result)),
+  );
+  checkpoint.transcript = {
+    fingerprint: current.source.fingerprint,
+    sourceRevision: current.revision,
+    mode: provider.mode,
+    words: restored.words,
+    cut: restored.transcriptCut,
+  };
+  expect(
+    (await analyzeOwner(current, request, provider, signal(), checkpoint)).calls
+      .transcription,
+  ).toBe(0);
+  await analyzeOwner(
+    current,
+    { ...request, manualOnly: false },
+    provider,
+    signal(),
+    checkpoint,
+  );
+  expect(provider.transcribe).toHaveBeenCalledTimes(1);
+  expect(provider.transcribeCut).toHaveBeenCalledTimes(1);
+  await analyzeOwner(
+    current,
+    { ...request, ranges: [range(300_000, 360_000)] },
+    provider,
+    signal(),
+    checkpoint,
+  );
+  // The full-source result now covers every manual window.
+  expect(provider.transcribeCut).toHaveBeenCalledTimes(1);
+});
+
+it("uses one continuous manual window, invalidates uncovered partial cache and skips empty manual input", async () => {
+  const current = workspace(480_000),
+    provider = {
+      ...ports(),
+      transcribeCut: vi.fn<NonNullable<OwnerAnalysisPorts["transcribeCut"]>>(
+        async () => [],
+      ),
+    };
+  const checkpoint = {
+    transcript: undefined as OwnerTranscript | undefined,
+    completed(value: OwnerTranscript) {
+      this.transcript = value;
+    },
+  };
+  const request = {
+    ...input(),
+    ranges: [range(10_000, 20_000), range(25_000, 35_000)],
+    manualOnly: true,
+  };
+  await analyzeOwner(current, request, provider, signal(), checkpoint);
+  expect(provider.transcribeCut.mock.calls[0]![1]).toEqual({
+    startFrame: 300,
+    endFrame: 1050,
+  });
+  await analyzeOwner(
+    current,
+    { ...request, ranges: [range(100_000, 110_000)] },
+    provider,
+    signal(),
+    checkpoint,
+  );
+  expect(provider.transcribeCut).toHaveBeenCalledTimes(2);
+  const empty = await analyzeOwner(
+    current,
+    { ...request, ranges: [] },
+    provider,
+    signal(),
+    checkpoint,
+  );
+  expect(empty.calls).toEqual({ transcription: 0, selection: 0 });
+  expect(empty.words).toEqual([]);
+  expect(provider.transcribeCut).toHaveBeenCalledTimes(2);
+  await analyzeOwner(
+    current,
+    { ...request, ranges: [range(0, 10000), range(400000, 410000)] },
+    provider,
+    signal(),
+  );
+  expect(provider.transcribe).toHaveBeenCalledTimes(1);
+});
 
 describe("source transcription reuse", () => {
   function checkpoint() {

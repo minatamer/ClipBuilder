@@ -62,8 +62,10 @@ import { LocalDiagnostics } from "./diagnostics.ts";
 import type { ClipCaptionTranscription } from "./clip-caption-port.ts";
 import { fakeOwnerCaptionWords } from "./fake-analysis.ts";
 import { limitHostedDemoInputs } from "../../../packages/contracts/local/hosted-editing.ts";
+import type { CodexProgress } from "../../../packages/contracts/local/codex-progress.ts";
 
 export type OwnerHostProviders = {
+  codexProgress?: (workspaceId: string) => CodexProgress | null;
   localAi?: {
     aiProvider: "codex";
     aiSetup: "ready" | "speech-missing" | "codex-missing" | "disabled";
@@ -73,7 +75,15 @@ export type OwnerHostProviders = {
   analysis?: OwnerAnalysisPorts;
   clipPreparation?: Pick<
     OwnerClipPorts,
-    "mode" | "plan" | "image" | "resume" | "focus" | "hookSuggestion" | "texts"
+    | "mode"
+    | "prepareWords"
+    | "plan"
+    | "planVisuals"
+    | "image"
+    | "resume"
+    | "focus"
+    | "hookSuggestion"
+    | "texts"
   >;
   close?: (signal: AbortSignal) => Promise<void>;
   cleanupWorkspace?: (id: string, signal: AbortSignal) => Promise<void>;
@@ -105,7 +115,10 @@ export type OwnerHostOptions = {
   acquisition?: OwnerAcquisitionPort;
   shutdown?: () => void;
   analysis?: OwnerAnalysisPorts;
-  clipPreparation?: Pick<OwnerClipPorts, "mode" | "plan" | "image" | "focus">;
+  clipPreparation?: Pick<
+    OwnerClipPorts,
+    "mode" | "plan" | "planVisuals" | "image" | "focus"
+  >;
   providers?: (files: WorkspaceFiles) => OwnerHostProviders;
   media: (
     job: OwnerMediaJob,
@@ -126,6 +139,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       analysis && clipPreparation && analysis.mode === clipPreparation.mode,
     ),
     captionGeneration: Boolean(providers?.captionTranscription),
+    visualDiscovery: Boolean(clipPreparation?.planVisuals),
     ...(options.hosted
       ? { execution: "hosted", localMedia: false, cloud: true }
       : {
@@ -314,6 +328,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
           sourceRevision: loaded.analysis.inputs.sourceRevision,
           mode: loaded.analysis.mode,
           words: loaded.analysis.words,
+          speakersPrepared: loaded.analysis.transcriptSpeakersPrepared ?? true,
+          ...(loaded.analysis.transcriptCut
+            ? { cut: loaded.analysis.transcriptCut }
+            : {}),
         });
       }
       expires.set(workspace.id, Date.now() + OWNER_LIMITS.workspaceMs);
@@ -367,6 +385,11 @@ export function createOwnerHost(options: OwnerHostOptions) {
             sourceRevision: loaded.analysis.inputs.sourceRevision,
             mode: loaded.analysis.mode,
             words: loaded.analysis.words,
+            speakersPrepared:
+              loaded.analysis.transcriptSpeakersPrepared ?? true,
+            ...(loaded.analysis.transcriptCut
+              ? { cut: loaded.analysis.transcriptCut }
+              : {}),
           });
         }
         expires.set(workspace.id, Date.now() + OWNER_LIMITS.workspaceMs);
@@ -877,7 +900,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           ? req.url?.replace("/api/agent/workspace/", "/api/workspace/")
           : req.url
       )?.match(
-        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|clips|assets|audio-assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|picture|audio|youtube-audio|validate|captions|fake-captions)(?:\/(\d+))?)?)?)?$/,
+        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|codex-progress|clips|assets|audio-assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|picture|visuals|audio|youtube-audio|validate|captions|fake-captions)(?:\/(\d+))?)?)?)?$/,
       );
       if (
         agent &&
@@ -1002,6 +1025,35 @@ export function createOwnerHost(options: OwnerHostOptions) {
           } finally {
             busy.delete(workspace.id);
           }
+        }
+        if (
+          req.method === "POST" &&
+          batch &&
+          route[3] &&
+          route[4] === "visuals"
+        ) {
+          if (!clipPreparation?.planVisuals) {
+            res.writeHead(503).end();
+            return;
+          }
+          if (busy.has(workspace.id) || batch.active) {
+            res.writeHead(409).end();
+            return;
+          }
+          busy.add(workspace.id);
+          try {
+            const result = await batch.findVisuals(
+              route[3],
+              await readOwnerJson(req),
+              controller.signal,
+            );
+            res
+              .writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify(clipReply(result)));
+          } finally {
+            busy.delete(workspace.id);
+          }
+          return;
         }
         if (req.method === "POST" && batch && route[3] && route[4] === "edit") {
           if (busy.has(workspace.id)) {
@@ -1368,6 +1420,20 @@ export function createOwnerHost(options: OwnerHostOptions) {
         );
         return;
       }
+      if (
+        req.method === "GET" &&
+        route?.[2] === "codex-progress" &&
+        !options.hosted &&
+        providers?.codexProgress
+      ) {
+        res
+          .writeHead(200, {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          })
+          .end(JSON.stringify(providers.codexProgress(workspace.id)));
+        return;
+      }
       if (req.method === "GET" && route?.[2] === "analysis") {
         res
           .writeHead(200, { "Content-Type": "application/json" })
@@ -1388,6 +1454,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
           const parsedInputs = ownerAnalysisRequestSchema.parse(
             await readOwnerJson(req),
           );
+          if (options.hosted && parsedInputs.aiCount === "all") {
+            res.writeHead(400).end();
+            return;
+          }
           const inputs =
             options.clipLimit === 3
               ? limitHostedDemoInputs(parsedInputs)
