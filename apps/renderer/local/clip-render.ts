@@ -237,7 +237,8 @@ export async function renderOwnerClip(
         ]),
         ...mix.inputs,
         "-filter_complex",
-        `${sourceGraph}${mix.graph ? `;${mix.graph}` : ""};${artGraph};[source][art]overlay=0:0:shortest=1:format=auto:ts_sync_mode=default,format=yuv420p[v]`,
+        // Keep framesync's default implicit: packaged FFmpeg 5.1 lacks ts_sync_mode.
+        `${sourceGraph}${mix.graph ? `;${mix.graph}` : ""};${artGraph};[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`,
         "-filter_complex_threads",
         "2",
         "-filter_threads",
