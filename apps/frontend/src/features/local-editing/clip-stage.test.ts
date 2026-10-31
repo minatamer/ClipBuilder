@@ -8,6 +8,9 @@ import { syntheticTextClip } from "../../../../../test/owner-text-fixture.ts";
 it("uses actual preparation phases only while preparing and preserves legacy/default caption identity", () => {
   expect(clipStageLabel({ state: "preparing" })).toBe("Preparing clip");
   expect(
+    clipStageLabel({ state: "preparing", preparationStage: "speakers" }),
+  ).toBe("Preparing speakers");
+  expect(
     clipStageLabel({ state: "preparing", preparationStage: "planning" }),
   ).toBe("Planning edits");
   expect(

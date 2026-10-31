@@ -1,0 +1,52 @@
+.steps {
+  display: grid;
+  gap: var(--cb-space-3);
+  width: min(100%, 21rem);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  text-align: left;
+  color: var(--cb-ink-soft);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: var(--cb-space-3);
+  min-width: 0;
+}
+.steps svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+.steps li[data-state="done"] svg,
+.steps li[data-state="running"] svg {
+  color: var(--cb-blue-light);
+}
+.steps li[data-state="pending"] {
+  opacity: 0.55;
+}
+.steps li[data-state="running"] {
+  color: var(--cb-ink);
+}
+.time {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.spinner {
+  animation: spin 1.2s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

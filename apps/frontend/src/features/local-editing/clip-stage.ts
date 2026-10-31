@@ -6,6 +6,7 @@ export function clipStageLabel(
 ): string {
   if (clip.state === "preparing" && clip.preparationStage)
     return {
+      speakers: "Preparing speakers",
       planning: "Planning edits",
       pictures: "Adding pictures",
       captions: "Adding captions",

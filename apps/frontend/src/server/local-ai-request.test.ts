@@ -36,11 +36,17 @@ async function transportFor(listener: RequestListener) {
   };
   return transport;
 }
-it("admits only local analysis and caption POST paths", () => {
+it("admits only local analysis, caption and visual discovery POST paths", () => {
   expect(localAiRequestPath("POST", path)).toBe(true);
   expect(
     localAiRequestPath("POST", ["workspace", id, "clips", id, "captions"]),
   ).toBe(true);
+  expect(
+    localAiRequestPath("POST", ["workspace", id, "clips", id, "visuals"]),
+  ).toBe(true);
+  expect(
+    localAiRequestPath("GET", ["workspace", id, "clips", id, "visuals"]),
+  ).toBe(false);
   for (const candidate of [
     ["workspace", "../", "analysis"],
     ["workspace", id, "source"],

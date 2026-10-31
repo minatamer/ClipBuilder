@@ -1,5 +1,5 @@
 import { Button } from "../../shared/ui/button";
-import { Play, Trash2, Clock3 } from "lucide-react";
+import { Play, Trash2, Clock3, Sparkles } from "lucide-react";
 import { ProcessingState } from "../../shared/ui/processing-state";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -30,6 +30,7 @@ import {
   limitHostedDemoInputs,
 } from "../../../../../packages/contracts/local/hosted-editing.ts";
 import { DemoLimitToast } from "./demo-limit-toast.tsx";
+import { CodexPreparationSteps } from "./codex-preparation-steps.tsx";
 
 const SELECTION_TABS = ["add", "clips"] as const;
 type SelectionTab = (typeof SELECTION_TABS)[number];
@@ -78,6 +79,8 @@ export function OwnerSelectionPanel({
       ? HOSTED_DEMO_POLICY.clips
       : null;
   const clipLimit = demoLimit ?? OWNER_LIMITS.clips;
+  const local = capabilities.localMedia;
+  const [findAll, setFindAll] = useState(false);
   const [limitNotice, setLimitNotice] = useState(0);
   const analysisAvailable =
     capabilities.aiMode !== "unavailable" &&
@@ -159,7 +162,14 @@ export function OwnerSelectionPanel({
           setMinimum(String(restored.inputs.aiDuration.minMs / 1000));
           setMaximum(String(restored.inputs.aiDuration.maxMs / 1000));
           setManualOnly(restored.inputs.manualOnly);
-          setCount(String(restored.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT));
+          setFindAll(local && restored.inputs.aiCount === "all");
+          setCount(
+            String(
+              typeof restored.inputs.aiCount === "number"
+                ? restored.inputs.aiCount
+                : OWNER_DEFAULT_AI_COUNT,
+            ),
+          );
           setPolicyRevision(restored.inputs.policyRevision);
           acceptAnalysis(restored);
           setMessage("");
@@ -179,7 +189,7 @@ export function OwnerSelectionPanel({
       controller.abort();
       pending.current?.abort();
     };
-  }, [workspace.id, onBusy, acceptAnalysis]);
+  }, [workspace.id, onBusy, acceptAnalysis, local]);
   function changed() {
     setPolicyRevision((value) => value + 1);
     setAnalysis(null);
@@ -224,7 +234,7 @@ export function OwnerSelectionPanel({
         maxMs: Number(maximum) * 1000,
       },
       manualOnly,
-      aiCount: Number(count),
+      aiCount: local && findAll ? "all" : Number(count),
     });
     return demoLimit ? limitHostedDemoInputs(inputs) : inputs;
   }
@@ -309,6 +319,7 @@ export function OwnerSelectionPanel({
         root.current?.scrollIntoView({ block: "start", behavior: "smooth" });
         setMessage(
           !result.inputs.manualOnly &&
+            result.inputs.aiCount !== "all" &&
             result.suggestions.length <
               (result.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT)
             ? `${result.suggestions.length} of ${result.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT} suggestions found.`
@@ -472,7 +483,16 @@ export function OwnerSelectionPanel({
                 ? "Preparing moments"
                 : "Finding moments"
           }
-        />
+        >
+          {analyzing &&
+            "aiProvider" in capabilities &&
+            capabilities.aiProvider === "codex" && (
+              <CodexPreparationSteps
+                key={workspace.id}
+                workspaceId={workspace.id}
+              />
+            )}
+        </ProcessingState>
       )}
       <div
         id={`${tabsId}-add-panel`}
@@ -599,33 +619,49 @@ export function OwnerSelectionPanel({
           </label>
           {!manualOnly && (
             <>
-              <label>
-                Clips
-                <input
-                  type="number"
-                  min="1"
-                  max={
-                    demoLimit
-                      ? Math.max(1, demoLimit - rows.length)
-                      : OWNER_LIMITS.suggestions
-                  }
-                  step="1"
-                  value={count}
-                  disabled={manualOnly}
-                  onChange={(event) => {
-                    changed();
-                    const value = event.currentTarget.value;
-                    if (
-                      demoLimit &&
-                      value !== "" &&
-                      Number(value) > demoLimit - rows.length
-                    ) {
-                      setCount(String(Math.max(1, demoLimit - rows.length)));
-                      setLimitNotice((current) => current + 1);
-                    } else setCount(value);
-                  }}
-                />
-              </label>
+              <div className="duration-row">
+                <label>
+                  Clips
+                  <input
+                    type="number"
+                    min="1"
+                    max={
+                      demoLimit
+                        ? Math.max(1, demoLimit - rows.length)
+                        : OWNER_LIMITS.suggestions
+                    }
+                    step="1"
+                    value={count}
+                    disabled={manualOnly || (local && findAll)}
+                    onChange={(event) => {
+                      changed();
+                      const value = event.currentTarget.value;
+                      if (
+                        demoLimit &&
+                        value !== "" &&
+                        Number(value) > demoLimit - rows.length
+                      ) {
+                        setCount(String(Math.max(1, demoLimit - rows.length)));
+                        setLimitNotice((current) => current + 1);
+                      } else setCount(value);
+                    }}
+                  />
+                </label>
+                {local && (
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      checked={findAll}
+                      onChange={(event) => {
+                        changed();
+                        setFindAll(event.target.checked);
+                      }}
+                    />
+                    <Sparkles size={16} aria-hidden="true" />
+                    Find all
+                  </label>
+                )}
+              </div>
               <div className="duration-row">
                 <label>
                   Min (s)
@@ -671,7 +707,11 @@ export function OwnerSelectionPanel({
               onClick={() => void findMoments()}
               aria-busy={analyzing}
             >
-              {manualOnly ? "Use clips" : "Find moments"}
+              {manualOnly
+                ? "Use clips"
+                : local && findAll
+                  ? "Find all moments"
+                  : "Find moments"}
             </Button>
           )}
           {analyzing && (

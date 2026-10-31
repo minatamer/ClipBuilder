@@ -28,6 +28,7 @@ import { HOSTED_DEMO_POLICY } from "../../../../../packages/contracts/local/host
 import { DemoLimitToast } from "./demo-limit-toast.tsx";
 import { LoaderCircle } from "lucide-react";
 import { pollClipConnection, type ClipConnection } from "./clip-connection.ts";
+import { CodexPreparationSteps } from "./codex-preparation-steps.tsx";
 
 const initial: OwnerClipList = { clips: [], active: false, workers: 1 };
 // Keep aligned with the clip-strip media query in style.css, including large tablets.
@@ -481,7 +482,18 @@ export function OwnerClipBatchPanel({
               <ProcessingState
                 className="clip-preparing"
                 label={clipStageLabel(current)}
-              />
+              >
+                {current.state === "preparing" &&
+                  "aiProvider" in capabilities &&
+                  capabilities.aiProvider === "codex" && (
+                    <CodexPreparationSteps
+                      key={current.id}
+                      workspaceId={workspace.id}
+                      clipId={current.id}
+                      preparationStage={current.preparationStage}
+                    />
+                  )}
+              </ProcessingState>
             )}
             {editable && !showProcessing && (
               <ClipEditor
@@ -494,6 +506,7 @@ export function OwnerClipBatchPanel({
                 footerTarget={footerTarget}
                 actionsVisible={!showProcessing}
                 captionGeneration={capabilities.captionGeneration ?? false}
+                visualDiscovery={capabilities.visualDiscovery ?? false}
                 captionProvider={
                   "captionProvider" in capabilities
                     ? capabilities.captionProvider

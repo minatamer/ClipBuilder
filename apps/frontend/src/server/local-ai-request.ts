@@ -14,7 +14,7 @@ export function localAiRequestPath(
 ) {
   return (
     method === "POST" &&
-    /^workspace\/[a-f0-9-]{36}\/(?:analysis|clips\/[a-f0-9-]{36}\/captions)$/u.test(
+    /^workspace\/[a-f0-9-]{36}\/(?:analysis|clips\/[a-f0-9-]{36}\/(?:captions|visuals))$/u.test(
       segments.join("/"),
     )
   );

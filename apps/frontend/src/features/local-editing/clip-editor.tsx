@@ -7,6 +7,7 @@ import {
   Magnet,
   RotateCw,
   ScanFace,
+  Sparkles,
   SlidersHorizontal,
   Type,
   Upload,
@@ -92,6 +93,7 @@ import {
 import { compileOwnerOverlay } from "../../../../../packages/composition/local/edit-overlay.ts";
 import {
   ownerClipListSchema,
+  OWNER_BATCH_POLICY,
   type OwnerClip,
   type OwnerClipList,
   type OwnerOverlay,
@@ -503,6 +505,7 @@ export function ClipEditor({
   footerTarget,
   actionsVisible = true,
   captionGeneration = false,
+  visualDiscovery = false,
   captionProvider = "gemini",
   fakeCaptionGeneration = false,
   youtubeAudio = false,
@@ -517,6 +520,7 @@ export function ClipEditor({
   footerTarget?: HTMLElement | null | undefined;
   actionsVisible?: boolean;
   captionGeneration?: boolean;
+  visualDiscovery?: boolean;
   captionProvider?: "gemini" | "local-speech" | undefined;
   fakeCaptionGeneration?: boolean;
   youtubeAudio?: boolean;
@@ -544,6 +548,7 @@ export function ClipEditor({
   const [forcedStale, setForcedStale] = useState(false);
   const [captionConfirm, setCaptionConfirm] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [findingVisuals, setFindingVisuals] = useState(false);
   const captionWasConfirming = useRef(false);
   const player = useRef<PlayerRef | null>(null);
   const alive = useRef(true);
@@ -956,6 +961,51 @@ export function ClipEditor({
       return;
     }
     void perform("picture", file);
+  }
+  async function findVisuals() {
+    if (request.current || dirty || stale || !visualDiscovery) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setPending(true);
+    setFindingVisuals(true);
+    setMessage("");
+    onBusy?.(true);
+    player.current?.pause();
+    try {
+      const response = await fetch(`${endpoint}/visuals`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          expectedRevision: clip.revision,
+        }),
+      });
+      if (!response.ok) throw new Error("visual_discovery_failed");
+      const list = ownerClipListSchema.parse(await response.json());
+      const accepted = list.clips.find((item) => item.id === clip.id);
+      if (!accepted?.base || !alive.current) return;
+      onAccepted(list);
+      const edit = initialOwnerEdit(accepted);
+      setForm({ original: edit, draft: structuredClone(edit) });
+      if (accepted.visualDiscovery?.outcome !== "found")
+        setMessage(
+          "No new visuals found. Your current pictures are still here.",
+        );
+      else setSelection(edit.visuals.at(-1)?.id ?? "captions");
+    } catch {
+      if (alive.current && !controller.signal.aborted)
+        setMessage(
+          "Couldn’t find visuals. Your current pictures are still here. Try again.",
+        );
+    } finally {
+      request.current = null;
+      if (alive.current) {
+        setPending(false);
+        setFindingVisuals(false);
+        onBusy?.(false);
+      }
+    }
   }
   async function generateCaptions(fake = false) {
     if (
@@ -1596,6 +1646,49 @@ export function ClipEditor({
               aria-labelledby={`${tabsId}-media-pictures`}
               hidden={mediaTab !== "pictures"}
             >
+              <div className="picture-tools" aria-label="AI visuals">
+                <Button
+                  variant="secondary"
+                  onClick={() => void findVisuals()}
+                  disabled={
+                    pending ||
+                    dirty ||
+                    stale ||
+                    !visualDiscovery ||
+                    draft.visuals.filter(
+                      (cue) =>
+                        clip.assets.find((asset) => asset.id === cue.assetId)
+                          ?.origin === "owner-supplied",
+                    ).length >= OWNER_PICTURE_LIMITS.cuesPerClip ||
+                    (clip.visualAttempts ?? 0) >=
+                      OWNER_BATCH_POLICY.visualDiscoveryAttempts ||
+                    clip.assets.length >= OWNER_PICTURE_LIMITS.assetsPerClip
+                  }
+                  title={
+                    dirty ? "Apply or discard your edits first" : undefined
+                  }
+                >
+                  {findingVisuals ? (
+                    <LoaderCircle
+                      size={18}
+                      className="acquisition-spinner"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Sparkles size={18} aria-hidden="true" />
+                  )}
+                  {findingVisuals ? "Finding visuals…" : "Find visuals"}
+                </Button>
+                {findingVisuals && (
+                  <Button
+                    variant="quiet"
+                    aria-label="Cancel visual search"
+                    onClick={() => request.current?.abort()}
+                  >
+                    Cancel
+                  </Button>
+                )}
+              </div>
               <fieldset disabled={pending}>
                 <legend className="local-sr-only">Pictures</legend>
                 <div
@@ -1634,7 +1727,7 @@ export function ClipEditor({
                     }
                     onClick={() => pictureInput.current?.click()}
                   >
-                    {pending ? (
+                    {pending && !findingVisuals ? (
                       <LoaderCircle
                         size={18}
                         className="acquisition-spinner"
@@ -1643,7 +1736,7 @@ export function ClipEditor({
                     ) : (
                       <Upload size={18} aria-hidden="true" />
                     )}
-                    {pending ? "Uploading…" : "Upload image"}
+                    {pending && !findingVisuals ? "Uploading…" : "Upload image"}
                   </Button>
                   <Button
                     variant="quiet"

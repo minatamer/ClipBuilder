@@ -1,4 +1,5 @@
 import { LoaderCircle } from "lucide-react";
+import type { ReactNode } from "react";
 import { BrandMark } from "./brand-mark";
 import { Progress } from "./progress";
 import styles from "./processing-state.module.css";
@@ -8,10 +9,12 @@ export function ProcessingState({
   label,
   className,
   progress,
+  children,
 }: {
   label: string;
   className?: string;
   progress?: { fraction: number; valueText: string };
+  children?: ReactNode;
 }) {
   return (
     <div className={[styles.state, className].filter(Boolean).join(" ")}>
@@ -24,6 +27,7 @@ export function ProcessingState({
       <p className={styles.title} role="status" aria-live="polite">
         {label}
       </p>
+      {children}
       {progress && (
         <div className={styles.meter}>
           <Progress
