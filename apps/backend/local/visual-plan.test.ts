@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { decodeCodexVisualPlan } from "./codex-visual-plan.ts";
+import { decodeVisualPlan } from "./visual-plan.ts";
 import type { VisualDiagnostic } from "../../../packages/contracts/local/visual-diagnostics.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
 import { ownerDiagnosticRecordSchema } from "../../../packages/contracts/local/diagnostics.ts";
@@ -25,7 +25,7 @@ it("repairs usable visual fields and records exact bounded rules without leaking
   const details: VisualDiagnostic[] = [],
     lines: string[] = [];
   const diagnostics = new LocalDiagnostics((line) => lines.push(line));
-  const plan = decodeCodexVisualPlan(
+  const plan = decodeVisualPlan(
     {
       pictures: [
         {
@@ -82,7 +82,7 @@ it("repairs usable visual fields and records exact bounded rules without leaking
 });
 it("preserves independent search/fallback pieces and omits only irrecoverable entries", () => {
   const details: VisualDiagnostic[] = [];
-  const plan = decodeCodexVisualPlan(
+  const plan = decodeVisualPlan(
     {
       pictures: [
         {
@@ -119,17 +119,31 @@ it("preserves independent search/fallback pieces and omits only irrecoverable en
   });
 });
 it("keeps malformed/empty plans nonfatal and bounds returned entries", () => {
-  expect(decodeCodexVisualPlan(null, 30, () => {})).toEqual([]);
+  expect(decodeVisualPlan(null, 30, () => {})).toEqual([]);
   expect(
-    decodeCodexVisualPlan(
+    decodeVisualPlan(
       { pictures: Array.from({ length: 100 }, () => cue) },
       930,
       () => {},
     ),
   ).toHaveLength(3);
   expect(
-    decodeCodexVisualPlan({ pictures: [cue] }, 930, () => {
+    decodeVisualPlan({ pictures: [cue] }, 930, () => {
       throw Error("synthetic-sink-failure");
     }),
   ).toHaveLength(1);
+});
+it("retains valid alternate briefs from legacy Gemini arrays and object envelopes", () => {
+  const picture = {
+    ...cue,
+    alternateBriefs: [{ ...cue.brief, searchQuery: "coral reef recovery" }],
+  };
+  for (const value of [[picture], { pictures: [picture] }]) {
+    const plan = decodeVisualPlan(value, 930, () => {});
+    expect(plan).toHaveLength(1);
+    expect(plan[0]!.alternateBriefs?.[0]).toMatchObject({
+      searchQuery: "coral reef recovery",
+      requiredTerms: cue.brief.requiredTerms,
+    });
+  }
 });

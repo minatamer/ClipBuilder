@@ -5,7 +5,7 @@ import {
   PLANNED_VISUAL_POLICY,
   plannedVisualGuide,
 } from "./planned-visuals.ts";
-import { decodeCodexVisualPlan } from "./codex-visual-plan.ts";
+import { decodeVisualPlan } from "./visual-plan.ts";
 import type { LocalDiagnostics } from "./diagnostics.ts";
 
 const schema = localCodexFocusSchema.pick({ pictures: true });
@@ -27,7 +27,7 @@ export function visualDiscoveryPlanner(
       signal,
     );
     signal.throwIfAborted();
-    return decodeCodexVisualPlan(value, frames, (detail) =>
+    return decodeVisualPlan(value, frames, (detail) =>
       diagnostics.visual(detail),
     );
   };

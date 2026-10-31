@@ -383,6 +383,18 @@ export function createHostedEditingWorkflow(options: Options) {
                 ? {
                     analysis: {
                       ...ports.analysis,
+                      ...(ports.analysis.transcribeCut
+                        ? {
+                            transcribeCut: async (
+                              ...args: Parameters<
+                                NonNullable<typeof ports.analysis.transcribeCut>
+                              >
+                            ) => {
+                              await charge();
+                              return ports.analysis!.transcribeCut!(...args);
+                            },
+                          }
+                        : {}),
                       async transcribe(...args) {
                         await charge();
                         return ports.analysis!.transcribe(...args);

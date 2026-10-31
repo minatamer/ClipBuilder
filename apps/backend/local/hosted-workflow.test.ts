@@ -16,18 +16,22 @@ import { createApplication } from "../src/app.ts";
 import { loadConfig } from "../src/config/loadConfig.ts";
 import { demoUsageFixture } from "../../../test/demo-usage-fixture.ts";
 import type { HostedDemoUsage } from "./demo-usage.ts";
+import type { OwnerAnalysisPorts } from "./analysis.ts";
 let root: string, flow: ReturnType<typeof createHostedEditingWorkflow>;
 let now: number;
 let usage: HostedDemoUsage;
+let boundedTranscription: boolean;
 const origin = "https://frontend.run.app";
 const media = vi.fn(),
   transcribe = vi.fn(fakeOwnerAnalysis.transcribe),
+  transcribeCut = vi.fn<NonNullable<OwnerAnalysisPorts["transcribeCut"]>>(),
   select = vi.fn(fakeOwnerAnalysis.select),
   plan = vi.fn(fakeOwnerClipPreparation.plan),
   image = vi.fn(fakeOwnerClipPreparation.image),
   abuse = vi.fn(async () => true);
 beforeEach(async () => {
   vi.clearAllMocks();
+  boundedTranscription = false;
   now = 1000;
   root = await mkdtemp(join(tmpdir(), "clipbuilder-hosted-editing-test-"));
   media.mockImplementation(async (job) => {
@@ -83,7 +87,12 @@ beforeEach(async () => {
     capacity: async () => {},
     media,
     providers: () => ({
-      analysis: { ...fakeOwnerAnalysis, transcribe, select },
+      analysis: {
+        ...fakeOwnerAnalysis,
+        transcribe,
+        select,
+        ...(boundedTranscription ? { transcribeCut } : {}),
+      },
       clipPreparation: { ...fakeOwnerClipPreparation, plan, image },
     }),
   });
@@ -530,6 +539,79 @@ it("enforces mixed manual/AI slots and three cumulative clips against direct API
     ).status,
   ).toBe(400);
 });
+
+it.each([false, true])(
+  "charges bounded manual transcription before dispatch and retains zero-call cache reuse (ledger fails=%s)",
+  async (fails) => {
+    boundedTranscription = true;
+    transcribeCut.mockResolvedValue([
+      {
+        id: "w_000001",
+        text: "Synthetic",
+        punctuatedText: "Synthetic",
+        startMs: 1100,
+        endMs: 1500,
+        speakerId: null,
+        confidence: 1,
+      },
+    ]);
+    const app = server(),
+      headers = await start(app);
+    const upload = await request(app)
+      .post("/upload")
+      .set(headers)
+      .send({ bytes: 9 });
+    await request(app)
+      .put(`/upload/${upload.body.uploadId}/0`)
+      .set(headers)
+      .set("Content-Type", "application/octet-stream")
+      .send(Buffer.from("synthetic"));
+    const opened = await request(app)
+      .post("/open/video")
+      .set(headers)
+      .send({ uploadId: upload.body.uploadId });
+    expect(opened.status).toBe(200);
+    const charge = vi.spyOn(usage, "charge");
+    if (fails)
+      charge.mockRejectedValueOnce(new Error("synthetic_ledger_offline"));
+    const path = `/workspace/${opened.body.workspace.id}/analysis`;
+    const result = await request(app)
+      .post(path)
+      .set(headers)
+      .send({
+        sourceRevision: 0,
+        policyRevision: 0,
+        ranges: [{ id: randomUUID(), startMs: 1000, endMs: 2000 }],
+        aiDuration: { minMs: 10000, maxMs: 10000 },
+        manualOnly: true,
+      });
+    expect(charge).toHaveBeenCalledExactlyOnceWith(
+      expect.any(String),
+      "provider",
+    );
+    expect(transcribe).not.toHaveBeenCalled();
+    expect(select).not.toHaveBeenCalled();
+    if (fails) {
+      expect(result.status).toBe(400);
+      expect(transcribeCut).not.toHaveBeenCalled();
+    } else {
+      expect(result.status).toBe(200);
+      expect(transcribeCut).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ id: opened.body.workspace.id }),
+        { startFrame: 30, endFrame: 60 },
+        expect.any(AbortSignal),
+      );
+      const repeated = await request(app)
+        .post(path)
+        .set(headers)
+        .send(result.body.inputs);
+      expect(repeated.status).toBe(200);
+      expect(repeated.body.calls).toEqual({ transcription: 0, selection: 0 });
+      expect(transcribeCut).toHaveBeenCalledTimes(1);
+      expect(charge).toHaveBeenCalledTimes(1);
+    }
+  },
+);
 
 it("dispatches no native or provider work when durable charging fails", async () => {
   const app = server(),

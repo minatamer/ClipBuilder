@@ -4,7 +4,8 @@ import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createOwnerProviderAi } from "./provider-ai.ts";
-import { analyzeOwner } from "./analysis.ts";
+import { analyzeOwner, type OwnerTranscript } from "./analysis.ts";
+import { FOCUS_PLANNING_POLICY } from "./focus-planning-policy.ts";
 import { ownerSelectionPolicy } from "./selection-policy.ts";
 import { normalizeCandidateSelection } from "../src/analysis/analysis.provider-shape.ts";
 import { normalizeTranscription } from "../src/analysis/transcribe.normalization.ts";
@@ -384,10 +385,9 @@ function fixture(
       operation: job.operation,
       bytes: 24,
       digest: "c".repeat(64),
-      durationMs:
-        job.operation === "prepare-owner-audio"
-          ? workspace.source.durationMs
-          : Math.round(((job.cut.endFrame - job.cut.startFrame) * 1000) / 30),
+      durationMs: job.cut
+        ? Math.round(((job.cut.endFrame - job.cut.startFrame) * 1000) / 30)
+        : workspace.source.durationMs,
     };
   });
   const pictures = {
@@ -417,6 +417,296 @@ function fixture(
 }
 
 describe("dormant owner provider ports with synthetic transports", () => {
+  it("transcribes only the manual window, reuses it, and requests full audio for later AI discovery", async () => {
+    const f = fixture();
+    let transcript: OwnerTranscript | undefined;
+    const reuse = {
+      get transcript() {
+        return transcript;
+      },
+      completed(value: OwnerTranscript) {
+        transcript = value;
+      },
+    };
+    const request = {
+      sourceRevision: f.workspace.revision,
+      policyRevision: 0,
+      ranges: [{ id: randomUUID(), startMs: 60_000, endMs: 90_000 }],
+      aiDuration: { minMs: 10_000, maxMs: 30_000 },
+      manualOnly: true,
+    };
+    try {
+      const first = await analyzeOwner(
+        f.workspace,
+        request,
+        f.ports.analysis,
+        f.signal,
+        reuse,
+      );
+      expect(first.manual[0]!.cues).toEqual(words);
+      expect(first.words).toEqual(
+        words.map((word) => ({
+          ...word,
+          startMs: word.startMs + 60_000,
+          endMs: word.endMs + 60_000,
+        })),
+      );
+      expect(transcript?.cut).toEqual({ startFrame: 1800, endFrame: 2700 });
+      expect(f.media).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          operation: "prepare-owner-audio",
+          cut: { startFrame: 1800, endFrame: 2700 },
+          clipId: expect.any(String),
+        }),
+        f.signal,
+      );
+      const audioJob = f.media.mock.calls[0]![0];
+      if (audioJob.operation !== "prepare-owner-audio")
+        throw Error("unexpected_test_job");
+      const proxyId = audioJob.clipId;
+      expect(f.files.readProviderInput).toHaveBeenCalledWith(
+        f.workspace.id,
+        { kind: "audio", clipId: proxyId },
+        expect.objectContaining({ durationMs: 30_000 }),
+        f.signal,
+      );
+      expect(f.files.removeProviderInput).toHaveBeenCalledExactlyOnceWith(
+        f.workspace.id,
+        { kind: "audio", clipId: proxyId },
+      );
+      await analyzeOwner(
+        f.workspace,
+        request,
+        f.ports.analysis,
+        f.signal,
+        reuse,
+      );
+      expect(f.transport.transcribe).toHaveBeenCalledTimes(1);
+      const full = await analyzeOwner(
+        f.workspace,
+        { ...request, manualOnly: false },
+        f.ports.analysis,
+        f.signal,
+        reuse,
+      );
+      expect(full.words).toEqual(words);
+      expect(transcript).not.toHaveProperty("cut");
+      expect(f.media).toHaveBeenCalledTimes(2);
+      expect(f.media.mock.calls[1]![0]).not.toHaveProperty("cut");
+      expect(f.transport.transcribe).toHaveBeenCalledTimes(2);
+      expect(f.transport.candidates).toHaveBeenCalledTimes(1);
+      expect(f.transport.upload).toHaveBeenCalledTimes(2);
+      expect(f.transport.delete).toHaveBeenCalledTimes(2);
+    } finally {
+      await f.ports.close(f.signal);
+    }
+  });
+  it("dispatches nothing for empty manual selection, invalid cuts or pre-cancellation", async () => {
+    const f = fixture();
+    try {
+      await analyzeOwner(
+        f.workspace,
+        {
+          sourceRevision: f.workspace.revision,
+          policyRevision: 0,
+          ranges: [],
+          aiDuration: policy,
+          manualOnly: true,
+        },
+        f.ports.analysis,
+        f.signal,
+      );
+      for (const cut of [
+        { startFrame: -1, endFrame: 30 },
+        { startFrame: 30, endFrame: 29 },
+        { startFrame: 108000, endFrame: 108030 },
+      ])
+        await expect(
+          f.ports.analysis.transcribeCut!(f.workspace, cut, f.signal),
+        ).rejects.toThrow();
+      await expect(
+        f.ports.analysis.transcribeCut!(
+          f.workspace,
+          { startFrame: 1800, endFrame: 2700 },
+          AbortSignal.abort(),
+        ),
+      ).rejects.toThrow();
+      expect(f.media).not.toHaveBeenCalled();
+      expect(f.transport.transcribe).not.toHaveBeenCalled();
+      expect(f.transport.upload).not.toHaveBeenCalled();
+    } finally {
+      await f.ports.close(f.signal);
+    }
+  });
+  it.each(["canceled", "bad-receipt"])(
+    "cleans a bounded proxy before any provider call on %s",
+    async (failure) => {
+      const f = fixture(),
+        controller = new AbortController();
+      f.media.mockImplementationOnce(async () => {
+        if (failure === "canceled") controller.abort();
+        return {
+          operation: "prepare-owner-audio",
+          bytes: 24,
+          digest: "c".repeat(64),
+          durationMs: failure === "bad-receipt" ? 31_000 : 30_000,
+        };
+      });
+      try {
+        await expect(
+          f.ports.analysis.transcribeCut!(
+            f.workspace,
+            { startFrame: 1800, endFrame: 2700 },
+            controller.signal,
+          ),
+        ).rejects.toThrow();
+        expect(f.media).toHaveBeenCalledTimes(1);
+        expect(f.transport.transcribe).not.toHaveBeenCalled();
+        expect(f.transport.upload).not.toHaveBeenCalled();
+        expect(f.files.readProviderInput).not.toHaveBeenCalled();
+        expect(f.files.removeProviderInput).toHaveBeenCalledTimes(1);
+      } finally {
+        await f.ports.close(f.signal);
+      }
+    },
+  );
+  it("keeps Gemini initial alternate searches and precise nonfatal decoder diagnostics", async () => {
+    const lines: string[] = [];
+    const search = {
+      find: vi.fn<ContextualPictureSource["find"]>(async () => null),
+    };
+    const f = fixture(new LocalDiagnostics((line) => lines.push(line)), search);
+    f.transport.generate.mockResolvedValue({
+      finished: true,
+      text: JSON.stringify({
+        pictures: [
+          {
+            ...cue,
+            startFrame: "0",
+            brief: {
+              ...cue.brief,
+              searchQuery: "restored coral reef (underwater)",
+            },
+            alternateBriefs: [
+              { ...cue.brief, searchQuery: "coral reef recovery" },
+            ],
+          },
+          {
+            startFrame: 200,
+            endFrame: 300,
+            brief: { searchQuery: "https://synthetic-private.invalid/token" },
+          },
+        ],
+      }),
+    });
+    try {
+      const plan = await f.ports.clipPreparation.plan(
+        { workspace: f.workspace, clipId: f.clipId, moment: f.moment },
+        f.signal,
+      );
+      expect(plan).toHaveLength(1);
+      expect(plan[0]!.alternateBriefs?.[0]!.searchQuery).toBe(
+        "coral reef recovery",
+      );
+      const picture = await f.ports.clipPreparation.image(
+        { clipId: f.clipId, cue: plan[0]!, words },
+        f.signal,
+      );
+      expect(picture).toBeNull();
+      expect(search.find).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          alternateBriefs: [
+            expect.objectContaining({ searchQuery: "coral reef recovery" }),
+          ],
+        }),
+        expect.any(AbortSignal),
+      );
+      expect(f.pictures.find).toHaveBeenCalledTimes(1);
+      const visuals = lines
+        .map((line) => JSON.parse(line).visual)
+        .filter(Boolean);
+      expect(visuals).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            stage: "decode",
+            index: 0,
+            outcome: "repaired",
+            issues: expect.arrayContaining([
+              expect.objectContaining({ field: "startFrame", rule: "type" }),
+            ]),
+          }),
+          expect.objectContaining({
+            stage: "decode",
+            received: 2,
+            retained: 1,
+            dropped: 1,
+          }),
+        ]),
+      );
+      expect(lines.join("")).not.toContain("synthetic-private.invalid");
+      expect(lines.join("")).not.toContain("coral reef recovery");
+      expect(f.transport.generate).toHaveBeenCalledTimes(1);
+      expect(f.transport.transcribe).not.toHaveBeenCalled();
+    } finally {
+      await f.ports.close(f.signal);
+    }
+  });
+  it.each([0.99, 0.6])(
+    "uses shared tight-head instructions and admits only strong visual opening evidence (confidence=%s)",
+    async (confidence) => {
+      const f = fixture();
+      const openingWords = [
+        { ...words[0]!, startMs: 0, endMs: 700, speakerId: null },
+        { ...words[1]!, startMs: 700, endMs: 1500, speakerId: null },
+      ];
+      const moment = { ...f.moment, cues: openingWords };
+      f.transport.generate.mockResolvedValue({
+        finished: true,
+        text: JSON.stringify({
+          pictures: [cue],
+          focus: {
+            people: [0.1, 0.6].map((x, index) => ({
+              id: `person_${index + 1}`,
+              observations: [
+                {
+                  startFrame: 0,
+                  endFrame: 9000,
+                  box: { x, y: 0.1, width: 0.2, height: 0.2 },
+                },
+              ],
+            })),
+            decisions: [
+              {
+                startFrame: 0,
+                endFrame: 90,
+                personId: "person_2",
+                speakerId: null,
+                confidence,
+                evidenceWordIds: openingWords.map((word) => word.id),
+                shotStart: true,
+              },
+            ],
+          },
+        }),
+      });
+      try {
+        const request = { workspace: f.workspace, clipId: f.clipId, moment };
+        await f.ports.clipPreparation.plan(request, f.signal);
+        expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
+          FOCUS_PLANNING_POLICY,
+        );
+        expect(f.ports.clipPreparation.focus!(request).shots[0]!.personId).toBe(
+          confidence >= 0.95 ? "person_2" : "person_1",
+        );
+        expect(moment.cues.every((word) => word.speakerId === null)).toBe(true);
+        expect(f.transport.generate).toHaveBeenCalledTimes(1);
+        expect(f.media).toHaveBeenCalledTimes(1);
+        expect(f.transport.transcribe).not.toHaveBeenCalled();
+      } finally {
+        await f.ports.close(f.signal);
+      }
+    },
+  );
   it.each([true, false])(
     "searches before Gemini generation for explicit transcript-only visuals (hit=%s)",
     async (hit) => {

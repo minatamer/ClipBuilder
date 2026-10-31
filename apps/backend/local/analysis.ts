@@ -151,7 +151,7 @@ export async function analyzeOwner(
   signal.throwIfAborted();
   // Parsing freezes a private input snapshot before any asynchronous dispatch.
   const cached = reuse?.transcript;
-  // Only Codex supplies this port. A continuous window keeps anonymous speaker
+  // A bounded transcription port keeps one continuous window and anonymous speaker
   // labels consistent across multiple manual ranges without scanning the source.
   const manualWindow =
     inputs.manualOnly && ports.transcribeCut && cuts.length

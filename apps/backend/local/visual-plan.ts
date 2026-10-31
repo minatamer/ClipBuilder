@@ -111,7 +111,7 @@ function issues(error: z.ZodError): NonNullable<VisualDiagnostic["issues"]> {
 }
 
 /** Repair editorial data locally; diagnostics contain schema facts, never values. */
-export function decodeCodexVisualPlan(
+export function decodeVisualPlan(
   value: unknown,
   frames: number,
   writeDiagnostic: (detail: VisualDiagnostic) => void,
@@ -123,7 +123,7 @@ export function decodeCodexVisualPlan(
       /* Diagnostics cannot reject a usable plan. */
     }
   };
-  const returned = record(value)?.pictures;
+  const returned = Array.isArray(value) ? value : record(value)?.pictures;
   if (!Array.isArray(returned)) {
     report({
       stage: "decode",
@@ -236,6 +236,7 @@ export function decodeCodexVisualPlan(
     )
       faults.unshift({ field: "brief.searchQuery", rule: "unsafe_search" });
     if (cue.success) {
+      if (!cue.data.alternateBriefs?.length) delete cue.data.alternateBriefs;
       retained.push(cue.data);
       const repaired =
         !original.success ||

@@ -2,6 +2,7 @@ import { expect, it, vi } from "vitest";
 import { createLocalCodexAi } from "./codex-ai.ts";
 import { WorkspaceFiles } from "./workspace-files.ts";
 import { ownerSelectionPolicy } from "./selection-policy.ts";
+import { FOCUS_PLANNING_POLICY } from "./focus-planning-policy.ts";
 import type { CodexInference } from "./codex-exec.ts";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -689,6 +690,7 @@ it.each(["audio", "invented", "visual-opening"])(
         "visual-only evidence controls the opening crop",
       );
       expect(request.prompt).toContain("excluding the torso");
+      expect(request.prompt).toContain(FOCUS_PLANNING_POLICY);
       expect(request.prompt).toContain("No fixed palette");
       expect(request.prompt).toContain(
         "MUST preserve the primary scene's meaning",
