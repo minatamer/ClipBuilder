@@ -33,6 +33,7 @@ import { prepareOwnerProviderMedia } from "./provider-media.ts";
 import { normalizeOwnerAudio } from "./audio-media.ts";
 import { prepareLocalCodexInput } from "./codex-media.ts";
 import { LOCAL_CODEX_POLICY } from "../../../packages/contracts/local/codex.ts";
+import type { CodexProgressStep } from "../../../packages/contracts/local/codex-progress.ts";
 import type { LocalSpeechTools } from "../../../scripts/local-speech-tools.ts";
 
 export function createOwnerWorker(options: {
@@ -58,6 +59,7 @@ export function createOwnerWorker(options: {
         id: string;
         controller: AbortController;
         stage: OwnerAcquisitionNativeStage | null;
+        codex?: CodexProgressStep[];
       }
     | undefined;
   let closing = false;
@@ -86,13 +88,21 @@ export function createOwnerWorker(options: {
     const progress = req.url?.match(/^\/progress\/([a-f0-9-]{36})$/);
     if (req.method === "GET" && progress) {
       const active = current;
-      if (!active || active.id !== progress[1] || !active.stage) {
+      if (
+        !active ||
+        active.id !== progress[1] ||
+        (!active.stage && !active.codex)
+      ) {
         res.writeHead(404).end();
         return;
       }
       res
         .writeHead(200, { "Content-Type": "application/json" })
-        .end(JSON.stringify({ stage: active.stage }));
+        .end(
+          JSON.stringify(
+            active.codex ? { codex: active.codex } : { stage: active.stage },
+          ),
+        );
       return;
     }
     if (req.method === "POST" && req.url === "/cancel") {
@@ -186,7 +196,7 @@ export function createOwnerWorker(options: {
         controller.signal,
         AbortSignal.timeout(
           job.operation === "codex-input"
-            ? job.kind === "speech"
+            ? job.kind !== "frames"
               ? LOCAL_CODEX_POLICY.speechTimeoutMs
               : LOCAL_CODEX_POLICY.frameTimeoutMs
             : 10 * 60_000,
@@ -196,7 +206,16 @@ export function createOwnerWorker(options: {
       const result = options.execute
         ? await options.execute(job, signal)
         : job.operation === "codex-input"
-          ? await prepareLocalCodexInput(options, job, signal)
+          ? await prepareLocalCodexInput(
+              {
+                ...options,
+                progress: (steps) => {
+                  if (current?.id === key) current.codex = steps;
+                },
+              },
+              job,
+              signal,
+            )
           : job.operation === "normalize-audio"
             ? await normalizeOwnerAudio(
                 options.root,
