@@ -69,11 +69,19 @@ export function composeAnalysis(
         "google-gemini",
         diagnostics,
         new WebPictureSource(
-          geminiImageDiscovery(config.gemini.apiKey!, config.gemini.model),
+          geminiImageDiscovery(
+            config.gemini.apiKey!,
+            config.gemini.model,
+            undefined,
+            (detail) => diagnostics.executionTrace(detail),
+          ),
           (facts) =>
             diagnostics.assembly("assembly_pictures", {
               pictureCandidates: facts.candidates,
             }),
+          undefined,
+          undefined,
+          (detail) => diagnostics.executionTrace(detail),
         ),
         composeGeminiPictureGenerator(config, diagnostics),
       )

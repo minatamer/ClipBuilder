@@ -42,6 +42,8 @@ export function classifyExecutionFailure(
     image_raster_limit: "raster_limit",
     image_search_not_attempted: "search_missing",
     image_search_incomplete: "search_incomplete",
+    image_search_metadata_missing: "search_metadata_missing",
+    image_search_tool_failed: "search_tool_failed",
     codex_login_required: "authentication",
     codex_subscription_required: "subscription",
     codex_limit: "rate_limit",

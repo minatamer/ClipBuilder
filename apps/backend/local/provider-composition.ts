@@ -36,6 +36,8 @@ export function composeOwnerProviders(
           geminiImageDiscovery(
             readiness.config.gemini.apiKey!,
             readiness.config.gemini.model,
+            undefined,
+            (detail) => diagnostics.trace(detail),
           ),
           (facts) => diagnostics.visual({ stage: "search", ...facts }),
           undefined,

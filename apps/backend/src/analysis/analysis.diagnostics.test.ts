@@ -25,6 +25,35 @@ import {
 } from "../../test/environment.fixture.js";
 
 const requestId = `req_${"a".repeat(32)}`;
+it("keeps search execution failures in the legacy request context and rejects raw diagnostic fields", async () => {
+  const f = fixture();
+  await scoped(f.diagnostics, async () => {
+    const trace = {
+      boundary: "search" as const,
+      phase: "events" as const,
+      outcome: "warning" as const,
+      elapsedMs: 12,
+      error: { category: "search_metadata_missing" as const },
+    };
+    f.diagnostics.executionTrace(trace);
+    f.diagnostics.executionTrace({
+      ...trace,
+      ...{ raw: "synthetic-private-query-url-key" },
+    });
+  });
+  expect(
+    f.lines.map((line) => JSON.parse(parseAnalysisDiagnosticLine(line)!)),
+  ).toContainEqual(
+    expect.objectContaining({
+      requestId,
+      phase: "assembly_pictures",
+      execution: expect.objectContaining({
+        error: { category: "search_metadata_missing" },
+      }),
+    }),
+  );
+  expect(f.lines.join("")).not.toContain("synthetic-private");
+});
 function fixture() {
   const lines: string[] = [];
   let now = 0;

@@ -7,6 +7,10 @@ import {
 } from "@clipbuilder/contracts";
 import { z } from "zod";
 import {
+  executionTraceSchema,
+  type ExecutionTrace,
+} from "../../../../packages/contracts/local/execution-diagnostics.ts";
+import {
   describeValidationFailure,
   validationDiagnosticSchema,
 } from "./analysis.validation-diagnostics.js";
@@ -319,6 +323,7 @@ const diagnosticSchema = z
       .refine((value) => messages.has(value))
       .optional(),
     assembly: assemblyDiagnosticSchema.optional(),
+    execution: executionTraceSchema.optional(),
     browser: browserDiagnosticSchema.optional(),
     validation: validationDiagnosticSchema.optional(),
     elapsedMs: z.number().int().min(0).max(86_400_000),
@@ -534,6 +539,20 @@ export class AnalysisDiagnostics {
     this.emit(phase, "completed", undefined, undefined, undefined, () => ({
       assembly: assemblyDiagnosticSchema.parse(detail),
     }));
+  }
+  executionTrace(detail: ExecutionTrace) {
+    this.emit(
+      "assembly_pictures",
+      detail.outcome === "failed"
+        ? "failed"
+        : detail.outcome === "started"
+          ? "started"
+          : "completed",
+      undefined,
+      undefined,
+      undefined,
+      () => ({ execution: executionTraceSchema.parse(detail) }),
+    );
   }
   critique(phase: AnalysisPhase, error: unknown) {
     this.emit(phase, "completed", undefined, error, undefined, () => ({

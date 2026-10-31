@@ -11,7 +11,7 @@ export async function boundedPictureBody(response: Response, maxBytes: number) {
       const chunk = await reader.read();
       if (chunk.done) break;
       bytes += chunk.value.byteLength;
-      if (bytes > maxBytes) throw new Error("contextual_picture_unavailable");
+      if (bytes > maxBytes) throw new Error("image_download_limit");
       chunks.push(chunk.value);
     }
     return Buffer.concat(chunks);

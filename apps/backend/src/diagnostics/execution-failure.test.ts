@@ -26,6 +26,8 @@ it.each([
   ["image_redirect_failed", "redirect"],
   ["image_format_unsupported", "format"],
   ["image_search_incomplete", "search_incomplete"],
+  ["image_search_metadata_missing", "search_metadata_missing"],
+  ["image_search_tool_failed", "search_tool_failed"],
   ["unrecognized private failure", "unknown"],
 ])("classifies %s without serializing private text", (message, category) => {
   const result = classifyExecutionFailure(

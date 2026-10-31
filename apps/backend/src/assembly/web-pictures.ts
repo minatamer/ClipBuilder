@@ -48,6 +48,9 @@ export type PictureSearchFacts = {
     | "no_candidates"
     | "search_failed"
     | "search_not_attempted"
+    | "search_metadata_missing"
+    | "search_incomplete"
+    | "search_tool_failed"
     | "address_blocked"
     | "download_failed"
     | "download_limit"
@@ -413,11 +416,7 @@ export class WebPictureSource implements ContextualPictureSource {
         ...(error instanceof PictureHttpFailure
           ? { httpStatus: error.status }
           : {}),
-        reason:
-          error instanceof Error &&
-          error.message === "image_search_not_attempted"
-            ? "search_not_attempted"
-            : "search_failed",
+        reason: discoveryFailureReason(error),
       });
       throw new ExecutionError(
         "image_search_failed",
@@ -433,5 +432,22 @@ export class WebPictureSource implements ContextualPictureSource {
         downloads,
       });
     }
+  }
+}
+
+function discoveryFailureReason(
+  error: unknown,
+): NonNullable<PictureSearchFacts["reason"]> {
+  switch (classifyExecutionFailure(error).category) {
+    case "search_missing":
+      return "search_not_attempted";
+    case "search_metadata_missing":
+      return "search_metadata_missing";
+    case "search_incomplete":
+      return "search_incomplete";
+    case "search_tool_failed":
+      return "search_tool_failed";
+    default:
+      return "search_failed";
   }
 }

@@ -31,6 +31,8 @@ export const executionFailureSchema = z
       "turn_missing",
       "search_missing",
       "search_incomplete",
+      "search_metadata_missing",
+      "search_tool_failed",
       "output_missing",
       "output_shape",
       "output_limit",
@@ -201,6 +203,57 @@ export const executionTraceSchema = z
       .enum(["caller", "inference", "search", "retrieval", "request"])
       .optional(),
     searchEnabled: z.boolean().optional(),
+    searchRequest: z
+      .object({
+        api: z.literal("gemini-interactions"),
+        tool: z.literal("google_search"),
+        toolChoice: z.literal("auto"),
+        store: z.literal(false),
+        background: z.literal(false),
+        stream: z.literal(false),
+        modelPolicy: z.literal("configured"),
+        maxOutputTokens: count,
+        responseLimitBytes: count,
+      })
+      .strict()
+      .optional(),
+    search: z
+      .object({
+        api: z.literal("gemini-interactions"),
+        state: z.enum([
+          "completed",
+          "skipped",
+          "incomplete",
+          "tool_failed",
+          "metadata_missing",
+        ]),
+        evidence: z.enum(["call_result", "reported_usage", "none"]),
+        status: z.enum([
+          "completed",
+          "incomplete",
+          "in_progress",
+          "requires_action",
+          "failed",
+          "canceled",
+          "unknown",
+        ]),
+        responseShape: z.enum(["interactions", "legacy", "unknown"]),
+        stepsPresent: z.boolean(),
+        usagePresent: z.boolean(),
+        calls: count,
+        results: count,
+        matchedResults: count,
+        failedResults: count,
+        queries: count,
+        queriesPresent: z.boolean(),
+        reportedSearches: count.optional(),
+        citations: count,
+        outputParts: count,
+        unknownSteps: count,
+        candidateSource: z.enum(["json", "citations", "none"]),
+      })
+      .strict()
+      .optional(),
     cliVersion: z
       .string()
       .regex(/^\d+\.\d+\.\d+$/)
