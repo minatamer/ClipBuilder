@@ -77,7 +77,7 @@ const pictureRasterShape = {
 export const commonsPictureAssetSchema = z
   .object({
     repository: z.literal("wikimedia-commons"),
-    license: z.enum(["CC0", "public-domain"]),
+    license: z.string().min(1).max(120),
     pageId: z.number().int().positive(),
     title: boundedPlainTextSchema(240),
     ...pictureRasterShape,
@@ -85,6 +85,7 @@ export const commonsPictureAssetSchema = z
   .strict();
 export const contextualPictureAssetSchema = z.discriminatedUnion("repository", [
   commonsPictureAssetSchema,
+  z.object({ repository: z.literal("web"), ...pictureRasterShape }).strict(),
   z
     .object({
       repository: z.literal("google-gemini"),
@@ -117,4 +118,4 @@ export type ContextualPicturePlan = z.infer<typeof contextualPicturePlanSchema>;
 export type ContextualPictureRequest = Pick<
   ContextualPicturePlan,
   "kind" | "brief"
->;
+> & { alternateBriefs?: z.infer<typeof contextualPictureBriefSchema>[] };

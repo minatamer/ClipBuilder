@@ -4,6 +4,8 @@ import { clipCandidateSchema } from "@clipbuilder/contracts";
 import { OWNER_VALIDATION_LIMITS } from "@clipbuilder/contracts";
 import {
   OWNER_LIMITS,
+  OWNER_DEFAULT_AI_COUNT,
+  OWNER_ALL_AI_MOMENTS_LIMIT,
   OWNER_MAX_REQUESTED_CLIP_MS,
   ownerIdSchema,
   OWNER_FPS,
@@ -38,11 +40,16 @@ export const ownerRangeSchema = z
       range.endMs - range.startMs <= OWNER_LIMITS.clipMs,
     { message: "Manual ranges must last 1–300 seconds with start before end." },
   );
-export const ownerAiCountSchema = z
-  .number()
-  .int()
-  .min(1)
-  .max(OWNER_LIMITS.suggestions);
+export const ownerAiCountSchema = z.union([
+  z.number().int().min(1).max(OWNER_LIMITS.suggestions),
+  z.literal("all"),
+]);
+export type OwnerAiCount = z.infer<typeof ownerAiCountSchema>;
+export function ownerAiResultLimit(count?: OwnerAiCount): number {
+  return count === "all"
+    ? OWNER_ALL_AI_MOMENTS_LIMIT
+    : (count ?? OWNER_DEFAULT_AI_COUNT);
+}
 export const ownerAnalysisInputsSchema = z
   .object({
     sourceRevision: z.number().int().nonnegative(),
@@ -90,6 +97,7 @@ export const ownerMomentSchema = z
     rangeIds: z.array(ownerIdSchema).max(OWNER_LIMITS.ranges),
     evidence: ownerAiEvidenceSchema.nullable(),
     cues: ownerWordsSchema,
+    speakersPrepared: z.boolean().optional(),
   })
   .strict();
 export type OwnerMoment = z.infer<typeof ownerMomentSchema>;
@@ -99,8 +107,10 @@ export const ownerAnalysisSchema = z
     inputs: ownerAnalysisInputsSchema,
     mode: ownerAiModeSchema,
     words: ownerWordsSchema,
+    transcriptCut: ownerCutSchema.optional(),
+    transcriptSpeakersPrepared: z.boolean().optional(),
     manual: z.array(ownerMomentSchema).max(OWNER_LIMITS.ranges),
-    suggestions: z.array(ownerMomentSchema).max(OWNER_LIMITS.suggestions),
+    suggestions: z.array(ownerMomentSchema).max(OWNER_ALL_AI_MOMENTS_LIMIT),
     calls: z
       .object({
         transcription: z.number().int().min(0).max(1),
@@ -108,7 +118,13 @@ export const ownerAnalysisSchema = z
       })
       .strict(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (analysis) =>
+      analysis.inputs.aiCount === "all" ||
+      analysis.suggestions.length <= OWNER_LIMITS.suggestions,
+    { path: ["suggestions"], message: "Too many numeric-mode suggestions." },
+  );
 export type OwnerAnalysis = z.infer<typeof ownerAnalysisSchema>;
 export const ownerMomentExportSchema = z
   .object({

@@ -9,12 +9,15 @@ import {
   ownerIdSchema,
   OWNER_FPS,
   OWNER_LIMITS,
+  OWNER_ALL_AI_MOMENTS_LIMIT,
 } from "./policy.ts";
 import { ownerWordsSchema } from "./selection.ts";
 import { ownerFocusPersonSchema, ownerFocusDecisionSchema } from "./focus.ts";
 import { ownerHookSchema } from "./hook.ts";
 import { ownerClipPlanSchema, OWNER_BATCH_POLICY } from "./clips.ts";
 import { ownerAuthoredTextPlanSchema } from "./text-layers.ts";
+import { codexProgressStepsSchema } from "./codex-progress.ts";
+import { ownerIllustrationSchema } from "./illustration.ts";
 
 export const LOCAL_CODEX_POLICY = {
   frames: 60,
@@ -40,9 +43,11 @@ export const localCodexJobSchema = z
     operation: z.literal("codex-input"),
     workspaceId: ownerIdSchema,
     jobId: ownerIdSchema,
-    kind: z.enum(["speech", "frames"]),
+    kind: z.enum(["speech", "frames", "speakers"]),
     fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
     cut: ownerCutSchema.optional(),
+    diarize: z.boolean().optional(),
+    words: ownerWordsSchema.optional(),
     speakerChanges: z
       .array(
         z
@@ -56,6 +61,22 @@ export const localCodexJobSchema = z
   })
   .strict()
   .refine((job) => job.kind === "speech" || !!job.cut)
+  .refine((job) => job.diarize === undefined || job.kind === "speech")
+  .refine((job) =>
+    job.kind === "speakers"
+      ? !!job.words &&
+        !!job.cut &&
+        job.words.every(
+          (word) =>
+            word.startMs >= 0 &&
+            word.endMs > word.startMs &&
+            word.endMs <=
+              Math.round(
+                ((job.cut!.endFrame - job.cut!.startFrame) * 1000) / OWNER_FPS,
+              ),
+        )
+      : job.words === undefined,
+  )
   .refine(
     (job) =>
       job.speakerChanges === undefined ||
@@ -72,9 +93,10 @@ export const localCodexReceiptSchema = z
   .object({
     operation: z.literal("codex-input"),
     jobId: ownerIdSchema,
-    kind: z.enum(["speech", "frames"]),
+    kind: z.enum(["speech", "frames", "speakers"]),
     bytes: z.number().int().positive().max(LOCAL_CODEX_POLICY.artifactBytes),
     digest: z.string().regex(/^[a-f0-9]{64}$/),
+    progress: codexProgressStepsSchema.optional(),
   })
   .strict();
 export type LocalCodexReceipt = z.infer<typeof localCodexReceiptSchema>;
@@ -104,6 +126,7 @@ export const localCodexFrameSchema = z
   .strict();
 export const localCodexArtifactSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("speech"), words: ownerWordsSchema }).strict(),
+  z.object({ kind: z.literal("speakers"), words: ownerWordsSchema }).strict(),
   z
     .object({
       kind: z.literal("frames"),
@@ -134,7 +157,7 @@ export const localCodexCandidatesSchema = z
           })
           .strict(),
       )
-      .max(OWNER_LIMITS.suggestions + OWNER_LIMITS.ranges),
+      .max(OWNER_ALL_AI_MOMENTS_LIMIT + OWNER_LIMITS.ranges),
   })
   .strict();
 export const localCodexFocusSchema = z
@@ -145,8 +168,8 @@ export const localCodexFocusSchema = z
     pictures: z
       .array(
         ownerClipPlanSchema.element
-          .omit({ illustration: true })
           .extend({
+            illustration: ownerIllustrationSchema,
             alternateBriefs:
               ownerClipPlanSchema.element.shape.alternateBriefs.unwrap(),
           })

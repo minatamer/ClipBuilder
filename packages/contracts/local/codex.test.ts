@@ -8,7 +8,45 @@ import {
 import { ownerMediaJobSchema, ownerMediaResultSchema } from "./index.ts";
 import { ownerRuntimeCapabilitiesSchema } from "./runtime.ts";
 import { ownerClipPlanSchema } from "./clips.ts";
-it("requests image briefs instead of a fixed diagram vocabulary while retaining saved illustration plans", () => {
+it("separates ASR-only discovery from selected-cut speaker assignment without admitting unbounded inputs", () => {
+  const base = {
+    operation: "codex-input",
+    workspaceId: crypto.randomUUID(),
+    jobId: crypto.randomUUID(),
+    fingerprint: "a".repeat(64),
+  };
+  const words = [
+    {
+      id: "w_000001",
+      text: "Synthetic",
+      punctuatedText: "Synthetic",
+      startMs: 100,
+      endMs: 700,
+      speakerId: null,
+      confidence: null,
+    },
+  ];
+  expect(
+    localCodexJobSchema.parse({ ...base, kind: "speech", diarize: false }),
+  ).toMatchObject({ diarize: false });
+  const job = {
+    ...base,
+    kind: "speakers",
+    cut: { startFrame: 30, endFrame: 60 },
+    words,
+  };
+  expect(localCodexJobSchema.safeParse(job).success).toBe(true);
+  for (const invalid of [
+    { ...job, cut: undefined },
+    { ...job, words: undefined },
+    { ...job, words: [{ ...words[0], endMs: 1001 }] },
+    { ...job, diarize: false },
+    { ...base, kind: "speech", words },
+    { ...base, kind: "frames", cut: job.cut, diarize: false },
+  ])
+    expect(localCodexJobSchema.safeParse(invalid).success).toBe(false);
+});
+it("requests a search brief and bounded generated fallback in the same planning call", () => {
   const cue = {
     startFrame: 0,
     endFrame: 60,
@@ -20,13 +58,19 @@ it("requests image briefs instead of a fixed diagram vocabulary while retaining 
       avoidTerms: [],
     },
   };
+  const illustration = {
+    layout: "concept",
+    heading: "Toy",
+    items: [{ label: "Play", icon: "box" }],
+  };
   expect(
     localCodexFocusSchema.shape.pictures.element.parse({
       ...cue,
       alternateBriefs: [],
+      illustration,
     }),
-  ).toEqual({ ...cue, alternateBriefs: [] });
-  expect(localCodexFocusSchema.shape.pictures.element.shape).not.toHaveProperty(
+  ).toEqual({ ...cue, alternateBriefs: [], illustration });
+  expect(localCodexFocusSchema.shape.pictures.element.shape).toHaveProperty(
     "illustration",
   );
   expect(

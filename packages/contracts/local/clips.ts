@@ -44,6 +44,7 @@ export const OWNER_BATCH_POLICY = {
   clipReservationBytes: 384 * 1024 ** 2,
   outputs: 20,
   operations: 200,
+  visualDiscoveryAttempts: 5,
 } as const;
 export const ownerOutputRevisionSchema = z
   .number()
@@ -190,6 +191,36 @@ export const ownerClipSchema = z
       .min(0)
       .max(OWNER_CAPTION_GENERATION_ATTEMPTS)
       .optional(),
+    visualAttempts: z
+      .number()
+      .int()
+      .min(0)
+      .max(OWNER_BATCH_POLICY.visualDiscoveryAttempts)
+      .optional(),
+    visualOperations: z
+      .array(
+        z
+          .object({
+            operationId: ownerIdSchema,
+            requestHash: ownerAssetSchema.shape.digest,
+          })
+          .strict(),
+      )
+      .max(OWNER_BATCH_POLICY.visualDiscoveryAttempts)
+      .refine(
+        (values) =>
+          new Set(values.map((value) => value.operationId)).size ===
+          values.length,
+      )
+      .optional(),
+    visualDiscovery: z
+      .object({
+        operationId: ownerIdSchema,
+        requestHash: ownerAssetSchema.shape.digest,
+        outcome: z.enum(["pending", "found", "miss", "failed"]),
+      })
+      .strict()
+      .optional(),
     baseHash: ownerAssetSchema.shape.digest.nullable(),
     state: z.enum([
       "selected",
@@ -204,7 +235,7 @@ export const ownerClipSchema = z
       "failed",
     ]),
     preparationStage: z
-      .enum(["planning", "pictures", "captions", "preview"])
+      .enum(["speakers", "planning", "pictures", "captions", "preview"])
       .optional(),
     base: ownerClipBaseSchema.nullable(),
     preview: ownerClipPreviewSchema.optional(),

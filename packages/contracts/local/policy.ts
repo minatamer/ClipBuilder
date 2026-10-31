@@ -16,6 +16,8 @@ export const OWNER_LIMITS = {
   jsonBytes: 1024 * 1024,
 } as const;
 export const OWNER_DEFAULT_AI_COUNT = 2;
+/** A resource ceiling for exhaustive discovery, never a selection target. */
+export const OWNER_ALL_AI_MOMENTS_LIMIT = OWNER_LIMITS.sourceMs / 10_000;
 export const OWNER_MAX_REQUESTED_CLIP_MS = 60_000;
 export const OWNER_FPS = 30;
 export const ownerAiModeSchema = z.enum(["synthetic-ai", "provider-ai"]);

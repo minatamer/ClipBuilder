@@ -22,7 +22,7 @@ export type HostedDemoStatus = z.infer<typeof hostedDemoStatusSchema>;
 /** Manual slots take priority; the same rule runs before browser and server work. */
 export function limitHostedDemoInputs(
   input: OwnerAnalysisInputs,
-): OwnerAnalysisInputs {
+): OwnerAnalysisInputs & { aiCount: number } {
   const ranges = input.ranges.slice(0, HOSTED_DEMO_POLICY.clips);
   const available = HOSTED_DEMO_POLICY.clips - ranges.length;
   return {
@@ -31,7 +31,12 @@ export function limitHostedDemoInputs(
     manualOnly: input.manualOnly || available === 0,
     aiCount: Math.max(
       1,
-      Math.min(input.aiCount ?? OWNER_DEFAULT_AI_COUNT, available),
+      Math.min(
+        input.aiCount === "all"
+          ? OWNER_DEFAULT_AI_COUNT
+          : (input.aiCount ?? OWNER_DEFAULT_AI_COUNT),
+        available,
+      ),
     ),
   };
 }
@@ -67,7 +72,7 @@ export function hostedEditingPath(method: string, path: string) {
     return true;
   if (method === "DELETE" && path === "/session") return true;
   const match =
-    /^\/workspace\/[a-f0-9-]{36}(?:\/(source|portrait|analysis|clips|assets|audio-assets)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|picture|audio|validate|captions)(?:\/(\d{1,2}))?)?)?)?$/u.exec(
+    /^\/workspace\/[a-f0-9-]{36}(?:\/(source|portrait|analysis|clips|assets|audio-assets)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|picture|visuals|audio|validate|captions)(?:\/(\d{1,2}))?)?)?)?$/u.exec(
       path,
     );
   if (!match) return false;

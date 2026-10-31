@@ -2,6 +2,8 @@ import { z } from "zod";
 import { requestIdSchema } from "../src/ids.schema.ts";
 import { ownerIdSchema } from "./policy.ts";
 import { ownerMediaJobSchema } from "./index.ts";
+import { CODEX_TIMING_OPERATION } from "./codex-progress.ts";
+import { visualDiagnosticSchema } from "./visual-diagnostics.ts";
 
 // Fixed code-owned reasons only. Never serialize an arbitrary message or cause.
 export const ownerDiagnosticReasonSchema = z.enum([
@@ -180,6 +182,7 @@ export const ownerDiagnosticReasonSchema = z.enum([
   "workspace_missing",
 ]);
 export const ownerDiagnosticOperationSchema = z.enum([
+  ...Object.values(CODEX_TIMING_OPERATION),
   ...ownerMediaJobSchema.options.map((item) => item.shape.operation.value),
   "http_request",
   "http_read",
@@ -352,6 +355,7 @@ export const ownerDiagnosticRecordSchema = z
     error: ownerDiagnosticErrorSchema.optional(),
     transcriptTiming: ownerTranscriptTimingDiagnosticSchema.optional(),
     focus: ownerFocusDiagnosticSchema.optional(),
+    visual: visualDiagnosticSchema.optional(),
     droppedRecords: z.number().int().min(0).max(1000000).optional(),
   })
   .strict();
