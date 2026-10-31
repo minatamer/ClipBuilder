@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, readFile, mkdir, writeFile, rm } from "node:fs/promises";
@@ -8,7 +8,11 @@ import { stop } from "esbuild";
 import { openBrowser } from "../apps/renderer/node_modules/@remotion/renderer/dist/index.js";
 import { ownerNativeTools } from "../scripts/native-tools.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
-import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
+import {
+  ownerAnalysisSchema,
+  ownerAnalysisRequestSchema,
+  type OwnerAnalysis,
+} from "../packages/contracts/local/selection.ts";
 import { ownerBatchRequestSchema } from "../packages/contracts/local/clips.ts";
 import { prepareLocalControlsFixture } from "./owner-controls-browser.ts";
 import { listenOwner } from "./owner-http.ts";
@@ -68,6 +72,7 @@ function analysis(total = 3) {
       ranges: [{ id: randomUUID(), startMs: 1000, endMs: 4000 }],
       aiDuration: { minMs: 10000, maxMs: 60000 },
       manualOnly: false,
+      ...(total > 12 ? { aiCount: "all" } : {}),
     },
     manual: Array.from({ length: manualCount }, (_, i) => moment(i, true)),
     suggestions: Array.from({ length: total - manualCount }, (_, i) =>
@@ -125,8 +130,11 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
       durationMs: 10000,
     },
   };
-  let result = analysis(),
+  let result: OwnerAnalysis | null = analysis(),
     active = false;
+  let hosted = false;
+  let analysisOutcome: "success" | "hold" | "failure" = "success";
+  const analyses: unknown[] = [];
   const submissions: unknown[] = [],
     writes: string[] = [];
   const server = createServer((req, res) => {
@@ -153,6 +161,20 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
           json({ clips: [], active: false, workers: 1 }, 202);
           return;
         }
+        if (path.endsWith("/analysis")) {
+          const inputs = ownerAnalysisRequestSchema.parse(
+            JSON.parse(Buffer.concat(chunks).toString()),
+          );
+          analyses.push(inputs);
+          if (analysisOutcome === "hold") return;
+          if (analysisOutcome === "failure") {
+            json({}, 500);
+            return;
+          }
+          result = ownerAnalysisSchema.parse({ ...analysis(32), inputs });
+          json(result);
+          return;
+        }
         throw new Error("unexpected_write");
       }
       if (path === "/favicon.ico") {
@@ -164,8 +186,14 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
           aiMode: "provider-ai",
           sourceMode: null,
           planningAvailable: true,
-          localMedia: true,
-          cloud: false,
+          ...(hosted
+            ? {
+                execution: "hosted",
+                localMedia: false,
+                cloud: true,
+                demoClipLimit: null,
+              }
+            : { localMedia: true, cloud: false }),
         });
         return;
       }
@@ -375,6 +403,94 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
       ),
     ).toEqual({ disabled: true, empty: true, focus: "tabpanel" });
     expect(writes).toHaveLength(1);
+    result = null;
+    await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+    await page.goto({ url: `http://localhost:${port}/`, timeout: 10000 });
+    const initializeActions = `globalThis.waitMoment=async(fn)=>{for(let i=0;i<400;i++){const v=fn();if(v)return v;await new Promise(done=>setTimeout(done,25));}throw new Error('all_moments_wait_timeout');};globalThis.momentAction=text=>[...document.querySelectorAll('button')].find(n=>n.textContent.trim()===text);`;
+    await evaluate(initializeActions);
+    await evaluate(
+      `waitMoment(()=>momentAction('Find moments')&&!momentAction('Find moments').disabled).then(()=>{globalThis.allChoice=()=>[...document.querySelectorAll('.selection label')].find(n=>n.textContent.trim()==='Find all')?.querySelector('input');allChoice().focus();})`,
+    );
+    for (const type of ["keyDown", "keyUp"] as const)
+      await page._client().send("Input.dispatchKeyEvent", {
+        type,
+        key: " ",
+        code: "Space",
+        windowsVirtualKeyCode: 32,
+        ...(type === "keyDown" ? { text: " " } : {}),
+      });
+    expect(
+      await evaluate(
+        `waitMoment(()=>momentAction('Find all moments')).then(()=>({checked:allChoice().checked,countDisabled:document.querySelector('.selection input[type="number"]').disabled}))`,
+      ),
+    ).toEqual({ checked: true, countDisabled: true });
+    for (const width of [1440, 390, 320]) {
+      await page.setViewport({
+        width,
+        height: width === 1440 ? 1000 : 844,
+        deviceScaleFactor: 1,
+      });
+      expect(
+        await evaluate(
+          `(async()=>{allChoice().scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const b=momentAction('Find all moments'),r=b.getBoundingClientRect();return {overflow:document.documentElement.scrollWidth>innerWidth,footer:document.querySelector('#sample-main > footer').contains(b),visible:r.top>=0&&r.bottom<=innerHeight+1};})()`,
+        ),
+      ).toEqual({ overflow: false, footer: true, visible: true });
+      const shot = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        resolve(`.local-build/evidence/cl172-find-all-${width}.png`),
+        Buffer.from(shot.value.data, "base64"),
+      );
+    }
+    await evaluate(
+      `momentAction('Find all moments').click();waitMoment(()=>document.querySelectorAll('.moment-card').length===32).then(()=>true)`,
+    );
+    expect(analyses).toEqual([expect.objectContaining({ aiCount: "all" })]);
+    expect(
+      await evaluate(
+        `waitMoment(()=>momentAction('Process clips')).then(button=>({disabled:button.disabled,shortfall:document.querySelector('.selection').textContent.includes('of all suggestions')}))`,
+      ),
+    ).toEqual({ disabled: true, shortfall: false });
+    expect(submissions).toHaveLength(1);
+    await ready();
+    await evaluate(
+      `momentAction('Add clips').click();waitMoment(()=>momentAction('Find all moments')).then(()=>true)`,
+    );
+    expect(
+      await evaluate(
+        `({checked:[...document.querySelectorAll('.selection label')].find(n=>n.textContent.trim()==='Find all').querySelector('input').checked,countDisabled:document.querySelector('.selection input[type="number"]').disabled})`,
+      ),
+    ).toEqual({ checked: true, countDisabled: true });
+    analysisOutcome = "hold";
+    await evaluate(
+      `momentAction('Find all moments').click();waitMoment(()=>momentAction('Cancel analysis')).then(()=>true)`,
+    );
+    await vi.waitFor(() => expect(analyses).toHaveLength(2));
+    expect(
+      await evaluate(`document.querySelector('.selection fieldset').disabled`),
+    ).toBe(true);
+    await evaluate(
+      `momentAction('Cancel analysis').click();waitMoment(()=>momentAction('Find all moments')&&!momentAction('Find all moments').disabled).then(()=>true)`,
+    );
+    analysisOutcome = "failure";
+    await evaluate(
+      `momentAction('Find all moments').click();waitMoment(()=>document.querySelector('.selection').textContent.includes('Couldn’t find moments. Try again.')).then(()=>true)`,
+    );
+    expect(analyses).toHaveLength(3);
+    hosted = true;
+    result = null;
+    await page.goto({ url: `http://localhost:${port}/`, timeout: 10000 });
+    await evaluate(initializeActions);
+    await evaluate(
+      `waitMoment(()=>momentAction('Find moments')&&!momentAction('Find moments').disabled).then(()=>true)`,
+    );
+    expect(
+      await evaluate(
+        `[...document.querySelectorAll('.selection label')].some(n=>n.textContent.trim()==='Find all')`,
+      ),
+    ).toBe(false);
+    expect(analyses).toHaveLength(3);
   } finally {
     await browser.close({ silent: true });
     await new Promise<void>((done) => server.close(() => done()));

@@ -17,11 +17,13 @@ import { join, resolve, relative, isAbsolute } from "node:path";
 import { createOwnerHost } from "../apps/backend/local/server.ts";
 import { createOwnerWorker } from "../apps/renderer/local/server.ts";
 import { createLocalCodexAi } from "../apps/backend/local/codex-ai.ts";
+import { createOwnerProviderAi } from "../apps/backend/local/provider-ai.ts";
+import type { GeminiTransport } from "../apps/backend/src/analysis/gemini.adapter.ts";
+import { createHash } from "node:crypto";
 import type { CodexInference } from "../apps/backend/local/codex-exec.ts";
 import { localWorkerPort } from "../apps/backend/local/worker-port.ts";
 import { ownerNativeTools } from "../scripts/native-tools.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
-import { retrievedPictureFixture } from "./owner-content-fixture.ts";
 import { ownerClipListSchema } from "../packages/contracts/local/clips.ts";
 import { ownerDraftStatusSchema } from "../packages/contracts/local/drafts.ts";
 import { ownerWorkspaceSchema } from "../packages/contracts/local/index.ts";
@@ -54,6 +56,9 @@ it("runs the local Codex workflow through real controls/native worker with injec
   const speech = vi.fn<typeof runOwnedProcess>(
     async (_exe, args, speechSignal) => {
       speechSignal.throwIfAborted();
+      // Hold the injected model long enough to observe authenticated native
+      // progress in the actual controls; no real model is invoked.
+      await new Promise<void>((done) => setTimeout(done, 1200));
       const prefix = args[args.indexOf("-of") + 1]!,
         wav = args[args.indexOf("-f") + 1]!;
       const probe = JSON.parse(
@@ -132,6 +137,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
   );
   let failSelection = true;
   const infer = vi.fn<CodexInference>(async (request) => {
+    await new Promise<void>((done) => setTimeout(done, 1100));
     expect(request.prompt).toContain("untrusted source data");
     if (
       "candidates" in (request.schema.properties as Record<string, unknown>)
@@ -153,21 +159,25 @@ it("runs the local Codex workflow through real controls/native worker with injec
         ],
       };
     }
-    expect(request.images?.length).toBeGreaterThan(0);
-    expect(request.images!.length).toBeLessThanOrEqual(60);
-    expect(
-      request.images!.every((jpeg) =>
-        Buffer.from(jpeg, "base64")
-          .subarray(0, 3)
-          .equals(Buffer.from([255, 216, 255])),
-      ),
-    ).toBe(true);
+    if ("people" in (request.schema.properties as Record<string, unknown>)) {
+      expect(request.images?.length).toBeGreaterThan(0);
+      expect(request.images!.length).toBeLessThanOrEqual(60);
+      expect(
+        request.images!.every((jpeg) =>
+          Buffer.from(jpeg, "base64")
+            .subarray(0, 3)
+            .equals(Buffer.from([255, 216, 255])),
+        ),
+      ).toBe(true);
+    } else expect(request.images).toBeUndefined();
     const match = /\n(\{.*\})$/su.exec(request.prompt),
       context = JSON.parse(match![1]!);
-    expect(request.images).toHaveLength(
-      Math.min(60, Math.max(1, Math.floor(context.frames / 30))),
-    );
+    if (request.images)
+      expect(request.images).toHaveLength(
+        Math.min(60, Math.max(1, Math.floor(context.frames / 30))),
+      );
     if (
+      request.images &&
       context.words.some(
         (word: { speakerId: string | null }) => word.speakerId === "spk_1",
       )
@@ -200,7 +210,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
                 .map((word: { id: string }) => word.id),
               brief: {
                 scene: "A simple local computer processing concept",
-                searchQuery: "local processing",
+                searchQuery: "local processing: illustration?",
                 requiredTerms: ["processing"],
                 avoidTerms: [],
               },
@@ -212,6 +222,14 @@ it("runs the local Codex workflow through real controls/native worker with injec
                   avoidTerms: [],
                 },
               ],
+              illustration: {
+                layout: "process",
+                heading: "Local processing",
+                items: [
+                  { label: "On device", icon: "computer" },
+                  { label: "Bounded work", icon: "check" },
+                ],
+              },
             },
           ]
         : [],
@@ -258,22 +276,63 @@ it("runs the local Codex workflow through real controls/native worker with injec
     join(ui, "index.html"),
     '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script nonce="synthetic" type="module" src="/app.js"></script></body></html>',
   );
-  const photo = await retrievedPictureFixture();
   const pictures = {
-    find: vi
-      .fn(
-        async (
-          request: ContextualPictureRequest,
-          signal: AbortSignal,
-        ): Promise<typeof photo.asset | null> => {
-          signal.throwIfAborted();
-          expect(request.brief.requiredTerms).toEqual(["processing"]);
-          return photo.asset;
-        },
-      )
-      .mockResolvedValueOnce(null),
+    find: vi.fn(
+      async (
+        request: ContextualPictureRequest,
+        signal: AbortSignal,
+      ): Promise<null> => {
+        signal.throwIfAborted();
+        expect(request.brief.requiredTerms).toEqual(["processing"]);
+        return null;
+      },
+    ),
   };
   let simulateOutage = false;
+  let useGemini = false;
+  const searchedJpeg = await sharp({
+    create: { width: 24, height: 12, channels: 3, background: "#128fea" },
+  })
+    .jpeg()
+    .toBuffer();
+  const geminiSearch = {
+    find: vi.fn(async () => ({
+      repository: "web" as const,
+      width: 24,
+      height: 12,
+      sha256: createHash("sha256").update(searchedJpeg).digest("hex"),
+      dataUri: `data:image/jpeg;base64,${searchedJpeg.toString("base64")}`,
+    })),
+  };
+  const geminiPictures = { find: vi.fn(async (): Promise<null> => null) };
+  const unexpected = vi.fn(async (): Promise<never> => {
+    throw new Error("unexpected_gemini_media_work");
+  });
+  const geminiTransport = {
+    upload: unexpected,
+    get: unexpected,
+    generate: unexpected,
+    transcribe: unexpected,
+    delete: unexpected,
+    candidates: vi.fn<GeminiTransport["candidates"]>(async () => ({
+      finished: true,
+      text: JSON.stringify({
+        pictures: [
+          {
+            startFrame: 30,
+            endFrame: 150,
+            evidenceWordIds: ["w_000001"],
+            brief: {
+              scene: "Local computer processing",
+              searchQuery: "local computer processing",
+              requiredTerms: ["processing"],
+              avoidTerms: [],
+            },
+          },
+        ],
+      }),
+    })),
+  } satisfies GeminiTransport;
   function makeHost() {
     const host = createOwnerHost({
       root,
@@ -285,7 +344,15 @@ it("runs the local Codex workflow through real controls/native worker with injec
       media,
       capacity: async () => {},
       providers: (files) =>
-        createLocalCodexAi({ files, media, infer, pictures }),
+        useGemini
+          ? createOwnerProviderAi({
+              files,
+              media,
+              transport: geminiTransport,
+              pictures: geminiPictures,
+              search: geminiSearch,
+            })
+          : createLocalCodexAi({ files, media, infer, pictures }),
     });
     host.server.prependListener("request", (req, response) => {
       // Match the normal frontend policy; the retired host UI predates audio.
@@ -373,9 +440,9 @@ it("runs the local Codex workflow through real controls/native worker with injec
         const input=document.querySelector('.upload-card input'),transfer=new DataTransfer();transfer.items.add(new File([Uint8Array.from(atob('${(await readFile(source)).toString("base64")}'),c=>c.charCodeAt(0))],'synthetic.mp4',{type:'video/mp4'}));input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));
         await wait(()=>button('Find moments')&&!button('Find moments').disabled,'find_ready');
         const set=async(label,value)=>{const n=[...document.querySelectorAll('.selection label')].find(n=>n.firstChild?.textContent.trim()===label)?.querySelector('input');if(!n)throw new Error('missing_'+label);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(n,value);n.dispatchEvent(new Event('input',{bubbles:true}));await new Promise(r=>setTimeout(r,40));};
-        await set('Clips','1');await set('Max (s)','10');button('Find moments').click();await wait(()=>document.body.textContent.includes('Sign in to Codex CLI with ChatGPT'),'login_error');
+        await set('Clips','1');await set('Max (s)','10');button('Find moments').click();await wait(()=>named('Preparation stages')?.querySelector('[data-state="running"]'),'speech_progress');await wait(()=>document.body.textContent.includes('Sign in to Codex CLI with ChatGPT'),'login_error');
         if(document.body.textContent.includes('Gemini credits'))throw new Error('gemini_fallback');
-        button('Find moments').click();await wait(()=>button('Process clips')&&!button('Process clips').disabled,'moments_ready');button('Process clips').click();await wait(()=>document.querySelector('.editor-preview video')&&button('Export clip'),'editor');
+        button('Find moments').click();await wait(()=>button('Process clips')&&!button('Process clips').disabled,'moments_ready');button('Process clips').click();await wait(()=>named('Preparation stages')?.querySelector('[data-state="running"]'),'planning_progress');await wait(()=>document.querySelector('.editor-preview video')&&button('Export clip'),'editor');
         return true;
       }
       if(action==='export'){button('Export clip').click();await wait(()=>named('Download clip'),'download');return true;}
@@ -429,7 +496,32 @@ it("runs the local Codex workflow through real controls/native worker with injec
     };
     expect(await run("start")).toBe(true);
     expect(speech).toHaveBeenCalledTimes(1);
+    expect(diarize).toHaveBeenCalledTimes(1);
     expect(infer).toHaveBeenCalledTimes(3);
+    const progressWorkspace = JSON.parse(
+      (
+        await ownerRequest(port, "/api/workspace", { headers: auth })
+      ).body.toString(),
+    );
+    const progressPath = `/api/workspace/${progressWorkspace.id}/codex-progress`;
+    expect((await ownerRequest(port, progressPath)).status).toBe(403);
+    const measured = await ownerRequest(port, progressPath, { headers: auth });
+    expect(measured.status).toBe(200);
+    expect(JSON.parse(measured.body.toString()).steps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "frames", state: "done" }),
+        expect.objectContaining({ id: "planning", state: "done" }),
+      ]),
+    );
+    expect(
+      (
+        await ownerRequest(
+          port,
+          `/api/workspace/${randomUUID()}/codex-progress`,
+          { headers: auth },
+        )
+      ).status,
+    ).toBe(404);
     expect(await run("export")).toBe(true);
     await note("exported");
     const workspace = JSON.parse(
@@ -471,7 +563,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
     expect(clips.clips[0]!.base!.hookSuggestion).toBeUndefined();
     expect(clips.clips[0]!.edit?.hook).toBeUndefined();
     expect(clips.clips[0]!.assets).toHaveLength(1);
-    expect(clips.clips[0]!.assets[0]!.origin).toBe("retrieved");
+    expect(clips.clips[0]!.assets[0]!.origin).toBe("generated");
     expect(clips.clips[0]!.base!.overlay.visuals[0]).toMatchObject({
       entrance: "none",
       exit: "fade",
@@ -636,7 +728,20 @@ it("runs the local Codex workflow through real controls/native worker with injec
     const prepared = media.mock.calls.filter(
       ([job]) => job.operation === "codex-input",
     );
-    expect(prepared).toHaveLength(4);
+    expect(prepared).toHaveLength(5);
+    expect(
+      prepared.filter(
+        ([job]) =>
+          job.operation === "codex-input" &&
+          job.kind === "speech" &&
+          job.diarize === false,
+      ),
+    ).toHaveLength(1);
+    expect(
+      prepared.filter(
+        ([job]) => job.operation === "codex-input" && job.kind === "speakers",
+      ),
+    ).toHaveLength(1);
     expect(
       prepared
         .filter(
@@ -676,6 +781,83 @@ it("runs the local Codex workflow through real controls/native worker with injec
         Buffer.from(shot.value.data, "base64"),
       );
     }
+    const findVisuals = async (capture: boolean) => {
+      const opened = await page._client().send("Runtime.evaluate", {
+        expression: `(async()=>{[...document.querySelectorAll('[role=tab]')].find(button=>button.textContent.trim()==='Media').click();await new Promise(resolve=>requestAnimationFrame(resolve));const button=[...document.querySelectorAll('button')].find(button=>button.textContent.trim()==='Find visuals');if(!button||button.disabled||!button.querySelector('svg'))throw Error('find_visuals_cta_missing');button.focus();button.click();await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return true;})()`,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      expect(opened.value.exceptionDetails).toBeUndefined();
+      if (capture) {
+        const busy = await page._client().send("Runtime.evaluate", {
+          expression: `document.body.textContent.includes('Finding visuals…')`,
+          returnByValue: true,
+        });
+        expect(busy.value.result.value).toBe(true);
+        const shot = await page
+          ._client()
+          .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+        await writeFile(
+          resolve(".local-build/evidence/cl171-find-visuals-busy.png"),
+          Buffer.from(shot.value.data, "base64"),
+        );
+      }
+      const finished = await page._client().send("Runtime.evaluate", {
+        expression: `(async()=>{const start=Date.now();while(document.body.textContent.includes('Finding visuals…')){if(Date.now()-start>15000)throw Error('find_visuals_timeout');await new Promise(resolve=>setTimeout(resolve,50));}return true;})()`,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      expect(finished.value.exceptionDetails).toBeUndefined();
+    };
+    const beforeDiscovery = clips.clips[0]!,
+      nativeBeforeDiscovery = media.mock.calls.length;
+    await findVisuals(true);
+    clips = ownerClipListSchema.parse(
+      JSON.parse(
+        (
+          await ownerRequest(port, `${endpoint}/clips`, { headers: auth })
+        ).body.toString(),
+      ),
+    );
+    expect(clips.clips[0]!.visualDiscovery?.outcome).toBe("found");
+    expect(clips.clips[0]!.base).toEqual(beforeDiscovery.base);
+    expect(clips.clips[0]!.assets).toHaveLength(2);
+    expect(clips.clips[0]!.edit?.visuals[0]!.assetId).not.toBe(
+      beforeDiscovery.edit?.visuals[0]!.assetId,
+    );
+    expect(media).toHaveBeenCalledTimes(nativeBeforeDiscovery);
+    expect(speech).toHaveBeenCalledTimes(2);
+    expect(infer).toHaveBeenCalledTimes(5);
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+    expect(await run("fits")).toBe(true);
+    const discoveryDesktop = await page
+      ._client()
+      .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+    await writeFile(
+      resolve(".local-build/evidence/cl171-find-visuals-1440.png"),
+      Buffer.from(discoveryDesktop.value.data, "base64"),
+    );
+    await page.setViewport({ width: 390, height: 900, deviceScaleFactor: 1 });
+    expect(await run("fits")).toBe(true);
+    await page._client().send("Runtime.evaluate", {
+      expression: `document.querySelector('[aria-label="AI visuals"]').scrollIntoView({block:'center'});`,
+    });
+    const discoveryPhone = await page
+      ._client()
+      .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+    await writeFile(
+      resolve(".local-build/evidence/cl171-find-visuals-390.png"),
+      Buffer.from(discoveryPhone.value.data, "base64"),
+    );
+    expect(await run("export")).toBe(true);
+    clips = ownerClipListSchema.parse(
+      JSON.parse(
+        (
+          await ownerRequest(port, `${endpoint}/clips`, { headers: auth })
+        ).body.toString(),
+      ),
+    );
+    expect(clips.clips[0]!.outputs).toHaveLength(2);
     expect(
       (await ownerRequest(port, `${endpoint}/draft`, { headers: auth })).status,
     ).toBe(200);
@@ -750,7 +932,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
     expect(media).toHaveBeenCalledTimes(mediaCount);
     expect(speech).toHaveBeenCalledTimes(2);
     expect(diarize).toHaveBeenCalledTimes(2);
-    expect(infer).toHaveBeenCalledTimes(4);
+    expect(infer).toHaveBeenCalledTimes(5);
     await note("connection_outage");
     simulateOutage = true;
     const disconnected = await page._client().send("Runtime.evaluate", {
@@ -814,6 +996,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
     const inferenceCount = infer.mock.calls.length,
       oldId = reopened.id;
     await host.close();
+    useGemini = true;
     host = makeHost();
     await new Promise<void>((done, fail) => {
       host.server.once("error", fail);
@@ -866,6 +1049,30 @@ it("runs the local Codex workflow through real controls/native worker with injec
     expect(speech).toHaveBeenCalledTimes(2);
     expect(diarize).toHaveBeenCalledTimes(2);
     expect(media).toHaveBeenCalledTimes(mediaCount);
+    await findVisuals(false);
+    const geminiClips = ownerClipListSchema.parse(
+      JSON.parse(
+        (
+          await ownerRequest(
+            port,
+            `/api/workspace/${recoveredWorkspace.id}/clips`,
+            { headers: auth },
+          )
+        ).body.toString(),
+      ),
+    );
+    expect(geminiClips.clips[0]!.visualAttempts).toBe(2);
+    expect(geminiClips.clips[0]!.assets.at(-1)).toMatchObject({
+      origin: "retrieved",
+      width: 24,
+      height: 12,
+    });
+    expect(geminiClips.clips[0]!.base).toEqual(recoveredClips.clips[0]!.base);
+    expect(geminiTransport.candidates).toHaveBeenCalledTimes(1);
+    expect(geminiSearch.find).toHaveBeenCalledTimes(1);
+    expect(geminiPictures.find).not.toHaveBeenCalled();
+    expect(unexpected).not.toHaveBeenCalled();
+    expect(media).toHaveBeenCalledTimes(mediaCount);
     expect(
       (
         await ownerRequest(port, `/api/workspace/${recoveredWorkspace.id}`, {
@@ -916,7 +1123,10 @@ it("runs the local Codex workflow through real controls/native worker with injec
     expect(pictures.find).toHaveBeenCalledTimes(2);
     expect(
       pictures.find.mock.calls.map(([request]) => request.brief.searchQuery),
-    ).toEqual(["local processing", "processing"]);
+    ).toEqual([
+      "local processing illustration",
+      "local processing illustration",
+    ]);
     expect(
       pictures.find.mock.calls.every(
         ([request]) => request.brief.requiredTerms.join(" ") === "processing",
