@@ -75,6 +75,7 @@ it("reports the composed provider mode without invoking any provider", async () 
     sourceMode: null,
     planningAvailable: true,
     captionGeneration: false,
+    visualDiscovery: true,
     localMedia: true,
     cloud: false,
   });

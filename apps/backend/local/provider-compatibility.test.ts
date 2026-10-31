@@ -352,7 +352,7 @@ it.each([
   },
 );
 
-it("fails closed when a provider-shaped image adapter returns synthetic provenance", async () => {
+it("rejects synthetic image provenance while keeping the provider clip reviewable", async () => {
   const validImage = clipPorts.image.getMockImplementation()!;
   clipPorts.image.mockImplementationOnce(async (input, signal) => ({
     ...(await validImage(input, signal))!,
@@ -365,13 +365,14 @@ it("fails closed when a provider-shaped image adapter returns synthetic provenan
   await batch.drain();
   const clip = batch.snapshot().clips[0]!;
   expect(clip.mode).toBe("provider-ai");
-  expect(clip.state).toBe("failed");
+  expect(clip.state).toBe("review-ready");
   expect(clip.calls).toEqual({ plan: 1, image: 1, render: 0 });
-  expect(clip.base).toBeNull();
+  expect(clip.base!.overlay.visuals).toEqual([]);
   expect(clip.assets).toEqual([]);
   expect(clip.outputs).toEqual([]);
   expect(clipPorts.image).toHaveBeenCalledTimes(1);
-  expect(clipPorts.render).toHaveBeenCalledTimes(0);
+  expect(clipPorts.render).toHaveBeenCalledTimes(1);
+  expect(clipPorts.render.mock.calls[0]![0].operation).toBe("clip-preview");
 });
 
 it("does not admit synthetic analysis into a provider-shaped batch", async () => {
@@ -458,7 +459,7 @@ it.each([
     Buffer.alloc(CONTEXTUAL_PICTURE_POLICY.maxDownloadBytes + 1),
   ],
 ])(
-  "rejects a %s before writing an asset or rendering",
+  "rejects a %s image before storing it and preserves preview-only work",
   async (_reason, bytes) => {
     clipPorts.image.mockResolvedValueOnce({ bytes, origin: "generated" });
     await batch.submit(
@@ -467,14 +468,16 @@ it.each([
     );
     await batch.drain();
     const clip = batch.snapshot().clips[0]!;
-    expect(clip.state).toBe("failed");
+    expect(clip.state).toBe("review-ready");
+    expect(clip.base!.overlay.visuals).toEqual([]);
     expect(clip.assets).toEqual([]);
     expect(clip.outputs).toEqual([]);
     expect(clip.calls).toEqual({ plan: 1, image: 1, render: 0 });
     expect(clipPorts.image).toHaveBeenCalledTimes(1);
-    expect(clipPorts.render).toHaveBeenCalledTimes(0);
-    expect(await readdir(join(directory, workspace.id))).toEqual([
-      "source.mp4",
-    ]);
+    expect(clipPorts.render).toHaveBeenCalledTimes(1);
+    expect(clipPorts.render.mock.calls[0]![0].operation).toBe("clip-preview");
+    expect((await readdir(join(directory, workspace.id))).sort()).toEqual(
+      [`${clip.id}.source.mp4`, "source.mp4"].sort(),
+    );
   },
 );

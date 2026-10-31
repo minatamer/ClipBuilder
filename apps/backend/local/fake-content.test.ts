@@ -5,6 +5,7 @@ import { fakeOwnerClipPreparation } from "./fake-clips.ts";
 import { ownerWorkspaceSchema } from "../../../packages/contracts/local/index.ts";
 import { ownerWordsSchema } from "../../../packages/contracts/local/selection.ts";
 import type { OwnerClipPorts } from "./clip-batch.ts";
+import { OWNER_AI_HOOK_POLICY } from "../../../packages/contracts/local/hook-sounds.ts";
 
 it("simulates a varied source-contained Hook range that stays stable for a clip", () => {
   const starts = new Set<number>();
@@ -21,7 +22,10 @@ it("simulates a varied source-contained Hook range that stays stable for a clip"
       fps: 30,
     },
   });
-  for (const frames of [1, 30, 600]) {
+  const minimum =
+    OWNER_AI_HOOK_POLICY.earliestStartFrame +
+    OWNER_AI_HOOK_POLICY.minimumPreferredFrames;
+  for (const frames of [1, 30, minimum - 1, minimum, 600]) {
     for (let index = 0; index < 12; index++) {
       const request: Parameters<
         NonNullable<OwnerClipPorts["hookSuggestion"]>
@@ -37,13 +41,23 @@ it("simulates a varied source-contained Hook range that stays stable for a clip"
           evidence: null,
         },
       };
-      const range = fakeOwnerClipPreparation.hookSuggestion!(request)!;
+      const range = fakeOwnerClipPreparation.hookSuggestion!(request);
       expect(range).toEqual(fakeOwnerClipPreparation.hookSuggestion!(request));
-      expect(range.startFrame).toBeGreaterThanOrEqual(0);
-      expect(range.endFrame).toBeLessThanOrEqual(frames);
-      expect(range.endFrame - range.startFrame).toBeLessThanOrEqual(90);
-      expect(range.endFrame).toBeGreaterThan(range.startFrame);
-      if (frames === 600) starts.add(range.startFrame);
+      if (frames < minimum) {
+        expect(range).toBeUndefined();
+        continue;
+      }
+      expect(range!.startFrame).toBeGreaterThanOrEqual(
+        OWNER_AI_HOOK_POLICY.earliestStartFrame,
+      );
+      expect(range!.endFrame).toBeLessThanOrEqual(frames);
+      expect(range!.endFrame - range!.startFrame).toBeLessThanOrEqual(
+        OWNER_AI_HOOK_POLICY.preferredFrames,
+      );
+      expect(range!.endFrame - range!.startFrame).toBeGreaterThanOrEqual(
+        OWNER_AI_HOOK_POLICY.minimumPreferredFrames,
+      );
+      if (frames === 600) starts.add(range!.startFrame);
     }
   }
   expect(starts.size).toBeGreaterThan(1);

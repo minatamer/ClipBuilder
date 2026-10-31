@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { slidingHighlight } from "./sliding-highlight.ts";
 import { ownerOverlayFrame } from "./overlay-frame.ts";
-import { syntheticTextClip } from "../../../test/owner-text-fixture.ts";
+import type { OwnerOverlay } from "../../contracts/local/clips.ts";
 import { OWNER_CAPTION_PRESETS } from "../../contracts/local/editor.ts";
 
 const cues = [
@@ -65,8 +65,10 @@ it("resets across lines, handles short cues/overlap and admits unordered provide
 });
 
 it("keeps native raster reuse safe throughout sliding motion and short silent gaps", () => {
-  const overlay = {
-    ...syntheticTextClip().base!.overlay,
+  const overlay: OwnerOverlay = {
+    version: 1,
+    frames: 90,
+    visuals: [],
     captionStyle: {
       ...OWNER_CAPTION_PRESETS.tiktok,
       animation: "slide" as const,

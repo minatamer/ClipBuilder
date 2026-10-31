@@ -111,6 +111,7 @@ describe("isolated owner host", () => {
       sourceMode: null,
       planningAvailable: false,
       captionGeneration: false,
+      visualDiscovery: false,
       localMedia: true,
       cloud: false,
     });

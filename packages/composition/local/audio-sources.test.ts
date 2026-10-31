@@ -11,9 +11,11 @@ it("serves deterministic real recordings with exact catalogue sample clocks and 
   ).toEqual(["riser", "rising-tension", "pop", "discord", "bamboo", "boom"]);
   for (const sound of OWNER_SOUNDS) {
     const sample = ownerSoundAudio(sound.id);
-    expect(new Uint8Array(sample.bytes)).toEqual(
-      new Uint8Array(ownerSoundAudio(sound.id).bytes),
-    );
+    const [digest, repeated] = await Promise.all([
+      crypto.subtle.digest("SHA-256", sample.bytes),
+      crypto.subtle.digest("SHA-256", ownerSoundAudio(sound.id).bytes),
+    ]);
+    expect(new Uint8Array(digest)).toEqual(new Uint8Array(repeated));
     const bytes = new DataView(sample.bytes);
     if (!sound.recordingDigest) {
       expect(sample.extension).toBe("wav");
@@ -21,13 +23,10 @@ it("serves deterministic real recordings with exact catalogue sample clocks and 
     } else {
       expect(sample.mimeType).toBe("audio/flac");
       expect(sample.extension).toBe("flac");
-      const digest = new Uint8Array(
-        await crypto.subtle.digest("SHA-256", sample.bytes),
-      );
       expect(
-        Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join(
-          "",
-        ),
+        Array.from(new Uint8Array(digest), (byte) =>
+          byte.toString(16).padStart(2, "0"),
+        ).join(""),
       ).toBe(sound.recordingDigest);
       expect(bytes.getUint32(0)).toBe(0x664c6143);
       // FLAC STREAMINFO packs the rate, channels, bit depth and total PCM samples.
