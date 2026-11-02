@@ -515,6 +515,14 @@
     background: var(--cb-glass-sheen), var(--cb-canvas);
     box-shadow: var(--cb-glass-edge-shadow);
   }
+  .collection-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+  }
   .section-heading {
     display: flex;
     flex-wrap: wrap;

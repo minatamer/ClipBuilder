@@ -10,7 +10,6 @@ import {
   ownerIdSchema,
   OWNER_FPS,
   OWNER_LIMITS,
-  OWNER_ALL_AI_MOMENTS_LIMIT,
 } from "./policy.ts";
 import { ownerWordsSchema } from "./selection.ts";
 import { ownerFocusPersonSchema, ownerFocusDecisionSchema } from "./focus.ts";
@@ -143,24 +142,22 @@ export const localCodexArtifactSchema = z.discriminatedUnion("kind", [
 export type LocalCodexArtifact = z.infer<typeof localCodexArtifactSchema>;
 export const localCodexCandidatesSchema = z
   .object({
-    candidates: z
-      .array(
-        z
-          .object({
-            startWordId: wordIdSchema,
-            endWordId: wordIdSchema,
-            titleWordIds: z.array(wordIdSchema).min(1).max(40),
-            hookWordIds: z.array(wordIdSchema).min(1).max(40),
-            evidence: z
-              .array(
-                candidateEvidenceSchema.pick({ signal: true, wordIds: true }),
-              )
-              .max(8),
-            caveats: z.array(candidateCaveatSchema.shape.code).max(3),
-          })
-          .strict(),
-      )
-      .max(OWNER_ALL_AI_MOMENTS_LIMIT + OWNER_LIMITS.ranges),
+    candidates: z.array(
+      z
+        .object({
+          startWordId: wordIdSchema,
+          endWordId: wordIdSchema,
+          titleWordIds: z.array(wordIdSchema).min(1).max(40),
+          hookWordIds: z.array(wordIdSchema).min(1).max(40),
+          evidence: z
+            .array(
+              candidateEvidenceSchema.pick({ signal: true, wordIds: true }),
+            )
+            .max(8),
+          caveats: z.array(candidateCaveatSchema.shape.code).max(3),
+        })
+        .strict(),
+    ),
   })
   .strict();
 export const localCodexFocusSchema = z

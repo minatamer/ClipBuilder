@@ -7,6 +7,7 @@ import { createReadStream, createWriteStream } from "node:fs";
 import { lstat, mkdir, open, readdir, rename, rm } from "node:fs/promises";
 import { isAbsolute, parse, relative, resolve, sep } from "node:path";
 import { dirname } from "node:path";
+import { pageDocument, unpageDocument } from "./paged-document.ts";
 import { AnalysisChunks } from "./analysis-chunks.ts";
 import { pipeline } from "node:stream/promises";
 import { Transform } from "node:stream";
@@ -20,17 +21,14 @@ import {
 } from "../../../packages/contracts/local/drafts.ts";
 import {
   OWNER_LIMITS,
+  OWNER_ALL_AI_MOMENTS_LIMIT,
   ownerIdSchema,
 } from "../../../packages/contracts/local/policy.ts";
 import {
   ownerDigestSchema,
-  OWNER_PICTURE_LIMITS,
   ownerPictureExtension,
 } from "../../../packages/contracts/local/assets.ts";
-import {
-  OWNER_AUDIO_LIMITS,
-  type OwnerAudioAsset,
-} from "../../../packages/contracts/local/audio.ts";
+import { type OwnerAudioAsset } from "../../../packages/contracts/local/audio.ts";
 import { compileOwnerOverlay } from "../../../packages/contracts/local/edit-overlay.ts";
 import {
   confinedPath,
@@ -39,7 +37,6 @@ import {
 } from "./workspace-files.ts";
 import { rejectRepositoryStorage } from "./owner-storage.ts";
 import {
-  ownerSourceFitsCapacity,
   resolveOwnerCapacity,
   type OwnerCapacity,
 } from "../../../packages/contracts/local/capacity.ts";
@@ -75,14 +72,9 @@ const recordSchema = z
     savedAt: z.string().datetime(),
     snapshot: ownerDraftSnapshotSchema,
     source: fileSchema,
-    assets: z
-      .array(assetFileSchema)
-      .max(
-        OWNER_LIMITS.clips *
-          (OWNER_PICTURE_LIMITS.assetsPerClip + OWNER_AUDIO_LIMITS.assets),
-      ),
-    raw: z.array(rawFileSchema).max(OWNER_LIMITS.clips),
-    outputs: z.array(outputFileSchema).max(200),
+    assets: z.array(assetFileSchema),
+    raw: z.array(rawFileSchema),
+    outputs: z.array(outputFileSchema),
   })
   .strict();
 type DraftRecord = z.infer<typeof recordSchema>;
@@ -172,7 +164,11 @@ async function readDocument(
     if (bytes > MAX_DOCUMENT_BYTES) throw new Error("draft_document_large");
     chunks.push(chunk);
   }
-  return JSON.parse(Buffer.concat(chunks, bytes).toString("utf8"));
+  return unpageDocument(
+    path,
+    JSON.parse(Buffer.concat(chunks, bytes).toString("utf8")),
+    signal,
+  );
 }
 
 /** Reject links in every ancestor before creating even the first storage folder. */
@@ -205,9 +201,14 @@ async function atomicJson(
   path: string,
   value: unknown,
   signal: AbortSignal,
+  pageCapacity?: typeof requireDisk,
 ): Promise<void> {
   signal.throwIfAborted();
-  const json = JSON.stringify(value);
+  const json = JSON.stringify(
+    pageCapacity
+      ? await pageDocument(path, value, signal, pageCapacity)
+      : value,
+  );
   if (Buffer.byteLength(json) > MAX_DOCUMENT_BYTES)
     throw new Error("draft_document_large");
   const temporary = `${path}.${randomUUID()}.tmp`;
@@ -437,6 +438,7 @@ export class OwnerDraftStore {
     root: string,
     private readonly capacity: typeof requireDisk = requireDisk,
     private readonly policy: OwnerCapacity = resolveOwnerCapacity({}),
+    private readonly restoreCapacity: typeof requireDisk = capacity,
   ) {
     if (!isAbsolute(root)) throw new Error("invalid_path");
     this.root = resolve(root);
@@ -530,13 +532,6 @@ export class OwnerDraftStore {
       try {
         const path = await confinedPath(directory, name);
         const record = recordSchema.parse(await readDocument(path, signal));
-        if (
-          !ownerSourceFitsCapacity(
-            record.snapshot.workspace.source,
-            this.policy,
-          )
-        )
-          throw Error("draft_source_capacity");
         if (record.id !== id) throw new Error("draft_document_invalid");
         validateRelations(record);
         if (verify) {
@@ -568,8 +563,10 @@ export class OwnerDraftStore {
     files: WorkspaceFiles,
     signal: AbortSignal,
   ): Promise<OwnerDraftSummary> {
-    if (!ownerSourceFitsCapacity(snapshot.workspace.source, this.policy))
-      throw Error("draft_source_capacity");
+    const paged =
+      this.policy.profile === "local-codex" ||
+      snapshot.clips.length > OWNER_LIMITS.clips ||
+      (snapshot.analysis?.suggestions.length ?? 0) > OWNER_ALL_AI_MOMENTS_LIMIT;
     const exists = await this.rootExists(signal);
     const previous = id
       ? exists
@@ -701,21 +698,22 @@ export class OwnerDraftStore {
       await this.capacity(this.root, bytes);
       for (const copy of copies)
         await copyImmutable(copy, signal, this.verified);
-      if (this.policy.profile === "local-codex")
-        await new AnalysisChunks(dirname(sourcePath), this.capacity).copyTo(
-          directory,
-          signal,
-        );
+      await new AnalysisChunks(dirname(sourcePath), this.capacity).copyTo(
+        directory,
+        signal,
+      );
       if (previous)
         await atomicJson(
           await confinedPath(directory, "backup.json"),
           previous,
           signal,
+          paged ? this.capacity : undefined,
         );
       await atomicJson(
         await confinedPath(directory, "draft.json"),
         record,
         signal,
+        paged ? this.capacity : undefined,
       );
       return ownerDraftSummarySchema.parse({
         id: record.id,
@@ -851,7 +849,7 @@ export class OwnerDraftStore {
       this.verified.clear();
       const record = await this.readRecord(id, signal);
       const paths = await this.paths(record);
-      await this.capacity(
+      await this.restoreCapacity(
         files.root,
         record.source.bytes +
           [...record.assets, ...record.raw, ...record.outputs].reduce(
@@ -899,14 +897,10 @@ export class OwnerDraftStore {
           await copyImmutable(copy, signal, this.verified);
         signal.throwIfAborted();
         const snapshot = record.snapshot;
-        if (this.policy.profile === "local-codex")
-          await new AnalysisChunks(
-            await this.directory(id),
-            this.capacity,
-          ).copyTo(
-            dirname(await files.file(workspaceId, "source.mp4")),
-            signal,
-          );
+        await new AnalysisChunks(
+          await this.directory(id),
+          this.capacity,
+        ).copyTo(dirname(await files.file(workspaceId, "source.mp4")), signal);
         snapshot.workspace.id = workspaceId;
         for (const clip of snapshot.clips) {
           if (

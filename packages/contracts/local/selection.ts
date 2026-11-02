@@ -46,13 +46,16 @@ export const ownerRangeSchema = z
     { message: "Manual ranges must last 1–300 seconds with start before end." },
   );
 export const ownerAiCountSchema = z.union([
-  z.number().int().min(1).max(OWNER_LIMITS.suggestions),
+  z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
   z.literal("all"),
 ]);
 export type OwnerAiCount = z.infer<typeof ownerAiCountSchema>;
-export function ownerAiResultLimit(count?: OwnerAiCount): number {
+export function ownerAiResultLimit(
+  count?: OwnerAiCount,
+  maximum: number | null = OWNER_ALL_AI_MOMENTS_LIMIT,
+): number {
   return count === "all"
-    ? OWNER_ALL_AI_MOMENTS_LIMIT
+    ? (maximum ?? Number.MAX_SAFE_INTEGER)
     : (count ?? OWNER_DEFAULT_AI_COUNT);
 }
 export const ownerAnalysisInputsSchema = z
@@ -131,6 +134,7 @@ export const ownerAnalysisSchema = z
             "codex_login_required",
             "codex_limit",
             "disk_unavailable",
+            "memory_unavailable",
             "processing_unavailable",
           ])
           .optional(),
@@ -139,7 +143,7 @@ export const ownerAnalysisSchema = z
       .refine((value) => value.completed <= value.planned)
       .optional(),
     manual: z.array(ownerMomentSchema).max(OWNER_LIMITS.ranges),
-    suggestions: z.array(ownerMomentSchema).max(OWNER_ALL_AI_MOMENTS_LIMIT),
+    suggestions: z.array(ownerMomentSchema),
     calls: z
       .object({
         transcription: z
@@ -155,7 +159,8 @@ export const ownerAnalysisSchema = z
   .refine(
     (analysis) =>
       analysis.inputs.aiCount === "all" ||
-      analysis.suggestions.length <= OWNER_LIMITS.suggestions,
+      analysis.suggestions.length <=
+        Math.max(OWNER_LIMITS.suggestions, analysis.inputs.aiCount ?? 0),
     { path: ["suggestions"], message: "Too many numeric-mode suggestions." },
   );
 export type OwnerAnalysis = z.infer<typeof ownerAnalysisSchema>;

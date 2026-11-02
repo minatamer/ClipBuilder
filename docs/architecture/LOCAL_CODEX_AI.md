@@ -1,5 +1,14 @@
 # Local Codex provider — CL-135
 
+## Collection scaling — CL-190
+
+Local Codex count readiness is enabled: no 360-moment/ten-clip total quota.
+Finite planned discovery, bounded response pages, serial preparation, immutable
+paged saves/recovery and actual disk/heap guards apply. There is no automatic
+retry, extra fill-to-count loop or model/reasoning switch. Gemini/hosted budgets
+remain independent. See the [capacity inventory](../operations/LOCAL_CODEX_CAPACITY.md)
+and [packet evidence](../tickets/CL-190-codex-unrestricted-moment-batches.md).
+
 ## Long-source pass — CL-189
 
 The local Codex capacity now enables long sources. Eight-minute source-aligned ASR cores with two seconds of context and sixty-second discovery overlap replace whole-source WAV/prompt processing. Individually bounded compatible receipts copy incrementally into saved drafts and single rolling recovery. Explicit retry resumes missing units, with partial/canceled coverage retained. Disk reserve, per-operation native/inference limits and safe codecs remain; Gemini/hosted budgets do not change. The existing model/reasoning is preserved; no real throughput/quality claim is made. CL-190 owns aggregate moment/batch scaling.

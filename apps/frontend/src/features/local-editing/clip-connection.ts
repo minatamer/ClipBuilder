@@ -1,7 +1,5 @@
-import {
-  ownerClipListSchema,
-  type OwnerClipList,
-} from "../../../../../packages/contracts/local/clips.ts";
+import { readOwnerClips } from "./collection-pages.ts";
+import { type OwnerClipList } from "../../../../../packages/contracts/local/clips.ts";
 import {
   ownerWorkspaceSchema,
   type OwnerWorkspace,
@@ -63,7 +61,12 @@ export async function pollClipConnection(options: {
         throw new Error("connection_unavailable");
       }
       if (!response.ok) throw new Error("connection_unavailable");
-      const list = ownerClipListSchema.parse(await response.json());
+      const list = await readOwnerClips(
+        response,
+        options.workspaceId,
+        options.signal,
+        request,
+      );
       if (options.signal.aborted) return;
       options.list(list, revision);
       options.state("connected");

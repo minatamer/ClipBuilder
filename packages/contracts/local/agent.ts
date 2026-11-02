@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ownerIdSchema, OWNER_LIMITS } from "./policy.ts";
+import { ownerIdSchema } from "./policy.ts";
 import { ownerWorkspaceSchema } from "./index.ts";
 import {
   ownerClipSchema,
@@ -77,7 +77,7 @@ export const ownerAgentClipSchema = ownerClipSchema
   .strict();
 export const ownerAgentClipListSchema = z
   .object({
-    clips: z.array(ownerAgentClipSchema).max(OWNER_LIMITS.clips),
+    clips: z.array(ownerAgentClipSchema),
     active: z.boolean(),
     workers: z.literal(1),
     pictureAssetId: ownerClipListSchema.shape.pictureAssetId,
@@ -87,7 +87,7 @@ export const ownerAgentStatusSchema = z
   .object({
     workspace: ownerWorkspaceSchema.nullable(),
     active: z.boolean(),
-    clips: z.array(ownerAgentClipSchema).max(OWNER_LIMITS.clips),
+    clips: z.array(ownerAgentClipSchema),
   })
   .strict();
 export const ownerAgentValidationSchema = z

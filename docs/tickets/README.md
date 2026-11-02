@@ -1,5 +1,14 @@
 # ClipBuilder canonical ticket index
 
+## Local Codex collection capacity — 2026-11-02
+
+[CL-190](CL-190-codex-unrestricted-moment-batches.md) removes Codex total-count
+quotas through selection, review, processing and recovery. Large collections
+page their wire/storage data; one worker and real machine guards remain. The
+720-moment/24-clip fake server/browser evidence and smaller native workflow
+pass, with unchanged Gemini/hosted admission. CL-192 manual camera punch-in is
+next; CL-193 remains research only. No real provider/download test was run.
+
 ## Long local Codex analysis — 2026-11-02
 
 [CL-189](CL-189-long-source-codex-discovery.md) enables long/large local Codex sources, bounded complete audio/discovery windows, acknowledged receipt recovery and explicit partial retry. Two-hour fake server recovery/retry makes zero new calls; current-source native/browser proofs and duration guards pass. Gemini/hosted budgets are unchanged. CL-190 is next; no real processing was run.

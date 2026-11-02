@@ -28,11 +28,13 @@ export class OwnerSessionRecovery {
     diagnostics = new LocalDiagnostics(),
     capacity: typeof requireDisk = requireDisk,
     policy: OwnerCapacity = resolveOwnerCapacity({}),
+    restoreCapacity: typeof requireDisk = capacity,
   ) {
     this.store = new OwnerDraftStore(
       join(storageRoot, ".recovery"),
       capacity,
       policy,
+      restoreCapacity,
     );
     this.drafts = new OwnerWorkspaceDrafts(
       this.store,

@@ -58,7 +58,7 @@ it.each(["codex", "gemini", "hosted"] as const)(
         expect(capabilities.capacity).toMatchObject({
           profile: kind === "codex" ? "local-codex" : "bounded",
           longSources: kind === "codex",
-          manyClips: false,
+          manyClips: kind === "codex",
           sourceBytes: kind === "codex" ? null : OWNER_LIMITS.sourceBytes,
           sourceMs: kind === "codex" ? null : OWNER_LIMITS.sourceMs,
         });

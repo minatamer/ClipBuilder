@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { OwnerClipBatch, type OwnerClipPorts } from "./clip-batch.ts";
 import { editorContentFixture as fakeOwnerClipPreparation } from "../../../test/owner-content-fixture.ts";
 import { fakeOwnerAnalysis } from "./fake-analysis.ts";
@@ -138,6 +138,131 @@ const gate = () => {
   });
   return { wait, release };
 };
+it("prepares twenty-four retained clips with one worker, retries only the failed clip and restores without dispatch", async () => {
+  await batch.close();
+  batch = new OwnerClipBatch(
+    workspace,
+    files,
+    ports,
+    () => {},
+    new LocalDiagnostics(),
+    async () => {},
+    Number.MAX_SAFE_INTEGER,
+  );
+  const sample = analysis.suggestions[0]!;
+  analysis.inputs.aiCount = "all";
+  analysis.suggestions = Array.from({ length: 24 }, (_, i) => ({
+    ...structuredClone(sample),
+    id: randomUUID(),
+    processingIdentity: createHash("sha256")
+      .update(`${workspace.source.fingerprint}:${i * 30}:${i * 30 + 300}`)
+      .digest("hex"),
+    cut: { startFrame: i * 30, endFrame: i * 30 + 300 },
+  }));
+  let active = 0,
+    maximum = 0;
+  ports.plan.mockImplementation(async () => {
+    active++;
+    maximum = Math.max(maximum, active);
+    try {
+      if (ports.plan.mock.calls.length === 3) throw Error("fictional_failure");
+      return [];
+    } finally {
+      active--;
+    }
+  });
+  await batch.submit(
+    { ...request(), momentIds: analysis.suggestions.map((m) => m.id) },
+    analysis,
+  );
+  await batch.drain();
+  const completed = batch.snapshot();
+  expect(completed.clips).toHaveLength(24);
+  expect(maximum).toBe(1);
+  expect(
+    completed.clips.filter((clip) => clip.state === "failed"),
+  ).toHaveLength(1);
+  expect(ports.plan).toHaveBeenCalledTimes(24);
+  expect(ports.render).toHaveBeenCalledTimes(23);
+  const failed = completed.clips.find((clip) => clip.state === "failed")!;
+  await batch.retry(
+    failed.id,
+    { operationId: randomUUID(), expectedRevision: failed.revision },
+    analysis,
+  );
+  await batch.drain();
+  expect(ports.plan).toHaveBeenCalledTimes(25);
+  expect(ports.render).toHaveBeenCalledTimes(24);
+  expect(
+    batch.snapshot().clips.every((clip) => clip.state === "review-ready"),
+  ).toBe(true);
+  const restored = new OwnerClipBatch(
+    workspace,
+    files,
+    ports,
+    () => {},
+    new LocalDiagnostics(),
+    async () => {},
+    Number.MAX_SAFE_INTEGER,
+  );
+  restored.restore(batch.snapshot().clips);
+  expect(restored.snapshot().clips).toHaveLength(24);
+  expect(restored.active).toBe(false);
+  expect(ports.plan).toHaveBeenCalledTimes(25);
+  expect(ports.render).toHaveBeenCalledTimes(24);
+  await restored.close();
+});
+it("does not impose the old two-hundred-operation quota on idempotent Codex session submissions", async () => {
+  await batch.close();
+  batch = new OwnerClipBatch(
+    workspace,
+    files,
+    ports,
+    () => {},
+    new LocalDiagnostics(),
+    async () => {},
+    Number.MAX_SAFE_INTEGER,
+  );
+  ports.plan.mockResolvedValue([]);
+  for (let i = 0; i < 205; i++)
+    await batch.submit(
+      { ...request(), momentIds: [analysis.suggestions[0]!.id] },
+      analysis,
+    );
+  await batch.drain();
+  expect(batch.snapshot().clips).toHaveLength(1);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.render).toHaveBeenCalledTimes(1);
+});
+it("stops queued Codex work on disk exhaustion while retaining completed clips for explicit retry", async () => {
+  await batch.close();
+  let fail = false;
+  const capacity = vi.fn(async () => {
+    if (fail) throw Error("disk_unavailable");
+  });
+  batch = new OwnerClipBatch(
+    workspace,
+    files,
+    ports,
+    () => {},
+    new LocalDiagnostics(),
+    capacity,
+    Number.MAX_SAFE_INTEGER,
+  );
+  ports.plan.mockImplementation(async () => {
+    fail = true;
+    return [];
+  });
+  await batch.submit(request(), analysis);
+  await batch.drain();
+  const result = batch.snapshot();
+  expect(result.clips.some((clip) => clip.error === "disk_unavailable")).toBe(
+    true,
+  );
+  expect(result.clips.some((clip) => clip.state === "canceled")).toBe(true);
+  expect(result.active).toBe(false);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+});
 it("adds recorded visual Pops when Find visuals starts from a silent clip and keeps them on replay/restore", async () => {
   ports.plan.mockResolvedValueOnce([]);
   const planVisuals = vi.fn(fakeOwnerClipPreparation.plan);

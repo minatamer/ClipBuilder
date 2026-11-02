@@ -271,13 +271,20 @@ export const ownerClipSchema = z
         render: z.number().int().nonnegative(),
       })
       .strict(),
-    error: z.enum(["local_clip_failed", "canceled"]).nullable(),
+    error: z
+      .enum([
+        "local_clip_failed",
+        "canceled",
+        "disk_unavailable",
+        "memory_unavailable",
+      ])
+      .nullable(),
   })
   .strict();
 export type OwnerClip = z.infer<typeof ownerClipSchema>;
 export const ownerClipListSchema = z
   .object({
-    clips: z.array(ownerClipSchema).max(OWNER_LIMITS.clips),
+    clips: z.array(ownerClipSchema),
     active: z.boolean(),
     workers: z.literal(1),
     pictureAssetId: ownerIdSchema.optional(),
@@ -291,7 +298,7 @@ export const ownerBatchRequestSchema = z
     analysisId: ownerIdSchema,
     sourceRevision: z.number().int().nonnegative(),
     policyRevision: z.number().int().nonnegative(),
-    momentIds: z.array(ownerIdSchema).min(1).max(OWNER_LIMITS.clips),
+    momentIds: z.array(ownerIdSchema).min(1),
   })
   .strict()
   .refine(

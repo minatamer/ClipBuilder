@@ -299,7 +299,11 @@ export function createLocalCodexAi(options: {
         return run(signal, async (signal) => {
           const admitted = ownerWordsSchema.parse(words),
             policy = ownerAiDurationSchema.parse(duration);
-          if (instructions !== ownerSelectionPolicy(policy, requestedCount))
+          if (
+            instructions !==
+              ownerSelectionPolicy(policy, requestedCount, null) &&
+            instructions !== ownerSelectionPolicy(policy, requestedCount)
+          )
             throw new Error("owner_selection_policy_rejected");
           if (!admitted.length) return [];
           const current = analysisProgress;
@@ -317,7 +321,10 @@ export function createLocalCodexAi(options: {
           const normalized = normalizeCandidateSelection(
             value,
             admitted,
-            OWNER_LIMITS.ranges + ownerAiResultLimit(requestedCount),
+            Math.min(
+              Number.MAX_SAFE_INTEGER,
+              OWNER_LIMITS.ranges + ownerAiResultLimit(requestedCount, null),
+            ),
           );
           diagnostics.analysis.candidateNormalization(normalized.diagnostic);
           return normalized.candidates;

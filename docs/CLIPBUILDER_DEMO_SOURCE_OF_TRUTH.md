@@ -1,5 +1,27 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Local Codex collection capacity — CL-190, 2026-11-02
+
+Local Codex has no arbitrary total moment/clip quota. Numeric/default-two and
+Find all remain explicit choices; finite planned discovery retains all unique
+usable source cuts with bounded per-operation responses and no automatic retry.
+Gemini/hosted retain their previous limits. The server chooses capacity, never
+browser or draft fields. Large local collections use authenticated read-only
+pages, fifty mounted review cards, twenty rail tabs and one active editor.
+Explicit Process clips admits bounded groups into the existing one-worker
+batch. Capacity failure preserves completed state and requires explicit retry.
+
+Saved state and derived selection receipts use immutable bounded pages and
+atomic digest-bound roots, retaining legacy documents and the single rolling
+recovery store. Actual disk/memory guards replace total-count quotas for Codex;
+no new general queue/library exists. Restore and page navigation dispatch no
+AI/render work. Completed saved Codex clips remain readable after provider
+switches; new Gemini/hosted operations cannot inherit expanded capacity.
+Two-hour inactivity/active-job handling and retained source/export cleanup are
+unchanged. Synthetic 720-moment/24-clip evidence and a smaller native export
+proof establish mechanics; real quality/large-batch throughput remain owner
+acceptance. Codex still consumes subscription allowance and model resources.
+
 ## Long local Codex sources — CL-189, 2026-11-02
 
 Local Codex source admission has no fixed duration/byte quota within safe media arithmetic. Actual disk reserve and supported decoding remain. Long analysis uses finite serial eight-minute ASR cores with two-second context, sixty-second discovery overlap, separately bounded acknowledged receipts and explicit partial/canceled retry. Native WAV duration is verified; no whole-source truncation can pass as complete. Restore reuses receipts without new AI/render work. Active work does not expire; acknowledged changes refresh the same two-hour inactivity deadline, while GET polling does not. Per-unit deadlines remain; only trusted local Codex long analysis loses the frontend overall timeout. Gemini/hosted budgets stay unchanged. CL-190 owns aggregate result/clip scaling. Synthetic/native evidence does not establish real two-hour throughput or AI quality.

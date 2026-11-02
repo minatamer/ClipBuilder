@@ -1,5 +1,17 @@
 # Local Codex capacity ownership — CL-185–190
 
+## Collection readiness delivered — CL-190
+
+Both local Codex readiness flags are enabled. Total moments/clips are
+quota-free; server-owned policy still bounds Gemini/hosted operations. Wire
+reads page fifty items with a byte target, review mounts fifty cards and the
+rail twenty tabs. The existing worker is serial; disk/heap availability gates
+actual active work. Saved records/receipts page arrays into immutable
+digest-bound trees, with legacy reads and explicit retry.
+Per-item/media/response bounds and two-hour inactivity handling remain. This
+does not remove Codex subscription/model limits or prove real large-video/AI
+quality. Earlier foundation-state paragraphs are historical.
+
 ## Long-source readiness delivered — CL-189
 
 The local Codex source readiness flag is now enabled. Source duration/byte

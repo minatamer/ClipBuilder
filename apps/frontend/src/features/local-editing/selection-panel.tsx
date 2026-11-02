@@ -1,3 +1,5 @@
+import { OWNER_COLLECTION_PAGE_ITEMS as REVIEW_PAGE_ITEMS } from "../../../../../packages/contracts/local/collection-pages.ts";
+import { readOwnerAnalysis } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
 import { Play, Trash2, Clock3, Sparkles } from "lucide-react";
 import { ProcessingState } from "../../shared/ui/processing-state";
@@ -11,7 +13,6 @@ import {
 import {
   OWNER_FPS,
   ownerAnalysisRequestSchema,
-  ownerAnalysisSchema,
   ownerCut,
   ownerTimestamp,
   type OwnerAnalysis,
@@ -94,7 +95,10 @@ export function OwnerSelectionPanel({
     "execution" in capabilities && capabilities.demoClipLimit !== null
       ? HOSTED_DEMO_POLICY.clips
       : null;
-  const clipLimit = demoLimit ?? OWNER_LIMITS.clips;
+  const expanded =
+    "capacity" in capabilities && capabilities.capacity?.manyClips === true;
+  const clipLimit =
+    demoLimit ?? (expanded ? Number.MAX_SAFE_INTEGER : OWNER_LIMITS.clips);
   const local = capabilities.localMedia;
   const originalOffset = workspace.source.origin?.startMs ?? 0;
   const availableSource = ownerAvailableSourceWindow(workspace.source);
@@ -125,6 +129,17 @@ export function OwnerSelectionPanel({
   const [analysis, setAnalysis] = useState<OwnerAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false),
     [selected, setSelected] = useState<string[]>([]);
+  const [reviewPage, setReviewPage] = useState(0);
+  const currentReviewPage = Math.min(
+    reviewPage,
+    Math.max(0, Math.ceil(selected.length / REVIEW_PAGE_ITEMS) - 1),
+  );
+  const visibleMoments = new Set(
+    selected.slice(
+      currentReviewPage * REVIEW_PAGE_ITEMS,
+      currentReviewPage * REVIEW_PAGE_ITEMS + REVIEW_PAGE_ITEMS,
+    ),
+  );
   const [restoring, setRestoring] = useState(true);
   const waiting = analyzing || restoring;
   const [message, setMessage] = useState("");
@@ -139,6 +154,7 @@ export function OwnerSelectionPanel({
       const all = defaultMomentSelection(result);
       const next = demoLimit ? all.slice(0, demoLimit) : all;
       if (next.length < all.length) setLimitNotice((value) => value + 1);
+      setReviewPage(0);
       setAnalysis(result);
       setSelected(next.map(({ momentId }) => momentId));
       onChoose(next);
@@ -173,9 +189,11 @@ export function OwnerSelectionPanel({
           { signal: controller.signal },
         );
         if (!response.ok) throw new Error("unavailable");
-        const restored = ownerAnalysisSchema
-          .nullable()
-          .parse(await response.json());
+        const restored = await readOwnerAnalysis(
+          response,
+          workspace.id,
+          controller.signal,
+        );
         if (restored && !controller.signal.aborted) {
           setRows(
             restored.inputs.ranges.map((row) => ({
@@ -297,6 +315,13 @@ export function OwnerSelectionPanel({
       })
     )
       throw new Error("manual_outside_source_window");
+    if (
+      !demoLimit &&
+      !expanded &&
+      typeof inputs.aiCount === "number" &&
+      inputs.aiCount > OWNER_LIMITS.suggestions
+    )
+      throw Error("ai_count_limit");
     return demoLimit ? limitHostedDemoInputs(inputs) : inputs;
   }
   function rounded(row: Row): string {
@@ -346,14 +371,16 @@ export function OwnerSelectionPanel({
       );
     } catch (error) {
       setMessage(
-        error instanceof Error &&
-          error.message === "manual_outside_source_window"
-          ? "Keep manual clips inside the analysis range."
-          : windowed
-            ? "Choose a valid analysis range inside this video, and check clip times."
-            : manualOnly
-              ? `Manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000} seconds. Check start and end times.`
-              : `Check clip times: manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s and AI durations 10–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s.`,
+        error instanceof Error && error.message === "ai_count_limit"
+          ? "Choose between one and ten suggestions."
+          : error instanceof Error &&
+              error.message === "manual_outside_source_window"
+            ? "Keep manual clips inside the analysis range."
+            : windowed
+              ? "Choose a valid analysis range inside this video, and check clip times."
+              : manualOnly
+                ? `Manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000} seconds. Check start and end times.`
+                : `Check clip times: manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s and AI durations 10–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s.`,
       );
       return;
     }
@@ -380,7 +407,12 @@ export function OwnerSelectionPanel({
           capabilities.aiProvider === "codex"
           ? await localCodexError(response)
           : new Error("unavailable");
-      const result = ownerAnalysisSchema.parse(await response.json());
+      const result = await readOwnerAnalysis(
+        response,
+        workspace.id,
+        controller.signal,
+      );
+      if (!result) throw Error("analysis_unavailable");
       if (!controller.signal.aborted && mounted.current) {
         acceptAnalysis(result);
         root.current?.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -415,7 +447,7 @@ export function OwnerSelectionPanel({
   function choices(moments: OwnerMoment[], label: string, offset = 0) {
     const retained = moments
       .map((moment, index) => ({ moment, number: offset + index + 1 }))
-      .filter(({ moment }) => selected.includes(moment.id));
+      .filter(({ moment }) => visibleMoments.has(moment.id));
     if (!retained.length) return null;
     return (
       <section aria-label={label}>
@@ -774,7 +806,9 @@ export function OwnerSelectionPanel({
                     max={
                       demoLimit
                         ? Math.max(1, demoLimit - rows.length)
-                        : OWNER_LIMITS.suggestions
+                        : expanded
+                          ? undefined
+                          : OWNER_LIMITS.suggestions
                     }
                     step="1"
                     value={count}
@@ -896,6 +930,36 @@ export function OwnerSelectionPanel({
                 : ""}
             </p>
             {selected.length === 0 && <p>No clips yet.</p>}
+            {selected.length > REVIEW_PAGE_ITEMS && (
+              <nav className="collection-navigation" aria-label="Moment pages">
+                <Button
+                  variant="secondary"
+                  disabled={busy || currentReviewPage === 0}
+                  onClick={() => setReviewPage(currentReviewPage - 1)}
+                >
+                  Previous
+                </Button>
+                <span>
+                  {currentReviewPage * REVIEW_PAGE_ITEMS + 1}–
+                  {Math.min(
+                    selected.length,
+                    (currentReviewPage + 1) * REVIEW_PAGE_ITEMS,
+                  )}{" "}
+                  of {selected.length}
+                </span>
+                <Button
+                  variant="secondary"
+                  disabled={
+                    busy ||
+                    (currentReviewPage + 1) * REVIEW_PAGE_ITEMS >=
+                      selected.length
+                  }
+                  onClick={() => setReviewPage(currentReviewPage + 1)}
+                >
+                  Next
+                </Button>
+              </nav>
+            )}
             <div className="choices">
               {choices(analysis.manual, "Manual clips")}
               {choices(

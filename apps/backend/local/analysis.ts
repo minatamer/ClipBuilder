@@ -160,7 +160,13 @@ export async function analyzeOwner(
   if (workspace.mode !== ports.mode) throw new Error("analysis_mode_mismatch");
   const inputs = ownerAnalysisRequestSchema.parse(value);
   const requestedCount = inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT;
-  const resultLimit = ownerAiResultLimit(requestedCount);
+  const resultLimit = ownerAiResultLimit(requestedCount, capacity.moments);
+  if (
+    !capacity.manyClips &&
+    typeof requestedCount === "number" &&
+    requestedCount > OWNER_LIMITS.suggestions
+  )
+    throw Error("candidate_policy_rejected");
   if (inputs.sourceRevision !== workspace.revision)
     throw new Error("stale_source_revision");
   const window = ownerAnalysisWindow(workspace.source, inputs.window);
@@ -335,13 +341,17 @@ export async function analyzeOwner(
   if (selected) {
     const proposals = z
       .array(ownerAiEvidenceSchema)
-      .max(OWNER_LIMITS.ranges + resultLimit)
+      .max(Math.min(Number.MAX_SAFE_INTEGER, OWNER_LIMITS.ranges + resultLimit))
       .parse(
         await ports.select(
           words,
           inputs.aiDuration,
           signal,
-          ownerSelectionPolicy(inputs.aiDuration, requestedCount),
+          ownerSelectionPolicy(
+            inputs.aiDuration,
+            requestedCount,
+            capacity.moments,
+          ),
           requestedCount,
           excludedCuts,
         ),
@@ -421,6 +431,7 @@ export async function analyzeOwner(
         cut = { startFrame, endFrame };
       }
       if (suggestions.length >= resultLimit) break;
+      if (capacity.manyClips && byCut.has(key(cut))) continue;
       if (
         byCut.has(key(cut)) ||
         suggestions.some(

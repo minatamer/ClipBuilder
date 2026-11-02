@@ -1,3 +1,4 @@
+import { readOwnerClips } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
 import { ProcessingState } from "../../shared/ui/processing-state";
 import {
@@ -94,7 +95,6 @@ import {
 } from "../../../../../packages/contracts/local/video-look.ts";
 import { compileOwnerOverlay } from "../../../../../packages/composition/local/edit-overlay.ts";
 import {
-  ownerClipListSchema,
   OWNER_BATCH_POLICY,
   type OwnerClip,
   type OwnerClipList,
@@ -917,7 +917,11 @@ export function ClipEditor({
         throw new Error("stale");
       }
       if (!response.ok) throw new Error("unacknowledged");
-      const value = ownerClipListSchema.parse(await response.json());
+      const value = await readOwnerClips(
+        response,
+        workspaceId,
+        controller.signal,
+      );
       const acknowledged = value.clips.find((item) => item.id === clip.id);
       if (!acknowledged?.base) throw new Error("unacknowledged");
       if (!alive.current) return;
@@ -1012,7 +1016,11 @@ export function ClipEditor({
         }),
       });
       if (!response.ok) throw new Error("visual_discovery_failed");
-      const list = ownerClipListSchema.parse(await response.json());
+      const list = await readOwnerClips(
+        response,
+        workspaceId,
+        controller.signal,
+      );
       const accepted = list.clips.find((item) => item.id === clip.id);
       if (!accepted?.base || !alive.current) return;
       onAccepted(list);
@@ -1076,7 +1084,11 @@ export function ClipEditor({
         throw captionProvider === "local-speech"
           ? await localCodexError(response)
           : new Error("caption_generation_failed");
-      const list = ownerClipListSchema.parse(await response.json()),
+      const list = await readOwnerClips(
+          response,
+          workspaceId,
+          controller.signal,
+        ),
         accepted = list.clips.find((item) => item.id === clip.id);
       if (!accepted?.base || !alive.current) return;
       onAccepted(list);

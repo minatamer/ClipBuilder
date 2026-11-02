@@ -1296,9 +1296,13 @@ describe("dormant owner provider ports with synthetic transports", () => {
     expect(
       normalizeCandidateSelection(proposals, words, 14).candidates,
     ).toHaveLength(14);
-    expect(() => normalizeCandidateSelection(proposals, words, 371)).toThrow(
-      "candidate_policy_rejected",
-    );
+    expect(() =>
+      normalizeCandidateSelection(
+        proposals,
+        words,
+        Number.MAX_SAFE_INTEGER + 1,
+      ),
+    ).toThrow("candidate_policy_rejected");
     expect(f.transport.transcribe).toHaveBeenCalledTimes(1);
     await f.ports.close(f.signal);
   });

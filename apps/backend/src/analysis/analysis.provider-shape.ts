@@ -1,9 +1,5 @@
 import { z } from "zod";
 import {
-  OWNER_ALL_AI_MOMENTS_LIMIT,
-  OWNER_LIMITS,
-} from "../../../../packages/contracts/local/policy.ts";
-import {
   clipCandidateSchema,
   candidateEvidenceSchema,
   candidateCaveatSchema,
@@ -13,16 +9,15 @@ import {
 
 export const CANDIDATE_GENERATION_SCHEMA_POLICY = "json_only";
 // Public callers keep their default; local exhaustive discovery has a larger ceiling.
-const MAX_CANDIDATE_PROPOSALS =
-  OWNER_ALL_AI_MOMENTS_LIMIT + OWNER_LIMITS.ranges;
+const MAX_CANDIDATE_PROPOSALS = Number.MAX_SAFE_INTEGER;
 export const candidateNormalizationDiagnosticSchema = z
   .object({
     inputShape: z.enum(["array", "envelope", "unsupported"]),
-    returnedCount: z.number().int().min(0).max(1_000_000),
+    returnedCount: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
     consideredCount: z.number().int().min(0).max(MAX_CANDIDATE_PROPOSALS),
     acceptedCount: z.number().int().min(0).max(MAX_CANDIDATE_PROPOSALS),
-    droppedCount: z.number().int().min(0).max(1_000_000),
-    adjustmentCount: z.number().int().min(0).max(1_000_000),
+    droppedCount: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+    adjustmentCount: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
     dropReasons: z
       .array(
         z
@@ -32,7 +27,7 @@ export const candidateNormalizationDiagnosticSchema = z
               "candidate_not_decodable",
               "range_unavailable",
             ]),
-            count: z.number().int().positive().max(1_000_000),
+            count: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
           })
           .strict(),
       )

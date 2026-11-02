@@ -10,7 +10,7 @@ export { OWNER_SAFE_SOURCE_MS } from "./policy.ts";
 /** Enabled only by the packets proving the complete downstream pipelines. */
 export const LOCAL_CODEX_CAPACITY_READINESS = {
   longSources: true, // CL-189 owns the full-source coverage gate.
-  manyClips: false, // CL-190 owns incremental batch/persistence admission.
+  manyClips: true, // CL-190 owns incremental batch/persistence admission.
 } as const;
 const quota = z
   .number()

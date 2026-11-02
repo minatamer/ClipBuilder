@@ -1,3 +1,4 @@
+import { requireLocalMemory } from "./machine-memory.ts";
 import { createHash, randomUUID } from "node:crypto";
 import {
   ownerAnalysisRequestSchema,
@@ -161,6 +162,7 @@ export async function analyzeLongOwner(options: {
     );
   };
   const candidates = new Map<number, OwnerAnalysis["suggestions"]>();
+  let retainedBytes = 0;
   let overflowing = false;
   const reconcile = () => {
     const unique = new Map<string, OwnerAnalysis["suggestions"][number]>();
@@ -173,7 +175,7 @@ export async function analyzeLongOwner(options: {
         const key = `${item.cut.startFrame}:${item.cut.endFrame}`;
         if (!unique.has(key)) unique.set(key, item);
       }
-    const limit = ownerAiResultLimit(inputs.aiCount);
+    const limit = ownerAiResultLimit(inputs.aiCount, capacity.moments);
     overflowing = inputs.aiCount === "all" && unique.size > limit;
     const values = [...unique.values()];
     result.suggestions =
@@ -235,7 +237,7 @@ export async function analyzeLongOwner(options: {
         ranges,
       };
       const key = JSON.stringify([
-        "selection-v1",
+        "selection-v2",
         ports.compatibility ?? "codex-current",
         workspace.source.fingerprint,
         scoped,
@@ -268,6 +270,10 @@ export async function analyzeLongOwner(options: {
         await chunks.write(key, record, signal);
       }
       if (record.kind !== "selection") throw Error("analysis_chunk_invalid");
+      retainedBytes += Buffer.byteLength(
+        JSON.stringify(record.analysis.suggestions),
+      );
+      requireLocalMemory(retainedBytes * 6);
       candidates.set(current.core.startMs, record.analysis.suggestions);
       for (const item of record.analysis.manual)
         if (
@@ -316,7 +322,9 @@ export async function analyzeLongOwner(options: {
           ? reason
           : reason === "disk_unavailable"
             ? reason
-            : "processing_unavailable";
+            : reason === "memory_unavailable"
+              ? reason
+              : "processing_unavailable";
     await options.checkpoint(ownerAnalysisSchema.parse(result));
     if (!result.coverage!.completed && !result.calls.transcription) throw error;
   }

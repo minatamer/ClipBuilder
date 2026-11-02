@@ -121,3 +121,16 @@ scoped lint/format, whitespace, contracts and current-worker builds pass. Final
 read-only validate: no actionable findings. Empty-summary cache reuse was
 resolved and checked against a short request after two-hour recovery. Real
 processing remains untested; no normal app service was started.
+
+CL-189 committed `906cb13`.
+
+## CL-190 implementation and validation
+
+Codex total-count quotas removed through prompt/schema/normalization, review,
+serial preparation and paged save/recovery. Server-owned provider boundaries,
+actual disk/heap guards, legacy reads and completed-state gating preserved.
+919-case local gate, additional memory/page checks, 112 public analysis cases,
+720-result/24-clip fake server/browser evidence and the smaller current-source
+native workflow passed. Final read-only validate reports no actionable findings
+after documented paging/compatibility/resource fixes. No real provider/download
+or normal app launch. CL-192 is next; CL-193 remains research only.

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ownerWorkspaceSchema } from "./index.ts";
 import { ownerAnalysisSchema } from "./selection.ts";
 import { ownerClipSchema } from "./clips.ts";
-import { OWNER_LIMITS, ownerIdSchema } from "./policy.ts";
+import { ownerIdSchema } from "./policy.ts";
 import { ownerDigestSchema } from "./assets.ts";
 
 export const OWNER_DRAFT_DOCUMENT_BYTES = 32 * 1024 ** 2;
@@ -32,7 +32,7 @@ export const ownerDraftSnapshotSchema = z
     version: z.literal(1),
     workspace: ownerWorkspaceSchema,
     analysis: ownerAnalysisSchema.nullable(),
-    clips: z.array(ownerClipSchema).max(OWNER_LIMITS.clips),
+    clips: z.array(ownerClipSchema),
   })
   .strict();
 export type OwnerDraftSnapshot = z.infer<typeof ownerDraftSnapshotSchema>;
@@ -40,7 +40,7 @@ export const ownerDraftSummarySchema = z
   .object({
     id: ownerIdSchema,
     savedAt: z.string().datetime(),
-    clips: z.number().int().nonnegative().max(OWNER_LIMITS.clips),
+    clips: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   })
   .strict();
 export const ownerDraftListSchema = z.array(ownerDraftSummarySchema).max(200);

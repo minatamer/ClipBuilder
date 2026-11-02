@@ -22,42 +22,47 @@ const words = ["Coral", "reefs", "recover."].map((text, index) => ({
   confidence: null,
 }));
 const policy = { minMs: 10_000, maxMs: 30_000 };
-it("retains more than twenty Codex proposals for all-moments selection in one injected request", async () => {
-  const candidate = {
-    startWordId: words[0]!.id,
-    endWordId: words[2]!.id,
-    titleWordIds: [words[0]!.id],
-    hookWordIds: [words[0]!.id],
-    evidence: [],
-    caveats: [],
-  };
-  const infer = vi.fn<CodexInference>(async () => ({
-    candidates: Array.from({ length: 30 }, () => candidate),
-  }));
-  const media = vi.fn();
-  const ai = createLocalCodexAi({
-    files: new WorkspaceFiles("unused-synthetic"),
-    media,
-    infer,
-  });
-  try {
-    expect(
-      await ai.analysis!.select(
-        words,
-        policy,
-        AbortSignal.timeout(2000),
-        ownerSelectionPolicy(policy, "all"),
-        "all",
-      ),
-    ).toHaveLength(30);
-    expect(infer).toHaveBeenCalledTimes(1);
-    expect(infer.mock.calls[0]![0].prompt).toContain('"requestedCount":"all"');
-    expect(infer.mock.calls[0]![0].prompt).not.toContain("aiming for");
-    expect(media).not.toHaveBeenCalled();
-  } finally {
-    await ai.close!(AbortSignal.timeout(2000));
-  }
-});
+it.each([30, 600])(
+  "retains %i Codex proposals for all-moments selection in one injected request",
+  async (count) => {
+    const candidate = {
+      startWordId: words[0]!.id,
+      endWordId: words[2]!.id,
+      titleWordIds: [words[0]!.id],
+      hookWordIds: [words[0]!.id],
+      evidence: [],
+      caveats: [],
+    };
+    const infer = vi.fn<CodexInference>(async () => ({
+      candidates: Array.from({ length: count }, () => candidate),
+    }));
+    const media = vi.fn();
+    const ai = createLocalCodexAi({
+      files: new WorkspaceFiles("unused-synthetic"),
+      media,
+      infer,
+    });
+    try {
+      expect(
+        await ai.analysis!.select(
+          words,
+          policy,
+          AbortSignal.timeout(2000),
+          ownerSelectionPolicy(policy, "all", null),
+          "all",
+        ),
+      ).toHaveLength(count);
+      expect(infer).toHaveBeenCalledTimes(1);
+      expect(infer.mock.calls[0]![0].prompt).toContain(
+        '"requestedCount":"all"',
+      );
+      expect(infer.mock.calls[0]![0].prompt).not.toContain("aiming for");
+      expect(media).not.toHaveBeenCalled();
+    } finally {
+      await ai.close!(AbortSignal.timeout(2000));
+    }
+  },
+);
 it("owns and aborts transcript-only visual planning on close and refuses another dispatch", async () => {
   const infer = vi.fn<CodexInference>(
     async (_request, signal) =>

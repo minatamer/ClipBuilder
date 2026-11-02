@@ -34,6 +34,7 @@ import { OwnerClipBatch, type OwnerClipPorts } from "./clip-batch.ts";
 import { OWNER_AUDIO_LIMITS } from "../../../packages/contracts/local/audio.ts";
 import { localCodexFailureSchema } from "../../../packages/contracts/local/codex.ts";
 import { OwnerDraftStore } from "./draft-store.ts";
+import { ownerCollectionPage } from "../../../packages/contracts/local/collection-pages.ts";
 import { AnalysisChunks } from "./analysis-chunks.ts";
 import { analyzeLongOwner, LONG_ANALYSIS_CHUNK_MS } from "./long-analysis.ts";
 import { OwnerWorkspaceDrafts } from "./workspace-drafts.ts";
@@ -165,11 +166,24 @@ export function createOwnerHost(options: OwnerHostOptions) {
         }),
   });
   const workspaces = new Map<string, OwnerWorkspace>();
+  const wireJson = (value: unknown) =>
+    JSON.stringify(
+      capacityPolicy.manyClips ? ownerCollectionPage(value) : value,
+    );
   const analyses = new Map<string, OwnerAnalysis>();
   const transcripts = new Map<string, OwnerTranscript>();
   const batches = new Map<string, OwnerClipBatch>();
+  const restoreCapacity =
+    options.capacity ??
+    ((root: string, peak: number) =>
+      requireDisk(root, peak, { scratchBytes: null }));
   const storage = options.storageRoot
-    ? new OwnerDraftStore(options.storageRoot, capacity, capacityPolicy)
+    ? new OwnerDraftStore(
+        options.storageRoot,
+        capacity,
+        capacityPolicy,
+        restoreCapacity,
+      )
     : undefined;
   const snapshot = (id: string) =>
     ownerDraftSnapshotSchema.parse({
@@ -187,6 +201,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           diagnostics,
           capacity,
           capacityPolicy,
+          restoreCapacity,
         )
       : undefined;
   const drafts = storage
@@ -216,7 +231,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       () => changed(workspace.id),
       diagnostics,
       capacity,
-      options.clipLimit,
+      options.clipLimit ?? capacityPolicy.clips ?? Number.MAX_SAFE_INTEGER,
       options.exported,
     );
   const controllers = new Set<AbortController>();
@@ -680,7 +695,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         const result = await sources.catalog(controller.signal);
         res
           .writeHead(200, { "Content-Type": "application/json" })
-          .end(JSON.stringify(result));
+          .end(wireJson(result));
         return;
       }
       if (req.method === "GET" && req.url === "/api/sources/state") {
@@ -716,7 +731,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         const result = await sources.lookup(input.url, controller.signal);
         res
           .writeHead(200, { "Content-Type": "application/json" })
-          .end(JSON.stringify(result));
+          .end(wireJson(result));
         return;
       }
       if (req.method === "POST" && req.url === "/api/sources/metadata") {
@@ -726,14 +741,14 @@ export function createOwnerHost(options: OwnerHostOptions) {
         const result = await sources.metadata(input.url, controller.signal);
         res
           .writeHead(200, { "Content-Type": "application/json" })
-          .end(JSON.stringify(result));
+          .end(wireJson(result));
         return;
       }
       if (req.method === "POST" && req.url === "/api/sources/import") {
         const result = sources.start(await readOwnerJson(req));
         res
           .writeHead(202, { "Content-Type": "application/json" })
-          .end(JSON.stringify(result));
+          .end(wireJson(result));
         return;
       }
       if (req.method === "POST" && req.url === "/api/sources/open") {
@@ -743,7 +758,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         );
         res
           .writeHead(200, { "Content-Type": "application/json" })
-          .end(JSON.stringify(result));
+          .end(wireJson(result));
         return;
       }
       if (req.method === "POST" && req.url === "/api/sources/cancel") {
@@ -793,7 +808,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
         );
         res
           .writeHead(200, { "Content-Type": "application/json" })
-          .end(JSON.stringify(result));
+          .end(wireJson(result));
         return;
       }
       if (req.method === "GET" && req.url === "/api/agent/status") {
@@ -861,7 +876,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
                 );
           res
             .writeHead(200, { "Content-Type": "application/json" })
-            .end(JSON.stringify(result));
+            .end(wireJson(result));
           return;
         } finally {
           uploading = false;
@@ -923,6 +938,46 @@ export function createOwnerHost(options: OwnerHostOptions) {
         } finally {
           uploading = false;
         }
+      }
+      const collectionRoute =
+        /^\/api\/workspace\/([a-f0-9-]{36})\/(?:clip-pages\/(\d+)|analysis-pages\/([a-f0-9-]{36})\/(\d+))$/.exec(
+          req.url ?? "",
+        );
+      if (collectionRoute && req.method === "GET") {
+        if (
+          options.hosted ||
+          !capacityPolicy.manyClips ||
+          !workspaces.has(collectionRoute[1]!) ||
+          closingWorkspaces.has(collectionRoute[1]!)
+        ) {
+          res.writeHead(404).end();
+          return;
+        }
+        const id = collectionRoute[1]!,
+          analysis = analyses.get(id);
+        const value =
+          collectionRoute[2] !== undefined
+            ? batches.get(id)?.responsePage(Number(collectionRoute[2]), true)
+            : analysis?.id === collectionRoute[3]
+              ? analysis
+              : undefined;
+        if (!value) {
+          res.writeHead(404).end();
+          return;
+        }
+        res
+          .writeHead(200, {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          })
+          .end(
+            JSON.stringify(
+              collectionRoute[2] !== undefined
+                ? value
+                : ownerCollectionPage(value, Number(collectionRoute[4]), true),
+            ),
+          );
+        return;
       }
       const route = (
         agent
@@ -991,7 +1046,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             const result = await drafts.save(workspace.id);
             res
               .writeHead(200, { "Content-Type": "application/json" })
-              .end(JSON.stringify(result));
+              .end(wireJson(result));
             return;
           } finally {
             busy.delete(workspace.id);
@@ -1016,13 +1071,17 @@ export function createOwnerHost(options: OwnerHostOptions) {
           }
         }
         if (req.method === "GET" && !route[3]) {
-          res
-            .writeHead(200, { "Content-Type": "application/json" })
-            .end(
-              JSON.stringify(
-                batch?.snapshot() ?? { clips: [], active: false, workers: 1 },
-              ),
-            );
+          res.writeHead(200, { "Content-Type": "application/json" }).end(
+            wireJson(
+              (capacityPolicy.manyClips
+                ? batch?.responsePage()
+                : batch?.snapshot()) ?? {
+                clips: [],
+                active: false,
+                workers: 1,
+              },
+            ),
+          );
           return;
         }
         if (req.method === "POST" && !route[3]) {
@@ -1049,7 +1108,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             );
             res
               .writeHead(202, { "Content-Type": "application/json" })
-              .end(JSON.stringify(result));
+              .end(wireJson(result));
             return;
           } finally {
             busy.delete(workspace.id);
@@ -1078,7 +1137,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             );
             res
               .writeHead(200, { "Content-Type": "application/json" })
-              .end(JSON.stringify(clipReply(result)));
+              .end(wireJson(clipReply(result)));
           } finally {
             busy.delete(workspace.id);
           }
@@ -1094,7 +1153,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             const result = await batch.edit(route[3], await readOwnerJson(req));
             res
               .writeHead(200, { "Content-Type": "application/json" })
-              .end(JSON.stringify(clipReply(result)));
+              .end(wireJson(clipReply(result)));
             return;
           } finally {
             busy.delete(workspace.id);
@@ -1137,7 +1196,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             );
             res
               .writeHead(200, { "Content-Type": "application/json" })
-              .end(JSON.stringify(clipReply(result)));
+              .end(wireJson(clipReply(result)));
           } finally {
             busy.delete(workspace.id);
           }
@@ -1170,7 +1229,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             );
             res
               .writeHead(200, { "Content-Type": "application/json" })
-              .end(JSON.stringify(clipReply(result)));
+              .end(wireJson(clipReply(result)));
           } finally {
             busy.delete(workspace.id);
           }
@@ -1194,7 +1253,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             );
             res
               .writeHead(200, { "Content-Type": "application/json" })
-              .end(JSON.stringify(result));
+              .end(wireJson(result));
             return;
           } finally {
             busy.delete(workspace.id);
@@ -1253,7 +1312,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             );
             res
               .writeHead(200, { "Content-Type": "application/json" })
-              .end(JSON.stringify(clipReply(result)));
+              .end(wireJson(clipReply(result)));
             return;
           } finally {
             busy.delete(workspace.id);
@@ -1309,7 +1368,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             ](route[3], Buffer.concat(chunks), controller.signal);
             res
               .writeHead(200, { "Content-Type": "application/json" })
-              .end(JSON.stringify(clipReply(result)));
+              .end(wireJson(clipReply(result)));
             return;
           } finally {
             busy.delete(workspace.id);
@@ -1323,7 +1382,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           res
             .writeHead(200, { "Content-Type": "application/json" })
             .end(
-              JSON.stringify(
+              wireJson(
                 clipReply(
                   batch.cancel(route[3] === "cancel" ? undefined : route[3]),
                 ),
@@ -1354,7 +1413,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
                 : await batch.render(route[3], request);
             res
               .writeHead(202, { "Content-Type": "application/json" })
-              .end(JSON.stringify(clipReply(result)));
+              .end(wireJson(clipReply(result)));
             return;
           } finally {
             busy.delete(workspace.id);
@@ -1466,7 +1525,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       if (req.method === "GET" && route?.[2] === "analysis") {
         res
           .writeHead(200, { "Content-Type": "application/json" })
-          .end(JSON.stringify(analyses.get(workspace.id) ?? null));
+          .end(wireJson(analyses.get(workspace.id) ?? null));
         return;
       }
       if (req.method === "POST" && route?.[2] === "analysis") {
@@ -1503,7 +1562,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
             ((inputs.window
               ? inputs.window.endMs - inputs.window.startMs
               : workspace.source.durationMs) > LONG_ANALYSIS_CHUNK_MS ||
-              !!analyses.get(workspace.id)?.coverage)
+              !!analyses.get(workspace.id)?.coverage ||
+              (capacityPolicy.manyClips &&
+                (inputs.aiCount === "all" ||
+                  (typeof inputs.aiCount === "number" && inputs.aiCount > 10))))
               ? (async () =>
                   analyzeLongOwner({
                     workspace,
@@ -1550,7 +1612,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           changed(workspace.id);
           res
             .writeHead(200, { "Content-Type": "application/json" })
-            .end(JSON.stringify(result));
+            .end(wireJson(result));
           return;
         } finally {
           busy.delete(workspace.id);
@@ -1614,7 +1676,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           );
           res
             .writeHead(200, { "Content-Type": "application/json" })
-            .end(JSON.stringify(result));
+            .end(wireJson(result));
           return;
         } finally {
           busy.delete(workspace.id);
@@ -1669,12 +1731,12 @@ export function createOwnerHost(options: OwnerHostOptions) {
       if (
         !options.hosted &&
         error instanceof Error &&
-        error.message === "disk_unavailable"
+        ["disk_unavailable", "memory_unavailable"].includes(error.message)
       ) {
         if (!res.destroyed)
           res
             .writeHead(507, { "Content-Type": "application/json" })
-            .end('{"error":"disk_unavailable"}');
+            .end(JSON.stringify({ error: error.message }));
         return;
       }
       if (

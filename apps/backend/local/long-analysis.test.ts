@@ -1,8 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm, mkdir } from "node:fs/promises";
+import {
+  mkdtemp,
+  rm,
+  mkdir,
+  readFile,
+  readdir,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
+import { unpageDocument } from "./paged-document.ts";
 import { AnalysisChunks } from "./analysis-chunks.ts";
 import {
   analyzeLongOwner,
@@ -139,6 +147,21 @@ it("covers two hours and later audio in bounded serial requests, and restores ac
   expect(result.words).toEqual([]);
   const restored = join(f.root, "restored");
   await mkdir(restored);
+  // Retain CL-189's acknowledged plain receipt format across the paged upgrade.
+  const archive = join(f.root, "analysis-chunks");
+  for (const entry of await readdir(archive))
+    if (entry.endsWith(".json")) {
+      const path = join(archive, entry),
+        value = JSON.parse(await readFile(path, "utf8"));
+      if (value.format === "clipbuilder-paged-v1") {
+        await writeFile(
+          path,
+          JSON.stringify(await unpageDocument(path, value, f.options.signal)),
+        );
+        break;
+      }
+    }
+  await f.options.chunks.copyTo(restored, f.options.signal);
   await f.options.chunks.copyTo(restored, f.options.signal);
   f.select.mockClear();
   f.transcribeWindow.mockClear();

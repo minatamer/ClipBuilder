@@ -1,3 +1,5 @@
+import { OWNER_COLLECTION_PAGE_ITEMS as REQUEST_PAGE_ITEMS } from "../../../../../packages/contracts/local/collection-pages.ts";
+import { readOwnerClips } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
 import buttonStyles from "../../shared/ui/workflow.module.css";
 import {
@@ -14,7 +16,7 @@ import { clipStageLabel } from "./clip-stage.ts";
 import { ProcessingState } from "../../shared/ui/processing-state";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import {
-  ownerClipListSchema,
+  ownerBatchRequestSchema,
   type OwnerClip,
   type OwnerClipList,
 } from "../../../../../packages/contracts/local/clips.ts";
@@ -30,6 +32,7 @@ import { LoaderCircle } from "lucide-react";
 import { pollClipConnection, type ClipConnection } from "./clip-connection.ts";
 import { CodexPreparationSteps } from "./codex-preparation-steps.tsx";
 
+const RAIL_PAGE_ITEMS = 20;
 const initial: OwnerClipList = { clips: [], active: false, workers: 1 };
 // Keep aligned with the clip-strip media query in style.css, including large tablets.
 const clipStripQuery =
@@ -75,7 +78,9 @@ export function OwnerClipBatchPanel({
   const clipLimit =
     "execution" in capabilities && capabilities.demoClipLimit !== null
       ? HOSTED_DEMO_POLICY.clips
-      : OWNER_LIMITS.clips;
+      : "capacity" in capabilities && capabilities.capacity?.manyClips
+        ? Number.MAX_SAFE_INTEGER
+        : OWNER_LIMITS.clips;
   const [limitNotice, setLimitNotice] = useState(0);
   const [connection, setConnection] = useState<ClipConnection>("connected");
   const [connectionAttempt, setConnectionAttempt] = useState(0);
@@ -165,55 +170,93 @@ export function OwnerClipBatchPanel({
     onConnected,
   ]);
   async function action(path: string, body?: unknown) {
-    if (requesting.current) return;
+    if (requesting.current) {
+      if (!path.endsWith("/cancel")) return;
+      requestController.current?.abort();
+    }
     requesting.current = true;
     mutationRevision.current++;
     setPending(true);
     const controller = new AbortController();
     requestController.current = controller;
     try {
-      const response = await fetch(path, {
-        method: "POST",
-        signal: controller.signal,
-        ...(body === undefined
-          ? {}
-          : {
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(body),
+      const batch =
+        path === endpoint ? ownerBatchRequestSchema.safeParse(body) : undefined;
+      const messages: unknown[] = batch?.success
+        ? Array.from(
+            {
+              length: Math.ceil(
+                batch.data.momentIds.length / REQUEST_PAGE_ITEMS,
+              ),
+            },
+            (_, index) => ({
+              ...batch.data,
+              operationId: crypto.randomUUID(),
+              momentIds: batch.data.momentIds.slice(
+                index * REQUEST_PAGE_ITEMS,
+                index * REQUEST_PAGE_ITEMS + REQUEST_PAGE_ITEMS,
+              ),
             }),
-      });
-      if (response.status === 429) {
-        const error: unknown = await response.json();
-        if (
-          error &&
-          typeof error === "object" &&
-          "error" in error &&
-          error.error === "demo_clip_limit"
-        ) {
-          if (alive.current) setLimitNotice((value) => value + 1);
-          return;
+          )
+        : [body];
+      for (const [index, message] of messages.entries()) {
+        controller.signal.throwIfAborted();
+        const response = await fetch(path, {
+          method: "POST",
+          signal: controller.signal,
+          ...(message === undefined
+            ? {}
+            : {
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(message),
+              }),
+        });
+        if (response.status === 429) {
+          const error: unknown = await response.json();
+          if (
+            error &&
+            typeof error === "object" &&
+            "error" in error &&
+            error.error === "demo_clip_limit"
+          ) {
+            if (alive.current) setLimitNotice((value) => value + 1);
+            return;
+          }
         }
-      }
-      if (!response.ok) throw new Error("unavailable");
-      const value = ownerClipListSchema.parse(await response.json());
-      if (alive.current) {
-        mutationRevision.current++;
-        accept(value);
-        setMessage("");
-        if (path === endpoint) onProcessed?.();
+        if (!response.ok) throw new Error("unavailable");
+        const value = await readOwnerClips(
+          response,
+          workspace.id,
+          controller.signal,
+        );
+        if (alive.current) {
+          mutationRevision.current++;
+          accept(value);
+          setMessage("");
+          if (path === endpoint && index === 0) onProcessed?.();
+        }
       }
     } catch {
       if (alive.current && !controller.signal.aborted)
         setMessage("Couldn’t complete this action. Try again.");
     } finally {
-      requestController.current = null;
-      requesting.current = false;
-      if (alive.current) setPending(false);
+      if (requestController.current === controller) {
+        requestController.current = null;
+        requesting.current = false;
+        if (alive.current) setPending(false);
+      }
     }
   }
   const current =
     list.clips.find((clip) => clip.id === review) ?? list.clips[0];
   const currentId = current?.id;
+  const railStart =
+    Math.floor(
+      Math.max(
+        0,
+        list.clips.findIndex((clip) => clip.id === currentId),
+      ) / RAIL_PAGE_ITEMS,
+    ) * RAIL_PAGE_ITEMS;
   useEffect(() => {
     const rail = clipList.current;
     if (!horizontal || !rail || showProcessing) return;
@@ -340,7 +383,7 @@ export function OwnerClipBatchPanel({
             {!showProcessing && list.active && (
               <Button
                 variant="secondary"
-                disabled={!list.active || pending}
+                disabled={!list.active}
                 onClick={() => void action(`${endpoint}/cancel`)}
               >
                 Cancel processing
@@ -356,52 +399,57 @@ export function OwnerClipBatchPanel({
           aria-label="Choose a clip"
           aria-orientation={horizontal ? "horizontal" : "vertical"}
         >
-          {list.clips.map((clip, index) => (
-            <Button
-              key={clip.id}
-              variant="secondary"
-              className="clip-choice"
-              role="tab"
-              id={`${tabsId}-${clip.id}`}
-              aria-controls={`${tabsId}-panel`}
-              aria-selected={current?.id === clip.id}
-              tabIndex={current?.id === clip.id ? 0 : -1}
-              aria-label={`Edit clip ${index + 1}`}
-              disabled={!!dirtyClip && dirtyClip !== clip.id}
-              onClick={() => setReview(clip.id)}
-              onKeyDown={(event) => {
-                const previous = horizontal ? "ArrowLeft" : "ArrowUp",
-                  following = horizontal ? "ArrowRight" : "ArrowDown";
-                if (
-                  dirtyClip ||
-                  ![previous, following, "Home", "End"].includes(event.key)
-                )
-                  return;
-                event.preventDefault();
-                const next =
-                  list.clips[
-                    event.key === "Home"
-                      ? 0
-                      : event.key === "End"
-                        ? list.clips.length - 1
-                        : (index +
-                            (event.key === following ? 1 : -1) +
-                            list.clips.length) %
-                          list.clips.length
-                  ]!;
-                if (next.id === current?.id) {
-                  keyboardClip.current = null;
-                  event.currentTarget.focus();
-                } else {
-                  keyboardClip.current = next.id;
-                  setReview(next.id);
-                }
-              }}
-            >
-              <span>Clip {index + 1}</span>
-              <span className="clip-state">{clipStageLabel(clip)}</span>
-            </Button>
-          ))}
+          {list.clips
+            .slice(railStart, railStart + RAIL_PAGE_ITEMS)
+            .map((clip) => {
+              const index = list.clips.findIndex((item) => item.id === clip.id);
+              return (
+                <Button
+                  key={clip.id}
+                  variant="secondary"
+                  className="clip-choice"
+                  role="tab"
+                  id={`${tabsId}-${clip.id}`}
+                  aria-controls={`${tabsId}-panel`}
+                  aria-selected={current?.id === clip.id}
+                  tabIndex={current?.id === clip.id ? 0 : -1}
+                  aria-label={`Edit clip ${index + 1}`}
+                  disabled={!!dirtyClip && dirtyClip !== clip.id}
+                  onClick={() => setReview(clip.id)}
+                  onKeyDown={(event) => {
+                    const previous = horizontal ? "ArrowLeft" : "ArrowUp",
+                      following = horizontal ? "ArrowRight" : "ArrowDown";
+                    if (
+                      dirtyClip ||
+                      ![previous, following, "Home", "End"].includes(event.key)
+                    )
+                      return;
+                    event.preventDefault();
+                    const next =
+                      list.clips[
+                        event.key === "Home"
+                          ? 0
+                          : event.key === "End"
+                            ? list.clips.length - 1
+                            : (index +
+                                (event.key === following ? 1 : -1) +
+                                list.clips.length) %
+                              list.clips.length
+                      ]!;
+                    if (next.id === current?.id) {
+                      keyboardClip.current = null;
+                      event.currentTarget.focus();
+                    } else {
+                      keyboardClip.current = next.id;
+                      setReview(next.id);
+                    }
+                  }}
+                >
+                  <span>Clip {index + 1}</span>
+                  <span className="clip-state">{clipStageLabel(clip)}</span>
+                </Button>
+              );
+            })}
         </div>
         {current && (
           <article
@@ -413,6 +461,47 @@ export function OwnerClipBatchPanel({
             <div className="section-heading">
               <div>
                 <h3 className="local-sr-only">Clip {currentIndex}</h3>
+                {list.clips.length > RAIL_PAGE_ITEMS && (
+                  <nav
+                    className="collection-navigation"
+                    aria-label="Clip pages"
+                  >
+                    <Button
+                      variant="secondary"
+                      disabled={!!dirtyClip || railStart === 0}
+                      onClick={() =>
+                        setReview(
+                          list.clips[Math.max(0, railStart - RAIL_PAGE_ITEMS)]!
+                            .id,
+                        )
+                      }
+                    >
+                      Previous
+                    </Button>
+                    <span>
+                      Clip {currentIndex} of {list.clips.length}
+                    </span>
+                    <Button
+                      variant="secondary"
+                      disabled={
+                        !!dirtyClip ||
+                        railStart + RAIL_PAGE_ITEMS >= list.clips.length
+                      }
+                      onClick={() =>
+                        setReview(
+                          list.clips[
+                            Math.min(
+                              list.clips.length - 1,
+                              railStart + RAIL_PAGE_ITEMS,
+                            )
+                          ]!.id,
+                        )
+                      }
+                    >
+                      Next
+                    </Button>
+                  </nav>
+                )}
               </div>
               {connection === "connected" &&
                 !showProcessing &&

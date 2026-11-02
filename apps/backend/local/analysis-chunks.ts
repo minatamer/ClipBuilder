@@ -8,6 +8,7 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
+import { pageDocument, unpageDocument } from "./paged-document.ts";
 import { z } from "zod";
 import {
   ownerWordsSchema,
@@ -61,7 +62,11 @@ export class AnalysisChunks {
       )
         throw Error("analysis_chunk_invalid");
       const record = receipt.parse(
-        JSON.parse(await readFile(path, { encoding: "utf8", signal })),
+        await unpageDocument(
+          path,
+          JSON.parse(await readFile(path, { encoding: "utf8", signal })),
+          signal,
+        ),
       );
       if (record.key !== key) throw Error("analysis_chunk_invalid");
       return record.value;
@@ -85,7 +90,11 @@ export class AnalysisChunks {
       if (!info.isFile() || info.nlink !== 1 || info.size > MAX_BYTES)
         throw Error("analysis_chunk_invalid");
       const record = receipt.parse(
-        JSON.parse(await readFile(path, { encoding: "utf8", signal })),
+        await unpageDocument(
+          path,
+          JSON.parse(await readFile(path, { encoding: "utf8", signal })),
+          signal,
+        ),
       );
       if (`${hash(record.key)}.json` !== entry.name)
         throw Error("analysis_chunk_invalid");
@@ -111,11 +120,16 @@ export class AnalysisChunks {
     return undefined;
   }
   async write(key: string, value: Receipt["value"], signal: AbortSignal) {
-    const bytes = Buffer.from(JSON.stringify(receipt.parse({ key, value })));
-    if (bytes.length > MAX_BYTES) throw Error("analysis_chunk_limit");
     const dir = await this.directory();
-    await this.capacity(dir, bytes.length);
     const path = await confinedPath(dir, `${hash(key)}.json`);
+    const admitted = receipt.parse({ key, value });
+    const stored =
+      value.kind === "selection"
+        ? await pageDocument(path, admitted, signal, this.capacity)
+        : admitted;
+    const bytes = Buffer.from(JSON.stringify(stored));
+    if (bytes.length > MAX_BYTES) throw Error("analysis_chunk_limit");
+    await this.capacity(dir, bytes.length);
     const temporary = await confinedPath(dir, `${randomUUID()}.partial`);
     try {
       await writeFile(temporary, bytes, { flag: "wx", mode: 0o600, signal });
@@ -143,11 +157,44 @@ export class AnalysisChunks {
         info = await lstat(path);
       if (!info.isFile() || info.nlink !== 1 || info.size > MAX_BYTES)
         throw Error("analysis_chunk_invalid");
+      const bytes = await readFile(path, { signal });
+      const destination = await confinedPath(
+        await target.directory(),
+        entry.name,
+      );
+      let retainedBytes: Buffer | undefined;
+      try {
+        const retained = await lstat(destination);
+        if (
+          !retained.isFile() ||
+          retained.isSymbolicLink() ||
+          retained.nlink !== 1 ||
+          retained.size > MAX_BYTES
+        )
+          throw Error("analysis_chunk_invalid");
+        retainedBytes = await readFile(destination, { signal });
+        if (retained.size === bytes.length && bytes.equals(retainedBytes))
+          continue;
+      } catch (error) {
+        if (!missing(error)) throw error;
+      }
       const record = receipt.parse(
-        JSON.parse(await readFile(path, { encoding: "utf8", signal })),
+        await unpageDocument(path, JSON.parse(bytes.toString("utf8")), signal),
       );
       if (`${hash(record.key)}.json` !== entry.name)
         throw Error("analysis_chunk_invalid");
+      if (retainedBytes) {
+        const previous = receipt.parse(
+          await unpageDocument(
+            destination,
+            JSON.parse(retainedBytes.toString("utf8")),
+            signal,
+          ),
+        );
+        if (JSON.stringify(previous) !== JSON.stringify(record))
+          throw Error("analysis_chunk_conflict");
+        continue;
+      }
       if (!(await target.read(record.key, signal)))
         await target.write(record.key, record.value, signal);
     }

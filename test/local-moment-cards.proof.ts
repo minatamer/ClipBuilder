@@ -1,3 +1,5 @@
+import { ownerCollectionPage } from "../packages/contracts/local/collection-pages.ts";
+import { resolveOwnerCapacity } from "../packages/contracts/local/capacity.ts";
 import { expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 import { createHash, randomUUID } from "node:crypto";
@@ -13,7 +15,11 @@ import {
   ownerAnalysisRequestSchema,
   type OwnerAnalysis,
 } from "../packages/contracts/local/selection.ts";
-import { ownerBatchRequestSchema } from "../packages/contracts/local/clips.ts";
+import {
+  ownerClipListSchema,
+  type OwnerClipList,
+  ownerBatchRequestSchema,
+} from "../packages/contracts/local/clips.ts";
 import { prepareLocalControlsFixture } from "./owner-controls-browser.ts";
 import { listenOwner } from "./owner-http.ts";
 
@@ -133,7 +139,9 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
   };
   let result: OwnerAnalysis | null = analysis(),
     active = false;
-  let hosted = false;
+  let hosted = false,
+    expanded = false;
+  let railClips: OwnerClipList | undefined;
   let analysisOutcome: "success" | "hold" | "failure" = "success";
   const analyses: unknown[] = [];
   const submissions: unknown[] = [],
@@ -144,7 +152,7 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
       const json = (body: unknown, status = 200) =>
         res
           .writeHead(status, { "Content-Type": "application/json" })
-          .end(JSON.stringify(body));
+          .end(JSON.stringify(expanded ? ownerCollectionPage(body) : body));
       if (req.method === "POST") {
         writes.push(path);
         const chunks: Buffer[] = [];
@@ -194,7 +202,16 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
                 cloud: true,
                 demoClipLimit: null,
               }
-            : { localMedia: true, cloud: false }),
+            : {
+                localMedia: true,
+                cloud: false,
+                ...(expanded
+                  ? {
+                      aiProvider: "codex",
+                      capacity: resolveOwnerCapacity({ aiProvider: "codex" }),
+                    }
+                  : {}),
+              }),
         });
         return;
       }
@@ -202,12 +219,17 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
         json(workspace);
         return;
       }
+      const collection = /analysis-pages\/([a-f0-9-]+)\/(\d+)$/.exec(path);
+      if (collection && expanded && result) {
+        json(ownerCollectionPage(result, Number(collection[2]), true));
+        return;
+      }
       if (path.endsWith("/analysis")) {
         json(result);
         return;
       }
       if (path.endsWith("/clips")) {
-        json({ clips: [], active, workers: 1 });
+        json(railClips ?? { clips: [], active, workers: 1 });
         return;
       }
       if (path.endsWith("/source")) {
@@ -538,6 +560,137 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
       ),
     ).toBe(false);
     expect(analyses).toHaveLength(4);
+    hosted = false;
+    expanded = true;
+    result = analysis(720);
+    await ready();
+    await evaluate(
+      `waitMoment(()=>momentAction('Process clips')).then(()=>true)`,
+    );
+    expect(
+      await evaluate(
+        `({cards:document.querySelectorAll('.moment-card').length,count:document.querySelector('.selection-count').textContent.trim(),enabled:!momentAction('Process clips').disabled})`,
+      ),
+    ).toEqual({ cards: 50, count: "720 clips", enabled: true });
+    for (const width of [1440, 390, 320]) {
+      await page.setViewport({
+        width,
+        height: width === 1440 ? 1000 : 844,
+        deviceScaleFactor: 1,
+      });
+      expect(
+        await evaluate(
+          `(async()=>{const nav=document.querySelector('[aria-label="Moment pages"]');nav.scrollIntoView({block:'start'});await new Promise(requestAnimationFrame);const footer=document.querySelector('#sample-main > footer').getBoundingClientRect();return {overflow:document.documentElement.scrollWidth>innerWidth,footer:footer.top>=0&&footer.bottom<=innerHeight+1,cards:document.querySelectorAll('.moment-card').length};})()`,
+        ),
+      ).toEqual({ overflow: false, footer: true, cards: 50 });
+      const shot = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        resolve(`.local-build/evidence/cl190-review-${width}.png`),
+        Buffer.from(shot.value.data, "base64"),
+      );
+    }
+    await evaluate(
+      `document.querySelector('[aria-label="Moment pages"] button:last-child').focus()`,
+    );
+    for (const type of ["keyDown", "keyUp"] as const)
+      await page._client().send("Input.dispatchKeyEvent", {
+        type,
+        key: "Enter",
+        code: "Enter",
+        windowsVirtualKeyCode: 13,
+        ...(type === "keyDown" ? { text: "\r" } : {}),
+      });
+    expect(
+      await evaluate(
+        `waitMoment(()=>document.querySelector('[aria-label="Remove clip 51"]')).then(()=>document.querySelectorAll('.moment-card').length)`,
+      ),
+    ).toBe(50);
+    await evaluate(
+      `document.querySelector('[aria-label="Remove clip 51"]').click();waitMoment(()=>document.querySelector('.selection-count').textContent.includes('719')).then(()=>true)`,
+    );
+    expect(analyses).toHaveLength(4);
+    const before = submissions.length;
+    await evaluate(`momentAction('Process clips').click()`);
+    await vi.waitFor(() => expect(submissions).toHaveLength(before + 15), {
+      timeout: 10_000,
+    });
+    const queued = submissions
+      .slice(before)
+      .flatMap((value) => ownerBatchRequestSchema.parse(value).momentIds);
+    expect(new Set(queued).size).toBe(719);
+    expect(queued).not.toContain(result.suggestions[48]!.id);
+    railClips = ownerClipListSchema.parse({
+      clips: queued.slice(0, 24).map((momentId) => ({
+        id: randomUUID(),
+        momentId,
+        analysisId: result!.id,
+        mode: "provider-ai",
+        sourceRevision: 0,
+        revision: 0,
+        assemblyRevision: 0,
+        baseHash: null,
+        state: "selected",
+        base: null,
+        edit: null,
+        assets: [],
+        outputs: [],
+        calls: { plan: 0, image: 0, render: 0 },
+        error: null,
+      })),
+      active: false,
+      workers: 1,
+    });
+    await evaluate(
+      `waitMoment(()=>document.querySelectorAll('.clip-choice').length===20).then(()=>true)`,
+    );
+    for (const width of [1440, 390, 320]) {
+      await page.setViewport({
+        width,
+        height: width === 1440 ? 1000 : 844,
+        deviceScaleFactor: 1,
+      });
+      expect(
+        await evaluate(
+          `(async()=>{await new Promise(requestAnimationFrame);const r=document.querySelector('#sample-main > footer').getBoundingClientRect();return {tabs:document.querySelectorAll('.clip-choice').length,editors:document.querySelectorAll('.clip-editor').length,overflow:document.documentElement.scrollWidth>innerWidth,footer:r.top>=0&&r.bottom<=innerHeight+1};})()`,
+        ),
+      ).toEqual({ tabs: 20, editors: 0, overflow: false, footer: true });
+      const shot = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        resolve(`.local-build/evidence/cl190-rail-${width}.png`),
+        Buffer.from(shot.value.data, "base64"),
+      );
+    }
+    await evaluate(
+      `document.querySelector('[aria-label="Edit clip 20"]').focus()`,
+    );
+    for (const type of ["keyDown", "keyUp"] as const)
+      await page._client().send("Input.dispatchKeyEvent", {
+        type,
+        key: "ArrowRight",
+        code: "ArrowRight",
+        windowsVirtualKeyCode: 39,
+      });
+    expect(
+      await evaluate(
+        `waitMoment(()=>document.activeElement?.getAttribute('aria-label')==='Edit clip 21').then(()=>document.querySelectorAll('.clip-choice').length)`,
+      ),
+    ).toBe(4);
+    for (const type of ["keyDown", "keyUp"] as const)
+      await page._client().send("Input.dispatchKeyEvent", {
+        type,
+        key: "End",
+        code: "End",
+        windowsVirtualKeyCode: 35,
+      });
+    expect(
+      await evaluate(
+        `waitMoment(()=>document.activeElement?.getAttribute('aria-label')==='Edit clip 24').then(()=>true)`,
+      ),
+    ).toBe(true);
   } finally {
     await browser.close({ silent: true });
     await new Promise<void>((done) => server.close(() => done()));

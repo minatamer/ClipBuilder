@@ -2,8 +2,12 @@ import type { OwnerClip } from "../../../../../packages/contracts/local/clips.ts
 
 /** Labels describe observed work boundaries; no simulated progress clock. */
 export function clipStageLabel(
-  clip: Pick<OwnerClip, "state" | "preparationStage">,
+  clip: Pick<OwnerClip, "state" | "preparationStage"> & {
+    error?: OwnerClip["error"];
+  },
 ): string {
+  if (clip.error === "disk_unavailable") return "Free disk space, then retry";
+  if (clip.error === "memory_unavailable") return "Free memory, then retry";
   if (clip.state === "preparing" && clip.preparationStage)
     return {
       speakers: "Preparing speakers",

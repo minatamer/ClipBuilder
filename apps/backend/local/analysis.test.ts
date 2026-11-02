@@ -23,6 +23,7 @@ import {
 } from "../../../packages/contracts/local/selection.ts";
 import type { OwnerWorkspace } from "../../../packages/contracts/local/index.ts";
 import { startSessionRequestSchema } from "../../../packages/contracts/src/api.schema.ts";
+import { resolveOwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
 
 const workspace = (durationMs = 240_000): OwnerWorkspace => ({
   id: randomUUID(),
@@ -55,6 +56,33 @@ const ports = () => ({
   select: vi.fn(fakeOwnerAnalysis.select),
 });
 const signal = () => new AbortController().signal;
+it("admits numeric Codex requests beyond ten while rejecting the same forged Gemini/hosted request before any AI", async () => {
+  const request = { ...input(10_000, 30_000), ranges: [], aiCount: 100 };
+  const provider = ports(),
+    current = workspace();
+  for (const capacity of [
+    resolveOwnerCapacity({ aiProvider: "gemini" }),
+    resolveOwnerCapacity({ hosted: true, aiProvider: "codex" }),
+  ])
+    await expect(
+      analyzeOwner(current, request, provider, signal(), undefined, capacity),
+    ).rejects.toThrow("candidate_policy_rejected");
+  expect(provider.transcribe).not.toHaveBeenCalled();
+  expect(provider.select).not.toHaveBeenCalled();
+  const result = await analyzeOwner(
+    current,
+    request,
+    provider,
+    signal(),
+    undefined,
+    resolveOwnerCapacity({ aiProvider: "codex" }),
+  );
+  expect(result.inputs.aiCount).toBe(100);
+  expect(result.suggestions.length).toBeGreaterThan(0);
+  expect(result.suggestions.length).toBeLessThan(100);
+  expect(provider.transcribe).toHaveBeenCalledTimes(1);
+  expect(provider.select).toHaveBeenCalledTimes(1);
+});
 it("finds all moments beyond twenty, restores the choice and reuses full-source words on explicit count changes", async () => {
   const current = workspace(900_000),
     provider = ports();
@@ -106,7 +134,7 @@ it("finds all moments beyond twenty, restores the choice and reuses full-source 
       ...restored,
       suggestions: Array.from({ length: 361 }, () => result.suggestions[0]),
     }).success,
-  ).toBe(false);
+  ).toBe(true);
 });
 it("accepts empty all-moments output without retry and cancels before dispatch", async () => {
   const provider = ports();

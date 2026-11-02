@@ -1,3 +1,5 @@
+import { requireLocalMemory } from "./machine-memory.ts";
+import { ownerCollectionPage } from "../../../packages/contracts/local/collection-pages.ts";
 import { createHash, randomUUID } from "node:crypto";
 import { classifyExecutionFailure } from "../src/diagnostics/execution-failure.ts";
 import {
@@ -54,7 +56,6 @@ import {
   type OwnerAudioCue,
 } from "../../../packages/contracts/local/audio.ts";
 import {
-  ownerAnalysisSchema,
   type OwnerAnalysis,
   type OwnerMoment,
   type OwnerWord,
@@ -219,6 +220,18 @@ export class OwnerClipBatch {
       active: this.active,
       workers: OWNER_BATCH_POLICY.workers,
     });
+  }
+  /** Hot read path validates only the returned page, without cloning every base. */
+  responsePage(start = 0, force = false) {
+    return ownerCollectionPage(
+      {
+        clips: [...this.clips.values()],
+        active: this.active,
+        workers: OWNER_BATCH_POLICY.workers,
+      },
+      start,
+      force,
+    );
   }
   restore(value: unknown) {
     if (this.clips.size || this.active || this.closing)
@@ -735,7 +748,10 @@ export class OwnerClipBatch {
       prior = this.receipts.get(key);
     if (prior && prior !== hash) throw new Error("operation_conflict");
     if (prior) return true;
-    if (this.receipts.size >= OWNER_BATCH_POLICY.operations)
+    if (
+      this.clipLimit !== Number.MAX_SAFE_INTEGER &&
+      this.receipts.size >= OWNER_BATCH_POLICY.operations
+    )
       throw new Error("operation_limit");
     return false;
   }
@@ -749,7 +765,7 @@ export class OwnerClipBatch {
   }
   async submit(value: unknown, analysis: OwnerAnalysis) {
     const request = ownerBatchRequestSchema.parse(value),
-      snapshot = ownerAnalysisSchema.parse(analysis);
+      snapshot = analysis;
     const cancelVersion = this.cancelVersion;
     return this.serialize(() =>
       this.submitOne(request, snapshot, cancelVersion),
@@ -761,6 +777,7 @@ export class OwnerClipBatch {
     cancelVersion: number,
   ) {
     if (this.closing) throw new Error("workspace_closed");
+    requireLocalMemory(1024 * 1024);
     const request = ownerBatchRequestSchema.parse(value),
       key = `batch:${request.operationId}`;
     if (this.receipt(key, request)) return this.snapshot();
@@ -772,13 +789,20 @@ export class OwnerClipBatch {
       request.policyRevision !== analysis.inputs.policyRevision
     )
       throw new Error("stale_analysis");
+    const availableMoments = new Map(
+      [...analysis.manual, ...analysis.suggestions].map((moment) => [
+        moment.id,
+        moment,
+      ]),
+    );
+    let allocation = 0;
     const choices = request.momentIds.map((id) => {
-      const moment = [...analysis.manual, ...analysis.suggestions].find(
-        (item) => item.id === id,
-      );
+      const moment = availableMoments.get(id);
       if (!moment) throw new Error("moment_missing");
       if (!ownerCutInsideAvailableSource(this.workspace.source, moment.cut))
         throw Error("moment_outside_source_window");
+      allocation += Buffer.byteLength(JSON.stringify(moment)) * 5;
+      requireLocalMemory(allocation);
       return structuredClone(moment);
     });
     // Identical returned passages stay visible; processing the same cut once
@@ -836,6 +860,15 @@ export class OwnerClipBatch {
     return this.snapshot();
   }
   private async reserve(additional: number, outputs = 0, assets = 0) {
+    if (this.clipLimit === Number.MAX_SAFE_INTEGER) {
+      await this.capacity(
+        this.files.root,
+        assets +
+          OWNER_BATCH_POLICY.clipReservationBytes +
+          OWNER_BATCH_POLICY.overlayBytes,
+      );
+      return;
+    }
     const retained = [...this.clips.values()].reduce(
       (sum, clip) =>
         sum +
@@ -898,6 +931,8 @@ export class OwnerClipBatch {
               (candidate) => candidate.id === clip.momentId,
             )
           : undefined);
+      if (!clip.base && this.clips.size > this.clipLimit)
+        throw Error("clip_limit");
       if (!clip.base && !moment) throw new Error("moment_missing");
       await this.reserve(0);
       this.receipts.set(key, digest(request));
@@ -1264,6 +1299,8 @@ export class OwnerClipBatch {
       const controller = new AbortController();
       this.current = { clip, controller, kind: work.kind };
       try {
+        requireLocalMemory(OWNER_BATCH_POLICY.clipReservationBytes);
+        await this.reserve(0);
         await this.diagnostics.run(
           "clip_build",
           async () => {
@@ -1370,11 +1407,27 @@ export class OwnerClipBatch {
           },
           { independent: true },
         );
-      } catch {
+      } catch (error) {
+        const capacityFailure =
+          error instanceof Error &&
+          ["disk_unavailable", "memory_unavailable"].includes(error.message)
+            ? error.message
+            : null;
+        if (capacityFailure) {
+          for (const queued of this.queue) {
+            queued.clip.state = "canceled";
+            queued.clip.error = "canceled";
+          }
+          this.queue = [];
+        }
         clip.state = controller.signal.aborted ? "canceled" : "failed";
         clip.error = controller.signal.aborted
           ? "canceled"
-          : "local_clip_failed";
+          : capacityFailure === "disk_unavailable"
+            ? "disk_unavailable"
+            : capacityFailure === "memory_unavailable"
+              ? "memory_unavailable"
+              : "local_clip_failed";
         // Failed output is derived scratch only. The admitted master and sibling
         // bundles/assets/outputs retain their independent workspace ownership.
         if (work.kind === "export")
