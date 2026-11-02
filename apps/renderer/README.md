@@ -1,5 +1,12 @@
 # Private media renderer
 
+Local Codex derives 16-kHz mono PCM from the selected master/window and samples
+temporal triptychs only for selected clips. CL-187 retains native panel geometry
+while bounding JPEG/artifact bytes; over-budget images fail before inference.
+Exports continue reading the master. Synthetic proofs cover clocks/pixels and
+require no keys; real ASR/face accuracy needs the prepared local models and
+owner-approved Codex allowance. This is sampled framing, not continuous tracking.
+
 CL-061 packages this application's fixed native editing worker and browser
 overlay inside the normal backend image. The backend starts it internally on
 private loopback; the same caption/picture/filter composition is used by the

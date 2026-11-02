@@ -1,5 +1,13 @@
 # ClipBuilder canonical ticket index
 
+## Master quality and analysis derivatives — 2026-11-02
+
+[CL-187](CL-187-high-quality-master-and-analysis-derivatives.md) implements Codex
+supported 4K/highest selection and explicit audio tracks. Native temporal panels
+retain source geometry; source-copy/export/crop/clock proofs and 93 fake cases
+pass. Real face accuracy and throughput remain unverified. CL-188 partial
+acquisition is next; no real inference/download was used.
+
 ## Source analysis ranges — 2026-11-02
 
 [CL-186](CL-186-source-analysis-window.md) implements explicit analysis ranges,

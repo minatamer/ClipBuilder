@@ -78,3 +78,13 @@ current-source browser/native proofs cover two-hour metadata/twenty-minute
 windows, exact VFR audio extraction, original offset labels/local playback,
 responsive footer, cancel/failure and restore. Static/final validation evidence
 is recorded in its packet. No real acquisition/inference or normal app start.
+
+CL-186 committed `536d451`; final 163 fake cases and four browser/native cases
+pass. Validate resolved long-hour formatting/manual-row defaults and reports no
+actionable findings on the settled diff.
+
+## CL-187 implementation
+
+Codex supported quality/audio-track selection and original-resolution temporal
+panels implemented. Existing safe 4K decode/remux/export boundaries retained.
+Scope/checks and remaining real quality acceptance are recorded in its packet.

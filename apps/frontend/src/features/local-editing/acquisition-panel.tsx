@@ -21,6 +21,7 @@ import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts
 import {
   resolutionChoices,
   savedResolutionChoices,
+  youtubeAudioTrack,
 } from "./resolution-choices.ts";
 import { YoutubePreview } from "./youtube-preview.tsx";
 
@@ -71,6 +72,7 @@ export function OwnerAcquisitionPanel({
   > | null>(null);
   const [offer, setOffer] = useState<OwnerYoutubeOffer | null>(null);
   const [choice, setChoice] = useState("");
+  const [audioTrack, setAudioTrack] = useState("");
   const [progress, setProgress] = useState<OwnerAcquisitionProgress | null>(
     null,
   );
@@ -88,17 +90,61 @@ export function OwnerAcquisitionPanel({
   const active = running(progress);
   const ready = capabilities !== null && !initializing;
   const checked = !!lookup && checkedUrl === url.trim();
-  const saved = savedResolutionChoices(lookup?.saved ?? []);
-  const selectedSaved = saved.find((entry) => savedChoice(entry) === choice);
-  const resolutions = resolutionChoices(offer?.choices ?? []).filter(
+  const codex = capabilities?.localMedia && capabilities.aiProvider === "codex";
+  const tracks = [
+    ...new Map(
+      [
+        ...(offer?.choices
+          .filter((item) => item.supported && item.audio)
+          .map((item) => item.audio!) ?? []),
+        ...(lookup?.saved.map((entry) => entry.variant.audio) ?? []),
+      ].map((audio) => [youtubeAudioTrack(audio), audio]),
+    ).entries(),
+  ];
+  const effectiveTrack = tracks.some(([key]) => key === audioTrack)
+    ? audioTrack
+    : (tracks.find(([, audio]) => audio.role === "original")?.[0] ??
+      tracks[0]?.[0]);
+  const saved = savedResolutionChoices(
+    (lookup?.saved ?? []).filter(
+      (entry) =>
+        !codex || youtubeAudioTrack(entry.variant.audio) === effectiveTrack,
+    ),
+    codex,
+  );
+  const resolutions = resolutionChoices(
+    (offer?.choices ?? []).filter(
+      (item) =>
+        !codex ||
+        (!!item.audio && youtubeAudioTrack(item.audio) === effectiveTrack),
+    ),
+    codex,
+  ).filter(
     (item) =>
+      codex ||
       !saved.some(
         (entry) =>
           Math.min(entry.variant.actual.width, entry.variant.actual.height) ===
           item.tier,
       ),
   );
-  const selected = resolutions.find((item) => item.id === choice);
+  const highest = [
+    ...saved.map((entry) => ({
+      value: savedChoice(entry),
+      tier: Math.min(entry.variant.actual.width, entry.variant.actual.height),
+      fps: entry.variant.actual.fps,
+    })),
+    ...resolutions.map((item) => ({
+      value: item.id,
+      tier: item.tier,
+      fps: item.video.fps,
+    })),
+  ].sort((a, b) => b.tier - a.tier || b.fps - a.fps)[0];
+  const resolvedChoice = choice === "highest" ? highest?.value : choice;
+  const selectedSaved = saved.find(
+    (entry) => savedChoice(entry) === resolvedChoice,
+  );
+  const selected = resolutions.find((item) => item.id === resolvedChoice);
   const canUse =
     checked &&
     !workspace &&
@@ -220,11 +266,16 @@ export function OwnerAcquisitionPanel({
         setCheckedUrl(link);
         setStep("resolution");
         setOffer(null);
-        const ready = savedResolutionChoices(value.saved)[0];
+        const ready = savedResolutionChoices(value.saved, codex)[0];
         if (ready) setChoice(savedChoice(ready));
         else if (value.metadataAvailable && capabilities.sourceMode)
           await loadOffer(link, controller.signal);
-        else setMessage("No English video available at 480p–1440p.");
+        else
+          setMessage(
+            codex
+              ? "No supported video available."
+              : "No English video available at 480p–1440p.",
+          );
       } else if (kind === "metadata") {
         if (!checked || !lookup?.metadataAvailable || !capabilities.sourceMode)
           throw new Error("unavailable");
@@ -292,6 +343,7 @@ export function OwnerAcquisitionPanel({
     setCheckedUrl("");
     setOffer(null);
     setChoice("");
+    setAudioTrack("");
     setMessage("");
   }
   const disabled = !ready || busy || !!pending || active || !!workspace;
@@ -352,7 +404,7 @@ export function OwnerAcquisitionPanel({
               title={offer.preview.title}
               resolution={selected?.tier}
             />
-          ) : (
+          ) : codex ? null : (
             <div className="youtube-preview-placeholder" aria-hidden="true" />
           ))}
         {step === "url" ? (
@@ -424,6 +476,26 @@ export function OwnerAcquisitionPanel({
           <>
             <fieldset className="link-fields" disabled={disabled}>
               <legend className="local-sr-only">Video quality</legend>
+              {codex && tracks.length > 0 && (
+                <label>
+                  <span>Audio track</span>
+                  <select
+                    aria-label="Audio track"
+                    value={effectiveTrack}
+                    onChange={(event) => {
+                      setAudioTrack(event.currentTarget.value);
+                      setChoice("");
+                    }}
+                  >
+                    {tracks.map(([key, audio]) => (
+                      <option key={key} value={key}>
+                        {audio.language ?? "Unknown language"} · {audio.role}
+                        {audio.trackId ? ` · ${audio.trackId}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {(saved.length > 0 || resolutions.length > 0) && (
                 <label>
                   <span>Resolution</span>
@@ -436,6 +508,11 @@ export function OwnerAcquisitionPanel({
                     <option value="" disabled>
                       Select resolution
                     </option>
+                    {codex && highest && (
+                      <option value="highest">
+                        Highest · {highest.tier}p
+                      </option>
+                    )}
                     {saved.length > 0 && (
                       <optgroup label="Saved on this device">
                         {saved.map((entry) => (
@@ -461,6 +538,9 @@ export function OwnerAcquisitionPanel({
                             disabled={!item.supported}
                           >
                             {item.tier}p
+                            {codex
+                              ? ` · ${item.video.fps} fps · ${item.video.codec}`
+                              : ""}
                           </option>
                         ))}
                       </optgroup>
@@ -481,7 +561,9 @@ export function OwnerAcquisitionPanel({
                 <>
                   {offer && !resolutions.length && !selectedSaved && (
                     <p role="status">
-                      No English video available at 480p–1440p.
+                      {codex
+                        ? "No supported video available for this audio track."
+                        : "No English video available at 480p–1440p."}
                     </p>
                   )}
                   {!offer &&

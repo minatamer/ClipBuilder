@@ -392,11 +392,11 @@ export async function prepareLocalCodexInput(
               "-sn",
               "-dn",
               "-vf",
-              "fps=5:start_time=0,scale=640:640:force_original_aspect_ratio=decrease:force_divisible_by=2,tpad=stop_mode=clone:stop_duration=0.6,tile=3x1",
+              "fps=5:start_time=0,scale=trunc(iw/2)*2:trunc(ih/2)*2,tpad=stop_mode=clone:stop_duration=0.6,tile=3x1",
               "-frames:v",
               "1",
               "-q:v",
-              "8",
+              "4",
               file,
             ],
             signal,
@@ -406,13 +406,13 @@ export async function prepareLocalCodexInput(
             !info.isFile() ||
             info.isSymbolicLink() ||
             info.nlink !== 1 ||
-            info.size > 2 * 1024 ** 2
+            info.size > 8 * 1024 ** 2
           )
             throw new Error("codex_input_invalid");
           let jpeg = await readFile(file);
-          for (const width of [960, 720]) {
+          for (const quality of [8, 14, 22, 31]) {
             if (jpeg.length <= LOCAL_CODEX_POLICY.imageBytes) break;
-            const compressed = join(scratch, `${index}-${width}.jpg`);
+            const compressed = join(scratch, `${index}-${quality}.jpg`);
             await runOwnedProcess(
               options.tools.ffmpeg,
               [
@@ -422,12 +422,10 @@ export async function prepareLocalCodexInput(
                 "error",
                 "-i",
                 file,
-                "-vf",
-                `scale=${width}:-2`,
                 "-frames:v",
                 "1",
                 "-q:v",
-                "15",
+                String(quality),
                 compressed,
               ],
               signal,
@@ -437,7 +435,7 @@ export async function prepareLocalCodexInput(
               !compressedInfo.isFile() ||
               compressedInfo.isSymbolicLink() ||
               compressedInfo.nlink !== 1 ||
-              compressedInfo.size > 2 * 1024 ** 2
+              compressedInfo.size > 8 * 1024 ** 2
             )
               throw new Error("codex_input_invalid");
             jpeg = await readFile(compressed);

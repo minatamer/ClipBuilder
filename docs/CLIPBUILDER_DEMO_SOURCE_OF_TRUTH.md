@@ -1,5 +1,30 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Master quality and analysis derivatives — CL-187, 2026-11-02
+
+Local Codex quality selection exposes every server-admitted tier, including
+2160p, and an explicit Highest supported quality choice. Audio track/language
+selection binds the actual offered identity. Same-tier saved media does not hide
+a newly offered higher-cadence master. Gemini retains its existing picker policy;
+hosted remains upload-only. The installed safe pipeline admits SDR H.264/VP9,
+AAC/Opus, 12–60 fps and up to 3840-by-2160 pixels (including portrait orientation).
+AV1/HEVC, HDR/unknown dynamic range, higher geometry/cadence, unsupported audio,
+DRM and unsupported transport remain explicit capability rejections. There is
+no silent format substitution, tone mapping or added conversion/model support.
+
+One acquired master supplies exports, 16-kHz mono PCM speech input and
+selected-clip temporal images. Audio extraction neither decodes video pixels nor
+downloads a second low-resolution video. Temporal panels now retain original
+pixel geometry (even-rounded where necessary); bounded JPEG compression changes
+quality, never downsizes them. At most sixty samples and two MiB per triptych
+(192-MiB encoded artifact bound) keep selected-clip work finite. An image that
+cannot fit fails before inference rather than silently reducing geometry.
+Normalized face/crop coordinates and sample clocks stay unchanged. This is
+sampled camera planning, not continuous face tracking. Native synthetic chart,
+stream-copy and export checks prove pixel/clock mechanics; real small-face,
+multi-person and speech accuracy remain owner acceptance. No speed/equal-quality
+claim, Codex model/reasoning change or extra inference call is introduced.
+
 ## Source analysis ranges — CL-186, 2026-11-02
 
 Uploads and local YouTube sources share an optional contiguous analysis window,

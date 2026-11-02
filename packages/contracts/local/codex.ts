@@ -22,8 +22,8 @@ import { ownerIllustrationSchema } from "./illustration.ts";
 
 export const LOCAL_CODEX_POLICY = {
   frames: 60,
-  imageBytes: 96 * 1024,
-  artifactBytes: 12 * 1024 ** 2,
+  imageBytes: 2 * 1024 ** 2,
+  artifactBytes: 192 * 1024 ** 2,
   responseBytes: 4 * 1024 ** 2,
   inputBytes: 16 * 1024 ** 2,
   speechTimeoutMs: 45 * 60_000,

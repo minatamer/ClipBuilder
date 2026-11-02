@@ -43,6 +43,7 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
   let stalled = false;
   let stalledStreams = 0;
   let hosted = false;
+  let codex = false;
   const requests: string[] = [];
   const offer = await fakeOwnerAcquisition.metadata(
     canonicalOwnerYoutubeSource("https://youtu.be/synthetic01"),
@@ -95,6 +96,7 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
               planningAvailable: true,
               localMedia: true,
               cloud: false,
+              ...(codex ? { aiProvider: "codex" } : {}),
             },
       );
       return;
@@ -104,6 +106,10 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
       path === "/api/local/sources/state"
     ) {
       json(null);
+      return;
+    }
+    if (path === "/api/local/session" && request.method === "GET") {
+      json({ active: false, limited: false, retryAt: null });
       return;
     }
     if (path === "/api/local/sources/lookup" && request.method === "POST") {
@@ -121,6 +127,11 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
       request.resume();
       uploads++;
       json({ error: "synthetic_open_failure" }, 400);
+      return;
+    }
+    if (path === "/api/local/sources/metadata" && request.method === "POST") {
+      request.resume();
+      json({ ...offer, mode: "provider-source" });
       return;
     }
     if (path === `/api/local/sources/downloads/${saved.id}/preview`) {
@@ -349,6 +360,47 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
     expect(await page.evaluate(() => globalThis.intakeFallback())).toBe(true);
     await new Promise((done) => setTimeout(done, 100));
     expect(stalledStreams).toBe(0);
+    expect(requests).toEqual([]);
+    codex = true;
+    stalled = false;
+    await page.goto({ url: `http://localhost:${port}/`, timeout: 15000 });
+    await page._client().send("Runtime.evaluate", { expression: driver });
+    await page.evaluate(() => globalThis.intakeChooseSaved());
+    const evaluateQuality = async (expression: string) => {
+      const result = await page._client().send("Runtime.evaluate", {
+        expression,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      if (result.value.exceptionDetails) throw Error("quality_browser_failed");
+      return result.value.result.value;
+    };
+    await evaluateQuality(
+      `(async()=>{[...document.querySelectorAll('.youtube-card button')].find(b=>b.textContent.trim()==='More resolutions').click();await wait(()=>[...document.querySelectorAll('.youtube-card option')].some(n=>n.textContent.startsWith('2160p')));const select=document.querySelector('.youtube-card select.select-control');select.value='highest';select.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(requestAnimationFrame);return true;})()`,
+    );
+    for (const [width, height] of [
+      [1440, 900],
+      [390, 844],
+      [320, 568],
+    ]) {
+      await page.setViewport({
+        width: width!,
+        height: height!,
+        deviceScaleFactor: 1,
+      });
+      expect(
+        await evaluateQuality(
+          `(async()=>{const card=document.querySelector('.youtube-card');card.querySelector('footer').scrollIntoView({block:'end'});await new Promise(requestAnimationFrame);return {overflow:document.documentElement.scrollWidth>innerWidth,highest:card.textContent.includes('Highest · 2160p'),audio:!!card.querySelector('[aria-label="Audio track"]'),footer:card.querySelector('footer').getBoundingClientRect().bottom<=innerHeight+1};})()`,
+        ),
+      ).toEqual({ overflow: false, highest: true, audio: true, footer: true });
+      const shot = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        join(evidence, `cl187-quality-${width}.png`),
+        Buffer.from(shot.value.data, "base64"),
+      );
+    }
     expect(requests).toEqual([]);
     // The same upload area remains usable in the upload-only hosted view.
     hosted = true;

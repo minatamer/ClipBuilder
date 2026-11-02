@@ -118,6 +118,23 @@ it("never exposes unsupported variants as downloadable choices", () => {
   };
   expect(resolutionChoices([unsupported])).toEqual([]);
 });
+it("allows every server-supported Codex tier and explicit audio language without changing Gemini choices", () => {
+  const base = choice("a", "4k", 160);
+  const high = {
+    ...base,
+    tier: 2160,
+    video: { ...base.video, width: 3840, height: 2160 },
+    audio: { ...base.audio!, language: "ar" },
+  };
+  expect(resolutionChoices([high])).toEqual([]);
+  expect(resolutionChoices([high], true)).toEqual([high]);
+  expect(
+    resolutionChoices(
+      [{ ...high, supported: false, reason: "video-codec" }],
+      true,
+    ),
+  ).toEqual([]);
+});
 it("filters and deduplicates saved qualities without losing their exact registered identity", () => {
   const first = choice("a", "video", 128);
   const saved: OwnerSavedSourceEntry = {

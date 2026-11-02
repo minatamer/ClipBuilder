@@ -23,6 +23,8 @@ import {
   ownerFocusCrop,
 } from "../packages/contracts/local/focus.ts";
 import { prepareLocalOverlayFixture } from "./owner-controls-browser.ts";
+import { prepareLocalCodexInput } from "../apps/renderer/local/codex-media.ts";
+import { LOCAL_CODEX_POLICY } from "../packages/contracts/local/codex.ts";
 
 async function clearQualityScratch(root: string) {
   const actual = await realpath(root),
@@ -183,6 +185,33 @@ it("exports original detail, native portrait size and 24/30/60/fractional cadenc
       expect(await hash(source)).toBe(originalDigest);
       let detail: { native: number; previous: number } | undefined;
       if (fixture.detail) {
+        const sampleJob = {
+          operation: "codex-input" as const,
+          kind: "frames" as const,
+          workspaceId,
+          jobId: randomUUID(),
+          fingerprint: metadata.fingerprint,
+          cut: { startFrame: 0, endFrame: 30 },
+        };
+        await prepareLocalCodexInput({ root, tools }, sampleJob, signal);
+        const artifact = JSON.parse(
+          await readFile(
+            join(directory, `${sampleJob.jobId}.codex.json`),
+            "utf8",
+          ),
+        );
+        const imageBytes = Buffer.from(artifact.frames[0].jpeg, "base64");
+        expect(imageBytes.length).toBeLessThanOrEqual(
+          LOCAL_CODEX_POLICY.imageBytes,
+        );
+        const sample = join(directory, "native-samples.jpg");
+        await writeFile(sample, imageBytes);
+        expect(await probe(sample)).toMatchObject({
+          width: fixture.width * 3,
+          height: fixture.height,
+        });
+        expect(artifact.frames[0].sampleFrames).toEqual([0, 6, 12]);
+        expect(await hash(source)).toBe(originalDigest);
         const raw = join(directory, `${clipId}.source.mp4`),
           cachedDigest = await hash(raw),
           previous = join(directory, "previous-quality.mp4"),
@@ -222,6 +251,26 @@ it("exports original detail, native portrait size and 24/30/60/fractional cadenc
             values.reduce((sum, n) => sum + (n - mean) ** 2, 0) / values.length,
           );
         };
+        const reducedSample = join(directory, "reduced-samples.jpg");
+        await run([
+          "-i",
+          sample,
+          "-vf",
+          "scale=1920:-2",
+          "-frames:v",
+          "1",
+          reducedSample,
+        ]);
+        const nativeSampleContrast = await contrast(
+            sample,
+            "sample-native.gray",
+          ),
+          reducedSampleContrast = await contrast(
+            reducedSample,
+            "sample-reduced.gray",
+          );
+        expect(nativeSampleContrast).toBeGreaterThan(40);
+        expect(nativeSampleContrast).toBeGreaterThan(reducedSampleContrast * 2);
         detail = {
           native: await contrast(output, "native.gray"),
           previous: await contrast(previous, "previous.gray"),

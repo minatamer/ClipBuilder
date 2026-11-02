@@ -1,7 +1,7 @@
 # CL-187 — Highest-quality local Codex master with efficient analysis inputs
 
-Status: Authorized and queued, 2026-11-02. Owner AFK authorization lifts the
-previous execution hold; use execute/validate/fix loops and local
+Status: Implemented and locally validated, 2026-11-02. Owner AFK authorization
+lifts the previous execution hold; use execute/validate/fix loops and local
 ticket-prefixed commits without push. Depends on CL-185; coordinate window
 clocks with CL-186.
 
@@ -86,4 +86,57 @@ prepared CPU speech/ speaker assets and ChatGPT allowance. Bigger ASR models/GPU
 acceleration are not implemented or verified here. Gemini needs its key/live
 approvals. No assets, weights or real video are downloaded; no
 processing/config/restart/cloud/Git work is authorized until execution is
-separately requested.
+separately requested. This historical planning gate is superseded by the current
+AFK authorization; no real provider/download/config/model/cloud/deploy/push work
+has been performed.
+
+## Delivered and verified scope
+
+The Codex picker removes its 1440p/English ceiling, exposes the highest admitted
+tier plus actual cadence/codec, and binds an explicitly chosen audio track.
+Gemini/hosted behavior is unchanged. Existing backend ranking audits every
+format and admits SDR H.264/VP9 up to 4K and 60 fps with supported AAC/Opus.
+AV1/HEVC, HDR/unknown color, >4K/>60fps, DRM/unsupported transport/audio remain
+rejected with existing reasons. No new conversion is justified or claimed.
+
+The existing acquisition remux uses stream copy and verifies selected streams.
+Native exports read `source.mp4` with source cadence/detail, not a
+low-resolution proxy. ASR uses direct audio-only extraction. Selected-clip
+temporal triptychs now retain native panel dimensions, with JPEG quality
+adjustment and a two-MiB/image, sixty-image / 192-MiB encoded-artifact bound.
+Prompt text remains separately bounded at sixteen MiB. Impossible image inputs
+fail before inference; no downscale fallback. Existing normalized crop and
+sample-frame semantics remain. Model/reasoning/speech weights and the number of
+planning calls are unchanged.
+
+Allocated code: frontend `resolution-choices.ts`, `acquisition-panel.tsx` and
+choice tests; shared `codex.ts` media bounds; native `codex-media.ts`; existing
+`local-intake-preview` and `local-export-quality` proofs. Owning documentation:
+this packet, source of truth, frontend/renderer guides, index and execution
+ledger. Backend remux/ranking/export code required no behavioral change.
+
+Initial scoped gate: 93 fake tests across six files pass. Static local/test and
+frontend types pass. Native acquisition proof passes all three cases, including
+4K admission and copied packet identity for VP9/Opus and combined H.264/AAC. The
+dense 4K chart exposed an inadequate initial 512-KiB image budget; raised to the
+documented finite bound while retaining pixels. A stale hosted-session mock was
+corrected in the touched browser proof. Final proof/static/validate results: six
+browser/native proof cases across acquisition, intake, quality and focus-native
+files pass, plus the final chart-contrast rerun. Native-resolution sample
+contrast exceeds the reduced comparison by more than two times; this synthetic
+pattern proves detail retention, not face-model accuracy. Master hashes, copied
+packet identities, normalized focus crops, timestamps and export cadence are
+verified. Quality/cancel/fallback/hosted intake states and 1440/390/320
+screenshots are checked. Empty Codex metadata no longer reserves a blank preview
+placeholder above the added controls. Final scoped lint/format, local/test/
+frontend types and current worker build pass.
+
+Validate pass 1: the initial image budget was too small for dense 4K and
+same-tier saved files could hide higher-cadence available downloads. Both fixed;
+separate saved/download choices retain explicit identities, and Highest ranks
+cadence after tier. Final read-only validate: Meets ticket; no actionable
+findings. No real face-quality or two-hour speed claim. No substantive scope
+deviation; existing native codec/geometry limits were retained after audit,
+because no additional format has demonstrated safe native parity. Installed
+lockfile-pinned binaries used directly as documented in CL-185; no dependency or
+configuration change.

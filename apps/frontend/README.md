@@ -1,5 +1,11 @@
 # ClipBuilder frontend
 
+Local Codex YouTube intake offers the server's supported tiers (including 4K),
+**Highest supported quality**, and an explicit audio-track choice. It displays
+cadence/codec for new downloads and retains exact offered identities. Unsupported
+representations are never substituted during acquisition. Gemini's existing
+English 480p–1440p picker policy and hosted upload-only intake stay separate.
+
 The moment selection view offers **Entire video** (or **Entire section**) and
 **Choose range** before analysis. Start/End use the original video's timestamps
 for imported sections; playback and editing retain local-media time. Changing
