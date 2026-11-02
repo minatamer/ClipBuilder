@@ -157,3 +157,55 @@ Normal app was not running; final normal stack start remains after the series.
 Real source duration/availability, long ASR/face/editorial quality and owner
 personal/release acceptance are unverified. Later packet gates remain explicit
 in the capacity inventory; no partially wired long-source feature is exposed.
+
+## Normal startup follow-up — 2026-11-02
+
+The owner's requested normal Codex run exposed a missing discovery integration:
+`runtime.ts` supplies the trusted capacity profile as `state.tools.capacity`,
+but `scripts/local-discovery.mjs` still admitted only `ffmpeg`/`ffprobe` keys.
+The worker became ready, then discovery publication failed and startup cleaned
+up. Earlier fake hosts did not exercise this normal private descriptor through
+the strict discovery reader. The failed launcher/watchers were
+identity-verified, stopped and checked absent before relaunch; no
+media/inference was attempted.
+
+Narrow follow-up allocation: `scripts/local-discovery.mjs`,
+`test/owner-discovery.test.ts`, this packet
+(`docs/tickets/CL-185-local-codex-capacity-policy.md`) and
+`docs/operations/CL184_193_EXECUTION.md`. Admit the existing optional capacity
+metadata only; native startup remains its validator and browser capacity still
+comes from the authenticated server composition. Discovery returns no profile or
+media-tool details. Test bounded/Codex descriptors, opaque public pointer and
+continued rejection of unrelated tool fields, then scoped lint/types/validate
+and the requested non-metered normal-stack readiness check. No environment,
+model/provider, media, staging, commit, push or deployment change belongs here.
+
+Follow-up validation: 14 fake/no-key/paid-off discovery/capacity cases pass in
+1.43s, including the actual bounded and local-Codex descriptor profiles and
+unknown tool-field rejection. Scoped ESLint, root-test TypeScript and whitespace
+checks pass. Read-only validate finds no actionable issue: the optional metadata
+is ignored by discovery, is never copied into the public pointer/return value,
+and does not choose server/native permissions. The existing worker remains its
+schema validator. No provider/media call or configuration change was made. The
+requested normal launch's read-only readiness evidence is recorded in the
+execution ledger; startup does not establish two-hour ASR/editorial quality.
+Changes remain unstaged/uncommitted for this run request.
+
+Requested normal launch verified after the fix: backend `/v1/health`, frontend
+`/start`, `/api/sample/config` and exposed `/api/local/capabilities` all
+return 200. The owner's requested provider is selected for this backend process
+only; ignored files and all other operating settings remain unchanged.
+Capabilities confirm Codex `provider-ai`, setup ready, local-speech captions,
+long sources and many clips with null total quotas; cloud is false. Listener
+ownership is verified on 3000/4000/4200 and recorded outside Git with creation
+identities and separate logs. The frontend and backend/worker are left running
+for the owner's manual two-hour acceptance. No download, inference or real-media
+test was run.
+
+## Local Git authorization — 2026-11-03
+
+The owner now authorizes whole-file planning, staging and multiple ticket-prefixed
+local commits. The startup follow-up's earlier unstaged handoff is superseded by
+the [file-level commit plan](../operations/CL185_196_COMMIT_PLAN.md). Existing
+verification is unchanged; no processing, configuration, restart or push is
+part of this Git task. Real long-source AI acceptance remains owner-only.

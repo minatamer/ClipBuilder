@@ -11,6 +11,7 @@ import {
 } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
+import { resolveOwnerCapacity } from "../packages/contracts/local/capacity.ts";
 import {
   clearOwnerDiscovery,
   discoverOwnerHost,
@@ -321,3 +322,42 @@ it("refuses linked runtime paths, hardlinked or nonregular records and leaves ou
     "synthetic",
   );
 });
+
+it.each(["gemini", "codex"] as const)(
+  "publishes the normal private %s capacity descriptor without exposing or trusting its profile",
+  async (aiProvider) => {
+    const stateFile = join(runtime, "state.json"),
+      state = JSON.parse(await readFile(stateFile, "utf8"));
+    const capacity = resolveOwnerCapacity({ aiProvider });
+    await writeFile(
+      stateFile,
+      JSON.stringify({ ...state, tools: { ...state.tools, capacity } }),
+    );
+    await publishOwnerDiscovery(runtime, options());
+    expect(await discoverOwnerHost(options())).toEqual({
+      token: "a".repeat(64),
+      runtime,
+    });
+    const metadata = JSON.parse(await readFile(pointer(), "utf8"));
+    expect(Object.keys(metadata).sort()).toEqual([
+      "publishedAt",
+      "runtime",
+      "supervisor",
+      "version",
+    ]);
+    expect(JSON.stringify(metadata)).not.toContain(capacity.profile);
+    await writeFile(
+      stateFile,
+      JSON.stringify({
+        ...state,
+        tools: { ...state.tools, capacity, command: "not-admitted" },
+      }),
+    );
+    await expect(discoverOwnerHost(options())).rejects.toThrow(
+      /^owner_host_unavailable$/,
+    );
+    await expect(publishOwnerDiscovery(runtime, options())).rejects.toThrow(
+      /^owner_host_unavailable$/,
+    );
+  },
+);

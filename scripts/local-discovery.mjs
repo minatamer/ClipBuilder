@@ -218,7 +218,8 @@ async function readRuntime(ctx, runtime) {
     ["root", "token", "workerToken", "tools", "overlayBundle", "chromium"],
     ["storageRoot", "desktopStorageRoot", "speech"],
   );
-  shape(state.tools, ["ffmpeg", "ffprobe"]);
+  // The native worker validates its startup capacity; discovery never returns it.
+  shape(state.tools, ["ffmpeg", "ffprobe"], ["capacity"]);
   if (state.speech !== undefined) {
     shape(state.speech, ["executable", "model", "directory"], ["speakers"]);
     if (

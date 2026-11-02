@@ -165,3 +165,32 @@ acceptance and Linux/hosted release checks are explicitly unverified. No real
 provider or YouTube call, environment change, normal app launch, push or cloud/
 deployment occurred. Current worker builds and per-ticket fake/native/browser
 mechanics are recorded above. Existing owner media/configuration were preserved.
+
+## Requested normal Codex run — startup follow-up, 2026-11-02
+
+Normal startup exposed CL-185's missing `tools.capacity` discovery allowlist
+entry. Fixed the private descriptor integration and added actual bounded/Codex
+profile regressions in `owner-discovery.test.ts`; 14 focused fake cases,
+scoped lint/root-test types and read-only validate pass. The failed backend
+watcher tree was identity-verified, stopped and absent through stabilization
+before relaunch. User configuration/media were preserved; no real AI/download
+operation was invoked. The current run uses pinned pnpm 11.19.0 via a temporary
+PATH shim because nested scripts otherwise selected the tool environment's
+incompatible fallback. This changes no dependency, lockfile or configuration.
+The narrow fix is left unstaged/uncommitted; no push/deployment.
+
+Final normal-run readiness: all four documented/read-only health/page/bridge/
+capability GETs return 200. Codex real mode/setup ready, local speech captions,
+long-source/many-clip profiles and null total quotas confirmed. Provider choice
+is process-local for the explicitly requested Codex run, with no ignored-file
+or other operating switch changes. Owned listeners and supervisors are recorded
+outside Git; services are left running. No acquisition or inference initiated.
+
+## Owner-authorized follow-up commits — 2026-11-03
+
+The owner authorizes file-level planning, staging and ticket-prefixed local
+commits for the pending CL-185 startup and CL-194–196 repair work. The earlier
+unstaged handoff is superseded by the [whole-file allocation](CL185_196_COMMIT_PLAN.md).
+No push or new processing test is authorized by this Git task. The owner will
+resume real processing acceptance in their next testing session; the recorded
+fake checks and live read-only recovery evidence remain distinct.
