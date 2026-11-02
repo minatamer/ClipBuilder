@@ -1,3 +1,4 @@
+import { OWNER_SAFE_SOURCE_MS } from "../../../../../packages/contracts/local/policy.ts";
 import {
   ownerTimestamp,
   parseOwnerTimestamp,
@@ -9,9 +10,9 @@ export function normalizeManualTime(value: string): string {
   if (!match || value.length > 32) throw new Error("invalid_manual_time");
   const seconds =
     Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
-  if (!Number.isSafeInteger(seconds) || seconds >= 100 * 3600)
+  if (!Number.isSafeInteger(seconds) || seconds * 1000 > OWNER_SAFE_SOURCE_MS)
     throw new Error("invalid_manual_time");
-  return ownerTimestamp(seconds * 1000).slice(0, 8);
+  return ownerTimestamp(seconds * 1000).replace(/\.\d{3}$/, "");
 }
 
 export function parseManualTime(value: string): number {

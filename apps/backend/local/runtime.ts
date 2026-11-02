@@ -309,6 +309,7 @@ async function composeLocalWorkflow(
         scratchRoot: root,
         tools: acquisition,
         sectionTools: tools,
+        capacity: resolveOwnerCapacity({ aiProvider: config.aiProvider }),
       }),
       providers: (files) => {
         if (config.providerMode === "live" && config.aiProvider === "codex")

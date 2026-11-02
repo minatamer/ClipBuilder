@@ -1,5 +1,9 @@
 # ClipBuilder backend
 
+## Long local Codex analysis
+
+CL-189 admits long/large local Codex sources with measured disk reserve, supported decoding and bounded speech/discovery windows. Compatible receipts recover through the existing rolling store; explicit retry resumes missing work. Progress polling and restore make no provider calls. Gemini and hosted limits are unchanged. Real long-video throughput and quality remain unverified. See the [capacity inventory](../../docs/operations/LOCAL_CODEX_CAPACITY.md).
+
 CL-188 local section acquisition stays in the protected downloader adapter.
 Pinned FFmpeg/FFprobe share the authenticated, host/DNS-checked TLS broker.
 The native worker receives section clocks and fixed file identities, never a

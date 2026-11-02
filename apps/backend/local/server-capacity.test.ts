@@ -57,23 +57,25 @@ it.each(["codex", "gemini", "hosted"] as const)(
       else
         expect(capabilities.capacity).toMatchObject({
           profile: kind === "codex" ? "local-codex" : "bounded",
-          longSources: false,
+          longSources: kind === "codex",
           manyClips: false,
-          sourceBytes: OWNER_LIMITS.sourceBytes,
-          sourceMs: OWNER_LIMITS.sourceMs,
+          sourceBytes: kind === "codex" ? null : OWNER_LIMITS.sourceBytes,
+          sourceMs: kind === "codex" ? null : OWNER_LIMITS.sourceMs,
         });
-      const oversized = await ownerRequest(port, "/api/source", {
-        method: "POST",
-        headers: {
-          ...headers,
-          "Content-Type": "video/mp4",
-          "Content-Length": String(OWNER_LIMITS.sourceBytes + 1),
-          "X-ClipBuilder-Capacity": "local-codex",
-        },
-        body: bytes,
-      });
-      expect(oversized.status).toBe(400);
-      expect(media).toHaveBeenCalledTimes(0);
+      if (kind !== "codex") {
+        const oversized = await ownerRequest(port, "/api/source", {
+          method: "POST",
+          headers: {
+            ...headers,
+            "Content-Type": "video/mp4",
+            "Content-Length": String(OWNER_LIMITS.sourceBytes + 1),
+            "X-ClipBuilder-Capacity": "local-codex",
+          },
+          body: bytes,
+        });
+        expect(oversized.status).toBe(400);
+        expect(media).toHaveBeenCalledTimes(0);
+      }
       const long = await ownerRequest(port, "/api/source", {
         method: "POST",
         headers: {
@@ -83,10 +85,10 @@ it.each(["codex", "gemini", "hosted"] as const)(
         },
         body: bytes,
       });
-      expect(long.status).toBe(400);
+      expect(long.status).toBe(kind === "codex" ? 200 : 400);
       expect(media).toHaveBeenCalledTimes(1);
       expect(transcribe).toHaveBeenCalledTimes(0);
-      expect(await readdir(root)).toEqual([]);
+      if (kind !== "codex") expect(await readdir(root)).toEqual([]);
     } finally {
       await host.close();
       await rmdir(root);

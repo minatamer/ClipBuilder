@@ -22,7 +22,7 @@ const source = {
 it("admits large/long measured metadata only for the completed local Codex profile", () => {
   const codex = resolveOwnerCapacity({ aiProvider: "codex" }, ready);
   expect(ownerSourceForCapacity(codex).parse(source)).toEqual(source);
-  expect(ownerSourceSchema.safeParse(source).success).toBe(false);
+  expect(ownerSourceSchema.safeParse(source).success).toBe(true);
   for (const composition of [
     {},
     { aiProvider: "gemini" as const },
@@ -34,7 +34,10 @@ it("admits large/long measured metadata only for the completed local Codex profi
       false,
     );
   }
-  const pending = resolveOwnerCapacity({ aiProvider: "codex" });
+  const pending = resolveOwnerCapacity(
+    { aiProvider: "codex" },
+    { longSources: false, manyClips: false },
+  );
   expect(pending.profile).toBe("local-codex");
   expect(pending.longSources).toBe(false);
   expect(pending.manyClips).toBe(false);

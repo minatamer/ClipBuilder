@@ -212,6 +212,10 @@ export async function prepareLocalCodexInput(
       const speech = options.speech;
       const wav = join(scratch, "speech.wav"),
         prefix = join(scratch, "speech");
+      // An accidental full-source job must fail before a size-limited WAV can
+      // be mistaken for complete audio. The control API plans small chunks.
+      if (duration * 32000 + 65536 >= 120 * 1024 ** 2)
+        throw Error("local_speech_chunk_required");
       await measured("audio", () =>
         runOwnedProcess(
           options.tools.ffmpeg,
@@ -249,6 +253,33 @@ export async function prepareLocalCodexInput(
           signal,
         ),
       );
+      const decodedDuration = Number(
+        (
+          await runOwnedProcess(
+            options.tools.ffprobe,
+            [
+              "-v",
+              "error",
+              "-protocol_whitelist",
+              "file,pipe",
+              "-format_whitelist",
+              "wav",
+              "-show_entries",
+              "format=duration",
+              "-of",
+              "default=noprint_wrappers=1:nokey=1",
+              wav,
+            ],
+            signal,
+            { maxStdout: 1024 },
+          )
+        ).trim(),
+      );
+      if (
+        !Number.isFinite(decodedDuration) ||
+        Math.abs(decodedDuration - duration) > 0.08
+      )
+        throw Error("local_speech_audio_incomplete");
       const speakers = job.diarize === false ? undefined : speech.speakers;
       if (job.kind === "speakers" && !speakers)
         throw new Error("local_speech_unavailable");

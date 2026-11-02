@@ -20,6 +20,10 @@ export const OWNER_DEFAULT_AI_COUNT = 2;
 export const OWNER_ALL_AI_MOMENTS_LIMIT = OWNER_LIMITS.sourceMs / 10_000;
 export const OWNER_MAX_REQUESTED_CLIP_MS = 60_000;
 export const OWNER_FPS = 30;
+/** Structural arithmetic safety; actual provider/source budgets come from composition. */
+export const OWNER_SAFE_SOURCE_MS = Math.floor(
+  Number.MAX_SAFE_INTEGER / OWNER_FPS,
+);
 export const ownerAiModeSchema = z.enum(["synthetic-ai", "provider-ai"]);
 export type OwnerAiMode = z.infer<typeof ownerAiModeSchema>;
 export const ownerIdSchema = z.uuid();
@@ -34,6 +38,6 @@ export const ownerCutSchema = z
       cut.endFrame > cut.startFrame &&
       cut.endFrame - cut.startFrame <=
         (OWNER_LIMITS.clipMs * OWNER_FPS) / 1000 &&
-      cut.endFrame <= (OWNER_LIMITS.sourceMs * OWNER_FPS) / 1000,
+      cut.endFrame <= Math.floor((OWNER_SAFE_SOURCE_MS * OWNER_FPS) / 1000),
   );
 export type OwnerCut = z.infer<typeof ownerCutSchema>;

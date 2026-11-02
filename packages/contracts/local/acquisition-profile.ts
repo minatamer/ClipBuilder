@@ -21,7 +21,7 @@ export const ownerAcquisitionNativeStageSchema = z.enum([
 export type OwnerAcquisitionNativeStage = z.infer<
   typeof ownerAcquisitionNativeStageSchema
 >;
-import { OWNER_LIMITS } from "./policy.ts";
+import { OWNER_SAFE_SOURCE_MS } from "./policy.ts";
 
 /** Owner-only acquisition budgets; these do not enable network or tools. */
 export const OWNER_ACQUISITION_LIMITS = {
@@ -43,7 +43,7 @@ export const ownerAcquisitionDescriptorSchema = z
     width: z.number().int().positive().max(3840),
     height: z.number().int().positive().max(3840),
     fps: z.number().finite().min(12).max(60),
-    durationMs: z.number().int().min(1000).max(OWNER_LIMITS.sourceMs),
+    durationMs: z.number().int().min(1000).max(OWNER_SAFE_SOURCE_MS),
     videoCodec: z.enum(["h264", "vp9"]),
     audioCodec: z.enum(["aac", "opus"]),
     audioChannels: z.union([z.literal(1), z.literal(2)]),

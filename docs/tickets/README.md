@@ -1,5 +1,9 @@
 # ClipBuilder canonical ticket index
 
+## Long local Codex analysis — 2026-11-02
+
+[CL-189](CL-189-long-source-codex-discovery.md) enables long/large local Codex sources, bounded complete audio/discovery windows, acknowledged receipt recovery and explicit partial retry. Two-hour fake server recovery/retry makes zero new calls; current-source native/browser proofs and duration guards pass. Gemini/hosted budgets are unchanged. CL-190 is next; no real processing was run.
+
 ## Partial local YouTube acquisition — 2026-11-02
 
 [CL-188](CL-188-partial-youtube-acquisition.md) implements original-time ranges,

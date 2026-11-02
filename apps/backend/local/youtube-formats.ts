@@ -1,3 +1,7 @@
+import {
+  resolveOwnerCapacity,
+  type OwnerCapacity,
+} from "../../../packages/contracts/local/capacity.ts";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import {
@@ -19,10 +23,7 @@ import {
   type OwnerYoutubeSupportReason,
   type OwnerYoutubeVideo,
 } from "../../../packages/contracts/local/acquisition.ts";
-import {
-  OWNER_LIMITS,
-  ownerIdSchema,
-} from "../../../packages/contracts/local/policy.ts";
+import { ownerIdSchema } from "../../../packages/contracts/local/policy.ts";
 import { ownerYoutubeSourceId } from "./youtube-url.ts";
 import { ownerAnalysisWindow } from "../../../packages/contracts/local/source-window.ts";
 import { ownerPaddedAcquisitionWindow } from "../../../packages/contracts/local/acquisition-section.ts";
@@ -289,9 +290,13 @@ function reason(
   metadata: Pick<OwnerYoutubeMetadata, "status" | "durationMs">,
   video: OwnerYoutubeVideo,
   audio: OwnerYoutubeAudio | null,
+  capacity: OwnerCapacity = resolveOwnerCapacity({}),
 ): OwnerYoutubeSupportReason | null {
   if (metadata.status !== "vod") return "source-unavailable";
-  if (metadata.durationMs < 1000 || metadata.durationMs > OWNER_LIMITS.sourceMs)
+  if (
+    metadata.durationMs < 1000 ||
+    (capacity.sourceMs !== null && metadata.durationMs > capacity.sourceMs)
+  )
     return "duration";
   if (video.drm || audio?.drm) return "drm";
   if (video.protocol !== "https" || (audio && audio.protocol !== "https"))
@@ -317,13 +322,19 @@ function reason(
     video.bytes === null || audio.bytes === null
       ? null
       : video.bytes + (video.formatId === audio.formatId ? 0 : audio.bytes);
-  if (total !== null && total > OWNER_LIMITS.sourceBytes) return "bytes";
+  if (
+    total !== null &&
+    capacity.sourceBytes !== null &&
+    total > capacity.sourceBytes
+  )
+    return "bytes";
   return null;
 }
 
 /** Rank every offered video before applying the deliberately narrow decoder policy. */
 export function buildOwnerYoutubeOffer(
   input: OwnerYoutubeMetadata,
+  capacity: OwnerCapacity = resolveOwnerCapacity({}),
 ): OwnerYoutubeOffer {
   try {
     const metadata = ownerYoutubeMetadataSchema.parse(input);
@@ -349,7 +360,7 @@ export function buildOwnerYoutubeOffer(
       if (choices.length + audios.length > OWNER_ACQUISITION_LIMITS.maxChoices)
         throw new Error();
       for (const audio of audios) {
-        const rejection = reason(metadata, video, audio);
+        const rejection = reason(metadata, video, audio, capacity);
         const combined = audio?.formatId === video.formatId;
         const size =
           video.bytes === null || !audio || audio.bytes === null
@@ -411,6 +422,7 @@ export function buildOwnerYoutubeOffer(
 export function selectOwnerYoutubeFormat(
   input: OwnerYoutubeOffer,
   selection: OwnerYoutubeImportRequest,
+  capacity: OwnerCapacity = resolveOwnerCapacity({}),
 ): { choice: OwnerYoutubeChoice; expected: OwnerAcquisitionDescriptor } {
   const offer = ownerYoutubeOfferSchema.parse(input);
   const request = ownerYoutubeImportRequestSchema.parse(selection);
@@ -443,8 +455,16 @@ export function selectOwnerYoutubeFormat(
         { status: "vod", durationMs: window.endMs - window.startMs },
         { ...choice.video, bytes: null },
         choice.audio ? { ...choice.audio, bytes: null } : null,
+        capacity,
       )
-    : choice.reason;
+    : choice.reason === null || ["duration", "bytes"].includes(choice.reason)
+      ? reason(
+          { status: "vod", durationMs: offer.durationMs },
+          choice.video,
+          choice.audio,
+          capacity,
+        )
+      : choice.reason;
   if (sectionReason !== null || !choice.audio)
     throw new Error("owner_youtube_format_unsupported");
   const admitted = {
@@ -466,6 +486,7 @@ export function selectOwnerYoutubeFormat(
     expected: ownerYoutubeChoiceDescriptor(
       padded ? { durationMs: padded.endMs - padded.startMs } : offer,
       admitted,
+      capacity,
     ),
   };
 }
@@ -474,12 +495,14 @@ export function selectOwnerYoutubeFormat(
 export function ownerYoutubeChoiceDescriptor(
   offer: Pick<OwnerYoutubeOffer, "durationMs">,
   choice: Pick<OwnerYoutubeChoice, "video" | "audio">,
+  capacity: OwnerCapacity = resolveOwnerCapacity({}),
 ): OwnerAcquisitionDescriptor {
   if (
     reason(
       { status: "vod", durationMs: offer.durationMs },
       choice.video,
       choice.audio,
+      capacity,
     ) !== null
   )
     throw new Error("owner_youtube_format_unsupported");

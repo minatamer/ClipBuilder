@@ -129,6 +129,7 @@ export class OwnerSourceAcquisition {
             root,
             options.capacity,
             options.capacityPolicy?.scratchBytes,
+            options.capacityPolicy,
           ),
         );
     }
@@ -280,6 +281,7 @@ export class OwnerSourceAcquisition {
     const { choice, expected } = selectOwnerYoutubeFormat(
       prepared.offer,
       input.request,
+      this.options.capacityPolicy,
     );
     const section = input.request.window
       ? { window: input.request.window, durationMs: prepared.offer.durationMs }
@@ -361,6 +363,8 @@ export class OwnerSourceAcquisition {
         const directory = dirname(
           await this.options.files.file(workspaceId, "source.mp4"),
         );
+        let checkedBytes = 0;
+        let diskCheck = Promise.resolve();
         const downloadReceipt = await port.download(
           {
             ...prepared,
@@ -370,6 +374,19 @@ export class OwnerSourceAcquisition {
             ...(section ? { section } : {}),
           },
           (progress) => {
+            if (progress.downloadedBytes - checkedBytes >= 64 * 1024 ** 2) {
+              checkedBytes = progress.downloadedBytes;
+              diskCheck = diskCheck
+                .then(() =>
+                  (this.options.capacity ?? requireDisk)(
+                    this.options.files.root,
+                    checkedBytes + overhead * 2,
+                  ),
+                )
+                .catch(() => {
+                  controller.abort(new Error("source_capacity"));
+                });
+            }
             if (progress.downloadedBytes > this.maximumComponents) {
               controller.abort(new Error("source_capacity"));
               throw new Error("source_capacity");
@@ -382,6 +399,8 @@ export class OwnerSourceAcquisition {
           },
           controller.signal,
         );
+        await diskCheck;
+        controller.signal.throwIfAborted();
         if (port.mode === "provider-source") {
           let components = 0;
           for (const part of section ||
@@ -534,6 +553,7 @@ export class OwnerSourceAcquisition {
           ? { ...variant.audio, bytes: null }
           : variant.audio,
       },
+      this.options.capacityPolicy,
     );
     const opened = await library.open(
       variant.id,
@@ -608,6 +628,7 @@ export class OwnerSourceAcquisition {
       const expected = ownerYoutubeChoiceDescriptor(
         { durationMs: variant.actual.durationMs },
         variant,
+        this.options.capacityPolicy,
       );
       const located = await library.locate(
         variant.id,

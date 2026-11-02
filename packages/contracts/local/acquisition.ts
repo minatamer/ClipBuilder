@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ownerDigestSchema } from "./assets.ts";
-import { OWNER_LIMITS, ownerIdSchema } from "./policy.ts";
+import { ownerIdSchema } from "./policy.ts";
 import { ownerSourceSchema } from "./index.ts";
 import { OWNER_ACQUISITION_LIMITS } from "./acquisition-profile.ts";
 import { ownerSourceWindowSchema } from "./source-window.ts";
@@ -205,12 +205,12 @@ export const ownerAcquisitionProgressSchema = z
       .number()
       .int()
       .nonnegative()
-      .max(OWNER_LIMITS.scratchBytes),
+      .max(Number.MAX_SAFE_INTEGER),
     totalBytes: z
       .number()
       .int()
       .positive()
-      .max(OWNER_LIMITS.scratchBytes)
+      .max(Number.MAX_SAFE_INTEGER)
       .nullable(),
     variantId: ownerIdSchema.nullable(),
     error: z

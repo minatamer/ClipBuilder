@@ -150,6 +150,13 @@ async function admittedMediaPath(
   return target;
 }
 
+const inspectedSources = new WeakMap<
+  OwnerNativeTools,
+  Map<
+    string,
+    { identity: string; value: { metadata: OwnerSource; videoStart: number } }
+  >
+>();
 export async function inspectOwnerMedia(
   file: string,
   tools: OwnerNativeTools,
@@ -165,6 +172,14 @@ export async function inspectOwnerMedia(
     (capacity.sourceBytes !== null && info.size > capacity.sourceBytes)
   )
     throw new Error("invalid");
+  signal.throwIfAborted();
+  const identity = `${info.dev}:${info.ino}:${info.size}:${info.mtimeMs}:${info.ctimeMs}`;
+  let cache = inspectedSources.get(tools);
+  const retained = capacity.longSources ? cache?.get(file) : undefined;
+  if (retained?.identity === identity) {
+    ownerSourceForCapacity(capacity).parse(retained.value.metadata);
+    return structuredClone(retained.value);
+  }
   const probe = await probeMedia(file, tools.ffprobe, signal);
   const video = probe.streams.find((s) => s.codec_type === "video");
   const audio = probe.streams.find((s) => s.codec_type === "audio");
@@ -243,6 +258,8 @@ export async function inspectOwnerMedia(
       ...SOURCE_INPUT_OPTIONS,
       "-select_streams",
       "v:0",
+      "-read_intervals",
+      `${Math.max(videoStart, videoStart + (video.duration ?? probe.format.duration) - 60)}%`,
       "-show_packets",
       "-show_entries",
       "packet=pts_time,duration_time",
@@ -279,10 +296,19 @@ export async function inspectOwnerMedia(
     height: Math.abs(rotation) % 180 === 90 ? video.width : video.height,
     fps: (numerator ?? 0) / (denominator ?? 1),
   });
-  return {
+  const value = {
     metadata,
     videoStart,
   };
+  if (capacity.longSources) {
+    if (!cache) {
+      cache = new Map();
+      inspectedSources.set(tools, cache);
+    }
+    if (cache.size >= 16) cache.delete(cache.keys().next().value ?? "");
+    cache.set(file, { identity, value: structuredClone(value) });
+  }
+  return value;
 }
 
 export async function inspectOwnerSource(

@@ -1,5 +1,14 @@
 # Local Codex capacity ownership — CL-185–190
 
+## Long-source readiness delivered — CL-189
+
+The local Codex source readiness flag is now enabled. Source duration/byte
+quotas are null only for this server-owned profile. Downloader, native
+remux/inspection, upload, saved source and draft paths honor it. Disk reserve,
+safe arithmetic and decoding stay enforced. Audio/discovery work is chunked and
+acknowledged; each receipt and operation remains bounded. Count/batch readiness
+remains off until CL-190. Earlier foundation-state paragraphs are historical.
+
 The server resolves capacity from explicit local/hosted composition and the
 selected provider. Requests, browser state, saved drafts and hosted exemptions
 cannot select a privileged profile. Gemini/hosted limits stay independent.

@@ -4,6 +4,7 @@ import { hostedDemoClientIp } from "./demo-client-ip";
 import { discoverOwnerHost } from "../../../../scripts/local-discovery.mjs";
 import { fetchLocalAi, localAiRequestPath } from "./local-ai-request";
 import { LOCAL_CODEX_POLICY } from "../../../../packages/contracts/local/codex.ts";
+import { ownerRuntimeCapabilitiesSchema } from "../../../../packages/contracts/local/runtime.ts";
 import {
   acquireControlRequest,
   controlIsLocal,
@@ -109,6 +110,31 @@ export async function proxyLocalWorkflow(request: Request, segments: string[]) {
     if (local) {
       const host = await discoverOwnerHost();
       headers.set("Authorization", `Bearer ${host.token}`);
+      if (localAi && segments[2] === "analysis") {
+        // Trust the local server's composition, never browser/request flags.
+        const capabilityResponse = await fetch(
+          "http://127.0.0.1:4000/v1/local/capabilities",
+          {
+            headers,
+            cache: "no-store",
+            redirect: "error",
+            signal: AbortSignal.any([
+              controller.signal,
+              AbortSignal.timeout(5000),
+            ]),
+          },
+        );
+        const parsed = ownerRuntimeCapabilitiesSchema.safeParse(
+          capabilityResponse.ok ? await capabilityResponse.json() : null,
+        );
+        if (
+          parsed.success &&
+          "aiProvider" in parsed.data &&
+          parsed.data.aiProvider === "codex" &&
+          parsed.data.capacity?.longSources
+        )
+          clearTimeout(timer);
+      }
       response = localAi
         ? await fetchLocalAi(segments, options)
         : await fetch(

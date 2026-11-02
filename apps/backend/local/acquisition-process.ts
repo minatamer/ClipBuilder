@@ -9,7 +9,8 @@ export type AcquisitionProcessRequest = {
   input: string;
   cwd: string;
   env: NodeJS.ProcessEnv;
-  timeoutMs: number;
+  timeoutMs: number | null;
+  streaming?: boolean;
 };
 export type AcquisitionProcess = (
   request: AcquisitionProcessRequest,
@@ -83,7 +84,10 @@ export const runAcquisitionProcess: AcquisitionProcess = async (
         termination = Promise.resolve();
       }
     };
-    const timeout = setTimeout(stop, request.timeoutMs);
+    const timeout =
+      request.timeoutMs === null
+        ? undefined
+        : setTimeout(stop, request.timeoutMs);
     const idle = setInterval(() => {
       if (Date.now() - lastOutput > OWNER_ACQUISITION_LIMITS.idleMs) stop();
     }, 1000);
@@ -94,7 +98,10 @@ export const runAcquisitionProcess: AcquisitionProcess = async (
       if (failed) return;
       lastOutput = Date.now();
       output += chunk.length;
-      if (output > OWNER_ACQUISITION_LIMITS.metadataBytes) {
+      if (
+        !request.streaming &&
+        output > OWNER_ACQUISITION_LIMITS.metadataBytes
+      ) {
         stop();
         return;
       }
@@ -127,7 +134,7 @@ export const runAcquisitionProcess: AcquisitionProcess = async (
     child.stderr.on("data", (chunk: Buffer) => {
       // Never store a raw extractor exception, URL, filename or title.
       stderr += chunk.length;
-      if (stderr > 256 * 1024) stop();
+      if (!request.streaming && stderr > 256 * 1024) stop();
     });
     child.stdin.on("error", stop);
     child.stdin.end(request.input, "utf8");

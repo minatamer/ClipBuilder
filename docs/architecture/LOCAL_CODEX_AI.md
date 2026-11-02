@@ -1,5 +1,9 @@
 # Local Codex provider — CL-135
 
+## Long-source pass — CL-189
+
+The local Codex capacity now enables long sources. Eight-minute source-aligned ASR cores with two seconds of context and sixty-second discovery overlap replace whole-source WAV/prompt processing. Individually bounded compatible receipts copy incrementally into saved drafts and single rolling recovery. Explicit retry resumes missing units, with partial/canceled coverage retained. Disk reserve, per-operation native/inference limits and safe codecs remain; Gemini/hosted budgets do not change. The existing model/reasoning is preserved; no real throughput/quality claim is made. CL-190 owns aggregate moment/batch scaling.
+
 ## Capacity composition — CL-185
 
 The actual local Codex composition selects the capacity profile; browser fields,

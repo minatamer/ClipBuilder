@@ -12,10 +12,14 @@ import {
   ownerCutSchema,
   ownerIdSchema,
   ownerMediaResultSchema,
-  ownerWorkspaceSchema,
+  ownerWorkspaceForCapacity,
   type OwnerMediaJob,
   type OwnerMediaResult,
 } from "../../../packages/contracts/local/index.ts";
+import { resolveOwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
+const ownerWorkspaceSchema = ownerWorkspaceForCapacity(
+  resolveOwnerCapacity({ aiProvider: "gemini" }),
+);
 import {
   ownerAiDurationSchema,
   ownerAiResultLimit,

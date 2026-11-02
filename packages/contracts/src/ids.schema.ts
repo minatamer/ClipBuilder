@@ -33,7 +33,10 @@ export const transcriptUtteranceIdSchema = z
   .regex(/^utt_\d{6}$/u, "Expected an ordinal utterance identifier.");
 export const wordIdSchema = z
   .string()
-  .regex(/^w_\d{6}$/u, "Expected an ordinal transcript word identifier.");
+  .regex(
+    /^w_(?:\d{6}|[a-f0-9]{32})$/u,
+    "Expected an ordinal or stable transcript word identifier.",
+  );
 export const speakerIdSchema = z
   .string()
   .regex(/^spk_(?:[0-9]|1[0-5])$/u, "Expected an opaque speaker-turn label.");

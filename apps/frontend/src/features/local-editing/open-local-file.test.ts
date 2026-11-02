@@ -14,7 +14,10 @@ it("uses admitted source capacity while keeping pending Codex and saved-document
       large,
       AbortSignal.timeout(2000),
       transport,
-      resolveOwnerCapacity({ aiProvider: "codex" }),
+      resolveOwnerCapacity(
+        { aiProvider: "codex" },
+        { longSources: false, manyClips: false },
+      ),
     ),
   ).rejects.toThrow("picked_file_large");
   expect(transport).toHaveBeenCalledTimes(0);

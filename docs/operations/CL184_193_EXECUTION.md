@@ -104,3 +104,20 @@ Final CL-188 gate: 212 fake cases / twelve files; three browser/native cases;
 contracts/local/frontend/test types, contracts/worker builds and scoped lint/
 format pass. Source/timestamp/transport/layout/reuse findings resolved; final
 read-only validate reports no actionable findings. No real processing.
+
+CL-188 committed `f28a676`.
+
+## CL-189 implementation
+
+Long-source admission, bounded speech/discovery work, private compatible chunk
+receipts, server recovery/explicit retry, actual WAV duration guards and trusted
+proxy timing are implemented. No real ASR/YouTube/Codex/Gemini work was used.
+Synthetic/native evidence and final validation are recorded in its packet.
+CL-190 owns aggregate result/clip scaling next.
+
+CL-189 final: 909 local fake cases/107 files, 67 focused post-fix cases,
+thirteen frontend transport cases and four browser/native cases pass. Types,
+scoped lint/format, whitespace, contracts and current-worker builds pass. Final
+read-only validate: no actionable findings. Empty-summary cache reuse was
+resolved and checked against a short request after two-hour recovery. Real
+processing remains untested; no normal app service was started.

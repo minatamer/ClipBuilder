@@ -74,7 +74,10 @@ export function CodexPreparationSteps({
   const steps: CodexProgressStep[] =
     progress &&
     progress.clipId === clipId &&
-    (!!clipId || progress.steps.some((step) => step.state !== "done"))
+    (!!clipId ||
+      (progress.chunks &&
+        progress.chunks.completed < progress.chunks.planned) ||
+      progress.steps.some((step) => step.state !== "done"))
       ? progress.steps.map((step) => ({ ...step }))
       : [];
   if (
@@ -113,7 +116,12 @@ export function CodexPreparationSteps({
               aria-hidden="true"
               className={step.state === "running" ? styles.spinner : undefined}
             />
-            <span>{labels[step.id]}</span>
+            <span>
+              {labels[step.id]}
+              {step.id === "selection" && progress?.chunks
+                ? ` · ${progress.chunks.completed}/${progress.chunks.planned} sections`
+                : ""}
+            </span>
             <span className={styles.status}>
               {step.state === "done"
                 ? "Done"

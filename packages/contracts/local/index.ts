@@ -37,8 +37,8 @@ export {
 export const ownerSourceSchema = z
   .object({
     fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-    bytes: z.number().int().positive().max(OWNER_LIMITS.sourceBytes),
-    durationMs: z.number().int().min(1000).max(OWNER_LIMITS.sourceMs),
+    bytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+    durationMs: z.number().int().min(1000).max(OWNER_SAFE_SOURCE_MS),
     width: z.number().int().positive().max(3840),
     height: z.number().int().positive().max(3840),
     fps: z.number().finite().min(12).max(60),

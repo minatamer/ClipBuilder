@@ -20,6 +20,7 @@ it("shows observed Codex spinners/ticks with a visible footer at desktop and pho
       res.end(
         JSON.stringify({
           runId,
+          chunks: { completed: 2, planned: 15 },
           steps: [
             { id: "inspect", state: "done", elapsedMs: 120 },
             { id: "audio", state: "done", elapsedMs: 200 },

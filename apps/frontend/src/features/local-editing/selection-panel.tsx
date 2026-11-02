@@ -879,6 +879,16 @@ export function OwnerSelectionPanel({
       >
         {analysis && (
           <>
+            {analysis.coverage && analysis.coverage.state !== "complete" && (
+              <p role="status">
+                {analysis.coverage.state === "canceled"
+                  ? "Canceled"
+                  : "Partial results"}{" "}
+                � {analysis.coverage.completed}/{analysis.coverage.planned}{" "}
+                sections complete. Use Add clips to retry; completed work is
+                retained.
+              </p>
+            )}
             <p className="selection-count" role="status">
               {selected.length} {selected.length === 1 ? "clip" : "clips"}
               {selected.length > clipLimit

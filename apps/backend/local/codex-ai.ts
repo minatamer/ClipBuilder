@@ -44,6 +44,7 @@ import { LocalDiagnostics } from "./diagnostics.ts";
 import type { OwnerHostProviders } from "./server.ts";
 import type { WorkspaceFiles } from "./workspace-files.ts";
 import type { CodexInference } from "./codex-exec.ts";
+import { LOCAL_SPEECH_PIN } from "../../../scripts/local-speech-tools.ts";
 import { HOOK_SUGGESTION_POLICY } from "./hook-suggestion-policy.ts";
 import {
   PLANNED_VISUAL_POLICY,
@@ -199,6 +200,10 @@ export function createLocalCodexAi(options: {
     },
     analysis: {
       mode: "provider-ai",
+      compatibility: `${LOCAL_SPEECH_PIN.build}:${LOCAL_SPEECH_PIN.modelSha256}:codex-current-medium-v1:selection-CL184`,
+      chunkProgress(completed, planned) {
+        if (analysisProgress) analysisProgress.chunks = { completed, planned };
+      },
       transcriptionSpeakersPrepared: false,
       started(workspace, work) {
         analysisProgress = progress.begin(workspace.id, [

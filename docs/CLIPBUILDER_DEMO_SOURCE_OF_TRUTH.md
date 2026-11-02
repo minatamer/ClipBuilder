@@ -1,5 +1,9 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Long local Codex sources — CL-189, 2026-11-02
+
+Local Codex source admission has no fixed duration/byte quota within safe media arithmetic. Actual disk reserve and supported decoding remain. Long analysis uses finite serial eight-minute ASR cores with two-second context, sixty-second discovery overlap, separately bounded acknowledged receipts and explicit partial/canceled retry. Native WAV duration is verified; no whole-source truncation can pass as complete. Restore reuses receipts without new AI/render work. Active work does not expire; acknowledged changes refresh the same two-hour inactivity deadline, while GET polling does not. Per-unit deadlines remain; only trusted local Codex long analysis loses the frontend overall timeout. Gemini/hosted budgets stay unchanged. CL-190 owns aggregate result/clip scaling. Synthetic/native evidence does not establish real two-hour throughput or AI quality.
+
 ## Partial local YouTube acquisition — CL-188, 2026-11-02
 
 Local intake offers mutually exclusive Quality/Range settings in the existing

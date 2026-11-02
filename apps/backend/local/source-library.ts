@@ -24,6 +24,11 @@ import {
 import { ownerDigestSchema } from "../../../packages/contracts/local/assets.ts";
 import { prepareOwnerStorage } from "./owner-storage.ts";
 import { ownerYoutubeSourceId } from "./youtube-url.ts";
+import {
+  ownerSourceFitsCapacity,
+  resolveOwnerCapacity,
+  type OwnerCapacity,
+} from "../../../packages/contracts/local/capacity.ts";
 import { ownerYoutubeChoiceDescriptor } from "./youtube-formats.ts";
 import {
   confinedPath,
@@ -102,7 +107,7 @@ async function mediaFile(path: string) {
     info.isSymbolicLink() ||
     info.nlink !== 1n ||
     info.size <= 0n ||
-    info.size > BigInt(OWNER_LIMITS.sourceBytes)
+    info.size > BigInt(Number.MAX_SAFE_INTEGER)
   )
     throw error("damaged");
   return {
@@ -249,7 +254,8 @@ async function publishRecord(
     await rm(temporary, { force: true });
   }
 }
-function supported(variant: OwnerSavedSourceVariant) {
+function supported(variant: OwnerSavedSourceVariant, policy: OwnerCapacity) {
+  if (!ownerSourceFitsCapacity(variant.actual, policy)) return false;
   const { video, audio, actual, selection } = variant;
   try {
     ownerYoutubeChoiceDescriptor(
@@ -258,6 +264,7 @@ function supported(variant: OwnerSavedSourceVariant) {
         video: actual.origin ? { ...video, bytes: null } : video,
         audio: actual.origin ? { ...audio, bytes: null } : audio,
       },
+      policy,
     );
     return (
       variant.offsetMs === (actual.origin?.startMs ?? 0) &&
@@ -282,6 +289,7 @@ export class OwnerSourceLibrary {
     root: string,
     private readonly capacity: typeof requireDisk = requireDisk,
     private readonly scratchBytes: number | null = OWNER_LIMITS.scratchBytes,
+    private readonly policy: OwnerCapacity = resolveOwnerCapacity({}),
   ) {
     if (!isAbsolute(root)) throw error("invalid");
     this.root = resolve(root);
@@ -359,7 +367,10 @@ export class OwnerSourceLibrary {
     record: SourceRecord,
     signal: AbortSignal,
   ): Promise<OwnerSavedSourceVariant> {
-    let state: OwnerSavedSourceVariant["state"] = supported(record.variant)
+    let state: OwnerSavedSourceVariant["state"] = supported(
+      record.variant,
+      this.policy,
+    )
       ? "ready"
       : "unsupported";
     if (state === "ready") {
@@ -404,7 +415,7 @@ export class OwnerSourceLibrary {
     return this.serial(async (current) => {
       if (!(await prepareOwnerStorage(this.root))) throw error("missing");
       const record = await this.read(id, current);
-      if (!supported(record.variant)) throw error("unsupported");
+      if (!supported(record.variant, this.policy)) throw error("unsupported");
       const file = await this.sourcePath(record.variant.actual.fingerprint);
       await verifyMedia(file, record.variant.actual, current, this.verified);
       current.throwIfAborted();
@@ -450,6 +461,8 @@ export class OwnerSourceLibrary {
     const value = publicationSchema.parse(input),
       source = ownerSourceSchema.parse(workspace.source),
       workspaceId = ownerIdSchema.parse(workspace.id);
+    if (!ownerSourceFitsCapacity(source, this.policy))
+      throw error("unsupported");
     return this.serial(async (current) => {
       const from = await files.file(workspaceId, "source.mp4");
       await verifyMedia(from, source, current, this.verified);
@@ -465,7 +478,7 @@ export class OwnerSourceLibrary {
         offsetMs: source.origin?.startMs ?? 0,
         state: "ready",
       });
-      if (!supported(variant)) throw error("unsupported");
+      if (!supported(variant, this.policy)) throw error("unsupported");
       const tools =
         value.tools ??
         (value.mode === "synthetic-source"
@@ -535,7 +548,7 @@ export class OwnerSourceLibrary {
     return this.serial(async (current) => {
       if (!(await prepareOwnerStorage(this.root))) throw error("missing");
       const record = await this.read(id, current);
-      if (!supported(record.variant)) throw error("unsupported");
+      if (!supported(record.variant, this.policy)) throw error("unsupported");
       // Explicit use validates bytes afresh, rather than trusting list or restart metadata.
       this.verified.clear();
       const from = await this.sourcePath(record.variant.actual.fingerprint);
@@ -585,7 +598,7 @@ export class OwnerSourceLibrary {
     return this.serial(async (current) => {
       if (!(await prepareOwnerStorage(this.root))) throw error("missing");
       const record = await this.read(id, current);
-      if (!supported(record.variant)) throw error("unsupported");
+      if (!supported(record.variant, this.policy)) throw error("unsupported");
       const from = await files.file(workspaceId, "source.mp4");
       await verifyMedia(from, record.variant.actual, current);
       const source = ownerSourceSchema.parse(

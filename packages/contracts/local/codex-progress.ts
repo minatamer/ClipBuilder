@@ -31,6 +31,13 @@ export const codexProgressSchema = z
   .object({
     runId: ownerIdSchema,
     clipId: ownerIdSchema.optional(),
+    chunks: z
+      .object({
+        completed: z.number().int().nonnegative(),
+        planned: z.number().int().positive(),
+      })
+      .strict()
+      .optional(),
     steps: codexProgressStepsSchema,
   })
   .strict();

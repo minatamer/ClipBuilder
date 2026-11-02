@@ -41,7 +41,9 @@ import {
   verifyAcquisitionTools,
   type PreparedAcquisitionTools,
 } from "./acquisition-tools.ts";
+import { type OwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
 export type YtDlpConfiguration = {
+  capacity?: OwnerCapacity;
   scratchRoot: string;
   tools: PreparedAcquisitionTools;
   sectionTools?: { ffmpeg: string; ffprobe: string };
@@ -227,7 +229,7 @@ export function ytDlpAcquisitionInput(input: {
     input.maxBytes !== undefined &&
     (!Number.isSafeInteger(input.maxBytes) ||
       input.maxBytes < 1 ||
-      input.maxBytes > OWNER_LIMITS.sourceBytes)
+      input.maxBytes > Number.MAX_SAFE_INTEGER)
   )
     throw new Error("acquisition_config_invalid");
   args.push(input.canonicalUrl);
@@ -241,12 +243,12 @@ const progressSchema = z
       .number()
       .int()
       .nonnegative()
-      .max(OWNER_LIMITS.sourceBytes),
+      .max(Number.MAX_SAFE_INTEGER),
     total_bytes: z
       .number()
       .int()
       .positive()
-      .max(OWNER_LIMITS.sourceBytes)
+      .max(Number.MAX_SAFE_INTEGER)
       .optional(),
     total_bytes_estimate: z.number().finite().positive().optional(),
     speed: z.number().finite().nonnegative().nullable().optional(),
@@ -335,6 +337,16 @@ export function createYtDlpAcquisitionPort(
               args: ["--ignore-config", "--config-locations", "-", "--"],
               input: ytDlpAcquisitionInput({
                 ...options,
+                ...(options.action === "video" || options.action === "audio"
+                  ? {
+                      maxBytes:
+                        options.maxBytes ??
+                        config.capacity?.sourceBytes ??
+                        (config.capacity?.longSources
+                          ? Number.MAX_SAFE_INTEGER
+                          : OWNER_LIMITS.sourceBytes),
+                    }
+                  : {}),
                 canonicalUrl: identity.canonicalUrl,
                 proxy,
                 challenge: config.tools.challenge,
@@ -347,7 +359,13 @@ export function createYtDlpAcquisitionPort(
               timeoutMs:
                 options.action === "metadata" || options.action === "clock"
                   ? OWNER_ACQUISITION_LIMITS.metadataMs
-                  : OWNER_ACQUISITION_LIMITS.transferMs,
+                  : config.capacity?.longSources
+                    ? null
+                    : OWNER_ACQUISITION_LIMITS.transferMs,
+              ...(config.capacity?.longSources &&
+              (options.action === "video" || options.action === "audio")
+                ? { streaming: true }
+                : {}),
             },
             line,
             controller.signal,
@@ -395,6 +413,7 @@ export function createYtDlpAcquisitionPort(
         revision: randomUUID(),
         mode: "provider-source",
       }),
+      config.capacity,
     );
   }
   return {
@@ -578,7 +597,11 @@ export function createYtDlpAcquisitionPort(
                 }
                 if (
                   value.downloaded_bytes < last ||
-                  completed + value.downloaded_bytes > OWNER_LIMITS.sourceBytes
+                  completed + value.downloaded_bytes >
+                    (config.capacity?.sourceBytes ??
+                      (config.capacity?.longSources
+                        ? Number.MAX_SAFE_INTEGER
+                        : OWNER_LIMITS.sourceBytes))
                 )
                   throw new Error("acquisition_bytes_invalid");
                 last = value.downloaded_bytes;
@@ -599,7 +622,12 @@ export function createYtDlpAcquisitionPort(
                     : null;
                 if (
                   total !== null &&
-                  (total > OWNER_LIMITS.sourceBytes || completed + last > total)
+                  (total >
+                    (config.capacity?.sourceBytes ??
+                      (config.capacity?.longSources
+                        ? Number.MAX_SAFE_INTEGER
+                        : OWNER_LIMITS.sourceBytes)) ||
+                    completed + last > total)
                 )
                   throw new Error("acquisition_progress_invalid");
                 progress({
@@ -617,7 +645,11 @@ export function createYtDlpAcquisitionPort(
               info.isSymbolicLink() ||
               info.nlink !== 1 ||
               info.size < 1 ||
-              info.size > OWNER_LIMITS.sourceBytes ||
+              info.size >
+                (config.capacity?.sourceBytes ??
+                  (config.capacity?.longSources
+                    ? Number.MAX_SAFE_INTEGER
+                    : OWNER_LIMITS.sourceBytes)) ||
               info.size !== last
             )
               throw new Error("acquisition_transfer_incomplete");

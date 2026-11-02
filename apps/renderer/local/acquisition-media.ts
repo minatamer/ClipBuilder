@@ -21,6 +21,23 @@ import {
   type OwnerAcquisitionSection,
 } from "../../../packages/contracts/local/acquisition-section.ts";
 import { ownerSourceSchema } from "../../../packages/contracts/local/index.ts";
+import {
+  ownerSourceFitsCapacity,
+  resolveOwnerCapacity,
+} from "../../../packages/contracts/local/capacity.ts";
+
+function admitAcquisitionDuration(
+  selected: OwnerAcquisitionDescriptor,
+  tools: OwnerNativeTools,
+) {
+  if (
+    !ownerSourceFitsCapacity(
+      { bytes: 1, durationMs: selected.durationMs },
+      tools.capacity ?? resolveOwnerCapacity({}),
+    )
+  )
+    throw Error("acquisition_selection_changed");
+}
 
 // Only this owner-only remux boundary admits WebM components. Upload/public
 // inspection keeps its existing MP4 demuxer boundary. All inputs are fixed
@@ -72,14 +89,18 @@ const matchesOfferedDuration = (
 ) =>
   Math.abs(actualMs - selected.durationMs) <
   (selected.durationMs % 1000 === 0 ? 1000 : frameTolerance(selected) + 1);
-async function boundedFile(path: string) {
+async function boundedFile(path: string, tools: OwnerNativeTools) {
   const info = await lstat(path);
   if (
     !info.isFile() ||
     info.isSymbolicLink() ||
     info.nlink !== 1 ||
     info.size < 1 ||
-    info.size > OWNER_LIMITS.sourceBytes
+    info.size >
+      (tools.capacity?.sourceBytes ??
+        (tools.capacity?.longSources
+          ? Number.MAX_SAFE_INTEGER
+          : OWNER_LIMITS.sourceBytes))
   )
     throw new Error("acquisition_component_invalid");
   return info.size;
@@ -99,7 +120,7 @@ async function componentProbe(
   signal: AbortSignal,
   combined = false,
 ) {
-  await boundedFile(path);
+  await boundedFile(path, tools);
   return componentProbeSchema
     .extend({ streams: z.array(streamSchema).length(combined ? 2 : 1) })
     .parse(
@@ -165,6 +186,7 @@ export async function inspectOwnerAcquisition(
   signal: AbortSignal,
 ) {
   const selected = ownerAcquisitionDescriptorSchema.parse(expected);
+  admitAcquisitionDuration(selected, tools);
   const sourcePath = await ownerMediaPath(root, workspaceId, "source.mp4");
   return inspectPrepared(sourcePath, selected, tools, signal);
 }
@@ -276,6 +298,7 @@ export async function prepareOwnerAcquisition(
     : undefined;
   if (section && !combined) throw Error("acquisition_section_unsupported");
   const selected = ownerAcquisitionDescriptorSchema.parse(expected);
+  admitAcquisitionDuration(selected, tools);
   const video = await ownerAcquisitionMediaPath(root, workspaceId, "video");
   const audio = await ownerAcquisitionMediaPath(root, workspaceId, "audio");
   const temporary = await ownerAcquisitionMediaPath(
@@ -321,8 +344,12 @@ export async function prepareOwnerAcquisition(
             audioProbe.format.duration * 1000 -
               videoProbe.format.duration * 1000,
           ) > Math.max(100, frameTolerance(selected)))) ||
-      (await boundedFile(video)) + (combined ? 0 : await boundedFile(audio)) >
-        OWNER_LIMITS.sourceBytes
+      (await boundedFile(video, tools)) +
+        (combined ? 0 : await boundedFile(audio, tools)) >
+        (tools.capacity?.sourceBytes ??
+          (tools.capacity?.longSources
+            ? Number.MAX_SAFE_INTEGER
+            : OWNER_LIMITS.sourceBytes))
     )
       throw new Error("acquisition_selection_changed");
     stage?.("merging");
@@ -363,7 +390,12 @@ export async function prepareOwnerAcquisition(
         "-f",
         "mp4",
         "-fs",
-        String(OWNER_LIMITS.sourceBytes),
+        String(
+          tools.capacity?.sourceBytes ??
+            (tools.capacity?.longSources
+              ? Number.MAX_SAFE_INTEGER
+              : OWNER_LIMITS.sourceBytes),
+        ),
         temporary,
       ],
       signal,
@@ -398,6 +430,7 @@ export async function createSyntheticAcquisitionComponents(
   stage?: (value: OwnerAcquisitionNativeStage) => void,
 ) {
   const selected = ownerAcquisitionDescriptorSchema.parse(expected);
+  admitAcquisitionDuration(selected, tools);
   if (
     selected.durationMs !== 16000 ||
     selected.width % 2 ||

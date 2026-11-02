@@ -34,6 +34,8 @@ import { OwnerClipBatch, type OwnerClipPorts } from "./clip-batch.ts";
 import { OWNER_AUDIO_LIMITS } from "../../../packages/contracts/local/audio.ts";
 import { localCodexFailureSchema } from "../../../packages/contracts/local/codex.ts";
 import { OwnerDraftStore } from "./draft-store.ts";
+import { AnalysisChunks } from "./analysis-chunks.ts";
+import { analyzeLongOwner, LONG_ANALYSIS_CHUNK_MS } from "./long-analysis.ts";
 import { OwnerWorkspaceDrafts } from "./workspace-drafts.ts";
 import { OwnerSessionRecovery } from "./session-recovery.ts";
 import {
@@ -167,7 +169,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
   const transcripts = new Map<string, OwnerTranscript>();
   const batches = new Map<string, OwnerClipBatch>();
   const storage = options.storageRoot
-    ? new OwnerDraftStore(options.storageRoot, capacity)
+    ? new OwnerDraftStore(options.storageRoot, capacity, capacityPolicy)
     : undefined;
   const snapshot = (id: string) =>
     ownerDraftSnapshotSchema.parse({
@@ -184,12 +186,14 @@ export function createOwnerHost(options: OwnerHostOptions) {
           snapshot,
           diagnostics,
           capacity,
+          capacityPolicy,
         )
       : undefined;
   const drafts = storage
     ? new OwnerWorkspaceDrafts(storage, files, snapshot, diagnostics)
     : undefined;
   const changed = (id: string) => {
+    expires.set(id, Date.now() + OWNER_LIMITS.workspaceMs);
     drafts?.changed(id);
     recovery?.changed(id);
   };
@@ -338,19 +342,21 @@ export function createOwnerHost(options: OwnerHostOptions) {
       batches.set(workspace.id, batch);
       if (loaded.analysis) {
         analyses.set(workspace.id, loaded.analysis);
-        transcripts.set(workspace.id, {
-          fingerprint: workspace.source.fingerprint,
-          sourceRevision: loaded.analysis.inputs.sourceRevision,
-          mode: loaded.analysis.mode,
-          words: loaded.analysis.words,
-          speakersPrepared: loaded.analysis.transcriptSpeakersPrepared ?? true,
-          ...(loaded.analysis.transcriptWindow
-            ? { window: loaded.analysis.transcriptWindow }
-            : {}),
-          ...(loaded.analysis.transcriptCut
-            ? { cut: loaded.analysis.transcriptCut }
-            : {}),
-        });
+        if (!loaded.analysis.coverage)
+          transcripts.set(workspace.id, {
+            fingerprint: workspace.source.fingerprint,
+            sourceRevision: loaded.analysis.inputs.sourceRevision,
+            mode: loaded.analysis.mode,
+            words: loaded.analysis.words,
+            speakersPrepared:
+              loaded.analysis.transcriptSpeakersPrepared ?? true,
+            ...(loaded.analysis.transcriptWindow
+              ? { window: loaded.analysis.transcriptWindow }
+              : {}),
+            ...(loaded.analysis.transcriptCut
+              ? { cut: loaded.analysis.transcriptCut }
+              : {}),
+          });
       }
       expires.set(workspace.id, Date.now() + OWNER_LIMITS.workspaceMs);
       const saved = (await storage.list()).find((item) => item.id === id);
@@ -398,20 +404,21 @@ export function createOwnerHost(options: OwnerHostOptions) {
         batches.set(workspace.id, batch);
         if (loaded.analysis) {
           analyses.set(workspace.id, loaded.analysis);
-          transcripts.set(workspace.id, {
-            fingerprint: workspace.source.fingerprint,
-            sourceRevision: loaded.analysis.inputs.sourceRevision,
-            mode: loaded.analysis.mode,
-            words: loaded.analysis.words,
-            speakersPrepared:
-              loaded.analysis.transcriptSpeakersPrepared ?? true,
-            ...(loaded.analysis.transcriptWindow
-              ? { window: loaded.analysis.transcriptWindow }
-              : {}),
-            ...(loaded.analysis.transcriptCut
-              ? { cut: loaded.analysis.transcriptCut }
-              : {}),
-          });
+          if (!loaded.analysis.coverage)
+            transcripts.set(workspace.id, {
+              fingerprint: workspace.source.fingerprint,
+              sourceRevision: loaded.analysis.inputs.sourceRevision,
+              mode: loaded.analysis.mode,
+              words: loaded.analysis.words,
+              speakersPrepared:
+                loaded.analysis.transcriptSpeakersPrepared ?? true,
+              ...(loaded.analysis.transcriptWindow
+                ? { window: loaded.analysis.transcriptWindow }
+                : {}),
+              ...(loaded.analysis.transcriptCut
+                ? { cut: loaded.analysis.transcriptCut }
+                : {}),
+            });
         }
         expires.set(workspace.id, Date.now() + OWNER_LIMITS.workspaceMs);
         recovery.changed(workspace.id);
@@ -1492,22 +1499,51 @@ export function createOwnerHost(options: OwnerHostOptions) {
             return;
           }
           const result = await diagnostics.run("find_moments", () =>
-            analyzeOwner(
-              workspace,
-              inputs,
-              analysis,
-              controller.signal,
-              {
-                transcript: transcripts.get(workspace.id),
-                completed(transcript) {
-                  transcripts.set(workspace.id, transcript);
-                },
-                reused() {
-                  diagnostics.analysis.check("transcription_reuse", () => {});
-                },
-              },
-              capacityPolicy,
-            ),
+            capacityPolicy.longSources &&
+            ((inputs.window
+              ? inputs.window.endMs - inputs.window.startMs
+              : workspace.source.durationMs) > LONG_ANALYSIS_CHUNK_MS ||
+              !!analyses.get(workspace.id)?.coverage)
+              ? (async () =>
+                  analyzeLongOwner({
+                    workspace,
+                    value: inputs,
+                    ports: analysis,
+                    signal: controller.signal,
+                    capacity: capacityPolicy,
+                    chunks: new AnalysisChunks(
+                      dirname(await files.file(workspace.id, "source.mp4")),
+                      capacity,
+                    ),
+                    async checkpoint(result) {
+                      analyses.set(workspace.id, result);
+                      changed(workspace.id);
+                      if (
+                        (await recovery?.flush(workspace.id))?.state ===
+                        "unsaved"
+                      )
+                        throw Error("disk_unavailable");
+                    },
+                  }))()
+              : analyzeOwner(
+                  workspace,
+                  inputs,
+                  analysis,
+                  controller.signal,
+                  {
+                    transcript: transcripts.get(workspace.id),
+                    completed(transcript) {
+                      transcripts.set(workspace.id, transcript);
+                    },
+                    reused() {
+                      diagnostics.analysis.check(
+                        "transcription_reuse",
+                        () => {},
+                      );
+                    },
+                  },
+                  capacityPolicy,
+                ),
           );
           controller.signal.throwIfAborted();
           analyses.set(workspace.id, result);

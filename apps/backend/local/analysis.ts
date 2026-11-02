@@ -36,6 +36,8 @@ import {
 
 /** Domain ports only; explicit owner composition supplies synthetic or provider AI. */
 export type OwnerAnalysisPorts = {
+  readonly compatibility?: string;
+  chunkProgress?(completed: number, planned: number): void;
   readonly mode: OwnerAiMode;
   readonly transcriptionSpeakersPrepared?: boolean;
   started?(

@@ -2,16 +2,14 @@ import { z } from "zod";
 import {
   OWNER_LIMITS,
   OWNER_ALL_AI_MOMENTS_LIMIT,
-  OWNER_FPS,
+  OWNER_SAFE_SOURCE_MS,
 } from "./policy.ts";
 
 /** Structural arithmetic bounds, not a duration/size quota. */
-export const OWNER_SAFE_SOURCE_MS = Math.floor(
-  Number.MAX_SAFE_INTEGER / OWNER_FPS,
-);
+export { OWNER_SAFE_SOURCE_MS } from "./policy.ts";
 /** Enabled only by the packets proving the complete downstream pipelines. */
 export const LOCAL_CODEX_CAPACITY_READINESS = {
-  longSources: false, // CL-189 owns the full-source coverage gate.
+  longSources: true, // CL-189 owns the full-source coverage gate.
   manyClips: false, // CL-190 owns incremental batch/persistence admission.
 } as const;
 const quota = z

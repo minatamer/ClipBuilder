@@ -6,6 +6,8 @@ import {
 import { createReadStream, createWriteStream } from "node:fs";
 import { lstat, mkdir, open, readdir, rename, rm } from "node:fs/promises";
 import { isAbsolute, parse, relative, resolve, sep } from "node:path";
+import { dirname } from "node:path";
+import { AnalysisChunks } from "./analysis-chunks.ts";
 import { pipeline } from "node:stream/promises";
 import { Transform } from "node:stream";
 import { z } from "zod";
@@ -36,13 +38,18 @@ import {
   type WorkspaceFiles,
 } from "./workspace-files.ts";
 import { rejectRepositoryStorage } from "./owner-storage.ts";
+import {
+  ownerSourceFitsCapacity,
+  resolveOwnerCapacity,
+  type OwnerCapacity,
+} from "../../../packages/contracts/local/capacity.ts";
 
 export type OwnerDraftSummary = z.infer<typeof ownerDraftSummarySchema>;
 const MAX_DOCUMENT_BYTES = OWNER_DRAFT_DOCUMENT_BYTES;
 const fileSchema = z
   .object({
     digest: ownerDigestSchema,
-    bytes: z.number().int().positive().max(OWNER_LIMITS.sourceBytes),
+    bytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   })
   .strict();
 type StoredFile = z.infer<typeof fileSchema>;
@@ -102,7 +109,7 @@ async function regularFile(path: string): Promise<number> {
     !info.isFile() ||
     info.isSymbolicLink() ||
     info.size < 1 ||
-    info.size > OWNER_LIMITS.sourceBytes
+    !Number.isSafeInteger(info.size)
   )
     throw new Error("draft_file_invalid");
   return info.size;
@@ -429,6 +436,7 @@ export class OwnerDraftStore {
   constructor(
     root: string,
     private readonly capacity: typeof requireDisk = requireDisk,
+    private readonly policy: OwnerCapacity = resolveOwnerCapacity({}),
   ) {
     if (!isAbsolute(root)) throw new Error("invalid_path");
     this.root = resolve(root);
@@ -522,6 +530,13 @@ export class OwnerDraftStore {
       try {
         const path = await confinedPath(directory, name);
         const record = recordSchema.parse(await readDocument(path, signal));
+        if (
+          !ownerSourceFitsCapacity(
+            record.snapshot.workspace.source,
+            this.policy,
+          )
+        )
+          throw Error("draft_source_capacity");
         if (record.id !== id) throw new Error("draft_document_invalid");
         validateRelations(record);
         if (verify) {
@@ -553,6 +568,8 @@ export class OwnerDraftStore {
     files: WorkspaceFiles,
     signal: AbortSignal,
   ): Promise<OwnerDraftSummary> {
+    if (!ownerSourceFitsCapacity(snapshot.workspace.source, this.policy))
+      throw Error("draft_source_capacity");
     const exists = await this.rootExists(signal);
     const previous = id
       ? exists
@@ -684,6 +701,11 @@ export class OwnerDraftStore {
       await this.capacity(this.root, bytes);
       for (const copy of copies)
         await copyImmutable(copy, signal, this.verified);
+      if (this.policy.profile === "local-codex")
+        await new AnalysisChunks(dirname(sourcePath), this.capacity).copyTo(
+          directory,
+          signal,
+        );
       if (previous)
         await atomicJson(
           await confinedPath(directory, "backup.json"),
@@ -773,7 +795,7 @@ export class OwnerDraftStore {
     if (
       !Number.isSafeInteger(file.bytes) ||
       file.bytes < 1 ||
-      file.bytes > OWNER_LIMITS.sourceBytes
+      (this.policy.sourceBytes !== null && file.bytes > this.policy.sourceBytes)
     )
       throw new Error("invalid_source");
     return this.serial(async (ownSignal) => {
@@ -877,6 +899,14 @@ export class OwnerDraftStore {
           await copyImmutable(copy, signal, this.verified);
         signal.throwIfAborted();
         const snapshot = record.snapshot;
+        if (this.policy.profile === "local-codex")
+          await new AnalysisChunks(
+            await this.directory(id),
+            this.capacity,
+          ).copyTo(
+            dirname(await files.file(workspaceId, "source.mp4")),
+            signal,
+          );
         snapshot.workspace.id = workspaceId;
         for (const clip of snapshot.clips) {
           if (

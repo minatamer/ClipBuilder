@@ -12,6 +12,60 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+it.each(["truncated", "unpartitioned"])(
+  "rejects %s audio before any model call and cleans owned scratch",
+  async (mode) => {
+    const root = await mkdtemp(join(tmpdir(), "clipbuilder-audio-coverage-")),
+      workspaceId = crypto.randomUUID();
+    await mkdir(join(root, workspaceId));
+    const inspect = vi.spyOn(media, "inspectOwnerSource").mockResolvedValue({
+      fingerprint: "a".repeat(64),
+      bytes: 100,
+      durationMs: mode === "unpartitioned" ? 7_200_000 : 60_000,
+      width: 640,
+      height: 360,
+      fps: 30,
+    });
+    const extract = vi.spyOn(native, "runOwnedProcess").mockResolvedValue("59");
+    const speech = vi.fn<typeof native.runOwnedProcess>();
+    try {
+      await expect(
+        prepareLocalCodexInput(
+          {
+            root,
+            tools: { ffmpeg: "synthetic", ffprobe: "synthetic" },
+            speech: {
+              executable: "synthetic",
+              model: "synthetic",
+              directory: root,
+            },
+            runSpeech: speech,
+          },
+          {
+            operation: "codex-input",
+            workspaceId,
+            jobId: crypto.randomUUID(),
+            kind: "speech",
+            diarize: false,
+            fingerprint: "a".repeat(64),
+          },
+          new AbortController().signal,
+        ),
+      ).rejects.toThrow(
+        mode === "unpartitioned"
+          ? "local_speech_chunk_required"
+          : "local_speech_audio_incomplete",
+      );
+      expect(speech).not.toHaveBeenCalled();
+      expect(extract).toHaveBeenCalledTimes(mode === "unpartitioned" ? 0 : 2);
+      expect(await readdir(join(root, workspaceId))).toEqual([]);
+    } finally {
+      inspect.mockRestore();
+      extract.mockRestore();
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);
 it.each(["asr-only", "speakers-only"] as const)(
   "runs %s without invoking the other speech engine",
   async (mode) => {
@@ -43,6 +97,7 @@ it.each(["asr-only", "speakers-only"] as const)(
     const extract = vi
       .spyOn(native, "runOwnedProcess")
       .mockImplementation(async (_exe, args) => {
+        if (args.includes("format=duration")) return "60";
         await writeFile(args.at(-1)!, "synthetic-wav");
         return "";
       });
@@ -180,6 +235,7 @@ it.each(["cut", "window"] as const)(
     const extract = vi
       .spyOn(native, "runOwnedProcess")
       .mockImplementation(async (_exe, args) => {
+        if (args.includes("format=duration")) return "60";
         expect(args[args.indexOf("-ss") + 1]).toBe("10");
         expect(args[args.indexOf("-t") + 1]).toBe("60");
         await writeFile(args.at(-1)!, "synthetic-wav");
@@ -232,7 +288,7 @@ it.each(["cut", "window"] as const)(
         new AbortController().signal,
       );
       expect(receipt.kind).toBe("speech");
-      expect(extract).toHaveBeenCalledTimes(1);
+      expect(extract).toHaveBeenCalledTimes(2);
       const artifact = JSON.parse(
         await readFile(
           await media.ownerCodexMediaPath(root, workspaceId, jobId),

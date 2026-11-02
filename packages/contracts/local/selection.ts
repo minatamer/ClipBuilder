@@ -13,6 +13,7 @@ import {
   OWNER_MAX_REQUESTED_CLIP_MS,
   ownerIdSchema,
   OWNER_FPS,
+  OWNER_SAFE_SOURCE_MS,
   ownerCutSchema,
   ownerAiModeSchema,
   type OwnerCut,
@@ -34,8 +35,8 @@ export const ownerAiDurationSchema = z
 export const ownerRangeSchema = z
   .object({
     id: ownerIdSchema,
-    startMs: z.number().int().nonnegative().max(OWNER_LIMITS.sourceMs),
-    endMs: z.number().int().positive().max(OWNER_LIMITS.sourceMs),
+    startMs: z.number().int().nonnegative().max(OWNER_SAFE_SOURCE_MS),
+    endMs: z.number().int().positive().max(OWNER_SAFE_SOURCE_MS),
   })
   .strict()
   .refine(
@@ -115,12 +116,38 @@ export const ownerAnalysisSchema = z
     transcriptCut: ownerCutSchema.optional(),
     transcriptWindow: ownerSourceWindowSchema.optional(),
     transcriptSpeakersPrepared: z.boolean().optional(),
+    coverage: z
+      .object({
+        state: z.enum(["complete", "partial", "canceled"]),
+        completed: z.number().int().nonnegative(),
+        planned: z.number().int().nonnegative(),
+        coveredThroughMs: z
+          .number()
+          .int()
+          .nonnegative()
+          .max(OWNER_SAFE_SOURCE_MS),
+        failure: z
+          .enum([
+            "codex_login_required",
+            "codex_limit",
+            "disk_unavailable",
+            "processing_unavailable",
+          ])
+          .optional(),
+      })
+      .strict()
+      .refine((value) => value.completed <= value.planned)
+      .optional(),
     manual: z.array(ownerMomentSchema).max(OWNER_LIMITS.ranges),
     suggestions: z.array(ownerMomentSchema).max(OWNER_ALL_AI_MOMENTS_LIMIT),
     calls: z
       .object({
-        transcription: z.number().int().min(0).max(1),
-        selection: z.number().int().min(0).max(1),
+        transcription: z
+          .number()
+          .int()
+          .nonnegative()
+          .max(Number.MAX_SAFE_INTEGER),
+        selection: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
       })
       .strict(),
   })
@@ -149,7 +176,7 @@ export function ownerCut(
   if (
     !Number.isSafeInteger(sourceMs) ||
     sourceMs < 1000 ||
-    sourceMs > OWNER_LIMITS.sourceMs
+    sourceMs > OWNER_SAFE_SOURCE_MS
   )
     throw new Error("The source duration is unsupported.");
   if (
@@ -176,14 +203,18 @@ export function ownerCut(
 }
 export const ownerTimestamp = ownerSourceTimestamp;
 export function parseOwnerTimestamp(value: string): number {
-  const match = /^(\d{2}):([0-5]\d):([0-5]\d)(?:\.(\d{1,3}))?$/.exec(value);
+  const match = /^(\d+):([0-5]\d):([0-5]\d)(?:\.(\d{1,3}))?$/.exec(value);
   if (!match) throw new Error("Use HH:MM:SS.mmm source timestamps.");
   const result =
     Number(match[1]) * 3_600_000 +
     Number(match[2]) * 60_000 +
     Number(match[3]) * 1000 +
     Number((match[4] ?? "").padEnd(3, "0"));
-  if (result > OWNER_LIMITS.sourceMs)
+  if (
+    value.length > 32 ||
+    !Number.isSafeInteger(result) ||
+    result > OWNER_SAFE_SOURCE_MS
+  )
     throw new Error("Timestamp exceeds the local source limit.");
   return result;
 }

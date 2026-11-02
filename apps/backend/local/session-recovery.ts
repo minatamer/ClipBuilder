@@ -11,6 +11,10 @@ import {
 } from "./workspace-files.ts";
 import { rejectRepositoryStorage } from "./owner-storage.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
+import {
+  resolveOwnerCapacity,
+  type OwnerCapacity,
+} from "../../../packages/contracts/local/capacity.ts";
 
 /** One private rolling local session, separate from explicitly saved projects. */
 export class OwnerSessionRecovery {
@@ -23,8 +27,13 @@ export class OwnerSessionRecovery {
     snapshot: (id: string) => OwnerDraftSnapshot,
     diagnostics = new LocalDiagnostics(),
     capacity: typeof requireDisk = requireDisk,
+    policy: OwnerCapacity = resolveOwnerCapacity({}),
   ) {
-    this.store = new OwnerDraftStore(join(storageRoot, ".recovery"), capacity);
+    this.store = new OwnerDraftStore(
+      join(storageRoot, ".recovery"),
+      capacity,
+      policy,
+    );
     this.drafts = new OwnerWorkspaceDrafts(
       this.store,
       files,
@@ -36,6 +45,9 @@ export class OwnerSessionRecovery {
   changed(id: string) {
     this.workspaceId = id;
     this.drafts.changed(id);
+  }
+  async flush(id: string) {
+    return this.drafts.flush(id);
   }
   async restore(signal: AbortSignal): Promise<OwnerDraftSnapshot | null> {
     const latest = (await this.store.list()).sort((a, b) =>

@@ -13,6 +13,8 @@ it.each([
   ["00:90:00", "01:30:00"],
   ["1:90:90", "02:31:30"],
   ["0:0:0", "00:00:00"],
+  ["100:00:00", "100:00:00"],
+  ["99:59:60", "100:00:00"],
   [" 00:59:120 ", "01:01:00"],
 ])("carries complete clock %s into %s", (input, output) => {
   expect(normalizeManualTime(input)).toBe(output);
@@ -28,8 +30,6 @@ it.each([
   "00:00:01.5",
   "00:1e2:00",
   "Infinity:00:00",
-  "100:00:00",
-  "99:59:60",
   "0:99999999999999999999999999999999999:0",
 ])("rejects partial, fractional, signed or oversized clock %s", (input) => {
   expect(() => normalizeManualTime(input)).toThrow("invalid_manual_time");
@@ -38,7 +38,8 @@ it.each([
 it("uses carried values at submission without relaxing source or clip bounds", () => {
   expect(parseManualTime("00:00:90")).toBe(90_000);
   expect(parseManualTime("00:60:00")).toBe(3_600_000);
-  expect(() => parseManualTime("00:90:00")).toThrow("source limit");
+  expect(parseManualTime("00:90:00")).toBe(5_400_000);
+  expect(() => parseManualTime("999999999999999:00:00")).toThrow();
   const range = {
     startMs: parseManualTime("00:00:60"),
     endMs: parseManualTime("00:00:90"),
