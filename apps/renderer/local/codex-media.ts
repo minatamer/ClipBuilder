@@ -351,7 +351,8 @@ export async function prepareLocalCodexInput(
                   TEMP: scratch,
                   TMP: scratch,
                 },
-                maxStdout: 65536,
+                // The bounded speech.json file owns results, not console word output.
+                stdout: "ignore",
               },
             ),
           taskSignal,

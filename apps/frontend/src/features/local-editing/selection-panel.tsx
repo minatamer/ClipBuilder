@@ -1,3 +1,4 @@
+import { AnalysisCoverageStatus } from "./analysis-coverage-status";
 import { OWNER_COLLECTION_PAGE_ITEMS as REVIEW_PAGE_ITEMS } from "../../../../../packages/contracts/local/collection-pages.ts";
 import { readOwnerAnalysis } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
@@ -913,16 +914,7 @@ export function OwnerSelectionPanel({
       >
         {analysis && (
           <>
-            {analysis.coverage && analysis.coverage.state !== "complete" && (
-              <p role="status">
-                {analysis.coverage.state === "canceled"
-                  ? "Canceled"
-                  : "Partial results"}{" "}
-                � {analysis.coverage.completed}/{analysis.coverage.planned}{" "}
-                sections complete. Use Add clips to retry; completed work is
-                retained.
-              </p>
-            )}
+            <AnalysisCoverageStatus coverage={analysis.coverage} />
             <p className="selection-count" role="status">
               {selected.length} {selected.length === 1 ? "clip" : "clips"}
               {selected.length > clipLimit

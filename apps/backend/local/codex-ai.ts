@@ -169,6 +169,13 @@ export function createLocalCodexAi(options: {
       );
       signal.throwIfAborted();
       return value;
+    } catch (error) {
+      // The worker may remove final progress before the last poll reaches us.
+      // Never leave a failed native input looking as though it is still running.
+      for (const step of runProgress?.steps ?? [])
+        if (step.state === "running")
+          step.state = signal.aborted ? "canceled" : "failed";
+      throw error;
     } finally {
       await rm(await options.files.codexInput(current.id, job.jobId), {
         force: true,

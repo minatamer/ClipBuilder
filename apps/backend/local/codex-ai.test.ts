@@ -864,3 +864,74 @@ it.each(["audio", "invented", "visual-opening"])(
     }
   },
 );
+
+it.each(["failed", "canceled", "already-failed"] as const)(
+  "settles failed native transcription progress without any inference or retry (state=%s)",
+  async (mode) => {
+    const cancel = mode === "canceled";
+    const root = await mkdtemp(join(tmpdir(), "clipbuilder-speech-failure-"));
+    const files = new WorkspaceFiles(root),
+      id = await files.create();
+    const controller = new AbortController(),
+      infer = vi.fn<CodexInference>();
+    const media = vi.fn<Parameters<typeof createLocalCodexAi>[0]["media"]>(
+      async (_job, _signal, _stage, observe) => {
+        observe?.([
+          { id: "inspect", state: "done", elapsedMs: 1 },
+          { id: "audio", state: "done", elapsedMs: 1 },
+          {
+            id: "transcription",
+            state: mode === "already-failed" ? "failed" : "running",
+            elapsedMs: 10,
+          },
+        ]);
+        if (cancel) controller.abort();
+        throw Error("media_unavailable");
+      },
+    );
+    const ai = createLocalCodexAi({ files, media, infer });
+    const workspace: OwnerWorkspace = {
+      id,
+      mode: "provider-ai",
+      revision: 0,
+      source: {
+        fingerprint: "a".repeat(64),
+        bytes: 100,
+        durationMs: 480000,
+        width: 1920,
+        height: 1080,
+        fps: 30,
+      },
+    };
+    try {
+      ai.analysis!.started?.(workspace, {
+        transcription: true,
+        selection: true,
+        speakers: false,
+      });
+      await expect(
+        ai.analysis!.transcribeWindow!(
+          workspace,
+          { startMs: 0, endMs: 480000 },
+          controller.signal,
+        ),
+      ).rejects.toThrow("media_unavailable");
+      const snapshot = ai.codexProgress!(id)!;
+      expect(
+        snapshot.steps.find((step) => step.id === "transcription")?.state,
+      ).toBe(cancel ? "canceled" : "failed");
+      expect(
+        snapshot.steps.find((step) => step.id === "selection")?.state,
+      ).toBe("pending");
+      expect(snapshot.steps.some((step) => step.state === "running")).toBe(
+        false,
+      );
+      expect(media).toHaveBeenCalledTimes(1);
+      expect(infer).not.toHaveBeenCalled();
+    } finally {
+      await ai.close!(AbortSignal.timeout(2000));
+      await files.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);

@@ -94,6 +94,7 @@ it.each(["asr-only", "speakers-only"] as const)(
       height: 360,
       fps: 30,
     });
+    const realRun = native.runOwnedProcess;
     const extract = vi
       .spyOn(native, "runOwnedProcess")
       .mockImplementation(async (_exe, args) => {
@@ -102,16 +103,18 @@ it.each(["asr-only", "speakers-only"] as const)(
         return "";
       });
     const runSpeech = vi.fn<typeof native.runOwnedProcess>(
-      async (_exe, args) => {
-        await writeFile(
-          args[args.indexOf("-of") + 1]! + ".json",
-          JSON.stringify({
-            transcription: [
-              { text: "Synthetic", offsets: { from: 100, to: 900 } },
-            ],
-          }),
+      async (_exe, args, taskSignal, options) => {
+        expect(options?.stdout).toBe("ignore");
+        // A noisy fake speech process writes its actual result to the fixed JSON.
+        // No model, runtime weights, real speech or provider is invoked.
+        const script =
+          "const fs=require('node:fs');process.stdout.write('synthetic word '.repeat(200000));fs.writeFileSync(process.argv[1],JSON.stringify({transcription:[{text:'Synthetic',offsets:{from:100,to:900}}]}));";
+        return realRun(
+          process.execPath,
+          ["-e", script, args[args.indexOf("-of") + 1]! + ".json"],
+          taskSignal,
+          { ...options, env: {} },
         );
-        return "";
       },
     );
     const runSpeakers = vi.fn<typeof native.runOwnedProcess>(
