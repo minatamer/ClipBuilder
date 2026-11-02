@@ -393,7 +393,7 @@ it("edits independent text with shared typography, timing, gestures, discard/sav
         await evaluate(
           `(async()=>{textPanel().scrollIntoView({block:'start'});await new Promise(requestAnimationFrame);const footer=document.querySelector('#sample-main > footer').getBoundingClientRect();return {overflow:document.documentElement.scrollWidth>innerWidth,footer:footer.top>=0&&footer.bottom<=innerHeight+1,targets:[...textPanel().querySelectorAll('button,input,select')].filter(n=>n.getClientRects().length).every(n=>n.getBoundingClientRect().height>=44),tabs:document.querySelectorAll('[aria-label="Clip settings"] button').length};})()`,
         ),
-      ).toEqual({ overflow: false, footer: true, targets: true, tabs: 5 });
+      ).toEqual({ overflow: false, footer: true, targets: true, tabs: 6 });
       if (width >= 1280) {
         expect(
           await evaluate(
@@ -473,6 +473,112 @@ it("edits independent text with shared typography, timing, gestures, discard/sav
     expect(clip.edit).toEqual(persisted);
     expect(writes.every((path) => path.endsWith("/edit"))).toBe(true);
     expect(writes).toHaveLength(2);
+    await evaluate(
+      `textButton('Reload clip').click();waitText(()=>textButton('Export clip')&&!textButton('Apply changes')).then(()=>true)`,
+    );
+    // A generated title is edited/captured on the visible presentation clock,
+    // while the video in the short Hook reads a later source excerpt.
+    const opening = {
+      ...syntheticTextLayer(),
+      role: "opening-title" as const,
+      startFrame: 0,
+      endFrame: 40,
+    };
+    clip = {
+      ...clip,
+      edit: {
+        ...clip.edit!,
+        hook: { startFrame: 45, endFrame: 60 },
+        texts: [opening],
+      },
+    };
+    await ready();
+    await evaluate(`textSetting('Text')`);
+    await evaluate(
+      `document.querySelector('.text-choice').click();waitText(()=>document.querySelector('[data-text-layer]')).then(()=>true)`,
+    );
+    await evaluate(`textSub('Timing')`);
+    expect(
+      await evaluate(
+        `Number(document.querySelector('[aria-label="Text end seconds"]').max)`,
+      ),
+    ).toBe(3.5);
+    await evaluate(
+      `waitText(()=>!document.querySelector('[aria-label="Capture text start"]').disabled).then(()=>{document.querySelector('[aria-label="Capture text start"]').click();return true;})`,
+    );
+    expect(
+      await evaluate(
+        `Number(document.querySelector('[aria-label="Text start seconds"]').value)`,
+      ),
+    ).toBe(0);
+    await evaluate(
+      `textChange(document.querySelector('[aria-label="Text start seconds"]'),'0.8')`,
+    );
+    await evaluate(
+      `document.querySelector('.text-choice').click();waitText(()=>!document.querySelector('[aria-label="Capture text start"]').disabled).then(()=>{document.querySelector('[aria-label="Capture text start"]').click();return true;})`,
+    );
+    expect(
+      await evaluate(
+        `Number(document.querySelector('[aria-label="Text start seconds"]').value)`,
+      ),
+    ).toBe(0.8);
+    await evaluate(
+      `textChange(document.querySelector('[aria-label="Text start seconds"]'),'0')`,
+    );
+    await evaluate(
+      `document.querySelector('.text-choice').click();waitText(()=>document.querySelector('[data-text-layer]')).then(()=>true)`,
+    );
+    for (const [width, height] of [
+      [1440, 1000],
+      [390, 844],
+      [320, 844],
+    ] as const) {
+      await page.setViewport({ width, height, deviceScaleFactor: 1 });
+      expect(
+        await evaluate(
+          `(async()=>{await new Promise(requestAnimationFrame);const f=document.querySelector('#sample-main > footer').getBoundingClientRect();return !!document.querySelector('[aria-label="Select and move text 1"]')&&document.documentElement.scrollWidth<=innerWidth&&f.top>=0&&f.bottom<=innerHeight+1;})()`,
+        ),
+      ).toBe(true);
+      const shot = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        resolve(`.local-build/evidence/cl184-title-${width}.png`),
+        Buffer.from(shot.value.data, "base64"),
+      );
+    }
+    await evaluate(
+      `(async()=>{await textSub('Content');await textChange(document.querySelector('[aria-label="Text content"]'),'Hook-led synthetic title');await textSub('Timing');await textChange(document.querySelector('[aria-label="Text end seconds"]'),'3.5');textButton('Apply changes').click();await waitText(()=>textButton('Export clip')&&!textButton('Apply changes'));return true;})()`,
+    );
+    expect(clip.edit!.texts![0]).toMatchObject({
+      text: "Hook-led synthetic title",
+      role: "opening-title",
+      startFrame: 0,
+      endFrame: 105,
+    });
+    await ready();
+    await evaluate(`textSetting('Text')`);
+    expect(
+      await evaluate(`!!document.querySelector('[data-text-layer]')`),
+    ).toBe(true);
+    await evaluate(
+      `(async()=>{await textSetting('Hook');textButton('Remove hook').click();await new Promise(requestAnimationFrame);await textSetting('Text');await textSub('Timing');return true;})()`,
+    );
+    expect(
+      await evaluate(
+        `Number(document.querySelector('[aria-label="Text end seconds"]').value)`,
+      ),
+    ).toBe(3);
+    await evaluate(
+      `textButton('Apply changes').click();waitText(()=>textButton('Export clip')&&!textButton('Apply changes')).then(()=>true)`,
+    );
+    expect(clip.edit!.hook).toBeUndefined();
+    expect(clip.edit!.texts![0]).toMatchObject({
+      text: "Hook-led synthetic title",
+      role: "opening-title",
+      startFrame: 0,
+      endFrame: 90,
+    });
   } finally {
     hold = false;
     await browser.close({ silent: true });

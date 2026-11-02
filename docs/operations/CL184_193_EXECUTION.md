@@ -11,10 +11,11 @@ cloud/deployment/credit purchase.
 
 - Planning baseline: AGENTS.md, source of truth, ticket index, CL-184–193
   packets, and this ledger. No implementation is claimed by the baseline commit.
-- CL-184 (active): opening-title contract, planned-text policy/decoder, shared
-  overlay clock/evaluation, native branch offsets, focused tests/proof and
-  owning docs. Exact changed files and checks belong in CL-184 before its
-  commit.
+- Planning baseline committed: `8d3f6ac` (14 documentation paths).
+- CL-184 (implemented/validated; commit pending): opening-title contract,
+  planned-text policy/decoder, shared overlay clock/evaluation, native branch
+  offsets, focused tests/proof and owning docs. Exact changed files and checks
+  belong in CL-184 before its commit.
 - CL-185 → CL-186 → CL-187 → CL-188 → CL-189 → CL-190: execute in this order;
   allocate each packet's files after its scoped implementation audit. Earlier
   commits may be updated by later tickets only for their distinct requirements.
@@ -37,3 +38,17 @@ processing. Real source acquisition/inference is deferred until applicable
 synthetic gates pass and used only if necessary for a bounded final acceptance;
 never repeat real work to debug unfinished code. Final taste/quality/release
 decisions remain owner.
+
+## CL-184 validation handoff
+
+Settled implementation: 20 code/test paths plus its four owning documentation
+files. Focused 156-case fake suite and overlapping 20-case follow-up pass; six
+browser/native/export/recovery proof cases pass across the combined run and
+final targeted editor rerun. Contracts/local/frontend/test types, lint/format
+and whitespace checks pass. One Hook-shortening title-clock finding resolved;
+final read-only validate reports no actionable findings. Actual provider quality
+and personal acceptance remain unverified. No normal stack was running;
+current-source proofs compiled their own native overlay. Final normal runtime
+start waits for the rest of this authorized series. Toolchain/bootstrap and
+harness adaptations are detailed in the ticket. No real provider calls or owner
+media used.

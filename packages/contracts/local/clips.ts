@@ -30,7 +30,11 @@ import { ownerIllustrationSchema } from "./illustration.ts";
 import { ownerTextLayersSchema, ownerClipTitleSchema } from "./text-layers.ts";
 import { OWNER_CAPTION_GENERATION_ATTEMPTS } from "./caption-generation.ts";
 import { ownerCaptionSpeakersSchema } from "./caption-speakers.ts";
-import { ownerHookSchema, OWNER_PRESENTATION_MAX_FRAMES } from "./hook.ts";
+import {
+  ownerHookSchema,
+  ownerPresentationFrames,
+  OWNER_PRESENTATION_MAX_FRAMES,
+} from "./hook.ts";
 import {
   CONTEXTUAL_PICTURE_POLICY,
   contextualPictureBriefSchema,
@@ -87,7 +91,13 @@ export const ownerOverlaySchema = z
         (cue) =>
           cue.endFrame <= cue.startFrame || cue.endFrame > overlay.frames,
       ) ||
-      overlay.texts?.some((layer) => layer.endFrame > overlay.frames) ||
+      overlay.texts?.some(
+        (layer) =>
+          layer.endFrame >
+          (layer.role === "opening-title"
+            ? ownerPresentationFrames(overlay)
+            : overlay.frames),
+      ) ||
       new Set(overlay.visuals.map((cue) => cue.id)).size !==
         overlay.visuals.length
     )

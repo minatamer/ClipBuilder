@@ -26,6 +26,7 @@ it("accepts newly authored headlines in every supported hook style without requi
     expect(ownerAuthoredTextPlanSchema.parse([item])).toEqual([item]);
     expect(decodePlannedText({ texts: [item] }, words, 900)[0]).toMatchObject({
       text: item.title,
+      role: "opening-title",
       startFrame: 0,
       endFrame: 93,
     });

@@ -183,6 +183,9 @@ it("rejects nonfinite, unbounded and empty physical raster clocks", () => {
   expect(ownerOverlayClockSchema.safeParse(valid).success).toBe(true);
   for (const patch of [
     { sourceStartFrame: NaN },
+    { presentationStartFrame: Infinity },
+    { presentationStartFrame: -1 },
+    { presentationStartFrame: 304 },
     { sourceEndFrame: Infinity },
     { frames: 304 },
     { sourceEndFrame: 9 },

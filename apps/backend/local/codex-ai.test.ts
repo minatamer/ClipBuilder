@@ -685,7 +685,9 @@ it.each(["audio", "invented", "visual-opening"])(
       expect(request.prompt).toContain(
         "different explanatory detail of the same passage",
       );
-      expect(request.prompt).toContain("Always display the title at the start");
+      expect(request.prompt).toContain(
+        "Always display the title at the first presented frame",
+      );
       expect(request.prompt).toContain(
         "visual-only evidence controls the opening crop",
       );
@@ -705,6 +707,7 @@ it.each(["audio", "invented", "visual-opening"])(
         "title words do NOT need to be spoken verbatim",
       );
       expect(request.prompt).toContain("choose the ONE strongest accurate fit");
+      expect(request.prompt).toContain("title inspired by that excerpt");
       return {
         texts: [
           {

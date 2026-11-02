@@ -27,12 +27,14 @@ export function useEditorPreview({
   attempt,
   frames,
   captureTarget,
+  presentationClock = false,
 }: {
   player: RefObject<PlayerRef | null>;
   available: boolean;
   attempt: number;
   frames: number;
   captureTarget: object;
+  presentationClock?: boolean;
 }) {
   const hook = useContext(EditorHookClock);
   const [frame, setFrame] = useState(
@@ -105,7 +107,7 @@ export function useEditorPreview({
   }, [available, player, attempt, hook, frames, captureTarget]);
 
   return {
-    frame: ownerSourceFrame({ hook }, frame),
+    frame: presentationClock ? frame : ownerSourceFrame({ hook }, frame),
     playing,
     captureReady: available && ready,
     captureFrame: async () => {
@@ -127,7 +129,8 @@ export function useEditorPreview({
         return null;
       current.pause();
       const presentation = current.getCurrentFrame();
-      const at = ownerSourceFrame({ hook }, presentation);
+      const sourceFrame = ownerSourceFrame({ hook }, presentation);
+      const at = presentationClock ? presentation : sourceFrame;
       if (!Number.isInteger(at) || at < 0 || at >= frames) return null;
       // Separate media/player clocks can briefly drift during playback. Check
       // their alignment on capture rather than flashing disabled every tick.
@@ -142,7 +145,8 @@ export function useEditorPreview({
         video.readyState >= 2 &&
         !video.seeking &&
         !video.error &&
-        Math.abs(video.currentTime - at / OWNER_FPS) <= 1 / OWNER_FPS + 0.001;
+        Math.abs(video.currentTime - sourceFrame / OWNER_FPS) <=
+          1 / OWNER_FPS + 0.001;
       try {
         if (aligned()) return at;
         return await new Promise<number | null>((resolve) => {
@@ -175,7 +179,9 @@ export function useEditorPreview({
     },
     seekTo: (at: number) => {
       player.current?.pause();
-      const presentation = ownerPresentationFrame({ hook }, at);
+      const presentation = presentationClock
+        ? at
+        : ownerPresentationFrame({ hook }, at);
       player.current?.seekTo(presentation);
       setFrame(presentation);
     },

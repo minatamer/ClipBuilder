@@ -49,6 +49,8 @@ import { OWNER_SOCIAL_TEXT_PRESETS } from "../../../../../packages/contracts/loc
 import {
   OWNER_TEXT_LIMITS,
   ownerLayerTextSchema,
+  ownerTextFrame,
+  boundOwnerOpeningTitles,
   type OwnerTextLayer,
 } from "../../../../../packages/contracts/local/text-layers.ts";
 import { OWNER_CAPTION_GENERATION_ATTEMPTS } from "../../../../../packages/contracts/local/caption-generation.ts";
@@ -445,10 +447,10 @@ function Review({
         {setting === "text" &&
           (overlay.texts ?? [])
             .map((layer, index) => ({ layer, index }))
-            .filter(
-              ({ layer }) =>
-                layer.startFrame <= frame && frame < layer.endFrame,
-            )
+            .filter(({ layer }) => {
+              const at = ownerTextFrame(layer, presentationFrame, frame);
+              return layer.startFrame <= at && at < layer.endFrame;
+            })
             .map(({ layer, index }) => (
               <SelectionBox
                 key={layer.id}
@@ -604,7 +606,13 @@ export function ClipEditor({
                   !Number.isInteger(layer.endFrame) ||
                   layer.startFrame < 0 ||
                   layer.endFrame <= layer.startFrame ||
-                  layer.endFrame > base.overlay.frames,
+                  layer.endFrame >
+                    (layer.role === "opening-title"
+                      ? ownerPresentationFrames({
+                          frames: base.overlay.frames,
+                          hook: draft.hook ?? undefined,
+                        })
+                      : base.overlay.frames),
               )
             ? "Set each text layer’s end after its start, within this clip."
             : draft.captionText?.some((word) => !word.text.trim())
@@ -700,6 +708,21 @@ export function ClipEditor({
   }, [dirty]);
 
   function update(next: OwnerEditDocument) {
+    if (
+      next.texts &&
+      JSON.stringify(next.hook) !== JSON.stringify(draft.hook) &&
+      (!next.hook || ownerHookSchema.safeParse(next.hook).success)
+    )
+      next = {
+        ...next,
+        texts: boundOwnerOpeningTitles(
+          next.texts,
+          ownerPresentationFrames({
+            frames: base.overlay.frames,
+            hook: next.hook,
+          }),
+        ),
+      };
     if (next.audio)
       next = {
         ...next,
@@ -771,9 +794,16 @@ export function ClipEditor({
     if (
       Number.isInteger(layer.startFrame) &&
       layer.startFrame >= 0 &&
-      layer.startFrame < base.overlay.frames
+      layer.startFrame <
+        (layer.role === "opening-title"
+          ? ownerPresentationFrames(overlay)
+          : base.overlay.frames)
     )
-      player.current?.seekTo(ownerPresentationFrame(overlay, layer.startFrame));
+      player.current?.seekTo(
+        layer.role === "opening-title"
+          ? layer.startFrame
+          : ownerPresentationFrame(overlay, layer.startFrame),
+      );
   }
   function addText() {
     if (pending || (draft.texts?.length ?? 0) >= OWNER_TEXT_LIMITS.layers)

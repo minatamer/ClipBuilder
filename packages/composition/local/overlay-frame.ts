@@ -5,6 +5,7 @@ import { ownerVisualMotion } from "./visual-motion.ts";
 import { captionSpeakerFrame } from "../../contracts/local/caption-speakers.ts";
 import { OWNER_CAPTION_PRESETS } from "../../contracts/local/editor.ts";
 import type { OwnerOverlayClock } from "../../contracts/local/visual-clock.ts";
+import { ownerTextFrame } from "../../contracts/local/text-layers.ts";
 import {
   ownerSourceFrame,
   ownerHookFrames,
@@ -17,6 +18,11 @@ export function ownerOverlayFrame(
   frame: number,
   clock?: OwnerOverlayClock,
 ) {
+  const presentationFrame = clock
+    ? frame +
+      (clock.presentationStartFrame ??
+        (clock.hook ? 0 : ownerHookFrames(overlay)))
+    : frame;
   const inHook =
     clock?.hook ?? (!!overlay.hook && frame < ownerHookFrames(overlay));
   frame = clock
@@ -47,9 +53,10 @@ export function ownerOverlayFrame(
   const visuals = overlay.visuals.filter(
     (cue) => cue.startFrame <= frame && frame < cue.endFrame,
   );
-  const texts = (overlay.texts ?? []).filter(
-    (layer) => layer.startFrame <= frame && frame < layer.endFrame,
-  );
+  const texts = (overlay.texts ?? []).filter((layer) => {
+    const at = ownerTextFrame(layer, presentationFrame, frame);
+    return layer.startFrame <= at && at < layer.endFrame;
+  });
   const highlights =
     caption?.wordCues
       .filter((cue) => cue.startMs <= ms && ms < cue.endMs)

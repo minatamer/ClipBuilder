@@ -91,6 +91,8 @@ export const ownerTextLayerSchema = z
   .object({
     id: ownerIdSchema,
     text: ownerLayerTextSchema,
+    /** Only generated opening titles use the once-only presentation clock. */
+    role: z.literal("opening-title").optional(),
     startFrame: z.number().int().nonnegative(),
     endFrame: z
       .number()
@@ -111,3 +113,28 @@ export const ownerTextLayersSchema = z
     { message: "Text layer IDs must be unique." },
   );
 export type OwnerTextLayer = z.infer<typeof ownerTextLayerSchema>;
+
+/** Manual/legacy layers follow source speech; an opening title appears once. */
+export function ownerTextFrame(
+  layer: Pick<OwnerTextLayer, "role">,
+  presentationFrame: number,
+  sourceFrame: number,
+) {
+  return layer.role === "opening-title" ? presentationFrame : sourceFrame;
+}
+
+/** A changed Hook may shorten playback; preserve authored copy and other layers. */
+export function boundOwnerOpeningTitles(
+  layers: OwnerTextLayer[],
+  frames: number,
+) {
+  return layers.map((layer) =>
+    layer.role === "opening-title"
+      ? {
+          ...layer,
+          startFrame: Math.min(layer.startFrame, frames - 1),
+          endFrame: Math.min(layer.endFrame, frames),
+        }
+      : layer,
+  );
+}

@@ -12,6 +12,12 @@ const clipFrames = (OWNER_LIMITS.clipMs * OWNER_FPS) / 1000;
 export const ownerOverlayClockSchema = z
   .object({
     hook: z.boolean(),
+    presentationStartFrame: z
+      .number()
+      .finite()
+      .nonnegative()
+      .max(OWNER_HOOK_MAX_FRAMES + 3)
+      .optional(),
     sourceStartFrame: z.number().finite().nonnegative().max(clipFrames),
     sourceEndFrame: z
       .number()

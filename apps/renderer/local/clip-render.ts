@@ -170,6 +170,8 @@ export async function renderOwnerClip(
         frames: bodyFrames,
         clock: {
           hook: false,
+          presentationStartFrame:
+            ((hookProfile?.frames ?? 0) / profile.fps) * OWNER_FPS,
           sourceStartFrame: 0,
           sourceEndFrame: job.overlay.frames,
           frames: job.overlay.frames,
@@ -184,6 +186,7 @@ export async function renderOwnerClip(
           frames: hookFrames,
           clock: {
             hook: true,
+            presentationStartFrame: 0,
             sourceStartFrame: (hookStartFrame / profile.fps) * OWNER_FPS,
             sourceEndFrame:
               ((hookStartFrame + hookProfile!.frames) / profile.fps) *

@@ -190,6 +190,9 @@ it.each([
     expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
       "TEXT: Write zero or one compelling opening title",
     );
+    expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
+      "title inspired by that excerpt",
+    );
     expect(
       z.toJSONSchema(f.transport.generate.mock.calls[0]![2].schema, {
         io: "input",

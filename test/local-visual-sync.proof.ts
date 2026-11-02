@@ -21,6 +21,7 @@ import { WorkspaceFiles } from "../apps/backend/local/workspace-files.ts";
 import { prepareLocalOverlayFixture } from "./owner-controls-browser.ts";
 import type { OwnerOverlay } from "../packages/contracts/local/clips.ts";
 import { ownerVisualOccurrences } from "../packages/contracts/local/visual-clock.ts";
+import { OWNER_SOCIAL_TEXT_PRESETS } from "../packages/contracts/local/text-style.ts";
 import { openBrowser } from "../apps/renderer/node_modules/@remotion/renderer/dist/index.js";
 import { listenOwner } from "./owner-http.ts";
 
@@ -124,6 +125,22 @@ it("decodes native MP4 image/audio onsets on the same frames at 24/25/29.97/30/6
         hook: { startFrame: 23, endFrame: 34 },
         captions: [],
         visuals,
+        texts: [
+          {
+            id: randomUUID(),
+            text: "TEST",
+            role: "opening-title",
+            startFrame: 0,
+            endFrame: 17,
+            style: {
+              ...OWNER_SOCIAL_TEXT_PRESETS["solid-block"],
+              color: "#ff0000",
+              backgroundColor: "#ff0000",
+              backgroundOpacity: 1,
+              box: { x: 0.65, y: 0.1, width: 0.25, height: 0.2 },
+            },
+          },
+        ],
         audio: {
           originalVolume: 0,
           assets: [
@@ -237,6 +254,31 @@ it("decodes native MP4 image/audio onsets on the same frames at 24/25/29.97/30/6
       expect(audioStarts, `decoded audio starts at ${rate}`).toEqual(
         imageStarts,
       );
+      const titlePixels = join(root, "title.rgb");
+      await run([
+        "-i",
+        output,
+        "-vf",
+        "crop=60:80:110:30,scale=1:1",
+        "-an",
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "rgb24",
+        titlePixels,
+      ]);
+      const red = await readFile(titlePixels);
+      for (let frame = 0; frame < hookFrames + bodyFrames; frame++) {
+        const inHook = frame < hookFrames;
+        const raster = Math.floor(
+          ((inHook ? frame : frame - hookFrames) * 30) / fps + 1e-9,
+        );
+        const presentation = raster + (inHook ? 0 : (hookFrames / fps) * 30);
+        expect(
+          red[frame * 3]! > 3,
+          `opening title frame ${frame} at ${rate}`,
+        ).toBe(presentation < 17);
+      }
     }
   } finally {
     await files.close();

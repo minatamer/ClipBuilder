@@ -16,6 +16,7 @@ export function PictureTiming<
   attempt,
   onChange,
   label = "Picture",
+  presentationClock = false,
 }: {
   cue: T;
   frames: number;
@@ -24,6 +25,7 @@ export function PictureTiming<
   attempt: number;
   onChange: (cue: T) => void;
   label?: string;
+  presentationClock?: boolean;
 }) {
   const preview = useEditorPreview({
     player,
@@ -31,6 +33,7 @@ export function PictureTiming<
     attempt,
     frames,
     captureTarget: cue,
+    presentationClock,
   });
   const [error, setError] = useState("");
   async function capture(key: "startFrame" | "endFrame") {

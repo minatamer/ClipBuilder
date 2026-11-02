@@ -1,5 +1,15 @@
 # ClipBuilder canonical ticket index
 
+## Hook-led opening titles — 2026-11-02
+
+[CL-184](CL-184-hook-led-opening-title.md) is implemented and validated locally.
+Generated titles appear once from the first Hook frame; capture/edits/native
+exports share presentation timing, preserving legacy/manual text and adjusting
+only title timing on Hook removal. Scoped fake tests, current-source browser/
+native/export/recovery proofs, desktop/phone screenshots and static checks pass.
+Validate loop: no actionable findings after the Hook-shortening fix. No real
+inference/download/configuration or normal app start. CL-185 is next.
+
 ## Authorized AFK execution — 2026-11-02
 
 The owner now authorizes CL-184–190 and CL-192 implementation plus CL-193

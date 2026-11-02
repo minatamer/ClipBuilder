@@ -14,6 +14,35 @@ import {
 } from "../apps/frontend/src/features/local-editing/editor-state.ts";
 import { syntheticTextClip, syntheticTextLayer } from "./owner-text-fixture.ts";
 
+it("shortens only opening-title timing when removing a Hook, preserving copy/style and ordinary text", () => {
+  const clip = syntheticTextClip();
+  const title = {
+    ...syntheticTextLayer(),
+    role: "opening-title" as const,
+    startFrame: 0,
+    endFrame: 105,
+  };
+  const manual = syntheticTextLayer();
+  clip.edit = applyOwnerEdit(clip, {
+    operationId: randomUUID(),
+    baseHash: clip.baseHash,
+    expectedRevision: clip.revision,
+    operations: [
+      { kind: "hook", hook: { startFrame: 45, endFrame: 60 } },
+      { kind: "text-layers", layers: [title, manual] },
+    ],
+  });
+  clip.revision = clip.edit.revision;
+  const edit = applyOwnerEdit(clip, {
+    operationId: randomUUID(),
+    baseHash: clip.baseHash,
+    expectedRevision: clip.revision,
+    operations: [{ kind: "hook", hook: null }],
+  });
+  expect(edit.texts).toEqual([{ ...title, endFrame: 90 }, manual]);
+  expect(compileOwnerOverlay(clip.base!, edit, []).texts).toEqual(edit.texts);
+});
+
 it("validates bounded multiline plain text, strict typography, unique layers and exact clip clocks", () => {
   const layer = syntheticTextLayer();
   expect(

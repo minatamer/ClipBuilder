@@ -1,5 +1,20 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Hook-led opening titles — CL-184, 2026-11-02
+
+The optional generated opening title is authored around the suggested Hook and
+actual clip payoff in the same planning response, for both Codex and Gemini.
+New generated layers carry an `opening-title` role and display once on the
+presentation clock from frame zero, including a prepended Hook. Reading time
+continues through a short Hook/body transition without restarting at body start.
+Manual/legacy layers retain their source-relative timing. Saved text is never
+regenerated or rewritten automatically. Hook shortening/removal bounds only an
+opening title's timing to the new presentation, preserving copy/style and other
+layers. Editor selection/capture and native branches share the clock semantics,
+including measured physical Hook offsets at different export frame rates.
+No additional inference or retry. Fake/native proofs verify mechanics; real
+wording/taste and personal release acceptance remain the owner's decision.
+
 ## Owner AFK execution authorization — 2026-11-02
 
 The owner lifts the planning/research holds for CL-184–190 and CL-192–193 and

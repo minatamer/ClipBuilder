@@ -9,6 +9,8 @@ import {
 } from "../../../packages/contracts/local/edit-overlay.ts";
 import type { OwnerClip } from "../../../packages/contracts/local/clips.ts";
 import { resolveOwnerAudioCues } from "../../../packages/contracts/local/audio.ts";
+import { boundOwnerOpeningTitles } from "../../../packages/contracts/local/text-layers.ts";
+import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 
 export function applyOwnerEdit(
   clip: OwnerClip,
@@ -87,6 +89,18 @@ export function applyOwnerEdit(
         break;
     }
   }
+  if (
+    next.texts &&
+    request.operations.some((operation) => operation.kind === "hook") &&
+    !request.operations.some((operation) => operation.kind === "text-layers")
+  )
+    next.texts = boundOwnerOpeningTitles(
+      next.texts,
+      ownerPresentationFrames({
+        frames: clip.base.overlay.frames,
+        hook: next.hook,
+      }),
+    );
   if (next.audio)
     next.audio.cues = resolveOwnerAudioCues(
       next.audio.cues,

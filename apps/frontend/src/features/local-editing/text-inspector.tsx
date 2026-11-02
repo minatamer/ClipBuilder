@@ -1,4 +1,6 @@
-import type { RefObject } from "react";
+import { useContext, type RefObject } from "react";
+import { EditorHookClock } from "./editor-clock.ts";
+import { ownerPresentationFrames } from "../../../../../packages/contracts/local/hook.ts";
 import type { PlayerRef } from "@remotion/player";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
@@ -41,6 +43,7 @@ export function TextInspector({
   tab: string;
   onTab: (tab: string) => void;
 }) {
+  const hook = useContext(EditorHookClock);
   const current = layers.find((layer) => layer.id === selected) ?? layers[0];
   const index = layers.findIndex((layer) => layer.id === current?.id);
   function setLayer(next: OwnerTextLayer) {
@@ -168,7 +171,12 @@ export function TextInspector({
               {item.value === "timing" && tab === "timing" && (
                 <PictureTiming
                   cue={current}
-                  frames={frames}
+                  frames={
+                    current.role === "opening-title"
+                      ? ownerPresentationFrames({ frames, hook })
+                      : frames
+                  }
+                  presentationClock={current.role === "opening-title"}
                   player={player}
                   available={available}
                   attempt={attempt}
