@@ -1,5 +1,94 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Owner AFK execution authorization — 2026-11-02
+
+The owner lifts the planning/research holds for CL-184–190 and CL-192–193 and
+requests sequential execute/validate/fix loops plus local ticket-prefixed commits,
+without push. CL-191 cleanup is already complete. Use recommended choices while
+the owner is AFK; provisional verification does not replace personal visual or
+release acceptance. Preserve configuration, saved media, sources, exports and
+private diagnostics. Fake/no-key/paid-off verification comes first. Normal local
+runs and any necessary bounded final real acceptance use Codex only, never
+Gemini/fallback. Reuse completed work and minimize allowance use; no credit
+purchase, cloud action or deployment. The intended feature decisions below now
+have implementation authorization; mark capabilities complete only with evidence.
+CL-193 remains research-only: it does not authorize changing the successful
+production prompt or adding a genre selector.
+
+## Owner cleanup, manual camera effect and research proposal — 2026-11-02
+
+The current owner follow-up adds the following scope without lifting the
+CL-184–190 implementation hold:
+
+- [CL-191](tickets/CL-191-downloads-library-cleanup.md) owns completed Downloads
+  housekeeping: only expired rolling recovery was moved to the Recycle Bin;
+  saved projects/sources/exports are preserved. This is not a new cleanup policy.
+- [CL-192](tickets/CL-192-manual-camera-punch-in.md) plans an optional manually
+  authored smooth punch-in toward an owner-chosen face/object/crop in the
+  vertical preview, with controllable time to reach the target and automatic
+  return to the camera schedule at the current time. Preserve aspect ratio,
+  preview/export parity and ordinary overlays. AI must never add this effect.
+- [CL-193](tickets/CL-193-genre-moment-prompt-research.md) is an unexecuted
+  research proposal. Investigate three evidenced popular clipping categories
+  and public prompt/editorial practices only when the owner requests research.
+  Compare against the current successful prompt; no prompt replacement, genre
+  selector or inferred improvement is approved. No change is a valid finding.
+- The owner explicitly supplied a public long-video test URL for retention in
+  CL-189 and permits future tests with it. Defer real downloads/inference until
+  implementation and applicable fake gates are complete. Minimize any subsequent
+  real acceptance attempts, reuse completed work, and use only local Codex with
+  the existing model, sign-in/allowance and prepared speech tooling. No Gemini
+  test/fallback or credit purchase. The owner reports selecting Codex themselves;
+  do not inspect ignored configuration. Future normal starts must confirm the
+  exposed provider is Codex before real processing. No run is requested now.
+
+These are planning/housekeeping instructions, not approval to implement features,
+run research, change configuration/models, deploy, use cloud or mutate Git.
+Fake/no-key/paid-off checks remain the development gate; they prove mechanics,
+not real transcription, visual/editorial quality or long-video performance.
+
+## Owner long-source and hook-title planning request — 2026-11-02
+
+The owner requests [CL-184–190](tickets/README.md) as **planning only**, with an
+explanation before execution. No implementation is authorized yet. The following
+are intended revisions to implement after a subsequent owner instruction, not
+claims that existing limits or running behavior have already changed:
+
+- Make the opening title a textual hook inspired by the chosen Hook, visible
+  from the first presented frame, including the prepended excerpt. Correct
+  shared preview/native presentation timing without moving ordinary manual text
+  or rewriting saved edits. Keep the existing optional same-call title planning.
+- Remove arbitrary source-duration/source-byte and total-moment/clip demo quotas
+  specifically for local Codex, supporting two-hour and longer/large videos via
+  bounded incremental work. Preserve actual machine capacity, finite/structural
+  media safety, server provider isolation, cancellation and controlled concurrency.
+  Local Codex uses a remote subscription-backed model and still has provider
+  allowance/context/output constraints; it is not unlimited offline inference.
+- Offer the highest supported source quality for local Codex, keep that master
+  for exports, and use separate audio/visual analysis inputs. Do not silently
+  lower export quality or claim every codec/HDR representation works. Current
+  sampled camera planning is not continuous frame-by-frame face tracking.
+- Add an optional single contiguous start/end analysis window for uploads and
+  local YouTube, distinct from output-clip ranges. Add safe partial YouTube
+  acquisition with explicit original-time/section offsets and honest keyframe/
+  transfer limitations. Hosted uploads retain all existing admission/spend
+  limits, and YouTube remains local-only.
+- Extend existing Find all through local Codex discovery, review, processing and
+  recovery without the present 360-result/ten-clip total ceilings. Full long-input
+  coverage can require planned bounded transcript/selection chunks, explicitly
+  revising the old single-call invariant for local Codex only. Keep review and
+  processing explicit, no automatic provider retry or dispatch on recovery.
+
+Local Gemini allowances and existing Find all behavior remain unchanged; hosted
+restrictions remain unchanged. Existing two-hour recovery expiry, explicit
+Start over, saved/retained-media protection and owner-only real-processing gates
+remain. The packets must resolve long-job expiry/resource handling explicitly,
+without silently changing retention. Source/count admission must not be reported
+as complete until downstream long-input/batch checks pass. Agent verification
+will remain synthetic/fake/paid-off/no-key/network-blocked. This request
+authorizes documentation only, not config/model changes, real AI/download tests,
+app restarts, cloud actions, deployment or Git mutation.
+
 ## Observable Gemini image discovery — CL-182, 2026-10-31
 
 Gemini image discovery uses the configured model's documented Interactions

@@ -1,5 +1,69 @@
 # ClipBuilder canonical ticket index
 
+## Authorized AFK execution — 2026-11-02
+
+The owner now authorizes CL-184–190 and CL-192 implementation plus CL-193
+research, sequential execute/validate/fix loops until no actionable findings
+remain per ticket, and cohesive local ticket-prefixed commits. Do not push.
+Use recommended decisions without questions. CL-191 cleanup is complete.
+Earlier planning/research holds below are historical and superseded. Fake/
+no-key/paid-off checks come first; normal local and any necessary bounded real
+acceptance use Codex only, preserving configuration/media and avoiding unnecessary
+allowance use. No cloud/deployment/credit purchase. Execution evidence and
+whole-file ownership are recorded in the active packet and
+[execution ledger](../operations/CL184_193_EXECUTION.md).
+
+## Downloads cleanup, manual zoom and prompt-research proposal — 2026-11-02
+
+- [CL-191](CL-191-downloads-library-cleanup.md): completed owner-requested
+  housekeeping. Moved only the approximately 63.0-MiB expired rolling recovery
+  store to the Recycle Bin after verifying expiry, paths and idle app state.
+  Two saved projects, three sources and five exports are preserved; all 20
+  remaining file paths/counts/lengths/hashes match. No processing or app launch.
+- [CL-192](CL-192-manual-camera-punch-in.md): planned optional manual smooth
+  zoom toward an owner-chosen crop/subject, configurable arrival duration and
+  automatic return to the current underlying camera schedule. Never AI-created.
+  Implementation remains on hold with CL-184–190.
+- [CL-193](CL-193-genre-moment-prompt-research.md): research proposal only;
+  **do not start research yet**. Investigate three evidenced clipping genres and
+  actual public prompts/rules, compare with the successful current system prompt,
+  and recommend small optional additions or no change. No prompt/UI/model edit.
+
+The owner's public YouTube acceptance reference is recorded only in
+[CL-189](CL-189-long-source-codex-discovery.md), with its future-test scope and
+cost constraints. No real download/inference until implementation and fake gates
+are complete; use local Codex for any later necessary acceptance, never Gemini.
+The owner reports selecting Codex already. No ignored configuration was read or
+edited, and no real provider call, cloud action or Git mutation occurred.
+
+## Hook titles and long local Codex sources — planning only, 2026-11-02
+
+The owner requested tickets and a plan before implementation. **CL-184–190 are
+on hold: do not execute them until a subsequent owner instruction.** This
+documentation work changes no running capability, configuration or authorization
+for inference, downloads, restarts, cloud, deployment or Git mutation.
+
+Proposed sequence, one dependency-ready packet at a time:
+
+| Order | Packet | Proposed result | Dependencies |
+| --- | --- | --- | --- |
+| 1 | [CL-184](CL-184-hook-led-opening-title.md) | Hook-inspired title visible from the first presented Hook frame, with preview/export parity | Existing Hook/title packets |
+| 2 | [CL-185](CL-185-local-codex-capacity-policy.md) | Server-owned local Codex profile without demo source/count quotas; real capacity guards remain | Existing provider/Find all packets |
+| 3 | [CL-186](CL-186-source-analysis-window.md) | Start/end analysis scope for uploads and local YouTube, with original clocks and transcript coverage | CL-185 |
+| 4 | [CL-187](CL-187-high-quality-master-and-analysis-derivatives.md) | Highest supported master quality; separate audio/visual analysis derivatives | CL-185; coordinate CL-186 |
+| 5 | [CL-188](CL-188-partial-youtube-acquisition.md) | Acquire a requested section with safe partial transfer, quality and offset handling | CL-185–187 |
+| 6 | [CL-189](CL-189-long-source-codex-discovery.md) | Chunked long-source speech/discovery without truncation or oversized single prompts | CL-185–187; cover CL-188 |
+| 7 | [CL-190](CL-190-codex-unrestricted-moment-batches.md) | Local Codex Find all beyond current result/processing ceilings, with bounded active work | CL-185/186/189 |
+
+Local Gemini and hosted budgets stay unchanged; hosted remains upload-only.
+Existing local Gemini Find all is preserved. The initial analysis/download window
+is one contiguous start/end interval; it is separate from short manual clips.
+Lifting a source schema alone cannot count as two-hour support: CL-189 owns its
+complete pipeline gate. Codex plan/context/output and machine limits still apply.
+Fake/no-key checks prove mechanics with injected speech/provider output. Real
+ASR/face/editorial quality, two-hour speed, YouTube availability and real Codex/
+Gemini use remain owner-only acceptance; no implementation checks were run here.
+
 ## Fresh Linux packaging and local commits — 2026-10-31
 
 [CL-183](CL-183-fresh-linux-and-commit-packaging.md) owns the exhaustive

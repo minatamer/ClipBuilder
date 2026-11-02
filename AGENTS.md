@@ -6,6 +6,32 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Owner AFK execution authorization (2026-11-02, CL-184–193): execute the
+  dependency-ready feature packets sequentially and CL-193 research, using
+  execute/validate/fix loops until no actionable findings remain per ticket.
+  CL-191 cleanup is already complete. Use recommended decisions without questions;
+  personal visual/release acceptance remains owner-only. Local ticket-prefixed
+  staging/commits are authorized, never push. Earlier planning/research holds are
+  lifted. Prefer synthetic/fake/paid-off/no-key checks; finish these before any
+  necessary bounded real acceptance on the owner-designated public source.
+  Normal local runs must use Codex, never Gemini/fallback. Preserve ignored
+  configuration, saved media/exports, private logs and provider isolation. No
+  credit purchase, cloud action or deployment. This authorization does not
+  require real inference when synthetic/native checks establish the requirement.
+
+- Owner current planning/test preference (2026-11-02, CL-184–193): feature
+  implementation remains on hold until requested; genre-prompt research is also
+  on hold. The owner reports selecting Codex for normal local runs; confirm only
+  exposed provider capabilities before any later real action, never inspect
+  ignored configuration or use Gemini/fallback. Finish applicable synthetic/
+  fake/paid-off gates before any necessary future acceptance using the public
+  URL explicitly retained in CL-189. Minimize real attempts, reuse completed
+  work, and never purchase credits or automatically retry providers. CL-191's
+  authorized cleanup removed only expired rolling recovery to the Recycle Bin,
+  preserving saved projects, sources and exports. No current app start,
+  configuration/model change, provider call, cloud, deployment or Git mutation
+  is authorized by this planning/housekeeping request.
+
 - Owner recovery revision (2026-10-30, CL-158): automatically preserve the local
   working session through existing safe draft mechanisms in one separate rolling
   recovery store. No per-checkpoint Save opt-in or visible saved project per edit.
