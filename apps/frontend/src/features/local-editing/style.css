@@ -429,19 +429,6 @@
     min-width: 0;
     margin: 0;
   }
-  .download-quality-pair:not([hidden]) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-    align-items: start;
-  }
-  .download-quality-pair label + label {
-    margin-top: 0;
-  }
-  .download-quality-pair > p,
-  .download-quality-pair > button {
-    grid-column: 1 / -1;
-  }
   .download-window .duration-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

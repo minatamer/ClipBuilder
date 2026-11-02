@@ -39,14 +39,16 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
   let ui = "",
     bytes = Buffer.alloc(0),
     lookupCalls = 0,
+    metadataCalls = 0,
     uploads = 0,
     previewReads = 0;
   let stalled = false;
+  let metadataUnavailable = false;
   let stalledStreams = 0;
   let hosted = false;
   let codex = false;
   const requests: string[] = [];
-  const sectionImports: unknown[] = [];
+  const sourceImports: ReturnType<typeof ownerSourceImportSchema.parse>[] = [];
   const offer = await fakeOwnerAcquisition.metadata(
     canonicalOwnerYoutubeSource("https://youtu.be/synthetic01"),
     new AbortController().signal,
@@ -133,6 +135,11 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
     }
     if (path === "/api/local/sources/metadata" && request.method === "POST") {
       request.resume();
+      metadataCalls++;
+      if (metadataUnavailable) {
+        json({ error: "unavailable" }, 503);
+        return;
+      }
       json({ ...offer, mode: "provider-source" });
       return;
     }
@@ -140,7 +147,7 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
       void (async () => {
         const chunks: Buffer[] = [];
         for await (const chunk of request) chunks.push(Buffer.from(chunk));
-        sectionImports.push(
+        sourceImports.push(
           ownerSourceImportSchema.parse(
             JSON.parse(Buffer.concat(chunks).toString()),
           ),
@@ -402,9 +409,45 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
       if (result.value.exceptionDetails) throw Error("quality_browser_failed");
       return result.value.result.value;
     };
+    expect(metadataCalls).toBe(0);
+    expect(
+      await evaluateQuality(
+        `(()=>{const card=document.querySelector('.youtube-card');const select=card.querySelector('select.select-control');return {audio:!!card.querySelector('[aria-label="Audio track"]'),highest:!!card.querySelector('option[value="highest"]'),other:!!card.querySelector('option[value="other-resolutions"]'),saved:select.value.startsWith('saved:'),enabled:!select.disabled};})()`,
+      ),
+    ).toEqual({
+      audio: false,
+      highest: false,
+      other: true,
+      saved: true,
+      enabled: true,
+    });
+    // A real keyboard selection can request other qualities; failure keeps cached use.
+    metadataUnavailable = true;
     await evaluateQuality(
-      `(async()=>{[...document.querySelectorAll('.youtube-card button')].find(b=>b.textContent.trim()==='More resolutions').click();await wait(()=>[...document.querySelectorAll('.youtube-card option')].some(n=>n.textContent.startsWith('2160p')));const select=document.querySelector('.youtube-card select.select-control');select.value='highest';select.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(requestAnimationFrame);return true;})()`,
+      `document.querySelector('.youtube-card select.select-control').focus()`,
     );
+    for (const type of ["keyDown", "keyUp"] as const)
+      await page._client().send("Input.dispatchKeyEvent", {
+        type,
+        key: "End",
+        code: "End",
+        windowsVirtualKeyCode: 35,
+      });
+    await evaluateQuality(
+      `(async()=>{await wait(()=>document.querySelector('.youtube-card .flow-notice').textContent.includes('Couldn’t load resolutions.'));await wait(()=>!document.querySelector('.youtube-card select').disabled);return true;})()`,
+    );
+    expect(metadataCalls).toBe(1);
+    expect(
+      await evaluateQuality(
+        `(()=>{const card=document.querySelector('.youtube-card');return {saved:card.querySelector('select.select-control').value.startsWith('saved:'),use:[...card.querySelectorAll('button')].some(b=>b.textContent.trim()==='Use video'&&!b.disabled),retry:!!card.querySelector('option[value="other-resolutions"]')};})()`,
+      ),
+    ).toEqual({ saved: true, use: true, retry: true });
+    metadataUnavailable = false;
+    await evaluateQuality(
+      `(async()=>{const menu=document.querySelector('.youtube-card select.select-control');menu.value='other-resolutions';menu.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>[...document.querySelectorAll('.youtube-card option')].some(n=>n.textContent.startsWith('2160p')));const select=document.querySelector('.youtube-card select.select-control');select.value='highest';select.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(requestAnimationFrame);return true;})()`,
+    );
+    expect(metadataCalls).toBe(2);
+    expect(sourceImports).toEqual([]);
     for (const [width, height] of [
       [1440, 900],
       [390, 844],
@@ -419,16 +462,32 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
         await evaluateQuality(
           `(async()=>{const card=document.querySelector('.youtube-card');card.querySelector('footer').scrollIntoView({block:'end'});await new Promise(requestAnimationFrame);return {overflow:document.documentElement.scrollWidth>innerWidth,highest:card.textContent.includes('Highest · 2160p'),audio:!!card.querySelector('[aria-label="Audio track"]'),footer:card.querySelector('footer').getBoundingClientRect().bottom<=innerHeight+1};})()`,
         ),
-      ).toEqual({ overflow: false, highest: true, audio: true, footer: true });
+      ).toEqual({ overflow: false, highest: true, audio: false, footer: true });
       const shot = await page
         ._client()
         .send("Page.captureScreenshot", { format: "png", fromSurface: true });
       await writeFile(
-        join(evidence, `cl187-quality-${width}.png`),
+        join(evidence, `cl195-quality-${width}.png`),
         Buffer.from(shot.value.data, "base64"),
       );
     }
     expect(requests).toEqual([]);
+    await evaluateQuality(
+      `(async()=>{const card=document.querySelector('.youtube-card'),select=card.querySelector('select.select-control');const online=[...select.options].find(o=>o.parentElement.label==='Available to download'&&o.textContent.startsWith('1080p'));select.value=online.value;select.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>[...card.querySelectorAll('button')].find(b=>b.textContent.trim()==='Download video'&&!b.disabled));[...card.querySelectorAll('button')].find(b=>b.textContent.trim()==='Download video').click();await wait(()=>card.querySelector('.download-outcome')?.textContent==='Download failed');return true;})()`,
+    );
+    expect(sourceImports).toEqual([
+      expect.objectContaining({
+        request: expect.objectContaining({
+          choiceId: offer.choices.find((item) => item.tier === 1080)!.id,
+          selection: { kind: "variant" },
+        }),
+      }),
+    ]);
+    expect(
+      (sourceImports[0] as { request: Record<string, unknown> }).request.window,
+    ).toBeUndefined();
+    expect(saved.actual.height).toBe(720);
+    expect(metadataCalls).toBe(2);
     await evaluateQuality(
       `(async()=>{const tab=text=>[...document.querySelectorAll('.acquisition-tabs button')].find(b=>b.textContent===text);tab('Range').click();await wait(()=>document.querySelector('[aria-label="Download range"]'));const select=document.querySelector('[aria-label="Download range"]');select.value='section';select.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('[aria-label="Download start"]'));const set=(label,value)=>{const input=document.querySelector('[aria-label="'+label+'"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));};set('Download start','00:00:02');set('Download end','00:00:09');await new Promise(requestAnimationFrame);tab('Quality').click();await new Promise(requestAnimationFrame);const quality=document.querySelector('select.select-control');quality.value='highest';quality.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(requestAnimationFrame);tab('Range').click();await wait(()=>document.querySelector('[aria-label="Download end"]'));return true;})()`,
     );
@@ -460,7 +519,7 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
         Buffer.from(shot.value.data, "base64"),
       );
     }
-    expect(sectionImports).toEqual([]);
+    expect(sourceImports).toHaveLength(1);
     await evaluateQuality(
       `document.querySelector('[aria-label="Download start"]').focus()`,
     );
@@ -479,7 +538,12 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
     await evaluateQuality(
       `(async()=>{[...document.querySelectorAll('.youtube-card button')].find(b=>b.textContent.trim()==='Download video').click();await wait(()=>document.body.textContent.includes('Retry or choose Entire video.'));return true;})()`,
     );
-    expect(sectionImports).toEqual([
+    expect(sourceImports).toEqual([
+      expect.objectContaining({
+        request: expect.objectContaining({
+          choiceId: offer.choices.find((item) => item.tier === 1080)!.id,
+        }),
+      }),
       expect.objectContaining({
         request: expect.objectContaining({
           window: { startMs: 2000, endMs: 9000 },

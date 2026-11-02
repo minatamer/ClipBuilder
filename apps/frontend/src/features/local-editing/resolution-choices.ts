@@ -12,14 +12,6 @@ export function eligibleYoutubeResolution(
   );
 }
 
-export function youtubeAudioTrack(audio: {
-  language: string | null;
-  trackId: string | null;
-  role: string;
-}) {
-  return JSON.stringify([audio.language, audio.trackId, audio.role]);
-}
-
 const audioRole = { original: 3, default: 2, other: 1, unknown: 0 };
 
 export function savedResolutionChoices(
@@ -40,7 +32,7 @@ export function savedResolutionChoices(
   });
 }
 
-/** One English choice per tier; retain the server's highest admitted video rank. */
+/** One admitted choice per tier with automatic original/default audio; keep server video rank. */
 export function resolutionChoices(
   choices: readonly OwnerYoutubeChoice[],
   codex = false,

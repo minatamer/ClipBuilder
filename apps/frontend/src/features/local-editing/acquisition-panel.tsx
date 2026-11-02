@@ -21,7 +21,6 @@ import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts
 import {
   resolutionChoices,
   savedResolutionChoices,
-  youtubeAudioTrack,
 } from "./resolution-choices.ts";
 import { YoutubePreview } from "./youtube-preview.tsx";
 import {
@@ -79,7 +78,6 @@ export function OwnerAcquisitionPanel({
   > | null>(null);
   const [offer, setOffer] = useState<OwnerYoutubeOffer | null>(null);
   const [choice, setChoice] = useState("");
-  const [audioTrack, setAudioTrack] = useState("");
   const [sectionOnly, setSectionOnly] = useState(false);
   const [sectionStart, setSectionStart] = useState("00:00:00");
   const [sectionEnd, setSectionEnd] = useState<string | null>(null);
@@ -127,44 +125,20 @@ export function OwnerAcquisitionPanel({
   } catch {
     /* Keep invalid fields editable, without dispatch. */
   }
-  const tracks = [
-    ...new Map(
-      [
-        ...(offer?.choices
-          .filter((item) => item.supported && item.audio)
-          .map((item) => item.audio!) ?? []),
-        ...(lookup?.saved.map((entry) => entry.variant.audio) ?? []),
-      ].map((audio) => [youtubeAudioTrack(audio), audio]),
-    ).entries(),
-  ];
-  const effectiveTrack = tracks.some(([key]) => key === audioTrack)
-    ? audioTrack
-    : (tracks.find(([, audio]) => audio.role === "original")?.[0] ??
-      tracks[0]?.[0]);
   const saved = savedResolutionChoices(
     (lookup?.saved ?? []).filter(
       (entry) =>
-        (!codex || youtubeAudioTrack(entry.variant.audio) === effectiveTrack) &&
-        (!downloadWindow ||
-          ownerSourceCoversOriginalWindow(
-            entry.variant.actual,
-            downloadWindow,
-          )),
+        !downloadWindow ||
+        ownerSourceCoversOriginalWindow(entry.variant.actual, downloadWindow),
     ),
     codex,
   );
   const resolutions = resolutionChoices(
-    (offer?.choices ?? [])
-      .map((item) =>
-        downloadWindow && ["duration", "bytes"].includes(item.reason ?? "")
-          ? { ...item, supported: true, reason: null }
-          : item,
-      )
-      .filter(
-        (item) =>
-          !codex ||
-          (!!item.audio && youtubeAudioTrack(item.audio) === effectiveTrack),
-      ),
+    (offer?.choices ?? []).map((item) =>
+      downloadWindow && ["duration", "bytes"].includes(item.reason ?? "")
+        ? { ...item, supported: true, reason: null }
+        : item,
+    ),
     codex,
   ).filter(
     (item) =>
@@ -397,7 +371,6 @@ export function OwnerAcquisitionPanel({
     setCheckedUrl("");
     setOffer(null);
     setChoice("");
-    setAudioTrack("");
     setSectionOnly(false);
     setSectionStart("00:00:00");
     setSectionEnd(null);
@@ -619,30 +592,7 @@ export function OwnerAcquisitionPanel({
                   )}
                 </div>
               )}
-              <div
-                className={codex ? "download-quality-pair" : undefined}
-                hidden={downloadSettings !== "quality"}
-              >
-                {codex && tracks.length > 0 && (
-                  <label>
-                    <span>Audio track</span>
-                    <select
-                      aria-label="Audio track"
-                      value={effectiveTrack}
-                      onChange={(event) => {
-                        setAudioTrack(event.currentTarget.value);
-                        setChoice("");
-                      }}
-                    >
-                      {tracks.map(([key, audio]) => (
-                        <option key={key} value={key}>
-                          {audio.language ?? "Unknown language"} · {audio.role}
-                          {audio.trackId ? ` · ${audio.trackId}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
+              <div hidden={downloadSettings !== "quality"}>
                 {(saved.length > 0 || resolutions.length > 0) && (
                   <label>
                     <span>Resolution</span>
@@ -650,12 +600,16 @@ export function OwnerAcquisitionPanel({
                       className="select-control"
                       id={resolutionId}
                       value={choice}
-                      onChange={(event) => setChoice(event.currentTarget.value)}
+                      onChange={(event) => {
+                        if (event.currentTarget.value === "other-resolutions")
+                          void action("metadata");
+                        else setChoice(event.currentTarget.value);
+                      }}
                     >
                       <option value="" disabled>
                         Select resolution
                       </option>
-                      {codex && highest && (
+                      {codex && offer && highest && (
                         <option value="highest">
                           Highest · {highest.tier}p
                         </option>
@@ -697,6 +651,14 @@ export function OwnerAcquisitionPanel({
                           ))}
                         </optgroup>
                       )}
+                      {lookup?.metadataAvailable &&
+                        capabilities?.sourceMode && (
+                          <option value="other-resolutions">
+                            {offer
+                              ? "Refresh resolutions…"
+                              : "Other resolutions…"}
+                          </option>
+                        )}
                     </select>
                   </label>
                 )}
@@ -709,36 +671,26 @@ export function OwnerAcquisitionPanel({
                     />
                     Loading resolutions…
                   </p>
-                ) : hasChoices ? (
-                  <>
-                    {offer && !resolutions.length && !selectedSaved && (
-                      <p role="status">
-                        {codex
-                          ? "No supported video available for this audio track."
-                          : "No English video available at 480p–1440p."}
-                      </p>
-                    )}
-                    {!offer &&
-                      lookup?.metadataAvailable &&
-                      capabilities?.sourceMode && (
-                        <Button
-                          variant="quiet"
-                          onClick={() => void action("metadata")}
-                        >
-                          More resolutions
-                        </Button>
-                      )}
-                  </>
+                ) : offer && !resolutions.length && !selectedSaved ? (
+                  <p role="status">
+                    {codex
+                      ? "No supported video available."
+                      : "No English video available at 480p–1440p."}
+                  </p>
                 ) : null}
               </div>
             </fieldset>
             {outcome && (
               <p className="download-outcome" role="status">
-                {outcome.error === "capacity"
-                  ? "Not enough free disk space. Free space and retry."
-                  : sectionOnly && outcome.stage === "failed"
-                    ? "Couldn’t download this section. Retry or choose Entire video."
-                    : stages[outcome.stage]}
+                {outcome.diagnostic === "acquisition_stalled"
+                  ? "Progress stopped. Check your connection or disk and retry."
+                  : outcome.diagnostic === "acquisition_timed_out"
+                    ? "The operation timed out. Retry when ready."
+                    : outcome.error === "capacity"
+                      ? "Not enough free disk space. Free space and retry."
+                      : sectionOnly && outcome.stage === "failed"
+                        ? "Couldn’t download this section. Retry or choose Entire video."
+                        : stages[outcome.stage]}
               </p>
             )}
           </>

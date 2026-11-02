@@ -605,3 +605,40 @@ it("warns on the aggregate saved library threshold across Downloads and Desktop 
     usage.mockRestore();
   }
 });
+
+it("retains two downloaded qualities independently and reuses only the requested quality", async () => {
+  const offer = await acquisition.metadata(url, signal());
+  acquisition.start(input(offer, 720));
+  const low = await settled();
+  expect(low.stage).toBe("ready");
+  await clear();
+  const original = (await acquisition.catalog(signal())).entries.find(
+    (entry) => entry.variant.id === low.variantId,
+  )!.variant;
+  const refreshed = await acquisition.metadata(url, signal());
+  acquisition.start(input(refreshed, 1080));
+  const high = await settled();
+  expect(high.stage).toBe("ready");
+  expect(high.variantId).not.toBe(low.variantId);
+  expect(download).toHaveBeenCalledTimes(2);
+  const catalog = await acquisition.catalog(signal());
+  expect(
+    catalog.entries
+      .map((entry) => entry.variant.actual.height)
+      .sort((a, b) => a - b),
+  ).toEqual([720, 1080]);
+  expect(
+    catalog.entries.find((entry) => entry.variant.id === low.variantId)!
+      .variant,
+  ).toEqual(original);
+  await clear();
+  const again = await acquisition.metadata(url, signal());
+  acquisition.start(input(again, 720));
+  expect((await settled()).variantId).toBe(low.variantId);
+  expect(download).toHaveBeenCalledTimes(2);
+  expect(media.mock.calls.map(([job]) => job.operation)).toEqual([
+    "synthesize-acquisition",
+    "synthesize-acquisition",
+    "inspect-acquisition",
+  ]);
+});

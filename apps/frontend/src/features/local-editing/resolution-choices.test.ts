@@ -178,3 +178,34 @@ it("filters and deduplicates saved qualities without losing their exact register
     saved,
   ]);
 });
+
+it("chooses original/default audio automatically across Codex languages and retains every offered tier", () => {
+  const original = {
+    ...choice("a", "video", 96),
+    audio: { ...choice("a", "video", 96).audio!, language: "ar" },
+  };
+  const dubbed = {
+    ...choice("b", "video", 256),
+    audio: {
+      ...choice("b", "video", 256).audio!,
+      language: "en",
+      role: "default" as const,
+    },
+  };
+  const low = {
+    ...choice("c", "low", 128),
+    tier: 144,
+    video: { ...choice("c", "low", 128).video, width: 256, height: 144 },
+  };
+  const high = {
+    ...choice("d", "high", 128),
+    tier: 1080,
+    video: { ...choice("d", "high", 128).video, width: 1920, height: 1080 },
+  };
+  expect(resolutionChoices([low, high, dubbed, original], true)).toEqual([
+    low,
+    high,
+    original,
+  ]);
+  expect(resolutionChoices([dubbed], true)).toEqual([dubbed]);
+});
