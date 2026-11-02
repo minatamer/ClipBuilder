@@ -39,6 +39,7 @@ export const SOURCE_INPUT_OPTIONS = [
 const streamSchema = z.object({
   codec_type: z.string(),
   codec_name: z.string(),
+  profile: z.string().optional(),
   width: z.number().optional(),
   height: z.number().optional(),
   avg_frame_rate: z.string().optional(),
@@ -66,6 +67,7 @@ export async function probeMedia(
   ffprobe: string,
   signal: AbortSignal,
   kind: "video" | "audio" = "video",
+  timeoutMs?: number,
 ) {
   try {
     return (
@@ -87,6 +89,7 @@ export async function probeMedia(
             path,
           ],
           signal,
+          { timeoutMs },
         ),
       ),
     );

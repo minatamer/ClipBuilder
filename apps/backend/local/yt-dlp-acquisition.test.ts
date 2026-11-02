@@ -1,3 +1,4 @@
+import { resolveOwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import {
@@ -819,3 +820,38 @@ describe("synthetic local child framing without downloader or network", () => {
     expect(() => process.kill(pid, 0)).toThrow();
   });
 });
+
+it.each(["gemini", "codex"] as const)(
+  "keeps metadata bounded and selects the full-transfer deadline/broker budget from trusted %s composition",
+  async (aiProvider) => {
+    const setup = await fixture();
+    setup.config.capacity = resolveOwnerCapacity({ aiProvider });
+    const input = await setup.input();
+    setup.requests.length = 0;
+    const timer = vi.spyOn(globalThis, "setTimeout");
+    try {
+      await setup.port.download(input, () => {}, controller().signal);
+      const delays = timer.mock.calls.map((call) => call[1]);
+      expect(delays.includes(2 * 60 * 60 * 1000)).toBe(aiProvider !== "codex");
+      expect(setup.requests[0]!.timeoutMs).toBe(90_000);
+      expect(
+        setup.requests
+          .slice(1)
+          .every(
+            (request) =>
+              request.timeoutMs ===
+              (aiProvider === "codex" ? null : 2 * 60 * 60 * 1000),
+          ),
+      ).toBe(true);
+      if (aiProvider === "codex")
+        expect(setup.egress.mock.calls.at(-1)).toEqual([
+          expect.any(AbortSignal),
+          undefined,
+          { maximumBytes: null },
+        ]);
+      expect(setup.run).toHaveBeenCalledTimes(4); // initial metadata + admission metadata + video + audio
+    } finally {
+      timer.mockRestore();
+    }
+  },
+);

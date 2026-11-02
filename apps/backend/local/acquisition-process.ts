@@ -14,7 +14,7 @@ export type AcquisitionProcessRequest = {
 };
 export type AcquisitionProcess = (
   request: AcquisitionProcessRequest,
-  line: (value: string) => void,
+  line: (value: string) => number | void,
   signal: AbortSignal,
 ) => Promise<void>;
 
@@ -36,7 +36,10 @@ export const runAcquisitionProcess: AcquisitionProcess = async (
     const decoder = new StringDecoder("utf8");
     let buffer = "";
     let output = 0;
-    let stderr = 0;
+    let stderr = 0,
+      stderrBuffer = "",
+      lastMediaMs = 0,
+      lastBytes = 0;
     let failed = false;
     let failureCode = "acquisition_process_failed";
     let termination: Promise<void> | undefined;
@@ -87,16 +90,22 @@ export const runAcquisitionProcess: AcquisitionProcess = async (
     const timeout =
       request.timeoutMs === null
         ? undefined
-        : setTimeout(stop, request.timeoutMs);
+        : setTimeout(() => {
+            failureCode = "acquisition_timed_out";
+            stop();
+          }, request.timeoutMs);
     const idle = setInterval(() => {
-      if (Date.now() - lastOutput > OWNER_ACQUISITION_LIMITS.idleMs) stop();
+      if (Date.now() - lastOutput > OWNER_ACQUISITION_LIMITS.idleMs) {
+        failureCode = "acquisition_stalled";
+        stop();
+      }
     }, 1000);
     let lastOutput = Date.now();
     signal.addEventListener("abort", stop, { once: true });
     if (signal.aborted) stop();
     child.stdout.on("data", (chunk: Buffer) => {
       if (failed) return;
-      lastOutput = Date.now();
+      if (!request.streaming) lastOutput = Date.now();
       output += chunk.length;
       if (
         !request.streaming &&
@@ -117,7 +126,16 @@ export const runAcquisitionProcess: AcquisitionProcess = async (
         }
         if (value) {
           try {
-            line(value);
+            const activity = line(value);
+            if (
+              !request.streaming ||
+              (typeof activity === "number" &&
+                Number.isSafeInteger(activity) &&
+                activity > lastBytes)
+            ) {
+              lastOutput = Date.now();
+              if (typeof activity === "number") lastBytes = activity;
+            }
           } catch (error) {
             const code = ownerAcquisitionFailureCodeSchema.safeParse(
               error instanceof Error ? error.message : null,
@@ -134,6 +152,23 @@ export const runAcquisitionProcess: AcquisitionProcess = async (
     child.stderr.on("data", (chunk: Buffer) => {
       // Never store a raw extractor exception, URL, filename or title.
       stderr += chunk.length;
+      // External FFmpeg sections report advancing media time on stderr, not bytes.
+      if (request.streaming) {
+        stderrBuffer = (stderrBuffer + chunk.toString("utf8")).slice(-8192);
+        for (const match of stderrBuffer.matchAll(
+          /(?:^|\s)time=(\d{1,6}):([0-5]\d):([0-5]\d(?:\.\d+)?)/g,
+        )) {
+          const time =
+            (Number(match[1]) * 3600 +
+              Number(match[2]) * 60 +
+              Number(match[3])) *
+            1000;
+          if (Number.isSafeInteger(Math.round(time)) && time > lastMediaMs) {
+            lastMediaMs = time;
+            lastOutput = Date.now();
+          }
+        }
+      }
       if (!request.streaming && stderr > 256 * 1024) stop();
     });
     child.stdin.on("error", stop);

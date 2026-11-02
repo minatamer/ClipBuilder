@@ -1,3 +1,7 @@
+import {
+  assertAcquisitionAudio,
+  matchesAcquisitionAudioClock,
+} from "./acquisition-audio.ts";
 import { z } from "zod";
 import { lstat, rename, rm } from "node:fs/promises";
 import {
@@ -14,6 +18,7 @@ import { OWNER_LIMITS } from "../../../packages/contracts/local/policy.ts";
 import { probeMedia, SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { runOwnedProcess } from "../src/media/process-runner.ts";
 import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/local/acquisition-profile.ts";
+import { OWNER_ACQUISITION_LIMITS } from "../../../packages/contracts/local/acquisition-profile.ts";
 import { matchesOfferedFrameRate } from "../../../packages/contracts/local/acquisition-profile.ts";
 import {
   ownerAcquisitionSectionSchema,
@@ -42,6 +47,37 @@ function admitAcquisitionDuration(
 // Only this owner-only remux boundary admits WebM components. Upload/public
 // inspection keeps its existing MP4 demuxer boundary. All inputs are fixed
 // workspace-owned files; there is no URL/path/codec/argument escape hatch.
+async function acquisitionProcess(
+  tools: OwnerNativeTools,
+  args: string[],
+  signal: AbortSignal,
+  output?: string,
+) {
+  try {
+    return await runOwnedProcess(
+      tools.ffmpeg,
+      args,
+      signal,
+      tools.capacity?.longSources
+        ? {
+            progress: {
+              idleMs: OWNER_ACQUISITION_LIMITS.preparationIdleMs,
+              ...(output ? { watchFiles: [output] } : {}),
+            },
+          }
+        : {},
+    );
+  } catch (error) {
+    const cause = error instanceof Error ? error.cause : undefined;
+    if (cause instanceof Error && cause.message === "native_progress_stalled")
+      throw Error("acquisition_stalled");
+    throw error;
+  }
+}
+const acquisitionProgressArgs = (tools: OwnerNativeTools) =>
+  tools.capacity?.longSources
+    ? ["-progress", "pipe:1", "-stats_period", "1", "-nostats"]
+    : [];
 const COMPONENT_INPUT_OPTIONS = [
   "-protocol_whitelist",
   "file,pipe",
@@ -55,6 +91,7 @@ const COMPONENT_INPUT_OPTIONS = [
 const streamSchema = z.object({
   codec_type: z.string(),
   codec_name: z.string(),
+  profile: z.string().optional(),
   width: z.number().int().positive().optional(),
   height: z.number().int().positive().optional(),
   avg_frame_rate: z.string().optional(),
@@ -138,6 +175,11 @@ async function componentProbe(
             path,
           ],
           signal,
+          {
+            timeoutMs: tools.capacity?.longSources
+              ? OWNER_ACQUISITION_LIMITS.metadataMs
+              : undefined,
+          },
         ),
       ),
     );
@@ -164,19 +206,6 @@ function assertVideo(
   )
     throw new Error("acquisition_selection_changed");
 }
-function assertAudio(
-  stream: z.infer<typeof streamSchema>,
-  selected: OwnerAcquisitionDescriptor,
-) {
-  if (
-    stream.codec_type !== "audio" ||
-    stream.codec_name !== selected.audioCodec ||
-    stream.channels !== selected.audioChannels ||
-    stream.sample_rate !== selected.audioSampleRate
-  )
-    throw new Error("acquisition_selection_changed");
-}
-
 /** Validate the complete selected source before it can enter persistent storage. */
 export async function inspectOwnerAcquisition(
   root: string,
@@ -199,21 +228,33 @@ async function inspectPrepared(
   originalStartMs?: number,
 ) {
   const source = await inspectOwnerSource(path, tools, signal);
-  const probe = await probeMedia(path, tools.ffprobe, signal);
+  const probe = await probeMedia(
+    path,
+    tools.ffprobe,
+    signal,
+    "video",
+    tools.capacity?.longSources
+      ? OWNER_ACQUISITION_LIMITS.metadataMs
+      : undefined,
+  );
   const video = probe.streams.find((stream) => stream.codec_type === "video");
   const audio = probe.streams.find((stream) => stream.codec_type === "audio");
   if (!video || !audio) throw new Error("acquisition_streams_invalid");
   // inspectOwnerSource has already checked rotation, color descriptors, codec
   // membership, stream count, dimensions, source clocks, byte cap and digest.
   assertVideo(video, selected);
-  assertAudio(audio, selected);
+  assertAcquisitionAudio(audio, selected);
   if (
     source.width !== selected.width ||
     source.height !== selected.height ||
     (!section && !matchesOfferedDuration(source.durationMs, selected)) ||
     !audio.duration ||
-    Math.abs(audio.duration * 1000 - source.durationMs) >
-      Math.max(100, frameTolerance(selected))
+    !matchesAcquisitionAudioClock(
+      audio.duration * 1000,
+      source.durationMs,
+      selected,
+      audio.sample_rate,
+    )
   )
     throw new Error("acquisition_selection_changed");
   let admitted = source;
@@ -239,13 +280,14 @@ async function inspectPrepared(
       },
     });
   }
-  await runOwnedProcess(
-    tools.ffmpeg,
+  await acquisitionProcess(
+    tools,
     [
       "-nostdin",
       "-v",
       "error",
       "-xerror",
+      ...acquisitionProgressArgs(tools),
       ...SOURCE_INPUT_OPTIONS,
       "-threads",
       "2",
@@ -324,7 +366,7 @@ export async function prepareOwnerAcquisition(
     if (!videoStream || !audioStream)
       throw new Error("acquisition_streams_invalid");
     assertVideo(videoStream, selected);
-    assertAudio(audioStream, selected);
+    assertAcquisitionAudio(audioStream, selected);
     const originalStartMs = section
       ? Math.round(
           (videoStream.start_time ?? NaN) * 1000 - (section.clockOffsetMs ?? 0),
@@ -340,10 +382,12 @@ export async function prepareOwnerAcquisition(
     if (
       (!section &&
         (!matchesOfferedDuration(videoProbe.format.duration * 1000, selected) ||
-          Math.abs(
-            audioProbe.format.duration * 1000 -
-              videoProbe.format.duration * 1000,
-          ) > Math.max(100, frameTolerance(selected)))) ||
+          !matchesAcquisitionAudioClock(
+            audioProbe.format.duration * 1000,
+            videoProbe.format.duration * 1000,
+            selected,
+            audioStream.sample_rate,
+          ))) ||
       (await boundedFile(video, tools)) +
         (combined ? 0 : await boundedFile(audio, tools)) >
         (tools.capacity?.sourceBytes ??
@@ -353,13 +397,14 @@ export async function prepareOwnerAcquisition(
     )
       throw new Error("acquisition_selection_changed");
     stage?.("merging");
-    await runOwnedProcess(
-      tools.ffmpeg,
+    await acquisitionProcess(
+      tools,
       [
         "-nostdin",
         "-v",
         "error",
         "-xerror",
+        ...acquisitionProgressArgs(tools),
         "-n",
         "-filter_threads",
         "2",
@@ -399,6 +444,7 @@ export async function prepareOwnerAcquisition(
         temporary,
       ],
       signal,
+      temporary,
     );
     stage?.("inspecting");
     const inspected = await inspectPrepared(

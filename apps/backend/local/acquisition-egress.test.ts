@@ -206,3 +206,52 @@ describe("acquisition egress policy", () => {
     expect(connect).toHaveBeenCalledTimes(1);
   });
 });
+
+it.each([32, null])(
+  "enforces the explicit wire budget %s without changing host/address isolation",
+  async (maximumBytes) => {
+    const peer = createServer((socket) => {
+      socket.on("error", () => {});
+      socket.on("data", () => socket.write(Buffer.alloc(128, 65)));
+    });
+    peer.listen(0, "127.0.0.1");
+    await once(peer, "listening");
+    const address = peer.address();
+    if (!address || typeof address === "string")
+      throw Error("test_unavailable");
+    const peers = new Set<Socket>();
+    peer.on("connection", (socket) => {
+      peers.add(socket);
+      socket.on("close", () => peers.delete(socket));
+    });
+    const controller = new AbortController();
+    const broker = await createAcquisitionEgress(
+      controller.signal,
+      {
+        resolve: async () => [{ address: "8.8.8.8", family: 4 }],
+        connect: () =>
+          createConnection({ host: "127.0.0.1", port: address.port }),
+      },
+      { maximumBytes },
+    );
+    try {
+      const client = await tunnel(broker.proxy, "www.youtube.com:443");
+      expect(await reply(client)).toContain("200 Connection Established");
+      const result = reply(client);
+      client.write("synthetic");
+      const bytes = await result;
+      if (maximumBytes === null) {
+        expect(bytes.length).toBe(128);
+        expect(() => broker.assertHealthy()).not.toThrow();
+      } else
+        expect(() => broker.assertHealthy()).toThrow(
+          "acquisition_egress_unavailable",
+        );
+    } finally {
+      controller.abort();
+      await broker.close();
+      for (const peer of peers) peer.destroy();
+      await new Promise<void>((done) => peer.close(() => done()));
+    }
+  },
+);

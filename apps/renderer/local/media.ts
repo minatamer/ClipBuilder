@@ -1,3 +1,4 @@
+import { OWNER_ACQUISITION_LIMITS } from "../../../packages/contracts/local/acquisition-profile.ts";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { createReadStream } from "node:fs";
@@ -180,7 +181,13 @@ export async function inspectOwnerMedia(
     ownerSourceForCapacity(capacity).parse(retained.value.metadata);
     return structuredClone(retained.value);
   }
-  const probe = await probeMedia(file, tools.ffprobe, signal);
+  const probe = await probeMedia(
+    file,
+    tools.ffprobe,
+    signal,
+    "video",
+    capacity.longSources ? OWNER_ACQUISITION_LIMITS.metadataMs : undefined,
+  );
   const video = probe.streams.find((s) => s.codec_type === "video");
   const audio = probe.streams.find((s) => s.codec_type === "audio");
   if (
@@ -228,6 +235,11 @@ export async function inspectOwnerMedia(
             file,
           ],
           signal,
+          {
+            timeoutMs: capacity.longSources
+              ? OWNER_ACQUISITION_LIMITS.metadataMs
+              : undefined,
+          },
         ),
       ),
     );
@@ -268,7 +280,12 @@ export async function inspectOwnerMedia(
       file,
     ],
     signal,
-    { maxStdout: 16 * 1024 ** 2 },
+    {
+      maxStdout: 16 * 1024 ** 2,
+      timeoutMs: capacity.longSources
+        ? OWNER_ACQUISITION_LIMITS.metadataMs
+        : undefined,
+    },
   );
   let videoEnd = videoStart;
   for (const row of packets.trim().split(/\r?\n/)) {
@@ -286,8 +303,22 @@ export async function inspectOwnerMedia(
     videoEnd = Math.max(videoEnd, pts! + duration);
   }
   const hash = createHash("sha256");
-  for await (const bytes of createReadStream(file, { signal }))
-    hash.update(bytes);
+  const input = createReadStream(file, { signal });
+  let lastRead = Date.now();
+  const readIdle = capacity.longSources
+    ? setInterval(() => {
+        if (Date.now() - lastRead > OWNER_ACQUISITION_LIMITS.preparationIdleMs)
+          input.destroy(Error("acquisition_stalled"));
+      }, 1000)
+    : undefined;
+  try {
+    for await (const bytes of input) {
+      hash.update(bytes);
+      lastRead = Date.now();
+    }
+  } finally {
+    if (readIdle) clearInterval(readIdle);
+  }
   const metadata = ownerSourceForCapacity(capacity).parse({
     fingerprint: hash.digest("hex"),
     bytes: info.size,

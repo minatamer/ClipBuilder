@@ -64,7 +64,7 @@ type SessionRun = (
     maxBytes?: number;
     section?: OwnerAcquisitionSection;
   },
-  line: (value: string) => void,
+  line: (value: string) => number | void,
 ) => Promise<void>;
 
 const quote = (value: string) => {
@@ -304,16 +304,23 @@ export function createYtDlpAcquisitionPort(
     const abort = () => controller.abort();
     signal.addEventListener("abort", abort, { once: true });
     if (signal.aborted) abort();
-    const timer = setTimeout(
-      abort,
-      directory
-        ? OWNER_ACQUISITION_LIMITS.transferMs
-        : OWNER_ACQUISITION_LIMITS.metadataMs,
-    );
+    const timer =
+      directory && config.capacity?.longSources
+        ? undefined
+        : setTimeout(
+            abort,
+            directory
+              ? OWNER_ACQUISITION_LIMITS.transferMs
+              : OWNER_ACQUISITION_LIMITS.metadataMs,
+          );
     let broker: Awaited<ReturnType<typeof createAcquisitionEgress>> | undefined;
     try {
       controller.signal.throwIfAborted();
-      broker = await ports.egress(controller.signal);
+      broker = await ports.egress(
+        controller.signal,
+        undefined,
+        config.capacity?.longSources ? { maximumBytes: null } : undefined,
+      );
       controller.signal.throwIfAborted();
       const proxy = broker.proxy;
       const env = {
@@ -376,6 +383,10 @@ export function createYtDlpAcquisitionPort(
         proxy,
         controller.signal,
       );
+    } catch (error) {
+      if (controller.signal.aborted && !signal.aborted)
+        throw Error("acquisition_timed_out");
+      throw error;
     } finally {
       clearTimeout(timer);
       signal.removeEventListener("abort", abort);
@@ -464,6 +475,7 @@ export function createYtDlpAcquisitionPort(
                 )
                   throw new Error("acquisition_bytes_invalid");
                 last = progress.downloaded_bytes;
+                return last;
               },
             );
             const info = await lstat(output);
@@ -635,6 +647,7 @@ export function createYtDlpAcquisitionPort(
                   downloadedBytes: completed + last,
                   totalBytes: total,
                 });
+                return completed + last;
               },
             );
             if (!done) throw new Error("acquisition_transfer_incomplete");

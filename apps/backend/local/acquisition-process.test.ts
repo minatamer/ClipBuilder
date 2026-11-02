@@ -1,11 +1,12 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { runAcquisitionProcess } from "./acquisition-process.ts";
 
 const roots: string[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
   for (const root of roots.splice(0))
     await rm(root, { recursive: true, force: true });
 });
@@ -105,5 +106,43 @@ it("enforces the operation deadline even when the child never emits progress", a
       () => undefined,
       new AbortController().signal,
     ),
-  ).rejects.toThrow(/^acquisition_process_failed$/);
+  ).rejects.toThrow(/^acquisition_timed_out$/);
+});
+
+it("does not treat repeated validated byte counters or arbitrary stderr as download progress", async () => {
+  const execution = await request(
+    "process.stdout.write('5\\n');setInterval(()=>{process.stdout.write('5\\n');process.stderr.write('still alive');},50);",
+  );
+  const start = Date.now(),
+    clock = vi.spyOn(Date, "now").mockReturnValue(start);
+  let shifted = false;
+  await expect(
+    runAcquisitionProcess(
+      { ...execution, timeoutMs: null, streaming: true },
+      (line) => {
+        if (!shifted) {
+          shifted = true;
+          setTimeout(() => clock.mockReturnValue(start + 31_000), 20);
+        }
+        return Number(line);
+      },
+      new AbortController().signal,
+    ),
+  ).rejects.toThrow(/^acquisition_stalled$/);
+});
+it("counts advancing external-FFmpeg media time as section progress without retaining stderr", async () => {
+  const execution = await request(
+    "let n=0;const t=setInterval(()=>{process.stderr.write('time=00:00:'+String(++n).padStart(2,'0')+'.00\\r');if(n===20)clearInterval(t);},100);",
+  );
+  const start = Date.now(),
+    monotonicStart = performance.now();
+  // Simulate more than a minute of active work without clock-step races.
+  vi.spyOn(Date, "now").mockImplementation(
+    () => start + (performance.now() - monotonicStart) * 40,
+  );
+  await runAcquisitionProcess(
+    { ...execution, timeoutMs: null, streaming: true },
+    () => {},
+    new AbortController().signal,
+  );
 });

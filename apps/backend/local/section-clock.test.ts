@@ -12,7 +12,7 @@ const request = {
   systemRoot: tmpdir(),
 };
 it("measures the muxed video-origin delta without provider work and keeps TLS and broker confinement", async () => {
-  const run = vi.fn<AcquisitionProcess>(async (_request, line) =>
+  const run = vi.fn<AcquisitionProcess>(async (_request, line) => {
     line(
       JSON.stringify({
         streams: [
@@ -21,8 +21,8 @@ it("measures the muxed video-origin delta without provider work and keeps TLS an
         ],
         format: { start_time: "4.978666" },
       }),
-    ),
-  );
+    );
+  });
   expect(
     await probeOwnerSectionClock(
       { ...request, run },

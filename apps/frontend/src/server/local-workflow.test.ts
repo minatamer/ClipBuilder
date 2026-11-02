@@ -8,12 +8,12 @@ vi.mock("../../../../scripts/local-discovery.mjs", () => ({
 }));
 vi.mock("./local-ai-request", async (original) => ({
   ...(await original<typeof import("./local-ai-request")>()),
-  fetchLocalAi: vi.fn(),
+  fetchLocalWork: vi.fn(),
 }));
 import { discoverOwnerHost } from "../../../../scripts/local-discovery.mjs";
 import { proxyLocalWorkflow } from "./local-workflow";
 import { fetchControlApi } from "./control-api";
-import { fetchLocalAi } from "./local-ai-request";
+import { fetchLocalWork } from "./local-ai-request";
 import { resolveOwnerCapacity } from "../../../../packages/contracts/local/capacity.ts";
 const fetcher = vi.fn<typeof fetch>();
 beforeEach(() => {
@@ -31,7 +31,7 @@ afterEach(() => {
   fetcher.mockReset();
   vi.mocked(discoverOwnerHost).mockReset();
   vi.mocked(fetchControlApi).mockReset();
-  vi.mocked(fetchLocalAi).mockReset();
+  vi.mocked(fetchLocalWork).mockReset();
 });
 const input = (method = "GET", headers: Record<string, string> = {}) =>
   new Request("http://localhost:3000/api/local/capabilities", {
@@ -197,7 +197,9 @@ it("propagates browser cancellation into the upstream stream", async () => {
 it("uses the bounded long-running transport only for authenticated local AI writes", async () => {
   const id = "00000000-0000-4000-8000-000000000001";
   fetcher.mockResolvedValue(Response.json(null));
-  vi.mocked(fetchLocalAi).mockResolvedValue(Response.json({ synthetic: true }));
+  vi.mocked(fetchLocalWork).mockResolvedValue(
+    Response.json({ synthetic: true }),
+  );
   const result = await proxyLocalWorkflow(
     input("POST", { Origin: "http://localhost:3000" }),
     ["workspace", id, "analysis"],
@@ -207,8 +209,8 @@ it("uses the bounded long-running transport only for authenticated local AI writ
   expect(fetcher.mock.calls[0]![0]).toBe(
     "http://127.0.0.1:4000/v1/local/capabilities",
   );
-  expect(fetchLocalAi).toHaveBeenCalledTimes(1);
-  const [segments, options] = vi.mocked(fetchLocalAi).mock.calls[0]!;
+  expect(fetchLocalWork).toHaveBeenCalledTimes(1);
+  const [segments, options] = vi.mocked(fetchLocalWork).mock.calls[0]!;
   expect(segments).toEqual(["workspace", id, "analysis"]);
   expect(new Headers(options.headers).get("authorization")).toBe(
     "Bearer synthetic-private-token",
@@ -237,13 +239,15 @@ it.each(["codex", "gemini"] as const)(
         ready = done;
       });
       let finish!: (value: Response) => void;
-      vi.mocked(fetchLocalAi).mockImplementation(async (_segments, options) => {
-        upstream = options;
-        ready();
-        return new Promise((done) => {
-          finish = done;
-        });
-      });
+      vi.mocked(fetchLocalWork).mockImplementation(
+        async (_segments, options) => {
+          upstream = options;
+          ready();
+          return new Promise((done) => {
+            finish = done;
+          });
+        },
+      );
       const pending = proxyLocalWorkflow(
         input("POST", { Origin: "http://localhost:3000" }),
         ["workspace", "00000000-0000-4000-8000-000000000001", "analysis"],
@@ -254,6 +258,61 @@ it.each(["codex", "gemini"] as const)(
       finish(Response.json(null));
       const response = await pending;
       await response.body?.cancel();
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+
+it.each(["codex", "gemini"] as const)(
+  "preserves %s saved-source opening limits using trusted capabilities",
+  async (aiProvider) => {
+    vi.useFakeTimers();
+    let release!: (value: Response) => void;
+    let observed!: () => void;
+    let upstream: RequestInit | undefined;
+    const started = new Promise<void>((done) => {
+      observed = done;
+    });
+    const work = (_segments: readonly string[], options: RequestInit) => {
+      upstream = options;
+      observed();
+      return new Promise<Response>((done) => {
+        release = done;
+      });
+    };
+    try {
+      fetcher.mockImplementation(async (url, options) => {
+        if (String(url).endsWith("/capabilities"))
+          return Response.json({
+            aiMode: "provider-ai",
+            sourceMode: "provider-source",
+            planningAvailable: true,
+            localMedia: true,
+            cloud: false,
+            aiProvider,
+            capacity: resolveOwnerCapacity({ aiProvider }),
+          });
+        return work(["sources", "open"], options ?? {});
+      });
+      vi.mocked(fetchLocalWork).mockImplementation(work);
+      const pending = proxyLocalWorkflow(
+        input("POST", { Origin: "http://localhost:3000" }),
+        ["sources", "open"],
+      );
+      await started;
+      expect(fetchLocalWork).toHaveBeenCalledTimes(
+        aiProvider === "codex" ? 1 : 0,
+      );
+      expect(new Headers(upstream?.headers).get("authorization")).toBe(
+        "Bearer synthetic-private-token",
+      );
+      await vi.advanceTimersByTimeAsync(3 * 60 * 60_000);
+      expect(upstream?.signal?.aborted).toBe(aiProvider === "gemini");
+      release(Response.json({ synthetic: true }));
+      const response = await pending;
+      expect(await response.json()).toEqual({ synthetic: true });
+      expect(upstream?.signal?.aborted).toBe(true);
     } finally {
       vi.useRealTimers();
     }

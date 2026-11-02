@@ -294,6 +294,10 @@ async function composeLocalWorkflow(
       state.workerToken,
       undefined,
       diagnostics,
+      resolveOwnerCapacity({
+        aiProvider:
+          config.providerMode === "live" ? config.aiProvider : undefined,
+      }),
     );
     host = createOwnerHost({
       root,

@@ -19,17 +19,33 @@ export function localAiRequestPath(
     )
   );
 }
+/** Saved-master validation is a fixed local JSON operation, never a media stream. */
+export function localSourceOpenPath(
+  method: string,
+  segments: readonly string[],
+) {
+  return (
+    method === "POST" &&
+    segments.length === 2 &&
+    segments[0] === "sources" &&
+    segments[1] === "open"
+  );
+}
+
 type Transport = (
   options: RequestOptions,
   callback: (response: IncomingMessage) => void,
 ) => ClientRequest;
 /** Fixed private JSON requests can wait for bounded CPU work before headers. */
-export async function fetchLocalAi(
+export async function fetchLocalWork(
   segments: readonly string[],
   options: RequestInit,
   transport: Transport = request,
 ) {
-  if (!localAiRequestPath(options.method ?? "GET", segments))
+  if (
+    !localAiRequestPath(options.method ?? "GET", segments) &&
+    !localSourceOpenPath(options.method ?? "GET", segments)
+  )
     throw new Error("local_ai_request_invalid");
   const signal =
     options.signal ??

@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { resolveOwnerCapacity } from "../packages/contracts/local/capacity.ts";
 import { randomUUID } from "node:crypto";
 import {
   mkdir,
@@ -85,8 +86,11 @@ const profile = (
   audioSampleRate: 48000,
 });
 
-it("preserves NTSC packets while validating rounded offered timing and rejects real clock changes", async () => {
-  const tools = await ownerNativeTools(resolve("."));
+it("uses Codex progress supervision while preserving NTSC packets and rejecting real clock changes", async () => {
+  const tools = {
+    ...(await ownerNativeTools(resolve("."))),
+    capacity: resolveOwnerCapacity({ aiProvider: "codex" }),
+  };
   const root = await mkdtemp(
     join(tmpdir(), "clipbuilder-rounded-acquisition-"),
   );

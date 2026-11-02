@@ -77,3 +77,17 @@ fake/no-key/paid-off/no-env-file/network-blocked composition. Real local Codex
 requires prepared speech tools/models, saved ChatGPT sign-in and allowance; it
 is API-key-free for that path, not AI-free or wholly offline. Gemini needs its
 key/live approvals and is excluded from the current owner's test run.
+
+## Acquisition liveness follow-up — CL-194
+
+Trusted local Codex transfer removes the residual two-hour outer deadline and
+aggregate ten-GiB broker budget. Native acquisition removes the ten-minute worker
+and eleven-minute RPC deadlines; the production FFmpeg path still stream-copies
+and fully decodes the selected source. Active progress instead governs liveness:
+30 seconds without advancing validated bytes/external media time during transfer,
+120 seconds without native frame/media/byte counters or output writes, and
+120 seconds without hash reads. Faststart output rewrites count as disk work.
+Metadata/probes remain bounded at 90 seconds. Record/output memory, actual disk
+reserve, arithmetic, DNS/host/auth/TLS/rate/socket/concurrency guards and explicit
+cancel/reaping are retained. Gemini/hosted policy is unchanged. Stall/timeout
+failures use fixed actionable messages; no automatic retry or fallback.

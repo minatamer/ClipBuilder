@@ -28,6 +28,7 @@ export const OWNER_ACQUISITION_LIMITS = {
   metadataMs: 90_000,
   transferMs: 2 * 60 * 60 * 1000,
   idleMs: 30_000,
+  preparationIdleMs: 120_000,
   lineBytes: 1024 ** 2,
   metadataBytes: 4 * 1024 ** 2,
   maxFormats: 1000,
@@ -48,9 +49,16 @@ export const ownerAcquisitionDescriptorSchema = z
     audioCodec: z.enum(["aac", "opus"]),
     audioChannels: z.union([z.literal(1), z.literal(2)]),
     audioSampleRate: z.number().int().min(8000).max(48_000),
+    // HE-AAC may advertise the core rate while the decoder reports SBR output.
+    audioSbr: z.literal(true).optional(),
   })
   .strict()
-  .refine((value) => value.width * value.height <= 3840 * 2160);
+  .refine((value) => value.width * value.height <= 3840 * 2160)
+  .refine((value) => !value.audioSbr || value.audioCodec === "aac");
 export type OwnerAcquisitionDescriptor = z.infer<
   typeof ownerAcquisitionDescriptorSchema
 >;
+
+/** Only these source operations have media-progress liveness instead of a Codex total deadline. */
+export const ownerProgressAcquisition = (operation: string) =>
+  operation === "prepare-acquisition" || operation === "inspect-acquisition";

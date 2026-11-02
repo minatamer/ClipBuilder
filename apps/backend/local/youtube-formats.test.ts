@@ -700,3 +700,20 @@ describe("owner exact YouTube quality policy", () => {
     ).toBe(false);
   });
 });
+
+it("marks HE-AAC SBR explicitly without changing the offered rate or audio identity", () => {
+  const offer = buildOwnerYoutubeOffer(
+    metadata({
+      audios: [
+        audio("synthetic-he-aac", { codec: "mp4a.40.5", sampleRate: 22050 }),
+      ],
+    }),
+  );
+  const result = selectOwnerYoutubeFormat(offer, request(offer));
+  expect(result.expected).toMatchObject({
+    audioCodec: "aac",
+    audioSampleRate: 22050,
+    audioSbr: true,
+  });
+  expect(result.choice.audio?.codec).toBe("mp4a.40.5");
+});

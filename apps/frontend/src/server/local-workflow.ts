@@ -2,7 +2,11 @@ import { hostedEditingPath as admittedHostedPath } from "../../../../packages/co
 import { env } from "node:process";
 import { hostedDemoClientIp } from "./demo-client-ip";
 import { discoverOwnerHost } from "../../../../scripts/local-discovery.mjs";
-import { fetchLocalAi, localAiRequestPath } from "./local-ai-request";
+import {
+  fetchLocalWork,
+  localAiRequestPath,
+  localSourceOpenPath,
+} from "./local-ai-request";
 import { LOCAL_CODEX_POLICY } from "../../../../packages/contracts/local/codex.ts";
 import { ownerRuntimeCapabilitiesSchema } from "../../../../packages/contracts/local/runtime.ts";
 import {
@@ -37,6 +41,7 @@ export async function proxyLocalWorkflow(request: Request, segments: string[]) {
   const abort = () => controller.abort();
   request.signal.addEventListener("abort", abort, { once: true });
   const localAi = local && localAiRequestPath(request.method, segments);
+  const sourceOpen = local && localSourceOpenPath(request.method, segments);
   const timer = setTimeout(
     abort,
     localAi
@@ -110,7 +115,8 @@ export async function proxyLocalWorkflow(request: Request, segments: string[]) {
     if (local) {
       const host = await discoverOwnerHost();
       headers.set("Authorization", `Bearer ${host.token}`);
-      if (localAi && segments[2] === "analysis") {
+      let progressAwareOpen = false;
+      if ((localAi && segments[2] === "analysis") || sourceOpen) {
         // Trust the local server's composition, never browser/request flags.
         const capabilityResponse = await fetch(
           "http://127.0.0.1:4000/v1/local/capabilities",
@@ -132,15 +138,18 @@ export async function proxyLocalWorkflow(request: Request, segments: string[]) {
           "aiProvider" in parsed.data &&
           parsed.data.aiProvider === "codex" &&
           parsed.data.capacity?.longSources
-        )
+        ) {
           clearTimeout(timer);
+          progressAwareOpen = sourceOpen;
+        }
       }
-      response = localAi
-        ? await fetchLocalAi(segments, options)
-        : await fetch(
-            `http://127.0.0.1:4000/v1/local/${segments.join("/")}`,
-            options,
-          );
+      response =
+        localAi || progressAwareOpen
+          ? await fetchLocalWork(segments, options)
+          : await fetch(
+              `http://127.0.0.1:4000/v1/local/${segments.join("/")}`,
+              options,
+            );
     } else
       response = await fetchControlApi(
         `/v1/editing/${segments.join("/")}`,

@@ -1,3 +1,4 @@
+import { ownerProgressAcquisition } from "../../../packages/contracts/local/acquisition-profile.ts";
 import {
   ownerDiagnosticRecordSchema,
   describeOwnerDiagnosticError,
@@ -192,16 +193,20 @@ export function createOwnerWorker(options: {
         job.workspaceId,
         "source.mp4",
       );
-      const signal = AbortSignal.any([
-        controller.signal,
-        AbortSignal.timeout(
-          job.operation === "codex-input"
-            ? job.kind !== "frames"
-              ? LOCAL_CODEX_POLICY.speechTimeoutMs
-              : LOCAL_CODEX_POLICY.frameTimeoutMs
-            : 10 * 60_000,
-        ),
-      ]);
+      const signal =
+        options.tools.capacity?.longSources &&
+        ownerProgressAcquisition(job.operation)
+          ? controller.signal
+          : AbortSignal.any([
+              controller.signal,
+              AbortSignal.timeout(
+                job.operation === "codex-input"
+                  ? job.kind !== "frames"
+                    ? LOCAL_CODEX_POLICY.speechTimeoutMs
+                    : LOCAL_CODEX_POLICY.frameTimeoutMs
+                  : 10 * 60_000,
+              ),
+            ]);
       signal.throwIfAborted();
       const result = options.execute
         ? await options.execute(job, signal)
@@ -309,9 +314,27 @@ export function createOwnerWorker(options: {
         })
         .end(JSON.stringify(result));
     } catch (error) {
-      report("failed", error);
+      let failure: unknown = error;
+      if (ownerProgressAcquisition(operation)) {
+        let cause: unknown = error;
+        for (
+          let depth = 0;
+          depth < 5 && cause instanceof Error;
+          depth++, cause = cause.cause
+        ) {
+          if (cause.message === "native_progress_stalled") {
+            failure = Error("acquisition_stalled");
+            break;
+          }
+          if (cause.message === "native_timeout") {
+            failure = Error("acquisition_timed_out");
+            break;
+          }
+        }
+      }
+      report("failed", failure);
       const code = ownerAcquisitionFailureCodeSchema.safeParse(
-        error instanceof Error ? error.message : null,
+        failure instanceof Error ? failure.message : null,
       );
       if (!res.destroyed)
         res.writeHead(400).end(

@@ -515,5 +515,6 @@ export function ownerYoutubeChoiceDescriptor(
     audioCodec: choice.audio ? audioCodec(choice.audio.codec) : null,
     audioChannels: choice.audio?.channels,
     audioSampleRate: choice.audio?.sampleRate,
+    ...(choice.audio?.codec === "mp4a.40.5" ? { audioSbr: true } : {}),
   });
 }

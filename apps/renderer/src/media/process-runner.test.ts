@@ -48,3 +48,39 @@ describe("owned native process", () => {
     });
   });
 });
+
+it("discards noisy stdout only for explicit file-backed jobs and still reports native failures", async () => {
+  const result = await runOwnedProcess(
+    process.execPath,
+    ["-e", "process.stdout.write('synthetic word '.repeat(200000));"],
+    new AbortController().signal,
+    { env: {}, stdout: "ignore" },
+  );
+  expect(result).toBe("");
+  await expect(
+    runOwnedProcess(
+      process.execPath,
+      [
+        "-e",
+        "process.stdout.write('synthetic word '.repeat(200000));process.exitCode=7;",
+      ],
+      new AbortController().signal,
+      { env: {}, stdout: "ignore" },
+    ),
+  ).rejects.toMatchObject({ code: "media_failed", cause: { code: 7 } });
+});
+it("retains cancellation/reaping when stdout is ignored", async () => {
+  const controller = new AbortController();
+  const job = runOwnedProcess(
+    process.execPath,
+    ["-e", "setInterval(()=>process.stdout.write('synthetic'),20)"],
+    controller.signal,
+    { env: {}, stdout: "ignore" },
+  );
+  const result = expect(job).rejects.toMatchObject({
+    code: "canceled",
+    cause: { message: "canceled" },
+  });
+  controller.abort();
+  await result;
+});

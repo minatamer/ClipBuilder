@@ -1,3 +1,4 @@
+import { resolveOwnerCapacity } from "../packages/contracts/local/capacity.ts";
 import { describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -390,3 +391,71 @@ describe("owner worker progress polling with an injected transport", () => {
     },
   );
 });
+
+it.each(["gemini", "codex"] as const)(
+  "keeps source RPC deadlines isolated to trusted %s capacity",
+  async (aiProvider) => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const transport = vi.fn<typeof fetch>(async () =>
+      response({ operation: "prepare-acquisition", source, descriptor }),
+    );
+    try {
+      await localWorkerPort(
+        4200,
+        "synthetic-token",
+        transport,
+        undefined,
+        resolveOwnerCapacity({ aiProvider }),
+      )(job("prepare-acquisition"), new AbortController().signal);
+      expect(timeout.mock.calls.some(([ms]) => ms === 11 * 60_000)).toBe(
+        aiProvider !== "codex",
+      );
+      expect(transport).toHaveBeenCalledTimes(1);
+    } finally {
+      timeout.mockRestore();
+    }
+  },
+);
+
+it.each(["gemini", "codex"] as const)(
+  "uses progress supervision instead of a native total deadline only for %s acquisition",
+  async (aiProvider) => {
+    const root = await mkdtemp(join(tmpdir(), "clipbuilder-native-deadline-"));
+    const request = job("prepare-acquisition");
+    await mkdir(join(root, request.workspaceId));
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const worker = createOwnerWorker({
+      root,
+      token: "synthetic-deadline",
+      tools: {
+        ffmpeg: "unused",
+        ffprobe: "unused",
+        capacity: resolveOwnerCapacity({ aiProvider }),
+      },
+      execute: async () => ({
+        operation: "prepare-acquisition",
+        source,
+        descriptor,
+      }),
+    });
+    try {
+      const port = await listenOwner(worker.server);
+      const result = await ownerRequest(port, "/media", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer synthetic-deadline",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+      });
+      expect(result.status).toBe(200);
+      expect(timeout.mock.calls.some(([ms]) => ms === 10 * 60_000)).toBe(
+        aiProvider !== "codex",
+      );
+    } finally {
+      timeout.mockRestore();
+      await worker.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);

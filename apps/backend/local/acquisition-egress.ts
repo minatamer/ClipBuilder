@@ -75,8 +75,18 @@ const nativePorts: AcquisitionEgressPorts = {
 export async function createAcquisitionEgress(
   signal: AbortSignal,
   ports: AcquisitionEgressPorts = nativePorts,
+  limits?: { maximumBytes: number | null },
 ) {
   signal.throwIfAborted();
+  const maximumBytes =
+    limits?.maximumBytes === null
+      ? null
+      : (limits?.maximumBytes ?? OWNER_LIMITS.sourceBytes + 64 * 1024 ** 2);
+  if (
+    maximumBytes !== null &&
+    (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1)
+  )
+    throw Error("acquisition_egress_unavailable");
   const token = randomBytes(32).toString("hex");
   const authorization = Buffer.from(
     `Basic ${Buffer.from(`owner:${token}`).toString("base64")}`,
@@ -188,7 +198,8 @@ export async function createAcquisitionEgress(
         intervalBytes += chunk.length;
         // Includes TLS overhead. Conservative failure never selects lower quality.
         if (
-          transferred > OWNER_LIMITS.sourceBytes + 64 * 1024 ** 2 ||
+          !Number.isSafeInteger(transferred) ||
+          (maximumBytes !== null && transferred > maximumBytes) ||
           intervalBytes > OWNER_ACQUISITION_LIMITS.rateBytes
         ) {
           failure = true;

@@ -181,6 +181,8 @@ export const ownerAcquisitionFailureCodeSchema = z.enum([
   "acquisition_stale_format",
   "acquisition_metadata_invalid",
   "acquisition_process_failed",
+  "acquisition_stalled",
+  "acquisition_timed_out",
   "acquisition_section_unsupported",
   "media_unavailable",
   "unknown",
