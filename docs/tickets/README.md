@@ -1,5 +1,17 @@
 # ClipBuilder canonical ticket index
 
+## Genre prompt research — 2026-11-02
+
+[CL-193](CL-193-genre-moment-prompt-research.md) is complete as research only.
+The [cited report](../research/GENRE_MOMENT_PROMPTS_2026-11-02.md) recommends
+keeping General, records small optional podcast/comedy hypotheses and explains
+why transcript-only gaming discovery cannot copy visual/event-based tools.
+Public campaigns support all three sample categories; no global top-three rank
+or measured prompt gain is claimed. No prompt, UI, model or inference changed.
+Final validate: no actionable findings. CL-184–190/192 implementation and CL-193
+research are complete; CL-191 cleanup was completed separately. Owner/live/
+Linux/hosted release acceptance stays open, as recorded per packet.
+
 ## Manual camera zoom — 2026-11-02
 
 [CL-192](CL-192-manual-camera-punch-in.md) adds manual target/duration zooms

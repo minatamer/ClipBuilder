@@ -149,3 +149,19 @@ five-cadence native proof and one desktop/phone gesture/reopen proof passed.
 Scoped static checks and current worker build pass. Validation resolved the
 Hook no-op, legacy reset, fallback clock and FFmpeg option issues; final review
 reports no actionable findings. No owner/live/provider tests were performed.
+
+CL-192 committed `ddc644b`.
+
+## CL-193 research complete
+
+Cited primary-source report recommends preserving General and testing only
+small optional cues in a separately authorized comparison. Categories are an
+evidence-backed sample, not a global ranking. Current prompts/UI/models and
+provider paths are unchanged. Public references/date/claim/baseline checks and
+read-only validate report no actionable findings. No inference was run.
+
+All authorized packet work is complete. Real two-hour/AI/face quality, personal
+acceptance and Linux/hosted release checks are explicitly unverified. No real
+provider or YouTube call, environment change, normal app launch, push or cloud/
+deployment occurred. Current worker builds and per-ticket fake/native/browser
+mechanics are recorded above. Existing owner media/configuration were preserved.
