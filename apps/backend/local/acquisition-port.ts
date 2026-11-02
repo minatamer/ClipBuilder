@@ -4,6 +4,7 @@ import type {
   OwnerYoutubeOffer,
   OwnerYoutubeSelection,
 } from "../../../packages/contracts/local/acquisition.ts";
+import type { OwnerAcquisitionSection } from "../../../packages/contracts/local/acquisition-section.ts";
 
 export type OwnerLinkedIdentity = {
   videoId: string;
@@ -37,8 +38,9 @@ export type OwnerAcquisitionPort = {
       choice: OwnerYoutubeChoice;
       selection: OwnerYoutubeSelection;
       directory: string;
+      section?: OwnerAcquisitionSection;
     },
     progress: (value: AcquisitionTransferProgress) => void,
     signal: AbortSignal,
-  ): Promise<void>;
+  ): Promise<void | { clockOffsetMs: number }>;
 };

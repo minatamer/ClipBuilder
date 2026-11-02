@@ -45,6 +45,15 @@ export function ownerWindowFrames(window: OwnerSourceWindow) {
     endFrame: Math.floor((window.endMs * OWNER_FPS) / 1000),
   };
 }
+export function ownerCutInsideAvailableSource(
+  source: SourceClock,
+  cut: { startFrame: number; endFrame: number },
+) {
+  const available = ownerWindowFrames(ownerAvailableSourceWindow(source));
+  return (
+    cut.startFrame >= available.startFrame && cut.endFrame <= available.endFrame
+  );
+}
 export function ownerOriginalSourceTime(source: SourceClock, localMs: number) {
   return localMs + (source.origin?.startMs ?? 0);
 }

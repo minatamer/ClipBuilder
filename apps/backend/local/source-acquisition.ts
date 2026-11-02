@@ -39,6 +39,12 @@ import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/lo
 
 import { LocalDiagnostics } from "./diagnostics.ts";
 import type { OwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
+import {
+  ownerScopeImportedSource,
+  ownerSourceCoversOriginalWindow,
+  ownerPaddedAcquisitionWindow,
+} from "../../../packages/contracts/local/acquisition-section.ts";
+import type { OwnerSourceWindow } from "../../../packages/contracts/local/source-window.ts";
 
 type SourceAcquisitionOptions = {
   diagnostics?: LocalDiagnostics;
@@ -275,6 +281,9 @@ export class OwnerSourceAcquisition {
       prepared.offer,
       input.request,
     );
+    const section = input.request.window
+      ? { window: input.request.window, durationMs: prepared.offer.durationMs }
+      : undefined;
     const library = this.library(input.destination);
     const controller = new AbortController();
     this.controller = controller;
@@ -311,7 +320,11 @@ export class OwnerSourceAcquisition {
             (variant) =>
               variant.mode === port.mode &&
               variant.state === "ready" &&
-              stableFormat(variant) === stableFormat(choice),
+              stableFormat(variant) === stableFormat(choice) &&
+              ownerSourceCoversOriginalWindow(
+                variant.actual,
+                input.request.window,
+              ),
           );
           if (!saved) continue;
           update({ stage: "inspecting" });
@@ -319,6 +332,7 @@ export class OwnerSourceAcquisition {
             candidate,
             saved,
             controller.signal,
+            input.request.window,
           );
           try {
             controller.signal.throwIfAborted();
@@ -331,7 +345,9 @@ export class OwnerSourceAcquisition {
           return;
         }
         const known =
-          choice.bytes !== null && !choice.bytesEstimated ? choice.bytes : null;
+          !section && choice.bytes !== null && !choice.bytesEstimated
+            ? choice.bytes
+            : null;
         const reservation =
           known === null
             ? OWNER_LIMITS.scratchBytes
@@ -345,12 +361,13 @@ export class OwnerSourceAcquisition {
         const directory = dirname(
           await this.options.files.file(workspaceId, "source.mp4"),
         );
-        await port.download(
+        const downloadReceipt = await port.download(
           {
             ...prepared,
             choice,
             selection: input.request.selection,
             directory,
+            ...(section ? { section } : {}),
           },
           (progress) => {
             if (progress.downloadedBytes > this.maximumComponents) {
@@ -367,7 +384,8 @@ export class OwnerSourceAcquisition {
         );
         if (port.mode === "provider-source") {
           let components = 0;
-          for (const part of choice.video.formatId === choice.audio?.formatId
+          for (const part of section ||
+          choice.video.formatId === choice.audio?.formatId
             ? ["video"]
             : ["video", "audio"]) {
             const info = await lstat(join(directory, `acquisition.${part}`));
@@ -392,7 +410,21 @@ export class OwnerSourceAcquisition {
             workspaceId,
             expected,
             ...(port.mode === "provider-source"
-              ? { combined: choice.video.formatId === choice.audio?.formatId }
+              ? {
+                  combined:
+                    !!section ||
+                    choice.video.formatId === choice.audio?.formatId,
+                  ...(section
+                    ? {
+                        section: {
+                          ...section,
+                          ...(downloadReceipt
+                            ? { clockOffsetMs: downloadReceipt.clockOffsetMs }
+                            : {}),
+                        },
+                      }
+                    : {}),
+                }
               : {}),
           },
           controller.signal,
@@ -407,6 +439,17 @@ export class OwnerSourceAcquisition {
           result.source.bytes > this.maximumMaster
         )
           throw new Error("source_capacity");
+        if (section && port.mode === "synthetic-source") {
+          const padded = ownerPaddedAcquisitionWindow(section);
+          result.source = {
+            ...result.source,
+            origin: { startMs: padded.startMs, durationMs: section.durationMs },
+            availableWindow: {
+              startMs: section.window.startMs - padded.startMs,
+              endMs: section.window.endMs - padded.startMs,
+            },
+          };
+        }
         update({ stage: "inspecting" });
         update({ stage: "publishing" });
         const variant = await library.publish(
@@ -448,9 +491,11 @@ export class OwnerSourceAcquisition {
             ? "capacity"
             : controller.signal.aborted
               ? "canceled"
-              : message.includes("stale")
-                ? "stale"
-                : "failed",
+              : message.includes("section")
+                ? "unsupported"
+                : message.includes("stale")
+                  ? "stale"
+                  : "failed",
           diagnostic: ownerAcquisitionFailureCodeSchema
             .catch("unknown")
             .parse(message),
@@ -475,12 +520,22 @@ export class OwnerSourceAcquisition {
     library: OwnerSourceLibrary,
     variant: OwnerSavedSourceVariant,
     signal: AbortSignal,
+    window?: OwnerSourceWindow,
   ) {
+    ownerScopeImportedSource(variant.actual, window);
     const expected = ownerYoutubeChoiceDescriptor(
       { durationMs: variant.actual.durationMs },
-      variant,
+      {
+        ...variant,
+        video: variant.actual.origin
+          ? { ...variant.video, bytes: null }
+          : variant.video,
+        audio: variant.actual.origin
+          ? { ...variant.audio, bytes: null }
+          : variant.audio,
+      },
     );
-    return library.open(
+    const opened = await library.open(
       variant.id,
       this.options.files,
       async (workspaceId, operationSignal) => {
@@ -494,6 +549,15 @@ export class OwnerSourceAcquisition {
       },
       signal,
     );
+    try {
+      return {
+        ...opened,
+        source: ownerScopeImportedSource(opened.source, window),
+      };
+    } catch (error) {
+      await this.options.files.remove(opened.workspaceId);
+      throw error;
+    }
   }
   async open(value: unknown, signal: AbortSignal) {
     this.admit();
@@ -506,7 +570,12 @@ export class OwnerSourceAcquisition {
       );
       if (!variant || variant.state !== "ready")
         throw new Error("source_saved_unavailable");
-      const opened = await this.openFrom(library, variant, signal);
+      const opened = await this.openFrom(
+        library,
+        variant,
+        signal,
+        input.window,
+      );
       try {
         signal.throwIfAborted();
         return this.options.opened(opened.workspaceId, opened.source);

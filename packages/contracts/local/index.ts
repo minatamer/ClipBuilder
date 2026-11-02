@@ -26,6 +26,7 @@ import {
   ownerClipPreviewSchema,
 } from "./clips.ts";
 import { ownerAcquisitionDescriptorSchema } from "./acquisition-profile.ts";
+import { ownerAcquisitionSectionSchema } from "./acquisition-section.ts";
 export {
   OWNER_LIMITS,
   ownerIdSchema,
@@ -149,6 +150,7 @@ export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
       operation: z.literal("prepare-acquisition"),
       expected: ownerAcquisitionDescriptorSchema,
       combined: z.boolean().optional(),
+      section: ownerAcquisitionSectionSchema.optional(),
     })
     .strict(),
   z

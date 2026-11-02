@@ -126,6 +126,30 @@ describe("acquisition egress policy", () => {
     expect(resolve).not.toHaveBeenCalled();
     expect(connect).not.toHaveBeenCalled();
   });
+  it("challenges an unauthenticated native CONNECT without resolving or connecting upstream", async () => {
+    const resolve = vi.fn(async () => [{ address: "8.8.8.8", family: 4 }]),
+      connect = vi.fn<() => Socket>();
+    const broker = await createAcquisitionEgress(new AbortController().signal, {
+      resolve,
+      connect,
+    });
+    cleanup.push(broker.close);
+    const socket = createConnection({
+      host: "127.0.0.1",
+      port: Number(new URL(broker.proxy).port),
+    });
+    cleanup.push(async () => {
+      socket.destroy();
+    });
+    await once(socket, "connect");
+    const response = reply(socket);
+    socket.write(
+      "CONNECT rr1-synthetic.googlevideo.com:443 HTTP/1.1\r\nHost: rr1-synthetic.googlevideo.com:443\r\n\r\n",
+    );
+    expect(await response).toContain("407 Proxy Authentication Required");
+    expect(resolve).not.toHaveBeenCalled();
+    expect(connect).not.toHaveBeenCalled();
+  });
   it("rejects mixed public/private answers and rechecks DNS for each redirect tunnel", async () => {
     const resolve = vi
       .fn()

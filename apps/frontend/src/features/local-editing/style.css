@@ -424,6 +424,33 @@
   .link-fields > p {
     margin-top: 1rem;
   }
+  .source-card-heading .acquisition-tabs {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+  }
+  .download-quality-pair:not([hidden]) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    align-items: start;
+  }
+  .download-quality-pair label + label {
+    margin-top: 0;
+  }
+  .download-quality-pair > p,
+  .download-quality-pair > button {
+    grid-column: 1 / -1;
+  }
+  .download-window .duration-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .download-window input {
+    font-size: 0.8125rem;
+    padding-inline: 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
   .acquisition-loading {
     display: flex;
     align-items: center;
@@ -809,7 +836,8 @@
     font-size: 0.875rem;
     cursor: pointer;
   }
-  .control-tabs button[aria-selected="true"] {
+  .control-tabs button[aria-selected="true"],
+  .acquisition-tabs button[aria-pressed="true"] {
     color: var(--cb-ink);
     border-bottom-color: var(--cb-brand);
   }

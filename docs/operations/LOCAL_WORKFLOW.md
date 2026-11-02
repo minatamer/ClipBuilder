@@ -1,5 +1,17 @@
 # Local editing in ClipBuilder
 
+Local YouTube intake has **Quality** and **Range** settings. Choose Entire video
+or one original-time interval before Download. Section acquisition retains the
+selected streams and a small decode margin; playback/analysis/exports use the
+exact selected interval. Saved sections are labeled separately; full saved
+masters can serve smaller ranges without downloading again. Failure offers
+explicit retry/Entire video and never silently fetches the whole source.
+CL-188 synthetic TLS/range/native proofs establish clocks and routing, not real
+YouTube availability or throughput. Downloading needs prepared local tools and
+network but no AI key. Fake mode uses generated media; real Codex processing
+additionally needs its prepared speech assets and ChatGPT allowance, while
+Gemini requires its key/live gates and is excluded from agent acceptance.
+
 CL-158 automatically preserves the local working session in a separate rolling
 recovery draft under the private library's `.recovery` directory. It uses the
 existing incremental source/asset hashes rather than making a new project or

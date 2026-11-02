@@ -1559,7 +1559,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
           const moment = [...analysis.manual, ...analysis.suggestions].find(
             (moment) => moment.id === selection.momentId,
           );
-          if (!moment) {
+          if (
+            !moment ||
+            !ownerCutInsideAvailableSource(workspace.source, moment.cut)
+          ) {
             res.writeHead(409).end();
             return;
           }
@@ -1713,3 +1716,4 @@ export function createOwnerHost(options: OwnerHostOptions) {
     },
   };
 }
+import { ownerCutInsideAvailableSource } from "../../../packages/contracts/local/source-window.ts";

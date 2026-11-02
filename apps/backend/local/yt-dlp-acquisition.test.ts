@@ -147,7 +147,7 @@ function rawMetadata(muxed = false): {
     ],
   };
 }
-async function fixture(muxed = false) {
+async function fixture(muxed = false, sections = false) {
   const root = await mkdtemp(
     join(tmpdir(), "clipbuilder-acquisition-adapter-"),
   );
@@ -157,6 +157,14 @@ async function fixture(muxed = false) {
   await mkdir(directory, { recursive: true });
   const config: YtDlpConfiguration = {
     scratchRoot,
+    ...(sections
+      ? {
+          sectionTools: {
+            ffmpeg: join(root, "native", "ffmpeg.exe"),
+            ffprobe: join(root, "native", "ffprobe.exe"),
+          },
+        }
+      : {}),
     tools: {
       downloader: join(root, "reviewed-tools", "yt-dlp.exe"),
       challenge: join(root, "runtime's folder", "deno.exe"),
@@ -177,7 +185,25 @@ async function fixture(muxed = false) {
   const run = vi.fn<AcquisitionProcess>(async (request, line, signal) => {
     requests.push(request);
     signals.push(signal);
+    if (request.executable.endsWith("ffprobe.exe")) {
+      line(
+        JSON.stringify({
+          streams: [
+            { codec_type: "video", start_time: 5 },
+            { codec_type: "audio", start_time: 4.978666 },
+          ],
+          format: { start_time: 4.978666 },
+        }),
+      );
+      return;
+    }
     const args = tokens(request.input);
+    if (args.some((arg) => arg.startsWith("CB_CLOCK:"))) {
+      line(
+        `CB_CLOCK:${JSON.stringify("https://rr1-synthetic.googlevideo.com/media")}`,
+      );
+      return;
+    }
     if (args.includes("--skip-download")) {
       line(`CB_META:${JSON.stringify(raw.meta)}`);
       line(`CB_FORMATS:${JSON.stringify(raw.formats)}`);
@@ -232,6 +258,83 @@ async function fixture(muxed = false) {
 }
 
 describe("owner yt-dlp adapter with injected synthetic ports", () => {
+  it("probes only muxed original timeline headers and returns the measured offset with one section download", async () => {
+    const setup = await fixture(true, true),
+      input = await setup.input();
+    setup.run.mockClear();
+    setup.requests.length = 0;
+    const receipt = await setup.port.download(
+      {
+        ...input,
+        section: {
+          window: { startMs: 10_000, endMs: 20_000 },
+          durationMs: input.offer.durationMs,
+        },
+      },
+      () => {},
+      controller().signal,
+    );
+    expect(receipt).toEqual({ clockOffsetMs: expect.closeTo(21.334, 3) });
+    expect(setup.run).toHaveBeenCalledTimes(4);
+    expect(
+      setup.requests.filter((request) =>
+        request.input.includes("--download-sections"),
+      ),
+    ).toHaveLength(1);
+    expect(
+      setup.requests.filter((request) =>
+        request.executable.endsWith("ffprobe.exe"),
+      ),
+    ).toHaveLength(1);
+    expect(await readdir(setup.directory)).toEqual(["acquisition.video"]);
+  });
+  it("downloads a selected combined section once with fixed TLS/copy flags and no full-source fallback", async () => {
+    const setup = await fixture(false, true),
+      initial = await setup.input();
+    setup.run.mockClear();
+    setup.requests.length = 0;
+    await setup.port.download(
+      {
+        ...initial,
+        section: {
+          window: { startMs: 10_000, endMs: 20_000 },
+          durationMs: initial.offer.durationMs,
+        },
+      },
+      () => {},
+      controller().signal,
+    );
+    expect(setup.run).toHaveBeenCalledTimes(2);
+    const args = tokens(setup.requests[1]!.input);
+    expect(option(args, "--download-sections")).toBe("*8-22");
+    expect(option(args, "--format")).toBe("137+140");
+    expect(args.filter((arg) => arg.startsWith("ffmpeg_i:"))[0]).toContain(
+      "-tls_verify 1",
+    );
+    expect(args.filter((arg) => arg.startsWith("ffmpeg_i:"))[0]).toContain(
+      "-copyts -start_at_zero",
+    );
+    expect(args).toContain("--no-force-keyframes-at-cuts");
+    expect(args).not.toContain("--force-keyframes-at-cuts");
+    expect(await readdir(setup.directory)).toEqual(["acquisition.video"]);
+    const missing = await fixture(),
+      other = await missing.input();
+    missing.run.mockClear();
+    await expect(
+      missing.port.download(
+        {
+          ...other,
+          section: {
+            window: { startMs: 1000, endMs: 2000 },
+            durationMs: other.offer.durationMs,
+          },
+        },
+        () => {},
+        controller().signal,
+      ),
+    ).rejects.toThrow("acquisition_section_unsupported");
+    expect(missing.run).not.toHaveBeenCalled();
+  });
   it("imports bounded audio-only music without language/video requirements and reaps its output", async () => {
     const setup = await fixture();
     setup.raw.formats = setup.raw.formats.filter(

@@ -8,6 +8,7 @@ import {
   OWNER_ACQUISITION_LIMITS,
 } from "./acquisition.ts";
 import { ownerIdSchema } from "./policy.ts";
+import { ownerSourceWindowSchema } from "./source-window.ts";
 
 export const ownerSourceDestinationSchema = z.enum(["downloads", "desktop"]);
 export type OwnerSourceDestination = z.infer<
@@ -52,5 +53,6 @@ export const ownerSourceOpenSchema = z
   .object({
     destination: ownerSourceDestinationSchema,
     variantId: ownerIdSchema,
+    window: ownerSourceWindowSchema.optional(),
   })
   .strict();

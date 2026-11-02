@@ -308,6 +308,7 @@ async function composeLocalWorkflow(
       acquisition: createYtDlpAcquisitionPort({
         scratchRoot: root,
         tools: acquisition,
+        sectionTools: tools,
       }),
       providers: (files) => {
         if (config.providerMode === "live" && config.aiProvider === "codex")

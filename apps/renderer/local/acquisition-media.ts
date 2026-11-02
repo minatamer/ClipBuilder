@@ -15,6 +15,12 @@ import { probeMedia, SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { runOwnedProcess } from "../src/media/process-runner.ts";
 import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/local/acquisition-profile.ts";
 import { matchesOfferedFrameRate } from "../../../packages/contracts/local/acquisition-profile.ts";
+import {
+  ownerAcquisitionSectionSchema,
+  ownerPaddedAcquisitionWindow,
+  type OwnerAcquisitionSection,
+} from "../../../packages/contracts/local/acquisition-section.ts";
+import { ownerSourceSchema } from "../../../packages/contracts/local/index.ts";
 
 // Only this owner-only remux boundary admits WebM components. Upload/public
 // inspection keeps its existing MP4 demuxer boundary. All inputs are fixed
@@ -36,6 +42,7 @@ const streamSchema = z.object({
   height: z.number().int().positive().optional(),
   avg_frame_rate: z.string().optional(),
   duration: z.coerce.number().finite().positive().optional(),
+  start_time: z.coerce.number().finite().optional(),
   sample_rate: z.coerce.number().int().positive().optional(),
   channels: z.number().int().positive().optional(),
   pix_fmt: z.string().optional(),
@@ -166,6 +173,8 @@ async function inspectPrepared(
   selected: OwnerAcquisitionDescriptor,
   tools: OwnerNativeTools,
   signal: AbortSignal,
+  section?: OwnerAcquisitionSection,
+  originalStartMs?: number,
 ) {
   const source = await inspectOwnerSource(path, tools, signal);
   const probe = await probeMedia(path, tools.ffprobe, signal);
@@ -179,12 +188,35 @@ async function inspectPrepared(
   if (
     source.width !== selected.width ||
     source.height !== selected.height ||
-    !matchesOfferedDuration(source.durationMs, selected) ||
+    (!section && !matchesOfferedDuration(source.durationMs, selected)) ||
     !audio.duration ||
     Math.abs(audio.duration * 1000 - source.durationMs) >
       Math.max(100, frameTolerance(selected))
   )
     throw new Error("acquisition_selection_changed");
+  let admitted = source;
+  if (section) {
+    const scope = ownerAcquisitionSectionSchema.parse(section),
+      padded = ownerPaddedAcquisitionWindow(scope),
+      startMs = originalStartMs ?? NaN;
+    if (
+      !Number.isSafeInteger(startMs) ||
+      startMs < Math.max(0, padded.startMs - 30_000) ||
+      startMs > scope.window.startMs ||
+      startMs + source.durationMs < scope.window.endMs ||
+      startMs + source.durationMs >
+        padded.endMs + Math.max(100, frameTolerance(selected))
+    )
+      throw Error("acquisition_section_unsupported");
+    admitted = ownerSourceSchema.parse({
+      ...source,
+      origin: { startMs, durationMs: scope.durationMs },
+      availableWindow: {
+        startMs: scope.window.startMs - startMs,
+        endMs: scope.window.endMs - startMs,
+      },
+    });
+  }
   await runOwnedProcess(
     tools.ffmpeg,
     [
@@ -213,7 +245,7 @@ async function inspectPrepared(
   );
   signal.throwIfAborted();
   return {
-    source,
+    source: admitted,
     descriptor: ownerAcquisitionDescriptorSchema.parse({
       ...selected,
       durationMs: source.durationMs,
@@ -237,7 +269,12 @@ export async function prepareOwnerAcquisition(
   signal: AbortSignal,
   combined = false,
   stage?: (value: OwnerAcquisitionNativeStage) => void,
+  currentSection?: OwnerAcquisitionSection,
 ) {
+  const section = currentSection
+    ? ownerAcquisitionSectionSchema.parse(currentSection)
+    : undefined;
+  if (section && !combined) throw Error("acquisition_section_unsupported");
   const selected = ownerAcquisitionDescriptorSchema.parse(expected);
   const video = await ownerAcquisitionMediaPath(root, workspaceId, "video");
   const audio = await ownerAcquisitionMediaPath(root, workspaceId, "audio");
@@ -265,11 +302,25 @@ export async function prepareOwnerAcquisition(
       throw new Error("acquisition_streams_invalid");
     assertVideo(videoStream, selected);
     assertAudio(audioStream, selected);
+    const originalStartMs = section
+      ? Math.round(
+          (videoStream.start_time ?? NaN) * 1000 - (section.clockOffsetMs ?? 0),
+        )
+      : undefined;
     if (
-      !matchesOfferedDuration(videoProbe.format.duration * 1000, selected) ||
-      Math.abs(
-        audioProbe.format.duration * 1000 - videoProbe.format.duration * 1000,
-      ) > Math.max(100, frameTolerance(selected)) ||
+      section &&
+      (!Number.isSafeInteger(originalStartMs) ||
+        Math.abs(videoStream.start_time ?? NaN) >
+          Number.MAX_SAFE_INTEGER / 1000)
+    )
+      throw Error("acquisition_section_unsupported");
+    if (
+      (!section &&
+        (!matchesOfferedDuration(videoProbe.format.duration * 1000, selected) ||
+          Math.abs(
+            audioProbe.format.duration * 1000 -
+              videoProbe.format.duration * 1000,
+          ) > Math.max(100, frameTolerance(selected)))) ||
       (await boundedFile(video)) + (combined ? 0 : await boundedFile(audio)) >
         OWNER_LIMITS.sourceBytes
     )
@@ -289,6 +340,9 @@ export async function prepareOwnerAcquisition(
         ...COMPONENT_INPUT_OPTIONS,
         "-threads",
         "2",
+        ...(section
+          ? ["-itsoffset", String(-(videoStream.start_time ?? NaN))]
+          : []),
         "-i",
         video,
         ...(combined
@@ -315,7 +369,14 @@ export async function prepareOwnerAcquisition(
       signal,
     );
     stage?.("inspecting");
-    const inspected = await inspectPrepared(temporary, selected, tools, signal);
+    const inspected = await inspectPrepared(
+      temporary,
+      selected,
+      tools,
+      signal,
+      section,
+      originalStartMs,
+    );
     signal.throwIfAborted();
     await absent(source);
     await rename(temporary, source);

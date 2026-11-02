@@ -28,6 +28,12 @@ it.each([false, true])(
           width: 320,
           height: 180,
           fps: 30,
+          ...(!hosted
+            ? {
+                origin: { startMs: 1_800_000, durationMs: 7_200_000 },
+                availableWindow: { startMs: 0, endMs: 1000 },
+              }
+            : {}),
         },
       };
     });

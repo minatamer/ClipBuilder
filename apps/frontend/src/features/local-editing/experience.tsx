@@ -514,9 +514,37 @@ export function LocalEditingExperience({
                       controls
                       preload="metadata"
                       src={`/api/local/workspace/${workspace.id}/source`}
-                      onLoadedMetadata={() => setPreviewReadyFor(workspace.id)}
+                      onLoadedMetadata={(event) => {
+                        constrainSourcePlayback(
+                          event.currentTarget,
+                          workspace.source.availableWindow,
+                          "loaded",
+                        );
+                        setPreviewReadyFor(workspace.id);
+                      }}
+                      onTimeUpdate={(event) =>
+                        constrainSourcePlayback(
+                          event.currentTarget,
+                          workspace.source.availableWindow,
+                          "time",
+                        )
+                      }
+                      onPlay={(event) =>
+                        constrainSourcePlayback(
+                          event.currentTarget,
+                          workspace.source.availableWindow,
+                          "play",
+                        )
+                      }
                       onSeeked={() => setPreviewReadyFor(workspace.id)}
-                      onSeeking={() => setPreviewReadyFor(null)}
+                      onSeeking={(event) => {
+                        constrainSourcePlayback(
+                          event.currentTarget,
+                          workspace.source.availableWindow,
+                          "seeking",
+                        );
+                        setPreviewReadyFor(null);
+                      }}
                       onEmptied={() => setPreviewReadyFor(null)}
                       onError={() => setPreviewReadyFor(null)}
                       onLoadStart={() => setPreviewReadyFor(null)}
@@ -626,3 +654,4 @@ export function LocalEditingExperience({
     </Workspace>
   );
 }
+import { constrainSourcePlayback } from "./source-playback.ts";

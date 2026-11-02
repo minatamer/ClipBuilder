@@ -1,5 +1,15 @@
 # ClipBuilder canonical ticket index
 
+## Partial local YouTube acquisition — 2026-11-02
+
+[CL-188](CL-188-partial-youtube-acquisition.md) implements original-time ranges,
+stream-copy section downloads through authenticated checked TLS, measured muxed
+clock correction, padding exclusion and covered offline reuse. Final 212 fake
+cases, three browser/native cases, scoped static checks and worker build pass.
+Video matches every reference frame; audio timing has zero measured sample lag.
+Validate: no actionable findings after documented fixes. No real YouTube/AI
+call. CL-189 full long-source transcription/discovery is next.
+
 ## Master quality and analysis derivatives — 2026-11-02
 
 [CL-187](CL-187-high-quality-master-and-analysis-derivatives.md) implements Codex

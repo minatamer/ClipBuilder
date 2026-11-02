@@ -40,9 +40,12 @@ const toolsSchema = z
     ffmpeg: z.literal("9.0.2"),
   })
   .strict();
-const publicationSchema = ownerSavedSourceVariantSchema
-  .pick({ mode: true, selection: true, video: true, audio: true })
-  .extend({
+const publicationSchema = z
+  .object({
+    mode: ownerSavedSourceVariantSchema.shape.mode,
+    selection: ownerSavedSourceVariantSchema.shape.selection,
+    video: ownerSavedSourceVariantSchema.shape.video,
+    audio: ownerSavedSourceVariantSchema.shape.audio,
     videoId: ownerYoutubeVideoIdSchema,
     acquiredAt: z.string().datetime().optional(),
     tools: toolsSchema.optional(),
@@ -77,8 +80,20 @@ const error = (code: string) => new Error(`owner_source_${code}`);
 const missing = (cause: unknown) =>
   cause instanceof Error && "code" in cause && cause.code === "ENOENT";
 const sameSource = (first: OwnerSource, second: OwnerSource) =>
-  JSON.stringify(ownerSourceSchema.parse(first)) ===
-  JSON.stringify(ownerSourceSchema.parse(second));
+  JSON.stringify(
+    ownerSourceSchema.parse({
+      ...first,
+      origin: undefined,
+      availableWindow: undefined,
+    }),
+  ) ===
+  JSON.stringify(
+    ownerSourceSchema.parse({
+      ...second,
+      origin: undefined,
+      availableWindow: undefined,
+    }),
+  );
 
 async function mediaFile(path: string) {
   const info = await lstat(path, { bigint: true });
@@ -239,9 +254,13 @@ function supported(variant: OwnerSavedSourceVariant) {
   try {
     ownerYoutubeChoiceDescriptor(
       { durationMs: actual.durationMs },
-      { video, audio },
+      {
+        video: actual.origin ? { ...video, bytes: null } : video,
+        audio: actual.origin ? { ...audio, bytes: null } : audio,
+      },
     );
     return (
+      variant.offsetMs === (actual.origin?.startMs ?? 0) &&
       video.width === actual.width &&
       video.height === actual.height &&
       matchesOfferedFrameRate(actual.fps, video.fps) &&
@@ -443,7 +462,7 @@ export class OwnerSourceLibrary {
         video: value.video,
         audio: value.audio,
         actual: source,
-        offsetMs: 0,
+        offsetMs: source.origin?.startMs ?? 0,
         state: "ready",
       });
       if (!supported(variant)) throw error("unsupported");
@@ -465,6 +484,7 @@ export class OwnerSourceLibrary {
           existing.videoId === record.videoId &&
           existing.variant.mode === variant.mode &&
           existing.variant.actual.fingerprint === source.fingerprint &&
+          JSON.stringify(existing.variant.actual) === JSON.stringify(source) &&
           JSON.stringify(existing.variant.video) ===
             JSON.stringify(variant.video) &&
           JSON.stringify(existing.variant.audio) ===
@@ -534,7 +554,19 @@ export class OwnerSourceLibrary {
         );
         current.throwIfAborted();
         if (!sameSource(source, record.variant.actual)) throw error("damaged");
-        return { workspaceId, source, variant: record.variant };
+        return {
+          workspaceId,
+          source: {
+            ...source,
+            ...(record.variant.actual.origin
+              ? { origin: record.variant.actual.origin }
+              : {}),
+            ...(record.variant.actual.availableWindow
+              ? { availableWindow: record.variant.actual.availableWindow }
+              : {}),
+          },
+          variant: record.variant,
+        };
       } catch (cause) {
         await files.remove(workspaceId);
         throw cause;

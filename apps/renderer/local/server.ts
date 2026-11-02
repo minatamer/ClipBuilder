@@ -251,6 +251,7 @@ export function createOwnerWorker(options: {
                         signal,
                         job.combined ?? false,
                         stage,
+                        job.section,
                       )),
                     }
                   : job.operation === "synthesize-acquisition" ||

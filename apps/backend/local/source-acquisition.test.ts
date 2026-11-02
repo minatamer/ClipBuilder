@@ -40,6 +40,126 @@ let media: ReturnType<
 >;
 const url = "https://www.youtube.com/watch?v=aaaaaaaaaaa";
 const signal = () => new AbortController().signal;
+it("acquires twenty minutes of two-hour metadata, restores measured coverage and never reuses a disjoint section", async () => {
+  metadata.mockImplementation(async (identity, operationSignal) => {
+    const offer = await fakeOwnerAcquisition.metadata(
+      identity,
+      operationSignal,
+    );
+    return {
+      ...offer,
+      durationMs: 7_200_000,
+      choices: offer.choices.map((choice) => ({
+        ...choice,
+        supported: false,
+        reason: "duration" as const,
+      })),
+      bestReason: "duration",
+    };
+  });
+  const offer = await acquisition.metadata(url, signal()),
+    request = {
+      ...input(offer),
+      request: {
+        ...input(offer).request,
+        window: { startMs: 1_800_000, endMs: 3_000_000 },
+      },
+    };
+  expect(() =>
+    acquisition.start({
+      ...request,
+      request: { ...request.request, window: { startMs: 1, endMs: 7_200_001 } },
+    }),
+  ).toThrow();
+  expect(download).not.toHaveBeenCalled();
+  acquisition.start(request);
+  expect((await settled()).stage).toBe("ready");
+  expect(download).toHaveBeenCalledTimes(1);
+  expect(download.mock.calls[0]![0].section).toEqual({
+    window: request.request.window,
+    durationMs: 7_200_000,
+  });
+  expect(current?.source).toMatchObject({
+    durationMs: 1_204_000,
+    origin: { startMs: 1_798_000, durationMs: 7_200_000 },
+    availableWindow: { startMs: 2000, endMs: 1_202_000 },
+  });
+  const saved = (await acquisition.catalog(signal())).entries[0]!;
+  expect(saved.variant.offsetMs).toBe(1_798_000);
+  await clear();
+  acquisition.start({
+    ...request,
+    request: {
+      ...request.request,
+      window: { startMs: 1_801_000, endMs: 1_900_000 },
+    },
+  });
+  expect((await settled()).stage).toBe("ready");
+  expect(download).toHaveBeenCalledTimes(1);
+  expect(current?.source).toMatchObject({
+    origin: { startMs: 1_798_000 },
+    availableWindow: { startMs: 3000, endMs: 102_000 },
+  });
+  await clear();
+  await acquisition.open(
+    { destination: saved.destination, variantId: saved.variant.id },
+    signal(),
+  );
+  expect(current?.source).toMatchObject({
+    origin: { startMs: 1_798_000 },
+    availableWindow: { startMs: 2000, endMs: 1_202_000 },
+  });
+  await clear();
+  expect(() => acquisition.start(input(offer))).toThrow(
+    "owner_youtube_format_unsupported",
+  );
+  acquisition.start({
+    ...request,
+    request: {
+      ...request.request,
+      window: { startMs: 3_600_000, endMs: 3_660_000 },
+    },
+  });
+  expect((await settled()).stage).toBe("ready");
+  expect(download).toHaveBeenCalledTimes(2);
+  expect(metadata).toHaveBeenCalledTimes(1);
+  expect((await acquisition.catalog(signal())).entries).toHaveLength(2);
+});
+it("opens a verified full master as a section offline without another download", async () => {
+  const offer = await acquisition.metadata(url, signal());
+  acquisition.start(input(offer));
+  await settled();
+  const entry = (await acquisition.catalog(signal())).entries[0]!;
+  await clear();
+  await acquisition.open(
+    {
+      destination: entry.destination,
+      variantId: entry.variant.id,
+      window: { startMs: 3000, endMs: 9000 },
+    },
+    signal(),
+  );
+  expect(current?.source.availableWindow).toEqual({
+    startMs: 3000,
+    endMs: 9000,
+  });
+  expect(download).toHaveBeenCalledTimes(1);
+  expect(metadata).toHaveBeenCalledTimes(1);
+  await clear();
+  const calls = media.mock.calls.length;
+  await expect(
+    acquisition.open(
+      {
+        destination: entry.destination,
+        variantId: entry.variant.id,
+        window: { startMs: 15_000, endMs: 20_000 },
+      },
+      signal(),
+    ),
+  ).rejects.toThrow("source_section_unavailable");
+  expect(media).toHaveBeenCalledTimes(calls);
+  expect(await readdir(files.root)).toEqual([]);
+});
 it.each([
   ["acquisition_transfer_incomplete", "acquisition_transfer_incomplete"],
   ["synthetic-private-provider-detail", "unknown"],

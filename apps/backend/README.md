@@ -1,5 +1,13 @@
 # ClipBuilder backend
 
+CL-188 local section acquisition stays in the protected downloader adapter.
+Pinned FFmpeg/FFprobe share the authenticated, host/DNS-checked TLS broker.
+The native worker receives section clocks and fixed file identities, never a
+remote URL. Muxed header probes correct video/container start offsets; stored
+original origins and usable windows survive offline reuse/recovery. Fake tests
+use injected transports; real acquisition needs local tooling/network, and
+subsequent AI needs the selected provider's existing prerequisites/approvals.
+
 CL-114 adds hosted-only three-clip/network allowances and durable global usage accounting. Hosted readiness now requires a private pre-created ledger and verified client-IP ingress; see the usage accounting checklist in [release preparation](../../docs/operations/HOSTED_EDITOR_RELEASE_PREPARATION.md). CL-115 moves owner exemptions into backend-only `HOSTED_DEMO_OWNER_IPS`: comma-separated exact IPv4/IPv6 addresses in ignored `.env.local` or the private hosted environment. The committed example stays blank; restart after changing the private value. No cloud setup is performed by the code. Localhost keeps its existing limits.
 
 CL-061 adds the hosted adapter for the same upload/moments/editor use cases. It

@@ -10,6 +10,7 @@ import { ownerNativeTools } from "../scripts/native-tools.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
 import { fakeOwnerAcquisition } from "../apps/backend/local/fake-acquisition.ts";
 import { canonicalOwnerYoutubeSource } from "../apps/backend/local/youtube-url.ts";
+import { ownerSourceImportSchema } from "../packages/contracts/local/acquisition-flow.ts";
 
 declare global {
   function intakeChooseSaved(
@@ -45,6 +46,7 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
   let hosted = false;
   let codex = false;
   const requests: string[] = [];
+  const sectionImports: unknown[] = [];
   const offer = await fakeOwnerAcquisition.metadata(
     canonicalOwnerYoutubeSource("https://youtu.be/synthetic01"),
     new AbortController().signal,
@@ -132,6 +134,31 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
     if (path === "/api/local/sources/metadata" && request.method === "POST") {
       request.resume();
       json({ ...offer, mode: "provider-source" });
+      return;
+    }
+    if (path === "/api/local/sources/import" && request.method === "POST") {
+      void (async () => {
+        const chunks: Buffer[] = [];
+        for await (const chunk of request) chunks.push(Buffer.from(chunk));
+        sectionImports.push(
+          ownerSourceImportSchema.parse(
+            JSON.parse(Buffer.concat(chunks).toString()),
+          ),
+        );
+        json(
+          {
+            id: crypto.randomUUID(),
+            mode: "provider-source",
+            stage: "failed",
+            downloadedBytes: 0,
+            totalBytes: null,
+            variantId: null,
+            error: "unsupported",
+            diagnostic: "acquisition_section_unsupported",
+          },
+          202,
+        );
+      })().catch(() => response.destroy());
       return;
     }
     if (path === `/api/local/sources/downloads/${saved.id}/preview`) {
@@ -402,6 +429,64 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
       );
     }
     expect(requests).toEqual([]);
+    await evaluateQuality(
+      `(async()=>{const tab=text=>[...document.querySelectorAll('.acquisition-tabs button')].find(b=>b.textContent===text);tab('Range').click();await wait(()=>document.querySelector('[aria-label="Download range"]'));const select=document.querySelector('[aria-label="Download range"]');select.value='section';select.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('[aria-label="Download start"]'));const set=(label,value)=>{const input=document.querySelector('[aria-label="'+label+'"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));};set('Download start','00:00:02');set('Download end','00:00:09');await new Promise(requestAnimationFrame);tab('Quality').click();await new Promise(requestAnimationFrame);const quality=document.querySelector('select.select-control');quality.value='highest';quality.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(requestAnimationFrame);tab('Range').click();await wait(()=>document.querySelector('[aria-label="Download end"]'));return true;})()`,
+    );
+    for (const [width, height] of [
+      [1440, 900],
+      [390, 844],
+      [320, 568],
+    ]) {
+      await page.setViewport({
+        width: width!,
+        height: height!,
+        deviceScaleFactor: 1,
+      });
+      expect(
+        await evaluateQuality(
+          `(async()=>{const input=document.querySelector('[aria-label="Download end"]');input.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const footer=document.querySelector('.youtube-card footer'),r=footer.getBoundingClientRect();return {start:document.querySelector('[aria-label="Download start"]').value,end:input.value,overflow:document.documentElement.scrollWidth>innerWidth,anchored:footer.parentElement.classList.contains('source-card')};})()`,
+        ),
+      ).toEqual({
+        start: "00:00:02",
+        end: "00:00:09",
+        overflow: false,
+        anchored: true,
+      });
+      const shot = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        join(evidence, `cl188-section-${width}.png`),
+        Buffer.from(shot.value.data, "base64"),
+      );
+    }
+    expect(sectionImports).toEqual([]);
+    await evaluateQuality(
+      `document.querySelector('[aria-label="Download start"]').focus()`,
+    );
+    for (const type of ["keyDown", "keyUp"] as const)
+      await page._client().send("Input.dispatchKeyEvent", {
+        type,
+        key: "Tab",
+        code: "Tab",
+        windowsVirtualKeyCode: 9,
+      });
+    expect(
+      await evaluateQuality(
+        `document.activeElement.getAttribute('aria-label')`,
+      ),
+    ).toBe("Download end");
+    await evaluateQuality(
+      `(async()=>{[...document.querySelectorAll('.youtube-card button')].find(b=>b.textContent.trim()==='Download video').click();await wait(()=>document.body.textContent.includes('Retry or choose Entire video.'));return true;})()`,
+    );
+    expect(sectionImports).toEqual([
+      expect.objectContaining({
+        request: expect.objectContaining({
+          window: { startMs: 2000, endMs: 9000 },
+          choiceId: offer.choices.find((item) => item.tier === 2160)!.id,
+        }),
+      }),
+    ]);
     // The same upload area remains usable in the upload-only hosted view.
     hosted = true;
     const hostedDirectory = join(directory, "hosted");

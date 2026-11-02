@@ -3,6 +3,8 @@ import { ownerDigestSchema } from "./assets.ts";
 import { OWNER_LIMITS, ownerIdSchema } from "./policy.ts";
 import { ownerSourceSchema } from "./index.ts";
 import { OWNER_ACQUISITION_LIMITS } from "./acquisition-profile.ts";
+import { ownerSourceWindowSchema } from "./source-window.ts";
+import { OWNER_SAFE_SOURCE_MS } from "./capacity.ts";
 export {
   OWNER_ACQUISITION_LIMITS,
   ownerAcquisitionDescriptorSchema,
@@ -163,6 +165,7 @@ export const ownerYoutubeImportRequestSchema = z
     revision: ownerIdSchema,
     choiceId: ownerDigestSchema,
     selection: ownerYoutubeSelectionSchema,
+    window: ownerSourceWindowSchema.optional(),
   })
   .strict();
 export type OwnerYoutubeImportRequest = z.infer<
@@ -178,6 +181,7 @@ export const ownerAcquisitionFailureCodeSchema = z.enum([
   "acquisition_stale_format",
   "acquisition_metadata_invalid",
   "acquisition_process_failed",
+  "acquisition_section_unsupported",
   "media_unavailable",
   "unknown",
 ]);
@@ -242,10 +246,13 @@ export const ownerSavedSourceVariantSchema = z
     video: ownerYoutubeVideoSchema,
     audio: ownerYoutubeAudioSchema,
     actual: z.lazy(() => ownerSourceSchema),
-    offsetMs: z.literal(0),
+    offsetMs: z.number().int().nonnegative().max(OWNER_SAFE_SOURCE_MS),
     state: z.enum(["ready", "missing", "damaged", "unsupported"]),
   })
-  .strict();
+  .strict()
+  .refine(
+    (variant) => variant.offsetMs === (variant.actual.origin?.startMs ?? 0),
+  );
 export type OwnerSavedSourceVariant = z.infer<
   typeof ownerSavedSourceVariantSchema
 >;

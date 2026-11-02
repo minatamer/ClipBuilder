@@ -1,5 +1,36 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Partial local YouTube acquisition — CL-188, 2026-11-02
+
+Local intake offers mutually exclusive Quality/Range settings in the existing
+card, with one anchored Use/Download action. Entire video is the default; one
+original-time range can be selected before downloading. Saved sections are
+identified explicitly, and Highest for a whole-video request cannot select a
+partial master. Hosted has no YouTube path. Upload analysis scope stays in
+CL-186 and does not reduce uploaded-file transfer.
+
+The pinned downloader uses one combined, stream-copied section acquisition with
+two seconds of requested context padding, plus nearby decode keyframe data.
+Signed source URLs remain inside the acquisition adapter. FFmpeg/FFprobe use
+the same authenticated CONNECT broker, checked public DNS/hosts/redirects,
+verified TLS and cancellation as downloader traffic. An unauthenticated native
+CONNECT receives only a Basic challenge, with no upstream lookup/connection.
+For muxed representations, a bounded header probe measures video/container
+origin differences; separate video-only streams need no such correction.
+The native remux shifts timestamps to a zero-based playback clock without
+re-encoding. Measured original origin and exact usable interval accompany the
+master, drafts and recovery; analysis/playback/processing/exports exclude padding.
+
+Saved full masters may serve covered sections offline; partial/disjoint masters
+cannot satisfy whole/uncovered requests. Sidecar identities include coverage
+and offset. Invalid saved ranges fail before copy/native work, and failure
+cleanup removes only owned temporary workspaces. Unsupported transports/codecs,
+excessive keyframe padding, invalid coverage or section failures never trigger
+a whole-source fallback. Retry or Entire video is explicit. Transfer totals may
+remain unknown during the native stage; do not simulate proportional progress
+or promise exact byte savings. Gemini/hosted file limits remain; full long-source
+admission and chunking remain gated by CL-189. No real YouTube/AI test is claimed.
+
 ## Master quality and analysis derivatives — CL-187, 2026-11-02
 
 Local Codex quality selection exposes every server-admitted tier, including

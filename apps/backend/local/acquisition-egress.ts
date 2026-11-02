@@ -111,6 +111,21 @@ export async function createAcquisitionEgress(
     const action = (async () => {
       const supplied = Buffer.from(req.headers["proxy-authorization"] ?? "");
       const match = req.url?.match(/^([a-z0-9.-]+):443$/);
+      // FFmpeg waits for a Basic challenge; no destination lookup/connection is
+      // allowed until its second CONNECT carries the job-scoped credential.
+      if (
+        !closing &&
+        !signal.aborted &&
+        match?.[1] &&
+        admittedAcquisitionHost(match[1]) &&
+        !head.length &&
+        supplied.length === 0
+      ) {
+        socket.end(
+          'HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm="ClipBuilder"\r\nContent-Length: 0\r\nConnection: close\r\n\r\n',
+        );
+        return;
+      }
       if (
         closing ||
         signal.aborted ||

@@ -88,3 +88,19 @@ actionable findings on the settled diff.
 Codex supported quality/audio-track selection and original-resolution temporal
 panels implemented. Existing safe 4K decode/remux/export boundaries retained.
 Scope/checks and remaining real quality acceptance are recorded in its packet.
+
+CL-187 committed `fe1bd63`; 93 fake cases and six native/browser cases pass,
+including final density and responsive reruns. Final validate: no actionable
+findings after image-budget/same-tier saved-choice fixes. No real AI/download.
+
+## CL-188 implementation
+
+Scoped stream-copy acquisition, checked native TLS/proxy authentication,
+measured muxed origin correction, normalized playback, coverage-aware saved
+reuse and Quality/Range controls implemented. Verification/findings are recorded
+in its packet. Full long-source admission still belongs to CL-189.
+
+Final CL-188 gate: 212 fake cases / twelve files; three browser/native cases;
+contracts/local/frontend/test types, contracts/worker builds and scoped lint/
+format pass. Source/timestamp/transport/layout/reuse findings resolved; final
+read-only validate reports no actionable findings. No real processing.

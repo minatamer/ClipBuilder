@@ -245,6 +245,7 @@ export class OwnerClipBatch {
         const frames = moment.cut.endFrame - moment.cut.startFrame;
         if (
           moment.id !== clip.momentId ||
+          !ownerCutInsideAvailableSource(this.workspace.source, moment.cut) ||
           moment.cut.endFrame >
             Math.floor((this.workspace.source.durationMs * OWNER_FPS) / 1000) ||
           moment.processingIdentity !==
@@ -776,6 +777,8 @@ export class OwnerClipBatch {
         (item) => item.id === id,
       );
       if (!moment) throw new Error("moment_missing");
+      if (!ownerCutInsideAvailableSource(this.workspace.source, moment.cut))
+        throw Error("moment_outside_source_window");
       return structuredClone(moment);
     });
     // Identical returned passages stay visible; processing the same cut once
@@ -1393,3 +1396,4 @@ export class OwnerClipBatch {
     }
   }
 }
+import { ownerCutInsideAvailableSource } from "../../../packages/contracts/local/source-window.ts";

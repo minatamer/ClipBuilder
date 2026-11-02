@@ -24,6 +24,8 @@ import {
   ownerIdSchema,
 } from "../../../packages/contracts/local/policy.ts";
 import { ownerYoutubeSourceId } from "./youtube-url.ts";
+import { ownerAnalysisWindow } from "../../../packages/contracts/local/source-window.ts";
+import { ownerPaddedAcquisitionWindow } from "../../../packages/contracts/local/acquisition-section.ts";
 
 const ownerYoutubeMetadataSchema = z
   .object({
@@ -427,9 +429,45 @@ export function selectOwnerYoutubeFormat(
       choice.tier !== request.selection.tier)
   )
     throw new Error("owner_youtube_selection_stale");
-  if (!choice.supported || !choice.audio)
+  const window = request.window
+    ? ownerAnalysisWindow({ durationMs: offer.durationMs }, request.window)
+    : undefined;
+  if (
+    window &&
+    choice.reason !== null &&
+    !["duration", "bytes"].includes(choice.reason)
+  )
+    throw Error("owner_youtube_format_unsupported");
+  const sectionReason = window
+    ? reason(
+        { status: "vod", durationMs: window.endMs - window.startMs },
+        { ...choice.video, bytes: null },
+        choice.audio ? { ...choice.audio, bytes: null } : null,
+      )
+    : choice.reason;
+  if (sectionReason !== null || !choice.audio)
     throw new Error("owner_youtube_format_unsupported");
-  return { choice, expected: ownerYoutubeChoiceDescriptor(offer, choice) };
+  const admitted = {
+    ...choice,
+    supported: true,
+    reason: null,
+    ...(window
+      ? {
+          video: { ...choice.video, bytes: null },
+          audio: { ...choice.audio, bytes: null },
+        }
+      : {}),
+  };
+  const padded = window
+    ? ownerPaddedAcquisitionWindow({ window, durationMs: offer.durationMs })
+    : undefined;
+  return {
+    choice,
+    expected: ownerYoutubeChoiceDescriptor(
+      padded ? { durationMs: padded.endMs - padded.startMs } : offer,
+      admitted,
+    ),
+  };
 }
 
 /** Reuse frozen descriptors without online metadata or another acquisition. */
