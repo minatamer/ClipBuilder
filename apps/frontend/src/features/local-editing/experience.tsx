@@ -231,7 +231,14 @@ export function LocalEditingExperience({
             fetch,
             setOpeningState,
           )
-        : await openPickedFile(file, controller.signal);
+        : await openPickedFile(
+            file,
+            controller.signal,
+            fetch,
+            capabilities && "capacity" in capabilities
+              ? capabilities.capacity
+              : undefined,
+          );
       setWorkspace(result.workspace);
       setUnapplied(false);
       setInitialClip(result.clipId);
@@ -240,12 +247,14 @@ export function LocalEditingExperience({
       setHasClips(false);
       setView("moments");
       setMessage("");
-    } catch {
+    } catch (error) {
       if (!controller.signal.aborted)
         setMessage(
           hosted
             ? "Couldn’t open this video. Check verification and try again."
-            : "Couldn’t open this file. Choose an MP4 or ClipBuilder draft.",
+            : error instanceof Error && error.message === "picked_file_capacity"
+              ? "Not enough free disk space. Free space and try again."
+              : "Couldn’t open this file. Choose an MP4 or ClipBuilder draft.",
         );
     } finally {
       if (opening.current === controller) opening.current = null;

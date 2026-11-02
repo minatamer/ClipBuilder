@@ -12,7 +12,7 @@ cloud/deployment/credit purchase.
 - Planning baseline: AGENTS.md, source of truth, ticket index, CL-184–193
   packets, and this ledger. No implementation is claimed by the baseline commit.
 - Planning baseline committed: `8d3f6ac` (14 documentation paths).
-- CL-184 (implemented/validated; commit pending): opening-title contract,
+- CL-184 (committed `fc8b406`; implemented/validated): opening-title contract,
   planned-text policy/decoder, shared overlay clock/evaluation, native branch
   offsets, focused tests/proof and owning docs. Exact changed files and checks
   belong in CL-184 before its commit.
@@ -52,3 +52,19 @@ current-source proofs compiled their own native overlay. Final normal runtime
 start waits for the rest of this authorized series. Toolchain/bootstrap and
 harness adaptations are detailed in the ticket. No real provider calls or owner
 media used.
+
+## CL-185 implemented and validated (commit pending)
+
+Profile resolution, safe source/parser bounds, private native startup binding,
+common disk port propagation, picker limits and fixed low-disk feedback are
+implemented. The path inventory maps remaining long-source/count work to its own
+packets. Final focused checks/validation and commit are in progress; no
+long-source capability is advertised yet and no real provider/media was used.
+
+Final CL-185 gate: 110 fake cases / 17 files pass; one current-source synthetic
+browser/native/export/recovery proof passes in 80.00s. Worker/overlay build,
+contracts/local/frontend/test types, lint/format and whitespace pass. Final
+read-only validate: no actionable findings. Fixed duplicate saved-source quota
+checks and local disk failure feedback. 21 code/test paths plus seven owning
+docs are allocated in the ticket. Source/count readiness stays off for
+CL-189/190.

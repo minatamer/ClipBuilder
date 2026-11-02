@@ -22,6 +22,10 @@ import type {
   OwnerWorkspace,
 } from "../../../packages/contracts/local/index.ts";
 import type { OwnerYoutubeOffer } from "../../../packages/contracts/local/acquisition.ts";
+import {
+  resolveOwnerCapacity,
+  type OwnerCapacity,
+} from "../../../packages/contracts/local/capacity.ts";
 
 let directory: string, files: WorkspaceFiles, current: OwnerWorkspace | null;
 let acquisition: OwnerSourceAcquisition,
@@ -159,6 +163,7 @@ function create(
     metadata,
     download,
   },
+  capacityPolicy?: OwnerCapacity,
 ) {
   return new OwnerSourceAcquisition({
     files,
@@ -168,6 +173,7 @@ function create(
     },
     ...(port ? { port } : {}),
     media,
+    ...(capacityPolicy ? { capacityPolicy, capacity: async () => {} } : {}),
     available: () => current === null,
     opened(id, source) {
       if (current) throw new Error("workspace_busy");
@@ -175,6 +181,34 @@ function create(
     },
   });
 }
+
+it.each(["codex", "gemini"] as const)(
+  "applies %s component admission without a duplicate scratch quota",
+  async (provider) => {
+    await acquisition.close();
+    acquisition = create(
+      { mode: "synthetic-source", metadata, download },
+      resolveOwnerCapacity({ aiProvider: provider }),
+    );
+    const admitted = vi.fn();
+    download.mockImplementationOnce(async (_input, progress) => {
+      progress({
+        stage: "video",
+        downloadedBytes: OWNER_LIMITS.sourceBytes - 1,
+        totalBytes: OWNER_LIMITS.sourceBytes,
+      });
+      admitted();
+      throw new Error("synthetic-stop-after-capacity-check");
+    });
+    const offer = await acquisition.metadata(url, signal());
+    acquisition.start(input(offer));
+    await settled();
+    expect(admitted).toHaveBeenCalledTimes(provider === "codex" ? 1 : 0);
+    expect(download).toHaveBeenCalledTimes(1);
+    expect(media).toHaveBeenCalledTimes(0);
+    expect(await readdir(files.root)).toEqual([]);
+  },
+);
 function input(
   offer: OwnerYoutubeOffer,
   tier = 1080,

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ownerAcquisitionModeSchema } from "./acquisition.ts";
 import { ownerAiModeSchema } from "./policy.ts";
+import { ownerCapacitySchema } from "./capacity.ts";
 
 /** Content-free capabilities for the shared editing workflow. */
 const localRuntimeCapabilitiesSchema = z
@@ -16,6 +17,7 @@ const localRuntimeCapabilitiesSchema = z
       .enum(["ready", "speech-missing", "codex-missing", "disabled"])
       .optional(),
     captionProvider: z.enum(["gemini", "local-speech"]).optional(),
+    capacity: ownerCapacitySchema.optional(),
     localMedia: z.literal(true),
     cloud: z.literal(false),
   })

@@ -9,6 +9,10 @@ import {
 } from "../../../packages/contracts/local/index.ts";
 import { ownerOutputRevisionSchema } from "../../../packages/contracts/local/clips.ts";
 import {
+  ownerDiskFitsCapacity,
+  type OwnerCapacity,
+} from "../../../packages/contracts/local/capacity.ts";
+import {
   ownerPictureFormatSchema,
   ownerPictureExtension,
   type OwnerPictureFormat,
@@ -271,12 +275,11 @@ export class WorkspaceFiles {
 export async function requireDisk(
   root: string,
   peakBytes: number,
+  capacity: Pick<OwnerCapacity, "scratchBytes"> = {
+    scratchBytes: OWNER_LIMITS.scratchBytes,
+  },
 ): Promise<void> {
   const info = await statfs(root);
-  if (
-    peakBytes < 0 ||
-    peakBytes > OWNER_LIMITS.scratchBytes ||
-    info.bavail * info.bsize - peakBytes < OWNER_LIMITS.reserveBytes
-  )
+  if (!ownerDiskFitsCapacity(peakBytes, info.bavail * info.bsize, capacity))
     throw new Error("disk_unavailable");
 }

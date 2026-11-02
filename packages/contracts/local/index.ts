@@ -2,6 +2,11 @@ import { z } from "zod";
 import { ownerAudioAssetSchema } from "./audio.ts";
 import { localCodexJobSchema, localCodexReceiptSchema } from "./codex.ts";
 import { OWNER_PRESENTATION_MAX_FRAMES } from "./hook.ts";
+import {
+  ownerSourceFitsCapacity,
+  OWNER_SAFE_SOURCE_MS,
+  type OwnerCapacity,
+} from "./capacity.ts";
 
 import {
   OWNER_LIMITS,
@@ -35,6 +40,16 @@ export const ownerSourceSchema = z
   .strict()
   .refine((s) => s.width * s.height <= 3840 * 2160);
 export type OwnerSource = z.infer<typeof ownerSourceSchema>;
+
+/** Explicit capacity parser for the incremental source path; legacy stays bounded. */
+export function ownerSourceForCapacity(capacity: OwnerCapacity) {
+  return ownerSourceSchema
+    .safeExtend({
+      bytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+      durationMs: z.number().int().min(1000).max(OWNER_SAFE_SOURCE_MS),
+    })
+    .refine((source) => ownerSourceFitsCapacity(source, capacity));
+}
 
 export const ownerWorkspaceSchema = z
   .object({

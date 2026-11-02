@@ -1,5 +1,16 @@
 # ClipBuilder canonical ticket index
 
+## Local Codex capacity foundation — 2026-11-02
+
+[CL-185](CL-185-local-codex-capacity-policy.md) is implemented/validated as the
+server-owned capacity foundation. Native tools and intake/picker use the trusted
+profile; Codex scratch uses real free space/reserve without Gemini's aggregate
+quota. Fixed low-disk feedback and cleanup pass. Final 110 fake cases, a fresh
+80-second browser/native/export/recovery proof, worker build and scoped static
+checks pass. Validate loop: no actionable findings after duplicate quota and
+error-feedback fixes. Long-source/count admission remains gated for CL-189/190;
+CL-186 analysis windows are next. No real AI/download/configuration/app start.
+
 ## Hook-led opening titles — 2026-11-02
 
 [CL-184](CL-184-hook-led-opening-title.md) is implemented and validated locally.

@@ -1,5 +1,20 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Local Codex capacity foundation — CL-185, 2026-11-02
+
+Capacity is selected from actual server composition. A browser field, restored
+record, worker job or hosted exemption cannot activate local Codex permissions.
+Local Codex scratch uses measured disk headroom and the existing free-space
+reserve; saved/retained files are never deleted to make room. Gemini and hosted
+budgets stay unchanged. Source admission, the picker and private native startup
+share the effective policy. Local low disk produces fixed actionable feedback.
+Long-source and unrestricted-batch readiness remain disabled until CL-189/190
+prove complete coverage and incremental persistence. This foundation alone does
+not implement two-hour processing. The
+[capacity inventory](operations/LOCAL_CODEX_CAPACITY.md) assigns all remaining
+clock/download/ASR/prompt/count/protocol gates to their owning packets. Synthetic
+metadata/native/browser checks prove mechanics, not real provider performance.
+
 ## Hook-led opening titles — CL-184, 2026-11-02
 
 The optional generated opening title is authored around the suggested Hook and

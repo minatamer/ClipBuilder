@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import type { BackendConfig } from "../src/config/env.schema.js";
 import { ownerNativeTools } from "../../../scripts/native-tools.ts";
+import { resolveOwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
 import {
   ownerProcessTree,
   forceOwnerTree,
@@ -116,7 +117,13 @@ async function composeLocalWorkflow(
     root,
     token: randomBytes(32).toString("hex"),
     workerToken: randomBytes(32).toString("hex"),
-    tools,
+    tools: {
+      ...tools,
+      capacity: resolveOwnerCapacity({
+        aiProvider:
+          config.providerMode === "live" ? config.aiProvider : undefined,
+      }),
+    },
     overlayBundle,
     chromium,
     storageRoot,

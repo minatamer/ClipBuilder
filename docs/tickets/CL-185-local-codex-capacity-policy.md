@@ -1,10 +1,8 @@
 # CL-185 — Separate local Codex capacity from demo limits
 
-Status: Authorized and queued, 2026-11-02. Owner AFK authorization lifts the
-previous execution hold; use execute/validate/fix loops and local
-ticket-prefixed commits without push. Depends on implemented CL-135, CL-137 and
-CL-172. This is the foundation for CL-186–190; it must not advertise unfinished
-long-source support.
+Status: Foundation implemented and validated locally, 2026-11-02. Local commit
+approved. Depends on CL-135/137/172. Actual long-source/count admission remains
+gated for CL-189/190; this packet does not claim two-hour processing support.
 
 ## Owner request and interpretation
 
@@ -80,6 +78,82 @@ performance. Existing local CPU speech assets are documented as prepared;
 accelerated/larger-model paths are not verified. Real Codex uses saved ChatGPT
 login and plan allowance rather than a Gemini key; local does not mean unlimited
 or wholly offline. Gemini requires keys/live approvals. Official guidance:
-[Codex usage and plan limits](https://learn.chatgpt.com/docs/pricing). No
-implementation, real inference/download, config/model change, restart, cloud,
-deployment or Git mutation is authorized by this planning request.
+[Codex usage and plan limits](https://learn.chatgpt.com/docs/pricing). The later
+AFK instruction authorizes this implementation and local commit. No real
+inference/download, config/model change, app start, cloud, deployment or push
+was performed here.
+
+## Current execution allocation — 2026-11-02
+
+Capacity ownership and the remaining downstream gates are inventoried in
+[local Codex capacity](../operations/LOCAL_CODEX_CAPACITY.md). This packet owns
+composition, structural source admission, common disk checks and their safe
+transport to the existing worker/picker. CL-186/188/189/190 still own their
+window/download/chunk/count implementations; long-source/count readiness stays
+false until those paths pass their final gates. Do not report the foundation
+alone as two-hour or unrestricted-batch support.
+
+## Implementation evidence and whole-file allocation
+
+The single profile resolver takes trusted composition, not request/draft state.
+Source and disk policy use finite integers and preserve actual codec/geometry
+checks. Local Codex scratch is quota-free with measured headroom and the
+existing reserve. Native startup passes the same profile in the private tools
+descriptor; forged job fields are rejected before execution. Intake and picker
+share the current effective source-byte limit. Saved-source/component secondary
+scratch checks no longer reintroduce Gemini's quota for Codex. Local low disk is
+a fixed HTTP 507 and actionable free-space message, with zero native/AI
+dispatch.
+
+21 code/test paths:
+
+- Contracts local: new `capacity.ts`/`capacity.test.ts`, `index.ts`,
+  `runtime.ts`.
+- Backend local: `server.ts`, new `server-capacity.test.ts`, `runtime.ts`,
+  `workspace-files.ts`, `draft-store.ts`, `session-recovery.ts`,
+  `source-library.ts`, `source-acquisition.ts`/`source-acquisition.test.ts`.
+- Renderer local: `entry.ts`, `media.ts`, new `media-capacity.test.ts`.
+- Frontend local-editing: `experience.tsx`, `open-local-file.ts` and its test.
+- Root tests: `owner-local.test.ts`, `owner-provider-host.test.ts`.
+
+Seven owning documentation paths: this packet, index, source of truth, execution
+ledger, capacity inventory, LOCAL_CODEX_AI architecture and backend local guide.
+No public limits, provider/model setting, ignored configuration or media
+changed.
+
+## Checks and validate loop
+
+- Final scoped `scripts/local-test.config.ts` gate: **110 cases / 17 files
+  pass**. Covers safe/unsafe metadata beyond one hour/10 GiB,
+  Gemini/hosted/exemption policy, pending readiness, native mocked two-hour
+  probing with unchanged codec rejection, authenticated host/worker forgery with
+  zero AI, 40-GiB synthetic disk headroom, near-10-GiB progress without giant
+  files, cancel/cleanup, saved-source/draft/recovery compatibility, picker
+  streaming/draft bounds and low-disk errors before processing. Fake
+  speech/provider paths only.
+- `test/local-codex.proof.ts` under the fake/offline proof config: **one case
+  passes in 80.00s**, compiling the current-source overlay in owned scratch and
+  exercising browser/native preparation, manual edits, export and recovery. This
+  verifies composition on generated media, not two-hour ASR performance.
+- Current normal media worker/overlay build passes with
+  `node scripts/local-media-build.mjs`; no server is started. Contracts build,
+  contracts-local/local/frontend/root-test TypeScript, scoped ESLint/Prettier
+  and whitespace checks pass. No new controls/layout need a new screenshot;
+  existing responsive proof and source picker remain intact.
+
+Read-only validate of the settled CL-185 worktree: **Meets the gated foundation;
+no actionable findings**. Fixed two findings before the final pass: duplicate
+saved-source scratch/component cutoffs and an unhelpful generic low-disk intake
+error. Rechecked source/provider boundaries, compatibility, no automatic
+retries, content-free diagnostics and file/listener/request/native scratch
+cleanup. Exact-optional-property TypeScript mismatches were corrected, without
+casts.
+
+Environment deviation: used installed lockfile-pinned tool binaries after the
+Corepack registry bootstrap problem recorded in CL-184. Test/proof escalation
+only resolves Windows transform-cache access; setup still clears credentials,
+forces fake/paid-off, disables env-file loading and blocks external connections.
+Normal app was not running; final normal stack start remains after the series.
+Real source duration/availability, long ASR/face/editorial quality and owner
+personal/release acceptance are unverified. Later packet gates remain explicit
+in the capacity inventory; no partially wired long-source feature is exposed.

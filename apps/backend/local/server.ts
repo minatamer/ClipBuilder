@@ -63,6 +63,10 @@ import type { ClipCaptionTranscription } from "./clip-caption-port.ts";
 import { fakeOwnerCaptionWords } from "./fake-analysis.ts";
 import { limitHostedDemoInputs } from "../../../packages/contracts/local/hosted-editing.ts";
 import type { CodexProgress } from "../../../packages/contracts/local/codex-progress.ts";
+import {
+  resolveOwnerCapacity,
+  ownerSourceFitsCapacity,
+} from "../../../packages/contracts/local/capacity.ts";
 
 export type OwnerHostProviders = {
   codexProgress?: (workspaceId: string) => CodexProgress | null;
@@ -130,6 +134,14 @@ export function createOwnerHost(options: OwnerHostOptions) {
   const diagnostics = options.diagnostics ?? new LocalDiagnostics();
   const files = new WorkspaceFiles(options.root);
   const providers = options.providers?.(files);
+  const capacityPolicy = resolveOwnerCapacity({
+    hosted: options.hosted,
+    aiProvider: providers?.localAi?.aiProvider,
+    sourceLimits: options.sourceLimits,
+  });
+  const capacity =
+    options.capacity ??
+    ((root: string, peak: number) => requireDisk(root, peak, capacityPolicy));
   const analysis = providers?.analysis ?? options.analysis;
   const clipPreparation = providers?.clipPreparation ?? options.clipPreparation;
   const capabilities = ownerRuntimeCapabilitiesSchema.parse({
@@ -147,6 +159,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           cloud: false,
           ...(options.acquisition?.audio ? { youtubeAudio: true } : {}),
           ...providers?.localAi,
+          capacity: capacityPolicy,
         }),
   });
   const workspaces = new Map<string, OwnerWorkspace>();
@@ -154,7 +167,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
   const transcripts = new Map<string, OwnerTranscript>();
   const batches = new Map<string, OwnerClipBatch>();
   const storage = options.storageRoot
-    ? new OwnerDraftStore(options.storageRoot)
+    ? new OwnerDraftStore(options.storageRoot, capacity)
     : undefined;
   const snapshot = (id: string) =>
     ownerDraftSnapshotSchema.parse({
@@ -170,6 +183,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           files,
           snapshot,
           diagnostics,
+          capacity,
         )
       : undefined;
   const drafts = storage
@@ -197,7 +211,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       },
       () => changed(workspace.id),
       diagnostics,
-      options.capacity,
+      capacity,
       options.clipLimit,
       options.exported,
     );
@@ -219,6 +233,8 @@ export function createOwnerHost(options: OwnerHostOptions) {
   const sources = new OwnerSourceAcquisition({
     files,
     diagnostics,
+    capacity,
+    capacityPolicy,
     roots: {
       ...(options.storageRoot ? { downloads: options.storageRoot } : {}),
       ...(options.desktopStorageRoot
@@ -229,6 +245,8 @@ export function createOwnerHost(options: OwnerHostOptions) {
     media: options.media,
     available: () => !closing && !uploading && workspaces.size === 0,
     opened(id, source) {
+      if (!ownerSourceFitsCapacity(source, capacityPolicy))
+        throw new Error("invalid_source");
       if (closing || workspaces.size) throw new Error("workspace_busy");
       const workspace: OwnerWorkspace = {
         id,
@@ -253,11 +271,12 @@ export function createOwnerHost(options: OwnerHostOptions) {
     if (
       !Number.isSafeInteger(size) ||
       size <= 0 ||
-      size > (options.sourceLimits?.bytes ?? OWNER_LIMITS.sourceBytes) ||
+      (capacityPolicy.sourceBytes !== null &&
+        size > capacityPolicy.sourceBytes) ||
       req.headers["content-type"] !== "video/mp4"
     )
       throw new Error("invalid_source");
-    await (options.capacity ?? requireDisk)(options.root, size * 2);
+    await capacity(options.root, size * 2);
     const file = await open(await files.file(id, "source.mp4"), "wx", 0o600);
     const hash = createHash("sha256");
     try {
@@ -285,11 +304,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       signal,
     );
     if (inspected.operation !== "inspect") throw new Error("invalid_source");
-    if (
-      options.sourceLimits &&
-      (inspected.source.durationMs > options.sourceLimits.durationMs ||
-        inspected.source.bytes > options.sourceLimits.bytes)
-    )
+    if (!ownerSourceFitsCapacity(inspected.source, capacityPolicy))
       throw new Error("invalid_source");
     const workspace: OwnerWorkspace = {
       id,
@@ -876,13 +891,14 @@ export function createOwnerHost(options: OwnerHostOptions) {
         if (
           !Number.isSafeInteger(size) ||
           size <= 0 ||
-          size > OWNER_LIMITS.sourceBytes ||
+          (capacityPolicy.sourceBytes !== null &&
+            size > capacityPolicy.sourceBytes) ||
           req.headers["content-type"] !== "video/mp4"
         )
           throw new Error("invalid_source");
         uploading = true;
         try {
-          await (options.capacity ?? requireDisk)(options.root, size * 2);
+          await capacity(options.root, size * 2);
           newId = await files.create();
           await receiveSource(newId, req, controller.signal);
           const workspace = await inspectWorkspace(newId, controller.signal);
@@ -1199,7 +1215,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
               await readOwnerJson(req),
             );
             const identity = canonicalOwnerYoutubeSource(request.url);
-            await (options.capacity ?? requireDisk)(
+            await capacity(
               options.root,
               OWNER_AUDIO_LIMITS.inputBytes + OWNER_AUDIO_LIMITS.bytes,
             );
@@ -1534,10 +1550,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
             res.writeHead(409).end();
             return;
           }
-          await (options.capacity ?? requireDisk)(
-            options.root,
-            OWNER_LIMITS.outputBytes * 2,
-          );
+          await capacity(options.root, OWNER_LIMITS.outputBytes * 2);
           const result = await options.media(
             {
               workspaceId: workspace.id,
@@ -1601,6 +1614,17 @@ export function createOwnerHost(options: OwnerHostOptions) {
     } catch (error) {
       diagnostics.failure("http_request", error);
       if (newId) await files.remove(newId).catch(() => undefined);
+      if (
+        !options.hosted &&
+        error instanceof Error &&
+        error.message === "disk_unavailable"
+      ) {
+        if (!res.destroyed)
+          res
+            .writeHead(507, { "Content-Type": "application/json" })
+            .end('{"error":"disk_unavailable"}');
+        return;
+      }
       if (
         options.clipLimit === 3 &&
         error instanceof Error &&

@@ -1,4 +1,5 @@
 import { OWNER_LIMITS } from "../../../../../packages/contracts/local/policy.ts";
+import type { OwnerCapacity } from "../../../../../packages/contracts/local/capacity.ts";
 import {
   OWNER_DRAFT_DOCUMENT_BYTES,
   ownerPickedDraftFileSchema,
@@ -11,14 +12,18 @@ export async function openPickedFile(
   file: File,
   signal: AbortSignal,
   transport: typeof fetch = fetch,
+  capacity?: Pick<OwnerCapacity, "sourceBytes">,
 ) {
   signal.throwIfAborted();
   if (!Number.isSafeInteger(file.size) || file.size < 1)
     throw new Error("picked_file_invalid");
   const draft = file.name.toLowerCase().endsWith(".json");
-  if (
-    file.size > (draft ? OWNER_DRAFT_DOCUMENT_BYTES : OWNER_LIMITS.sourceBytes)
-  )
+  const maximum = draft
+    ? OWNER_DRAFT_DOCUMENT_BYTES
+    : capacity?.sourceBytes === undefined
+      ? OWNER_LIMITS.sourceBytes
+      : capacity.sourceBytes;
+  if (maximum !== null && file.size > maximum)
     throw new Error("picked_file_large");
   let body: BodyInit = file;
   if (draft) {
@@ -42,7 +47,12 @@ export async function openPickedFile(
       body,
     },
   );
-  if (!response.ok) throw new Error("picked_file_unavailable");
+  if (!response.ok)
+    throw new Error(
+      response.status === 507
+        ? "picked_file_capacity"
+        : "picked_file_unavailable",
+    );
   const result = ownerPickedFileResultSchema.parse(await response.json());
   signal.throwIfAborted();
   return result;

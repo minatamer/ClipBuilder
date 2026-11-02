@@ -38,6 +38,7 @@ import type {
 import type { OwnerAcquisitionNativeStage } from "../../../packages/contracts/local/acquisition-profile.ts";
 
 import { LocalDiagnostics } from "./diagnostics.ts";
+import type { OwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
 
 type SourceAcquisitionOptions = {
   diagnostics?: LocalDiagnostics;
@@ -52,9 +53,12 @@ type SourceAcquisitionOptions = {
   available: () => boolean;
   opened: (id: string, source: OwnerSource) => OwnerWorkspace;
   capacity?: typeof requireDisk;
+  capacityPolicy?: OwnerCapacity;
 };
 const overhead = 32 * 1024 ** 2;
-const maximumMaster = Math.floor((OWNER_LIMITS.scratchBytes - overhead) / 2);
+const defaultMaximumMaster = Math.floor(
+  (OWNER_LIMITS.scratchBytes - overhead) / 2,
+);
 const stableFormat = (
   value:
     | OwnerSavedSourceVariant
@@ -98,10 +102,29 @@ export class OwnerSourceAcquisition {
   private metadataDrain: Promise<void> = Promise.resolve();
   private closed = false;
   private current: OwnerAcquisitionProgress | null = null;
+  private readonly maximumMaster: number;
+  private readonly maximumComponents: number;
   constructor(private readonly options: SourceAcquisitionOptions) {
+    this.maximumMaster =
+      options.capacityPolicy?.scratchBytes === null
+        ? (options.capacityPolicy.sourceBytes ??
+          Math.floor(Number.MAX_SAFE_INTEGER / 2) - overhead)
+        : defaultMaximumMaster;
+    this.maximumComponents =
+      options.capacityPolicy?.profile === "local-codex"
+        ? this.maximumMaster
+        : this.maximumMaster - overhead;
     for (const destination of ["downloads", "desktop"] as const) {
       const root = options.roots[destination];
-      if (root) this.libraries.set(destination, new OwnerSourceLibrary(root));
+      if (root)
+        this.libraries.set(
+          destination,
+          new OwnerSourceLibrary(
+            root,
+            options.capacity,
+            options.capacityPolicy?.scratchBytes,
+          ),
+        );
     }
   }
   get active() {
@@ -330,7 +353,7 @@ export class OwnerSourceAcquisition {
             directory,
           },
           (progress) => {
-            if (progress.downloadedBytes > maximumMaster - overhead) {
+            if (progress.downloadedBytes > this.maximumComponents) {
               controller.abort(new Error("source_capacity"));
               throw new Error("source_capacity");
             }
@@ -352,7 +375,7 @@ export class OwnerSourceAcquisition {
               throw new Error("source_invalid");
             components += info.size;
           }
-          if (components > maximumMaster - overhead)
+          if (components > this.maximumComponents)
             throw new Error("source_capacity");
           await (this.options.capacity ?? requireDisk)(
             this.options.files.root,
@@ -381,7 +404,7 @@ export class OwnerSourceAcquisition {
         if (
           (result.operation !== "synthesize-acquisition" &&
             result.operation !== "prepare-acquisition") ||
-          result.source.bytes > maximumMaster
+          result.source.bytes > this.maximumMaster
         )
           throw new Error("source_capacity");
         update({ stage: "inspecting" });

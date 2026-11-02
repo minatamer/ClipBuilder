@@ -259,7 +259,11 @@ export class OwnerSourceLibrary {
   private tail: Promise<unknown> = Promise.resolve();
   private controller = new AbortController();
   private readonly verified = new Map<string, Verified>();
-  constructor(root: string) {
+  constructor(
+    root: string,
+    private readonly capacity: typeof requireDisk = requireDisk,
+    private readonly scratchBytes: number | null = OWNER_LIMITS.scratchBytes,
+  ) {
     if (!isAbsolute(root)) throw error("invalid");
     this.root = resolve(root);
   }
@@ -483,10 +487,13 @@ export class OwnerSourceLibrary {
         if (!missing(cause)) throw cause;
         copyBytes = source.bytes;
       }
-      if (source.bytes + copyBytes + MAX_SIDECAR > OWNER_LIMITS.scratchBytes)
+      if (
+        this.scratchBytes !== null &&
+        source.bytes + copyBytes + MAX_SIDECAR > this.scratchBytes
+      )
         throw error("capacity");
-      await requireDisk(files.root, 0);
-      await requireDisk(this.root, copyBytes + MAX_SIDECAR);
+      await this.capacity(files.root, 0);
+      await this.capacity(this.root, copyBytes + MAX_SIDECAR);
       current.throwIfAborted();
       if (copyBytes) await copyMaster(from, target, source, current);
       await verifyMedia(target, source, current, this.verified);
@@ -513,7 +520,7 @@ export class OwnerSourceLibrary {
       this.verified.clear();
       const from = await this.sourcePath(record.variant.actual.fingerprint);
       await verifyMedia(from, record.variant.actual, current, this.verified);
-      await requireDisk(files.root, record.variant.actual.bytes);
+      await this.capacity(files.root, record.variant.actual.bytes);
       const workspaceId = await files.create();
       try {
         await copyMaster(
@@ -558,10 +565,13 @@ export class OwnerSourceLibrary {
         await verifyMedia(target, source, current);
       } catch (cause) {
         if (!missing(cause)) throw cause;
-        if (source.bytes * 2 + MAX_SIDECAR > OWNER_LIMITS.scratchBytes)
+        if (
+          this.scratchBytes !== null &&
+          source.bytes * 2 + MAX_SIDECAR > this.scratchBytes
+        )
           throw error("capacity");
-        await requireDisk(this.root, source.bytes + MAX_SIDECAR);
-        await requireDisk(files.root, 0);
+        await this.capacity(this.root, source.bytes + MAX_SIDECAR);
+        await this.capacity(files.root, 0);
         await copyMaster(from, target, source, current);
       }
       current.throwIfAborted();

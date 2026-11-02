@@ -1,5 +1,12 @@
 # Local editing backend
 
+CL-185 centralizes provider-scoped capacity and disk admission. Local Codex uses
+measured scratch headroom with the existing reserve; Gemini/hosted keep their
+budgets. Actual source/count limits remain bounded until CL-189/190 complete
+the long-input/batch gates. See the
+[capacity inventory](../../../docs/operations/LOCAL_CODEX_CAPACITY.md). Local
+intake reports insufficient disk space without inference, retry or private data.
+
 CL-142 supersedes CL-138's initial sound choice: each new prepared visual gets
 the recorded Pop SFX (nine logical frames), at its start only. No new provider
 call, generation or runtime sample download is added. Stable anchors, independent

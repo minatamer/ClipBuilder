@@ -1,5 +1,22 @@
 # Local Codex provider — CL-135
 
+## Capacity composition — CL-185
+
+The actual local Codex composition selects the capacity profile; browser fields,
+worker job JSON, restored drafts and hosted owner exemptions cannot select it.
+Source admission and measured disk checks are independent of provider dispatch.
+The content-free capability tells the picker the effective source limit. The
+private startup descriptor carries the same profile to native inspection. Common
+save/recovery/source/batch paths retain a real disk reserve and preserve owner
+files. Gemini and hosted keep their existing independent budgets.
+
+Long-source/count readiness remains disabled until CL-189/190 prove complete
+incremental pipelines. The foundation does not establish two-hour transcription
+or count-free processing. See the
+[capacity path inventory](../operations/LOCAL_CODEX_CAPACITY.md) for remaining
+schema, clock, downloader, ASR, prompt and persistence owners. No new config,
+provider call, model change or fallback is introduced.
+
 CL-171 replaces mandatory Commons with broad provider web discovery. A separate
 Codex request receives only generic briefs/alternatives and enables live hosted
 web search; media/transcript planning keeps all tools disabled.

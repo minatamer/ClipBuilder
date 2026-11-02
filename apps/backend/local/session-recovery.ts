@@ -4,7 +4,11 @@ import type { OwnerDraftSnapshot } from "../../../packages/contracts/local/draft
 import { OWNER_LIMITS } from "../../../packages/contracts/local/policy.ts";
 import { OwnerDraftStore } from "./draft-store.ts";
 import { OwnerWorkspaceDrafts } from "./workspace-drafts.ts";
-import { confinedPath, type WorkspaceFiles } from "./workspace-files.ts";
+import {
+  confinedPath,
+  requireDisk,
+  type WorkspaceFiles,
+} from "./workspace-files.ts";
 import { rejectRepositoryStorage } from "./owner-storage.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
 
@@ -18,8 +22,9 @@ export class OwnerSessionRecovery {
     private readonly files: WorkspaceFiles,
     snapshot: (id: string) => OwnerDraftSnapshot,
     diagnostics = new LocalDiagnostics(),
+    capacity: typeof requireDisk = requireDisk,
   ) {
-    this.store = new OwnerDraftStore(join(storageRoot, ".recovery"));
+    this.store = new OwnerDraftStore(join(storageRoot, ".recovery"), capacity);
     this.drafts = new OwnerWorkspaceDrafts(
       this.store,
       files,

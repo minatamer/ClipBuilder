@@ -5,6 +5,7 @@ import {
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { createOwnerWorker } from "./server.ts";
+import { ownerCapacitySchema } from "../../../packages/contracts/local/capacity.ts";
 
 async function main() {
   if (
@@ -21,6 +22,7 @@ async function main() {
       tools: z.object({
         ffmpeg: z.string().min(1),
         ffprobe: z.string().min(1),
+        capacity: ownerCapacitySchema.optional(),
       }),
       speech: z
         .object({

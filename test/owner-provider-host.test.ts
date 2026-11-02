@@ -76,6 +76,16 @@ it("reports the composed provider mode without invoking any provider", async () 
     planningAvailable: true,
     captionGeneration: false,
     visualDiscovery: true,
+    capacity: {
+      profile: "bounded",
+      longSources: false,
+      manyClips: false,
+      sourceBytes: 10 * 1024 ** 3,
+      sourceMs: 3_600_000,
+      scratchBytes: 20 * 1024 ** 3,
+      clips: 10,
+      moments: 360,
+    },
     localMedia: true,
     cloud: false,
   });

@@ -8,10 +8,14 @@ import {
   OWNER_FPS,
   ownerCutSchema,
   type OwnerCut,
-  ownerSourceSchema,
+  ownerSourceForCapacity,
   ownerIdSchema,
   type OwnerSource,
 } from "../../../packages/contracts/local/index.ts";
+import {
+  resolveOwnerCapacity,
+  type OwnerCapacity,
+} from "../../../packages/contracts/local/capacity.ts";
 import { probeMedia, SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { runOwnedProcess } from "../src/media/process-runner.ts";
 import { ownerOutputRevisionSchema } from "../../../packages/contracts/local/clips.ts";
@@ -31,7 +35,11 @@ import {
   type OwnerOutputProfile,
 } from "./export-profile.ts";
 
-export type OwnerNativeTools = { ffmpeg: string; ffprobe: string };
+export type OwnerNativeTools = {
+  ffmpeg: string;
+  ffprobe: string;
+  capacity?: OwnerCapacity | undefined;
+};
 export async function ownerCodexMediaPath(
   root: string,
   id: string,
@@ -147,11 +155,14 @@ export async function inspectOwnerMedia(
   tools: OwnerNativeTools,
   signal: AbortSignal,
 ) {
+  const capacity = tools.capacity ?? resolveOwnerCapacity({});
   const info = await lstat(file);
   if (
     !info.isFile() ||
     info.isSymbolicLink() ||
-    info.size > OWNER_LIMITS.sourceBytes
+    !Number.isSafeInteger(info.size) ||
+    info.size <= 0 ||
+    (capacity.sourceBytes !== null && info.size > capacity.sourceBytes)
   )
     throw new Error("invalid");
   const probe = await probeMedia(file, tools.ffprobe, signal);
@@ -260,7 +271,7 @@ export async function inspectOwnerMedia(
   const hash = createHash("sha256");
   for await (const bytes of createReadStream(file, { signal }))
     hash.update(bytes);
-  const metadata = ownerSourceSchema.parse({
+  const metadata = ownerSourceForCapacity(capacity).parse({
     fingerprint: hash.digest("hex"),
     bytes: info.size,
     durationMs: Math.round((videoEnd - videoStart) * 1000),

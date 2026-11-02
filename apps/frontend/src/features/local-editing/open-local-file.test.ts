@@ -1,6 +1,43 @@
 import { expect, it, vi } from "vitest";
 import { openPickedFile } from "./open-local-file.ts";
 import { OWNER_DRAFT_DOCUMENT_BYTES } from "../../../../../packages/contracts/local/drafts.ts";
+import { resolveOwnerCapacity } from "../../../../../packages/contracts/local/capacity.ts";
+
+it("uses admitted source capacity while keeping pending Codex and saved-document bounds", async () => {
+  const large = new File(["synthetic"], "synthetic.mp4");
+  Object.defineProperty(large, "size", { value: 12 * 1024 ** 3 });
+  const transport = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(Response.json({ ...result, kind: "video" }));
+  await expect(
+    openPickedFile(
+      large,
+      AbortSignal.timeout(2000),
+      transport,
+      resolveOwnerCapacity({ aiProvider: "codex" }),
+    ),
+  ).rejects.toThrow("picked_file_large");
+  expect(transport).toHaveBeenCalledTimes(0);
+  const ready = resolveOwnerCapacity(
+    { aiProvider: "codex" },
+    { longSources: true, manyClips: false },
+  );
+  await expect(
+    openPickedFile(large, AbortSignal.timeout(2000), transport, ready),
+  ).resolves.toMatchObject({ kind: "video" });
+  expect(transport).toHaveBeenCalledExactlyOnceWith(
+    "/api/local/open/video",
+    expect.objectContaining({ body: large }),
+  );
+  const draft = new File(["{}"], "draft.json");
+  Object.defineProperty(draft, "size", {
+    value: OWNER_DRAFT_DOCUMENT_BYTES + 1,
+  });
+  await expect(
+    openPickedFile(draft, AbortSignal.timeout(2000), transport, ready),
+  ).rejects.toThrow("picked_file_large");
+  expect(transport).toHaveBeenCalledTimes(1);
+});
 
 const id = crypto.randomUUID(),
   fingerprint = "a".repeat(64);
@@ -95,5 +132,19 @@ it("keeps unavailable or invalid saved material as an error without a processing
       transport,
     ),
   ).rejects.toThrow("picked_file_unavailable");
+  expect(transport).toHaveBeenCalledTimes(1);
+});
+
+it("reports local storage exhaustion as capacity, without inference or a retry", async () => {
+  const transport = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(new Response(null, { status: 507 }));
+  await expect(
+    openPickedFile(
+      new File(["synthetic"], "clip.mp4"),
+      AbortSignal.timeout(2000),
+      transport,
+    ),
+  ).rejects.toThrow("picked_file_capacity");
   expect(transport).toHaveBeenCalledTimes(1);
 });

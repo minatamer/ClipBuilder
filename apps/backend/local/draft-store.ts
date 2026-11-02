@@ -426,7 +426,10 @@ export class OwnerDraftStore {
   private controller = new AbortController();
   private readonly verified: FileCache = new Map();
   readonly root: string;
-  constructor(root: string) {
+  constructor(
+    root: string,
+    private readonly capacity: typeof requireDisk = requireDisk,
+  ) {
     if (!isAbsolute(root)) throw new Error("invalid_path");
     this.root = resolve(root);
   }
@@ -678,7 +681,7 @@ export class OwnerDraftStore {
           bytes += copy.file.bytes;
         }
       }
-      await requireDisk(this.root, bytes);
+      await this.capacity(this.root, bytes);
       for (const copy of copies)
         await copyImmutable(copy, signal, this.verified);
       if (previous)
@@ -826,7 +829,7 @@ export class OwnerDraftStore {
       this.verified.clear();
       const record = await this.readRecord(id, signal);
       const paths = await this.paths(record);
-      await requireDisk(
+      await this.capacity(
         files.root,
         record.source.bytes +
           [...record.assets, ...record.raw, ...record.outputs].reduce(
