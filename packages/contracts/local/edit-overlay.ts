@@ -111,6 +111,7 @@ export function compileOwnerOverlay(
     ...(edit?.captions ? { captionStyle: edit.captions } : {}),
     ...(edit?.videoLook ? { videoLook: edit.videoLook } : {}),
     ...(edit?.focus ? { focus: edit.focus } : {}),
+    ...(edit?.cameraEffects ? { cameraEffects: edit.cameraEffects } : {}),
     ...(audio
       ? {
           audio: ownerAudioTrackSchema.parse({

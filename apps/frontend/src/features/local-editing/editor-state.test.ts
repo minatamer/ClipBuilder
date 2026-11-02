@@ -326,3 +326,33 @@ it("adds and resets focus on legacy saved clips without rewriting their base or 
   ).toBeUndefined();
   expect(JSON.stringify(current.base)).toBe(snapshot);
 });
+
+it("tracks manual camera effects through Apply/Discard operations without changing the base", () => {
+  const current = clip(),
+    original = initialOwnerEdit(current),
+    base = JSON.stringify(current.base);
+  const focus = defaultOwnerFocus({ width: 1280, height: 720 }, 90),
+    effect = {
+      id: crypto.randomUUID(),
+      occurrence: "body" as const,
+      startFrame: 3,
+      zoomFrames: 15,
+      holdFrames: 9 as const,
+      returnFrames: 12 as const,
+      target: { centerX: 0.3, centerY: 0.5, zoom: 2 },
+    };
+  const draft = { ...original, focus, cameraEffects: [effect] };
+  expect(sameOwnerEdit(original, draft)).toBe(false);
+  expect(ownerEditOperations(original, draft, current)).toEqual([
+    { kind: "camera-effects", effects: [effect] },
+    { kind: "focus", focus },
+  ]);
+  expect(
+    compileOwnerOverlay(current.base!, draft, current.assets).cameraEffects,
+  ).toEqual([effect]);
+  expect(sameOwnerEdit(original, structuredClone(original))).toBe(true);
+  expect(
+    ownerEditOperations(draft, { ...draft, cameraEffects: [] }, current),
+  ).toEqual([{ kind: "camera-effects", effects: [] }]);
+  expect(JSON.stringify(current.base)).toBe(base);
+});

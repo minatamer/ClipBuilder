@@ -1,3 +1,7 @@
+import {
+  ownerCameraEffectsSchema,
+  ownerCameraEffectsFit,
+} from "./camera-motion.ts";
 import { z } from "zod";
 import {
   OWNER_AUDIO_LIMITS,
@@ -71,12 +75,16 @@ export const ownerOverlaySchema = z
     texts: ownerTextLayersSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
     focus: ownerFocusSchema.optional(),
+    cameraEffects: ownerCameraEffectsSchema.optional(),
     visuals: z.array(ownerVisualSchema).max(OWNER_PICTURE_LIMITS.cuesPerClip),
   })
   .strict()
   .superRefine((overlay, ctx) => {
     if (
       (overlay.hook && overlay.hook.endFrame > overlay.frames) ||
+      (!!overlay.cameraEffects?.length &&
+        (!overlay.focus ||
+          !ownerCameraEffectsFit(overlay.cameraEffects, overlay))) ||
       (overlay.focus && overlay.focus.frames !== overlay.frames) ||
       overlay.audio?.cues.some(
         (cue) => cue.placement === "clip" && cue.endFrame > overlay.frames,
@@ -123,6 +131,7 @@ export const ownerClipBaseSchema = z
   .strict()
   .refine(
     (base) =>
+      !base.overlay.cameraEffects?.length &&
       base.overlay.frames === base.cut.endFrame - base.cut.startFrame &&
       (!base.hookSuggestion ||
         base.hookSuggestion.endFrame <= base.overlay.frames),

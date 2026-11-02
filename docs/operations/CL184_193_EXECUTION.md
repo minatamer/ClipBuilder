@@ -134,3 +134,18 @@ actual disk/heap guards, legacy reads and completed-state gating preserved.
 native workflow passed. Final read-only validate reports no actionable findings
 after documented paging/compatibility/resource fixes. No real provider/download
 or normal app launch. CL-192 is next; CL-193 remains research only.
+
+CL-190 committed `630db03`.
+
+## CL-192 implementation
+
+Manual occurrence-bound camera effects, shared preview/native interpolation,
+scaled target controls and edit persistence are implemented. Native generated
+exports pass at five cadences. Scope, validation findings and final verification
+are recorded in CL-192; no real provider/download or normal app launch.
+
+CL-192 final: 929 local fake cases/112 files, 25 focused post-fix cases, one
+five-cadence native proof and one desktop/phone gesture/reopen proof passed.
+Scoped static checks and current worker build pass. Validation resolved the
+Hook no-op, legacy reset, fallback clock and FFmpeg option issues; final review
+reports no actionable findings. No owner/live/provider tests were performed.

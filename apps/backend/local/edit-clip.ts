@@ -27,6 +27,7 @@ export function applyOwnerEdit(
     throw new Error("stale_edit_revision");
   const automatic = automaticOwnerEdit(clip.base, clip.id, clip.baseHash);
   const next = ownerEditDocumentSchema.parse(clip.edit ?? automatic);
+  const priorHook = JSON.stringify(next.hook);
   for (const operation of request.operations) {
     switch (operation.kind) {
       case "audio":
@@ -45,6 +46,9 @@ export function applyOwnerEdit(
         break;
       case "caption-text":
         next.captionText = operation.words;
+        break;
+      case "camera-effects":
+        next.cameraEffects = operation.effects;
         break;
       case "focus":
         if (
@@ -84,11 +88,21 @@ export function applyOwnerEdit(
           next.visuals = automatic.visuals;
         else if (operation.panel === "focus") {
           if (automatic.focus) next.focus = automatic.focus;
-          else delete next.focus;
+          else {
+            delete next.focus;
+            next.cameraEffects = [];
+          }
         } else delete next.videoLook;
         break;
     }
   }
+  if (
+    priorHook !== JSON.stringify(next.hook) &&
+    !request.operations.some((operation) => operation.kind === "camera-effects")
+  )
+    next.cameraEffects = next.cameraEffects?.filter(
+      (effect) => effect.occurrence === "body",
+    );
   if (
     next.texts &&
     request.operations.some((operation) => operation.kind === "hook") &&

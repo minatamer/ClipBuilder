@@ -34,6 +34,7 @@ import {
   ownerDraftStatusSchema,
 } from "../packages/contracts/local/drafts.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
+import { ownerPresentationFrames } from "../packages/contracts/local/hook.ts";
 import { syntheticTextLayer } from "./owner-text-fixture.ts";
 
 // Control/API integration only: AI adapters and native media jobs are test doubles.
@@ -78,6 +79,7 @@ afterEach(async () => {
 async function start(
   withAI = true,
   mode: "synthetic-ai" | "provider-ai" = "synthetic-ai",
+  recoverSession = false,
 ): Promise<Context> {
   const root = join(directory, `scratch-${contexts.length}`);
   await mkdir(root);
@@ -120,14 +122,17 @@ async function start(
     );
     return {
       operation: "clip",
-      frames: job.overlay.frames,
+      frames: ownerPresentationFrames(job.overlay),
       bytes: output.length,
-      durationMs: Math.round((job.overlay.frames * 1000) / 30),
+      durationMs: Math.round(
+        (ownerPresentationFrames(job.overlay) * 1000) / 30,
+      ),
     };
   });
   const host = createOwnerHost({
     root,
     storageRoot,
+    recoverSession,
     ui: directory,
     token: "editor-test",
     port: 0,
@@ -780,4 +785,167 @@ it("saves and autosaves locally, then restores/edit/exports on a new host with e
   expect(
     await readFile(join(restored.root, reopened.id, "source.mp4")),
   ).toEqual(source);
+});
+
+it.each([false, true])(
+  "persists manual Hook/body zooms through save/recovery (%s), explicit render/retry and Hook changes without AI",
+  async (rolling) => {
+    const initial = await start(true, "synthetic-ai", rolling),
+      { workspace, list } = await prepare(initial, false),
+      first = list.clips[2]!,
+      path = `${endpoint(workspace.id)}/clips/${first.id}`;
+    const zoom = {
+      id: randomUUID(),
+      occurrence: "body" as const,
+      startFrame: 3,
+      zoomFrames: 12,
+      holdFrames: 9 as const,
+      returnFrames: 12 as const,
+      target: { centerX: 0.4, centerY: 0.5, zoom: 2 },
+    };
+    const hookZoom = { ...zoom, id: randomUUID(), occurrence: "hook" as const };
+    expect(
+      (
+        await post(
+          initial,
+          `${path}/edit`,
+          edit(first, [
+            { kind: "hook", hook: { startFrame: 15, endFrame: 75 } },
+            { kind: "camera-effects", effects: [zoom, hookZoom] },
+          ]),
+        )
+      ).status,
+    ).toBe(200);
+    const edited = (await clips(initial, workspace.id)).clips[2]!;
+    expect(edited.edit?.cameraEffects).toEqual([zoom, hookZoom]);
+    counts(initial, 0);
+    const saved = rolling
+      ? null
+      : ownerDraftStatusSchema.parse(
+          JSON.parse(
+            (
+              await post(initial, `${endpoint(workspace.id)}/draft`)
+            ).body.toString(),
+          ),
+        );
+    await stop(initial);
+    const restored = await start(false, "synthetic-ai", rolling);
+    const opened = rolling
+      ? await ownerRequest(restored.port, "/api/workspace", { headers: auth })
+      : await post(restored, `/api/drafts/${saved!.id}/open`);
+    expect(opened.status).toBe(200);
+    const reopened = ownerWorkspaceSchema.parse(
+      JSON.parse(opened.body.toString()),
+    );
+    const loaded = (await clips(restored, reopened.id)).clips[2]!,
+      restoredPath = `${endpoint(reopened.id)}/clips/${loaded.id}`;
+    expect(loaded.edit?.cameraEffects).toEqual([zoom, hookZoom]);
+    expect(restored.media).toHaveBeenCalledTimes(0);
+    expect(
+      (
+        await post(restored, `${restoredPath}/render`, {
+          operationId: randomUUID(),
+          expectedRevision: loaded.revision,
+        })
+      ).status,
+    ).toBe(202);
+    expect((await completed(restored, reopened.id)).clips[2]!.state).toBe(
+      "ready",
+    );
+    expect(restored.media).toHaveBeenCalledTimes(1);
+    const job = restored.media.mock.calls[0]![0];
+    if (job.operation !== "clip") throw new Error("expected_clip");
+    expect(job.overlay.cameraEffects).toEqual([zoom, hookZoom]);
+    const render = restored.media.getMockImplementation()!;
+    restored.media.mockImplementationOnce(async () => {
+      throw Error("synthetic_export_failure");
+    });
+    expect(
+      (
+        await post(restored, `${restoredPath}/render`, {
+          operationId: randomUUID(),
+          expectedRevision: loaded.revision,
+        })
+      ).status,
+    ).toBe(202);
+    expect((await completed(restored, reopened.id)).clips[2]!.state).toBe(
+      "failed",
+    );
+    expect(restored.media).toHaveBeenCalledTimes(2);
+    expect(
+      (
+        await post(restored, `${restoredPath}/retry`, {
+          operationId: randomUUID(),
+          expectedRevision: loaded.revision,
+        })
+      ).status,
+    ).toBe(202);
+    expect((await completed(restored, reopened.id)).clips[2]!.state).toBe(
+      "ready",
+    );
+    expect(restored.media).toHaveBeenCalledTimes(3);
+    restored.media.mockImplementation(render);
+    const retried = restored.media.mock.calls[2]![0];
+    if (retried.operation !== "clip") throw Error("expected_clip");
+    expect(retried.overlay.cameraEffects).toEqual([zoom, hookZoom]);
+    const sameHook = (await clips(restored, reopened.id)).clips[2]!;
+    expect(
+      (
+        await post(
+          restored,
+          `${restoredPath}/edit`,
+          edit(sameHook, [{ kind: "hook", hook: sameHook.edit!.hook! }]),
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (await clips(restored, reopened.id)).clips[2]!.edit?.cameraEffects,
+    ).toEqual([zoom, hookZoom]);
+    const current = (await clips(restored, reopened.id)).clips[2]!;
+    expect(
+      (
+        await post(
+          restored,
+          `${restoredPath}/edit`,
+          edit(current, [{ kind: "hook", hook: null }]),
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (await clips(restored, reopened.id)).clips[2]!.edit?.cameraEffects,
+    ).toEqual([zoom]);
+    counts(initial, 0);
+  },
+);
+
+it("resets legacy unframed camera editing explicitly without leaving unusable zooms", async () => {
+  const { syntheticTextClip } = await import("./owner-text-fixture.ts"),
+    { defaultOwnerFocus } =
+      await import("../packages/contracts/local/focus.ts"),
+    { automaticOwnerEdit } =
+      await import("../packages/contracts/local/edit-overlay.ts"),
+    { applyOwnerEdit } = await import("../apps/backend/local/edit-clip.ts");
+  const clip = syntheticTextClip();
+  clip.edit = {
+    ...automaticOwnerEdit(clip.base!, clip.id, clip.baseHash!),
+    focus: defaultOwnerFocus({ width: 1280, height: 720 }, 90),
+    cameraEffects: [
+      {
+        id: randomUUID(),
+        occurrence: "body",
+        startFrame: 3,
+        zoomFrames: 15,
+        holdFrames: 9,
+        returnFrames: 12,
+        target: { centerX: 0.3, centerY: 0.5, zoom: 2 },
+      },
+    ],
+  };
+  const reset = applyOwnerEdit(
+    clip,
+    edit(clip, [{ kind: "reset", panel: "focus" }]),
+  );
+  expect(reset.focus).toBeUndefined();
+  expect(reset.cameraEffects).toEqual([]);
+  expect(clip.edit.cameraEffects).toHaveLength(1);
 });

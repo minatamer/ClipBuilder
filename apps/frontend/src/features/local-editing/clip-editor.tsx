@@ -1,3 +1,8 @@
+import {
+  ownerCameraCropAt,
+  ownerCameraEffectsSchema,
+  ownerCameraEffectsFit,
+} from "../../../../../packages/contracts/local/camera-motion.ts";
 import { readOwnerClips } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
 import { ProcessingState } from "../../shared/ui/processing-state";
@@ -57,8 +62,6 @@ import {
 import { OWNER_CAPTION_GENERATION_ATTEMPTS } from "../../../../../packages/contracts/local/caption-generation.ts";
 import {
   defaultOwnerFocus,
-  ownerFocusAt,
-  ownerFocusCrop,
   ownerFocusSchema,
 } from "../../../../../packages/contracts/local/focus.ts";
 import {
@@ -341,7 +344,17 @@ function Review({
   const frame = ownerSourceFrame(overlay, presentationFrame);
   const caption = overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean;
   const crop = overlay.focus
-    ? ownerFocusCrop(overlay.focus, ownerFocusAt(overlay.focus, frame))
+    ? ownerCameraCropAt(
+        overlay.focus,
+        overlay.cameraEffects ?? [],
+        frame,
+        overlay.hook && presentationFrame < ownerHookFrames(overlay)
+          ? "hook"
+          : "body",
+        overlay.hook && presentationFrame < ownerHookFrames(overlay)
+          ? presentationFrame
+          : frame,
+      )
     : null;
   return (
     <AbsoluteFill style={{ backgroundColor: "#101215" }}>
@@ -619,24 +632,32 @@ export function ClipEditor({
               ? "Enter text for each caption word."
               : draft.captionText?.length
                 ? "Keep each caption under 80 characters and use plain text."
-                : draft.focus &&
-                    !ownerFocusSchema.safeParse(draft.focus).success
-                  ? "Set camera changes inside this clip, with zoom from 1 to 3."
-                  : draft.visuals.some(
-                        (cue) =>
-                          !Number.isFinite(cue.startFrame) ||
-                          !Number.isFinite(cue.endFrame) ||
-                          cue.startFrame < 0 ||
-                          cue.endFrame <= cue.startFrame ||
-                          cue.endFrame > base.overlay.frames,
-                      )
-                    ? "Set each picture’s end after its start, within this clip."
-                    : draft.captions &&
-                        (!Number.isInteger(draft.captions.fontSize) ||
-                          draft.captions.fontSize < 24 ||
-                          draft.captions.fontSize > 120)
-                      ? "Use a font size from 24 to 120."
-                      : "Keep layers inside the preview and check their size.";
+                : draft.cameraEffects &&
+                    (!ownerCameraEffectsSchema.safeParse(draft.cameraEffects)
+                      .success ||
+                      !ownerCameraEffectsFit(draft.cameraEffects, {
+                        frames: base.overlay.frames,
+                        hook: draft.hook,
+                      }))
+                  ? "Keep zooms apart and leave room for their automatic return."
+                  : draft.focus &&
+                      !ownerFocusSchema.safeParse(draft.focus).success
+                    ? "Set camera changes inside this clip, with zoom from 1 to 3."
+                    : draft.visuals.some(
+                          (cue) =>
+                            !Number.isFinite(cue.startFrame) ||
+                            !Number.isFinite(cue.endFrame) ||
+                            cue.startFrame < 0 ||
+                            cue.endFrame <= cue.startFrame ||
+                            cue.endFrame > base.overlay.frames,
+                        )
+                      ? "Set each picture’s end after its start, within this clip."
+                      : draft.captions &&
+                          (!Number.isInteger(draft.captions.fontSize) ||
+                            draft.captions.fontSize < 24 ||
+                            draft.captions.fontSize > 120)
+                        ? "Use a font size from 24 to 120."
+                        : "Keep layers inside the preview and check their size.";
     try {
       overlay = compileOwnerOverlay(
         base,
@@ -708,6 +729,18 @@ export function ClipEditor({
   }, [dirty]);
 
   function update(next: OwnerEditDocument) {
+    if (
+      JSON.stringify(next.hook) !== JSON.stringify(draft.hook) &&
+      next.cameraEffects?.some((effect) => effect.occurrence === "hook")
+    ) {
+      next = {
+        ...next,
+        cameraEffects: next.cameraEffects.filter(
+          (effect) => effect.occurrence === "body",
+        ),
+      };
+      setMessage("Hook zooms were removed because the Hook changed.");
+    }
     if (
       next.texts &&
       JSON.stringify(next.hook) !== JSON.stringify(draft.hook) &&
@@ -1352,10 +1385,16 @@ export function ClipEditor({
                 available={!playbackFailed && previewLoaded}
                 focus={
                   draft.focus ??
+                  base.overlay.focus ??
                   defaultOwnerFocus(
                     source ?? { width: 1080, height: 1920 },
                     base.overlay.frames,
                   )
+                }
+                cameraEffects={draft.cameraEffects ?? []}
+                cameraAvailable={Boolean(draft.focus ?? base.overlay.focus)}
+                onCameraEffects={(cameraEffects) =>
+                  update({ ...draft, cameraEffects })
                 }
                 automatic={base.overlay.focus}
                 sourceUrl={`${endpoint}/source`}
@@ -1363,7 +1402,15 @@ export function ClipEditor({
                 onChange={(focus) => {
                   const next = { ...draft };
                   if (focus) next.focus = focus;
-                  else delete next.focus;
+                  else {
+                    delete next.focus;
+                    if (!base.overlay.focus && next.cameraEffects?.length) {
+                      next.cameraEffects = [];
+                      setMessage(
+                        "Zooms were removed because camera framing was reset.",
+                      );
+                    }
+                  }
                   update(next);
                 }}
               />

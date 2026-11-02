@@ -1,5 +1,13 @@
 # Private media renderer
 
+CL-192 samples shared manual camera motion at original native cadence, preserving
+the existing even-pixel projection and `setsar=1` scaler fix. Numeric graphs live
+in owned temporary files when zooms exist: admitted Windows FFmpeg 9 uses
+`-/filter_complex`, packaged Linux FFmpeg 5 uses `-filter_complex_script`.
+Scratch is removed on completion/failure/cancel. Current-source generated-media
+proof passes at 24/25/29.97/30/60 fps without keys or AI; this does not establish
+Linux execution or real face/visual acceptance.
+
 Local Codex derives 16-kHz mono PCM from the selected master/window and samples
 temporal triptychs only for selected clips. CL-187 retains native panel geometry
 while bounding JPEG/artifact bytes; over-budget images fail before inference.

@@ -58,6 +58,15 @@ Reset failures expose Retry/Discard in a dismissible popover. Synthetic fake/no-
 browser checks verify these layouts and guards; real-device/owner visual and
 live AI acceptance remain separate. AI still requires keys/live flags/approvals.
 
+[CL-192](../../docs/tickets/CL-192-manual-camera-punch-in.md) adds a manual
+Zoom tab in Focus. Capture a start at the playhead, pick the target in the
+portrait view, and set magnification and arrival duration. A 0.3-second hold and
+0.4-second automatic return follow the current camera schedule. Hook and body
+zooms are independent; changing the Hook clears only its zooms. Apply/Discard,
+saved drafts and rolling recovery retain manual effects. No AI call is added.
+Synthetic fake/no-key proofs verify controls and native output; real render
+availability and owner visual acceptance remain separate.
+
 CL-068/069/072 add Focus to the shared completed-clip editor: Camera/People
 tabs, numbered position handles, explicit person removal and playback-based
 Start/End Capture. Camera contains Timing/Advanced for the selected position;

@@ -93,6 +93,8 @@ export function sameOwnerEdit(
       JSON.stringify(right.captionText ?? []) &&
     JSON.stringify(left.videoLook) === JSON.stringify(right.videoLook) &&
     JSON.stringify(left.focus) === JSON.stringify(right.focus) &&
+    JSON.stringify(left.cameraEffects ?? []) ===
+      JSON.stringify(right.cameraEffects ?? []) &&
     JSON.stringify(left.visuals) === JSON.stringify(right.visuals)
   );
 }
@@ -127,6 +129,14 @@ export function ownerEditOperations(
     JSON.stringify(draft.captionText ?? [])
   )
     operations.push({ kind: "caption-text", words: draft.captionText ?? [] });
+  if (
+    JSON.stringify(original.cameraEffects ?? []) !==
+    JSON.stringify(draft.cameraEffects ?? [])
+  )
+    operations.push({
+      kind: "camera-effects",
+      effects: draft.cameraEffects ?? [],
+    });
   if (JSON.stringify(original.focus) !== JSON.stringify(draft.focus))
     operations.push(
       draft.focus

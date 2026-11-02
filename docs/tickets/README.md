@@ -1,5 +1,15 @@
 # ClipBuilder canonical ticket index
 
+## Manual camera zoom — 2026-11-02
+
+[CL-192](CL-192-manual-camera-punch-in.md) adds manual target/duration zooms
+with smooth approach, fixed short hold/return, explicit Hook/body occurrence
+and shared preview/original-source crop math. Native exports pass at five
+cadences; desktop/phone pointer, touch, keyboard, Apply/Discard and reopen pass.
+Saved/recovery/export retry keep the edit without AI. Final validate found no
+actionable findings. Owner visual/real quality and Linux/hosted acceptance remain
+open. CL-193 is the remaining research-only packet; no production genre change.
+
 ## Local Codex collection capacity — 2026-11-02
 
 [CL-190](CL-190-codex-unrestricted-moment-batches.md) removes Codex total-count

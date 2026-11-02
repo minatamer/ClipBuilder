@@ -1,3 +1,4 @@
+import type { OwnerCameraRect } from "../../../packages/contracts/local/camera-motion.ts";
 import {
   OWNER_FPS,
   type OwnerCut,
@@ -65,8 +66,13 @@ export function ownerOriginalFocusCrop(
   focus: OwnerFocus,
   shot: OwnerFocusShot,
 ) {
-  const crop = ownerFocusCrop(focus, shot),
-    source = focus.source;
+  return ownerOriginalCameraCrop(focus, ownerFocusCrop(focus, shot));
+}
+export function ownerOriginalCameraCrop(
+  focus: Pick<OwnerFocus, "source">,
+  crop: OwnerCameraRect,
+) {
+  const source = focus.source;
   // FFmpeg force_original_aspect_ratio rounds to an integer before applying its
   // even-divisibility constraint. This is the actual old preview picture area,
   // which can differ by two pixels from the logical content rectangle.

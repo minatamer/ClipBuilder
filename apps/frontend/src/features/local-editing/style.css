@@ -961,6 +961,44 @@
     resize: vertical;
     font: inherit;
   }
+  .zoom-target-preview {
+    margin: 0.75rem auto;
+  }
+  .zoom-target-surface {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: crosshair;
+    touch-action: none;
+  }
+  .zoom-target-surface:focus-visible {
+    outline: 3px solid var(--cb-focus);
+    outline-offset: -3px;
+  }
+  .zoom-target-marker {
+    position: absolute;
+    translate: -50% -50%;
+    width: 2.75rem;
+    height: 2.75rem;
+    display: grid;
+    place-items: center;
+    color: var(--cb-ink);
+    background: var(--cb-brand);
+    border: 2px solid var(--cb-ink);
+    border-radius: 50%;
+    font-size: 1.5rem;
+  }
+  .camera-motion-editor .collection-navigation {
+    margin-block: 0.75rem;
+  }
+  .camera-motion-editor .collection-navigation label {
+    flex: 1;
+    min-width: 8rem;
+  }
   .focus-source {
     position: relative;
     overflow: hidden;

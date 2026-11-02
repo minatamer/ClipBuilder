@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type PointerEvent,
+  type ReactNode,
 } from "react";
 import { Clock3 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
@@ -49,6 +50,7 @@ export function FocusEditor({
   onCaptureFrame,
   captureReady,
   disabled,
+  motion,
 }: {
   focus: OwnerFocus;
   automatic: OwnerFocus | undefined;
@@ -60,6 +62,7 @@ export function FocusEditor({
   onCaptureFrame: () => Promise<number | null>;
   captureReady: boolean;
   disabled: boolean;
+  motion?: ReactNode;
 }) {
   const tabsId = useId();
   const cameraTabsId = useId();
@@ -323,138 +326,140 @@ export function FocusEditor({
   return (
     <fieldset className="focus-editor" disabled={disabled}>
       <legend className="local-sr-only">Person focus</legend>
-      <div
-        className="focus-source"
-        ref={source}
-        style={{
-          aspectRatio: `${content.width}/${content.height}`,
-          maxWidth: (content.width / content.height) * 240,
-        }}
-      >
-        <video
-          ref={media}
-          src={sourceUrl}
-          muted
-          playsInline
-          preload="metadata"
-          aria-hidden="true"
-          onLoadedMetadata={() => {
-            if (media.current)
-              media.current.currentTime = sourceFrame / OWNER_FPS;
-          }}
-          style={{
-            position: "absolute",
-            width: `${(1080 / content.width) * 100}%`,
-            height: `${(1920 / content.height) * 100}%`,
-            maxWidth: "none",
-            left: `${(-content.x / content.width) * 100}%`,
-            top: `${(-content.y / content.height) * 100}%`,
-          }}
-        />
+      <div hidden={tab === "zoom"}>
         <div
-          className="focus-crop"
-          aria-hidden="true"
+          className="focus-source"
+          ref={source}
           style={{
-            left: `${((crop.x - content.x) / content.width) * 100}%`,
-            top: `${((crop.y - content.y) / content.height) * 100}%`,
-            width: `${(crop.width / content.width) * 100}%`,
-            height: `${(crop.height / content.height) * 100}%`,
-          }}
-        />
-        {focus.people
-          .filter((p) => p.id !== activePersonId)
-          .flatMap((p) => {
-            const available = positions.filter(
-              (pos) =>
-                pos.personId === p.id &&
-                sourceFrame >= pos.sourceStart &&
-                sourceFrame < pos.sourceEnd,
-            );
-            const saved =
-              available.find(
-                (pos) =>
-                  focus.shots[pos.index]!.startFrame <= sourceFrame &&
-                  focus.shots[pos.index]!.endFrame > sourceFrame,
-              ) ?? available[0];
-            const observation = p.observations.find(
-              (o) => o.startFrame <= sourceFrame && o.endFrame > sourceFrame,
-            );
-            if (!saved && !observation) return [];
-            const other = ownerFocusCrop(
-              focus,
-              saved
-                ? previewFocusShot(focus.shots[saved.index]!)
-                : { ...shownShot, ...ownerPersonCamera(p, sourceFrame) },
-            );
-            return [
-              <button
-                key={p.id}
-                type="button"
-                className="focus-person-handle"
-                aria-label={`Select ${focusPersonName(p.id)}`}
-                onClick={() => selectPerson(p.id)}
-                style={{
-                  left: `${((other.x + other.width / 2 - content.x) / content.width) * 100}%`,
-                  top: `${((other.y + other.height / 2 - content.y) / content.height) * 100}%`,
-                }}
-              >
-                <span>{p.id.slice(-1)}</span>
-              </button>,
-            ];
-          })}
-        <button
-          type="button"
-          className="focus-person-handle"
-          aria-label={
-            person
-              ? `Move ${focusPersonName(person.id)} position`
-              : "Move custom position"
-          }
-          aria-pressed="true"
-          disabled={unused}
-          style={{ left: `${center.x * 100}%`, top: `${center.y * 100}%` }}
-          onPointerDown={begin}
-          onPointerMove={move}
-          onPointerUp={() => {
-            gesture.current = null;
-          }}
-          onPointerCancel={() => {
-            gesture.current = null;
-          }}
-          onLostPointerCapture={() => {
-            gesture.current = null;
-          }}
-          onKeyDown={(event) => {
-            const dx =
-                event.key === "ArrowRight"
-                  ? 0.01
-                  : event.key === "ArrowLeft"
-                    ? -0.01
-                    : 0,
-              dy =
-                event.key === "ArrowDown"
-                  ? 0.01
-                  : event.key === "ArrowUp"
-                    ? -0.01
-                    : 0;
-            if (!dx && !dy) return;
-            event.preventDefault();
-            onSeek(sourceFrame);
-            onChange(
-              moveFocusPosition(focus, index, center.x + dx, center.y + dy),
-            );
+            aspectRatio: `${content.width}/${content.height}`,
+            maxWidth: (content.width / content.height) * 240,
           }}
         >
-          <span>{person?.id.slice(-1) ?? "↔"}</span>
-        </button>
-      </div>
-      <div className="focus-context">
-        <strong>
-          {unused && person
-            ? focusPersonName(person.id)
-            : focusPositionName(position)}
-        </strong>
-        <span>{unused ? "Not used" : "This position"}</span>
+          <video
+            ref={media}
+            src={sourceUrl}
+            muted
+            playsInline
+            preload="metadata"
+            aria-hidden="true"
+            onLoadedMetadata={() => {
+              if (media.current)
+                media.current.currentTime = sourceFrame / OWNER_FPS;
+            }}
+            style={{
+              position: "absolute",
+              width: `${(1080 / content.width) * 100}%`,
+              height: `${(1920 / content.height) * 100}%`,
+              maxWidth: "none",
+              left: `${(-content.x / content.width) * 100}%`,
+              top: `${(-content.y / content.height) * 100}%`,
+            }}
+          />
+          <div
+            className="focus-crop"
+            aria-hidden="true"
+            style={{
+              left: `${((crop.x - content.x) / content.width) * 100}%`,
+              top: `${((crop.y - content.y) / content.height) * 100}%`,
+              width: `${(crop.width / content.width) * 100}%`,
+              height: `${(crop.height / content.height) * 100}%`,
+            }}
+          />
+          {focus.people
+            .filter((p) => p.id !== activePersonId)
+            .flatMap((p) => {
+              const available = positions.filter(
+                (pos) =>
+                  pos.personId === p.id &&
+                  sourceFrame >= pos.sourceStart &&
+                  sourceFrame < pos.sourceEnd,
+              );
+              const saved =
+                available.find(
+                  (pos) =>
+                    focus.shots[pos.index]!.startFrame <= sourceFrame &&
+                    focus.shots[pos.index]!.endFrame > sourceFrame,
+                ) ?? available[0];
+              const observation = p.observations.find(
+                (o) => o.startFrame <= sourceFrame && o.endFrame > sourceFrame,
+              );
+              if (!saved && !observation) return [];
+              const other = ownerFocusCrop(
+                focus,
+                saved
+                  ? previewFocusShot(focus.shots[saved.index]!)
+                  : { ...shownShot, ...ownerPersonCamera(p, sourceFrame) },
+              );
+              return [
+                <button
+                  key={p.id}
+                  type="button"
+                  className="focus-person-handle"
+                  aria-label={`Select ${focusPersonName(p.id)}`}
+                  onClick={() => selectPerson(p.id)}
+                  style={{
+                    left: `${((other.x + other.width / 2 - content.x) / content.width) * 100}%`,
+                    top: `${((other.y + other.height / 2 - content.y) / content.height) * 100}%`,
+                  }}
+                >
+                  <span>{p.id.slice(-1)}</span>
+                </button>,
+              ];
+            })}
+          <button
+            type="button"
+            className="focus-person-handle"
+            aria-label={
+              person
+                ? `Move ${focusPersonName(person.id)} position`
+                : "Move custom position"
+            }
+            aria-pressed="true"
+            disabled={unused}
+            style={{ left: `${center.x * 100}%`, top: `${center.y * 100}%` }}
+            onPointerDown={begin}
+            onPointerMove={move}
+            onPointerUp={() => {
+              gesture.current = null;
+            }}
+            onPointerCancel={() => {
+              gesture.current = null;
+            }}
+            onLostPointerCapture={() => {
+              gesture.current = null;
+            }}
+            onKeyDown={(event) => {
+              const dx =
+                  event.key === "ArrowRight"
+                    ? 0.01
+                    : event.key === "ArrowLeft"
+                      ? -0.01
+                      : 0,
+                dy =
+                  event.key === "ArrowDown"
+                    ? 0.01
+                    : event.key === "ArrowUp"
+                      ? -0.01
+                      : 0;
+              if (!dx && !dy) return;
+              event.preventDefault();
+              onSeek(sourceFrame);
+              onChange(
+                moveFocusPosition(focus, index, center.x + dx, center.y + dy),
+              );
+            }}
+          >
+            <span>{person?.id.slice(-1) ?? "↔"}</span>
+          </button>
+        </div>
+        <div className="focus-context">
+          <strong>
+            {unused && person
+              ? focusPersonName(person.id)
+              : focusPositionName(position)}
+          </strong>
+          <span>{unused ? "Not used" : "This position"}</span>
+        </div>
       </div>
       <ControlTabs
         id={tabsId}
@@ -462,6 +467,7 @@ export function FocusEditor({
         items={[
           { value: "camera", label: "Camera" },
           { value: "people", label: "People" },
+          ...(motion ? [{ value: "zoom", label: "Zoom" }] : []),
         ]}
         value={tab}
         onChange={(next) => {
@@ -470,6 +476,15 @@ export function FocusEditor({
           if (next === "camera") setPersonId(shot.personId);
         }}
       />
+      <div
+        role="tabpanel"
+        id={`${tabsId}-zoom-panel`}
+        aria-labelledby={`${tabsId}-zoom`}
+        hidden={tab !== "zoom"}
+        tabIndex={0}
+      >
+        {tab === "zoom" && motion}
+      </div>
       <div
         role="tabpanel"
         id={`${tabsId}-people-panel`}

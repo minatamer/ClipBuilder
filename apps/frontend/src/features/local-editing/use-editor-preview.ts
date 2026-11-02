@@ -168,7 +168,7 @@ export function useEditorPreview({
           video.addEventListener("error", canceled);
           controller.signal.addEventListener("abort", canceled, { once: true });
           try {
-            video.currentTime = at / OWNER_FPS;
+            video.currentTime = sourceFrame / OWNER_FPS;
           } catch {
             canceled();
           }

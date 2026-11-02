@@ -1,5 +1,26 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Manual camera zoom — CL-192, 2026-11-02
+
+The existing Focus panel includes a manual Zoom tab. Add at playhead captures
+one explicit Hook or body occurrence; target position, magnification and time to
+reach it are editable with a scaled portrait target, pointer/keyboard and numeric
+controls. Effects use smoothstep interpolation, a 0.3-second hold and a
+0.4-second return, leaving 0.1 seconds at the occurrence end for baseline framing.
+Return evaluates the independent camera schedule at the current timestamp.
+Overlapping effects in one occurrence are rejected; Hook changes remove only
+Hook effects with a visible notice. No AI prompt/plan can create these effects.
+
+Preview and original-source export share continuous 9:16 crop math; only native
+codec projection rounds to even pixels. Captions, pictures, text and audio keep
+their existing clocks. Effects survive explicit Apply, save, rolling recovery
+and source-preserving export retry without new AI calls. Legacy clips without
+effects keep their previous camera path. Unframed legacy clips first need a
+manual camera position; resetting that legacy framing removes its zooms. A per-clip finite effect bound does not change Codex's
+unbounded total clip policy. Native proof covers 24/25/29.97/30/60 fps; actual
+face detail, owner taste, Linux execution and hosted release remain unverified.
+The manual effect needs no AI key; normal render availability still applies.
+
 ## Local Codex collection capacity — CL-190, 2026-11-02
 
 Local Codex has no arbitrary total moment/clip quota. Numeric/default-two and

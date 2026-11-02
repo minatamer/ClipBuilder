@@ -1,3 +1,4 @@
+import { ownerCameraEffectsSchema } from "./camera-motion.ts";
 import { z } from "zod";
 import { ownerAudioEditSchema } from "./audio.ts";
 import { normalizedBoxSchema } from "@clipbuilder/contracts";
@@ -155,6 +156,7 @@ export const ownerEditDocumentSchema = z
     texts: ownerTextLayersSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
     focus: ownerFocusSchema.optional(),
+    cameraEffects: ownerCameraEffectsSchema.optional(),
     visuals: z
       .array(ownerVisualEditSchema)
       .max(OWNER_PICTURE_LIMITS.cuesPerClip),
@@ -184,6 +186,12 @@ export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
     .object({ kind: z.literal("caption-text"), words: ownerCaptionTextSchema })
     .strict(),
   z.object({ kind: z.literal("focus"), focus: ownerFocusSchema }).strict(),
+  z
+    .object({
+      kind: z.literal("camera-effects"),
+      effects: ownerCameraEffectsSchema,
+    })
+    .strict(),
   z
     .object({ kind: z.literal("video-look"), look: ownerVideoLookSchema })
     .strict(),

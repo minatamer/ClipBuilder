@@ -1,6 +1,6 @@
 # CL-192 — Manual smooth camera punch-in and automatic return
 
-Status: Authorized and queued, 2026-11-02. Owner AFK authorization lifts the
+Status: Implemented and validated, 2026-11-02. Owner AFK authorization lifts the
 previous execution hold; use execute/validate/fix loops and local
 ticket-prefixed commits without push. Depends on the existing independent
 camera-position, Hook/presentation-clock and source-quality export features.
@@ -90,3 +90,112 @@ effect synthetically. Owner visual taste remains acceptance. Normal local runs
 for this series must use Codex, as selected by the owner, with no Gemini
 fallback. No implementation, live processing, configuration, restart, cloud,
 deployment or Git mutation is authorized by this ticket creation.
+
+## Implemented behavior and verification — 2026-11-02
+
+Manual Zoom is a third Focus tab, retaining the one-panel/editor-footer flow.
+Add at playhead captures exactly one occurrence; numeric start is on
+presentation time, while stored start is local to Hook/body. Target uses
+normalized original source coordinates selected through the scaled portrait
+viewport. Magnification is 1–8; smoothstep moves from the opening baseline crop
+to the target. Defaults: 0.5-second approach, 0.3-second hold, 0.4-second return
+and 0.1-second end margin. Approach duration remains editable to one logical
+frame. Return samples the current baseline, including intervening cuts, and
+never rewrites camera shots. Same-occurrence overlaps/duplicate IDs/invalid
+clocks or geometry are rejected; up to sixty manual effects fit each finite
+clip. This is separate from CL-190's unlimited total local Codex clip count.
+
+Hook changes remove only Hook effects, with a visible notice; submitting the
+same Hook preserves them. Resetting legacy framing with no automatic camera also
+removes dependent zooms, restoring the original unframed behavior. Existing
+framed camera resets retain independent effects. Old documents without effects
+keep the exact old native filter path. Generated bases forbid effects; provider
+schemas/prompts remain unchanged and cannot create them. Captions, pictures,
+opening titles and audio remain separate from source-video cropping.
+
+Current-source native proof rendered original generated pixels through the full
+renderer at 24/25/30000÷1001/30/60 fps. Sixty Hook/body samples include
+baseline, mid-approach, arrival, return and settled baseline. Maximum per-sample
+mean RGB error against independently encoded expected crops was 1.40/255; output
+frame counts/cadences/even geometry and unchanged source hashes passed. Owned
+numeric graph files avoid Windows command-length limits. The admitted Windows
+FFmpeg 9 file-loading option and packaged Linux 5 option differ; only Windows
+execution was tested. The CL-126 `setsar=1` before frame-evaluated scale remains
+intact. Temporary graphs/rasters/partial outputs are confined to owned scratch
+cleanup.
+
+- `vitest run --config scripts/local-test.config.ts --maxWorkers=4`: 929 cases,
+  112 files passed in 77.03s. An earlier unrestricted run alongside browser work
+  hit two contention timeouts; bounded concurrency passed both without changing
+  production deadlines or retry policy.
+- After the final legacy reset fix: focused camera contracts/editor state/API
+  checks passed 25 cases/three files in 9.68s. Explicit drafts and rolling
+  recovery restore effects with zero AI/native calls; failed export retries keep
+  the edit and dispatch only the explicitly requested fake render.
+- `local-camera-motion.proof.ts`: one full native proof, 39.92s, generated video
+  and current-source overlay, no models/provider requests.
+- `local-camera-motion-editor.proof.ts`: one real-control browser proof, 19.67s;
+  mouse/touch drag, keyboard/numeric target, invalid inputs, independent body
+  occurrence with Hook prefix, preview, Apply/Discard, reopen and remove across
+  1440×900, 390×844 and 320×568. Screenshots inspected: footer visible and no
+  horizontal overflow. Six explicit edit requests and zero AI/render calls.
+- Contracts/local/frontend/test TypeScript, scoped ESLint/Prettier, whitespace
+  and the normal worker/overlay build pass (final commands recorded below). No
+  normal service was listening on 3000/4000/4200, so no process was replaced or
+  app launched. No ignored environment was read/changed.
+
+Execute/validate findings resolved: unchanged-Hook submissions clearing effects;
+legacy reset leaving a zoom without a valid baseline; presentation capture's
+fallback seeking the presentation time rather than source time; and FFmpeg 9's
+removed legacy filter-file option. Final read-only validate: no actionable
+findings on the settled ticket scope. Synthetic evidence proves mechanics, not
+real face detail/taste or live provider readiness.
+
+The old all-purpose `local-focus-editor.proof.ts` fixture carries a pre-CL-166
+suggestion before ten seconds, which current policy correctly hides. Attempts to
+extend it also exposed timing assumptions in that unrelated prelude. It was left
+unchanged; the new focused current-source zoom proof tests the required
+interaction directly. No production Hook policy was relaxed for a test.
+
+Toolchain deviation remains the series' documented unavailable Corepack pnpm
+11.19.0 bootstrap: use installed pinned package binaries directly, not the
+mismatched installed pnpm fallback. No dependencies or lockfile changed. Native
+and unit checks needed the approved Windows sandbox transform-cache fallback;
+their hardcoded fake/paid-off/no-network setup remains before imports.
+
+Unchecked owner-only gates: personal visual acceptance, real face/ASR/AI
+quality, actual two-hour throughput, Linux native execution,
+hosted/release/deployment. This manual effect itself adds no AI/key requirement.
+Real preparation still needs the normal Codex login/allowance and local speech
+assets; Gemini would need keys/live approvals and was neither used nor selected.
+No real provider, YouTube, cloud, configuration, push or deployment action
+occurred.
+
+## Whole-file commit allocation
+
+- `apps/backend/local/edit-clip.ts`
+- `apps/frontend/README.md`
+- `apps/frontend/src/features/local-editing/camera-motion-editor.tsx`
+- `apps/frontend/src/features/local-editing/clip-editor.tsx`
+- `apps/frontend/src/features/local-editing/editor-state.test.ts`
+- `apps/frontend/src/features/local-editing/editor-state.ts`
+- `apps/frontend/src/features/local-editing/focus-editor.tsx`
+- `apps/frontend/src/features/local-editing/focus-preview-controls.tsx`
+- `apps/frontend/src/features/local-editing/style.css`
+- `apps/frontend/src/features/local-editing/use-editor-preview.ts`
+- `apps/renderer/README.md`
+- `apps/renderer/local/clip-render.ts`
+- `apps/renderer/local/export-profile.ts`
+- `apps/renderer/local/focus-filter.ts`
+- `docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md`
+- `docs/operations/CL184_193_EXECUTION.md`
+- `docs/tickets/CL-192-manual-camera-punch-in.md`
+- `docs/tickets/README.md`
+- `packages/contracts/local/camera-motion.test.ts`
+- `packages/contracts/local/camera-motion.ts`
+- `packages/contracts/local/clips.ts`
+- `packages/contracts/local/edit-overlay.ts`
+- `packages/contracts/local/editor.ts`
+- `test/local-camera-motion-editor.proof.ts`
+- `test/local-camera-motion.proof.ts`
+- `test/owner-editor.test.ts`
