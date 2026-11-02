@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownerSourceWindowSchema } from "./source-window.ts";
 import {
   wordIdSchema,
   candidateEvidenceSchema,
@@ -46,6 +47,7 @@ export const localCodexJobSchema = z
     kind: z.enum(["speech", "frames", "speakers"]),
     fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
     cut: ownerCutSchema.optional(),
+    window: ownerSourceWindowSchema.optional(),
     diarize: z.boolean().optional(),
     words: ownerWordsSchema.optional(),
     speakerChanges: z
@@ -61,6 +63,7 @@ export const localCodexJobSchema = z
   })
   .strict()
   .refine((job) => job.kind === "speech" || !!job.cut)
+  .refine((job) => !job.window || (job.kind === "speech" && !job.cut))
   .refine((job) => job.diarize === undefined || job.kind === "speech")
   .refine((job) =>
     job.kind === "speakers"

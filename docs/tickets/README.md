@@ -1,5 +1,13 @@
 # ClipBuilder canonical ticket index
 
+## Source analysis ranges — 2026-11-02
+
+[CL-186](CL-186-source-analysis-window.md) implements explicit analysis ranges,
+scoped audio/discovery, original timestamp metadata and wider-transcript reuse.
+163 focused fake cases and browser/native proofs cover offsets, exact extracted
+audio, restore and responsive controls. Source limits remain gated for CL-189;
+CL-187 master/analysis quality separation is next. No real provider calls.
+
 ## Local Codex capacity foundation — 2026-11-02
 
 [CL-185](CL-185-local-codex-capacity-policy.md) is implemented/validated as the

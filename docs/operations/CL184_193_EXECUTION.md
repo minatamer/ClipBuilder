@@ -53,7 +53,7 @@ start waits for the rest of this authorized series. Toolchain/bootstrap and
 harness adaptations are detailed in the ticket. No real provider calls or owner
 media used.
 
-## CL-185 implemented and validated (commit pending)
+## CL-185 implemented and validated (committed `8c97227`)
 
 Profile resolution, safe source/parser bounds, private native startup binding,
 common disk port propagation, picker limits and fixed low-disk feedback are
@@ -68,3 +68,13 @@ read-only validate: no actionable findings. Fixed duplicate saved-source quota
 checks and local disk failure feedback. 21 code/test paths plus seven owning
 docs are allocated in the ticket. Source/count readiness stays off for
 CL-189/190.
+
+## CL-186 implementation and validation
+
+Dedicated source-window/origin contracts, isolated audio jobs, source-relative
+word offsets, scoped discovery, wider transcript coverage retention, restore
+seeding and existing selection fields are implemented. Focused fake checks and
+current-source browser/native proofs cover two-hour metadata/twenty-minute
+windows, exact VFR audio extraction, original offset labels/local playback,
+responsive footer, cancel/failure and restore. Static/final validation evidence
+is recorded in its packet. No real acquisition/inference or normal app start.

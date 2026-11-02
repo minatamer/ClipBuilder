@@ -24,6 +24,7 @@ export function capturePreviewTime(
     "currentTime" | "duration" | "readyState" | "error" | "seeking"
   > | null,
   sourceMs: number,
+  originalOffsetMs = 0,
 ): string | null {
   if (
     !preview ||
@@ -41,5 +42,8 @@ export function capturePreviewTime(
   const seconds = Math.floor(
     Math.min(preview.currentTime, preview.duration, sourceMs / 1000),
   );
-  return ownerTimestamp(seconds * 1000).slice(0, 8);
+  return ownerTimestamp(seconds * 1000 + originalOffsetMs).replace(
+    /\.\d{3}$/u,
+    "",
+  );
 }

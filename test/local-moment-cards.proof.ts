@@ -128,6 +128,7 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
       height: 90,
       fps: 30,
       durationMs: 10000,
+      origin: { startMs: 1_800_000, durationMs: 7_200_000 },
     },
   };
   let result: OwnerAnalysis | null = analysis(),
@@ -478,6 +479,52 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
       `momentAction('Find all moments').click();waitMoment(()=>document.querySelector('.selection').textContent.includes('Couldn’t find moments. Try again.')).then(()=>true)`,
     );
     expect(analyses).toHaveLength(3);
+    analysisOutcome = "success";
+    await evaluate(
+      `(async()=>{const select=document.querySelector('[aria-label="Analysis range"]');select.value='range';select.dispatchEvent(new Event('change',{bubbles:true}));await waitMoment(()=>document.querySelector('[aria-label="Analysis start"]'));globalThis.setRange=(label,value)=>{const input=document.querySelector('[aria-label="'+label+'"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));};setRange('Analysis start','00:30:02');setRange('Analysis end','00:30:09');await new Promise(requestAnimationFrame);return true;})()`,
+    );
+    for (const width of [1440, 390, 320]) {
+      await page.setViewport({
+        width,
+        height: width === 1440 ? 1000 : 844,
+        deviceScaleFactor: 1,
+      });
+      expect(
+        await evaluate(
+          `(async()=>{document.querySelector('.source-window').scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const b=momentAction('Find all moments'),r=b.getBoundingClientRect();return {overflow:document.documentElement.scrollWidth>innerWidth,footer:document.querySelector('#sample-main > footer').contains(b),visible:r.top>=0&&r.bottom<=innerHeight+1,start:document.querySelector('[aria-label="Analysis start"]').value,end:document.querySelector('[aria-label="Analysis end"]').value};})()`,
+        ),
+      ).toEqual({
+        overflow: false,
+        footer: true,
+        visible: true,
+        start: "00:30:02",
+        end: "00:30:09",
+      });
+      const shot = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        resolve(`.local-build/evidence/cl186-range-${width}.png`),
+        Buffer.from(shot.value.data, "base64"),
+      );
+    }
+    // The server receives imported-media time once; changing fields does not dispatch.
+    expect(analyses).toHaveLength(3);
+    await evaluate(
+      `momentAction('Find all moments').click();waitMoment(()=>document.querySelectorAll('.moment-card').length===32).then(()=>true)`,
+    );
+    expect(analyses.at(-1)).toMatchObject({
+      window: { startMs: 2000, endMs: 9000 },
+    });
+    await ready();
+    await evaluate(
+      `momentAction('Add clips').click();waitMoment(()=>document.querySelector('[aria-label="Analysis start"]')).then(()=>true)`,
+    );
+    expect(
+      await evaluate(
+        `document.querySelector('[aria-label="Analysis start"]').value`,
+      ),
+    ).toBe("00:30:02");
     hosted = true;
     result = null;
     await page.goto({ url: `http://localhost:${port}/`, timeout: 10000 });
@@ -490,7 +537,7 @@ it("reviews manual/AI moment cards with exact source jumps, duration, removal, c
         `[...document.querySelectorAll('.selection label')].some(n=>n.textContent.trim()==='Find all')`,
       ),
     ).toBe(false);
-    expect(analyses).toHaveLength(3);
+    expect(analyses).toHaveLength(4);
   } finally {
     await browser.close({ silent: true });
     await new Promise<void>((done) => server.close(() => done()));

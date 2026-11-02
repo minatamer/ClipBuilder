@@ -304,6 +304,22 @@ it("sends only the selected speech cut and returns source-relative words without
         word.endMs + 120000,
       ]),
     );
+    const window = { startMs: 180_000, endMs: 480_000 };
+    const scoped = await ai.analysis!.transcribeWindow!(
+      workspace,
+      window,
+      new AbortController().signal,
+    );
+    expect(media).toHaveBeenCalledTimes(2);
+    expect(media.mock.calls[1]![0]).toMatchObject({
+      kind: "speech",
+      window,
+      diarize: false,
+    });
+    expect(media.mock.calls[1]![0]).not.toHaveProperty("cut");
+    expect(scoped.map((word) => word.startMs)).toEqual(
+      words.map((word) => word.startMs + window.startMs),
+    );
     expect(infer).not.toHaveBeenCalled();
   } finally {
     await ai.close!(new AbortController().signal);

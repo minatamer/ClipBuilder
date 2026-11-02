@@ -1,5 +1,25 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Source analysis ranges — CL-186, 2026-11-02
+
+Uploads and local YouTube sources share an optional contiguous analysis window,
+separate from output clip duration. Entire video/section remains the default.
+Range edits require an explicit Find moments action. Manual cuts must lie inside
+the range; invalid/stale requests dispatch nothing. Existing file admission,
+hosted and Gemini limits still apply. Local two-hour admission waits for CL-189.
+
+Imported-media time remains the processing/playback clock. Optional original
+start/duration and available-window metadata describe section downloads and
+exclude acquisition padding; visible timestamps add the original offset once.
+Native audio jobs extract the requested interval; returned word times add its
+local offset once. Discovery sees only covered words. A verified wider transcript
+can serve a narrower range without retranscription, preserving the wider words
+and coverage through drafts/recovery. Uncovered scopes require explicit work.
+Canonical decoded words are compatible across real providers; fake/real mode,
+source fingerprint and source revision must match. CL-189 owns native runtime
+chunk identities and incremental checkpoints. Synthetic proofs establish clocks
+and routing, not real ASR quality or long-video throughput.
+
 ## Local Codex capacity foundation — CL-185, 2026-11-02
 
 Capacity is selected from actual server composition. A browser field, restored

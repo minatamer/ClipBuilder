@@ -23,7 +23,14 @@ import {
   OWNER_DEFAULT_AI_COUNT,
   OWNER_MAX_REQUESTED_CLIP_MS,
 } from "../../../../../packages/contracts/local/policy.ts";
-import { normalizeManualTime, parseManualTime } from "./manual-time.ts";
+import {
+  ownerAnalysisWindow,
+  ownerAvailableSourceWindow,
+  ownerOriginalSourceTime,
+  ownerSourceTimestamp,
+  parseOwnerSourceTimestamp,
+  ownerWindowFrames,
+} from "../../../../../packages/contracts/local/source-window.ts";
 import { defaultMomentSelection, momentDuration } from "./moment-selection.ts";
 import {
   HOSTED_DEMO_POLICY,
@@ -37,15 +44,24 @@ type SelectionTab = (typeof SELECTION_TABS)[number];
 
 type TimeField = { text: string; preservedMs?: number };
 type Row = { id: string; start: TimeField; end: TimeField };
-const restoredTime = (milliseconds: number): TimeField => ({
-  text: ownerTimestamp(milliseconds).slice(0, 8),
+const restoredTime = (
+  milliseconds: number,
+  offsetMs = 0,
+  precise = false,
+): TimeField => ({
+  text: precise
+    ? ownerSourceTimestamp(milliseconds + offsetMs).replace(/\.000$/u, "")
+    : ownerTimestamp(milliseconds + offsetMs).replace(/\.\d{3}$/u, ""),
   preservedMs: milliseconds,
 });
-const fieldMilliseconds = (field: TimeField) =>
-  field.preservedMs ?? parseManualTime(field.text);
+const fieldMilliseconds = (field: TimeField, offsetMs = 0) =>
+  field.preservedMs ?? parseOwnerSourceTimestamp(field.text) - offsetMs;
 const normalizedTime = (field: TimeField): TimeField => ({
   ...field,
-  text: normalizeManualTime(field.text),
+  text: ownerSourceTimestamp(parseOwnerSourceTimestamp(field.text)).replace(
+    /\.000$/u,
+    "",
+  ),
 });
 type Props = {
   workspace: OwnerWorkspace;
@@ -80,6 +96,15 @@ export function OwnerSelectionPanel({
       : null;
   const clipLimit = demoLimit ?? OWNER_LIMITS.clips;
   const local = capabilities.localMedia;
+  const originalOffset = workspace.source.origin?.startMs ?? 0;
+  const availableSource = ownerAvailableSourceWindow(workspace.source);
+  const [windowed, setWindowed] = useState(false);
+  const [windowStart, setWindowStart] = useState(() =>
+    restoredTime(availableSource.startMs, originalOffset, true),
+  );
+  const [windowEnd, setWindowEnd] = useState(() =>
+    restoredTime(availableSource.endMs, originalOffset, true),
+  );
   const [findAll, setFindAll] = useState(false);
   const [limitNotice, setLimitNotice] = useState(0);
   const analysisAvailable =
@@ -155,13 +180,22 @@ export function OwnerSelectionPanel({
           setRows(
             restored.inputs.ranges.map((row) => ({
               id: row.id,
-              start: restoredTime(row.startMs),
-              end: restoredTime(row.endMs),
+              start: restoredTime(row.startMs, originalOffset),
+              end: restoredTime(row.endMs, originalOffset),
             })),
           );
           setMinimum(String(restored.inputs.aiDuration.minMs / 1000));
           setMaximum(String(restored.inputs.aiDuration.maxMs / 1000));
           setManualOnly(restored.inputs.manualOnly);
+          setWindowed(Boolean(restored.inputs.window));
+          const savedWindow = ownerAnalysisWindow(
+            workspace.source,
+            restored.inputs.window,
+          );
+          setWindowStart(
+            restoredTime(savedWindow.startMs, originalOffset, true),
+          );
+          setWindowEnd(restoredTime(savedWindow.endMs, originalOffset, true));
           setFindAll(local && restored.inputs.aiCount === "all");
           setCount(
             String(
@@ -189,7 +223,14 @@ export function OwnerSelectionPanel({
       controller.abort();
       pending.current?.abort();
     };
-  }, [workspace.id, onBusy, acceptAnalysis, local]);
+  }, [
+    workspace.id,
+    workspace.source,
+    originalOffset,
+    onBusy,
+    acceptAnalysis,
+    local,
+  ]);
   function changed() {
     setPolicyRevision((value) => value + 1);
     setAnalysis(null);
@@ -221,13 +262,22 @@ export function OwnerSelectionPanel({
     );
   }
   function parsed() {
+    const window = ownerAnalysisWindow(
+      workspace.source,
+      windowed
+        ? {
+            startMs: fieldMilliseconds(windowStart, originalOffset),
+            endMs: fieldMilliseconds(windowEnd, originalOffset),
+          }
+        : undefined,
+    );
     const inputs = ownerAnalysisRequestSchema.parse({
       sourceRevision: workspace.revision,
       policyRevision,
       ranges: rows.map((row) => ({
         id: row.id,
-        startMs: fieldMilliseconds(row.start),
-        endMs: fieldMilliseconds(row.end),
+        startMs: fieldMilliseconds(row.start, originalOffset),
+        endMs: fieldMilliseconds(row.end, originalOffset),
       })),
       aiDuration: {
         minMs: Number(minimum) * 1000,
@@ -235,20 +285,32 @@ export function OwnerSelectionPanel({
       },
       manualOnly,
       aiCount: local && findAll ? "all" : Number(count),
+      ...(windowed ? { window } : {}),
     });
+    const bound = ownerWindowFrames(window);
+    if (
+      inputs.ranges.some((range) => {
+        const cut = ownerCut(range, workspace.source.durationMs);
+        return (
+          cut.startFrame < bound.startFrame || cut.endFrame > bound.endFrame
+        );
+      })
+    )
+      throw new Error("manual_outside_source_window");
     return demoLimit ? limitHostedDemoInputs(inputs) : inputs;
   }
   function rounded(row: Row): string {
     try {
       if (
-        fieldMilliseconds(row.end) - fieldMilliseconds(row.start) >
+        fieldMilliseconds(row.end, originalOffset) -
+          fieldMilliseconds(row.start, originalOffset) >
         OWNER_MAX_REQUESTED_CLIP_MS
       )
         return `Keep clips to ${OWNER_MAX_REQUESTED_CLIP_MS / 1000} seconds or less.`;
       const cut = ownerCut(
         {
-          startMs: fieldMilliseconds(row.start),
-          endMs: fieldMilliseconds(row.end),
+          startMs: fieldMilliseconds(row.start, originalOffset),
+          endMs: fieldMilliseconds(row.end, originalOffset),
         },
         workspace.source.durationMs,
       );
@@ -282,11 +344,16 @@ export function OwnerSelectionPanel({
           end: normalizedTime(row.end),
         })),
       );
-    } catch {
+    } catch (error) {
       setMessage(
-        manualOnly
-          ? `Manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000} seconds. Check start and end times.`
-          : `Check clip times: manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s and AI durations 10–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s.`,
+        error instanceof Error &&
+          error.message === "manual_outside_source_window"
+          ? "Keep manual clips inside the analysis range."
+          : windowed
+            ? "Choose a valid analysis range inside this video, and check clip times."
+            : manualOnly
+              ? `Manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000} seconds. Check start and end times.`
+              : `Check clip times: manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s and AI durations 10–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s.`,
       );
       return;
     }
@@ -363,12 +430,18 @@ export function OwnerSelectionPanel({
                 <div className="moment-card-meta">
                   <span className="moment-card-range">
                     {ownerTimestamp(
-                      (moment.cut.startFrame * 1000) / OWNER_FPS,
-                    ).slice(0, 8)}
+                      ownerOriginalSourceTime(
+                        workspace.source,
+                        (moment.cut.startFrame * 1000) / OWNER_FPS,
+                      ),
+                    ).replace(/\.\d{3}$/u, "")}
                     {" – "}
                     {ownerTimestamp(
-                      (moment.cut.endFrame * 1000) / OWNER_FPS,
-                    ).slice(0, 8)}
+                      ownerOriginalSourceTime(
+                        workspace.source,
+                        (moment.cut.endFrame * 1000) / OWNER_FPS,
+                      ),
+                    ).replace(/\.\d{3}$/u, "")}
                   </span>
                   <span
                     className="moment-card-duration"
@@ -501,6 +574,63 @@ export function OwnerSelectionPanel({
         hidden={waiting || tab !== "add"}
         tabIndex={0}
       >
+        <fieldset disabled={busy} className="source-window">
+          <legend>Analysis range</legend>
+          <label>
+            Video range
+            <select
+              aria-label="Analysis range"
+              value={windowed ? "range" : "all"}
+              onChange={(event) => {
+                changed();
+                setWindowed(event.currentTarget.value === "range");
+              }}
+            >
+              <option value="all">
+                {workspace.source.availableWindow
+                  ? "Entire section"
+                  : "Entire video"}
+              </option>
+              <option value="range">Choose range</option>
+            </select>
+          </label>
+          {windowed && (
+            <div className="duration-row">
+              {(["start", "end"] as const).map((field) => {
+                const value = field === "start" ? windowStart : windowEnd;
+                const set = field === "start" ? setWindowStart : setWindowEnd;
+                return (
+                  <label key={field}>
+                    {field === "start" ? "Start" : "End"}
+                    <input
+                      aria-label={`Analysis ${field}`}
+                      placeholder="HH:MM:SS"
+                      maxLength={32}
+                      value={value.text}
+                      onChange={(event) => {
+                        changed();
+                        set({ text: event.currentTarget.value });
+                      }}
+                      onBlur={() => {
+                        try {
+                          set(
+                            restoredTime(
+                              fieldMilliseconds(value, originalOffset),
+                              originalOffset,
+                              true,
+                            ),
+                          );
+                        } catch {
+                          /* Keep the invalid input for correction. */
+                        }
+                      }}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </fieldset>
         <fieldset disabled={busy}>
           <legend>Manual clips</legend>
           {rows.map((row, index) => (
@@ -560,6 +690,21 @@ export function OwnerSelectionPanel({
                 setLimitNotice((value) => value + 1);
                 return;
               }
+              let bounds = availableSource;
+              try {
+                bounds = ownerAnalysisWindow(
+                  workspace.source,
+                  windowed
+                    ? {
+                        startMs: fieldMilliseconds(windowStart, originalOffset),
+                        endMs: fieldMilliseconds(windowEnd, originalOffset),
+                      }
+                    : undefined,
+                );
+              } catch {
+                setMessage("Choose a valid analysis range inside this video.");
+                return;
+              }
               changed();
               if (demoLimit && !manualOnly) {
                 const remaining = demoLimit - rows.length - 1;
@@ -573,9 +718,10 @@ export function OwnerSelectionPanel({
                 ...current,
                 {
                   id: crypto.randomUUID(),
-                  start: { text: "00:00:00" },
+                  start: restoredTime(bounds.startMs, originalOffset),
                   end: restoredTime(
-                    Math.min(10_000, workspace.source.durationMs),
+                    Math.min(bounds.startMs + 10_000, bounds.endMs),
+                    originalOffset,
                   ),
                 },
               ]);

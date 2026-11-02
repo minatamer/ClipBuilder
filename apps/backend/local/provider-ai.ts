@@ -2,6 +2,10 @@ import { createHash, randomUUID } from "node:crypto";
 import { classifyExecutionFailure } from "../src/diagnostics/execution-failure.ts";
 import { z } from "zod";
 import {
+  ownerAnalysisWindow,
+  type OwnerSourceWindow,
+} from "../../../packages/contracts/local/source-window.ts";
+import {
   OWNER_FPS,
   OWNER_LIMITS,
   OWNER_PROVIDER_MEDIA,
@@ -263,23 +267,29 @@ export function createOwnerProviderAi(options: Options): {
     current: Parameters<OwnerAnalysisPorts["transcribe"]>[0],
     signal: AbortSignal,
     selectedCut?: z.infer<typeof ownerCutSchema>,
+    selectedWindow?: OwnerSourceWindow,
   ) {
     return run("transcribe", signal, async () => {
       const workspace = ownerWorkspaceSchema.parse(current);
       if (workspace.mode !== "provider-ai")
         throw new Error("analysis_mode_mismatch");
       const cut = selectedCut ? ownerCutSchema.parse(selectedCut) : undefined;
+      const window = selectedWindow
+        ? ownerAnalysisWindow(workspace.source, selectedWindow)
+        : undefined;
       if (
         cut &&
         cut.endFrame >
           Math.floor((workspace.source.durationMs * OWNER_FPS) / 1000)
       )
         throw new Error("invalid_cut");
-      const durationMs = cut
-        ? Math.round(((cut.endFrame - cut.startFrame) * 1000) / OWNER_FPS)
-        : workspace.source.durationMs;
+      const durationMs = window
+        ? window.endMs - window.startMs
+        : cut
+          ? Math.round(((cut.endFrame - cut.startFrame) * 1000) / OWNER_FPS)
+          : workspace.source.durationMs;
       // A bounded source window gets its own temporary proxy, not a prepared clip.
-      const clipId = cut ? randomUUID() : undefined;
+      const clipId = cut || window ? randomUUID() : undefined;
       return proxy(
         workspace.id,
         { kind: "audio", ...(clipId ? { clipId } : {}) },
@@ -289,6 +299,7 @@ export function createOwnerProviderAi(options: Options): {
           jobId: randomUUID(),
           fingerprint: workspace.source.fingerprint,
           ...(cut && clipId ? { clipId, cut } : {}),
+          ...(window && clipId ? { clipId, window } : {}),
         },
         durationMs,
         signal,
@@ -300,9 +311,11 @@ export function createOwnerProviderAi(options: Options): {
               durationMs,
               diagnostics,
             );
-            const offset = cut
-              ? Math.round((cut.startFrame * 1000) / OWNER_FPS)
-              : 0;
+            const offset = window
+              ? window.startMs
+              : cut
+                ? Math.round((cut.startFrame * 1000) / OWNER_FPS)
+                : 0;
             return retained.map((word) => ({
               ...word,
               startMs: word.startMs + offset,
@@ -355,6 +368,8 @@ export function createOwnerProviderAi(options: Options): {
       transcribe: transcribeSource,
       transcribeCut: (workspace, cut, signal) =>
         transcribeSource(workspace, signal, cut),
+      transcribeWindow: (workspace, window, signal) =>
+        transcribeSource(workspace, signal, undefined, window),
       select(
         current,
         duration,

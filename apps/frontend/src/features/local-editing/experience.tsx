@@ -542,6 +542,7 @@ export function LocalEditingExperience({
                         capturePreviewTime(
                           sourcePreview.current,
                           workspace.source.durationMs,
+                          workspace.source.origin?.startMs ?? 0,
                         )
                       }
                       onJumpTo={(seconds) => {

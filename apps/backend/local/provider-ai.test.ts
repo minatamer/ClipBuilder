@@ -62,6 +62,36 @@ const proposal = {
   ],
   caveats: [],
 };
+it("extracts a long selected audio window and offsets returned words once with one injected transcription", async () => {
+  const f = fixture(),
+    window = { startMs: 1_800_000, endMs: 3_000_000 };
+  try {
+    const result = await f.ports.analysis.transcribeWindow!(
+      f.workspace,
+      window,
+      f.signal,
+    );
+    expect(result.map((word) => word.startMs)).toEqual(
+      words.map((word) => word.startMs + window.startMs),
+    );
+    expect(f.media).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        operation: "prepare-owner-audio",
+        window,
+        clipId: expect.any(String),
+      }),
+      f.signal,
+    );
+    expect(f.media.mock.calls[0]![0]).not.toHaveProperty("cut");
+    expect(f.transport.transcribe).toHaveBeenCalledTimes(1);
+    expect(f.transport.candidates).not.toHaveBeenCalled();
+    expect(f.transport.upload).toHaveBeenCalledTimes(1);
+    expect(f.transport.delete).toHaveBeenCalledTimes(1);
+    expect(f.files.removeProviderInput).toHaveBeenCalledTimes(1);
+  } finally {
+    await f.ports.close(f.signal);
+  }
+});
 it("retains more than twenty Gemini proposals in all mode with exactly one injected selection call", async () => {
   const f = fixture();
   f.transport.candidates.mockResolvedValue({
@@ -388,9 +418,12 @@ function fixture(
       operation: job.operation,
       bytes: 24,
       digest: "c".repeat(64),
-      durationMs: job.cut
-        ? Math.round(((job.cut.endFrame - job.cut.startFrame) * 1000) / 30)
-        : workspace.source.durationMs,
+      durationMs:
+        job.operation === "prepare-owner-audio" && job.window
+          ? job.window.endMs - job.window.startMs
+          : job.cut
+            ? Math.round(((job.cut.endFrame - job.cut.startFrame) * 1000) / 30)
+            : workspace.source.durationMs,
     };
   });
   const pictures = {

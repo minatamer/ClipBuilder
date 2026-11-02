@@ -160,102 +160,109 @@ it("normalizes bounded offline word clocks to stable IDs without inventing diari
   ).toThrow();
 });
 
-it("measures scoped native stages without leaking paths or native output", async () => {
-  const root = await mkdtemp(join(tmpdir(), "clipbuilder-codex-timing-test-"));
-  const workspaceId = crypto.randomUUID(),
-    jobId = crypto.randomUUID();
-  await mkdir(join(root, workspaceId));
-  const inspect = vi.spyOn(media, "inspectOwnerSource").mockResolvedValue({
-    fingerprint: "a".repeat(64),
-    bytes: 100,
-    durationMs: 480000,
-    width: 640,
-    height: 360,
-    fps: 30,
-  });
-  const extract = vi
-    .spyOn(native, "runOwnedProcess")
-    .mockImplementation(async (_exe, args) => {
-      expect(args[args.indexOf("-ss") + 1]).toBe("10");
-      expect(args[args.indexOf("-t") + 1]).toBe("60");
-      await writeFile(args.at(-1)!, "synthetic-wav");
-      return "synthetic-private-native-output";
+it.each(["cut", "window"] as const)(
+  "measures scoped native stages without leaking paths or native output (%s)",
+  async (scope) => {
+    const root = await mkdtemp(
+      join(tmpdir(), "clipbuilder-codex-timing-test-"),
+    );
+    const workspaceId = crypto.randomUUID(),
+      jobId = crypto.randomUUID();
+    await mkdir(join(root, workspaceId));
+    const inspect = vi.spyOn(media, "inspectOwnerSource").mockResolvedValue({
+      fingerprint: "a".repeat(64),
+      bytes: 100,
+      durationMs: 480000,
+      width: 640,
+      height: 360,
+      fps: 30,
     });
-  const lines: string[] = [],
-    snapshots: string[] = [];
-  try {
-    const receipt = await prepareLocalCodexInput(
-      {
-        root,
-        tools: { ffmpeg: "synthetic-ffmpeg", ffprobe: "synthetic-ffprobe" },
-        parallelism: 6,
-        speech: {
-          executable: "synthetic-whisper",
-          model: "synthetic-private-model",
-          directory: root,
-          speakers: {
-            executable: "synthetic-speakers",
-            segmentation: "synthetic-private-segmentation",
-            embedding: "synthetic-private-embedding",
+    const extract = vi
+      .spyOn(native, "runOwnedProcess")
+      .mockImplementation(async (_exe, args) => {
+        expect(args[args.indexOf("-ss") + 1]).toBe("10");
+        expect(args[args.indexOf("-t") + 1]).toBe("60");
+        await writeFile(args.at(-1)!, "synthetic-wav");
+        return "synthetic-private-native-output";
+      });
+    const lines: string[] = [],
+      snapshots: string[] = [];
+    try {
+      const receipt = await prepareLocalCodexInput(
+        {
+          root,
+          tools: { ffmpeg: "synthetic-ffmpeg", ffprobe: "synthetic-ffprobe" },
+          parallelism: 6,
+          speech: {
+            executable: "synthetic-whisper",
+            model: "synthetic-private-model",
             directory: root,
+            speakers: {
+              executable: "synthetic-speakers",
+              segmentation: "synthetic-private-segmentation",
+              embedding: "synthetic-private-embedding",
+              directory: root,
+            },
           },
+          runSpeech: vi.fn(async (_exe, args) => {
+            await writeFile(
+              args[args.indexOf("-of") + 1]! + ".json",
+              JSON.stringify({
+                transcription: [
+                  { text: "Synthetic", offsets: { from: 100, to: 900 } },
+                ],
+              }),
+            );
+            return "synthetic-private-speech";
+          }),
+          runSpeakers: vi.fn(async () => "0.000 -- 60.000 speaker_00\n"),
+          diagnostic: (line) => lines.push(line),
+          progress: (steps) => snapshots.push(JSON.stringify(steps)),
         },
-        runSpeech: vi.fn(async (_exe, args) => {
-          await writeFile(
-            args[args.indexOf("-of") + 1]! + ".json",
-            JSON.stringify({
-              transcription: [
-                { text: "Synthetic", offsets: { from: 100, to: 900 } },
-              ],
-            }),
-          );
-          return "synthetic-private-speech";
-        }),
-        runSpeakers: vi.fn(async () => "0.000 -- 60.000 speaker_00\n"),
-        diagnostic: (line) => lines.push(line),
-        progress: (steps) => snapshots.push(JSON.stringify(steps)),
-      },
-      {
-        operation: "codex-input",
-        kind: "speech",
-        workspaceId,
-        jobId,
-        fingerprint: "a".repeat(64),
-        cut: { startFrame: 300, endFrame: 2100 },
-      },
-      new AbortController().signal,
-    );
-    expect(receipt.kind).toBe("speech");
-    expect(extract).toHaveBeenCalledTimes(1);
-    const artifact = JSON.parse(
-      await readFile(
-        await media.ownerCodexMediaPath(root, workspaceId, jobId),
-        "utf8",
-      ),
-    );
-    expect(artifact.words[0]).toMatchObject({ startMs: 100, endMs: 900 });
-    expect(lines.map((line) => JSON.parse(line).operation)).toEqual(
-      expect.arrayContaining([
-        "codex_inspect",
-        "codex_audio",
-        "codex_transcription",
-        "codex_speakers",
-      ]),
-    );
-    expect(
-      JSON.parse(snapshots.at(-1)!).every(
-        (step: { state: string }) => step.state === "done",
-      ),
-    ).toBe(true);
-    expect(lines.join("")).not.toContain("synthetic-private");
-    expect(lines.join("")).not.toContain(root);
-    expect(await readdir(join(root, workspaceId))).toHaveLength(1);
-  } finally {
-    inspect.mockRestore();
-    extract.mockRestore();
-    await rm(root, { recursive: true, force: true });
-  }
-});
+        {
+          operation: "codex-input",
+          kind: "speech",
+          workspaceId,
+          jobId,
+          fingerprint: "a".repeat(64),
+          ...(scope === "cut"
+            ? { cut: { startFrame: 300, endFrame: 2100 } }
+            : { window: { startMs: 10_000, endMs: 70_000 } }),
+        },
+        new AbortController().signal,
+      );
+      expect(receipt.kind).toBe("speech");
+      expect(extract).toHaveBeenCalledTimes(1);
+      const artifact = JSON.parse(
+        await readFile(
+          await media.ownerCodexMediaPath(root, workspaceId, jobId),
+          "utf8",
+        ),
+      );
+      expect(artifact.words[0]).toMatchObject({ startMs: 100, endMs: 900 });
+      expect(lines.map((line) => JSON.parse(line).operation)).toEqual(
+        expect.arrayContaining([
+          "codex_inspect",
+          "codex_audio",
+          "codex_transcription",
+          "codex_speakers",
+        ]),
+      );
+      expect(
+        JSON.parse(snapshots.at(-1)!).every(
+          (step: { state: string }) => step.state === "done",
+        ),
+      ).toBe(true);
+      expect(lines.join("")).not.toContain("synthetic-private");
+      expect(lines.join("")).not.toContain(root);
+      expect(await readdir(join(root, workspaceId))).toHaveLength(1);
+    } finally {
+      inspect.mockRestore();
+      extract.mockRestore();
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);
 it("removes partial transition images on cancellation without publishing an artifact", async () => {
   const root = await mkdtemp(join(tmpdir(), "clipbuilder-codex-cancel-test-")),
     workspaceId = crypto.randomUUID(),

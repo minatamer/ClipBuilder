@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   OWNER_LIMITS,
-  ownerWorkspaceSchema,
+  ownerWorkspaceForCapacity,
   type OwnerWorkspace,
 } from "../../../packages/contracts/local/index.ts";
 import {
@@ -24,6 +24,15 @@ import { ownerSelectionPolicy } from "./selection-policy.ts";
 import { ownerAvailableWindows } from "./selection-windows.ts";
 import { OWNER_DEFAULT_AI_COUNT } from "../../../packages/contracts/local/policy.ts";
 import type { OwnerAiMode } from "../../../packages/contracts/local/policy.ts";
+import {
+  resolveOwnerCapacity,
+  type OwnerCapacity,
+} from "../../../packages/contracts/local/capacity.ts";
+import {
+  ownerAnalysisWindow,
+  ownerWindowFrames,
+  type OwnerSourceWindow,
+} from "../../../packages/contracts/local/source-window.ts";
 
 /** Domain ports only; explicit owner composition supplies synthetic or provider AI. */
 export type OwnerAnalysisPorts = {
@@ -43,6 +52,11 @@ export type OwnerAnalysisPorts = {
     cut: OwnerCut,
     signal: AbortSignal,
   ): Promise<OwnerWord[]>;
+  transcribeWindow?(
+    workspace: OwnerWorkspace,
+    window: OwnerSourceWindow,
+    signal: AbortSignal,
+  ): Promise<OwnerWord[]>;
   select(
     words: readonly OwnerWord[],
     policy: OwnerAnalysisInputs["aiDuration"],
@@ -60,6 +74,7 @@ export type OwnerTranscript = {
   mode: OwnerAiMode;
   words: OwnerWord[];
   cut?: OwnerCut | undefined;
+  window?: OwnerSourceWindow | undefined;
   speakersPrepared?: boolean | undefined;
 };
 
@@ -137,17 +152,30 @@ export async function analyzeOwner(
     completed(transcript: OwnerTranscript): void;
     reused?(): void;
   },
+  capacity: OwnerCapacity = resolveOwnerCapacity({}),
 ) {
-  const workspace = ownerWorkspaceSchema.parse(currentWorkspace);
+  const workspace = ownerWorkspaceForCapacity(capacity).parse(currentWorkspace);
   if (workspace.mode !== ports.mode) throw new Error("analysis_mode_mismatch");
   const inputs = ownerAnalysisRequestSchema.parse(value);
   const requestedCount = inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT;
   const resultLimit = ownerAiResultLimit(requestedCount);
   if (inputs.sourceRevision !== workspace.revision)
     throw new Error("stale_source_revision");
+  const window = ownerAnalysisWindow(workspace.source, inputs.window);
+  const windowCut = ownerWindowFrames(window);
+  const scoped =
+    window.startMs !== 0 || window.endMs !== workspace.source.durationMs;
   const cuts = inputs.ranges.map((range) =>
     ownerCut(range, workspace.source.durationMs),
   );
+  if (
+    cuts.some(
+      (cut) =>
+        cut.startFrame < windowCut.startFrame ||
+        cut.endFrame > windowCut.endFrame,
+    )
+  )
+    throw new Error("manual_outside_source_window");
   signal.throwIfAborted();
   // Parsing freezes a private input snapshot before any asynchronous dispatch.
   const cached = reuse?.transcript;
@@ -169,18 +197,37 @@ export async function analyzeOwner(
       ? manualWindow
       : undefined;
   const emptyManual =
-    inputs.manualOnly && cuts.length === 0 && !!ports.transcribeCut;
+    inputs.manualOnly &&
+    cuts.length === 0 &&
+    !!(ports.transcribeCut || ports.transcribeWindow);
+  const requestedWindow = !requestedCut && scoped ? window : undefined;
+  const requiredCoverage = requestedCut
+    ? {
+        startMs: (requestedCut.startFrame * 1000) / OWNER_FPS,
+        endMs: (requestedCut.endFrame * 1000) / OWNER_FPS,
+      }
+    : window;
+  const cachedWindow =
+    cached?.window ??
+    (cached?.cut
+      ? {
+          startMs: (cached.cut.startFrame * 1000) / OWNER_FPS,
+          endMs: (cached.cut.endFrame * 1000) / OWNER_FPS,
+        }
+      : undefined);
   const reused =
     !emptyManual &&
     cached !== undefined &&
     cached.fingerprint === workspace.source.fingerprint &&
     cached.sourceRevision === workspace.revision &&
     cached.mode === workspace.mode &&
-    (!cached.cut ||
-      (!!requestedCut &&
-        cached.cut.startFrame <= requestedCut.startFrame &&
-        cached.cut.endFrame >= requestedCut.endFrame));
+    (!cachedWindow ||
+      (cachedWindow.startMs <= requiredCoverage.startMs &&
+        cachedWindow.endMs >= requiredCoverage.endMs));
   const transcriptCut = reused ? cached.cut : requestedCut;
+  const transcriptWindow = reused ? cached.window : requestedWindow;
+  if (!emptyManual && !reused && requestedWindow && !ports.transcribeWindow)
+    throw new Error("source_window_unavailable");
   const speakersPrepared = reused
     ? (cached.speakersPrepared ?? true)
     : requestedCut
@@ -191,18 +238,20 @@ export async function analyzeOwner(
     selection: !inputs.manualOnly,
     speakers: speakersPrepared,
   });
-  const words = ownerWordsSchema.parse(
+  const transcriptWords = ownerWordsSchema.parse(
     emptyManual
       ? []
       : reused
         ? cached.words
         : requestedCut && ports.transcribeCut
           ? await ports.transcribeCut(workspace, requestedCut, signal)
-          : await ports.transcribe(workspace, signal),
+          : requestedWindow && ports.transcribeWindow
+            ? await ports.transcribeWindow(workspace, requestedWindow, signal)
+            : await ports.transcribe(workspace, signal),
   );
   const ids = new Set<string>();
   let previousStart = -1;
-  for (const word of words) {
+  for (const word of transcriptWords) {
     if (ids.has(word.id)) throw new Error("invalid_owner_transcript");
     if (
       word.startMs < previousStart ||
@@ -218,12 +267,26 @@ export async function analyzeOwner(
       fingerprint: workspace.source.fingerprint,
       sourceRevision: workspace.revision,
       mode: workspace.mode,
-      words: ownerWordsSchema.parse(words),
+      words: ownerWordsSchema.parse(transcriptWords),
       ...(transcriptCut ? { cut: transcriptCut } : {}),
+      ...(transcriptWindow ? { window: transcriptWindow } : {}),
       ...(!speakersPrepared ? { speakersPrepared: false } : {}),
     });
   signal.throwIfAborted();
   if (reused) reuse?.reused?.();
+  // Keep acknowledged wider words/coverage for recovery, but expose only the
+  // selected interval to discovery and moment cue construction.
+  const words = scoped
+    ? transcriptWords
+        .filter(
+          (word) => word.endMs > window.startMs && word.startMs < window.endMs,
+        )
+        .map((word) => ({
+          ...word,
+          startMs: Math.max(window.startMs, word.startMs),
+          endMs: Math.min(window.endMs, word.endMs),
+        }))
+    : transcriptWords;
   const byCut = new Map<string, OwnerMoment>();
   const key = (cut: OwnerCut) => `${cut.startFrame}:${cut.endFrame}`;
   const moment = (cut: OwnerCut): OwnerMoment => ({
@@ -253,7 +316,12 @@ export async function analyzeOwner(
   const available = ownerAvailableWindows(
     workspace.source.durationMs,
     excludedCuts,
-  );
+  )
+    .map((cut) => ({
+      startFrame: Math.max(cut.startFrame, windowCut.startFrame),
+      endFrame: Math.min(cut.endFrame, windowCut.endFrame),
+    }))
+    .filter((cut) => cut.endFrame > cut.startFrame);
   const selected =
     !inputs.manualOnly &&
     words.length > 0 &&
@@ -326,13 +394,12 @@ export async function analyzeOwner(
         ports.critique?.();
         // Keep the returned passage available. Only physical source/resource
         // bounds constrain the render clock; duration/exclusion advice cannot veto it.
-        const total = Math.floor(
-          (workspace.source.durationMs * OWNER_FPS) / 1000,
-        );
+        const total = windowCut.endFrame;
+        const minimumFrames = Math.min(OWNER_FPS, total - windowCut.startFrame);
         const startFrame = Math.max(
-          0,
+          windowCut.startFrame,
           Math.min(
-            total - OWNER_FPS,
+            total - minimumFrames,
             Math.floor(
               (Math.min(...span.map((word) => word.startMs)) * OWNER_FPS) /
                 1000,
@@ -340,7 +407,7 @@ export async function analyzeOwner(
           ),
         );
         const endFrame = Math.max(
-          startFrame + OWNER_FPS,
+          startFrame + minimumFrames,
           Math.min(
             total,
             startFrame + (OWNER_LIMITS.clipMs * OWNER_FPS) / 1000,
@@ -379,8 +446,9 @@ export async function analyzeOwner(
     id: randomUUID(),
     mode: ports.mode,
     inputs,
-    words,
+    words: transcriptWords,
     ...(transcriptCut ? { transcriptCut } : {}),
+    ...(transcriptWindow ? { transcriptWindow } : {}),
     ...(!speakersPrepared ? { transcriptSpeakersPrepared: false } : {}),
     manual,
     suggestions,

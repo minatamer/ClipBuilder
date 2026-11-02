@@ -1,7 +1,7 @@
 # CL-186 — Choose the source window before transcription and discovery
 
-Status: Authorized and queued, 2026-11-02. Owner AFK authorization lifts the
-previous execution hold; use execute/validate/fix loops and local
+Status: Implemented and locally validated, 2026-11-02. Owner AFK authorization
+lifts the previous execution hold; use execute/validate/fix loops and local
 ticket-prefixed commits without push. Depends on CL-185 and implemented
 CL-168/169/181. CL-188 adds actual partial YouTube acquisition; CL-189 handles
 long Codex windows.
@@ -70,5 +70,54 @@ and local gates; Gemini needs its key and live approvals. Real transcription
 accuracy and long-window speed remain owner acceptance. Uploading a selected
 window still transfers the uploaded file unless a future client-side trim is
 implemented; partial network acquisition belongs specifically to CL-188. This is
-documentation only: no implementation, provider/download test, config, restart,
-model installation, cloud, deployment or Git mutation.
+documentation history is superseded by the owner's AFK implementation and local
+commit authorization. No real provider/download test, config change, model
+installation, cloud action, deployment or push occurred.
+
+## Implementation and evidence
+
+- New contracts `source-window.ts` and tests; local source/workspace, analysis
+  and Codex job schemas carry scope/origin/coverage without extending short
+  cuts.
+- Backend analysis, fake/Codex/Gemini adapters and server restore seed preserve
+  canonical source-relative words and acknowledged coverage. Scoped native audio
+  extraction lives in `codex-media.ts` / `provider-media.ts`.
+- Existing frontend selection panel owns Entire video/section and Start/End;
+  shared controls/footer remain. Original labels translate once; manual capture,
+  Jump to, captions, camera, Hook and exports continue using local media clocks.
+  Manual Add clip starts inside the selected range; invalid fields stay
+  editable.
+- 154 focused fake cases across seven files pass (range contracts/orchestrator,
+  both injected provider adapters, native speech jobs, analysis/manual-time
+  regressions). Two-hour metadata with twenty-minute scope does not enable
+  production long-source admission. Exact ASR/selection counts are asserted.
+- Current-source `local-moment-cards` and `owner-ranges` proofs pass; responsive
+  1440/390/320 range screenshots inspected. Offset labels, imported-media jumps,
+  retained inputs, restore, anchored footer, cancel and failure checked.
+  `owner-provider` adds exact fractional-window audio/frequency verification on
+  synthetic VFR/nonzero-stream-clock media, with private metadata stripping.
+- Scope allocation: changed contract, backend, renderer and frontend paths
+  above, their focused tests, two existing proof files and the owning source of
+  truth, index, execution ledger and this packet. No unrelated files.
+
+Final gate: 163 fake cases across nine files pass, plus four browser/native
+proof cases across the three proof files (some overlapping runs).
+Contracts/local, frontend and root-test TypeScript, scoped ESLint/Prettier and
+whitespace checks pass. Current worker/overlay build passes; no normal app was
+running to reload. The same unavailable Corepack-pinned bootstrap as CL-185
+required using installed lockfile-pinned binaries directly; no dependency
+changed.
+
+Validate pass 1 found manual timestamp normalization retained an old two-digit
+hour ceiling and Add clip initially defaulted outside a selected range. Both are
+fixed; invalid windows return editable feedback before adding a row. Final
+settled read-only validate: Meets ticket, no actionable findings. Covered:
+scope/offset contracts, per-provider extraction, discovery limits, exact call
+counts, wider/partial reuse, persisted coverage, responsive footer and cleanup.
+Live accuracy/visual taste/actual download remain unverified and do not waive
+the later CL-188/189 gates. No scope reduction or provider-spend deviation.
+
+Real ASR accuracy, face/editorial quality, actual YouTube acquisition and
+long-video performance remain unverified. CL-188 supplies section acquisition;
+CL-189 supplies long-window chunking. No extra real provider calls or automatic
+retry.

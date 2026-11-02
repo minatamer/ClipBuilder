@@ -10,6 +10,10 @@ import type {
 import { rm } from "node:fs/promises";
 import { z } from "zod";
 import {
+  ownerAnalysisWindow,
+  type OwnerSourceWindow,
+} from "../../../packages/contracts/local/source-window.ts";
+import {
   localCodexCandidatesSchema,
   localCodexFocusSchema,
   localCodexJobSchema,
@@ -121,7 +125,11 @@ export function createLocalCodexAi(options: {
     cut?: OwnerCut,
     speakerChanges?: readonly number[],
     runProgress?: CodexProgress,
-    speechOptions?: { diarize?: boolean; words?: OwnerWord[] },
+    speechOptions?: {
+      diarize?: boolean;
+      words?: OwnerWord[];
+      window?: OwnerSourceWindow;
+    },
   ) {
     const current = ownerWorkspaceSchema.parse(workspace);
     if (current.mode !== "provider-ai")
@@ -206,6 +214,31 @@ export function createLocalCodexAi(options: {
         ]);
       },
       critique: () => diagnostics.critique("candidate_validate"),
+      transcribeWindow(workspace, requested, signal) {
+        return run(signal, async (signal) => {
+          const window = ownerAnalysisWindow(workspace.source, requested);
+          const current = analysisProgress ?? progress.begin(workspace.id, []);
+          const value = await input(
+            workspace,
+            "speech",
+            signal,
+            undefined,
+            undefined,
+            current,
+            { diarize: false, window },
+          );
+          if (value.kind !== "speech") throw new Error("codex_input_invalid");
+          return retainOwnerTranscript(
+            value.words,
+            window.endMs - window.startMs,
+            diagnostics,
+          ).map((word) => ({
+            ...word,
+            startMs: word.startMs + window.startMs,
+            endMs: word.endMs + window.startMs,
+          }));
+        });
+      },
       transcribeCut(workspace, cut, signal) {
         return run(signal, async (signal) => {
           const current = analysisProgress ?? progress.begin(workspace.id, []);

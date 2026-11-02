@@ -1,5 +1,13 @@
 # ClipBuilder frontend
 
+The moment selection view offers **Entire video** (or **Entire section**) and
+**Choose range** before analysis. Start/End use the original video's timestamps
+for imported sections; playback and editing retain local-media time. Changing
+fields never starts AI work. Fake mode needs no keys and uses fictional words;
+real transcription needs the selected provider/runtime and existing live gates.
+See [CL-186](../../docs/tickets/CL-186-source-analysis-window.md) for verified
+scope, transcript reuse and the separate long-source admission gate.
+
 CL-135 keeps the same local controls with backend-owned Codex subscription
 selection and local speech captions in real mode. Setup/login/allowance errors
 are fixed safe messages. Hosted retains Gemini and no local setup fields;

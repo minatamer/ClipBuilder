@@ -3,6 +3,11 @@ import { ownerAudioAssetSchema } from "./audio.ts";
 import { localCodexJobSchema, localCodexReceiptSchema } from "./codex.ts";
 import { OWNER_PRESENTATION_MAX_FRAMES } from "./hook.ts";
 import {
+  ownerSourceWindowSchema,
+  ownerSourceOriginSchema,
+  ownerAvailableSourceWindow,
+} from "./source-window.ts";
+import {
   ownerSourceFitsCapacity,
   OWNER_SAFE_SOURCE_MS,
   type OwnerCapacity,
@@ -36,9 +41,19 @@ export const ownerSourceSchema = z
     width: z.number().int().positive().max(3840),
     height: z.number().int().positive().max(3840),
     fps: z.number().finite().min(12).max(60),
+    origin: ownerSourceOriginSchema.optional(),
+    availableWindow: ownerSourceWindowSchema.optional(),
   })
   .strict()
-  .refine((s) => s.width * s.height <= 3840 * 2160);
+  .refine((s) => s.width * s.height <= 3840 * 2160)
+  .refine((source) => {
+    const window = ownerAvailableSourceWindow(source);
+    return (
+      window.endMs <= source.durationMs &&
+      (!source.origin ||
+        source.origin.startMs + window.endMs <= source.origin.durationMs)
+    );
+  });
 export type OwnerSource = z.infer<typeof ownerSourceSchema>;
 
 /** Explicit capacity parser for the incremental source path; legacy stays bounded. */
@@ -60,6 +75,11 @@ export const ownerWorkspaceSchema = z
   })
   .strict();
 export type OwnerWorkspace = z.infer<typeof ownerWorkspaceSchema>;
+export function ownerWorkspaceForCapacity(capacity: OwnerCapacity) {
+  return ownerWorkspaceSchema.safeExtend({
+    source: ownerSourceForCapacity(capacity),
+  });
+}
 
 /** Fixed local provider-input budgets; these do not enable provider dispatch. */
 export const OWNER_PROVIDER_MEDIA = {
@@ -99,9 +119,11 @@ export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
       fingerprint: ownerSourceSchema.shape.fingerprint,
       clipId: ownerIdSchema.optional(),
       cut: ownerCutSchema.optional(),
+      window: ownerSourceWindowSchema.optional(),
     })
     .strict()
-    .refine((job) => Boolean(job.clipId) === Boolean(job.cut)),
+    .refine((job) => Boolean(job.clipId) === Boolean(job.cut || job.window))
+    .refine((job) => !(job.cut && job.window)),
   z
     .object({
       workspaceId: ownerIdSchema,

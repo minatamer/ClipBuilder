@@ -182,10 +182,14 @@ export async function prepareLocalCodexInput(
   );
   if (metadata.fingerprint !== job.fingerprint)
     throw new Error("codex_input_invalid");
-  const start = (job.cut?.startFrame ?? 0) / OWNER_FPS,
-    duration = job.cut
-      ? (job.cut.endFrame - job.cut.startFrame) / OWNER_FPS
-      : metadata.durationMs / 1000;
+  const start = job.window
+      ? job.window.startMs / 1000
+      : (job.cut?.startFrame ?? 0) / OWNER_FPS,
+    duration = job.window
+      ? (job.window.endMs - job.window.startMs) / 1000
+      : job.cut
+        ? (job.cut.endFrame - job.cut.startFrame) / OWNER_FPS
+        : metadata.durationMs / 1000;
   if (start + duration > metadata.durationMs / 1000 + 0.001)
     throw new Error("codex_input_invalid");
   const output = await ownerCodexMediaPath(

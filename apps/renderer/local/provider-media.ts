@@ -49,10 +49,20 @@ export async function prepareOwnerProviderMedia(
     cut.endFrame > Math.floor((metadata.durationMs * OWNER_FPS) / 1000)
   )
     throw new Error("invalid_cut");
-  const start = cut ? cut.startFrame / OWNER_FPS : 0;
-  const duration = cut
-    ? (cut.endFrame - cut.startFrame) / OWNER_FPS
-    : metadata.durationMs / 1000;
+  const window =
+    job.operation === "prepare-owner-audio" ? job.window : undefined;
+  if (window && window.endMs > metadata.durationMs)
+    throw new Error("invalid_source_window");
+  const start = window
+    ? window.startMs / 1000
+    : cut
+      ? cut.startFrame / OWNER_FPS
+      : 0;
+  const duration = window
+    ? (window.endMs - window.startMs) / 1000
+    : cut
+      ? (cut.endFrame - cut.startFrame) / OWNER_FPS
+      : metadata.durationMs / 1000;
   const clipId = job.clipId ?? null;
   const videoInput = job.operation === "prepare-owner-video";
   const output = await ownerProviderMediaPath(

@@ -45,26 +45,31 @@ const conversation = [
   turn.text.split(" ").map((text) => ({ text, speakerId: turn.speakerId })),
 );
 
+function fictionalWords(durationMs: number, offsetMs = 0) {
+  return Array.from({ length: Math.ceil(durationMs / 500) }, (_, index) => ({
+    id: `w_${String(index + 1).padStart(6, "0")}`,
+    startMs: offsetMs + index * 500,
+    endMs: offsetMs + Math.min(durationMs, (index + 1) * 500),
+    text: conversation[index % conversation.length]!.text.replace(
+      /[.,?!]/g,
+      "",
+    ),
+    punctuatedText: conversation[index % conversation.length]!.text,
+    speakerId: conversation[index % conversation.length]!.speakerId,
+    confidence: 1,
+  }));
+}
+
 /** Deliberately fictional words: this adapter never reads or transcribes source audio. */
 export const fakeOwnerAnalysis: OwnerAnalysisPorts = {
   mode: "synthetic-ai",
+  async transcribeWindow(_workspace, window, signal) {
+    signal.throwIfAborted();
+    return fictionalWords(window.endMs - window.startMs, window.startMs);
+  },
   async transcribe(workspace, signal) {
     signal.throwIfAborted();
-    return Array.from(
-      { length: Math.ceil(workspace.source.durationMs / 500) },
-      (_, index) => ({
-        id: `w_${String(index + 1).padStart(6, "0")}`,
-        startMs: index * 500,
-        endMs: Math.min(workspace.source.durationMs, (index + 1) * 500),
-        text: conversation[index % conversation.length]!.text.replace(
-          /[.,?!]/g,
-          "",
-        ),
-        punctuatedText: conversation[index % conversation.length]!.text,
-        speakerId: conversation[index % conversation.length]!.speakerId,
-        confidence: 1,
-      }),
-    );
+    return fictionalWords(workspace.source.durationMs);
   },
   async select(
     words,

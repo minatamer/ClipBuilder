@@ -344,6 +344,9 @@ export function createOwnerHost(options: OwnerHostOptions) {
           mode: loaded.analysis.mode,
           words: loaded.analysis.words,
           speakersPrepared: loaded.analysis.transcriptSpeakersPrepared ?? true,
+          ...(loaded.analysis.transcriptWindow
+            ? { window: loaded.analysis.transcriptWindow }
+            : {}),
           ...(loaded.analysis.transcriptCut
             ? { cut: loaded.analysis.transcriptCut }
             : {}),
@@ -402,6 +405,9 @@ export function createOwnerHost(options: OwnerHostOptions) {
             words: loaded.analysis.words,
             speakersPrepared:
               loaded.analysis.transcriptSpeakersPrepared ?? true,
+            ...(loaded.analysis.transcriptWindow
+              ? { window: loaded.analysis.transcriptWindow }
+              : {}),
             ...(loaded.analysis.transcriptCut
               ? { cut: loaded.analysis.transcriptCut }
               : {}),
@@ -1486,15 +1492,22 @@ export function createOwnerHost(options: OwnerHostOptions) {
             return;
           }
           const result = await diagnostics.run("find_moments", () =>
-            analyzeOwner(workspace, inputs, analysis, controller.signal, {
-              transcript: transcripts.get(workspace.id),
-              completed(transcript) {
-                transcripts.set(workspace.id, transcript);
+            analyzeOwner(
+              workspace,
+              inputs,
+              analysis,
+              controller.signal,
+              {
+                transcript: transcripts.get(workspace.id),
+                completed(transcript) {
+                  transcripts.set(workspace.id, transcript);
+                },
+                reused() {
+                  diagnostics.analysis.check("transcription_reuse", () => {});
+                },
               },
-              reused() {
-                diagnostics.analysis.check("transcription_reuse", () => {});
-              },
-            }),
+              capacityPolicy,
+            ),
           );
           controller.signal.throwIfAborted();
           analyses.set(workspace.id, result);

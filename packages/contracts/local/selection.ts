@@ -3,6 +3,10 @@ import { transcriptWordSchema } from "@clipbuilder/contracts";
 import { clipCandidateSchema } from "@clipbuilder/contracts";
 import { OWNER_VALIDATION_LIMITS } from "@clipbuilder/contracts";
 import {
+  ownerSourceWindowSchema,
+  ownerSourceTimestamp,
+} from "./source-window.ts";
+import {
   OWNER_LIMITS,
   OWNER_DEFAULT_AI_COUNT,
   OWNER_ALL_AI_MOMENTS_LIMIT,
@@ -58,6 +62,7 @@ export const ownerAnalysisInputsSchema = z
     aiDuration: ownerAiDurationSchema,
     aiCount: ownerAiCountSchema.optional(),
     manualOnly: z.boolean(),
+    window: ownerSourceWindowSchema.optional(),
   })
   .strict()
   .refine(
@@ -108,6 +113,7 @@ export const ownerAnalysisSchema = z
     mode: ownerAiModeSchema,
     words: ownerWordsSchema,
     transcriptCut: ownerCutSchema.optional(),
+    transcriptWindow: ownerSourceWindowSchema.optional(),
     transcriptSpeakersPrepared: z.boolean().optional(),
     manual: z.array(ownerMomentSchema).max(OWNER_LIMITS.ranges),
     suggestions: z.array(ownerMomentSchema).max(OWNER_ALL_AI_MOMENTS_LIMIT),
@@ -168,10 +174,7 @@ export function ownerCut(
     ),
   });
 }
-export function ownerTimestamp(milliseconds: number): string {
-  const value = Math.max(0, Math.round(milliseconds));
-  return `${String(Math.floor(value / 3_600_000)).padStart(2, "0")}:${String(Math.floor(value / 60_000) % 60).padStart(2, "0")}:${String(Math.floor(value / 1000) % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
-}
+export const ownerTimestamp = ownerSourceTimestamp;
 export function parseOwnerTimestamp(value: string): number {
   const match = /^(\d{2}):([0-5]\d):([0-5]\d)(?:\.(\d{1,3}))?$/.exec(value);
   if (!match) throw new Error("Use HH:MM:SS.mmm source timestamps.");

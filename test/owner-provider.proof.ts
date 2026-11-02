@@ -152,7 +152,15 @@ it("prepares full clock-normalized audio and only a fractional selected upright 
       clipId,
       cut: { startFrame: 61, endFrame: 92 },
     };
-    for (const job of [audioJob, videoJob, clipAudioJob]) {
+    const windowAudioJob: OwnerMediaJob = {
+      ...audioJob,
+      jobId: randomUUID(),
+      clipId,
+      window: { startMs: 2034, endMs: 3067 },
+    };
+    for (const job of [audioJob, videoJob, clipAudioJob, windowAudioJob]) {
+      const full =
+        !job.cut && !(job.operation === "prepare-owner-audio" && job.window);
       const response = await run(job);
       expect(response.status).toBe(200);
       const result = ownerMediaResultSchema.parse(
@@ -186,7 +194,7 @@ it("prepares full clock-normalized audio and only a fractional selected upright 
         "durationMs",
         "operation",
       ]);
-      expect(result.durationMs).toBe(!job.cut ? 4000 : 1033);
+      expect(result.durationMs).toBe(full ? 4000 : 1033);
       const pcm = join(directory, "proof.pcm");
       await runOwnedProcess(
         tools.ffmpeg,
@@ -210,11 +218,8 @@ it("prepares full clock-normalized audio and only a fractional selected upright 
         signal(),
       );
       const decoded = await readFile(pcm);
-      expect(frequency(decoded, 0.2, 0.8)).toBeCloseTo(
-        !job.cut ? 500 : 1000,
-        -1,
-      );
-      if (!job.cut) expect(frequency(decoded, 2.2, 2.8)).toBeCloseTo(1000, -1);
+      expect(frequency(decoded, 0.2, 0.8)).toBeCloseTo(full ? 500 : 1000, -1);
+      if (full) expect(frequency(decoded, 2.2, 2.8)).toBeCloseTo(1000, -1);
       else if (job.operation === "prepare-owner-video") {
         const probe = await probeMedia(file, tools.ffprobe, signal());
         const video = probe.streams.find(
