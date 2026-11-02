@@ -1,5 +1,23 @@
 # Local editing in ClipBuilder
 
+CL-196 reads local speech results from the bounded transcript JSON file and
+ignores duplicate console word output. ASR/model/timestamp settings are unchanged.
+If analysis fails before any section finishes, review says Analysis failed;
+completed partial work remains retained. Use Add clips for an explicit retry.
+A failed local transcription dispatches no Codex moment-selection call. Synthetic
+checks require no keys; actual local speech uses prepared CPU assets, while
+later Codex inference uses the existing ChatGPT login/allowance and live gates.
+
+CL-194 removes overall acquisition transfer/preparation timeouts only for trusted
+local Codex. The app allows advancing work to finish, stops genuine stalls and
+still fully validates the selected master. Opening a saved local Codex master
+also waits for native progress without an overall HTTP header/request cutoff;
+explicit cancellation and actual stall detection still apply. HE-AAC core/output rates and packet
+rounding are checked without converting audio/video. Metadata, actual disk and
+network safety controls remain; Gemini/hosted budgets are unchanged. This needs
+no AI key. Fake/no-key tests use synthetic media; real YouTube acquisition needs
+the prepared tools and network. Acquisition success does not establish AI quality.
+
 Local YouTube intake has **Quality** and **Range** settings. Choose Entire video
 or one original-time interval before Download. Section acquisition retains the
 selected streams and a small decode margin; playback/analysis/exports use the
@@ -239,9 +257,13 @@ Camera views to diagnose a hold or missed person. Real AI accuracy and Linux/
 hosted release acceptance remain separate from synthetic Windows proofs.
 
 Alternatively, enter a supported YouTube video link and Continue. The card switches
-to resolution selection; choose a quality or Best available, then Download video.
-Ready saved copies appear in the same picker offline; More resolutions explicitly
-requests online qualities. New downloads save automatically to Downloads/ClipBuilder.
+to resolution selection. Saved copies remain usable offline. To get a different
+quality, choose **Other resolutions…** inside Resolution, then pick an available
+quality (or Highest) and **Download video**. **Refresh resolutions…** refreshes
+online choices. Audio is chosen automatically from supported original/default
+tracks. Each quality stays saved separately; an existing lower-quality copy is
+preserved. Checking resolutions fetches metadata, with no AI or video download.
+New downloads save automatically to Downloads/ClipBuilder.
 Downloading is real even with fake AI. Access,
 regional restrictions and upstream challenges can still prevent a download;
 there is no account-cookie/DRM bypass. Saved source reuse checks the existing

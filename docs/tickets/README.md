@@ -1,5 +1,37 @@
 # ClipBuilder canonical ticket index
 
+## Local speech output repair — 2026-11-02
+
+[CL-196](CL-196-local-speech-console-output.md) repairs the 64-KiB console-capture
+failure encountered in the owner-started eight-minute Find all calibration.
+Whisper's actual JSON result remains bounded; duplicate console text is ignored.
+Failure progress/zero-section status is corrected. Fifty-five focused fake
+checks and scoped types/lint/format pass; the normal worker was rebuilt/reloaded
+and the saved 1080p source/eight-minute inputs recovered. Final validate: no
+actionable findings. Explicit owner real retry remains unchecked. The failed
+calibration dispatched zero Codex calls; no automatic retry is run.
+
+## YouTube quality selection — 2026-11-02
+
+[CL-195](CL-195-simplify-youtube-quality-selection.md) removes the audio-track
+control and puts Other resolutions… directly inside Resolution. Saved copies
+stay usable offline; explicit metadata lookup exposes other downloadable tiers
+without replacing previous masters. Seventeen frontend cases, a fake variant
+retention regression and the desktop/phone synthetic browser proof pass, along
+with scoped types/lint/format. Final validate: no actionable findings. No real
+acquisition, inference, backend restart, Git mutation or owner-media change.
+
+## Current acquisition repair — 2026-11-02
+
+[CL-194](CL-194-progress-aware-youtube-acquisition.md) is complete for local fixes
+and the authorized full 144p source acceptance. Progress-aware Codex preparation
+replaces the ten-minute cutoff; measured HE-AAC rate/packet-clock compatibility
+is repaired without conversion. All 197 focused fake checks and native proof
+pass. The full source reached ready, was saved, and remained playable after the
+final worker rebuild/reload. High-resolution performance and AI quality remain
+unverified; no inference, new Git mutation or deployment was performed.
+
+
 ## Genre prompt research — 2026-11-02
 
 [CL-193](CL-193-genre-moment-prompt-research.md) is complete as research only.

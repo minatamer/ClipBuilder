@@ -1,5 +1,68 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## File-backed local speech and failed analysis status — CL-196, 2026-11-02
+
+Local Whisper writes its authoritative transcript to the existing bounded JSON
+file. Its duplicate word-level stdout is ignored at the process boundary so a
+long valid speech job cannot hit a console-capture ceiling. Other native output
+capture/progress, bounded stderr classification, JSON/word/media validation,
+model/clock settings, cancellation and owned process cleanup remain unchanged.
+No model downgrade, transcript truncation, extra inference or automatic retry.
+
+Native-input failure settles active progress steps without marking pending AI
+selection as executed. Zero completed sections display Analysis failed rather
+than useful partial results; cancellation remains distinct, and completed partial
+work stays retained for explicit Add clips retry. Local speech needs prepared
+CPU assets without API keys; moment selection still consumes Codex subscription
+allowance. Synthetic checks prove mechanics, not live ASR or moment quality.
+The failed owner eight-minute attempt reached no Codex inference; its rounded
+weekly meter stayed at 12%. An explicit owner retry remains the real checkpoint.
+
+## One YouTube resolution picker — CL-195, 2026-11-02
+
+The owner removes the audio-track picker. The card automatically uses supported
+original/default audio while retaining the frozen server-selected identity and
+video rank; source audio stays present and no conversion is introduced. Saved
+qualities remain immediately reusable offline. Resolution → Other resolutions…
+explicitly loads current online metadata, then groups saved copies and admitted
+downloadable qualities. Refresh resolutions… supports an explicit refresh/retry.
+A cached lower quality cannot hide a higher offered tier or be labeled Highest
+before online choices are known. Choosing a quality still needs Download video
+in the anchored footer. Different qualities remain independent immutable masters;
+loading qualities never downloads video or calls AI. Gemini/hosted admission,
+Range, cancellation and source preservation remain unchanged. This supersedes
+CL-187's explicit audio-language control requirement. Synthetic/native-browser
+checks establish mechanics; real YouTube/AI quality remains owner acceptance.
+
+## Progress-aware local acquisition — CL-194, 2026-11-02
+
+The owner authorizes diagnosis, fixes and reasoned real retries for the supplied
+long YouTube source, always at 144p until acquisition succeeds. Conserve transfer
+quota; no blind/automatic retry, higher-resolution acceptance, transcription or
+provider inference is authorized. Preserve completed media and normal Codex mode.
+
+Local Codex transfer and native acquisition preparation have no overall elapsed
+time or aggregate network-byte quota. Advancing validated download bytes or
+external-FFmpeg media time govern transfer liveness (30 seconds without progress).
+Native stream-copy/full decode uses advancing frame/media/byte counters and
+output writes, including faststart rewrites (120 seconds without progress).
+Hash reads have the same native idle guard. Opening a saved local Codex master
+also uses the fixed native JSON transport without an overall/implicit HTTP header
+cutoff, selected only from trusted server capacity; explicit abort still propagates.
+Background import returns 202 and status polling has no aggregate run deadline.
+Metadata/probes retain 90-second bounds; streamed records, disk reserve, arithmetic, codec, concurrency, network
+host/DNS/TLS/auth/rate/socket controls and explicit cancel/owned cleanup remain.
+Repeated status or frozen counters do not reset idle guards. Full decode/media
+validation remains mandatory.
+HE-AAC is explicitly marked from the offered codec and checked against the native
+profile. It may decode at its advertised core rate or twice that rate within
+48 kHz. Its end-clock margin covers two output audio packets plus one video
+frame; other rates/profiles/channels and larger drift still reject. AAC-LC/Opus
+binding and legacy records retain their previous rules. No resampling occurs. Gemini/hosted budgets and provider gates stay
+unchanged. Successful 144p acquisition does not establish high-resolution
+throughput or AI quality. Full-source 144p acceptance reached ready and survived a
+final worker reload; no inference was run. See the [ticket evidence](tickets/CL-194-progress-aware-youtube-acquisition.md).
+
 ## Manual camera zoom — CL-192, 2026-11-02
 
 The existing Focus panel includes a manual Zoom tab. Add at playhead captures
@@ -81,8 +144,8 @@ admission and chunking remain gated by CL-189. No real YouTube/AI test is claime
 ## Master quality and analysis derivatives — CL-187, 2026-11-02
 
 Local Codex quality selection exposes every server-admitted tier, including
-2160p, and an explicit Highest supported quality choice. Audio track/language
-selection binds the actual offered identity. Same-tier saved media does not hide
+2160p, and an explicit Highest supported quality choice. CL-195 automates
+original/default audio selection while binding the actual offered identity. Same-tier saved media does not hide
 a newly offered higher-cadence master. Gemini retains its existing picker policy;
 hosted remains upload-only. The installed safe pipeline admits SDR H.264/VP9,
 AAC/Opus, 12–60 fps and up to 3840-by-2160 pixels (including portrait orientation).
