@@ -537,7 +537,6 @@ export class OwnerSourceLibrary {
   open(
     id: string,
     files: WorkspaceFiles,
-    inspect: Inspector,
     signal?: AbortSignal,
   ): Promise<{
     workspaceId: string;
@@ -549,7 +548,8 @@ export class OwnerSourceLibrary {
       if (!(await prepareOwnerStorage(this.root))) throw error("missing");
       const record = await this.read(id, current);
       if (!supported(record.variant, this.policy)) throw error("unsupported");
-      // Explicit use validates bytes afresh, rather than trusting list or restart metadata.
+      // The ready record retains completed native validation. Reuse it only
+      // after fresh byte verification, including the isolated workspace copy.
       this.verified.clear();
       const from = await this.sourcePath(record.variant.actual.fingerprint);
       await verifyMedia(from, record.variant.actual, current, this.verified);
@@ -562,22 +562,10 @@ export class OwnerSourceLibrary {
           record.variant.actual,
           current,
         );
-        const source = ownerSourceSchema.parse(
-          await inspect(workspaceId, current),
-        );
         current.throwIfAborted();
-        if (!sameSource(source, record.variant.actual)) throw error("damaged");
         return {
           workspaceId,
-          source: {
-            ...source,
-            ...(record.variant.actual.origin
-              ? { origin: record.variant.actual.origin }
-              : {}),
-            ...(record.variant.actual.availableWindow
-              ? { availableWindow: record.variant.actual.availableWindow }
-              : {}),
-          },
+          source: structuredClone(record.variant.actual),
           variant: record.variant,
         };
       } catch (cause) {

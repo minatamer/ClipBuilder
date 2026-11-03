@@ -1,4 +1,7 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
+import { OwnerSourceAcquisition } from "../apps/backend/local/source-acquisition.ts";
+import { OwnerSourceLibrary } from "../apps/backend/local/source-library.ts";
+import { WorkspaceFiles } from "../apps/backend/local/workspace-files.ts";
 import { resolveOwnerCapacity } from "../packages/contracts/local/capacity.ts";
 import { randomUUID } from "node:crypto";
 import {
@@ -22,6 +25,7 @@ import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
 import {
   ownerMediaResultSchema,
   type OwnerMediaJob,
+  type OwnerWorkspace,
 } from "../packages/contracts/local/index.ts";
 import type { OwnerAcquisitionDescriptor } from "../packages/contracts/local/acquisition.ts";
 import { ownerAcquisitionNativeStageSchema } from "../packages/contracts/local/acquisition-profile.ts";
@@ -85,6 +89,102 @@ const profile = (
   audioChannels: 1,
   audioSampleRate: 48000,
 });
+
+it("reopens a fully validated generated master after restart without native or provider dispatch", async () => {
+  const tools = await ownerNativeTools(resolve("."));
+  const root = await mkdtemp(join(tmpdir(), "clipbuilder-saved-validation-"));
+  const scratch = join(root, "workspaces"),
+    storage = join(root, "library");
+  await mkdir(scratch);
+  const files = new WorkspaceFiles(scratch);
+  const expected = profile(320, 180);
+  const signal = AbortSignal.timeout(60000);
+  const media = vi.fn(async () => {
+    throw Error("unexpected_native_dispatch");
+  });
+  const acquisition = new OwnerSourceAcquisition({
+    files,
+    roots: { downloads: storage },
+    media,
+    available: () => true,
+    opened(id, source): OwnerWorkspace {
+      return { id, source, mode: "unavailable", revision: 0 };
+    },
+  });
+  try {
+    const id = await files.create();
+    await createSyntheticAcquisitionComponents(
+      scratch,
+      id,
+      expected,
+      tools,
+      signal,
+    );
+    const prepared = await prepareOwnerAcquisition(
+      scratch,
+      id,
+      expected,
+      tools,
+      signal,
+    );
+    const saved = await new OwnerSourceLibrary(storage).publish(
+      {
+        videoId: "aaaaaaaaaaa",
+        mode: "synthetic-source",
+        selection: { kind: "tier", tier: 180 },
+        video: {
+          formatId: "v1",
+          codec: "h264",
+          protocol: "https",
+          drm: false,
+          bytes: null,
+          bytesEstimated: false,
+          bitrateKbps: null,
+          width: 320,
+          height: 180,
+          fps: 30,
+          dynamicRange: "sdr",
+          quality: null,
+          preference: null,
+        },
+        audio: {
+          formatId: "a1",
+          codec: "aac",
+          protocol: "https",
+          drm: false,
+          bytes: null,
+          bytesEstimated: false,
+          bitrateKbps: null,
+          channels: 1,
+          sampleRate: 48000,
+          language: null,
+          trackId: null,
+          role: "original",
+        },
+      },
+      { id, source: prepared.source },
+      files,
+      signal,
+    );
+    await files.remove(id);
+    const reopened = await acquisition.open(
+      { destination: "downloads", variantId: saved.id },
+      signal,
+    );
+    expect(reopened.source).toEqual(prepared.source);
+    expect(await readFile(await files.file(reopened.id, "source.mp4"))).toEqual(
+      await readFile(
+        join(storage, "Sources", `${saved.actual.fingerprint}.mp4`),
+      ),
+    );
+    expect(media).toHaveBeenCalledTimes(0);
+  } finally {
+    await acquisition.close();
+    await files.close();
+    expect(resolve(root, "..")).toBe(resolve(tmpdir()));
+    await rm(root, { recursive: true, force: true });
+  }
+}, 60000);
 
 it("uses Codex progress supervision while preserving NTSC packets and rejecting real clock changes", async () => {
   const tools = {

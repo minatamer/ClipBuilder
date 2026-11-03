@@ -131,6 +131,7 @@ it("opens a verified full master as a section offline without another download",
   await settled();
   const entry = (await acquisition.catalog(signal())).entries[0]!;
   await clear();
+  const mediaCalls = media.mock.calls.length;
   await acquisition.open(
     {
       destination: entry.destination,
@@ -145,6 +146,7 @@ it("opens a verified full master as a section offline without another download",
   });
   expect(download).toHaveBeenCalledTimes(1);
   expect(metadata).toHaveBeenCalledTimes(1);
+  expect(media).toHaveBeenCalledTimes(mediaCalls);
   await clear();
   const calls = media.mock.calls.length;
   await expect(
@@ -419,7 +421,6 @@ it("imports an exact Desktop variant once, preserves it across restart, and open
   expect(download).toHaveBeenCalledTimes(1);
   expect(media.mock.calls.map(([job]) => job.operation)).toEqual([
     "synthesize-acquisition",
-    "inspect-acquisition",
   ]);
 });
 
@@ -434,7 +435,6 @@ it("reuses matching formats after explicit refresh and preserves completed varia
   expect(download).toHaveBeenCalledTimes(1);
   expect(media.mock.calls.map(([job]) => job.operation)).toEqual([
     "synthesize-acquisition",
-    "inspect-acquisition",
   ]);
   await clear();
   offer = await acquisition.metadata(url, signal());
@@ -462,7 +462,7 @@ it("reuses matching formats after explicit refresh and preserves completed varia
   pause.release();
   expect((await settled()).stage).toBe("canceled");
   expect(download).toHaveBeenCalledTimes(3);
-  expect(media).toHaveBeenCalledTimes(2);
+  expect(media).toHaveBeenCalledTimes(1);
   expect(
     (await acquisition.catalog(signal())).entries.map(
       (entry) => entry.variant.id,
@@ -515,7 +515,6 @@ it("allows an explicit retry after failure and reopens a successful identical ch
   expect(download).toHaveBeenCalledTimes(2);
   expect(media.mock.calls.map(([job]) => job.operation)).toEqual([
     "synthesize-acquisition",
-    "inspect-acquisition",
   ]);
 });
 
@@ -639,6 +638,5 @@ it("retains two downloaded qualities independently and reuses only the requested
   expect(media.mock.calls.map(([job]) => job.operation)).toEqual([
     "synthesize-acquisition",
     "synthesize-acquisition",
-    "inspect-acquisition",
   ]);
 });

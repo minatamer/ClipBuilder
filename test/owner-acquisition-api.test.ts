@@ -441,7 +441,6 @@ it("imports through protected HTTP into the existing range/analysis/batch flow a
   expect(media.mock.calls.map(([job]) => job.operation)).toEqual([
     "synthesize-acquisition",
     "clip-preview",
-    "inspect-acquisition",
   ]);
 });
 

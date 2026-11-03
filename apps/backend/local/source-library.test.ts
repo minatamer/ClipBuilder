@@ -159,7 +159,7 @@ it("keeps measured NTSC source clocks ready when the frozen offer used nominal 3
     actual: { fps: source.fps },
     video: { fps: 30 },
   });
-  const opened = await library.open(saved.id, files, inspector(source));
+  const opened = await library.open(saved.id, files);
   expect(opened.variant.actual.fps).toBe(source.fps);
 });
 
@@ -177,7 +177,7 @@ it.each([
   ["avc1.640028", "mp4a.40.2"],
   ["vp09.00.51.08", "opus"],
 ])(
-  "retains provider-shaped %s/%s descriptors through offline native admission",
+  "reuses provider-shaped %s/%s validation offline after restart",
   async (videoCodec, audioCodec) => {
     const input = publication();
     input.mode = "provider-source";
@@ -191,15 +191,14 @@ it.each([
     const saved = await library.publish(input, await workspace(), files);
     library = new OwnerSourceLibrary(storage);
     expect((await library.list())[0]?.state).toBe("ready");
-    const inspect = inspector();
-    const opened = await library.open(saved.id, files, inspect);
+    const opened = await library.open(saved.id, files);
     expect(opened.variant.video.codec).toBe(videoCodec);
     expect(opened.variant.audio.codec).toBe(audioCodec);
-    expect(inspect).toHaveBeenCalledTimes(1);
+    expect(opened.source).toEqual(saved.actual);
   },
 );
 
-it("reuses one complete retained master after restart with frozen IDs and a fresh native inspection of its new workspace copy", async () => {
+it("reuses completed validation after restart with frozen IDs and a checksum-verified workspace copy", async () => {
   expect(await library.list()).toEqual([]);
   expect(await library.usage()).toEqual({ bytes: 0, warning: false });
   expect(await exists(storage)).toBe(false);
@@ -213,13 +212,12 @@ it("reuses one complete retained master after restart with frozen IDs and a fres
     before = await lstat(master);
   await files.close();
   library = new OwnerSourceLibrary(storage);
-  const inspect = inspector();
   expect(await library.list("aaaaaaaaaaa")).toEqual([saved]);
-  expect(inspect).toHaveBeenCalledTimes(0);
-  const opened = await library.open(saved.id, files, inspect);
+  const opened = await library.open(saved.id, files);
   expect(opened.workspaceId).not.toBe(original.id);
   expect(opened.variant.id).toBe(saved.id);
-  expect(inspect).toHaveBeenCalledTimes(1);
+  expect(opened.source).toEqual(saved.actual);
+  expect(opened.source).not.toBe(opened.variant.actual);
   expect(
     await readFile(await files.file(opened.workspaceId, "source.mp4")),
   ).toEqual(bytes);
@@ -247,7 +245,7 @@ it("reports missing/damaged masters offline, never overwrites damage, and locate
   const damaged = Buffer.alloc(bytes.length, 1);
   await writeFile(master, damaged);
   expect((await library.list())[0]!.state).toBe("damaged");
-  await expect(library.open(saved.id, files, inspect)).rejects.toThrow(
+  await expect(library.open(saved.id, files)).rejects.toThrow(
     "owner_source_damaged",
   );
   await expect(
@@ -268,7 +266,7 @@ it("reports missing/damaged masters offline, never overwrites damage, and locate
   expect((await library.list())[0]!.state).toBe("ready");
 });
 
-it("isolates unsupported/failed variants and native revalidation failure without deleting a completed source", async () => {
+it("rejects unsupported variants and a failed workspace copy without deleting a completed source", async () => {
   const original = await workspace(),
     saved = await library.publish(publication(), original, files);
   const hdr = publication("bbbbbbbbbbb");
@@ -277,23 +275,103 @@ it("isolates unsupported/failed variants and native revalidation failure without
     "owner_source_unsupported",
   );
   const before = await readdir(scratch);
-  await expect(
-    library.open(saved.id, files, async () => {
-      throw new Error("native_unavailable");
-    }),
-  ).rejects.toThrow("owner_source_unavailable");
-  expect(await readdir(scratch)).toEqual(before);
-  await expect(
-    library.open(saved.id, files, async () => ({
-      ...original.source,
-      width: 1280,
-    })),
-  ).rejects.toThrow("owner_source_damaged");
+  const file = vi
+    .spyOn(files, "file")
+    .mockRejectedValueOnce(new Error("copy_unavailable"));
+  await expect(library.open(saved.id, files)).rejects.toThrow(
+    "owner_source_unavailable",
+  );
+  file.mockRestore();
   expect(await readdir(scratch)).toEqual(before);
   expect((await library.list()).map((item) => item.id)).toEqual([saved.id]);
   expect(
     await readFile(join(storage, "Sources", `${saved.actual.fingerprint}.mp4`)),
   ).toEqual(bytes);
+});
+
+it("keeps native validation on explicit replacement and rejects incompatible retained descriptors", async () => {
+  const original = await workspace(),
+    saved = await library.publish(publication(), original, files);
+  const master = join(storage, "Sources", `${saved.actual.fingerprint}.mp4`);
+  await rm(master);
+  const inspect = inspector();
+  inspect.mockRejectedValueOnce(new Error("native_unavailable"));
+  await expect(
+    library.locate(saved.id, original.id, files, inspect),
+  ).rejects.toThrow("owner_source_unavailable");
+  inspect.mockResolvedValueOnce({ ...original.source, width: 1280 });
+  await expect(
+    library.locate(saved.id, original.id, files, inspect),
+  ).rejects.toThrow("owner_source_damaged");
+  expect(await exists(master)).toBe(false);
+  await library.locate(saved.id, original.id, files, inspect);
+  expect(inspect).toHaveBeenCalledTimes(3);
+  const sidecar = join(storage, "Sources", `${saved.id}.source.json`);
+  const record = JSON.parse(await readFile(sidecar, "utf8"));
+  record.variant.video.dynamicRange = "hdr";
+  await writeFile(sidecar, JSON.stringify(record));
+  expect((await library.list())[0]!.state).toBe("unsupported");
+  const before = await readdir(scratch);
+  await expect(library.open(saved.id, files)).rejects.toThrow(
+    "owner_source_unsupported",
+  );
+  expect(await readdir(scratch)).toEqual(before);
+  expect(await readFile(master)).toEqual(bytes);
+});
+
+it("rejects changed bytes between fresh verification and copying without retaining a partial workspace", async () => {
+  const original = await workspace(),
+    saved = await library.publish(publication(), original, files);
+  const master = join(storage, "Sources", `${saved.actual.fingerprint}.mp4`);
+  const changed = Buffer.alloc(bytes.length, 2);
+  library = new OwnerSourceLibrary(storage, async () => {
+    await writeFile(master, changed);
+  });
+  const before = await readdir(scratch);
+  await expect(library.open(saved.id, files)).rejects.toThrow(
+    "owner_source_damaged",
+  );
+  expect(await readdir(scratch)).toEqual(before);
+  expect(await readFile(master)).toEqual(changed);
+  expect(await readFile(await files.file(original.id, "source.mp4"))).toEqual(
+    bytes,
+  );
+  expect((await library.list())[0]!.state).toBe("damaged");
+});
+
+it("cancels a blocked saved-source copy, drains its stream and preserves the retained master", async () => {
+  const original = await workspace(),
+    saved = await library.publish(publication(), original, files);
+  const master = join(storage, "Sources", `${saved.actual.fingerprint}.mp4`);
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
+  let reads = 0,
+    entered!: () => void,
+    blocked: ReturnType<typeof createReadStream> | undefined;
+  const started = new Promise<void>((done) => {
+    entered = done;
+  });
+  vi.mocked(createReadStream).mockImplementation((path, options) => {
+    const stream = actual.createReadStream(path, options);
+    if (path === master && ++reads === 2) {
+      blocked = stream;
+      vi.spyOn(stream, "_read").mockImplementation(() => {
+        entered();
+      });
+    }
+    return stream;
+  });
+  const controller = new AbortController();
+  const before = await readdir(scratch);
+  const opening = expect(
+    library.open(saved.id, files, controller.signal),
+  ).rejects.toThrow("owner_source_canceled");
+  await started;
+  controller.abort();
+  await opening;
+  expect(blocked?.destroyed).toBe(true);
+  expect(await readdir(scratch)).toEqual(before);
+  expect(await readFile(master)).toEqual(bytes);
+  expect((await library.list())[0]!.state).toBe("ready");
 });
 
 it("refuses draft references, preserves a master shared by another variant, and drains an active reader before targeted deletion", async () => {
@@ -320,18 +398,28 @@ it("refuses draft references, preserves a master shared by another variant, and 
   const master = join(storage, "Sources", `${second.actual.fingerprint}.mp4`);
   expect(await readFile(master)).toEqual(bytes);
   expect((await library.list()).map((item) => item.id)).toEqual([second.id]);
-  let entered!: () => void, release!: () => void;
+  let entered!: () => void,
+    release!: () => void,
+    reads = 0;
   const started = new Promise<void>((done) => {
-      entered = done;
-    }),
-    held = new Promise<void>((done) => {
-      release = done;
-    });
-  const opened = library.open(second.id, files, async () => {
-    entered();
-    await held;
-    return original.source;
+    entered = done;
   });
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
+  vi.mocked(createReadStream).mockImplementation((path, options) => {
+    const stream = actual.createReadStream(path, options);
+    if (path === master && ++reads === 2) {
+      const originalRead = stream._read;
+      const read = vi.spyOn(stream, "_read").mockImplementation((size) => {
+        release = () => {
+          read.mockRestore();
+          originalRead.call(stream, size);
+        };
+        entered();
+      });
+    }
+    return stream;
+  });
+  const opened = library.open(second.id, files);
   await started;
   const deleting = library.delete(second.id);
   await Promise.resolve();
@@ -380,9 +468,7 @@ it("drains cancellation of a blocked publication stream and queued operations, r
   expect(await readFile(source)).toEqual(bytes);
   vi.mocked(createReadStream).mockImplementation(actual.createReadStream);
   const saved = await library.publish(publication(), original, files);
-  expect((await library.open(saved.id, files, inspector())).variant.id).toBe(
-    saved.id,
-  );
+  expect((await library.open(saved.id, files)).variant.id).toBe(saved.id);
 });
 
 it("rejects junction escapes, linked masters and malformed sidecars without following or deleting outside files", async () => {
@@ -392,7 +478,7 @@ it("rejects junction escapes, linked masters and malformed sidecars without foll
     outside = join(directory, "outside.mp4");
   await link(source, outside);
   expect((await library.list())[0]!.state).toBe("damaged");
-  await expect(library.open(saved.id, files, inspector())).rejects.toThrow();
+  await expect(library.open(saved.id, files)).rejects.toThrow();
   await expect(library.delete(saved.id)).rejects.toThrow();
   expect(await readFile(outside)).toEqual(bytes);
   await rm(outside);
@@ -400,7 +486,7 @@ it("rejects junction escapes, linked masters and malformed sidecars without foll
     record = JSON.parse(await readFile(sidecar, "utf8"));
   await writeFile(sidecar, JSON.stringify({ ...record, sourcePath: outside }));
   expect(await library.list()).toEqual([]);
-  await expect(library.open(saved.id, files, inspector())).rejects.toThrow();
+  await expect(library.open(saved.id, files)).rejects.toThrow();
   expect(await readFile(source)).toEqual(bytes);
   const elsewhere = join(directory, "elsewhere"),
     linkedRoot = join(directory, "linked-root");

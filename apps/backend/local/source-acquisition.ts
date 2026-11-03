@@ -542,33 +542,7 @@ export class OwnerSourceAcquisition {
     window?: OwnerSourceWindow,
   ) {
     ownerScopeImportedSource(variant.actual, window);
-    const expected = ownerYoutubeChoiceDescriptor(
-      { durationMs: variant.actual.durationMs },
-      {
-        ...variant,
-        video: variant.actual.origin
-          ? { ...variant.video, bytes: null }
-          : variant.video,
-        audio: variant.actual.origin
-          ? { ...variant.audio, bytes: null }
-          : variant.audio,
-      },
-      this.options.capacityPolicy,
-    );
-    const opened = await library.open(
-      variant.id,
-      this.options.files,
-      async (workspaceId, operationSignal) => {
-        const result = await this.options.media(
-          { operation: "inspect-acquisition", workspaceId, expected },
-          operationSignal,
-        );
-        if (result.operation !== "inspect-acquisition")
-          throw new Error("source_inspection_invalid");
-        return result.source;
-      },
-      signal,
-    );
+    const opened = await library.open(variant.id, this.options.files, signal);
     try {
       return {
         ...opened,
