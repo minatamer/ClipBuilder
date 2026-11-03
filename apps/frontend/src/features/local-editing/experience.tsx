@@ -79,7 +79,7 @@ export function LocalEditingExperience({
   const heading = useRef<HTMLHeadingElement>(null);
   const clipsChanged = useCallback((value: boolean) => {
     setHasClips(value);
-    if (value) setView("editor");
+    setView(value ? "editor" : "moments");
   }, []);
   useEffect(() => {
     if (view === "editor") sourcePreview.current?.pause();

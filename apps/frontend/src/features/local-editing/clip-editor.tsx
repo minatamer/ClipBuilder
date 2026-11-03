@@ -22,6 +22,11 @@ import { WorkflowActions } from "./workflow-actions.tsx";
 import { ControlTabs } from "./control-tabs.tsx";
 import { FocusPreviewControls } from "./focus-preview-controls.tsx";
 import { PictureTiming } from "./picture-timing.tsx";
+import { PictureImageDialog } from "./picture-image-dialog";
+import {
+  ownerCameraTracksFit,
+  ownerCameraTracksSchema,
+} from "../../../../../packages/contracts/local/camera-follow.ts";
 import { CaptionTextEditor } from "./caption-text-editor.tsx";
 import { CaptionSpeakers } from "./caption-speakers.tsx";
 import { localCodexError, LocalCodexError } from "./codex-errors.ts";
@@ -316,7 +321,7 @@ function SelectionBox({
   );
 }
 
-function Review({
+export function Review({
   overlay,
   workspaceId,
   assets,
@@ -329,6 +334,7 @@ function Review({
   onPreviewReady,
   interactive,
   setting,
+  silent = false,
 }: {
   overlay: OwnerOverlay;
   workspaceId: string;
@@ -338,6 +344,7 @@ function Review({
   onPreviewReady: () => void;
   interactive: boolean;
   setting: EditorSetting;
+  silent?: boolean;
 } & LayerControls) {
   const presentationFrame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -354,6 +361,7 @@ function Review({
         overlay.hook && presentationFrame < ownerHookFrames(overlay)
           ? presentationFrame
           : frame,
+        overlay.cameraTracks ?? [],
       )
     : null;
   return (
@@ -395,7 +403,7 @@ function Review({
               }
               src={sourceUrl}
               preload="auto"
-              volume={(overlay.audio?.originalVolume ?? 100) / 100}
+              volume={silent ? 0 : (overlay.audio?.originalVolume ?? 100) / 100}
               trimBefore={part.start}
               trimAfter={part.end}
               style={
@@ -422,11 +430,13 @@ function Review({
           </Sequence>
         ))}
       </OwnerVideoLookLayer>
-      <OwnerAudioPreview
-        overlay={overlay}
-        workspaceId={workspaceId}
-        onError={onPlaybackError}
-      />
+      {!silent && (
+        <OwnerAudioPreview
+          overlay={overlay}
+          workspaceId={workspaceId}
+          onError={onPlaybackError}
+        />
+      )}
       <OwnerAutomaticOverlay
         overlay={overlay}
         assets={assets}
@@ -526,6 +536,7 @@ export function ClipEditor({
   youtubeAudio = false,
   onBusy,
   onPending,
+  onPreviewReady,
 }: {
   clip: OwnerClip;
   workspaceId: string;
@@ -541,6 +552,7 @@ export function ClipEditor({
   youtubeAudio?: boolean;
   onBusy?: (busy: boolean) => void;
   onPending?: (pending: boolean) => void;
+  onPreviewReady?: (() => void) | undefined;
 }) {
   const [form, setForm] = useState(() => {
     const original = initialOwnerEdit(clip);
@@ -554,7 +566,10 @@ export function ClipEditor({
   const [pictureTab, setPictureTab] = useState("image");
   const tabsId = useId();
   const [message, setMessage] = useState("");
-  const [pending, setPending] = useState(false);
+  const [requestPending, setPending] = useState(false);
+  const [trackingBusy, setTrackingBusy] = useState(false);
+  const [trackingMode, setTrackingMode] = useState(false);
+  const pending = requestPending || trackingBusy;
   const [audioUploading, setAudioUploading] = useState(false);
   const [audioImport, setAudioImport] = useState<string | null>(null);
   const [importedAudioCue, setImportedAudioCue] = useState<
@@ -569,6 +584,9 @@ export function ClipEditor({
   const alive = useRef(true);
   const [playbackFailed, setPlaybackFailed] = useState(false);
   const [previewLoaded, setPreviewLoaded] = useState(false);
+  useEffect(() => {
+    if (previewLoaded) onPreviewReady?.();
+  }, [previewLoaded, onPreviewReady]);
   const previewReady = useCallback(() => {
     if (alive.current) setPreviewLoaded(true);
   }, []);
@@ -638,26 +656,36 @@ export function ClipEditor({
                       !ownerCameraEffectsFit(draft.cameraEffects, {
                         frames: base.overlay.frames,
                         hook: draft.hook,
+                        cameraTracks: draft.cameraTracks,
                       }))
                   ? "Keep zooms apart and leave room for their automatic return."
-                  : draft.focus &&
-                      !ownerFocusSchema.safeParse(draft.focus).success
-                    ? "Set camera changes inside this clip, with zoom from 1 to 3."
-                    : draft.visuals.some(
-                          (cue) =>
-                            !Number.isFinite(cue.startFrame) ||
-                            !Number.isFinite(cue.endFrame) ||
-                            cue.startFrame < 0 ||
-                            cue.endFrame <= cue.startFrame ||
-                            cue.endFrame > base.overlay.frames,
-                        )
-                      ? "Set each picture’s end after its start, within this clip."
-                      : draft.captions &&
-                          (!Number.isInteger(draft.captions.fontSize) ||
-                            draft.captions.fontSize < 24 ||
-                            draft.captions.fontSize > 120)
-                        ? "Use a font size from 24 to 120."
-                        : "Keep layers inside the preview and check their size.";
+                  : draft.cameraTracks &&
+                      (!ownerCameraTracksSchema.safeParse(draft.cameraTracks)
+                        .success ||
+                        !ownerCameraTracksFit(
+                          draft.cameraTracks,
+                          draft.focus ?? base.overlay.focus,
+                          { frames: base.overlay.frames, hook: draft.hook },
+                        ))
+                    ? "Keep motion within this camera and occurrence; leave it separate from Zoom."
+                    : draft.focus &&
+                        !ownerFocusSchema.safeParse(draft.focus).success
+                      ? "Set camera changes inside this clip, with zoom from 1 to 3."
+                      : draft.visuals.some(
+                            (cue) =>
+                              !Number.isFinite(cue.startFrame) ||
+                              !Number.isFinite(cue.endFrame) ||
+                              cue.startFrame < 0 ||
+                              cue.endFrame <= cue.startFrame ||
+                              cue.endFrame > base.overlay.frames,
+                          )
+                        ? "Set each picture’s end after its start, within this clip."
+                        : draft.captions &&
+                            (!Number.isInteger(draft.captions.fontSize) ||
+                              draft.captions.fontSize < 24 ||
+                              draft.captions.fontSize > 120)
+                          ? "Use a font size from 24 to 120."
+                          : "Keep layers inside the preview and check their size.";
     try {
       overlay = compileOwnerOverlay(
         base,
@@ -684,9 +712,15 @@ export function ClipEditor({
     return () => onPending?.(false);
   }, [pending, onPending]);
   useEffect(() => {
+    if (!trackingBusy) return;
+    onBusy?.(true);
+    return () => onBusy?.(false);
+  }, [trackingBusy, onBusy]);
+  useEffect(() => {
     onDirty(
       clip.id,
       dirty ||
+        trackingMode ||
         captionConfirm ||
         generating ||
         (audioUploading && audioImport === null),
@@ -695,6 +729,7 @@ export function ClipEditor({
   }, [
     clip.id,
     dirty,
+    trackingMode,
     captionConfirm,
     generating,
     audioUploading,
@@ -720,15 +755,33 @@ export function ClipEditor({
     captionWasConfirming.current = captionConfirm;
   }, [captionConfirm, footerTarget, base.overlay.captions.length, tabsId]);
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty && !trackingMode) return;
     const warn = (event: BeforeUnloadEvent) => {
       event.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  }, [dirty, trackingMode]);
 
   function update(next: OwnerEditDocument) {
+    if (next.cameraTracks?.length) {
+      const hookChanged =
+        JSON.stringify(next.hook) !== JSON.stringify(draft.hook);
+      const valid = next.cameraTracks.filter(
+        (track) =>
+          !(hookChanged && track.occurrence === "hook") &&
+          ownerCameraTracksFit([track], next.focus ?? base.overlay.focus, {
+            frames: base.overlay.frames,
+            hook: next.hook,
+          }),
+      );
+      if (valid.length !== next.cameraTracks.length) {
+        next = { ...next, cameraTracks: valid };
+        setMessage(
+          "Motion was cleared for changed camera positions or Hook timing.",
+        );
+      }
+    }
     if (
       JSON.stringify(next.hook) !== JSON.stringify(draft.hook) &&
       next.cameraEffects?.some((effect) => effect.occurrence === "hook")
@@ -1392,6 +1445,13 @@ export function ClipEditor({
                   )
                 }
                 cameraEffects={draft.cameraEffects ?? []}
+                cameraTracks={draft.cameraTracks ?? []}
+                onCameraTracks={(cameraTracks) =>
+                  update({ ...draft, cameraTracks })
+                }
+                onTrackingMode={setTrackingMode}
+                onTrackingBusy={setTrackingBusy}
+                footerTarget={footerTarget}
                 cameraAvailable={Boolean(draft.focus ?? base.overlay.focus)}
                 onCameraEffects={(cameraEffects) =>
                   update({ ...draft, cameraEffects })
@@ -1786,23 +1846,30 @@ export function ClipEditor({
                   aria-label="Pictures"
                 >
                   {draft.visuals.map((cue, index) => (
-                    <Button
-                      key={cue.id}
-                      variant="secondary"
-                      className="picture-choice"
-                      aria-label={`Edit picture ${index + 1}`}
-                      aria-pressed={selection === cue.id}
-                      onClick={() => choosePicture(cue)}
-                    >
-                      <span
-                        className="picture-thumb"
-                        aria-hidden="true"
-                        style={{
-                          backgroundImage: `url(/api/local/workspace/${workspaceId}/assets/${cue.assetId})`,
-                        }}
+                    <div key={cue.id} className="picture-card">
+                      <Button
+                        variant="secondary"
+                        className="picture-choice"
+                        aria-label={`Edit picture ${index + 1}`}
+                        aria-pressed={selection === cue.id}
+                        onClick={() => choosePicture(cue)}
+                      >
+                        <span
+                          className="picture-thumb"
+                          aria-hidden="true"
+                          style={{
+                            backgroundImage: `url(/api/local/workspace/${workspaceId}/assets/${cue.assetId})`,
+                          }}
+                        />
+                        <span>Picture {index + 1}</span>
+                      </Button>
+                      <PictureImageDialog
+                        workspaceId={workspaceId}
+                        assetId={cue.assetId}
+                        number={index + 1}
+                        onOpen={() => player.current?.pause()}
                       />
-                      <span>Picture {index + 1}</span>
-                    </Button>
+                    </div>
                   ))}
                 </div>
                 <div className="picture-tools">
@@ -2215,6 +2282,7 @@ export function ClipEditor({
               </WorkflowActions>
             )}
           {actionsVisible &&
+            !trackingMode &&
             !captionConfirm &&
             (!audioUploading || audioImport !== null) &&
             (dirty || stale || previewUnavailable) && (

@@ -51,6 +51,7 @@ export function FocusEditor({
   captureReady,
   disabled,
   motion,
+  tracking,
 }: {
   focus: OwnerFocus;
   automatic: OwnerFocus | undefined;
@@ -63,6 +64,7 @@ export function FocusEditor({
   captureReady: boolean;
   disabled: boolean;
   motion?: ReactNode;
+  tracking?: ReactNode;
 }) {
   const tabsId = useId();
   const cameraTabsId = useId();
@@ -95,17 +97,26 @@ export function FocusEditor({
   const candidateOnly =
     requestedPerson &&
     !positions.some((p) => p.personId === requestedPerson.id);
-  const activePersonId = candidateOnly ? requestedPerson.id : shot.personId;
+  const timelineTab = tab === "zoom" || tab === "motion";
+  const timelineShot = ownerFocusAt(focus, frame);
+  const activePersonId = timelineTab
+    ? timelineShot.personId
+    : candidateOnly
+      ? requestedPerson.id
+      : shot.personId;
   const person = focus.people.find((p) => p.id === activePersonId);
-  const unused = Boolean(candidateOnly);
-  const sourceFrame =
-    !playing && frame >= position.sourceStart && frame < position.sourceEnd
+  const unused = !timelineTab && Boolean(candidateOnly);
+  const sourceFrame = timelineTab
+    ? frame
+    : !playing && frame >= position.sourceStart && frame < position.sourceEnd
       ? frame
       : Math.max(0, Number.isFinite(shot.startFrame) ? shot.startFrame : 0);
   const shownShot = previewFocusShot(
     unused && person
       ? { ...shot, ...ownerPersonCamera(person, sourceFrame) }
-      : shot,
+      : timelineTab
+        ? timelineShot
+        : shot,
   );
   const content = ownerSourceContent(focus.source),
     crop = ownerFocusCrop(focus, shownShot);
@@ -220,7 +231,7 @@ export function FocusEditor({
     onSeek(shot.startFrame);
   }
   function begin(event: PointerEvent<HTMLButtonElement>) {
-    if (event.button !== 0 || disabled || unused) return;
+    if (event.button !== 0 || disabled || unused || timelineTab) return;
     const rect = source.current!.getBoundingClientRect();
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -326,7 +337,11 @@ export function FocusEditor({
   return (
     <fieldset className="focus-editor" disabled={disabled}>
       <legend className="local-sr-only">Person focus</legend>
-      <div hidden={tab === "zoom"}>
+      <div
+        className="numbered-focus-preview"
+        role="group"
+        aria-label="Numbered speaker preview"
+      >
         <div
           className="focus-source"
           ref={source}
@@ -396,6 +411,10 @@ export function FocusEditor({
                   type="button"
                   className="focus-person-handle"
                   aria-label={`Select ${focusPersonName(p.id)}`}
+                  disabled={
+                    timelineTab &&
+                    !positions.some((pos) => pos.personId === p.id)
+                  }
                   onClick={() => selectPerson(p.id)}
                   style={{
                     left: `${((other.x + other.width / 2 - content.x) / content.width) * 100}%`,
@@ -411,10 +430,15 @@ export function FocusEditor({
             className="focus-person-handle"
             aria-label={
               person
-                ? `Move ${focusPersonName(person.id)} position`
+                ? timelineTab
+                  ? `Selected ${focusPersonName(person.id)}`
+                  : `Move ${focusPersonName(person.id)} position`
                 : "Move custom position"
             }
             aria-pressed="true"
+            onClick={() => {
+              if (timelineTab && person) selectPerson(person.id);
+            }}
             disabled={unused}
             style={{ left: `${center.x * 100}%`, top: `${center.y * 100}%` }}
             onPointerDown={begin}
@@ -429,6 +453,7 @@ export function FocusEditor({
               gesture.current = null;
             }}
             onKeyDown={(event) => {
+              if (timelineTab) return;
               const dx =
                   event.key === "ArrowRight"
                     ? 0.01
@@ -456,7 +481,11 @@ export function FocusEditor({
           <strong>
             {unused && person
               ? focusPersonName(person.id)
-              : focusPositionName(position)}
+              : focusPositionName(
+                  timelineTab
+                    ? positions[focus.shots.indexOf(timelineShot)]!
+                    : position,
+                )}
           </strong>
           <span>{unused ? "Not used" : "This position"}</span>
         </div>
@@ -468,6 +497,7 @@ export function FocusEditor({
           { value: "camera", label: "Camera" },
           { value: "people", label: "People" },
           ...(motion ? [{ value: "zoom", label: "Zoom" }] : []),
+          ...(tracking ? [{ value: "motion", label: "Motion" }] : []),
         ]}
         value={tab}
         onChange={(next) => {
@@ -476,6 +506,15 @@ export function FocusEditor({
           if (next === "camera") setPersonId(shot.personId);
         }}
       />
+      <div
+        role="tabpanel"
+        id={`${tabsId}-motion-panel`}
+        aria-labelledby={`${tabsId}-motion`}
+        hidden={tab !== "motion"}
+        tabIndex={0}
+      >
+        {tab === "motion" && tracking}
+      </div>
       <div
         role="tabpanel"
         id={`${tabsId}-zoom-panel`}

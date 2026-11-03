@@ -23,8 +23,11 @@
     justify-content: flex-start;
   }
   &.local-editor {
-    --local-editor-navigation-height: 0.5rem;
-    --local-preview-width: min(16rem, calc((100cqh - 0.5rem) * 9 / 16));
+    --local-editor-navigation-height: 3.5rem;
+    --local-preview-width: min(
+      16rem,
+      calc((100cqh - var(--local-editor-navigation-height)) * 9 / 16)
+    );
     --local-editor-spacing: clamp(0.5rem, 1.5cqh, 1rem);
     --local-editor-panel-padding: clamp(0.75rem, 2cqh, 1.1rem);
     --local-editor-field-gap: 0.25rem;
@@ -685,6 +688,8 @@
     gap: 0.25rem;
     text-align: left;
     border-radius: 0.85rem;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
   }
   .clip-state {
     color: var(--cb-ink-soft);
@@ -692,6 +697,30 @@
     font-weight: 400;
     text-transform: capitalize;
     overflow-wrap: anywhere;
+  }
+  .clip-label {
+    width: 100%;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .clip-rail-preview {
+    display: block;
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    border-radius: 0.6rem;
+    overflow: hidden;
+    background: var(--cb-surface);
+  }
+  .clip-choice:has(.clip-rail-preview) {
+    justify-items: center;
+    padding: 0.65rem;
+    text-align: center;
+  }
+  .clip-rail-placeholder {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    font-size: 0.7rem;
   }
   .clip-choice[aria-selected="true"] {
     border-color: var(--cb-brand);
@@ -708,12 +737,53 @@
     align-items: center;
     margin-bottom: 0;
   }
+  .clip-name-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 0;
+    padding-block: 0.25rem;
+  }
+  .clip-name-controls h3 {
+    font-size: 1rem;
+    overflow-wrap: anywhere;
+  }
+  .clip-name-controls > button {
+    padding: 0.35rem;
+  }
+  .clip-name-controls form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .clip-name-controls input {
+    min-width: 0;
+    width: min(14rem, 100%);
+  }
   .clip-review > .section-heading h3,
   .clip-review > .section-heading p {
     margin: 0;
   }
   .moment-selection > summary {
     color: var(--cb-ink-soft);
+  }
+  .moment-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .moment-section-heading h3 {
+    margin: 0;
+  }
+  .manual-clip-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
   }
   .processing-details {
     margin-top: 1rem;
@@ -848,8 +918,14 @@
     overflow-x: auto;
     padding: 0.25rem;
   }
-  .picture-choice {
+  .picture-card {
     flex: 0 0 5.5rem;
+    display: grid;
+    align-content: start;
+    gap: 0.25rem;
+  }
+  .picture-choice {
+    width: 100%;
     display: grid;
     gap: 0.4rem;
     padding: 0.5rem;
@@ -871,6 +947,28 @@
     align-items: center;
     gap: 0.5rem;
     margin-block: 1rem 0.5rem;
+  }
+  .head-motion-source {
+    width: 100%;
+    max-width: 32rem;
+  }
+  .head-seed-surface {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    cursor: crosshair;
+    touch-action: none;
+  }
+  .head-seed-surface > span {
+    position: absolute;
+    border: 2px solid var(--cb-blue-light);
+    background: rgb(49 87 213 / 16%);
+    pointer-events: none;
   }
   .editor-tabs,
   .moment-tabs {
@@ -1415,7 +1513,7 @@
   /* Match clipStripQuery in clip-batch-panel.tsx. */
   @media (max-width: 75rem), (hover: none) and (pointer: coarse) {
     &.local-editor {
-      --local-editor-navigation-height: 5.5rem;
+      --local-editor-navigation-height: 8.5rem;
       --local-preview-width: min(
         calc(100cqw - 17rem - var(--local-editor-spacing)),
         calc((100cqh - var(--local-editor-navigation-height)) * 9 / 16)
@@ -1609,6 +1707,16 @@
   align-items: center;
   gap: 0.75rem;
 }
+.head-motion-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.workflow-footer-slot:has(.head-motion-actions):not(:has(.connection-status))
+  > .workflow-actions:not(:has(.head-motion-actions)),
+.local-footer-actions:has(.head-motion-actions):not(:has(.connection-status))
+  > button {
+  display: none;
+}
 .local-footer-actions {
   margin-left: auto;
 }
@@ -1698,6 +1806,11 @@
   .local-footer-actions a {
     padding-inline: 0.65rem;
     font-size: 0.8125rem;
+  }
+  .local-footer-actions .clip-remove {
+    flex: 0 0 var(--cb-target);
+    width: var(--cb-target);
+    padding-inline: 0;
   }
 }
 

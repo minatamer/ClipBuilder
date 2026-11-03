@@ -32,7 +32,7 @@ async function clearScratch(root: string) {
     throw new Error("invalid_proof_cleanup");
   await rm(actual, { recursive: true, force: true });
 }
-it("edits manual zoom through real mouse/touch/keyboard controls and Apply/Discard/reopen with a Hook at desktop and phone sizes", async () => {
+it("edits Zoom and captures Zoom/Motion endpoints from real playback with a Hook at desktop and phone sizes", async () => {
   const directory = await mkdtemp(join(tmpdir(), "clipbuilder-focus-browser-")),
     source = join(directory, "synthetic.mp4");
   const tools = await ownerNativeTools(resolve("."));
@@ -304,6 +304,20 @@ it("edits manual zoom through real mouse/touch/keyboard controls and Apply/Disca
     const open=async()=>{await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'ready');[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Focus').click();await wait(()=>document.querySelector('.focus-editor'),'focus');};
     const video=()=>document.querySelector('.editor-preview video[data-editor-active=true]');
     const settled=()=>wait(()=>!button('Apply changes')&&!document.querySelector('.focus-editor').disabled,'saved');
+    const seek=async frame=>{
+      const bar=[...document.querySelectorAll('.editor-preview div')].find(n=>n.style.touchAction==='none'&&n.style.paddingTop==='4px'&&n.style.cursor==='pointer');if(!bar)throw Error('missing_player_seekbar');
+      const r=bar.getBoundingClientRect(),point={bubbles:true,button:0,pointerId:77,clientX:r.left+r.width*frame/179,clientY:r.top+r.height/2};
+      bar.dispatchEvent(new PointerEvent('pointerdown',point));await new Promise(requestAnimationFrame);document.body.dispatchEvent(new PointerEvent('pointerup',point));
+      const source=frame<60?15+frame:frame-60;await wait(()=>video()?.dataset.editorVideo===(frame<60?'hook':'body')&&video().readyState>=2&&!video().seeking&&Math.abs(video().currentTime-source/30)<.025,'capture_seek_'+frame);
+      await wait(()=>[...document.querySelectorAll('button[aria-label^="Capture "]')].some(n=>!n.disabled),'capture_seek_ready');
+    };
+    const capture=async name=>{await wait(()=>named(name)&&!named(name).disabled,'ready_'+name);named(name).click();await new Promise(r=>setTimeout(r,60));};
+    const fieldIs=(name,value)=>Math.abs(Number(named(name).value)-value)<.0001;
+    const captureLayout=(field,cta)=>{
+      const input=named(field),button=named(cta);if(!input.closest('.range-time').contains(button))throw Error('capture_not_inline');
+      button.scrollIntoView({block:'center'});const r=button.getBoundingClientRect(),f=document.querySelector('footer').getBoundingClientRect();
+      return r.width>=44&&r.height>=44&&r.left>=0&&r.right<=innerWidth+1&&f.top>=0&&f.bottom<=innerHeight+1&&document.documentElement.scrollWidth<=innerWidth;
+    };
     globalThis.motionRun=async(action,value)=>{
       if(action==='open'){await open();await tab('Zoom');return;}
       if(action==='add'){
@@ -316,6 +330,42 @@ it("edits manual zoom through real mouse/touch/keyboard controls and Apply/Disca
       }
       if(action==='info')return {x:Number(named('Zoom target x').value),duration:Number(named('Zoom duration seconds').value),zoom:Number(named('Zoom magnification').value),dirty:!!button('Apply changes')};
       if(action==='key'){named('Zoom target').focus();return;}
+      if(action==='captureZoom'){
+        await seek(66);await capture('Capture zoom start');if(!fieldIs('Zoom start seconds',2.2)||!fieldIs('Zoom duration seconds',.6)||!fieldIs('Zoom magnification',2.5)||!fieldIs('Zoom target x',50))throw Error('zoom_capture_clock_or_other_field');
+        await seek(5);await capture('Capture zoom start');if(!fieldIs('Zoom start seconds',2.2))throw Error('zoom_capture_hook_allowed');
+        await seek(160);await capture('Capture zoom start');if(!fieldIs('Zoom start seconds',2.2))throw Error('zoom_capture_no_room');
+        await seek(66);video().dispatchEvent(new Event('seeking'));await wait(()=>named('Capture zoom start').disabled,'zoom_seeking_disabled');video().dispatchEvent(new Event('seeked'));await wait(()=>!named('Capture zoom start').disabled,'zoom_seeked_enabled');
+        await change('Zoom start seconds','2.3');named('Capture zoom start').scrollIntoView({block:'center'});named('Capture zoom start').focus();return;
+      }
+      if(action==='captureZoomKeyDone'){await wait(()=>fieldIs('Zoom start seconds',2.2),'zoom_keyboard_capture');return captureLayout('Zoom start seconds','Capture zoom start');}
+      if(action==='captureOverlap'){
+        await seek(130);button('Add at playhead').click();await wait(()=>named('Zoom effect').options.length===3&&fieldIs('Zoom start seconds',4.333),'second_zoom');const before=named('Zoom start seconds').value;
+        await seek(66);await capture('Capture zoom start');if(named('Zoom start seconds').value!==before)throw Error('zoom_capture_overlap');button('Remove zoom').click();await wait(()=>named('Zoom effect').options.length===2,'remove_second_zoom');
+        await seek(63);await tab('Motion');await wait(()=>button('Add at playhead')&&!button('Add at playhead').disabled,'motion_overlap_ready');button('Add at playhead').click();await wait(()=>named('Motion end seconds'),'motion_overlap_seed');const end=named('Motion end seconds').value;
+        await seek(80);await capture('Capture motion end');if(named('Motion end seconds').value!==end)throw Error('motion_capture_zoom_overlap');button('Cancel').click();await wait(()=>!named('Motion end seconds'),'motion_overlap_cancel');await tab('Zoom');return true;
+      }
+      if(action==='captureMotion'){
+        await seek(63);await tab('Motion');await wait(()=>button('Add at playhead')&&!button('Add at playhead').disabled,'motion_seed_ready');button('Add at playhead').click();await wait(()=>named('Motion end seconds'),'motion_seed');
+        if(!fieldIs('Motion end seconds',3))throw Error('motion_default_camera_end');
+        const start=[...document.querySelectorAll('.head-motion-editor p')].find(n=>n.textContent.startsWith('Start:'))?.textContent;
+        const head=named('Head to follow');if(!start||!head)throw Error('missing_motion_seed');
+        await seek(80);await capture('Capture motion end');if(!fieldIs('Motion end seconds',2.7))throw Error('motion_capture_exclusive_end');
+        await seek(5);await capture('Capture motion end');if(!fieldIs('Motion end seconds',2.7))throw Error('motion_capture_hook_allowed');
+        await seek(64);await capture('Capture motion end');if(!fieldIs('Motion end seconds',2.7))throw Error('motion_capture_too_short');
+        if(start!==[...document.querySelectorAll('.head-motion-editor p')].find(n=>n.textContent.startsWith('Start:'))?.textContent||head!==named('Head to follow')||!button('Track head').disabled)throw Error('motion_capture_changed_seed');
+        return captureLayout('Motion end seconds','Capture motion end');
+      }
+      if(action==='defaultMotion'){
+        await tab('Motion');
+        for(const [frame,end] of [[63,3],[90,4],[123,5],[153,6],[5,.5],[54,2]]){
+          await seek(frame);await wait(()=>button('Add at playhead')&&!button('Add at playhead').disabled,'default_motion_ready');button('Add at playhead').click();await wait(()=>named('Motion end seconds'),'default_motion_seed');
+          if(!fieldIs('Motion end seconds',end))throw Error('motion_default_boundary_'+frame);
+          if(!document.querySelector('.head-motion-editor p').parentNode.textContent.includes('Start: '+(frame/30).toFixed(2)+'s'))throw Error('motion_default_start_changed');
+          if(!named('Capture motion end')||!button('Track head').disabled)throw Error('motion_default_controls');
+          button('Cancel').click();await wait(()=>!named('Motion end seconds'),'default_motion_cancel');
+        }
+        await seek(55);button('Add at playhead').click();await wait(()=>document.querySelector('.head-motion-editor').textContent.includes('Choose an earlier start'),'default_motion_short');if(named('Motion end seconds'))throw Error('motion_default_extended_past_boundary');return true;
+      }
       if(action==='check'){
         await change('Zoom duration seconds','');if(!button('Apply changes').disabled||!button('Preview zoom').disabled)throw Error('empty_duration_allowed');await change('Zoom duration seconds','.6');
         await change('Zoom start seconds','5.9');if(!button('Apply changes').disabled)throw Error('end_bound_allowed');await change('Zoom start seconds','2.1');
@@ -444,6 +494,40 @@ it("edits manual zoom through real mouse/touch/keyboard controls and Apply/Disca
       await run("click", "Apply changes");
       await run("settle");
       expect(clip.edit!.cameraEffects).toEqual([]);
+      await run("add");
+      await run("captureZoom");
+      for (const type of ["keyDown", "keyUp"] as const) {
+        await client.send("Input.dispatchKeyEvent", {
+          type,
+          key: "Enter",
+          code: "Enter",
+          windowsVirtualKeyCode: 13,
+          ...(type === "keyDown" ? { text: "\r" } : {}),
+        });
+      }
+      expect(await run("captureZoomKeyDone")).toBe(true);
+      for (const feature of ["zoom", "motion"]) {
+        if (feature === "motion") {
+          expect(await run("captureOverlap")).toBe(true);
+          await run("click", "Discard changes");
+          await run("settle");
+          expect(await run("captureMotion")).toBe(true);
+        }
+        const captureShot = await client.send("Page.captureScreenshot", {
+          format: "png",
+          fromSurface: true,
+        });
+        await writeFile(
+          resolve(
+            `.local-build/evidence/cl207-${feature}-${viewport.width}.png`,
+          ),
+          Buffer.from(captureShot.value.data, "base64"),
+        );
+      }
+      await run("click", "Cancel");
+      expect(await run("defaultMotion")).toBe(true);
+      expect(clip.edit!.cameraEffects).toEqual([]);
+      expect(clip.edit!.cameraTracks ?? []).toEqual([]);
     }
     expect(edits).toBe(6);
     expect(clip.calls).toEqual({ plan: 0, image: 0, render: 0 });

@@ -95,6 +95,8 @@ export function sameOwnerEdit(
     JSON.stringify(left.focus) === JSON.stringify(right.focus) &&
     JSON.stringify(left.cameraEffects ?? []) ===
       JSON.stringify(right.cameraEffects ?? []) &&
+    JSON.stringify(left.cameraTracks ?? []) ===
+      JSON.stringify(right.cameraTracks ?? []) &&
     JSON.stringify(left.visuals) === JSON.stringify(right.visuals)
   );
 }
@@ -105,6 +107,14 @@ export function ownerEditOperations(
   clip: OwnerClip,
 ): OwnerEditRequest["operations"] {
   const operations: OwnerEditRequest["operations"] = [];
+  if (
+    JSON.stringify(original.cameraTracks ?? []) !==
+    JSON.stringify(draft.cameraTracks ?? [])
+  )
+    operations.push({
+      kind: "camera-tracks",
+      tracks: draft.cameraTracks ?? [],
+    });
   if (JSON.stringify(original.audio) !== JSON.stringify(draft.audio))
     operations.push({
       kind: "audio",

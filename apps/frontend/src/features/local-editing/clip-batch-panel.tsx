@@ -11,6 +11,13 @@ import {
   useSyncExternalStore,
 } from "react";
 import { ClipEditor } from "./clip-editor.tsx";
+import { ClipRailPreview } from "./clip-rail-preview";
+import { ClipNameControls } from "./clip-name-controls";
+import {
+  ownerClipDisplayName,
+  ownerClipDownloadName,
+} from "../../../../../packages/contracts/local/clip-name.ts";
+import { useClipEntry } from "./use-clip-entry";
 import { isLocalClipEditable } from "./clip-readiness.ts";
 import { clipStageLabel } from "./clip-stage.ts";
 import { ProcessingState } from "../../shared/ui/processing-state";
@@ -28,7 +35,7 @@ import type { OwnerMomentExport } from "../../../../../packages/contracts/local/
 import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts/local/runtime.ts";
 import { HOSTED_DEMO_POLICY } from "../../../../../packages/contracts/local/hosted-editing.ts";
 import { DemoLimitToast } from "./demo-limit-toast.tsx";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Trash2 } from "lucide-react";
 import { pollClipConnection, type ClipConnection } from "./clip-connection.ts";
 import { CodexPreparationSteps } from "./codex-preparation-steps.tsx";
 
@@ -93,6 +100,16 @@ export function OwnerClipBatchPanel({
   const [dirtyClip, setDirtyClip] = useState<string | null>(null);
   const [editorPending, setEditorPending] = useState(false);
   const tabsId = useId();
+  const {
+    root: entryRoot,
+    choose: prepareEntry,
+    ready: previewEntryReady,
+  } = useClipEntry();
+  function chooseClip(id: string) {
+    if (id === review) return;
+    prepareEntry(document.getElementById(`${tabsId}-${id}`));
+    setReview(id);
+  }
   const clipList = useRef<HTMLDivElement>(null);
   const horizontal = useSyncExternalStore(
     subscribeClipLayout,
@@ -169,7 +186,11 @@ export function OwnerClipBatchPanel({
     onActive,
     onConnected,
   ]);
-  async function action(path: string, body?: unknown) {
+  async function action(
+    path: string,
+    body?: unknown,
+    onSuccess?: (value: OwnerClipList) => void,
+  ) {
     if (requesting.current) {
       if (!path.endsWith("/cancel")) return;
       requestController.current?.abort();
@@ -232,6 +253,7 @@ export function OwnerClipBatchPanel({
         if (alive.current) {
           mutationRevision.current++;
           accept(value);
+          onSuccess?.(value);
           setMessage("");
           if (path === endpoint && index === 0) onProcessed?.();
         }
@@ -285,6 +307,7 @@ export function OwnerClipBatchPanel({
     ["queued", "preparing", "rendering", "canceling"].includes(clip.state);
   return (
     <section
+      ref={entryRoot}
       className="batch-section"
       aria-labelledby={hasClips ? "batch-title" : undefined}
       aria-label={hasClips ? undefined : "Clips"}
@@ -386,7 +409,9 @@ export function OwnerClipBatchPanel({
                 disabled={!list.active}
                 onClick={() => void action(`${endpoint}/cancel`)}
               >
-                Cancel processing
+                <span>
+                  Cancel<span className="local-action-detail"> processing</span>
+                </span>
               </Button>
             )}
           </WorkflowActions>
@@ -413,9 +438,9 @@ export function OwnerClipBatchPanel({
                   aria-controls={`${tabsId}-panel`}
                   aria-selected={current?.id === clip.id}
                   tabIndex={current?.id === clip.id ? 0 : -1}
-                  aria-label={`Edit clip ${index + 1}`}
+                  aria-label={`Edit ${ownerClipDisplayName(clip, index + 1)}`}
                   disabled={!!dirtyClip && dirtyClip !== clip.id}
-                  onClick={() => setReview(clip.id)}
+                  onClick={() => chooseClip(clip.id)}
                   onKeyDown={(event) => {
                     const previous = horizontal ? "ArrowLeft" : "ArrowUp",
                       following = horizontal ? "ArrowRight" : "ArrowDown";
@@ -441,11 +466,16 @@ export function OwnerClipBatchPanel({
                       event.currentTarget.focus();
                     } else {
                       keyboardClip.current = next.id;
-                      setReview(next.id);
+                      chooseClip(next.id);
                     }
                   }}
                 >
-                  <span>Clip {index + 1}</span>
+                  <span className="clip-label">
+                    {ownerClipDisplayName(clip, index + 1)}
+                  </span>
+                  {!horizontal && isLocalClipEditable(clip) && (
+                    <ClipRailPreview clip={clip} workspaceId={workspace.id} />
+                  )}
                   <span className="clip-state">{clipStageLabel(clip)}</span>
                 </Button>
               );
@@ -460,7 +490,19 @@ export function OwnerClipBatchPanel({
           >
             <div className="section-heading">
               <div>
-                <h3 className="local-sr-only">Clip {currentIndex}</h3>
+                <ClipNameControls
+                  key={current.id}
+                  clip={current}
+                  index={currentIndex}
+                  workspaceId={workspace.id}
+                  onAccepted={acceptEdit}
+                  disabled={
+                    !!dirtyClip ||
+                    pending ||
+                    editorPending ||
+                    connection !== "connected"
+                  }
+                />
                 {list.clips.length > RAIL_PAGE_ITEMS && (
                   <nav
                     className="collection-navigation"
@@ -510,6 +552,38 @@ export function OwnerClipBatchPanel({
                     target={footerTarget}
                     label={`Clip ${currentIndex} actions`}
                   >
+                    {current.state === "canceled" && !dirtyClip && (
+                      <Button
+                        className="clip-remove"
+                        variant="secondary"
+                        aria-label="Remove clip"
+                        title="Remove clip"
+                        disabled={pending || editorPending}
+                        onClick={() =>
+                          void action(
+                            `${endpoint}/${current.id}/remove`,
+                            {
+                              operationId: crypto.randomUUID(),
+                              expectedRevision: current.revision,
+                            },
+                            (value) => {
+                              const next =
+                                value.clips[
+                                  Math.min(
+                                    currentIndex - 1,
+                                    value.clips.length - 1,
+                                  )
+                                ];
+                              keyboardClip.current = next?.id ?? null;
+                              setReview(next?.id ?? null);
+                            },
+                          )
+                        }
+                      >
+                        <Trash2 size={16} aria-hidden="true" />
+                        <span className="local-action-detail">Remove clip</span>
+                      </Button>
+                    )}
                     {(retryable ||
                       (current.base &&
                         editable &&
@@ -534,7 +608,14 @@ export function OwnerClipBatchPanel({
                             )
                           }
                         >
-                          {retryable ? "Retry clip" : "Export clip"}
+                          {retryable ? (
+                            <span>
+                              Retry
+                              <span className="local-action-detail"> clip</span>
+                            </span>
+                          ) : (
+                            "Export clip"
+                          )}
                         </Button>
                       )}
                     {latest &&
@@ -549,7 +630,11 @@ export function OwnerClipBatchPanel({
                               : "Download previous export"
                           }
                           href={`${endpoint}/${current.id}/output/${latest.revision}`}
-                          download={`clip-${currentIndex}-r${latest.revision}.mp4`}
+                          download={ownerClipDownloadName(
+                            current,
+                            currentIndex,
+                            latest.revision,
+                          )}
                         >
                           {latest.editRevision === current.revision
                             ? "Download clip"
@@ -608,6 +693,7 @@ export function OwnerClipBatchPanel({
                 }
                 onBusy={onActive}
                 onPending={setEditorPending}
+                onPreviewReady={previewEntryReady}
               />
             )}
           </article>

@@ -19,14 +19,17 @@ import {
   ownerCameraEffectSchema,
   ownerCameraTargetSchema,
   ownerCameraTargetCrop,
+  ownerCameraEffectsFit,
   type OwnerCameraEffect,
 } from "../../../../../packages/contracts/local/camera-motion.ts";
+import type { OwnerCameraTrack } from "../../../../../packages/contracts/local/camera-follow.ts";
 
 const seconds = (frames: number) =>
   Number.isFinite(frames) ? Number((frames / OWNER_FPS).toFixed(3)) : "";
 export function CameraMotionEditor({
   focus,
   effects,
+  tracks = [],
   hook,
   sourceUrl,
   onChange,
@@ -39,6 +42,7 @@ export function CameraMotionEditor({
 }: {
   focus: OwnerFocus;
   effects: OwnerCameraEffect[];
+  tracks?: OwnerCameraTrack[];
   hook: OwnerHook | undefined;
   sourceUrl: string;
   onChange: (effects: OwnerCameraEffect[]) => void;
@@ -50,6 +54,7 @@ export function CameraMotionEditor({
   disabled: boolean;
 }) {
   const [selected, setSelected] = useState<string | null>(null),
+    [capturingStart, setCapturingStart] = useState(false),
     [message, setMessage] = useState("");
   const effect = effects.find((item) => item.id === selected) ?? effects[0];
   const prefix = ownerHookFrames({ hook }),
@@ -111,6 +116,41 @@ export function CameraMotionEditor({
       ),
     );
     setMessage("");
+  }
+  async function captureStart() {
+    const targetMedia = media.current;
+    if (!effect || disabled || capturingStart || !targetMedia) return;
+    setCapturingStart(true);
+    try {
+      const at = await capture();
+      if (media.current !== targetMedia) return;
+      if (at === null) {
+        setMessage("Wait for the preview to finish seeking.");
+        return;
+      }
+      const startFrame = at - offset;
+      const next = effects.map((item) =>
+        item.id === effect.id ? { ...item, startFrame } : item,
+      );
+      if (
+        startFrame < 0 ||
+        startFrame >= (effect.occurrence === "hook" ? prefix : focus.frames) ||
+        !ownerCameraEffectsSchema.safeParse(next).success ||
+        !ownerCameraEffectsFit(next, {
+          frames: focus.frames,
+          hook,
+          cameraTracks: tracks,
+        })
+      ) {
+        setMessage(
+          "Choose a frame in this occurrence with room for the zoom and return, without overlapping another Zoom or Motion.",
+        );
+        return;
+      }
+      update({ startFrame });
+    } finally {
+      if (media.current === targetMedia) setCapturingStart(false);
+    }
   }
   function move(px: number, py: number) {
     if (!effect || disabled) return;
@@ -194,7 +234,10 @@ export function CameraMotionEditor({
     setMessage("");
   }
   return (
-    <fieldset className="camera-motion-editor" disabled={disabled}>
+    <fieldset
+      className="camera-motion-editor"
+      disabled={disabled || capturingStart}
+    >
       <legend className="local-sr-only">Manual zoom</legend>
       {!available && (
         <p role="status">Set a camera position before adding a zoom.</p>
@@ -342,26 +385,38 @@ export function CameraMotionEditor({
             </button>
           </div>
           <div className="editor-fields focus-fields">
-            <label>
-              Start (s)
-              <input
-                aria-label="Zoom start seconds"
-                type="number"
-                min={offset / OWNER_FPS}
-                step={1 / OWNER_FPS}
-                value={seconds(effect.startFrame + offset)}
-                onChange={(event) =>
-                  update({
-                    startFrame:
-                      event.currentTarget.value === ""
-                        ? NaN
-                        : Math.round(
-                            Number(event.currentTarget.value) * OWNER_FPS,
-                          ) - offset,
-                  })
-                }
-              />
-            </label>
+            <div className="range-time">
+              <label>
+                Start (s)
+                <input
+                  aria-label="Zoom start seconds"
+                  type="number"
+                  min={offset / OWNER_FPS}
+                  step={1 / OWNER_FPS}
+                  value={seconds(effect.startFrame + offset)}
+                  onChange={(event) =>
+                    update({
+                      startFrame:
+                        event.currentTarget.value === ""
+                          ? NaN
+                          : Math.round(
+                              Number(event.currentTarget.value) * OWNER_FPS,
+                            ) - offset,
+                    })
+                  }
+                />
+              </label>
+              <Button
+                variant="quiet"
+                icon={Clock3}
+                aria-label="Capture zoom start"
+                title="Use current preview frame"
+                disabled={disabled || capturingStart || !captureReady}
+                onClick={() => void captureStart()}
+              >
+                Capture
+              </Button>
+            </div>
             <label>
               Reach target in (s)
               <input
