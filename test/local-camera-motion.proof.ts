@@ -24,8 +24,12 @@ import {
   type OwnerCameraEffect,
 } from "../packages/contracts/local/camera-motion.ts";
 import { defaultOwnerFocus } from "../packages/contracts/local/focus.ts";
+import {
+  ownerCameraFollowKey,
+  type OwnerCameraTrack,
+} from "../packages/contracts/local/camera-follow.ts";
 import { prepareLocalOverlayFixture } from "./owner-controls-browser.ts";
-it("renders smooth manual Hook/body crops and the advancing baseline at 24/25/29.97/30/60fps from original pixels", async () => {
+it("renders manual Zoom and tracked Hook/body camera paths at 24/25/29.97/30/60fps from original pixels", async () => {
   const root = await mkdtemp(join(tmpdir(), "clipbuilder-camera-motion-")),
     tools = await ownerNativeTools(resolve(".")),
     signal = AbortSignal.timeout(350_000);
@@ -93,6 +97,60 @@ it("renders smooth manual Hook/body crops and the advancing baseline at 24/25/29
         hook = { startFrame: 15, endFrame: 60 };
       const body = ownerOutputProfile(metadata, 60),
         prefix = ownerOutputProfile(metadata, 45).frames;
+      const tracks: OwnerCameraTrack[] = (["hook", "body"] as const).map(
+        (occurrence) => {
+          const duration = occurrence === "hook" ? 9 : 24;
+          return {
+            id: randomUUID(),
+            occurrence,
+            personId: null,
+            startFrame: 36,
+            endFrame: 36 + duration,
+            sourceStartFrame:
+              36 + (occurrence === "hook" ? hook.startFrame : 0),
+            focusKey: ownerCameraFollowKey(focus, null),
+            seed: { x: 0.4, y: 0.2, width: 0.1, height: 0.2 },
+            outcome: "complete",
+            points: Array.from(
+              { length: Math.ceil((duration - 1) / 2) + 1 },
+              (_, i) => {
+                const frame = Math.min(i * 2, duration - 1);
+                return {
+                  frame,
+                  x: 0.45 + (frame / (duration - 1)) * 0.2,
+                  y: 0.3,
+                };
+              },
+            ),
+          };
+        },
+      );
+      const bodyTrack = tracks.find((track) => track.occurrence === "body")!;
+      const split = 12;
+      const firstBody: OwnerCameraTrack = {
+        ...bodyTrack,
+        endFrame: bodyTrack.startFrame + split,
+        points: [0, 2, 4, 6, 8, 10, 11].map((frame) => ({
+          frame,
+          x: 0.45 + (frame / 23) * 0.2,
+          y: 0.3,
+        })),
+      };
+      const center = firstBody.points.at(-1)!;
+      const secondBody: OwnerCameraTrack = {
+        ...bodyTrack,
+        id: randomUUID(),
+        continues: firstBody.id,
+        startFrame: 48,
+        sourceStartFrame: 48,
+        seed: { ...bodyTrack.seed, x: center.x - 0.05 },
+        points: firstBody.points.map((point) => ({
+          frame: point.frame,
+          x: center.x + (point.frame / 23) * 0.2,
+          y: 0.3,
+        })),
+      };
+      tracks.splice(tracks.indexOf(bodyTrack), 1, firstBody, secondBody);
       await renderOwnerClip(
         {
           root,
@@ -117,6 +175,7 @@ it("renders smooth manual Hook/body crops and the advancing baseline at 24/25/29
             focus,
             hook,
             cameraEffects: effects,
+            cameraTracks: tracks,
           },
         },
         signal,
@@ -147,14 +206,23 @@ it("renders smooth manual Hook/body crops and the advancing baseline at 24/25/29
       expect(num / den).toBeCloseTo(metadata.fps, 4);
       const comparisons: unknown[] = [];
       for (const occurrence of ["hook", "body"] as const)
-        for (const logical of [0, 9, 15, 27, 36, 42]) {
+        for (const logical of occurrence === "hook"
+          ? [0, 9, 15, 27, 36, 39, 42, 44]
+          : [0, 9, 15, 27, 36, 39, 42, 51, 57, 59]) {
           const index = Math.round((logical * metadata.fps) / 30),
             phase = (index * 30) / metadata.fps;
           const sourceFrame =
             (occurrence === "hook" ? hook.startFrame : 0) + phase;
           const crop = ownerOriginalCameraCrop(
             focus,
-            ownerCameraCropAt(focus, effects, sourceFrame, occurrence, phase),
+            ownerCameraCropAt(
+              focus,
+              effects,
+              sourceFrame,
+              occurrence,
+              phase,
+              tracks,
+            ),
           );
           for (const n of Object.values(crop)) expect(n % 2).toBe(0);
           const actual = join(directory, `actual-${occurrence}-${index}.rgb`),
@@ -214,6 +282,10 @@ it("renders smooth manual Hook/body crops and the advancing baseline at 24/25/29
     await mkdir(resolve(".local-build/evidence"), { recursive: true });
     await writeFile(
       resolve(".local-build/evidence/cl192-native.json"),
+      JSON.stringify({ synthetic: true, providerCalls: 0, evidence }, null, 2),
+    );
+    await writeFile(
+      resolve(".local-build/evidence/cl203-native.json"),
       JSON.stringify({ synthetic: true, providerCalls: 0, evidence }, null, 2),
     );
   } finally {

@@ -1,5 +1,22 @@
 # Private media renderer
 
+CL-203 evaluates manually seeded Motion paths through the same camera crop as
+the browser, at original native cadence. Only bounded validated numeric paths
+enter the fixed graph; the worker does not detect/track heads or call AI.
+Baseline zoom and cuts to other people remain; timed Zoom overlaps are rejected.
+Track-only exports also use the owned numeric graph-file path. Ninety generated
+Hook/body pixel samples pass at 24/25/29.97/30/60fps with unchanged source hashes;
+real-head taste, Linux execution and hosted release remain owner-only. The
+tracking mechanism itself needs no key/model; export availability keeps normal
+render gates and any hosted compute requirements.
+
+CL-206 bulk tracking uses that same numeric format with optional validated
+predecessor links. Adjacent chunks of one camera keep the original vertical
+anchor and ease only at the chain's outer edges. Links cannot cross camera
+cuts, people or occurrences, and old unlinked manual paths retain their timing.
+The generated native proof also covers linked chunks; tracking still runs only
+in the browser, without an AI/model call or automatic export.
+
 CL-192 samples shared manual camera motion at original native cadence, preserving
 the existing even-pixel projection and `setsar=1` scaler fix. Numeric graphs live
 in owned temporary files when zooms exist: admitted Windows FFmpeg 9 uses

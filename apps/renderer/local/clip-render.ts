@@ -98,7 +98,11 @@ export async function renderOwnerClip(
     metadata,
     bodyProfile,
     job.overlay.hook ? "body" : "focus",
-    { effects: job.overlay.cameraEffects ?? [], occurrence: "body" },
+    {
+      effects: job.overlay.cameraEffects ?? [],
+      tracks: job.overlay.cameraTracks ?? [],
+      occurrence: "body",
+    },
   );
   const bodyVideo = `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${focus}`;
   const bodyAudio = ownerCutAudioFilter(videoStart, job.cut);
@@ -108,7 +112,7 @@ export async function renderOwnerClip(
     ? Math.floor((hook.startFrame * profile.fps) / OWNER_FPS + 1e-9)
     : 0;
   const hookVideo = hook
-    ? `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${ownerNativeFocusFilter(job.overlay.focus, metadata, bodyProfile, "hook", { effects: job.overlay.cameraEffects ?? [], occurrence: "hook", hook, hookStartFrame })},trim=start_frame=${hookStartFrame}:end_frame=${hookStartFrame + hookProfile!.frames},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${hookProfile!.frames}`
+    ? `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${ownerNativeFocusFilter(job.overlay.focus, metadata, bodyProfile, "hook", { effects: job.overlay.cameraEffects ?? [], tracks: job.overlay.cameraTracks ?? [], occurrence: "hook", hook, hookStartFrame })},trim=start_frame=${hookStartFrame}:end_frame=${hookStartFrame + hookProfile!.frames},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${hookProfile!.frames}`
     : "";
   // Independent source decoders avoid buffering a full raw-video branch in split.
   // Both occurrences read original pixels and meet in one final encode.
@@ -211,7 +215,10 @@ export async function renderOwnerClip(
     signal.throwIfAborted();
     const graph = `${sourceGraph}${mix.graph ? `;${mix.graph}` : ""};${artGraph};[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`;
     const graphFile = join(frames, "camera.ffgraph");
-    if (job.overlay.cameraEffects?.length)
+    const movingCamera = !!(
+      job.overlay.cameraEffects?.length || job.overlay.cameraTracks?.length
+    );
+    if (movingCamera)
       await writeFile(graphFile, graph, { flag: "wx", mode: 0o600, signal });
     await runOwnedProcess(
       options.tools.ffmpeg,
@@ -245,13 +252,13 @@ export async function renderOwnerClip(
           join(directory, "%06d.png"),
         ]),
         ...mix.inputs,
-        job.overlay.cameraEffects?.length
+        movingCamera
           ? process.platform === "win32"
             ? "-/filter_complex" // Admitted Windows FFmpeg 9 removed the legacy option.
             : "-filter_complex_script" // Packaged Linux FFmpeg 5.1.
           : "-filter_complex",
         // Keep framesync's default implicit: packaged FFmpeg 5.1 lacks ts_sync_mode.
-        job.overlay.cameraEffects?.length ? graphFile : graph,
+        movingCamera ? graphFile : graph,
         "-filter_complex_threads",
         "2",
         "-filter_threads",

@@ -22,6 +22,7 @@ import type { OwnerOverlay } from "../packages/contracts/local/clips.ts";
 import { ownerPresentationFrames } from "../packages/contracts/local/hook.ts";
 import { defaultOwnerFocus } from "../packages/contracts/local/focus.ts";
 import { OWNER_SOCIAL_TEXT_PRESETS } from "../packages/contracts/local/text-style.ts";
+import { resolveCaptionSpeakers } from "../packages/contracts/local/caption-speakers.ts";
 
 async function clearScratch(root: string) {
   const actual = await realpath(root),
@@ -36,7 +37,7 @@ async function clearScratch(root: string) {
   await rm(actual, { recursive: true, force: true });
 }
 
-it("renders speaker turns and manual colors into a real native MP4 using current shared composition", async () => {
+it("renders speaker turns, default Word pop highlights and manual colors into a real native MP4 using current shared composition", async () => {
   const root = await mkdtemp(join(tmpdir(), "clipbuilder-speaker-hook-proof-"));
   const signal = AbortSignal.timeout(90_000),
     tools = await ownerNativeTools(resolve("."));
@@ -166,6 +167,95 @@ it("renders speaker turns and manual colors into a real native MP4 using current
         )
           colored++;
       expect(colored).toBeGreaterThan(20);
+    }
+    const defaults: OwnerOverlay = {
+      ...overlay,
+      captionStyle: {
+        ...OWNER_CAPTION_PRESETS.tiktok,
+        fontSize: 100,
+        box: overlay.captionStyle!.box,
+      },
+      hook: { startFrame: 30, endFrame: 60 },
+      captions: overlay.captions[0]!.wordCues.map((word) => ({
+        startMs: word.startMs,
+        endMs: word.endMs,
+        text: word.text,
+        lines: [word.text],
+        wordIds: [word.wordId],
+        wordCues: [word],
+      })),
+    };
+    defaults.captionSpeakers = resolveCaptionSpeakers(
+      defaults.captions,
+      overlay.captions[0]!.wordCues.map((word, index) => ({
+        id: word.wordId,
+        text: word.text,
+        punctuatedText: word.text,
+        startMs: word.startMs,
+        endMs: word.endMs,
+        confidence: null,
+        speakerId: `spk_${index}`,
+      })),
+    );
+    const defaultResult = await renderOwnerClip(
+      {
+        root,
+        tools,
+        bundle,
+        chromium: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+        cache: new Map(),
+      },
+      {
+        operation: "clip",
+        workspaceId,
+        clipId,
+        jobId: randomUUID(),
+        renderRevision: 2,
+        cut: { startFrame: 0, endFrame: 60 },
+        fingerprint: metadata.fingerprint,
+        overlay: defaults,
+      },
+      signal,
+    );
+    expect(defaultResult.frames).toBe(90);
+    for (const [time, red, green, blue] of [
+      [0.5, 255, 184, 108], // Hook repeats the second speaker's orange highlight.
+      [1.5, 116, 185, 255],
+      [2.5, 255, 184, 108],
+    ] as const) {
+      const raw = join(directory, `default-${time}.rgb`);
+      await run([
+        "-ss",
+        String(time),
+        "-i",
+        join(directory, `${clipId}.r2.mp4`),
+        "-frames:v",
+        "1",
+        "-pix_fmt",
+        "rgb24",
+        "-f",
+        "rawvideo",
+        raw,
+      ]);
+      const pixels = await readFile(raw);
+      let accent = 0,
+        white = 0;
+      for (let index = 0; index < pixels.length; index += 3) {
+        if (
+          Math.abs(pixels[index]! - red) < 35 &&
+          Math.abs(pixels[index + 1]! - green) < 35 &&
+          Math.abs(pixels[index + 2]! - blue) < 35
+        )
+          accent++;
+        if (
+          pixels[index]! > 220 &&
+          pixels[index + 1]! > 220 &&
+          pixels[index + 2]! > 220
+        )
+          white++;
+      }
+      expect(accent).toBeGreaterThan(20);
+      expect(white).toBeGreaterThan(20);
     }
     overlay.hook = { startFrame: 30, endFrame: 60 };
     const assetId = randomUUID(),

@@ -9,6 +9,7 @@ import {
 } from "../../../packages/contracts/local/camera-motion.ts";
 import type { OwnerHook } from "../../../packages/contracts/local/hook.ts";
 import type { OwnerSource } from "../../../packages/contracts/local/index.ts";
+import type { OwnerCameraTrack } from "../../../packages/contracts/local/camera-follow.ts";
 import {
   ownerOriginalFocusCrop,
   ownerOriginalCameraCrop,
@@ -23,6 +24,7 @@ export function ownerNativeFocusFilter(
   target: "focus" | "body" | "hook" = "focus",
   motion?: {
     effects: readonly OwnerCameraEffect[];
+    tracks?: readonly OwnerCameraTrack[];
     occurrence: "hook" | "body";
     hook?: OwnerHook | undefined;
     hookStartFrame?: number;
@@ -36,9 +38,9 @@ export function ownerNativeFocusFilter(
     focus.source.height !== source.height
   )
     throw new Error("stale_focus_source");
-  const moving = motion?.effects.some(
-    (effect) => effect.occurrence === motion.occurrence,
-  );
+  const moving =
+    motion?.tracks?.some((track) => track.occurrence === motion.occurrence) ||
+    motion?.effects.some((effect) => effect.occurrence === motion.occurrence);
   const cropAt = (index: number) => {
     const phaseFrame =
       ((index -
@@ -57,6 +59,7 @@ export function ownerNativeFocusFilter(
         sourceFrame,
         motion?.occurrence ?? "body",
         phaseFrame,
+        motion?.tracks ?? [],
       ),
     );
   };
