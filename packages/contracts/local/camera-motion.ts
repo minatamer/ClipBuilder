@@ -7,6 +7,10 @@ import {
   ownerSourceContent,
   type OwnerFocus,
 } from "./focus.ts";
+import {
+  ownerCameraFollowCrop,
+  type OwnerCameraTrack,
+} from "./camera-follow.ts";
 
 export const OWNER_CAMERA_MOTION = {
   effects: 60,
@@ -74,12 +78,22 @@ export function ownerCameraEffectEnd(effect: OwnerCameraEffect) {
 }
 export function ownerCameraEffectsFit(
   items: readonly OwnerCameraEffect[],
-  clock: { frames: number; hook?: OwnerHook | undefined },
+  clock: {
+    frames: number;
+    hook?: OwnerHook | undefined;
+    cameraTracks?: readonly OwnerCameraTrack[] | undefined;
+  },
 ) {
   return items.every(
     (item) =>
       ownerCameraEffectEnd(item) + OWNER_CAMERA_MOTION.settleFrames <=
-      (item.occurrence === "hook" ? ownerHookFrames(clock) : clock.frames),
+        (item.occurrence === "hook" ? ownerHookFrames(clock) : clock.frames) &&
+      !clock.cameraTracks?.some(
+        (track) =>
+          track.occurrence === item.occurrence &&
+          track.startFrame < ownerCameraEffectEnd(item) &&
+          item.startFrame < track.endFrame,
+      ),
   );
 }
 /** Continuous 9:16 geometry; only the native projection rounds to codec pixels. */
@@ -131,8 +145,15 @@ export function ownerCameraCropAt(
   sourceFrame: number,
   occurrence: "hook" | "body",
   occurrenceFrame: number,
+  tracks: readonly OwnerCameraTrack[] = [],
 ): OwnerCameraRect {
-  const baseline = ownerFocusCrop(focus, ownerFocusAt(focus, sourceFrame));
+  const baseline = ownerCameraFollowCrop(
+    focus,
+    tracks,
+    sourceFrame,
+    occurrence,
+    occurrenceFrame,
+  );
   const effect = effects.find(
     (item) =>
       item.occurrence === occurrence &&

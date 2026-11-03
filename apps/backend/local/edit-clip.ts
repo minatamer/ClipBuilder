@@ -11,6 +11,7 @@ import type { OwnerClip } from "../../../packages/contracts/local/clips.ts";
 import { resolveOwnerAudioCues } from "../../../packages/contracts/local/audio.ts";
 import { boundOwnerOpeningTitles } from "../../../packages/contracts/local/text-layers.ts";
 import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
+import { ownerCameraTracksFit } from "../../../packages/contracts/local/camera-follow.ts";
 
 export function applyOwnerEdit(
   clip: OwnerClip,
@@ -49,6 +50,9 @@ export function applyOwnerEdit(
         break;
       case "camera-effects":
         next.cameraEffects = operation.effects;
+        break;
+      case "camera-tracks":
+        next.cameraTracks = operation.tracks;
         break;
       case "focus":
         if (
@@ -120,6 +124,19 @@ export function applyOwnerEdit(
       next.audio.cues,
       next.visuals,
       clip.base.overlay.frames,
+    );
+  if (
+    !request.operations.some((operation) => operation.kind === "camera-tracks")
+  )
+    next.cameraTracks = next.cameraTracks?.filter(
+      (track) =>
+        !(
+          priorHook !== JSON.stringify(next.hook) && track.occurrence === "hook"
+        ) &&
+        ownerCameraTracksFit([track], next.focus ?? clip.base!.overlay.focus, {
+          frames: clip.base!.overlay.frames,
+          hook: next.hook,
+        }),
     );
   next.revision = clip.revision + 1;
   const validated = ownerEditDocumentSchema.parse(next);

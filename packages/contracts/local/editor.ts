@@ -1,5 +1,6 @@
 import { ownerCameraEffectsSchema } from "./camera-motion.ts";
 import { z } from "zod";
+import { ownerCameraTracksSchema } from "./camera-follow.ts";
 import { ownerAudioEditSchema } from "./audio.ts";
 import { normalizedBoxSchema } from "@clipbuilder/contracts";
 import { ownerIdSchema } from "./policy.ts";
@@ -73,7 +74,7 @@ export const OWNER_CAPTION_PRESETS: Record<
   tiktok: {
     ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
     highlight: "#7652d8",
-    animation: "none",
+    animation: "pop",
     box: captionBox,
   },
   solid: {
@@ -157,6 +158,7 @@ export const ownerEditDocumentSchema = z
     videoLook: ownerVideoLookSchema.optional(),
     focus: ownerFocusSchema.optional(),
     cameraEffects: ownerCameraEffectsSchema.optional(),
+    cameraTracks: ownerCameraTracksSchema.optional(),
     visuals: z
       .array(ownerVisualEditSchema)
       .max(OWNER_PICTURE_LIMITS.cuesPerClip),
@@ -169,6 +171,12 @@ export const ownerEditDocumentSchema = z
   );
 export type OwnerEditDocument = z.infer<typeof ownerEditDocumentSchema>;
 export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("camera-tracks"),
+      tracks: ownerCameraTracksSchema,
+    })
+    .strict(),
   z.object({ kind: z.literal("audio"), audio: ownerAudioEditSchema }).strict(),
   z
     .object({ kind: z.literal("hook"), hook: ownerHookSchema.nullable() })

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { utf8ByteLength } from "./utf8.ts";
 import { ownerAnalysisSchema } from "./selection.ts";
 import { ownerClipListSchema } from "./clips.ts";
 
@@ -17,12 +18,7 @@ export const ownerClipsPageSchema = z
   .object({ value: ownerClipListSchema, page })
   .strict();
 function jsonBytes(value: unknown) {
-  let bytes = 0;
-  for (const character of JSON.stringify(value)) {
-    const code = character.codePointAt(0)!;
-    bytes += code <= 0x7f ? 1 : code <= 0x7ff ? 2 : code <= 0xffff ? 3 : 4;
-  }
-  return bytes;
+  return utf8ByteLength(JSON.stringify(value));
 }
 function pageItems<T>(items: readonly T[], start: number) {
   if (!Number.isSafeInteger(start) || start < 0 || start > items.length)

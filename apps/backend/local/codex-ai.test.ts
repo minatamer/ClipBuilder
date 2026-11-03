@@ -11,6 +11,7 @@ import type { OwnerMoment } from "../../../packages/contracts/local/selection.ts
 import type { OwnerWorkspace } from "../../../packages/contracts/local/index.ts";
 import { retrievedPictureFixture } from "../../../test/owner-content-fixture.ts";
 import { LocalDiagnostics } from "./diagnostics.ts";
+import { ownerClipSchema } from "../../../packages/contracts/local/clips.ts";
 
 const words = ["Coral", "reefs", "recover."].map((text, index) => ({
   id: `w_${String(index + 1).padStart(6, "0")}`,
@@ -325,6 +326,51 @@ it("sends only the selected speech cut and returns source-relative words without
     expect(scoped.map((word) => word.startMs)).toEqual(
       words.map((word) => word.startMs + window.startMs),
     );
+    const labeled = words.map((word) => ({ ...word, speakerId: "spk_1" }));
+    vi.mocked(files.readCodexInput).mockResolvedValueOnce({
+      kind: "speech",
+      words: labeled,
+    });
+    const clip = ownerClipSchema.parse({
+      id: crypto.randomUUID(),
+      momentId: crypto.randomUUID(),
+      analysisId: crypto.randomUUID(),
+      sourceRevision: 0,
+      revision: 0,
+      assemblyRevision: 0,
+      baseHash: "b".repeat(64),
+      state: "review-ready",
+      mode: "provider-ai",
+      edit: null,
+      assets: [],
+      outputs: [],
+      calls: { plan: 0, image: 0, render: 0 },
+      error: null,
+      base: {
+        version: 1,
+        analysisId: crypto.randomUUID(),
+        momentId: crypto.randomUUID(),
+        sourceRevision: 0,
+        fingerprint: workspace.source.fingerprint,
+        processingIdentity: "c".repeat(64),
+        cut: { startFrame: 3600, endFrame: 3660 },
+        words: [],
+        overlay: { version: 1, frames: 60, captions: [], visuals: [] },
+      },
+    });
+    expect(
+      await ai.captionTranscription!(
+        workspace,
+        clip,
+        new AbortController().signal,
+      ),
+    ).toEqual(labeled);
+    expect(media).toHaveBeenCalledTimes(3);
+    expect(media.mock.calls[2]![0]).toMatchObject({
+      kind: "speech",
+      cut: clip.base!.cut,
+    });
+    expect(media.mock.calls[2]![0]).not.toMatchObject({ diarize: false });
     expect(infer).not.toHaveBeenCalled();
   } finally {
     await ai.close!(new AbortController().signal);
@@ -618,11 +664,12 @@ it.each([false, true])(
     }
   },
 );
-it.each(["audio", "invented", "visual-opening"])(
+it.each(["audio", "invented", "visual-opening", "aliases"])(
   "uses supported opening/switch evidence and clears invented labels: %s",
   async (mode) => {
     const invented = mode === "invented",
-      visualOpening = mode === "visual-opening";
+      visualOpening = mode === "visual-opening",
+      aliases = mode === "aliases";
     const root = await mkdtemp(join(tmpdir(), "clipbuilder-codex-ai-test-")),
       files = new WorkspaceFiles(root);
     const cues = Array.from({ length: 10 }, (_, index) => ({
@@ -654,7 +701,13 @@ it.each(["audio", "invented", "visual-opening"])(
       id: `w_${String(index + 1).padStart(6, "0")}`,
       startMs: index * 400,
       endMs: index * 400 + 350,
-      speakerId: index < 5 ? (visualOpening ? null : "spk_0") : "spk_1",
+      speakerId: aliases
+        ? "spk_0"
+        : index < 5
+          ? visualOpening
+            ? null
+            : "spk_0"
+          : "spk_1",
     }));
     const workspace: OwnerWorkspace = {
       id: crypto.randomUUID(),
@@ -714,6 +767,10 @@ it.each(["audio", "invented", "visual-opening"])(
       );
       expect(request.prompt).toContain("excluding the torso");
       expect(request.prompt).toContain(FOCUS_PLANNING_POLICY);
+      expect(request.prompt).toContain("ONE PARTICIPANT, ONE ID");
+      expect(request.prompt).toContain(
+        "manual Motion feature tracks movement for the SAME person",
+      );
       expect(request.prompt).toContain("No fixed palette");
       expect(request.prompt).toContain(
         "MUST preserve the primary scene's meaning",
@@ -768,7 +825,7 @@ it.each(["audio", "invented", "visual-opening"])(
             observations: [
               {
                 startFrame: 0,
-                endFrame: 120,
+                endFrame: aliases && number === 2 ? 60 : 120,
                 box: {
                   x: number === 1 ? 0.1 : 0.6,
                   y: 0.1,
@@ -778,20 +835,40 @@ it.each(["audio", "invented", "visual-opening"])(
               },
             ],
           })),
+          ...(aliases
+            ? [
+                {
+                  id: "person_5",
+                  observations: [
+                    {
+                      startFrame: 60,
+                      endFrame: 120,
+                      box: { x: 0.64, y: 0.1, width: 0.25, height: 0.5 },
+                    },
+                  ],
+                },
+              ]
+            : []),
           null,
         ],
         decisions: [
           ...[0, 1].map((index) => ({
             startFrame: index * 60,
             endFrame: (index + 1) * 60,
-            personId: visualOpening
-              ? `person_${2 - index}`
-              : `person_${index + 1}`,
+            personId: aliases
+              ? index === 0
+                ? "person_2"
+                : "person_5"
+              : visualOpening
+                ? `person_${2 - index}`
+                : `person_${index + 1}`,
             speakerId: invented
               ? "spk_99"
               : visualOpening && index === 0
                 ? null
-                : `spk_${index}`,
+                : aliases
+                  ? "spk_0"
+                  : `spk_${index}`,
             evidenceWordIds: cues
               .slice(index * 5, index * 5 + 5)
               .map((word) => word.id),
@@ -807,6 +884,7 @@ it.each(["audio", "invented", "visual-opening"])(
     const pictures = { find: vi.fn(async () => fixture.asset) };
     const ai = createLocalCodexAi({ files, media, infer, pictures }),
       request = { workspace, moment, clipId: crypto.randomUUID() };
+    const originalCues = structuredClone(cues);
     try {
       const plan = await ai.clipPreparation!.plan(
         request,
@@ -830,8 +908,26 @@ it.each(["audio", "invented", "visual-opening"])(
       expect(pictures.find).toHaveBeenCalledTimes(1);
       const focus = ai.clipPreparation!.focus!(request);
       expect(focus.decisions.map((item) => item.speakerId)).toEqual(
-        invented ? [null, null] : [visualOpening ? null : "spk_0", "spk_1"],
+        invented
+          ? [null, null]
+          : aliases
+            ? ["spk_0", "spk_0"]
+            : [visualOpening ? null : "spk_0", "spk_1"],
       );
+      if (aliases) {
+        expect(focus.people.map((person) => person.id)).toEqual([
+          "person_1",
+          "person_2",
+        ]);
+        expect(focus.decisions.map((decision) => decision.personId)).toEqual([
+          "person_2",
+          "person_2",
+        ]);
+        expect(focus.shots).toHaveLength(1);
+        expect(focus.shots[0]!.personId).toBe("person_2");
+        expect(focus.shots[0]!.centerX).toBeCloseTo(0.725);
+      }
+      expect(cues).toEqual(originalCues);
       if (visualOpening) {
         expect(focus.shots[0]!.personId).toBe("person_2");
         expect(focus.decisions[0]!.evidenceWordIds).toHaveLength(5);
@@ -848,15 +944,15 @@ it.each(["audio", "invented", "visual-opening"])(
         focus.shots.some(
           (shot) => shot.personId === "person_2" && shot.reason === "speaker",
         ),
-      ).toBe(!invented && !visualOpening);
+      ).toBe(!invented && !visualOpening && !aliases);
       expect(infer).toHaveBeenCalledTimes(1);
       expect(media).toHaveBeenCalledTimes(1);
       expect(media.mock.calls[0]![0]).toMatchObject({
         operation: "codex-input",
         kind: "frames",
-        ...(visualOpening ? {} : { speakerChanges: [60] }),
+        ...(visualOpening || aliases ? {} : { speakerChanges: [60] }),
       });
-      if (visualOpening)
+      if (visualOpening || aliases)
         expect(media.mock.calls[0]![0]).not.toHaveProperty("speakerChanges");
     } finally {
       await ai.close?.(AbortSignal.timeout(2000));

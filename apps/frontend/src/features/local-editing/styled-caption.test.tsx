@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { OwnerStyledCaption } from "../../../../../packages/composition/local/styled-caption.tsx";
 import { ownerOverlayFrame } from "../../../../../packages/composition/local/overlay-frame.ts";
+import { resolveCaptionSpeakers } from "../../../../../packages/contracts/local/caption-speakers.ts";
 import type { OwnerOverlay } from "../../../../../packages/contracts/local/clips.ts";
 import {
   OWNER_CAPTION_PRESETS,
@@ -97,6 +98,52 @@ const wordMarkup = (html: string, wordId: string) => {
   expect(start).toBeGreaterThanOrEqual(0);
   return html.slice(start, end < 0 ? html.length : end);
 };
+
+it("renders default Word pop with a speaker highlight, white base text, neutral gaps and intact explicit static styling", () => {
+  const words = caption.wordCues.map((word) => ({
+    id: word.wordId,
+    text: word.text,
+    punctuatedText: word.text,
+    startMs: word.startMs,
+    endMs: word.endMs,
+    confidence: null,
+    speakerId: "spk_1",
+  }));
+  const overlay: OwnerOverlay = {
+    version: 1,
+    frames: 90,
+    visuals: [],
+    captions: [caption],
+    captionStyle: OWNER_CAPTION_PRESETS.tiktok,
+    captionSpeakers: resolveCaptionSpeakers([caption], words),
+  };
+  const at = (frame: number) => {
+    const state = ownerOverlayFrame(overlay, frame);
+    return renderToStaticMarkup(
+      <OwnerStyledCaption
+        caption={state.caption!}
+        ms={state.ms}
+        style={overlay.captionStyle!}
+        colors={state.colors!}
+      />,
+    );
+  };
+  expect(at(3)).toContain("color:#ffffff;");
+  expect(wordMarkup(at(3), "w_000001")).toContain("scale(0.88)");
+  expect(wordMarkup(at(3), "w_000001")).toContain("background-color:#ffb86c;");
+  expect(wordMarkup(at(6), "w_000001")).toContain("scale(1)");
+  for (const word of caption.wordIds)
+    expect(wordMarkup(at(36), word)).toContain("opacity:0;");
+  overlay.hook = { startFrame: 3, endFrame: 18 };
+  expect(wordMarkup(at(0), "w_000001")).toContain("scale(0.88)");
+  expect(ownerOverlayFrame(overlay, 0).colors).toEqual(
+    ownerOverlayFrame(overlay, 18).colors,
+  );
+  overlay.hook = undefined;
+  overlay.captionStyle = { ...OWNER_CAPTION_PRESETS.tiktok, animation: "none" };
+  expect(at(3)).not.toContain("scale(0.88)");
+  expect(at(3).match(/opacity:0;/gu)).toHaveLength(4);
+});
 
 it("keeps both supplied lines and all timed words in their original order", () => {
   const before = structuredClone(caption),

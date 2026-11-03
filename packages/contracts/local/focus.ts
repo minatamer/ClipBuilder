@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { normalizedBoxSchema } from "@clipbuilder/contracts";
 import { OWNER_FPS, OWNER_LIMITS } from "./policy.ts";
+import { reconcileAutomaticFocusPeople } from "./focus-people.ts";
 
 export const OWNER_FOCUS_LIMITS = {
   people: 8,
@@ -366,6 +367,14 @@ export function compileAutomaticOwnerFocus(
         }
       : null;
   }
+  const reconciled = reconcileAutomaticFocusPeople(
+    focus.people,
+    focus.decisions,
+    new Set(focus.decisions.filter((d) => d.speakerId && supportedDecision(d))),
+    shotStarts,
+  );
+  focus.people = reconciled.people;
+  focus.decisions = reconciled.decisions;
   const shots: OwnerFocusShot[] = [];
   let switches = 0,
     held = 0,
@@ -472,6 +481,8 @@ export function compileAutomaticOwnerFocus(
       fallback,
       rejected,
       converted,
+      mergedPeople: reconciled.mergedPeople,
+      speakerConflicts: reconciled.speakerConflicts,
     },
   };
 }

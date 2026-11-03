@@ -91,8 +91,7 @@ export function resolveCaptionSpeakers(
   }));
   return {
     enabled:
-      edits?.enabled ??
-      new Set(assignments.map((w) => w.speakerId).filter(Boolean)).size > 1,
+      edits?.enabled ?? assignments.some((word) => word.speakerId !== null),
     colors: edits?.colors ?? [],
     assignments,
   };
@@ -124,8 +123,8 @@ export function defaultSpeakerColor(
   const accent = palette[index % palette.length]!;
   return {
     speakerId,
-    color: ownerTextBackground(style).opacity > 0 ? "#101827" : accent,
-    backgroundColor: accent,
+    color: style.color,
+    backgroundColor: ownerTextBackground(style).color,
     highlight: accent,
   };
 }

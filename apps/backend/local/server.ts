@@ -39,6 +39,7 @@ import { AnalysisChunks } from "./analysis-chunks.ts";
 import { analyzeLongOwner, LONG_ANALYSIS_CHUNK_MS } from "./long-analysis.ts";
 import { OwnerWorkspaceDrafts } from "./workspace-drafts.ts";
 import { OwnerSessionRecovery } from "./session-recovery.ts";
+import { ownerClipDownloadName } from "../../../packages/contracts/local/clip-name.ts";
 import {
   ownerDraftSnapshotSchema,
   ownerWorkspaceClearRequestSchema,
@@ -534,6 +535,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
     type: string,
     workspaceId?: string,
     maximumRangeBytes?: number,
+    downloadName?: string,
   ) {
     const size = (await stat(file)).size;
     const range = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
@@ -558,6 +560,11 @@ export function createOwnerHost(options: OwnerHostOptions) {
       "Content-Type": type,
       "Content-Length": end - start + 1,
       "Accept-Ranges": "bytes",
+      ...(downloadName
+        ? {
+            "Content-Disposition": `attachment; filename="clip.mp4"; filename*=UTF-8''${encodeURIComponent(downloadName).replace(/['()*]/gu, (value) => `%${value.charCodeAt(0).toString(16).toUpperCase()}`)}`,
+          }
+        : {}),
       ...(range ? { "Content-Range": `bytes ${start}-${end}/${size}` } : {}),
     });
     const input = createReadStream(file, { start, end });
@@ -984,7 +991,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           ? req.url?.replace("/api/agent/workspace/", "/api/workspace/")
           : req.url
       )?.match(
-        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|codex-progress|clips|assets|audio-assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|picture|visuals|audio|youtube-audio|validate|captions|fake-captions)(?:\/(\d+))?)?)?)?$/,
+        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|codex-progress|clips|assets|audio-assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|rename|remove|picture|visuals|audio|youtube-audio|validate|captions|fake-captions)(?:\/(\d+))?)?)?)?$/,
       );
       if (
         agent &&
@@ -1082,6 +1089,20 @@ export function createOwnerHost(options: OwnerHostOptions) {
               },
             ),
           );
+          return;
+        }
+        if (
+          req.method === "POST" &&
+          batch &&
+          route[3] &&
+          ["rename", "remove"].includes(route[4] ?? "")
+        ) {
+          const result = await batch[
+            route[4] === "remove" ? "remove" : "rename"
+          ](route[3], await readOwnerJson(req));
+          res
+            .writeHead(200, { "Content-Type": "application/json" })
+            .end(wireJson(clipReply(result)));
           return;
         }
         if (req.method === "POST" && !route[3]) {
@@ -1427,9 +1448,8 @@ export function createOwnerHost(options: OwnerHostOptions) {
           route[5]
         ) {
           const revision = Number(route[5]);
-          const clip = batch
-            .snapshot()
-            .clips.find((clip) => clip.id === route[3]);
+          const outputClips = batch.snapshot().clips;
+          const clip = outputClips.find((clip) => clip.id === route[3]);
           if (!clip?.outputs.some((output) => output.revision === revision)) {
             res.writeHead(404).end();
             return;
@@ -1440,6 +1460,12 @@ export function createOwnerHost(options: OwnerHostOptions) {
             res,
             "video/mp4",
             workspace.id,
+            undefined,
+            ownerClipDownloadName(
+              clip,
+              outputClips.indexOf(clip) + 1,
+              revision,
+            ),
           );
           return;
         }

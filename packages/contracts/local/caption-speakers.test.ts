@@ -137,10 +137,45 @@ it("honors whole-caption correction and all color roles without changing IDs/tim
       Array.from(
         { length: 16 },
         (_, i) =>
-          defaultSpeakerColor(`spk_${i}`, OWNER_CAPTION_PRESETS.clean).color,
+          defaultSpeakerColor(`spk_${i}`, OWNER_CAPTION_PRESETS.clean)
+            .highlight,
       ),
     ).size,
   ).toBe(16);
+});
+
+it("defaults a single known speaker to highlight-only coloring and retains explicit disabled/color edits", () => {
+  const labeled = words.map((word) => ({ ...word, speakerId: "spk_1" }));
+  const config = resolveCaptionSpeakers([caption], labeled);
+  expect(config.enabled).toBe(true);
+  const style = OWNER_CAPTION_PRESETS.tiktok;
+  expect(style.animation).toBe("pop");
+  const colors = captionSpeakerFrame(caption, 100, config, style).colors!;
+  expect(colors).toMatchObject({
+    color: style.color,
+    backgroundColor: style.backgroundColor,
+    highlight: "#ffb86c",
+  });
+  const solid = OWNER_CAPTION_PRESETS.solid;
+  expect(defaultSpeakerColor("spk_1", solid)).toMatchObject({
+    color: solid.color,
+    backgroundColor: solid.backgroundColor,
+  });
+  const disabled = resolveCaptionSpeakers([caption], labeled, {
+    ...config,
+    enabled: false,
+  });
+  expect(
+    captionSpeakerFrame(caption, 100, disabled, style).colors,
+  ).toBeUndefined();
+  const unknown = resolveCaptionSpeakers(
+    [caption],
+    labeled.map((word) => ({ ...word, speakerId: null })),
+  );
+  expect(unknown.enabled).toBe(false);
+  expect(
+    captionSpeakerFrame(caption, 100, unknown, style).colors,
+  ).toBeUndefined();
 });
 
 it("uses a known majority for legacy mixed edits, including when the first word is unknown", () => {

@@ -67,6 +67,7 @@ import { normalizePicture } from "../src/assembly/picture-raster.ts";
 import type { OwnerAiMode } from "../../../packages/contracts/local/policy.ts";
 
 import { LocalDiagnostics } from "./diagnostics.ts";
+import { ownerClipRenameSchema } from "../../../packages/contracts/local/clip-name.ts";
 import { FAKE_CAPTIONS_ENABLED } from "./fake-content.ts";
 import {
   ownerCaptionGenerationRequestSchema,
@@ -315,6 +316,43 @@ export class OwnerClipBatch {
         clip,
         applyOwnerEdit(clip, value, this.workspace.source),
       );
+    });
+  }
+  async remove(id: string, value: unknown) {
+    const request = ownerClipRenderRequestSchema.parse(value);
+    return this.serialize(async () => {
+      const key = `remove:${id}:${request.operationId}`;
+      if (this.receipt(key, request)) return this.snapshot();
+      const clip = this.clips.get(id);
+      if (
+        this.closing ||
+        !clip ||
+        clip.revision !== request.expectedRevision ||
+        clip.state !== "canceled" ||
+        this.current?.clip.id === id ||
+        this.queue.some((work) => work.clip.id === id)
+      )
+        throw Error("stale_or_busy_clip");
+      this.clips.delete(id);
+      this.receipts.set(key, digest(request));
+      this.changed();
+      return this.snapshot();
+    });
+  }
+  async rename(id: string, value: unknown) {
+    const request = ownerClipRenameSchema.parse(value);
+    return this.serialize(async () => {
+      const key = `rename:${id}:${request.operationId}`;
+      if (this.receipt(key, request)) return this.snapshot();
+      const clip = this.clips.get(id);
+      if (this.closing || !clip) throw Error("clip_unavailable");
+      if ((clip.displayName ?? null) !== request.expectedName)
+        throw Error("stale_clip_name");
+      if (request.name === null) delete clip.displayName;
+      else clip.displayName = request.name;
+      this.receipts.set(key, digest(request));
+      this.changed();
+      return this.snapshot();
     });
   }
   async edit(id: string, value: unknown) {

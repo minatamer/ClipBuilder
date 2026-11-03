@@ -138,6 +138,107 @@ const gate = () => {
   });
   return { wait, release };
 };
+it("removes only a canceled clip idempotently while preserving another active queue", async () => {
+  const pause = gate();
+  ports.plan.mockImplementationOnce(async (...args) => {
+    await pause.wait;
+    return fakeOwnerClipPreparation.plan(...args);
+  });
+  const submitted = await batch.submit(request(), analysis);
+  const target = submitted.clips.at(-1)!;
+  const operation = {
+    operationId: randomUUID(),
+    expectedRevision: target.revision,
+  };
+  try {
+    await expect(batch.remove(target.id, operation)).rejects.toThrow(
+      "stale_or_busy_clip",
+    );
+    batch.cancel(target.id);
+    const before = batch.snapshot();
+    const calls = [
+      ports.plan.mock.calls.length,
+      ports.image.mock.calls.length,
+      ports.render.mock.calls.length,
+    ];
+    await expect(
+      batch.remove(target.id, { ...operation, expectedRevision: 99 }),
+    ).rejects.toThrow("stale_or_busy_clip");
+    const result = await batch.remove(target.id, operation);
+    expect(result.clips).toEqual(
+      before.clips.filter((clip) => clip.id !== target.id),
+    );
+    expect(result.active).toBe(true);
+    expect(await batch.remove(target.id, operation)).toEqual(result);
+    await expect(
+      batch.remove(target.id, { ...operation, expectedRevision: 99 }),
+    ).rejects.toThrow("operation_conflict");
+    await expect(
+      batch.remove(target.id, { ...operation, operationId: randomUUID() }),
+    ).rejects.toThrow("stale_or_busy_clip");
+    expect([
+      ports.plan.mock.calls.length,
+      ports.image.mock.calls.length,
+      ports.render.mock.calls.length,
+    ]).toEqual(calls);
+    expect(
+      await readFile(await files.file(workspace.id, "source.mp4"), "utf8"),
+    ).toBe("synthetic");
+  } finally {
+    pause.release();
+    await batch.drain();
+  }
+  expect(batch.snapshot().clips).toHaveLength(2);
+  expect(
+    batch.snapshot().clips.every((clip) => clip.state === "review-ready"),
+  ).toBe(true);
+  const ready = batch.snapshot().clips[0]!;
+  await expect(
+    batch.remove(ready.id, {
+      operationId: randomUUID(),
+      expectedRevision: ready.revision,
+    }),
+  ).rejects.toThrow("stale_or_busy_clip");
+  expect(ports.plan).toHaveBeenCalledTimes(2);
+  expect(ports.render).toHaveBeenCalledTimes(2);
+});
+
+it("renames a queued clip without changing queue state or dispatching additional work", async () => {
+  const pause = gate();
+  ports.plan.mockImplementationOnce(async (...args) => {
+    await pause.wait;
+    return fakeOwnerClipPreparation.plan(...args);
+  });
+  const submitted = await batch.submit(request(), analysis);
+  const clip = submitted.clips.at(-1)!;
+  const before = batch.snapshot();
+  const name = {
+    operationId: randomUUID(),
+    expectedName: null,
+    name: "Synthetic queue label",
+  };
+  try {
+    const renamed = await batch.rename(clip.id, name);
+    expect(renamed.clips.at(-1)!.displayName).toBe(name.name);
+    expect(renamed.clips.map((c) => [c.id, c.state, c.calls])).toEqual(
+      before.clips.map((c) => [c.id, c.state, c.calls]),
+    );
+    expect((await batch.rename(clip.id, name)).clips.at(-1)!.displayName).toBe(
+      name.name,
+    );
+    await expect(
+      batch.rename(clip.id, {
+        ...name,
+        operationId: randomUUID(),
+        name: "stale",
+      }),
+    ).rejects.toThrow("stale_clip_name");
+  } finally {
+    pause.release();
+    await batch.drain();
+  }
+});
+
 it("prepares twenty-four retained clips with one worker, retries only the failed clip and restores without dispatch", async () => {
   await batch.close();
   batch = new OwnerClipBatch(
@@ -1226,6 +1327,7 @@ it.each(["generated", "retrieved"] as const)(
     expect(failed.base!.overlay.texts).toEqual([]);
     expect(failed.base!.overlay.captionStyle?.outlineWidth).toBe(12);
     expect(failed.base!.overlay.captionStyle?.preset).toBe("tiktok");
+    expect(failed.base!.overlay.captionStyle?.animation).toBe("pop");
     expect(failed.base!.overlay.captions.length).toBeGreaterThan(0);
     expect(failed.base!.overlay.visuals[0]).toMatchObject({
       entrance: "none",
@@ -1900,144 +2002,166 @@ it("converts invalid visual clocks, critiques weak evidence, and renders without
   });
 });
 
-it("starts production fake clips empty, explicitly transcribes one clip, preserves edits and replays without another paid call", async () => {
-  const appFake = await import("./fake-clips.ts");
-  ports.plan.mockImplementation(appFake.fakeOwnerClipPreparation.plan);
-  const input = { ...request(), momentIds: [analysis.manual[0]!.id] };
-  await batch.submit(input, analysis);
-  await batch.drain();
-  const before = batch.snapshot().clips[0]!;
-  expect(before.base!.overlay.captions).toEqual([]);
-  expect(before.assets).toEqual([]);
-  expect(ports.image).toHaveBeenCalledTimes(0);
-  const words = [
-    {
-      id: "w_900001",
-      text: "Mars",
-      punctuatedText: "Mars.",
-      startMs: 100,
-      endMs: 600,
-      speakerId: "spk_0",
-      confidence: 1,
-    },
-  ];
-  const transcribe = vi.fn(async () => structuredClone(words));
-  const action = {
-    operationId: randomUUID(),
-    expectedRevision: before.revision,
-    paidConsent: true,
-  };
-  const result = await batch.generateCaptions(
-    before.id,
-    action,
-    transcribe,
-    new AbortController().signal,
-  );
-  const generated = result.clips[0]!;
-  expect(generated.revision).toBe(1);
-  expect(generated.captionAttempts).toBe(1);
-  expect(generated.base!.overlay.focus).toEqual(before.base!.overlay.focus);
-  expect(generated.outputs).toEqual(before.outputs);
-  expect(generated.base!.overlay.captions[0]!.wordCues[0]).toMatchObject({
-    text: "Mars.",
-    startMs: 100,
-    endMs: 600,
-  });
-  await batch.generateCaptions(
-    before.id,
-    action,
-    transcribe,
-    new AbortController().signal,
-  );
-  expect(transcribe).toHaveBeenCalledTimes(1);
-  await expect(
-    batch.generateCaptions(
+it.each(["gemini", "codex"] as const)(
+  "starts production fake clips empty, explicitly transcribes one %s clip, preserves edits and replays without another call",
+  async (provider) => {
+    const appFake = await import("./fake-clips.ts");
+    ports.plan.mockImplementation(appFake.fakeOwnerClipPreparation.plan);
+    const input = { ...request(), momentIds: [analysis.manual[0]!.id] };
+    await batch.submit(input, analysis);
+    await batch.drain();
+    const before = batch.snapshot().clips[0]!;
+    expect(before.base!.overlay.captions).toEqual([]);
+    expect(before.assets).toEqual([]);
+    expect(ports.image).toHaveBeenCalledTimes(0);
+    const words = [
+      {
+        id: "w_900001",
+        text: "Mars",
+        punctuatedText: "Mars.",
+        startMs: 100,
+        endMs: 600,
+        speakerId: "spk_0",
+        confidence: 1,
+      },
+    ];
+    const transcribe = vi.fn(async () => structuredClone(words));
+    const action = {
+      operationId: randomUUID(),
+      expectedRevision: before.revision,
+      ...(provider === "gemini" ? { paidConsent: true } : {}),
+    };
+    const result = await batch.generateCaptions(
       before.id,
-      { ...action, operationId: randomUUID() },
+      action,
       transcribe,
       new AbortController().signal,
-    ),
-  ).rejects.toThrow("stale_edit_revision");
-  const edit = await batch.edit(before.id, {
-    operationId: randomUUID(),
-    expectedRevision: 1,
-    baseHash: generated.baseHash,
-    operations: [
-      {
-        kind: "caption-text",
-        words: [{ wordId: "w_900001", text: "Martian." }],
-      },
-    ],
-  });
-  expect(edit.clips[0]!.edit!.captionText).toEqual([
-    { wordId: "w_900001", text: "Martian." },
-  ]);
-  const speakers = {
-    enabled: true,
-    colors: [
-      {
-        speakerId: "spk_7",
-        color: "#123456",
-        backgroundColor: "#654321",
-        highlight: "#abcdef",
-      },
-    ],
-    assignments: [{ wordId: "w_900001", speakerId: "spk_7" }],
-  };
-  const colored = await batch.edit(before.id, {
-    operationId: randomUUID(),
-    expectedRevision: 2,
-    baseHash: generated.baseHash,
-    operations: [{ kind: "caption-speakers", speakers }],
-  });
-  expect(colored.clips[0]!.edit!.captionSpeakers).toEqual(speakers);
-  await expect(
-    batch.edit(before.id, {
+      false,
+      provider === "codex",
+    );
+    const generated = result.clips[0]!;
+    expect(generated.revision).toBe(1);
+    expect(generated.captionAttempts).toBe(1);
+    expect(generated.base!.overlay.captionStyle).toMatchObject({
+      preset: "tiktok",
+      animation: "pop",
+    });
+    expect(
+      compileOwnerOverlay(generated.base!, generated.edit, []).captionSpeakers,
+    ).toMatchObject({
+      enabled: true,
+      colors: [],
+      assignments: [{ wordId: "w_900001", speakerId: "spk_0" }],
+    });
+    expect(generated.base!.overlay.focus).toEqual(before.base!.overlay.focus);
+    expect(generated.outputs).toEqual(before.outputs);
+    expect(generated.base!.overlay.captions[0]!.wordCues[0]).toMatchObject({
+      text: "Mars.",
+      startMs: 100,
+      endMs: 600,
+    });
+    await batch.generateCaptions(
+      before.id,
+      action,
+      transcribe,
+      new AbortController().signal,
+      false,
+      provider === "codex",
+    );
+    expect(transcribe).toHaveBeenCalledTimes(1);
+    await expect(
+      batch.generateCaptions(
+        before.id,
+        { ...action, operationId: randomUUID() },
+        transcribe,
+        new AbortController().signal,
+        false,
+        provider === "codex",
+      ),
+    ).rejects.toThrow("stale_edit_revision");
+    const edit = await batch.edit(before.id, {
       operationId: randomUUID(),
-      expectedRevision: 3,
+      expectedRevision: 1,
       baseHash: generated.baseHash,
       operations: [
         {
-          kind: "caption-speakers",
-          speakers: {
-            ...speakers,
-            assignments: [{ wordId: "absent", speakerId: null }],
-          },
+          kind: "caption-text",
+          words: [{ wordId: "w_900001", text: "Martian." }],
         },
       ],
-    }),
-  ).rejects.toThrow("unknown_caption_word");
-  await batch.render(before.id, {
-    operationId: randomUUID(),
-    expectedRevision: 3,
-  });
-  await batch.drain();
-  const job = ports.render.mock.calls.at(-1)![0];
-  if (job.operation !== "clip") throw new Error("clip_missing");
-  expect(job.overlay.captionSpeakers).toEqual(speakers);
-  expect(job.overlay.captions[0]!.wordCues[0]).toMatchObject({
-    text: "Martian.",
-    startMs: 100,
-    endMs: 600,
-  });
-  const reopened = new OwnerClipBatch(
-    workspace,
-    files,
-    ports,
-    () => {},
-    new LocalDiagnostics(),
-    async () => {},
-  );
-  reopened.restore(JSON.parse(JSON.stringify(batch.snapshot().clips)));
-  expect(reopened.snapshot().clips[0]!.edit!.captionSpeakers).toEqual(speakers);
-  expect(reopened.snapshot().clips[0]!.edit!.captionText).toEqual([
-    { wordId: "w_900001", text: "Martian." },
-  ]);
-  await reopened.close();
-  expect(transcribe).toHaveBeenCalledTimes(1);
-  expect(ports.plan).toHaveBeenCalledTimes(1);
-  expect(ports.image).toHaveBeenCalledTimes(0);
-});
+    });
+    expect(edit.clips[0]!.edit!.captionText).toEqual([
+      { wordId: "w_900001", text: "Martian." },
+    ]);
+    const speakers = {
+      enabled: true,
+      colors: [
+        {
+          speakerId: "spk_7",
+          color: "#123456",
+          backgroundColor: "#654321",
+          highlight: "#abcdef",
+        },
+      ],
+      assignments: [{ wordId: "w_900001", speakerId: "spk_7" }],
+    };
+    const colored = await batch.edit(before.id, {
+      operationId: randomUUID(),
+      expectedRevision: 2,
+      baseHash: generated.baseHash,
+      operations: [{ kind: "caption-speakers", speakers }],
+    });
+    expect(colored.clips[0]!.edit!.captionSpeakers).toEqual(speakers);
+    await expect(
+      batch.edit(before.id, {
+        operationId: randomUUID(),
+        expectedRevision: 3,
+        baseHash: generated.baseHash,
+        operations: [
+          {
+            kind: "caption-speakers",
+            speakers: {
+              ...speakers,
+              assignments: [{ wordId: "absent", speakerId: null }],
+            },
+          },
+        ],
+      }),
+    ).rejects.toThrow("unknown_caption_word");
+    await batch.render(before.id, {
+      operationId: randomUUID(),
+      expectedRevision: 3,
+    });
+    await batch.drain();
+    const job = ports.render.mock.calls.at(-1)![0];
+    if (job.operation !== "clip") throw new Error("clip_missing");
+    expect(job.overlay.captionSpeakers).toEqual(speakers);
+    expect(job.overlay.captions[0]!.wordCues[0]).toMatchObject({
+      text: "Martian.",
+      startMs: 100,
+      endMs: 600,
+    });
+    const reopened = new OwnerClipBatch(
+      workspace,
+      files,
+      ports,
+      () => {},
+      new LocalDiagnostics(),
+      async () => {},
+    );
+    reopened.restore(JSON.parse(JSON.stringify(batch.snapshot().clips)));
+    expect(reopened.snapshot().clips[0]!.edit!.captionSpeakers).toEqual(
+      speakers,
+    );
+    expect(reopened.snapshot().clips[0]!.edit!.captionText).toEqual([
+      { wordId: "w_900001", text: "Martian." },
+    ]);
+    await reopened.close();
+    expect(transcribe).toHaveBeenCalledTimes(1);
+    expect(ports.plan).toHaveBeenCalledTimes(1);
+    expect(ports.image).toHaveBeenCalledTimes(0);
+  },
+);
 
 it("requires consent and revision, bounds failures, and never automatically repeats a failed caption attempt", async () => {
   const appFake = await import("./fake-clips.ts");
@@ -2123,6 +2247,7 @@ it("adds fictional captions on demand without consuming a Gemini attempt or trig
   );
   expect(result.clips[0]!.base!.overlay.captions.length).toBeGreaterThan(0);
   expect(result.clips[0]!.base!.overlay.captionStyle?.preset).toBe("tiktok");
+  expect(result.clips[0]!.base!.overlay.captionStyle?.animation).toBe("pop");
   expect(result.clips[0]!.captionAttempts).toBeUndefined();
   expect(result.clips[0]!.revision).toBe(1);
   expect(ports.plan).toHaveBeenCalledTimes(1);

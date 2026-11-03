@@ -296,6 +296,8 @@ export const ownerFocusDiagnosticSchema = z
     fallback: z.number().int().min(0).max(120).optional(),
     rejected: z.number().int().min(0).max(1000).optional(),
     converted: z.number().int().min(0).max(1000).optional(),
+    mergedPeople: z.number().int().min(0).max(8).optional(),
+    speakerConflicts: z.number().int().min(0).max(120).optional(),
   })
   .strict();
 export type OwnerFocusDiagnostic = z.infer<typeof ownerFocusDiagnosticSchema>;
