@@ -1,5 +1,141 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Motion default camera interval — CL-208, 2026-11-03
+
+Adding manual Motion at the playhead defaults End to the current camera
+position's end, rather than an arbitrary five seconds. Keep Start at the chosen
+playhead, map source camera boundaries into the independent Hook/body clock, and
+respect the occurrence end, six-frame minimum and existing thirty-second pass
+bound. Adjacent positions remain distinct even for the same person. Capture and
+manual editing remain available; existing drafts/paths are not rewritten and no
+tracking starts automatically. CL-208 owns synthetic verification.
+
+## Manually seeded head-follow Motion — CL-203, 2026-11-03
+
+The owner authorizes research/implementation of a Motion tab beside Zoom in
+Focus. Mark a head once and explicitly track its pixels over a selected bounded
+interval; never require frame-by-frame owner keyframes, a face identity model,
+provider call or model download. Track the selected person's camera while
+preserving baseline cuts/zoom and the head's initial vertical placement. Stop
+on loss rather than switch targets. Numeric paths are manual draft edits shared
+by preview/native export and recovered without rerunning tracking. Footer,
+Hook/body independence, overlap, resource and privacy rules remain. Details,
+research and synthetic/owner-only gates belong to
+[CL-203](tickets/CL-203-manual-head-follow-camera-motion.md).
+
+CL-203 is locally implemented with a bounded browser pyramidal feature tracker,
+forward/back consistency and appearance/loss checks. It reads only the explicit
+interval of existing prepared source pixels, capped at 512px for analysis, with
+no new runtime/model/provider. Mouse/touch or keyboard/numeric seeding precedes
+Track head in the footer; Cancel is local. Each pass covers 0.2–30 seconds, with
+up to twenty finite nonoverlapping intervals and 451 samples per interval.
+Completed/lost-safe paths are ordinary draft edits with Preview, Apply/Discard,
+Adjust and Remove; reopening never runs tracking. Motion and timed Zoom do not
+overlap in an occurrence. Exact source/camera/Hook binding, another person's
+cuts, initial vertical head placement, baseline zoom, source clamps and a
+three-frame edge join are preserved in shared preview/native crop math. Paths
+survive save/recovery/render retry; changed relevant framing invalidates them
+with notice. Synthetic mechanics/pixel evidence passes, while personal real-head
+quality and Linux/hosted acceptance remain owner-only.
+
+## Large picture inspection — CL-202, 2026-11-03
+
+Each editor picture card offers View separately from selection/editing. A large
+responsive modal fits the existing original image without cropping, with Close,
+Escape/backdrop dismissal and keyboard focus return. Viewing pauses playback
+without changing drafts, dirty state, timing or processing. It uses the existing
+protected asset route locally and hosted; no AI, external fetch or new media
+job is required. Synthetic browser and owner visual evidence belong in
+[CL-202](tickets/CL-202-large-editor-image-dialog.md).
+
+## Remove canceled clips — CL-201, 2026-11-03
+
+The selected canceled clip offers Remove clip beside Retry clip in the existing
+workspace footer. Removal changes only session clip metadata and rolling
+recovery; it preserves other clips, source media and saved exports. It never
+retries, cancels other work, calls AI or regenerates media. Server identity,
+revision and canceled-state guards serialize removal with other mutations.
+Selection moves to an adjacent remaining clip; an empty collection uses the
+existing Add clips flow. Shared authenticated hosted editing retains parity.
+Fake/no-key checks and owner-only visual evidence belong in
+[CL-201](tickets/CL-201-remove-canceled-clips.md).
+
+## Clip refinements authorized after cancellation — 2026-11-03
+
+The owner canceled the active batch and authorizes CL-198–200 sequentially with
+execute/validate/fix loops, synthetic/fake/no-key checks and no real AI calls.
+This lifts the implementation hold below. Preserve completed and canceled clips;
+never retry them automatically. CL-200 adds local-desktop Export Timestamps
+opposite Suggestions and Import JSON beside Add clip, excluding Android/phone
+and hosted surfaces. Strict source-bound original-time JSON populates manual
+rows only; no video/transcript/provider content or automatic processing. Names,
+portrait rail and motion remain owned by CL-198/199. No Git mutation, environment
+change, download, provider/cloud action or deployment is authorized.
+
+CL-198 now implements visible-only desktop portrait players from the existing
+prepared preview composition and a token-timed card-to-editor entry transition.
+Phone/tablet stay compact, inactive cards stay paused, and readiness/dirty guards
+remain. Synthetic responsive evidence and owner-only visual gates are in the
+ticket; no owner media or real inference was used.
+
+CL-199 adds optional private display names with legacy Clip N fallback, a compact
+Rename action and matching safe download filenames. Renames are serialized,
+idempotent metadata updates independent of overlay revisions and processing;
+recovery retains names, completed output bytes remain unchanged, and internal
+paths/IDs stay opaque. New downloads use the current name plus clip/revision
+disambiguation. Naming sends nothing to AI and does not regenerate media.
+
+CL-200 implements source-bound timestamp JSON export/import on local desktop
+with a fine pointer, excluding Android/iOS and hosted surfaces. Export covers
+all retained review pages and includes only version/clock, source fingerprint/
+duration/origin and original-time ranges. Import validates the complete bounded
+document, deduplicates identical ranges and fills editable manual rows with AI
+suggestions off. The existing ten-row manual limit remains; larger imports fail
+without truncation or input loss. There is no automatic analysis, submission,
+download or provider call. Files contain no video, titles, transcript, prompts,
+URLs or private paths. File exchange needs no keys; later new clip preparation
+retains its existing local speech/Codex setup and approvals. Synthetic evidence
+and remaining owner visual acceptance belong in the ticket.
+
+## Planned clip navigation and naming — 2026-11-03
+
+The owner requests desktop portrait video cards in the left clip rail, with the
+clip name centered above each prepared preview, and a visible preview-to-editor
+selection transition. Phone/tablet navigation remains compact. Preserve current
+readiness gates, keyboard/dirty-state behavior, normal motion timing and bounded
+media resource use. [CL-198](tickets/CL-198-desktop-portrait-clip-rail-and-editor-transition.md)
+owns implementation and visual evidence.
+
+The owner also requests optional custom clip names used consistently in clip UI
+and downloaded MP4 filenames, with Clip N fallback and safe filename derivation.
+Names are private metadata, independent of on-video titles, IDs, processing,
+overlay revisions and stored media paths. Renaming must preserve completed work
+without new AI/render calls. [CL-199](tickets/CL-199-clip-display-names-and-download-filenames.md)
+owns contracts, persistence, interaction and download evidence.
+
+The initial planning hold ended after the owner's explicit cancellation and
+implementation instruction recorded above. A refreshed browser can reconnect to an accepted
+queue on the same running backend. Backend/watcher/worker restart can interrupt
+it: recovery preserves acknowledged work but restores unfinished jobs canceled,
+requiring explicit retry. Never promise automatic resumption of paid work or
+restart an active queue to deliver UI changes. The implementation authorization
+does not change provider/configuration settings or authorize real AI checks.
+
+## Saved-video validation reuse — CL-197, 2026-11-03
+
+Opening a supported saved local source reuses its completed native validation
+when fresh byte-count/checksum checks match the retained record. The isolated
+workspace copy is checksum-verified and uses the recorded measured source
+metadata, including original clocks and available ranges. Existing ready records
+remain compatible across restarts without another full decode. Changed/missing
+files, invalid records, linked paths and unsupported sources remain rejected.
+New acquisitions and replacement/locate actions retain full native validation;
+cancellation, capacity guards and cleanup preserve saved masters. Reopening
+dispatches no acquisition, transcription or AI work. This supersedes repeat
+full-decode validation on saved-source opening, not first acquisition validation.
+Synthetic/no-key evidence and owner-only acceptance belong in
+[CL-197](tickets/CL-197-reuse-saved-source-validation.md).
+
 ## File-backed local speech and failed analysis status — CL-196, 2026-11-02
 
 Local Whisper writes its authoritative transcript to the existing bounded JSON
@@ -53,7 +189,8 @@ Background import returns 202 and status polling has no aggregate run deadline.
 Metadata/probes retain 90-second bounds; streamed records, disk reserve, arithmetic, codec, concurrency, network
 host/DNS/TLS/auth/rate/socket controls and explicit cancel/owned cleanup remain.
 Repeated status or frozen counters do not reset idle guards. Full decode/media
-validation remains mandatory.
+validation remains mandatory for first acquisition and replacement; CL-197
+reuses completed validation for unchanged saved-source reopening.
 HE-AAC is explicitly marked from the offered codec and checked against the native
 profile. It may decode at its advertised core rate or twice that rate within
 48 kHz. Its end-clock margin covers two output audio packets plus one video
@@ -901,6 +1038,22 @@ own bounds, setup, exact implementation allocation and evidence. This supersedes
 earlier local Gemini-only composition, not hosted/live/spend/release controls.
 No deployment or agent real-AI inference is authorized; owner acceptance stays open.
 
+## Caption animation and speaker defaults — CL-204, 2026-11-03
+
+New captions use TikTok typography with Word pop and automatic speaker coloring
+of the active-word animation highlight, equally for Codex, Gemini and explicit
+synthetic captions. A single known caption speaker is sufficient; entirely
+unknown captions retain the style's normal highlight. Implicit speaker palettes
+preserve base text/background colors and change only the highlight. Existing
+explicit style, enable/disable, assignment and color edits remain authoritative;
+do not rewrite saved animation choices. Full-caption attribution below remains.
+Manual Text defaults are unchanged. Head-follow Motion tracks pixels and does
+not identify speech speakers. Existing selected-cut speech preparation supplies
+anonymous labels; styling adds no transcription/provider call or retry.
+[CL-204](tickets/CL-204-caption-word-pop-speaker-highlight-defaults.md) owns local
+fake/no-key and generated-media evidence. Real speaker quality, owner visual and
+Linux/hosted/release acceptance remain separate; no real inference is authorized.
+
 ## One speaker per caption — CL-134, 2026-10-29
 
 The owner simplifies Captions → Speakers to one selector for each full caption,
@@ -1391,6 +1544,56 @@ people; actual detection quality still requires owner-manual approved Gemini
 processing. The ticket owns actual execution/verification evidence; this does
 not authorize paid/cloud/deployment actions. It supersedes CL-068's visible
 appearance-editing UX. CL-070 separately owns the export-detail correction.
+
+## Capture every editable preview timestamp — CL-207, 2026-11-03
+
+Every editable Start/End timestamp with a usable nearby preview must include a
+concise inline Capture action. Use the real settled playhead and correct source/
+original/Hook/body clock, changing only the chosen endpoint. Source selection
+keeps its source timestamp precision rules; editor Start captures the current
+frame and exclusive End includes it. Preserve all other fields/precision and
+existing range/overlap/bounds checks; loading/seeking/failed/busy previews cannot
+overwrite fields. Capture never submits processing or applies edits. Read-only
+and derived timestamps, durations/offsets and download metadata without a playable
+preview are distinct. CL-207 adds missing Analysis Start/End, Zoom Start and
+Motion End actions while retaining existing manual/camera/Hook/Text/Picture/Audio
+capture. It owns fake/synthetic UI evidence; no real AI or deployment authorized.
+
+## Numbered Motion context and track all — CL-206, 2026-11-03
+
+Keep the numbered source/camera preview visible in Camera, People, Zoom and
+Motion, with consistent person selection and source clocks. Zoom/Motion viewing
+does not drag or edit the baseline camera. Motion's Add to all speakers prepares
+all eligible camera intervals in the current clip's body/Hook with one explicit
+footer Track all action. Existing numbered head observations seed local pixel
+tracking; new cuts reseed and adjacent thirty-second chunks continue the same
+tracked head with validated predecessor links, one vertical anchor and easing
+only at the outer edges. Existing unlinked manual paths retain their behavior;
+explicit replacement/removal detaches followers safely. Preserve existing
+Motion/Zoom, skip custom/unseeded/short ranges,
+and refuse over-capacity plans before work. Existing twenty-path/thirty-second
+bounds remain. Show progress and Cancel, discard canceled run results atomically,
+and add completed/usable partial numeric paths to the draft for preview and
+Apply/Discard. No extra AI/model/provider call or automatic preparation/Apply/
+export. Existing person identity is assumed, not re-recognized. CL-206 owns fake/
+generated evidence; real-head/identity/visual and hosted release remain owner-only.
+
+## Stable automatic person reuse — CL-205, 2026-11-03
+
+New camera plans maintain one anonymous participant roster throughout a clip,
+including sampled panels, pose/laughter/movement and real shot changes. Update
+observations rather than add an identity for another view of the same person.
+One confirmed speech speaker uses one canonical person; prefer the earliest
+established ID/framing. Deterministically reconcile compatible speech-linked
+aliases and strong same-shot geometric continuations, preserving distinct
+co-visible people and conflicting known speakers. Ambiguous associations hold
+instead of creating another target. A real cut resets geometry; same-shot head
+movement uses that person's manual Motion path. Do not infer identity from
+screen position across cuts or rewrite saved/manual focus/tracking. No extra
+inference/model/native job or automatic retry. Existing evidence/quality/spend
+rules remain. Detection is fallible; real identity/framing quality remains
+owner-tested. [CL-205](tickets/CL-205-stable-automatic-person-reuse.md) owns fake/
+synthetic evidence; no real inference or deployment is authorized.
 
 ## Automatic and manual person focus — 2026-10-25
 

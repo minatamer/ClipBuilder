@@ -1,5 +1,20 @@
 # Local Codex provider — CL-135
 
+## Stable within-clip participants — CL-205
+
+The existing single camera planning request now establishes one anonymous roster
+across temporal panels, movement and shot changes. Observations of another pose
+reuse the person ID; one confirmed speech speaker uses one canonical target.
+Fresh automatic compilation reconciles compatible speech-linked aliases and
+strong same-shot head-box continuity, retaining the earliest established ID/
+baseline and real-cut geometry. Separate co-visible heads and conflicting voices
+are preserved; ambiguous associations hold rather than invent another target.
+No position-only match across cuts, biometric recognition, extra inference or
+automatic retry. Manual Motion follows the existing person and saved focus/
+tracks are never migrated. Aggregate diagnostics contain merge/conflict counts
+only. Fake tests need no keys; actual identity/framing quality still requires
+owner acceptance with installed Codex/login/local speech and live approvals.
+
 ## Collection scaling — CL-190
 
 Local Codex count readiness is enabled: no 360-moment/ten-clip total quota.

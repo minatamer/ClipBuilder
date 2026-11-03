@@ -1,5 +1,67 @@
 # Local editing controls
 
+CL-206 keeps the numbered source preview in every Focus tab, including Zoom and
+Motion. Its Motion action Add to all speakers / footer Track all processes the
+current clip's eligible body/Hook camera intervals locally, using existing head
+boxes. It preserves Motion/Zoom, reports unseeded/lost/short ranges and refuses
+plans beyond twenty paths before decoding. Thirty-second chunks stay continuous;
+real camera cuts reseed. Cancel discards only the current bulk run, then normal
+preview/Apply/Discard and recovery use the saved numeric paths. Existing manual
+paths retain their behavior. Generated/fake media work without keys or models;
+new real clip preparation retains Codex/Gemini setup/live approvals. No automatic
+AI, tracking, Apply or export is added. Real-head/visual quality is owner-tested.
+
+CL-204 defaults new captions to TikTok typography, Word pop and a distinct
+speaker highlight, including clips with one known speaker. Base text/background
+keep their style colors; unknown labels stay neutral and explicit saved styles,
+speaker disable/assignments/colors win. Shared defaults serve Codex and Gemini.
+Head-follow Motion is separate from speech speaker attribution. Styling/manual
+correction works with synthetic captions and no keys; real local speech labels
+need installed speech/speaker tools/weights, Codex planning needs login/live
+approval and Gemini speech needs keys/live approval. No new AI call is added.
+
+CL-203 adds Focus / Motion beside Zoom. Select the person's camera, pause at the
+start, Add at playhead, draw/refine a head box and set End. Track head in the
+footer runs classical pixel tracking over that interval, with local progress/
+Cancel. Preview motion then Apply; Discard restores the prior path. Intervals
+are capped at thirty seconds, stay separate from timed Zoom, and are labeled
+Hook/Clip on presentation time. Lost tracking keeps safe coverage and asks for
+reselection. Source/camera changes invalidate affected paths; saves/recovery
+reuse completed numeric paths. This genuinely runs on generated video in fake
+mode without keys, models or sign-in, and uses the same mechanism for prepared
+local/hosted media. Existing new AI preparation still needs provider setup/live
+gates. No inference/native job is dispatched by Track head.
+
+CL-202 gives each picture card a View button that opens the existing original in
+a large responsive dialog without cropping. Close, Escape and backdrop dismiss
+it with focus return; loading/failure feedback keeps Close available. Viewing
+pauses playback without altering selection or unapplied edits, and closed
+dialogs release their image node. This uses the existing protected asset route
+locally/hosted and works with fake images/no keys. It calls no AI; new image
+generation keeps its existing provider setup/live gates and owner action.
+Generated-image desktop/phone and keyboard evidence is in the ticket.
+
+CL-201 adds Remove clip beside Retry clip for a canceled selection. It removes
+only session/recovery clip metadata, preserving source/exports and other work.
+The footer uses a labeled trash icon on phones. Selection/focus moves to an
+adjacent clip; removing the last returns to Add clips. Removal works without
+keys in fake or real mode and triggers no AI/native job. Any later explicit
+retry keeps its existing local speech/Codex setup and live gates. Synthetic
+batch/API/recovery and responsive browser evidence is in the ticket.
+
+CL-198–200 reuse the prepared preview composition in visible desktop portrait
+rail cards and animate selection into the editor. Compact phone/tablet navigation
+and readiness/dirty guards remain. Rename updates private clip metadata and safe
+download filenames without changing overlay revisions or regenerating media.
+Local desktop timestamp exchange exports all retained review pages and imports
+validated, matching-source ranges into manual rows with AI suggestions off.
+Import JSON is beside Add clip; Export Timestamps is opposite Suggestions.
+Android/iOS, phone layouts and hosted surfaces omit both file controls. Import
+retains the ten-manual-row limit and never submits processing. These features
+work with fake inputs/no keys; later real preparation still needs the selected
+provider's normal speech/sign-in/allowance and live approvals. Focused fake and
+generated-media browser evidence lives in the three tickets.
+
 CL-145 removes Sator from new sound selection while keeping saved audio playable.
 The body video is prepared with a hidden/frozen one-second Remotion premount,
 so the Hook ends with a normal hard cut into an already decoded video element.
@@ -245,6 +307,22 @@ within loaded source bounds and changes only that field. Capture is unavailable
 while loading, seeking, failed or busy and never starts analysis/processing.
 Both features work with fake AI and no API keys.
 The permanent rule is documented in repository AGENTS.md (CL-045).
+
+CL-207 makes inline Capture mandatory for every editable Start/End timestamp
+with a usable nearby preview. Analysis Start/End reuse the source clock and
+original-source offset. Zoom Start and Motion End use the settled presentation
+frame mapped to their Hook/body occurrence; Motion's exclusive End includes the
+current frame. Invalid bounds/order/overlap and unready media leave the endpoint
+unchanged. Other fields, processing and saved edits change only through their
+existing explicit actions. Derived/read-only times, duration controls and intake
+without playable media are distinct. These field tools need no API key/model;
+new real AI preparation retains its existing provider/live approval gates.
+
+CL-208 defaults a new manual Motion interval to the current camera position's
+end instead of five seconds after the playhead. Start remains captured; source
+camera boundaries map once into Hook/body time and stop at that occurrence's
+end or the existing thirty-second pass bound. Same-person camera positions stay
+distinct. End typing/Capture and saved paths retain their existing behavior.
 
 See the [local workflow guide](../../../../../docs/operations/LOCAL_WORKFLOW.md).
 The editor view uses its actual workflow content container height to size the

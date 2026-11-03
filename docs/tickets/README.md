@@ -1,5 +1,131 @@
 # ClipBuilder canonical ticket index
 
+## Local commit handoff — 2026-11-03
+
+The owner authorized a file-level plan and multiple local commits for CL-197–208;
+the [allocation and execution record](../operations/CL197_208_COMMIT_PLAN.md)
+owns the grouping. This later Git instruction supersedes earlier unstaged/no-Git
+handoff notes for this series only. Personal review is pending for 2026-11-04.
+Reuse the recorded synthetic/fake checks; no new live processing or push is part
+of this handoff.
+
+## Motion defaults to the current camera position — 2026-11-03
+
+[CL-208](CL-208-motion-default-camera-end.md) replaces the five-second manual
+Motion default with the current camera position's end, preserving occurrence
+clocks and existing per-pass bounds. Locally verified through eighteen synthetic
+desktop/phone boundary cases, Capture/Zoom regressions and scoped static checks.
+Final validate has no actionable findings. No real AI or Git mutation; owner
+visual/device and hosted release acceptance remain open.
+
+## Capture every editable preview timestamp — 2026-11-03
+
+[CL-207](CL-207-capture-every-editable-timestamp.md) audits Start/End inputs,
+adds missing Analysis range/Zoom Start/Motion End capture, and records the
+standing rule for future timestamp controls. Locally verified with 32 existing
+cases and synthetic source/editor browser checks, including offsets, overlap,
+keyboard and desktop/phone layout. Final validate has no actionable findings.
+No real AI or Git action; owner visual/device and release acceptance remain open.
+
+## Numbered Motion previews and track all speakers — 2026-11-03
+
+[CL-206](CL-206-numbered-motion-previews-and-track-all-speakers.md) keeps numbered
+source context in Zoom/Motion and adds explicit local bulk head tracking for the
+current clip, preserving existing Motion/Zoom and Apply/Discard. Locally verified
+with 104 fake cases, generated desktop/phone/32-second browser tracking, manual
+Zoom regression and ninety native pixel comparisons. Continuous chunk links
+survive save/recovery; final validate has no actionable findings. Normal Codex
+worker refreshed, all nine owner clip hashes unchanged. No real AI or Git action;
+personal real-head/visual and hosted/Linux acceptance remain open.
+
+## Stable automatic person reuse — 2026-11-03
+
+[CL-205](CL-205-stable-automatic-person-reuse.md) strengthens the existing
+planner's clip-wide person roster and reconciles supported speaker aliases and
+strong geometric continuations, preserving initial framing and manual Motion.
+Locally verified with 174 focused fake cases and scoped static checks; final
+validate has no actionable findings. Normal Codex worker rebuilt, all nine owner
+clip hashes unchanged. No real AI call, saved clip migration or Git mutation.
+Personal real-media identity/framing and hosted/Linux/release acceptance open.
+
+## Word pop and speaker highlight defaults — 2026-11-03
+
+[CL-204](CL-204-caption-word-pop-speaker-highlight-defaults.md) sets shared new
+caption defaults to TikTok, Word pop and speaker-colored animation highlights
+for Codex/Gemini, preserving explicit saved choices and unknown-speaker fallback.
+Locally verified: 150 focused fake cases, generated responsive and native speaker/
+Hook proofs and scoped static checks. Final validate: no actionable findings.
+Normal Codex worker rebuilt; all nine owner clips match before/after hashes.
+No real AI/configuration/Git action. Real speaker quality and owner visual/
+Linux/hosted/release acceptance remain open.
+
+## Manual head-follow Motion — 2026-11-03
+
+[CL-203](CL-203-manual-head-follow-camera-motion.md) researches and implements
+manual head seeding plus local classical tracking in a Motion tab beside Zoom.
+Implemented with no AI/model/provider call: bounded numeric paths feed preview,
+native export and recovery. The 109-case focused gate, three generated browser
+proofs, final Hook capture pass, 90 native pixel comparisons and scoped static
+checks pass; no actionable findings. All nine owner clips survived the verified
+worker rebuild unchanged. Personal real-head/visual and Linux/hosted acceptance
+remain open. Existing work is unstaged; no real AI/configuration/cloud action.
+
+## Large editor picture viewer — 2026-11-03
+
+[CL-202](CL-202-large-editor-image-dialog.md) adds a View action on each picture
+card, opening existing protected bytes in a large responsive modal. Viewing
+does not change edits or start AI/media processing. The generated browser proof
+covers original landscape/portrait assets, desktop/phone fit, loading/failure,
+Escape/backdrop/focus and preserved dirty edits; types/lint/format pass. Final
+validate: no actionable findings. Frontend only, no backend restart or real AI.
+Owner personal visual acceptance remains open; existing app/owner clips are preserved.
+
+## Remove canceled clips — 2026-11-03
+
+[CL-201](CL-201-remove-canceled-clips.md) adds Remove clip beside Retry clip in
+the selected canceled clip's footer. It removes session/recovery metadata only,
+preserving other clips and source/exports without processing or automatic retry.
+Locally implemented and validated: 63 fake batch/API cases, focused follow-up,
+generated desktop/phone browser states and scoped types/lint/format pass with no
+actionable findings. All nine owner clips survived the verified backend reload
+unchanged. No clip was removed/retried by the agent. Owner personal visual
+acceptance remains open; no Git/configuration, real AI, cloud or deployment action.
+
+## Clip refinements implemented — 2026-11-03
+
+After owner cancellation, CL-198 → CL-199 →
+[CL-200](CL-200-local-timestamp-json-exchange.md) completed local execute/validate
+loops with no actionable findings. Desktop portrait previews/entry motion,
+private clip names/download filenames and local desktop timestamp JSON exchange
+are implemented. Import populates manual rows without processing and retains
+the ten-row limit. The 114 combined fake cases, focused follow-ups, both generated
+browser proofs, strict types and scoped lint/format pass. The rebuilt normal app
+is healthy in Codex mode; all nine clips retain identical identities/assets/
+revisions/outputs, with five ready and four canceled. No work was retried or real
+AI called. Personal visual acceptance remains open. No Git/cloud/deployment or
+configuration changes.
+
+## Planned clip navigation and naming — 2026-11-03
+
+[CL-198](CL-198-desktop-portrait-clip-rail-and-editor-transition.md) implements desktop
+portrait clip cards with centered labels and a card-to-editor transition, keeping
+compact phone navigation. [CL-199](CL-199-clip-display-names-and-download-filenames.md)
+implements user clip names in the UI, recovery and downloaded MP4 filenames.
+The earlier planning hold was lifted after owner cancellation; evidence and
+remaining owner-only checks are in each ticket. Browser reconnection is distinct
+from backend restart: interrupted jobs require explicit retry, never automatic
+paid resumption.
+
+## Saved-video validation reuse — 2026-11-03
+
+[CL-197](CL-197-reuse-saved-source-validation.md) reuses completed validation for
+unchanged saved masters after fresh checksum and copy-integrity checks, avoiding
+full-video decode on reopening. Existing records work after restart; new downloads
+and replacement files retain native validation. All 34 focused fake checks, the
+generated native proof, scoped types/lint/format and app readiness pass. Final
+validate: no actionable findings. No real AI/download or owner-media test was
+run; actual reopen timing and the owner's Find all retry remain unchecked.
+
 ## Local speech output repair — 2026-11-02
 
 [CL-196](CL-196-local-speech-console-output.md) repairs the 64-KiB console-capture

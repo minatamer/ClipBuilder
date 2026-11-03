@@ -1,5 +1,47 @@
 # Local editing in ClipBuilder
 
+For manual head following (CL-203), select a person's camera in Focus, choose
+Motion beside Zoom, pause at the start and Add at playhead. Draw around the head
+or refine its box numerically, set End and press Track head in the footer. This
+is one local pixel-tracking pass over up to thirty seconds, with Cancel and no
+API key/model/provider call. Preview motion, then Apply changes; Discard keeps
+the prior saved edit. Adjust/Remove stay in Motion. Add another interval when
+needed, keeping it separate from timed Zoom. If tracking loses the head it keeps
+safe coverage and reports where it stopped; reselect explicitly to continue.
+Paths are saved/recovered and reused for export without tracking again. Existing
+clip preparation and export keep their normal setup/live/render gates. Verification
+used generated pixels, not the owner's real clips or AI calls.
+
+Canceled clips offer Remove clip beside Retry clip in the footer (a labeled
+trash icon on phones). Removal clears that clip from the session/recovery list
+without retrying work or deleting saved source/exports; other clips remain.
+The next/previous clip becomes selected, or the empty list returns to Add clips.
+This CL-201 action needs no keys and makes no AI/native call in fake or real
+mode. New explicit processing keeps the normal speech/Codex prerequisites.
+
+CL-198–200 add desktop portrait rail previews with a clip-to-editor transition,
+Rename for clip labels/download filenames, and reusable timestamp JSON. On local
+desktop, Export Timestamps sits opposite Suggestions; Import JSON sits beside
+Add clip in Manual clips. Open the same saved source before importing. Valid
+files fill manual rows without running Find AI Clips or starting processing;
+malformed/wrong-source files preserve current inputs. Exact duplicates collapse,
+and the existing ten-row manual limit still applies. Android/iOS, phone layouts
+and hosted surfaces omit timestamp exchange. Previews, naming and file transfer
+work without API keys in fake or real local mode. New clip preparation retains
+normal speech/Codex setup and live gates; import does not eliminate that later
+work. Rename preserves prepared edits and existing output bytes. Recovery keeps
+acknowledged clips under the existing two-hour policy; canceled work needs an
+explicit retry. Verification used generated media/fake ports, not owner AI calls.
+
+CL-197 reopens an unchanged saved source using its completed validation record.
+Fresh checksum/byte-count checks and a checksum-verified workspace copy remain;
+the recorded measured clocks and source ranges are reused without decoding the
+whole video again. This also works after restart with existing saved records.
+Changed/missing files still reject, and new downloads or replacement/locate
+actions retain full native validation. Opening uses disk/CPU for integrity and
+copying but makes no download, transcription or AI call. Tests use only fake or
+generated media without keys; owner real analysis remains a separate action.
+
 CL-196 reads local speech results from the bounded transcript JSON file and
 ignores duplicate console word output. ASR/model/timestamp settings are unchanged.
 If analysis fails before any section finishes, review says Analysis failed;
@@ -10,8 +52,8 @@ later Codex inference uses the existing ChatGPT login/allowance and live gates.
 
 CL-194 removes overall acquisition transfer/preparation timeouts only for trusted
 local Codex. The app allows advancing work to finish, stops genuine stalls and
-still fully validates the selected master. Opening a saved local Codex master
-also waits for native progress without an overall HTTP header/request cutoff;
+still fully validates a newly acquired master. Opening a saved local Codex master
+uses CL-197 validation reuse without an overall HTTP header/request cutoff;
 explicit cancellation and actual stall detection still apply. HE-AAC core/output rates and packet
 rounding are checked without converting audio/video. Metadata, actual disk and
 network safety controls remain; Gemini/hosted budgets are unchanged. This needs

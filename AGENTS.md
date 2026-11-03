@@ -131,6 +131,14 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   concise labels and actionable errors. Do not add tutorial/implementation prose,
   provider-call counters or redundant success messages to control flows. Inspect
   footer visibility and responsive states whenever adding or moving an action.
+- Permanent owner timestamp rule (2026-11-03, CL-207): every editable Start/End
+  timestamp with a usable nearby preview has an inline Capture action. Use the
+  actual settled preview clock, map source/original/Hook/body offsets once, and
+  change only that endpoint. Preserve readiness, bounds, ordering and existing
+  edits; invalid/busy/seeking/failed capture cannot overwrite it or start work.
+  Read-only/derived times, duration controls and acquisition without playable
+  media are distinct. Audit this rule whenever adding timestamp inputs. The
+  source of truth owns product semantics; ticket packets own produced evidence.
 - Permanent owner view rule (2026-10-23, CL-048): successive form/result stages
   replace the current content slot through mutually exclusive views or tabs;
   never append another complete workflow below the input form and force scrolling.
