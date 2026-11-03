@@ -1,4 +1,10 @@
 import { AnalysisCoverageStatus } from "./analysis-coverage-status";
+import { useTimestampExchange } from "./use-timestamp-exchange";
+import {
+  exportOwnerTimestamps,
+  importOwnerTimestamps,
+  OWNER_TIMESTAMP_FILE_BYTES,
+} from "../../../../../packages/contracts/local/timestamp-exchange.ts";
 import { OWNER_COLLECTION_PAGE_ITEMS as REVIEW_PAGE_ITEMS } from "../../../../../packages/contracts/local/collection-pages.ts";
 import { readOwnerAnalysis } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
@@ -101,6 +107,13 @@ export function OwnerSelectionPanel({
   const clipLimit =
     demoLimit ?? (expanded ? Number.MAX_SAFE_INTEGER : OWNER_LIMITS.clips);
   const local = capabilities.localMedia;
+  const {
+    enabled: timestampExchange,
+    reader: timestampReaderRef,
+    url: timestampUrlRef,
+  } = useTimestampExchange(local);
+  const timestampInput = useRef<HTMLInputElement>(null);
+  const timestampReadingRef = useRef(false);
   const originalOffset = workspace.source.origin?.startMs ?? 0;
   const availableSource = ownerAvailableSourceWindow(workspace.source);
   const [windowed, setWindowed] = useState(false);
@@ -239,6 +252,10 @@ export function OwnerSelectionPanel({
     })();
     return () => {
       mounted.current = false;
+      if (timestampReadingRef.current) {
+        timestampReadingRef.current = false;
+        onBusy(false);
+      }
       controller.abort();
       pending.current?.abort();
     };
@@ -256,6 +273,115 @@ export function OwnerSelectionPanel({
     setSelected([]);
     onChoose([]);
     setMessage("");
+  }
+  function captureAnalysis(field: "start" | "end") {
+    if (busy || analyzing || !previewReady) return;
+    const time = onCaptureTime();
+    if (time === null) {
+      setMessage("Wait for the source preview to finish seeking.");
+      return;
+    }
+    try {
+      const captured = { text: time };
+      ownerAnalysisWindow(workspace.source, {
+        startMs: fieldMilliseconds(
+          field === "start" ? captured : windowStart,
+          originalOffset,
+        ),
+        endMs: fieldMilliseconds(
+          field === "end" ? captured : windowEnd,
+          originalOffset,
+        ),
+      });
+      changed();
+      (field === "start" ? setWindowStart : setWindowEnd)(captured);
+    } catch {
+      setMessage(
+        "Choose a preview time inside the available analysis range, leaving at least one second between Start and End.",
+      );
+    }
+  }
+  function exportTimestamps() {
+    if (!timestampExchange || !analysis || busy) return;
+    try {
+      const moments = [...analysis.manual, ...analysis.suggestions].filter(
+        (moment) => selected.includes(moment.id),
+      );
+      const text = exportOwnerTimestamps(
+        workspace.source,
+        moments.map((moment) => moment.cut),
+      );
+      if (timestampUrlRef.current) URL.revokeObjectURL(timestampUrlRef.current);
+      const url = URL.createObjectURL(
+        new Blob([text], { type: "application/json" }),
+      );
+      timestampUrlRef.current = url;
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "clipbuilder-timestamps.json";
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch {
+      setMessage("Couldn’t export timestamps. Keep fewer clips in this file.");
+    }
+  }
+  function importTimestamps(file: File) {
+    if (!timestampExchange || busy) return;
+    if (file.size > OWNER_TIMESTAMP_FILE_BYTES) {
+      setMessage("Choose a timestamps JSON file smaller than 1 MiB.");
+      return;
+    }
+    timestampReaderRef.current?.abort();
+    const reader = new FileReader();
+    timestampReaderRef.current = reader;
+    timestampReadingRef.current = true;
+    onBusy(true);
+    reader.onload = () => {
+      if (!mounted.current || timestampReaderRef.current !== reader) return;
+      try {
+        if (typeof reader.result !== "string") throw Error("timestamp_invalid");
+        const ranges = importOwnerTimestamps(reader.result, workspace.source);
+        changed();
+        setRows(
+          ranges.map((range) => ({
+            id: crypto.randomUUID(),
+            start: restoredTime(range.startMs, originalOffset, true),
+            end: restoredTime(range.endMs, originalOffset, true),
+          })),
+        );
+        setManualOnly(true);
+        setWindowed(false);
+        setTab("add");
+      } catch (error) {
+        setMessage(
+          error instanceof Error &&
+            error.message === "timestamp_source_mismatch"
+            ? "These timestamps belong to a different saved video. Open its matching source."
+            : error instanceof Error && error.message === "timestamp_row_limit"
+              ? "Import at most 10 timestamps into Manual clips at a time. No clips were changed."
+              : error instanceof Error &&
+                  error.message === "timestamp_range_invalid"
+                ? "Keep timestamps inside this video's available range and supported clip duration."
+                : "Choose a valid ClipBuilder timestamps JSON file.",
+        );
+      } finally {
+        timestampReadingRef.current = false;
+        if (mounted.current) onBusy(false);
+      }
+    };
+    reader.onerror = () => {
+      timestampReadingRef.current = false;
+      if (mounted.current) {
+        setMessage("Couldn’t read this timestamps file. Try again.");
+        onBusy(false);
+      }
+    };
+    reader.onabort = () => {
+      timestampReadingRef.current = false;
+      if (mounted.current) onBusy(false);
+    };
+    reader.readAsText(file);
   }
   function editTime(id: string, field: "start" | "end", text: string) {
     changed();
@@ -452,7 +578,22 @@ export function OwnerSelectionPanel({
     if (!retained.length) return null;
     return (
       <section aria-label={label}>
-        <h3>{label}</h3>
+        <div className="moment-section-heading">
+          <h3>{label}</h3>
+          {timestampExchange &&
+            (moments === analysis?.manual ||
+              !analysis?.manual.some((moment) =>
+                visibleMoments.has(moment.id),
+              )) && (
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={exportTimestamps}
+              >
+                Export Timestamps
+              </Button>
+            )}
+        </div>
         <ul className="moments">
           {retained.map(({ moment, number }) => (
             <li key={moment.id} className="moment-card">
@@ -633,32 +774,44 @@ export function OwnerSelectionPanel({
                 const value = field === "start" ? windowStart : windowEnd;
                 const set = field === "start" ? setWindowStart : setWindowEnd;
                 return (
-                  <label key={field}>
-                    {field === "start" ? "Start" : "End"}
-                    <input
-                      aria-label={`Analysis ${field}`}
-                      placeholder="HH:MM:SS"
-                      maxLength={32}
-                      value={value.text}
-                      onChange={(event) => {
-                        changed();
-                        set({ text: event.currentTarget.value });
-                      }}
-                      onBlur={() => {
-                        try {
-                          set(
-                            restoredTime(
-                              fieldMilliseconds(value, originalOffset),
-                              originalOffset,
-                              true,
-                            ),
-                          );
-                        } catch {
-                          /* Keep the invalid input for correction. */
-                        }
-                      }}
-                    />
-                  </label>
+                  <div className="range-time" key={field}>
+                    <label>
+                      {field === "start" ? "Start" : "End"}
+                      <input
+                        aria-label={`Analysis ${field}`}
+                        placeholder="HH:MM:SS"
+                        maxLength={32}
+                        value={value.text}
+                        onChange={(event) => {
+                          changed();
+                          set({ text: event.currentTarget.value });
+                        }}
+                        onBlur={() => {
+                          try {
+                            set(
+                              restoredTime(
+                                fieldMilliseconds(value, originalOffset),
+                                originalOffset,
+                                true,
+                              ),
+                            );
+                          } catch {
+                            /* Keep the invalid input for correction. */
+                          }
+                        }}
+                      />
+                    </label>
+                    <Button
+                      variant="quiet"
+                      icon={Clock3}
+                      aria-label={`Capture analysis ${field}`}
+                      title="Use current source preview time"
+                      disabled={busy || analyzing || !previewReady}
+                      onClick={() => captureAnalysis(field)}
+                    >
+                      Capture
+                    </Button>
+                  </div>
                 );
               })}
             </div>
@@ -715,53 +868,83 @@ export function OwnerSelectionPanel({
               <p id={`cut-${row.id}`}>{rounded(row)}</p>
             </div>
           ))}
-          <Button
-            variant="secondary"
-            disabled={!demoLimit && rows.length >= OWNER_LIMITS.ranges}
-            onClick={() => {
-              if (demoLimit && rows.length >= demoLimit) {
-                setLimitNotice((value) => value + 1);
-                return;
-              }
-              let bounds = availableSource;
-              try {
-                bounds = ownerAnalysisWindow(
-                  workspace.source,
-                  windowed
-                    ? {
-                        startMs: fieldMilliseconds(windowStart, originalOffset),
-                        endMs: fieldMilliseconds(windowEnd, originalOffset),
-                      }
-                    : undefined,
-                );
-              } catch {
-                setMessage("Choose a valid analysis range inside this video.");
-                return;
-              }
-              changed();
-              if (demoLimit && !manualOnly) {
-                const remaining = demoLimit - rows.length - 1;
-                if (Number(count) > remaining) {
-                  setCount(String(Math.max(1, remaining)));
+          <div className="manual-clip-actions">
+            <Button
+              variant="secondary"
+              disabled={!demoLimit && rows.length >= OWNER_LIMITS.ranges}
+              onClick={() => {
+                if (demoLimit && rows.length >= demoLimit) {
                   setLimitNotice((value) => value + 1);
+                  return;
                 }
-                if (!remaining) setManualOnly(true);
-              }
-              setRows((current) => [
-                ...current,
-                {
-                  id: crypto.randomUUID(),
-                  start: restoredTime(bounds.startMs, originalOffset),
-                  end: restoredTime(
-                    Math.min(bounds.startMs + 10_000, bounds.endMs),
-                    originalOffset,
-                  ),
-                },
-              ]);
-            }}
-          >
-            Add clip
-          </Button>
+                let bounds = availableSource;
+                try {
+                  bounds = ownerAnalysisWindow(
+                    workspace.source,
+                    windowed
+                      ? {
+                          startMs: fieldMilliseconds(
+                            windowStart,
+                            originalOffset,
+                          ),
+                          endMs: fieldMilliseconds(windowEnd, originalOffset),
+                        }
+                      : undefined,
+                  );
+                } catch {
+                  setMessage(
+                    "Choose a valid analysis range inside this video.",
+                  );
+                  return;
+                }
+                changed();
+                if (demoLimit && !manualOnly) {
+                  const remaining = demoLimit - rows.length - 1;
+                  if (Number(count) > remaining) {
+                    setCount(String(Math.max(1, remaining)));
+                    setLimitNotice((value) => value + 1);
+                  }
+                  if (!remaining) setManualOnly(true);
+                }
+                setRows((current) => [
+                  ...current,
+                  {
+                    id: crypto.randomUUID(),
+                    start: restoredTime(bounds.startMs, originalOffset),
+                    end: restoredTime(
+                      Math.min(bounds.startMs + 10_000, bounds.endMs),
+                      originalOffset,
+                    ),
+                  },
+                ]);
+              }}
+            >
+              Add clip
+            </Button>
+            {timestampExchange && (
+              <>
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => timestampInput.current?.click()}
+                >
+                  Import JSON
+                </Button>
+                <input
+                  ref={timestampInput}
+                  type="file"
+                  accept="application/json,.json"
+                  hidden
+                  aria-label="Import timestamps JSON"
+                  onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    event.currentTarget.value = "";
+                    if (file) importTimestamps(file);
+                  }}
+                />
+              </>
+            )}
+          </div>
         </fieldset>
         <fieldset disabled={busy}>
           <legend>AI moments</legend>
