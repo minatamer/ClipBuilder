@@ -62,14 +62,14 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
   const directory = await mkdtemp(join(tmpdir(), "clipbuilder-focus-browser-")),
     source = join(directory, "synthetic.mp4");
   const tools = await ownerNativeTools(resolve("."));
-  const focus = defaultOwnerFocus({ width: 1280, height: 720 }, 120);
+  const focus = defaultOwnerFocus({ width: 1280, height: 720 }, 420);
   focus.people = [
     {
       id: "person_1",
       observations: [
         {
           startFrame: 0,
-          endFrame: 120,
+          endFrame: 420,
           box: { x: 0.1, y: 0.1, width: 0.3, height: 0.7 },
         },
       ],
@@ -79,7 +79,7 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
       observations: [
         {
           startFrame: 0,
-          endFrame: 120,
+          endFrame: 420,
           box: { x: 0.6, y: 0.1, width: 0.3, height: 0.7 },
         },
       ],
@@ -105,7 +105,7 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
     {
       ...focus.shots[0]!,
       startFrame: 90,
-      endFrame: 120,
+      endFrame: 420,
       personId: "person_1",
       centerX: 0.6,
     },
@@ -113,7 +113,7 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
   focus.decisions = [
     {
       startFrame: 90,
-      endFrame: 120,
+      endFrame: 420,
       personId: null,
       speakerId: null,
       confidence: 0,
@@ -126,7 +126,7 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
     observations: [
       {
         startFrame: 0,
-        endFrame: 120,
+        endFrame: 420,
         box: { x: 0.4, y: 0.1, width: 0.2, height: 0.7 },
       },
     ],
@@ -140,10 +140,10 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
     sourceRevision: 0,
     fingerprint: "a".repeat(64),
     processingIdentity: "b".repeat(64),
-    cut: { startFrame: 0, endFrame: 120 },
+    cut: { startFrame: 0, endFrame: 420 },
     words: [],
-    hookSuggestion: { startFrame: 15, endFrame: 75 },
-    overlay: { version: 1, frames: 120, captions: [], visuals: [], focus },
+    hookSuggestion: { startFrame: 315, endFrame: 375 },
+    overlay: { version: 1, frames: 420, captions: [], visuals: [], focus },
   };
   const baseHash = createHash("sha256")
     .update(JSON.stringify(base))
@@ -167,7 +167,7 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
         id: "c".repeat(64),
         revision: 0,
         editRevision: 0,
-        frames: 120,
+        frames: 420,
         bytes: 1000,
       },
     ],
@@ -342,7 +342,7 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
         "-f",
         "lavfi",
         "-i",
-        "color=c=black:s=1080x1920:r=30:d=4,drawbox=x=0:y=656:w=540:h=608:color=red:t=fill,drawbox=x=540:y=656:w=540:h=608:color=blue:t=fill",
+        "color=c=black:s=1080x1920:r=30:d=14,drawbox=x=0:y=656:w=540:h=608:color=red:t=fill,drawbox=x=540:y=656:w=540:h=608:color=blue:t=fill",
         "-c:v",
         "libx264",
         "-pix_fmt",
@@ -463,7 +463,7 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
           [...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Hook').click();
           await wait(()=>button('Use suggestion')&&!button('Use suggestion').disabled,'suggestion_ready');
           if(named('Hook start seconds')||button('Apply changes'))throw new Error('suggestion_auto_applied');
-          const card=document.querySelector('[aria-label="Simulated AI hook suggestion"]');if(!card?.textContent.includes('0.50s – 2.50s')||!card.querySelector('svg'))throw new Error('suggestion_badge');
+          const card=document.querySelector('[aria-label="Simulated AI hook suggestion"]');if(!card?.textContent.includes('10.50s – 12.50s')||!card.querySelector('svg'))throw new Error('suggestion_badge');
           if(value==='playing'){named('Play video').click();await wait(()=>named('Pause video')&&sourceVideo().currentTime>.2,'suggestion_playing');}
           const use=button('Use suggestion');use.scrollIntoView({block:'center'});use.focus();await new Promise(requestAnimationFrame);const r=use.getBoundingClientRect(),f=document.querySelector('footer').getBoundingClientRect();
           if(r.width<44||r.height<44||r.left<0||r.right>innerWidth+1||r.bottom>f.top+1)throw new Error('suggestion_touch_geometry');
@@ -471,27 +471,29 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
         }
         if(action==='hook-suggestion-check'){
           await wait(()=>named('Hook start seconds')&&button('Apply changes'),'suggestion_draft');
-          if(Number(named('Hook start seconds').value)!==.5||Number(named('Hook end seconds').value)!==2.5||!button('Use suggestion').disabled||named('Pause video'))throw new Error('suggestion_range');
+          if(Number(named('Hook start seconds').value)!==10.5||Number(named('Hook end seconds').value)!==12.5||!button('Use suggestion').disabled||named('Pause video'))throw new Error('suggestion_range');
           const before=await fetch('/seed').then(r=>r.json());if(before.edit?.hook)throw new Error('suggestion_saved_early');
           if(value==='apply'){
             button('Apply changes').click();await wait(()=>!button('Apply changes')&&!button('Remove hook').matches(':disabled'),'suggestion_saved');
-            const saved=await fetch('/seed').then(r=>r.json());if(saved.edit?.hook?.startFrame!==15||saved.edit?.hook?.endFrame!==75||saved.base.hookSuggestion.startFrame!==15)throw new Error('suggestion_not_saved');
+            const saved=await fetch('/seed').then(r=>r.json());if(saved.edit?.hook?.startFrame!==315||saved.edit?.hook?.endFrame!==375||saved.base.hookSuggestion.startFrame!==315)throw new Error('suggestion_not_saved');
             let toggles=0,seeks=0,crossed=false,lastTime=-1,preparedBody=null,readyBeforeCut=false;
             const controls=document.querySelector('.picture-timing'),observer=new MutationObserver(changes=>{toggles+=changes.filter(change=>change.attributeName==='disabled').length;});
             observer.observe(controls,{attributes:true,subtree:true,attributeFilter:['disabled']});
             const seeking=()=>seeks++;document.querySelector('.editor-preview').addEventListener('seeking',seeking,true);
             button('Preview hook').click();
-            for(let tick=0;tick<260;tick++){const time=sourceVideo()?.currentTime??-1;if(!crossed&&time>2&&time<2.5){preparedBody=document.querySelector('.editor-preview video[data-editor-video="body"]');readyBeforeCut=!!preparedBody&&preparedBody.readyState>=2&&!preparedBody.seeking&&preparedBody.paused&&preparedBody.currentTime<1/30;}if(lastTime>2&&time>=0&&time<.5)crossed=true;lastTime=time;await new Promise(r=>setTimeout(r,12));}
+            // The seek/decode to 10.5 s precedes the two-second prefix. Observe
+            // the transition rather than charging that preparation to playback.
+            for(let tick=0;tick<650&&!crossed;tick++){const time=sourceVideo()?.currentTime??-1;if(time>12&&time<12.5){preparedBody=document.querySelector('.editor-preview video[data-editor-video="body"]');readyBeforeCut=!!preparedBody&&preparedBody.readyState>=2&&!preparedBody.seeking&&preparedBody.paused&&preparedBody.currentTime<1/30;}if(lastTime>12&&time>=0&&time<.5)crossed=true;lastTime=time;await new Promise(r=>setTimeout(r,12));}
             observer.disconnect();document.querySelector('.editor-preview').removeEventListener('seeking',seeking,true);named('Pause video')?.click();
             if(!crossed||toggles>4)throw new Error('hook_boundary_'+JSON.stringify({toggles,seeks,crossed}));
             if(!readyBeforeCut||sourceVideo()!==preparedBody)throw new Error('hook_body_cold_mount_'+JSON.stringify({readyBeforeCut,reusedPreparedBody:sourceVideo()===preparedBody,connected:preparedBody?.isConnected,videos:[...document.querySelectorAll('.editor-preview video')].map(n=>({part:n.dataset.editorVideo,active:n.dataset.editorActive,time:n.currentTime,ready:n.readyState,paused:n.paused}))}));
-            if(Number(named('Hook start seconds').value)!==.5||Number(named('Hook end seconds').value)!==2.5||button('Apply changes'))throw new Error('playback_changed_hook');
+            if(Number(named('Hook start seconds').value)!==10.5||Number(named('Hook end seconds').value)!==12.5||button('Apply changes'))throw new Error('playback_changed_hook');
             await new Promise(requestAnimationFrame);
-            await wait(()=>sourceVideo().readyState>=2&&!sourceVideo().seeking&&!named('Capture hook end').matches(':disabled'),'body_capture_ready');
+            [...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Focus').click();await wait(()=>document.querySelector('.focus-editor'));await tab('Advanced');await change('Time (s)','11');await frameReady();[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Hook').click();await wait(()=>named('Capture hook end'),'hook_controls_rebound');await wait(()=>sourceVideo().readyState>=2&&!sourceVideo().seeking&&!named('Capture hook end').matches(':disabled'),'body_capture_ready');
             named('Capture hook end').click();const bodyTime=sourceVideo().currentTime;await wait(()=>button('Apply changes'),'body_captured');
             if(named('Pause video')||Math.abs(Number(named('Hook end seconds').value)-(bodyTime+1/30))>1.1/30)throw new Error('body_capture_clock');
             button('Discard changes').click();await wait(()=>!button('Apply changes')&&!button('Preview hook').matches(':disabled'),'body_capture_discard');
-            button('Preview hook').click();await new Promise(requestAnimationFrame);await wait(()=>sourceVideo().readyState>=2&&!sourceVideo().seeking&&sourceVideo().currentTime>.8&&sourceVideo().currentTime<1.3&&!named('Capture hook start').matches(':disabled'),'prefix_capture_ready');
+            button('Preview hook').click();await new Promise(requestAnimationFrame);await wait(()=>sourceVideo().readyState>=2&&!sourceVideo().seeking&&sourceVideo().currentTime>10.8&&sourceVideo().currentTime<11.3&&!named('Capture hook start').matches(':disabled'),'prefix_capture_ready');
             named('Capture hook start').click();const prefixTime=sourceVideo().currentTime;await wait(()=>button('Apply changes'),'prefix_captured');
             if(named('Pause video')||Math.abs(Number(named('Hook start seconds').value)-prefixTime)>1.1/30)throw new Error('prefix_capture_clock');
             button('Discard changes').click();await wait(()=>!button('Apply changes')&&!button('Remove hook').matches(':disabled'),'prefix_capture_discard');
@@ -556,14 +558,14 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
         if(action==='settle')return settle();
         if(action==='key'){const n=document.querySelector('.focus-person-handle[aria-pressed="true"]');n.focus();n.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));await new Promise(r=>setTimeout(r,40));return;}
         if(action==='navigation'){for(const name of ['People','Advanced','Camera'])await tab(name);await tab('People');person(3).click();await new Promise(requestAnimationFrame);return !button('Apply changes')&&document.querySelector('.focus-context').textContent.includes('Not used')&&!document.querySelector('input[aria-label*="appearance"]')&&![...document.querySelectorAll('.focus-editor label')].some(n=>/Appears|Leaves|Appearance/.test(n.textContent));}
-        if(action==='advanced'){await tab('Camera');const basic=!field('Zoom').getClientRects().length&&!field('Horizontal (%)').getClientRects().length;await tab('Advanced');return !document.querySelector('.focus-context').textContent.includes('Not used')&&basic&&field('Zoom').getClientRects().length>0&&document.querySelectorAll('[aria-label="Focus controls"] [role="tab"]').length===2&&field('Zoom').closest('[id$="camera-panel"]')!==null;}
+        if(action==='advanced'){await tab('Camera');const basic=!field('Zoom').getClientRects().length&&!field('Horizontal (%)').getClientRects().length;await tab('Advanced');return !document.querySelector('.focus-context').textContent.includes('Not used')&&basic&&field('Zoom').getClientRects().length>0&&document.querySelectorAll('[aria-label="Focus controls"] [role="tab"]').length===4&&field('Zoom').closest('[id$="camera-panel"]')!==null;}
         if(action==='pending')return document.querySelector('.focus-editor').disabled;
         if(action==='invalid'){await change('Zoom','0.5');const blocked=button('Apply changes').disabled&&!!document.querySelector('[role="alert"]');await change('Zoom','1.5');return blocked;}
         if(action==='failed')return wait(()=>[...document.querySelectorAll('[role="status"]')].some(n=>n.textContent.includes('Couldn’t save')),'save-failure');
         if(action==='removal'){await tab('People');person(4).click();await new Promise(requestAnimationFrame);named('Remove Person 2').click();await wait(()=>!person(2));if(!person(4)||person(4).getAttribute('aria-pressed')!=='true')throw new Error('remove_selection_regression');button('Discard changes').click();await settle();await wait(()=>person(2)&&person(4));person(4).click();await new Promise(requestAnimationFrame);await wait(()=>document.querySelector('footer').getBoundingClientRect().height>0,'removal-footer');const n=named('Remove Person 4');n.scrollIntoView({block:'center'});const r=n.getBoundingClientRect(),row=n.closest('.focus-person-row'),footer=document.querySelector('footer').getBoundingClientRect();const fit=r.width>=44&&r.height>=44&&r.bottom<=footer.top+1&&row.scrollWidth<=row.clientWidth+1;n.click();await wait(()=>!person(4));if(!fit)throw new Error('remove_layout_'+JSON.stringify({width:r.width,height:r.height,bottom:r.bottom,footer:footer.top,rowWidth:row.scrollWidth,client:row.clientWidth}));return !!person(2)&&!!person(3);}
-        if(action==='keyboard'){const camera=[...document.querySelectorAll('[aria-label="Focus controls"] [role="tab"]')][0];camera.focus();camera.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));await new Promise(requestAnimationFrame);if(document.activeElement.textContent!=='People')return false;await tab('Camera');const timing=[...document.querySelectorAll('[aria-label="Camera controls"] [role="tab"]')][0];timing.focus();timing.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));await new Promise(requestAnimationFrame);return document.activeElement.textContent==='Advanced';}
+        if(action==='keyboard'){const camera=[...document.querySelectorAll('[aria-label="Focus controls"] [role="tab"]')][0];camera.focus();camera.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));await new Promise(requestAnimationFrame);if(document.activeElement.textContent!=='Motion')return false;await tab('Camera');const timing=[...document.querySelectorAll('[aria-label="Camera controls"] [role="tab"]')][0];timing.focus();timing.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));await new Promise(requestAnimationFrame);return document.activeElement.textContent==='Advanced';}
         if(action==='layout'){const panel=document.querySelector('[role="tabpanel"][id$="'+value.toLowerCase()+'-panel"]');panel.scrollIntoView({block:'start'});return globalThis.focusUiState();}
-        if(action==='positions'){const n=named('Person position'),choices=[...n.options].map(o=>o.value);await change('Position',choices[2]);await wait(()=>globalThis.focusUiState().selected===3);const lastLocked=named('Capture camera end').disabled;await change('Position',choices[1]);await wait(()=>globalThis.focusUiState().selected===2);await frameReady();return lastLocked&&!button('Apply changes');} if(action==='scrubber'){const n=[...document.querySelectorAll('.editor-preview div')].filter(n=>n.style.touchAction==='none'&&n.style.paddingTop==='4px'&&n.getClientRects().length).sort((a,b)=>b.getBoundingClientRect().width-a.getBoundingClientRect().width)[0];if(!n)throw new Error('missing_playback_scrubber');n.scrollIntoView({block:'center'});const r=n.getBoundingClientRect();return {x:r.left+1,y:r.top+r.height/2,targetX:r.left+r.width*39/119};} if(action==='scrub-start'){await wait(()=>Number(field('Time (s)').value)<=.067,'slider-start');return;} if(action==='scrub-frame'){await wait(()=>Number(field('Time (s)').value)>1&&Number(field('Time (s)').value)<2);await frameReady();return Math.round(Number(field('Time (s)').value)*30);} if(action==='active-person')return document.querySelector('.focus-person-select[aria-pressed=true]')?.textContent; if(action==='zoom')return Number(field('Zoom').value); if(action==='scroll-capture'){named('Capture camera start').scrollIntoView({block:'center'});return;} if(action==='no-appearance')return !document.querySelector('.focus-editor').textContent.match(/appearance|Appears at|Leaves at/i);
+        if(action==='positions'){const n=named('Person position'),choices=[...n.options].map(o=>o.value);await change('Position',choices[2]);await wait(()=>globalThis.focusUiState().selected===3);const lastLocked=named('Capture camera end').disabled;await change('Position',choices[1]);await wait(()=>globalThis.focusUiState().selected===2);await frameReady();return lastLocked&&!button('Apply changes');} if(action==='scrubber'){const n=[...document.querySelectorAll('.editor-preview div')].filter(n=>n.style.touchAction==='none'&&n.style.paddingTop==='4px'&&n.getClientRects().length).sort((a,b)=>b.getBoundingClientRect().width-a.getBoundingClientRect().width)[0];if(!n)throw new Error('missing_playback_scrubber');n.scrollIntoView({block:'center'});const r=n.getBoundingClientRect();return {x:r.left+1,y:r.top+r.height/2,targetX:r.left+r.width*39/419};} if(action==='scrub-start'){await wait(()=>Number(field('Time (s)').value)<=.067,'slider-start');return;} if(action==='scrub-frame'){await wait(()=>Number(field('Time (s)').value)>1&&Number(field('Time (s)').value)<2);await frameReady();return Math.round(Number(field('Time (s)').value)*30);} if(action==='active-person')return document.querySelector('.focus-person-select[aria-pressed=true]')?.textContent; if(action==='zoom')return Number(field('Zoom').value); if(action==='scroll-capture'){named('Capture camera start').scrollIntoView({block:'center'});return;} if(action==='no-appearance')return !document.querySelector('.focus-editor').textContent.match(/appearance|Appears at|Leaves at/i);
         if(action==='capture-guards'){const video=sourceVideo();const locked=named('Capture camera start').disabled;Object.defineProperty(video,'seeking',{configurable:true,value:true});video.dispatchEvent(new Event('seeking'));await wait(()=>named('Capture camera end').disabled);delete video.seeking;video.dispatchEvent(new Event('seeked'));await frameReady();named('Capture camera end').click();await wait(()=>document.querySelector('.local-error')?.textContent.includes('neighboring'));return locked&&!button('Apply changes');} if(action==='preview-error'){sourceVideo().dispatchEvent(new Event('error',{bubbles:true}));await wait(()=>named('Retry preview'),'preview-error');const blocked=named('Capture camera end').disabled;named('Retry preview').click();await frameReady();return blocked;} if(action==='crop'){const v=sourceVideo().getBoundingClientRect(),c=document.querySelector('.editor-preview').getBoundingClientRect(),n=document.querySelector('.focus-person-handle[aria-pressed=true]'),style=getComputedStyle(n);return {x:(c.left-v.left)*1080/v.width,y:(c.top-v.top)*1920/v.height,width:c.width*1080/v.width,height:c.height*1920/v.height,handleFrame:style.boxShadow==='none'&&style.borderTopWidth==='0px'};} if(action==='cancel'){document.querySelector('.focus-person-handle[aria-pressed="true"]').dispatchEvent(new PointerEvent('pointercancel',{pointerId:1,bubbles:true}));return;}
         throw new Error('unknown_action_'+action);
       };

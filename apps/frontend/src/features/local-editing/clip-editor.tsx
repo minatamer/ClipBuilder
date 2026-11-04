@@ -1,5 +1,4 @@
 import {
-  ownerCameraCropAt,
   ownerCameraEffectsSchema,
   ownerCameraEffectsFit,
 } from "../../../../../packages/contracts/local/camera-motion.ts";
@@ -21,6 +20,7 @@ import {
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { ControlTabs } from "./control-tabs.tsx";
 import { FocusPreviewControls } from "./focus-preview-controls.tsx";
+import { CameraPreviewVideo } from "./camera-preview-video.tsx";
 import { PictureTiming } from "./picture-timing.tsx";
 import { PictureImageDialog } from "./picture-image-dialog";
 import {
@@ -81,7 +81,6 @@ import {
 import { Player, type PlayerRef } from "@remotion/player";
 import {
   AbsoluteFill,
-  Html5Video,
   Img,
   Sequence,
   useCurrentFrame,
@@ -350,20 +349,6 @@ export function Review({
   const { fps } = useVideoConfig();
   const frame = ownerSourceFrame(overlay, presentationFrame);
   const caption = overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean;
-  const crop = overlay.focus
-    ? ownerCameraCropAt(
-        overlay.focus,
-        overlay.cameraEffects ?? [],
-        frame,
-        overlay.hook && presentationFrame < ownerHookFrames(overlay)
-          ? "hook"
-          : "body",
-        overlay.hook && presentationFrame < ownerHookFrames(overlay)
-          ? presentationFrame
-          : frame,
-        overlay.cameraTracks ?? [],
-      )
-    : null;
   return (
     <AbsoluteFill style={{ backgroundColor: "#101215" }}>
       <OwnerVideoLookLayer look={overlay.videoLook}>
@@ -371,7 +356,7 @@ export function Review({
           ...(overlay.hook
             ? [
                 {
-                  kind: "hook",
+                  kind: "hook" as const,
                   from: 0,
                   duration: ownerHookFrames(overlay),
                   start: overlay.hook.startFrame,
@@ -380,7 +365,7 @@ export function Review({
               ]
             : []),
           {
-            kind: "body",
+            kind: "body" as const,
             from: ownerHookFrames(overlay),
             duration: overlay.frames,
             start: 0,
@@ -393,39 +378,23 @@ export function Review({
             durationInFrames={part.duration}
             premountFor={fps}
           >
-            <Html5Video
-              data-editor-video={part.kind}
-              data-editor-active={
+            <CameraPreviewVideo
+              kind={part.kind}
+              active={
                 part.kind ===
                 (overlay.hook && presentationFrame < ownerHookFrames(overlay)
                   ? "hook"
                   : "body")
               }
-              src={sourceUrl}
-              preload="auto"
+              sourceUrl={sourceUrl}
               volume={silent ? 0 : (overlay.audio?.originalVolume ?? 100) / 100}
-              trimBefore={part.start}
-              trimAfter={part.end}
-              style={
-                crop
-                  ? {
-                      position: "absolute",
-                      width: (1080 * 1080) / crop.width,
-                      height: (1920 * 1920) / crop.height,
-                      maxWidth: "none",
-                      left: (-crop.x * 1080) / crop.width,
-                      top: (-crop.y * 1920) / crop.height,
-                    }
-                  : { width: "100%", height: "100%", objectFit: "contain" }
-              }
-              pauseWhenBuffering
-              onLoadedData={onPreviewReady}
-              onErrorCapture={(event) => {
-                // Next treats Remotion's native-error console log as a page error too.
-                event.stopPropagation();
-                onPlaybackError();
-              }}
-              onError={onPlaybackError}
+              start={part.start}
+              end={part.end}
+              focus={overlay.focus}
+              effects={overlay.cameraEffects}
+              tracks={overlay.cameraTracks}
+              onPreviewReady={onPreviewReady}
+              onPlaybackError={onPlaybackError}
             />
           </Sequence>
         ))}
