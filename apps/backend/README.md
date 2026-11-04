@@ -1,5 +1,56 @@
 # ClipBuilder backend
 
+CL-216's fresh provider preparations can add conditional speaker-follow during
+the existing clip-preview operation, using already planned focus and local
+prepared pixels. Valid numeric paths attach only to the initial edit; the base
+and AI plan/image counts remain unchanged. Reopen, restore, export and existing
+prepared clips do not start this pass. Synthetic/fake composition skips automatic
+tracking; tests use injected no-key transports and generated native inputs.
+Untrackable optional Motion preserves a usable baseline without a provider retry.
+Local Codex/hosted Gemini and all real-provider/live/approval gates remain.
+
+Local Codex **Find all** (CL-211) completes admissible speech boundaries and
+reconciles new results into a chronological, non-overlapping set. It preserves
+original selected speech ahead of added context, retains whole alternatives
+when expansion conflicts, and never trims one moment merely to fit another.
+Sentence/pause units, one dependent utterance and nearby questions guide bounded
+completion; semantic quality still requires owner review. Parakeet, saved
+analyses and numeric/manual/Gemini/hosted behavior remain unchanged. Two-minute
+reviews use up to the requested clip maximum before and after the core, with a
+fifteen-second minimum lookback; no additional AI pass or automatic retry.
+Internal selected-coverage anchors survive receipt recovery. See
+[CL-211](../../docs/tickets/CL-211-complete-nonoverlapping-find-all.md) for fake,
+native and private offline evidence and remaining real acceptance.
+
+Local Codex **Find all** (CL-210) uses planned two-minute review regions with
+bounded neighboring context, independently of Parakeet's reusable speech work.
+An eight-minute analysis window normally has four serial selection requests.
+This can consume more Codex request overhead than one global shortlist; compact
+word payloads reduce repeated input bookkeeping, without a measured token/credit
+promise. Numeric/default requests and Gemini/hosted behavior are unchanged.
+Successful ASR/review receipts are reused; only an explicit retry runs missing
+units. No engine/provider retry or automatic inference on restore. Fake/no-key
+and generated-native checks cover mechanics; real recall/quality still needs
+owner Codex allowance/login and existing live approvals. See
+[CL-210](../../docs/tickets/CL-210-codex-find-all-consistency.md).
+
+CL-209 local Codex transcription uses pinned Parakeet TDT 0.6B v3 Q8 with
+CPU/BLAS, four threads and serial one-minute cores plus two seconds of context.
+Prepare it explicitly from the repository root with
+`corepack pnpm local:prepare:speech`, then restart the normal backend. Assets
+stay under ignored `.local-build/tools/speech-parakeet`; runtime never downloads
+or retries another engine/provider. Existing saved results stay intact. No
+Python or provider key is needed for native ASR. Codex selection still requires
+owner CLI sign-in/allowance and normal live gates. Fake/no-key checks inject
+synthetic results. The [comparison](../../docs/research/LOCAL_ASR_PERFORMANCE_2026-11-04.md)
+records real sample evidence separately from fake integration checks and owner
+listening acceptance. Hosted Gemini is unchanged.
+
+The demo supports English-language recordings only in both local and hosted
+composition. Local Codex uses local speech; hosted processing remains Gemini.
+Other languages and translation are outside the supported demo scope. See the
+[language decision](../../docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#english-only-demo-scope--cl-209-2026-11-04).
+
 ## Long local Codex analysis
 
 CL-189 admits long/large local Codex sources with measured disk reserve, supported decoding and bounded speech/discovery windows. Compatible receipts recover through the existing rolling store; explicit retry resumes missing work. Progress polling and restore make no provider calls. Gemini and hosted limits are unchanged. Real long-video throughput and quality remain unverified. See the [capacity inventory](../../docs/operations/LOCAL_CODEX_CAPACITY.md).

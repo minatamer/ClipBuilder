@@ -4,6 +4,11 @@ Browser-safe shared React/Remotion layout for strict manifests v2/v3: one frozen
 range, fixed captions, bounded contextual overlays and deterministic contain/crop.
 No Node, environment, provider, renderer SDK or application imports.
 
+The local camera surface also owns the pure region-seeded pixel tracker reused
+by browser Motion and the native worker (CL-216). It has no DOM, model, detector,
+provider or application dependency. Numeric tolerance/crop and interval contracts
+remain in contracts so preview and native export use the same saved framing.
+
 The v3 layout uses large white captions with a purple spoken-word background.
 Grounded pictures use signed inline JPEGs in a compact lower-video overlay;
 captions render above them. Legacy plain-text cards also use compact geometry,

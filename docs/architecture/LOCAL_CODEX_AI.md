@@ -1,5 +1,66 @@
 # Local Codex provider — CL-135
 
+## Complete, non-overlapping Find all — CL-211, 2026-11-04
+
+For new local Find all analyses, deterministic speech-boundary completion and
+reconciliation replace CL-210's retain-overlapping-alternatives behavior.
+Find all exposes observed sentence/pause units, keeps nearby question/answer and
+one dependent utterance together where admissible, and retains original whole
+proposals as alternatives when added context would conflict. Overlapping shared
+speech can merge within the requested duration; incompatible alternatives use
+interval scheduling, prioritizing original selected coverage before added
+context, then fewer clips and fuller context. Results are chronological and
+non-overlapping; adjacent independent ideas remain separate. No timing-only
+semantic guarantee or automatic truncation/retry follows from this policy.
+
+Lookback now includes up to the requested maximum duration, with a fifteen-second
+minimum; following context still uses that maximum. Normal two-minute reviews
+carry at most four minutes of words with a sixty-second clip maximum. The same
+four planned reviews per eight-minute window reuse existing ASR. Compact input
+includes request-local speech-unit references; canonical saved words/clocks and
+Parakeet compatibility stay unchanged. `regional-complete-v2` selection receipts
+also retain optional internal original-coverage anchors for consistent
+copy/recovery/retry; legacy selection receipts remain readable.
+
+Existing completed results are never migrated or automatically reprocessed.
+Numeric/manual/Gemini/hosted paths remain unchanged. Fake/no-key checks verify
+mechanics; another real owner-started run and subjective listening remain
+separate acceptance. The packet records private offline aggregate comparison,
+not a claim that new real model output has already been accepted.
+
+## Regional Find all — CL-210, 2026-11-04
+
+Local Codex Find all separates two-minute selection cores from the existing
+Parakeet speech cores. Fifteen seconds of preceding context and up to the maximum
+clip duration of following context retain boundary-spanning ideas. An eight-minute
+window plans four serial reviews, reusing one acknowledged ASR unit where covered.
+Compact request-local word references and punctuated speech remove duplicated
+text/null metadata and long canonical hashes from the model input; decoded
+references/evidence map back to unchanged saved IDs and source clocks. Each review
+asks for independent chronological coverage before ranking, with no clip quota.
+A core with no eligible spoken word skips inference even if neighboring context
+has speech. Duplicate canonical word spans reconcile once across padded contexts;
+distinct overlapping passages remain available.
+
+The fixed plan may issue more Codex requests than the prior global shortlist;
+actual allowance/time/quality cannot be inferred from mock results or JSON size.
+There are no automatic retries or model/reasoning/provider changes. Selection
+receipts have a separate regional policy/core key; ASR compatibility stays intact.
+Completed old analyses remain readable and are never automatically reprocessed.
+Failure/cancel checkpoints keep successful regions for explicit retry. Progress
+completion describes reviewed regions, not guaranteed semantic completeness.
+Numeric/manual-only and Gemini/hosted paths stay unchanged. The packet records
+actual fake/native checks and outstanding real owner recall acceptance.
+
+## Supported language — CL-209, 2026-11-04
+
+The supported demo input is English only, locally and when deployed. This latest
+owner decision supersedes earlier multilingual-preservation requirements below.
+An English-specialist local ASR candidate still needs measured accuracy and word
+timing acceptance; model size or advertised streaming latency alone is not a
+performance verdict. Hosted remains Gemini; no provider/API call is part of the
+local optimization benchmark. CL-209 owns actual results and implementation.
+
 ## Stable within-clip participants — CL-205
 
 The existing single camera planning request now establishes one anonymous roster
@@ -253,23 +314,24 @@ authorized for agent verification; tests inject transports and process results.
 
 The documented [input limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
 exclude raw audio/video and the transcription/image-generation APIs on this
-subscription route. Pair Codex with local CPU Whisper transcription and bounded
+subscription route. Pair Codex with local CPU transcription (CL-209 Parakeet) and bounded
 JPEG frames. The app automatically extracts these inputs; the owner does not
 need to show the video in chat or copy moments back. No whole original video or
 audio goes to Codex. Transcript and sampled frames are sent only by an explicit
 local processing action. Existing exports still use original source quality.
 
-Use [whisper.cpp](https://github.com/ggml-org/whisper.cpp/releases/tag/b5454)'s
-official b5454 CPU binary (current v1.9.5 line; stable tags have no Windows assets) and
-the multilingual small model (roughly 466 MiB), preserving source language,
-with bounded word timestamps. Both projects provide MIT-licensed components;
-retain exact licenses with ignored tooling. Pin official binary/model digests,
-reject links/changed files, and provide explicit preparation outside startup.
-The AFK request authorizes preparing these free local prerequisites from official
-sources; no provider calls, cloud resources or owner-media inference are included.
-If preparation cannot be verified, expose unavailable setup and record it.
+CL-209 selects the official b5454 native Parakeet/BLAS binary and Parakeet TDT
+0.6B v3 Q8 model. This replaces the earlier Whisper small default after measured
+accuracy/timestamp and performance comparison. Four threads, sixty-second cores
+and two seconds of context bound the native encoder's memory. Native 10-ms token
+clocks are grouped into words, retained once by midpoint ownership and returned
+through bounded private files. The model is CC BY 4.0 with NVIDIA attribution;
+native code is MIT and OpenBLAS has its retained BSD notice. Digests and an
+explicit preparation command admit assets outside startup. Nothing is downloaded
+during processing and no alternative engine/provider is retried automatically.
+See [the measured comparison](../research/LOCAL_ASR_PERFORMANCE_2026-11-04.md).
 
-Whisper supplies words/timing; CL-150's separate local diarizer supplies anonymous
+Parakeet supplies words/timing; CL-150's separate local diarizer supplies anonymous
 audio speaker labels. Codex associates these with temporal images, retaining
 uncertainty and held focus when the evidence cannot establish a visible speaker.
 Manual caption-level assignment remains available. Real diarization, camera/
@@ -289,7 +351,7 @@ The existing bounded Gemini normalizer resolves title/hook word references into
 spoken text; internal word IDs are never used as the title copy.
 
 Keep the backend's single fake/real mode. Fake always uses existing fictional
-providers and cannot launch Codex/Whisper inference. Normal local real mode uses
+providers and cannot launch Codex/local-ASR inference. Normal local real mode uses
 the chosen provider: CL-137 defaults to `AI_PROVIDER=gemini`, and local
 `AI_PROVIDER=codex` opts into this bridge; hosted real mode continues using Gemini
 and rejects explicit Codex selection. No second app,
@@ -350,7 +412,7 @@ downloads tools, signs in or processes media. The preparation commands change
 no private configuration and do not inspect credentials.
 
 An explicit local analysis prepares 16-kHz mono speech in the private worker and
-runs pinned Whisper, returning bounded words with stable IDs. CL-169 defers
+runs pinned Parakeet in bounded serial chunks, returning words with stable IDs. CL-169 defers
 diarization for full-source discovery to chosen clips; bounded manual cuts retain
 their combined speech preparation. Codex receives
 the admitted transcript and existing selection policy and returns structured
@@ -424,10 +486,61 @@ and permit explicit retry through normal controls. Readiness never infers.
 Fake/paid-off/no-key tests must cover provider selection (local vs hosted),
 ChatGPT-only auth, safe process flags/environment, closed input/schema, response
 size, cancellation/timeouts and cleanup. Exercise real authenticated browser
-actions with injected Codex/Whisper results and actual synthetic native media,
+actions with injected Codex/Parakeet results and actual synthetic native media,
 including moments, captions, focus, export, restore and error recovery. Count
 fake invocations and prove zero Gemini/image-generation calls in Codex mode.
 Run focused types/lint/format, source/diff validate, then refresh normal worker
 with verified lifecycle ownership. Do not run owner's real clip, real Codex
 inference, Gemini or a hosted deployment to claim readiness. Document actual
 prerequisites, checks and remaining listening/visual/ASR/live/device/rights gates.
+## Source-cut timing follow-up — CL-213
+
+The local frame-preparation job now runs one bounded FFmpeg scdet pass at
+160×90 on the prepared preview's 30-fps source clock. A one-second preroll plus
+absolute timestamps avoids decoding preceding hours while preserving cut phase,
+VFR and nonzero container starts. Metadata stays bounded to 2 MiB/180 seconds;
+up to 600 numeric candidates are transient artifact data, never new saved media
+or a frame-by-frame face model. Suppress adjacent high-difference flash evidence.
+Low-contrast/fade correctness and real speaker associations remain uncertain.
+
+The same planning request receives those numeric source cuts and exact-boundary
+instructions. Contact sheets share their existing targeted slots between scene
+and speaker transitions, retaining the original image allowance and at least
+half uniform coverage. The automatic refinement matches unambiguous resets
+within thirty logical frames, moves equal observation/decision endpoints, and
+preserves geometry/IDs/evidence. It skips manual plans, ordinary speech switches,
+colliding candidates or any intervening clock. Legacy artifacts without cuts
+keep their previous behavior. Gemini/hosted and Parakeet are unchanged.
+
+No automatic existing-plan migration or new inference/retry occurs. The reported
+Clip 1 boundary was repaired through the existing validate/edit API after the
+owner confirmed no unsaved draft; all other clip/panel/media state was retained.
+Fake/no-key tests establish plumbing and generated cut clocks, not real AI face
+accuracy. See [CL-213](../tickets/CL-213-source-cut-accurate-codex-cameras.md).
+
+## Conditional native speaker follow — CL-216
+
+Fresh provider preparation piggybacks focus evidence on its existing protected
+clip-preview operation. The native worker reuses the prepared source and the
+shared region-seeded pixel tracker, storing complete numeric camera families
+only if the chosen head escapes the fixed crop. A bounded unique recent-pixel
+match can recover a layout translation; missing/ambiguous heads retain the
+usable baseline. This adds no model, ASR work, provider call or retry. Local
+Codex/hosted Gemini selection and existing plan/image counts remain unchanged.
+
+Body paths attach only to the initial edit and cache against exact source/cut/
+focus. Existing clips, restore, reopen and export never start tracking. New
+paths use an editable Follow window (default 30%) to hold small movements still;
+legacy paths retain their stored behavior until edited. Numeric framing and
+interval policy lives in contracts; the pure pixel algorithm lives in composition
+for browser/native reuse. Hook/body cuts, manual Zoom conflicts and final export
+resolution/cadence keep their existing contracts.
+
+At most twenty thirty-second intervals sample every two logical frames, with
+512px maximum analysis size, a sixty-second pixel deadline and bounded frame
+buffers. Adaptive resolution bounds gray scratch to 192 MiB and the remaining
+existing clip reservation. Compact interval expressions avoid command-size and
+short-clip cutoffs. Tests cover full five-minute resource planning and a native
+72-second late shift. Normal fake preparation skips the pass; generated fake/
+no-key native and injected API proofs establish mechanics, not real AI/head
+quality or hosted release acceptance. CL-216 owns actual timing/evidence.

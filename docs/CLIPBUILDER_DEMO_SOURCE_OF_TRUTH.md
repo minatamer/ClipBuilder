@@ -1,5 +1,271 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Commit and push handoff - 2026-11-05
+
+The owner authorizes whole-file staging, multiple commits and a normal push of
+the pending CL-209-217 work. The [file-level allocation and execution record](operations/CL209_217_COMMIT_PLAN.md)
+owns the Git handoff; earlier unstaged/no-Git notes remain historical. Personal
+review is pending for 2026-11-06. This authorizes no new processing, configuration
+change, app restart, deployment or release acceptance. Existing fake/no-key and
+approved local ASR evidence remains distinct from real provider/hosted quality.
+
+## Motion layout and automatic speaker follow — CL-216/217, 2026-11-04
+
+The owner confirms manual Motion compensates for a same-speaker source-layout
+shift, but requests steadier framing and automatic conditional speaker-follow
+during future AI editing. CL-216 owns a measured framing-tolerance/jitter policy
+and fresh-preparation integration. Follow the chosen speaking person only when
+fixed framing would lose them, over the camera interval or a bounded moving
+part. Preserve cuts, identities, manual overrides and saved paths; do not infer
+that a larger pixel seed alone eliminates camera jitter. Local remains Codex,
+hosted remains Gemini, and no extra provider calls or model downloads follow.
+The owner explicitly requested both tickets be implemented in this pass.
+
+CL-216 is implemented for fresh provider preparation locally and in the shared
+hosted preparation path. The existing clip-preview operation accepts bounded
+focus evidence and may return source-bound numeric Motion paths for the initial
+edit. It uses already prepared pixels and the existing camera/person plan;
+there is no extra provider request or model. Retain a whole camera-position
+family only when the selected head escapes fixed framing and the local track
+completes. Stop on loss/ambiguous pixels and preserve the usable baseline.
+Manual and automatic paths share an editable Follow window, default 30% for new
+paths: a dead zone keeps small head motion from shifting the crop. Its size is
+clamped by head/crop space. Same-person position resets and other-person cuts
+remain distinct. Complete camera intervals hold their last tracked crop through
+the final frame; partial manual intervals retain their bounded edge joins.
+
+Legacy paths keep existing math until explicitly edited. Window edits need no
+retracking and update linked chunks together. Restore, reopen, export and
+previously prepared clips never start an automatic pass. Normal synthetic/fake
+preparation also skips it; generated native proofs opt in with fake/no-key
+transports. Analysis pixels are at most 512px, samples every two logical frames,
+up to twenty thirty-second chunks, with a sixty-second pixel-work deadline.
+Adaptive analysis size bounds gray scratch to 192 MiB and the remaining existing
+384 MiB clip reservation rather than skipping longer manual clips. Preview and
+final video resolution are unchanged. Local stays Codex and hosted stays Gemini;
+real provider/head quality and hosted release acceptance remain owner-only.
+
+CL-217 owns the Motion interface first: replace duplicate marking previews with
+one adaptive head-selection view, offer accessible expanded selection without
+changing normalized geometry, separate timing from optional head-box fields,
+and replace editable controls with shared Progress while tracking runs. Keep
+Track/Cancel and Apply/Discard in the existing footer. The Motion tab does not
+expose unrelated Reset focus. Other settings retain their layout and behavior.
+These UI and local pixel capabilities work on prepared fake/synthetic media
+without API keys; fresh real AI preparation keeps its provider/runtime/live and
+approval gates. Neither packet migrates saved owner edits. Actual evidence and
+remaining acceptance belong to the individual packets.
+
+## Jump to manual timestamps — CL-215, 2026-11-04
+
+Each manual clip's Start and End has a Jump to action beside Capture. Use the
+existing source preview to revisit typed or imported endpoints before Use clips,
+without editing timestamps or starting preparation. Map original-video offsets
+once; preserve imported millisecond precision. A valid End at physical EOF seeks
+the final playable logical frame. Invalid/outside-source, busy or unready actions
+cannot navigate. A valid endpoint stays inspectable while its other endpoint is
+being corrected. Capture keeps its existing endpoint-only behavior.
+
+Use shared buttons and responsive inline groups, retaining the main workflow
+action in the footer. Manual navigation is shared locally and when hosted;
+JSON transfer remains local desktop only and hosted processing quotas remain.
+This needs playable media but no API keys or AI work, including in fake mode.
+Later real processing retains existing provider/runtime/live/approval gates.
+[CL-215](tickets/CL-215-manual-timestamp-jump-to.md) owns verification evidence.
+
+## Larger local timestamp imports — CL-214, 2026-11-04
+
+Remove CL-200's ten-row import restriction. Local desktop Import JSON accepts
+every valid, deduplicated timestamp within its existing 1 MiB/10,000-record
+structural safeguards, without truncation or automatic work. Keep exact source
+binding, original clocks, duration/window checks, atomic errors and mobile/
+hosted exclusion. The local Codex expanded profile admits those manual rows
+through explicit Use clips, long-source review, retained analysis and recovery.
+It must not accept the import and then fail at a hidden ten-row request schema.
+
+Import size is independent of processing quotas. Gemini/hosted request admission
+remains bounded, and the normal deployed demo still enforces three cumulative
+clips per session on the server. No upload/import control is exposed to hosted
+visitors by this change, and no provider/native request follows file selection.
+New real preparation keeps its existing tools/login/key/live/spend gates.
+[CL-214](tickets/CL-214-larger-local-timestamp-imports.md) owns actual checks.
+
+## Source-cut-accurate local Codex cameras — CL-213, 2026-11-04
+
+Local Codex preparation measures candidate hard cuts with the existing native
+FFmpeg before its single camera planning call. Use the prepared preview's
+logical 30-fps clock, bounded low-resolution decoding and a short seek preroll,
+including nonzero source clocks and VFR. Numeric cut evidence is transient;
+target existing contact-sheet slots around it without increasing image/call
+allowances. This supplements sampled face/speaker reasoning; Codex is not a
+continuous frame-by-frame tracker.
+
+Ask for the new shot's geometry at its measured opening frame. A conservative
+automatic refinement may align a nearby supported shot reset and its matching
+observation/decision boundaries. It cannot invent a person/box, reorder other
+timings, move ordinary speech switches or rewrite manual framing. Ambiguous,
+unmatched and low-contrast transitions retain existing behavior; no detector
+guarantees perfect visual cuts. No quality retry/rejection or provider fallback.
+Gemini/hosted and local speech/Parakeet remain unchanged.
+
+CL-212 keeps the live crop aligned with decoded images; it does not establish
+that the saved plan's boundaries match the source. Existing saved/applied plans
+are not silently migrated. A measured, owner-requested existing-camera repair
+can use normal validated focus edits with no AI/regeneration, preserving every
+other panel and retained media/export. [CL-213](tickets/CL-213-source-cut-accurate-codex-cameras.md)
+records the reported repair, generated clock checks and owner visual limits.
+
+## Frame-aligned preview cameras — CL-212, 2026-11-04
+
+During normal editor playback, apply camera geometry against the source frame
+actually presented by the video decoder. The independent Player tick must not
+switch a crop before or after the corresponding source image, showing a wrong
+intermediate position. Use the same saved focus/Zoom/Motion math and immediate
+cuts; never hide timing mismatch with a camera animation, per-frame seeking,
+another decoder or reduced-motion behavior.
+
+The browser video-frame callback owns live crop updates without putting ticks
+into the editor's state or recreating Player inputs. Hook and body use each
+video's source clock with the occurrence offset mapped once. Paused edits and
+settled seeks update the same element. Source changes and unmounts cancel old
+work; browsers without frame callbacks use a playback-only bounded animation
+frame fallback plus settled media events. Keep source clocks, native exports,
+saved camera plans and normal editor controls unchanged. No inference, render,
+download, configuration or migration follows from this fix.
+
+[CL-212](tickets/CL-212-frame-aligned-preview-camera-cuts.md) owns generated
+before/after timing evidence and real-owner visual acceptance. Synthetic
+decoder/crop correctness is distinct from subjective real-device/media review.
+
+## Complete local Find all passages — CL-211, 2026-11-04
+
+The owner requests fixes for shortened/split passages and overlapping results
+while retaining Parakeet. For new local Codex Find all analyses, this supersedes
+CL-210's retain-distinct-overlaps rule. Leave existing analyses, applied clips,
+projects, exports and manual choices unchanged; numeric/default, manual-only,
+Gemini/hosted behavior and the English-only demo scope remain unchanged.
+
+Keep the finite two-minute review plan and compatible eight-minute Parakeet
+receipts. Give each review preceding context up to the requested maximum clip
+duration (at least fifteen seconds), plus that maximum as following context,
+within the requested window. The bound is normally four minutes of words per
+two-minute review at a sixty-second clip maximum, with neighboring ASR buffers
+only. No added AI pass, retry, provider/model/configuration change or clip quota.
+
+Expose canonical sentence/pause units to selection. Request full coherent
+passages, including necessary questions, answers and payoffs, rather than
+mid-sentence starts or adjacent/nested alternatives. Deterministic completion
+can expand to observed boundaries, one immediately preceding dependent
+utterance, or a nearby question within twenty seconds. Pauses, known speaker
+changes, the requested window, maximum duration and manual reservations bound
+this context; no repeated dependent-utterance chain. Incomplete context edges
+and long unpunctuated units do not become arbitrary new boundaries. A usable
+original remains a whole alternative if expansion conflicts with another cut;
+do not trim it merely to snap or fit another result. An overlong proposal is
+not silently cut at sixty seconds to create an incomplete thought.
+
+Return a chronological, non-overlapping set. Shared canonical speech can join
+overlapping fragments within the duration bound; proximity alone never joins
+independent adjacent ideas or bridges a manual reservation. Resolve incompatible
+overlaps using whole admissible alternatives, preserving the greatest amount of
+originally selected source speech first, then fewer clips and fuller context.
+Added context cannot displace selected speech simply by being longer. Update
+merged evidence endpoints, cue offsets and source-bound processing identities.
+Regional receipts retain internal selected-coverage anchors so explicit retry
+and recovery reproduce the same reconciliation without inference. Selection
+policy is versioned independently of unchanged speech compatibility.
+
+Punctuation, pauses, pronouns and nearby questions are bounded editorial
+heuristics, not proof of semantic identity or guaranteed future model recall.
+Synthetic/fake/no-key and native checks establish mechanics; private offline
+normalization of retained owner results is distinct from fresh model inference
+and listening acceptance. [CL-211](tickets/CL-211-complete-nonoverlapping-find-all.md)
+owns actual evidence and remaining owner acceptance.
+
+## Regional local Codex Find all — CL-210, 2026-11-04
+
+The owner requests investigation and improved Find all consistency after two
+same-source runs proposed eleven versus six moments. Retained speech covers all
+five omitted passages and both runs retained every returned candidate; exact
+model reasoning and live recall remain unverified. Keep native Parakeet and
+English-only scope. The improvement applies to local Codex Find all only.
+
+Plan source-aligned two-minute review cores independently of eight-minute ASR
+cores. Give each review up to fifteen seconds of preceding context and up to the
+requested maximum clip duration (at most sixty seconds) following it, within the
+requested analysis window. Fold subsecond edge fragments into an adjacent core.
+Review chronologically and consider each independent qualifying passage before
+ranking, without a target count. A normal eight-minute window has four finite
+serial reviews; silent regions can finish without inference. This changes the
+planned Codex request budget per owner action and consumes subscription allowance;
+it is not an automatic retry or fill-to-count loop. Numeric/default, manual-only,
+local Gemini and hosted behavior retain their existing paths and limits.
+
+Reuse compatible acknowledged Parakeet speech receipts, retaining at most the
+neighboring speech buffers needed for context. Request-local compact references
+map back to canonical saved word IDs, evidence and source clocks; no original
+word/timestamp is rewritten. Keep all unique usable returned passages, including
+usable context proposals, with no new quality/overlap rejection. Exact source
+cuts or identical canonical start/end word spans reconcile once even if context
+padding changed; distinct overlapping spans remain available. Regional
+selection receipt keys bind policy/core/context/input so old global selections
+cannot masquerade as completed regional work. Completed saved analyses, clips,
+exports and recovery remain readable; restore/polling perform no inference.
+An explicit retry resumes missing regions only. Existing progress counts planned
+and completed review units; complete means planned processing finished, not proof
+that a model found every worthwhile moment. No new real provider invocation is
+part of agent verification. Synthetic/fake/no-key and generated native checks
+prove orchestration; recovery of the five real passages and subjective quality
+require owner acceptance. [CL-210](tickets/CL-210-codex-find-all-consistency.md)
+owns evidence and the finite-call tradeoff.
+
+## English-only demo scope — CL-209, 2026-11-04
+
+The owner explicitly limits the demonstration to English-language recordings,
+both locally and when deployed. Other source languages, translation and
+multilingual/code-switching quality are outside the supported demo scope. This
+supersedes earlier multilingual-support expectations; an English-specialist
+local speech model may be selected only after the CL-209 accuracy, word-timing
+and performance checks. Hosted/deployed processing remains Gemini; local
+processing remains the isolated Codex route with API-free local speech.
+
+This is a support/scope statement, not a new paid-result rejection or automatic
+translation/retry gate. Preserve existing clips, transcripts and exports. The
+benchmark authorizes bounded real local ASR on the existing owner-designated
+public sample and explicit free runtime/model preparation, with content-free
+timings and private comparison data outside Git. No provider/API inference,
+cloud, deployment, ignored configuration change or Git mutation is included.
+Fake/no-key checks establish integration mechanics, not real ASR accuracy or
+throughput. The exact candidate evidence belongs to
+[CL-209](tickets/CL-209-local-speech-throughput-benchmark.md).
+
+## Bounded local transcription — CL-209, 2026-11-04
+
+Normal local Codex speech uses pinned native Parakeet TDT 0.6B v3 Q8 with the
+CPU/BLAS build, four compute/BLAS threads, serial sixty-second cores and two
+seconds of context. This supersedes historical local Whisper small selection.
+The bounded chunks avoid the measured whole-window memory spike. Native 10-ms
+token clocks become word clocks once; midpoint ownership reconciles context,
+including a final short remainder. Audio/result files remain private, bounded
+and removed on completion, failure or cancellation. No model download at runtime,
+automatic engine retry or provider fallback is introduced. Diarization remains
+an independent selected-clip stage.
+
+New speech receipts include model/build/chunk-policy compatibility. Existing
+completed analyses, captions, clips, saved drafts and exports remain intact;
+loading them does not re-transcribe or invoke Codex. Explicit new/retried work
+uses the selected engine and cannot mislabel old incompatible receipts as new.
+Hosted Gemini is unchanged.
+
+On the authorized 480.436-second window, bounded Parakeet took 125.909–152.307
+seconds at about 1.1 GiB peak RAM, compared with the historical Whisper speech
+stage's 451.544 seconds. Automatic-caption word agreement improved on this sample
+and known-text timing checks passed; this is not human-ground-truth accuracy or
+a two-hour throughput guarantee. Synthetic/fake no-key tests prove worker
+mechanics only. Real API-free ASR needs explicitly prepared local weights and
+native tools; subsequent Codex selection needs owner login/allowance and normal
+live gates. See [the benchmark and comparison](research/LOCAL_ASR_PERFORMANCE_2026-11-04.md).
+
 ## Motion default camera interval — CL-208, 2026-11-03
 
 Adding manual Motion at the playhead defaults End to the current camera

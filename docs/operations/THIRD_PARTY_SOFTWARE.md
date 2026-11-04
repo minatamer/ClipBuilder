@@ -1,5 +1,31 @@
 # Google and Node media software readiness
 
+## Local English ASR — CL-209, 2026-11-04
+
+The normal local Codex route now uses native Parakeet TDT 0.6B v3 Q8 from the
+[official GGUF conversion](https://huggingface.co/ggml-org/parakeet-GGUF), the
+[whisper.cpp b5454 BLAS release](https://github.com/ggml-org/whisper.cpp/releases/tag/b5454)
+and CPU OpenBLAS. Exact archive, executable/DLL and model hashes live in
+`scripts/local-speech-tools.ts`. The selected model is 668,757,119 bytes, SHA-256
+`4d64e9e96c2792186d072fde0034df0ad670cf680a2f53069052ead827fd600e`.
+
+The [original NVIDIA model](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3)
+is CC BY 4.0, including commercial use with attribution; its terms are retained
+rather than replaced by the conversion repository's code license. Explicit
+preparation retains model attribution, conversion/quantization notice, full
+CC BY 4.0 terms, MIT native-code license and OpenBLAS BSD license under ignored
+`.local-build/tools/speech-parakeet`. Weights/binaries never enter Git or hosted
+build inputs. No Python or provider API key is required by the selected path.
+
+Preparation/admission passed using checksum-verified official benchmark assets;
+the idempotent public preparation command passed. Fresh-machine download was
+not repeated. Bounded real local ASR was expressly authorized in CL-209; its
+measured comparison and synthetic/native workflow proof supersede historical
+no-inference/Whisper-only evidence below. Owner listening, broader content
+quality, rights and hosted release remain separate checks. Experimental Python
+faster-whisper/Moonshine and Distil assets are benchmark-only, not application
+prerequisites or engine fallbacks.
+
 ## Local speaker tools — CL-150
 
 Anonymous diarization uses [Sherpa-ONNX v2.0.1](https://github.com/k2-fsa/sherpa-onnx/releases/tag/v2.0.1)
@@ -17,7 +43,7 @@ no CLI/auth files are copied into the repository or hosted image. This workstati
 has CLI `0.165.0-alpha.1.2`; help/protocol inspection used no inference. Subscription
 allowance, account sign-in and actual AI quality remain owner checks.
 
-The explicit `corepack pnpm local:prepare:speech` command prepares ignored Windows
+Historical CL-135 setup (superseded by CL-209) prepared ignored Windows
 x64 CPU [whisper.cpp b5454](https://github.com/ggml-org/whisper.cpp/releases/tag/b5454)
 and the [multilingual small model](https://huggingface.co/ggerganov/whisper.cpp).
 The official archive digest and every admitted executable/DLL digest are pinned

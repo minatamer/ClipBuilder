@@ -1,5 +1,44 @@
 # Private media renderer
 
+CL-216 shares the region-seeded pixel tracker with the browser. A fresh protected
+clip-preview request may supply exact focus evidence; the worker samples the
+already prepared clip, retaining only complete camera families whose selected
+head escapes fixed framing. Unique translated recent pixels can recover an
+abrupt layout shift; ambiguous/missing heads keep the baseline. No detector,
+weights, new tool or provider call is added. Numeric paths cache by exact
+source/cut/focus and are saved as edits for normal preview/export reuse.
+
+Analysis is at most 512px and every two logical frames, with twenty bounded
+thirty-second chunks and a sixty-second total pixel deadline. Adaptive pixel
+size keeps gray scratch below 192 MiB and within the existing clip reservation
+after prepared-video bytes and overhead. One stream is decoded and frame reads
+use bounded buffers; checked owned scratch is removed on success/failure/cancel.
+The shared Follow window affects camera paths, preserving original export
+resolution/cadence. Generated fake/no-key native proofs cover layout shifts,
+loss, speaker cuts, cache/cancel, a 72-second late shift and five export rates;
+real provider/head quality and hosted/Linux release acceptance remain separate.
+
+CL-213 measures candidate source cuts locally before Codex camera planning.
+One bounded 160×90 FFmpeg decode uses a short preroll and the same 30-fps clock
+as prepared preview, preserving VFR and nonzero starts. Numeric scene evidence
+fits the existing transient artifact; images and planning-call budgets do not
+increase. Source media, ASR/Parakeet, final render cadence and crop math stay
+unchanged. No model/key is needed for cut measurement. Generated fake/no-key
+proofs cover clocks, not actual face/speaker quality; see
+[CL-213](../../docs/tickets/CL-213-source-cut-accurate-codex-cameras.md).
+
+CL-209 local Codex transcription uses pinned Parakeet TDT 0.6B v3 Q8 with
+CPU/BLAS, four threads and serial one-minute cores plus two seconds of context.
+Prepare it explicitly from the repository root with
+`corepack pnpm local:prepare:speech`, then restart the normal backend. Assets
+stay under ignored `.local-build/tools/speech-parakeet`; runtime never downloads
+or retries another engine/provider. Existing saved results stay intact. No
+Python or provider key is needed for native ASR. Codex selection still requires
+owner CLI sign-in/allowance and normal live gates. Fake/no-key checks inject
+synthetic results. The [comparison](../../docs/research/LOCAL_ASR_PERFORMANCE_2026-11-04.md)
+records real sample evidence separately from fake integration checks and owner
+listening acceptance. Hosted Gemini is unchanged.
+
 CL-203 evaluates manually seeded Motion paths through the same camera crop as
 the browser, at original native cadence. Only bounded validated numeric paths
 enter the fixed graph; the worker does not detect/track heads or call AI.

@@ -1,5 +1,58 @@
 # ClipBuilder frontend
 
+Motion uses one active head-marking view with an adaptive source preview and
+**Expand** for a larger selection surface. End/Capture stay together, head-region
+numbers have their own optional two-column group, and local tracking replaces
+those inputs with shared progress. Track/Cancel and Apply/Discard stay in the
+workspace footer. Opening/closing the expanded view preserves the normalized
+selection and requires no processing or keys. CL-217 owns synthetic mouse,
+touch, keyboard, responsive and saved-path evidence.
+
+CL-216 adds **Follow window (%)**, defaulting to 30 for new Motion. The dashed
+window separates framing tolerance from the head's pixel region; increasing it
+holds small movements still, within available crop space. Existing paths retain
+their old behavior until the owner changes this value and applies the edit;
+changing the window needs no retracking, API keys or credits. Fresh real-provider
+clip preparation also adds local pixel Motion only to selected-speaker camera
+intervals that would lose the head. It reuses the existing AI plan and prepared
+video, with no additional AI calls. Normal fake preparation does not launch that
+automatic pass; generated-media proofs exercise the actual native path directly.
+Real preparation keeps the existing Codex/Gemini/runtime/live/approval gates.
+
+Manual Start and End fields pair **Capture** with **Jump to** (CL-215). Jump to
+uses the source preview to check typed/imported times before Use clips, preserving
+the fields and starting no processing. It handles original-video offsets, precise
+milliseconds and the final playable frame at EOF, with invalid/busy/unready
+guards. The same controls work locally, on phones and when hosted; JSON import
+stays local desktop only. Navigation needs existing playable media, no API keys
+or AI, and works in fake mode. See
+[CL-215](../../docs/tickets/CL-215-manual-timestamp-jump-to.md) for synthetic
+browser checks; real preparation retains its existing prerequisites and gates.
+
+CL-214 removes the ten-timestamp JSON import restriction on local desktop.
+All valid deduplicated rows are retained within the existing file safeguards;
+normal local Codex Use clips accepts larger manual sets too. Import itself
+needs no keys and starts no work. Source/time checks and Android/phone/hosted
+exclusion remain. The deployed demo's server-enforced three-clip allowance is
+unchanged. See [CL-214](../../docs/tickets/CL-214-larger-local-timestamp-imports.md)
+for fake/no-key browser/API evidence; later real preparation retains its normal
+provider/local-model prerequisites and approvals.
+
+Normal editor camera playback (CL-212) follows the presented video-frame clock,
+keeping immediate camera cuts aligned with the decoded source image. Hook/body
+offsets, saved focus/Zoom/Motion settings and native export geometry are
+unchanged. Paused edits and settled seeks update the current crop; source
+replacement/unmount cleans up old callbacks. Browsers without video-frame
+callbacks use a playback-only fallback. This requires no AI or API keys; fake
+generated-media checks exercise the real decoder and normal controls. See
+[CL-212](../../docs/tickets/CL-212-frame-aligned-preview-camera-cuts.md) for actual
+evidence and the separate owner real-media visual check.
+
+The demo supports English-language recordings only, locally and when deployed.
+Other source languages and translation are outside the supported scope. Hosted
+processing remains Gemini; local processing uses the isolated Codex route. See
+the [language decision](../../docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#english-only-demo-scope--cl-209-2026-11-04).
+
 Local Codex YouTube intake offers the server's supported tiers (including 4K),
 **Highest supported quality**, and an explicit audio-track choice. It displays
 cadence/codec for new downloads and retains exact offered identities. Unsupported

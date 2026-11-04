@@ -24,6 +24,9 @@ ClipBuilder turns uploaded conversations into captioned vertical clips. Choose
 manual ranges or AI-suggested moments, then adjust captions, pictures, motion and
 filters in one focused editor before downloading an MP4.
 
+The demo supports English-language recordings only, locally and when deployed.
+Other source languages and translation are outside the supported scope.
+
 The same upload and editor flow serves local and hosted composition. YouTube URL
 downloading is available only locally; the hosted product accepts uploads only.
 The shared hosted adapter is implemented in source and awaits the owner's release

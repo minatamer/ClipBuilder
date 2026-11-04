@@ -6,6 +6,18 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Owner local ASR benchmark authorization (2026-11-04, CL-209): benchmark local
+  speech engines on a separate copy of the existing designated public sample,
+  prepare necessary free official tools/models, record every run's timings and
+  compare accuracy/word clocks before implementing the fastest passing bounded
+  option. Bounded real local ASR is expressly authorized for this packet;
+  default tests remain synthetic/fake/paid-off. Keep audio/transcripts/private
+  references outside Git and normal logs; retain aggregate evidence only. The
+  source of truth owns the owner's English-only scope for both local and
+  deployed demos. Local remains Codex and hosted remains Gemini. No provider
+  API/inference spend, ignored configuration change, cloud/deployment or Git
+  mutation is authorized by this request.
+
 - Owner AFK execution authorization (2026-11-02, CL-184–193): execute the
   dependency-ready feature packets sequentially and CL-193 research, using
   execute/validate/fix loops until no actionable findings remain per ticket.

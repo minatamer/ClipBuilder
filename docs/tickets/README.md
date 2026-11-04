@@ -1,5 +1,137 @@
 # ClipBuilder canonical ticket index
 
+## Commit and push handoff - 2026-11-05
+
+The owner authorized a whole-file plan, multiple commits and a normal push for
+the pending CL-209-217 series. The [allocation and execution record](../operations/CL209_217_COMMIT_PLAN.md)
+owns all 98 paths. This supersedes earlier no-Git/unstaged handoff notes for this
+series only. Personal review is pending for 2026-11-06. Recorded synthetic/fake
+and approved local ASR evidence is reused; no new inference, app restart or
+deployment is part of the Git handoff. Real-media, visual/device, hosted and
+release acceptance remain open.
+
+## Motion layout and automatic follow — 2026-11-04
+
+[CL-217](CL-217-motion-editor-layout.md) is complete locally: coherent marking,
+timing, geometry and visible tracking progress, with a larger selection view.
+The full synthetic/no-key browser proof passes at desktop, short laptop and two
+phone sizes, with exact fake edit counts, keyboard/touch, save/cancel/restore,
+types and lint. Settled validation has no actionable findings.
+[CL-216](CL-216-automatic-speaker-follow-and-steady-framing.md) is complete locally:
+fresh AI preparation conditionally adds local pixel Motion when its selected
+speaker would escape fixed framing. An adjustable Follow window suppresses
+small movement, preserving legacy paths until edited. No additional AI calls.
+110 distinct units, full browser controls and native follow/export proofs pass;
+the 72-second generated late-shift case prepares in 18.389 s including preview.
+Longer manual clips use bounded adaptive analysis rather than a hidden sample
+cutoff. Settled validation has no actionable findings. Backend/worker reloaded;
+source, saved clip and frontend are preserved. Real-media/hosted acceptance open.
+Existing owner Motion paths and camera plans are not migrated.
+
+## Jump to manual timestamps — 2026-11-04
+
+[CL-215](CL-215-manual-timestamp-jump-to.md) adds Jump to beside manual Start and
+End fields, paired with Capture, for checking typed/imported clips before Use
+clips. Complete locally: 24 timestamp tests, synthetic desktop/phone/Android/
+hosted browser checks, keyboard, precise clocks, guards, footer, types and
+focused lint/format pass. Navigation preserves fields and starts no processing.
+Settled read-only validation has no actionable findings. Owner-device visual
+acceptance remains separate; no provider call or backend restart was needed.
+
+## Larger local timestamp imports — 2026-11-04
+
+[CL-214](CL-214-larger-local-timestamp-imports.md) is complete locally: removes the ten-row local JSON
+import restriction and the matching local Codex manual-submission bottleneck.
+File/source/time safeguards, local-only controls, explicit processing and
+bounded hosted/Gemini admission remain. Ninety-nine relevant unit cases and the
+25-row browser import/explicit-submission proof pass with no keys or real AI.
+Settled review has no actionable findings. Current source/state survived the
+verified backend/native-worker reload. Deployed three-clip enforcement also
+passes its direct API regression. Owner-file/device acceptance remains open.
+
+## Source-cut-accurate local cameras — 2026-11-04
+
+[CL-213](CL-213-source-cut-accurate-codex-cameras.md) is complete locally. Private
+inspection of the owner's remaining camera correction after CL-212
+confirms a source cut fourteen frames (467 ms) before its saved camera reset.
+The normal preview clock fix does not correct AI-authored boundary timing.
+Local measured cuts, same-call Codex guidance and conservative automatic
+alignment are implemented. The reported Clip 1 boundary was repaired through
+normal validated focus editing, with no regeneration or AI call. Ninety-five
+focused unit cases and the generated native clock proof pass; settled review
+has no actionable findings. Backend/native worker reload preserved all eleven
+clips exactly. Owner-device and fresh real Codex quality acceptance remain open;
+other saved camera timings are preserved.
+
+## Frame-aligned preview camera cuts — 2026-11-04
+
+[CL-212](CL-212-frame-aligned-preview-camera-cuts.md) is complete locally. A generated
+normal-preview reproduction confirmed a one-frame crop/decoder mismatch on
+eighteen switches. The preview now follows presented video frames while keeping
+immediate cuts, saved plans and native geometry unchanged. Four playback cases
+pass under Strict Mode: 742 decoded frames, 72 switches and zero wrong crops or
+rewinds, including phone, Hook/body and Zoom/Motion. Lifecycle/fallback and the
+full responsive editor proof pass; settled review has no actionable findings.
+The owner's batch finished with all eleven clips ready and the app is healthy.
+Owner real-media visual acceptance remains unchecked; no new AI, configuration
+or Git action.
+
+## Complete, non-overlapping Find all — 2026-11-04
+
+[CL-211](CL-211-complete-nonoverlapping-find-all.md) is complete locally:
+complete speech boundaries and reconcile shortened/split/overlapping local Codex
+moments while retaining Parakeet. Selected speech takes precedence over added
+context; whole alternatives, bounded work and receipt recovery are preserved.
+178 focused tests and the current-source native/API proof pass; settled read-only
+validation reports no actionable findings. Private zero-inference normalization
+of the twenty retained proposals yields thirteen non-overlapping moments, each
+of the eleven historical passages having at least 94.5% single-clip time coverage.
+The refreshed normal backend restores the exact twenty saved results and speech
+receipt; new policy applies only to a new explicit Find all. Numeric/manual/
+Gemini/hosted behavior is unchanged. A later owner-started real run returned
+eleven non-overlapping suggestions in 5m55s: all eleven historical passages have
+98.1–100% single-clip interval coverage, including both shortened passages and
+the former split. Some passages are combined into longer cuts. Weekly usage
+remained at the rounded 31%; no processing failures, with the known nonblocking
+CLI warning. Listening/repeated-run consistency remain unverified; nothing
+staged, committed or deployed.
+
+## Local Find all consistency — 2026-11-04
+
+[CL-210](CL-210-codex-find-all-consistency.md) is complete locally after
+investigating the same-source eleven-versus-six result and improving regional
+selection consistency while retaining Parakeet. Fixed two-minute review cores
+reuse speech, compact
+reversible references preserve canonical words/clocks, and successful regions
+survive explicit retries. More planned Codex review calls are an explicit
+tradeoff; no provider retry/target-count loop or model switch. Agent checks use
+synthetic/fake/no-key data, with real owner recall acceptance still unverified.
+151 focused tests, generated regional native/API and browser/native proofs, types,
+lint and packaging checks pass; final read-only validation has no actionable
+findings. The normal backend/worker is refreshed with Codex ready, and the owner's
+six results, inputs, source and compatible speech receipt restored unchanged.
+CL-209's existing unstaged work remains preserved. Nothing staged, committed,
+pushed or deployed. A later owner-started real run returned twenty suggestions
+in 7m02s: the five previously missing passages are represented again, with one
+split across two clips. Other boundaries still vary; subjective quality and
+repeatability remain unverified. The packet records timings, nonblocking CLI
+warnings and rounded account-wide usage without private transcript/cuts.
+
+## Local speech throughput benchmark — 2026-11-04
+
+[CL-209](CL-209-local-speech-throughput-benchmark.md) is complete locally after
+51 recorded benchmark attempts and execute/validate/fix loops with no actionable
+findings. Native Parakeet Q8 with four threads and bounded one-minute cores is
+selected: 2m06s–2m32s on the 8m00s window versus historical Whisper 7m32s,
+about 1.1 GiB peak RAM, passing recorded word/timestamp checks. The
+[comparison](../research/LOCAL_ASR_PERFORMANCE_2026-11-04.md) distinguishes
+measured options, rejected quality tradeoffs and unmeasured GPU paths.
+Both local and deployed demos explicitly support English input only; hosted
+remains Gemini. Real local ASR used no provider/API inference or credits.
+Fake/native no-key checks pass, the normal worker is refreshed and owner-saved
+files are preserved. Listening, broader corpus/fresh-machine/two-hour/hosted
+acceptance remain unverified. Nothing staged, committed or deployed.
+
 ## Local commit handoff — 2026-11-03
 
 The owner authorized a file-level plan and multiple local commits for CL-197–208;
