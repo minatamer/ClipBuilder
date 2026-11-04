@@ -44,7 +44,7 @@ it("round-trips original clocks and frame boundaries without exporting transcrip
     "version",
   ]);
 });
-it("deduplicates exact ranges and preserves the existing manual-row limit without truncation", () => {
+it("deduplicates exact ranges and imports more than ten distinct rows without truncation", () => {
   const text = exportOwnerTimestamps(
     source,
     Array.from({ length: 11 }, () => ({ startFrame: 0, endFrame: 60 })),
@@ -52,14 +52,12 @@ it("deduplicates exact ranges and preserves the existing manual-row limit withou
   expect(importOwnerTimestamps(text, source)).toHaveLength(1);
   const many = exportOwnerTimestamps(
     source,
-    Array.from({ length: 11 }, (_, i) => ({
+    Array.from({ length: 25 }, (_, i) => ({
       startFrame: i * 90,
       endFrame: i * 90 + 60,
     })),
   );
-  expect(() => importOwnerTimestamps(many, source)).toThrow(
-    "timestamp_row_limit",
-  );
+  expect(importOwnerTimestamps(many, source)).toHaveLength(25);
 });
 it("rejects wrong source, malformed, oversized, unsafe and out-of-window files before returning rows", () => {
   const text = exportOwnerTimestamps(source, [{ startFrame: 0, endFrame: 60 }]);

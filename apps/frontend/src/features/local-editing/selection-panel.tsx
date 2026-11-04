@@ -1,5 +1,6 @@
 import { AnalysisCoverageStatus } from "./analysis-coverage-status";
 import { useTimestampExchange } from "./use-timestamp-exchange";
+import { manualPreviewJumpSeconds } from "./manual-time.ts";
 import {
   exportOwnerTimestamps,
   importOwnerTimestamps,
@@ -19,7 +20,7 @@ import {
 } from "../../../../../packages/contracts/local/index.ts";
 import {
   OWNER_FPS,
-  ownerAnalysisRequestSchema,
+  ownerAnalysisRequestForCapacity,
   ownerCut,
   ownerTimestamp,
   type OwnerAnalysis,
@@ -29,6 +30,7 @@ import {
 import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts/local/runtime.ts";
 import {
   OWNER_DEFAULT_AI_COUNT,
+  OWNER_MANUAL_ROW_LIMIT,
   OWNER_MAX_REQUESTED_CLIP_MS,
 } from "../../../../../packages/contracts/local/policy.ts";
 import {
@@ -358,12 +360,10 @@ export function OwnerSelectionPanel({
           error instanceof Error &&
             error.message === "timestamp_source_mismatch"
             ? "These timestamps belong to a different saved video. Open its matching source."
-            : error instanceof Error && error.message === "timestamp_row_limit"
-              ? "Import at most 10 timestamps into Manual clips at a time. No clips were changed."
-              : error instanceof Error &&
-                  error.message === "timestamp_range_invalid"
-                ? "Keep timestamps inside this video's available range and supported clip duration."
-                : "Choose a valid ClipBuilder timestamps JSON file.",
+            : error instanceof Error &&
+                error.message === "timestamp_range_invalid"
+              ? "Keep timestamps inside this video's available range and supported clip duration."
+              : "Choose a valid ClipBuilder timestamps JSON file.",
         );
       } finally {
         timestampReadingRef.current = false;
@@ -391,6 +391,17 @@ export function OwnerSelectionPanel({
       ),
     );
   }
+  function manualJumpTime(row: Row, field: "start" | "end") {
+    try {
+      return manualPreviewJumpSeconds(
+        fieldMilliseconds(row[field], originalOffset),
+        workspace.source,
+        field,
+      );
+    } catch {
+      return null;
+    }
+  }
   function normalizeTime(id: string, field: "start" | "end") {
     setRows((current) =>
       current.map((row) => {
@@ -416,7 +427,9 @@ export function OwnerSelectionPanel({
           }
         : undefined,
     );
-    const inputs = ownerAnalysisRequestSchema.parse({
+    const inputs = ownerAnalysisRequestForCapacity({
+      manyClips: expanded,
+    }).parse({
       sourceRevision: workspace.revision,
       policyRevision,
       ranges: rows.map((row) => ({
@@ -821,38 +834,56 @@ export function OwnerSelectionPanel({
           <legend>Manual clips</legend>
           {rows.map((row, index) => (
             <div className="range-row" key={row.id}>
-              {(["start", "end"] as const).map((field) => (
-                <div className="range-time" key={field}>
-                  <label>
-                    {field === "start" ? "Start" : "End"}
-                    <input
-                      value={row[field].text}
-                      maxLength={32}
-                      aria-label={`Clip ${index + 1} ${field}`}
-                      placeholder="HH:MM:SS"
-                      aria-describedby={`cut-${row.id}`}
-                      onChange={(event) =>
-                        editTime(row.id, field, event.target.value)
-                      }
-                      onBlur={() => normalizeTime(row.id, field)}
-                    />
-                  </label>
-                  <Button
-                    variant="quiet"
-                    icon={Clock3}
-                    disabled={!previewReady}
-                    aria-label={`Set clip ${index + 1} ${field} to current time`}
-                    title="Use current preview time"
-                    onClick={() => {
-                      if (busy || !previewReady) return;
-                      const time = onCaptureTime();
-                      if (time !== null) editTime(row.id, field, time);
-                    }}
-                  >
-                    Capture
-                  </Button>
-                </div>
-              ))}
+              {(["start", "end"] as const).map((field) => {
+                const jumpTime = manualJumpTime(row, field);
+                return (
+                  <div className="range-time" key={field}>
+                    <label>
+                      {field === "start" ? "Start" : "End"}
+                      <input
+                        value={row[field].text}
+                        maxLength={32}
+                        aria-label={`Clip ${index + 1} ${field}`}
+                        placeholder="HH:MM:SS"
+                        aria-describedby={`cut-${row.id}`}
+                        onChange={(event) =>
+                          editTime(row.id, field, event.target.value)
+                        }
+                        onBlur={() => normalizeTime(row.id, field)}
+                      />
+                    </label>
+                    <div className="manual-time-actions">
+                      <Button
+                        variant="quiet"
+                        icon={Clock3}
+                        disabled={!previewReady}
+                        aria-label={`Set clip ${index + 1} ${field} to current time`}
+                        title="Use current preview time"
+                        onClick={() => {
+                          if (busy || !previewReady) return;
+                          const time = onCaptureTime();
+                          if (time !== null) editTime(row.id, field, time);
+                        }}
+                      >
+                        Capture
+                      </Button>
+                      <Button
+                        variant="quiet"
+                        icon={Play}
+                        disabled={busy || !previewReady || jumpTime === null}
+                        aria-label={`Jump to clip ${index + 1} ${field}`}
+                        title="Preview this time"
+                        onClick={() => {
+                          if (!busy && previewReady && jumpTime !== null)
+                            onJumpTo(jumpTime);
+                        }}
+                      >
+                        Jump to
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
               <Button
                 variant="secondary"
                 aria-label={`Remove clip ${index + 1}`}
@@ -871,7 +902,11 @@ export function OwnerSelectionPanel({
           <div className="manual-clip-actions">
             <Button
               variant="secondary"
-              disabled={!demoLimit && rows.length >= OWNER_LIMITS.ranges}
+              disabled={
+                !demoLimit &&
+                rows.length >=
+                  (expanded ? OWNER_MANUAL_ROW_LIMIT : OWNER_LIMITS.ranges)
+              }
               onClick={() => {
                 if (demoLimit && rows.length >= demoLimit) {
                   setLimitNotice((value) => value + 1);

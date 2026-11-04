@@ -3,6 +3,10 @@
 Status: Locally implemented and verified, 2026-11-03. Owner visual acceptance
 open.
 
+CL-214 supersedes the ten-row import/manual limit recorded below. Its new local
+Codex admission and larger import checks are separate evidence; this packet's
+original limits and verification remain historical.
+
 The owner canceled the real batch and authorizes sequential execute/validate/fix
 loops for CL-198–200. No real AI, download, configuration, Git or cloud action.
 Preserve the existing five prepared and four canceled clips, source and

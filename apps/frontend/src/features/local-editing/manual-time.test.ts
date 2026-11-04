@@ -4,7 +4,35 @@ import {
   capturePreviewTime,
   normalizeManualTime,
   parseManualTime,
+  manualPreviewJumpSeconds,
 } from "./manual-time.ts";
+
+it("jumps to precise local endpoint clocks and uses the last playable frame for physical EOF", () => {
+  const source = { durationMs: 20000 };
+  expect(manualPreviewJumpSeconds(10633, source, "start")).toBe(10.633);
+  expect(manualPreviewJumpSeconds(17333, source, "end")).toBe(17.333);
+  expect(manualPreviewJumpSeconds(20000, source, "end")).toBeCloseTo(
+    19.9666667,
+  );
+  expect(manualPreviewJumpSeconds(20000, source, "start")).toBeNull();
+  expect(
+    manualPreviewJumpSeconds(
+      12000,
+      { ...source, availableWindow: { startMs: 5000, endMs: 12000 } },
+      "end",
+    ),
+  ).toBe(12);
+});
+it("blocks invalid/outside endpoints without silently clipping them to the available source", () => {
+  const source = {
+    durationMs: 20000,
+    availableWindow: { startMs: 5000, endMs: 15000 },
+  };
+  for (const value of [NaN, Infinity, -1, 5000.5, 4999, 15001, 20001])
+    expect(manualPreviewJumpSeconds(value, source, "end")).toBeNull();
+  expect(manualPreviewJumpSeconds(5000, source, "start")).toBe(5);
+  expect(manualPreviewJumpSeconds(15000, source, "start")).toBeNull();
+});
 
 it.each([
   ["00:00:60", "00:01:00"],

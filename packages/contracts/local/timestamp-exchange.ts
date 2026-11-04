@@ -3,7 +3,7 @@ import { utf8ByteLength } from "./utf8.ts";
 import { ownerDigestSchema } from "./assets.ts";
 import {
   OWNER_FPS,
-  OWNER_LIMITS,
+  OWNER_MANUAL_ROW_LIMIT,
   OWNER_MAX_REQUESTED_CLIP_MS,
   OWNER_SAFE_SOURCE_MS,
 } from "./policy.ts";
@@ -28,7 +28,7 @@ export const ownerTimestampFileSchema = z
     clips: z
       .array(z.object({ startMs: time, endMs: time }).strict())
       .min(1)
-      .max(10_000),
+      .max(OWNER_MANUAL_ROW_LIMIT),
   })
   .strict();
 
@@ -91,7 +91,6 @@ export function importOwnerTimestamps(text: string, source: OwnerSource) {
     }
     rows.set(`${range.startMs}:${range.endMs}`, range);
   }
-  if (rows.size > OWNER_LIMITS.ranges) throw Error("timestamp_row_limit");
   return [...rows.values()];
 }
 

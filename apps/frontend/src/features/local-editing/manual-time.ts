@@ -1,4 +1,9 @@
-import { OWNER_SAFE_SOURCE_MS } from "../../../../../packages/contracts/local/policy.ts";
+import {
+  OWNER_FPS,
+  OWNER_SAFE_SOURCE_MS,
+} from "../../../../../packages/contracts/local/policy.ts";
+import type { OwnerSource } from "../../../../../packages/contracts/local/index.ts";
+import { ownerAvailableSourceWindow } from "../../../../../packages/contracts/local/source-window.ts";
 import {
   ownerTimestamp,
   parseOwnerTimestamp,
@@ -17,6 +22,30 @@ export function normalizeManualTime(value: string): string {
 
 export function parseManualTime(value: string): number {
   return parseOwnerTimestamp(normalizeManualTime(value));
+}
+
+/** Receives an already mapped local clock; navigation never changes an endpoint. */
+export function manualPreviewJumpSeconds(
+  localMs: number,
+  source: Pick<OwnerSource, "durationMs" | "availableWindow">,
+  endpoint: "start" | "end",
+): number | null {
+  const available = ownerAvailableSourceWindow(source);
+  if (
+    !Number.isSafeInteger(localMs) ||
+    !Number.isSafeInteger(source.durationMs) ||
+    source.durationMs <= 0 ||
+    localMs < 0 ||
+    localMs > source.durationMs ||
+    localMs < available.startMs ||
+    localMs > available.endMs ||
+    (endpoint === "start" && localMs === available.endMs)
+  )
+    return null;
+  return localMs === source.durationMs
+    ? Math.max(0, Math.ceil((source.durationMs * OWNER_FPS) / 1000) - 1) /
+        OWNER_FPS
+    : localMs / 1000;
 }
 
 export function capturePreviewTime(
