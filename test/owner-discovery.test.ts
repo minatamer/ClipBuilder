@@ -147,6 +147,7 @@ it("admits prepared speech metadata without exposing it and rejects malformed sp
   const stateFile = join(runtime, "state.json");
   const state = JSON.parse(await readFile(stateFile, "utf8"));
   const speech = {
+    engine: "parakeet",
     executable: join(temporary, "synthetic-speech.exe"),
     model: join(temporary, "synthetic-model.bin"),
     directory: join(temporary, "synthetic-speech-tools"),
@@ -178,6 +179,7 @@ it("admits prepared speech metadata without exposing it and rejects malformed sp
     { ...speech, executable: "x".repeat(4097) },
     { ...speech, directory: speech.directory + "\n" },
     { ...speech, arguments: ["not-admitted"] },
+    { ...speech, engine: "unprepared-engine" },
     { ...speech, speakers: null },
     { ...speech, speakers: { ...speech.speakers, embedding: "relative.onnx" } },
     { ...speech, speakers: { ...speech.speakers, command: "not-admitted" } },

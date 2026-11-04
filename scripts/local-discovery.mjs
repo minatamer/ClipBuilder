@@ -221,7 +221,13 @@ async function readRuntime(ctx, runtime) {
   // The native worker validates its startup capacity; discovery never returns it.
   shape(state.tools, ["ffmpeg", "ffprobe"], ["capacity"]);
   if (state.speech !== undefined) {
-    shape(state.speech, ["executable", "model", "directory"], ["speakers"]);
+    shape(
+      state.speech,
+      ["executable", "model", "directory"],
+      ["speakers", "engine"],
+    );
+    if (state.speech.engine !== undefined && state.speech.engine !== "parakeet")
+      throw error();
     if (
       ![
         state.speech.executable,

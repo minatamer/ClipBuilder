@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { availableParallelism } from "node:os";
 import { runLocalSpeechPair } from "./codex-speech.ts";
+import { transcribeParakeet } from "./parakeet-speech.ts";
 import {
   CODEX_TIMING_OPERATION,
   type CodexProgressStep,
@@ -41,6 +42,7 @@ import { runOwnedProcess } from "../src/media/process-runner.ts";
 import type { LocalSpeechTools } from "../../../scripts/local-speech-tools.ts";
 import { assignLocalSpeakers } from "./speaker-turns.ts";
 import { planCodexFrameSamples } from "../../../packages/contracts/local/codex-sampling.ts";
+import { detectSourceSceneCuts } from "./source-scene-cuts.ts";
 
 const speechOutput = z.object({
   transcription: z
@@ -318,8 +320,32 @@ export async function prepareLocalCodexInput(
       const transcriptionTask = (taskSignal: AbortSignal) =>
         measured(
           "transcription",
-          () =>
-            (options.runSpeech ?? runOwnedProcess)(
+          async () => {
+            if (speech.engine === "parakeet") {
+              const result = await transcribeParakeet(
+                {
+                  speech,
+                  ffmpeg: options.tools.ffmpeg,
+                  wav,
+                  scratch,
+                  durationMs: Math.round(duration * 1000),
+                  ...(options.runSpeech
+                    ? { runSpeech: options.runSpeech }
+                    : {}),
+                },
+                taskSignal,
+              );
+              const encoded = JSON.stringify(result);
+              if (Buffer.byteLength(encoded) > LOCAL_CODEX_POLICY.artifactBytes)
+                throw new Error("local_speech_output_invalid");
+              await writeFile(prefix + ".json", encoded, {
+                flag: "wx",
+                mode: 0o600,
+                signal: taskSignal,
+              });
+              return;
+            }
+            await (options.runSpeech ?? runOwnedProcess)(
               speech.executable,
               [
                 "-m",
@@ -354,7 +380,8 @@ export async function prepareLocalCodexInput(
                 // The bounded speech.json file owns results, not console word output.
                 stdout: "ignore",
               },
-            ),
+            );
+          },
           taskSignal,
         );
       const speakerOutput =
@@ -394,9 +421,16 @@ export async function prepareLocalCodexInput(
       };
     } else {
       artifact = await measured("frames", async () => {
+        const sceneCuts = await detectSourceSceneCuts(
+          source,
+          options.tools,
+          job.cut!,
+          signal,
+        );
         const samples = planCodexFrameSamples(
           job.cut!.endFrame - job.cut!.startFrame,
           job.speakerChanges,
+          sceneCuts,
         );
         const frames = [];
         for (const [index, frame] of samples.entries()) {
@@ -482,7 +516,7 @@ export async function prepareLocalCodexInput(
             jpeg: jpeg.toString("base64"),
           });
         }
-        return { kind: "frames" as const, frames };
+        return { kind: "frames" as const, sceneCuts, frames };
       });
     }
     const bytes = Buffer.from(

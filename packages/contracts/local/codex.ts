@@ -21,6 +21,7 @@ import { ownerIllustrationSchema } from "./illustration.ts";
 
 export const LOCAL_CODEX_POLICY = {
   frames: 60,
+  sceneCuts: 600,
   imageBytes: 2 * 1024 ** 2,
   artifactBytes: 192 * 1024 ** 2,
   responseBytes: 4 * 1024 ** 2,
@@ -132,6 +133,19 @@ export const localCodexArtifactSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("frames"),
+      sceneCuts: z
+        .array(
+          z
+            .number()
+            .int()
+            .positive()
+            .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
+        )
+        .max(LOCAL_CODEX_POLICY.sceneCuts)
+        .refine((cuts) =>
+          cuts.every((cut, index) => index === 0 || cut > cuts[index - 1]!),
+        )
+        .optional(),
       frames: z
         .array(localCodexFrameSchema)
         .min(1)

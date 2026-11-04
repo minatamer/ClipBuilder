@@ -26,6 +26,7 @@ async function main() {
       }),
       speech: z
         .object({
+          engine: z.literal("parakeet").optional(),
           executable: z.string().min(1),
           model: z.string().min(1),
           directory: z.string().min(1),

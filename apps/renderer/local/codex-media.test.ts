@@ -2,6 +2,69 @@ import { expect, it, vi } from "vitest";
 import { parseLocalSpeech, prepareLocalCodexInput } from "./codex-media.ts";
 import * as media from "./media.ts";
 import * as native from "../src/media/process-runner.ts";
+import { detectSourceSceneCuts } from "./source-scene-cuts.ts";
+vi.mock("./source-scene-cuts.ts", () => ({
+  detectSourceSceneCuts: vi.fn(async () => []),
+}));
+
+it("attaches measured source cuts and samples their exact middle panel within the original frame budget", async () => {
+  const root = await mkdtemp(join(tmpdir(), "clipbuilder-cut-artifact-test-"));
+  const workspaceId = crypto.randomUUID(),
+    jobId = crypto.randomUUID();
+  await mkdir(join(root, workspaceId));
+  const inspect = vi.spyOn(media, "inspectOwnerSource").mockResolvedValue({
+    fingerprint: "a".repeat(64),
+    bytes: 100,
+    durationMs: 4000,
+    width: 640,
+    height: 360,
+    fps: 30,
+  });
+  vi.mocked(detectSourceSceneCuts).mockResolvedValueOnce([47]);
+  const run = vi
+    .spyOn(native, "runOwnedProcess")
+    .mockImplementation(async (_exe, args) => {
+      await writeFile(args.at(-1)!, Buffer.from([255, 216, 255]));
+      return "";
+    });
+  try {
+    const result = await prepareLocalCodexInput(
+      { root, tools: { ffmpeg: "synthetic", ffprobe: "synthetic" } },
+      {
+        operation: "codex-input",
+        workspaceId,
+        jobId,
+        fingerprint: "a".repeat(64),
+        kind: "frames",
+        cut: { startFrame: 0, endFrame: 120 },
+        speakerChanges: [60],
+      },
+      AbortSignal.timeout(3000),
+    );
+    const artifact = JSON.parse(
+      await readFile(
+        await media.ownerCodexMediaPath(root, workspaceId, jobId),
+        "utf8",
+      ),
+    );
+    expect(result.kind).toBe("frames");
+    expect(artifact.sceneCuts).toEqual([47]);
+    expect(artifact.frames).toHaveLength(4);
+    expect(
+      artifact.frames.some(
+        (frame: { sampleFrames: number[] }) => frame.sampleFrames[1] === 47,
+      ),
+    ).toBe(true);
+    expect(run).toHaveBeenCalledTimes(4);
+    expect(await readdir(join(root, workspaceId))).toEqual([
+      `${jobId}.codex.json`,
+    ]);
+  } finally {
+    inspect.mockRestore();
+    run.mockRestore();
+    await rm(root, { recursive: true, force: true });
+  }
+});
 import {
   mkdtemp,
   mkdir,

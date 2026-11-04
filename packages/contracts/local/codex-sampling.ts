@@ -48,6 +48,7 @@ export function codexSpeakerChangeFrames(
 export function planCodexFrameSamples(
   frames: number,
   speakerChanges: readonly number[] = [],
+  sceneCuts: readonly number[] = [],
 ): number[] {
   if (
     !Number.isInteger(frames) ||
@@ -65,7 +66,7 @@ export function planCodexFrameSamples(
     );
   const changes = [
     ...new Set(
-      speakerChanges
+      [...sceneCuts, ...speakerChanges]
         .filter(
           (frame) => Number.isInteger(frame) && frame > 0 && frame < frames,
         )

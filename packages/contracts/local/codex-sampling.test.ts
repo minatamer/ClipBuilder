@@ -37,6 +37,11 @@ it("keeps the legacy uniform grid when labels or changes are absent", () => {
     ),
   ).toEqual([]);
 });
+it("places measured off-grid cuts at the middle panel without increasing the image allowance", () => {
+  const samples = planCodexFrameSamples(600, [173], [47, 113]);
+  expect(samples).toHaveLength(20);
+  expect(samples).toEqual(expect.arrayContaining([0, 41, 107, 167]));
+});
 it("places off-grid changes at the middle panel without adding image slots", () => {
   const samples = planCodexFrameSamples(600, [17, 173, 590]);
   expect(samples).toHaveLength(20);

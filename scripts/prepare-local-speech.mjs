@@ -8,6 +8,7 @@ import {
   rm,
   rename,
   readFile,
+  writeFile,
 } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { execFile } from "node:child_process";
@@ -21,7 +22,7 @@ import {
 if (process.platform !== "win32" || process.arch !== "x64")
   throw new Error("local_speech_unavailable");
 const repository = resolve(import.meta.dirname, ".."),
-  directory = join(repository, ".local-build/tools/speech");
+  directory = join(repository, ".local-build/tools/speech-parakeet");
 for (const path of [
   join(repository, ".local-build"),
   join(repository, ".local-build/tools"),
@@ -72,13 +73,13 @@ try {
   if (!ready) {
     const archive = await download(
       "whisper.zip",
-      `https://github.com/ggml-org/whisper.cpp/releases/download/${pin.build}/whisper-bin-x64.zip`,
+      `https://github.com/ggml-org/whisper.cpp/releases/download/${pin.build}/whisper-blas-bin-x64.zip`,
       pin.archiveSha256,
-      16 * 1024 ** 2,
+      32 * 1024 ** 2,
     );
     const model = await download(
       pin.model,
-      `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin?download=true&clipbuilder=${Date.now()}`,
+      `https://huggingface.co/ggml-org/parakeet-GGUF/resolve/main/${pin.model}?download=true&clipbuilder=${Date.now()}`,
       pin.modelSha256,
       pin.modelBytes,
     );
@@ -111,22 +112,35 @@ try {
       }
     }
     await download(
-      "whisper.LICENSE",
+      "parakeet.LICENSE",
       `https://raw.githubusercontent.com/ggml-org/whisper.cpp/${pin.build}/LICENSE`,
       undefined,
       65536,
     );
     await download(
       "model.LICENSE",
-      "https://raw.githubusercontent.com/openai/whisper/v20250625/LICENSE",
+      "https://creativecommons.org/licenses/by/4.0/legalcode.txt",
       undefined,
       65536,
+    );
+    await download(
+      "openblas.LICENSE",
+      "https://raw.githubusercontent.com/OpenMathLib/OpenBLAS/v0.3.29/LICENSE",
+      undefined,
+      65536,
+    );
+    await writeFile(
+      join(scratch, "model.NOTICE"),
+      "NVIDIA Parakeet TDT 0.6B v3, CC BY 4.0. Original: https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3 . GGUF Q8_0 conversion: https://huggingface.co/ggml-org/parakeet-GGUF . Conversion/quantization changes the original representation. No endorsement implied.\n",
+      { flag: "wx", mode: 0o600 },
     );
     for (const name of [
       ...Object.keys(pin.files),
       pin.model,
-      "whisper.LICENSE",
+      "parakeet.LICENSE",
       "model.LICENSE",
+      "model.NOTICE",
+      "openblas.LICENSE",
     ])
       await rename(
         name === pin.model ? model : join(scratch, name),

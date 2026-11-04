@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { runOwnedProcess } from "./process-runner.js";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 describe("owned native process", () => {
   it("bounds stdout and strips child errors", async () => {
     await expect(
@@ -47,6 +50,59 @@ describe("owned native process", () => {
       cause: { message: "native_filter_unavailable", code: 9 },
     });
   });
+});
+
+it("captures bounded stderr into an exclusive private result file and reaps overflow", async () => {
+  const root = await mkdtemp(join(tmpdir(), "clipbuilder-native-file-test-"));
+  const file = join(root, "result.tokens");
+  try {
+    expect(
+      await runOwnedProcess(
+        process.execPath,
+        ["-e", "process.stderr.write('synthetic token dump')"],
+        new AbortController().signal,
+        {
+          env: {},
+          stdout: "ignore",
+          stderrFile: { path: file, maxBytes: 100 },
+        },
+      ),
+    ).toBe("");
+    expect(await readFile(file, "utf8")).toBe("synthetic token dump");
+    await expect(
+      runOwnedProcess(
+        process.execPath,
+        ["-e", "process.stderr.write('replacement')"],
+        new AbortController().signal,
+        { env: {}, stderrFile: { path: file, maxBytes: 100 } },
+      ),
+    ).rejects.toMatchObject({
+      code: "media_failed",
+      cause: { message: "media_failed", code: "EEXIST" },
+    });
+    await expect(
+      runOwnedProcess(
+        process.execPath,
+        [
+          "-e",
+          "process.stderr.write('x'.repeat(100000));setInterval(()=>{},1000)",
+        ],
+        new AbortController().signal,
+        {
+          env: {},
+          stderrFile: { path: join(root, "overflow"), maxBytes: 100 },
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "canceled",
+      cause: { message: "native_stdout_limit" },
+    });
+    expect((await readFile(join(root, "overflow"))).length).toBeLessThanOrEqual(
+      100,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 it("discards noisy stdout only for explicit file-backed jobs and still reports native failures", async () => {

@@ -54,13 +54,12 @@ it("runs the local Codex workflow through real controls/native worker with injec
   const tools = await ownerNativeTools(resolve(".")),
     signal = AbortSignal.timeout(240000);
   const speech = vi.fn<typeof runOwnedProcess>(
-    async (_exe, args, speechSignal) => {
+    async (_exe, args, speechSignal, processOptions) => {
       speechSignal.throwIfAborted();
       // Hold the injected model long enough to observe authenticated native
       // progress in the actual controls; no real model is invoked.
       await new Promise<void>((done) => setTimeout(done, 1200));
-      const prefix = args[args.indexOf("-of") + 1]!,
-        wav = args[args.indexOf("-f") + 1]!;
+      const wav = args[args.indexOf("-f") + 1]!;
       const probe = JSON.parse(
         await runOwnedProcess(
           tools.ffprobe,
@@ -82,14 +81,24 @@ it("runs the local Codex workflow through real controls/native worker with injec
       });
       const duration = Number(probe.format.duration),
         count = Math.min(10, Math.floor(duration));
-      await writeFile(
-        prefix + ".json",
-        JSON.stringify({
-          transcription: Array.from({ length: count }, (_, index) => ({
-            text: ` Synthetic${index + 1}`,
-            offsets: { from: index * 1000, to: index * 1000 + 800 },
-          })),
-        }),
+      const dump =
+        `parakeet_print_timings: total time = 1 ms\nTokens [${count}]:\n` +
+        Array.from(
+          { length: count },
+          (_, index) =>
+            ` [${index}] id=1 t0=${index * 100} t1=${index * 100 + 80} word_start=true "▁Synthetic${index + 1}"`,
+        ).join("\n") +
+        "\n";
+      expect(processOptions?.stderrFile?.maxBytes).toBe(1024 ** 2);
+      await runOwnedProcess(
+        process.execPath,
+        [
+          "-e",
+          "process.stdout.write('synthetic '.repeat(200000));process.stderr.write(process.argv[1])",
+          dump,
+        ],
+        speechSignal,
+        { ...processOptions, env: {} },
       );
       return "";
     },
@@ -105,6 +114,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
     chromium: "C:/Program Files/Google/Chrome/Application/chrome.exe",
     overlayBundle: bundle,
     speech: {
+      engine: "parakeet",
       executable: "synthetic-whisper",
       model: "synthetic-model",
       directory,
@@ -783,7 +793,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
     }
     const findVisuals = async (capture: boolean) => {
       const opened = await page._client().send("Runtime.evaluate", {
-        expression: `(async()=>{[...document.querySelectorAll('[role=tab]')].find(button=>button.textContent.trim()==='Media').click();await new Promise(resolve=>requestAnimationFrame(resolve));const button=[...document.querySelectorAll('button')].find(button=>button.textContent.trim()==='Find visuals');if(!button||button.disabled||!button.querySelector('svg'))throw Error('find_visuals_cta_missing');button.focus();button.click();await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return true;})()`,
+        expression: `(async()=>{const started=Date.now();let media;while(!(media=[...document.querySelectorAll('[role=tab]')].find(button=>button.textContent.trim()==='Media'))){if(Date.now()-started>25000)throw Error('editor_rebind_unavailable');await new Promise(resolve=>setTimeout(resolve,50));}media.click();await new Promise(resolve=>requestAnimationFrame(resolve));const button=[...document.querySelectorAll('button')].find(button=>button.textContent.trim()==='Find visuals');if(!button||button.disabled||!button.querySelector('svg'))throw Error('find_visuals_cta_missing');button.focus();button.click();await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return true;})()`,
         awaitPromise: true,
         returnByValue: true,
       });
