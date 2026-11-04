@@ -56,6 +56,47 @@ const ports = () => ({
   select: vi.fn(fakeOwnerAnalysis.select),
 });
 const signal = () => new AbortController().signal;
+it("reviews twenty-five local Codex manual ranges while bounded profiles reject before any provider work", async () => {
+  const request = {
+    ...input(),
+    ranges: Array.from({ length: 25 }, (_, i) =>
+      range(i * 4000, i * 4000 + 2000),
+    ),
+    manualOnly: true,
+  };
+  for (const capacity of [
+    resolveOwnerCapacity({ aiProvider: "gemini" }),
+    resolveOwnerCapacity({ hosted: true, aiProvider: "codex" }),
+  ]) {
+    const provider = ports();
+    await expect(
+      analyzeOwner(
+        workspace(),
+        request,
+        provider,
+        signal(),
+        undefined,
+        capacity,
+      ),
+    ).rejects.toThrow();
+    expect(provider.transcribe).not.toHaveBeenCalled();
+    expect(provider.select).not.toHaveBeenCalled();
+  }
+  const provider = ports();
+  const result = await analyzeOwner(
+    workspace(),
+    request,
+    provider,
+    signal(),
+    undefined,
+    resolveOwnerCapacity({ aiProvider: "codex" }),
+  );
+  expect(result.manual).toHaveLength(25);
+  expect(result.inputs.ranges).toEqual(request.ranges);
+  expect(ownerAnalysisSchema.parse(result).manual).toHaveLength(25);
+  expect(provider.transcribe).toHaveBeenCalledTimes(1);
+  expect(provider.select).not.toHaveBeenCalled();
+});
 it("admits numeric Codex requests beyond ten while rejecting the same forged Gemini/hosted request before any AI", async () => {
   const request = { ...input(10_000, 30_000), ranges: [], aiCount: 100 };
   const provider = ports(),

@@ -8,6 +8,94 @@ import { listenOwner, ownerRequest } from "../../../test/owner-http.ts";
 import { OWNER_LIMITS } from "../../../packages/contracts/local/policy.ts";
 
 it.each(["codex", "gemini", "hosted"] as const)(
+  "admits twenty-five manual rows only on the composed expanded profile (%s)",
+  async (kind) => {
+    const root = await mkdtemp(join(tmpdir(), "clipbuilder-manual-capacity-"));
+    const bytes = Buffer.from("synthetic-source");
+    const media = vi.fn<OwnerHostOptions["media"]>(async () => ({
+      operation: "inspect",
+      source: {
+        fingerprint: createHash("sha256").update(bytes).digest("hex"),
+        bytes: bytes.length,
+        durationMs: 120000,
+        width: 320,
+        height: 180,
+        fps: 30,
+      },
+    }));
+    const transcribe = vi.fn(async () => []),
+      select = vi.fn(async () => []);
+    const host = createOwnerHost({
+      root,
+      port: 0,
+      token: "synthetic-manual",
+      hosted: kind === "hosted",
+      media,
+      capacity: async () => {},
+      providers: () => ({
+        ...(kind !== "gemini"
+          ? {
+              localAi: {
+                aiProvider: "codex" as const,
+                aiSetup: "ready" as const,
+                captionProvider: "local-speech" as const,
+              },
+            }
+          : {}),
+        analysis: { mode: "synthetic-ai", transcribe, select },
+      }),
+    });
+    try {
+      const port = await listenOwner(host.server),
+        headers = { Authorization: "Bearer synthetic-manual" };
+      const opened = await ownerRequest(port, "/api/source", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "video/mp4" },
+        body: bytes,
+      });
+      expect(opened.status).toBe(200);
+      const workspace = JSON.parse(opened.body.toString());
+      const request = {
+        sourceRevision: workspace.revision,
+        policyRevision: 1,
+        manualOnly: true,
+        aiDuration: { minMs: 10000, maxMs: 30000 },
+        ranges: Array.from({ length: 25 }, (_, i) => ({
+          id: crypto.randomUUID(),
+          startMs: i * 4000,
+          endMs: i * 4000 + 2000,
+        })),
+      };
+      const result = await ownerRequest(
+        port,
+        `/api/workspace/${workspace.id}/analysis`,
+        {
+          method: "POST",
+          headers: {
+            ...headers,
+            "Content-Type": "application/json",
+            "X-ClipBuilder-Capacity": "local-codex",
+          },
+          body: JSON.stringify(request),
+        },
+      );
+      expect(result.status).toBe(kind === "codex" ? 200 : 400);
+      if (kind === "codex") {
+        const response = JSON.parse(result.body.toString());
+        expect((response.value ?? response).manual).toHaveLength(25);
+      }
+      expect(transcribe).toHaveBeenCalledTimes(kind === "codex" ? 1 : 0);
+      expect(select).not.toHaveBeenCalled();
+      expect(media).toHaveBeenCalledTimes(1);
+    } finally {
+      await host.close();
+      expect(await readdir(root)).toEqual([]);
+      await rmdir(root);
+    }
+  },
+);
+
+it.each(["codex", "gemini", "hosted"] as const)(
   "binds %s capacity to composition and rejects forged expansion before AI",
   async (kind) => {
     const root = await mkdtemp(join(tmpdir(), "clipbuilder-capacity-test-"));

@@ -1,8 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import { classifyExecutionFailure } from "../src/diagnostics/execution-failure.ts";
 import { LocalCodexProgress } from "./codex-progress.ts";
+import { codexSelectionInput } from "./codex-selection-input.ts";
 import { decodeVisualPlan } from "./visual-plan.ts";
 import { FOCUS_PLANNING_POLICY } from "./focus-planning-policy.ts";
+import { alignAutomaticFocusCuts } from "../../../packages/contracts/local/focus-cut-alignment.ts";
 import type {
   CodexProgress,
   CodexProgressStep,
@@ -44,7 +46,10 @@ import { LocalDiagnostics } from "./diagnostics.ts";
 import type { OwnerHostProviders } from "./server.ts";
 import type { WorkspaceFiles } from "./workspace-files.ts";
 import type { CodexInference } from "./codex-exec.ts";
-import { LOCAL_SPEECH_PIN } from "../../../scripts/local-speech-tools.ts";
+import {
+  LOCAL_SPEECH_PIN,
+  LOCAL_SPEECH_POLICY,
+} from "../../../scripts/local-speech-tools.ts";
 import { HOOK_SUGGESTION_POLICY } from "./hook-suggestion-policy.ts";
 import {
   PLANNED_VISUAL_POLICY,
@@ -207,7 +212,7 @@ export function createLocalCodexAi(options: {
     },
     analysis: {
       mode: "provider-ai",
-      compatibility: `${LOCAL_SPEECH_PIN.build}:${LOCAL_SPEECH_PIN.modelSha256}:codex-current-medium-v1:selection-CL184`,
+      compatibility: `${LOCAL_SPEECH_PIN.build}:${LOCAL_SPEECH_PIN.modelSha256}:${LOCAL_SPEECH_POLICY.compatibility}:codex-current-medium-v1:selection-CL184`,
       chunkProgress(completed, planned) {
         if (analysisProgress) analysisProgress.chunks = { completed, planned };
       },
@@ -302,6 +307,7 @@ export function createLocalCodexAi(options: {
         instructions,
         requestedCount,
         excludedCuts = [],
+        reviewCore,
       ) {
         return run(signal, async (signal) => {
           const admitted = ownerWordsSchema.parse(words),
@@ -313,12 +319,16 @@ export function createLocalCodexAi(options: {
           )
             throw new Error("owner_selection_policy_rejected");
           if (!admitted.length) return [];
+          const compact =
+            requestedCount === "all"
+              ? codexSelectionInput(admitted, reviewCore)
+              : undefined;
           const current = analysisProgress;
           const infer = () =>
             options.infer(
               {
                 schema: jsonSchema(localCodexCandidatesSchema),
-                prompt: `${untrusted}\n${instructions}\nChoose moment start/end word IDs from the transcript. Do not transcribe or retime.\n${JSON.stringify({ words: admitted, excludedCuts, requestedCount })}`,
+                prompt: `${untrusted}\n${instructions}\n${compact?.instructions ?? ""}\nChoose moment start/end word IDs from the transcript. Do not transcribe or retime.\n${JSON.stringify({ words: compact?.words ?? admitted, excludedCuts, requestedCount, ...(compact ? { fps: OWNER_FPS, reviewCore: compact.reviewCore, speechUnits: compact.speechUnits } : {}) })}`,
               },
               signal,
             );
@@ -327,14 +337,16 @@ export function createLocalCodexAi(options: {
             : await diagnostics.run("codex_selection", infer);
           const normalized = normalizeCandidateSelection(
             value,
-            admitted,
+            compact?.aliases ?? admitted,
             Math.min(
               Number.MAX_SAFE_INTEGER,
               OWNER_LIMITS.ranges + ownerAiResultLimit(requestedCount, null),
             ),
           );
           diagnostics.analysis.candidateNormalization(normalized.diagnostic);
-          return normalized.candidates;
+          return compact
+            ? compact.restore(normalized.candidates)
+            : normalized.candidates;
         });
       },
     },
@@ -405,6 +417,10 @@ export function createLocalCodexAi(options: {
           );
           if (artifact.kind !== "frames")
             throw new Error("codex_input_invalid");
+          const sceneCuts = artifact.sceneCuts ?? [];
+          if (sceneCuts.some((frame) => frame >= frames))
+            throw new Error("codex_input_invalid");
+          const scenePolicy = `SOURCE CUTS: ${JSON.stringify(sceneCuts)} are locally measured candidate first frames of new source shots, on the clip-relative 30-fps clock. Verify against the ordered panels. For a supported cut use that exact frame for shotStart and the new view's observation/decision boundary, even when the same person stays visible. Never hold the previous shot's geometry until the next sampled image or a later speech word. These timings do not identify speakers or people. Uncertain cuts/associations stay unassigned; do not invent geometry.`;
           const value = await progress.measure(
             runProgress,
             "planning",
@@ -420,7 +436,7 @@ export function createLocalCodexAi(options: {
                     }),
                   ),
                   images: artifact.frames.map((frame) => frame.jpeg),
-                  prompt: `${untrusted}\n${HOOK_SUGGESTION_POLICY}\n${PLANNED_TEXT_POLICY}\n${PLANNED_VISUAL_POLICY}\nPlan portrait camera framing and useful contextual illustrations from the ordered temporal images and timed transcript. Each image contains three left-to-right panels at its supplied sampleFrames, or one frame for legacy images. Opening-title display uses presentation-relative frames; all other times are clip-relative integer frames at 30 fps. ${FOCUS_PLANNING_POLICY} Boxes are relative to ONE panel, never the whole sheet. Word speakerId values come from local audio diarization. PICTURES: plan the visualCoverage minimum, at least one per started thirty-second portion, up to three useful contextual images. Each has startFrame/endFrame, evidenceWordIds and a generic brief (scene, searchQuery, requiredTerms, avoidTerms) and alternateBriefs with up to two alternative depictions/search phrases for the SAME precise script idea if the primary image cannot be found. Keep the primary scene meaning and every essential requiredTerm in all alternatives. Vary the angle or query specificity, never substitute a different subject or an unrelated metaphor. Use specific searchable subject/concept nouns rather than generic props; never duplicate a search. Choose the clearest explanatory beat from the timed words, use those evidenceWordIds and begin near the key spoken subject/action. The brief must explain what the viewer learns from the scene. Use literal scenes first; an analogy needs explicit support in the source. Relevant diagrams/illustrations are allowed without a fixed template. The app performs bounded public-image lookup. SEARCH FIRST, GENERATED FALLBACK SECOND: The app first searches for relevant real images using your brief and up to two distinct same-subject alternate briefs. Also supply an illustration fallback for EACH picture in this same response: layout concept/process/comparison, a short generic heading, and one to four items with short labels and icons person/globe/idea/computer/chart/clock/box/check/leaf. Choose the layout and symbols that explain the spoken idea; no unrelated filler. All labels and briefs must be generic public depictions, never transcript quotations or private details. The app uses the illustration only after image search cannot provide a usable image. Do not return image bytes, URLs, SVG/HTML, executable code, brands, source-speaker likenesses or invented facts. Use short generic searchable scene terms; no transcript quotations or private details in search terms. Return pictures/texts arrays, meeting visualCoverage; text remains optional.\n${JSON.stringify({ frames, fps: OWNER_FPS, visualCoverage: plannedVisualGuide(frames), source: { width: workspace.source.width, height: workspace.source.height }, images: artifact.frames.map((frame) => ({ frame: frame.frame, sampleFrames: frame.sampleFrames })), words: moment.cues })}`,
+                  prompt: `${untrusted}\n${scenePolicy}\n${HOOK_SUGGESTION_POLICY}\n${PLANNED_TEXT_POLICY}\n${PLANNED_VISUAL_POLICY}\nPlan portrait camera framing and useful contextual illustrations from the ordered temporal images and timed transcript. Each image contains three left-to-right panels at its supplied sampleFrames, or one frame for legacy images. Opening-title display uses presentation-relative frames; all other times are clip-relative integer frames at 30 fps. ${FOCUS_PLANNING_POLICY} Boxes are relative to ONE panel, never the whole sheet. Word speakerId values come from local audio diarization. PICTURES: plan the visualCoverage minimum, at least one per started thirty-second portion, up to three useful contextual images. Each has startFrame/endFrame, evidenceWordIds and a generic brief (scene, searchQuery, requiredTerms, avoidTerms) and alternateBriefs with up to two alternative depictions/search phrases for the SAME precise script idea if the primary image cannot be found. Keep the primary scene meaning and every essential requiredTerm in all alternatives. Vary the angle or query specificity, never substitute a different subject or an unrelated metaphor. Use specific searchable subject/concept nouns rather than generic props; never duplicate a search. Choose the clearest explanatory beat from the timed words, use those evidenceWordIds and begin near the key spoken subject/action. The brief must explain what the viewer learns from the scene. Use literal scenes first; an analogy needs explicit support in the source. Relevant diagrams/illustrations are allowed without a fixed template. The app performs bounded public-image lookup. SEARCH FIRST, GENERATED FALLBACK SECOND: The app first searches for relevant real images using your brief and up to two distinct same-subject alternate briefs. Also supply an illustration fallback for EACH picture in this same response: layout concept/process/comparison, a short generic heading, and one to four items with short labels and icons person/globe/idea/computer/chart/clock/box/check/leaf. Choose the layout and symbols that explain the spoken idea; no unrelated filler. All labels and briefs must be generic public depictions, never transcript quotations or private details. The app uses the illustration only after image search cannot provide a usable image. Do not return image bytes, URLs, SVG/HTML, executable code, brands, source-speaker likenesses or invented facts. Use short generic searchable scene terms; no transcript quotations or private details in search terms. Return pictures/texts arrays, meeting visualCoverage; text remains optional.\n${JSON.stringify({ frames, fps: OWNER_FPS, visualCoverage: plannedVisualGuide(frames), source: { width: workspace.source.width, height: workspace.source.height }, images: artifact.frames.map((frame) => ({ frame: frame.frame, sampleFrames: frame.sampleFrames })), words: moment.cues })}`,
                 },
                 signal,
               ),
@@ -477,7 +493,7 @@ export function createLocalCodexAi(options: {
             diagnostics.critique("focus_compile");
           focus.set(current.clipId, {
             workspaceId: workspace.id,
-            value: camera.focus,
+            value: alignAutomaticFocusCuts(camera.focus, sceneCuts),
             texts: decodePlannedText(value, moment.cues, frames, () =>
               diagnostics.critique(
                 "visual_validate",

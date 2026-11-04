@@ -1,7 +1,7 @@
 import { requireLocalMemory } from "./machine-memory.ts";
 import { createHash, randomUUID } from "node:crypto";
 import {
-  ownerAnalysisRequestSchema,
+  ownerAnalysisRequestForCapacity,
   ownerAnalysisSchema,
   ownerWordsSchema,
   OWNER_FPS,
@@ -9,6 +9,7 @@ import {
   type OwnerAnalysis,
   type OwnerWord,
   type OwnerAnalysisInputs,
+  type OwnerCut,
 } from "../../../packages/contracts/local/selection.ts";
 import {
   ownerAnalysisWindow,
@@ -21,18 +22,37 @@ import {
 import type { OwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
 import { analyzeOwner, type OwnerAnalysisPorts } from "./analysis.ts";
 import { AnalysisChunks } from "./analysis-chunks.ts";
+import { CODEX_FIND_ALL_POLICY } from "./codex-selection-input.ts";
+import {
+  completeFindAllPassages,
+  reconcileFindAllPassages,
+} from "./find-all-passages.ts";
 
 export const LONG_ANALYSIS_CHUNK_MS = 8 * 60_000;
+export const FIND_ALL_REVIEW_MS = 2 * 60_000;
+const REVIEW_LOOKBACK_MS = 15_000;
 const CONTEXT_MS = 60_000,
   SPEECH_OVERLAP_MS = 2000;
 const digest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
 /** Iteration, rather than an array proportional to source duration. */
-export function* longAnalysisPlan(startMs: number, endMs: number) {
+export function* longAnalysisPlan(
+  startMs: number,
+  endMs: number,
+  chunkMs = LONG_ANALYSIS_CHUNK_MS,
+) {
+  if (
+    !Number.isSafeInteger(startMs) ||
+    !Number.isSafeInteger(endMs) ||
+    startMs < 0 ||
+    endMs < startMs ||
+    !Number.isSafeInteger(chunkMs) ||
+    chunkMs < 1000
+  )
+    throw Error("analysis_plan_invalid");
   for (let start = startMs; start < endMs;) {
-    let boundary =
-      (Math.floor(start / LONG_ANALYSIS_CHUNK_MS) + 1) * LONG_ANALYSIS_CHUNK_MS;
-    if (boundary - start < 1000) boundary += LONG_ANALYSIS_CHUNK_MS;
+    let boundary = (Math.floor(start / chunkMs) + 1) * chunkMs;
+    if (boundary - start < 1000) boundary += chunkMs;
     const end = endMs - boundary < 1000 ? endMs : boundary;
     yield { startMs: start, endMs: end };
     start = end;
@@ -60,19 +80,19 @@ export async function analyzeLongOwner(options: {
     !ports.transcribeWindow
   )
     throw Error("long_analysis_unavailable");
-  const inputs = ownerAnalysisRequestSchema.parse(options.value);
+  const inputs = ownerAnalysisRequestForCapacity(capacity).parse(options.value);
   if (inputs.sourceRevision !== workspace.revision)
     throw Error("stale_source_revision");
   const window = ownerAnalysisWindow(workspace.source, inputs.window);
   const available = ownerAvailableSourceWindow(workspace.source);
-  const firstBoundary =
-    (Math.floor(window.startMs / LONG_ANALYSIS_CHUNK_MS) + 1) *
-    LONG_ANALYSIS_CHUNK_MS;
-  const lastTail = window.endMs % LONG_ANALYSIS_CHUNK_MS;
+  const regional = inputs.aiCount === "all" && !inputs.manualOnly;
+  const reviewMs = regional ? FIND_ALL_REVIEW_MS : LONG_ANALYSIS_CHUNK_MS;
+  const firstBoundary = (Math.floor(window.startMs / reviewMs) + 1) * reviewMs;
+  const lastTail = window.endMs % reviewMs;
   const planned = Math.max(
     1,
-    Math.ceil(window.endMs / LONG_ANALYSIS_CHUNK_MS) -
-      Math.floor(window.startMs / LONG_ANALYSIS_CHUNK_MS) -
+    Math.ceil(window.endMs / reviewMs) -
+      Math.floor(window.startMs / reviewMs) -
       (lastTail > 0 && lastTail < 1000 ? 1 : 0) -
       (firstBoundary - window.startMs < 1000 && firstBoundary < window.endMs
         ? 1
@@ -107,19 +127,71 @@ export async function analyzeLongOwner(options: {
     speakers: false,
   });
   ports.chunkProgress?.(0, planned);
+  const anchorsByCore = new Map<number, OwnerCut[]>();
   const chunkPorts: OwnerAnalysisPorts = {
     ...ports,
     started() {},
-    select(words, policy, signal, instructions, count, excluded = []) {
+    async select(
+      words,
+      policy,
+      signal,
+      instructions,
+      count,
+      excluded = [],
+      reviewCore,
+    ) {
       const global = inputs.ranges.map((r) => ({
         startFrame: Math.round((r.startMs * OWNER_FPS) / 1000),
         endFrame: Math.round((r.endMs * OWNER_FPS) / 1000),
       }));
       result.calls.selection++;
-      return ports.select(words, policy, signal, instructions, count, [
-        ...excluded,
-        ...global,
-      ]);
+      const selected = await ports.select(
+        words,
+        policy,
+        signal,
+        instructions,
+        count,
+        [...excluded, ...global],
+        reviewCore,
+      );
+      if (regional && reviewCore) {
+        const positions = new Map(words.map((word, index) => [word.id, index]));
+        anchorsByCore.set(
+          reviewCore.startMs,
+          selected.flatMap((item) => {
+            const a = positions.get(item.startWordId),
+              b = positions.get(item.endWordId);
+            if (a === undefined || b === undefined) return [];
+            const cut = {
+              startFrame: Math.floor(
+                (words[Math.min(a, b)]!.startMs * OWNER_FPS) / 1000,
+              ),
+              endFrame: Math.ceil(
+                (words[Math.max(a, b)]!.endMs * OWNER_FPS) / 1000,
+              ),
+            };
+            return cut.endFrame > cut.startFrame &&
+              cut.endFrame - cut.startFrame <=
+                Math.floor((policy.maxMs * OWNER_FPS) / 1000) &&
+              ![...excluded, ...global].some(
+                (reserved) =>
+                  cut.startFrame < reserved.endFrame &&
+                  cut.endFrame > reserved.startFrame,
+              )
+              ? [cut]
+              : [];
+          }),
+        );
+      }
+      return regional
+        ? completeFindAllPassages(
+            words,
+            selected,
+            policy,
+            [...excluded, ...global],
+            true,
+          )
+        : selected;
     },
   };
   const speech = async (core: { startMs: number; endMs: number }) => {
@@ -165,6 +237,22 @@ export async function analyzeLongOwner(options: {
   let retainedBytes = 0;
   let overflowing = false;
   const reconcile = () => {
+    const limit = ownerAiResultLimit(inputs.aiCount, capacity.moments);
+    if (regional) {
+      const values = reconcileFindAllPassages(
+        [...candidates.values()].flat(),
+        workspace.source.fingerprint,
+        inputs.aiDuration,
+        inputs.ranges.map((range) => ({
+          startFrame: Math.round((range.startMs * OWNER_FPS) / 1000),
+          endFrame: Math.round((range.endMs * OWNER_FPS) / 1000),
+        })),
+        [...anchorsByCore.values()].flat(),
+      );
+      overflowing = values.length > limit;
+      result.suggestions = values.slice(0, limit);
+      return;
+    }
     const unique = new Map<string, OwnerAnalysis["suggestions"][number]>();
     // Round-robin preserves late windows in numeric mode without another AI call.
     const windows = [...candidates.values()];
@@ -173,9 +261,9 @@ export async function analyzeLongOwner(options: {
         const item = items[rank];
         if (!item) continue;
         const key = `${item.cut.startFrame}:${item.cut.endFrame}`;
-        if (!unique.has(key)) unique.set(key, item);
+        if (unique.has(key)) continue;
+        unique.set(key, item);
       }
-    const limit = ownerAiResultLimit(inputs.aiCount, capacity.moments);
     overflowing = inputs.aiCount === "all" && unique.size > limit;
     const values = [...unique.values()];
     result.suggestions =
@@ -219,15 +307,18 @@ export async function analyzeLongOwner(options: {
     const discover = async (
       current: NonNullable<typeof previous>,
       next?: NonNullable<typeof previous>,
+      reviewContext?: { startMs: number; endMs: number },
     ) => {
-      const context = {
+      const context = reviewContext ?? {
         startMs: current.core.startMs,
         endMs: Math.min(window.endMs, current.core.endMs + CONTEXT_MS),
       };
-      const words = [
-        ...current.words,
-        ...(next?.words.filter((w) => w.startMs < context.endMs) ?? []),
-      ];
+      const words = reviewContext
+        ? current.words
+        : [
+            ...current.words,
+            ...(next?.words.filter((w) => w.startMs < context.endMs) ?? []),
+          ];
       const ranges = inputs.ranges.filter(
         (r) => r.startMs >= context.startMs && r.endMs <= context.endMs,
       );
@@ -237,12 +328,13 @@ export async function analyzeLongOwner(options: {
         ranges,
       };
       const key = JSON.stringify([
-        "selection-v2",
+        regional ? `selection-v3:${CODEX_FIND_ALL_POLICY}` : "selection-v2",
         ports.compatibility ?? "codex-current",
         workspace.source.fingerprint,
         scoped,
         inputs.ranges,
         digest(words),
+        ...(regional ? [current.core] : []),
       ]);
       let record = await chunks.read(key, signal);
       if (!record) {
@@ -263,13 +355,25 @@ export async function analyzeLongOwner(options: {
             completed() {},
           },
           capacity,
+          regional ? current.core : undefined,
         );
         // Full transcript lives only in its separate speech receipts.
         analysis.words = [];
-        record = { kind: "selection", analysis };
+        record = {
+          kind: "selection",
+          analysis,
+          ...(regional
+            ? { anchors: anchorsByCore.get(current.core.startMs) ?? [] }
+            : {}),
+        };
         await chunks.write(key, record, signal);
       }
       if (record.kind !== "selection") throw Error("analysis_chunk_invalid");
+      if (regional)
+        anchorsByCore.set(
+          current.core.startMs,
+          record.anchors ?? record.analysis.suggestions.map((item) => item.cut),
+        );
       retainedBytes += Buffer.byteLength(
         JSON.stringify(record.analysis.suggestions),
       );
@@ -288,15 +392,65 @@ export async function analyzeLongOwner(options: {
       ports.chunkProgress?.(result.coverage!.completed, planned);
       await options.checkpoint(ownerAnalysisSchema.parse(result));
     };
-    for (const core of longAnalysisPlan(window.startMs, window.endMs)) {
-      signal.throwIfAborted();
-      const current = { core, words: await speech(core) };
-      if (previous)
-        current.words = reconcileChunkSeam(previous.words, current.words);
-      if (previous) await discover(previous, current);
-      previous = current;
+    if (regional) {
+      const review = longAnalysisPlan(
+        window.startMs,
+        window.endMs,
+        FIND_ALL_REVIEW_MS,
+      );
+      let pending = review.next();
+      let buffered: NonNullable<typeof previous>[] = [];
+      for (const core of longAnalysisPlan(window.startMs, window.endMs)) {
+        signal.throwIfAborted();
+        const current = { core, words: await speech(core) };
+        if (previous)
+          current.words = reconcileChunkSeam(previous.words, current.words);
+        previous = current;
+        buffered.push(current);
+        while (!pending.done) {
+          const context = {
+            startMs: Math.max(
+              window.startMs,
+              pending.value.startMs -
+                Math.max(REVIEW_LOOKBACK_MS, inputs.aiDuration.maxMs),
+            ),
+            endMs: Math.min(
+              window.endMs,
+              pending.value.endMs + inputs.aiDuration.maxMs,
+            ),
+          };
+          if (context.endMs > core.endMs) break;
+          const words = buffered.flatMap((part) =>
+            part.words.filter(
+              (w) =>
+                (w.startMs + w.endMs) / 2 >= context.startMs &&
+                (w.startMs + w.endMs) / 2 < context.endMs,
+            ),
+          );
+          await discover({ core: pending.value, words }, undefined, context);
+          pending = review.next();
+          const keepFrom = pending.done
+            ? Infinity
+            : Math.max(
+                window.startMs,
+                pending.value.startMs -
+                  Math.max(REVIEW_LOOKBACK_MS, inputs.aiDuration.maxMs),
+              );
+          buffered = buffered.filter((part) => part.core.endMs > keepFrom);
+        }
+      }
+      if (!pending.done) throw Error("analysis_chunk_invalid");
+    } else {
+      for (const core of longAnalysisPlan(window.startMs, window.endMs)) {
+        signal.throwIfAborted();
+        const current = { core, words: await speech(core) };
+        if (previous)
+          current.words = reconcileChunkSeam(previous.words, current.words);
+        if (previous) await discover(previous, current);
+        previous = current;
+      }
+      if (previous) await discover(previous);
     }
-    if (previous) await discover(previous);
     // Manual seam-spanning rows get their own bounded, explicit ASR operation.
     for (const range of inputs.ranges)
       if (!result.manual.some((m) => m.rangeIds.includes(range.id))) {

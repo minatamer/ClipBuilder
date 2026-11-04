@@ -7,7 +7,7 @@ import {
 } from "../../../packages/contracts/local/index.ts";
 import {
   OWNER_FPS,
-  ownerAnalysisRequestSchema,
+  ownerAnalysisRequestForCapacity,
   ownerAiEvidenceSchema,
   ownerAnalysisSchema,
   ownerCut,
@@ -66,6 +66,7 @@ export type OwnerAnalysisPorts = {
     instructions: string,
     requestedCount?: OwnerAiCount,
     excludedCuts?: readonly OwnerCut[],
+    reviewCore?: OwnerSourceWindow,
   ): Promise<OwnerAiEvidence[]>;
 };
 
@@ -155,10 +156,11 @@ export async function analyzeOwner(
     reused?(): void;
   },
   capacity: OwnerCapacity = resolveOwnerCapacity({}),
+  reviewCore?: OwnerSourceWindow,
 ) {
   const workspace = ownerWorkspaceForCapacity(capacity).parse(currentWorkspace);
   if (workspace.mode !== ports.mode) throw new Error("analysis_mode_mismatch");
-  const inputs = ownerAnalysisRequestSchema.parse(value);
+  const inputs = ownerAnalysisRequestForCapacity(capacity).parse(value);
   const requestedCount = inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT;
   const resultLimit = ownerAiResultLimit(requestedCount, capacity.moments);
   if (
@@ -333,6 +335,11 @@ export async function analyzeOwner(
   const selected =
     !inputs.manualOnly &&
     words.length > 0 &&
+    (!reviewCore ||
+      words.some(
+        (word) =>
+          word.startMs >= reviewCore.startMs && word.startMs < reviewCore.endMs,
+      )) &&
     available.some(
       (cut) =>
         cut.endFrame - cut.startFrame >=
@@ -354,6 +361,7 @@ export async function analyzeOwner(
           ),
           requestedCount,
           excludedCuts,
+          ...(reviewCore ? [reviewCore] : []),
         ),
       );
     signal.throwIfAborted();

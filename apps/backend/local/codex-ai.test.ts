@@ -23,6 +23,75 @@ const words = ["Coral", "reefs", "recover."].map((text, index) => ({
   confidence: null,
 }));
 const policy = { minMs: 10_000, maxMs: 30_000 };
+it.each(["all", 1] as const)(
+  "maps compact Find all references back to canonical words and leaves numeric input unchanged (%s)",
+  async (count) => {
+    const canonical = words.map((word, index) => ({
+      ...word,
+      id: `w_${String(index + 1).padStart(32, "a")}`,
+      startMs: 300000 + word.startMs,
+      endMs: 300000 + word.endMs,
+    }));
+    const infer = vi.fn<CodexInference>(async (request) => {
+      const payload = JSON.parse(
+        request.prompt.slice(request.prompt.lastIndexOf("\n") + 1),
+      );
+      expect(payload.words[0].startMs).toBe(300000);
+      expect(payload.words[0].id).toBe(
+        count === "all" ? "w_000001" : canonical[0]!.id,
+      );
+      if (count === "all") {
+        expect(payload.words[0]).not.toHaveProperty("punctuatedText");
+        expect(payload.reviewCore).toEqual({ startMs: 300000, endMs: 420000 });
+        expect(payload.fps).toBe(30);
+        expect(request.prompt).toContain("Review chronologically");
+      } else {
+        expect(payload.words[0]).toHaveProperty("punctuatedText");
+        expect(payload).not.toHaveProperty("reviewCore");
+      }
+      return {
+        candidates: [
+          {
+            startWordId: payload.words[0].id,
+            endWordId: payload.words[2].id,
+            titleWordIds: [payload.words[0].id],
+            hookWordIds: [payload.words[1].id],
+            evidence: [
+              { signal: "self-contained", wordIds: [payload.words[0].id] },
+            ],
+            caveats: [],
+          },
+        ],
+      };
+    });
+    const ai = createLocalCodexAi({
+      files: new WorkspaceFiles("unused-synthetic"),
+      media: vi.fn(),
+      infer,
+    });
+    try {
+      const result = await ai.analysis!.select(
+        canonical,
+        policy,
+        AbortSignal.timeout(2000),
+        ownerSelectionPolicy(policy, count, null),
+        count,
+        [],
+        ...(count === "all" ? [{ startMs: 300000, endMs: 420000 }] : []),
+      );
+      expect(result[0]).toMatchObject({
+        startWordId: canonical[0]!.id,
+        endWordId: canonical[2]!.id,
+        title: "Coral",
+        hook: "reefs",
+        evidence: [{ wordIds: [canonical[0]!.id] }],
+      });
+      expect(infer).toHaveBeenCalledTimes(1);
+    } finally {
+      await ai.close!(AbortSignal.timeout(2000));
+    }
+  },
+);
 it.each([30, 600])(
   "retains %i Codex proposals for all-moments selection in one injected request",
   async (count) => {

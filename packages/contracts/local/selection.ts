@@ -8,6 +8,7 @@ import {
 } from "./source-window.ts";
 import {
   OWNER_LIMITS,
+  OWNER_MANUAL_ROW_LIMIT,
   OWNER_DEFAULT_AI_COUNT,
   OWNER_ALL_AI_MOMENTS_LIMIT,
   OWNER_MAX_REQUESTED_CLIP_MS,
@@ -62,7 +63,7 @@ export const ownerAnalysisInputsSchema = z
   .object({
     sourceRevision: z.number().int().nonnegative(),
     policyRevision: z.number().int().nonnegative(),
-    ranges: z.array(ownerRangeSchema).max(OWNER_LIMITS.ranges),
+    ranges: z.array(ownerRangeSchema).max(OWNER_MANUAL_ROW_LIMIT),
     aiDuration: ownerAiDurationSchema,
     aiCount: ownerAiCountSchema.optional(),
     manualOnly: z.boolean(),
@@ -77,7 +78,7 @@ export const ownerAnalysisInputsSchema = z
   );
 export type OwnerAnalysisInputs = z.infer<typeof ownerAnalysisInputsSchema>;
 /** New submissions are narrower than retained analysis and physical render clocks. */
-export const ownerAnalysisRequestSchema = ownerAnalysisInputsSchema.refine(
+const expandedAnalysisRequestSchema = ownerAnalysisInputsSchema.refine(
   (input) =>
     input.ranges.every(
       (range) => range.endMs - range.startMs <= OWNER_MAX_REQUESTED_CLIP_MS,
@@ -87,6 +88,21 @@ export const ownerAnalysisRequestSchema = ownerAnalysisInputsSchema.refine(
     message: `Manual clips cannot exceed ${OWNER_MAX_REQUESTED_CLIP_MS / 1000} seconds.`,
   },
 );
+/** Only composed local Codex capacity admits expanded manual submissions. */
+export const ownerAnalysisRequestSchema = expandedAnalysisRequestSchema.refine(
+  (input) => input.ranges.length <= OWNER_LIMITS.ranges,
+  {
+    path: ["ranges"],
+    message: "Too many manual clips for this processing profile.",
+  },
+);
+export function ownerAnalysisRequestForCapacity(capacity: {
+  manyClips: boolean;
+}) {
+  return capacity.manyClips
+    ? expandedAnalysisRequestSchema
+    : ownerAnalysisRequestSchema;
+}
 export type OwnerRange = z.infer<typeof ownerRangeSchema>;
 export const ownerWordsSchema = z
   .array(transcriptWordSchema)
@@ -103,7 +119,7 @@ export const ownerMomentSchema = z
     id: ownerIdSchema,
     processingIdentity: z.string().regex(/^[a-f0-9]{64}$/),
     cut: ownerCutSchema,
-    rangeIds: z.array(ownerIdSchema).max(OWNER_LIMITS.ranges),
+    rangeIds: z.array(ownerIdSchema).max(OWNER_MANUAL_ROW_LIMIT),
     evidence: ownerAiEvidenceSchema.nullable(),
     cues: ownerWordsSchema,
     speakersPrepared: z.boolean().optional(),
@@ -142,7 +158,7 @@ export const ownerAnalysisSchema = z
       .strict()
       .refine((value) => value.completed <= value.planned)
       .optional(),
-    manual: z.array(ownerMomentSchema).max(OWNER_LIMITS.ranges),
+    manual: z.array(ownerMomentSchema).max(OWNER_MANUAL_ROW_LIMIT),
     suggestions: z.array(ownerMomentSchema),
     calls: z
       .object({

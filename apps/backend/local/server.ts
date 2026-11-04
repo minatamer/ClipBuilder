@@ -25,7 +25,7 @@ import {
   type OwnerTranscript,
 } from "./analysis.ts";
 import {
-  ownerAnalysisRequestSchema,
+  ownerAnalysisRequestForCapacity,
   ownerMomentExportSchema,
   type OwnerAnalysis,
 } from "../../../packages/contracts/local/selection.ts";
@@ -1565,9 +1565,9 @@ export function createOwnerHost(options: OwnerHostOptions) {
         }
         busy.add(workspace.id);
         try {
-          const parsedInputs = ownerAnalysisRequestSchema.parse(
-            await readOwnerJson(req),
-          );
+          const parsedInputs = ownerAnalysisRequestForCapacity(
+            capacityPolicy,
+          ).parse(await readOwnerJson(req));
           if (options.hosted && parsedInputs.aiCount === "all") {
             res.writeHead(400).end();
             return;

@@ -13,6 +13,7 @@ import { z } from "zod";
 import {
   ownerWordsSchema,
   ownerAnalysisSchema,
+  ownerCutSchema,
 } from "../../../packages/contracts/local/selection.ts";
 import { confinedPath, requireDisk } from "./workspace-files.ts";
 
@@ -26,7 +27,11 @@ const receipt = z
     value: z.union([
       z.object({ kind: z.literal("speech"), words: ownerWordsSchema }).strict(),
       z
-        .object({ kind: z.literal("selection"), analysis: ownerAnalysisSchema })
+        .object({
+          kind: z.literal("selection"),
+          analysis: ownerAnalysisSchema,
+          anchors: z.array(ownerCutSchema).optional(),
+        })
         .strict(),
     ]),
   })
