@@ -103,6 +103,7 @@ it("renders manual Zoom and tracked Hook/body camera paths at 24/25/29.97/30/60f
           return {
             id: randomUUID(),
             occurrence,
+            ...(occurrence === "body" ? { followWindow: 30 } : {}),
             personId: null,
             startFrame: 36,
             endFrame: 36 + duration,

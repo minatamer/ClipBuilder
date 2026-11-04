@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { ownerFocusSchema } from "./focus.ts";
+import { ownerCameraTracksSchema } from "./camera-follow.ts";
 import { ownerAudioAssetSchema } from "./audio.ts";
 import { localCodexJobSchema, localCodexReceiptSchema } from "./codex.ts";
 import { OWNER_PRESENTATION_MAX_FRAMES } from "./hook.ts";
@@ -110,8 +112,14 @@ export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
       clipId: ownerIdSchema,
       cut: ownerCutSchema,
       fingerprint: ownerSourceSchema.shape.fingerprint,
+      followFocus: ownerFocusSchema.optional(),
     })
-    .strict(),
+    .strict()
+    .refine(
+      (job) =>
+        !job.followFocus ||
+        job.followFocus.frames === job.cut.endFrame - job.cut.startFrame,
+    ),
   z
     .object({
       workspaceId: ownerIdSchema,
@@ -206,6 +214,7 @@ export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
     .extend({
       operation: z.literal("clip-preview"),
       durationMs: z.number().int().positive().max(OWNER_LIMITS.clipMs),
+      cameraTracks: ownerCameraTracksSchema.optional(),
     })
     .strict(),
   z

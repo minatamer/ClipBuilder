@@ -21,6 +21,7 @@ import { OWNER_SOCIAL_TEXT_PRESETS } from "../../../packages/contracts/local/tex
 import { compileOwnerOverlay } from "../../../packages/contracts/local/edit-overlay.ts";
 import { OWNER_AUDIO_LIMITS } from "../../../packages/contracts/local/audio.ts";
 import { defaultOwnerFocus } from "../../../packages/contracts/local/focus.ts";
+import { ownerCameraFollowKey } from "../../../packages/contracts/local/camera-follow.ts";
 import { placeOwnerPlannedVisual } from "../../../packages/contracts/local/visual-placement.ts";
 import {
   checkHostedScratch,
@@ -131,6 +132,116 @@ const request = () => ({
     (moment) => moment.id,
   ),
 });
+it.each(["provider-ai", "synthetic-ai", "invalid-path"] as const)(
+  "adds source-bound automatic Motion only to fresh real-provider preparations (%s)",
+  async (mode) => {
+    await batch.close();
+    ports.mode = mode === "synthetic-ai" ? "synthetic-ai" : "provider-ai";
+    workspace.mode = ports.mode;
+    analysis.mode = ports.mode;
+    ports.plan.mockResolvedValue([]);
+    Object.assign(ports, {
+      focus: ({
+        moment,
+      }: Parameters<NonNullable<OwnerClipPorts["focus"]>>[0]) => {
+        const focus = defaultOwnerFocus(
+          workspace.source,
+          moment.cut.endFrame - moment.cut.startFrame,
+        );
+        focus.people = [
+          {
+            id: "person_1",
+            observations: [
+              {
+                startFrame: 0,
+                endFrame: focus.frames,
+                box: { x: 0.45, y: 0.3, width: 0.1, height: 0.2 },
+              },
+            ],
+          },
+        ];
+        focus.shots[0]!.personId = "person_1";
+        focus.shots[0]!.centerX = 0.5;
+        return focus;
+      },
+    });
+    const render = ports.render.getMockImplementation()!;
+    ports.render.mockImplementation(async (job, signal) => {
+      const result = await render(job, signal);
+      if (
+        job.operation !== "clip-preview" ||
+        result.operation !== "clip-preview" ||
+        !job.followFocus
+      )
+        return result;
+      const focus = job.followFocus,
+        frames = focus.frames;
+      return {
+        ...result,
+        cameraTracks: [
+          {
+            id: randomUUID(),
+            personId: "person_1",
+            occurrence: "body",
+            startFrame: 0,
+            endFrame: frames,
+            sourceStartFrame: 0,
+            followWindow: 30,
+            seed: { x: 0.45, y: 0.3, width: 0.1, height: 0.2 },
+            outcome: "complete",
+            focusKey:
+              mode === "invalid-path"
+                ? "wrong"
+                : ownerCameraFollowKey(focus, "person_1"),
+            points: Array.from(
+              { length: Math.ceil((frames - 1) / 2) + 1 },
+              (_, i) => {
+                const frame = Math.min(i * 2, frames - 1);
+                return { frame, x: 0.5 + (0.1 * frame) / (frames - 1), y: 0.4 };
+              },
+            ),
+          },
+        ],
+      };
+    });
+    batch = new OwnerClipBatch(workspace, files, ports);
+    await batch.submit(
+      { ...request(), momentIds: [analysis.manual[1]!.id] },
+      analysis,
+    );
+    await batch.drain();
+    const ready = batch.snapshot().clips[0]!;
+    expect(ready.state).toBe("review-ready");
+    expect(ready.base!.overlay.cameraTracks).toBeUndefined();
+    expect(ready.edit?.cameraTracks?.length ?? 0).toBe(
+      mode === "provider-ai" ? 1 : 0,
+    );
+    expect(ports.plan).toHaveBeenCalledTimes(1);
+    expect(ports.image).toHaveBeenCalledTimes(0);
+    expect(ports.render).toHaveBeenCalledTimes(1);
+    const prepared = ports.render.mock.calls[0]![0];
+    expect(
+      prepared.operation === "clip-preview" && !!prepared.followFocus,
+    ).toBe(mode !== "synthetic-ai");
+    await batch.close();
+    batch = new OwnerClipBatch(workspace, files, ports);
+    batch.restore([ready]);
+    expect(batch.snapshot().clips[0]!.edit).toEqual(ready.edit);
+    expect(ports.render).toHaveBeenCalledTimes(1);
+    await batch.render(ready.id, {
+      operationId: randomUUID(),
+      expectedRevision: ready.revision,
+    });
+    await batch.drain();
+    expect(ports.render).toHaveBeenCalledTimes(2);
+    expect(ports.plan).toHaveBeenCalledTimes(1);
+    const exported = ports.render.mock.calls[1]![0];
+    if (exported.operation !== "clip") throw Error("expected_export");
+    expect(exported.overlay.cameraTracks?.length ?? 0).toBe(
+      mode === "provider-ai" ? 1 : 0,
+    );
+  },
+);
 const gate = () => {
   let release!: () => void;
   const wait = new Promise<void>((done) => {

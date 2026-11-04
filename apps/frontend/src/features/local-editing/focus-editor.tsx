@@ -938,20 +938,22 @@ export function FocusEditor({
           {message}
         </p>
       )}
-      <Button
-        variant="quiet"
-        onClick={() => {
-          setAdding(null);
-          setSelected(0);
-          setPersonId(automatic?.shots[0]?.personId ?? null);
-          setMessage("");
-          remembered.current.clear();
-          onChange(automatic ? structuredClone(automatic) : undefined);
-          onSeek(0);
-        }}
-      >
-        Reset focus
-      </Button>
+      {tab !== "motion" && (
+        <Button
+          variant="quiet"
+          onClick={() => {
+            setAdding(null);
+            setSelected(0);
+            setPersonId(automatic?.shots[0]?.personId ?? null);
+            setMessage("");
+            remembered.current.clear();
+            onChange(automatic ? structuredClone(automatic) : undefined);
+            onSeek(0);
+          }}
+        >
+          Reset focus
+        </Button>
+      )}
     </fieldset>
   );
 }

@@ -70,6 +70,10 @@ import { LocalDiagnostics } from "./diagnostics.ts";
 import { ownerClipRenameSchema } from "../../../packages/contracts/local/clip-name.ts";
 import { FAKE_CAPTIONS_ENABLED } from "./fake-content.ts";
 import {
+  ownerCameraTracksSchema,
+  ownerCameraTracksFit,
+} from "../../../packages/contracts/local/camera-follow.ts";
+import {
   ownerCaptionGenerationRequestSchema,
   ownerFakeCaptionGenerationRequestSchema,
   ownerLocalCaptionGenerationRequestSchema,
@@ -1343,6 +1347,7 @@ export class OwnerClipBatch {
           "clip_build",
           async () => {
             if (work.kind === "prepare") {
+              const freshPlan = !clip.base;
               clip.state = "preparing";
               if (!clip.base) {
                 const moment = work.moment;
@@ -1359,6 +1364,14 @@ export class OwnerClipBatch {
               }
               controller.signal.throwIfAborted();
               const frames = clip.base.overlay.frames;
+              const followFocus =
+                freshPlan &&
+                this.ports.mode === "provider-ai" &&
+                clip.base.overlay.focus?.shots.some(
+                  (shot) => shot.personId !== null,
+                )
+                  ? structuredClone(clip.base.overlay.focus)
+                  : undefined;
               clip.preparationStage = "preview";
               this.changed();
               const result = await this.ports.render(
@@ -1369,6 +1382,7 @@ export class OwnerClipBatch {
                   clipId: clip.id,
                   cut: structuredClone(clip.base.cut),
                   fingerprint: clip.base.fingerprint,
+                  ...(followFocus ? { followFocus } : {}),
                 },
                 controller.signal,
               );
@@ -1382,6 +1396,22 @@ export class OwnerClipBatch {
               )
                 throw new Error("invalid_clip_output");
               clip.preview = { frames: result.frames, bytes: result.bytes };
+              if (
+                followFocus &&
+                result.cameraTracks?.length &&
+                clip.edit?.revision === 0 &&
+                !clip.edit.cameraTracks?.length
+              ) {
+                const tracks = ownerCameraTracksSchema.safeParse(
+                  result.cameraTracks,
+                );
+                if (
+                  tracks.success &&
+                  tracks.data.every((track) => track.occurrence === "body") &&
+                  ownerCameraTracksFit(tracks.data, followFocus, { frames })
+                )
+                  clip.edit = { ...clip.edit, cameraTracks: tracks.data };
+              }
               clip.state = "review-ready";
               clip.error = null;
               return;

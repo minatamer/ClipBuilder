@@ -11,7 +11,7 @@ import {
   HeadPixelTracker,
   grayHeadFrame,
   type HeadBox,
-} from "./head-pixel-tracker";
+} from "../../../../../packages/composition/local/head-pixel-tracker.ts";
 
 function mediaReady(
   video: HTMLVideoElement,
@@ -145,7 +145,10 @@ export async function trackHeadVideo({
         context.getImageData(0, 0, canvas.width, canvas.height).data,
       );
       if (!tracker) {
-        tracker = new HeadPixelTracker(image, seed);
+        tracker = new HeadPixelTracker(image, seed, {
+          immediate: true,
+          recoverTranslation: true,
+        });
         points.push({
           frame: 0,
           x: Number((seed.x + seed.width / 2).toFixed(6)),

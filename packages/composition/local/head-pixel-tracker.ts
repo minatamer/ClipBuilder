@@ -1,4 +1,4 @@
-/** Classical, manually seeded image motion. No detector, model or identity data. */
+/** Classical region-seeded image motion. No detector, model or identity data. */
 export type GrayFrame = { width: number; height: number; pixels: Float32Array };
 export type HeadBox = { x: number; y: number; width: number; height: number };
 type Point = { x: number; y: number };
@@ -206,7 +206,14 @@ export class HeadPixelTracker {
   private readonly original: Float32Array;
   private count = 0;
   private center: Point;
-  constructor(frame: GrayFrame, normalized: HeadBox) {
+  constructor(
+    frame: GrayFrame,
+    normalized: HeadBox,
+    private readonly options: {
+      immediate?: boolean;
+      recoverTranslation?: boolean;
+    } = {},
+  ) {
     if (
       !Number.isInteger(frame.width) ||
       !Number.isInteger(frame.height) ||
@@ -233,6 +240,58 @@ export class HeadPixelTracker {
       y: this.box.y + this.box.height / 2,
     };
   }
+  /** Reacquire a unique translated copy of the same recent pixels, never a detector. */
+  private recover(frame: GrayFrame): Point | null {
+    if (!this.options.recoverTranslation) return null;
+    const previous = patch(this.previous[0]!, this.box);
+    if (!previous) return null;
+    const radius = Math.min(128, Math.floor(frame.width * 0.3));
+    const candidates: { box: HeadBox; score: number }[] = [];
+    const score = (x: number, y: number) => {
+      if (
+        x < 0 ||
+        y < 0 ||
+        x + this.box.width > frame.width ||
+        y + this.box.height > frame.height
+      )
+        return;
+      const box = { ...this.box, x, y },
+        appearance = patch(frame, box);
+      if (!appearance || correlation(this.original, appearance) < 0.35) return;
+      candidates.push({ box, score: correlation(previous, appearance) });
+    };
+    for (let dy = -radius; dy <= radius; dy += 2)
+      for (let dx = -radius; dx <= radius; dx += 2)
+        score(this.box.x + dx, this.box.y + dy);
+    candidates.sort((a, b) => b.score - a.score);
+    const coarse = candidates[0];
+    if (!coarse) return null;
+    for (let dy = -2; dy <= 2; dy += 0.5)
+      for (let dx = -2; dx <= 2; dx += 0.5)
+        score(coarse.box.x + dx, coarse.box.y + dy);
+    candidates.sort((a, b) => b.score - a.score);
+    const best = candidates[0]!;
+    const other = candidates.find(
+      (candidate) =>
+        Math.hypot(candidate.box.x - best.box.x, candidate.box.y - best.box.y) >
+        Math.max(this.box.width, this.box.height) * 0.5,
+    );
+    if (best.score < 0.85 || (other && best.score - other.score < 0.1))
+      return null;
+    const points = corners(frame, best.box);
+    if (points.length < 6) return null;
+    this.box = best.box;
+    this.previous = pyramid(frame);
+    this.points = points;
+    this.center = {
+      x: best.box.x + best.box.width / 2,
+      y: best.box.y + best.box.height / 2,
+    };
+    return {
+      x: Number((this.center.x / frame.width).toFixed(6)),
+      y: Number((this.center.y / frame.height).toFixed(6)),
+    };
+  }
   step(frame: GrayFrame): Point | null {
     const old = this.previous[0]!;
     if (
@@ -251,7 +310,7 @@ export class HeadPixelTracker {
         candidates.push({ point: q, dx: q.x - p.x, dy: q.y - p.y });
     }
     if (candidates.length < 5 || candidates.length < this.points.length * 0.45)
-      return null;
+      return this.recover(frame);
     const dx = median(candidates.map((p) => p.dx)),
       dy = median(candidates.map((p) => p.dy));
     const inliers = candidates.filter(
@@ -262,7 +321,7 @@ export class HeadPixelTracker {
       inliers.length < candidates.length * 0.6 ||
       Math.hypot(dx, dy) > Math.max(this.box.width, this.box.height) * 0.6
     )
-      return null;
+      return this.recover(frame);
     const moved = { ...this.box, x: this.box.x + dx, y: this.box.y + dy };
     const appearance = patch(frame, moved),
       previous = patch(old, this.box);
@@ -272,7 +331,7 @@ export class HeadPixelTracker {
       correlation(previous, appearance) < 0.5 ||
       correlation(this.original, appearance) < 0.22
     )
-      return null;
+      return this.recover(frame);
     const x = moved.x + moved.width / 2,
       y = moved.y + moved.height / 2;
     if (x < 0 || y < 0 || x > frame.width || y > frame.height) return null;
@@ -289,8 +348,12 @@ export class HeadPixelTracker {
       if (refreshed.length >= 8) this.points = refreshed;
     }
     this.center = {
-      x: this.center.x + (x - this.center.x) * 0.7,
-      y: this.center.y + (y - this.center.y) * 0.7,
+      x:
+        this.center.x +
+        (x - this.center.x) * (this.options.immediate ? 1 : 0.7),
+      y:
+        this.center.y +
+        (y - this.center.y) * (this.options.immediate ? 1 : 0.7),
     };
     return {
       x: Number((this.center.x / frame.width).toFixed(6)),

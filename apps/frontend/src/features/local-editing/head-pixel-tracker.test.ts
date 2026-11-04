@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { HeadPixelTracker, type GrayFrame } from "./head-pixel-tracker";
+import {
+  HeadPixelTracker,
+  type GrayFrame,
+} from "../../../../../packages/composition/local/head-pixel-tracker.ts";
 
 function image(
   x = 80,
@@ -33,6 +36,26 @@ function image(
 }
 const seed = { x: 60 / 320, y: 50 / 180, width: 40 / 320, height: 60 / 180 };
 describe("manually seeded classical head tracking", () => {
+  it("optionally reacquires an abrupt unique layout translation and still stops on loss", () => {
+    const options = { immediate: true, recoverTranslation: true };
+    const point = new HeadPixelTracker(image(), seed, options).step(
+      image(120, 80),
+    );
+    expect(point).not.toBeNull();
+    expect(Math.abs(point!.x * 320 - 120)).toBeLessThan(1);
+    expect(
+      new HeadPixelTracker(image(), seed, options).step(
+        image(80, 80, 1, 0, false),
+      ),
+    ).toBeNull();
+    const repeated = image(120, 80);
+    for (let y = 50; y < 110; y++)
+      for (let x = 100; x < 140; x++)
+        repeated.pixels[y * 320 + x + 50] = repeated.pixels[y * 320 + x]!;
+    expect(
+      new HeadPixelTracker(image(), seed, options).step(repeated),
+    ).toBeNull();
+  });
   it("follows translation past the original camera without switching to a stationary distractor", () => {
     const tracker = new HeadPixelTracker(image(), seed);
     for (let i = 1; i <= 20; i++) {

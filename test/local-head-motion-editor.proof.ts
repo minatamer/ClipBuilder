@@ -353,16 +353,41 @@ it("tracks a manually marked moving head through real editor controls, cancel, A
         const media=document.querySelector('.head-motion-source video');await wait(()=>media.readyState>=2&&!media.seeking,'seed_frame');const t=Math.floor(media.currentTime*30)/30,x=70+25*t,y=70+5*Math.sin(t*2);
         return {x:r.left+r.width*x/480,y:r.top+r.height*y/270,endX:r.left+r.width*(x+72)/480,endY:r.top+r.height*(y+96)/270};
       }
+      if(action==='layout'){
+        await wait(()=>named('Head width percent').value==='15'&&named('Head height percent').value==='35.6','pointer_selection_committed');
+        if(named('Numbered speaker preview').getBoundingClientRect().width||button('Reset focus'))throw Error('duplicate_marking_preview');
+        const group=document.querySelector('.motion-interval-fields'),end=named('Motion end seconds'),r=end.getBoundingClientRect();
+        if(!group.contains(end)||r.height<44||r.height>52||!group.contains(named('Capture motion end')))throw Error('motion_time_layout');
+        document.querySelector('.motion-head-details').open=true;
+        const inputs=[...document.querySelectorAll('.motion-head-fields input')],boxes=inputs.map(n=>n.getBoundingClientRect());
+        if(boxes.some(b=>b.height<44||b.height>52||b.left<0||b.right>innerWidth)||Math.abs(boxes[0].top-boxes[1].top)>1||Math.abs(boxes[2].top-boxes[3].top)>1)throw Error('motion_geometry_layout');
+        document.querySelector('.motion-head-details').open=false;
+        const windowBox=()=>document.querySelector('.head-follow-window');const beforeWindow=windowBox().getBoundingClientRect().width;await change('Follow window percent','45');if(windowBox().getBoundingClientRect().width<=beforeWindow)throw Error('follow_window_not_larger');await change('Follow window percent','30');
+        window.headSeedBefore=inputs.map(n=>n.value);window.headInlineWidth=named('Head to follow').getBoundingClientRect().width;
+        button('Expand').click();await wait(()=>document.querySelector('dialog[open] [aria-label="Head to follow"]'),'expanded');
+        const dialog=document.querySelector('dialog[open]'),box=dialog.getBoundingClientRect();
+        if(box.left<0||box.right>innerWidth||box.top<0||box.bottom>innerHeight||!dialog.contains(document.activeElement)||document.querySelectorAll('[aria-label="Head to follow"]').length!==1)throw Error('expanded_selection_bounds');
+        if(innerWidth>=1000&&named('Head to follow').getBoundingClientRect().width<=window.headInlineWidth)throw Error('selection_not_enlarged');
+        named('Head to follow').focus();return;
+      }
+      if(action==='expanded-close'){
+        await wait(()=>!document.querySelector('dialog[open]')&&named('Head to follow')?.getBoundingClientRect().width>0,'expanded_closed');
+        if(JSON.stringify([...document.querySelectorAll('.motion-head-fields input')].map(n=>n.value))!==JSON.stringify(window.headSeedBefore)||button('Track head').disabled)throw Error('expanded_changed_seed');
+        if(document.activeElement!==button('Expand'))throw Error('expanded_focus_return');
+        footer();return;
+      }
       if(action==='numeric'){
+        document.querySelector('.motion-head-details').open=true;
         const media=document.querySelector('.head-motion-source video');await wait(()=>media.readyState>=2&&!media.seeking,'numeric_frame');const t=Math.floor(media.currentTime*30)/30;
         for(const [n,v]of[['Head x percent',String((70+25*t)/480*100)],['Head y percent',String((70+5*Math.sin(t*2))/270*100)],['Head width percent','15'],['Head height percent','35.5556']])await change(n,v);
         named('Head to follow').focus();named('Head to follow').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));return;
       }
-      if(action==='track' || action==='track-hook'){
+      if(action==='track' || action==='track-hook'||action==='track-start'){
         await wait(()=>button('Track head')&&!button('Track head').disabled,'marked');
         await change('Motion end seconds','99999');button('Track head').click();await wait(()=>document.querySelector('.head-motion-editor').textContent.includes('0.2 to 30'),'bad_end');await change('Motion end seconds',action==='track-hook'?'1.5':'4');
-        button('Track head').click();await wait(()=>button('Apply changes')&&!button('Apply changes').disabled&&button('Preview motion'),'tracked');footer();return;
+        button('Track head').click();await wait(()=>{const n=named('Tracking head');if(!n)return false;const r=n.getBoundingClientRect(),footer=document.querySelector('#sample-main > footer').getBoundingClientRect();return r.top>=0&&r.bottom<=footer.top;},'visible_tracking_progress');if(named('Motion end seconds')||document.querySelector('.motion-head-fields'))throw Error('tracking_kept_fields');footer();if(action==='track-start')return;await wait(()=>button('Apply changes')&&!button('Apply changes').disabled&&button('Preview motion'),'tracked');footer();return;
       }
+      if(action==='track-finish'){await wait(()=>button('Apply changes')&&!button('Apply changes').disabled&&button('Preview motion'),'tracked');footer();return;}
       if(action==='cancel'){
         button('Track head').click();await wait(()=>button('Cancel tracking'),'running');button('Cancel tracking').click();await wait(()=>!named('Head to follow')&&button('Add at playhead')&&!button('Add at playhead').disabled,'canceled');
         if(button('Apply changes'))throw Error('cancel_modified_draft');footer();return;
@@ -370,21 +395,28 @@ it("tracks a manually marked moving head through real editor controls, cancel, A
       if(action==='discard'){button('Discard changes').click();await wait(()=>!button('Apply changes')&&button('Add more clips'),'discarded');if(named('Motion interval'))throw Error('discard_kept_track');return;}
       if(action==='apply'){button('Apply changes').click();await wait(()=>!button('Apply changes')&&button('Add more clips'),'applied');return;}
       if(action==='hook-label')return named('Motion interval').selectedOptions[0].textContent.includes('Hook');
-      if(action==='reopened'){if(!named('Motion interval')||named('Head to follow'))throw Error('restored_track_missing');button('Remove motion').click();await wait(()=>button('Apply changes'),'removed');return;}
+      if(action==='reopened'){if(named('Follow window percent')?.value!=='30')throw Error('follow_window_not_saved');await change('Follow window percent','50');if(!button('Apply changes'))throw Error('follow_window_not_editable');if(!named('Motion interval')||named('Head to follow'))throw Error('restored_track_missing');button('Remove motion').click();await wait(()=>button('Apply changes'),'removed');return;}
       if(action==='preview'){
-        const video=()=>document.querySelector('.editor-preview video[data-editor-active=true]');const initial=video().style.left;
-        button('Preview motion').click();await wait(()=>named('Pause video'),'playing');await new Promise(r=>setTimeout(r,1100));named('Pause video').click();if(video().style.left===initial)throw Error('preview_did_not_follow');return;
+        const video=()=>document.querySelector('.editor-preview video[data-editor-active=true]');const initial=getComputedStyle(video()).left;
+        button('Preview motion').click();await wait(()=>named('Pause video'),'playing');await wait(()=>video().currentTime>=1.5,'preview_passed_follow_window');named('Pause video').click();if(getComputedStyle(video()).left===initial)throw Error('preview_did_not_follow');return;
       }
       throw Error('unknown_head_motion_action');
     };`;
     const run = (action: string) =>
       page.evaluate((a) => globalThis.headMotionRun(a), action);
     await mkdir(resolve(".local-build/evidence"), { recursive: true });
-    for (const width of [1440, 390, 320]) {
+    for (const width of [1440, 1280, 390, 320]) {
       clip = structuredClone(original);
       await page.setViewport({
         width,
-        height: width === 320 ? 568 : width === 390 ? 844 : 900,
+        height:
+          width === 1280
+            ? 600
+            : width === 320
+              ? 568
+              : width === 390
+                ? 844
+                : 900,
         deviceScaleFactor: 1,
       });
       await page.goto({ url: `http://localhost:${port}/`, timeout: 15000 });
@@ -433,6 +465,27 @@ it("tracks a manually marked moving head through real editor controls, cancel, A
           touchPoints: [],
         });
       } else await run("numeric");
+      await run("layout");
+      const expanded = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        resolve(`.local-build/evidence/cl217-${width}-expanded.png`),
+        Buffer.from(expanded.value.data, "base64"),
+      );
+      await page._client().send("Input.dispatchKeyEvent", {
+        type: "keyDown",
+        key: "Escape",
+        code: "Escape",
+        windowsVirtualKeyCode: 27,
+      });
+      await page._client().send("Input.dispatchKeyEvent", {
+        type: "keyUp",
+        key: "Escape",
+        code: "Escape",
+        windowsVirtualKeyCode: 27,
+      });
+      await run("expanded-close");
       const shot = await page
         ._client()
         .send("Page.captureScreenshot", { format: "png", fromSurface: true });
@@ -440,7 +493,15 @@ it("tracks a manually marked moving head through real editor controls, cancel, A
         resolve(`.local-build/evidence/cl203-${width}-seed.png`),
         Buffer.from(shot.value.data, "base64"),
       );
-      await run("track");
+      await run("track-start");
+      const tracking = await page
+        ._client()
+        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
+      await writeFile(
+        resolve(`.local-build/evidence/cl217-${width}-tracking.png`),
+        Buffer.from(tracking.value.data, "base64"),
+      );
+      await run("track-finish");
       await run("preview");
       await run("discard");
       await run("add");
@@ -454,6 +515,7 @@ it("tracks a manually marked moving head through real editor controls, cancel, A
       await run("apply");
       const tracked = clip.edit!.cameraTracks![0]!;
       expect(tracked.outcome).toBe("complete");
+      expect(tracked.followWindow).toBe(30);
       expect(tracked.points.length).toBe(
         Math.ceil((tracked.endFrame - tracked.startFrame - 1) / 2) + 1,
       );
@@ -661,7 +723,16 @@ it("tracks a manually marked moving head through real editor controls, cancel, A
     await run("open");
     await run("bulk");
     await run("apply");
-    expect(clip.edit!.cameraTracks).toHaveLength(2);
+    expect(
+      clip.edit!.cameraTracks,
+      JSON.stringify(
+        clip.edit!.cameraTracks?.map((t) => ({
+          start: t.startFrame,
+          end: t.endFrame,
+          outcome: t.outcome,
+        })),
+      ),
+    ).toHaveLength(2);
     expect(clip.edit!.cameraTracks![1]!.continues).toBe(
       clip.edit!.cameraTracks![0]!.id,
     );
@@ -674,7 +745,7 @@ it("tracks a manually marked moving head through real editor controls, cancel, A
     await page._client().send("Runtime.evaluate", { expression: driver });
     await run("open");
     await run("bulk-covered");
-    expect(edits).toBe(13);
+    expect(edits).toBe(15);
     expect(unexpected).toBe(0);
   } finally {
     try {

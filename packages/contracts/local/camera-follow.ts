@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { normalizedBoxSchema } from "@clipbuilder/contracts";
 import { OWNER_FPS, OWNER_LIMITS, ownerIdSchema } from "./policy.ts";
+import { steadyCameraCenter } from "./camera-follow-window.ts";
 import { ownerHookFrames, type OwnerHook } from "./hook.ts";
 import {
   ownerFocusAt,
@@ -15,6 +16,7 @@ export const OWNER_CAMERA_FOLLOW = {
   sampleFrames: 2,
   samples: 451,
   edgeFrames: 3,
+  followWindow: 30,
 } as const;
 export const ownerHeadBoxSchema = normalizedBoxSchema.refine(
   (box) =>
@@ -43,6 +45,7 @@ export const ownerCameraTrackSchema = z
     focusKey: z.string().min(1).max(12000),
     seed: ownerHeadBoxSchema,
     outcome: z.enum(["complete", "lost"]),
+    followWindow: z.number().int().min(0).max(60).optional(),
     points: z
       .array(
         z
@@ -202,11 +205,18 @@ export function ownerCameraFollowCrop(
   );
   if (!track) return baseline;
   let first = track;
+  const chain = [track];
   for (let i = 0; i < tracks.length && first.continues; i++) {
     const previous = tracks.find((t) => t.id === first.continues);
     if (!previous) break;
     first = previous;
+    chain.unshift(previous);
   }
+  if (
+    track.followWindow !== undefined &&
+    ownerFocusAt(focus, first.sourceStartFrame).startFrame !== shot.startFrame
+  )
+    return baseline;
   const continues = tracks.some((t) => t.continues === track.id);
   const at = occurrenceFrame - track.startFrame;
   let right = 1;
@@ -215,26 +225,35 @@ export function ownerCameraFollowCrop(
   const a = track.points[right - 1]!,
     b = track.points[right]!;
   const p = Math.max(0, Math.min(1, (at - a.frame) / (b.frame - a.frame)));
+  const steady =
+    track.followWindow === undefined
+      ? undefined
+      : steadyCameraCenter(focus, chain, occurrenceFrame);
   const target = ownerFocusCrop(focus, {
     ...shot,
-    centerX: a.x + (b.x - a.x) * p,
-    centerY: Math.max(
-      0,
-      Math.min(
-        1,
-        shot.centerY +
-          a.y +
-          (b.y - a.y) * p -
-          (first.seed.y + first.seed.height / 2),
+    centerX: steady?.x ?? a.x + (b.x - a.x) * p,
+    centerY:
+      steady?.y ??
+      Math.max(
+        0,
+        Math.min(
+          1,
+          shot.centerY +
+            a.y +
+            (b.y - a.y) * p -
+            (first.seed.y + first.seed.height / 2),
+        ),
       ),
-    ),
   });
   const edge = Math.max(
     0,
     Math.min(
       1,
       track.continues ? 1 : at / OWNER_CAMERA_FOLLOW.edgeFrames,
-      continues
+      continues ||
+        (track.followWindow !== undefined &&
+          track.sourceStartFrame + track.endFrame - track.startFrame ===
+            shot.endFrame)
         ? 1
         : (track.endFrame - track.startFrame - 1 - at) /
             OWNER_CAMERA_FOLLOW.edgeFrames,

@@ -6,6 +6,8 @@ import {
   type OwnerMediaJob,
 } from "../../../packages/contracts/local/index.ts";
 import { OWNER_BATCH_POLICY } from "../../../packages/contracts/local/clips.ts";
+import type { OwnerCameraTrack } from "../../../packages/contracts/local/camera-follow.ts";
+import { followPreparedCamera } from "./automatic-camera-follow.ts";
 import {
   ownerClipMediaPath,
   ownerMediaPath,
@@ -14,7 +16,12 @@ import {
 } from "./media.ts";
 
 type Preview = { frames: number; bytes: number; durationMs: number };
-type CachedCut = { binding: string; digest: string; preview: Preview };
+type CachedCut = {
+  binding: string;
+  digest: string;
+  preview: Preview;
+  follow?: { binding: string; tracks: OwnerCameraTrack[] };
+};
 export type OwnerCutCache = Map<string, CachedCut>;
 const hashFile = async (file: string, signal: AbortSignal) => {
   const hash = createHash("sha256");
@@ -44,13 +51,38 @@ export async function prepareOwnerClipPreview(
     }),
     key = `${job.workspaceId}:${job.clipId}`,
     cached = options.cache.get(key);
+  const reply = async (entry: CachedCut) => {
+    if (job.operation !== "clip-preview" || !job.followFocus)
+      return { operation: "clip-preview" as const, ...entry.preview };
+    const followBinding = JSON.stringify(job.followFocus);
+    if (entry.follow?.binding !== followBinding) {
+      let tracks: OwnerCameraTrack[] = [];
+      try {
+        tracks = await followPreparedCamera(
+          raw,
+          job.followFocus,
+          options.tools,
+          signal,
+        );
+      } catch {
+        signal.throwIfAborted();
+      }
+      entry.follow = { binding: followBinding, tracks };
+    }
+    signal.throwIfAborted();
+    return {
+      operation: "clip-preview" as const,
+      ...entry.preview,
+      cameraTracks: structuredClone(entry.follow.tracks),
+    };
+  };
   if (cached) {
     if (
       cached.binding !== binding ||
       (await hashFile(raw, signal)) !== cached.digest
     )
       throw new Error("stale_clip_source");
-    return { operation: "clip-preview" as const, ...cached.preview };
+    return reply(cached);
   }
   const result = await ownerPreviewCut(
     await ownerMediaPath(options.root, job.workspaceId, "source.mp4"),
@@ -71,10 +103,11 @@ export async function prepareOwnerClipPreview(
       ((job.cut.endFrame - job.cut.startFrame) * 1000) / OWNER_FPS,
     ),
   };
-  options.cache.set(key, {
+  const entry: CachedCut = {
     binding,
     digest: await hashFile(raw, signal),
     preview,
-  });
-  return { operation: "clip-preview" as const, ...preview };
+  };
+  options.cache.set(key, entry);
+  return reply(entry);
 }

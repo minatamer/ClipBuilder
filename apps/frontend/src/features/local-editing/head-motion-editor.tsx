@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Clock3, Play, Trash2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 import { Progress } from "../../shared/ui/progress";
@@ -30,7 +30,12 @@ import {
 } from "../../../../../packages/contracts/local/camera-follow.ts";
 import { trackHeadVideo } from "./track-head-video";
 import { BulkHeadMotionEditor } from "./bulk-head-motion-editor";
-import type { HeadBox } from "./head-pixel-tracker";
+import { HeadSelectionView } from "./head-selection-view";
+import {
+  ownerFollowWindow,
+  setOwnerFollowWindow,
+} from "../../../../../packages/contracts/local/camera-follow-window.ts";
+import type { HeadBox } from "../../../../../packages/composition/local/head-pixel-tracker.ts";
 
 type Draft = Pick<
   OwnerCameraTrack,
@@ -41,8 +46,44 @@ type Draft = Pick<
   | "endFrame"
   | "sourceStartFrame"
   | "seed"
+  | "followWindow"
 > & { marked: boolean };
 const name = (id: string | null) => (id ? `Person ${id.slice(-1)}` : "Camera");
+function FollowWindowField({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: number;
+  disabled: boolean;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="motion-follow-window">
+      Follow window (%)
+      <input
+        type="number"
+        aria-label="Follow window percent"
+        min={0}
+        max={60}
+        step={5}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => {
+          const next = Number(event.currentTarget.value);
+          if (
+            event.currentTarget.value !== "" &&
+            Number.isInteger(next) &&
+            next >= 0 &&
+            next <= 60
+          )
+            onChange(next);
+        }}
+      />
+      <span>Larger keeps framing still through small movements.</span>
+    </label>
+  );
+}
 const clampBox = (box: HeadBox): HeadBox => {
   const width = Math.max(0.02, Math.min(0.7, box.width)),
     height = Math.max(0.02, Math.min(0.7, box.height));
@@ -101,16 +142,12 @@ export function HeadMotionEditor({
     [progress, setProgress] = useState(0);
   const person = draft ? draft.personId : personId;
   const request = useRef<AbortController | null>(null),
-    alive = useRef(false),
-    video = useRef<HTMLVideoElement>(null);
-  const gesture = useRef<{ pointer: number; x: number; y: number } | null>(
-    null,
-  );
+    alive = useRef(false);
+  const progressSlot = useRef<HTMLDivElement>(null);
   const prefix = ownerHookFrames({ hook }),
     content = ownerSourceContent(focus.source);
   const chosen = tracks.find((t) => t.id === selected) ?? tracks[0];
   const selecting = draft !== null || bulk;
-  const seedFrame = draft?.sourceStartFrame;
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -124,13 +161,9 @@ export function HeadMotionEditor({
   }, [selecting, onMode]);
   useEffect(() => {
     onBusy(busy);
+    if (busy) progressSlot.current?.scrollIntoView({ block: "nearest" });
     return () => onBusy(false);
   }, [busy, onBusy]);
-  useEffect(() => {
-    const media = video.current;
-    if (media && seedFrame !== undefined && media.readyState >= 1)
-      media.currentTime = (seedFrame + 0.25) / OWNER_FPS;
-  }, [seedFrame]);
   const offset = draft?.occurrence === "body" ? prefix : 0;
   function updateSeed(seed: HeadBox) {
     if (draft) setDraft({ ...draft, seed: clampBox(seed), marked: true });
@@ -173,15 +206,9 @@ export function HeadMotionEditor({
         height: 0.25,
       }),
       marked: false,
+      followWindow: OWNER_CAMERA_FOLLOW.followWindow,
     });
     setMessage("");
-  }
-  function pointer(event: PointerEvent<HTMLButtonElement>) {
-    const r = event.currentTarget.getBoundingClientRect();
-    return {
-      x: Math.max(0, Math.min(1, (event.clientX - r.left) / r.width)),
-      y: Math.max(0, Math.min(1, (event.clientY - r.top) / r.height)),
-    };
   }
   async function captureEnd() {
     if (!draft || busy || disabled || capturingEnd) return;
@@ -319,8 +346,13 @@ export function HeadMotionEditor({
     }
   }
   return (
-    <div className="head-motion-editor">
-      {!bulk && (
+    <div
+      className="head-motion-editor"
+      data-mode={
+        bulk ? "bulk" : draft ? (busy ? "tracking" : "marking") : "idle"
+      }
+    >
+      {!bulk && !draft && (
         <div className="collection-navigation">
           <label>
             Follow
@@ -398,194 +430,132 @@ export function HeadMotionEditor({
         />
       ) : draft ? (
         <>
-          <p>{name(draft.personId)} · Drag around the head to follow.</p>
-          <div
-            className="focus-source head-motion-source"
-            style={{ aspectRatio: `${content.width}/${content.height}` }}
-          >
-            <video
-              ref={video}
-              src={sourceUrl}
-              muted
-              playsInline
-              preload="metadata"
-              aria-hidden="true"
-              onLoadedMetadata={() => {
-                if (video.current)
-                  video.current.currentTime =
-                    (draft.sourceStartFrame + 0.25) / OWNER_FPS;
-              }}
-              style={{
-                position: "absolute",
-                width: `${(1080 / content.width) * 100}%`,
-                height: `${(1920 / content.height) * 100}%`,
-                maxWidth: "none",
-                left: `${(-content.x / content.width) * 100}%`,
-                top: `${(-content.y / content.height) * 100}%`,
-              }}
-            />
-            <button
-              type="button"
-              className="head-seed-surface"
-              aria-label="Head to follow"
-              disabled={disabled || busy}
-              onPointerDown={(e) => {
-                if (e.button !== 0) return;
-                e.preventDefault();
-                e.currentTarget.focus();
-                e.currentTarget.setPointerCapture(e.pointerId);
-                const p = pointer(e);
-                gesture.current = { pointer: e.pointerId, ...p };
-                updateSeed({
-                  ...draft.seed,
-                  x: p.x - draft.seed.width / 2,
-                  y: p.y - draft.seed.height / 2,
-                });
-              }}
-              onPointerMove={(e) => {
-                const g = gesture.current;
-                if (!g || g.pointer !== e.pointerId) return;
-                const p = pointer(e);
-                updateSeed({
-                  x: Math.min(p.x, g.x),
-                  y: Math.min(p.y, g.y),
-                  width: Math.abs(p.x - g.x),
-                  height: Math.abs(p.y - g.y),
-                });
-              }}
-              onPointerUp={() => {
-                gesture.current = null;
-              }}
-              onPointerCancel={() => {
-                gesture.current = null;
-              }}
-              onLostPointerCapture={() => {
-                gesture.current = null;
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  setDraft({ ...draft, marked: true });
-                  return;
-                }
-                const dx =
-                    e.key === "ArrowRight"
-                      ? 0.01
-                      : e.key === "ArrowLeft"
-                        ? -0.01
-                        : 0,
-                  dy =
-                    e.key === "ArrowDown"
-                      ? 0.01
-                      : e.key === "ArrowUp"
-                        ? -0.01
-                        : 0;
-                if (!dx && !dy) return;
-                e.preventDefault();
-                updateSeed(
-                  e.shiftKey
-                    ? {
-                        ...draft.seed,
-                        width: draft.seed.width + dx,
-                        height: draft.seed.height + dy,
+          <div className="motion-marking-context">
+            <strong>{name(draft.personId)}</strong>
+            <span>
+              {draft.occurrence === "hook" ? "Hook" : "Clip"} ·{" "}
+              {((offset + draft.startFrame) / OWNER_FPS).toFixed(2)}–
+              {((offset + draft.endFrame) / OWNER_FPS).toFixed(2)}s
+            </span>
+          </div>
+          <HeadSelectionView
+            sourceUrl={sourceUrl}
+            content={content}
+            sourceFrame={draft.sourceStartFrame}
+            seed={draft.seed}
+            disabled={disabled || busy}
+            tracking={busy}
+            onChange={updateSeed}
+            onConfirm={() => setDraft({ ...draft, marked: true })}
+            followWindow={ownerFollowWindow(focus, draft).box}
+          />
+          <div className="motion-editing-slot" ref={progressSlot}>
+            {busy ? (
+              <Progress label="Tracking head" fraction={progress} />
+            ) : (
+              <>
+                <div className="motion-interval-fields">
+                  <p className="motion-start-time">
+                    <span>Start</span>
+                    <strong>
+                      {((offset + draft.startFrame) / OWNER_FPS).toFixed(3)}s
+                    </strong>
+                  </p>
+                  <div className="range-time">
+                    <label>
+                      End (seconds)
+                      <input
+                        type="number"
+                        aria-label="Motion end seconds"
+                        min={(offset + draft.startFrame + 6) / OWNER_FPS}
+                        max={
+                          (offset +
+                            Math.min(
+                              draft.startFrame + OWNER_CAMERA_FOLLOW.frames,
+                              draft.occurrence === "hook"
+                                ? prefix
+                                : focus.frames,
+                            )) /
+                          OWNER_FPS
+                        }
+                        step={1 / OWNER_FPS}
+                        disabled={disabled || busy || capturingEnd}
+                        value={
+                          Number.isFinite(draft.endFrame)
+                            ? Number(
+                                ((offset + draft.endFrame) / OWNER_FPS).toFixed(
+                                  3,
+                                ),
+                              )
+                            : ""
+                        }
+                        onChange={(e) =>
+                          setDraft({
+                            ...draft,
+                            endFrame:
+                              e.currentTarget.value === ""
+                                ? NaN
+                                : Math.round(
+                                    Number(e.currentTarget.value) * OWNER_FPS,
+                                  ) - offset,
+                          })
+                        }
+                      />
+                    </label>
+                    <Button
+                      variant="quiet"
+                      icon={Clock3}
+                      aria-label="Capture motion end"
+                      title="End after current frame"
+                      disabled={
+                        disabled || busy || capturingEnd || !captureReady
                       }
-                    : {
-                        ...draft.seed,
-                        x: draft.seed.x + dx,
-                        y: draft.seed.y + dy,
-                      },
-                );
-              }}
-            >
-              <span
-                style={{
-                  left: `${draft.seed.x * 100}%`,
-                  top: `${draft.seed.y * 100}%`,
-                  width: `${draft.seed.width * 100}%`,
-                  height: `${draft.seed.height * 100}%`,
-                }}
-              />
-            </button>
-          </div>
-          <div className="editor-fields">
-            <p>
-              Start: {((offset + draft.startFrame) / OWNER_FPS).toFixed(2)}s ·{" "}
-              {draft.occurrence === "hook" ? "Hook" : "Clip"}
-            </p>
-            <div className="range-time">
-              <label>
-                End (seconds)
-                <input
-                  type="number"
-                  aria-label="Motion end seconds"
-                  min={(offset + draft.startFrame + 6) / OWNER_FPS}
-                  max={
-                    (offset +
-                      Math.min(
-                        draft.startFrame + OWNER_CAMERA_FOLLOW.frames,
-                        draft.occurrence === "hook" ? prefix : focus.frames,
-                      )) /
-                    OWNER_FPS
-                  }
-                  step={1 / OWNER_FPS}
-                  disabled={disabled || busy || capturingEnd}
-                  value={
-                    Number.isFinite(draft.endFrame)
-                      ? Number(
-                          ((offset + draft.endFrame) / OWNER_FPS).toFixed(3),
-                        )
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      endFrame:
-                        e.currentTarget.value === ""
-                          ? NaN
-                          : Math.round(
-                              Number(e.currentTarget.value) * OWNER_FPS,
-                            ) - offset,
-                    })
+                      onClick={() => void captureEnd()}
+                    >
+                      Capture
+                    </Button>
+                  </div>
+                </div>
+                <FollowWindowField
+                  value={draft.followWindow ?? 0}
+                  disabled={disabled}
+                  onChange={(followWindow) =>
+                    setDraft({ ...draft, followWindow })
                   }
                 />
-              </label>
-              <Button
-                variant="quiet"
-                icon={Clock3}
-                aria-label="Capture motion end"
-                title="End after current frame"
-                disabled={disabled || busy || capturingEnd || !captureReady}
-                onClick={() => void captureEnd()}
-              >
-                Capture
-              </Button>
-            </div>
-            {(["x", "y", "width", "height"] as const).map((key) => (
-              <label key={key}>
-                Head {key === "x" ? "left" : key === "y" ? "top" : key} (%)
-                <input
-                  type="number"
-                  aria-label={`Head ${key} percent`}
-                  min={0}
-                  max={100}
-                  step={1}
-                  disabled={disabled || busy}
-                  value={Number((draft.seed[key] * 100).toFixed(1))}
-                  onChange={(e) => {
-                    if (
-                      e.currentTarget.value !== "" &&
-                      Number.isFinite(Number(e.currentTarget.value))
-                    )
-                      updateSeed({
-                        ...draft.seed,
-                        [key]: Number(e.currentTarget.value) / 100,
-                      });
-                  }}
-                />
-              </label>
-            ))}
+                <details className="motion-head-details">
+                  <summary>Head region</summary>
+                  <div className="motion-head-fields">
+                    {(["x", "y", "width", "height"] as const).map((key) => (
+                      <label key={key}>
+                        Head {key === "x" ? "left" : key === "y" ? "top" : key}{" "}
+                        (%)
+                        <input
+                          type="number"
+                          aria-label={`Head ${key} percent`}
+                          min={0}
+                          max={100}
+                          step={1}
+                          disabled={disabled || busy}
+                          value={Number((draft.seed[key] * 100).toFixed(1))}
+                          onChange={(e) => {
+                            if (
+                              e.currentTarget.value !== "" &&
+                              Number.isFinite(Number(e.currentTarget.value))
+                            )
+                              updateSeed({
+                                ...draft.seed,
+                                [key]: Number(e.currentTarget.value) / 100,
+                              });
+                          }}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </details>
+              </>
+            )}
           </div>
-          {busy && <Progress label="Tracking head" fraction={progress} />}
           <WorkflowActions
             target={footerTarget}
             label="Motion tracking actions"
@@ -650,6 +620,15 @@ export function HeadMotionEditor({
                 </select>
               </label>
               {chosen && (
+                <FollowWindowField
+                  value={chosen.followWindow ?? 0}
+                  disabled={disabled}
+                  onChange={(value) =>
+                    onChange(setOwnerFollowWindow(tracks, chosen.id, value))
+                  }
+                />
+              )}
+              {chosen && (
                 <div className="picture-tools">
                   <Button
                     variant="secondary"
@@ -678,6 +657,9 @@ export function HeadMotionEditor({
                         sourceStartFrame: chosen.sourceStartFrame,
                         seed: chosen.seed,
                         marked: true,
+                        followWindow:
+                          chosen.followWindow ??
+                          OWNER_CAMERA_FOLLOW.followWindow,
                       });
                       seek(
                         chosen.startFrame +
