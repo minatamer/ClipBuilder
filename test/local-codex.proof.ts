@@ -468,9 +468,9 @@ it("runs the local Codex workflow through real controls/native worker with injec
       if(action==='first-content'){
         const clip=[...document.querySelectorAll('[role=tab]')].find(n=>n.textContent.trim().startsWith('Clip 1'));if(!clip)throw new Error('clip_1');clip.click();
         await wait(()=>[...document.querySelectorAll('.editor-preview video')].some(video=>video.src.includes(globalThis.firstClipId))&&button('Text')&&!button('Text').disabled,'content_ready');
-        await wait(()=>{const node=button('Text');if(!node||node.disabled)return false;node.click();return true;},'text_control');await wait(()=>named('Edit text 1')&&named('Edit text 1').getClientRects().length,'text_control');named('Edit text 1').click();
+        await wait(()=>{const node=button('Text');if(!node||node.disabled)return false;node.click();return true;},'text_control');await wait(()=>document.querySelector('[data-timeline-key*=":text:"]')&&document.querySelector('[data-timeline-key*=":text:"]').getClientRects().length,'text_control');document.querySelector('[data-timeline-key*=":text:"]').click();
         await wait(()=>document.querySelector('.editor-preview [data-text-layer]'),'planned_text');
-        button('Media').click();button('Pictures')?.click();await wait(()=>named('Edit picture 1')&&named('Edit picture 1').getClientRects().length,'picture_control');named('Edit picture 1').click();
+        button('Media').click();button('Pictures')?.click();await wait(()=>document.querySelector('[data-timeline-key*=":picture:"]')&&document.querySelector('[data-timeline-key*=":picture:"]').getClientRects().length,'picture_control');document.querySelector('[data-timeline-key*=":picture:"]').click();
         await wait(()=>[...document.querySelectorAll('.editor-preview img')].some(image=>image.naturalWidth>0),'planned_visual');
         return document.querySelector('.editor-preview [data-text-layer]').textContent.includes('POV: Synthetic');
       }

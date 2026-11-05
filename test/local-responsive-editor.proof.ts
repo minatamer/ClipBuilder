@@ -452,7 +452,7 @@ it("uses the real editor, clip navigation and footer at phone, tablet and deskto
         const modal=()=>document.querySelector('dialog[open]'), close=()=>modal()?.querySelector('button[aria-label="Close image"]');
         if(document.querySelectorAll('dialog img').length)throw new Error('closed_image_loaded');
         if(action==='image-view' && innerWidth>1000){
-          document.querySelector('[aria-label="Edit picture 1"]').click();
+          document.querySelector('[data-timeline-key*=":picture:"]').click();
           await wait(()=>[...document.querySelectorAll('label')].some(n=>n.textContent.trim().startsWith('Fit') && n.querySelector('select')),'picture_selected');
           const fit=[...document.querySelectorAll('label')].find(n=>n.textContent.trim().startsWith('Fit'))?.querySelector('select');
           if(!fit)throw new Error('picture_fit_control');
@@ -460,7 +460,7 @@ it("uses the real editor, clip navigation and footer at phone, tablet and deskto
           await wait(()=>button('Apply changes'),'picture_dirty_before_view');
         }
         const dirty=Boolean(button('Apply changes'));
-        const selectedPicture=()=>document.querySelector('.picture-choice[aria-pressed="true"]')?.getAttribute('aria-label');
+        const selectedPicture=()=>document.querySelector('[data-picture][aria-pressed="true"]')?.getAttribute('data-timeline-key');
         const beforeSelection=selectedPicture();
         let sawLoading=false;
         const observer=new MutationObserver(()=>{if(document.querySelector('dialog[open] [role="status"]'))sawLoading=true;});

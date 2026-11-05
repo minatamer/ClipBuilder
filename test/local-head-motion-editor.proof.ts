@@ -324,10 +324,9 @@ it("tracks a manually marked moving head through real editor controls, cancel, A
         await wait(()=>named('Zoom effect'),'zoom_context');if(!root.getBoundingClientRect().width)throw Error('numbered_zoom_missing');
         root.querySelector('[aria-pressed=true]').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
         if(button('Apply changes'))throw Error('zoom_context_moved_camera');
-        tabs.find(n=>n.textContent==='Motion').click();await wait(()=>named('Motion person'),'motion_context');
-        named('Select Person 2').click();await wait(()=>named('Motion person').value==='person_2'&&named('Selected Person 2'),'person_context_select');
-        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(named('Motion person'),'person_1');named('Motion person').dispatchEvent(new Event('change',{bubbles:true}));
-        await wait(()=>named('Selected Person 1')&&named('Motion person').value==='person_1','person_context_return');
+        tabs.find(n=>n.textContent==='Motion').click();await wait(()=>named('Camera timeline'),'motion_context');
+        [...named('Camera timeline').querySelectorAll('button')].find(n=>n.textContent.includes('Person 2')).click();await wait(()=>named('Selected Person 2'),'person_context_select');
+        [...named('Camera timeline').querySelectorAll('button')].find(n=>n.textContent.includes('Person 1')).click();await wait(()=>named('Selected Person 1'),'person_context_return');
         if(button('Apply changes'))throw Error('person_selection_changed_draft');root.scrollIntoView({block:'start'});await new Promise(r=>setTimeout(r,100));footer();return;
       }
       if(action==='bulk-cancel' || action==='bulk'){
