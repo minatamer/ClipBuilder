@@ -1,5 +1,41 @@
 # ClipBuilder frontend
 
+CL-223 treats a new Hook start at or past the old end as a new range choice:
+End clears to blank in the local draft, and Preview hook, Use suggestion and
+Apply disable until an ordered in-clip range up to 10 seconds is complete.
+Capture and numeric edits share this behavior; Discard/removal clear the draft.
+The last valid preview clock stays available to choose the end. Incomplete
+endpoints never enter saved edits or worker input. Existing prepared/synthetic
+clips support this without API keys, processing or regeneration.
+
+New captions use **Default positioning** in Captions → Position: a centered
+safe text box at 53.75% of portrait height, between Center and Lower half,
+matching the owner's above-visual reference. Other positions and manual geometry
+remain. Saved caption boxes/styles and authored Text defaults are preserved.
+This is API-free layout; real caption generation retains its provider gates.
+
+CL-222 keeps the explicitly selected **Hook / Main clip** editing context pinned
+through playback and seeking. Every picture, authored text layer, caption group,
+audio cue and camera item stays in its context's picker regardless of playhead
+time. Selecting a picture/text/caption/audio item seeks its occurrence; existing
+timing panels keep the item's source clock. Preview drag handles and Capture are
+available when that same occurrence is showing, protecting the other copy.
+This changes editor behavior locally with no keys or new processing, including
+existing clips; normal generation/provider approvals remain separate.
+
+Adding a Hook copies its repeated content into **Hook** and **Main clip** editing
+contexts. Select either above the settings to edit its own captions, text,
+pictures/motion, audio, filter and camera settings. Preview/jump and Capture
+follow that occurrence; Apply/Discard covers both. Copies share immutable media
+assets, with no AI calls or extra media files. Hook-range changes preserve
+intersecting edits, add newly repeated content and clear Hook camera paths on
+the changed clock. Removing a Hook drops its copy while preserving the main clip.
+Existing linked saves separate on an explicit edit. Caption/visual AI generation
+remains a main-clip action; a captionless Hook can copy existing main captions.
+Prepared synthetic clips support these edits without API keys. Real generation
+keeps its existing local-model/provider and approval requirements. CL-220 owns
+save/recovery and generated browser/native parity evidence.
+
 Motion uses one active head-marking view with an adaptive source preview and
 **Expand** for a larger selection surface. End/Capture stay together, head-region
 numbers have their own optional two-column group, and local tracking replaces
@@ -18,6 +54,12 @@ intervals that would lose the head. It reuses the existing AI plan and prepared
 video, with no additional AI calls. Normal fake preparation does not launch that
 automatic pass; generated-media proofs exercise the actual native path directly.
 Real preparation keeps the existing Codex/Gemini/runtime/live/approval gates.
+
+CL-218 preserves useful automatic Motion before a later tracking loss or source
+cut. Partial paths retain their existing lost status and stop at verified pixels;
+restore/export reuse them without new AI or tracking. Uncertain automatic focus
+does not choose a person by roster order. Real speaker accuracy still requires
+real-media evidence; manual Motion continues to work without API keys.
 
 Manual Start and End fields pair **Capture** with **Jump to** (CL-215). Jump to
 uses the source preview to check typed/imported times before Use clips, preserving

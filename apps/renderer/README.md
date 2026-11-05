@@ -2,9 +2,11 @@
 
 CL-216 shares the region-seeded pixel tracker with the browser. A fresh protected
 clip-preview request may supply exact focus evidence; the worker samples the
-already prepared clip, retaining only complete camera families whose selected
-head escapes fixed framing. Unique translated recent pixels can recover an
-abrupt layout shift; ambiguous/missing heads keep the baseline. No detector,
+already prepared clip, retaining verified paths whose selected head escapes
+fixed framing. CL-218 preserves a useful measured prefix when a later cut/loss
+ends tracking, with no extrapolation or continuation from a lost path. Unique
+translated recent pixels can recover an abrupt layout shift; ambiguous/missing
+heads never authorize new coordinates. No detector,
 weights, new tool or provider call is added. Numeric paths cache by exact
 source/cut/focus and are saved as edits for normal preview/export reuse.
 
@@ -65,7 +67,8 @@ proof passes at 24/25/29.97/30/60 fps without keys or AI; this does not establis
 Linux execution or real face/visual acceptance.
 
 Local Codex derives 16-kHz mono PCM from the selected master/window and samples
-temporal triptychs only for selected clips. CL-187 retains native panel geometry
+two-by-two temporal sheets only for selected clips (four panels spanning 1.5s).
+CL-218 retains legacy triptych decoding. CL-187 retains native panel geometry
 while bounding JPEG/artifact bytes; over-budget images fail before inference.
 Exports continue reading the master. Synthetic proofs cover clocks/pixels and
 require no keys; real ASR/face accuracy needs the prepared local models and

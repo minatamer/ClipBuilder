@@ -1,5 +1,105 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Open-ended Hook choice — CL-223, 2026-11-05
+
+When the owner chooses a Hook start at or beyond its current end, accept the new
+start and clear End to null in the local editor draft. The empty end stays blank
+until explicitly set; preview/use/apply remain disabled until a valid ordered
+in-clip range (up to 10 seconds) is complete. Numeric edits and settled Capture
+share this rule. Keep incomplete state out of saved edit/worker schemas, retain
+the last valid source-preview clock during selection, and preserve Discard,
+removal, dirty navigation and independent Hook content. No AI or regeneration is
+required for this UI change; provider/live gates and saved owner work remain.
+
+## Fresh Motion and stable editor lists — owner revision, 2026-11-05
+
+The owner reports fresh regeneration still misses same-speaker layout-shift
+Motion. CL-221 must correct the generic fresh-preparation path, preserve framing
+when the selected speaker escapes fixed framing, and demonstrate generated
+regressions without editing the owner's saved clip. Never apply a corrected
+saved edit as proof of a generic fix. Ask the owner to regenerate after the fix;
+real fresh-pipeline acceptance stays pending until that test. This supersedes
+CL-218's permission to apply its separately tested camera result. No new real
+provider/inference/source acquisition, configuration, cloud or Git action.
+Read-only separate prepared-pixel diagnosis is permitted; saved state stays intact.
+Native clip-preview numeric Motion replies may use the existing 1 MiB JSON
+budget consistently across both bounded HTTP readers; ordinary/progress/cancel
+receipts retain the smaller bound. Explicit retry of an unfinished initial
+preview reuses its plan and requests follow until that preview is acknowledged.
+Ready/edit/export/restore behavior does not silently start tracking or inference.
+
+CL-222 owns stable complete timed-item lists: playback must not hide media, text,
+captions, audio or other editable items based on their active timestamp, or switch
+Hook/Main editing context implicitly. The selected context and all its items
+stay visible; selecting an item seeks its occurrence and exposes its timing.
+Rendering still follows the cue's interval; editing remains independently scoped.
+
+## Caption placement and independent Hook content — CL-219/220, 2026-11-05
+
+The owner chooses a caption position between Center and Lower half, matching the
+supplied above-visual preview. CL-219 names it **Default positioning** in Captions
+→ Position and uses a canonical vertical center of 1032/1920 (53.75%) for new
+captions, preserving the normal safe width and centered alignment. Taller caption
+presets share that center. Existing explicit saved boxes and manual typography/
+position edits remain authoritative. Authored Text and visual placement are unchanged.
+
+The owner also requests independently editable Hook/Main clip occurrences for
+duplicated media, text, captions, audio and applicable editor settings. CL-220
+owns this change after CL-219, including clear editing context, saved independent
+edits, exact clocks and shared preview/native output. This supersedes the earlier
+mandatory shared-edits rule for Hook copies. The excerpt still precedes the full
+main clip; reusing copies must not call AI again or duplicate immutable media bytes.
+Preserve existing saves, source and owner work. New Hooks materialize a bounded
+content snapshot; legacy linked saves separate at an explicit edit. Hook / Main
+clip selects the existing inspector and matching preview occurrence. Each has
+its own caption corrections/styles/speakers, text, pictures/motion, original and
+added audio, look and camera settings. A copied cue keeps its immutable asset ID
+while settings, timing and removal are independent. Apply/Discard covers both;
+save/recovery never reruns AI. Normal source-clock cues are bounded to the Hook
+window; opening titles and whole-occurrence music restart on each occurrence.
+Range changes preserve intersecting edits, copy newly repeated content and clear
+Hook camera paths; removing a Hook drops only its snapshot. Caption/visual AI
+generation stays a main-clip action, and existing main captions can be copied
+into a captionless Hook. The original per-clip asset/request/provider/resource
+bounds remain; individual content arrays retain their bounds per occurrence.
+Implementation and produced evidence belong to CL-220.
+
+These editing/default features work on prepared fake/synthetic media without
+API keys. Real AI content generation keeps its existing provider/login/key/live
+and approval requirements. No real processing, configuration, Git, cloud or
+deployment action is authorized by this follow-up.
+
+## Real speaker/reframe regression — CL-218, 2026-11-05
+
+The owner requests a general correction and agent-run bounded local acceptance
+on the designated public manual clip: focus the actual speaking people and retain
+useful Motion through its slide/layout reframe. Reuse existing evidence and a
+separate private copy, finish synthetic gates before necessary real Codex/local
+work, and preserve owner sources, edits and exports. No Gemini/fallback, paid API
+calls, purchases, ignored configuration change, cloud, deployment or Git mutation.
+Private media, frames, transcripts and inference artifacts stay outside Git and
+normal logs. This supersedes the owner-only real-check restriction for this
+specific bounded local reproduction; hosted and release acceptance remain separate.
+
+Audio diarization labels are fallible hints. Strong temporal visual evidence at a
+shot opening may establish the speaking person without asserting an audio label,
+including when the supplied words already carry a collapsed voice label. Preserve
+the words and labels; do not merge visually different participants to satisfy
+diarization. Uncertain multi-person openings retain the centered portrait instead
+of choosing the first roster entry; later uncertainty may retain a still-visible
+established person. Sustained evidence, confidence, overlap and visibility guards
+remain. Local planning uses four chronological panels in a two-by-two sheet over
+1.5 seconds, retaining the image/request budget and legacy three-panel decoding.
+
+Automatic native Motion retains useful verified prefixes if a later frame loses
+tracking or cuts away. Paths end at the last verified frame, carry the existing
+lost outcome when incomplete, and never seed a continuation from a lost path.
+Linked verified chunks survive; absent/ambiguous pixels never authorize new target
+coordinates or extrapolation. Existing in-frame retention, tolerance, clock,
+resource and cancellation rules remain. CL-218 owns actual evidence and acceptance.
+Fake/no-key proofs establish mechanics, while real Codex selection uses installed
+tools/login and the applicable local gates. Existing clips are not silently migrated.
+
 ## Commit and push handoff - 2026-11-05
 
 The owner authorizes whole-file staging, multiple commits and a normal push of

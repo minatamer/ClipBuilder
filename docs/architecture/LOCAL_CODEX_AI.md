@@ -276,10 +276,11 @@ limitation below with pinned local CPU Sherpa-ONNX v2.0.1, pyannote segmentation
 3.0 and NeMo TitaNet-small speaker embeddings. Only anonymous within-source turns
 are retained; voice embeddings stay in the native process and are never saved
 or sent. Align word overlap conservatively, keeping overlap/unknown neutral.
-Codex receives the timed labels and up to sixty JPEGs, each containing three
-5-fps temporal panels (0/0.2/0.4 seconds). CL-152 retains the existing per-duration
+Codex receives the timed labels and up to sixty JPEGs. CL-218 now uses four
+two-by-two temporal panels (0/0.5/1/1.5 seconds), retaining old triptych decoding.
+CL-152 retains the existing per-duration
 image count and reserves at most half its slots for known speaker changes,
-anchoring bursts 0.2 seconds before selected transitions. At least half retain
+anchoring bursts 0.5 seconds before selected transitions. At least half retain
 uniform coverage, including the opening. Excess changes are spread across the
 clip; duplicate anchors are refilled from the uniform grid. Unknown/overlapping
 word labels break transition inference; no-hint jobs keep uniform sampling.
@@ -517,6 +518,30 @@ Clip 1 boundary was repaired through the existing validate/edit API after the
 owner confirmed no unsaved draft; all other clip/panel/media state was retained.
 Fake/no-key tests establish plumbing and generated cut clocks, not real AI face
 accuracy. See [CL-213](../tickets/CL-213-source-cut-accurate-codex-cameras.md).
+
+## Real speaker/reframe correction — CL-218
+
+Temporal planning now supplies four panels in a two-by-two reading-order grid
+at 0/0.5/1/1.5 seconds, with clone padding bounded by the selected clip. Numeric
+sampleFrames remain the coordinate authority; legacy three-panel/single-frame
+artifacts remain readable. Targeted source/speaker changes occupy the second
+panel without increasing image or inference counts. The wider temporal context
+and square sheet preserve more useful face detail than the previous triptych.
+
+Local audio clusters can collapse short turns by different people. Strong
+visual-only evidence at a shot opening may cite already labeled words while
+leaving the decision's speakerId null. It never changes transcript labels or
+merges people through that null association. Confidence, sustained speech,
+intersecting words, visibility and cross-talk checks remain. An uncertain opening
+with multiple visible people does not select the first roster entry; an
+established still-visible person or a sole visible person can remain the fallback.
+
+A late tracking loss no longer discards previously verified Motion in that
+camera family. Retain an escaping verified prefix with the existing lost outcome,
+end on its last measured sample and skip dependent chunks. No invented coordinates,
+extrapolation, automatic retry or tracking on restore/export. Current-source native
+and fake integration proofs precede the explicitly requested bounded real test;
+see CL-218 for measured evidence and remaining acceptance.
 
 ## Conditional native speaker follow — CL-216
 

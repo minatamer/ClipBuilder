@@ -1,5 +1,61 @@
 # ClipBuilder canonical ticket index
 
+## CL-218-223 Git handoff - 2026-11-05
+
+The owner subsequently authorized whole-file staging, multiple ticket-prefixed
+commits and a normal push to `origin/main`.
+[The file-level plan](../operations/CL218_223_COMMIT_PLAN.md) allocates all 71
+paths across six commits. Earlier no-Git/unstaged notes record the implementation
+handoffs and are superseded by this later authorization for packaging only.
+Recorded local verification remains separate from remote CI; fresh owner
+regeneration is still required for real Motion acceptance.
+
+## Open-ended Hook selection — 2026-11-05
+
+[CL-223](CL-223-open-ended-hook-selection.md) is complete locally: later/equal
+Hook starts clear End in a local draft, with preview/use/apply disabled until a
+valid explicit end. 22 focused cases and actual editor Capture/typing/Discard
+checks pass at desktop/390/320. Worker reloaded and saved owner state preserved;
+no AI, configuration or Git action.
+
+## Fresh Motion and stable item lists — 2026-11-05
+
+[CL-221](CL-221-fresh-automatic-reframe-motion.md) is complete locally: fixes the
+8 KiB camera-response handoff and unfinished-preview retry. 65 cases plus real
+worker HTTP/native and browser proofs pass; reloaded app preserves owner state.
+[CL-222](CL-222-stable-complete-editor-item-lists.md) is complete locally: explicit
+Hook/Main context, complete lists independent of playhead, matched item seeks,
+safe drag/Capture and bounded new audio. 99 cases across both packets plus two
+Hook/audio browser proofs pass; phones and native export inspected. Preserve pending
+CL-218/219/220 work; tests remain generated/fake/no-key. Owner regeneration is
+required for real end-to-end acceptance.
+
+## Caption default and independent Hook content — 2026-11-05
+
+[CL-219](CL-219-default-caption-position.md) is complete locally: the owner's
+above-visual caption placement is Default positioning for new captions. Forty-nine
+units, real responsive controls and native caption rendering pass, with types and
+scoped lint/format. Current source/Hook/edits survived the worker reload unchanged.
+[CL-220](CL-220-independent-hook-content-editing.md) is complete locally: separate
+Hook/Main clip content, matched preview/Capture, save/recovery and native output.
+55 units plus generated responsive browser and native pixels/audio proofs pass,
+including the strict fractional-rate one-frame Hook regression. Worker reloaded;
+source and complete saved clip list preserved. No real AI, configuration or Git
+mutation. Personal/device and hosted release acceptance remain owner-only.
+
+## Correct speaker and source-reframe Motion — 2026-11-05
+
+[CL-218](CL-218-correct-speaker-and-source-reframe-motion.md) is complete locally:
+corrects collapsed-audio-label/uncertain-opening focus and preserves useful
+Motion before a later loss/cut. Four-panel temporal evidence retains the existing
+request budget. The owner's reported real clip passes one authorized Codex
+planning test, private native crop inspection and a normal-app corrected MP4.
+148 units, four generated browser/native proofs, types and scoped lint/format
+pass; settled validation has no actionable findings. The tested correction is
+saved on the existing clip; source, base, other edits and frontend are preserved.
+Backend/worker rebuilt/reloaded. No Gemini/fallback, paid API, cloud or Git
+mutation. Broader source/device and hosted/release acceptance remain open.
+
 ## Commit and push handoff - 2026-11-05
 
 The owner authorized a whole-file plan, multiple commits and a normal push for

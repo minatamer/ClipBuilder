@@ -6,6 +6,15 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Owner fresh-regeneration verification rule (2026-11-05, CL-221–222): fix and
+  verify the normal fresh pipeline for code regressions. Never apply a corrected
+  saved edit, camera path or output to the owner's clip as proof of a generic
+  fix. Preserve existing source/base/edits/exports and ask the owner to create a
+  fresh clip for real-provider acceptance after the fix. Any later requested
+  saved-clip edit requires explicit task authorization; do not infer it from a
+  debugging or regression-fix request. Generated fake/no-key integration must
+  include real transport boundaries when those boundaries carry the changed data.
+
 - Owner local ASR benchmark authorization (2026-11-04, CL-209): benchmark local
   speech engines on a separate copy of the existing designated public sample,
   prepare necessary free official tools/models, record every run's timings and
@@ -151,6 +160,10 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
   Read-only/derived times, duration controls and acquisition without playable
   media are distinct. Audit this rule whenever adding timestamp inputs. The
   source of truth owns product semantics; ticket packets own produced evidence.
+  Owner Hook exception (2026-11-05, CL-223): a new start at/past the current end
+  accepts that start and clears End to null in the local draft. Preview/use/apply
+  stay disabled until a complete valid range; all other endpoint capture retains
+  the single-endpoint rule. Never persist an incomplete Hook or invent an end.
 - Permanent owner view rule (2026-10-23, CL-048): successive form/result stages
   replace the current content slot through mutually exclusive views or tabs;
   never append another complete workflow below the input form and force scrolling.

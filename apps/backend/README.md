@@ -1,5 +1,22 @@
 # ClipBuilder backend
 
+CL-221 fixes automatic Motion handoff during fresh preparation: clip-preview
+numeric camera replies use the existing bounded 1 MiB JSON budget in both native
+HTTP readers, while ordinary/progress/cancel receipts retain their small bound.
+An explicit retry of an unfinished revision-zero preview retains its existing
+plan and requests follow again; ready previews, owner edits, restore and exports
+start no extra work. Generated real-worker HTTP/native proof covers replies above
+8 KiB and fresh path attachment without provider access. Real fresh-provider
+acceptance requires owner regeneration; agents do not patch saved clips as proof.
+
+CL-220 stores one bounded, non-recursive Hook-content snapshot with independent
+edits and source-clock caption/word references. Normal edit compilation validates
+both occurrences against the shared admitted asset pool; source word clocks
+cannot be invented by a Hook edit. Save/recovery retains both without processing.
+New Hooks copy content locally; old linked documents separate on explicit edits.
+Per-occurrence content bounds and the existing per-clip asset, request-byte,
+provider and output budgets remain. This path needs no API keys or inference.
+
 CL-216's fresh provider preparations can add conditional speaker-follow during
 the existing clip-preview operation, using already planned focus and local
 prepared pixels. Valid numeric paths attach only to the initial edit; the base
@@ -8,6 +25,14 @@ prepared clips do not start this pass. Synthetic/fake composition skips automati
 tracking; tests use injected no-key transports and generated native inputs.
 Untrackable optional Motion preserves a usable baseline without a provider retry.
 Local Codex/hosted Gemini and all real-provider/live/approval gates remain.
+
+CL-218 retains useful verified Motion before a later loss/cut, including saved
+and exported partial paths. Local planning now supplies four chronological panels
+over 1.5s in each two-by-two sheet, within the existing image/call budget. Strong
+visual evidence may establish a shot's speaking person despite a collapsed audio
+cluster, without rewriting transcript labels. Uncertain multi-person openings
+do not select the first roster entry. See the packet for bounded real acceptance;
+fake/no-key evidence alone cannot prove speaking-person accuracy.
 
 Local Codex **Find all** (CL-211) completes admissible speech boundaries and
 reconciles new results into a chronological, non-overlapping set. It preserves
