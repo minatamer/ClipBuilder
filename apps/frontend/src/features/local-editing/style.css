@@ -999,6 +999,86 @@
     align-items: start;
     gap: var(--cb-space-3);
   }
+  .motion-interval-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .head-motion-editor > .collection-navigation {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    align-items: end;
+  }
+  .motion-target {
+    display: grid;
+    gap: var(--cb-space-2);
+    align-content: center;
+    min-height: var(--cb-target);
+  }
+  .head-motion-editor .range-time {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+  .motion-head-fields {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  }
+  .editor-timeline {
+    display: grid;
+    gap: var(--cb-space-2);
+    min-width: 0;
+    max-height: 15rem;
+    overflow-y: auto;
+    margin-block: var(--cb-space-3);
+    padding: 2px;
+  }
+  .editor-timeline-entry {
+    display: grid;
+    min-width: 0;
+    gap: 0.2rem;
+  }
+  .editor-timeline-entry > .focus-shot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    text-align: left;
+    width: 100%;
+  }
+  .editor-timeline-entry > .focus-shot[data-picture] {
+    grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  }
+  .editor-timeline .picture-thumb {
+    width: 3.5rem;
+    grid-row: span 2;
+  }
+  .editor-timeline-name {
+    overflow-wrap: anywhere;
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+  .editor-timeline-time {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .editor-timeline-actions,
+  .picture-audio-context {
+    display: flex;
+    gap: var(--cb-space-2);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 480px) {
+    .editor-timeline-entry > .focus-shot {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.2rem;
+    }
+    .editor-timeline-entry > .focus-shot[data-picture] {
+      grid-template-columns: 3.5rem minmax(0, 1fr);
+    }
+    .editor-timeline-entry > .focus-shot[data-picture] .editor-timeline-time {
+      grid-column: 2;
+    }
+  }
   .motion-interval-fields .range-time,
   .motion-head-fields label {
     align-content: start;

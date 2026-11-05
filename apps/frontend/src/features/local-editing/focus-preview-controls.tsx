@@ -77,7 +77,27 @@ export function FocusPreviewControls({
           effects={cameraEffects}
           hook={hook}
           sourceUrl={props.sourceUrl}
-          personId={ownerFocusAt(props.focus, sourceFrame).personId}
+          personId={
+            ownerFocusAt(
+              props.focus,
+              props.positionRequest
+                ? ownerSourceFrame({ hook }, props.positionRequest.startFrame)
+                : sourceFrame,
+            ).personId
+          }
+          onCameraPositionSelect={(at) =>
+            props.onPositionSelect?.(
+              props.focus.shots.findIndex(
+                (shot) => shot.startFrame <= at && at < shot.endFrame,
+              ),
+            )
+          }
+          selectionKey={props.positionRequest?.key}
+          selectionFrame={
+            props.positionRequest
+              ? ownerSourceFrame({ hook }, props.positionRequest.startFrame)
+              : undefined
+          }
           onPersonChange={(id) => {
             const choices = props.focus.shots.filter(
               (shot) => shot.personId === id,

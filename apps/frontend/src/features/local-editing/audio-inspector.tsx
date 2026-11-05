@@ -1,3 +1,4 @@
+import { pictureLinkedAudio } from "./picture-audio.ts";
 import {
   useContext,
   useEffect,
@@ -10,7 +11,11 @@ import type { PlayerRef } from "@remotion/player";
 import { Play, Square, Upload } from "lucide-react";
 import { Button, IconButton } from "../../shared/ui/button";
 import { ControlTabs } from "./control-tabs.tsx";
-import { EditorOccurrence } from "./editor-clock.ts";
+import {
+  EditorOccurrence,
+  EditorPresentationClock,
+  editorClockOffset,
+} from "./editor-clock.ts";
 import { ownerHookFrames } from "../../../../../packages/contracts/local/hook.ts";
 import { PictureTiming } from "./picture-timing.tsx";
 import {
@@ -48,6 +53,9 @@ export function AudioInspector({
   onUpload,
   onYoutube,
   initialCueId,
+  hideCueList = false,
+  linkedVisual,
+  onBackToPicture,
 }: {
   audio: OwnerAudioEdit | undefined;
   assets: readonly OwnerAudioAsset[];
@@ -62,8 +70,13 @@ export function AudioInspector({
   onUpload: (file: File) => Promise<string | null>;
   onYoutube?: (() => void) | undefined;
   initialCueId?: string | undefined;
+  hideCueList?: boolean;
+  linkedVisual?: OwnerVisualTiming | undefined;
+  onBackToPicture?: (() => void) | undefined;
 }) {
   const occurrence = useContext(EditorOccurrence);
+  const unifiedClock = useContext(EditorPresentationClock);
+  const displayOffset = unifiedClock ? editorClockOffset(hook, occurrence) : 0;
   const current = audio ?? { originalVolume: 100, cues: [] };
   const windowStart = occurrence === "hook" && hook ? hook.startFrame : 0;
   const windowEnd = occurrence === "hook" && hook ? hook.endFrame : frames;
@@ -86,7 +99,9 @@ export function AudioInspector({
   }, []);
   const activeCues = resolveOwnerAudioCues(current.cues, visuals, frames);
   const selected =
-    activeCues.find((cue) => cue.id === selection) ?? activeCues[0];
+    selection === "original"
+      ? undefined
+      : (activeCues.find((cue) => cue.id === selection) ?? activeCues[0]);
   const cueStart = (cue: OwnerAudioCue) => {
     const prefix = ownerHookFrames({ hook }) / OWNER_FPS;
     const segments = ownerAudioSegments(
@@ -164,7 +179,7 @@ export function AudioInspector({
         ownerSourceFrame({ hook }, player.current?.getCurrentFrame() ?? 0),
       ),
     );
-    const cue: OwnerAudioCue = {
+    let cue: OwnerAudioCue = {
       id: crypto.randomUUID(),
       source,
       placement,
@@ -184,6 +199,13 @@ export function AudioInspector({
       volume: sound?.music || source.kind === "upload" ? 20 : 35,
       loop: (!!sound?.music && !sound.hookOnly) || source.kind === "upload",
     };
+    if (linkedVisual)
+      cue = pictureLinkedAudio(
+        cue,
+        linkedVisual,
+        windowEnd,
+        Math.round(ownerAudioDuration(source, assets) * OWNER_FPS),
+      );
     stop();
     seekCue(cue);
     onChange({ ...current, cues: [...current.cues, cue] });
@@ -218,6 +240,20 @@ export function AudioInspector({
   };
   return (
     <div className="audio-inspector">
+      {linkedVisual && (
+        <div
+          className="picture-audio-context"
+          role="group"
+          aria-label="Picture audio"
+        >
+          <strong>
+            Audio for picture{occurrence === "hook" ? " [Hook]" : ""}
+          </strong>
+          <Button variant="quiet" onClick={onBackToPicture}>
+            Back to picture
+          </Button>
+        </div>
+      )}
       <ControlTabs
         id={`${id}-view`}
         label="Audio views"
@@ -377,23 +413,25 @@ export function AudioInspector({
           />
         </label>
         {!activeCues.length && <p className="focus-empty">No added audio.</p>}
-        <div className="audio-cue-list" role="group" aria-label="Added audio">
-          {activeCues.map((cue, index) => (
-            <Button
-              variant="secondary"
-              className="audio-cue"
-              key={cue.id}
-              aria-pressed={selected?.id === cue.id}
-              onClick={() => {
-                setSelection(cue.id);
-                seekCue(cue);
-              }}
-            >
-              {index + 1}. {label(cue.source)}
-              {cue.visualId ? " · Visual" : ""}
-            </Button>
-          ))}
-        </div>
+        {!hideCueList && (
+          <div className="audio-cue-list" role="group" aria-label="Added audio">
+            {activeCues.map((cue, index) => (
+              <Button
+                variant="secondary"
+                className="audio-cue"
+                key={cue.id}
+                aria-pressed={selected?.id === cue.id}
+                onClick={() => {
+                  setSelection(cue.id);
+                  seekCue(cue);
+                }}
+              >
+                {index + 1}. {label(cue.source)}
+                {cue.visualId ? " · Visual" : ""}
+              </Button>
+            ))}
+          </div>
+        )}
         {selected && (
           <fieldset disabled={pending} className="audio-settings">
             <legend className="local-sr-only">Audio settings</legend>
@@ -462,8 +500,11 @@ export function AudioInspector({
             {selected.visualId && (
               <div className="caption-empty-actions">
                 <span>
-                  At visual start ·{" "}
-                  {(selected.startFrame / OWNER_FPS).toFixed(2)}s
+                  At picture start ·{" "}
+                  {((selected.startFrame + displayOffset) / OWNER_FPS).toFixed(
+                    2,
+                  )}
+                  s
                 </span>
                 <Button
                   variant="quiet"

@@ -208,7 +208,13 @@ export function HeadSelectionView({
         </header>
         {expanded && selection}
         <footer>
-          <Button variant="primary" onClick={() => dialog.current?.close()}>
+          <Button
+            variant="primary"
+            onClick={() => {
+              onConfirm();
+              dialog.current?.close();
+            }}
+          >
             Done
           </Button>
         </footer>

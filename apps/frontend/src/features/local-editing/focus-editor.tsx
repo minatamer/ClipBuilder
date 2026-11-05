@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useContext,
   useId,
   useMemo,
   useRef,
@@ -7,6 +8,12 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
+import {
+  EditorHookClock,
+  EditorOccurrence,
+  EditorPresentationClock,
+  editorClockOffset,
+} from "./editor-clock.ts";
 import { Clock3 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 import { ControlTabs } from "./control-tabs.tsx";
@@ -52,6 +59,10 @@ export function FocusEditor({
   disabled,
   motion,
   tracking,
+  timeline,
+  positionRequest,
+  navigationDisabled = false,
+  onPositionSelect,
 }: {
   focus: OwnerFocus;
   automatic: OwnerFocus | undefined;
@@ -65,14 +76,30 @@ export function FocusEditor({
   disabled: boolean;
   motion?: ReactNode;
   tracking?: ReactNode;
+  timeline?: ReactNode;
+  positionRequest?:
+    { index: number; key: string; startFrame: number } | undefined;
+  navigationDisabled?: boolean;
+  onPositionSelect?: ((index: number) => void) | undefined;
 }) {
   const tabsId = useId();
+  const hook = useContext(EditorHookClock);
+  const occurrence = useContext(EditorOccurrence);
+  const unifiedClock = useContext(EditorPresentationClock);
+  const displayOffset = unifiedClock ? editorClockOffset(hook, occurrence) : 0;
+  const firstFrame =
+    unifiedClock && occurrence === "hook" && hook ? hook.startFrame : 0;
+  const lastFrame =
+    unifiedClock && occurrence === "hook" && hook
+      ? hook.endFrame
+      : focus.frames;
   const cameraTabsId = useId();
   const [tab, setTab] = useState("camera");
   const [cameraTab, setCameraTab] = useState("timing");
-  const [selected, setSelected] = useState(0);
+  const [selected, setSelected] = useState(positionRequest?.index ?? 0);
   const [personId, setPersonId] = useState<string | null>(
-    focus.shots[0]!.personId,
+    focus.shots[positionRequest?.index ?? 0]?.personId ??
+      focus.shots[0]!.personId,
   );
   const [message, setMessage] = useState("");
   const [adding, setAdding] = useState<{
@@ -157,10 +184,28 @@ export function FocusEditor({
     }
   }, [isAdding, selected]);
 
+  const requestKey = positionRequest
+    ? `${positionRequest.key}:${positionRequest.index}`
+    : "";
+  const [lastPositionRequest, setLastPositionRequest] = useState(requestKey);
+  if (lastPositionRequest !== requestKey) {
+    setLastPositionRequest(requestKey);
+    if (positionRequest) {
+      setSelected(positionRequest.index);
+      setPersonId(focus.shots[positionRequest.index]?.personId ?? null);
+    }
+    setAdding(null);
+    setMessage("");
+  }
+
+  function selectCamera(index: number) {
+    setSelected(index);
+    onPositionSelect?.(index);
+  }
   function selectChange(next: number, seek = true) {
     setAdding(null);
     const nextShot = focus.shots[next]!;
-    setSelected(next);
+    selectCamera(next);
     setPersonId(nextShot.personId);
     setMessage("");
     if (seek) onSeek(nextShot.startFrame);
@@ -268,7 +313,9 @@ export function FocusEditor({
         focus,
         index,
         key,
-        text === "" ? NaN : Math.round(Number(text) * OWNER_FPS),
+        text === ""
+          ? NaN
+          : Math.round(Number(text) * OWNER_FPS) - displayOffset,
       ),
     );
     setMessage("");
@@ -493,6 +540,7 @@ export function FocusEditor({
       <ControlTabs
         id={tabsId}
         label="Focus controls"
+        disabled={navigationDisabled}
         items={[
           { value: "camera", label: "Camera" },
           { value: "people", label: "People" },
@@ -506,6 +554,7 @@ export function FocusEditor({
           if (next === "camera") setPersonId(shot.personId);
         }}
       />
+      {timeline && tab !== "people" && timeline}
       <div
         role="tabpanel"
         id={`${tabsId}-motion-panel`}
@@ -610,38 +659,42 @@ export function FocusEditor({
         hidden={tab !== "camera"}
         tabIndex={0}
       >
-        <div className="focus-heading">
-          <strong>Camera positions</strong>
-        </div>
-        <div
-          className="focus-shot-list"
-          role="group"
-          aria-label="Camera timeline"
-        >
-          {focus.shots.map((s, i) => (
-            <button
-              type="button"
-              className="focus-shot"
-              key={i}
-              aria-pressed={i === index}
-              data-playing={ownerFocusAt(focus, frame) === s || undefined}
-              onClick={() => selectChange(i)}
-            >
-              <span>{focusPositionName(positions[i]!)}</span>
-              <span>
-                {focusTimestamp(s.startFrame)}–{focusTimestamp(s.endFrame)}
-              </span>
-              <span
-                className="focus-shot-bar"
-                aria-hidden="true"
-                style={{
-                  left: `${(s.startFrame / focus.frames) * 100}%`,
-                  width: `${((s.endFrame - s.startFrame) / focus.frames) * 100}%`,
-                }}
-              />
-            </button>
-          ))}
-        </div>
+        {!timeline && (
+          <div className="focus-heading">
+            <strong>Camera positions</strong>
+          </div>
+        )}
+        {!timeline && (
+          <div
+            className="focus-shot-list"
+            role="group"
+            aria-label="Camera timeline"
+          >
+            {focus.shots.map((s, i) => (
+              <button
+                type="button"
+                className="focus-shot"
+                key={i}
+                aria-pressed={i === index}
+                data-playing={ownerFocusAt(focus, frame) === s || undefined}
+                onClick={() => selectChange(i)}
+              >
+                <span>{focusPositionName(positions[i]!)}</span>
+                <span>
+                  {focusTimestamp(s.startFrame)}–{focusTimestamp(s.endFrame)}
+                </span>
+                <span
+                  className="focus-shot-bar"
+                  aria-hidden="true"
+                  style={{
+                    left: `${(s.startFrame / focus.frames) * 100}%`,
+                    width: `${((s.endFrame - s.startFrame) / focus.frames) * 100}%`,
+                  }}
+                />
+              </button>
+            ))}
+          </div>
+        )}
         <div className="picture-tools" ref={addTools}>
           <Button
             variant="secondary"
@@ -674,7 +727,7 @@ export function FocusEditor({
               const next = removeOwnerFocusShot(focus, index);
               onChange(next);
               const at = Math.max(0, index - 1);
-              setSelected(at);
+              selectCamera(at);
               setPersonId(next.shots[at]!.personId);
               remembered.current.clear();
               setMessage("");
@@ -729,7 +782,7 @@ export function FocusEditor({
                   focusAdded.current = true;
                   setAdding(null);
                   onChange(added.focus);
-                  setSelected(added.index);
+                  selectCamera(added.index);
                   setPersonId(insertion.personId);
                   setCameraTab("timing");
                   remembered.current.clear();
@@ -814,7 +867,9 @@ export function FocusEditor({
           >
             {(["startFrame", "endFrame"] as const).map((key) => {
               const start = key === "startFrame",
-                locked = start ? index === 0 : index === focus.shots.length - 1;
+                locked = start
+                  ? shot.startFrame <= firstFrame
+                  : shot.endFrame >= lastFrame;
               return (
                 <div className="range-time" key={key}>
                   <label>
@@ -824,11 +879,14 @@ export function FocusEditor({
                         start ? "Camera start seconds" : "Camera end seconds"
                       }
                       type="number"
-                      min="0"
-                      max={focus.frames / OWNER_FPS}
+                      min={(firstFrame + displayOffset) / OWNER_FPS}
+                      max={(lastFrame + displayOffset) / OWNER_FPS}
                       step="0.033333"
                       disabled={locked}
-                      value={seconds(shot[key])}
+                      value={seconds(
+                        Math.max(firstFrame, Math.min(lastFrame, shot[key])) +
+                          displayOffset,
+                      )}
                       onChange={(e) => boundary(key, e.currentTarget.value)}
                     />
                   </label>
@@ -910,19 +968,19 @@ export function FocusEditor({
                 <input
                   aria-label="Focus playhead seconds"
                   type="number"
-                  min="0"
-                  max={(focus.frames - 1) / OWNER_FPS}
+                  min={(firstFrame + displayOffset) / OWNER_FPS}
+                  max={(lastFrame - 1 + displayOffset) / OWNER_FPS}
                   step="0.033333"
-                  value={seconds(frame)}
+                  value={seconds(frame + displayOffset)}
                   onChange={(e) => {
                     const next = Number(e.currentTarget.value);
                     if (e.currentTarget.value !== "" && Number.isFinite(next))
                       onSeek(
                         Math.max(
-                          0,
+                          firstFrame,
                           Math.min(
-                            focus.frames - 1,
-                            Math.round(next * OWNER_FPS),
+                            lastFrame - 1,
+                            Math.round(next * OWNER_FPS) - displayOffset,
                           ),
                         ),
                       );
@@ -943,7 +1001,7 @@ export function FocusEditor({
           variant="quiet"
           onClick={() => {
             setAdding(null);
-            setSelected(0);
+            selectCamera(0);
             setPersonId(automatic?.shots[0]?.personId ?? null);
             setMessage("");
             remembered.current.clear();

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Clock3, Play, Trash2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 import { Progress } from "../../shared/ui/progress";
@@ -31,6 +31,7 @@ import {
 import { trackHeadVideo } from "./track-head-video";
 import { BulkHeadMotionEditor } from "./bulk-head-motion-editor";
 import { HeadSelectionView } from "./head-selection-view";
+import { motionForCameraPosition } from "./head-motion-selection.ts";
 import {
   ownerFollowWindow,
   setOwnerFollowWindow,
@@ -113,6 +114,9 @@ export function HeadMotionEditor({
   footerTarget,
   disabled,
   available,
+  selectionKey,
+  selectionFrame,
+  onCameraPositionSelect,
 }: {
   focus: OwnerFocus;
   tracks: OwnerCameraTrack[];
@@ -132,6 +136,9 @@ export function HeadMotionEditor({
   footerTarget?: HTMLElement | null | undefined;
   disabled: boolean;
   available: boolean;
+  selectionKey?: string | undefined;
+  selectionFrame?: number | undefined;
+  onCameraPositionSelect?: ((frame: number) => void) | undefined;
 }) {
   const [draft, setDraft] = useState<Draft | null>(null),
     [bulk, setBulk] = useState(false),
@@ -146,8 +153,27 @@ export function HeadMotionEditor({
   const progressSlot = useRef<HTMLDivElement>(null);
   const prefix = ownerHookFrames({ hook }),
     content = ownerSourceContent(focus.source);
-  const chosen = tracks.find((t) => t.id === selected) ?? tracks[0];
+  const chosen =
+    tracks.find((t) => t.id === selected) ??
+    (selectionKey ? undefined : tracks[0]);
   const selecting = draft !== null || bulk;
+  const selectionRequest = useRef("");
+  useEffect(() => {
+    if (
+      !selectionKey ||
+      selectionFrame === undefined ||
+      selectionRequest.current === `${selectionKey}:${selectionFrame}`
+    )
+      return;
+    selectionRequest.current = `${selectionKey}:${selectionFrame}`;
+    const path = motionForCameraPosition(
+      focus,
+      tracks,
+      selectionFrame,
+      selected,
+    );
+    setSelected(path?.id ?? null);
+  }, [selectionKey, selectionFrame, tracks, focus, selected]);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -155,15 +181,22 @@ export function HeadMotionEditor({
       request.current?.abort();
     };
   }, []);
+  const reportMode = useEffectEvent((value: boolean) => onMode(value));
+  const reportBusy = useEffectEvent((value: boolean) => onBusy(value));
   useEffect(() => {
-    onMode(selecting);
-    return () => onMode(false);
-  }, [selecting, onMode]);
+    reportMode(selecting);
+  }, [selecting]);
   useEffect(() => {
-    onBusy(busy);
+    reportBusy(busy);
     if (busy) progressSlot.current?.scrollIntoView({ block: "nearest" });
-    return () => onBusy(false);
-  }, [busy, onBusy]);
+  }, [busy]);
+  useEffect(
+    () => () => {
+      reportMode(false);
+      reportBusy(false);
+    },
+    [],
+  );
   const offset = draft?.occurrence === "body" ? prefix : 0;
   function updateSeed(seed: HeadBox) {
     if (draft) setDraft({ ...draft, seed: clampBox(seed), marked: true });
@@ -179,6 +212,13 @@ export function HeadMotionEditor({
     const sourceStartFrame =
       startFrame + (occurrence === "hook" ? hook!.startFrame : 0);
     const shot = ownerFocusAt(focus, sourceStartFrame);
+    if (
+      selectionFrame !== undefined &&
+      shot !== ownerFocusAt(focus, selectionFrame)
+    ) {
+      setMessage("Choose a frame inside the selected camera position.");
+      return;
+    }
     if (shot.personId !== person) {
       setMessage("Move the playhead to this person's camera first.");
       return;
@@ -354,27 +394,34 @@ export function HeadMotionEditor({
     >
       {!bulk && !draft && (
         <div className="collection-navigation">
-          <label>
-            Follow
-            <select
-              aria-label="Motion person"
-              value={person ?? "camera"}
-              disabled={disabled || !!draft}
-              onChange={(e) => {
-                const next =
-                  e.currentTarget.value === "camera"
-                    ? null
-                    : e.currentTarget.value;
-                onPersonChange(next);
-              }}
-            >
-              {[...new Set(focus.shots.map((s) => s.personId))].map((id) => (
-                <option key={id ?? "camera"} value={id ?? "camera"}>
-                  {name(id)}
-                </option>
-              ))}
-            </select>
-          </label>
+          {selectionKey ? (
+            <div className="motion-target">
+              <span>Follow</span>
+              <strong>{name(person)}</strong>
+            </div>
+          ) : (
+            <label>
+              Follow
+              <select
+                aria-label="Motion person"
+                value={person ?? "camera"}
+                disabled={disabled || !!draft}
+                onChange={(e) => {
+                  const next =
+                    e.currentTarget.value === "camera"
+                      ? null
+                      : e.currentTarget.value;
+                  onPersonChange(next);
+                }}
+              >
+                {[...new Set(focus.shots.map((s) => s.personId))].map((id) => (
+                  <option key={id ?? "camera"} value={id ?? "camera"}>
+                    {name(id)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <Button
             variant="secondary"
             icon={Clock3}
@@ -597,9 +644,23 @@ export function HeadMotionEditor({
                 Motion interval
                 <select
                   aria-label="Motion interval"
-                  value={chosen?.id}
-                  onChange={(e) => setSelected(e.currentTarget.value)}
+                  value={chosen?.id ?? ""}
+                  onChange={(e) => {
+                    const path = tracks.find(
+                      (track) => track.id === e.currentTarget.value,
+                    );
+                    if (!path) return;
+                    setSelected(path.id);
+                    onCameraPositionSelect?.(path.sourceStartFrame);
+                    seek(
+                      path.startFrame +
+                        (path.occurrence === "body" ? prefix : 0),
+                    );
+                  }}
                 >
+                  <option value="" disabled>
+                    Choose Motion
+                  </option>
                   {tracks.map((t, i) => (
                     <option key={t.id} value={t.id}>
                       Motion {i + 1} · {name(t.personId)} ·{" "}

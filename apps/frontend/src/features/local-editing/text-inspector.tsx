@@ -29,8 +29,10 @@ export function TextInspector({
   attempt,
   tab,
   onTab,
+  hidePicker = false,
 }: {
   id: string;
+  hidePicker?: boolean;
   layers: OwnerTextLayer[];
   selected: string;
   onSelect: (layer: OwnerTextLayer) => void;
@@ -58,21 +60,23 @@ export function TextInspector({
   ];
   return (
     <>
-      <div className="text-picker" role="group" aria-label="Text layers">
-        {layers.map((layer, index) => (
-          <Button
-            key={layer.id}
-            variant="secondary"
-            className="text-choice"
-            aria-label={`Edit text ${index + 1}`}
-            aria-pressed={layer.id === current?.id}
-            onClick={() => onSelect(layer)}
-          >
-            <span>Text {index + 1}</span>
-            <span>{layer.text}</span>
-          </Button>
-        ))}
-      </div>
+      {!hidePicker && (
+        <div className="text-picker" role="group" aria-label="Text layers">
+          {layers.map((layer, index) => (
+            <Button
+              key={layer.id}
+              variant="secondary"
+              className="text-choice"
+              aria-label={`Edit text ${index + 1}`}
+              aria-pressed={layer.id === current?.id}
+              onClick={() => onSelect(layer)}
+            >
+              <span>Text {index + 1}</span>
+              <span>{layer.text}</span>
+            </Button>
+          ))}
+        </div>
+      )}
       <div className="text-tools">
         <Button
           id={`${id}-add`}

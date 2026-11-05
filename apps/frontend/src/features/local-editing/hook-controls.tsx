@@ -102,7 +102,7 @@ export function HookControls({
                 ? "Choose an end to preview or apply the Hook."
                 : !range
                   ? "Choose an end after the start, inside this clip and within 10 seconds."
-                  : "Up to 10 seconds. Edit each copy in Hook or Main clip."}
+                  : "Up to 10 seconds. Repeated items are marked [Hook]."}
           </p>
           <div className="caption-empty-actions">
             <Button

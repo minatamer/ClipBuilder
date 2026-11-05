@@ -1,3 +1,10 @@
+import { pictureLinkedAudio } from "./picture-audio.ts";
+import { EditorTimeline, PictureTimelineAudio } from "./editor-timeline.tsx";
+import {
+  editorTimelineItems,
+  type EditorTimelineItem,
+  type EditorTimelineKind,
+} from "./editor-timeline.ts";
 import {
   ownerCameraEffectsSchema,
   ownerCameraEffectsFit,
@@ -56,7 +63,11 @@ import {
   withIndependentOwnerHook,
   type OwnerEditOccurrence,
 } from "../../../../../packages/contracts/local/hook-content.ts";
-import { EditorOccurrence, EditorHookClock } from "./editor-clock.ts";
+import {
+  EditorOccurrence,
+  EditorHookClock,
+  EditorPresentationClock,
+} from "./editor-clock.ts";
 import {
   ownerSourceFrame,
   ownerPresentationFrames,
@@ -82,6 +93,7 @@ import {
 } from "../../../../../packages/contracts/local/focus.ts";
 import {
   useEffect,
+  useEffectEvent,
   useCallback,
   useId,
   useRef,
@@ -581,6 +593,10 @@ export function ClipEditor({
     undefined,
   );
   const [selection, setSelection] = useState("captions");
+  const [timelineSelection, setTimelineSelection] = useState<
+    EditorTimelineItem | undefined
+  >();
+  const [audioPicture, setAudioPicture] = useState<string | undefined>();
   const [setting, setSetting] = useState<EditorSetting>("captions");
   const [mediaTab, setMediaTab] = useState("pictures");
   const [captionTab, setCaptionTab] = useState("style");
@@ -774,35 +790,36 @@ export function ClipEditor({
       request.current?.abort();
     };
   }, []);
+  const reportPending = useEffectEvent((value: boolean) => onPending?.(value));
+  const reportBusy = useEffectEvent((value: boolean) => onBusy?.(value));
+  const reportDirty = useEffectEvent((value: boolean) =>
+    onDirty(clip.id, value),
+  );
+  const editorDirty =
+    dirty ||
+    trackingMode ||
+    captionConfirm ||
+    generating ||
+    (audioUploading && audioImport === null);
   useEffect(() => {
-    onPending?.(pending);
-    return () => onPending?.(false);
-  }, [pending, onPending]);
+    reportPending(pending);
+  }, [pending]);
   useEffect(() => {
-    if (!trackingBusy) return;
-    onBusy?.(true);
-    return () => onBusy?.(false);
-  }, [trackingBusy, onBusy]);
+    if (trackingBusy) reportBusy(true);
+    return () => {
+      if (trackingBusy) reportBusy(false);
+    };
+  }, [trackingBusy]);
   useEffect(() => {
-    onDirty(
-      clip.id,
-      dirty ||
-        trackingMode ||
-        captionConfirm ||
-        generating ||
-        (audioUploading && audioImport === null),
-    );
-    return () => onDirty(clip.id, false);
-  }, [
-    clip.id,
-    dirty,
-    trackingMode,
-    captionConfirm,
-    generating,
-    audioUploading,
-    audioImport,
-    onDirty,
-  ]);
+    reportDirty(editorDirty);
+  }, [editorDirty]);
+  useEffect(
+    () => () => {
+      reportPending(false);
+      reportDirty(false);
+    },
+    [],
+  );
   useEffect(() => {
     if (captionConfirm) {
       const target = footerTarget ?? document.querySelector(".clip-editor");
@@ -962,6 +979,8 @@ export function ClipEditor({
     )
       setMessage("Motion and Zoom were cleared for the changed Hook range.");
     setOccurrence(hook ? "hook" : "body");
+    setTimelineSelection(undefined);
+    setAudioPicture(undefined);
     player.current?.seekTo(0);
   }
   function setCaption(next: OwnerCaptionStyle) {
@@ -993,6 +1012,7 @@ export function ClipEditor({
     }
   }
   function selectLayer(id: string) {
+    setTimelineSelection(undefined);
     setMediaTab("pictures");
     setSelection(id);
     setSetting(
@@ -1004,7 +1024,7 @@ export function ClipEditor({
     );
   }
   function selectSetting(value: EditorSetting) {
-    if (pending) return;
+    if (pending || trackingMode) return;
     setCaptionConfirm(false);
     setSetting(value);
     if (value === "captions") setSelection("captions");
@@ -1016,6 +1036,7 @@ export function ClipEditor({
       chooseText(draft.texts[0]);
   }
   function chooseText(layer: OwnerTextLayer) {
+    setTimelineSelection(undefined);
     setSelection(layer.id);
     player.current?.pause();
     if (
@@ -1045,16 +1066,87 @@ export function ClipEditor({
     activeOccurrence === "hook"
       ? masterDraft.hook!.endFrame
       : base.overlay.frames;
-  function selectOccurrence(next: OwnerEditOccurrence) {
+  function selectTimelineItem(item: EditorTimelineItem) {
+    if (pending || trackingMode || audioImport !== null) return;
     player.current?.pause();
-    const at = ownerSourceFrame(
-      playbackOverlay,
-      player.current?.getCurrentFrame() ?? 0,
-    );
-    setOccurrence(next);
+    setOccurrence(item.occurrence);
+    setTimelineSelection(item);
     setCaptionConfirm(false);
-    player.current?.seekTo(
-      ownerOccurrencePresentationFrame(masterDraft.hook, at, next),
+    setAudioPicture(undefined);
+    if (item.kind === "picture" || item.kind === "text") setSelection(item.id);
+    if (item.kind === "caption") setSelection("captions");
+    if (item.kind === "audio")
+      setImportedAudioCue(item.index < 0 ? "original" : item.id);
+    const inset =
+      item.kind === "picture"
+        ? Math.min(9, Math.floor((item.endFrame - item.startFrame - 1) / 2))
+        : 0;
+    player.current?.seekTo(item.startFrame + inset);
+  }
+  function pictureAudio(item: EditorTimelineItem) {
+    selectTimelineItem(item);
+    setAudioPicture(item.id);
+    setImportedAudioCue(undefined);
+    setMediaTab("audio");
+  }
+  function timeline(kind: EditorTimelineKind, label: string) {
+    const items = editorTimelineItems(playbackOverlay, kind);
+    const selected =
+      timelineSelection?.kind === kind &&
+      items.some((item) => item.key === timelineSelection.key)
+        ? timelineSelection.key
+        : items.find(
+            (item) =>
+              item.occurrence === activeOccurrence &&
+              (kind === "picture" || kind === "text"
+                ? item.id === selection
+                : true),
+          )?.key;
+    return (
+      <EditorTimeline
+        items={items}
+        selected={selected}
+        label={label}
+        frames={ownerPresentationFrames(playbackOverlay)}
+        disabled={pending || trackingMode || audioImport !== null}
+        onSelect={selectTimelineItem}
+        preview={
+          kind === "picture"
+            ? (item) => (
+                <span
+                  className="picture-thumb"
+                  aria-hidden="true"
+                  style={{
+                    backgroundImage: `url(/api/local/workspace/${workspaceId}/assets/${ownerOccurrenceOverlay(playbackOverlay, item.occurrence).visuals[item.index]!.assetId})`,
+                  }}
+                />
+              )
+            : undefined
+        }
+        accessory={
+          kind === "picture"
+            ? (item) => (
+                <div className="editor-timeline-actions">
+                  <PictureTimelineAudio
+                    item={item}
+                    disabled={pending}
+                    onAdd={pictureAudio}
+                  />
+                  <PictureImageDialog
+                    occurrence={item.occurrence}
+                    workspaceId={workspaceId}
+                    assetId={
+                      ownerOccurrenceOverlay(playbackOverlay, item.occurrence)
+                        .visuals[item.index]!.assetId
+                    }
+                    number={item.index + 1}
+                    onOpen={() => player.current?.pause()}
+                  />
+                </div>
+              )
+            : undefined
+        }
+      />
     );
   }
   function addText() {
@@ -1187,7 +1279,7 @@ export function ClipEditor({
           (item) => item.id === value.audioAssetId,
         );
         if (!asset) throw new Error("unacknowledged");
-        const cue: OwnerAudioCue = {
+        let cue: OwnerAudioCue = {
           id: crypto.randomUUID(),
           source: { kind: "upload", id: asset.id },
           placement: "video",
@@ -1198,6 +1290,14 @@ export function ClipEditor({
           loop: true,
         };
         const audio = draft.audio ?? { originalVolume: 100, cues: [] };
+        const visual = draft.visuals.find((item) => item.id === audioPicture);
+        if (visual)
+          cue = pictureLinkedAudio(
+            cue,
+            visual,
+            windowEnd,
+            Math.round((asset.durationMs * OWNER_FPS) / 1000),
+          );
         update({ ...draft, audio: { ...audio, cues: [...audio.cues, cue] } });
         setMessage("");
         if (kind === "youtube-audio") {
@@ -1207,6 +1307,8 @@ export function ClipEditor({
         return asset.id;
       } else if (kind !== "picture") {
         setHookDraft(undefined);
+        setTimelineSelection(undefined);
+        setAudioPicture(undefined);
         const accepted = initialOwnerEdit(acknowledged);
         setForm({ original: accepted, draft: structuredClone(accepted) });
         setForcedStale(false);
@@ -1461,25 +1563,6 @@ export function ClipEditor({
           )}
         </div>
         <div className="editor-panels" hidden={!previewLoaded}>
-          {masterDraft.hook && (
-            <div
-              className="editor-occurrence"
-              role="group"
-              aria-label="Editing occurrence"
-            >
-              {(["hook", "body"] as const).map((part) => (
-                <Button
-                  key={part}
-                  variant="secondary"
-                  aria-pressed={activeOccurrence === part}
-                  disabled={pending || audioImport !== null}
-                  onClick={() => selectOccurrence(part)}
-                >
-                  {part === "hook" ? "Hook" : "Main clip"}
-                </Button>
-              ))}
-            </div>
-          )}
           <div
             className="editor-tabs"
             role="tablist"
@@ -1493,7 +1576,7 @@ export function ClipEditor({
                   id={`${tabsId}-${value}`}
                   type="button"
                   role="tab"
-                  disabled={pending || audioImport !== null}
+                  disabled={pending || trackingMode || audioImport !== null}
                   aria-selected={setting === value}
                   aria-controls={`${tabsId}-${value}-panel`}
                   tabIndex={setting === value ? 0 : -1}
@@ -1501,7 +1584,7 @@ export function ClipEditor({
                     selectSetting(value);
                   }}
                   onKeyDown={(event) => {
-                    if (pending || audioImport !== null) return;
+                    if (pending || trackingMode || audioImport !== null) return;
                     if (
                       !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
                         event.key,
@@ -1611,11 +1694,13 @@ export function ClipEditor({
             hidden={setting !== "text"}
             tabIndex={0}
           >
+            {setting === "text" && timeline("text", "Text layers")}
             {setting === "text" && (
               <fieldset disabled={pending}>
                 <legend className="local-sr-only">Text</legend>
                 <TextInspector
                   id={`${tabsId}-text-controls`}
+                  hidePicker
                   layers={draft.texts ?? []}
                   selected={selection}
                   onSelect={chooseText}
@@ -1640,6 +1725,30 @@ export function ClipEditor({
           >
             {setting === "focus" && (
               <FocusPreviewControls
+                navigationDisabled={trackingMode}
+                timeline={timeline("camera", "Camera timeline")}
+                positionRequest={
+                  editorTimelineItems(playbackOverlay, "camera").find(
+                    (item) =>
+                      item.occurrence === activeOccurrence &&
+                      item.key === timelineSelection?.key,
+                  ) ??
+                  editorTimelineItems(playbackOverlay, "camera").find(
+                    (item) => item.occurrence === activeOccurrence,
+                  )
+                }
+                onPositionSelect={(index) =>
+                  setTimelineSelection({
+                    kind: "camera",
+                    occurrence: activeOccurrence,
+                    id: String(index),
+                    index,
+                    key: `${activeOccurrence}:camera:${index}`,
+                    title: "",
+                    startFrame: 0,
+                    endFrame: 0,
+                  })
+                }
                 attempt={previewAttempt}
                 player={player}
                 available={!playbackFailed && previewLoaded}
@@ -1690,6 +1799,7 @@ export function ClipEditor({
             hidden={setting !== "captions"}
             tabIndex={0}
           >
+            {setting === "captions" && timeline("caption", "Caption timeline")}
             {activeOccurrence === "hook" && !base.overlay.captions.length ? (
               <div className="caption-empty">
                 <h4>No captions in this Hook</h4>
@@ -1907,7 +2017,19 @@ export function ClipEditor({
                   >
                     {captionTab === "text" && (
                       <CaptionTextEditor
-                        captions={base.overlay.captions}
+                        startIndex={
+                          timelineSelection?.kind === "caption" &&
+                          timelineSelection.occurrence === activeOccurrence
+                            ? timelineSelection.index
+                            : 0
+                        }
+                        captions={
+                          timelineSelection?.kind === "caption" &&
+                          timelineSelection.occurrence === activeOccurrence &&
+                          base.overlay.captions[timelineSelection.index]
+                            ? [base.overlay.captions[timelineSelection.index]!]
+                            : base.overlay.captions
+                        }
                         edits={draft.captionText}
                         player={player}
                         available={
@@ -1953,6 +2075,7 @@ export function ClipEditor({
             hidden={setting !== "filters"}
             tabIndex={0}
           >
+            {setting === "filters" && timeline("look", "Filter timeline")}
             <fieldset disabled={pending}>
               <legend className="local-sr-only">Filters</legend>
               <label>
@@ -2046,6 +2169,9 @@ export function ClipEditor({
               aria-labelledby={`${tabsId}-media-pictures`}
               hidden={mediaTab !== "pictures"}
             >
+              {setting === "pictures" &&
+                mediaTab === "pictures" &&
+                timeline("picture", "Picture timeline")}
               <div className="picture-tools" aria-label="AI visuals">
                 <Button
                   variant="secondary"
@@ -2092,38 +2218,6 @@ export function ClipEditor({
               </div>
               <fieldset disabled={pending}>
                 <legend className="local-sr-only">Pictures</legend>
-                <div
-                  className="picture-picker"
-                  role="group"
-                  aria-label="Pictures"
-                >
-                  {draft.visuals.map((cue, index) => (
-                    <div key={cue.id} className="picture-card">
-                      <Button
-                        variant="secondary"
-                        className="picture-choice"
-                        aria-label={`Edit picture ${index + 1}`}
-                        aria-pressed={selection === cue.id}
-                        onClick={() => choosePicture(cue)}
-                      >
-                        <span
-                          className="picture-thumb"
-                          aria-hidden="true"
-                          style={{
-                            backgroundImage: `url(/api/local/workspace/${workspaceId}/assets/${cue.assetId})`,
-                          }}
-                        />
-                        <span>Picture {index + 1}</span>
-                      </Button>
-                      <PictureImageDialog
-                        workspaceId={workspaceId}
-                        assetId={cue.assetId}
-                        number={index + 1}
-                        onOpen={() => player.current?.pause()}
-                      />
-                    </div>
-                  ))}
-                </div>
                 <div className="picture-tools">
                   <Button
                     variant="secondary"
@@ -2436,6 +2530,10 @@ export function ClipEditor({
             >
               {setting === "pictures" &&
                 mediaTab === "audio" &&
+                audioImport === null &&
+                timeline("audio", "Audio timeline")}
+              {setting === "pictures" &&
+                mediaTab === "audio" &&
                 audioImport !== null && (
                   <YoutubeAudioIntake
                     value={audioImport}
@@ -2455,6 +2553,19 @@ export function ClipEditor({
                 mediaTab === "audio" &&
                 audioImport === null && (
                   <AudioInspector
+                    key={`${activeOccurrence}:${importedAudioCue ?? ""}:${audioPicture ?? ""}`}
+                    hideCueList
+                    linkedVisual={draft.visuals.find(
+                      (cue) => cue.id === audioPicture,
+                    )}
+                    onBackToPicture={
+                      audioPicture
+                        ? () => {
+                            setAudioPicture(undefined);
+                            setMediaTab("pictures");
+                          }
+                        : undefined
+                    }
                     audio={draft.audio}
                     visuals={overlay.visuals}
                     assets={clip.audioAssets ?? []}
@@ -2476,7 +2587,26 @@ export function ClipEditor({
                           }
                         : undefined
                     }
-                    onChange={(audio) => update({ ...draft, audio })}
+                    onChange={(audio) => {
+                      const added = audio.cues.find(
+                        (cue) =>
+                          !draft.audio?.cues.some((old) => old.id === cue.id),
+                      );
+                      if (added) {
+                        setImportedAudioCue(added.id);
+                        setTimelineSelection({
+                          key: `${activeOccurrence}:audio:${added.id}`,
+                          kind: "audio",
+                          occurrence: activeOccurrence,
+                          id: added.id,
+                          index: audio.cues.length - 1,
+                          title: "",
+                          startFrame: 0,
+                          endFrame: 0,
+                        });
+                      }
+                      update({ ...draft, audio });
+                    }}
                     onUpload={async (file) => {
                       if (
                         file.size < 1 ||
@@ -2587,12 +2717,14 @@ export function ClipEditor({
     </section>
   );
   return (
-    <EditorHookClock value={masterDraft.hook}>
-      <EditorOccurrence
-        value={setting === "hook" ? undefined : activeOccurrence}
-      >
-        {content}
-      </EditorOccurrence>
-    </EditorHookClock>
+    <EditorPresentationClock value={true}>
+      <EditorHookClock value={masterDraft.hook}>
+        <EditorOccurrence
+          value={setting === "hook" ? undefined : activeOccurrence}
+        >
+          {content}
+        </EditorOccurrence>
+      </EditorHookClock>
+    </EditorPresentationClock>
   );
 }

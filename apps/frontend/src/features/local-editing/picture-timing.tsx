@@ -4,7 +4,12 @@ import { Clock3 } from "lucide-react";
 import type { OwnerVisualEdit } from "../../../../../packages/contracts/local/assets.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import { Button } from "../../shared/ui/button";
-import { EditorHookClock, EditorOccurrence } from "./editor-clock.ts";
+import {
+  EditorHookClock,
+  EditorOccurrence,
+  EditorPresentationClock,
+  editorClockOffset,
+} from "./editor-clock.ts";
 import { useEditorPreview } from "./use-editor-preview.ts";
 
 export function PictureTiming<
@@ -32,6 +37,10 @@ export function PictureTiming<
 }) {
   const hook = useContext(EditorHookClock);
   const occurrence = useContext(EditorOccurrence);
+  const unifiedClock = useContext(EditorPresentationClock);
+  const displayOffset = unifiedClock
+    ? editorClockOffset(hook, occurrence, presentationClock)
+    : 0;
   const minimum =
     !presentationClock && occurrence === "hook" && hook ? hook.startFrame : 0;
   const maximum =
@@ -97,12 +106,17 @@ export function PictureTiming<
                 <input
                   type="number"
                   aria-label={`${label} ${start ? "start" : "end"} seconds`}
-                  min={(minimum + (start ? 0 : 1)) / OWNER_FPS}
-                  max={(start ? maximum - 1 : maximum) / OWNER_FPS}
+                  min={(displayOffset + minimum + (start ? 0 : 1)) / OWNER_FPS}
+                  max={
+                    (displayOffset + (start ? maximum - 1 : maximum)) /
+                    OWNER_FPS
+                  }
                   step="0.033333"
                   value={
                     Number.isFinite(cue[key])
-                      ? Number((cue[key] / OWNER_FPS).toFixed(3))
+                      ? Number(
+                          ((cue[key] + displayOffset) / OWNER_FPS).toFixed(3),
+                        )
                       : ""
                   }
                   onChange={(event) => {
@@ -114,7 +128,7 @@ export function PictureTiming<
                           ? NaN
                           : Math.round(
                               Number(event.currentTarget.value) * OWNER_FPS,
-                            ),
+                            ) - displayOffset,
                     });
                   }}
                 />

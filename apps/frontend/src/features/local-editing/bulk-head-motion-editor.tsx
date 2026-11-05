@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { EditorOccurrence } from "./editor-clock.ts";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Button } from "../../shared/ui/button";
 import { Progress } from "../../shared/ui/progress";
 import { WorkflowActions } from "./workflow-actions";
@@ -42,10 +42,11 @@ export function BulkHeadMotionEditor(props: {
       request.current?.abort();
     };
   }, []);
+  const reportBusy = useEffectEvent((value: boolean) => onBusy(value));
   useEffect(() => {
-    onBusy(busy);
-    return () => onBusy(false);
-  }, [busy, onBusy]);
+    reportBusy(busy);
+  }, [busy]);
+  useEffect(() => () => reportBusy(false), []);
   const occurrence = useContext(EditorOccurrence);
   const plan = planBulkHeadMotion({ ...props, occurrence });
   const people = new Set(plan.intervals.map((interval) => interval.personId))

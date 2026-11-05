@@ -9,11 +9,13 @@ export function PictureImageDialog({
   assetId,
   number,
   onOpen,
+  occurrence,
 }: {
   workspaceId: string;
   assetId: string;
   number: number;
   onOpen: () => void;
+  occurrence?: "hook" | "body";
 }) {
   const titleId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -26,7 +28,7 @@ export function PictureImageDialog({
     <div ref={root} className={styles.trigger}>
       <Button
         variant="quiet"
-        aria-label={`View picture ${number}`}
+        aria-label={`View picture ${number}${occurrence === "hook" ? " [Hook]" : ""}`}
         aria-haspopup="dialog"
         onClick={() => {
           if (!dialog.current || dialog.current.open) return;
@@ -77,7 +79,10 @@ export function PictureImageDialog({
       >
         <div className={styles.surface}>
           <header className={styles.heading}>
-            <h2 id={titleId}>Picture {number}</h2>
+            <h2 id={titleId}>
+              Picture {number}
+              {occurrence === "hook" ? " [Hook]" : ""}
+            </h2>
             <Button
               variant="secondary"
               aria-label="Close image"

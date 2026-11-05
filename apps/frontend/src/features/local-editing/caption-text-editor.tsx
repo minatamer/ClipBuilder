@@ -5,7 +5,12 @@ import type { OwnerOverlay } from "../../../../../packages/contracts/local/clips
 import type { OwnerEditDocument } from "../../../../../packages/contracts/local/editor.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import { Button } from "../../shared/ui/button";
-import { EditorOccurrence, EditorHookClock } from "./editor-clock.ts";
+import {
+  EditorOccurrence,
+  EditorHookClock,
+  EditorPresentationClock,
+  editorClockOffset,
+} from "./editor-clock.ts";
 import { ownerOccurrencePresentationFrame } from "../../../../../packages/contracts/local/hook-content.ts";
 
 export function CaptionTextEditor({
@@ -15,16 +20,22 @@ export function CaptionTextEditor({
   available,
   frames,
   onChange,
+  startIndex = 0,
 }: {
   captions: OwnerOverlay["captions"];
   edits: OwnerEditDocument["captionText"];
   player: RefObject<PlayerRef | null>;
   available: boolean;
   frames: number;
+  startIndex?: number;
   onChange: (edits: NonNullable<OwnerEditDocument["captionText"]>) => void;
 }) {
   const hook = useContext(EditorHookClock);
   const occurrence = useContext(EditorOccurrence);
+  const unifiedClock = useContext(EditorPresentationClock);
+  const offset = unifiedClock
+    ? editorClockOffset(hook, occurrence) / OWNER_FPS
+    : 0;
   const replacements = new Map(edits?.map((edit) => [edit.wordId, edit.text]));
   return (
     <div className="caption-text-editor">
@@ -33,12 +44,14 @@ export function CaptionTextEditor({
           key={`${caption.startMs}:${index}`}
           className="caption-word-group"
         >
-          <legend className="local-sr-only">Caption {index + 1}</legend>
+          <legend className="local-sr-only">
+            Caption {startIndex + index + 1}
+          </legend>
           <Button
             variant="quiet"
             icon={Play}
             disabled={!available}
-            aria-label={`Preview caption ${index + 1}`}
+            aria-label={`Preview caption ${startIndex + index + 1}`}
             onClick={() => {
               player.current?.pause();
               player.current?.seekTo(
@@ -53,7 +66,7 @@ export function CaptionTextEditor({
               );
             }}
           >
-            {(caption.startMs / 1000).toFixed(2)}s
+            {(caption.startMs / 1000 + offset).toFixed(2)}s
           </Button>
           <div className="caption-words">
             {caption.wordCues.map((word, wordIndex) => {
@@ -61,11 +74,11 @@ export function CaptionTextEditor({
               return (
                 <label key={word.wordId}>
                   <span className="local-sr-only">
-                    Caption {index + 1}, word {wordIndex + 1}
+                    Caption {startIndex + index + 1}, word {wordIndex + 1}
                   </span>
                   <input
                     type="text"
-                    aria-label={`Caption ${index + 1} word ${wordIndex + 1}`}
+                    aria-label={`Caption ${startIndex + index + 1} word ${wordIndex + 1}`}
                     value={value}
                     maxLength={80}
                     size={Math.min(24, Math.max(4, value.length + 1))}
