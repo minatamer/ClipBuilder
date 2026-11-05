@@ -14,27 +14,38 @@ matching the owner's above-visual reference. Other positions and manual geometry
 remain. Saved caption boxes/styles and authored Text defaults are preserved.
 This is API-free layout; real caption generation retains its provider gates.
 
-CL-222 keeps the explicitly selected **Hook / Main clip** editing context pinned
-through playback and seeking. Every picture, authored text layer, caption group,
-audio cue and camera item stays in its context's picker regardless of playhead
-time. Selecting a picture/text/caption/audio item seeks its occurrence; existing
-timing panels keep the item's source clock. Preview drag handles and Capture are
-available when that same occurrence is showing, protecting the other copy.
-This changes editor behavior locally with no keys or new processing, including
-existing clips; normal generation/provider approvals remain separate.
+CL-224 shows Hook and main content together in chronological editor collections.
+Repeated items are marked **[Hook]**; selecting a row opens that copy's settings
+and seeks its final-video timestamp. All pictures, text, caption groups, audio,
+filters and camera positions stay listed regardless of playback. Source values
+remain unchanged internally; timing fields and Capture map the final-video clock
+once. Playback cannot silently change edit ownership. Preview handles and Capture
+still protect the other occurrence. Camera positions are selectable directly
+inside Camera, Zoom and Motion; adding/removing a position keeps the selection
+aligned. Motion selects the matching camera's existing path and its target.
 
-Adding a Hook copies its repeated content into **Hook** and **Main clip** editing
-contexts. Select either above the settings to edit its own captions, text,
-pictures/motion, audio, filter and camera settings. Preview/jump and Capture
-follow that occurrence; Apply/Discard covers both. Copies share immutable media
-assets, with no AI calls or extra media files. Hook-range changes preserve
-intersecting edits, add newly repeated content and clear Hook camera paths on
-the changed clock. Removing a Hook drops its copy while preserving the main clip.
-Existing linked saves separate on an explicit edit. Caption/visual AI generation
-remains a main-clip action; a captionless Hook can copy existing main captions.
-Prepared synthetic clips support these edits without API keys. Real generation
-keeps its existing local-model/provider and approval requirements. CL-220 owns
-save/recovery and generated browser/native parity evidence.
+Picture rows offer **Add audio** into the existing sound library. Choosing a
+sound links it to that picture, aligns its start automatically and follows later
+picture timing edits. Hook/main copies keep separate sound settings and removal.
+Audio rows show the recording's name and [Hook] when applicable. Original audio
+remains independently adjustable for each occurrence.
+
+Adding a Hook still copies bounded repeated content, including captions, text,
+pictures/motion, audio, filters and camera settings. Apply/Discard covers both
+copies; immutable assets are shared, with no extra AI call or media file.
+Range changes preserve intersecting edits, add newly repeated content and clear
+Hook camera paths on the changed clock. Removing a Hook preserves the main clip.
+Legacy saves separate on explicit editing; existing saved geometry/content is
+preserved. CL-220 owns the storage/native isolation behavior; CL-224 replaces
+its separate occurrence tabs. Prepared synthetic/existing clips require no keys
+or regeneration. Real generation retains its provider/runtime/live approvals.
+
+Editor activity notifications follow state changes independently of callback
+identity, preventing parent-render feedback. Motion marking uses aligned timing,
+optional head-region fields and the persistent Track/Cancel footer. Expanded
+selection's Done confirms the displayed region. The CL-224 packet records Codex
+browser responsive/interaction checks and the separate fake tracking-state proof;
+these do not establish real-provider quality or deployment readiness.
 
 Motion uses one active head-marking view with an adaptive source preview and
 **Expand** for a larger selection surface. End/Capture stay together, head-region

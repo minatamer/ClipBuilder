@@ -1,5 +1,17 @@
 # ClipBuilder canonical ticket index
 
+## Unified editor usability — 2026-11-05
+
+[CL-224](CL-224-unified-editor-timeline-and-motion-layout.md) is complete locally:
+combined chronological Hook/main collections, camera selection inside Motion,
+picture-linked library audio and stable editor activity notifications. 57 focused
+cases, types/lint/format and Codex-browser responsive/interaction checks pass.
+Generated save/reopen, Capture, tracking-state and cleanup checks preserve saved
+owner work. Real-provider/physical-device/release acceptance remains separate;
+deployment is cancelled. The later authorized [local file-level commit handoff](../operations/CL224_COMMIT_PLAN.md)
+packages all 34 files in three commits, with owner review pending for 2026-11-06.
+No push is requested.
+
 ## CL-218-223 Git handoff - 2026-11-05
 
 The owner subsequently authorized whole-file staging, multiple ticket-prefixed

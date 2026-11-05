@@ -1,5 +1,21 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Unified editor collections — CL-224, 2026-11-05
+
+The owner replaces the Hook/Main editing tabs with unified chronological item
+collections inside each editor panel. Show both independent occurrences together
+with [Hook] labels and final-video clocks; selecting an item selects its copy's
+existing inspector and seeks that occurrence. Playback never filters the list or
+silently changes editing ownership. Preserve independent saved content and exact
+source/Hook/body clocks from CL-220/222. Camera positions remain selectable inside
+Motion and Zoom as well as Camera. Pictures offer Add audio into the existing
+library with picture linkage and automatic timing. CL-224 also owns the reported
+React update-loop correction and responsive audit of all editor layouts/states.
+The owner cancels deployment and authorizes AFK execute/validate/fix decisions;
+saved work, local provider/configuration and cloud services remain preserved.
+These editor operations require prepared media, no API keys or regeneration;
+real AI keeps the normal provider/live/approval gates.
+
 ## Open-ended Hook choice — CL-223, 2026-11-05
 
 When the owner chooses a Hook start at or beyond its current end, accept the new

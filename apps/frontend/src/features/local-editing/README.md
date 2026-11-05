@@ -1,5 +1,14 @@
 # Local editing controls
 
+CL-224 combines Hook/main items in chronological collections with [Hook] labels.
+Selecting a row chooses its independent inspector and final-video clock; playback
+does not filter the list or change ownership. Picture Add audio opens the sound
+library with an existing visual link. Motion includes camera selection and keeps
+its range/form/footer aligned. Timing/Capture convert display clocks once while
+preserving source-bound schemas. These controls use prepared media without API
+keys or regeneration; real generation retains normal provider/live gates.
+
+
 CL-206 keeps the numbered source preview in every Focus tab, including Zoom and
 Motion. Its Motion action Add to all speakers / footer Track all processes the
 current clip's eligible body/Hook camera intervals locally, using existing head

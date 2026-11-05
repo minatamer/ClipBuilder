@@ -6,6 +6,11 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Owner browser preference (2026-11-05, CL-224): use the Codex browser for browser
+  inspection and acceptance checks. Never request access to the owner's Google
+  Chrome window or ask them to use Google Chrome. Preserve the running local app
+  and use generated, fake/no-key editor fixtures for editing regression checks.
+
 - Owner fresh-regeneration verification rule (2026-11-05, CL-221–222): fix and
   verify the normal fresh pipeline for code regressions. Never apply a corrected
   saved edit, camera path or output to the owner's clip as proof of a generic
