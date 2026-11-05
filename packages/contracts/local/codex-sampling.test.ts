@@ -40,12 +40,12 @@ it("keeps the legacy uniform grid when labels or changes are absent", () => {
 it("places measured off-grid cuts at the middle panel without increasing the image allowance", () => {
   const samples = planCodexFrameSamples(600, [173], [47, 113]);
   expect(samples).toHaveLength(20);
-  expect(samples).toEqual(expect.arrayContaining([0, 41, 107, 167]));
+  expect(samples).toEqual(expect.arrayContaining([0, 32, 98, 158]));
 });
 it("places off-grid changes at the middle panel without adding image slots", () => {
   const samples = planCodexFrameSamples(600, [17, 173, 590]);
   expect(samples).toHaveLength(20);
-  expect(samples).toEqual(expect.arrayContaining([0, 11, 167, 584]));
+  expect(samples).toEqual(expect.arrayContaining([0, 2, 158, 575]));
   expect(
     Math.max(
       ...samples.slice(1).map((frame, index) => frame - samples[index]!),
@@ -69,7 +69,7 @@ it("retains uniform coverage and spreads targeted slots under dense changes", ()
 });
 it("refills opening collisions and handles cut-end and sub-second bursts", () => {
   expect(planCodexFrameSamples(60, [1, 1, 0, 60, -1])).toEqual([0, 30]);
-  expect(planCodexFrameSamples(60, [59])).toEqual([0, 53]);
+  expect(planCodexFrameSamples(60, [59])).toEqual([0, 44]);
   expect(planCodexFrameSamples(2, [1])).toEqual([0]);
 });
 it.each([0, -1, 1.5, NaN, 9001])(

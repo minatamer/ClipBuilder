@@ -113,7 +113,8 @@ export const localCodexFrameSchema = z
           .nonnegative()
           .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
       )
-      .length(3)
+      .min(3)
+      .max(4)
       .optional(),
     frame: z
       .number()

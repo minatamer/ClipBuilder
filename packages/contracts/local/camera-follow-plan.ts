@@ -20,6 +20,7 @@ export type CameraFollowInput = {
   tracks: OwnerCameraTrack[];
   effects: OwnerCameraEffect[];
   hook: OwnerHook | undefined;
+  occurrence?: "body" | "hook" | undefined;
 };
 type Interval = Pick<
   OwnerCameraTrack,
@@ -42,6 +43,7 @@ export function planBulkHeadMotion({
   tracks,
   effects,
   hook,
+  occurrence,
 }: CameraFollowInput): BulkHeadPlan {
   const plan: BulkHeadPlan = {
     intervals: [],
@@ -72,6 +74,7 @@ export function planBulkHeadMotion({
     { occurrence: "body" as const, start: 0, end: focus.frames },
   ];
   for (const window of occurrences) {
+    if (occurrence && window.occurrence !== occurrence) continue;
     const blockers = [
       ...tracks
         .filter((t) => t.occurrence === window.occurrence)

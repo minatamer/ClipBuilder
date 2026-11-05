@@ -402,7 +402,7 @@ it("removes partial transition images on cancellation without publishing an arti
   const run = vi
     .spyOn(native, "runOwnedProcess")
     .mockImplementation(async (_exe, args, signal) => {
-      expect(args[args.indexOf("-vf") + 1]).toContain("tile=3x1");
+      expect(args[args.indexOf("-vf") + 1]).toContain("tile=2x2");
       await writeFile(args.at(-1)!, Buffer.from([255, 216, 255]));
       controller.abort(new Error("synthetic_cancel"));
       signal.throwIfAborted();

@@ -66,11 +66,11 @@ it("fills from opening, holds uncertainty, switches only after supported speech 
     [word],
   );
   expect(focus.shots).toHaveLength(2);
-  expect(ownerFocusAt(focus, 0).personId).toBe("person_1");
-  expect(ownerFocusAt(focus, 89).personId).toBe("person_1");
+  expect(ownerFocusAt(focus, 0).personId).toBeNull();
+  expect(ownerFocusAt(focus, 89).personId).toBeNull();
   expect(ownerFocusAt(focus, 90).personId).toBe("person_2");
   expect(ownerFocusAt(focus, 239).personId).toBe("person_2");
-  expect(summary).toMatchObject({ switches: 1, held: 2, fallback: 0 });
+  expect(summary).toMatchObject({ switches: 1, held: 2, fallback: 1 });
 });
 it("prefers the confirmed opening speaker over the left-most person", () => {
   const { focus } = compileAutomaticOwnerFocus(
@@ -110,7 +110,6 @@ it("keeps visual-only opening evidence conservative and never uses it for later 
     [{ ...opening, confidence: 0.94 }, [unknown]],
     [{ ...opening, evidenceWordIds: ["invented"] }, [unknown]],
     [opening, [{ ...unknown, endMs: 900 }]],
-    [opening, [{ ...unknown, speakerId: "spk_1" }]],
     [opening, [unknown, { ...unknown, id: "other", speakerId: "spk_0" }]],
     [
       { ...opening, startFrame: 60 },
@@ -124,8 +123,47 @@ it("keeps visual-only opening evidence conservative and never uses it for later 
       frames,
       cues,
     );
-    expect(focus.shots.every((s) => s.personId === "person_1")).toBe(true);
+    expect(focus.shots.every((s) => s.personId === null)).toBe(true);
   }
+});
+it("uses strong visual opening evidence when diarization labels two visible speakers alike, without merging or relabeling them", () => {
+  const cues = [
+    { ...word, id: "opening", startMs: 0, endMs: 2500, speakerId: "spk_0" },
+    { ...word, id: "later", startMs: 4000, endMs: 7000, speakerId: "spk_0" },
+  ];
+  const { focus } = compileAutomaticOwnerFocus(
+    {
+      people,
+      decisions: [
+        {
+          ...decision,
+          startFrame: 0,
+          endFrame: 120,
+          personId: "person_2",
+          speakerId: null,
+          evidenceWordIds: ["opening"],
+          shotStart: true,
+        },
+        {
+          ...decision,
+          startFrame: 120,
+          endFrame: frames,
+          personId: "person_1",
+          speakerId: "spk_0",
+          evidenceWordIds: ["later"],
+          shotStart: true,
+        },
+      ],
+    },
+    source,
+    frames,
+    cues,
+  );
+  expect(ownerFocusAt(focus, 0).personId).toBe("person_2");
+  expect(ownerFocusAt(focus, 120).personId).toBe("person_1");
+  expect(focus.people).toHaveLength(2);
+  expect(focus.decisions[0]!.speakerId).toBeNull();
+  expect(cues.every((cue) => cue.speakerId === "spk_0")).toBe(true);
 });
 it("does not choose between contradictory visible opening speakers", () => {
   const { focus } = compileAutomaticOwnerFocus(
@@ -142,7 +180,7 @@ it("does not choose between contradictory visible opening speakers", () => {
     frames,
     [{ ...word, startMs: 0, speakerId: null }],
   );
-  expect(focus.shots[0]!.personId).toBe("person_1");
+  expect(focus.shots[0]!.personId).toBeNull();
 });
 it("permits visual-only re-establishment at a real shot boundary", () => {
   const { focus } = compileAutomaticOwnerFocus(
@@ -162,7 +200,7 @@ it("permits visual-only re-establishment at a real shot boundary", () => {
     frames,
     [{ ...word, startMs: 4000, endMs: 6000, speakerId: null }],
   );
-  expect(ownerFocusAt(focus, 119).personId).toBe("person_1");
+  expect(ownerFocusAt(focus, 119).personId).toBeNull();
   expect(ownerFocusAt(focus, 120).personId).toBe("person_2");
 });
 it("waits for the actual supporting words rather than switching early at the decision's start", () => {
@@ -172,8 +210,8 @@ it("waits for the actual supporting words rather than switching early at the dec
     frames,
     [word],
   );
-  expect(ownerFocusAt(focus, 0).personId).toBe("person_1");
-  expect(ownerFocusAt(focus, 89).personId).toBe("person_1");
+  expect(ownerFocusAt(focus, 0).personId).toBeNull();
+  expect(ownerFocusAt(focus, 89).personId).toBeNull();
   expect(ownerFocusAt(focus, 90).personId).toBe("person_2");
 });
 it("chooses the first person when people enter after an empty opening", () => {
@@ -285,7 +323,7 @@ it("does not switch for invented evidence, brief speech, offscreen people or dup
       [{ ...word, endMs: 2400 }],
     );
     expect(focus.shots).toHaveLength(1);
-    expect(focus.shots[0]!.personId).toBe("person_1");
+    expect(focus.shots[0]!.personId).toBeNull();
   }
 });
 it("resets geometry at real cuts without carrying an offscreen person", () => {
@@ -316,6 +354,31 @@ it("resets geometry at real cuts without carrying an offscreen person", () => {
     [],
   );
   expect(ownerFocusAt(focus, 119).personId).toBe("person_1");
+  expect(ownerFocusAt(focus, 120).personId).toBe("person_2");
+});
+it("holds an established visible speaker at an uncertain cut instead of choosing roster order", () => {
+  const { focus } = compileAutomaticOwnerFocus(
+    {
+      people,
+      decisions: [
+        { ...decision, startFrame: 0, endFrame: 120, shotStart: true },
+        {
+          ...decision,
+          startFrame: 120,
+          endFrame: frames,
+          personId: null,
+          speakerId: null,
+          confidence: 0.35,
+          evidenceWordIds: [],
+          shotStart: true,
+        },
+      ],
+    },
+    source,
+    frames,
+    [{ ...word, startMs: 0, endMs: 3500 }],
+  );
+  expect(ownerFocusAt(focus, 0).personId).toBe("person_2");
   expect(ownerFocusAt(focus, 120).personId).toBe("person_2");
 });
 it("keeps usable people when neighbouring observations fail and converts only physical clocks", () => {

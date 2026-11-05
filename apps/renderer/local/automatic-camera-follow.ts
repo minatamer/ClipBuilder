@@ -88,8 +88,6 @@ export async function followPreparedCamera(
     const positions = new Map(indices.map((frame, index) => [frame, index]));
     const bytes = Buffer.alloc(frameBytes);
     const tracks: OwnerCameraTrack[] = [];
-    const failedShots = new Set<number>(),
-      trackShots = new Map<string, number>();
     let previous: OwnerCameraTrack | undefined;
     for (const interval of plan.intervals) {
       workSignal.throwIfAborted();
@@ -97,7 +95,6 @@ export async function followPreparedCamera(
         interval.continuation &&
         (!previous || previous.outcome !== "complete")
       ) {
-        failedShots.add(interval.shot);
         previous = undefined;
         continue;
       }
@@ -164,11 +161,8 @@ export async function followPreparedCamera(
           points.push({ frame: frame - interval.sourceStartFrame, ...center });
           if (points.length % 8 === 0) await yieldPixels();
         }
-        if (
-          lost ||
-          points.at(-1)?.frame !== end - interval.sourceStartFrame - 1
-        ) {
-          failedShots.add(interval.shot);
+        const verifiedFrames = (points.at(-1)?.frame ?? -1) + 1;
+        if (verifiedFrames < 6 || points.length < 2) {
           previous = undefined;
           continue;
         }
@@ -180,31 +174,26 @@ export async function followPreparedCamera(
           occurrence: "body",
           personId: interval.personId,
           startFrame: interval.startFrame,
-          endFrame: interval.endFrame,
+          endFrame: interval.startFrame + verifiedFrames,
           sourceStartFrame: interval.sourceStartFrame,
           seed,
           points,
-          outcome: "complete",
+          outcome: lost ? "lost" : "complete",
           followWindow: OWNER_CAMERA_FOLLOW.followWindow,
           focusKey: ownerCameraFollowKey(focus, interval.personId),
         });
         tracks.push(track);
-        trackShots.set(track.id, interval.shot);
         previous = track;
       } catch {
         workSignal.throwIfAborted();
-        failedShots.add(interval.shot);
         previous = undefined;
       }
     }
-    // Retain a whole linked camera family only if fixed framing would lose its head.
+    // A later cut/loss cannot erase verified motion. Never extend it past loss or
+    // seed the next chunk from an incomplete track.
     const retained = new Set<string>();
     for (const track of tracks)
-      if (
-        !failedShots.has(trackShots.get(track.id)!) &&
-        headEscapesCamera(focus, track)
-      )
-        retained.add(track.id);
+      if (headEscapesCamera(focus, track)) retained.add(track.id);
     for (let i = 0; i < tracks.length; i++)
       for (const track of tracks)
         if (

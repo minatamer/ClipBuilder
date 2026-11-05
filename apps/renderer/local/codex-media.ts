@@ -449,7 +449,7 @@ export async function prepareLocalCodexInput(
               "-ss",
               String(start + offset),
               "-t",
-              String(Math.min(0.6, duration - offset)),
+              String(Math.min(2, duration - offset)),
               "-i",
               source,
               "-map",
@@ -458,7 +458,7 @@ export async function prepareLocalCodexInput(
               "-sn",
               "-dn",
               "-vf",
-              "fps=5:start_time=0,scale=trunc(iw/2)*2:trunc(ih/2)*2,tpad=stop_mode=clone:stop_duration=0.6,tile=3x1",
+              "fps=30:start_time=0,tpad=stop_mode=clone:stop_duration=2,select='not(mod(n,15))',scale=trunc(iw/2)*2:trunc(ih/2)*2,tile=2x2",
               "-frames:v",
               "1",
               "-q:v",
@@ -510,7 +510,7 @@ export async function prepareLocalCodexInput(
             throw new Error("codex_input_invalid");
           frames.push({
             frame,
-            sampleFrames: [0, 6, 12].map((delta) =>
+            sampleFrames: [0, 15, 30, 45].map((delta) =>
               Math.min(Math.round(duration * OWNER_FPS) - 1, frame + delta),
             ),
             jpeg: jpeg.toString("base64"),

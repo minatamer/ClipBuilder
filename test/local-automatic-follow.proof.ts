@@ -52,6 +52,7 @@ it("automatically follows only escaping selected speakers from prepared native p
       "layout",
       "lost",
       "cut",
+      "tail-cut",
       "long",
     ] as const) {
       const workspaceId = randomUUID(),
@@ -91,7 +92,7 @@ it("automatically follows only escaping selected speakers from prepared native p
           "-i",
           "anullsrc=r=48000:cl=stereo",
           "-filter_complex",
-          `[1:v]split[a][b];[0:v][a]overlay=x='${x}':y=70:shortest=1[first];[first][b]overlay=x=350:y=70:shortest=1${kind === "lost" ? ",drawbox=x=0:y=0:w=iw:h=ih:color=0x202020:t=fill:enable='gte(t,1.5)'" : ""}[v]`,
+          `[1:v]split[a][b];[0:v][a]overlay=x='${x}':y=70:shortest=1[first];[first][b]overlay=x=350:y=70:shortest=1${kind === "lost" || kind === "tail-cut" ? `,drawbox=x=0:y=0:w=iw:h=ih:color=0x202020:t=fill:enable='gte(n,${kind === "lost" ? 45 : frames - 1})'` : ""}[v]`,
           "-map",
           "[v]",
           "-map",
@@ -192,12 +193,25 @@ it("automatically follows only escaping selected speakers from prepared native p
         throw Error("invalid_proof_result");
       const elapsed = performance.now() - prepare,
         tracks = result.cameraTracks ?? [];
-      if (kind === "jitter" || kind === "lost") expect(tracks).toEqual([]);
+      if (kind === "jitter") expect(tracks).toEqual([]);
       else {
         expect(tracks, kind).toHaveLength(kind === "long" ? 3 : 1);
         expect(tracks[0]!.personId).toBe("person_1");
         expect(tracks[0]!.followWindow).toBe(30);
-        expect(tracks.at(-1)!.endFrame).toBe(kind === "cut" ? 45 : frames);
+        expect(tracks.at(-1)!.endFrame).toBe(
+          kind === "cut" || kind === "lost"
+            ? 45
+            : kind === "tail-cut"
+              ? frames - 1
+              : frames,
+        );
+        if (kind === "lost" || kind === "tail-cut") {
+          expect(tracks.at(-1)!.outcome).toBe("lost");
+          const stopped = tracks.at(-1)!.endFrame;
+          expect(
+            ownerCameraFollowCrop(focus, tracks, stopped, "body", stopped),
+          ).toEqual(ownerFocusCrop(focus, focus.shots[0]!));
+        }
         if (kind === "layout")
           expect(tracks[0]!.points.at(-1)!.x).toBeLessThan(0.39);
         else expect(tracks.at(-1)!.points.at(-1)!.x).toBeGreaterThan(0.3);

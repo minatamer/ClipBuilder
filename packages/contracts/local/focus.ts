@@ -293,8 +293,9 @@ export function compileAutomaticOwnerFocus(
     decision: OwnerFocus["decisions"][number],
     openingStart?: number,
   ) {
-    // Visual evidence can establish the opening crop without inventing an
-    // audio label. It cannot authorize a later speaker switch.
+    // Diarization labels can collapse distinct voices. Strong temporal visual
+    // evidence can establish a shot opening without claiming an audio identity;
+    // it cannot authorize an arbitrary later speaker switch.
     const visualOpening =
       decision.speakerId === null && decision.startFrame === openingStart;
     const target = focus.people.find(
@@ -309,7 +310,8 @@ export function compileAutomaticOwnerFocus(
     const evidence = decision.evidenceWordIds
       .flatMap((id) => {
         const w = byWord.get(id);
-        if (!w || w.speakerId !== decision.speakerId) return [];
+        if (!w || (!visualOpening && w.speakerId !== decision.speakerId))
+          return [];
         const start = Math.max(
             w.startMs,
             (decision.startFrame * 1000) / OWNER_FPS,
@@ -333,11 +335,20 @@ export function compileAutomaticOwnerFocus(
     }
     const confirmedFrame =
       confirmedMs === null ? null : Math.ceil((confirmedMs * OWNER_FPS) / 1000);
+    const evidenceSpeakers = new Set(
+      decision.evidenceWordIds.flatMap((id) => {
+        const word = byWord.get(id);
+        return word ? [word.speakerId] : [];
+      }),
+    );
+    const evidenceSpeaker = visualOpening
+      ? evidenceSpeakers.values().next().value
+      : decision.speakerId;
     const overlap =
       confirmedMs !== null &&
       words.some(
         (w) =>
-          w.speakerId !== decision.speakerId &&
+          w.speakerId !== evidenceSpeaker &&
           w.endMs > w.startMs &&
           w.startMs < confirmedMs &&
           w.endMs >
@@ -349,6 +360,7 @@ export function compileAutomaticOwnerFocus(
     return target &&
       decision.confidence >= (visualOpening ? 0.95 : 0.85) &&
       (decision.speakerId || visualOpening) &&
+      (!visualOpening || evidenceSpeakers.size === 1) &&
       confirmedMs !== null &&
       confirmedFrame !== null &&
       !overlap &&
@@ -394,11 +406,17 @@ export function compileAutomaticOwnerFocus(
       new Set(openingTargets.map((p) => p.id)).size === 1
         ? openingTargets[0]
         : null;
+    const visible = focus.people.filter((p) =>
+      p.observations.some((o) => o.startFrame <= start && o.endFrame > start),
+    );
+    const previousPerson = shots.at(-1)?.personId;
+    // Uncertainty is not evidence for the first roster entry. Keep an established
+    // visible target, or use the sole visible person; an ambiguous opening keeps
+    // the existing centered portrait until supported speech identifies a target.
     const person =
       openingPerson ??
-      focus.people.find((p) =>
-        p.observations.some((o) => o.startFrame <= start && o.endFrame > start),
-      );
+      visible.find((p) => p.id === previousPerson) ??
+      (visible.length === 1 ? visible[0] : undefined);
     let current: OwnerFocusShot = {
       ...focus.shots[0]!,
       startFrame: start,
@@ -415,7 +433,18 @@ export function compileAutomaticOwnerFocus(
             .map((o) => ({ person: p, frame: o.startFrame })),
         )
         .sort((a, b) => a.frame - b.frame)[0];
-      if (firstVisible && shots.length < OWNER_FOCUS_LIMITS.shots - 1) {
+      if (
+        !visible.length &&
+        firstVisible &&
+        focus.people.filter((p) =>
+          p.observations.some(
+            (o) =>
+              o.startFrame <= firstVisible.frame &&
+              o.endFrame > firstVisible.frame,
+          ),
+        ).length === 1 &&
+        shots.length < OWNER_FOCUS_LIMITS.shots - 1
+      ) {
         shots.push({ ...current, endFrame: firstVisible.frame });
         current = {
           ...current,

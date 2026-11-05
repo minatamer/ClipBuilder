@@ -70,7 +70,7 @@ export function planCodexFrameSamples(
         .filter(
           (frame) => Number.isInteger(frame) && frame > 0 && frame < frames,
         )
-        .map((frame) => Math.max(0, frame - OWNER_FPS / 5)),
+        .map((frame) => Math.max(0, frame - OWNER_FPS / 2)),
     ),
   ].sort((a, b) => a - b);
   const targeted = spreadChanges(changes, Math.floor(count / 2));

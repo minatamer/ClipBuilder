@@ -193,8 +193,8 @@ it("runs the local Codex workflow through real controls/native worker with injec
       )
     )
       expect(context.images).toContainEqual({
-        frame: 144,
-        sampleFrames: [144, 150, 156],
+        frame: 135,
+        sampleFrames: [135, 150, 165, 180],
       });
     return {
       texts: context.words.length
