@@ -2,6 +2,9 @@ import { request } from "node:http";
 import { OWNER_LIMITS } from "../../../packages/contracts/local/policy.ts";
 
 export const WORKER_RESPONSE_BYTES = 8192;
+/** Numeric camera paths use the existing bounded JSON budget, not receipt size. */
+export const workerResponseBytes = (operation: unknown) =>
+  operation === "clip-preview" ? OWNER_LIMITS.jsonBytes : WORKER_RESPONSE_BYTES;
 
 /** Native RPC headers may arrive only after encoding. Honor the caller's
  * explicit deadline instead of fetch's shorter implicit headers timeout. */
@@ -32,6 +35,19 @@ export const nativeWorkerFetch: typeof fetch = async (input, init) => {
       Buffer.byteLength(body) > OWNER_LIMITS.jsonBytes)
   )
     throw new Error("invalid_worker_body");
+  let responseBytes = WORKER_RESPONSE_BYTES;
+  if (url.pathname === "/media" && typeof body === "string") {
+    try {
+      const value: unknown = JSON.parse(body);
+      responseBytes = workerResponseBytes(
+        typeof value === "object" && value !== null && "operation" in value
+          ? value.operation
+          : undefined,
+      );
+    } catch {
+      throw new Error("invalid_worker_body");
+    }
+  }
   const signal = init?.signal;
   if (!signal) throw new Error("worker_deadline_required");
   signal.throwIfAborted();
@@ -45,7 +61,7 @@ export const nativeWorkerFetch: typeof fetch = async (input, init) => {
         let size = 0;
         response.on("data", (chunk: Buffer) => {
           size += chunk.length;
-          if (size > WORKER_RESPONSE_BYTES) {
+          if (size > responseBytes) {
             const error = new Error("worker_response_too_large");
             reject(error);
             pending.destroy(error);

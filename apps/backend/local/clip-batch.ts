@@ -1347,7 +1347,6 @@ export class OwnerClipBatch {
           "clip_build",
           async () => {
             if (work.kind === "prepare") {
-              const freshPlan = !clip.base;
               clip.state = "preparing";
               if (!clip.base) {
                 const moment = work.moment;
@@ -1365,7 +1364,10 @@ export class OwnerClipBatch {
               controller.signal.throwIfAborted();
               const frames = clip.base.overlay.frames;
               const followFocus =
-                freshPlan &&
+                !clip.preview &&
+                !clip.outputs.length &&
+                clip.edit?.revision === 0 &&
+                !clip.edit.cameraTracks?.length &&
                 this.ports.mode === "provider-ai" &&
                 clip.base.overlay.focus?.shots.some(
                   (shot) => shot.personId !== null,

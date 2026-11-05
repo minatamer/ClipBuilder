@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   nativeWorkerFetch,
   WORKER_RESPONSE_BYTES,
+  workerResponseBytes,
 } from "./worker-transport.ts";
 import { localWorkerPort } from "./worker-port.ts";
 import { OWNER_LIMITS } from "../../../packages/contracts/local/policy.ts";
@@ -119,6 +120,54 @@ describe("bounded native worker HTTP transport", () => {
       302,
     );
     expect(calls).toBe(2);
+  });
+
+  it("accepts bounded camera replies above receipt size only on media preview, and keeps both readers bounded", async () => {
+    let size = WORKER_RESPONSE_BYTES + 1;
+    const origin = await listen(
+      createServer((req, res) => {
+        req.resume();
+        res.end(" ".repeat(size));
+      }),
+    );
+    const preview = {
+      ...options(),
+      body: JSON.stringify({ operation: "clip-preview" }),
+    };
+    expect((await nativeWorkerFetch(origin + "/media", preview)).status).toBe(
+      200,
+    );
+    await expect(
+      nativeWorkerFetch(origin + "/cancel", preview),
+    ).rejects.toThrow("worker_response_too_large");
+    await expect(
+      nativeWorkerFetch(origin + "/media", {
+        ...preview,
+        body: JSON.stringify({ operation: "inspect" }),
+      }),
+    ).rejects.toThrow("worker_response_too_large");
+    size = workerResponseBytes("clip-preview") + 1;
+    await expect(nativeWorkerFetch(origin + "/media", preview)).rejects.toThrow(
+      "worker_response_too_large",
+    );
+    const native = localWorkerPort(
+      4200,
+      "synthetic-test",
+      async () => new Response(" ".repeat(size)),
+    );
+    await expect(
+      native(
+        {
+          operation: "clip-preview",
+          jobId: randomUUID(),
+          workspaceId: randomUUID(),
+          clipId: randomUUID(),
+          cut: { startFrame: 0, endFrame: 30 },
+          fingerprint: "a".repeat(64),
+        },
+        AbortSignal.timeout(5000),
+      ),
+    ).rejects.toThrow("invalid_media_result");
   });
 
   it("rejects external, non-worker, oversized and pre-aborted requests before dispatch", async () => {

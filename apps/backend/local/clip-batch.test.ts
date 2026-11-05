@@ -132,7 +132,13 @@ const request = () => ({
     (moment) => moment.id,
   ),
 });
-it.each(["provider-ai", "synthetic-ai", "invalid-path"] as const)(
+it.each([
+  "provider-ai",
+  "partial-path",
+  "retry-path",
+  "synthetic-ai",
+  "invalid-path",
+] as const)(
   "adds source-bound automatic Motion only to fresh real-provider preparations (%s)",
   async (mode) => {
     await batch.close();
@@ -166,7 +172,14 @@ it.each(["provider-ai", "synthetic-ai", "invalid-path"] as const)(
       },
     });
     const render = ports.render.getMockImplementation()!;
+    let previewAttempts = 0;
     ports.render.mockImplementation(async (job, signal) => {
+      if (
+        job.operation === "clip-preview" &&
+        mode === "retry-path" &&
+        previewAttempts++ === 0
+      )
+        throw Error("synthetic_worker_transport_failure");
       const result = await render(job, signal);
       if (
         job.operation !== "clip-preview" ||
@@ -175,7 +188,7 @@ it.each(["provider-ai", "synthetic-ai", "invalid-path"] as const)(
       )
         return result;
       const focus = job.followFocus,
-        frames = focus.frames;
+        frames = mode === "partial-path" ? focus.frames - 6 : focus.frames;
       return {
         ...result,
         cameraTracks: [
@@ -188,7 +201,7 @@ it.each(["provider-ai", "synthetic-ai", "invalid-path"] as const)(
             sourceStartFrame: 0,
             followWindow: 30,
             seed: { x: 0.45, y: 0.3, width: 0.1, height: 0.2 },
-            outcome: "complete",
+            outcome: mode === "partial-path" ? "lost" : "complete",
             focusKey:
               mode === "invalid-path"
                 ? "wrong"
@@ -210,15 +223,33 @@ it.each(["provider-ai", "synthetic-ai", "invalid-path"] as const)(
       analysis,
     );
     await batch.drain();
+    if (mode === "retry-path") {
+      const failed = batch.snapshot().clips[0]!;
+      expect(failed.state).toBe("failed");
+      expect(failed.base).not.toBeNull();
+      expect(failed.preview).toBeUndefined();
+      await batch.retry(failed.id, {
+        operationId: randomUUID(),
+        expectedRevision: 0,
+      });
+      await batch.drain();
+    }
     const ready = batch.snapshot().clips[0]!;
     expect(ready.state).toBe("review-ready");
     expect(ready.base!.overlay.cameraTracks).toBeUndefined();
     expect(ready.edit?.cameraTracks?.length ?? 0).toBe(
-      mode === "provider-ai" ? 1 : 0,
+      mode === "provider-ai" || mode === "partial-path" || mode === "retry-path"
+        ? 1
+        : 0,
     );
+    if (mode === "partial-path")
+      expect(ready.edit?.cameraTracks?.[0]).toMatchObject({
+        outcome: "lost",
+        endFrame: ready.base!.overlay.frames - 6,
+      });
     expect(ports.plan).toHaveBeenCalledTimes(1);
     expect(ports.image).toHaveBeenCalledTimes(0);
-    expect(ports.render).toHaveBeenCalledTimes(1);
+    expect(ports.render).toHaveBeenCalledTimes(mode === "retry-path" ? 2 : 1);
     const prepared = ports.render.mock.calls[0]![0];
     expect(
       prepared.operation === "clip-preview" && !!prepared.followFocus,
@@ -227,18 +258,20 @@ it.each(["provider-ai", "synthetic-ai", "invalid-path"] as const)(
     batch = new OwnerClipBatch(workspace, files, ports);
     batch.restore([ready]);
     expect(batch.snapshot().clips[0]!.edit).toEqual(ready.edit);
-    expect(ports.render).toHaveBeenCalledTimes(1);
+    expect(ports.render).toHaveBeenCalledTimes(mode === "retry-path" ? 2 : 1);
     await batch.render(ready.id, {
       operationId: randomUUID(),
       expectedRevision: ready.revision,
     });
     await batch.drain();
-    expect(ports.render).toHaveBeenCalledTimes(2);
+    expect(ports.render).toHaveBeenCalledTimes(mode === "retry-path" ? 3 : 2);
     expect(ports.plan).toHaveBeenCalledTimes(1);
-    const exported = ports.render.mock.calls[1]![0];
+    const exported = ports.render.mock.calls[mode === "retry-path" ? 2 : 1]![0];
     if (exported.operation !== "clip") throw Error("expected_export");
     expect(exported.overlay.cameraTracks?.length ?? 0).toBe(
-      mode === "provider-ai" ? 1 : 0,
+      mode === "provider-ai" || mode === "partial-path" || mode === "retry-path"
+        ? 1
+        : 0,
     );
   },
 );
