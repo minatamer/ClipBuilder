@@ -86,6 +86,7 @@ export async function renderOwnerClip(
   const presentationFrames = ownerPresentationFrames(job.overlay);
   const bodyProfile = ownerOutputProfile(metadata, job.overlay.frames);
   const hook = job.overlay.hook;
+  const hookContent = job.overlay.hookContent ?? job.overlay;
   const hookProfile = hook
     ? ownerOutputProfile(metadata, hook.endFrame - hook.startFrame)
     : null;
@@ -106,21 +107,26 @@ export async function renderOwnerClip(
   );
   const bodyVideo = `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${focus}`;
   const bodyAudio = ownerCutAudioFilter(videoStart, job.cut);
+  const bodyGain = (job.overlay.audio?.originalVolume ?? 100) / 100;
+  const hookGain = (hookContent.audio?.originalVolume ?? 100) / 100;
   // Both streams use the same whole native-frame cut; logical audio bounds
   // would leave padding before the body when a short Hook rounds upward.
   const hookStartFrame = hook
     ? Math.floor((hook.startFrame * profile.fps) / OWNER_FPS + 1e-9)
     : 0;
   const hookVideo = hook
-    ? `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${ownerNativeFocusFilter(job.overlay.focus, metadata, bodyProfile, "hook", { effects: job.overlay.cameraEffects ?? [], tracks: job.overlay.cameraTracks ?? [], occurrence: "hook", hook, hookStartFrame })},trim=start_frame=${hookStartFrame}:end_frame=${hookStartFrame + hookProfile!.frames},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${hookProfile!.frames}`
+    ? `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${ownerNativeFocusFilter(hookContent.focus, metadata, bodyProfile, "hook", { effects: hookContent.cameraEffects ?? [], tracks: hookContent.cameraTracks ?? [], occurrence: "hook", hook, hookStartFrame })},trim=start_frame=${hookStartFrame}:end_frame=${hookStartFrame + hookProfile!.frames},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${hookProfile!.frames}`
     : "";
   // Independent source decoders avoid buffering a full raw-video branch in split.
   // Both occurrences read original pixels and meet in one final encode.
   const sourceGraph = hook
-    ? `[0:v:0]${bodyVideo}[body];[1:v:0]${hookVideo}[hook];[0:a:0]${bodyAudio},apad,atrim=duration=${bodyProfile.frames / profile.fps}[bodyAudio];[1:a:0]${bodyAudio},atrim=start=${hookStartFrame / profile.fps}:duration=${hookProfile!.frames / profile.fps},asetpts=PTS-STARTPTS,apad,atrim=duration=${hookProfile!.frames / profile.fps}[hookAudio];[hook][hookAudio][body][bodyAudio]concat=n=2:v=1:a=1[sequence][audio];[sequence]fps=fps=${profile.fps}:start_time=0:round=near,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${profile.frames},${ownerVideoLookFilter(job.overlay.videoLook)}[source]`
-    : `[0:v:0]${bodyVideo},${ownerVideoLookFilter(job.overlay.videoLook)}[source];[0:a:0]${bodyAudio}[audio]`;
+    ? `[0:v:0]${bodyVideo},${ownerVideoLookFilter(job.overlay.videoLook)}[body];[1:v:0]${hookVideo},${ownerVideoLookFilter(hookContent.videoLook)}[hook];[0:a:0]${bodyAudio},volume=${bodyGain},apad,atrim=duration=${bodyProfile.frames / profile.fps}[bodyAudio];[1:a:0]${bodyAudio},atrim=start=${hookStartFrame / profile.fps}:duration=${hookProfile!.frames / profile.fps},asetpts=PTS-STARTPTS,volume=${hookGain},apad,atrim=duration=${hookProfile!.frames / profile.fps}[hookAudio];[hook][hookAudio][body][bodyAudio]concat=n=2:v=1:a=1[sequence][audio];[sequence]fps=fps=${profile.fps}:start_time=0:round=near,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${profile.frames}[source]`
+    : `[0:v:0]${bodyVideo},${ownerVideoLookFilter(job.overlay.videoLook)}[source];[0:a:0]${bodyAudio},volume=${bodyGain}[audio]`;
   const assets: Record<string, string> = {};
-  for (const cue of job.overlay.visuals) {
+  for (const cue of [
+    ...job.overlay.visuals,
+    ...(job.overlay.hookContent?.visuals ?? []),
+  ]) {
     const file = await ownerAssetMediaPath(
       options.root,
       job.workspaceId,
@@ -209,14 +215,19 @@ export async function renderOwnerClip(
     // Join on the same whole native Hook boundary as the source and audio.
     const artBranch = (input: number, length: number, label: string) =>
       `[${input}:v:0]fps=fps=${profile.fps}:start_time=0:round=up,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${length},setpts=PTS-STARTPTS[${label}]`;
+    // A one-frame art branch has no second PTS to establish its duration.
+    // Bounded silent clocks preserve its full native duration at the join.
     const artGraph = hook
-      ? `${artBranch(2, hookProfile!.frames, "hookArt")};${artBranch(3, bodyProfile.frames, "bodyArt")};[hookArt][bodyArt]concat=n=2:v=1:a=0,fps=fps=${profile.fps}:start_time=0:round=near,trim=end_frame=${profile.frames},scale=${profile.width}:${profile.height}[art]`
+      ? `${artBranch(2, hookProfile!.frames, "hookArt")};${artBranch(3, bodyProfile.frames, "bodyArt")};anullsrc=r=48000:cl=mono,atrim=duration=${hookProfile!.frames / profile.fps}[hookArtClock];anullsrc=r=48000:cl=mono,atrim=duration=${bodyProfile.frames / profile.fps}[bodyArtClock];[hookArt][hookArtClock][bodyArt][bodyArtClock]concat=n=2:v=1:a=1[artSequence][artClock];[artClock]anullsink;[artSequence]fps=fps=${profile.fps}:start_time=0:round=near,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${profile.frames},scale=${profile.width}:${profile.height}[art]`
       : `${artBranch(1, bodyProfile.frames, "bodyArt")};[bodyArt]scale=${profile.width}:${profile.height}[art]`;
     signal.throwIfAborted();
     const graph = `${sourceGraph}${mix.graph ? `;${mix.graph}` : ""};${artGraph};[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`;
     const graphFile = join(frames, "camera.ffgraph");
     const movingCamera = !!(
-      job.overlay.cameraEffects?.length || job.overlay.cameraTracks?.length
+      job.overlay.cameraEffects?.length ||
+      job.overlay.cameraTracks?.length ||
+      hookContent.cameraEffects?.length ||
+      hookContent.cameraTracks?.length
     );
     if (movingCamera)
       await writeFile(graphFile, graph, { flag: "wx", mode: 0o600, signal });

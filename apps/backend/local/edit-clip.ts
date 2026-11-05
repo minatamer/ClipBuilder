@@ -11,6 +11,11 @@ import type { OwnerClip } from "../../../packages/contracts/local/clips.ts";
 import { resolveOwnerAudioCues } from "../../../packages/contracts/local/audio.ts";
 import { boundOwnerOpeningTitles } from "../../../packages/contracts/local/text-layers.ts";
 import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
+import {
+  copyOwnerHookContent,
+  withIndependentOwnerHook,
+} from "../../../packages/contracts/local/hook-content.ts";
+import { OWNER_FPS } from "../../../packages/contracts/local/policy.ts";
 import { ownerCameraTracksFit } from "../../../packages/contracts/local/camera-follow.ts";
 
 export function applyOwnerEdit(
@@ -27,10 +32,23 @@ export function applyOwnerEdit(
   )
     throw new Error("stale_edit_revision");
   const automatic = automaticOwnerEdit(clip.base, clip.id, clip.baseHash);
-  const next = ownerEditDocumentSchema.parse(clip.edit ?? automatic);
+  let next = ownerEditDocumentSchema.parse(clip.edit ?? automatic);
+  // A legacy linked Hook separates on the first explicit edit, before body changes.
+  if (next.hook && !next.hookContent)
+    next = withIndependentOwnerHook(
+      clip.base,
+      next,
+      clip.assets,
+      clip.audioAssets ?? [],
+      next.hook,
+    );
   const priorHook = JSON.stringify(next.hook);
   for (const operation of request.operations) {
     switch (operation.kind) {
+      case "hook-content":
+        if (operation.content) next.hookContent = operation.content;
+        else delete next.hookContent;
+        break;
       case "audio":
         next.audio = operation.audio;
         break;
@@ -138,6 +156,67 @@ export function applyOwnerEdit(
           hook: next.hook,
         }),
     );
+  if (!next.hook) delete next.hookContent;
+  else if (
+    !next.hookContent ||
+    JSON.stringify(next.hookContent.window) !== JSON.stringify(next.hook)
+  ) {
+    const selectedHook = next.hook;
+    const priorContent = next.hookContent;
+    delete next.hookContent;
+    next = withIndependentOwnerHook(
+      clip.base,
+      next,
+      clip.assets,
+      clip.audioAssets ?? [],
+      selectedHook,
+    );
+    // Range changes preserve scoped edits through the shared bounded-copy helper.
+    if (priorContent) {
+      next.hookContent = copyOwnerHookContent(
+        clip.base,
+        next,
+        clip.assets,
+        clip.audioAssets ?? [],
+        selectedHook,
+        priorContent,
+      );
+    }
+  }
+  if (next.hookContent) {
+    const known = [
+      ...clip.base.overlay.captions.flatMap((caption) => caption.wordCues),
+      ...(clip.edit?.hookContent?.captions.flatMap(
+        (caption) => caption.wordCues,
+      ) ?? []),
+    ];
+    const start = Math.floor((next.hook!.startFrame * 1000) / OWNER_FPS),
+      end = Math.ceil((next.hook!.endFrame * 1000) / OWNER_FPS);
+    for (const word of next.hookContent.captions.flatMap(
+      (caption) => caption.wordCues,
+    )) {
+      if (
+        !known.some(
+          (reference) =>
+            reference.wordId === word.wordId &&
+            Math.abs(word.startMs - Math.max(reference.startMs, start)) <=
+              1e-6 &&
+            Math.abs(word.endMs - Math.min(reference.endMs, end)) <= 1e-6,
+        )
+      )
+        throw new Error("stale_hook_content");
+    }
+  }
+  for (const content of [next, next.hookContent?.edits]) {
+    if (
+      content?.focus &&
+      (content.focus.frames !== clip.base.overlay.frames ||
+        (source &&
+          (content.focus.source.width !== source.width ||
+            content.focus.source.height !== source.height)))
+    )
+      throw new Error("stale_edit_source");
+  }
   next.revision = clip.revision + 1;
   const validated = ownerEditDocumentSchema.parse(next);
   compileOwnerOverlay(clip.base, validated, clip.assets, clip.audioAssets);

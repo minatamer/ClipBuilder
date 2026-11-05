@@ -1156,3 +1156,88 @@ it("resets legacy unframed camera editing explicitly without leaving unusable zo
   expect(reset.cameraEffects).toEqual([]);
   expect(clip.edit.cameraEffects).toHaveLength(1);
 });
+
+it.each([false, true])(
+  "preserves independent Hook content through %s rolling recovery and explicit re-export without AI",
+  async (rolling) => {
+    const initial = await start(true, "synthetic-ai", rolling),
+      { workspace, list } = await prepare(initial, false),
+      first = list.clips[0]!,
+      path = `${endpoint(workspace.id)}/clips/${first.id}`;
+    expect(
+      (
+        await post(
+          initial,
+          `${path}/edit`,
+          edit(first, [
+            { kind: "hook", hook: { startFrame: 0, endFrame: 30 } },
+          ]),
+        )
+      ).status,
+    ).toBe(200);
+    const detached = (await clips(initial, workspace.id)).clips[0]!,
+      content = structuredClone(detached.edit!.hookContent!);
+    content.edits.visuals = [];
+    content.edits.captions = OWNER_CAPTION_PRESETS.bold;
+    content.edits.audio = { originalVolume: 0, cues: [] };
+    expect(
+      (
+        await post(
+          initial,
+          `${path}/edit`,
+          edit(detached, [
+            { kind: "hook-content", content },
+            { kind: "caption", style: OWNER_CAPTION_PRESETS.clean },
+          ]),
+        )
+      ).status,
+    ).toBe(200);
+    const changed = (await clips(initial, workspace.id)).clips[0]!;
+    expect(changed.edit!.hookContent).toEqual(content);
+    expect(changed.edit!.visuals).toHaveLength(
+      first.base!.overlay.visuals.length,
+    );
+    counts(initial, 0);
+    const saved = rolling
+      ? null
+      : ownerDraftStatusSchema.parse(
+          JSON.parse(
+            (
+              await post(initial, `${endpoint(workspace.id)}/draft`)
+            ).body.toString(),
+          ),
+        );
+    await stop(initial);
+    const restored = await start(false, "synthetic-ai", rolling);
+    const opened = rolling
+      ? await ownerRequest(restored.port, "/api/workspace", { headers: auth })
+      : await post(restored, `/api/drafts/${saved!.id}/open`);
+    expect(opened.status).toBe(200);
+    const reopened = ownerWorkspaceSchema.parse(
+      JSON.parse(opened.body.toString()),
+    );
+    const loaded = (await clips(restored, reopened.id)).clips[0]!;
+    expect(loaded.edit).toEqual(changed.edit);
+    expect(restored.media).toHaveBeenCalledTimes(0);
+    expect(
+      (
+        await post(
+          restored,
+          `${endpoint(reopened.id)}/clips/${loaded.id}/render`,
+          { operationId: randomUUID(), expectedRevision: loaded.revision },
+        )
+      ).status,
+    ).toBe(202);
+    await completed(restored, reopened.id);
+    expect(restored.media).toHaveBeenCalledTimes(1);
+    const job = restored.media.mock.calls[0]![0];
+    if (job.operation !== "clip") throw Error("expected_scoped_clip");
+    expect(job.overlay.hookContent!.visuals).toEqual([]);
+    expect(job.overlay.hookContent!.captionStyle).toEqual(
+      OWNER_CAPTION_PRESETS.bold,
+    );
+    expect(job.overlay.captionStyle).toEqual(OWNER_CAPTION_PRESETS.clean);
+    expect(job.overlay.hookContent!.audio!.originalVolume).toBe(0);
+    counts(initial, 0);
+  },
+);

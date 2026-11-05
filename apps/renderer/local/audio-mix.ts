@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { OWNER_AUDIO_LIMITS } from "../../../packages/contracts/local/audio.ts";
 import {
-  ownerAudioSegments,
-  ownerAudioTrackSchema,
-  OWNER_AUDIO_LIMITS,
-} from "../../../packages/contracts/local/audio.ts";
+  ownerOverlayAudioSegments,
+  ownerOverlayAudioAssets,
+} from "../../../packages/contracts/local/occurrence-audio.ts";
 import type { OwnerOverlay } from "../../../packages/contracts/local/clips.ts";
 import { ownerSoundAudio } from "../../../packages/composition/local/audio-sources.ts";
 import { ownerAudioMediaPath } from "./media.ts";
@@ -23,17 +23,10 @@ export async function prepareOwnerAudioMix(options: {
   fps: number;
   signal: AbortSignal;
 }) {
-  const audio = options.overlay.audio
-    ? ownerAudioTrackSchema.parse(options.overlay.audio)
-    : undefined;
-  const segments = ownerAudioSegments(
-    audio,
-    options.overlay.frames,
-    options.overlay.hook,
-    options,
-    options.overlay.visuals,
-  );
-  if (!segments.length && (audio?.originalVolume ?? 100) === 100)
+  const segments = ownerOverlayAudioSegments(options.overlay, options);
+  const assets = ownerOverlayAudioAssets(options.overlay);
+  // Original speech gains are applied before the exact native occurrence join.
+  if (!segments.length)
     return { inputs: [] as string[], graph: "", label: "audio" };
   const files = new Map<string, { file: string; format: "wav" | "flac" }>(),
     inputs: string[] = [],
@@ -57,7 +50,7 @@ export async function prepareOwnerAudioMix(options: {
         });
         prepared = { file, format: sample.extension };
       } else {
-        const asset = audio!.assets.find((item) => item.id === source.id);
+        const asset = assets.find((item) => item.id === source.id);
         if (!asset) throw new Error("invalid_audio_asset");
         const file = await ownerAudioMediaPath(
           options.root,
@@ -101,9 +94,7 @@ export async function prepareOwnerAudioMix(options: {
       `[${options.firstInput + index}:a:0]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,atrim=start=${segment.offset}:duration=${span},asetpts=PTS-STARTPTS,afade=t=in:d=${fade},afade=t=out:st=${span - fade}:d=${fade},volume=${segment.cue.volume / 100},adelay=${Math.round(segment.start * OWNER_AUDIO_LIMITS.sampleRate)}S:all=1,apad,atrim=duration=${duration}[added${index}]`,
     );
   }
-  filters.push(
-    `[audio]volume=${(audio?.originalVolume ?? 100) / 100},apad,atrim=duration=${duration}[originalAudio]`,
-  );
+  filters.push(`[audio]apad,atrim=duration=${duration}[originalAudio]`);
   filters.push(
     `[originalAudio]${segments.map((_, index) => `[added${index}]`).join("")}amix=inputs=${segments.length + 1}:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.95:level=0,atrim=duration=${duration}[mixedAudio]`,
   );
