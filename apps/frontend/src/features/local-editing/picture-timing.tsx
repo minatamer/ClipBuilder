@@ -1,9 +1,10 @@
-import { useState, type RefObject } from "react";
+import { useContext, useState, type RefObject } from "react";
 import type { PlayerRef } from "@remotion/player";
 import { Clock3 } from "lucide-react";
 import type { OwnerVisualEdit } from "../../../../../packages/contracts/local/assets.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import { Button } from "../../shared/ui/button";
+import { EditorHookClock, EditorOccurrence } from "./editor-clock.ts";
 import { useEditorPreview } from "./use-editor-preview.ts";
 
 export function PictureTiming<
@@ -17,6 +18,7 @@ export function PictureTiming<
   onChange,
   label = "Picture",
   presentationClock = false,
+  onStartAfterEnd,
 }: {
   cue: T;
   frames: number;
@@ -26,7 +28,18 @@ export function PictureTiming<
   onChange: (cue: T) => void;
   label?: string;
   presentationClock?: boolean;
+  onStartAfterEnd?: ((frame: number) => void) | undefined;
 }) {
+  const hook = useContext(EditorHookClock);
+  const occurrence = useContext(EditorOccurrence);
+  const minimum =
+    !presentationClock && occurrence === "hook" && hook ? hook.startFrame : 0;
+  const maximum =
+    occurrence === "hook" && hook
+      ? presentationClock
+        ? hook.endFrame - hook.startFrame
+        : hook.endFrame
+      : frames;
   const preview = useEditorPreview({
     player,
     available,
@@ -34,6 +47,7 @@ export function PictureTiming<
     frames,
     captureTarget: cue,
     presentationClock,
+    occurrenceClock: presentationClock,
   });
   const [error, setError] = useState("");
   async function capture(key: "startFrame" | "endFrame") {
@@ -42,12 +56,23 @@ export function PictureTiming<
       setError("Wait for the preview to finish seeking.");
       return;
     }
+    if (
+      key === "startFrame" &&
+      onStartAfterEnd &&
+      at >= minimum &&
+      at < maximum &&
+      (!Number.isFinite(cue.endFrame) || at >= cue.endFrame)
+    ) {
+      setError("");
+      onStartAfterEnd(at);
+      return;
+    }
     const next = { ...cue, [key]: key === "startFrame" ? at : at + 1 };
     if (
       !Number.isFinite(next.startFrame) ||
       !Number.isFinite(next.endFrame) ||
-      next.startFrame < 0 ||
-      next.endFrame > frames ||
+      next.startFrame < minimum ||
+      next.endFrame > maximum ||
       next.startFrame >= next.endFrame
     ) {
       setError(
@@ -72,8 +97,8 @@ export function PictureTiming<
                 <input
                   type="number"
                   aria-label={`${label} ${start ? "start" : "end"} seconds`}
-                  min={start ? 0 : 1 / OWNER_FPS}
-                  max={(start ? frames - 1 : frames) / OWNER_FPS}
+                  min={(minimum + (start ? 0 : 1)) / OWNER_FPS}
+                  max={(start ? maximum - 1 : maximum) / OWNER_FPS}
                   step="0.033333"
                   value={
                     Number.isFinite(cue[key])

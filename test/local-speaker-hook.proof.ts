@@ -170,11 +170,7 @@ it("renders speaker turns, default Word pop highlights and manual colors into a 
     }
     const defaults: OwnerOverlay = {
       ...overlay,
-      captionStyle: {
-        ...OWNER_CAPTION_PRESETS.tiktok,
-        fontSize: 100,
-        box: overlay.captionStyle!.box,
-      },
+      captionStyle: structuredClone(OWNER_CAPTION_PRESETS.tiktok),
       hook: { startFrame: 30, endFrame: 60 },
       captions: overlay.captions[0]!.wordCues.map((word) => ({
         startMs: word.startMs,
@@ -239,14 +235,17 @@ it("renders speaker turns, default Word pop highlights and manual colors into a 
       ]);
       const pixels = await readFile(raw);
       let accent = 0,
+        accentY = 0,
         white = 0;
       for (let index = 0; index < pixels.length; index += 3) {
         if (
           Math.abs(pixels[index]! - red) < 35 &&
           Math.abs(pixels[index + 1]! - green) < 35 &&
           Math.abs(pixels[index + 2]! - blue) < 35
-        )
+        ) {
           accent++;
+          accentY += Math.floor(index / 3 / 180);
+        }
         if (
           pixels[index]! > 220 &&
           pixels[index + 1]! > 220 &&
@@ -255,6 +254,8 @@ it("renders speaker turns, default Word pop highlights and manual colors into a 
           white++;
       }
       expect(accent).toBeGreaterThan(20);
+      expect(accentY / accent / 320).toBeGreaterThan(0.48);
+      expect(accentY / accent / 320).toBeLessThan(0.6);
       expect(white).toBeGreaterThan(20);
     }
     overlay.hook = { startFrame: 30, endFrame: 60 };

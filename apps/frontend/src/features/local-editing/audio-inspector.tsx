@@ -1,8 +1,17 @@
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import {
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import type { PlayerRef } from "@remotion/player";
 import { Play, Square, Upload } from "lucide-react";
 import { Button, IconButton } from "../../shared/ui/button";
 import { ControlTabs } from "./control-tabs.tsx";
+import { EditorOccurrence } from "./editor-clock.ts";
+import { ownerHookFrames } from "../../../../../packages/contracts/local/hook.ts";
 import { PictureTiming } from "./picture-timing.tsx";
 import {
   ownerSoundAudio,
@@ -54,7 +63,10 @@ export function AudioInspector({
   onYoutube?: (() => void) | undefined;
   initialCueId?: string | undefined;
 }) {
+  const occurrence = useContext(EditorOccurrence);
   const current = audio ?? { originalVolume: 100, cues: [] };
+  const windowStart = occurrence === "hook" && hook ? hook.startFrame : 0;
+  const windowEnd = occurrence === "hook" && hook ? hook.endFrame : frames;
   const [view, setView] = useState(initialCueId ? "tracks" : "library"),
     [selection, setSelection] = useState<string | null>(initialCueId ?? null),
     [playing, setPlaying] = useState<string | null>(null),
@@ -75,14 +87,22 @@ export function AudioInspector({
   const activeCues = resolveOwnerAudioCues(current.cues, visuals, frames);
   const selected =
     activeCues.find((cue) => cue.id === selection) ?? activeCues[0];
-  const cueStart = (cue: OwnerAudioCue) =>
-    ownerAudioSegments(
+  const cueStart = (cue: OwnerAudioCue) => {
+    const prefix = ownerHookFrames({ hook }) / OWNER_FPS;
+    const segments = ownerAudioSegments(
       { ...current, cues: [cue], assets: [...assets] },
       frames,
-      hook,
+      occurrence === "body" ? undefined : hook,
       undefined,
       visuals,
-    )[0]?.start;
+    );
+    const at = segments.find(
+      (segment) => occurrence !== "hook" || segment.start < prefix,
+    )?.start;
+    return at === undefined
+      ? undefined
+      : at + (occurrence === "body" ? prefix : 0);
+  };
   const selectedStart = selected ? cueStart(selected) : undefined;
   const seekCue = (cue: OwnerAudioCue) => {
     const start = cueStart(cue);
@@ -138,9 +158,9 @@ export function AudioInspector({
           ? "hook"
           : "clip";
     const frame = Math.max(
-      0,
+      windowStart,
       Math.min(
-        frames - 1,
+        windowEnd - 1,
         ownerSourceFrame({ hook }, player.current?.getCurrentFrame() ?? 0),
       ),
     );
@@ -152,7 +172,7 @@ export function AudioInspector({
       endFrame:
         placement === "clip"
           ? Math.min(
-              frames,
+              windowEnd,
               frame +
                 Math.max(
                   1,
@@ -245,7 +265,8 @@ export function AudioInspector({
                 disabled={
                   pending ||
                   current.cues.length >= OWNER_AUDIO_LIMITS.cues ||
-                  ((sound.id === "tension" || sound.hookOnly) && !hook)
+                  ((sound.id === "tension" || sound.hookOnly) &&
+                    (!hook || occurrence === "body"))
                 }
                 onClick={() => add({ kind: "builtin", id: sound.id })}
               >
@@ -363,7 +384,10 @@ export function AudioInspector({
               className="audio-cue"
               key={cue.id}
               aria-pressed={selected?.id === cue.id}
-              onClick={() => setSelection(cue.id)}
+              onClick={() => {
+                setSelection(cue.id);
+                seekCue(cue);
+              }}
             >
               {index + 1}. {label(cue.source)}
               {cue.visualId ? " · Visual" : ""}
@@ -405,8 +429,12 @@ export function AudioInspector({
                     const next: OwnerAudioCue = {
                       ...selected,
                       placement,
-                      startFrame: 0,
-                      endFrame: frames,
+                      startFrame:
+                        placement === "clip" && occurrence === "hook" && hook
+                          ? hook.startFrame
+                          : 0,
+                      endFrame:
+                        occurrence === "hook" && hook ? hook.endFrame : frames,
                     };
                     delete next.visualId;
                     change(next);
@@ -414,8 +442,16 @@ export function AudioInspector({
                 }}
               >
                 <option value="clip">Timed clip</option>
-                <option value="hook">Hook only</option>
-                <option value="video">Whole video</option>
+                {occurrence !== "body" && (
+                  <option value="hook">Hook only</option>
+                )}
+                <option value="video">
+                  {occurrence === "hook"
+                    ? "Whole Hook"
+                    : occurrence === "body"
+                      ? "Whole main clip"
+                      : "Whole video"}
+                </option>
               </select>
             </label>
             {selected.placement === "hook" && !hook && (

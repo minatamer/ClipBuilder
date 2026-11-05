@@ -379,18 +379,18 @@ it("edits Media audio through the real authenticated API/worker with audition, u
       if(action==='manual-hook'){
         await tab('Clip settings','Hook');await wait(()=>button('Remove hook'),'manual_controls');button('Remove hook').click();await wait(()=>button('Add hook'),'manual_empty');button('Add hook').click();await wait(()=>named('Hook end seconds'),'manual_added');
         await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Your audio');
-        if(!document.querySelector('.audio-inspector').textContent.includes('No added audio.'))throw Error('manual_hook_added_music');button('Discard changes').click();await wait(()=>!button('Apply changes'),'manual_discard');
+        if(document.querySelectorAll('.audio-cue').length!==1||!document.querySelector('.audio-cue').textContent.includes('Visual'))throw Error('manual_hook_did_not_copy_main_accent');button('Discard changes').click();await wait(()=>!button('Apply changes'),'manual_discard');
       }
       if(action==='suggest-hook'||action==='suggest-hook-save'){
-        await tab('Clip settings','Hook');await wait(()=>button('Use suggestion')&&!button('Use suggestion').disabled,'suggestion_ready');button('Use suggestion').click();await wait(()=>button('Apply changes')&&button('Use suggestion').disabled,'suggestion_added');
+        await tab('Clip settings','Hook');await wait(()=>button('Use suggestion'),'suggestion_ready');if(!button('Use suggestion').disabled){button('Use suggestion').click();await wait(()=>button('Apply changes')&&button('Use suggestion').disabled,'suggestion_added');}
         await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Your audio');const cues=[...document.querySelectorAll('.audio-cue')].filter(n=>n.textContent.includes('Riser'));if(cues.length!==1)throw Error('suggestion_duplicate_music');cues[0].click();await new Promise(requestAnimationFrame);
         if(named('Audio placement').value!=='hook'||named('Audio offset seconds').value!=='0.3'||named('Added audio volume').value!=='35'||[...document.querySelectorAll('.audio-settings label')].find(n=>n.textContent.includes('Loop audio'))?.querySelector('input').checked)throw Error('suggestion_sound_defaults');
         if(action==='suggest-hook-save'){await set('Added audio volume','27');button('Apply changes').click();await wait(()=>!button('Apply changes'),'suggestion_saved');}
-        else {button('Discard changes').click();await wait(()=>!button('Apply changes'),'suggestion_discard');}
+        else {button('Apply changes').click();await wait(()=>!button('Discard changes'),'suggestion_initial_save');}
       }
       if(action==='add-discord'){await tab('Audio views','Sound library');named('Add Discord notification').click();await wait(()=>button('Apply changes'),'discord_added');if(named('Audio placement').value!=='clip'||named('Added audio volume').value!=='35')throw new Error('discord_defaults');await set('Added audio volume','42');button('Apply changes').click();await wait(()=>!button('Apply changes')&&!named('Audio placement').matches(':disabled'),'discord_saved');}
       if(action==='cue-preview-ready'){
-        await tab('Clip settings','Focus');await tab('Focus controls','Camera');await tab('Camera controls','Advanced');await set('Focus playhead seconds','1.5');
+        await tab('Clip settings','Focus');await tab('Focus controls','Camera');await tab('Camera controls','Advanced');await set('Focus playhead seconds','10.5');
         await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Your audio');
         [...document.querySelectorAll('.audio-cue')].find(n=>n.textContent.includes('Vine boom')).click();await new Promise(requestAnimationFrame);
         const preview=button('Preview in clip');await wait(()=>preview&&!preview.matches(':disabled'),'cue_preview_ready');preview.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);
@@ -409,7 +409,7 @@ it("edits Media audio through the real authenticated API/worker with audition, u
           await wait(()=>{const body=document.querySelector('.editor-preview video[data-editor-video="body"][data-editor-active="true"]');return body&&body.readyState>=2&&!body.seeking&&body.currentTime>.1;},'body_after_hook');await new Promise(r=>setTimeout(r,80));const after=energy();named('Pause video')?.click();return {peak,after};
         }finally{node?.disconnect();analyser?.disconnect();stream?.getTracks().forEach(track=>track.stop());await context?.close();delete globalThis.cueContext;}
       }
-      if(action==='play-ready'){const r=named('Play video').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};}
+      if(action==='play-ready'){[...named('Editing occurrence').querySelectorAll('button')].find(n=>n.textContent==='Hook').click();await new Promise(r=>setTimeout(r,80));const r=named('Play video').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};}
       if(action==='youtube-open'){
         await tab('Audio views','Sound library');await wait(()=>button('From YouTube')&&!button('From YouTube').matches(':disabled'),'youtube_available');await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));globalThis.youtubeFooter=document.querySelector('#sample-main > footer').textContent.trim();button('From YouTube').click();await wait(()=>named('YouTube audio URL')&&button('Download sound')&&button('Export clip'),'youtube_form');
         if(document.querySelector('#sample-main > footer').textContent.trim()!==globalThis.youtubeFooter||!document.querySelector('.youtube-audio-card button'))throw new Error('youtube_footer'+JSON.stringify({before:globalThis.youtubeFooter,after:document.querySelector('#sample-main > footer').textContent.trim()}));
@@ -439,9 +439,9 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         await wait(()=>named('Pause video'),'playing');await wait(()=>tracks().some(n=>!n.paused&&n.currentTime>.03),'added_audio_playing');
         named('Mute sound').click();await wait(()=>tracks().every(n=>n.muted||n.volume===0),'mute_all');named('Unmute sound').click();
         named('Pause video').click();await new Promise(r=>setTimeout(r,100));if(tracks().some(n=>!n.paused))throw new Error('added_audio_not_paused');
-        await tab('Clip settings','Focus');await tab('Focus controls','Camera');await tab('Camera controls','Advanced');await set('Focus playhead seconds','1.5');
-        await wait(()=>Math.abs(document.querySelector('.editor-preview video').currentTime-1.5)<.08,'video_seek');
-        await wait(()=>tracks().some(n=>n.src.includes('/audio-assets/')&&n.currentTime>.18&&n.currentTime<.38),'music_seek_phase');
+        await tab('Clip settings','Focus');await tab('Focus controls','Camera');await tab('Camera controls','Advanced');await set('Focus playhead seconds','10.5');
+        await wait(()=>Math.abs(document.querySelector('.editor-preview video[data-editor-active=true]').currentTime-10.5)<.08,'video_seek');
+        await wait(()=>tracks().some(n=>n.src.includes('/audio-assets/')&&n.duration>0&&Math.abs(n.currentTime-(.5%n.duration))<.08),'music_seek_phase');
         if(tracks().some(n=>!n.paused))throw new Error('seek_started_audio');
       }
       if(action==='tracks'){[...document.querySelectorAll('[aria-label="Audio views"] button')].find(n=>n.textContent.startsWith('Your audio')).click();await new Promise(requestAnimationFrame);document.querySelector('.audio-inspector').scrollIntoView({block:'start'});await new Promise(r=>setTimeout(r,180));}
@@ -599,11 +599,15 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         ).body.toString(),
       ),
     );
-    expect(final.clips[0]!.edit!.audio!.cues).toHaveLength(5);
+    expect(final.clips[0]!.edit!.hookContent!.edits.audio!.cues).toHaveLength(
+      5,
+    );
     expect(
-      final.clips[0]!.edit!.audio!.cues.filter((cue) => cue.suggestedHook),
+      final.clips[0]!.edit!.hookContent!.edits.audio!.cues.filter(
+        (cue) => cue.suggestedHook,
+      ),
     ).toHaveLength(1);
-    expect(final.clips[0]!.edit!.audio!.cues).toEqual(
+    expect(final.clips[0]!.edit!.hookContent!.edits.audio!.cues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           source: { kind: "builtin", id: "discord" },

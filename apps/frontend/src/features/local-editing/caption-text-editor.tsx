@@ -5,8 +5,8 @@ import type { OwnerOverlay } from "../../../../../packages/contracts/local/clips
 import type { OwnerEditDocument } from "../../../../../packages/contracts/local/editor.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import { Button } from "../../shared/ui/button";
-import { EditorHookClock } from "./editor-clock.ts";
-import { ownerPresentationFrame } from "../../../../../packages/contracts/local/hook.ts";
+import { EditorOccurrence, EditorHookClock } from "./editor-clock.ts";
+import { ownerOccurrencePresentationFrame } from "../../../../../packages/contracts/local/hook-content.ts";
 
 export function CaptionTextEditor({
   captions,
@@ -24,6 +24,7 @@ export function CaptionTextEditor({
   onChange: (edits: NonNullable<OwnerEditDocument["captionText"]>) => void;
 }) {
   const hook = useContext(EditorHookClock);
+  const occurrence = useContext(EditorOccurrence);
   const replacements = new Map(edits?.map((edit) => [edit.wordId, edit.text]));
   return (
     <div className="caption-text-editor">
@@ -41,12 +42,13 @@ export function CaptionTextEditor({
             onClick={() => {
               player.current?.pause();
               player.current?.seekTo(
-                ownerPresentationFrame(
-                  { hook },
+                ownerOccurrencePresentationFrame(
+                  hook,
                   Math.min(
                     frames - 1,
                     Math.floor((caption.startMs * OWNER_FPS) / 1000),
                   ),
+                  occurrence ?? "body",
                 ),
               );
             }}

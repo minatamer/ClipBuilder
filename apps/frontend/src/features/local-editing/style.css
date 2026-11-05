@@ -1083,6 +1083,16 @@
     font-size: var(--cb-text-small);
     font-weight: 400;
   }
+  .editor-occurrence {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .editor-occurrence button[aria-pressed="true"] {
+    border-color: var(--cb-brand);
+    background: var(--cb-brand-soft);
+  }
   .editor-tabs,
   .moment-tabs {
     display: grid;

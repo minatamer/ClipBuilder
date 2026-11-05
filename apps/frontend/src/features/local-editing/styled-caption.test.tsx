@@ -64,6 +64,7 @@ const style: OwnerCaptionStyle = {
   color: "#ea4433",
   highlight: "#123456",
   align: "right",
+  verticalAlign: "bottom",
   box: { x: 0.1, y: 0.2, width: 0.8, height: 0.2 },
 };
 const render = (ms: number, value = style) =>
@@ -226,7 +227,7 @@ it("maps the normalized safe-area box and supplied colors/alignment onto fixed p
   ])
     expect(html).toContain(expected);
   const defaults = render(300, OWNER_CAPTION_PRESETS.clean);
-  expect(defaults).toContain("top:1500px");
+  expect(defaults).toContain("top:932px");
   expect(defaults).toContain("height:200px");
   expect(defaults).toContain("width:920px");
 });

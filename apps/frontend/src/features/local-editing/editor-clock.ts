@@ -3,3 +3,7 @@ import type { OwnerHook } from "../../../../../packages/contracts/local/hook.ts"
 
 /** All source-oriented inspectors share the presentation-to-source mapping. */
 export const EditorHookClock = createContext<OwnerHook | undefined>(undefined);
+
+export const EditorOccurrence = createContext<"body" | "hook" | undefined>(
+  undefined,
+);

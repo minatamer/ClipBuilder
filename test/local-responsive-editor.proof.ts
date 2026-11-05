@@ -420,6 +420,26 @@ it("uses the real editor, clip navigation and footer at phone, tablet and deskto
         [...document.querySelectorAll('[role=tab]')].find(n=>n.textContent==='Style').click();
         await new Promise(requestAnimationFrame);return;
       }
+      if(action==='caption-position'){
+        [...document.querySelectorAll('.control-tabs button')].find(n=>n.textContent==='Position').click();
+        await wait(()=>button('Default positioning'),'caption_default_position');
+        if(button('Default positioning').getAttribute('aria-pressed')!=='true' || button('Apply changes'))throw new Error('caption_default_not_selected');
+        button('Lower half').click();await new Promise(requestAnimationFrame);
+        if(button('Lower half').getAttribute('aria-pressed')!=='true')throw new Error('caption_lower_not_selected');
+        button('Default positioning').click();await new Promise(requestAnimationFrame);
+        const node=document.querySelector('[aria-label="Select and move captions"]');
+        if(!node || Math.abs(parseFloat(node.style.top)+parseFloat(node.style.height)/2-1032)>.01 || button('Default positioning').getAttribute('aria-pressed')!=='true')throw new Error('caption_default_geometry');
+        button('Default positioning').scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);
+        const bounds=rect(button('Default positioning')),footerTop=rect(document.querySelector('#sample-main > footer')).top;
+        if(bounds.left<0 || bounds.right>innerWidth || bounds.top<0 || bounds.bottom>footerTop)throw new Error('caption_default_position_hidden');
+        if(document.documentElement.scrollWidth>innerWidth)throw new Error('caption_position_overflow');footer();return;
+      }
+      if(action==='caption-position-reset'){
+        button('Discard changes').click();await wait(()=>!button('Apply changes'),'caption_position_discard');
+        [...document.querySelectorAll('.control-tabs button')].find(n=>n.textContent==='Style').click();
+        content().scrollTop=0;
+        await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));return;
+      }
       if(action==='image-escaped'){
         await wait(()=>!document.querySelector('dialog[open]') && !document.querySelectorAll('dialog img').length && document.activeElement===document.querySelector('[aria-label="View picture 1"]'),'real_escape');
         if(button('Discard changes')){button('Discard changes').click();await wait(()=>button('Add more clips') && !button('Apply changes'),'picture_discard_before_navigation');}return;
@@ -603,6 +623,9 @@ it("uses the real editor, clip navigation and footer at phone, tablet and deskto
       await page._client().send("Runtime.evaluate", { expression: driver });
       const geometry = await run("ready");
       await run("captions");
+      await run("caption-position");
+      await capture(`${viewport.width}-caption-default`);
+      await run("caption-position-reset");
       await capture(`${viewport.width}-preview`);
       await run("navigation");
       if (!viewport.touch) await run("rail");

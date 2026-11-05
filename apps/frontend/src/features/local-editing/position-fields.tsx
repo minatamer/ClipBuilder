@@ -47,10 +47,12 @@ export function TextPositionFields({
   label,
   style,
   onChange,
+  defaultCenter,
 }: {
   label: string;
   style: OwnerTextGeometry;
   onChange: (box: OwnerEditorBox, centered?: boolean) => void;
+  defaultCenter?: number | undefined;
 }) {
   return (
     <>
@@ -61,6 +63,9 @@ export function TextPositionFields({
       >
         {(
           [
+            ...(defaultCenter === undefined
+              ? []
+              : [{ center: defaultCenter, label: "Default positioning" }]),
             { center: 0.25, label: "Upper half" },
             { center: 0.5, label: "Center" },
             { center: 0.75, label: "Lower half" },

@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import { ownerPresentationFrames } from "../../../../../packages/contracts/local/hook.ts";
 import {
   OWNER_CAPTION_PRESETS,
+  OWNER_CAPTION_DEFAULT_CENTER_Y,
   ownerCaptionStyleSchema,
   ownerEditRequestSchema,
 } from "../../../../../packages/contracts/local/editor.ts";
@@ -42,9 +43,14 @@ it("keeps caption placement when changing typography, fitting larger presets aro
   expect(ownerCaptionStyleSchema.safeParse(next).success).toBe(true);
 });
 
-it("centers caption text boxes exactly at portrait quarters within safe bounds", () => {
+it("centers caption text boxes at Default positioning and portrait quarters within safe bounds", () => {
   for (const caption of Object.values(OWNER_CAPTION_PRESETS)) {
-    for (const center of [0.25, 0.5, 0.75] as const) {
+    expect(caption.box.y + caption.box.height / 2).toBeCloseTo(
+      OWNER_CAPTION_DEFAULT_CENTER_Y,
+      12,
+    );
+    expect(caption.verticalAlign).toBe("center");
+    for (const center of [OWNER_CAPTION_DEFAULT_CENTER_Y, 0.25, 0.5, 0.75]) {
       const box = centeredOwnerBox(caption.box, center, caption);
       expect(box.x + box.width / 2).toBeCloseTo(0.5, 12);
       expect(box.y + box.height / 2).toBeCloseTo(center, 12);

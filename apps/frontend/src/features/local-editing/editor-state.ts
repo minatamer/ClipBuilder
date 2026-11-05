@@ -15,7 +15,7 @@ export type OwnerEditorBox = OwnerVisualEdit["box"];
 
 export function centeredOwnerBox(
   box: OwnerEditorBox,
-  center: 0.25 | 0.5 | 0.75,
+  center: number,
   caption: OwnerTextGeometry | null,
 ): OwnerEditorBox {
   const edge = caption ? 0.05 : 0;
@@ -83,6 +83,7 @@ export function sameOwnerEdit(
   right: OwnerEditDocument,
 ): boolean {
   return (
+    JSON.stringify(left.hookContent) === JSON.stringify(right.hookContent) &&
     JSON.stringify(left.hook) === JSON.stringify(right.hook) &&
     JSON.stringify(left.audio) === JSON.stringify(right.audio) &&
     JSON.stringify(left.captions) === JSON.stringify(right.captions) &&
@@ -107,6 +108,13 @@ export function ownerEditOperations(
   clip: OwnerClip,
 ): OwnerEditRequest["operations"] {
   const operations: OwnerEditRequest["operations"] = [];
+  if (
+    JSON.stringify(original.hookContent) !== JSON.stringify(draft.hookContent)
+  )
+    operations.push({
+      kind: "hook-content",
+      content: draft.hookContent ?? null,
+    });
   if (
     JSON.stringify(original.cameraTracks ?? []) !==
     JSON.stringify(draft.cameraTracks ?? [])

@@ -1,3 +1,5 @@
+import { useContext } from "react";
+import { EditorOccurrence } from "./editor-clock.ts";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../shared/ui/button";
 import { Progress } from "../../shared/ui/progress";
@@ -44,7 +46,8 @@ export function BulkHeadMotionEditor(props: {
     onBusy(busy);
     return () => onBusy(false);
   }, [busy, onBusy]);
-  const plan = planBulkHeadMotion(props);
+  const occurrence = useContext(EditorOccurrence);
+  const plan = planBulkHeadMotion({ ...props, occurrence });
   const people = new Set(plan.intervals.map((interval) => interval.personId))
     .size;
   async function run() {
@@ -61,6 +64,7 @@ export function BulkHeadMotionEditor(props: {
     setBusy(true);
     try {
       const result = await trackBulkHeadMotion({
+        occurrence,
         ...props,
         signal: controller.signal,
         progress: (value) => {

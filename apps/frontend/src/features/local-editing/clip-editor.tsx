@@ -30,6 +30,10 @@ import {
 import { CaptionTextEditor } from "./caption-text-editor.tsx";
 import { CaptionSpeakers } from "./caption-speakers.tsx";
 import { localCodexError, LocalCodexError } from "./codex-errors.ts";
+import {
+  completeOwnerHookDraft,
+  type OwnerHookDraft,
+} from "./hook-range-draft.ts";
 import { HookControls } from "./hook-controls.tsx";
 import {
   changeManualOwnerHook,
@@ -44,10 +48,17 @@ import {
   resolveOwnerAudioCues,
   type OwnerAudioCue,
 } from "../../../../../packages/contracts/local/audio.ts";
-import { EditorHookClock } from "./editor-clock.ts";
+import {
+  copyOwnerHookContent,
+  ownerContentEdits,
+  ownerOccurrenceOverlay,
+  ownerOccurrencePresentationFrame,
+  withIndependentOwnerHook,
+  type OwnerEditOccurrence,
+} from "../../../../../packages/contracts/local/hook-content.ts";
+import { EditorOccurrence, EditorHookClock } from "./editor-clock.ts";
 import {
   ownerSourceFrame,
-  ownerPresentationFrame,
   ownerPresentationFrames,
   ownerHookFrames,
   ownerHookSchema,
@@ -109,6 +120,7 @@ import {
 } from "../../../../../packages/contracts/local/clips.ts";
 import {
   OWNER_CAPTION_PRESETS,
+  OWNER_CAPTION_DEFAULT_CENTER_Y,
   OWNER_CAPTION_ANIMATIONS,
   ownerEditDocumentSchema,
   ownerEditRequestSchema,
@@ -321,7 +333,7 @@ function SelectionBox({
 }
 
 export function Review({
-  overlay,
+  overlay: playbackOverlay,
   workspaceId,
   assets,
   sourceUrl,
@@ -334,6 +346,7 @@ export function Review({
   interactive,
   setting,
   silent = false,
+  editingOccurrence,
 }: {
   overlay: OwnerOverlay;
   workspaceId: string;
@@ -344,14 +357,21 @@ export function Review({
   interactive: boolean;
   setting: EditorSetting;
   silent?: boolean;
+  editingOccurrence?: OwnerEditOccurrence | undefined;
 } & LayerControls) {
   const presentationFrame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const frame = ownerSourceFrame(overlay, presentationFrame);
+  const frame = ownerSourceFrame(playbackOverlay, presentationFrame);
+  const overlay = ownerOccurrenceOverlay(
+    playbackOverlay,
+    playbackOverlay.hook && presentationFrame < ownerHookFrames(playbackOverlay)
+      ? "hook"
+      : "body",
+  );
   const caption = overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean;
   return (
     <AbsoluteFill style={{ backgroundColor: "#101215" }}>
-      <OwnerVideoLookLayer look={overlay.videoLook}>
+      <>
         {[
           ...(overlay.hook
             ? [
@@ -371,43 +391,51 @@ export function Review({
             start: 0,
             end: overlay.frames,
           },
-        ].map((part) => (
-          <Sequence
-            key={part.kind}
-            from={part.from}
-            durationInFrames={part.duration}
-            premountFor={fps}
-          >
-            <CameraPreviewVideo
-              kind={part.kind}
-              active={
-                part.kind ===
-                (overlay.hook && presentationFrame < ownerHookFrames(overlay)
-                  ? "hook"
-                  : "body")
-              }
-              sourceUrl={sourceUrl}
-              volume={silent ? 0 : (overlay.audio?.originalVolume ?? 100) / 100}
-              start={part.start}
-              end={part.end}
-              focus={overlay.focus}
-              effects={overlay.cameraEffects}
-              tracks={overlay.cameraTracks}
-              onPreviewReady={onPreviewReady}
-              onPlaybackError={onPlaybackError}
-            />
-          </Sequence>
-        ))}
-      </OwnerVideoLookLayer>
+        ].map((part) => {
+          const content = ownerOccurrenceOverlay(playbackOverlay, part.kind);
+          return (
+            <Sequence
+              key={part.kind}
+              from={part.from}
+              durationInFrames={part.duration}
+              premountFor={fps}
+            >
+              <OwnerVideoLookLayer look={content.videoLook}>
+                <CameraPreviewVideo
+                  kind={part.kind}
+                  active={
+                    part.kind ===
+                    (overlay.hook &&
+                    presentationFrame < ownerHookFrames(overlay)
+                      ? "hook"
+                      : "body")
+                  }
+                  sourceUrl={sourceUrl}
+                  volume={
+                    silent ? 0 : (content.audio?.originalVolume ?? 100) / 100
+                  }
+                  start={part.start}
+                  end={part.end}
+                  focus={content.focus}
+                  effects={content.cameraEffects}
+                  tracks={content.cameraTracks}
+                  onPreviewReady={onPreviewReady}
+                  onPlaybackError={onPlaybackError}
+                />
+              </OwnerVideoLookLayer>
+            </Sequence>
+          );
+        })}
+      </>
       {!silent && (
         <OwnerAudioPreview
-          overlay={overlay}
+          overlay={playbackOverlay}
           workspaceId={workspaceId}
           onError={onPlaybackError}
         />
       )}
       <OwnerAutomaticOverlay
-        overlay={overlay}
+        overlay={playbackOverlay}
         assets={assets}
         frame={presentationFrame}
         renderImage={bufferedOverlayImage}
@@ -417,7 +445,16 @@ export function Review({
         className="editor-interaction"
         style={{
           pointerEvents: "none",
-          visibility: interactive ? "visible" : "hidden",
+          visibility:
+            interactive &&
+            (!editingOccurrence ||
+              editingOccurrence ===
+                (playbackOverlay.hook &&
+                presentationFrame < ownerHookFrames(playbackOverlay)
+                  ? "hook"
+                  : "body"))
+              ? "visible"
+              : "hidden",
         }}
       >
         {setting === "pictures" &&
@@ -440,7 +477,17 @@ export function Review({
           (overlay.texts ?? [])
             .map((layer, index) => ({ layer, index }))
             .filter(({ layer }) => {
-              const at = ownerTextFrame(layer, presentationFrame, frame);
+              const at = ownerTextFrame(
+                layer,
+                playbackOverlay.hookContent &&
+                  !(
+                    playbackOverlay.hook &&
+                    presentationFrame < ownerHookFrames(playbackOverlay)
+                  )
+                  ? presentationFrame - ownerHookFrames(playbackOverlay)
+                  : presentationFrame,
+                frame,
+              );
               return layer.startFrame <= at && at < layer.endFrame;
             })
             .map(({ layer, index }) => (
@@ -527,6 +574,12 @@ export function ClipEditor({
     const original = initialOwnerEdit(clip);
     return { original, draft: structuredClone(original) };
   });
+  const [occurrence, setOccurrence] = useState<OwnerEditOccurrence>(
+    clip.edit?.hook ? "hook" : "body",
+  );
+  const [hookDraft, setHookDraft] = useState<OwnerHookDraft | undefined>(
+    undefined,
+  );
   const [selection, setSelection] = useState("captions");
   const [setting, setSetting] = useState<EditorSetting>("captions");
   const [mediaTab, setMediaTab] = useState("pictures");
@@ -576,20 +629,64 @@ export function ClipEditor({
     setPreviewAttempt((value) => value + 1);
     setPlaybackFailed(false);
   }
-  const changed = !sameOwnerEdit(form.original, form.draft);
+  const changed =
+    hookDraft !== undefined || !sameOwnerEdit(form.original, form.draft);
   const revisionChanged = form.original.revision !== clip.revision;
   const original =
     revisionChanged && !changed ? initialOwnerEdit(clip) : form.original;
-  const draft = revisionChanged && !changed ? original : form.draft;
-  const dirty = !sameOwnerEdit(original, draft);
+  const masterDraft = revisionChanged && !changed ? original : form.draft;
+  const activeOccurrence = masterDraft.hook ? occurrence : "body";
+  const hookContent =
+    masterDraft.hookContent ??
+    (masterDraft.hook &&
+    ownerHookSchema.safeParse(masterDraft.hook).success &&
+    masterDraft.hook.endFrame <= clip.base!.overlay.frames
+      ? copyOwnerHookContent(
+          clip.base!,
+          masterDraft,
+          clip.assets,
+          clip.audioAssets ?? [],
+          masterDraft.hook,
+        )
+      : undefined);
+  const draft =
+    activeOccurrence === "hook" && hookContent
+      ? { ...masterDraft, ...hookContent.edits }
+      : {
+          ...masterDraft,
+          cameraEffects: masterDraft.cameraEffects?.filter(
+            (effect) => effect.occurrence === "body",
+          ),
+          cameraTracks: masterDraft.cameraTracks?.filter(
+            (track) => track.occurrence === "body",
+          ),
+        };
+  const dirty =
+    hookDraft !== undefined || !sameOwnerEdit(original, masterDraft);
   const stale = forcedStale || (revisionChanged && changed);
-  const base = clip.base!;
+  const rootBase = clip.base!;
+  const base =
+    activeOccurrence === "hook" && hookContent
+      ? {
+          ...rootBase,
+          words: hookContent.words,
+          overlay: {
+            ...rootBase.overlay,
+            captions: hookContent.captions,
+          },
+        }
+      : rootBase;
   let error: string | null = null;
   let previewUnavailable = false;
-  let overlay: OwnerOverlay = base.overlay;
+  let playbackOverlay: OwnerOverlay = rootBase.overlay;
   try {
-    ownerEditDocumentSchema.parse(draft);
-    overlay = compileOwnerOverlay(base, draft, clip.assets, clip.audioAssets);
+    ownerEditDocumentSchema.parse(masterDraft);
+    playbackOverlay = compileOwnerOverlay(
+      rootBase,
+      masterDraft,
+      clip.assets,
+      clip.audioAssets,
+    );
   } catch {
     error =
       draft.hook &&
@@ -656,8 +753,8 @@ export function ClipEditor({
                           ? "Use a font size from 24 to 120."
                           : "Keep layers inside the preview and check their size.";
     try {
-      overlay = compileOwnerOverlay(
-        base,
+      playbackOverlay = compileOwnerOverlay(
+        rootBase,
         original,
         clip.assets,
         clip.audioAssets,
@@ -666,6 +763,7 @@ export function ClipEditor({
       previewUnavailable = true;
     }
   }
+  const overlay = ownerOccurrenceOverlay(playbackOverlay, activeOccurrence);
   const caption = captionForOwnerEdit(draft, base.overlay.captionStyle);
   const selectedCue = draft.visuals.find((cue) => cue.id === selection);
   const endpoint = `/api/local/workspace/${workspaceId}/clips/${clip.id}`;
@@ -732,7 +830,7 @@ export function ClipEditor({
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty, trackingMode]);
 
-  function update(next: OwnerEditDocument) {
+  function update(next: OwnerEditDocument, global = false) {
     if (next.cameraTracks?.length) {
       const hookChanged =
         JSON.stringify(next.hook) !== JSON.stringify(draft.hook);
@@ -790,7 +888,81 @@ export function ClipEditor({
           ),
         },
       };
+    if (!global) {
+      const separated =
+        masterDraft.hook && !masterDraft.hookContent
+          ? withIndependentOwnerHook(
+              rootBase,
+              masterDraft,
+              clip.assets,
+              clip.audioAssets ?? [],
+              masterDraft.hook,
+            )
+          : masterDraft;
+      next =
+        activeOccurrence === "hook" && separated.hookContent
+          ? {
+              ...separated,
+              hookContent: {
+                ...separated.hookContent,
+                edits: ownerContentEdits(next),
+              },
+            }
+          : { ...next, hookContent: separated.hookContent };
+    }
     setForm({ original, draft: next });
+  }
+  function changeHook(hook: OwnerEditDocument["hook"], suggested = false) {
+    if (
+      hook &&
+      (!ownerHookSchema.safeParse(hook).success ||
+        hook.endFrame > rootBase.overlay.frames)
+    ) {
+      setForm({ original, draft: { ...masterDraft, hook } });
+      return;
+    }
+    const validPrior = {
+      ...masterDraft,
+      hook:
+        masterDraft.hookContent?.window ??
+        (ownerHookSchema.safeParse(masterDraft.hook).success
+          ? masterDraft.hook
+          : undefined),
+    };
+    let next = withIndependentOwnerHook(
+      rootBase,
+      validPrior,
+      clip.assets,
+      clip.audioAssets ?? [],
+      hook,
+    );
+    if (!hook) next = changeManualOwnerHook(next, undefined);
+    else if (suggested && next.hookContent) {
+      const scoped = { ...next, ...next.hookContent.edits };
+      const accepted = acceptSuggestedOwnerHook(
+        scoped,
+        hook,
+        crypto.randomUUID(),
+      );
+      next = {
+        ...next,
+        hookContent: {
+          ...next.hookContent,
+          edits: ownerContentEdits(accepted),
+        },
+      };
+    }
+    update(next, true);
+    if (
+      hook &&
+      JSON.stringify(hook) !== JSON.stringify(masterDraft.hook) &&
+      (masterDraft.hookContent?.edits.cameraTracks?.length ?? 0) +
+        (masterDraft.hookContent?.edits.cameraEffects?.length ?? 0) >
+        0
+    )
+      setMessage("Motion and Zoom were cleared for the changed Hook range.");
+    setOccurrence(hook ? "hook" : "body");
+    player.current?.seekTo(0);
   }
   function setCaption(next: OwnerCaptionStyle) {
     if (Number.isFinite(next.fontSize) && next.fontSize !== caption.fontSize)
@@ -856,25 +1028,50 @@ export function ClipEditor({
     )
       player.current?.seekTo(
         layer.role === "opening-title"
-          ? layer.startFrame
-          : ownerPresentationFrame(overlay, layer.startFrame),
+          ? layer.startFrame +
+              (activeOccurrence === "body" && playbackOverlay.hookContent
+                ? ownerHookFrames(playbackOverlay)
+                : 0)
+          : ownerOccurrencePresentationFrame(
+              overlay.hook,
+              layer.startFrame,
+              activeOccurrence,
+            ),
       );
+  }
+  const windowStart =
+    activeOccurrence === "hook" ? masterDraft.hook!.startFrame : 0;
+  const windowEnd =
+    activeOccurrence === "hook"
+      ? masterDraft.hook!.endFrame
+      : base.overlay.frames;
+  function selectOccurrence(next: OwnerEditOccurrence) {
+    player.current?.pause();
+    const at = ownerSourceFrame(
+      playbackOverlay,
+      player.current?.getCurrentFrame() ?? 0,
+    );
+    setOccurrence(next);
+    setCaptionConfirm(false);
+    player.current?.seekTo(
+      ownerOccurrencePresentationFrame(masterDraft.hook, at, next),
+    );
   }
   function addText() {
     if (pending || (draft.texts?.length ?? 0) >= OWNER_TEXT_LIMITS.layers)
       return;
     const startFrame = Math.max(
-      0,
+      windowStart,
       Math.min(
         ownerSourceFrame(overlay, player.current?.getCurrentFrame() ?? 0),
-        base.overlay.frames - 1,
+        windowEnd - 1,
       ),
     );
     const layer: OwnerTextLayer = {
       id: crypto.randomUUID(),
       text: "Your text",
       startFrame,
-      endFrame: Math.min(base.overlay.frames, startFrame + 4 * OWNER_FPS),
+      endFrame: Math.min(windowEnd, startFrame + 4 * OWNER_FPS),
       style: {
         ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
         box: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
@@ -885,15 +1082,18 @@ export function ClipEditor({
     chooseText(layer);
   }
   function newPicture(assetId: string): OwnerVisualEdit {
-    const startFrame = Math.min(
-      ownerSourceFrame(overlay, player.current?.getCurrentFrame() ?? 0),
-      base.overlay.frames - 1,
+    const startFrame = Math.max(
+      windowStart,
+      Math.min(
+        ownerSourceFrame(overlay, player.current?.getCurrentFrame() ?? 0),
+        windowEnd - 1,
+      ),
     );
     return {
       id: crypto.randomUUID(),
       assetId,
       startFrame,
-      endFrame: Math.min(base.overlay.frames, startFrame + 4 * OWNER_FPS),
+      endFrame: Math.min(windowEnd, startFrame + 4 * OWNER_FPS),
       box: { x: 0.1, y: 0.1, width: 0.8, height: 0.3 },
       fit: "contain",
       ...OWNER_VISUAL_DEFAULT_MOTION,
@@ -903,13 +1103,14 @@ export function ClipEditor({
     setSelection(cue.id);
     player.current?.pause();
     player.current?.seekTo(
-      ownerPresentationFrame(
-        overlay,
+      ownerOccurrencePresentationFrame(
+        overlay.hook,
         cue.startFrame +
           Math.min(
             cue.animationFrames ?? 9,
             Math.floor((cue.endFrame - cue.startFrame - 1) / 2),
           ),
+        activeOccurrence,
       ),
     );
   }
@@ -917,7 +1118,7 @@ export function ClipEditor({
     kind: "edit" | "picture" | "reload" | "audio" | "youtube-audio",
     file?: File,
   ) {
-    if (request.current) return;
+    if (request.current || (kind === "edit" && hookDraft)) return;
     const controller = new AbortController();
     request.current = controller;
     setPending(true);
@@ -931,7 +1132,7 @@ export function ClipEditor({
                 operationId: crypto.randomUUID(),
                 expectedRevision: original.revision,
                 baseHash: original.baseHash,
-                operations: ownerEditOperations(original, draft, clip),
+                operations: ownerEditOperations(original, masterDraft, clip),
               })
             : null;
       const response = await fetch(
@@ -1005,6 +1206,7 @@ export function ClipEditor({
         }
         return asset.id;
       } else if (kind !== "picture") {
+        setHookDraft(undefined);
         const accepted = initialOwnerEdit(acknowledged);
         setForm({ original: accepted, draft: structuredClone(accepted) });
         setForcedStale(false);
@@ -1052,7 +1254,14 @@ export function ClipEditor({
     void perform("picture", file);
   }
   async function findVisuals() {
-    if (request.current || dirty || stale || !visualDiscovery) return;
+    if (
+      request.current ||
+      dirty ||
+      stale ||
+      !visualDiscovery ||
+      activeOccurrence === "hook"
+    )
+      return;
     const controller = new AbortController();
     request.current = controller;
     setPending(true);
@@ -1103,6 +1312,7 @@ export function ClipEditor({
   async function generateCaptions(fake = false) {
     if (
       request.current ||
+      activeOccurrence === "hook" ||
       dirty ||
       stale ||
       (fake
@@ -1210,7 +1420,7 @@ export function ClipEditor({
               key={`${clip.id}-${previewAttempt}`}
               component={Review}
               inputProps={{
-                overlay,
+                overlay: playbackOverlay,
                 workspaceId,
                 sourceUrl: `${endpoint}/source`,
                 assets: Object.fromEntries(
@@ -1226,6 +1436,7 @@ export function ClipEditor({
                 onPlaybackError: playbackError,
                 onPreviewReady: previewReady,
                 interactive: previewLoaded,
+                editingOccurrence: activeOccurrence,
                 setting:
                   setting === "pictures" && mediaTab === "audio"
                     ? "filters"
@@ -1234,7 +1445,7 @@ export function ClipEditor({
               durationInFrames={ownerPresentationFrames(overlay)}
               compositionWidth={1080}
               compositionHeight={1920}
-              numberOfSharedAudioTags={OWNER_AUDIO_LIMITS.cues}
+              numberOfSharedAudioTags={OWNER_AUDIO_LIMITS.cues * 2}
               fps={OWNER_FPS}
               initialFrame={Math.min(
                 previewFrame,
@@ -1250,6 +1461,25 @@ export function ClipEditor({
           )}
         </div>
         <div className="editor-panels" hidden={!previewLoaded}>
+          {masterDraft.hook && (
+            <div
+              className="editor-occurrence"
+              role="group"
+              aria-label="Editing occurrence"
+            >
+              {(["hook", "body"] as const).map((part) => (
+                <Button
+                  key={part}
+                  variant="secondary"
+                  aria-pressed={activeOccurrence === part}
+                  disabled={pending || audioImport !== null}
+                  onClick={() => selectOccurrence(part)}
+                >
+                  {part === "hook" ? "Hook" : "Main clip"}
+                </Button>
+              ))}
+            </div>
+          )}
           <div
             className="editor-tabs"
             role="tablist"
@@ -1323,10 +1553,10 @@ export function ClipEditor({
             tabIndex={0}
           >
             {setting === "hook" && (
-              <fieldset disabled={pending}>
+              <fieldset disabled={pending || !!error}>
                 <legend className="local-sr-only">Hook</legend>
                 <HookControls
-                  hook={draft.hook}
+                  hook={hookDraft ?? draft.hook}
                   suggestion={decodeOwnerHookSuggestion(
                     base.hookSuggestion,
                     base.overlay.frames,
@@ -1339,22 +1569,30 @@ export function ClipEditor({
                   player={player}
                   available={!playbackFailed && previewLoaded && !pending}
                   attempt={previewAttempt}
-                  valid={!error}
-                  onChange={(hook) => {
+                  valid={!error && !hookDraft}
+                  onChange={(next) => {
                     player.current?.pause();
                     setMessage("");
-                    update(changeManualOwnerHook(draft, hook));
+                    const complete = next
+                      ? completeOwnerHookDraft(next, base.overlay.frames)
+                      : undefined;
+                    if (!next || complete) {
+                      try {
+                        changeHook(complete);
+                        setHookDraft(undefined);
+                      } catch {
+                        setHookDraft(next);
+                        setMessage(
+                          "Couldn’t update the Hook. Check its range and layers.",
+                        );
+                      }
+                    } else setHookDraft(next);
                   }}
                   onUseSuggestion={(hook) => {
                     player.current?.pause();
                     try {
-                      update(
-                        acceptSuggestedOwnerHook(
-                          draft,
-                          hook,
-                          crypto.randomUUID(),
-                        ),
-                      );
+                      changeHook(hook, true);
+                      setHookDraft(undefined);
                       setMessage("");
                     } catch {
                       setMessage(
@@ -1452,7 +1690,50 @@ export function ClipEditor({
             hidden={setting !== "captions"}
             tabIndex={0}
           >
-            {!base.overlay.captions.length ? (
+            {activeOccurrence === "hook" && !base.overlay.captions.length ? (
+              <div className="caption-empty">
+                <h4>No captions in this Hook</h4>
+                <Button
+                  variant="secondary"
+                  disabled={pending || !rootBase.overlay.captions.length}
+                  onClick={() => {
+                    const fresh = copyOwnerHookContent(
+                      rootBase,
+                      masterDraft,
+                      clip.assets,
+                      clip.audioAssets ?? [],
+                      masterDraft.hook!,
+                    );
+                    const detached = withIndependentOwnerHook(
+                      rootBase,
+                      masterDraft,
+                      clip.assets,
+                      clip.audioAssets ?? [],
+                      masterDraft.hook,
+                    );
+                    update(
+                      {
+                        ...detached,
+                        hookContent: {
+                          ...detached.hookContent!,
+                          captions: fresh.captions,
+                          words: fresh.words,
+                          edits: {
+                            ...detached.hookContent!.edits,
+                            captionText: [],
+                            captionSpeakers: fresh.edits.captionSpeakers,
+                            captions: fresh.edits.captions,
+                          },
+                        },
+                      },
+                      true,
+                    );
+                  }}
+                >
+                  Copy main captions
+                </Button>
+              </div>
+            ) : !base.overlay.captions.length ? (
               <div className="caption-empty">
                 <h4>No captions yet</h4>
                 {generating ? (
@@ -1596,6 +1877,7 @@ export function ClipEditor({
                   >
                     <TextPositionFields
                       label="Caption"
+                      defaultCenter={OWNER_CAPTION_DEFAULT_CENTER_Y}
                       style={caption}
                       onChange={(box, centered) =>
                         setCaption({
@@ -1773,6 +2055,7 @@ export function ClipEditor({
                     dirty ||
                     stale ||
                     !visualDiscovery ||
+                    activeOccurrence === "hook" ||
                     draft.visuals.filter(
                       (cue) =>
                         clip.assets.find((asset) => asset.id === cue.assetId)
@@ -2074,9 +2357,10 @@ export function ClipEditor({
                         disabled={!!error || playbackFailed}
                         onClick={() => {
                           player.current?.seekTo(
-                            ownerPresentationFrame(
-                              overlay,
+                            ownerOccurrencePresentationFrame(
+                              overlay.hook,
                               selectedCue.startFrame,
+                              activeOccurrence,
                             ),
                           );
                           player.current?.play();
@@ -2259,7 +2543,9 @@ export function ClipEditor({
                 <Button
                   variant="primary"
                   type="button"
-                  disabled={!dirty || !!error || stale || pending}
+                  disabled={
+                    !dirty || !!error || !!hookDraft || stale || pending
+                  }
                   onClick={() => void perform("edit")}
                 >
                   {pending && audioImport === null ? (
@@ -2300,5 +2586,13 @@ export function ClipEditor({
       </div>
     </section>
   );
-  return <EditorHookClock value={overlay.hook}>{content}</EditorHookClock>;
+  return (
+    <EditorHookClock value={masterDraft.hook}>
+      <EditorOccurrence
+        value={setting === "hook" ? undefined : activeOccurrence}
+      >
+        {content}
+      </EditorOccurrence>
+    </EditorHookClock>
+  );
 }

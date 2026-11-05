@@ -4,6 +4,11 @@ import { Sparkles } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 import { PictureTiming } from "./picture-timing.tsx";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
+import {
+  changeOwnerHookEndpoint,
+  completeOwnerHookDraft,
+  type OwnerHookDraft,
+} from "./hook-range-draft.ts";
 import type { OwnerHook } from "../../../../../packages/contracts/local/hook.ts";
 
 export function HookControls({
@@ -19,7 +24,7 @@ export function HookControls({
   onUseSuggestion,
   suggestedAudio = false,
 }: {
-  hook: OwnerHook | undefined;
+  hook: OwnerHookDraft | undefined;
   suggestion?: OwnerHook | undefined;
   simulated?: boolean;
   frames: number;
@@ -27,10 +32,14 @@ export function HookControls({
   available: boolean;
   attempt: number;
   valid: boolean;
-  onChange: (hook: OwnerHook | undefined) => void;
+  onChange: (hook: OwnerHookDraft | undefined) => void;
   onUseSuggestion: (hook: OwnerHook) => void;
   suggestedAudio?: boolean;
 }) {
+  const range = hook ? completeOwnerHookDraft(hook, frames) : undefined;
+  const view = hook
+    ? { startFrame: hook.startFrame ?? NaN, endFrame: hook.endFrame ?? NaN }
+    : undefined;
   return (
     <div className="hook-controls">
       <p>Repeat a moment, then play the full clip.</p>
@@ -56,6 +65,7 @@ export function HookControls({
             variant="secondary"
             disabled={
               !available ||
+              !valid ||
               (suggestedAudio &&
                 hook?.startFrame === suggestion.startFrame &&
                 hook.endFrame === suggestion.endFrame)
@@ -70,20 +80,34 @@ export function HookControls({
         <>
           <PictureTiming
             label="Hook"
-            cue={hook}
+            cue={view!}
             frames={frames}
             player={player}
             available={available}
             attempt={attempt}
-            onChange={onChange}
+            onStartAfterEnd={(frame) =>
+              onChange(changeOwnerHookEndpoint(hook, "startFrame", frame))
+            }
+            onChange={(next) => {
+              const endpoint = !Object.is(next.startFrame, view!.startFrame)
+                ? "startFrame"
+                : "endFrame";
+              onChange(changeOwnerHookEndpoint(hook, endpoint, next[endpoint]));
+            }}
           />
           <p className="focus-empty">
-            Up to 10 seconds. Edits and captions follow the moment.
+            {hook.startFrame === null
+              ? "Choose a start."
+              : hook.endFrame === null
+                ? "Choose an end to preview or apply the Hook."
+                : !range
+                  ? "Choose an end after the start, inside this clip and within 10 seconds."
+                  : "Up to 10 seconds. Edit each copy in Hook or Main clip."}
           </p>
           <div className="caption-empty-actions">
             <Button
               variant="secondary"
-              disabled={!available || !valid}
+              disabled={!available || !valid || !range}
               onClick={() => {
                 player.current?.pause();
                 player.current?.seekTo(0);
@@ -100,6 +124,7 @@ export function HookControls({
       ) : (
         <Button
           variant="secondary"
+          disabled={!available || !valid}
           onClick={() =>
             onChange({
               startFrame: 0,

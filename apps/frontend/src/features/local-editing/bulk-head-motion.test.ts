@@ -256,3 +256,22 @@ it("settles local failures once and continues independently at the next camera b
   expect(sampler).toHaveBeenCalledTimes(2);
   expect(result.tracks[0]!.personId).toBe("person_2");
 });
+
+it("plans and tracks only the selected Hook or Main occurrence", async () => {
+  const input = fixture();
+  input.hook = { startFrame: 30, endFrame: 90 };
+  for (const occurrence of ["hook", "body"] as const) {
+    const plan = planBulkHeadMotion({ ...input, occurrence });
+    expect(plan.intervals.length).toBeGreaterThan(0);
+    expect(
+      plan.intervals.every((interval) => interval.occurrence === occurrence),
+    ).toBe(true);
+    const result = await trackBulkHeadMotion(
+      { ...runInput(input), occurrence },
+      sample,
+    );
+    expect(
+      result.tracks.every((track) => track.occurrence === occurrence),
+    ).toBe(true);
+  }
+});

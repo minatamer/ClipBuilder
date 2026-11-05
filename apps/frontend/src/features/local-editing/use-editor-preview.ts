@@ -3,11 +3,11 @@ import type { PlayerRef } from "@remotion/player";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import {
   ownerSourceFrame,
-  ownerPresentationFrame,
   ownerHookFrames,
   type OwnerHook,
 } from "../../../../../packages/contracts/local/hook.ts";
-import { EditorHookClock } from "./editor-clock.ts";
+import { ownerOccurrencePresentationFrame } from "../../../../../packages/contracts/local/hook-content.ts";
+import { EditorOccurrence, EditorHookClock } from "./editor-clock.ts";
 
 function activeSourceVideo(
   container: HTMLElement | null | undefined,
@@ -28,6 +28,7 @@ export function useEditorPreview({
   frames,
   captureTarget,
   presentationClock = false,
+  occurrenceClock = false,
 }: {
   player: RefObject<PlayerRef | null>;
   available: boolean;
@@ -35,8 +36,10 @@ export function useEditorPreview({
   frames: number;
   captureTarget: object;
   presentationClock?: boolean;
+  occurrenceClock?: boolean;
 }) {
   const hook = useContext(EditorHookClock);
+  const occurrence = useContext(EditorOccurrence);
   const [frame, setFrame] = useState(
     () => player.current?.getCurrentFrame() ?? 0,
   );
@@ -104,12 +107,22 @@ export function useEditorPreview({
       for (const event of ["seeking", "waiting", "emptied"])
         container?.removeEventListener(event, waiting, true);
     };
-  }, [available, player, attempt, hook, frames, captureTarget]);
+  }, [available, player, attempt, hook, occurrence, frames, captureTarget]);
 
   return {
-    frame: presentationClock ? frame : ownerSourceFrame({ hook }, frame),
+    frame: presentationClock
+      ? frame -
+        (occurrenceClock && occurrence === "body"
+          ? ownerHookFrames({ hook })
+          : 0)
+      : ownerSourceFrame({ hook }, frame),
     playing,
-    captureReady: available && ready,
+    captureReady:
+      available &&
+      ready &&
+      (!occurrence ||
+        !hook ||
+        frame < ownerHookFrames({ hook }) === (occurrence === "hook")),
     captureFrame: async () => {
       const current = player.current;
       const container = current?.getContainerNode();
@@ -130,7 +143,18 @@ export function useEditorPreview({
       current.pause();
       const presentation = current.getCurrentFrame();
       const sourceFrame = ownerSourceFrame({ hook }, presentation);
-      const at = presentationClock ? presentation : sourceFrame;
+      const at = presentationClock
+        ? presentation -
+          (occurrenceClock && occurrence === "body"
+            ? ownerHookFrames({ hook })
+            : 0)
+        : sourceFrame;
+      if (
+        occurrence &&
+        hook &&
+        presentation < ownerHookFrames({ hook }) !== (occurrence === "hook")
+      )
+        return null;
       if (!Number.isInteger(at) || at < 0 || at >= frames) return null;
       // Separate media/player clocks can briefly drift during playback. Check
       // their alignment on capture rather than flashing disabled every tick.
@@ -180,8 +204,10 @@ export function useEditorPreview({
     seekTo: (at: number) => {
       player.current?.pause();
       const presentation = presentationClock
-        ? at
-        : ownerPresentationFrame({ hook }, at);
+        ? occurrenceClock && occurrence === "body"
+          ? ownerHookFrames({ hook }) + at
+          : at
+        : ownerOccurrencePresentationFrame(hook, at, occurrence ?? "body");
       player.current?.seekTo(presentation);
       setFrame(presentation);
     },

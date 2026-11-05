@@ -6,10 +6,11 @@ import {
   useVideoConfig,
   useBufferState,
 } from "remotion";
+import { ownerAudioDuration } from "../../../../../packages/contracts/local/audio.ts";
 import {
-  ownerAudioDuration,
-  ownerAudioSegments,
-} from "../../../../../packages/contracts/local/audio.ts";
+  ownerOverlayAudioSegments,
+  ownerOverlayAudioAssets,
+} from "../../../../../packages/contracts/local/occurrence-audio.ts";
 import type { OwnerOverlay } from "../../../../../packages/contracts/local/clips.ts";
 import {
   ownerSoundAudio,
@@ -30,18 +31,20 @@ export function OwnerAudioPreview({
   const { delayPlayback } = useBufferState();
   const [sources, setSources] = useState<Record<string, string>>({});
   const cache = useRef<Record<string, string>>({});
-  const audio = overlay.audio;
+  const cues = [
+    ...(overlay.audio?.cues ?? []),
+    ...(overlay.hookContent?.audio?.cues ?? []),
+  ];
+  const assets = ownerOverlayAudioAssets(overlay);
   const key = JSON.stringify(
-    [
-      ...new Set(audio?.cues.map((cue) => ownerAudioSourceKey(cue.source))),
-    ].sort(),
+    [...new Set(cues.map((cue) => ownerAudioSourceKey(cue.source)))].sort(),
   );
   useEffect(() => {
     const next = cache.current;
     const pending = delayPlayback();
     // Defer PCM preparation so changing controls can paint before synthesis.
     const timer = window.setTimeout(() => {
-      for (const cue of audio?.cues ?? []) {
+      for (const cue of cues) {
         const source = cue.source,
           id = ownerAudioSourceKey(source);
         if (next[id]) continue;
@@ -74,24 +77,16 @@ export function OwnerAudioPreview({
   }, []);
   return (
     <>
-      {ownerAudioSegments(
-        audio,
-        overlay.frames,
-        overlay.hook,
-        undefined,
-        overlay.visuals,
-      ).map((segment, index) => {
+      {ownerOverlayAudioSegments(overlay).map((segment, index) => {
         const src = sources[ownerAudioSourceKey(segment.cue.source)];
-        if (!src || !audio) return null;
+        if (!src) return null;
         // Remotion pools tags by URL and clock. Distinct cues must still mix
         // independently when they use the same source at the same time.
         const cueSource = `${src}#${segment.cue.id}`;
         const offset = Math.round(segment.offset * fps),
           duration = Math.max(
             1,
-            Math.round(
-              ownerAudioDuration(segment.cue.source, audio.assets) * fps,
-            ),
+            Math.round(ownerAudioDuration(segment.cue.source, assets) * fps),
           );
         const track = (
           <Html5Audio
