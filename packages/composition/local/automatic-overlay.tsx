@@ -34,11 +34,8 @@ export function OwnerAutomaticOverlay({
 }) {
   const width = 1080,
     height = 1920;
-  const { ms, frame, caption, colors, visuals, texts } = ownerOverlayFrame(
-    overlay,
-    presentationFrame,
-    clock,
-  );
+  const { ms, frame, caption, colors, visuals, texts, captionStyle } =
+    ownerOverlayFrame(overlay, presentationFrame, clock);
   return (
     <div
       style={{
@@ -84,11 +81,11 @@ export function OwnerAutomaticOverlay({
         <OwnerTextLayerView key={layer.id} layer={layer} />
       ))}
       {caption &&
-        (overlay.captionStyle || colors ? (
+        (captionStyle || colors ? (
           <OwnerStyledCaption
             caption={caption}
             ms={ms}
-            style={overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean}
+            style={captionStyle ?? OWNER_CAPTION_PRESETS.clean}
             {...(colors ? { colors } : {})}
           />
         ) : (

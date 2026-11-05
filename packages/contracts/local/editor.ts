@@ -2,8 +2,12 @@ import { ownerCameraEffectsSchema } from "./camera-motion.ts";
 import { z } from "zod";
 import { ownerCameraTracksSchema } from "./camera-follow.ts";
 import { ownerAudioEditSchema } from "./audio.ts";
-import { normalizedBoxSchema } from "@clipbuilder/contracts";
-import { ownerIdSchema } from "./policy.ts";
+import {
+  normalizedBoxSchema,
+  compositionManifestV3Schema,
+} from "@clipbuilder/contracts";
+import { ownerWordsSchema } from "./selection.ts";
+import { OWNER_FPS, ownerIdSchema } from "./policy.ts";
 import {
   ownerDigestSchema,
   ownerVisualEditSchema,
@@ -61,9 +65,10 @@ export const ownerCaptionTextSchema = z
   )
   .max(12000)
   .refine((words) => new Set(words.map((w) => w.wordId)).size === words.length);
+export const OWNER_CAPTION_DEFAULT_CENTER_Y = 1032 / 1920;
 const captionBox = {
   x: 80 / 1080,
-  y: 1500 / 1920,
+  y: OWNER_CAPTION_DEFAULT_CENTER_Y - 100 / 1920,
   width: 920 / 1080,
   height: 200 / 1920,
 };
@@ -101,6 +106,7 @@ export const OWNER_CAPTION_PRESETS: Record<
     color: "#ffffff",
     highlight: "#7652d8",
     align: "center",
+    verticalAlign: "center",
     box: captionBox,
   },
   classic: {
@@ -109,6 +115,7 @@ export const OWNER_CAPTION_PRESETS: Record<
     color: "#ffffff",
     highlight: "#245f78",
     align: "center",
+    verticalAlign: "center",
     box: captionBox,
   },
   bold: {
@@ -117,7 +124,12 @@ export const OWNER_CAPTION_PRESETS: Record<
     color: "#fff160",
     highlight: "#222222",
     align: "center",
-    box: { ...captionBox, height: 240 / 1920, y: 1460 / 1920 },
+    verticalAlign: "center",
+    box: {
+      ...captionBox,
+      height: 240 / 1920,
+      y: OWNER_CAPTION_DEFAULT_CENTER_Y - 120 / 1920,
+    },
   },
   boxed: {
     preset: "boxed",
@@ -142,18 +154,12 @@ export const OWNER_CAPTION_PRESETS: Record<
     box: captionBox,
   },
 };
-export const ownerEditDocumentSchema = z
+export const ownerContentEditSchema = z
   .object({
-    version: z.literal(1),
-    clipId: ownerIdSchema,
-    fingerprint: ownerDigestSchema,
-    baseHash: ownerDigestSchema,
-    revision: z.number().int().nonnegative(),
     captions: ownerCaptionStyleSchema.nullable(),
     audio: ownerAudioEditSchema.optional(),
     captionText: ownerCaptionTextSchema.optional(),
     captionSpeakers: ownerCaptionSpeakersSchema.optional(),
-    hook: ownerHookSchema.optional(),
     texts: ownerTextLayersSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
     focus: ownerFocusSchema.optional(),
@@ -169,8 +175,77 @@ export const ownerEditDocumentSchema = z
       new Set(document.visuals.map((cue) => cue.id)).size ===
       document.visuals.length,
   );
+export type OwnerContentEdit = z.infer<typeof ownerContentEditSchema>;
+export const ownerHookContentSchema = z
+  .object({
+    window: ownerHookSchema,
+    captions: compositionManifestV3Schema.shape.captions,
+    words: ownerWordsSchema,
+    edits: ownerContentEditSchema,
+  })
+  .strict()
+  .superRefine((content, ctx) => {
+    const start = Math.floor((content.window.startFrame * 1000) / OWNER_FPS),
+      end = Math.ceil((content.window.endFrame * 1000) / OWNER_FPS);
+    const words = new Set(content.words.map((word) => word.id));
+    if (
+      content.words.some(
+        (word) => word.startMs < start - 1e-6 || word.endMs > end + 1e-6,
+      ) ||
+      content.captions.some(
+        (caption) =>
+          caption.startMs < start - 1e-6 ||
+          caption.endMs > end + 1e-6 ||
+          caption.wordIds.some((id) => !words.has(id)),
+      ) ||
+      content.edits.visuals.some(
+        (cue) =>
+          cue.startFrame < content.window.startFrame ||
+          cue.endFrame > content.window.endFrame,
+      ) ||
+      content.edits.texts?.some((layer) =>
+        layer.role === "opening-title"
+          ? layer.endFrame > content.window.endFrame - content.window.startFrame
+          : layer.startFrame < content.window.startFrame ||
+            layer.endFrame > content.window.endFrame,
+      ) ||
+      content.edits.cameraEffects?.some(
+        (effect) => effect.occurrence !== "hook",
+      ) ||
+      content.edits.cameraTracks?.some((track) => track.occurrence !== "hook")
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Hook content must stay inside its occurrence.",
+      });
+  });
+export type OwnerHookContent = z.infer<typeof ownerHookContentSchema>;
+export const ownerEditDocumentSchema = ownerContentEditSchema
+  .safeExtend({
+    version: z.literal(1),
+    clipId: ownerIdSchema,
+    fingerprint: ownerDigestSchema,
+    baseHash: ownerDigestSchema,
+    revision: z.number().int().nonnegative(),
+    hook: ownerHookSchema.optional(),
+    hookContent: ownerHookContentSchema.optional(),
+  })
+  .refine(
+    (document) =>
+      !document.hookContent ||
+      (document.hook &&
+        document.hook.startFrame === document.hookContent.window.startFrame &&
+        document.hook.endFrame === document.hookContent.window.endFrame),
+    { message: "Hook content must match the selected Hook." },
+  );
 export type OwnerEditDocument = z.infer<typeof ownerEditDocumentSchema>;
 export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("hook-content"),
+      content: ownerHookContentSchema.nullable(),
+    })
+    .strict(),
   z
     .object({
       kind: z.literal("camera-tracks"),

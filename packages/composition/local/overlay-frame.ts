@@ -28,6 +28,21 @@ export function ownerOverlayFrame(
   frame = clock
     ? clock.sourceStartFrame + frame
     : ownerSourceFrame(overlay, frame);
+  const textPresentationFrame =
+    overlay.hookContent && !inHook
+      ? clock
+        ? frame
+        : presentationFrame - ownerHookFrames(overlay)
+      : presentationFrame;
+  if (inHook && overlay.hookContent) {
+    // Native frame rounding can start just before the selected source window.
+    // Hold the copy's boundary state rather than hiding its bounded first/last cue.
+    frame = Math.max(
+      overlay.hook!.startFrame,
+      Math.min(overlay.hook!.endFrame - 1e-6, frame),
+    );
+    overlay = overlay.hookContent;
+  }
   const ms = (frame * 1000) / OWNER_FPS;
   const captionIndex = overlay.captions.findIndex(
     (cue) => cue.startMs <= ms && ms < cue.endMs,
@@ -54,7 +69,7 @@ export function ownerOverlayFrame(
     (cue) => cue.startFrame <= frame && frame < cue.endFrame,
   );
   const texts = (overlay.texts ?? []).filter((layer) => {
-    const at = ownerTextFrame(layer, presentationFrame, frame);
+    const at = ownerTextFrame(layer, textPresentationFrame, frame);
     return layer.startFrame <= at && at < layer.endFrame;
   });
   const highlights =
@@ -73,6 +88,7 @@ export function ownerOverlayFrame(
   return {
     ms,
     frame,
+    captionStyle: overlay.captionStyle,
     caption,
     colors,
     visuals,

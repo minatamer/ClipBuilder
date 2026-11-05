@@ -64,7 +64,7 @@ export const ownerOutputRevisionSchema = z
   .int()
   .min(0)
   .max(OWNER_BATCH_POLICY.outputs - 1);
-export const ownerOverlaySchema = z
+export const ownerOverlayContentSchema = z
   .object({
     version: z.literal(1),
     frames: z
@@ -125,6 +125,29 @@ export const ownerOverlaySchema = z
         message: "Overlay clocks or cue IDs are invalid.",
       });
   });
+export type OwnerOverlayContent = z.infer<typeof ownerOverlayContentSchema>;
+export const ownerOverlaySchema = ownerOverlayContentSchema
+  .safeExtend({
+    hookContent: ownerOverlayContentSchema.optional(),
+  })
+  .superRefine((overlay, ctx) => {
+    const content = overlay.hookContent;
+    if (
+      content &&
+      (!overlay.hook ||
+        content.frames !== overlay.frames ||
+        content.hook?.startFrame !== overlay.hook.startFrame ||
+        content.hook.endFrame !== overlay.hook.endFrame ||
+        (content.focus &&
+          overlay.focus &&
+          JSON.stringify(content.focus.source) !==
+            JSON.stringify(overlay.focus.source)))
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Hook content must match its source and clock.",
+      });
+  });
 export type OwnerOverlay = z.infer<typeof ownerOverlaySchema>;
 export const ownerClipBaseSchema = z
   .object({
@@ -144,6 +167,7 @@ export const ownerClipBaseSchema = z
     (base) =>
       !base.overlay.cameraEffects?.length &&
       !base.overlay.cameraTracks?.length &&
+      !base.overlay.hookContent &&
       base.overlay.frames === base.cut.endFrame - base.cut.startFrame &&
       (!base.hookSuggestion ||
         base.hookSuggestion.endFrame <= base.overlay.frames),

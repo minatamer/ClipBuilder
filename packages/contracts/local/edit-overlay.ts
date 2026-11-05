@@ -3,12 +3,19 @@ import {
   ownerVisualEditSchema,
   type OwnerAsset,
 } from "./assets.ts";
-import { ownerEditDocumentSchema, type OwnerEditDocument } from "./editor.ts";
+import {
+  ownerEditDocumentSchema,
+  type OwnerEditDocument,
+  type OwnerContentEdit,
+} from "./editor.ts";
+import type { OwnerHook } from "./hook.ts";
+import { OWNER_FPS } from "./policy.ts";
 import { correctedOwnerCaptions } from "./caption-text.ts";
 import { resolveCaptionSpeakers } from "./caption-speakers.ts";
 import {
   ownerClipBaseSchema,
   ownerOverlaySchema,
+  ownerOverlayContentSchema,
   type OwnerClipBase,
   type OwnerOverlay,
 } from "./clips.ts";
@@ -70,6 +77,43 @@ export function compileOwnerOverlay(
   const assets = admitted.map((asset) => ownerAssetSchema.parse(asset));
   if (new Set(assets.map((asset) => asset.id)).size !== assets.length)
     throw new Error("duplicate_asset");
+  const overlay = compileContent(base, edit, assets, audioAssets, edit?.hook);
+  if (edit?.hookContent && edit.hook) {
+    const saved = edit.hookContent;
+    if (
+      saved.words.some(
+        (word) =>
+          word.startMs < 0 ||
+          word.endMs > Math.round((base.overlay.frames * 1000) / OWNER_FPS),
+      )
+    )
+      throw new Error("stale_hook_content");
+    const hookBase = {
+      ...base,
+      words: saved.words,
+      overlay: { ...base.overlay, captions: saved.captions },
+    };
+    return ownerOverlaySchema.parse({
+      ...overlay,
+      hookContent: compileContent(
+        hookBase,
+        saved.edits,
+        assets,
+        audioAssets,
+        edit.hook,
+      ),
+    });
+  }
+  return ownerOverlaySchema.parse(overlay);
+}
+
+function compileContent(
+  base: OwnerClipBase,
+  edit: OwnerContentEdit | null,
+  assets: readonly OwnerAsset[],
+  audioAssets: readonly OwnerAudioAsset[],
+  hook: OwnerHook | undefined,
+) {
   const visuals = edit
     ? edit.visuals.map((cue) => {
         const asset = assets.find((asset) => asset.id === cue.assetId);
@@ -97,7 +141,7 @@ export function compileOwnerOverlay(
   const audioCues = audio
     ? resolveOwnerAudioCues(audio.cues, visuals, base.overlay.frames)
     : [];
-  return ownerOverlaySchema.parse({
+  return ownerOverlayContentSchema.parse({
     ...base.overlay,
     captions: correctedOwnerCaptions(base.overlay.captions, edit?.captionText),
     captionSpeakers: resolveCaptionSpeakers(
@@ -105,7 +149,7 @@ export function compileOwnerOverlay(
       base.words,
       edit?.captionSpeakers,
     ),
-    ...(edit?.hook ? { hook: edit.hook } : {}),
+    ...(hook ? { hook } : {}),
     visuals,
     ...(edit?.texts ? { texts: edit.texts } : {}),
     ...(edit?.captions ? { captionStyle: edit.captions } : {}),
