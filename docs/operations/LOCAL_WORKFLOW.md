@@ -135,6 +135,24 @@ intake. Active processing disables reset, and failed cleanup offers retry or
 explicit discard. Existing saved drafts/exports and downloaded/retained sources
 are preserved. No Save draft or permanent export-history panel is shown.
 
+Filters lists camera-position ranges for the Hook and main footage. Select a
+row, set Start/End or use either inline Capture button, then choose the filter
+and strength. Times use the final video's clock. Ranges may span camera
+positions; later camera changes do not retime them. Reset filter makes only
+that range Original, and Apply/Discard covers the usual pending edits. Existing
+whole-video filters remain the fallback outside authored ranges. The list has
+its own bounded scroll, keeping the inspector discoverable. Timed filtering and
+native export work on prepared clips without AI or API keys; fresh real AI
+preparation retains its normal provider/runtime/live/approval requirements.
+
+Fresh AI-added pictures retain the standard large 920x520 footprint on the
+logical 1080x1920 portrait. Automatic placement searches for a clear position;
+it no longer shrinks pictures into small gaps around detected people. If every
+large slot overlaps, it uses the least-overlapping large slot. Existing saved
+and manual sizes remain unchanged; picture position/size is still editable.
+Contain/cover and asset aspect ratios still determine any letterboxing. This
+placement needs no additional AI call; fake/no-key fixtures verify its mechanics.
+
 Hook may show an AI suggested hook with a sparkles badge and timestamp range.
 Use suggestion fills its Start/End fields; Apply or Discard decides whether it
 becomes an active prefix. You can still choose any manual range or remove it.
@@ -380,7 +398,18 @@ errors retain their operation/class and safe structural details. Private Gemini
 body capture remains separate and is never enabled by local workflow diagnostics.
 An original failed attempt cannot be diagnosed retroactively if its old logger
 discarded the error. Fake/no-key tests verify logging with synthetic failures;
-actual Gemini failure evidence requires the owner's deliberate real-mode retry.
+actual configured-provider failure evidence requires a deliberately authorized
+real-mode attempt.
+
+CL-234 writes these validated local/analysis/execution records directly from the
+normal backend into private OS-temp `clipbuilder-backend-diagnostics-*` JSONL
+parts, independently of stderr capture. No setup flag or raw-response capture is
+needed. See the backend diagnostic guide for the fixed 8MiB/64MiB part/run caps,
+terminal reserve, drop markers and shutdown handling. Existing worker logs retain
+their native job IDs. Record the current directory with the local runtime.
+Windows launchers also redirect within CMD or use persistent OS handles so logs
+keep growing after the launching PowerShell exits. Inspect only validated
+structural records; successful logging is not authorization for real AI retries.
 
 Permanent Gemini acceptance (CL-060) supersedes CL-059's timing filtering:
 decoded words retain their provider order and timestamps. Timing, evidence,

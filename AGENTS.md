@@ -6,6 +6,30 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Owner stable-feedback rule (2026-11-06, CL-241): errors cannot steal a
+  control column, resize fields, wrap action buttons or change editor preview
+  geometry. Use shared contextual feedback with stable local message space;
+  duration/error states share one slot. Footer-only failures anchor to their
+  actions outside the controls' sizing flow. Preserve focus, caret, validation
+  and readable wrapping; verify settled valid/error/corrected geometry at
+  desktop/tablet/phone widths when changing feedback. Keep the CL-237–238
+  contextual placement rule; never substitute a page-top banner.
+
+- Owner contextual-error rule (2026-11-06, CL-237–238): never put errors in a
+  page/editor-top banner. Show concise feedback beside the field, section or
+  action that needs attention; use a compact relevant-tab indication when the
+  affected control is hidden. Associate field errors accessibly, preserve typed
+  input/caret and existing validation/Apply guards. Record this product rule in
+  the source of truth and inspect local/responsive placement when changing errors.
+
+- Owner ticket traceability rule (2026-11-06, CL-226): always document the
+  owner's requested edits, fixes and feedback in an owning ticket under
+  `docs/tickets/`. Extend the relevant packet or create a new one before
+  implementation; capture the request, intended behavior, acceptance checks and
+  current status, and keep the ticket index linked. Record follow-up revisions
+  and actual verification in that packet. Ticket creation alone does not
+  authorize implementation, provider actions, Git mutation or deployment.
+
 - Owner browser preference (2026-11-05, CL-224): use the Codex browser for browser
   inspection and acceptance checks. Never request access to the owner's Google
   Chrome window or ask them to use Google Chrome. Preserve the running local app
@@ -483,6 +507,14 @@ corepack pnpm build
   runtime record outside Git. Capture stdout/stderr in separate content-safe
   logs outside Git and report absolute log paths, owning PIDs, verified ports,
   and app URLs. Never print environment values or sensitive startup output.
+- Local diagnostic durability (CL-234): the normal backend owns validated,
+  bounded JSONL logs independently of its launcher. Preserve those logs and
+  report the current directory with the runtime record. On Windows, stdout/
+  stderr redirection must also survive the launching PowerShell process:
+  use OS-owned handles or CMD-internal redirection, not a parent-dependent
+  asynchronous redirector. Prove log growth after the launch tool returns.
+  Keep provider/media content and secrets excluded; never retry AI to smoke-test
+  logging. Confirm current rolling recovery before a diagnostic backend reload.
 - A returned launcher PID is not readiness. Verify actual listeners and the
   non-metered GET checks above. If a new instance fails, stop its entire newly
   created tree and verify cleanup; preserve unrelated healthy services. Restart

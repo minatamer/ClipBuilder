@@ -1,5 +1,268 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Speaker turns, Word pop and aligned forms — CL-243–245, 2026-11-07
+
+Local Codex speaker preparation must distinguish actual voice turns, including a
+short opening question followed by a longer reply. Speaker count alone does not
+establish correctness. Apply one generic local policy to every fresh selected
+clip; never use a source reference, transcript phrase, fixed turn timestamp or
+requested two-speaker count as detection. Keep uncertain speech neutral and
+preserve admitted word IDs/text/clocks. Reused transcription still defers speaker
+preparation to each new selected Codex clip, without retranscribing cached words
+or altering an acknowledged existing clip.
+
+Restore the established TikTok/Word pop default with speaker-colored active-word
+backgrounds and the selected style's normal foreground/background. This supersedes
+CL-240's implicit whole-caption foreground recoloring. Explicit palettes,
+assignments, disabled speaker coloring and saved animation choices remain
+authoritative; no additional provider call is needed for styling.
+
+Shared editor form grids align control tops and use the existing target height
+for number/select/color/range controls. Pack label rows from the top; keep mixed
+color hints in their heading and contextual feedback in stable local space.
+Responsive wrapping and local scrolling retain the preview and footer geometry.
+Fake/no-key fixtures verify UI/mechanics; the separately authorized public-range
+local-model check establishes bounded real detection evidence, not broad-corpus
+accuracy or hosted/provider quality.
+
+## Moments columns and compact results — CL-242, 2026-11-06
+
+At desktop widths of at least 64rem, the source and moments columns share their
+top/bottom bounds within the workflow frame. Keep the source video contained
+and visible while long results/forms scroll in the right column. Bound the
+grid row and both columns to actual available space; the surrounding frame
+must not gain a horizontal scrollbar or clip the source heading. Narrow screens
+stack naturally and retain their persistent footer actions.
+
+Remove the redundant duration/resolution line below the source video. Keep
+count, section heading/export action and result cards compact. Empty information
+does not allocate blank result rows; export feedback anchors to its heading
+outside sizing flow. Headings/actions wrap as whole controls on small screens,
+cards keep readable titles and naturally sized Jump/Remove buttons. Shared
+processing sizing includes padding/borders, with compact moments loading visuals
+in short laptop windows. Playback/Capture/Jump, retention, limits, cancellation,
+progress polling and provider behavior remain unchanged. Generated/fake/no-key
+UI verification is separate from normal real-provider setup and approvals.
+
+## Stable contextual feedback — CL-241, 2026-11-06
+
+Validation feedback must not take width from inputs/actions or change preview
+geometry. Duration and invalid-range messages share one full-width slot. Keep
+compact field feedback space mounted through correction, including inline label
+messages and dialogs; message text does not contribute to intrinsic control
+width. Brief errors use the reserved space, while longer explanations wrap in
+their own row without clipping or overlapping controls. Main/sub-tab indicators
+do not change tab widths. Keep pending/title failure feedback in the same slot.
+
+Footer-only clip/editor/reset failures and demo bounds anchor to their relevant
+actions outside normal sizing flow, with viewport-safe bounds. Preserve the
+normal footer height when entering Apply/Discard, input focus/caret, endpoint
+Capture/Jump behavior, validation and submission guards. Actual media/whole-view
+failures still replace their unavailable content slot. This extends CL-237–238;
+no page-top error banner. Verification uses generated/fake/no-key UI and settled
+preview/scroll geometry. Real provider processing keeps its existing setup,
+live flags and approvals; this UI correction requires no regeneration or AI.
+
+## Speaker-aware captions — CL-240, 2026-11-06
+
+Fix fresh speaker preparation and caption compilation at their source; never
+patch a saved clip to demonstrate a generic correction. Selected-clip local
+diarization keeps automatic speaker counts, with clustering distance threshold
+0.4 after the authorized separate-copy diagnostic reproduced a two-voice merge
+at 0.5. No forced two-speaker count, visual guess, ASR/provider retry or saved
+result migration. Ambiguous/overlapping words remain unassigned. Preserve all
+admitted word IDs/text/clocks through enrichment and later caption generation;
+reuse existing labeled words rather than transcribing them again. New captions
+refresh both body and independent Hook words while preserving manual Hook text
+and explicit speaker settings.
+
+Known speakers receive distinct text colors as well as complementary highlights
+by default, including presets without word highlighting. This supersedes
+CL-204's highlight-only default. Preserve explicit palettes, manual assignments,
+backgrounds and disabled coloring; uncertain captions retain the base style.
+Show missing/single-label status beside Speakers controls. Generated/fake checks
+need no keys; the bounded real local diagnostic used installed CPU models and
+no provider APIs. Broader voice accuracy and fresh real clip quality remain
+owner acceptance with the configured runtime/live flags/approvals.
+
+## Titles for every chosen Hook — CL-239, 2026-11-06
+
+Choosing or changing a valid Hook, including manual timestamps/Capture, requests
+one title matched to that exact excerpt and the clip's actual payoff after the
+range settles. Use the established editorial policy and meaningful exact-phrase
+emphasis, normally bright red #FF3B30 against readable surrounding copy. Reuse
+admitted timed words; no extra media transcription, visual plan or provider
+fallback. This supersedes the earlier no-inference-on-Hook-change behavior.
+Mount/restore, invalid/incomplete/no-op ranges and styling edits do not dispatch.
+Superseded work cancels, settled results reuse a bounded cache, failures need
+explicit retry and attempts are bounded. Preview changes only the Hook title
+draft, protecting concurrent typing; Apply/Discard still owns persistence and
+independent Hook/body content. Real automatic title requests use the configured
+provider/runtime, live flags and applicable approvals. Generated/fake tests need
+no keys and do not establish real editorial quality.
+
+## Contextual errors — CL-237–238, 2026-11-06
+
+Errors belong beside the field, section or action that needs attention, never
+in a banner at the top of a page/editor. Keep them brief; associate field
+messages with their inputs and provide a compact relevant-tab indication for
+hidden controls. Preserve input, caret and validation/Apply guards. In Text,
+show content validation beside the Text label; action/stale feedback stays with
+the corresponding actions. This applies throughout intake, moments, session and
+clip actions, every editor section, media/dialogs and recovery views. A whole-view
+failure replaces that unavailable view with its recovery action; it is not a
+generic page-top banner. Keep background progress feedback separate from input
+errors, and bind hidden feedback to the relevant tab, clip and occurrence.
+CL-237 owns the original editor correction; CL-238 owns the app-wide audit and
+shared inline feedback. Prepared/generated UI verification needs no API keys or
+AI; real provider processing retains its normal setup, live flags and approvals.
+
+## Durable local failure diagnostics — CL-234, 2026-11-06
+
+Normal local startup must retain content-safe operation/analysis/execution
+diagnostics independently of a launcher or terminal lifetime. Use existing
+allowlisted schemas/correlation, bounded disk/records and a terminal-failure
+reserve; preserve the first cause with process/transport/schema/output/cleanup
+facts. Never write raw prompts, media, transcripts, provider responses, secrets
+or arbitrary exception text. A sink failure cannot alter work or add a retry.
+Application-owned local logs and durable launcher redirection serve distinct
+failure paths; hosted/test composition must not create the local log store.
+Keep existing saved/recovery media and prior diagnostic evidence. A historical
+failure whose record was lost remains unconfirmed until a new expressly
+authorized owner attempt produces evidence. CL-234 owns implementation and
+no-key/normal-startup verification; live title quality remains owner acceptance.
+
+The confirmed title-styling failure was a Codex strict wire-schema regression.
+Adapt optional fields to required nullable wire values, then remove only added
+null placeholders before existing decoding. Preserve intentional nulls, saved
+schemas and styling values; do not add a provider fallback or automatic retry.
+
+## Shared editor navigation and clip naming — CL-233, 2026-11-06
+
+Every editor tab group uses the same shared rounded, single-row navigation,
+including the six main sections and their sub-tabs. Narrow groups scroll
+horizontally with keyboard selection revealed, without wrapping or expanding
+the document. Keep normal scroll ownership, ARIA relationships and busy guards.
+
+Remove the separate main clip-name row. Each compact clip card owns a name and
+circular pencil above its preview/state, including the horizontal phone/tablet
+strip. Ellipsize the name visually while preserving its full accessible value.
+The pencil opens a design-system modal with the full saved name, editable input
+and Save/Cancel footer. Fit portrait/landscape screens, keep actions visible and
+scroll only the dialog body when needed. Preserve focus return, validation,
+pending/failure/retry and optimistic rename semantics. Names remain metadata,
+separate from rendered titles; renaming calls no AI or renderer. This supersedes
+the older centered-name/inline rename presentation. Generated checks need no
+API keys; real AI preparation retains its configured setup/live approvals.
+CL-233 owns implementation and responsive evidence; owner device acceptance
+remains manual.
+
+The owner's CL-233 sizing follow-up makes the clip rail more compact and removes
+excess padding below card headers. On desktop, size the main 9:16 preview from
+the available editor height so it extends to the normal small footer gap,
+reserving usable inspector width instead of keeping the former 16rem cap.
+Shrink navigation cards rather than their touch targets. Tablet/phone strips
+remain compact; narrow layouts retain their natural workflow scroll and all
+editor/Focus scroll ownership and footer actions stay intact.
+
+## Shared scrollbar ownership — CL-231, 2026-11-06
+
+Every visible application scrollbar uses the shared global treatment in frontend
+`styles/tokens.css`: token-backed rounded 4px thumbs without arrow buttons on the
+WebKit styling path, standard thin fallback elsewhere and native forced-color
+semantics. Feature styles must not override width/color or duplicate pseudo
+rendering. Overflow/gutter geometry, token-only theming and existing intentionally
+hidden horizontal strips remain separate. CL-231 owns consistency verification;
+no AI or API keys are needed for these UI mechanics.
+
+## Editor scroll ownership — CL-232, 2026-11-06
+
+Every desktop editor section scrolls within its active pane, without a competing
+outer settings/page scrollbar. Settings navigation remains in its own row;
+bounded caption/filter/media collections retain intentional internal scrolling.
+Use the actual remaining height after headers/errors so controls and workspace
+footer stay reachable, including short windows. The editor frame can shrink
+below the shared intake minimum. Phones retain one natural workflow scroll.
+Focus's split has independent left/right columns and ordinary scrolling sub-tabs.
+Generated/no-key checks establish layout mechanics; owner device acceptance
+remains separate. CL-232 owns cross-section evidence.
+
+## Laptop Focus layout trial — CL-230, 2026-11-06
+
+The latest owner revision trials a larger source preview above the camera
+collection in the left column, with sub-tabs, editing controls and local actions
+on the right across Camera, People, Zoom and Motion. Prioritize the frame's usable
+size; the preview and positions form one left scroll column rather than shrink
+to a tiny thumbnail. The active controls form one independent right scroll
+column. The surrounding Focus panel has no competing scroll extent, and Focus
+tabs scroll normally with their controls, without sticky positioning/backing.
+The positions list has no nested scrollbar in this split. Zoom shows source and target side
+by side in the left preview area. Narrow panels stack. Motion marking replaces
+the numbered preview with its interactive head selection on the left, and its
+progress remains in the right controls. Apply/Discard and Track/Cancel remain
+in the persistent workspace footer. Retain expanded selection, normalized
+geometry/clocks, independent Hook/main ownership and persistent footer actions.
+Narrow screens stack naturally. The trial needs no AI/API keys on prepared
+clips; CL-230 owns generated responsive evidence and owner visual acceptance.
+
+## Camera-seeded timed filters — CL-228, 2026-11-06
+
+Filters must support editable timestamp ranges, initially drawn from camera
+positions, with inline settled-preview Capture for Start and End. Use one
+chronological Hook/main timeline with [Hook] labels and one inspector; show
+applied ranges and the remaining camera portions without hiding items according
+to playback. A range may be trimmed/extended within its occurrence; camera
+positions seed it rather than silently retiming it after later camera edits.
+Only the selected interval changes. Preserve independent content, legacy whole
+filters, source-only coloring, shared preview/native clocks and footer Apply/
+Discard. Manual filters need no AI or API keys. CL-228 owns implementation and
+the generated desktop/phone/transport/native acceptance evidence.
+
+## Readable initial AI pictures — CL-227, 2026-11-06
+
+The owner rejects tiny automatically placed pictures. Fresh AI pictures retain
+the standard 920x520 box on the logical 1080x1920 portrait (about 85% width).
+Search for a clear position at that size; never shrink through smaller candidate
+sizes to avoid people. With no clear large slot, use the least-overlapping large
+fallback while preserving usable results and the existing provider call budget.
+This supersedes CL-154's smaller alternatives, retaining stable full-cue checks.
+Preserve contain/cover, saved/manual picture sizes and independent Hook copies;
+do not enlarge saved owner pictures automatically as proof of this change.
+
+## Hook title emphasis — CL-226, 2026-11-06
+
+CL-236: the focused Content textarea owns text entry. Entering it ends direct
+preview editing while preserving a selected word range for formatting. Text
+revision/selection updates must never remount a preview editor that steals the
+textarea's focus or insertion point. This requires no AI or regeneration.
+
+The owner requests implementation of the researched UX for Hook-relevant opening titles,
+more visual title treatments and selectable word/phrase typography inside one
+title layer. Direct preview selection should scope the existing Text inspector
+to those characters; AI must receive the same bounded treatment/emphasis
+capabilities through the existing planning response. Preserve first-Hook-frame,
+once-only title timing, independent content, editable saved copy and no automatic
+AI retry. [CL-226](tickets/CL-226-hook-title-inline-typography.md) records current
+code evidence, primary-source research, UX, canonical data/AI integration and
+acceptance gates. Plain text remains authoritative with up to 32 normalized,
+non-overlapping UTF-16 spans on grapheme boundaries. Selection survives inspector
+focus; a collapsed caret cannot format the whole layer accidentally. Four title
+treatments retain explicit word overrides. Preview and native export share
+styled runs; old span-free documents keep their rendering. Both AI schemas and
+their existing same-call policy allow exact-substring emphasis and treatment.
+No real AI call or current saved-clip edit is authorized by implementation.
+CL-220's independent Hook/main opening-title clocks remain authoritative;
+the earlier CL-184 once-only clock continues for legacy linked occurrences.
+
+## Compact caption collection — CL-225, 2026-11-06
+
+Keep the unified caption list compact and independently scrollable, so its
+editing controls below remain discoverable. Preserve every chronological row,
+Hook/main independence, caption-row styling and keyboard selection. Short lists
+shrink naturally; the height limit adapts to the viewport. Other editor
+collections retain their layout. This presentation change needs no API keys or
+regeneration on prepared clips and does not change real AI prerequisites.
+
 ## Unified editor collections — CL-224, 2026-11-05
 
 The owner replaces the Hook/Main editing tabs with unified chronological item
@@ -1266,7 +1529,8 @@ audio-backed sustained evidence. Genuine uncertainty retains the held crop.
 
 New planned pictures use observed face/head bounds projected through every
 intersecting portrait camera crop, with a safe margin. Try readable clear slots
-and smaller alternatives over the full cue; keep one stable placement. Fully
+over the full cue; keep one stable placement. CL-227 removes smaller-size
+alternatives in favor of the standard large readable footprint. Fully
 occupied frames retain a bounded least-overlap editable fallback, never reject
 usable paid work or request another inference. Ask Codex for tight complete
 face/head bounds including chin/hair and excluding torso. Existing saved/manual
@@ -2005,6 +2269,13 @@ of short videos, to avoid showing opening logos/blank intro frames. This is a
 read-only local preview using the existing protected ranges; preserve the master,
 offline behavior, silent playback and explicit Use video action. No remote
 thumbnail lookup, native preview job or durable poster cache is introduced.
+
+CL-235: fill the compact 16:9 intake thumbnail and conservatively crop paired
+black bands embedded in the decoded video frame or JPEG. Inspect at most a
+128x72 memory-only pixel copy; dark/ambiguous frames and unavailable pixel reads
+retain normal cover framing. Wait for the intended settled saved-video sample.
+This changes thumbnail presentation only, with no source/edit/export changes,
+new remote lookup, retained poster, AI call or provider prerequisite.
 
 ## Source transcription reuse — 2026-10-25
 

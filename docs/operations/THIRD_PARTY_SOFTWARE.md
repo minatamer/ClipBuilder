@@ -26,15 +26,20 @@ quality, rights and hosted release remain separate checks. Experimental Python
 faster-whisper/Moonshine and Distil assets are benchmark-only, not application
 prerequisites or engine fallbacks.
 
-## Local speaker tools — CL-150
+## Local speaker tools — CL-244 (supersedes CL-150)
 
-Anonymous diarization uses [Sherpa-ONNX v2.0.1](https://github.com/k2-fsa/sherpa-onnx/releases/tag/v2.0.1)
-(Apache-2.0), its official pyannote segmentation-3.0 ONNX conversion (MIT license
-retained), and NVIDIA NeMo TitaNet-small ONNX embedding. Exact artifact/per-file
-SHA-256 pins are in scripts/local-speaker-tools.ts. The explicit preparation
-command retains upstream license/attribution and model-card links beside assets
-under ignored .local-build/tools/speakers. No binaries, weights, voices or
-embeddings enter Git or hosted build inputs. See [upstream diarization setup](https://k2-fsa.github.io/sherpa/onnx/speaker-diarization/models.html).
+Anonymous local speaker windows use the official `sherpa-onnx-node` and platform
+addon 2.0.1 (Apache-2.0, integrity-pinned in the lockfile), and
+[WeSpeaker English VoxCeleb ResNet34](https://huggingface.co/Wespeaker/wespeaker-voxceleb-resnet34)
+(model card: Apache-2.0; WeSpeaker team). The official Sherpa
+[model distribution](https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models)
+is checksum-pinned in `scripts/local-speaker-tools.ts`. Explicit preparation
+retains attribution/model-card links under ignored `.local-build/tools/speaker-windows`.
+The prior pyannote/NeMo tools and their notices remain preserved separately;
+they are not an application fallback. No binaries, weights, voices or embeddings
+enter Git or hosted build inputs. There is no new Python runtime requirement.
+The Node package is a root development dependency for the local worker, excluded
+from the renderer's production dependency deployment.
 
 ## Local subscription and speech tooling — CL-135, 2026-10-29
 

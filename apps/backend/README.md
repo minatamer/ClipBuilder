@@ -1,5 +1,42 @@
 # ClipBuilder backend
 
+CL-239 adds a bounded title-only operation for the actual chosen Hook, including
+manual ranges, using admitted words and the shared title/emphasis policy. Both
+configured providers compose it without another transcription, image request or
+full plan. Revision/range binding, idempotency, cancellation and a twelve-attempt
+limit protect the draft; failures require explicit retry. Fake HTTP checks need
+no keys; real copy quality retains configured provider/live approvals.
+
+CL-244 replaces CL-240's insufficient threshold-only correction with generic
+short-window English speaker embeddings and measured quiet-gap boundaries.
+The pinned native Node helper runs locally without Python or provider keys.
+After dependency setup, run `corepack pnpm local:media:build` and
+`node scripts/prepare-local-speakers.mjs`; assets are checksum-verified and old
+tools remain preserved. Fresh selected Codex clips prepare speakers even when
+transcription is reused; no source-specific rule or speaker count is forced.
+The authorized separate-copy public-range check verifies both voices and the
+opening change through real worker HTTP. Caption generation reuses
+canonical labeled words, or enriches existing unlabeled words without ASR, and
+refreshes independent Hook captions without overwriting manual text/settings.
+Injected transport/native checks prove preservation; broader model accuracy
+remains owner acceptance. No provider fallback or automatic retry is added.
+
+CL-226 exposes visual title treatments and up to two exact-phrase emphasis
+proposals through both existing Codex/Gemini planning schemas. Shared decoding
+resolves occurrence anchors into bounded canonical text spans and keeps usable
+copy when optional styling is malformed. Hook meaning still follows the selected
+excerpt and actual payoff; no extra inference or retry is added. Spans persist
+through preparation/edit/recovery and real worker HTTP transport. Generated
+fake/no-key native proof verifies mechanics; real creative quality remains
+owner acceptance with the existing provider/runtime/live approvals.
+
+CL-234 fixes Codex's strict wire format for optional title treatments, emphasis
+and nested typography. Every declared object key is required on the wire, using
+null for an unused optional value. The inference adapter removes only those
+added placeholders before normal decoding, retaining required/intentional nulls,
+style values and runtime/saved schemas. Offline production-schema and result-file
+tests cover this boundary; no extra inference/retry or provider fallback is added.
+
 CL-221 fixes automatic Motion handoff during fresh preparation: clip-preview
 numeric camera replies use the existing bounded 1 MiB JSON budget in both native
 HTTP readers, while ordinary/progress/cancel receipts retain their small bound.
@@ -730,6 +767,19 @@ Missing credentials do not require fake overrides or a cloud setup: leave
 gated features unavailable and report the owner-only setup that remains.
 
 ## Analysis diagnostics
+
+CL-234 adds durable local capture independent of the launcher's lifetime. Normal
+local startup owns validated JSONL files under an OS-temp
+`clipbuilder-backend-diagnostics-*` directory; no environment switch is needed.
+The file sink includes local/analysis stages and correlated Codex process,
+transport/schema/error, event/output and cleanup details already emitted by the
+adapters. It stores no prompt, transcript, raw response, credential or arbitrary
+exception text. Files are exclusive 8MiB parts, capped at 64MiB per process with
+an 8MiB terminal-record reserve and explicit drop/limit markers. It preserves
+older files/runs; log disposal remains explicit. Failures also sync to disk.
+Shutdown drains cleanup before closing, and a sink failure cannot change work.
+Hosted/test startup does not create this local capture. Generated no-key process,
+redaction, lifecycle and bounded-storage checks do not prove real provider quality.
 
 Local editing uses the same content-safe diagnostic sink, plus bounded
 `local_diagnostic` operation records. Provider stages share a request ID with

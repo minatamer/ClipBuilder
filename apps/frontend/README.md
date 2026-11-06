@@ -1,5 +1,136 @@
 # ClipBuilder frontend
 
+CL-243 aligns shared caption/title/editor controls at the existing 44px target,
+packs labels from the top, styles range controls and keeps validation geometry
+stable. CL-244–245 restores normal caption foregrounds with speaker-colored
+Word pop backgrounds, retaining explicit style/palette choices. Generated no-key
+browser checks cover laptop/tablet/phone sizing; real detection is backend-owned.
+
+CL-242 aligns desktop moments columns within the workflow frame, retaining a
+visible source while the right side scrolls. Source metadata below the player
+is removed; results use compact count/heading/card spacing and natural action
+widths. Export feedback cannot squeeze its heading. Loading uses border-box
+sizing and fits short laptop windows; tablets/phones stack with the footer
+accessible. Generated loading/one/many/long-title checks need no API keys or
+regeneration. Source clocks, processing/progress, owner data and live gates stay
+unchanged; physical-device/hosted acceptance remains separate.
+
+CL-241 stabilizes contextual feedback sizing throughout the app. Shared feedback
+reserves local field space without contributing intrinsic control width; manual
+duration/error states share one row. Title labels, tab indicators, caption-word
+inputs, typography and rename feedback retain their geometry. Footer-only errors
+anchor beside actions, leaving preview/Apply/Discard sizing intact. Long copy
+wraps without clipping and narrow callouts stay inside the viewport. Generated
+desktop/tablet/phone checks and fake/no-key regressions verify UI mechanics;
+owner data/configuration is unchanged and no AI/regeneration is needed.
+
+CL-239 automatically suggests an emphasized title for a changed valid Hook,
+including manual timestamps/Capture. Debounced, bound responses update the Hook
+draft while protecting concurrent typing; Apply waits, Discard cancels, and a
+failed suggestion offers footer Retry with feedback in Hook. Mount/restore and
+styling changes make no requests. Fake browser/HTTP checks need no keys; real
+title relevance uses the configured provider/runtime and normal live approvals.
+
+CL-240 makes known speakers visibly distinct in caption text and highlights
+across presets, retaining explicit colors, manual assignments and disabled
+coloring. Missing/single-label status appears in Speakers controls; manual
+palette slots do not claim detected voices. Body/Hook preview and generated
+native exports match. Fake fixtures verify those mechanics, separately from the
+authorized API-free local model diagnostic and broader real voice acceptance.
+
+CL-238 extends contextual feedback throughout the app. Upload/link/resolution,
+analysis/manual/import/AI inputs, session/retry/export actions, audio audition
+and uploads, captions, filters and Focus show brief feedback beside their own
+controls. Shared inline feedback replaces page-top notices and floating demo
+limit messages; hidden issues identify the appropriate tab and occurrence.
+Whole-view recovery remains in the failed view. Input labels/descriptions stay
+stable while correcting errors, and Apply guards remain intact. Generated Codex
+browser desktop/tablet/phone checks, focused unit tests, lint and types verify
+these UI mechanics with fake/paid-off transports and no API keys. They do not
+prove live AI quality; real processing still needs its configured provider/runtime,
+enabled live flags and applicable approvals. Owner media/configuration is untouched.
+
+CL-237 places title validation beside its Text label with concise messages,
+`aria-invalid`/described errors and a compact affected-tab indicator. Selecting
+Text can reveal an invalid layer/occurrence; correction clears feedback without
+changing the caret or Apply guards. Editor validation stays in its owning
+section and action/stale feedback stays with actions, replacing the editor's
+top banners. This is a permanent design rule recorded in AGENTS/source of truth.
+Generated/no-key desktop/phone checks and focused tests verify this editor path;
+it does not require AI, keys, regeneration or changes to owner media.
+
+CL-236 fixes title Content typing after direct preview editing. Focusing or
+selecting in the textarea explicitly transfers editing ownership to it while
+retaining selected-word styling. Updating text can no longer remount a preview
+editor that steals the caret. Generated/no-key native keyboard checks cover
+typing, replacement, deletion, undo/redo and Hook/body switching; original clips
+and provider/native processing are unaffected. Physical IME/touch acceptance
+remains manual.
+
+CL-235 fills intake thumbnails with a 16:9 cover frame and bounded, memory-only
+inspection to crop clear paired black bands already embedded in a video frame
+or JPEG. Dark/ambiguous images keep ordinary framing; unavailable canvas access
+never hides usable media. Saved previews retain their silent ten-second/quarter
+sample and source switches reset loading/crop/failure state. This needs no API
+keys, AI or new download and changes no source file, edit or export. Ten focused
+generated-pixel cases and generated Codex-browser desktop/tablet/phone checks
+verify the presentation; owner-media/device visual acceptance remains manual.
+
+CL-233 shares rounded, single-row navigation across main editor sections and
+sub-tabs; narrow groups scroll horizontally with keyboard access. Each clip
+card now owns its truncated name and circular pencil, including the compact
+phone/tablet strip. The separate name row is removed. Rename opens a responsive
+dialog showing the full name, with Save/Cancel in its footer and a bounded body
+for short landscape screens. Existing validation, focus return, dirty/pending
+guards and metadata-only rename/download behavior remain. Generated UI and
+transport checks need no keys; fresh real AI retains provider/live approvals.
+The compact rail now leaves more room for the main preview: desktop sizing uses
+available editor height and a small footer gap, with inspector width preserved.
+Smaller navigation cards keep 44px pencils and compact phone/tablet strips.
+
+CL-226 adds word/phrase styling in Text. Double-click a selected preview title,
+press Enter on its selection box, or choose **Edit text in preview**; select real
+characters and use the normal inspector for color, font, size, weight, outline
+and word highlight. Content selection also carries into Style. The scope label
+and mixed values prevent accidental whole-layer changes; Done/Whole text exits
+range mode. Apply/Discard stays in the workspace footer. Four title treatments
+keep explicit accents; Clear selection styling and Reset word styles are explicit.
+Plain-text paste, grapheme-safe offsets and bounded local typing undo preserve
+saved spans without HTML/font downloads. Prepared-media editing needs no API keys;
+fresh real AI retains the configured provider/runtime/live approvals.
+
+CL-232 gives every desktop settings section its own bounded scroll area. The
+outer settings wrapper stays fixed; the editor fits short windows without
+forcing a page scrollbar or pushing the footer below the viewport. Intentional
+bounded collections remain, and phone layouts use the natural workflow scroll.
+These mechanics need no API keys; generated acceptance evidence is in the ticket.
+
+CL-230's latest laptop trial puts a larger source preview above the camera list
+on the left, with Focus tabs, active controls and local actions on the right.
+Camera, People, Zoom and Motion share this arrangement. The complete left column
+and right inspector scroll independently, with no competing outer scroll area
+or nested left-list scrollbar. Focus tabs scroll normally, without a sticky
+backing. Give the source room rather than compress it to fit
+all controls. Zoom's source/target share the left preview area side by side.
+Apply/Discard and Track/Cancel stay in the persistent workspace footer. Laptop
+main settings tabs use one row to leave more editing space. The split activates
+at viewport widths of at least 1024px with at least 42rem of actual panel space;
+narrower panels stack. Motion's head selection adapts to the available preview
+space; expanded selection remains available. Contextual inline feedback stays
+with the active controls. Resizing preserves player/editor state.
+Generated/no-key checks verify mechanics; owner visual acceptance remains manual.
+No new AI or native-render behavior is introduced.
+
+CL-228 adds timed filters seeded from camera positions, with separate Hook/main
+rows and final-video timestamps. Select a range to edit Start/End with inline
+Capture, Filter and Strength in one inspector. Ranges can cross positions;
+Reset filter affects only the selected range. The compact list scrolls internally
+and Apply/Discard stays in the footer. Preview and native export filter only
+source footage, preserving caption/picture/Text colors. Existing whole-video
+filters remain the fallback outside new ranges. Prepared synthetic/existing clips
+support this without API keys; fresh AI generation retains its normal setup and
+approvals. The packet records generated native and Codex-browser verification.
+
 CL-223 treats a new Hook start at or past the old end as a new range choice:
 End clears to blank in the local draft, and Preview hook, Use suggestion and
 Apply disable until an ordered in-clip range up to 10 seconds is complete.
@@ -741,7 +872,10 @@ approval remain separate checks documented in the CL-013 packet. Scrollbars use
 one global transparent-track treatment with shared thumb tokens: 4px rounded
 thumbs without arrow buttons in WebKit-compatible engines, standard thin styling
 elsewhere and native scrollbars in forced colors. The WebKit path resets
-standard width/color to auto so they cannot override custom rendering. The dark
+standard width/color to auto so they cannot override custom rendering.
+Feature panes inherit this global rule; do not add local width/color overrides
+or duplicate pseudo-element styling. Overflow/gutter geometry and deliberately
+hidden horizontal strips retain their owning layout rules. The dark
 privacy dialog overrides only thumb colors. Candidate thumbnail play circles are
 28px decorative cues inside the whole-card button; actual player controls retain
 their 44px targets. Every shared workflow player, including source video, uses

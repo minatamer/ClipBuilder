@@ -1,5 +1,212 @@
 # ClipBuilder canonical ticket index
 
+## Whole-file local commits — 2026-11-07
+
+[CL-246](CL-246-file-level-local-commits.md) records the owner's authorization,
+seven whole-file commit allocations and local packaging evidence for CL-225–245.
+This supersedes earlier no-Git handoff notes for local staging/commits only.
+No push is authorized; owner testing remains planned for 2026-11-08.
+
+## Editor alignment, speaker turns and Word pop — 2026-11-07
+
+[CL-243](CL-243-editor-form-control-alignment.md) is complete locally: shared
+44px controls, aligned typography and stable validation pass generated responsive
+checks and 26 no-key cases. [CL-244](CL-244-speaker-detection-range-regression.md)
+and [CL-245](CL-245-default-word-pop-speaker-backgrounds.md) are complete locally:
+generic short-window native speaker detection, deferred fresh range preparation,
+and restored Word pop with speaker-colored active-word backgrounds. The authorized
+API-free local 1:04–1:45 check verifies the opening/reply change through real worker
+transport; 150 no-key tests and three generated workflow proofs pass. Normal
+backend/worker reloaded with source/edits/assets/outputs preserved. No paid-provider
+call, configuration edit or Git mutation; broader-corpus/device/hosted acceptance
+remains separate. CL-244 supersedes CL-240's insufficient two-label-only evidence.
+
+## Moments columns and results — 2026-11-06
+
+[CL-242](CL-242-moments-column-and-results-layout.md) is complete locally:
+aligned/bounded desktop source and moments columns, compact loading and results,
+removed video metadata and independent right-side scrolling. Forty-eight
+fake/no-key cases, types/lint and generated laptop/short-laptop/tablet/phone
+checks pass, including twelve long-title results and retained process limits.
+Owner work/configuration and normal services are preserved; nothing committed.
+Physical-device/AT/hosted acceptance remains manual.
+
+## Stable contextual feedback — 2026-11-06
+
+[CL-241](CL-241-stable-contextual-feedback-layout.md) is complete locally:
+manual duration/errors share a stable row, shared field feedback cannot steal
+control width, and footer-only failures anchor outside action sizing. The audit
+also covers Text/caption/typography, tabs, rename, Hook feedback and demo bounds.
+Thirty-eight fake/no-key tests, types/lint and generated desktop/tablet/phone
+geometry checks pass, including actual fake-HTTP export failure and unchanged
+preview bounds. Owner clips/configuration and running services are preserved;
+nothing staged or committed. Physical-device/AT/hosted acceptance remains manual.
+
+## Manual Hook titles and speaker captions — 2026-11-06
+
+[CL-239](CL-239-manual-hook-ai-titles.md) and
+[CL-240](CL-240-speaker-caption-attribution-and-colors.md) are complete locally:
+automatic Hook-matched title/emphasis, preserved caption labels/Hook copies and
+distinct speaker text colors. The separately authorized API-free public-sample
+diagnostic reproduced a two-voice diarization merge and selected a corrected
+automatic clustering threshold. The 104-case fake/no-key gate, generated browser
+and current-source native workflow checks pass; normal backend/worker reloaded.
+Owner clips/configuration remain preserved, nothing staged/committed. Fresh real
+title/speaker quality and broader devices/corpus remain owner acceptance.
+
+## App-wide contextual feedback — 2026-11-06
+
+[CL-238](CL-238-app-wide-contextual-feedback.md) extends CL-237 across the whole
+app. Implemented locally: shared inline feedback, explicit input/action owners,
+tab/clip/occurrence binding, audio audition/upload feedback and inline demo limits.
+The audit includes retained media/dialog/recovery placements. Thirty-nine focused
+cases, types/lint and generated desktop/tablet/phone checks pass; owner state,
+validation and provider gates remain intact. Device/AT and live AI acceptance
+remain separate; nothing staged or committed.
+
+## Contextual error placement — 2026-11-06
+
+[CL-237](CL-237-contextual-editor-errors.md) records the permanent rule that
+errors belong beside their field, section or action, never above the editor.
+Implemented locally: brief title-field errors, accessible tab indications,
+contextual section discovery and removal of the editor's top banners. Twenty-two
+focused cases, frontend types/lint and generated desktop/phone checks pass;
+validation, caret and owner drafts are preserved. Personal/device/AT acceptance
+remains manual; nothing staged or committed.
+
+## Title textarea insertion position — 2026-11-06
+
+[CL-236](CL-236-textarea-caret-stability.md) fixes the cursor jump in Text →
+Content after preview editing: textarea focus now explicitly ends preview
+editing without losing range styling. The generated native-keyboard reproduction
+and desktop/phone typing, replacement, deletion, undo/redo and Hook/body checks
+pass; 16 existing range/render cases and frontend types/lint pass. Owner data is
+preserved, nothing committed; physical IME/touch/accessibility acceptance is manual.
+
+## Intake thumbnail letterboxing — 2026-11-06
+
+[CL-235](CL-235-intake-thumbnail-letterboxing.md) records the owner's request
+to remove black bands from the small Saved video thumbnail. Complete locally:
+16:9 cover plus conservative memory-only cropping of embedded black bands for
+saved frames/JPEGs, preserving originals, sampling and actions. Ten no-key cases,
+frontend types/lint and generated Codex-browser desktop/tablet/phone checks pass.
+Owner-media/device crop preference remains manual; normal app and prior work
+preserved, nothing staged or committed.
+
+## Repeated fresh clip failure — 2026-11-06
+
+[CL-234](CL-234-fresh-clip-processing-failure.md) confirms failure at Codex
+planning. Durable logging captured the one expressly authorized retry:
+`invalid_json_schema` / missing required keys in new title styling. The Codex
+wire adapter is corrected with optional/null round trips; 66 schema/planning
+cases plus 67 diagnostic cases and scoped checks pass. Failed work/source and
+logs are preserved; no second real retry, config change or Git mutation.
+Fresh live success/title quality remains owner acceptance.
+
+## Shared editor tabs and compact naming — 2026-11-06
+
+[CL-233](CL-233-shared-editor-tabs-and-rename-dialog.md) is complete locally:
+shared rounded single-row editor navigation, no dedicated clip-name row, and
+name/pencil headers on every clip card opening a full-name rename dialog.
+Desktop/tablet/phone and short-landscape checks, the ten-size responsive proof,
+12 focused cases and scoped types/lint/format pass with generated/no-key media.
+Zero AI/render calls; owner clips and previous work preserved. Normal app remains
+healthy. Owner visual/physical-device/assistive-technology acceptance is manual.
+The title-to-pencil spacing follow-up is complete: short names keep the pencil
+nearby while long names still truncate; desktop/tablet/phone checks pass.
+The smaller-card/taller-preview follow-up is complete: tighter thumbnail spacing,
+narrower cards and a desktop main preview extending to the 8px footer gap.
+Generated responsive proof and desktop/tablet/phone/short-window checks pass.
+
+## Editor scrollbar ownership follow-up — 2026-11-06
+
+[CL-230](CL-230-laptop-focus-split-layout.md) now uses separate left/right scroll
+areas and ordinary scrolling tabs. [CL-232](CL-232-editor-scroll-ownership.md)
+is complete locally: every main desktop editor section scrolls within its active
+pane, with no competing outer settings/page scrollbar and a visible footer.
+Generated laptop/short-window/tablet/phone checks, 24 focused cases and scoped
+types/lint/format pass without API keys. Owner visual/device acceptance remains
+manual; normal app/owner data preserved, nothing staged or committed.
+
+## Title word styling implementation — 2026-11-06
+
+[CL-226](CL-226-hook-title-inline-typography.md) is complete locally: direct
+preview/Content selection, scoped color/font typography, mixed states, four
+treatments and persisted canonical spans. Both AI planning paths can author
+exact-phrase emphasis without another inference. Generated browser/edit HTTP,
+fresh preparation/current-source native proof and focused types/tests pass;
+normal renderer reloaded. Real AI taste, touch/IME/device acceptance remain manual.
+
+## Shared scrollbar consistency — 2026-11-06
+
+[CL-231](CL-231-shared-scrollbar-consistency.md) is complete locally: removed
+three local width overrides so visible scrollbars inherit the shared global
+treatment. Generated Codex-browser laptop/phone checks verify actual 4px gutters,
+rounded thumbs, no arrows and keyboard/wheel access without keys/provider calls.
+Scoped format/review pass; normal app and owner media remain intact. Owner
+device/visual and forced-color acceptance remain manual.
+
+## Laptop Focus split layout — 2026-11-06
+
+[CL-230](CL-230-laptop-focus-split-layout.md) is complete locally as the latest
+visual trial: larger preview above the camera list on the left, with normal
+tabs/controls/local actions on the right across Camera, People, Zoom and Motion.
+The whole left column and right inspector scroll independently, with no
+competing outer scrollbar or sticky tabs. Apply/Discard and Track/Cancel retain the
+persistent footer. Stacked narrow fallbacks and validation-banner sizing remain.
+Generated Codex-browser laptop/phone/wheel/keyboard checks, 24 focused cases,
+frontend/test types and scoped lint/format pass without keys/provider calls.
+Normal app and owner clip preserved. Owner design/device acceptance pending;
+no staging/commits.
+
+## Circular clip rename control — 2026-11-06
+
+[CL-229](CL-229-circular-clip-rename-button.md) is complete locally: the pencil
+beside the title uses the shared circular IconButton. Desktop/320px geometry,
+alignment, keyboard/Cancel/Escape and disabled states pass in the generated
+Codex-browser editor; scoped format/lint and review pass without API keys.
+Normal app and owner data preserved; visual acceptance remains owner-only.
+
+## Timed filters from camera positions — 2026-11-06
+
+[CL-228](CL-228-camera-seeded-timed-filters.md) is complete locally: one compact
+camera-seeded Hook/main filter timeline, editable Start/End with inline Capture,
+bounded independent ranges and legacy fallback. 55 focused cases, four real
+HTTP/native exports across 24/29.97/30/60fps, Codex-browser desktop/phone checks,
+types/build and scoped lint/format pass with generated/fake/no-key data. Backend/
+worker reloaded; canonical source/base/edit/assets/output hashes match and the
+frontend is preserved. Owner visual/device acceptance remains manual. Preserve
+the separate CL-225/226/227 work; no staging/commits.
+
+## Readable AI picture size — 2026-11-06
+
+[CL-227](CL-227-readable-ai-picture-size.md) is complete locally: fresh AI
+pictures retain the standard large footprint instead of shrinking into gaps.
+68 units, real HTTP/native export, Codex-browser geometry, types and scoped
+lint/format pass with generated/fake/no-key data. Saved/manual sizing remains
+authoritative; backend/worker reloaded and app reachable. Fresh owner acceptance
+and exact full-state identity remain unverified as recorded in the packet.
+Preserve the separate pending CL-225/226 work; no staging/commits.
+
+## Hook title relevance and word styling — 2026-11-06
+
+[CL-226](CL-226-hook-title-inline-typography.md) documents the owner's feedback,
+primary-source research and recommended UX: title with the accepted Hook,
+select words directly in its box, style them through Text, more title treatments
+and bounded AI emphasis output. The earlier planning hold was lifted by the
+owner's implementation request; implementation evidence is recorded above.
+The standing always-ticket feedback rule is
+recorded in AGENTS.md. Preserve the separate CL-225 work and current owner clip.
+
+## Compact caption list — 2026-11-06
+
+[CL-225](CL-225-bounded-caption-list.md) is complete locally: a compact,
+independently scrollable caption timeline keeps the editing controls below
+discoverable, retaining all rows and the new row design. Generated Codex-browser
+checks pass at desktop/390/320, including later selection, keyboard, short-list
+shrinkage and footer/overflow; scoped format/lint and whitespace pass. Normal app
+and owner state are preserved. No API keys, regeneration or real processing.
+
 ## Unified editor usability — 2026-11-05
 
 [CL-224](CL-224-unified-editor-timeline-and-motion-layout.md) is complete locally:

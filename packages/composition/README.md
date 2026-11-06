@@ -1,5 +1,12 @@
 # Fixed clip composition
 
+Local Text layers with canonical spans share `OwnerStyledTextLayer` between
+scaled direct editing, preview and native overlays (CL-226). Allowlisted fonts,
+colors, size/weight, outline and highlight use bounded fitting and the same
+plain-text wrapping. Span-free saved layers retain their prior renderer. No
+HTML, CSS, remote fonts or assets are interpreted. Generated fake/no-key native
+frames verify accent/panel paint; physical-device/font acceptance stays manual.
+
 Browser-safe shared React/Remotion layout for strict manifests v2/v3: one frozen
 range, fixed captions, bounded contextual overlays and deterministic contain/crop.
 No Node, environment, provider, renderer SDK or application imports.

@@ -1,5 +1,19 @@
 # Local Codex provider — CL-135
 
+## Caption speaker preparation — CL-240, 2026-11-06
+
+The selected-clip diarizer keeps automatic cluster counts (`num-clusters=-1`)
+with distance threshold 0.4. The authorized separate-copy public diagnostic
+found one merged speaker at 0.5/0.45, two at 0.4 and three at 0.35; two short
+isolated-turn controls each retained one. This is bounded sample evidence, not
+a general accuracy claim. Models, two CPU threads and neutral overlap handling
+stay unchanged; no forced count, inference retry or saved-clip migration.
+Later caption creation reuses canonical labeled words, or performs speaker-only
+enrichment of existing unlabeled words. IDs/text/clocks are checked unchanged.
+Hook caption refresh preserves its independently authored title and settings.
+Fake/no-key transport/native checks verify mechanics separately from this
+API-free local model diagnostic and broader owner quality acceptance.
+
 ## Complete, non-overlapping Find all — CL-211, 2026-11-04
 
 For new local Find all analyses, deterministic speech-boundary completion and
@@ -271,11 +285,23 @@ the original multilingual/runtime validation. No prompt/quality gate, automatic
 retry or provider fallback is added. An isolated installed-CLI fake-provider
 proof must reject the old schema and accept the adapted schema with images.
 
-Latest owner parity revision CL-150 replaces the original unassigned-speaker
-limitation below with pinned local CPU Sherpa-ONNX v2.0.1, pyannote segmentation
-3.0 and NeMo TitaNet-small speaker embeddings. Only anonymous within-source turns
-are retained; voice embeddings stay in the native process and are never saved
-or sent. Align word overlap conservatively, keeping overlap/unknown neutral.
+CL-244 supersedes CL-150's whole-segmentation-window speaker pooling and CL-240's
+threshold-only correction. The owned Node child uses pinned Sherpa-ONNX 2.0.1 and
+English WeSpeaker VoxCeleb ResNet34 embeddings on 1.5-second windows, stepped by
+0.75 seconds. Fixed average-link cosine distance 0.35 discovers the count; at
+least two windows support a speaker, apart from a one-window input. Isolated
+transition/noise windows remain neutral. Overlapping centers divide clocks once;
+a measured 80ms quiet gap may refine a contiguous speaker boundary within half a
+step, only with a tenfold energy reduction. Gaps are never bridged. Work follows
+the existing clip duration bound, with at most sixteen supported speakers.
+The same task handles new selected clips and caption enrichment. Codex discovery,
+including manual-cut transcription, defers voices; even older reused words get
+new selected-clip speaker work without changing retained clip/base/edits. Normal
+ASR remains Parakeet. Python and experimental model/window variants are not
+application dependencies or fallbacks. Only anonymous within-source turns are
+retained; embeddings stay in the owned child and are never saved or sent.
+Align word overlap conservatively, keeping overlap/unknown neutral. The separate
+authorized diagnostic used private temporary data and retained aggregate evidence.
 Codex receives the timed labels and up to sixty JPEGs. CL-218 now uses four
 two-by-two temporal panels (0/0.5/1/1.5 seconds), retaining old triptych decoding.
 CL-152 retains the existing per-duration
