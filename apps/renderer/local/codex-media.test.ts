@@ -149,6 +149,13 @@ it.each(["asr-only", "speakers-only"] as const)(
         confidence: null,
       },
     ];
+    if (mode === "speakers-only")
+      words.push({
+        ...words[0]!,
+        id: "w_000002",
+        startMs: 1100,
+        endMs: 1900,
+      });
     const inspect = vi.spyOn(media, "inspectOwnerSource").mockResolvedValue({
       fingerprint: "a".repeat(64),
       bytes: 100,
@@ -181,7 +188,11 @@ it.each(["asr-only", "speakers-only"] as const)(
       },
     );
     const runSpeakers = vi.fn<typeof native.runOwnedProcess>(
-      async () => "0.000 -- 60.000 speaker_00\n",
+      async (_exe, args) => {
+        expect(args[0]).toBe("synthetic-speaker-script");
+        expect(args[1]).toBe("synthetic-embedding");
+        return "0.000 -- 1.000 speaker_00\n1.000 -- 60.000 speaker_01\n";
+      },
     );
     try {
       const receipt = await prepareLocalCodexInput(
@@ -194,7 +205,7 @@ it.each(["asr-only", "speakers-only"] as const)(
             directory: root,
             speakers: {
               executable: "synthetic-speakers",
-              segmentation: "synthetic-segmentation",
+              script: "synthetic-speaker-script",
               embedding: "synthetic-embedding",
               directory: root,
             },
@@ -228,9 +239,9 @@ it.each(["asr-only", "speakers-only"] as const)(
         ),
       );
       expect(artifact.words).toEqual(
-        words.map((word) => ({
+        words.map((word, index) => ({
           ...word,
-          speakerId: mode === "speakers-only" ? "spk_0" : null,
+          speakerId: mode === "speakers-only" ? `spk_${index}` : null,
         })),
       );
       expect(receipt.progress!.map((step) => step.id)).toEqual(
@@ -321,7 +332,7 @@ it.each(["cut", "window"] as const)(
             directory: root,
             speakers: {
               executable: "synthetic-speakers",
-              segmentation: "synthetic-private-segmentation",
+              script: "synthetic-private-speaker-script",
               embedding: "synthetic-private-embedding",
               directory: root,
             },

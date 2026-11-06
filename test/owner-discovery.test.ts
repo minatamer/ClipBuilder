@@ -153,7 +153,7 @@ it("admits prepared speech metadata without exposing it and rejects malformed sp
     directory: join(temporary, "synthetic-speech-tools"),
     speakers: {
       executable: join(temporary, "synthetic-speakers.exe"),
-      segmentation: join(temporary, "segmentation.onnx"),
+      script: join(temporary, "speaker-windows.mjs"),
       embedding: join(temporary, "embedding.onnx"),
       directory: join(temporary, "synthetic-speakers"),
     },

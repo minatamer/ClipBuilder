@@ -215,7 +215,7 @@ it("renders speaker turns, default Word pop highlights and manual colors into a 
     );
     expect(defaultResult.frames).toBe(90);
     for (const [time, red, green, blue] of [
-      [0.5, 255, 184, 108], // Hook repeats the second speaker's orange highlight.
+      [0.5, 255, 184, 108], // Hook repeats the second speaker's orange word background.
       [1.5, 116, 185, 255],
       [2.5, 255, 184, 108],
     ] as const) {

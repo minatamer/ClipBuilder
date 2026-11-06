@@ -40,6 +40,7 @@ await writeFile(
 for (const [entry, name] of [
   ["apps/backend/local/agent-cli.ts", "agent"],
   ["apps/renderer/local/entry.ts", "worker"],
+  ["apps/renderer/local/window-speaker-cli.ts", "speaker-windows"],
 ]) {
   await build({
     absWorkingDir: process.cwd(),

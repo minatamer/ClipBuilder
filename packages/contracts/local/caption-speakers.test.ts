@@ -144,7 +144,7 @@ it("honors whole-caption correction and all color roles without changing IDs/tim
   ).toBe(16);
 });
 
-it("defaults a single known speaker to highlight-only coloring and retains explicit disabled/color edits", () => {
+it("defaults known speakers to Word pop backgrounds while preserving foreground and disabled edits", () => {
   const labeled = words.map((word) => ({ ...word, speakerId: "spk_1" }));
   const config = resolveCaptionSpeakers([caption], labeled);
   expect(config.enabled).toBe(true);
@@ -204,3 +204,16 @@ it("uses a known majority for legacy mixed edits, including when the first word 
   }
   expect(caption).toEqual(before);
 });
+
+it.each(Object.entries(OWNER_CAPTION_PRESETS))(
+  "preserves the %s foreground with distinct speaker word backgrounds",
+  (_name, style) => {
+    const first = defaultSpeakerColor("spk_0", style),
+      second = defaultSpeakerColor("spk_1", style);
+    expect(first.color).toBe(style.color);
+    expect(second.color).toBe(style.color);
+    expect(first.highlight).not.toBe(second.highlight);
+    expect(first.color).not.toBe(first.highlight);
+    expect(second.color).not.toBe(second.highlight);
+  },
+);

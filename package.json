@@ -41,6 +41,7 @@
     "eslint-config-next": "16.4.1",
     "globals": "17.12.0",
     "prettier": "3.9.9",
+    "sherpa-onnx-node": "2.0.1",
     "typescript": "6.0.3",
     "vitest": "5.0.2"
   }

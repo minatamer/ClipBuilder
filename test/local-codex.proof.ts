@@ -104,9 +104,11 @@ it("runs the local Codex workflow through real controls/native worker with injec
     },
   );
   const bundle = await prepareLocalOverlayFixture(directory);
-  const diarize = vi.fn(
-    async () => "2.000 -- 5.000 speaker_00\n5.000 -- 10.000 speaker_01\n",
-  );
+  const diarize = vi.fn(async (_executable: string, args: string[]) => {
+    expect(args[0]).toBe("synthetic-speaker-script");
+    expect(args[1]).toBe("synthetic-embedding");
+    return "2.000 -- 5.000 speaker_00\n5.000 -- 10.000 speaker_01\n";
+  });
   const worker = createOwnerWorker({
     root,
     token: "synthetic-codex-worker",
@@ -120,7 +122,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
       directory,
       speakers: {
         executable: "synthetic-speakers",
-        segmentation: "synthetic-segmentation",
+        script: "synthetic-speaker-script",
         embedding: "synthetic-embedding",
         directory,
       },
@@ -457,7 +459,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
       }
       if(action==='export'){button('Export clip').click();await wait(()=>named('Download clip'),'download');return true;}
       if(action==='local-captions'){
-        await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'restore');const clip=[...document.querySelectorAll('[role=tab]')].find(n=>n.textContent.trim().startsWith('Clip 2'));if(!clip)throw new Error('clip_2');clip.click();
+        await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'restore');const clip=document.querySelector('[role=tab][aria-label="Edit Clip 2"]');if(!clip)throw new Error('clip_2');clip.click();
         await wait(()=>button('Generate captions')&&!button('Generate captions').disabled,'caption_ready');button('Generate captions').click();await wait(()=>document.body.textContent.includes('This clip’s audio stays local.'),'local_confirmation');
         if(document.body.textContent.includes('uses Gemini credits'))throw new Error('paid_caption_copy');
         const footer=[...document.querySelectorAll('footer button')].find(n=>n.textContent.trim()==='Generate captions');if(!footer)throw new Error('caption_footer');footer.click();await wait(()=>!document.body.textContent.includes('No captions yet')&&!document.body.textContent.includes('Generating captions'),'captions_done');return true;
@@ -466,7 +468,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
         await wait(()=>document.querySelector('.editor-preview video'),'fits_ready');const footer=document.querySelector('#sample-main > footer').getBoundingClientRect();return document.documentElement.scrollWidth<=innerWidth&&footer.top>=0&&footer.bottom<=innerHeight+1;
       }
       if(action==='first-content'){
-        const clip=[...document.querySelectorAll('[role=tab]')].find(n=>n.textContent.trim().startsWith('Clip 1'));if(!clip)throw new Error('clip_1');clip.click();
+        const clip=document.querySelector('[role=tab][aria-label="Edit Clip 1"]');if(!clip)throw new Error('clip_1');clip.click();
         await wait(()=>[...document.querySelectorAll('.editor-preview video')].some(video=>video.src.includes(globalThis.firstClipId))&&button('Text')&&!button('Text').disabled,'content_ready');
         await wait(()=>{const node=button('Text');if(!node||node.disabled)return false;node.click();return true;},'text_control');await wait(()=>document.querySelector('[data-timeline-key*=":text:"]')&&document.querySelector('[data-timeline-key*=":text:"]').getClientRects().length,'text_control');document.querySelector('[data-timeline-key*=":text:"]').click();
         await wait(()=>document.querySelector('.editor-preview [data-text-layer]'),'planned_text');
@@ -487,7 +489,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
         items.find(item=>item.getAttribute('aria-selected')==='true').focus();
         await key('Home','Captions');await key('ArrowRight','Text');await key('ArrowLeft','Captions');await key('End','Hook');await key('ArrowRight','Captions');await key('ArrowLeft','Hook');
         items[3].click();await wait(()=>items[3].getAttribute('aria-selected')==='true','section_media');tabs.scrollIntoView({block:'center'});await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-        return items.every(item=>{const box=item.getBoundingClientRect(),icon=item.querySelector('svg').getBoundingClientRect();return box.height>=44&&box.left>=0&&box.right<=innerWidth&&icon.left>=box.left&&icon.right<=box.right&&icon.top>=box.top&&icon.bottom<=box.bottom;});
+        const strip=tabs.getBoundingClientRect();return strip.left>=0&&strip.right<=innerWidth&&items.every(item=>{const box=item.getBoundingClientRect(),icon=item.querySelector('svg').getBoundingClientRect();return box.height>=44&&icon.left>=box.left&&icon.right<=box.right&&icon.top>=box.top&&icon.bottom<=box.bottom;});
       }
       return false;
     };`;

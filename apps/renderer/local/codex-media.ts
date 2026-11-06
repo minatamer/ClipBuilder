@@ -292,16 +292,7 @@ export async function prepareLocalCodexInput(
               () =>
                 (options.runSpeakers ?? runOwnedProcess)(
                   speakers.executable,
-                  [
-                    `--segmentation.pyannote-model=${speakers.segmentation}`,
-                    `--embedding.model=${speakers.embedding}`,
-                    "--segmentation.provider=cpu",
-                    "--embedding.provider=cpu",
-                    "--segmentation.num-threads=2",
-                    "--embedding.num-threads=2",
-                    "--clustering.cluster-threshold=0.5",
-                    wav,
-                  ],
+                  [speakers.script, speakers.embedding, wav],
                   taskSignal,
                   {
                     cwd: scratch,

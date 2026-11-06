@@ -239,7 +239,7 @@ async function readRuntime(ctx, runtime) {
     if (state.speech.speakers !== undefined) {
       shape(state.speech.speakers, [
         "executable",
-        "segmentation",
+        "script",
         "embedding",
         "directory",
       ]);

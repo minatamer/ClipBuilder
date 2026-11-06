@@ -33,7 +33,7 @@ async function main() {
           speakers: z
             .object({
               executable: z.string().min(1),
-              segmentation: z.string().min(1),
+              script: z.string().min(1),
               embedding: z.string().min(1),
               directory: z.string().min(1),
             })
