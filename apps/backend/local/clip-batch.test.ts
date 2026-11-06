@@ -949,72 +949,80 @@ it("caps only fresh planned pictures and gaps, then preserves a manually extende
   if (job.operation !== "clip") throw new Error("expected_export");
   expect(job.overlay.visuals[0]!.endFrame).toBe(240);
 });
-it("places new planned pictures around observed faces and preserves manual boxes on restore/export", async () => {
-  Object.assign(ports, {
-    focus: ({
-      moment,
-    }: Parameters<NonNullable<OwnerClipPorts["focus"]>>[0]) => {
-      const focus = defaultOwnerFocus(
-        workspace.source,
-        moment.cut.endFrame - moment.cut.startFrame,
-      );
-      focus.people = [
-        {
-          id: "person_1",
-          observations: [
-            {
-              startFrame: 0,
-              endFrame: focus.frames,
-              box: { x: 0.08, y: 0.12, width: 0.3, height: 0.48 },
-            },
-          ],
-        },
-      ];
-      return focus;
-    },
-  });
-  await batch.submit(
-    { ...request(), momentIds: [analysis.manual[1]!.id] },
-    analysis,
-  );
-  await batch.drain();
-  const ready = batch.snapshot().clips[0]!,
-    visual = ready.base!.overlay.visuals[0]!;
-  expect(visual.box).toEqual(
-    placeOwnerPlannedVisual(ready.base!.overlay.focus, visual),
-  );
-  expect(visual.box).not.toEqual(placeOwnerPlannedVisual(undefined, visual));
-  const manualBox = { x: 0.1, y: 0.15, width: 0.4, height: 0.2 };
-  const edited = await batch.edit(ready.id, {
-    operationId: randomUUID(),
-    expectedRevision: ready.revision,
-    baseHash: ready.baseHash,
-    operations: [
-      {
-        kind: "visual-upsert",
-        cue: { ...ready.edit!.visuals[0]!, box: manualBox },
+it.each(["clear", "crowded"])(
+  "keeps planned pictures large in a %s portrait and preserves manual boxes on restore/export",
+  async (layout) => {
+    Object.assign(ports, {
+      focus: ({
+        moment,
+      }: Parameters<NonNullable<OwnerClipPorts["focus"]>>[0]) => {
+        const focus = defaultOwnerFocus(
+          workspace.source,
+          moment.cut.endFrame - moment.cut.startFrame,
+        );
+        focus.people = [
+          {
+            id: "person_1",
+            observations: [
+              {
+                startFrame: 0,
+                endFrame: focus.frames,
+                box:
+                  layout === "crowded"
+                    ? { x: 0, y: 0.225, width: 1, height: 0.55 }
+                    : { x: 0.08, y: 0.12, width: 0.3, height: 0.48 },
+              },
+            ],
+          },
+        ];
+        return focus;
       },
-    ],
-  });
-  await batch.close();
-  batch = new OwnerClipBatch(workspace, files, ports);
-  batch.restore(edited.clips);
-  expect(batch.snapshot().clips[0]!.edit!.visuals[0]!.box).toEqual(manualBox);
-  await batch.render(ready.id, {
-    operationId: randomUUID(),
-    expectedRevision: edited.clips[0]!.revision,
-  });
-  await batch.drain();
-  const exported = batch.snapshot().clips[0]!;
-  expect(exported.state).toBe("ready");
-  expect(exported.edit!.visuals[0]!.box).toEqual(manualBox);
-  expect(ports.plan).toHaveBeenCalledTimes(1);
-  expect(ports.image).toHaveBeenCalledTimes(1);
-  const final = ports.render.mock.calls.at(-1)![0];
-  expect(final.operation).toBe("clip");
-  if (final.operation === "clip")
-    expect(final.overlay.visuals[0]!.box).toEqual(manualBox);
-});
+    });
+    await batch.submit(
+      { ...request(), momentIds: [analysis.manual[1]!.id] },
+      analysis,
+    );
+    await batch.drain();
+    const ready = batch.snapshot().clips[0]!,
+      visual = ready.base!.overlay.visuals[0]!;
+    expect(visual.box).toEqual(
+      placeOwnerPlannedVisual(ready.base!.overlay.focus, visual),
+    );
+    expect(visual.box).not.toEqual(placeOwnerPlannedVisual(undefined, visual));
+    expect(visual.box.width).toBeCloseTo(920 / 1080);
+    expect(visual.box.height).toBeCloseTo(520 / 1920);
+    const manualBox = { x: 0.1, y: 0.15, width: 0.4, height: 0.2 };
+    const edited = await batch.edit(ready.id, {
+      operationId: randomUUID(),
+      expectedRevision: ready.revision,
+      baseHash: ready.baseHash,
+      operations: [
+        {
+          kind: "visual-upsert",
+          cue: { ...ready.edit!.visuals[0]!, box: manualBox },
+        },
+      ],
+    });
+    await batch.close();
+    batch = new OwnerClipBatch(workspace, files, ports);
+    batch.restore(edited.clips);
+    expect(batch.snapshot().clips[0]!.edit!.visuals[0]!.box).toEqual(manualBox);
+    await batch.render(ready.id, {
+      operationId: randomUUID(),
+      expectedRevision: edited.clips[0]!.revision,
+    });
+    await batch.drain();
+    const exported = batch.snapshot().clips[0]!;
+    expect(exported.state).toBe("ready");
+    expect(exported.edit!.visuals[0]!.box).toEqual(manualBox);
+    expect(ports.plan).toHaveBeenCalledTimes(1);
+    expect(ports.image).toHaveBeenCalledTimes(1);
+    const final = ports.render.mock.calls.at(-1)![0];
+    expect(final.operation).toBe("clip");
+    if (final.operation === "clip")
+      expect(final.overlay.visuals[0]!.box).toEqual(manualBox);
+  },
+);
 it("adds one editable recorded Pop per planned visual without additional planning and follows moved/deleted visual edits", async () => {
   await batch.submit(
     { ...request(), momentIds: [analysis.manual[0]!.id] },

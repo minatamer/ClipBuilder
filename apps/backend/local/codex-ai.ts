@@ -58,6 +58,8 @@ import {
 } from "./planned-visuals.ts";
 import { normalizeCandidateSelection } from "../src/analysis/analysis.provider-shape.ts";
 import { decodePlannedText, PLANNED_TEXT_POLICY } from "./planned-text.ts";
+import { hookTitlePlanner } from "./hook-title-planner.ts";
+import { retainSpeakerLabels } from "./speaker-word-labels.ts";
 import { renderCodexIllustration } from "./codex-visual.ts";
 import { normalizePicture } from "../src/assembly/picture-raster.ts";
 import { contextualPictureAssetSchema } from "@clipbuilder/contracts";
@@ -201,7 +203,32 @@ export function createLocalCodexAi(options: {
           clip.base.fingerprint !== workspace.source.fingerprint
         )
           throw new Error("stale_edit_source");
-        const value = await input(workspace, "speech", signal, clip.base.cut);
+        // Fresh preparation already owns the canonical words and anonymous voices.
+        // Caption creation must not re-transcribe and discard those IDs/clocks/labels.
+        if (clip.base.words.length) {
+          if (clip.base.words.some((word) => word.speakerId !== null))
+            return structuredClone(clip.base.words);
+          const value = await input(
+            workspace,
+            "speakers",
+            signal,
+            clip.base.cut,
+            undefined,
+            undefined,
+            { words: clip.base.words },
+          );
+          if (value.kind !== "speakers") throw Error("codex_input_invalid");
+          return retainSpeakerLabels(value.words, clip.base.words);
+        }
+        const value = await input(
+          workspace,
+          "speech",
+          signal,
+          clip.base.cut,
+          undefined,
+          undefined,
+          { diarize: true },
+        );
         if (value.kind !== "speech") throw new Error("codex_input_invalid");
         return retainOwnerTranscript(
           value.words,
@@ -266,6 +293,7 @@ export function createLocalCodexAi(options: {
             cut,
             undefined,
             current,
+            { diarize: false },
           );
           if (value.kind !== "speech") throw new Error("codex_input_invalid");
           const offset = Math.round((cut.startFrame * 1000) / OWNER_FPS);
@@ -351,6 +379,11 @@ export function createLocalCodexAi(options: {
       },
     },
     clipPreparation: {
+      hookTitle: hookTitlePlanner((prompt, schema, signal) =>
+        diagnostics.run("hook_title", () =>
+          run(signal, (current) => options.infer({ prompt, schema }, current)),
+        ),
+      ),
       planVisuals: visualDiscoveryPlanner(
         (prompt, schema, signal) =>
           diagnostics.run("codex_planning", () =>
@@ -380,20 +413,7 @@ export function createLocalCodexAi(options: {
             { words: moment.cues },
           );
           if (value.kind !== "speakers") throw new Error("codex_input_invalid");
-          const labeled = ownerWordsSchema.parse(value.words);
-          // The worker may assign labels only; never silently replace admitted
-          // words/IDs/clocks with another transcription.
-          if (
-            labeled.length !== moment.cues.length ||
-            labeled.some((word, index) => {
-              return (
-                JSON.stringify({ ...word, speakerId: null }) !==
-                JSON.stringify({ ...moment.cues[index]!, speakerId: null })
-              );
-            })
-          )
-            throw new Error("codex_input_invalid");
-          return labeled;
+          return retainSpeakerLabels(value.words, moment.cues);
         });
       },
       async plan(current, signal) {

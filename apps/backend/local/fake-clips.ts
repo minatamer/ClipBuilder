@@ -3,12 +3,33 @@ import { createHash } from "node:crypto";
 import type { OwnerClipPorts } from "./clip-batch.ts";
 import { compileAutomaticOwnerFocus } from "../../../packages/contracts/local/focus.ts";
 import { OWNER_AI_HOOK_POLICY } from "../../../packages/contracts/local/hook-sounds.ts";
+import { hookTitlePlanner } from "./hook-title-planner.ts";
 
 export const fakeOwnerClipPreparation: Pick<
   OwnerClipPorts,
-  "mode" | "plan" | "planVisuals" | "image" | "focus" | "hookSuggestion"
+  | "mode"
+  | "plan"
+  | "planVisuals"
+  | "image"
+  | "focus"
+  | "hookSuggestion"
+  | "hookTitle"
 > = {
   mode: "synthetic-ai",
+  hookTitle: hookTitlePlanner(async () => ({
+    texts: [
+      {
+        title: "A different way to see this moment",
+        wordIds: [],
+        startFrame: 0,
+        endFrame: 90,
+        hookStyle: "curiosity-gap",
+        emphasis: [
+          { text: "different way", occurrence: 0, style: { color: "#FF3B30" } },
+        ],
+      },
+    ],
+  })),
   async planVisuals(request, signal) {
     return fakeOwnerClipPreparation.plan(request, signal);
   },

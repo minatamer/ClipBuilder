@@ -371,6 +371,7 @@ it("sends only the selected speech cut and returns source-relative words without
     expect(media.mock.calls[0]![0]).toMatchObject({
       kind: "speech",
       cut: { startFrame: 3600, endFrame: 5400 },
+      diarize: false,
     });
     expect(value.map((word) => [word.id, word.startMs, word.endMs])).toEqual(
       words.map((word) => [
@@ -863,6 +864,14 @@ it.each(["audio", "invented", "visual-opening", "aliases"])(
             wordIds: cues.slice(0, 2).map((word) => word.id),
             title: "POV: Coral reefs get a second chance",
             hookStyle: "pov",
+            treatment: "editorial",
+            emphasis: [
+              {
+                text: "reefs",
+                occurrence: 0,
+                style: { color: "#FF3B30", fontWeight: 900 },
+              },
+            ],
           },
           { startFrame: "invalid" },
         ],
@@ -964,6 +973,14 @@ it.each(["audio", "invented", "visual-opening", "aliases"])(
       expect(ai.clipPreparation!.texts!(request)).toMatchObject([
         {
           text: "POV: Coral reefs get a second chance",
+          spans: [
+            {
+              start: 11,
+              end: 16,
+              style: { color: "#FF3B30", fontWeight: 900 },
+            },
+          ],
+          style: { font: "Georgia" },
           startFrame: 0,
           endFrame: 93,
         },

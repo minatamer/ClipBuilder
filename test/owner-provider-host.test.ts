@@ -76,6 +76,7 @@ it("reports the composed provider mode without invoking any provider", async () 
     planningAvailable: true,
     captionGeneration: false,
     visualDiscovery: true,
+    hookTitleSuggestions: true,
     capacity: {
       profile: "bounded",
       longSources: false,

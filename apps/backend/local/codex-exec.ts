@@ -11,7 +11,7 @@ import {
 import { join, resolve, dirname, relative, isAbsolute } from "node:path";
 import { LOCAL_CODEX_POLICY } from "../../../packages/contracts/local/codex.ts";
 import { nativeEnvironment } from "./local-mode.ts";
-import { codexOutputSchema } from "./codex-schema.ts";
+import { codexOutputSchema, codexOutputValue } from "./codex-schema.ts";
 import { randomUUID, createHash } from "node:crypto";
 import {
   classifyExecutionFailure,
@@ -686,7 +686,7 @@ export function createLocalCodexInference(options: {
         reject("output_json", "codex_response_invalid", error);
       }
       report("succeeded", { outputBytes: info.size, events: counts });
-      return result;
+      return codexOutputValue(request.schema, result);
     } catch (error) {
       const detail = classifyExecutionFailure(
         error,

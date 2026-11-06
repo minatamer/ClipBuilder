@@ -59,6 +59,7 @@ import {
   plannedVisualSearchBriefs,
 } from "./planned-visuals.ts";
 import { decodePlannedText, PLANNED_TEXT_POLICY } from "./planned-text.ts";
+import { hookTitlePlanner } from "./hook-title-planner.ts";
 import {
   ownerAuthoredTextPlanSchema,
   type OwnerTextLayer,
@@ -140,6 +141,7 @@ export function createOwnerProviderAi(options: Options): {
     | "focus"
     | "hookSuggestion"
     | "texts"
+    | "hookTitle"
   >;
   cleanupWorkspace(id: string, signal: AbortSignal): Promise<void>;
   close(signal: AbortSignal): Promise<void>;
@@ -338,6 +340,11 @@ export function createOwnerProviderAi(options: Options): {
           clip.base.fingerprint !== workspace.source.fingerprint
         )
           throw new Error("stale_edit_source");
+        if (
+          clip.base.words.length &&
+          clip.base.words.some((word) => word.speakerId !== null)
+        )
+          return structuredClone(clip.base.words);
         const durationMs = Math.round(
           (clip.base.overlay.frames * 1000) / OWNER_FPS,
         );
@@ -422,6 +429,16 @@ export function createOwnerProviderAi(options: Options): {
       },
     },
     clipPreparation: {
+      hookTitle: hookTitlePlanner((prompt, schema, signal) =>
+        run("hook_title", signal, async () => {
+          const result = await options.transport.candidates(
+            `${prompt}\nJSON schema: ${JSON.stringify(schema)}`,
+            signal,
+            "Write the selected Hook's opening title and meaningful phrase emphasis. Return JSON only. No tools.",
+          );
+          return decodeSearchJson(result.text ?? "");
+        }),
+      ),
       mode: "provider-ai",
       planVisuals: visualDiscoveryPlanner(async (prompt, schema, signal) => {
         return run("visual_plan", signal, async () => {

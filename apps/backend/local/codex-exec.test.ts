@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { mkdtemp, readdir, rm, writeFile, link } from "node:fs/promises";
+import {
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+  link,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LocalDiagnostics } from "./diagnostics.ts";
@@ -294,6 +301,59 @@ it("uses ChatGPT-only preflight, stdin and isolated no-tool flags without copyin
   expect(env).not.toHaveProperty("CODEX_HOME");
   expect(env.USERPROFILE).toBe("synthetic-profile");
 });
+it("writes a strict CLI schema and restores only optional null placeholders across the result-file boundary", async () => {
+  const schema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      style: {
+        type: "object",
+        properties: { color: { type: "string" }, font: { type: "string" } },
+        required: ["color"],
+        additionalProperties: false,
+      },
+      skipped: { type: "string" },
+      explicitNull: { type: ["string", "null"] },
+    },
+    required: ["style", "explicitNull"],
+  };
+  const original = structuredClone(schema);
+  const execute = vi.fn<CodexProcess>(async (call) => {
+    if (call.statusOnly) return "Logged in using ChatGPT";
+    const wire = JSON.parse(
+      await readFile(
+        call.args[call.args.indexOf("--output-schema") + 1]!,
+        "utf8",
+      ),
+    );
+    expect(wire.required).toEqual(["style", "skipped", "explicitNull"]);
+    expect(wire.properties.style.required).toEqual(["color", "font"]);
+    expect(wire.properties.style.properties.font).toEqual({
+      anyOf: [{ type: "string" }, { type: "null" }],
+    });
+    await writeFile(
+      call.args[call.args.indexOf("--output-last-message") + 1]!,
+      JSON.stringify({
+        style: { color: "#FF3B30", font: null },
+        skipped: null,
+        explicitNull: null,
+      }),
+    );
+    return '{"type":"turn.completed"}';
+  });
+  const infer = createLocalCodexInference({
+    root,
+    executable: "synthetic",
+    process: execute,
+  });
+  await expect(
+    infer({ prompt: "synthetic", schema }, AbortSignal.timeout(2000)),
+  ).resolves.toEqual({ style: { color: "#FF3B30" }, explicitNull: null });
+  expect(execute).toHaveBeenCalledTimes(2);
+  expect(schema).toEqual(original);
+  expect(await readdir(root)).toEqual([]);
+});
+
 it("permits only web search events in explicit search calls and diagnoses a model that never searched", async () => {
   let searches = true;
   const execute = vi.fn<CodexProcess>(async (call) => {

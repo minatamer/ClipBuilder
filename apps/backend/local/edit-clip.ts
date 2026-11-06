@@ -88,6 +88,9 @@ export function applyOwnerEdit(
       case "video-look":
         next.videoLook = operation.look;
         break;
+      case "video-looks":
+        next.videoLooks = operation.looks;
+        break;
       case "caption":
         next.captions = operation.style;
         break;
@@ -114,7 +117,10 @@ export function applyOwnerEdit(
             delete next.focus;
             next.cameraEffects = [];
           }
-        } else delete next.videoLook;
+        } else {
+          delete next.videoLook;
+          next.videoLooks = [];
+        }
         break;
     }
   }

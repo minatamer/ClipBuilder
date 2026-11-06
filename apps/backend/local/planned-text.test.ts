@@ -164,3 +164,46 @@ it("counts long or unspaced wording for reading time without exceeding eight sec
   );
   expect(result[0]).toMatchObject({ startFrame: 0, endFrame: 240 });
 });
+
+it("decodes treatment and bounded phrase emphasis independently of usable copy", () => {
+  const item = {
+    title: "Why buyers wait",
+    hookStyle: "pointed-question",
+    treatment: "editorial",
+    emphasis: [
+      {
+        text: "buyers",
+        occurrence: 0,
+        style: { color: "#FF3B30", fontWeight: 900 },
+      },
+    ],
+    startFrame: 0,
+    endFrame: 90,
+    wordIds: [words[0]!.id],
+  };
+  expect(ownerAuthoredTextPlanSchema.safeParse([item]).success).toBe(true);
+  expect(decodePlannedText({ texts: [item] }, words, 900)[0]).toMatchObject({
+    text: item.title,
+    style: { font: "Georgia" },
+    spans: [
+      { start: 4, end: 10, style: { color: "#FF3B30", fontWeight: 900 } },
+    ],
+  });
+  expect(
+    decodePlannedText(
+      {
+        texts: [
+          {
+            ...item,
+            treatment: "unknown",
+            emphasis: [
+              { text: "buyers", occurrence: 0, style: { color: "invalid" } },
+            ],
+          },
+        ],
+      },
+      words,
+      900,
+    )[0],
+  ).toMatchObject({ text: item.title, style: { preset: "tiktok" } });
+});

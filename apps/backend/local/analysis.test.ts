@@ -234,6 +234,40 @@ it("preserves deferred-speaker provenance through cache/serialized analysis with
   expect(provider.transcribe).toHaveBeenCalledTimes(1);
 });
 
+it("defers new selected-clip speakers even when cached manual words claim older prepared labels", async () => {
+  const current = workspace(480_000);
+  const provider = {
+    ...ports(),
+    transcriptionSpeakersPrepared: false,
+    transcribeCut: vi.fn(),
+  };
+  const cached: OwnerTranscript = {
+    fingerprint: current.source.fingerprint,
+    sourceRevision: 0,
+    mode: provider.mode,
+    words: [],
+    speakersPrepared: true,
+    cut: { startFrame: 0, endFrame: 1800 },
+  };
+  const result = await analyzeOwner(
+    current,
+    { ...input(), ranges: [range(0, 10000)], manualOnly: true },
+    provider,
+    signal(),
+    {
+      transcript: cached,
+      completed() {
+        throw Error("unexpected_transcription");
+      },
+    },
+  );
+  expect(result.calls.transcription).toBe(0);
+  expect(result.transcriptSpeakersPrepared).toBe(false);
+  expect(result.manual[0]!.speakersPrepared).toBe(false);
+  expect(cached.speakersPrepared).toBe(true);
+  expect(provider.transcribeCut).not.toHaveBeenCalled();
+});
+
 it("scopes Codex manual transcription, preserves coverage across serialization and never reuses partial words for AI", async () => {
   const current = workspace(480_000),
     provider = {

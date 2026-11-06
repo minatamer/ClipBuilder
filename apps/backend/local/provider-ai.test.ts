@@ -255,6 +255,14 @@ it.each([false, true])(
               ? {
                   title: "POV: Coral reefs get a second chance",
                   hookStyle: "pov",
+                  treatment: "impact",
+                  emphasis: [
+                    {
+                      text: "reefs",
+                      occurrence: 0,
+                      style: { color: "#FF3B30" },
+                    },
+                  ],
                 }
               : {}),
           },
@@ -276,6 +284,11 @@ it.each([false, true])(
       },
     ]);
     expect(f.transport.generate).toHaveBeenCalledTimes(1);
+    if (authored)
+      expect(f.ports.clipPreparation.texts!(request)[0]).toMatchObject({
+        spans: [{ start: 11, end: 16, style: { color: "#FF3B30" } }],
+        style: { fontWeight: 900 },
+      });
     expect(f.pictures.find).not.toHaveBeenCalled();
     await f.ports.close(f.signal);
   },
@@ -732,7 +745,8 @@ describe("dormant owner provider ports with synthetic transports", () => {
           FOCUS_PLANNING_POLICY,
         );
         expect(f.ports.clipPreparation.focus!(request).shots[0]!.personId).toBe(
-          confidence >= 0.95 ? "person_2" : "person_1",
+          // Unsupported speech holds the neutral crop, never invents the left speaker.
+          confidence >= 0.95 ? "person_2" : null,
         );
         expect(moment.cues.every((word) => word.speakerId === null)).toBe(true);
         expect(f.transport.generate).toHaveBeenCalledTimes(1);
@@ -1420,7 +1434,7 @@ it("transcribes only a selected cut in synthetic mode through the explicit capti
       fingerprint: f.workspace.source.fingerprint,
       processingIdentity: f.moment.processingIdentity,
       cut: f.moment.cut,
-      words: f.moment.cues,
+      words: [],
       overlay: { version: 1, frames: 9000, captions: [], visuals: [] },
     },
     edit: null,
@@ -1445,6 +1459,13 @@ it("transcribes only a selected cut in synthetic mode through the explicit capti
     f.signal,
   );
   expect(result).toHaveLength(4);
+  const reused = await f.ports.captionTranscription(
+    { ...f.workspace, mode: "synthetic-ai" },
+    { ...clip, base: { ...clip.base!, words: result } },
+    f.signal,
+  );
+  expect(reused).toEqual(result);
+  expect(reused).not.toBe(result);
   expect(f.media).toHaveBeenCalledTimes(1);
   expect(f.media.mock.calls[0]![0]).toMatchObject({
     operation: "prepare-owner-audio",
@@ -1470,4 +1491,50 @@ it("transcribes only a selected cut in synthetic mode through the explicit capti
   ).rejects.toThrow("analysis_mode_mismatch");
   expect(f.media).toHaveBeenCalledTimes(1);
   await f.ports.close(f.signal);
+});
+
+it("writes one selected-Hook title through Gemini with emphasis and zero media/upload/transcription calls", async () => {
+  const f = fixture();
+  f.transport.candidates.mockResolvedValue({
+    finished: true,
+    text: JSON.stringify({
+      texts: [
+        {
+          title: "Why reefs need a second chance",
+          startFrame: 0,
+          endFrame: 90,
+          wordIds: [],
+          hookStyle: "pointed-question",
+          emphasis: [
+            {
+              text: "second chance",
+              occurrence: 0,
+              style: { color: "#FF3B30" },
+            },
+          ],
+        },
+      ],
+    }),
+  });
+  try {
+    const title = await f.ports.clipPreparation.hookTitle!(
+      {
+        words: f.moment.cues,
+        frames: 9000,
+        hook: { startFrame: 0, endFrame: 60 },
+      },
+      f.signal,
+    );
+    expect(title?.spans?.[0]?.style.color).toBe("#FF3B30");
+    expect(f.transport.candidates).toHaveBeenCalledTimes(1);
+    expect(f.transport.candidates.mock.calls[0]![0]).toContain(
+      '"selectedHook":{"startFrame":0,"endFrame":60}',
+    );
+    expect(f.transport.upload).toHaveBeenCalledTimes(0);
+    expect(f.transport.transcribe).toHaveBeenCalledTimes(0);
+    expect(f.transport.generate).toHaveBeenCalledTimes(0);
+    expect(f.media).toHaveBeenCalledTimes(0);
+  } finally {
+    await f.ports.close(f.signal);
+  }
 });

@@ -29,6 +29,7 @@ export function ownerAgentClip(clip: OwnerClip) {
     error: clip.error,
     captions: overlay?.captionStyle ?? null,
     ...(overlay?.videoLook ? { videoLook: overlay.videoLook } : {}),
+    ...(overlay?.videoLooks ? { videoLooks: overlay.videoLooks } : {}),
     visuals: overlay?.visuals ?? [],
     overlayHash: overlay ? hash(overlay) : null,
   });
@@ -50,6 +51,7 @@ export function ownerAgentValidation(clip: OwnerClip, edit: OwnerEditDocument) {
     overlayHash: hash(overlay),
     captions: overlay.captionStyle ?? null,
     ...(overlay.videoLook ? { videoLook: overlay.videoLook } : {}),
+    ...(overlay.videoLooks ? { videoLooks: overlay.videoLooks } : {}),
     visuals: overlay.visuals,
   });
 }

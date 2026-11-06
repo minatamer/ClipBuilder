@@ -1,4 +1,11 @@
 import { requireLocalMemory } from "./machine-memory.ts";
+import { copyOwnerHookContent } from "../../../packages/contracts/local/hook-content.ts";
+import {
+  OWNER_HOOK_TITLE_LIMIT,
+  ownerHookTitleRequestSchema,
+  ownerHookTitleResultSchema,
+  type OwnerHookTitleResult,
+} from "../../../packages/contracts/local/hook-title.ts";
 import { ownerCollectionPage } from "../../../packages/contracts/local/collection-pages.ts";
 import { createHash, randomUUID } from "node:crypto";
 import { classifyExecutionFailure } from "../src/diagnostics/execution-failure.ts";
@@ -95,6 +102,7 @@ import {
 
 export { ownerClipPlanSchema } from "../../../packages/contracts/local/clips.ts";
 export type OwnerClipPorts = {
+  hookTitle?: import("./hook-title-planner.ts").HookTitlePlanning;
   readonly mode: OwnerAiMode;
   planVisuals?: OwnerClipPorts["plan"];
   prepareWords?(
@@ -198,6 +206,11 @@ export class OwnerClipBatch {
   private captionProcessing = false;
   private audioProcessing = false;
   private visualProcessing = false;
+  private titleProcessing = false;
+  private readonly titleReceipts = new Map<
+    string,
+    { hash: string; result?: OwnerHookTitleResult }
+  >();
   constructor(
     private readonly workspace: OwnerWorkspace,
     private readonly files: WorkspaceFiles,
@@ -216,6 +229,7 @@ export class OwnerClipBatch {
       Boolean(this.current) ||
       this.captionProcessing ||
       this.visualProcessing ||
+      this.titleProcessing ||
       this.audioProcessing
     );
   }
@@ -383,6 +397,71 @@ export class OwnerClipBatch {
       return this.snapshot();
     });
   }
+  async suggestHookTitle(id: string, value: unknown, signal: AbortSignal) {
+    const request = ownerHookTitleRequestSchema.parse(value);
+    return this.serialize(async () => {
+      const clip = this.clips.get(id);
+      if (
+        this.closing ||
+        !clip?.base ||
+        !["ready", "review-ready", "validated-revision"].includes(clip.state) ||
+        this.active ||
+        !this.ports.hookTitle
+      )
+        throw Error("hook_title_unavailable");
+      if (
+        request.sourceRevision !== this.workspace.revision ||
+        request.expectedRevision !== clip.revision
+      )
+        throw Error("stale_edit_revision");
+      if (request.hook.endFrame > clip.base.overlay.frames)
+        throw Error("invalid_hook_window");
+      const key = `${id}:${request.operationId}`,
+        hash = digest(request);
+      const prior = this.titleReceipts.get(key);
+      if (prior) {
+        if (prior.hash !== hash) throw Error("stale_edit_revision");
+        if (!prior.result) throw Error("hook_title_unavailable");
+        return structuredClone(prior.result);
+      }
+      if ((clip.hookTitleAttempts ?? 0) >= OWNER_HOOK_TITLE_LIMIT)
+        throw Error("hook_title_limit");
+      signal.throwIfAborted();
+      clip.hookTitleAttempts = (clip.hookTitleAttempts ?? 0) + 1;
+      const base = clip.base,
+        planTitle = this.ports.hookTitle;
+      this.titleReceipts.set(key, { hash });
+      this.titleProcessing = true;
+      this.changed();
+      try {
+        const title = await this.diagnostics.run("hook_title", () =>
+          planTitle(
+            {
+              words: structuredClone(base.words),
+              frames: base.overlay.frames,
+              hook: request.hook,
+            },
+            signal,
+          ),
+        );
+        signal.throwIfAborted();
+        if (clip.revision !== request.expectedRevision)
+          throw Error("stale_edit_revision");
+        const result = ownerHookTitleResultSchema.parse({
+          clipId: id,
+          expectedRevision: clip.revision,
+          sourceRevision: this.workspace.revision,
+          hook: request.hook,
+          title,
+        });
+        this.titleReceipts.set(key, { hash, result });
+        return structuredClone(result);
+      } finally {
+        this.titleProcessing = false;
+        this.changed();
+      }
+    });
+  }
   async generateCaptions(
     id: string,
     value: unknown,
@@ -463,6 +542,29 @@ export class OwnerClipBatch {
             ? { ...clip.edit.captionSpeakers, assignments: [] }
             : undefined,
         });
+        if (edit.hook) {
+          const prior = edit.hookContent
+            ? structuredClone(edit.hookContent)
+            : undefined;
+          // An empty Hook inherited "disabled" from having no captions at all;
+          // that is not a user decision to disable coloring on future captions.
+          if (
+            prior &&
+            !prior.captions.length &&
+            prior.edits.captionSpeakers &&
+            !prior.edits.captionSpeakers.assignments.length &&
+            !prior.edits.captionSpeakers.colors.length
+          )
+            delete prior.edits.captionSpeakers;
+          edit.hookContent = copyOwnerHookContent(
+            base,
+            edit,
+            clip.assets,
+            clip.audioAssets ?? [],
+            edit.hook,
+            prior,
+          );
+        }
         compileOwnerOverlay(base, edit, clip.assets, clip.audioAssets);
         clip.base = base;
         clip.baseHash = baseHash;

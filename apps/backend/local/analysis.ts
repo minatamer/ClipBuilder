@@ -238,11 +238,14 @@ export async function analyzeOwner(
   const transcriptWindow = reused ? cached.window : requestedWindow;
   if (!emptyManual && !reused && requestedWindow && !ports.transcribeWindow)
     throw new Error("source_window_unavailable");
-  const speakersPrepared = reused
-    ? (cached.speakersPrepared ?? true)
-    : requestedCut
-      ? true
-      : (ports.transcriptionSpeakersPrepared ?? true);
+  // Deferred local detection belongs to each new selected clip, including when
+  // transcription is reused from an older model. Never rewrite retained clips.
+  const speakersPrepared =
+    ports.transcriptionSpeakersPrepared === false
+      ? false
+      : reused
+        ? (cached.speakersPrepared ?? true)
+        : true;
   ports.started?.(workspace, {
     transcription: !reused && !emptyManual,
     selection: !inputs.manualOnly,

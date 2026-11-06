@@ -92,6 +92,7 @@ export type OwnerHostProviders = {
     | "focus"
     | "hookSuggestion"
     | "texts"
+    | "hookTitle"
   >;
   close?: (signal: AbortSignal) => Promise<void>;
   cleanupWorkspace?: (id: string, signal: AbortSignal) => Promise<void>;
@@ -125,7 +126,7 @@ export type OwnerHostOptions = {
   analysis?: OwnerAnalysisPorts;
   clipPreparation?: Pick<
     OwnerClipPorts,
-    "mode" | "plan" | "planVisuals" | "image" | "focus"
+    "mode" | "plan" | "planVisuals" | "image" | "focus" | "hookTitle"
   >;
   providers?: (files: WorkspaceFiles) => OwnerHostProviders;
   media: (
@@ -156,6 +157,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
     ),
     captionGeneration: Boolean(providers?.captionTranscription),
     visualDiscovery: Boolean(clipPreparation?.planVisuals),
+    ...(clipPreparation?.hookTitle ? { hookTitleSuggestions: true } : {}),
     ...(options.hosted
       ? { execution: "hosted", localMedia: false, cloud: true }
       : {
@@ -991,7 +993,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           ? req.url?.replace("/api/agent/workspace/", "/api/workspace/")
           : req.url
       )?.match(
-        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|codex-progress|clips|assets|audio-assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|rename|remove|picture|visuals|audio|youtube-audio|validate|captions|fake-captions)(?:\/(\d+))?)?)?)?$/,
+        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|codex-progress|clips|assets|audio-assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|rename|remove|picture|visuals|audio|youtube-audio|validate|captions|fake-captions|hook-title)(?:\/(\d+))?)?)?)?$/,
       );
       if (
         agent &&
@@ -1159,6 +1161,31 @@ export function createOwnerHost(options: OwnerHostOptions) {
             res
               .writeHead(200, { "Content-Type": "application/json" })
               .end(wireJson(clipReply(result)));
+          } finally {
+            busy.delete(workspace.id);
+          }
+          return;
+        }
+        if (
+          req.method === "POST" &&
+          batch &&
+          route[3] &&
+          route[4] === "hook-title"
+        ) {
+          if (busy.has(workspace.id) || batch.active) {
+            res.writeHead(409).end();
+            return;
+          }
+          busy.add(workspace.id);
+          try {
+            const result = await batch.suggestHookTitle(
+              route[3],
+              await readOwnerJson(req),
+              controller.signal,
+            );
+            res
+              .writeHead(200, { "Content-Type": "application/json" })
+              .end(JSON.stringify(result));
           } finally {
             busy.delete(workspace.id);
           }
