@@ -26,6 +26,9 @@ import {
 } from "lucide-react";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { ControlTabs } from "./control-tabs.tsx";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
+import { ZodError } from "zod";
+import { textLayerErrors, captionWordError } from "./text-validation.ts";
 import { FocusPreviewControls } from "./focus-preview-controls.tsx";
 import { CameraPreviewVideo } from "./camera-preview-video.tsx";
 import { PictureTiming } from "./picture-timing.tsx";
@@ -42,6 +45,14 @@ import {
   type OwnerHookDraft,
 } from "./hook-range-draft.ts";
 import { HookControls } from "./hook-controls.tsx";
+import {
+  HookTitleRequests,
+  hookTitleKey,
+  hookTitleFingerprint,
+  acceptHookTitle,
+  type HookTitleState,
+} from "./hook-title-request.ts";
+import { OWNER_HOOK_TITLE_LIMIT } from "../../../../../packages/contracts/local/hook-title.ts";
 import {
   changeManualOwnerHook,
   acceptSuggestedOwnerHook,
@@ -77,6 +88,13 @@ import {
 } from "../../../../../packages/contracts/local/hook.ts";
 import { TypographyFields } from "./typography-fields.tsx";
 import { TextInspector } from "./text-inspector.tsx";
+import {
+  TextSelectionContext,
+  TextSelectionScope,
+  PreviewTextEditor,
+  boundedTextSelection,
+  type TextSelection,
+} from "./text-selection.tsx";
 import { BoxFields, TextPositionFields } from "./position-fields.tsx";
 import { OWNER_SOCIAL_TEXT_PRESETS } from "../../../../../packages/contracts/local/text-style.ts";
 import {
@@ -93,6 +111,7 @@ import {
 } from "../../../../../packages/contracts/local/focus.ts";
 import {
   useEffect,
+  useContext,
   useEffectEvent,
   useCallback,
   useId,
@@ -120,9 +139,15 @@ export const bufferedOverlayImage = (props: OwnerOverlayImageProps) => (
 );
 import { OwnerVideoLookLayer } from "../../../../../packages/composition/local/video-look.tsx";
 import {
-  OWNER_VIDEO_LOOKS,
-  type OwnerVideoLook,
+  ownerVideoLookAt,
+  ownerVideoLookRangeSchema,
+  ownerVideoLooksSchema,
+  ownerVideoLooksFit,
+  replaceOwnerVideoLookRange,
+  type OwnerVideoLookRange,
 } from "../../../../../packages/contracts/local/video-look.ts";
+import { FilterInspector } from "./filter-inspector.tsx";
+import { filterRangeKey } from "./filter-ranges.ts";
 import { compileOwnerOverlay } from "../../../../../packages/composition/local/edit-overlay.ts";
 import {
   OWNER_BATCH_POLICY,
@@ -183,6 +208,14 @@ const SETTING_ICONS = {
   focus: ScanFace,
   hook: Magnet,
 } as const;
+const SETTING_LABELS = {
+  captions: "Captions",
+  text: "Text",
+  filters: "Filters",
+  pictures: "Media",
+  focus: "Focus",
+  hook: "Hook",
+} as const;
 
 function SelectionBox({
   id,
@@ -193,12 +226,14 @@ function SelectionBox({
   onSelect,
   onBox,
   onGestureStart,
+  onEdit,
 }: {
   id: string;
   label: string;
   box: OwnerEditorBox;
   selected: boolean;
   caption: OwnerTextGeometry | null;
+  onEdit?: (() => void) | undefined;
 } & Pick<LayerControls, "onSelect" | "onBox" | "onGestureStart">) {
   const scale = useCurrentScale();
   const handle = Math.max(84, 44 / scale);
@@ -298,7 +333,13 @@ function SelectionBox({
           onSelect(id);
         }}
         onPointerDown={(event) => start(event, false)}
-        onKeyDown={(event) => key(event, false)}
+        onDoubleClick={onEdit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && onEdit) {
+            event.preventDefault();
+            onEdit();
+          } else key(event, false);
+        }}
         {...handlers}
       />
       {selected && (
@@ -381,6 +422,29 @@ export function Review({
       : "body",
   );
   const caption = overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean;
+  const textSession = useContext(TextSelectionContext);
+  const editingText =
+    setting === "text" && textSession?.selection?.editing
+      ? textSession.layer
+      : null;
+  const paintedOverlay = editingText
+    ? {
+        ...playbackOverlay,
+        texts: playbackOverlay.texts?.filter(
+          (layer) => layer.id !== editingText.id,
+        ),
+        ...(playbackOverlay.hookContent
+          ? {
+              hookContent: {
+                ...playbackOverlay.hookContent,
+                texts: playbackOverlay.hookContent.texts?.filter(
+                  (layer) => layer.id !== editingText.id,
+                ),
+              },
+            }
+          : {}),
+      }
+    : playbackOverlay;
   return (
     <AbsoluteFill style={{ backgroundColor: "#101215" }}>
       <>
@@ -412,7 +476,7 @@ export function Review({
               durationInFrames={part.duration}
               premountFor={fps}
             >
-              <OwnerVideoLookLayer look={content.videoLook}>
+              <OwnerVideoLookLayer look={ownerVideoLookAt(content, frame)}>
                 <CameraPreviewVideo
                   kind={part.kind}
                   active={
@@ -447,7 +511,7 @@ export function Review({
         />
       )}
       <OwnerAutomaticOverlay
-        overlay={playbackOverlay}
+        overlay={paintedOverlay}
         assets={assets}
         frame={presentationFrame}
         renderImage={bufferedOverlayImage}
@@ -502,6 +566,7 @@ export function Review({
               );
               return layer.startFrame <= at && at < layer.endFrame;
             })
+            .filter(({ layer }) => layer.id !== editingText?.id)
             .map(({ layer, index }) => (
               <SelectionBox
                 key={layer.id}
@@ -513,8 +578,12 @@ export function Review({
                 onSelect={onSelect}
                 onBox={onBox}
                 onGestureStart={onGestureStart}
+                onEdit={() => textSession?.begin(layer)}
               />
             ))}
+        {editingText && (
+          <PreviewTextEditor key={editingText.id} layer={editingText} />
+        )}
         {setting === "captions" && overlay.captions.length > 0 && (
           <SelectionBox
             id="captions"
@@ -548,7 +617,7 @@ function PreviewFailure({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-/** Local form state never starts AI or a render; only Apply writes a revision. */
+/** Hook choices may request a title; only Apply writes the editor revision. */
 export function ClipEditor({
   clip,
   workspaceId,
@@ -559,6 +628,7 @@ export function ClipEditor({
   actionsVisible = true,
   captionGeneration = false,
   visualDiscovery = false,
+  hookTitleSuggestions = false,
   captionProvider = "gemini",
   fakeCaptionGeneration = false,
   youtubeAudio = false,
@@ -575,6 +645,7 @@ export function ClipEditor({
   actionsVisible?: boolean;
   captionGeneration?: boolean;
   visualDiscovery?: boolean;
+  hookTitleSuggestions?: boolean;
   captionProvider?: "gemini" | "local-speech" | undefined;
   fakeCaptionGeneration?: boolean;
   youtubeAudio?: boolean;
@@ -592,6 +663,14 @@ export function ClipEditor({
   const [hookDraft, setHookDraft] = useState<OwnerHookDraft | undefined>(
     undefined,
   );
+  const [hookTitleState, setHookTitleState] = useState<HookTitleState | null>(
+    null,
+  );
+  const [hookTitles] = useState(() => new HookTitleRequests(setHookTitleState));
+  useEffect(
+    () => () => hookTitles.cancel(),
+    [hookTitles, clip.revision, workspaceId],
+  );
   const [selection, setSelection] = useState("captions");
   const [timelineSelection, setTimelineSelection] = useState<
     EditorTimelineItem | undefined
@@ -601,9 +680,15 @@ export function ClipEditor({
   const [mediaTab, setMediaTab] = useState("pictures");
   const [captionTab, setCaptionTab] = useState("style");
   const [textTab, setTextTab] = useState("content");
+  const [textRange, setTextRange] = useState<TextSelection | null>(null);
   const [pictureTab, setPictureTab] = useState("image");
   const tabsId = useId();
   const [message, setMessage] = useState("");
+  const [messageArea, setMessageArea] = useState<
+    EditorSetting | "audio" | "action"
+  >("action");
+  const [messageOccurrence, setMessageOccurrence] =
+    useState<OwnerEditOccurrence>("body");
   const [requestPending, setPending] = useState(false);
   const [trackingBusy, setTrackingBusy] = useState(false);
   const [trackingMode, setTrackingMode] = useState(false);
@@ -651,7 +736,33 @@ export function ClipEditor({
   const original =
     revisionChanged && !changed ? initialOwnerEdit(clip) : form.original;
   const masterDraft = revisionChanged && !changed ? original : form.draft;
+  const currentTitle =
+    !hookDraft &&
+    masterDraft.hook &&
+    hookTitleState?.key === hookTitleKey(clip.revision, masterDraft.hook)
+      ? hookTitleState
+      : null;
+  const titleLoading = currentTitle?.phase === "loading";
+  const offeredTitle = currentTitle?.result;
+  const titleNeedsAccept =
+    !!offeredTitle?.title &&
+    !masterDraft.hookContent?.edits.texts?.some(
+      (layer) => layer.id === offeredTitle.title!.id,
+    );
+  const titleCanRetry =
+    currentTitle?.phase === "failed" &&
+    (clip.hookTitleAttempts ?? 0) < OWNER_HOOK_TITLE_LIMIT;
   const activeOccurrence = masterDraft.hook ? occurrence : "body";
+  function ownMessage(area: EditorSetting | "audio" | "action") {
+    setMessageArea(area);
+    setMessageOccurrence(activeOccurrence);
+  }
+  function messageFor(area: EditorSetting | "audio" | "action") {
+    return messageArea === area &&
+      (area === "action" || messageOccurrence === activeOccurrence)
+      ? message
+      : undefined;
+  }
   const hookContent =
     masterDraft.hookContent ??
     (masterDraft.hook &&
@@ -692,7 +803,35 @@ export function ClipEditor({
           },
         }
       : rootBase;
+  const textIssues = [
+    {
+      occurrence: "body" as const,
+      layers: masterDraft.texts ?? [],
+      frames: rootBase.overlay.frames,
+    },
+    {
+      occurrence: "hook" as const,
+      layers: masterDraft.hookContent?.edits.texts ?? [],
+      frames: masterDraft.hook
+        ? masterDraft.hook.endFrame - masterDraft.hook.startFrame
+        : rootBase.overlay.frames,
+    },
+  ].flatMap(({ occurrence, layers, frames }) =>
+    layers.flatMap((layer) => {
+      const issues = textLayerErrors(
+        layer,
+        layer.role === "opening-title" ? frames : rootBase.overlay.frames,
+      );
+      return Object.values(issues).some(Boolean)
+        ? [{ layer, occurrence, issues }]
+        : [];
+    }),
+  );
   let error: string | null = null;
+  let errorSection: EditorSetting = setting;
+  let errorField: PropertyKey | undefined;
+  let errorPath: readonly PropertyKey[] = [];
+  let errorOccurrence: OwnerEditOccurrence = activeOccurrence;
   let previewUnavailable = false;
   let playbackOverlay: OwnerOverlay = rootBase.overlay;
   try {
@@ -703,71 +842,109 @@ export function ClipEditor({
       clip.assets,
       clip.audioAssets,
     );
-  } catch {
+  } catch (failure) {
+    if (failure instanceof ZodError) {
+      const path = failure.issues[0]?.path ?? [];
+      const field =
+        path[0] === "hookContent"
+          ? path[1] === "edits"
+            ? path[2]
+            : "hook"
+          : path[0];
+      errorField = field;
+      errorPath = path[0] === "hookContent" ? path.slice(2) : path;
+      errorOccurrence = path[0] === "hookContent" ? "hook" : "body";
+      const owners: Record<string, EditorSetting> = {
+        texts: "text",
+        hook: "hook",
+        captions: "captions",
+        captionText: "captions",
+        captionSpeakers: "captions",
+        videoLook: "filters",
+        videoLooks: "filters",
+        focus: "focus",
+        cameraEffects: "focus",
+        cameraTracks: "focus",
+        visuals: "pictures",
+        audio: "pictures",
+      };
+      if (typeof field === "string") errorSection = owners[field] ?? setting;
+    }
     error =
-      draft.hook &&
-      (!ownerHookSchema.safeParse(draft.hook).success ||
-        draft.hook.endFrame > base.overlay.frames)
-        ? "Choose a hook inside this clip, from one frame up to 10 seconds."
-        : draft.texts?.some(
-              (layer) => !ownerLayerTextSchema.safeParse(layer.text).success,
-            )
-          ? "Use 1–500 plain-text characters and up to 10 lines per text layer."
+      draft.videoLooks &&
+      (!ownerVideoLooksSchema.safeParse(draft.videoLooks).success ||
+        !ownerVideoLooksFit(draft.videoLooks, {
+          startFrame:
+            activeOccurrence === "hook" ? masterDraft.hook!.startFrame : 0,
+          endFrame:
+            activeOccurrence === "hook"
+              ? masterDraft.hook!.endFrame
+              : base.overlay.frames,
+        }))
+        ? "Set each filter’s end after its start, inside this occurrence, with up to 32 separate ranges."
+        : draft.hook &&
+            (!ownerHookSchema.safeParse(draft.hook).success ||
+              draft.hook.endFrame > base.overlay.frames)
+          ? "Choose a hook inside this clip, from one frame up to 10 seconds."
           : draft.texts?.some(
-                (layer) =>
-                  !Number.isInteger(layer.startFrame) ||
-                  !Number.isInteger(layer.endFrame) ||
-                  layer.startFrame < 0 ||
-                  layer.endFrame <= layer.startFrame ||
-                  layer.endFrame >
-                    (layer.role === "opening-title"
-                      ? ownerPresentationFrames({
-                          frames: base.overlay.frames,
-                          hook: draft.hook ?? undefined,
-                        })
-                      : base.overlay.frames),
+                (layer) => !ownerLayerTextSchema.safeParse(layer.text).success,
               )
-            ? "Set each text layer’s end after its start, within this clip."
-            : draft.captionText?.some((word) => !word.text.trim())
-              ? "Enter text for each caption word."
-              : draft.captionText?.length
-                ? "Keep each caption under 80 characters and use plain text."
-                : draft.cameraEffects &&
-                    (!ownerCameraEffectsSchema.safeParse(draft.cameraEffects)
-                      .success ||
-                      !ownerCameraEffectsFit(draft.cameraEffects, {
-                        frames: base.overlay.frames,
-                        hook: draft.hook,
-                        cameraTracks: draft.cameraTracks,
-                      }))
-                  ? "Keep zooms apart and leave room for their automatic return."
-                  : draft.cameraTracks &&
-                      (!ownerCameraTracksSchema.safeParse(draft.cameraTracks)
+            ? "Use 1–500 plain-text characters and up to 10 lines per text layer."
+            : draft.texts?.some(
+                  (layer) =>
+                    !Number.isInteger(layer.startFrame) ||
+                    !Number.isInteger(layer.endFrame) ||
+                    layer.startFrame < 0 ||
+                    layer.endFrame <= layer.startFrame ||
+                    layer.endFrame >
+                      (layer.role === "opening-title"
+                        ? ownerPresentationFrames({
+                            frames: base.overlay.frames,
+                            hook: draft.hook ?? undefined,
+                          })
+                        : base.overlay.frames),
+                )
+              ? "Set each text layer’s end after its start, within this clip."
+              : draft.captionText?.some((word) => !word.text.trim())
+                ? "Enter text for each caption word."
+                : errorField === "captionText"
+                  ? "Keep each caption under 80 characters and use plain text."
+                  : draft.cameraEffects &&
+                      (!ownerCameraEffectsSchema.safeParse(draft.cameraEffects)
                         .success ||
-                        !ownerCameraTracksFit(
-                          draft.cameraTracks,
-                          draft.focus ?? base.overlay.focus,
-                          { frames: base.overlay.frames, hook: draft.hook },
-                        ))
-                    ? "Keep motion within this camera and occurrence; leave it separate from Zoom."
-                    : draft.focus &&
-                        !ownerFocusSchema.safeParse(draft.focus).success
-                      ? "Set camera changes inside this clip, with zoom from 1 to 3."
-                      : draft.visuals.some(
-                            (cue) =>
-                              !Number.isFinite(cue.startFrame) ||
-                              !Number.isFinite(cue.endFrame) ||
-                              cue.startFrame < 0 ||
-                              cue.endFrame <= cue.startFrame ||
-                              cue.endFrame > base.overlay.frames,
-                          )
-                        ? "Set each picture’s end after its start, within this clip."
-                        : draft.captions &&
-                            (!Number.isInteger(draft.captions.fontSize) ||
-                              draft.captions.fontSize < 24 ||
-                              draft.captions.fontSize > 120)
-                          ? "Use a font size from 24 to 120."
-                          : "Keep layers inside the preview and check their size.";
+                        !ownerCameraEffectsFit(draft.cameraEffects, {
+                          frames: base.overlay.frames,
+                          hook: draft.hook,
+                          cameraTracks: draft.cameraTracks,
+                        }))
+                    ? "Keep zooms apart and leave room for their automatic return."
+                    : draft.cameraTracks &&
+                        (!ownerCameraTracksSchema.safeParse(draft.cameraTracks)
+                          .success ||
+                          !ownerCameraTracksFit(
+                            draft.cameraTracks,
+                            draft.focus ?? base.overlay.focus,
+                            { frames: base.overlay.frames, hook: draft.hook },
+                          ))
+                      ? "Keep motion within this camera and occurrence; leave it separate from Zoom."
+                      : draft.focus &&
+                          !ownerFocusSchema.safeParse(draft.focus).success
+                        ? "Set camera changes inside this clip, with zoom from 1 to 3."
+                        : draft.visuals.some(
+                              (cue) =>
+                                !Number.isFinite(cue.startFrame) ||
+                                !Number.isFinite(cue.endFrame) ||
+                                cue.startFrame < 0 ||
+                                cue.endFrame <= cue.startFrame ||
+                                cue.endFrame > base.overlay.frames,
+                            )
+                          ? "Set each picture’s end after its start, within this clip."
+                          : draft.captions &&
+                              (!Number.isInteger(draft.captions.fontSize) ||
+                                draft.captions.fontSize < 24 ||
+                                draft.captions.fontSize > 120)
+                            ? "Use a font size from 24 to 120."
+                            : "Keep layers inside the preview and check their size.";
     try {
       playbackOverlay = compileOwnerOverlay(
         rootBase,
@@ -802,8 +979,8 @@ export function ClipEditor({
     generating ||
     (audioUploading && audioImport === null);
   useEffect(() => {
-    reportPending(pending);
-  }, [pending]);
+    reportPending(pending || titleLoading);
+  }, [pending, titleLoading]);
   useEffect(() => {
     if (trackingBusy) reportBusy(true);
     return () => {
@@ -860,6 +1037,7 @@ export function ClipEditor({
           }),
       );
       if (valid.length !== next.cameraTracks.length) {
+        ownMessage("focus");
         next = { ...next, cameraTracks: valid };
         setMessage(
           "Motion was cleared for changed camera positions or Hook timing.",
@@ -876,6 +1054,7 @@ export function ClipEditor({
           (effect) => effect.occurrence === "body",
         ),
       };
+      ownMessage("focus");
       setMessage("Hook zooms were removed because the Hook changed.");
     }
     if (
@@ -930,6 +1109,9 @@ export function ClipEditor({
     setForm({ original, draft: next });
   }
   function changeHook(hook: OwnerEditDocument["hook"], suggested = false) {
+    hookTitles.cancel();
+    setHookTitleState(null);
+    ownMessage("hook");
     if (
       hook &&
       (!ownerHookSchema.safeParse(hook).success ||
@@ -946,13 +1128,21 @@ export function ClipEditor({
           ? masterDraft.hook
           : undefined),
     };
-    let next = withIndependentOwnerHook(
-      rootBase,
-      validPrior,
-      clip.assets,
-      clip.audioAssets ?? [],
-      hook,
-    );
+    let next: OwnerEditDocument;
+    try {
+      next = withIndependentOwnerHook(
+        rootBase,
+        validPrior,
+        clip.assets,
+        clip.audioAssets ?? [],
+        hook,
+      );
+    } catch {
+      setMessage(
+        "Complete invalid edits or combine filter ranges before changing the Hook.",
+      );
+      return;
+    }
     if (!hook) next = changeManualOwnerHook(next, undefined);
     else if (suggested && next.hookContent) {
       const scoped = { ...next, ...next.hookContent.edits };
@@ -970,6 +1160,8 @@ export function ClipEditor({
       };
     }
     update(next, true);
+    if (hook && JSON.stringify(hook) !== JSON.stringify(masterDraft.hook))
+      queueHookTitle(next, hook);
     if (
       hook &&
       JSON.stringify(hook) !== JSON.stringify(masterDraft.hook) &&
@@ -982,6 +1174,35 @@ export function ClipEditor({
     setTimelineSelection(undefined);
     setAudioPicture(undefined);
     player.current?.seekTo(0);
+  }
+  function queueHookTitle(
+    next: OwnerEditDocument,
+    hook: NonNullable<OwnerEditDocument["hook"]>,
+    retry = false,
+  ) {
+    if (
+      !hookTitleSuggestions ||
+      (clip.hookTitleAttempts ?? 0) >= OWNER_HOOK_TITLE_LIMIT
+    )
+      return;
+    const fingerprint = hookTitleFingerprint(next);
+    hookTitles.select(
+      {
+        workspaceId,
+        clipId: clip.id,
+        revision: clip.revision,
+        sourceRevision: clip.sourceRevision,
+        hook,
+        apply: (result) => {
+          if (!alive.current) return;
+          setForm((current) => ({
+            ...current,
+            draft: acceptHookTitle(current.draft, result, fingerprint),
+          }));
+        },
+      },
+      retry,
+    );
   }
   function setCaption(next: OwnerCaptionStyle) {
     if (Number.isFinite(next.fontSize) && next.fontSize !== caption.fontSize)
@@ -1012,6 +1233,7 @@ export function ClipEditor({
     }
   }
   function selectLayer(id: string) {
+    if (id !== selection) setTextRange(null);
     setTimelineSelection(undefined);
     setMediaTab("pictures");
     setSelection(id);
@@ -1026,6 +1248,7 @@ export function ClipEditor({
   function selectSetting(value: EditorSetting) {
     if (pending || trackingMode) return;
     setCaptionConfirm(false);
+    if (value !== setting) setTextRange(null);
     setSetting(value);
     if (value === "captions") setSelection("captions");
     if (
@@ -1036,6 +1259,7 @@ export function ClipEditor({
       chooseText(draft.texts[0]);
   }
   function chooseText(layer: OwnerTextLayer) {
+    if (layer.id !== selection) setTextRange(null);
     setTimelineSelection(undefined);
     setSelection(layer.id);
     player.current?.pause();
@@ -1066,7 +1290,80 @@ export function ClipEditor({
     activeOccurrence === "hook"
       ? masterDraft.hook!.endFrame
       : base.overlay.frames;
+  const filterOffset =
+    activeOccurrence === "hook"
+      ? -masterDraft.hook!.startFrame
+      : ownerHookFrames(playbackOverlay);
+  const filterItem =
+    timelineSelection?.kind === "look" &&
+    timelineSelection.occurrence === activeOccurrence
+      ? timelineSelection
+      : editorTimelineItems(playbackOverlay, "look").find(
+          (item) => item.occurrence === activeOccurrence,
+        );
+  const filterWindow = filterItem
+    ? {
+        startFrame: filterItem.startFrame - filterOffset,
+        endFrame: filterItem.endFrame - filterOffset,
+      }
+    : { startFrame: windowStart, endFrame: windowEnd };
+  const selectedFilter: OwnerVideoLookRange = draft.videoLooks?.find(
+    (range) =>
+      Object.is(range.startFrame, filterWindow.startFrame) &&
+      Object.is(range.endFrame, filterWindow.endFrame),
+  ) ?? {
+    ...filterWindow,
+    ...(ownerVideoLookAt(overlay, filterWindow.startFrame) ?? {
+      preset: "original",
+      strength: 100,
+    }),
+  };
+  function changeFilter(next: OwnerVideoLookRange) {
+    ownMessage("filters");
+    let videoLooks: OwnerVideoLookRange[];
+    if (
+      ownerVideoLookRangeSchema.safeParse(next).success &&
+      ownerVideoLooksFit([next], {
+        startFrame: windowStart,
+        endFrame: windowEnd,
+      })
+    ) {
+      try {
+        videoLooks = replaceOwnerVideoLookRange(
+          draft.videoLooks ?? [],
+          selectedFilter,
+          next,
+        );
+      } catch {
+        setMessage(
+          "Keep up to 32 separate filter ranges. Extend this range to cover an adjacent range, or discard this change.",
+        );
+        return;
+      }
+    } else
+      videoLooks = [
+        ...(draft.videoLooks ?? []).filter(
+          (range) =>
+            !Object.is(range.startFrame, selectedFilter.startFrame) ||
+            !Object.is(range.endFrame, selectedFilter.endFrame),
+        ),
+        next,
+      ];
+    update({ ...draft, videoLooks });
+    setTimelineSelection({
+      kind: "look",
+      occurrence: activeOccurrence,
+      index: 0,
+      id: filterRangeKey(next),
+      key: `${activeOccurrence}:look:${filterRangeKey(next)}`,
+      title: filterItem?.title ?? "Filter range",
+      startFrame: next.startFrame + filterOffset,
+      endFrame: next.endFrame + filterOffset,
+    });
+    setMessage("");
+  }
   function selectTimelineItem(item: EditorTimelineItem) {
+    setTextRange(null);
     if (pending || trackingMode || audioImport !== null) return;
     player.current?.pause();
     setOccurrence(item.occurrence);
@@ -1093,7 +1390,8 @@ export function ClipEditor({
     const items = editorTimelineItems(playbackOverlay, kind);
     const selected =
       timelineSelection?.kind === kind &&
-      items.some((item) => item.key === timelineSelection.key)
+      (kind === "look" ||
+        items.some((item) => item.key === timelineSelection.key))
         ? timelineSelection.key
         : items.find(
             (item) =>
@@ -1211,6 +1509,18 @@ export function ClipEditor({
     file?: File,
   ) {
     if (request.current || (kind === "edit" && hookDraft)) return;
+    if (kind === "edit" && titleLoading) return;
+    if (kind === "reload") {
+      hookTitles.cancel();
+      setHookTitleState(null);
+    }
+    ownMessage(
+      kind === "picture"
+        ? "pictures"
+        : kind === "audio" || kind === "youtube-audio"
+          ? "audio"
+          : "action",
+    );
     const controller = new AbortController();
     request.current = controller;
     setPending(true);
@@ -1347,6 +1657,7 @@ export function ClipEditor({
     }
   }
   function upload(file: File | undefined) {
+    ownMessage("pictures");
     if (!file || draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip)
       return;
     if (file.size > OWNER_PICTURE_LIMITS.inputBytes || file.size === 0) {
@@ -1368,6 +1679,7 @@ export function ClipEditor({
     request.current = controller;
     setPending(true);
     setFindingVisuals(true);
+    ownMessage("pictures");
     setMessage("");
     onBusy?.(true);
     player.current?.pause();
@@ -1428,6 +1740,7 @@ export function ClipEditor({
     request.current = controller;
     setPending(true);
     setGenerating(true);
+    ownMessage("captions");
     onBusy?.(true);
     setMessage("");
     player.current?.pause();
@@ -1487,21 +1800,51 @@ export function ClipEditor({
   }
   const previewLoading =
     !previewLoaded && !playbackFailed && !previewUnavailable;
+  const captionIssueTab =
+    errorField === "captionText"
+      ? "text"
+      : errorField === "captionSpeakers"
+        ? "speakers"
+        : errorPath.includes("box")
+          ? "position"
+          : "style";
+  const pictureIssueTab = errorPath.includes("box")
+    ? "position"
+    : errorPath.some((part) =>
+          ["enterFrames", "exitFrames", "entrance", "exit"].includes(
+            String(part),
+          ),
+        )
+      ? "motion"
+      : errorPath.includes("assetId")
+        ? "image"
+        : "timing";
+  const captionIssue =
+    errorSection === "captions" && errorOccurrence === activeOccurrence
+      ? (error ?? undefined)
+      : undefined;
+  const pictureIssue =
+    errorSection === "pictures" &&
+    errorField === "visuals" &&
+    errorOccurrence === activeOccurrence &&
+    (typeof errorPath[1] !== "number" ||
+      draft.visuals[errorPath[1]]?.id === selectedCue?.id)
+      ? (error ?? undefined)
+      : undefined;
+  const sectionIssue = (section: EditorSetting) => (
+    <InlineFeedback
+      message={
+        errorSection === section &&
+        errorOccurrence === activeOccurrence &&
+        setting === section &&
+        !(section === "text" && textIssues.length)
+          ? error
+          : undefined
+      }
+    />
+  );
   const content = (
     <section className="clip-editor" aria-label="Clip editor">
-      <p className="flow-notice" role="status" aria-live="polite">
-        {!stale && audioImport === null && message}
-      </p>
-      {stale && (
-        <p className="editor-warning" role="alert">
-          This clip changed elsewhere. Reload it to continue.
-        </p>
-      )}
-      {error && (
-        <p className="editor-warning" role="alert">
-          {error}
-        </p>
-      )}
       {previewLoading && (
         <ProcessingState className="clip-preparing" label="Loading preview" />
       )}
@@ -1563,71 +1906,82 @@ export function ClipEditor({
           )}
         </div>
         <div className="editor-panels" hidden={!previewLoaded}>
-          <div
+          <ControlTabs
+            id={tabsId}
             className="editor-tabs"
-            role="tablist"
-            aria-label="Clip settings"
-          >
-            {SETTINGS.map((value, index) => {
-              const Icon = SETTING_ICONS[value];
-              return (
-                <button
-                  key={value}
-                  id={`${tabsId}-${value}`}
-                  type="button"
-                  role="tab"
-                  disabled={pending || trackingMode || audioImport !== null}
-                  aria-selected={setting === value}
-                  aria-controls={`${tabsId}-${value}-panel`}
-                  tabIndex={setting === value ? 0 : -1}
-                  onClick={() => {
-                    selectSetting(value);
-                  }}
-                  onKeyDown={(event) => {
-                    if (pending || trackingMode || audioImport !== null) return;
-                    if (
-                      !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
-                        event.key,
-                      )
-                    )
-                      return;
-                    event.preventDefault();
-                    const next =
-                      SETTINGS[
-                        event.key === "Home"
-                          ? 0
-                          : event.key === "End"
-                            ? SETTINGS.length - 1
-                            : (index +
-                                (event.key === "ArrowRight" ? 1 : -1) +
-                                SETTINGS.length) %
-                              SETTINGS.length
-                      ]!;
-                    selectSetting(next);
-                    document.getElementById(`${tabsId}-${next}`)?.focus();
-                  }}
-                >
-                  <Icon
-                    className="editor-section-icon"
-                    size={16}
-                    strokeWidth={1.8}
-                    aria-hidden="true"
-                    focusable="false"
-                  />
-                  {
-                    {
-                      captions: "Captions",
-                      text: "Text",
-                      filters: "Filters",
-                      pictures: "Media",
-                      focus: "Focus",
-                      hook: "Hook",
-                    }[value]
+            label="Clip settings"
+            items={SETTINGS.map((value) => ({
+              value,
+              label: SETTING_LABELS[value],
+              icon: SETTING_ICONS[value],
+              issue:
+                value === "text" && textIssues[0]
+                  ? Object.values(textIssues[0].issues).find(Boolean)
+                  : error && value === errorSection
+                    ? error
+                    : message &&
+                        value ===
+                          (messageArea === "audio" ? "pictures" : messageArea)
+                      ? message
+                      : value === "hook" && currentTitle?.phase === "failed"
+                        ? "Couldn’t suggest a title. Retry when ready."
+                        : undefined,
+            }))}
+            value={setting}
+            disabled={pending || trackingMode || audioImport !== null}
+            onChange={(next) => {
+              selectSetting(next);
+              if (error && next === errorSection) {
+                setOccurrence(errorOccurrence);
+                if (next === "captions") setCaptionTab(captionIssueTab);
+                if (next === "pictures")
+                  setMediaTab(errorField === "audio" ? "audio" : "pictures");
+                if (next === "pictures" && errorField === "visuals") {
+                  setPictureTab(pictureIssueTab);
+                  if (typeof errorPath[1] === "number") {
+                    const edits =
+                      errorOccurrence === "hook"
+                        ? masterDraft.hookContent?.edits
+                        : masterDraft;
+                    const cue = edits?.visuals[errorPath[1]];
+                    if (cue) setSelection(cue.id);
                   }
-                </button>
-              );
-            })}
-          </div>
+                }
+              }
+              if (
+                message &&
+                next === (messageArea === "audio" ? "pictures" : messageArea)
+              ) {
+                setOccurrence(messageOccurrence);
+                if (messageArea === "audio") setMediaTab("audio");
+                if (messageArea === "pictures") setMediaTab("pictures");
+                if (messageArea === "text") setTextTab("content");
+              }
+              const issue = next === "text" ? textIssues[0] : undefined;
+              if (issue) {
+                const item = editorTimelineItems(playbackOverlay, "text").find(
+                  (item) =>
+                    item.id === issue.layer.id &&
+                    item.occurrence === issue.occurrence,
+                );
+                if (item) selectTimelineItem(item);
+                else {
+                  player.current?.pause();
+                  setOccurrence(issue.occurrence);
+                  setSelection(issue.layer.id);
+                  setTimelineSelection(undefined);
+                  setTextRange(null);
+                }
+                setTextTab(
+                  issue.issues.content
+                    ? "content"
+                    : issue.issues.timing
+                      ? "timing"
+                      : "style",
+                );
+              }
+            }}
+          />
           <div
             id={`${tabsId}-hook-panel`}
             role="tabpanel"
@@ -1654,6 +2008,8 @@ export function ClipEditor({
                   attempt={previewAttempt}
                   valid={!error && !hookDraft}
                   onChange={(next) => {
+                    hookTitles.cancel();
+                    setHookTitleState(null);
                     player.current?.pause();
                     setMessage("");
                     const complete = next
@@ -1684,6 +2040,40 @@ export function ClipEditor({
                     }
                   }}
                 />
+                {masterDraft.hook && !hookDraft && (
+                  <>
+                    <InlineFeedback
+                      tone={
+                        titleLoading || !hookTitleSuggestions
+                          ? "status"
+                          : "error"
+                      }
+                      message={
+                        currentTitle?.phase === "failed"
+                          ? "Couldn’t suggest a title. Retry when ready."
+                          : titleLoading
+                            ? "Writing a title…"
+                            : !hookTitleSuggestions
+                              ? "AI titles unavailable."
+                              : currentTitle?.phase !== "ready" &&
+                                  (clip.hookTitleAttempts ?? 0) >=
+                                    OWNER_HOOK_TITLE_LIMIT
+                                ? "Title limit reached for this clip."
+                                : undefined
+                      }
+                    />
+                    {currentTitle?.result?.title && (
+                      <p className="source-hint">
+                        {clip.mode === "synthetic-ai"
+                          ? "Simulated title"
+                          : "AI title"}
+                        : {currentTitle.result.title.text}
+                      </p>
+                    )}
+                  </>
+                )}
+                {sectionIssue("hook")}
+                <InlineFeedback message={messageFor("hook")} />
               </fieldset>
             )}
           </div>
@@ -1705,7 +2095,11 @@ export function ClipEditor({
                   selected={selection}
                   onSelect={chooseText}
                   onAdd={addText}
-                  onChange={(texts) => update({ ...draft, texts })}
+                  onChange={(texts) => {
+                    if (messageArea === "text") setMessage("");
+                    update({ ...draft, texts });
+                  }}
+                  feedback={messageFor("text")}
                   frames={base.overlay.frames}
                   player={player}
                   available={!playbackFailed && previewLoaded && !pending}
@@ -1713,11 +2107,13 @@ export function ClipEditor({
                   tab={textTab}
                   onTab={setTextTab}
                 />
+                {sectionIssue("text")}
               </fieldset>
             )}
           </div>
           <div
             id={`${tabsId}-focus-panel`}
+            className="focus-panel"
             role="tabpanel"
             aria-labelledby={`${tabsId}-focus`}
             hidden={setting !== "focus"}
@@ -1725,6 +2121,24 @@ export function ClipEditor({
           >
             {setting === "focus" && (
               <FocusPreviewControls
+                feedback={
+                  error &&
+                  errorSection === "focus" &&
+                  errorOccurrence === activeOccurrence
+                    ? {
+                        tab:
+                          errorField === "cameraEffects"
+                            ? "zoom"
+                            : errorField === "cameraTracks"
+                              ? "motion"
+                              : errorPath.includes("people")
+                                ? "people"
+                                : "camera",
+                        message: error,
+                      }
+                    : undefined
+                }
+                notice={messageFor("focus")}
                 navigationDisabled={trackingMode}
                 timeline={timeline("camera", "Camera timeline")}
                 positionRequest={
@@ -1898,6 +2312,7 @@ export function ClipEditor({
                     {dirty && <p>Apply or discard your changes first.</p>}
                   </>
                 )}
+                <InlineFeedback message={messageFor("captions")} />
               </div>
             ) : (
               <>
@@ -1907,10 +2322,36 @@ export function ClipEditor({
                     id={`${tabsId}-caption`}
                     label="Caption controls"
                     items={[
-                      { value: "style", label: "Style" },
-                      { value: "position", label: "Position" },
-                      { value: "text", label: "Text" },
-                      { value: "speakers", label: "Speakers" },
+                      {
+                        value: "style",
+                        label: "Style",
+                        issue:
+                          captionIssueTab === "style"
+                            ? captionIssue
+                            : undefined,
+                      },
+                      {
+                        value: "position",
+                        label: "Position",
+                        issue:
+                          captionIssueTab === "position"
+                            ? captionIssue
+                            : undefined,
+                      },
+                      {
+                        value: "text",
+                        label: "Text",
+                        issue:
+                          captionIssueTab === "text" ? captionIssue : undefined,
+                      },
+                      {
+                        value: "speakers",
+                        label: "Speakers",
+                        issue:
+                          captionIssueTab === "speakers"
+                            ? captionIssue
+                            : undefined,
+                      },
                     ]}
                     value={captionTab}
                     onChange={setCaptionTab}
@@ -1923,6 +2364,17 @@ export function ClipEditor({
                     tabIndex={0}
                   >
                     <TypographyFields
+                      feedback={
+                        <InlineFeedback
+                          message={
+                            !draft.captionText?.some((word) =>
+                              captionWordError(word.text),
+                            ) && captionIssueTab === "style"
+                              ? captionIssue
+                              : undefined
+                          }
+                        />
+                      }
                       value={caption}
                       onChange={(style) => setCaption({ ...caption, ...style })}
                       onPreset={(preset) =>
@@ -1999,6 +2451,13 @@ export function ClipEditor({
                         })
                       }
                     />
+                    <InlineFeedback
+                      message={
+                        captionIssueTab === "position"
+                          ? captionIssue
+                          : undefined
+                      }
+                    />
                   </div>
                   <Button
                     variant="secondary"
@@ -2063,6 +2522,13 @@ export function ClipEditor({
                         }
                       />
                     )}
+                    <InlineFeedback
+                      message={
+                        captionIssueTab === "speakers"
+                          ? captionIssue
+                          : undefined
+                      }
+                    />
                   </div>
                 </fieldset>
               </>
@@ -2076,74 +2542,28 @@ export function ClipEditor({
             tabIndex={0}
           >
             {setting === "filters" && timeline("look", "Filter timeline")}
-            <fieldset disabled={pending}>
-              <legend className="local-sr-only">Filters</legend>
-              <label>
-                Filter
-                <select
-                  className="select-control"
-                  value={draft.videoLook?.preset ?? "original"}
-                  onChange={(event) =>
-                    update({
-                      ...draft,
-                      videoLook: {
-                        preset: event.currentTarget
-                          .value as OwnerVideoLook["preset"],
-                        strength: draft.videoLook?.strength ?? 100,
-                      },
-                    })
-                  }
-                >
-                  {OWNER_VIDEO_LOOKS.map((look) => (
-                    <option key={look} value={look}>
-                      {
-                        {
-                          original: "Original",
-                          vivid: "Vivid",
-                          warm: "Warm",
-                          cool: "Cool",
-                          mono: "Black and white",
-                        }[look]
-                      }
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Strength ({draft.videoLook?.strength ?? 100}%)
-                <input
-                  aria-label="Filter strength"
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={draft.videoLook?.strength ?? 100}
-                  disabled={
-                    !draft.videoLook || draft.videoLook.preset === "original"
-                  }
-                  onChange={(event) =>
-                    update({
-                      ...draft,
-                      videoLook: {
-                        preset: draft.videoLook?.preset ?? "original",
-                        strength: Number(event.currentTarget.value),
-                      },
-                    })
-                  }
-                />
-              </label>
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={() => {
-                  const next = { ...draft };
-                  delete next.videoLook;
-                  update(next);
-                }}
-              >
-                Reset filter
-              </Button>
-            </fieldset>
+            {setting === "filters" && (
+              <FilterInspector
+                feedback={
+                  errorSection === "filters" &&
+                  errorOccurrence === activeOccurrence
+                    ? (error ?? messageFor("filters"))
+                    : messageFor("filters")
+                }
+                cue={selectedFilter}
+                frames={base.overlay.frames}
+                player={player}
+                available={
+                  previewLoaded &&
+                  !playbackFailed &&
+                  !pending &&
+                  !previewUnavailable
+                }
+                attempt={previewAttempt}
+                disabled={pending}
+                onChange={changeFilter}
+              />
+            )}
           </div>
           <div
             id={`${tabsId}-pictures-panel`}
@@ -2274,16 +2694,45 @@ export function ClipEditor({
                   }}
                 />
                 <p className="source-hint">JPEG, PNG, WebP · Max 4 MB</p>
+                <InlineFeedback message={messageFor("pictures")} />
                 {selectedCue && (
                   <>
                     <ControlTabs
                       id={`${tabsId}-picture`}
                       label="Picture controls"
                       items={[
-                        { value: "image", label: "Image" },
-                        { value: "timing", label: "Timing" },
-                        { value: "motion", label: "Motion" },
-                        { value: "position", label: "Position" },
+                        {
+                          value: "image",
+                          label: "Image",
+                          issue:
+                            pictureIssueTab === "image"
+                              ? pictureIssue
+                              : undefined,
+                        },
+                        {
+                          value: "timing",
+                          label: "Timing",
+                          issue:
+                            pictureIssueTab === "timing"
+                              ? pictureIssue
+                              : undefined,
+                        },
+                        {
+                          value: "motion",
+                          label: "Motion",
+                          issue:
+                            pictureIssueTab === "motion"
+                              ? pictureIssue
+                              : undefined,
+                        },
+                        {
+                          value: "position",
+                          label: "Position",
+                          issue:
+                            pictureIssueTab === "position"
+                              ? pictureIssue
+                              : undefined,
+                        },
                       ]}
                       value={pictureTab}
                       onChange={setPictureTab}
@@ -2351,6 +2800,9 @@ export function ClipEditor({
                       >
                         Remove picture
                       </Button>
+                      {pictureIssueTab === "image" && (
+                        <InlineFeedback message={pictureIssue} />
+                      )}
                     </div>
                     <div
                       role="tabpanel"
@@ -2361,6 +2813,11 @@ export function ClipEditor({
                     >
                       <PictureTiming
                         key={selectedCue.id}
+                        validationMessage={
+                          pictureIssueTab === "timing"
+                            ? (pictureIssue ?? undefined)
+                            : undefined
+                        }
                         cue={selectedCue}
                         frames={base.overlay.frames}
                         player={player}
@@ -2446,6 +2903,9 @@ export function ClipEditor({
                           />
                         </label>
                       </div>
+                      {pictureIssueTab === "motion" && (
+                        <InlineFeedback message={pictureIssue} />
+                      )}
                       <Button
                         variant="secondary"
                         disabled={!!error || playbackFailed}
@@ -2517,6 +2977,9 @@ export function ClipEditor({
                         box={selectedCue.box}
                         onChange={(box) => setCue({ ...selectedCue, box })}
                       />
+                      {pictureIssueTab === "position" && (
+                        <InlineFeedback message={pictureIssue} />
+                      )}
                     </div>
                   </>
                 )}
@@ -2553,6 +3016,14 @@ export function ClipEditor({
                 mediaTab === "audio" &&
                 audioImport === null && (
                   <AudioInspector
+                    uploadFeedback={messageFor("audio")}
+                    validationFeedback={
+                      errorSection === "pictures" &&
+                      errorField === "audio" &&
+                      errorOccurrence === activeOccurrence
+                        ? (error ?? undefined)
+                        : undefined
+                    }
                     key={`${activeOccurrence}:${importedAudioCue ?? ""}:${audioPicture ?? ""}`}
                     hideCueList
                     linkedVisual={draft.visuals.find(
@@ -2616,6 +3087,7 @@ export function ClipEditor({
                         (draft.audio?.cues.length ?? 0) >=
                           OWNER_AUDIO_LIMITS.cues
                       ) {
+                        ownMessage("audio");
                         setMessage("Choose audio under 12 MB and 2 minutes.");
                         return null;
                       }
@@ -2625,6 +3097,23 @@ export function ClipEditor({
                 )}
             </div>
           </div>
+          {actionsVisible &&
+            audioImport === null &&
+            (stale || messageFor("action")) && (
+              <WorkflowActions
+                target={footerTarget}
+                label="Editor feedback"
+                feedback
+              >
+                <InlineFeedback
+                  message={
+                    stale
+                      ? "Clip changed. Reload to continue."
+                      : messageFor("action")
+                  }
+                />
+              </WorkflowActions>
+            )}
           {actionsVisible && audioUploading && audioImport === null && (
             <WorkflowActions target={footerTarget} label="Audio upload actions">
               <Button
@@ -2674,7 +3163,12 @@ export function ClipEditor({
                   variant="primary"
                   type="button"
                   disabled={
-                    !dirty || !!error || !!hookDraft || stale || pending
+                    !dirty ||
+                    !!error ||
+                    !!hookDraft ||
+                    stale ||
+                    pending ||
+                    titleLoading
                   }
                   onClick={() => void perform("edit")}
                 >
@@ -2712,6 +3206,41 @@ export function ClipEditor({
                 </Button>
               </WorkflowActions>
             )}
+          {actionsVisible &&
+            setting === "hook" &&
+            !hookDraft &&
+            masterDraft.hook &&
+            !pending &&
+            !trackingMode &&
+            !captionConfirm &&
+            (titleCanRetry || titleNeedsAccept) && (
+              <WorkflowActions target={footerTarget} label="Hook title actions">
+                {titleCanRetry && (
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      queueHookTitle(masterDraft, masterDraft.hook!, true)
+                    }
+                  >
+                    Retry title
+                  </Button>
+                )}
+                {titleNeedsAccept && offeredTitle && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      const result = offeredTitle;
+                      setForm((current) => ({
+                        ...current,
+                        draft: acceptHookTitle(current.draft, result, "", true),
+                      }));
+                    }}
+                  >
+                    Use AI title
+                  </Button>
+                )}
+              </WorkflowActions>
+            )}
         </div>
       </div>
     </section>
@@ -2722,7 +3251,85 @@ export function ClipEditor({
         <EditorOccurrence
           value={setting === "hook" ? undefined : activeOccurrence}
         >
-          {content}
+          <TextSelectionScope
+            session={{
+              layer:
+                draft.texts?.find((layer) => layer.id === selection) ?? null,
+              selection:
+                textRange?.layerId === selection &&
+                textRange.occurrence === activeOccurrence &&
+                textRange.text ===
+                  draft.texts?.find((layer) => layer.id === selection)?.text &&
+                setting === "text" &&
+                !pending
+                  ? textRange
+                  : null,
+              begin: (layer) => {
+                if (pending || !previewLoaded || playbackFailed) return;
+                chooseText(layer);
+                setTextTab("style");
+                setTextRange({
+                  layerId: layer.id,
+                  text: layer.text,
+                  occurrence: activeOccurrence,
+                  start: 0,
+                  end: 0,
+                  editing: true,
+                });
+              },
+              select: (layer, start, end, editing) => {
+                if (pending) return;
+                const bounded = boundedTextSelection(layer.text, start, end);
+                setTextRange((prior) => {
+                  const next = {
+                    layerId: layer.id,
+                    text: layer.text,
+                    occurrence: activeOccurrence,
+                    ...bounded,
+                    editing:
+                      editing ??
+                      ((prior?.layerId === layer.id &&
+                        prior.occurrence === activeOccurrence &&
+                        prior.editing) ||
+                        false),
+                  };
+                  return JSON.stringify(prior) === JSON.stringify(next)
+                    ? prior
+                    : next;
+                });
+              },
+              whole: () => {
+                setTextRange(null);
+                player.current?.pause();
+                document
+                  .getElementById(`${tabsId}-text-controls-${textTab}`)
+                  ?.focus();
+              },
+              change: (layer, start, end) => {
+                if (pending) return;
+                update({
+                  ...draft,
+                  texts: (draft.texts ?? []).map((item) =>
+                    item.id === layer.id ? layer : item,
+                  ),
+                });
+                if (start !== undefined)
+                  setTextRange({
+                    layerId: layer.id,
+                    text: layer.text,
+                    occurrence: activeOccurrence,
+                    ...boundedTextSelection(layer.text, start, end ?? start),
+                    editing: true,
+                  });
+              },
+              report: (text) => {
+                ownMessage("text");
+                setMessage(text);
+              },
+            }}
+          >
+            {content}
+          </TextSelectionScope>
         </EditorOccurrence>
       </EditorHookClock>
     </EditorPresentationClock>

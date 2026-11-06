@@ -7,6 +7,7 @@ import { OwnerAutomaticOverlay } from "../../../../../packages/composition/local
 import { OwnerStyledCaption } from "../../../../../packages/composition/local/styled-caption.tsx";
 import { ownerOverlayFrame } from "../../../../../packages/composition/local/overlay-frame.ts";
 import { TypographyFields } from "./typography-fields.tsx";
+import { OwnerTextLayerView } from "../../../../../packages/composition/local/text-layer.tsx";
 import { constrainOwnerBox, ownerCaptionPreset } from "./editor-state.ts";
 import {
   syntheticTextClip,
@@ -153,4 +154,35 @@ it("escapes user markup and fits long text without discarding characters or hard
   expect(html).toContain("&lt;script&gt;");
   expect((html.match(/W/gu) ?? []).length).toBe(400);
   expect(Number(/font-size:(\d+)px/u.exec(html)?.[1])).toBeGreaterThan(10);
+});
+
+it("paints canonical word spans with independent typography and escaped plain text", () => {
+  const layer = {
+    ...syntheticTextLayer(),
+    text: "Why <buyers> wait",
+    spans: [
+      {
+        start: 5,
+        end: 11,
+        style: {
+          font: "Georgia" as const,
+          color: "#FF3B30",
+          fontSize: 100,
+          fontWeight: 900 as const,
+          outlineColor: "#112233",
+          outlineWidth: 2,
+          highlightColor: "#FFD60A",
+        },
+      },
+    ],
+  };
+  const html = markup(createElement(OwnerTextLayerView, { layer }));
+  expect(html).toContain("color:#FF3B30");
+  expect(html).toContain("font-family:Georgia");
+  expect(html).toContain("font-weight:900");
+  expect(html).toContain("2px #112233");
+  expect(html).toContain("background-color:#FFD60A");
+  expect(html).not.toContain("<buyers>");
+  expect(html).toContain("&lt;");
+  expect(html).toContain("&gt; wait");
 });

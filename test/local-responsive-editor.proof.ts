@@ -535,12 +535,12 @@ it("uses the real editor, clip navigation and footer at phone, tablet and deskto
         tabs()[0].click();await wait(()=>ready(),'rail_return');
       }
       if(action==='rename'){
-        const rename=()=>document.querySelector('button[aria-label="Rename clip"]');
+        const rename=()=>selected().closest('.clip-card').querySelector('button[aria-label="Rename clip"]');
         rename().click();await wait(()=>document.querySelector('input[aria-label="Clip name"]'),'name_input');
         const input=document.querySelector('input[aria-label="Clip name"]');
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Synthetic highlight');
         input.dispatchEvent(new Event('input',{bubbles:true}));button('Save name').click();
-        await wait(()=>selected().textContent.includes('Synthetic highlight') && !document.querySelector('input[aria-label="Clip name"]'),'rename_saved');
+        await wait(()=>selected().closest('.clip-card').textContent.includes('Synthetic highlight') && !document.querySelector('input[aria-label="Clip name"]'),'rename_saved');
         if(!document.querySelector('a[download="Synthetic highlight-clip-1-r0.mp4"]'))throw new Error('download_name');
         rename().click();await wait(()=>document.querySelector('input[aria-label="Clip name"]'),'name_cancel');
         document.querySelector('input[aria-label="Clip name"]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));

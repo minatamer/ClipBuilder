@@ -4,6 +4,7 @@ import { Upload } from "lucide-react";
 import { Workspace } from "../../shared/ui/workspace";
 import { WorkflowFrame } from "../../shared/ui/workflow-frame";
 import { Button } from "../../shared/ui/button";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import {
   ownerWorkspaceSchema,
   type OwnerWorkspace,
@@ -56,6 +57,9 @@ export function LocalEditingExperience({
   const [acquisitionBusy, setAcquisitionBusy] = useState(false);
   const blocked = busy || acquisitionBusy || !capabilities;
   const [message, setMessage] = useState("");
+  const [messageArea, setMessageArea] = useState<
+    "upload" | "source" | "session"
+  >("upload");
   const [connectAttempt, setConnectAttempt] = useState(0);
   const [startupFailed, setStartupFailed] = useState(false);
   const [sessionConnected, setSessionConnected] = useState(true);
@@ -248,6 +252,7 @@ export function LocalEditingExperience({
       setView("moments");
       setMessage("");
     } catch (error) {
+      setMessageArea("upload");
       if (!controller.signal.aborted)
         setMessage(
           hosted
@@ -280,9 +285,8 @@ export function LocalEditingExperience({
       );
       if (response.status === 409) {
         setClearBlocked(true);
-        setMessage(
-          "Couldn’t save the latest changes. Retry or discard this session.",
-        );
+        setMessageArea("session");
+        setMessage("Couldn’t save changes. Retry or discard.");
         return;
       }
       if (!response.ok && response.status !== 404)
@@ -305,7 +309,8 @@ export function LocalEditingExperience({
         setDemoStatus(hostedDemoStatusSchema.parse(await status.json()));
       }
     } catch {
-      setMessage("The processing copy could not be cleared. Try again.");
+      setMessageArea("session");
+      setMessage("Couldn’t reset. Try again.");
     } finally {
       setBusy(false);
     }
@@ -340,6 +345,7 @@ export function LocalEditingExperience({
                 recovery={clearBlocked}
                 disabled={blocked || clipWork || !sessionConnected}
                 onClear={(discard) => void clear(discard)}
+                message={messageArea === "session" ? message : undefined}
               />
               <div className="local-footer-actions">
                 {hasClips && !unapplied && !clipWork && !blocked && (
@@ -383,11 +389,8 @@ export function LocalEditingExperience({
         }
       >
         <div
-          className={`local-editing ${!workspace ? "local-intake" : view === "editor" ? "local-editor" : ""}`}
+          className={`local-editing ${!workspace ? "local-intake" : view === "editor" ? "local-editor" : "local-moments"}`}
         >
-          <p className="flow-notice" role="status" aria-live="polite">
-            {message}
-          </p>
           {!workspace && demoStatus?.limited ? (
             <DemoLimitScreen retryAt={demoStatus.retryAt} />
           ) : !workspace && ((busy && !capabilities) || openingState) ? (
@@ -453,6 +456,10 @@ export function LocalEditingExperience({
                     </div>
                   </div>
                   <footer className="source-card-footer">
+                    <InlineFeedback
+                      id="upload-feedback"
+                      message={messageArea === "upload" ? message : undefined}
+                    />
                     <div className="source-actions">
                       <Button
                         icon={Upload}
@@ -471,6 +478,11 @@ export function LocalEditingExperience({
                         hosted
                           ? "Choose a video"
                           : "Choose a video or saved ClipBuilder draft"
+                      }
+                      aria-describedby={
+                        messageArea === "upload" && message
+                          ? "upload-feedback"
+                          : undefined
                       }
                       tabIndex={-1}
                       disabled={blocked}
@@ -521,6 +533,7 @@ export function LocalEditingExperience({
                           "loaded",
                         );
                         setPreviewReadyFor(workspace.id);
+                        if (messageArea === "source") setMessage("");
                       }}
                       onTimeUpdate={(event) =>
                         constrainSourcePlayback(
@@ -546,13 +559,22 @@ export function LocalEditingExperience({
                         setPreviewReadyFor(null);
                       }}
                       onEmptied={() => setPreviewReadyFor(null)}
-                      onError={() => setPreviewReadyFor(null)}
+                      onError={() => {
+                        setPreviewReadyFor(null);
+                        setMessageArea("source");
+                        setMessage("Couldn’t load the video preview.");
+                      }}
                       onLoadStart={() => setPreviewReadyFor(null)}
                     />
-                    <p className="source-hint">
-                      {Math.round(workspace.source.durationMs / 1000)} seconds ·{" "}
-                      {workspace.source.width} × {workspace.source.height}
-                    </p>
+                    <div
+                      className="source-preview-feedback"
+                      hidden={messageArea !== "source" || !message}
+                    >
+                      <InlineFeedback
+                        reserve={false}
+                        message={messageArea === "source" ? message : undefined}
+                      />
+                    </div>
                   </aside>
                   {capabilities && (
                     <OwnerSelectionPanel
@@ -587,6 +609,7 @@ export function LocalEditingExperience({
                         )
                           return;
                         try {
+                          setMessageArea("source");
                           setMessage("");
                           video.currentTime = seconds;
                           video.scrollIntoView({

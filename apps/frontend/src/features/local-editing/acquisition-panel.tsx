@@ -1,4 +1,5 @@
 import { Button } from "../../shared/ui/button";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { Progress } from "../../shared/ui/progress";
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowLeft, Link2, LoaderCircle } from "lucide-react";
@@ -89,6 +90,10 @@ export function OwnerAcquisitionPanel({
   );
   const [pending, setPending] = useState<Action | null>(null);
   const [message, setMessage] = useState("");
+  const [progressFeedback, setProgressFeedback] = useState("");
+  const [messageArea, setMessageArea] = useState<
+    "url" | "resolution" | "action"
+  >("url");
   const [shownDownload, setShownDownload] = useState<string | null>(null);
   const alive = useRef(false),
     request = useRef<AbortController | null>(null),
@@ -217,6 +222,7 @@ export function OwnerAcquisitionPanel({
           .nullable()
           .parse(await response.json());
         if (!controller.signal.aborted && atRevision === revision.current) {
+          setProgressFeedback("");
           if (value && running(value)) {
             setShownDownload(value.id);
             setStep("resolution");
@@ -239,7 +245,7 @@ export function OwnerAcquisitionPanel({
         }
       } catch {
         if (!controller.signal.aborted)
-          setMessage("Download status unavailable.");
+          setProgressFeedback("Download status unavailable.");
       }
       if (!controller.signal.aborted)
         timer = setTimeout(() => void read(), 1000);
@@ -280,6 +286,13 @@ export function OwnerAcquisitionPanel({
     request.current = controller;
     revision.current++;
     setPending(kind);
+    setMessageArea(
+      kind === "resolve"
+        ? "url"
+        : kind === "metadata"
+          ? "resolution"
+          : "action",
+    );
     setMessage("");
     try {
       if (kind === "resolve") {
@@ -291,6 +304,7 @@ export function OwnerAcquisitionPanel({
         setLookup(value);
         setCheckedUrl(link);
         setStep("resolution");
+        setMessageArea("resolution");
         setOffer(null);
         const ready = savedResolutionChoices(value.saved, codex)[0];
         if (ready) setChoice(savedChoice(ready));
@@ -482,6 +496,14 @@ export function OwnerAcquisitionPanel({
                   <input
                     type="url"
                     aria-label="YouTube link"
+                    aria-invalid={
+                      (messageArea === "url" && !!message) || undefined
+                    }
+                    aria-describedby={
+                      messageArea === "url" && message
+                        ? `${formId}-url-feedback`
+                        : undefined
+                    }
                     value={url}
                     autoComplete="off"
                     onChange={(event) => {
@@ -502,6 +524,10 @@ export function OwnerAcquisitionPanel({
                     </span>
                   )}
                 </span>
+                <InlineFeedback
+                  id={`${formId}-url-feedback`}
+                  message={messageArea === "url" ? message : undefined}
+                />
               </label>
             </fieldset>
           </form>
@@ -529,6 +555,7 @@ export function OwnerAcquisitionPanel({
                     : " / " + size(transfer.totalBytes)}
                 </p>
               )}
+            <InlineFeedback message={progressFeedback} />
           </article>
         ) : (
           <>
@@ -585,11 +612,13 @@ export function OwnerAcquisitionPanel({
                       ))}
                     </div>
                   )}
-                  {!validWindow && (
-                    <p role="status">
-                      Choose start and end times inside this video.
-                    </p>
-                  )}
+                  <InlineFeedback
+                    message={
+                      !validWindow
+                        ? "Check the download start and end."
+                        : undefined
+                    }
+                  />
                 </div>
               )}
               <div hidden={downloadSettings !== "quality"}>
@@ -599,6 +628,11 @@ export function OwnerAcquisitionPanel({
                     <select
                       className="select-control"
                       id={resolutionId}
+                      aria-describedby={
+                        messageArea === "resolution" && message
+                          ? `${formId}-resolution-feedback`
+                          : undefined
+                      }
                       value={choice}
                       onChange={(event) => {
                         if (event.currentTarget.value === "other-resolutions")
@@ -695,11 +729,22 @@ export function OwnerAcquisitionPanel({
             )}
           </>
         )}
-        <p className="flow-notice" role="status" aria-live="polite">
-          {message}
-        </p>
+        {step === "resolution" && messageArea === "resolution" && (
+          <InlineFeedback
+            id={`${formId}-resolution-feedback`}
+            message={message}
+          />
+        )}
       </div>
       <footer className="source-card-footer">
+        <InlineFeedback
+          message={
+            messageArea === "action" ||
+            (step === "resolution" && messageArea === "url")
+              ? message
+              : undefined
+          }
+        />
         <nav
           className="source-actions youtube-actions"
           aria-label="YouTube actions"

@@ -44,7 +44,12 @@ export function EditorTimeline({
   preview?: ((item: EditorTimelineItem) => ReactNode) | undefined;
 }) {
   return (
-    <div className="editor-timeline" role="group" aria-label={label}>
+    <div
+      className="editor-timeline"
+      data-kind={items[0]?.kind}
+      role="group"
+      aria-label={label}
+    >
       {items.map((item) => (
         <div className="editor-timeline-entry" key={item.key}>
           <button

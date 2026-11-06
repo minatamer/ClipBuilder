@@ -372,7 +372,7 @@ it("edits Media audio through the real authenticated API/worker with audition, u
           await wait(()=>button('Cancel upload'),'cancel_ready');const footer=document.querySelector('#sample-main > footer').getBoundingClientRect();if(footer.height>76||footer.bottom>innerHeight+1)throw new Error('upload_footer');
           button('Cancel upload').click();await wait(()=>!button('Cancel upload'),'canceled');
         }
-        else if(action==='upload-bad')await wait(()=>document.querySelector('.clip-editor > .flow-notice')?.textContent.includes('Couldn’t add this audio'),'upload_failure');
+        else if(action==='upload-bad')await wait(()=>[...document.querySelectorAll('.audio-inspector [data-inline-feedback]')].some(node=>node.textContent.includes('Couldn’t add this audio')),'upload_failure');
         else await wait(()=>button('Apply changes')&&document.querySelector('[data-audio-cue]')&&!button('Uploading…'),'uploaded');
       }
       if(action==='add-hook-sound'){await tab('Audio views','Sound library');if(named('Add Sator suspense'))throw new Error('retired_sator_visible');named('Add Vine boom').click();await wait(()=>button('Apply changes'),'hook_sound');await set('Audio placement','hook');button('Apply changes').click();await wait(()=>!button('Apply changes')&&!named('Audio placement').matches(':disabled'),'apply');}

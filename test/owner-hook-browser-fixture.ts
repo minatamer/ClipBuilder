@@ -10,11 +10,27 @@ import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
 import { independentHookFixture } from "./owner-hook-fixture.ts";
 import { withIndependentOwnerHook } from "../packages/contracts/local/hook-content.ts";
 import { applyOwnerEdit } from "../apps/backend/local/edit-clip.ts";
+import { ownerClipRenameSchema } from "../packages/contracts/local/clip-name.ts";
+import { ownerHookTitleRequestSchema } from "../packages/contracts/local/hook-title.ts";
+import { hookTitlePlanner } from "../apps/backend/local/hook-title-planner.ts";
+import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
 import { prepareLocalControlsFixture } from "./owner-controls-browser.ts";
 import { listenOwner } from "./owner-http.ts";
 
 /** Generated, loopback-only editor surface for browser regression checks. */
-export async function startHookEditorFixture(baselineEditor?: string) {
+export async function startHookEditorFixture(
+  baselineEditor?: string,
+  options: {
+    configure?: (clip: ReturnType<typeof independentHookFixture>) => void;
+    pictureSize?: { width: number; height: number };
+    simulateTracking?: boolean;
+    renameFailures?: number;
+    renameDelayMs?: number;
+    contextualFeedback?: boolean;
+    hookTitles?: boolean;
+    momentsLayout?: boolean;
+  } = {},
+) {
   const root = await mkdtemp(join(tmpdir(), "clipbuilder-hook-editor-"));
   const clip = independentHookFixture(),
     workspace = {
@@ -67,17 +83,71 @@ export async function startHookEditorFixture(baselineEditor?: string) {
     [],
     { startFrame: 30, endFrame: 90 },
   );
+  options.configure?.(clip);
   let ui = "",
     bytes = Buffer.alloc(0),
     edits = 0,
     unexpected = 0;
+  let renameAttempts = 0,
+    renames = 0;
+  let injectedFailures = 0;
+  let titleSuggestions = 0;
+  let analysesStarted = 0;
+  let analysesClosed = 0;
+  const momentsAnalysis = (many: boolean) => {
+    const moments = Array.from({ length: many ? 12 : 1 }, (_, index) => ({
+      id: randomUUID(),
+      processingIdentity: createHash("sha256")
+        .update(`synthetic-moment-${index}`)
+        .digest("hex"),
+      cut: { startFrame: index, endFrame: index + 60 },
+      rangeIds: [],
+      cues: [],
+      evidence:
+        many && index > 2
+          ? {
+              startWordId: "w_000001",
+              endWordId: "w_000002",
+              title:
+                `Synthetic ${index + 1}: a deliberately long headline that stays inside its result card`.slice(
+                  0,
+                  80,
+                ),
+              hook: "Synthetic hook",
+              rationale: "Generated layout example",
+              evidence: [],
+              caveats: [],
+            }
+          : null,
+    }));
+    return ownerAnalysisSchema.parse({
+      id: randomUUID(),
+      inputs: {
+        sourceRevision: 0,
+        policyRevision: 0,
+        ranges: [],
+        aiDuration: { minMs: 10000, maxMs: 60000 },
+        aiCount: many ? "all" : 1,
+        manualOnly: !many,
+      },
+      mode: "synthetic-ai",
+      words: [],
+      manual: moments.filter((m) => !m.evidence),
+      suggestions: moments.filter((m) => m.evidence),
+      calls: { transcription: 0, selection: 0 },
+    });
+  };
+  const oneAnalysis = options.momentsLayout ? momentsAnalysis(false) : null,
+    manyAnalysis = options.momentsLayout ? momentsAnalysis(true) : null;
+  const pictureSize = options.pictureSize ?? { width: 100, height: 100 };
   const picture = await sharp({
-    create: { width: 100, height: 100, channels: 3, background: "yellow" },
+    create: { ...pictureSize, channels: 3, background: "yellow" },
   })
     .png()
     .toBuffer();
   clip.assets[0] = {
     ...clip.assets[0]!,
+    ...pictureSize,
     bytes: picture.length,
     digest: createHash("sha256").update(picture).digest("hex"),
   };
@@ -86,8 +156,126 @@ export async function startHookEditorFixture(baselineEditor?: string) {
   const server = createServer((req, res) => {
     void (async () => {
       res.setHeader("Content-Type", "application/json");
+      if (
+        options.hookTitles &&
+        req.method === "POST" &&
+        req.url?.endsWith("/hook-title")
+      ) {
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) chunks.push(Buffer.from(chunk));
+        const request = ownerHookTitleRequestSchema.parse(
+          JSON.parse(Buffer.concat(chunks).toString()),
+        );
+        titleSuggestions++;
+        const title = await hookTitlePlanner(async () => ({
+          texts: [
+            {
+              title: "A Fresh Way to See This Moment",
+              startFrame: 0,
+              endFrame: 90,
+              wordIds: [],
+              hookStyle: "curiosity-gap",
+              emphasis: [
+                {
+                  text: "Fresh Way",
+                  occurrence: 0,
+                  style: { color: "#FF3B30" },
+                },
+              ],
+            },
+          ],
+        }))(
+          {
+            words: clip.base!.words,
+            frames: clip.base!.overlay.frames,
+            hook: request.hook,
+          },
+          new AbortController().signal,
+        );
+        res.end(
+          JSON.stringify({
+            clipId: clip.id,
+            expectedRevision: request.expectedRevision,
+            sourceRevision: request.sourceRevision,
+            hook: request.hook,
+            title,
+          }),
+        );
+        return;
+      }
+      const scenario =
+        options.contextualFeedback || options.momentsLayout
+          ? req.headers["x-fixture-view"]
+          : undefined;
+      if (
+        options.momentsLayout &&
+        req.url?.endsWith("/analysis") &&
+        req.method === "POST"
+      ) {
+        analysesStarted++;
+        req.resume();
+        res.once("close", () => {
+          analysesClosed++;
+        });
+        return;
+      }
+      if (options.momentsLayout && req.url?.endsWith("/codex-progress")) {
+        res.end(
+          JSON.stringify({
+            runId: workspace.id,
+            steps: [
+              { id: "inspect", state: "done", elapsedMs: 7000 },
+              { id: "audio", state: "done", elapsedMs: 400 },
+              { id: "transcription", state: "running", elapsedMs: 3000 },
+              { id: "speakers", state: "running", elapsedMs: 1000 },
+            ],
+          }),
+        );
+        return;
+      }
+      if (scenario && req.url === "/api/local/sources/state") {
+        res.writeHead(503).end("{}");
+        return;
+      }
+      if (options.contextualFeedback && scenario && req.method !== "GET") {
+        injectedFailures++;
+        req.resume();
+        res.writeHead(503).end("{}");
+        return;
+      }
       if (req.url === "/__fixture/state") {
-        res.end(JSON.stringify({ clip, edits, unexpected }));
+        res.end(
+          JSON.stringify({ clip, edits, unexpected, renameAttempts, renames }),
+        );
+        return;
+      }
+      if (
+        req.method === "POST" &&
+        req.url?.endsWith(`/clips/${clip.id}/rename`)
+      ) {
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) chunks.push(Buffer.from(chunk));
+        const input = ownerClipRenameSchema.parse(
+          JSON.parse(Buffer.concat(chunks).toString()),
+        );
+        renameAttempts++;
+        const renameDelayMs = options.renameDelayMs;
+        if (renameDelayMs)
+          await new Promise((done) =>
+            setTimeout(done, Math.min(3000, renameDelayMs)),
+          );
+        if (renameAttempts <= (options.renameFailures ?? 0)) {
+          res.writeHead(503).end("{}");
+          return;
+        }
+        if (input.expectedName !== (clip.displayName ?? null)) {
+          res.writeHead(409).end("{}");
+          return;
+        }
+        if (input.name === null) delete clip.displayName;
+        else clip.displayName = input.name;
+        renames++;
+        res.end(JSON.stringify(list()));
         return;
       }
       if (req.method === "POST" && req.url?.endsWith("/edit")) {
@@ -116,9 +304,11 @@ export async function startHookEditorFixture(baselineEditor?: string) {
         res.end(
           JSON.stringify({
             aiMode: "synthetic-ai",
+            ...(options.hookTitles ? { hookTitleSuggestions: true } : {}),
             sourceMode: null,
             planningAvailable: true,
             captionGeneration: false,
+            ...(options.momentsLayout ? { aiProvider: "codex" } : {}),
             localMedia: true,
             cloud: false,
           }),
@@ -126,15 +316,62 @@ export async function startHookEditorFixture(baselineEditor?: string) {
         return;
       }
       if (req.url === "/api/local/workspace") {
-        res.end(JSON.stringify(workspace));
+        res.end(JSON.stringify(scenario === "/intake.html" ? null : workspace));
         return;
       }
       if (req.url?.endsWith("/clips")) {
-        res.end(JSON.stringify(list()));
+        res.end(
+          JSON.stringify(
+            options.momentsLayout ||
+              scenario === "/moments.html" ||
+              scenario === "/intake.html"
+              ? { clips: [], active: false, workers: 1 }
+              : scenario === "/failed.html"
+                ? {
+                    clips: [
+                      {
+                        ...clip,
+                        state: "failed",
+                        error: "local_clip_failed",
+                        outputs: [],
+                      },
+                    ],
+                    active: false,
+                    workers: 1,
+                  }
+                : options.contextualFeedback
+                  ? {
+                      clips: [
+                        {
+                          ...clip,
+                          state: "review-ready",
+                          preview: {
+                            frames: clip.base!.overlay.frames,
+                            bytes: bytes.length,
+                          },
+                          outputs: [],
+                        },
+                      ],
+                      active: false,
+                      workers: 1,
+                    }
+                  : list(),
+          ),
+        );
         return;
       }
       if (req.url?.endsWith("/analysis")) {
-        res.end("null");
+        res.end(
+          JSON.stringify(
+            options.momentsLayout
+              ? scenario === "/moments-many.html"
+                ? manyAnalysis
+                : scenario === "/moments-one.html"
+                  ? oneAnalysis
+                  : null
+              : null,
+          ),
+        );
         return;
       }
       if (req.url?.includes("/assets/")) {
@@ -177,7 +414,17 @@ export async function startHookEditorFixture(baselineEditor?: string) {
                   ? "loop.js"
                   : req.url === "/loop-baseline.js"
                     ? "loop-baseline.js"
-                    : req.url === "/"
+                    : req.url === "/" ||
+                        ((options.contextualFeedback ||
+                          options.momentsLayout) &&
+                          [
+                            "/intake.html",
+                            "/moments.html",
+                            "/failed.html",
+                            "/moments-one.html",
+                            "/moments-many.html",
+                            "/moments-loading.html",
+                          ].includes(req.url ?? ""))
                       ? "index.html"
                       : req.url === "/app.js"
                         ? "app.js"
@@ -230,11 +477,23 @@ export async function startHookEditorFixture(baselineEditor?: string) {
       AbortSignal.timeout(30000),
     );
     bytes = await readFile(source);
+    if (options.contextualFeedback)
+      await writeFile(join(root, "synthetic-picture.png"), picture);
     ui = await prepareLocalControlsFixture(root);
     await writeFile(
       join(ui, "index.html"),
       '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>',
     );
+    if (options.contextualFeedback || options.momentsLayout) {
+      const html = await readFile(join(ui, "index.html"), "utf8");
+      await writeFile(
+        join(ui, "index.html"),
+        html.replace(
+          "<head>",
+          `<head><script>const originalFetch=window.fetch;window.fetch=(input,init={})=>{const headers=new Headers(init.headers);headers.set('x-fixture-view',location.pathname);return originalFetch(input,{...init,headers})};document.addEventListener('click',()=>{document.querySelectorAll('audio').forEach(audio=>audio.muted=true)},true);document.addEventListener('DOMContentLoaded',()=>{if(${Boolean(options.momentsLayout)})return;const button=document.createElement('button');button.textContent='Simulate audition failure (fixture)';button.style.cssText='position:fixed;bottom:4px;left:4px;z-index:10000';button.onclick=()=>{document.querySelector('.audio-inspector audio')?.dispatchEvent(new Event('error'));button.remove()};document.body.append(button)});</script>`,
+        ),
+      );
+    }
     const loopSource = `import React, {useRef,useState} from "react";
       import {createRoot} from "react-dom/client";
       import {ClipEditor} from "./apps/frontend/src/features/local-editing/clip-editor.tsx";
@@ -285,7 +544,7 @@ export async function startHookEditorFixture(baselineEditor?: string) {
     } finally {
       await stop();
     }
-    if (baselineEditor) {
+    if (baselineEditor || options.simulateTracking) {
       const fakeTrack = `export async function trackHeadVideo({seed,frames,signal,progress}) {
         for(let step=1;step<=8;step++) {
           signal.throwIfAborted();
@@ -335,8 +594,15 @@ export async function startHookEditorFixture(baselineEditor?: string) {
 
     return {
       url: `http://localhost:${port}/`,
+      syntheticMedia: options.contextualFeedback
+        ? { video: source, picture: join(root, "synthetic-picture.png") }
+        : undefined,
       clip,
       counts: () => ({ edits, unexpected }),
+      renameCounts: () => ({ renameAttempts, renames }),
+      feedbackCounts: () => ({ injectedFailures }),
+      titleCounts: () => ({ titleSuggestions }),
+      momentCounts: () => ({ analysesStarted, analysesClosed }),
       close: async () => {
         server.closeAllConnections();
         if (server.listening)

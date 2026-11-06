@@ -5,6 +5,8 @@ import { ownerOverlayAudioSegments } from "../../../../../packages/contracts/loc
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import { OWNER_SOUNDS } from "../../../../../packages/contracts/local/audio.ts";
 import { focusPositions, focusPositionName } from "./focus-positions.ts";
+import { filterTimelineRanges, filterRangeKey } from "./filter-ranges.ts";
+import { OWNER_VIDEO_LOOK_LABELS } from "../../../../../packages/contracts/local/video-look.ts";
 
 export type EditorTimelineKind =
   "picture" | "text" | "caption" | "audio" | "camera" | "look";
@@ -97,7 +99,19 @@ export function editorTimelineItems(
       });
     if (kind === "camera" && !content.focus)
       add("0", 0, "Custom position 1", first, last);
-    if (kind === "look") add("look", 0, "Video filter", first, last);
+    if (kind === "look")
+      filterTimelineRanges(content, {
+        startFrame: first,
+        endFrame: last,
+      }).forEach((range, i) =>
+        add(
+          filterRangeKey(range),
+          i,
+          `${range.title} · ${OWNER_VIDEO_LOOK_LABELS[range.preset]}`,
+          range.startFrame,
+          range.endFrame,
+        ),
+      );
     if (kind === "audio") {
       add("original", -1, "Original audio", first, last);
       for (const [index, cue] of (content.audio?.cues ?? []).entries()) {

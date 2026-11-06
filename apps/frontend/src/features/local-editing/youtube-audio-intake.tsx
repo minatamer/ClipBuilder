@@ -1,5 +1,6 @@
 import { ProcessingState } from "../../shared/ui/processing-state";
 import { Button } from "../../shared/ui/button";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
 export function YoutubeAudioIntake({
   value,
   pending,
@@ -36,11 +37,7 @@ export function YoutubeAudioIntake({
           <p className="source-hint">Audio up to 2 minutes · 12 MB</p>
         </>
       )}
-      {message && (
-        <p className="local-error" role="alert">
-          {message}
-        </p>
-      )}
+      <InlineFeedback message={message} />
       <div className="audio-intake-actions youtube-audio-card-actions">
         <Button
           variant="primary"

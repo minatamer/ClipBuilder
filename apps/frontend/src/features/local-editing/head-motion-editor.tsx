@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { Clock3, Play, Trash2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { Progress } from "../../shared/ui/progress";
 import { WorkflowActions } from "./workflow-actions";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
@@ -31,6 +32,7 @@ import {
 import { trackHeadVideo } from "./track-head-video";
 import { BulkHeadMotionEditor } from "./bulk-head-motion-editor";
 import { HeadSelectionView } from "./head-selection-view";
+import { FocusPreviewSlot } from "./focus-preview-slot";
 import { motionForCameraPosition } from "./head-motion-selection.ts";
 import {
   ownerFollowWindow,
@@ -452,7 +454,6 @@ export function HeadMotionEditor({
       {!available && (
         <p role="status">Set a camera position before adding Motion.</p>
       )}
-      {message && <p role="status">{message}</p>}
       {bulk ? (
         <BulkHeadMotionEditor
           focus={focus}
@@ -485,17 +486,19 @@ export function HeadMotionEditor({
               {((offset + draft.endFrame) / OWNER_FPS).toFixed(2)}s
             </span>
           </div>
-          <HeadSelectionView
-            sourceUrl={sourceUrl}
-            content={content}
-            sourceFrame={draft.sourceStartFrame}
-            seed={draft.seed}
-            disabled={disabled || busy}
-            tracking={busy}
-            onChange={updateSeed}
-            onConfirm={() => setDraft({ ...draft, marked: true })}
-            followWindow={ownerFollowWindow(focus, draft).box}
-          />
+          <FocusPreviewSlot>
+            <HeadSelectionView
+              sourceUrl={sourceUrl}
+              content={content}
+              sourceFrame={draft.sourceStartFrame}
+              seed={draft.seed}
+              disabled={disabled || busy}
+              tracking={busy}
+              onChange={updateSeed}
+              onConfirm={() => setDraft({ ...draft, marked: true })}
+              followWindow={ownerFollowWindow(focus, draft).box}
+            />
+          </FocusPreviewSlot>
           <div className="motion-editing-slot" ref={progressSlot}>
             {busy ? (
               <Progress label="Tracking head" fraction={progress} />
@@ -608,6 +611,7 @@ export function HeadMotionEditor({
             label="Motion tracking actions"
           >
             <span className="head-motion-actions">
+              <InlineFeedback message={message} />
               <Button
                 variant="primary"
                 disabled={
@@ -759,6 +763,7 @@ export function HeadMotionEditor({
           )}
         </>
       )}
+      {!draft && !bulk && <InlineFeedback message={message} />}
     </div>
   );
 }

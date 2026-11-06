@@ -30,6 +30,42 @@ function fixture() {
   };
 }
 
+it("seeds filter rows from camera positions and preserves custom ranges across positions", () => {
+  const { overlay } = fixture();
+  for (const content of [overlay, overlay.hookContent!]) {
+    const shot = content.focus!.shots[0]!;
+    content.focus!.shots = [
+      { ...shot, endFrame: 60 },
+      { ...shot, startFrame: 60 },
+    ];
+  }
+  expect(
+    editorTimelineItems(overlay, "look").map((item) => [
+      item.occurrence,
+      item.startFrame,
+      item.endFrame,
+    ]),
+  ).toEqual([
+    ["hook", 0, 30],
+    ["hook", 30, 60],
+    ["body", 60, 120],
+    ["body", 120, 180],
+  ]);
+  overlay.videoLooks = [
+    { preset: "mono", strength: 100, startFrame: 30, endFrame: 90 },
+  ];
+  const items = editorTimelineItems(overlay, "look"),
+    body = items.filter((item) => item.occurrence === "body");
+  expect(body.map((item) => [item.startFrame, item.endFrame])).toEqual([
+    [60, 90],
+    [90, 150],
+    [150, 180],
+  ]);
+  expect(body[1]!.title).toContain("Custom position 1 → Custom position 2");
+  expect(body[1]!.title).toContain("Black and white");
+  expect(items.filter((item) => item.occurrence === "hook")).toHaveLength(2);
+});
+
 it("lists both independent occurrences in presentation order without merging repeated IDs", () => {
   const { overlay } = fixture();
   for (const kind of [

@@ -56,7 +56,7 @@ export function HeadSelectionView({
               width: `min(100%, calc((85dvh - 9rem) * ${content.width / content.height}))`,
             }
           : {
-              width: `min(100%, calc((${tracking ? "35dvh - 4rem" : "50dvh - 5rem"}) * ${content.width / content.height}))`,
+              width: `min(100%, calc(var(--focus-preview-height, ${tracking ? "35dvh - 4rem" : "50dvh - 5rem"}) * ${content.width / content.height}))`,
             }),
       }}
     >

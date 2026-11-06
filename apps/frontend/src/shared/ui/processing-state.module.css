@@ -1,4 +1,5 @@
 .state {
+  box-sizing: border-box;
   position: relative;
   isolation: isolate;
   display: flex;

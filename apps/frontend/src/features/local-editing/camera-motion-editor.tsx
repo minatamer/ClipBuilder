@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Clock3, Play, Trash2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
+import { FocusPreviewSlot } from "./focus-preview-slot";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import {
   ownerHookFrames,
@@ -290,100 +292,104 @@ export function CameraMotionEditor({
       </div>
       {effect && (
         <>
-          <div
-            className="focus-source zoom-target-preview"
-            style={{ aspectRatio: "9/16", maxWidth: 150 }}
-          >
-            <video
-              ref={media}
-              src={sourceUrl}
-              muted
-              playsInline
-              preload="metadata"
-              aria-hidden="true"
-              onLoadedMetadata={() => {
-                if (media.current)
-                  media.current.currentTime = Math.min(
-                    media.current.duration,
-                    Math.max(0, sourceFrame / OWNER_FPS),
-                  );
-              }}
-              style={{
-                position: "absolute",
-                width: `${(1080 / baseline.width) * 100}%`,
-                height: `${(1920 / baseline.height) * 100}%`,
-                maxWidth: "none",
-                left: `${(-baseline.x / baseline.width) * 100}%`,
-                top: `${(-baseline.y / baseline.height) * 100}%`,
-              }}
-            />
-            <button
-              ref={surface}
-              type="button"
-              className="zoom-target-surface"
-              aria-label="Zoom target"
-              disabled={disabled}
-              onPointerDown={(event) => {
-                if (event.button !== 0) return;
-                event.preventDefault();
-                event.currentTarget.focus();
-                event.currentTarget.setPointerCapture(event.pointerId);
-                pointer.current = event.pointerId;
-                seek(Math.max(0, Math.min(focus.frames + prefix - 1, arrival)));
-                point(event);
-              }}
-              onPointerMove={(event) => {
-                if (pointer.current === event.pointerId) point(event);
-              }}
-              onPointerUp={() => {
-                pointer.current = null;
-              }}
-              onPointerCancel={() => {
-                pointer.current = null;
-              }}
-              onLostPointerCapture={() => {
-                pointer.current = null;
-              }}
-              onKeyDown={(event) => {
-                const step = event.shiftKey ? 0.05 : 0.01,
-                  dx =
-                    event.key === "ArrowRight"
-                      ? step
-                      : event.key === "ArrowLeft"
-                        ? -step
-                        : 0,
-                  dy =
-                    event.key === "ArrowDown"
-                      ? step
-                      : event.key === "ArrowUp"
-                        ? -step
-                        : 0;
-                if (dx || dy) {
+          <FocusPreviewSlot>
+            <div
+              className="focus-source zoom-target-preview"
+              style={{ aspectRatio: "9/16", maxWidth: 150 }}
+            >
+              <video
+                ref={media}
+                src={sourceUrl}
+                muted
+                playsInline
+                preload="metadata"
+                aria-hidden="true"
+                onLoadedMetadata={() => {
+                  if (media.current)
+                    media.current.currentTime = Math.min(
+                      media.current.duration,
+                      Math.max(0, sourceFrame / OWNER_FPS),
+                    );
+                }}
+                style={{
+                  position: "absolute",
+                  width: `${(1080 / baseline.width) * 100}%`,
+                  height: `${(1920 / baseline.height) * 100}%`,
+                  maxWidth: "none",
+                  left: `${(-baseline.x / baseline.width) * 100}%`,
+                  top: `${(-baseline.y / baseline.height) * 100}%`,
+                }}
+              />
+              <button
+                ref={surface}
+                type="button"
+                className="zoom-target-surface"
+                aria-label="Zoom target"
+                disabled={disabled || capturingStart}
+                onPointerDown={(event) => {
+                  if (event.button !== 0) return;
                   event.preventDefault();
+                  event.currentTarget.focus();
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  pointer.current = event.pointerId;
                   seek(
                     Math.max(0, Math.min(focus.frames + prefix - 1, arrival)),
                   );
-                  move(x + dx, y + dy);
-                }
-              }}
-            >
-              <span
-                className="focus-crop"
-                style={{
-                  left: `${((crop.x - baseline.x) / baseline.width) * 100}%`,
-                  top: `${((crop.y - baseline.y) / baseline.height) * 100}%`,
-                  width: `${(crop.width / baseline.width) * 100}%`,
-                  height: `${(crop.height / baseline.height) * 100}%`,
+                  point(event);
                 }}
-              />
-              <span
-                className="zoom-target-marker"
-                style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
+                onPointerMove={(event) => {
+                  if (pointer.current === event.pointerId) point(event);
+                }}
+                onPointerUp={() => {
+                  pointer.current = null;
+                }}
+                onPointerCancel={() => {
+                  pointer.current = null;
+                }}
+                onLostPointerCapture={() => {
+                  pointer.current = null;
+                }}
+                onKeyDown={(event) => {
+                  const step = event.shiftKey ? 0.05 : 0.01,
+                    dx =
+                      event.key === "ArrowRight"
+                        ? step
+                        : event.key === "ArrowLeft"
+                          ? -step
+                          : 0,
+                    dy =
+                      event.key === "ArrowDown"
+                        ? step
+                        : event.key === "ArrowUp"
+                          ? -step
+                          : 0;
+                  if (dx || dy) {
+                    event.preventDefault();
+                    seek(
+                      Math.max(0, Math.min(focus.frames + prefix - 1, arrival)),
+                    );
+                    move(x + dx, y + dy);
+                  }
+                }}
               >
-                +
-              </span>
-            </button>
-          </div>
+                <span
+                  className="focus-crop"
+                  style={{
+                    left: `${((crop.x - baseline.x) / baseline.width) * 100}%`,
+                    top: `${((crop.y - baseline.y) / baseline.height) * 100}%`,
+                    width: `${(crop.width / baseline.width) * 100}%`,
+                    height: `${(crop.height / baseline.height) * 100}%`,
+                  }}
+                />
+                <span
+                  className="zoom-target-marker"
+                  style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
+                >
+                  +
+                </span>
+              </button>
+            </div>
+          </FocusPreviewSlot>
           <div className="editor-fields focus-fields">
             <div className="range-time">
               <label>
@@ -541,11 +547,7 @@ export function CameraMotionEditor({
           </div>
         </>
       )}
-      {message && (
-        <p role="alert" className="local-error">
-          {message}
-        </p>
-      )}
+      <InlineFeedback message={message} />
     </fieldset>
   );
 }

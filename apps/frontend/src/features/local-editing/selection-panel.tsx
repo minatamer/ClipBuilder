@@ -9,7 +9,9 @@ import {
 import { OWNER_COLLECTION_PAGE_ITEMS as REVIEW_PAGE_ITEMS } from "../../../../../packages/contracts/local/collection-pages.ts";
 import { readOwnerAnalysis } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
-import { Play, Trash2, Clock3, Sparkles } from "lucide-react";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
+import { ZodError } from "zod";
+import { Play, Trash2, Clock3, Sparkles, CircleAlert } from "lucide-react";
 import { ProcessingState } from "../../shared/ui/processing-state";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -159,6 +161,12 @@ export function OwnerSelectionPanel({
   const [restoring, setRestoring] = useState(true);
   const waiting = analyzing || restoring;
   const [message, setMessage] = useState("");
+  const [messageArea, setMessageArea] = useState<
+    "analysis" | "manual" | "ai" | "import" | "results" | "action"
+  >("action");
+  const [limitArea, setLimitArea] = useState<
+    "manual" | "ai" | "action" | "results"
+  >("manual");
   const [tab, setTab] = useState<SelectionTab>("add");
   const tabsId = useId();
   const root = useRef<HTMLElement>(null);
@@ -169,7 +177,10 @@ export function OwnerSelectionPanel({
     (result: OwnerAnalysis) => {
       const all = defaultMomentSelection(result);
       const next = demoLimit ? all.slice(0, demoLimit) : all;
-      if (next.length < all.length) setLimitNotice((value) => value + 1);
+      if (next.length < all.length) {
+        setLimitArea("results");
+        setLimitNotice((value) => value + 1);
+      }
       setReviewPage(0);
       setAnalysis(result);
       setSelected(next.map(({ momentId }) => momentId));
@@ -277,6 +288,7 @@ export function OwnerSelectionPanel({
     setMessage("");
   }
   function captureAnalysis(field: "start" | "end") {
+    setMessageArea("analysis");
     if (busy || analyzing || !previewReady) return;
     const time = onCaptureTime();
     if (time === null) {
@@ -298,12 +310,11 @@ export function OwnerSelectionPanel({
       changed();
       (field === "start" ? setWindowStart : setWindowEnd)(captured);
     } catch {
-      setMessage(
-        "Choose a preview time inside the available analysis range, leaving at least one second between Start and End.",
-      );
+      setMessage("Keep Start/End inside the video, at least 1s apart.");
     }
   }
   function exportTimestamps() {
+    setMessageArea("results");
     if (!timestampExchange || !analysis || busy) return;
     try {
       const moments = [...analysis.manual, ...analysis.suggestions].filter(
@@ -329,6 +340,7 @@ export function OwnerSelectionPanel({
     }
   }
   function importTimestamps(file: File) {
+    setMessageArea("import");
     if (!timestampExchange || busy) return;
     if (file.size > OWNER_TIMESTAMP_FILE_BYTES) {
       setMessage("Choose a timestamps JSON file smaller than 1 MiB.");
@@ -417,7 +429,8 @@ export function OwnerSelectionPanel({
       }),
     );
   }
-  function parsed() {
+  function parsed(markArea: (area: "analysis" | "manual" | "ai") => void) {
+    markArea("analysis");
     const window = ownerAnalysisWindow(
       workspace.source,
       windowed
@@ -427,16 +440,19 @@ export function OwnerSelectionPanel({
           }
         : undefined,
     );
+    markArea("manual");
+    const ranges = rows.map((row) => ({
+      id: row.id,
+      startMs: fieldMilliseconds(row.start, originalOffset),
+      endMs: fieldMilliseconds(row.end, originalOffset),
+    }));
+    markArea("ai");
     const inputs = ownerAnalysisRequestForCapacity({
       manyClips: expanded,
     }).parse({
       sourceRevision: workspace.revision,
       policyRevision,
-      ranges: rows.map((row) => ({
-        id: row.id,
-        startMs: fieldMilliseconds(row.start, originalOffset),
-        endMs: fieldMilliseconds(row.end, originalOffset),
-      })),
+      ranges,
       aiDuration: {
         minMs: Number(minimum) * 1000,
         maxMs: Number(maximum) * 1000,
@@ -445,6 +461,7 @@ export function OwnerSelectionPanel({
       aiCount: local && findAll ? "all" : Number(count),
       ...(windowed ? { window } : {}),
     });
+    markArea("manual");
     const bound = ownerWindowFrames(window);
     if (
       inputs.ranges.some((range) => {
@@ -460,8 +477,10 @@ export function OwnerSelectionPanel({
       !expanded &&
       typeof inputs.aiCount === "number" &&
       inputs.aiCount > OWNER_LIMITS.suggestions
-    )
+    ) {
+      markArea("ai");
       throw Error("ai_count_limit");
+    }
     return demoLimit ? limitHostedDemoInputs(inputs) : inputs;
   }
   function rounded(row: Row): string {
@@ -481,20 +500,26 @@ export function OwnerSelectionPanel({
       );
       return `${Number(((cut.endFrame - cut.startFrame) / OWNER_FPS).toFixed(2))}s`;
     } catch {
-      return "Check start and end times.";
+      return `Check Start/End (1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s).`;
     }
   }
   async function findMoments() {
     if (busy || !analysisAvailable) return;
     let inputs;
+    const validation: { area: "analysis" | "manual" | "ai" } = {
+      area: "analysis",
+    };
     try {
-      inputs = parsed();
+      inputs = parsed((area) => {
+        validation.area = area;
+      });
       if (
         demoLimit &&
         (inputs.ranges.length !== rows.length ||
           inputs.aiCount !== Number(count) ||
           inputs.manualOnly !== manualOnly)
       ) {
+        setLimitArea("action");
         setLimitNotice((value) => value + 1);
         setRows((current) => current.slice(0, demoLimit));
         setCount(String(inputs.aiCount));
@@ -510,17 +535,28 @@ export function OwnerSelectionPanel({
         })),
       );
     } catch (error) {
+      const field =
+        error instanceof ZodError ? error.issues[0]?.path[0] : undefined;
+      const area =
+        field === "ranges"
+          ? "manual"
+          : field === "window"
+            ? "analysis"
+            : validation.area;
+      setMessageArea(area);
       setMessage(
         error instanceof Error && error.message === "ai_count_limit"
           ? "Choose between one and ten suggestions."
           : error instanceof Error &&
               error.message === "manual_outside_source_window"
             ? "Keep manual clips inside the analysis range."
-            : windowed
-              ? "Choose a valid analysis range inside this video, and check clip times."
-              : manualOnly
-                ? `Manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000} seconds. Check start and end times.`
-                : `Check clip times: manual clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s and AI durations 10–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s.`,
+            : field === "aiCount"
+              ? "Choose a positive whole number of suggestions."
+              : area === "analysis"
+                ? "Check the analysis start and end."
+                : area === "ai"
+                  ? `Use AI durations of 10–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s, with Max at least Min.`
+                  : `Clips must be 1–${OWNER_MAX_REQUESTED_CLIP_MS / 1000}s. Check Start/End.`,
       );
       return;
     }
@@ -532,6 +568,7 @@ export function OwnerSelectionPanel({
     setSelected([]);
     onChoose([]);
     setMessage("");
+    setMessageArea("action");
     try {
       const response = await fetch(
         `/api/local/workspace/${workspace.id}/analysis`,
@@ -556,16 +593,10 @@ export function OwnerSelectionPanel({
       if (!controller.signal.aborted && mounted.current) {
         acceptAnalysis(result);
         root.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-        setMessage(
-          !result.inputs.manualOnly &&
-            result.inputs.aiCount !== "all" &&
-            result.suggestions.length <
-              (result.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT)
-            ? `${result.suggestions.length} of ${result.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT} suggestions found.`
-            : "",
-        );
+        setMessage("");
       }
     } catch (failure) {
+      setMessageArea("action");
       if (mounted.current)
         setMessage(
           controller.signal.aborted
@@ -598,13 +629,24 @@ export function OwnerSelectionPanel({
               !analysis?.manual.some((moment) =>
                 visibleMoments.has(moment.id),
               )) && (
-              <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={exportTimestamps}
-              >
-                Export Timestamps
-              </Button>
+              <>
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={exportTimestamps}
+                >
+                  Export Timestamps
+                </Button>
+                <div
+                  className="moment-section-feedback"
+                  hidden={messageArea !== "results" || !message}
+                >
+                  <InlineFeedback
+                    reserve={false}
+                    message={messageArea === "results" ? message : undefined}
+                  />
+                </div>
+              </>
             )}
         </div>
         <ul className="moments">
@@ -678,7 +720,12 @@ export function OwnerSelectionPanel({
     );
   }
   return (
-    <section ref={root} className="selection" aria-labelledby="selection-title">
+    <section
+      ref={root}
+      className="selection"
+      data-waiting={waiting || undefined}
+      aria-labelledby="selection-title"
+    >
       <h2 id="selection-title" className="local-sr-only">
         Choose moments
       </h2>
@@ -695,6 +742,14 @@ export function OwnerSelectionPanel({
             type="button"
             role="tab"
             aria-selected={tab === value}
+            aria-label={value === "add" ? "Add clips" : "Your clips"}
+            aria-describedby={
+              message &&
+              ((value === "add" && messageArea !== "results") ||
+                (value === "clips" && messageArea === "results"))
+                ? `${tabsId}-${value}-issue`
+                : undefined
+            }
             aria-controls={`${tabsId}-${value}-panel`}
             tabIndex={tab === value ? 0 : -1}
             disabled={busy || (value === "clips" && !analysis)}
@@ -720,6 +775,23 @@ export function OwnerSelectionPanel({
             }}
           >
             {value === "add" ? "Add clips" : "Your clips"}
+            {message &&
+              ((value === "add" && messageArea !== "results") ||
+                (value === "clips" && messageArea === "results")) && (
+                <>
+                  <CircleAlert
+                    size={14}
+                    className="editor-tab-issue"
+                    aria-hidden="true"
+                  />
+                  <span
+                    className="local-sr-only"
+                    id={`${tabsId}-${value}-issue`}
+                  >
+                    {message}
+                  </span>
+                </>
+              )}
           </button>
         ))}
       </div>
@@ -730,12 +802,9 @@ export function OwnerSelectionPanel({
             : "Reopen this video to use the current AI mode."}
         </p>
       )}
-      <p className="flow-notice" role="status" aria-live="polite">
-        {message}
-      </p>
-      {limitNotice > 0 && <DemoLimitToast key={limitNotice} />}
       {waiting && (
         <ProcessingState
+          className="moments-processing"
           label={
             restoring
               ? "Loading moments"
@@ -792,6 +861,14 @@ export function OwnerSelectionPanel({
                       {field === "start" ? "Start" : "End"}
                       <input
                         aria-label={`Analysis ${field}`}
+                        aria-invalid={
+                          (messageArea === "analysis" && !!message) || undefined
+                        }
+                        aria-describedby={
+                          messageArea === "analysis" && message
+                            ? `${tabsId}-analysis-feedback`
+                            : undefined
+                        }
                         placeholder="HH:MM:SS"
                         maxLength={32}
                         value={value.text}
@@ -830,6 +907,10 @@ export function OwnerSelectionPanel({
             </div>
           )}
         </fieldset>
+        <InlineFeedback
+          id={`${tabsId}-analysis-feedback`}
+          message={messageArea === "analysis" ? message : undefined}
+        />
         <fieldset disabled={busy}>
           <legend>Manual clips</legend>
           {rows.map((row, index) => (
@@ -846,6 +927,9 @@ export function OwnerSelectionPanel({
                         aria-label={`Clip ${index + 1} ${field}`}
                         placeholder="HH:MM:SS"
                         aria-describedby={`cut-${row.id}`}
+                        aria-invalid={
+                          !/^[\d.]+s$/u.test(rounded(row)) || undefined
+                        }
                         onChange={(event) =>
                           editTime(row.id, field, event.target.value)
                         }
@@ -896,7 +980,11 @@ export function OwnerSelectionPanel({
               >
                 Remove
               </Button>
-              <p id={`cut-${row.id}`}>{rounded(row)}</p>
+              <InlineFeedback
+                id={`cut-${row.id}`}
+                message={rounded(row)}
+                tone={/^[\d.]+s$/u.test(rounded(row)) ? "status" : "error"}
+              />
             </div>
           ))}
           <div className="manual-clip-actions">
@@ -908,6 +996,7 @@ export function OwnerSelectionPanel({
                   (expanded ? OWNER_MANUAL_ROW_LIMIT : OWNER_LIMITS.ranges)
               }
               onClick={() => {
+                setLimitArea("manual");
                 if (demoLimit && rows.length >= demoLimit) {
                   setLimitNotice((value) => value + 1);
                   return;
@@ -927,6 +1016,7 @@ export function OwnerSelectionPanel({
                       : undefined,
                   );
                 } catch {
+                  setMessageArea("analysis");
                   setMessage(
                     "Choose a valid analysis range inside this video.",
                   );
@@ -980,14 +1070,34 @@ export function OwnerSelectionPanel({
               </>
             )}
           </div>
+          <InlineFeedback
+            message={
+              (messageArea === "manual" &&
+                rows.every((row) => /^[\d.]+s$/u.test(rounded(row)))) ||
+              messageArea === "import"
+                ? message
+                : undefined
+            }
+          />
+          {limitNotice > 0 && limitArea === "manual" && (
+            <DemoLimitToast key={limitNotice} />
+          )}
         </fieldset>
-        <fieldset disabled={busy}>
+        <fieldset
+          disabled={busy}
+          aria-describedby={
+            message && messageArea === "ai"
+              ? `${tabsId}-ai-feedback`
+              : undefined
+          }
+        >
           <legend>AI moments</legend>
           <label className="check">
             <input
               type="checkbox"
               checked={!manualOnly}
               onChange={(event) => {
+                setLimitArea("ai");
                 if (
                   event.target.checked &&
                   demoLimit &&
@@ -1033,6 +1143,7 @@ export function OwnerSelectionPanel({
                     value={count}
                     disabled={manualOnly || (local && findAll)}
                     onChange={(event) => {
+                      setLimitArea("ai");
                       changed();
                       const value = event.currentTarget.value;
                       if (
@@ -1093,10 +1204,24 @@ export function OwnerSelectionPanel({
               </div>
             </>
           )}
+          <InlineFeedback
+            id={`${tabsId}-ai-feedback`}
+            message={messageArea === "ai" ? message : undefined}
+          />
+          {limitNotice > 0 && limitArea === "ai" && (
+            <DemoLimitToast key={limitNotice} />
+          )}
         </fieldset>
       </div>
       {actionsVisible && tab === "add" && (
         <WorkflowActions target={footerTarget} label="Moment actions">
+          <InlineFeedback
+            message={messageArea === "action" ? message : undefined}
+            tone={message === "Canceled." ? "status" : "error"}
+          />
+          {limitNotice > 0 && limitArea === "action" && (
+            <DemoLimitToast key={limitNotice} />
+          )}
           {!waiting && (
             <Button
               variant="primary"
@@ -1139,6 +1264,21 @@ export function OwnerSelectionPanel({
                 ? ` · Remove ${selected.length - clipLimit} to keep ${clipLimit} or fewer.`
                 : ""}
             </p>
+            {limitNotice > 0 && limitArea === "results" && (
+              <DemoLimitToast key={limitNotice} />
+            )}
+            <InlineFeedback
+              reserve={false}
+              message={
+                !analysis.inputs.manualOnly &&
+                analysis.inputs.aiCount !== "all" &&
+                analysis.suggestions.length <
+                  (analysis.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT)
+                  ? `${analysis.suggestions.length} of ${analysis.inputs.aiCount ?? OWNER_DEFAULT_AI_COUNT} suggestions found.`
+                  : undefined
+              }
+              tone="status"
+            />
             {selected.length === 0 && <p>No clips yet.</p>}
             {selected.length > REVIEW_PAGE_ITEMS && (
               <nav className="collection-navigation" aria-label="Moment pages">

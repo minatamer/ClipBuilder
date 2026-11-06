@@ -1,3 +1,5 @@
+import { useId, type ReactNode } from "react";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import {
   OWNER_TEXT_FONTS,
   OWNER_TEXT_PRESET_LABELS,
@@ -12,63 +14,106 @@ export function TypographyFields({
   value,
   onChange,
   onPreset,
+  characterOnly = false,
+  mixed = [],
+  feedback,
 }: {
   value: OwnerTypography;
-  onChange: (next: OwnerTypography) => void;
+  onChange: (next: OwnerTypography, property?: keyof OwnerTypography) => void;
   onPreset: (preset: OwnerTypography["preset"]) => void;
+  characterOnly?: boolean;
+  mixed?: readonly (keyof OwnerTypography)[];
+  feedback?: ReactNode;
 }) {
   const background = ownerTextBackground(value);
+  const id = useId();
+  const sizeError =
+    !mixed.includes("fontSize") &&
+    (!Number.isInteger(value.fontSize) ||
+      value.fontSize < 24 ||
+      value.fontSize > 120)
+      ? "Use 24–120."
+      : undefined;
+  const outlineError =
+    !mixed.includes("outlineWidth") &&
+    (!Number.isInteger(ownerTypographyOutline(value)) ||
+      ownerTypographyOutline(value) < 0 ||
+      ownerTypographyOutline(value) > 12)
+      ? "Use 0–12."
+      : undefined;
   return (
     <div className="editor-fields typography-fields">
-      <label>
-        Style
-        <select
-          className="select-control"
-          value={value.preset}
-          onChange={(event) =>
-            onPreset(event.currentTarget.value as OwnerTypography["preset"])
-          }
-        >
-          {Object.entries(OWNER_TEXT_PRESET_LABELS).map(([preset, label]) => (
-            <option key={preset} value={preset}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {!characterOnly && (
+        <label>
+          Style
+          <select
+            className="select-control"
+            value={value.preset}
+            onChange={(event) =>
+              onPreset(event.currentTarget.value as OwnerTypography["preset"])
+            }
+          >
+            {Object.entries(OWNER_TEXT_PRESET_LABELS).map(([preset, label]) => (
+              <option key={preset} value={preset}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label>
         Font size
         <input
+          aria-label="Font size"
           type="number"
           min="24"
           max="120"
           step="1"
-          value={Number.isFinite(value.fontSize) ? value.fontSize : ""}
+          placeholder={mixed.includes("fontSize") ? "Mixed" : undefined}
+          aria-invalid={!!sizeError || undefined}
+          aria-describedby={sizeError ? `${id}-size-error` : undefined}
+          value={
+            !mixed.includes("fontSize") && Number.isFinite(value.fontSize)
+              ? value.fontSize
+              : ""
+          }
           onChange={(event) =>
-            onChange({
-              ...value,
-              fontSize:
-                event.currentTarget.value === ""
-                  ? NaN
-                  : Number(event.currentTarget.value),
-            })
+            onChange(
+              {
+                ...value,
+                fontSize:
+                  event.currentTarget.value === ""
+                    ? NaN
+                    : Number(event.currentTarget.value),
+              },
+              "fontSize",
+            )
           }
         />
+        <InlineFeedback id={`${id}-size-error`} message={sizeError} />
       </label>
       <label>
         Font
         <select
           className="select-control"
-          value={value.font ?? "Arial"}
+          value={mixed.includes("font") ? "" : (value.font ?? "Arial")}
           onChange={(event) =>
-            onChange({
-              ...value,
-              font: event.currentTarget.value as NonNullable<
-                OwnerTypography["font"]
-              >,
-            })
+            onChange(
+              {
+                ...value,
+                font: event.currentTarget.value as NonNullable<
+                  OwnerTypography["font"]
+                >,
+              },
+              "font",
+            )
           }
         >
+          {mixed.includes("font") && (
+            <option value="" disabled>
+              Mixed
+            </option>
+          )}
           {OWNER_TEXT_FONTS.map((font) => (
             <option key={font} value={font}>
               {font}
@@ -80,16 +125,26 @@ export function TypographyFields({
         Weight
         <select
           className="select-control"
-          value={ownerTypographyWeight(value)}
+          value={
+            mixed.includes("fontWeight") ? "" : ownerTypographyWeight(value)
+          }
           onChange={(event) =>
-            onChange({
-              ...value,
-              fontWeight: Number(event.currentTarget.value) as NonNullable<
-                OwnerTypography["fontWeight"]
-              >,
-            })
+            onChange(
+              {
+                ...value,
+                fontWeight: Number(event.currentTarget.value) as NonNullable<
+                  OwnerTypography["fontWeight"]
+                >,
+              },
+              "fontWeight",
+            )
           }
         >
+          {mixed.includes("fontWeight") && (
+            <option value="" disabled>
+              Mixed
+            </option>
+          )}
           {(
             [
               [400, "Regular"],
@@ -106,90 +161,135 @@ export function TypographyFields({
         </select>
       </label>
       <label>
-        Text color
+        <span className="typography-field-heading">
+          Text color
+          {mixed.includes("color") && <small>Mixed</small>}
+        </span>
         <input
           type="color"
           value={value.color}
           onChange={(event) =>
-            onChange({ ...value, color: event.currentTarget.value })
+            onChange({ ...value, color: event.currentTarget.value }, "color")
           }
         />
       </label>
-      <label>
-        Alignment
-        <select
-          className="select-control"
-          value={value.align}
-          onChange={(event) =>
-            onChange({
-              ...value,
-              align: event.currentTarget.value as OwnerTypography["align"],
-            })
-          }
-        >
-          {(["left", "center", "right"] as const).map((align) => (
-            <option key={align} value={align}>
-              {align[0]!.toUpperCase() + align.slice(1)}
-            </option>
-          ))}
-        </select>
-      </label>
+      {!characterOnly && (
+        <label>
+          Alignment
+          <select
+            className="select-control"
+            value={value.align}
+            onChange={(event) =>
+              onChange(
+                {
+                  ...value,
+                  align: event.currentTarget.value as OwnerTypography["align"],
+                },
+                "align",
+              )
+            }
+          >
+            {(["left", "center", "right"] as const).map((align) => (
+              <option key={align} value={align}>
+                {align[0]!.toUpperCase() + align.slice(1)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label>
         Outline width
         <input
+          aria-label="Outline width"
           type="number"
           min="0"
           max="12"
           step="1"
-          value={ownerTypographyOutline(value)}
+          placeholder={mixed.includes("outlineWidth") ? "Mixed" : undefined}
+          aria-invalid={!!outlineError || undefined}
+          aria-describedby={outlineError ? `${id}-outline-error` : undefined}
+          value={
+            mixed.includes("outlineWidth") ||
+            !Number.isFinite(ownerTypographyOutline(value))
+              ? ""
+              : ownerTypographyOutline(value)
+          }
           onChange={(event) =>
-            onChange({
-              ...value,
-              outlineWidth:
-                event.currentTarget.value === ""
-                  ? NaN
-                  : Number(event.currentTarget.value),
-            })
+            onChange(
+              {
+                ...value,
+                outlineWidth:
+                  event.currentTarget.value === ""
+                    ? NaN
+                    : Number(event.currentTarget.value),
+              },
+              "outlineWidth",
+            )
           }
         />
+        <InlineFeedback id={`${id}-outline-error`} message={outlineError} />
       </label>
       <label>
-        Outline color
+        <span className="typography-field-heading">
+          Outline color
+          {mixed.includes("outlineColor") && <small>Mixed</small>}
+        </span>
         <input
           type="color"
           value={value.outlineColor ?? "#000000"}
           onChange={(event) =>
-            onChange({ ...value, outlineColor: event.currentTarget.value })
+            onChange(
+              { ...value, outlineColor: event.currentTarget.value },
+              "outlineColor",
+            )
           }
         />
       </label>
-      <label>
-        Background color
-        <input
-          type="color"
-          value={background.color}
-          onChange={(event) =>
-            onChange({ ...value, backgroundColor: event.currentTarget.value })
-          }
-        />
-      </label>
-      <label>
-        Background opacity ({Math.round(background.opacity * 100)}%)
-        <input
-          aria-label="Background opacity"
-          type="range"
-          min="0"
-          max="100"
-          step="1"
-          value={background.opacity * 100}
-          onChange={(event) =>
-            onChange({
-              ...value,
-              backgroundOpacity: Number(event.currentTarget.value) / 100,
-            })
-          }
-        />
-      </label>
+      {!characterOnly && (
+        <label>
+          Background color
+          <input
+            type="color"
+            value={background.color}
+            onChange={(event) =>
+              onChange(
+                { ...value, backgroundColor: event.currentTarget.value },
+                "backgroundColor",
+              )
+            }
+          />
+        </label>
+      )}
+      {!characterOnly && (
+        <label>
+          Background opacity ({Math.round(background.opacity * 100)}%)
+          <input
+            aria-label="Background opacity"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value={background.opacity * 100}
+            onChange={(event) =>
+              onChange(
+                {
+                  ...value,
+                  backgroundOpacity: Number(event.currentTarget.value) / 100,
+                },
+                "backgroundOpacity",
+              )
+            }
+          />
+        </label>
+      )}
+      {feedback && (
+        <div
+          className="typography-feedback"
+          aria-hidden={!!(sizeError || outlineError) || undefined}
+        >
+          {feedback}
+        </div>
+      )}
     </div>
   );
 }

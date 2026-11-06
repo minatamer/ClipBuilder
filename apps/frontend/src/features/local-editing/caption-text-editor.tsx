@@ -1,4 +1,6 @@
-import { useContext, type RefObject } from "react";
+import { useContext, useId, type RefObject } from "react";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
+import { captionWordError } from "./text-validation";
 import type { PlayerRef } from "@remotion/player";
 import { Play } from "lucide-react";
 import type { OwnerOverlay } from "../../../../../packages/contracts/local/clips.ts";
@@ -31,6 +33,7 @@ export function CaptionTextEditor({
   onChange: (edits: NonNullable<OwnerEditDocument["captionText"]>) => void;
 }) {
   const hook = useContext(EditorHookClock);
+  const id = useId();
   const occurrence = useContext(EditorOccurrence);
   const unifiedClock = useContext(EditorPresentationClock);
   const offset = unifiedClock
@@ -71,6 +74,8 @@ export function CaptionTextEditor({
           <div className="caption-words">
             {caption.wordCues.map((word, wordIndex) => {
               const value = replacements.get(word.wordId) ?? word.text;
+              const error = captionWordError(value),
+                errorId = `${id}-${word.wordId}-feedback`;
               return (
                 <label key={word.wordId}>
                   <span className="local-sr-only">
@@ -79,9 +84,11 @@ export function CaptionTextEditor({
                   <input
                     type="text"
                     aria-label={`Caption ${startIndex + index + 1} word ${wordIndex + 1}`}
+                    aria-invalid={!!error || undefined}
+                    aria-describedby={error ? errorId : undefined}
                     value={value}
                     maxLength={80}
-                    size={Math.min(24, Math.max(4, value.length + 1))}
+                    size={Math.min(24, Math.max(4, word.text.length + 1))}
                     onFocus={() => player.current?.pause()}
                     onChange={(event) =>
                       onChange([
@@ -99,6 +106,7 @@ export function CaptionTextEditor({
                       ])
                     }
                   />
+                  <InlineFeedback id={errorId} message={error} />
                 </label>
               );
             })}

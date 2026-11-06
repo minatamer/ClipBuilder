@@ -11,6 +11,7 @@ import type { PlayerRef } from "@remotion/player";
 import { Play, Square, Upload } from "lucide-react";
 import { Button, IconButton } from "../../shared/ui/button";
 import { ControlTabs } from "./control-tabs.tsx";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import {
   EditorOccurrence,
   EditorPresentationClock,
@@ -56,6 +57,8 @@ export function AudioInspector({
   hideCueList = false,
   linkedVisual,
   onBackToPicture,
+  uploadFeedback,
+  validationFeedback,
 }: {
   audio: OwnerAudioEdit | undefined;
   assets: readonly OwnerAudioAsset[];
@@ -73,6 +76,8 @@ export function AudioInspector({
   hideCueList?: boolean;
   linkedVisual?: OwnerVisualTiming | undefined;
   onBackToPicture?: (() => void) | undefined;
+  uploadFeedback?: string | undefined;
+  validationFeedback?: string | undefined;
 }) {
   const occurrence = useContext(EditorOccurrence);
   const unifiedClock = useContext(EditorPresentationClock);
@@ -82,8 +87,14 @@ export function AudioInspector({
   const windowEnd = occurrence === "hook" && hook ? hook.endFrame : frames;
   const [view, setView] = useState(initialCueId ? "tracks" : "library"),
     [selection, setSelection] = useState<string | null>(initialCueId ?? null),
-    [playing, setPlaying] = useState<string | null>(null),
-    [message, setMessage] = useState("");
+    [playing, setPlaying] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<{
+    id: string;
+    text: string;
+  } | null>(null);
+  const [uploadError, setUploadError] = useState("");
+  const previewOwner = useRef<string | null>(null);
+  const auditionAttempt = useRef(0);
   const id = useId(),
     input = useRef<HTMLInputElement>(null),
     audition = useRef<HTMLAudioElement>(null),
@@ -92,6 +103,7 @@ export function AudioInspector({
     const player = audition.current,
       owned = urls.current;
     return () => {
+      previewOwner.current = null;
       player?.pause();
       owned.forEach((url) => URL.revokeObjectURL(url));
       owned.clear();
@@ -157,8 +169,11 @@ export function AudioInspector({
     });
   };
   const stop = () => {
+    auditionAttempt.current++;
+    previewOwner.current = null;
     audition.current?.pause();
     setPlaying(null);
+    setPreviewError(null);
   };
   const add = (source: OwnerAudioCue["source"]) => {
     if (pending || current.cues.length >= OWNER_AUDIO_LIMITS.cues) return;
@@ -219,6 +234,8 @@ export function AudioInspector({
     }
     const element = audition.current;
     if (!element) return;
+    previewOwner.current = sound.id;
+    const currentAttempt = ++auditionAttempt.current;
     player.current?.pause();
     const key = ownerAudioSourceKey({ kind: "builtin", id: sound.id });
     let url = urls.current.get(key);
@@ -232,10 +249,18 @@ export function AudioInspector({
     element.src = url;
     element.volume = 0.35;
     setPlaying(sound.id);
-    setMessage("");
+    setPreviewError(null);
     void element.play().catch(() => {
+      if (
+        previewOwner.current !== sound.id ||
+        auditionAttempt.current !== currentAttempt
+      )
+        return;
       setPlaying(null);
-      setMessage("Couldn’t play this sound. Try again.");
+      setPreviewError({
+        id: sound.id,
+        text: "Couldn’t play this sound. Retry preview.",
+      });
     });
   };
   return (
@@ -258,8 +283,16 @@ export function AudioInspector({
         id={`${id}-view`}
         label="Audio views"
         items={[
-          { value: "library", label: "Sound library" },
-          { value: "tracks", label: `Your audio (${current.cues.length})` },
+          {
+            value: "library",
+            label: "Sound library",
+            issue: uploadError || uploadFeedback || previewError?.text,
+          },
+          {
+            value: "tracks",
+            label: `Your audio (${current.cues.length})`,
+            issue: validationFeedback,
+          },
         ]}
         value={view}
         onChange={(value) => {
@@ -271,11 +304,14 @@ export function AudioInspector({
         ref={audition}
         onEnded={() => setPlaying(null)}
         onError={() => {
+          if (!previewOwner.current) return;
           setPlaying(null);
-          setMessage("Couldn’t play this sound. Try again.");
+          setPreviewError({
+            id: previewOwner.current,
+            text: "Couldn’t play this sound. Retry preview.",
+          });
         }}
       />
-      {message && <p role="status">{message}</p>}
       <div
         role="tabpanel"
         id={`${id}-view-library-panel`}
@@ -291,6 +327,11 @@ export function AudioInspector({
               </span>
               <IconButton
                 label={`${playing === sound.id ? "Stop" : "Preview"} ${sound.label}`}
+                aria-describedby={
+                  previewError?.id === sound.id
+                    ? `${id}-${sound.id}-feedback`
+                    : undefined
+                }
                 icon={playing === sound.id ? Square : Play}
                 disabled={pending}
                 onClick={() => preview(sound)}
@@ -308,6 +349,12 @@ export function AudioInspector({
               >
                 Add
               </Button>
+              <InlineFeedback
+                id={`${id}-${sound.id}-feedback`}
+                message={
+                  previewError?.id === sound.id ? previewError.text : undefined
+                }
+              />
             </div>
           ))}
           {assets.map((asset, index) => (
@@ -339,6 +386,11 @@ export function AudioInspector({
               current.cues.length >= OWNER_AUDIO_LIMITS.cues
             }
             onClick={() => input.current?.click()}
+            aria-describedby={
+              uploadError || uploadFeedback
+                ? `${id}-upload-feedback`
+                : undefined
+            }
           >
             {pending ? "Uploading…" : "Upload audio"}
           </Button>
@@ -354,16 +406,16 @@ export function AudioInspector({
               event.currentTarget.value = "";
               if (!file) return;
               if (file.size < 1 || file.size > OWNER_AUDIO_LIMITS.inputBytes) {
-                setMessage("Choose audio under 12 MB and 2 minutes.");
+                setUploadError("Choose audio under 12 MB and 2 minutes.");
                 return;
               }
-              setMessage("");
+              setUploadError("");
               stop();
               void onUpload(file).then((assetId) => {
                 if (assetId) {
                   setView("tracks");
                   setSelection(null);
-                }
+                } else setUploadError("Couldn’t add this audio. Try again.");
               });
             }}
           />
@@ -384,6 +436,10 @@ export function AudioInspector({
             </Button>
           )}
         </div>
+        <InlineFeedback
+          id={`${id}-upload-feedback`}
+          message={uploadError || uploadFeedback}
+        />
         <p className="source-hint">MP3, WAV or M4A · 12 MB · 2 minutes</p>
         {!hook && (
           <p className="source-hint">Add a hook to use hook-only audio.</p>
@@ -588,6 +644,7 @@ export function AudioInspector({
             </Button>
           </fieldset>
         )}
+        <InlineFeedback message={validationFeedback} />
       </div>
     </div>
   );

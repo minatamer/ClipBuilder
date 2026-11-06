@@ -1,15 +1,18 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "../../shared/ui/button";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
 
 export function SessionControls({
   recovery,
   disabled,
   onClear,
+  message,
 }: {
   recovery: boolean;
   disabled: boolean;
   onClear: (discardUnsaved?: boolean) => void;
+  message?: string | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const id = useId();
@@ -42,6 +45,7 @@ export function SessionControls({
         variant="quiet"
         className="session-reset"
         title={recovery ? "Reset options" : "Start over"}
+        aria-describedby={message ? `${id}-feedback` : undefined}
         aria-expanded={recovery ? open : undefined}
         aria-controls={recovery ? id : undefined}
         disabled={disabled}
@@ -53,6 +57,13 @@ export function SessionControls({
         <RotateCcw size={18} aria-hidden="true" />
         <span>{recovery ? "Reset options" : "Start over"}</span>
       </Button>
+      <div className="session-feedback" hidden={!message}>
+        <InlineFeedback
+          id={`${id}-feedback`}
+          message={message}
+          reserve={false}
+        />
+      </div>
       {recovery && open && (
         <div
           className="session-recovery"

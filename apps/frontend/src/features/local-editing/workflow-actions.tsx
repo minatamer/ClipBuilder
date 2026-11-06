@@ -6,13 +6,18 @@ export function WorkflowActions({
   target,
   label,
   children,
+  feedback = false,
 }: {
   target?: HTMLElement | null | undefined;
   label: string;
   children: ReactNode;
+  feedback?: boolean;
 }) {
   const actions = (
-    <nav className="workflow-actions" aria-label={label}>
+    <nav
+      className={`workflow-actions${feedback ? " workflow-action-feedback" : ""}`}
+      aria-label={label}
+    >
       {children}
     </nav>
   );

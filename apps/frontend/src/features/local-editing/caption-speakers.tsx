@@ -6,6 +6,7 @@ import {
   type OwnerCaptionSpeakers,
 } from "../../../../../packages/contracts/local/caption-speakers.ts";
 import { Button } from "../../shared/ui/button";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
 
 export function CaptionSpeakers({
   value,
@@ -19,6 +20,14 @@ export function CaptionSpeakers({
   onChange: (value: OwnerCaptionSpeakers | undefined) => void;
 }) {
   const labels = new Map(value.assignments.map((w) => [w.wordId, w.speakerId]));
+  const assigned = new Set(
+    value.assignments.flatMap((word) =>
+      word.speakerId ? [word.speakerId] : [],
+    ),
+  );
+  const unassigned = captions.filter(
+    (caption) => !captionSpeakerId(caption, labels),
+  ).length;
   const ids = [
     ...new Set([
       ...value.assignments.flatMap((w) => (w.speakerId ? [w.speakerId] : [])),
@@ -38,6 +47,24 @@ export function CaptionSpeakers({
         />
         Color by speaker
       </label>
+      <InlineFeedback
+        tone="status"
+        reserve={false}
+        message={
+          !assigned.size
+            ? "No speaker labels available. Assign captions below."
+            : assigned.size === 1
+              ? "One speaker label available. Correct assignments below if needed."
+              : undefined
+        }
+      />
+      {assigned.size > 0 && unassigned > 0 && (
+        <InlineFeedback
+          tone="status"
+          reserve={false}
+          message={`${unassigned} ${unassigned === 1 ? "caption is" : "captions are"} unassigned.`}
+        />
+      )}
       <div className="speaker-palette">
         {ids.map((id) => {
           const colors =

@@ -362,3 +362,41 @@ it("tracks manual camera effects through Apply/Discard operations without changi
   ).toEqual([{ kind: "camera-effects", effects: [] }]);
   expect(JSON.stringify(current.base)).toBe(base);
 });
+
+it("tracks timed filters through Apply/Discard without changing the legacy fallback or base", () => {
+  const current = clip(),
+    original = initialOwnerEdit(current),
+    base = JSON.stringify(current.base);
+  original.videoLook = { preset: "warm", strength: 70 };
+  const videoLooks = [
+    { startFrame: 10, endFrame: 40, preset: "mono" as const, strength: 100 },
+  ];
+  const draft = { ...original, videoLooks };
+  expect(sameOwnerEdit(original, draft)).toBe(false);
+  expect(ownerEditOperations(original, draft, current)).toEqual([
+    { kind: "video-looks", looks: videoLooks },
+  ]);
+  expect(ownerEditOperations(draft, original, current)).toEqual([
+    { kind: "video-looks", looks: [] },
+  ]);
+  expect(
+    compileOwnerOverlay(current.base!, draft, current.assets).videoLook,
+  ).toEqual(original.videoLook);
+  expect(sameOwnerEdit(original, { ...original, videoLooks: [] })).toBe(true);
+  expect(JSON.stringify(current.base)).toBe(base);
+});
+
+it("restores retained timed filters after clearing only the legacy fallback", () => {
+  const current = clip(),
+    original = initialOwnerEdit(current);
+  original.videoLook = { preset: "warm", strength: 70 };
+  original.videoLooks = [
+    { startFrame: 10, endFrame: 40, preset: "mono", strength: 100 },
+  ];
+  const draft = { ...original };
+  delete draft.videoLook;
+  expect(ownerEditOperations(original, draft, current)).toEqual([
+    { kind: "reset", panel: "video" },
+    { kind: "video-looks", looks: original.videoLooks },
+  ]);
+});

@@ -181,7 +181,7 @@ it("corrects hosted shared slots with a visible toast and replaces exhausted int
         ),
       ).toBe(true);
       await wait(
-        "document.querySelector('input[type=number]').value==='3' && document.querySelector('.demo-limit-toast')",
+        "document.querySelector('input[type=number]').value==='3' && document.querySelector('.demo-limit-feedback')",
       );
       for (let i = 0; i < 4; i++) {
         await evaluate(
@@ -198,10 +198,13 @@ it("corrects hosted shared slots with a visible toast and replaces exhausted int
         ),
       ).toBe(false);
       expect(
-        await evaluate("!!document.querySelector('.demo-limit-toast')"),
+        await evaluate("!!document.querySelector('.demo-limit-feedback')"),
       ).toBe(true);
+      await evaluate(
+        "document.querySelector('.demo-limit-feedback').scrollIntoView({block:'nearest'})",
+      );
       const fits = await evaluate(
-        "(()=>{const box=document.querySelector('.demo-limit-toast').getBoundingClientRect();return {left:box.left,right:box.right,bottom:box.bottom,width:innerWidth,scroll:document.documentElement.scrollWidth};})()",
+        "(()=>{const box=document.querySelector('.demo-limit-feedback').getBoundingClientRect();return {left:box.left,right:box.right,bottom:box.bottom,width:innerWidth,scroll:document.documentElement.scrollWidth};})()",
       );
       await capture(`cl114-toast-${width}`);
       expect((fits as { width: number }).width).toBe(width);
@@ -213,7 +216,7 @@ it("corrects hosted shared slots with a visible toast and replaces exhausted int
         "document.querySelector('[aria-label=\"Dismiss demo limit notice\"]').click()",
       );
       expect(
-        await evaluate("!!document.querySelector('.demo-limit-toast')"),
+        await evaluate("!!document.querySelector('.demo-limit-feedback')"),
       ).toBe(false);
       await page.goto({
         url: `http://127.0.0.1:${port}/?mode=exhausted`,
@@ -248,7 +251,7 @@ it("corrects hosted shared slots with a visible toast and replaces exhausted int
       await evaluate("document.querySelectorAll('.range-row').length"),
     ).toBe(4);
     expect(
-      await evaluate("!!document.querySelector('.demo-limit-toast')"),
+      await evaluate("!!document.querySelector('.demo-limit-feedback')"),
     ).toBe(false);
     expect(mutations).toBe(0);
     expect(interceptionFailed).toBe(false);

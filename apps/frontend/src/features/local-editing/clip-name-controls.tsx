@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { Pencil } from "lucide-react";
-import { Button } from "../../shared/ui/button";
+import { useEffect, useId, useRef, useState } from "react";
+import { Pencil, X } from "lucide-react";
+import styles from "./clip-name-controls.module.css";
+import { Button, IconButton } from "../../shared/ui/button";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import {
   ownerClipNameSchema,
   ownerClipRenameSchema,
@@ -18,12 +20,14 @@ export function ClipNameControls({
   workspaceId,
   onAccepted,
   disabled,
+  tabIndex,
 }: {
   clip: OwnerClip;
   index: number;
   workspaceId: string;
   onAccepted: (list: OwnerClipList) => void;
   disabled: boolean;
+  tabIndex?: number;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
@@ -31,6 +35,12 @@ export function ClipNameControls({
   const [pending, setPending] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const root = useRef<HTMLDivElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const expectedName = useRef<string | null>(null);
+  const titleId = useId();
+  const nameId = useId();
+  const errorId = useId();
+  const displayName = ownerClipDisplayName(clip, index);
   const wasEditing = useRef(false);
   const request = useRef<AbortController | null>(null);
   const alive = useRef(false);
@@ -43,6 +53,7 @@ export function ClipNameControls({
   }, []);
   useEffect(() => {
     if (editing) {
+      dialog.current?.showModal();
       input.current?.focus();
       input.current?.select();
     } else if (wasEditing.current)
@@ -65,7 +76,7 @@ export function ClipNameControls({
     try {
       const body = ownerClipRenameSchema.parse({
         operationId: crypto.randomUUID(),
-        expectedName: clip.displayName ?? null,
+        expectedName: expectedName.current,
         name: name?.data ?? null,
       });
       const response = await fetch(
@@ -77,7 +88,14 @@ export function ClipNameControls({
           signal: controller.signal,
         },
       );
-      if (!response.ok) throw Error("rename_unavailable");
+      if (!response.ok) {
+        setMessage(
+          response.status === 409
+            ? "The name changed elsewhere. Close and reopen this dialog to try again."
+            : "Couldn’t rename this clip. Try again.",
+        );
+        return;
+      }
       const list = await readOwnerClips(
         response,
         workspaceId,
@@ -85,7 +103,7 @@ export function ClipNameControls({
       );
       if (alive.current) {
         onAccepted(list);
-        setEditing(false);
+        dialog.current?.close();
       }
     } catch {
       if (alive.current && !controller.signal.aborted)
@@ -96,62 +114,98 @@ export function ClipNameControls({
     }
   }
   return (
-    <div ref={root} className="clip-name-controls">
-      {!editing ? (
-        <>
-          <h3>{ownerClipDisplayName(clip, index)}</h3>
-          <Button
-            variant="quiet"
-            aria-label="Rename clip"
-            title="Rename clip"
-            disabled={disabled}
-            onClick={() => {
-              setValue(clip.displayName ?? "");
-              setMessage("");
-              setEditing(true);
-            }}
-          >
-            <Pencil size={16} aria-hidden="true" />
-          </Button>
-        </>
-      ) : (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void save();
+    <div ref={root} className={styles.compact}>
+      <span id={nameId} className={styles.name} title={displayName}>
+        {displayName}
+      </span>
+      <IconButton
+        label="Rename clip"
+        icon={Pencil}
+        disabled={disabled}
+        tabIndex={tabIndex}
+        aria-describedby={nameId}
+        aria-haspopup="dialog"
+        onClick={() => {
+          expectedName.current = clip.displayName ?? null;
+          setValue(clip.displayName ?? "");
+          setMessage("");
+          setEditing(true);
+        }}
+      />
+      {editing && (
+        <dialog
+          ref={dialog}
+          className={styles.dialog}
+          aria-labelledby={titleId}
+          onCancel={(event) => {
+            if (pending || request.current) event.preventDefault();
           }}
           onKeyDown={(event) => {
-            if (event.key === "Escape" && !pending) {
-              event.preventDefault();
-              setEditing(false);
-            }
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            if (!pending && !request.current) dialog.current?.close();
           }}
+          onClose={() => setEditing(false)}
         >
-          <input
-            ref={input}
-            aria-label="Clip name"
-            value={value}
-            maxLength={160}
-            disabled={pending || disabled}
-            onChange={(event) => setValue(event.target.value)}
-          />
-          <Button
-            type="submit"
-            variant="secondary"
-            disabled={pending || disabled}
+          <form
+            className={styles.form}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void save();
+            }}
           >
-            Save name
-          </Button>
-          <Button
-            variant="quiet"
-            disabled={pending}
-            onClick={() => setEditing(false)}
-          >
-            Cancel
-          </Button>
-        </form>
+            <header className={styles.heading}>
+              <h2 id={titleId}>Rename clip</h2>
+              <IconButton
+                label="Close rename dialog"
+                icon={X}
+                disabled={pending}
+                onClick={() => dialog.current?.close()}
+              />
+            </header>
+            <div className={styles.body}>
+              <p className={styles.fullName}>{displayName}</p>
+              <label>
+                Clip name
+                <input
+                  ref={input}
+                  aria-label="Clip name"
+                  value={value}
+                  maxLength={160}
+                  placeholder={`Clip ${index}`}
+                  aria-describedby={message ? errorId : undefined}
+                  aria-invalid={
+                    !!value.trim() &&
+                    !ownerClipNameSchema.safeParse(value).success
+                  }
+                  disabled={pending || disabled}
+                  onChange={(event) => {
+                    setValue(event.target.value);
+                    setMessage("");
+                  }}
+                />
+              </label>
+              <InlineFeedback id={errorId} message={message} />
+            </div>
+            <footer className={styles.actions}>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={pending || disabled}
+              >
+                {pending ? "Saving…" : "Save name"}
+              </Button>
+              <Button
+                variant="quiet"
+                disabled={pending}
+                onClick={() => dialog.current?.close()}
+              >
+                Cancel
+              </Button>
+            </footer>
+          </form>
+        </dialog>
       )}
-      {message && <p role="alert">{message}</p>}
     </div>
   );
 }

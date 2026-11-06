@@ -1,9 +1,10 @@
-import { useContext, useState, type RefObject } from "react";
+import { useContext, useId, useState, type RefObject } from "react";
 import type { PlayerRef } from "@remotion/player";
 import { Clock3 } from "lucide-react";
 import type { OwnerVisualEdit } from "../../../../../packages/contracts/local/assets.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import { Button } from "../../shared/ui/button";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import {
   EditorHookClock,
   EditorOccurrence,
@@ -24,6 +25,7 @@ export function PictureTiming<
   label = "Picture",
   presentationClock = false,
   onStartAfterEnd,
+  validationMessage,
 }: {
   cue: T;
   frames: number;
@@ -34,6 +36,7 @@ export function PictureTiming<
   label?: string;
   presentationClock?: boolean;
   onStartAfterEnd?: ((frame: number) => void) | undefined;
+  validationMessage?: string | undefined;
 }) {
   const hook = useContext(EditorHookClock);
   const occurrence = useContext(EditorOccurrence);
@@ -59,6 +62,8 @@ export function PictureTiming<
     occurrenceClock: presentationClock,
   });
   const [error, setError] = useState("");
+  const feedbackId = useId();
+  const feedback = error || validationMessage;
   async function capture(key: "startFrame" | "endFrame") {
     const at = await preview.captureFrame();
     if (at === null) {
@@ -106,6 +111,8 @@ export function PictureTiming<
                 <input
                   type="number"
                   aria-label={`${label} ${start ? "start" : "end"} seconds`}
+                  aria-invalid={!!validationMessage || undefined}
+                  aria-describedby={feedback ? feedbackId : undefined}
                   min={(displayOffset + minimum + (start ? 0 : 1)) / OWNER_FPS}
                   max={
                     (displayOffset + (start ? maximum - 1 : maximum)) /
@@ -138,6 +145,7 @@ export function PictureTiming<
                 icon={Clock3}
                 disabled={!preview.captureReady}
                 aria-label={`Capture ${label.toLowerCase()} ${start ? "start" : "end"}`}
+                aria-describedby={feedback ? feedbackId : undefined}
                 title={
                   start
                     ? "Use current preview frame"
@@ -151,11 +159,7 @@ export function PictureTiming<
           );
         })}
       </div>
-      {error && (
-        <p className="local-error" role="alert">
-          {error}
-        </p>
-      )}
+      <InlineFeedback id={feedbackId} message={feedback} />
     </>
   );
 }
