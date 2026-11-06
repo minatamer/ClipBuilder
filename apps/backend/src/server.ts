@@ -1,5 +1,7 @@
 import { composeBackend } from "./composition.js";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ANALYSIS_DIAGNOSTIC_VERSION,
@@ -12,6 +14,7 @@ import { LocalDiagnostics } from "../local/diagnostics.ts";
 import { startHostedEditingWorkflow } from "../local/hosted-runtime.ts";
 import { ZodError } from "zod";
 import { ENVIRONMENT_KEYS } from "./config/env.schema.js";
+import { createLocalDiagnosticLog } from "../local/diagnostic-log.ts";
 
 // Only the executable entry point loads owner-managed local configuration.
 function loadLocalEnvironment(): void {
@@ -27,12 +30,44 @@ function loadLocalEnvironment(): void {
 }
 
 export async function startBackend(environment: NodeJS.ProcessEnv) {
-  const diagnostics = new AnalysisDiagnostics((line) => console.warn(line));
-  const localDiagnostics = new LocalDiagnostics((line) => console.warn(line));
+  let diagnosticLog: ReturnType<typeof createLocalDiagnosticLog> | undefined;
+  const warn = (line: string) => {
+    try {
+      console.warn(line);
+    } catch {
+      /* Detached or broken console. */
+    }
+  };
+  const writeDiagnostic = (line: string) => {
+    diagnosticLog?.write(line);
+    warn(line);
+  };
+  const diagnostics = new AnalysisDiagnostics(writeDiagnostic);
+  const localDiagnostics = new LocalDiagnostics(writeDiagnostic);
   const { application, config, localWorkflow, hostedWorkflow } = composeBackend(
     environment,
     diagnostics,
   );
+  if (config.appEnv === "local" && config.nodeEnv !== "test") {
+    try {
+      diagnosticLog = createLocalDiagnosticLog(
+        mkdtempSync(join(tmpdir(), "clipbuilder-backend-diagnostics-")),
+        (error) => {
+          localDiagnostics.failure("storage", error);
+          warn(
+            "ClipBuilder durable diagnostics unavailable; stderr remains active",
+          );
+        },
+      );
+    } catch (error) {
+      localDiagnostics.failure("storage", error);
+      warn(
+        "ClipBuilder durable diagnostics unavailable; stderr remains active",
+      );
+    }
+  }
+  const closeDiagnosticLog = () => diagnosticLog?.close();
+  if (diagnosticLog) process.once("exit", closeDiagnosticLog);
   let stopLocalFailure = () => {
     process.exitCode = 1;
   };
@@ -48,10 +83,18 @@ export async function startBackend(environment: NodeJS.ProcessEnv) {
     () => stopLocalFailure(),
   );
   hostedWorkflow.current = hosted;
-  const closeEditing = async () => {
-    hostedWorkflow.current = null;
-    await hosted?.close();
-  };
+  let editingClose: Promise<void> | undefined,
+    localClose: Promise<void> | undefined;
+  const closeEditing = () =>
+    (editingClose ??= (async () => {
+      hostedWorkflow.current = null;
+      await hosted?.close();
+    })());
+  const closeLocal = () =>
+    (localClose ??= (async () => {
+      localWorkflow.current = null;
+      await local?.close();
+    })());
   const privateCapture = composeLocalGeminiCapture(
     config,
     undefined,
@@ -91,7 +134,7 @@ export async function startBackend(environment: NodeJS.ProcessEnv) {
     void closeEditing().catch((error) =>
       localDiagnostics.failure("cleanup", error),
     );
-    void local?.close().catch((error: unknown) => {
+    void closeLocal().catch((error: unknown) => {
       localDiagnostics.failure("cleanup", error);
       process.exitCode = 1;
     });
@@ -110,7 +153,7 @@ export async function startBackend(environment: NodeJS.ProcessEnv) {
     );
     localDiagnostics.failure("startup", error);
     localWorkflow.current = null;
-    void local?.close().catch((error: unknown) => {
+    void closeLocal().catch((error: unknown) => {
       localDiagnostics.failure("cleanup", error);
       process.exitCode = 1;
     });
@@ -127,7 +170,7 @@ export async function startBackend(environment: NodeJS.ProcessEnv) {
         `ClipBuilder local media ready; content-safe logs: ${local.runtime}`,
       );
     } catch {
-      await local.close();
+      await closeLocal();
       server.closeAllConnections();
       server.close();
       throw new Error("local_workflow_unavailable");
@@ -139,13 +182,17 @@ export async function startBackend(environment: NodeJS.ProcessEnv) {
   process.once("SIGINT", interrupt);
   process.once("SIGTERM", terminate);
   server.once("close", () => {
-    void closeEditing().catch((error) =>
+    const editingStopped = closeEditing().catch((error) =>
       localDiagnostics.failure("cleanup", error),
     );
     localWorkflow.current = null;
-    void local?.close().catch((error: unknown) => {
+    const localStopped = closeLocal().catch((error: unknown) => {
       localDiagnostics.failure("cleanup", error);
       process.exitCode = 1;
+    });
+    void Promise.allSettled([editingStopped, localStopped]).then(() => {
+      closeDiagnosticLog();
+      process.removeListener("exit", closeDiagnosticLog);
     });
     process.removeListener("SIGINT", interrupt);
     process.removeListener("SIGTERM", terminate);
