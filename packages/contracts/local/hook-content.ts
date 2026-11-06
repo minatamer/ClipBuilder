@@ -13,6 +13,11 @@ import type { OwnerAudioAsset } from "./audio.ts";
 import type { OwnerClipBase, OwnerOverlay } from "./clips.ts";
 import { OWNER_FPS } from "./policy.ts";
 import {
+  clipOwnerVideoLooks,
+  subtractOwnerVideoLookWindow,
+  ownerVideoLookSegments,
+} from "./video-look.ts";
+import {
   ownerHookFrames,
   ownerHookCaption,
   ownerHookSchema,
@@ -32,6 +37,7 @@ export function ownerContentEdits(
     captionSpeakers,
     texts,
     videoLook,
+    videoLooks,
     focus,
     cameraEffects,
     cameraTracks,
@@ -44,6 +50,7 @@ export function ownerContentEdits(
     captionSpeakers,
     texts,
     videoLook,
+    videoLooks,
     focus,
     cameraEffects,
     cameraTracks,
@@ -160,6 +167,8 @@ export function copyOwnerHookContent(
   edits.visuals = edits.visuals
     .filter((cue) => intersects(cue, hook))
     .map(clipTiming);
+  if (body.videoLooks)
+    edits.videoLooks = clipOwnerVideoLooks(body.videoLooks, hook);
   edits.cameraEffects = edits.cameraEffects?.filter(
     (e) => e.occurrence === "hook",
   );
@@ -198,6 +207,26 @@ export function copyOwnerHookContent(
       ),
     ];
     preserved.visuals = mergeTimed(preserved.visuals, edits.visuals);
+    const inheritedLooks = subtractOwnerVideoLookWindow(
+      ownerVideoLookSegments(body, hook),
+      prior.window,
+    ).filter((range) => {
+      const fallback = preserved.videoLook ??
+        base.overlay.videoLook ?? {
+          preset: "original",
+          strength: 100,
+        };
+      return (
+        range.preset !== fallback.preset ||
+        range.strength !== fallback.strength ||
+        body.videoLooks?.some((saved) => intersects(saved, range))
+      );
+    });
+    if (preserved.videoLooks || inheritedLooks.length)
+      preserved.videoLooks = [
+        ...clipOwnerVideoLooks(preserved.videoLooks ?? [], hook),
+        ...inheritedLooks,
+      ].sort((a, b) => a.startFrame - b.startFrame);
     preserved.texts = [
       ...(preserved.texts ?? []).filter((t) => t.role === "opening-title"),
       ...mergeTimed(

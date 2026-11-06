@@ -72,7 +72,7 @@ export function hostedEditingPath(method: string, path: string) {
     return true;
   if (method === "DELETE" && path === "/session") return true;
   const match =
-    /^\/workspace\/[a-f0-9-]{36}(?:\/(source|portrait|analysis|clips|assets|audio-assets)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|rename|remove|picture|visuals|audio|validate|captions)(?:\/(\d{1,2}))?)?)?)?$/u.exec(
+    /^\/workspace\/[a-f0-9-]{36}(?:\/(source|portrait|analysis|clips|assets|audio-assets)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|rename|remove|picture|visuals|audio|validate|captions|hook-title)(?:\/(\d{1,2}))?)?)?)?$/u.exec(
       path,
     );
   if (!match) return false;

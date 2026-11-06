@@ -37,6 +37,7 @@ export function automaticOwnerEdit(
     baseHash,
     revision: 0,
     captions: null,
+    ...(base.overlay.videoLooks ? { videoLooks: base.overlay.videoLooks } : {}),
     ...(base.overlay.audio
       ? {
           audio: {
@@ -154,6 +155,7 @@ function compileContent(
     ...(edit?.texts ? { texts: edit.texts } : {}),
     ...(edit?.captions ? { captionStyle: edit.captions } : {}),
     ...(edit?.videoLook ? { videoLook: edit.videoLook } : {}),
+    ...(edit?.videoLooks ? { videoLooks: edit.videoLooks } : {}),
     ...(edit?.focus ? { focus: edit.focus } : {}),
     ...(edit?.cameraEffects ? { cameraEffects: edit.cameraEffects } : {}),
     ...(edit?.cameraTracks ? { cameraTracks: edit.cameraTracks } : {}),

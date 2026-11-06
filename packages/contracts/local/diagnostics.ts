@@ -48,6 +48,8 @@ export const ownerDiagnosticReasonSchema = z.enum([
   "clip_capacity",
   "clip_limit",
   "clip_unavailable",
+  "hook_title_unavailable",
+  "hook_title_limit",
   "disk_unavailable",
   "draft_canceled",
   "draft_document_invalid",
@@ -186,6 +188,7 @@ export const ownerDiagnosticReasonSchema = z.enum([
   "workspace_missing",
 ]);
 export const ownerDiagnosticOperationSchema = z.enum([
+  "hook_title",
   ...Object.values(CODEX_TIMING_OPERATION),
   ...ownerMediaJobSchema.options.map((item) => item.shape.operation.value),
   "http_request",

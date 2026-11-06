@@ -45,6 +45,27 @@ it("moves the old face-covering picture to a clear readable slot after portrait 
   expect(box.width).toBe(old.width);
   expect(box.height / box.width).toBeCloseTo(old.height / old.width);
 });
+it("keeps a large picture when only a thumbnail-sized gap avoids the protected person", () => {
+  const focus = sample();
+  focus.source = { width: 1080, height: 1920 };
+  focus.people[0]!.observations[0]!.box = {
+    x: 0.2,
+    y: 0.225,
+    width: 0.6,
+    height: 0.55,
+  };
+  const original = structuredClone(focus),
+    box = placeOwnerPlannedVisual(focus, interval);
+  expect(box.width).toBeCloseTo(920 / 1080);
+  expect(box.height).toBeCloseTo(520 / 1920);
+  expect(
+    ownerVisualProtectedBoxes(focus, interval).some((face) =>
+      overlaps(box, face),
+    ),
+  ).toBe(true);
+  expect(ownerVisualSchema.shape.box.safeParse(box).success).toBe(true);
+  expect(focus).toEqual(original);
+});
 it("projects source boxes through actual integer crops, including padding, zoom and offscreen people", () => {
   const focus = sample();
   focus.shots[0]!.zoom = 1.5;
@@ -102,7 +123,8 @@ it("ignores expired observations and retains a bounded editable fallback for ful
   const original = structuredClone(focus),
     box = placeOwnerPlannedVisual(focus, interval);
   expect(ownerVisualSchema.shape.box.safeParse(box).success).toBe(true);
-  expect(box.width).toBeGreaterThanOrEqual(0.44);
+  expect(box.width).toBeCloseTo(920 / 1080);
+  expect(box.height).toBeCloseTo(520 / 1920);
   expect(placeOwnerPlannedVisual(focus, interval)).toEqual(box);
   expect(focus).toEqual(original);
 });

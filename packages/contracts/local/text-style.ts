@@ -162,3 +162,22 @@ export function ownerTextBackground(style: OwnerTypography) {
           : 0),
   };
 }
+
+export const OWNER_TITLE_TREATMENT_STYLES = {
+  "bold-hook": { ...OWNER_SOCIAL_TEXT_PRESETS.tiktok, fontSize: 72 },
+  impact: {
+    ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
+    fontSize: 84,
+    fontWeight: 900,
+  },
+  editorial: {
+    ...OWNER_SOCIAL_TEXT_PRESETS.translucent,
+    font: "Georgia",
+    fontSize: 64,
+    fontWeight: 600,
+  },
+  "highlight-panel": {
+    ...OWNER_SOCIAL_TEXT_PRESETS["solid-block"],
+    fontSize: 72,
+  },
+} as const satisfies Record<string, OwnerTypography>;

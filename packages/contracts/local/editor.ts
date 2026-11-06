@@ -13,7 +13,7 @@ import {
   ownerVisualEditSchema,
   OWNER_PICTURE_LIMITS,
 } from "./assets.ts";
-import { ownerVideoLookSchema } from "./video-look.ts";
+import { ownerVideoLookSchema, ownerVideoLooksSchema } from "./video-look.ts";
 import { ownerFocusSchema } from "./focus.ts";
 import { boundedPlainTextSchema } from "../src/text.schema.ts";
 import {
@@ -162,6 +162,7 @@ export const ownerContentEditSchema = z
     captionSpeakers: ownerCaptionSpeakersSchema.optional(),
     texts: ownerTextLayersSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
+    videoLooks: ownerVideoLooksSchema.optional(),
     focus: ownerFocusSchema.optional(),
     cameraEffects: ownerCameraEffectsSchema.optional(),
     cameraTracks: ownerCameraTracksSchema.optional(),
@@ -202,6 +203,11 @@ export const ownerHookContentSchema = z
         (cue) =>
           cue.startFrame < content.window.startFrame ||
           cue.endFrame > content.window.endFrame,
+      ) ||
+      content.edits.videoLooks?.some(
+        (range) =>
+          range.startFrame < content.window.startFrame ||
+          range.endFrame > content.window.endFrame,
       ) ||
       content.edits.texts?.some((layer) =>
         layer.role === "opening-title"
@@ -277,6 +283,9 @@ export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
     .strict(),
   z
     .object({ kind: z.literal("video-look"), look: ownerVideoLookSchema })
+    .strict(),
+  z
+    .object({ kind: z.literal("video-looks"), looks: ownerVideoLooksSchema })
     .strict(),
   z
     .object({ kind: z.literal("caption"), style: ownerCaptionStyleSchema })

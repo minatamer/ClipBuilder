@@ -71,6 +71,7 @@ export const ownerAgentClipSchema = ownerClipSchema
   .extend({
     captions: ownerCaptionStyleSchema.nullable(),
     videoLook: ownerOverlaySchema.shape.videoLook,
+    videoLooks: ownerOverlaySchema.shape.videoLooks,
     visuals: ownerOverlaySchema.shape.visuals,
     overlayHash: ownerDigestSchema.nullable(),
   })
@@ -100,6 +101,7 @@ export const ownerAgentValidationSchema = z
     overlayHash: ownerDigestSchema,
     captions: ownerCaptionStyleSchema.nullable(),
     videoLook: ownerOverlaySchema.shape.videoLook,
+    videoLooks: ownerOverlaySchema.shape.videoLooks,
     visuals: ownerOverlaySchema.shape.visuals,
   })
   .strict();

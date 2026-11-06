@@ -66,19 +66,19 @@ export function placeOwnerPlannedVisual(
   if (!focus) return { ...initialBox };
   const protectedBoxes = ownerVisualProtectedBoxes(focus, interval);
   if (!protectedBoxes.length) return { ...initialBox };
-  const candidates: Box[] = [];
-  for (const width of [initialBox.width, 0.7, 0.56, 0.44]) {
-    const height = (width * initialBox.height) / initialBox.width;
-    for (const y of [0.86 - height, 0.04, 0.96 - height, (1 - height) / 2])
-      for (const x of [(1 - width) / 2, 0.04, 0.96 - width])
-        candidates.push({ x, y, width, height });
-  }
+  // Reposition at the readable default size; a tiny clear gap is not a usable
+  // substitute for a contextual picture. Manual/saved sizes remain untouched.
+  const candidates: Box[] = [],
+    { width, height } = initialBox;
+  for (const y of [0.86 - height, 0.04, 0.96 - height, (1 - height) / 2])
+    for (const x of [(1 - width) / 2, 0.04, 0.96 - width])
+      candidates.push({ x, y, width, height });
   const covered = (box: Box) =>
     protectedBoxes.reduce((area, face) => area + overlap(box, face), 0);
   const clear = candidates.find((box) => covered(box) === 0);
   if (clear) return clear;
   // Fully occupied portraits still retain usable, editable output. Minimize
-  // proportional overlap; ties retain the first, largest/readable placement.
+  // proportional overlap without shrinking; ties retain the first placement.
   return candidates.reduce((best, box) =>
     covered(box) / (box.width * box.height) <
     covered(best) / (best.width * best.height) - 1e-9

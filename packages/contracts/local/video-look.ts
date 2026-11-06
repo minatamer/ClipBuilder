@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OWNER_FPS, OWNER_LIMITS } from "./policy.ts";
 
 export const OWNER_VIDEO_LOOKS = [
   "original",
@@ -14,6 +15,136 @@ export const ownerVideoLookSchema = z
   })
   .strict();
 export type OwnerVideoLook = z.infer<typeof ownerVideoLookSchema>;
+export const OWNER_VIDEO_LOOK_LABELS: Record<OwnerVideoLook["preset"], string> =
+  {
+    original: "Original",
+    vivid: "Vivid",
+    warm: "Warm",
+    cool: "Cool",
+    mono: "Black and white",
+  };
+export const OWNER_VIDEO_LOOK_RANGE_LIMIT = 32;
+export const ownerVideoLookRangeSchema = ownerVideoLookSchema
+  .extend({
+    startFrame: z.number().int().nonnegative(),
+    endFrame: z
+      .number()
+      .int()
+      .positive()
+      .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
+  })
+  .strict()
+  .refine((range) => range.endFrame > range.startFrame);
+export type OwnerVideoLookRange = z.infer<typeof ownerVideoLookRangeSchema>;
+export const ownerVideoLooksSchema = z
+  .array(ownerVideoLookRangeSchema)
+  .max(OWNER_VIDEO_LOOK_RANGE_LIMIT)
+  .refine(
+    (ranges) =>
+      ranges.every(
+        (range, index) =>
+          index === 0 || ranges[index - 1]!.endFrame <= range.startFrame,
+      ),
+    { message: "Keep filter ranges ordered and separate." },
+  );
+type Window = { startFrame: number; endFrame: number };
+export type OwnerVideoLookContent = {
+  videoLook?: OwnerVideoLook | undefined;
+  videoLooks?: OwnerVideoLookRange[] | undefined;
+};
+export function ownerVideoLooksFit(
+  ranges: readonly OwnerVideoLookRange[],
+  window: Window,
+) {
+  return ranges.every(
+    (range) =>
+      range.startFrame >= window.startFrame &&
+      range.endFrame <= window.endFrame,
+  );
+}
+export function ownerVideoLookAt(
+  content: OwnerVideoLookContent,
+  frame: number,
+) {
+  const range = content.videoLooks?.find(
+    (range) => range.startFrame <= frame && frame < range.endFrame,
+  );
+  return range
+    ? { preset: range.preset, strength: range.strength }
+    : content.videoLook;
+}
+export function clipOwnerVideoLooks(
+  ranges: readonly OwnerVideoLookRange[],
+  window: Window,
+): OwnerVideoLookRange[] {
+  return ranges.flatMap((range) => {
+    const startFrame = Math.max(range.startFrame, window.startFrame),
+      endFrame = Math.min(range.endFrame, window.endFrame);
+    return startFrame < endFrame ? [{ ...range, startFrame, endFrame }] : [];
+  });
+}
+/** Subtract coverage without stacking filters or changing surviving styles. */
+export function subtractOwnerVideoLookWindow(
+  ranges: readonly OwnerVideoLookRange[],
+  window: Window,
+): OwnerVideoLookRange[] {
+  return ranges.flatMap((range) => {
+    if (
+      range.endFrame <= window.startFrame ||
+      range.startFrame >= window.endFrame
+    )
+      return [range];
+    return [
+      ...(range.startFrame < window.startFrame
+        ? [{ ...range, endFrame: window.startFrame }]
+        : []),
+      ...(range.endFrame > window.endFrame
+        ? [{ ...range, startFrame: window.endFrame }]
+        : []),
+    ];
+  });
+}
+/** Current is removed first, so moving a range restores its legacy fallback. */
+export function replaceOwnerVideoLookRange(
+  ranges: readonly OwnerVideoLookRange[],
+  current: Window | undefined,
+  value: OwnerVideoLookRange,
+): OwnerVideoLookRange[] {
+  const next = ownerVideoLookRangeSchema.parse(value),
+    retained = ranges.filter(
+      (range) =>
+        !current ||
+        !Object.is(range.startFrame, current.startFrame) ||
+        !Object.is(range.endFrame, current.endFrame),
+    );
+  return ownerVideoLooksSchema.parse(
+    [...subtractOwnerVideoLookWindow(retained, next), next].sort(
+      (a, b) => a.startFrame - b.startFrame,
+    ),
+  );
+}
+/** Complete, non-overlapping coverage for native branches and legacy fallback. */
+export function ownerVideoLookSegments(
+  content: OwnerVideoLookContent,
+  window: Window,
+): OwnerVideoLookRange[] {
+  const fallback = content.videoLook ?? {
+      preset: "original" as const,
+      strength: 100,
+    },
+    ranges = clipOwnerVideoLooks(content.videoLooks ?? [], window),
+    result: OwnerVideoLookRange[] = [];
+  let at = window.startFrame;
+  for (const range of ranges) {
+    if (at < range.startFrame)
+      result.push({ ...fallback, startFrame: at, endFrame: range.startFrame });
+    result.push(range);
+    at = range.endFrame;
+  }
+  if (at < window.endFrame)
+    result.push({ ...fallback, startFrame: at, endFrame: window.endFrame });
+  return result;
+}
 type Matrix = readonly [
   number,
   number,

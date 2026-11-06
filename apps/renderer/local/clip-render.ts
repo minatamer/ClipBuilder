@@ -26,7 +26,7 @@ import {
 } from "./media.ts";
 import { runOwnedProcess } from "../src/media/process-runner.ts";
 import { rasterizeOwnerOverlay } from "./rasterize-overlay.ts";
-import { ownerVideoLookFilter } from "./video-look.ts";
+import { ownerTimedVideoLookFilter } from "./video-look.ts";
 import { ownerNativeFocusFilter } from "./focus-filter.ts";
 import {
   ownerOutputProfile,
@@ -117,11 +117,27 @@ export async function renderOwnerClip(
   const hookVideo = hook
     ? `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${ownerNativeFocusFilter(hookContent.focus, metadata, bodyProfile, "hook", { effects: hookContent.cameraEffects ?? [], tracks: hookContent.cameraTracks ?? [], occurrence: "hook", hook, hookStartFrame })},trim=start_frame=${hookStartFrame}:end_frame=${hookStartFrame + hookProfile!.frames},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${hookProfile!.frames}`
     : "";
+  const bodyLook = ownerTimedVideoLookFilter(job.overlay, {
+    fps: profile.fps,
+    frames: bodyProfile.frames,
+    sourceStartFrame: 0,
+    startFrame: 0,
+    endFrame: job.overlay.frames,
+  });
+  const hookLook = hook
+    ? ownerTimedVideoLookFilter(hookContent, {
+        fps: profile.fps,
+        frames: hookProfile!.frames,
+        sourceStartFrame: hookStartFrame,
+        startFrame: hook.startFrame,
+        endFrame: hook.endFrame,
+      })
+    : "null";
   // Independent source decoders avoid buffering a full raw-video branch in split.
   // Both occurrences read original pixels and meet in one final encode.
   const sourceGraph = hook
-    ? `[0:v:0]${bodyVideo},${ownerVideoLookFilter(job.overlay.videoLook)}[body];[1:v:0]${hookVideo},${ownerVideoLookFilter(hookContent.videoLook)}[hook];[0:a:0]${bodyAudio},volume=${bodyGain},apad,atrim=duration=${bodyProfile.frames / profile.fps}[bodyAudio];[1:a:0]${bodyAudio},atrim=start=${hookStartFrame / profile.fps}:duration=${hookProfile!.frames / profile.fps},asetpts=PTS-STARTPTS,volume=${hookGain},apad,atrim=duration=${hookProfile!.frames / profile.fps}[hookAudio];[hook][hookAudio][body][bodyAudio]concat=n=2:v=1:a=1[sequence][audio];[sequence]fps=fps=${profile.fps}:start_time=0:round=near,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${profile.frames}[source]`
-    : `[0:v:0]${bodyVideo},${ownerVideoLookFilter(job.overlay.videoLook)}[source];[0:a:0]${bodyAudio},volume=${bodyGain}[audio]`;
+    ? `[0:v:0]${bodyVideo},${bodyLook}[body];[1:v:0]${hookVideo},${hookLook}[hook];[0:a:0]${bodyAudio},volume=${bodyGain},apad,atrim=duration=${bodyProfile.frames / profile.fps}[bodyAudio];[1:a:0]${bodyAudio},atrim=start=${hookStartFrame / profile.fps}:duration=${hookProfile!.frames / profile.fps},asetpts=PTS-STARTPTS,volume=${hookGain},apad,atrim=duration=${hookProfile!.frames / profile.fps}[hookAudio];[hook][hookAudio][body][bodyAudio]concat=n=2:v=1:a=1[sequence][audio];[sequence]fps=fps=${profile.fps}:start_time=0:round=near,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${profile.frames}[source]`
+    : `[0:v:0]${bodyVideo},${bodyLook}[source];[0:a:0]${bodyAudio},volume=${bodyGain}[audio]`;
   const assets: Record<string, string> = {};
   for (const cue of [
     ...job.overlay.visuals,

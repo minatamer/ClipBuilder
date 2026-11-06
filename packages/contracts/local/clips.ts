@@ -33,7 +33,7 @@ import {
   ownerAiModeSchema,
 } from "./policy.ts";
 import { ownerWordsSchema, ownerMomentSchema } from "./selection.ts";
-import { ownerVideoLookSchema } from "./video-look.ts";
+import { ownerVideoLookSchema, ownerVideoLooksSchema } from "./video-look.ts";
 import { ownerFocusSchema } from "./focus.ts";
 import { ownerIllustrationSchema } from "./illustration.ts";
 import { ownerTextLayersSchema, ownerClipTitleSchema } from "./text-layers.ts";
@@ -79,6 +79,7 @@ export const ownerOverlayContentSchema = z
     hook: ownerHookSchema.optional(),
     texts: ownerTextLayersSchema.optional(),
     videoLook: ownerVideoLookSchema.optional(),
+    videoLooks: ownerVideoLooksSchema.optional(),
     focus: ownerFocusSchema.optional(),
     cameraEffects: ownerCameraEffectsSchema.optional(),
     cameraTracks: ownerCameraTracksSchema.optional(),
@@ -88,6 +89,7 @@ export const ownerOverlayContentSchema = z
   .superRefine((overlay, ctx) => {
     if (
       (overlay.hook && overlay.hook.endFrame > overlay.frames) ||
+      overlay.videoLooks?.some((range) => range.endFrame > overlay.frames) ||
       !ownerCameraTracksFit(
         overlay.cameraTracks ?? [],
         overlay.focus,
@@ -138,6 +140,11 @@ export const ownerOverlaySchema = ownerOverlayContentSchema
         content.frames !== overlay.frames ||
         content.hook?.startFrame !== overlay.hook.startFrame ||
         content.hook.endFrame !== overlay.hook.endFrame ||
+        content.videoLooks?.some(
+          (range) =>
+            range.startFrame < overlay.hook!.startFrame ||
+            range.endFrame > overlay.hook!.endFrame,
+        ) ||
         (content.focus &&
           overlay.focus &&
           JSON.stringify(content.focus.source) !==
@@ -241,6 +248,7 @@ export const ownerClipSchema = z
     sourceRevision: z.number().int().nonnegative(),
     revision: z.number().int().nonnegative(),
     assemblyRevision: z.number().int().nonnegative(),
+    hookTitleAttempts: z.number().int().nonnegative().optional(),
     captionAttempts: z
       .number()
       .int()

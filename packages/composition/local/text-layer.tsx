@@ -5,6 +5,7 @@ import {
   ownerTypographyBackground,
   ownerTextLineUnits,
 } from "./text-paint.ts";
+import { OwnerStyledTextLayer } from "./styled-text-layer.tsx";
 
 function wrapText(
   text: string,
@@ -43,6 +44,7 @@ function wrapText(
 }
 
 export function OwnerTextLayerView({ layer }: { layer: OwnerTextLayer }) {
+  if (layer.spans?.length) return <OwnerStyledTextLayer layer={layer} />;
   const { style } = layer,
     width = style.box.width * 1080,
     height = style.box.height * 1920;

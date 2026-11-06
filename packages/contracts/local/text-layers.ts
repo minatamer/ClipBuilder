@@ -4,6 +4,12 @@ import { wordIdSchema } from "@clipbuilder/contracts";
 import { boundedPlainTextSchema } from "../src/text.schema.ts";
 import { OWNER_FPS, OWNER_LIMITS, ownerIdSchema } from "./policy.ts";
 import { ownerTypographySchema } from "./text-style.ts";
+import {
+  OWNER_TITLE_TREATMENTS,
+  ownerTitleEmphasisSchema,
+  ownerTextSpansSchema,
+  normalizeOwnerStyledText,
+} from "./text-ranges.ts";
 
 export const OWNER_TEXT_LIMITS = {
   layers: 10,
@@ -43,6 +49,8 @@ export const ownerPlannedTextSchema = z
         wordIds: z.array(wordIdSchema).min(1).max(12),
         title: ownerClipTitleSchema.optional(),
         hookStyle: z.enum(OWNER_TITLE_HOOK_STYLES).optional(),
+        treatment: z.enum(OWNER_TITLE_TREATMENTS).optional(),
+        emphasis: z.array(ownerTitleEmphasisSchema).max(2).optional(),
       })
       .strict(),
   )
@@ -87,7 +95,7 @@ export const ownerTextStyleSchema = ownerTypographySchema
     },
   );
 export type OwnerTextStyle = z.infer<typeof ownerTextStyleSchema>;
-export const ownerTextLayerSchema = z
+const textLayerSchema = z
   .object({
     id: ownerIdSchema,
     text: ownerLayerTextSchema,
@@ -100,11 +108,29 @@ export const ownerTextLayerSchema = z
       .positive()
       .max((OWNER_LIMITS.clipMs * OWNER_FPS) / 1000),
     style: ownerTextStyleSchema,
+    spans: ownerTextSpansSchema.optional(),
   })
   .strict()
   .refine((layer) => layer.endFrame > layer.startFrame, {
     message: "Text must end after it starts.",
   });
+export const ownerTextLayerSchema = z.preprocess((value) => {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !("text" in value) ||
+    typeof value.text !== "string" ||
+    !("spans" in value)
+  )
+    return value;
+  const parsed = ownerTextSpansSchema.safeParse(value.spans);
+  if (!parsed.success) return value;
+  try {
+    return { ...value, ...normalizeOwnerStyledText(value.text, parsed.data) };
+  } catch {
+    return { ...value, spans: null };
+  }
+}, textLayerSchema);
 export const ownerTextLayersSchema = z
   .array(ownerTextLayerSchema)
   .max(OWNER_TEXT_LIMITS.layers)
