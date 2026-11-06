@@ -1,6 +1,8 @@
 "use client";
 import { useEffect } from "react";
 import { reportBrowserViewFailure } from "../features/diagnostics/browser.diagnostics";
+import { Button } from "../shared/ui/button";
+import styles from "./view-failure.module.css";
 
 export default function GlobalError({
   error,
@@ -13,12 +15,10 @@ export default function GlobalError({
   return (
     <html lang="en">
       <body>
-        <main>
+        <main className={styles.recovery}>
           <h1>ClipBuilder could not load this view</h1>
           <p>Please reload the page and try again.</p>
-          <button type="button" onClick={() => window.location.reload()}>
-            Reload page
-          </button>
+          <Button onClick={() => window.location.reload()}>Reload page</Button>
         </main>
       </body>
     </html>

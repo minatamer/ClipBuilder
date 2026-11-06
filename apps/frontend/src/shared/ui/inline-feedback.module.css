@@ -1,0 +1,31 @@
+.feedback.feedback[data-inline-feedback] {
+  display: block;
+  box-sizing: border-box;
+  flex: 0 0 100%;
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+  inline-size: 100%;
+  contain: inline-size;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--cb-danger);
+  font-size: var(--cb-text-meta);
+  font-weight: 400;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.feedback[data-reserve] {
+  min-block-size: 2.8em;
+}
+.feedback.feedback[data-inline] {
+  flex: 1 1 0;
+  inline-size: auto;
+  grid-column: auto;
+}
+.feedback[role="status"][data-inline-feedback] {
+  color: var(--cb-ink-soft);
+}

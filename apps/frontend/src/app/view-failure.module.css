@@ -1,0 +1,22 @@
+.recovery {
+  min-height: 100svh;
+  box-sizing: border-box;
+  display: grid;
+  place-content: center;
+  justify-items: start;
+  gap: 1rem;
+  padding: var(--cb-page-gutter, 1.5rem);
+  background: var(--cb-canvas, #f6f7fb);
+  color: var(--cb-ink, #0b1020);
+  font-family: var(--cb-font-sans, system-ui);
+}
+.recovery h1 {
+  max-width: 30rem;
+  margin: 0;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  line-height: 1.2;
+}
+.recovery p {
+  max-width: 30rem;
+  margin: 0;
+}

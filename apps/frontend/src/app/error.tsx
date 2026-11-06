@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 import { reportBrowserViewFailure } from "../features/diagnostics/browser.diagnostics";
+import { Button } from "../shared/ui/button";
+import styles from "./view-failure.module.css";
 
 type ErrorPageProperties = {
   error: Error & { digest?: string };
@@ -15,12 +17,10 @@ export default function ErrorPage({ error, reset }: ErrorPageProperties) {
   }, [error.digest]);
 
   return (
-    <main>
+    <main className={styles.recovery}>
       <h1>ClipBuilder could not load this view</h1>
       <p>Your media was not changed. Try the view again.</p>
-      <button type="button" onClick={reset}>
-        Try again
-      </button>
+      <Button onClick={reset}>Try again</Button>
     </main>
   );
 }
