@@ -6,6 +6,12 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Owner focus-style rule (2026-11-07, CL-258): standard application focus uses
+  the shared neutral inset treatment, without blue outer outlines/halos. Cover
+  landing, intake, editor, dialogs and recovery views; do not add per-control
+  focus rings or force blur. Preserve keyboard focus, caret, geometry and OS
+  forced-colors behavior. The source of truth owns this design decision.
+
 - Owner stable-feedback rule (2026-11-06, CL-241): errors cannot steal a
   control column, resize fields, wrap action buttons or change editor preview
   geometry. Use shared contextual feedback with stable local message space;

@@ -1,5 +1,119 @@
 # ClipBuilder canonical ticket index
 
+## Local commits and tomorrow's list — 2026-11-07
+
+[CL-261](CL-261-file-level-local-commits-and-next-day-checklist.md) owns the
+six authorized whole-file local commits (94 files) for CL-247–260 and the November 8,
+10:00 Cairo reminder. Planned follow-ups: [CL-262](CL-262-owner-hook-and-codex-ui-testing.md)
+Hook/Codex UI testing, [CL-263](CL-263-first-editor-guided-tour.md) first-editor
+tour, [CL-264](CL-264-gemini-codex-behavior-comparison.md) provider comparison,
+and [CL-265](CL-265-gemini-before-deployment-decision.md) Gemini acceptance before
+a deployment decision. No future implementation, inference or deployment started.
+
+## Explicit Hook options — 2026-11-07
+
+[CL-260](CL-260-explicit-hook-title-and-audio-options.md) adds independent
+Generate title / Add Hook audio checkboxes with explicit opt-in. Generated
+request/cancel, Apply/reload, native export and four-width layout checks pass.
+
+## Hook audio length and volume — 2026-11-07
+
+[CL-259](CL-259-hook-audio-length-and-default-volume.md) owns recording-led
+Hook duration, synchronized cut timing and 100% default gain. Generated no-key
+unit, HTTP/browser, native audio and export checks pass; saved media is preserved.
+
+## Shared focus without blue glow — 2026-11-07
+
+[CL-258](CL-258-shared-focus-without-blue-glow.md) replaces outer blue focus
+halos with shared neutral inset feedback. The full source audit and 2,742
+focused-control checks across 111 rendered states pass at three device widths.
+
+## Refreshed clip-card preview — 2026-11-07
+
+[CL-257](CL-257-refreshed-clip-card-preview.md) fixes the empty card visibility
+gate with immediate layout/show checks and viewport-based lazy cleanup. Generated
+reload/pixel, hover, hidden-view and responsive checks pass; saved media is preserved.
+
+## Smooth editor playback — 2026-11-07
+
+[CL-256](CL-256-smooth-editor-playback.md) fixes measured image/audio buffering
+pauses, camera layout work and inspector seek churn. Generated no-store/1080p
+playback and full editor checks pass at laptop/tablet/phone widths. Owner device
+acceptance and CL-255's original uncorrelated warning remain separate.
+
+## Repeated-edit update loop — 2026-11-07
+
+[CL-255](CL-255-editor-update-depth-investigation.md) investigates the recurring
+maximum-update-depth error. A readiness callback cycle is reproduced/fixed and
+private bounded diagnostics plus strict Next edit/gesture regressions pass. The
+continuation fixes audio track identity and completes the full audio workflow. The original
+owner occurrence remains open pending correlated diagnostic evidence.
+
+## Camera tab name — 2026-11-07
+
+[CL-254](CL-254-camera-tab-name.md) is complete locally: the main tab is Camera,
+with its icon, controls and internal saved setting identifiers preserved.
+Generated navigation and zero-call checks passed; browser drivers use the new name.
+
+## Zoom inspector alignment — 2026-11-07
+
+[CL-253](CL-253-zoom-inspector-alignment.md) is complete locally: effect controls
+and numeric rows align; narrow columns stack consistently and share the inspector
+inset. Empty feedback no longer accumulates before Reset. Four-width browser
+checks, stable error/correction geometry and 15 feedback regressions passed.
+
+## Clip rename focus ring — 2026-11-07
+
+[CL-252](CL-252-clip-rename-focus-ring.md) is complete locally: the clip rename
+header has no lingering blue focus ring. Mouse/keyboard/dialog focus paths passed
+generated checks at laptop, tablet and phone sizes; existing rename flow is preserved.
+
+## Motion footer actions — 2026-11-07
+
+[CL-251](CL-251-motion-footer-actions.md) is complete locally: shared footer rules
+handle feedback at any nesting depth, keeping Track head/Cancel and unrelated
+action groups inside the frame. Five-width browser geometry and 15 feedback
+regressions passed; no Motion-specific workaround or service restart.
+
+## Camera-position zoom endpoint — 2026-11-07
+
+[CL-250](CL-250-camera-position-zoom-default-end.md) is complete locally: every
+manual zoom holds its target until the next timestamped camera position or a later
+Zoom/Motion, including legacy data without an implicit return. The whole-video
+rewind interpretation is retracted; direct body/Hook camera-cut checks passed.
+“Reach target in” uses the selected position's remaining duration and
+gradually reaches 1.5× at its end. Zoom edits paint immediately; invalid numeric
+input retains the latest valid draft without enabling Apply. Focused no-key,
+Codex-browser, decoded-frame and native checks passed. Existing edits and
+CL-247–249 remain preserved; earlier pulse-default evidence is historical.
+
+## Hook title progress and cancellation — 2026-11-07
+
+[CL-249](CL-249-hook-title-progress-and-cancel.md) is complete locally: clear title progress,
+an explained Apply blocker and Cancel title in Hook or beside Apply from another
+tab. Cancellation retains drafts, aborts pending work and ignores late replies.
+Twenty-two fake/no-key cases and five-size generated HTTP/editor checks pass;
+pending/failure footer geometry stays stable. Frontend/test types, lint/format and
+cleanup pass; pending CL-247/248 and owner work are preserved. Nothing committed.
+
+## Aligned clip-card title — 2026-11-07
+
+[CL-248](CL-248-aligned-clip-card-title.md) is complete after the visual follow-up:
+the title/16px pencil group and preparing/failed statuses center over the existing
+thumbnail column. A full-width 44px-high rename target retains ellipsis/dialog
+access. Five-size before/after checks prove unchanged thumbnail bounds; 15 no-key
+cases, types/lint/format pass. CL-247 and active owner work remain preserved;
+nothing committed.
+
+## Content-sized footer — 2026-11-07
+
+[CL-247](CL-247-content-sized-workflow-footer.md) is complete locally: empty footer
+feedback no longer reserves a field-validation row; displayed errors use shared
+anchored callouts. Footer size follows controls and normal responsive padding.
+Brief/long/reset/cleared errors preserve action/content geometry at five sizes;
+15 no-key cases, types/lint/format pass. Normal app/work preserved; no restart,
+provider call or Git action. Physical-device/AT/hosted checks remain separate.
+
 ## Whole-file local commits — 2026-11-07
 
 [CL-246](CL-246-file-level-local-commits.md) records the owner's authorization,

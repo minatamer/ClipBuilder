@@ -1,5 +1,9 @@
 # CL-162 — suggested hooks with owner-selected riser recordings
 
+Follow-up: CL-259 (2026-11-07) supersedes this packet's 35% and shorter-excerpt
+defaults with 100% and recording-led Hook duration, plus synchronization after
+manual timing changes. The measurements and historical verification below remain.
+
 Status: implemented and locally validated after CL-161. Plan filed before code.
 Owner supplied
 two MP3 recordings matching the public Riser / Rising tension references and

@@ -1,5 +1,35 @@
 # ClipBuilder frontend
 
+CL-255 fixes a reproducible preview-readiness callback feedback loop and adds
+private editor diagnostics. The shared bridge receives only allowlisted React
+issue/component codes and bounded lifecycle/preview/activity counters, correlated
+by a generated trace ID. It retains no text, media IDs, paths, raw arguments or
+stack contents, adds no user-facing output, and never retries processing. Media
+ticks update counters without sending a request per frame. Synthetic repeated-edit
+and callback-loop proofs need no API keys; the original owner occurrence remains
+unattributed until a correlated diagnostic is available. The continuation also
+fixes pooled audio track identity: Hook additions preserve existing body tracks,
+including picture-linked accents.
+
+CL-249 explains why Apply waits for a Hook title, with shared progress styling
+and Cancel in Hook or beside Apply when another tab is active. Cancel aborts
+pending title work, preserves current text/Hook edits and ignores late replies;
+normal validation still applies. Empty action groups contribute no spacing and
+small footers retain readable separated targets. Fake HTTP/editor checks need
+no API keys or model; actual title quality uses the configured provider/runtime.
+
+CL-248 aligns clip-card title and status/thumbnail padding with one shared compact
+inset. The title and smaller pencil form one centered 44px-high rename target
+over the unchanged thumbnail column; preparing/failed statuses share that center
+line. Short titles stay readable and long names retain ellipsis/full-dialog
+editing. Generated desktop/tablet/phone checks need no API keys, AI or regeneration.
+
+CL-247 keeps workflow footers sized by their controls and shared responsive
+padding. Empty footer feedback reserves no field-validation row; displayed
+action errors use the shared anchored callout without resizing the footer,
+buttons or content. Field validation space is unchanged. Generated no-key
+analysis/editor/reset and responsive error checks need no regeneration or AI.
+
 CL-243 aligns shared caption/title/editor controls at the existing 44px target,
 packs labels from the top, styles range controls and keeps validation geometry
 stable. CL-244–245 restores normal caption foregrounds with speaker-colored
@@ -296,9 +326,21 @@ browser checks verify these layouts and guards; real-device/owner visual and
 live AI acceptance remain separate. AI still requires keys/live flags/approvals.
 
 [CL-192](../../docs/tickets/CL-192-manual-camera-punch-in.md) adds a manual
-Zoom tab in Focus. Capture a start at the playhead, pick the target in the
-portrait view, and set magnification and arrival duration. A 0.3-second hold and
-0.4-second automatic return follow the current camera schedule. Hook and body
+Zoom sub-tab in Camera (formerly Focus, renamed by CL-254). Capture a start at the playhead, pick the target in the
+portrait view, and set magnification and arrival duration. [CL-250](../../docs/tickets/CL-250-camera-position-zoom-default-end.md)
+defaults “Reach target in” to the selected camera position's remaining duration,
+clipped to the Hook/body occurrence, reaching 1.5× on its final visible frame.
+After arrival, every manual zoom holds its target until the next timestamped
+camera position or an explicit later Zoom/Motion takes over. Legacy documents
+retain their stored timing values and arrival interpolation, with no automatic
+zoom-out. Repeated positions remain separate even with identical framing.
+Preview sampling never rounds into the next camera or beyond the Hook trim.
+CL-253 aligns the selector/Add controls and numeric rows, stacks controls by
+available column width, and uses the same inspector inset across devices. Focus
+feedback shares one stable local slot after Reset, avoiding accumulated blanks.
+Valid edits repaint immediately; blank/invalid intermediate
+inputs retain the last valid draft preview while Apply stays guarded. The playhead
+must be inside that selected row. Hook and body
 zooms are independent; changing the Hook clears only its zooms. Apply/Discard,
 saved drafts and rolling recovery retain manual effects. No AI call is added.
 Synthetic fake/no-key proofs verify controls and native output; real render
@@ -1153,6 +1195,48 @@ intentionally remain enabled under OS reduced-motion preferences per the owner;
 this exception is not an accessibility-compliance claim.
 
 ## Configuration boundary
+
+The CL-258 focus survey runs with
+`corepack pnpm local:proof test/local-focus-style.proof.ts`. It uses the normal
+Next dev frontend on port 3000 for public/404 views and generated fake/no-key
+fixtures for intake, editor, dialogs, moments and recovery views. All APIs are
+intercepted or kept on isolated loopback hosts. It checks neutral inset focus,
+keyboard navigation and unchanged control dimensions at three device widths;
+no owner media, provider processing or API keys are used.
+
+The CL-257 card refresh check runs with
+`corepack pnpm local:proof test/local-clip-rail-preview.proof.ts`. It requires the
+normal Next dev frontend on port 3000, intercepts all APIs to generated fake/no-key
+media, and checks actual reload pixels, deferred visibility, hover/pause, hidden
+view return, offscreen cleanup and compact tablet/phone navigation. It preserves
+normal backend sessions and makes zero provider calls.
+
+The CL-255 generated edit and full audio/Motion workflow checks run from the root:
+
+```text
+corepack pnpm local:proof test/local-editor-readiness.proof.ts test/local-editor-transitions.proof.ts
+corepack pnpm local:proof test/local-audio-editor.proof.ts test/local-head-motion-editor.proof.ts
+```
+
+The transitions proof requires the normal Next development frontend on port 3000.
+It intercepts every API request into its generated fake host, blocking external
+origins and preserving normal backend sessions/media. The others create owned
+synthetic loopback hosts. All force fake/no-key/paid-off before imports; none
+uses ignored configuration or proves live AI quality.
+
+The CL-256 editor playback proofs run from the repository root:
+
+```text
+corepack pnpm local:proof test/local-playback-smoothness.proof.ts test/local-editor-playback.proof.ts
+corepack pnpm local:proof test/local-camera-switch.proof.ts test/local-visual-sync.proof.ts
+```
+
+These use generated 1080p video, admitted images, delayed no-store responses and
+fake HTTP editor transport. They measure buffering, seeks, frame gaps, dropped
+frames, image readiness, crop alignment and cleanup. Run timing measurements
+without concurrent builds/encodes. No API key, provider/model, owner media or
+ignored configuration is used. They prove local playback mechanics; real AI
+quality and owner physical-device/hosted acceptance remain separate.
 
 The opt-in CL-009 playback proof runs with
 `corepack pnpm --filter @clipbuilder/frontend exec node --experimental-strip-types feasibility/edit-playback/run.mjs --assert-buffer-fix`

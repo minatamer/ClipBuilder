@@ -768,6 +768,12 @@ gated features unavailable and report the owner-only setup that remains.
 
 ## Analysis diagnostics
 
+CL-255 extends the existing private browser diagnostic schema with editor traces,
+bounded transition/preview counters and allowlisted React issue/component codes.
+The same origin/body/rate gates and content-safe sink apply. The browser receives
+an empty acknowledgement; reporting cannot change editing state or invoke a
+provider. Generated trace IDs identify diagnostics, never owner clips or media.
+
 CL-234 adds durable local capture independent of the launcher's lifetime. Normal
 local startup owns validated JSONL files under an OS-temp
 `clipbuilder-backend-diagnostics-*` directory; no environment switch is needed.

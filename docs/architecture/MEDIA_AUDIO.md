@@ -21,8 +21,22 @@ invent/stretch speech just to fill music. The decoder caps AI suggestions at
 222 frames without retrying/rejecting usable clips. Fake mode simulates the
 short recording's duration. AI processing never activates a hook or sound.
 
-Explicit Use suggestion adds the hook plus one editable Hook-only riser at 35%
-volume, choosing the shortest covering recording. Offset trims the lead-in to
+CL-260 (2026-11-07) makes title/music independent Hook checkboxes. New manual
+Hooks start with both off; unchecked options start no title or riser. Add Hook
+audio adds/removes only its managed cue; Generate title opts into matching title
+requests for this open editor, with Cancel/uncheck preserving existing content.
+
+CL-259 (2026-11-07) supersedes the original defaults: explicit Use suggestion with
+Add Hook audio checked, or
+recording choice sets the Hook's default duration to the selected full 159/222
+frames, bounded by remaining source while preserving Start. New Hook recordings
+start at 100%; edited gain survives replacement and timing changes. Manual
+endpoints remain exact; managed audio realigns its offset and upgrades to the
+long recording when required, with local draft validation above 7.4s. Hooks
+without managed sound retain the independent ten-second limit and add no music.
+
+Explicit Use suggestion adds the hook plus one editable Hook-only riser,
+choosing the shortest covering recording. Offset trims any necessary lead-in to
 align the rise's end with the cut; no looping or body spill. Preserve independent
 gain and other layers. A managed optional cue marker allows repeat acceptance
 to reuse its ID/gain, never erase user cues or exceed twelve layers. Manual

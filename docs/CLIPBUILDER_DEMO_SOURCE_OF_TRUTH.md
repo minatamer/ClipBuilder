@@ -56,7 +56,13 @@ do not change tab widths. Keep pending/title failure feedback in the same slot.
 
 Footer-only clip/editor/reset failures and demo bounds anchor to their relevant
 actions outside normal sizing flow, with viewport-safe bounds. Preserve the
-normal footer height when entering Apply/Discard, input focus/caret, endpoint
+content-sized footer: empty feedback reserves no extra row, and any shown error
+cannot increase its height or padding. Controls and normal responsive wrapping
+determine footer size, never a fixed height or per-state spacing override (CL-247).
+Apply these shared rules at every nesting depth inside footer action groups;
+feedback must never become a flex spacer that pushes CTAs outside the frame
+(CL-251).
+Preserve the normal footer height when entering Apply/Discard, input focus/caret, endpoint
 Capture/Jump behavior, validation and submission guards. Actual media/whole-view
 failures still replace their unavailable content slot. This extends CL-237–238;
 no page-top error banner. Verification uses generated/fake/no-key UI and settled
@@ -87,7 +93,23 @@ owner acceptance with the configured runtime/live flags/approvals.
 
 ## Titles for every chosen Hook — CL-239, 2026-11-06
 
-Choosing or changing a valid Hook, including manual timestamps/Capture, requests
+CL-260 (2026-11-07) supersedes implicit generation: Hook exposes independent
+Generate title / Add Hook audio checkboxes. Both start off for new manual Hooks;
+manual and suggested selection follow these explicit choices. Generate title is
+an editor-session opt-in, off on mount/reload/Discard. Checking it requests a
+title for the complete range and subsequent range edits while enabled; uncheck
+or Cancel stops pending work and keeps existing title content. Never infer
+consent to new work from a saved title. Actual generated content still persists
+through normal Apply; title opt-in is not a saved media/render setting.
+
+Add Hook audio reflects the managed cue; checking it adds one recording at 100%
+with CL-259's bounded recording-led duration. Unchecking removes only that cue
+and keeps the Hook window, title and independent audio. Saved managed cues appear
+checked without changes or dispatch. Audio-free manual Hooks keep the ten-second
+limit. Incomplete ranges retain endpoints and cannot start requests. Local
+availability, validation, bounded retries, cancellation and stable feedback remain.
+
+With Generate title checked, choosing or changing a valid Hook, including manual timestamps/Capture, requests
 one title matched to that exact excerpt and the clip's actual payoff after the
 range settles. Use the established editorial policy and meaningful exact-phrase
 emphasis, normally bright red #FF3B30 against readable surrounding copy. Reuse
@@ -100,6 +122,14 @@ draft, protecting concurrent typing; Apply/Discard still owns persistence and
 independent Hook/body content. Real automatic title requests use the configured
 provider/runtime, live flags and applicable approvals. Generated/fake tests need
 no keys and do not establish real editorial quality.
+
+CL-249 makes a pending title's Apply blocker explicit and cancelable. Show the
+shared title progress beside Hook controls, or anchored beside Apply when another
+tab is active, without growing the footer. Cancel stops pending title work,
+retains current title and Hook/content edits, releases only this blocker and
+ignores late replies; the same canceled range never restarts automatically.
+Existing validation, explicit failure retry, provider bounds and Apply/Discard
+persistence remain authoritative.
 
 ## Contextual errors — CL-237–238, 2026-11-06
 
@@ -118,6 +148,18 @@ shared inline feedback. Prepared/generated UI verification needs no API keys or
 AI; real provider processing retains its normal setup, live flags and approvals.
 
 ## Durable local failure diagnostics — CL-234, 2026-11-06
+
+CL-255 adds content-free editor lifecycle diagnostics through the same private
+browser bridge and durable sink. Generated diagnostic trace IDs, allowlisted
+React issue/component codes, state booleans and bounded counters identify
+readiness/activity notifications, edits, selections, Apply/Discard, preview
+subscriptions/media signals and capture/seek activity. Per-frame work only updates
+memory counters; bounded summaries and failures are sent privately. Raw console
+arguments, owner stacks, paths and editor content never cross the boundary.
+Logging failures/reports cannot update UI state, retry work or change validation.
+Preview-ready notifications follow readiness state, independently of consumer
+callback identity. A reproduced callback cycle is fixed; attributing a historical
+owner warning still requires its own correlated evidence.
 
 Normal local startup must retain content-safe operation/analysis/execution
 diagnostics independently of a launcher or terminal lifetime. Use existing
@@ -157,6 +199,20 @@ API keys; real AI preparation retains its configured setup/live approvals.
 CL-233 owns implementation and responsive evidence; owner device acceptance
 remains manual.
 
+Owner visual correction (CL-252, 2026-11-07): the compound clip-card rename
+header has no additional blue outline/shadow ring, including keyboard and
+programmatically restored focus. Preserve the button's focus return, keyboard
+operation, compact geometry and touch target without a forced blur workaround.
+
+Owner global correction (CL-258, 2026-11-07): remove the standard-theme blue
+outer focus glow throughout the website, including inputs/selects/textareas,
+links/buttons, editor controls, dialogs and recovery views. Reuse one neutral
+inset focus treatment from shared tokens; keyboard focus remains visible inside
+the control boundary without changing layout. Scaled preview handles retain a
+proportionate inset cue. Preserve actual focus, caret, dialog return and selected
+state semantics; never blur controls as a workaround. OS forced-colors uses its
+system focus color. This supersedes CL-252's earlier rename-only scope.
+
 The owner's CL-233 sizing follow-up makes the clip rail more compact and removes
 excess padding below card headers. On desktop, size the main 9:16 preview from
 the available editor height so it extends to the normal small footer gap,
@@ -189,6 +245,9 @@ remains separate. CL-232 owns cross-section evidence.
 
 ## Laptop Focus layout trial — CL-230, 2026-11-06
 
+CL-254 renames the main editor tab from Focus to Camera. This is the shared
+visible/accessibility label; internal `focus` settings and saved data stay intact.
+
 The latest owner revision trials a larger source preview above the camera
 collection in the left column, with sub-tabs, editing controls and local actions
 on the right across Camera, People, Zoom and Motion. Prioritize the frame's usable
@@ -204,6 +263,13 @@ in the persistent workspace footer. Retain expanded selection, normalized
 geometry/clocks, independent Hook/main ownership and persistent footer actions.
 Narrow screens stack naturally. The trial needs no AI/API keys on prepared
 clips; CL-230 owns generated responsive evidence and owner visual acceptance.
+
+CL-253 aligns Zoom's effect selector and Add action by the control edges, with
+full-width stacking when its own column is narrow. Nested Zoom controls share
+the inspector inset on every device; numeric rows align even when labels wrap.
+Focus uses one shared contextual feedback reservation after Reset instead of
+accumulating empty error/status slots before it. Zoom retains its own local
+message space, so validation cannot move controls or resize the preview/footer.
 
 ## Camera-seeded timed filters — CL-228, 2026-11-06
 
@@ -516,6 +582,18 @@ download, configuration or migration follows from this fix.
 before/after timing evidence and real-owner visual acceptance. Synthetic
 decoder/crop correctness is distinct from subjective real-device/media review.
 
+CL-256 (2026-11-07) keeps that decoded-frame ownership while moving the fixed-size
+video with a compositor transform. Camera/Zoom/Motion cannot resize the decoder's
+layout each frame. The source inspector uses normal muted playback and bounded
+resynchronization at actual jumps; Player ticks are not repeated seek commands.
+Prepare and retain admitted image bytes in session memory, including protected
+no-store responses, before their known cues. Initial image/audio preparation may
+gate Play; adding a cold image while playing shows it after preparation without
+pausing, seeking or remounting the source. Prepare and premount audio cues rather
+than allowing each cue's tag lifecycle to suspend video. Errors retain contextual
+recovery. Abort preparation and release elements, listeners, timers and owned
+Blob URLs when unused/unmounted. Native clocks, geometry and exports are unchanged.
+
 ## Complete local Find all passages — CL-211, 2026-11-04
 
 The owner requests fixes for shortened/split passages and overlapping results
@@ -749,7 +827,9 @@ clip name centered above each prepared preview, and a visible preview-to-editor
 selection transition. Phone/tablet navigation remains compact. Preserve current
 readiness gates, keyboard/dirty-state behavior, normal motion timing and bounded
 media resource use. [CL-198](tickets/CL-198-desktop-portrait-clip-rail-and-editor-transition.md)
-owns implementation and visual evidence.
+owns implementation and visual evidence. CL-257 requires visible prepared desktop
+cards to paint their paused edited preview after refresh without hover. Hidden
+and offscreen previews remain lazy; compact phone/tablet navigation is preserved.
 
 The owner also requests optional custom clip names used consistently in clip UI
 and downloaded MP4 filenames, with Clip N fallback and safe filename derivation.
@@ -845,14 +925,29 @@ unchanged. Successful 144p acquisition does not establish high-resolution
 throughput or AI quality. Full-source 144p acceptance reached ready and survived a
 final worker reload; no inference was run. See the [ticket evidence](tickets/CL-194-progress-aware-youtube-acquisition.md).
 
-## Manual camera zoom — CL-192, 2026-11-02
+## Manual camera zoom — CL-192; CL-250 revision, 2026-11-07
 
 The existing Focus panel includes a manual Zoom tab. Add at playhead captures
 one explicit Hook or body occurrence; target position, magnification and time to
 reach it are editable with a scaled portrait target, pointer/keyboard and numeric
-controls. Effects use smoothstep interpolation, a 0.3-second hold and a
-0.4-second return, leaving 0.1 seconds at the occurrence end for baseline framing.
-Return evaluates the independent camera schedule at the current timestamp.
+controls. Owner correction: new effects gradually reach an absolute 1.5× target
+on the last visible frame of the selected timestamped camera position, clipped
+to its Hook/body occurrence. “Reach target in” defaults to the full time from
+the settled playhead to that end. There is no default hold/return pulse; at least
+two frames are needed for a gradual change. After arrival, hold the target until
+the next timestamped camera position starts, or an explicit later Zoom/Motion
+takes over. This includes legacy implicit-return effects: preserve their stored
+hold/return values and arrival interpolation, but never automatically zoom out.
+Repeated positions remain distinct even for the same person and framing. A held
+effect cannot resume after a later Motion ends. Selecting another position
+or changing camera timing never silently retimes an existing effect. Holds stay
+bounded nonnegative frame counts; return is zero for gradual effects or the legacy
+0.4 seconds. Manual Zoom can end at the occurrence boundary without the former
+extra 0.1-second tail. Valid Zoom edits repaint immediately. Invalid intermediate
+inputs keep the latest valid draft visible in both main and target previews,
+with Apply still disabled; discard/source/revision changes cannot reuse stale paint.
+Preview sampling follows the presented source frame without rounding ahead into
+the next camera, and remains inside the active Hook/body trim.
 Overlapping effects in one occurrence are rejected; Hook changes remove only
 Hook effects with a visible notice. No AI prompt/plan can create these effects.
 
@@ -1344,7 +1439,11 @@ audio and owner pictures. Replays/restores never duplicate sounds. If the audio
 cue capacity is full, preserve existing audio and usable visuals. A search miss
 or cancellation never changes the prior audio edit. No extra AI or render call.
 
-Preview buffers on image loading and stops in existing recovery on image error.
+CL-256 replaces per-image playback buffering with initial image/audio preparation
+and retained decoded image bytes. Known cues reuse those bytes; dynamic additions
+prepare without suspending the source. Image errors stop in existing recovery.
+CL-255 keeps preview sound identity stable per cue and Hook/body occurrence;
+adding/removing Hook sounds or picture accents preserves unrelated body tracks.
 Native art branches and PCM delays use the same whole native-frame Hook/body
 clock, retaining source cadence/quality, 30fps art sampling and the shared scratch
 budget. Synthetic decoded image/audio onsets match at 24/25/29.97/30/60fps;
@@ -1401,6 +1500,27 @@ Manual hooks may still start at zero and retain their ten-second duration limit.
 Keep the 5.3/7.4-second risers and explicit suggestion-only application, no extra
 inference/automatic retries and no change to saved applied edits. Fake/native
 validation proves mechanics; real AI excerpt quality remains owner review.
+
+## Hook audio duration and gain — CL-259, 2026-11-07
+
+Selecting Riser or Rising tension, or Use suggestion with Add Hook audio checked, sets the
+default Hook duration to the selected recording's 159/222 frames (5.3/7.4s).
+Keep the excerpt's Start and bound End by the remaining source; if necessary
+trim only the recording's lead-in so its ending meets the Hook cut. New Hook
+recordings default to 100% volume. Preserve edited gain on the managed cue.
+These defaults supersede CL-162's 35% and shorter-excerpt defaults below.
+CL-260 makes music explicit: Use suggestion alone adds no sound when its audio
+checkbox is off. Manual Hooks also keep audio off until selected.
+
+Manual Start/End changes and Capture retain the exact chosen endpoint, update
+the managed cue's duration/offset atomically and upgrade short to long if needed.
+Managed audio permits up to the longer recording's 7.4s; incomplete/longer
+drafts keep their typed values with local validation and Apply disabled. Manual
+Hooks without managed sound still allow ten seconds and add no music. Explicit
+recording choice from either occurrence belongs to independent Hook content.
+Reuse one managed cue, preserve other audio, and retain normal Apply/Discard,
+restore, no-loop/no-body-spill behavior and explicit customization detachment.
+Never silently rewrite old saved edits during reload to prove a generic fix.
 
 ## Suggested-hook risers — CL-162, 2026-10-30
 
@@ -8595,7 +8715,7 @@ responsive Next.js/React landing prototype.
 | `--color-brand` | `#3157D5` | Primary action and selected evidence |
 | `--color-brand-strong` | `#2144B9` | Hover/pressed action |
 | `--color-brand-soft` | `#E7ECFF` | Quiet selection and proof background |
-| `--color-focus` | `#006BFF` | Focus ring independent from fill state |
+| `--color-focus` | Neutral, inset (CL-258) | Shared keyboard focus; no blue outer halo |
 | `--color-danger` | `#B9384A` | Destructive/error emphasis |
 | `--color-warning` | `#995400` | Caveat/warning |
 | `--color-success` | `#117A50` | Confirmed success |
