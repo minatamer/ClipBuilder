@@ -548,7 +548,7 @@ it("uses the real editor, clip navigation and footer at phone, tablet and deskto
       }
       if(action==='controls' || action==='dirty'){
         await wait(()=>ready(),'controls');
-        [...document.querySelectorAll('.editor-tabs button')].find(n=>n.textContent===(action==='controls'?'Focus':'Filters')).click();
+        [...document.querySelectorAll('.editor-tabs button')].find(n=>n.textContent===(action==='controls'?'Camera':'Filters')).click();
         await new Promise(requestAnimationFrame);
         if(action==='controls'){ready().scrollIntoView({block:'start'});await new Promise(r=>setTimeout(r,150));}
         else {const input=[...document.querySelectorAll('.editor-panels select')].find(n=>rect(n).width>0);if(!input)throw new Error('missing_filter');

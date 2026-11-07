@@ -32,6 +32,7 @@ type Measurement = {
 };
 declare global {
   function cameraMeasure(): Promise<Measurement>;
+  function cameraPositionHold(): Promise<boolean[]>;
   function cameraLifecycle(): Promise<{
     seek: boolean;
     edit: boolean;
@@ -132,7 +133,7 @@ it("keeps normal preview camera cuts aligned with decoded source frames during s
         contents: `
       import React,{useRef,useState} from 'react';import {createRoot} from 'react-dom/client';
       import {Player} from '@remotion/player';import {Review} from './apps/frontend/src/features/local-editing/clip-editor.tsx';
-      import {defaultOwnerFocus} from './packages/contracts/local/focus.ts';import {ownerCameraCropAt} from './packages/contracts/local/camera-motion.ts';
+      import {defaultOwnerFocus,ownerFocusCrop} from './packages/contracts/local/focus.ts';import {ownerCameraCropAt,ownerCameraTargetCrop} from './packages/contracts/local/camera-motion.ts';
       import {ownerCameraFollowKey} from './packages/contracts/local/camera-follow.ts';
       import {ownerPresentationFrames} from './packages/contracts/local/hook.ts';
       const mode=new URLSearchParams(location.search).get('mode');
@@ -140,6 +141,16 @@ it("keeps normal preview camera cuts aligned with decoded source frames during s
       const focus=defaultOwnerFocus({width:1920,height:1080},210);
       focus.shots=Array.from({length:21},(_,i)=>({...focus.shots[0],startFrame:i*10,endFrame:(i+1)*10,centerX:i%2?.75:.25,reason:'manual'}));
       const overlay={version:1,frames:210,captions:[],visuals:[],focus};
+      if(mode==='zoom-position'){
+        focus.shots=[{...focus.shots[0],endFrame:60},{...focus.shots[0],startFrame:60,endFrame:90,centerX:.75},{...focus.shots[0],startFrame:90,endFrame:210,centerX:.5}];
+        overlay.hook={startFrame:30,endFrame:90};
+        overlay.cameraEffects=[
+          {id:'11111111-1111-4111-8111-111111111111',occurrence:'body',startFrame:0,zoomFrames:15,holdFrames:0,returnFrames:12,target:{centerX:.25,centerY:.5,zoom:1.5}},
+          {id:'22222222-2222-4222-8222-222222222222',occurrence:'body',startFrame:60,zoomFrames:6,holdFrames:0,returnFrames:0,target:{centerX:.75,centerY:.5,zoom:2}},
+          {id:'33333333-3333-4333-8333-333333333333',occurrence:'hook',startFrame:0,zoomFrames:10,holdFrames:0,returnFrames:12,target:{centerX:.25,centerY:.5,zoom:1.5}},
+          {id:'44444444-4444-4444-8444-444444444444',occurrence:'hook',startFrame:30,zoomFrames:6,holdFrames:0,returnFrames:0,target:{centerX:.75,centerY:.5,zoom:2}}
+        ];
+      }
       if(mode==='hook')overlay.hook={startFrame:30,endFrame:90};
       if(mode==='motion'){
         overlay.cameraEffects=[{id:'11111111-1111-4111-8111-111111111111',occurrence:'body',startFrame:20,zoomFrames:9,holdFrames:9,returnFrames:12,target:{centerX:.6,centerY:.4,zoom:2}}];
@@ -151,8 +162,8 @@ it("keeps normal preview camera cuts aligned with decoded source frames during s
       const wait=async(fn,phase='ready')=>{for(let i=0;i<500;i++){if(fn())return;await new Promise(r=>setTimeout(r,20));}throw Error('camera_fixture_not_ready_'+phase+'_'+JSON.stringify({player:player.current?.getCurrentFrame(),videos:[...document.querySelectorAll('video')].map(v=>({active:v.dataset.editorActive,time:v.currentTime,seeking:v.seeking,ready:v.readyState,left:getComputedStyle(v).left,width:getComputedStyle(v).width}))}));};
       const active=()=>document.querySelector('video[data-editor-active="true"]');
       const observedTimes=new WeakMap();
-      const expectedAt=(video,time)=>{const source=Math.max(0,Math.round(time*30)),kind=video.dataset.editorVideo;return ownerCameraCropAt(current.focus,current.cameraEffects??[],source,kind,source-(kind==='hook'?current.hook.startFrame:0),current.cameraTracks??[]);};
-      const cropMatches=(video,crop)=>{const style=getComputedStyle(video),values={left:-crop.x*1080/crop.width,top:-crop.y*1920/crop.height,width:1080*1080/crop.width,height:1920*1920/crop.height};return Object.entries(values).every(([key,value])=>Math.abs(parseFloat(style[key])-value)<.5);};
+      const expectedAt=(video,time)=>{const kind=video.dataset.editorVideo,start=kind==='hook'?current.hook.startFrame:0,end=kind==='hook'?current.hook.endFrame:current.frames,source=Math.max(start,Math.min(end-1,Math.floor(time*30+.0001)));return ownerCameraCropAt(current.focus,current.cameraEffects??[],source,kind,source-start,current.cameraTracks??[]);};
+      const cropMatches=(video,crop)=>{const rect=video.getBoundingClientRect(),parent=video.parentElement.getBoundingClientRect(),scaleX=parent.width/1080,scaleY=parent.height/1920,actual={left:(rect.left-parent.left)/scaleX,top:(rect.top-parent.top)/scaleY,width:rect.width/scaleX,height:rect.height/scaleY},values={left:-crop.x*1080/crop.width,top:-crop.y*1920/crop.height,width:1080*1080/crop.width,height:1920*1920/crop.height};return Object.entries(values).every(([key,value])=>Math.abs(actual[key]-value)<.5);};
       const observedTime=video=>observedTimes.get(video)??video.currentTime;
       const aligned=video=>cropMatches(video,expectedAt(video,observedTime(video)));
       globalThis.cameraMeasure=async()=>{
@@ -174,13 +185,27 @@ it("keeps normal preview camera cuts aligned with decoded source frames during s
         try{player.current.play();await new Promise(r=>setTimeout(r,6200));player.current.pause();await new Promise(r=>setTimeout(r,10));return {decoded,mismatches,examples,rewinds,switches,sameVideo,progress:(player.current.getCurrentFrame()-begin)/30};}
         finally{stopped=true;observer.disconnect();for(const [video,handle]of handles)video.cancelVideoFrameCallback(handle);player.current.pause();}
       };
+      globalThis.cameraPositionHold=async()=>{
+        const checks=[];await wait(()=>player.current&&active()?.readyState>=2);player.current.pause();
+        const seek=async(frame,time,crop)=>{player.current.seekTo(frame);await wait(()=>active()?.readyState>=2&&!active().seeking&&Math.abs(active().currentTime-time)<.04,'position_seek');await wait(()=>cropMatches(active(),crop),'position_crop');checks.push(true);};
+        const first=ownerCameraTargetCrop(focus,overlay.cameraEffects[0].target),second=ownerCameraTargetCrop(focus,overlay.cameraEffects[1].target);
+        await seek(105,1.5,first);await seek(119,59/30,first);
+        active().currentTime=59.9/30;await wait(()=>!active().seeking&&Math.abs(active().currentTime-59.9/30)<.01,'before_cut_clock');await wait(()=>cropMatches(active(),first),'before_cut_hold');checks.push(true);
+        // Restore the Player's paused frame after the deliberate fractional-media probe.
+        // Otherwise Remotion's seek tolerance can retain 59.9/30 at the next seek to 2s.
+        active().currentTime=59/30;await wait(()=>!active().seeking&&Math.abs(active().currentTime-59/30)<.001,'restore_player_clock');
+        await seek(120,2,ownerFocusCrop(focus,focus.shots[1]));await seek(149,89/30,second);await seek(150,3,ownerFocusCrop(focus,focus.shots[2]));
+        await seek(29,59/30,first);await seek(30,2,ownerFocusCrop(focus,focus.shots[1]));await seek(59,89/30,second);
+        active().currentTime=3;await wait(()=>!active().seeking&&Math.abs(active().currentTime-3)<.01,'hook_tail_clock');await wait(()=>cropMatches(active(),second),'hook_tail_hold');checks.push(true);
+        return checks;
+      };
       globalThis.cameraLifecycle=async()=>{
         const handles=new Map();const scan=()=>document.querySelectorAll('video').forEach(video=>{if(handles.has(video)||typeof video.requestVideoFrameCallback!=='function')return;const callback=(_now,metadata)=>{observedTimes.set(video,metadata.mediaTime);if(video.isConnected)handles.set(video,video.requestVideoFrameCallback(callback));};handles.set(video,video.requestVideoFrameCallback(callback));});scan();const mediaObserver=new MutationObserver(scan);mediaObserver.observe(document.getElementById('root'),{childList:true,subtree:true});
         await wait(()=>player.current&&active()?.readyState>=2);player.current.pause();player.current.seekTo(43);await wait(()=>active()&&!active().seeking&&Math.abs(active().currentTime-43/30)<.04&&aligned(active()),'seek43');
         const video=active(),seek=aligned(video);update(value=>({...value,focus:{...value.focus,shots:value.focus.shots.map((s,i)=>i===4?{...s,centerX:.6}:s)}}));await new Promise(r=>setTimeout(r,100));const edit=video===active()&&aligned(video);
         player.current.seekTo(0);await wait(()=>!video.seeking&&video.currentTime<.04&&aligned(video),'replay0');const replay=aligned(video);let mutations=0;const observer=new MutationObserver(()=>mutations++);observer.observe(video,{attributes:true,attributeFilter:['style']});
         player.current.play();await new Promise(r=>setTimeout(r,700));player.current.pause();const fallbackMoves=mutations>0&&video.currentTime>.4;await new Promise(r=>setTimeout(r,100));
-        const index=Math.floor(Math.round(observedTime(video)*30)/10);update(value=>({...value,focus:{...value.focus,shots:value.focus.shots.map((s,i)=>i===index?{...s,centerX:.4}:s)}}));await new Promise(r=>setTimeout(r,100));const pausedEditAfterPlayback=aligned(video);
+        const index=Math.floor(Math.round(observedTime(video)*30)/10);update(value=>({...value,focus:{...value.focus,shots:value.focus.shots.map((s,i)=>i===index?{...s,centerX:.4}:s)}}));await new Promise(r=>setTimeout(r,100));await wait(()=>aligned(video),'paused_edit_'+JSON.stringify({observed:observedTime(video),time:video.currentTime,style:video.getAttribute('style'),crop:expectedAt(video,observedTime(video)),parent:video.parentElement.getBoundingClientRect().toJSON(),rect:video.getBoundingClientRect().toJSON()}));const pausedEditAfterPlayback=aligned(video);
         const oldStyle=video.getAttribute('style');replace();await wait(()=>active()!==video&&active()?.readyState>=2&&!active().seeking&&(typeof active().requestVideoFrameCallback!=='function'||observedTimes.has(active()))&&aligned(active()),'replacement');const next=active();await new Promise(r=>setTimeout(r,100));const replacement=!video.isConnected&&video.getAttribute('style')===oldStyle&&aligned(next);
         const before=next.getAttribute('style');root.unmount();await new Promise(r=>setTimeout(r,150));const cleanup=!next.isConnected&&before===next.getAttribute('style');observer.disconnect();mediaObserver.disconnect();for(const [node,handle]of handles)node.cancelVideoFrameCallback(handle);return {seek,edit,replay,cleanup,fallbackMoves,pausedEditAfterPlayback,replacement};
       };
@@ -221,6 +246,7 @@ it("keeps normal preview camera cuts aligned with decoded source frames during s
       { width: 390, height: 844, mode: "baseline" },
       { width: 1440, height: 900, mode: "hook" },
       { width: 1440, height: 900, mode: "motion" },
+      { width: 1440, height: 900, mode: "zoom-position" },
     ]) {
       await page.setViewport({
         width: scenario.width,
@@ -241,6 +267,11 @@ it("keeps normal preview camera cuts aligned with decoded source frames during s
       expect(result.switches).toBeGreaterThan(10);
       expect(result.progress).toBeGreaterThan(4.5);
       evidence.push({ scenario, result });
+      if (scenario.mode === "zoom-position") {
+        expect(await page.evaluate(() => cameraPositionHold())).toEqual(
+          Array(10).fill(true),
+        );
+      }
       if (scenario.mode === "baseline" && scenario.width === 1440) {
         expect(await page.evaluate(() => cameraLifecycle())).toEqual({
           seek: true,

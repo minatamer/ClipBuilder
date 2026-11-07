@@ -513,7 +513,7 @@ globalThis.clipbuilderReviewControls = async () => {
         await chooseTab('Filters');
         if (control('Filter').value !== 'warm' || control('Strength').value !== '60') throw new Error('tab_change_lost_filter_edits');
         tab('Filters').focus();
-        for (const [key, expected] of [['End','Focus'], ['Home','Captions'], ['ArrowLeft','Focus'], ['ArrowRight','Captions']]) {
+        for (const [key, expected] of [['End','Camera'], ['Home','Captions'], ['ArrowLeft','Camera'], ['ArrowRight','Captions']]) {
           document.activeElement.dispatchEvent(new KeyboardEvent('keydown', {key, bubbles:true}));
           await wait(() => document.activeElement === tab(expected) && tab(expected).getAttribute('aria-selected') === 'true');
           if (visiblePanels().length !== 1 || [...document.querySelectorAll('.editor-tabs > [role="tab"]')].filter(node => node.tabIndex === 0).length !== 1) throw new Error('tab_keyboard_failed');

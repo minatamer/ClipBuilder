@@ -483,7 +483,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
         const valid=selects.length===2&&selects[0]==='none'&&selects[1]==='fade';button('Discard changes').click();return valid;
       }
       if(action==='section-icons'){
-        const tabs=named('Clip settings'),items=[...tabs.querySelectorAll('[role=tab]')],labels=['Captions','Text','Filters','Media','Focus','Hook'];
+        const tabs=named('Clip settings'),items=[...tabs.querySelectorAll('[role=tab]')],labels=['Captions','Text','Filters','Media','Camera','Hook'];
         if(items.length!==6||items.some((item,index)=>item.textContent.trim()!==labels[index]||!item.querySelector('svg[aria-hidden="true"][focusable="false"]')))throw Error('section_icon_labels');
         const key=async(key,label)=>{document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true}));await wait(()=>items.some(item=>item.textContent.trim()===label&&item.getAttribute('aria-selected')==='true'&&document.activeElement===item),'section_keyboard');};
         items.find(item=>item.getAttribute('aria-selected')==='true').focus();

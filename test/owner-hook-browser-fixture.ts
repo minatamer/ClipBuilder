@@ -16,6 +16,10 @@ import { hookTitlePlanner } from "../apps/backend/local/hook-title-planner.ts";
 import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
 import { prepareLocalControlsFixture } from "./owner-controls-browser.ts";
 import { listenOwner } from "./owner-http.ts";
+import {
+  browserDiagnosticSchema,
+  type BrowserDiagnostic,
+} from "../packages/contracts/src/browser-diagnostic.schema.ts";
 
 /** Generated, loopback-only editor surface for browser regression checks. */
 export async function startHookEditorFixture(
@@ -28,7 +32,12 @@ export async function startHookEditorFixture(
     renameDelayMs?: number;
     contextualFeedback?: boolean;
     hookTitles?: boolean;
+    holdHookTitles?: boolean;
     momentsLayout?: boolean;
+    durationFrames?: number;
+    readinessFeedback?: boolean;
+    sourceSize?: { width: number; height: number };
+    previewAudio?: { id: string; bytes: Uint8Array; contentType: string };
   } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), "clipbuilder-hook-editor-"));
@@ -40,9 +49,9 @@ export async function startHookEditorFixture(
       source: {
         fingerprint: "a".repeat(64),
         bytes: 1000,
-        durationMs: 4000,
-        width: 640,
-        height: 360,
+        durationMs: ((options.durationFrames ?? 120) / 30) * 1000,
+        width: options.sourceSize?.width ?? 640,
+        height: options.sourceSize?.height ?? 360,
         fps: 30,
       },
     };
@@ -92,6 +101,13 @@ export async function startHookEditorFixture(
     renames = 0;
   let injectedFailures = 0;
   let titleSuggestions = 0;
+  let titleCancellations = 0,
+    titleFailures = 0;
+  const pendingTitles = new Set<
+    (outcome: "ready" | "failed" | "canceled") => void
+  >();
+  const diagnostics: BrowserDiagnostic[] = [];
+  let previewAudioReads = 0;
   let analysesStarted = 0;
   let analysesClosed = 0;
   const momentsAnalysis = (many: boolean) => {
@@ -156,6 +172,21 @@ export async function startHookEditorFixture(
   const server = createServer((req, res) => {
     void (async () => {
       res.setHeader("Content-Type", "application/json");
+      if (req.url === "/api/diagnostics" && req.method === "POST") {
+        const chunks: Buffer[] = [];
+        let bytes = 0;
+        for await (const chunk of req) {
+          bytes += chunk.length;
+          if (bytes > 8192) throw Error("synthetic_diagnostic_limit");
+          chunks.push(Buffer.from(chunk));
+        }
+        const record = browserDiagnosticSchema.parse(
+          JSON.parse(Buffer.concat(chunks).toString()),
+        );
+        if (diagnostics.length < 256) diagnostics.push(record);
+        res.writeHead(204).end();
+        return;
+      }
       if (
         options.hookTitles &&
         req.method === "POST" &&
@@ -167,6 +198,30 @@ export async function startHookEditorFixture(
           JSON.parse(Buffer.concat(chunks).toString()),
         );
         titleSuggestions++;
+        if (options.holdHookTitles) {
+          const outcome = await new Promise<"ready" | "failed" | "canceled">(
+            (done) => {
+              const finish = (value: "ready" | "failed" | "canceled") => {
+                pendingTitles.delete(finish);
+                res.off("close", canceled);
+                done(value);
+              };
+              const canceled = () => {
+                titleCancellations++;
+                finish("canceled");
+              };
+              pendingTitles.add(finish);
+              res.once("close", canceled);
+              if (res.destroyed) canceled();
+            },
+          );
+          if (outcome === "canceled") return;
+          if (outcome === "failed") {
+            titleFailures++;
+            res.writeHead(503).end("{}");
+            return;
+          }
+        }
         const title = await hookTitlePlanner(async () => ({
           texts: [
             {
@@ -378,6 +433,19 @@ export async function startHookEditorFixture(
         res.writeHead(200, { "Content-Type": "image/png" }).end(picture);
         return;
       }
+      if (
+        options.previewAudio &&
+        req.url?.endsWith(`/audio-assets/${options.previewAudio.id}`)
+      ) {
+        previewAudioReads++;
+        res
+          .writeHead(200, {
+            "Content-Type": options.previewAudio.contentType,
+            "Cache-Control": "no-store",
+          })
+          .end(options.previewAudio.bytes);
+        return;
+      }
       if (req.url?.endsWith("/source")) {
         const match = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/),
           start = Number(match?.[1] ?? 0),
@@ -459,11 +527,11 @@ export async function startHookEditorFixture(
         "-f",
         "lavfi",
         "-i",
-        "color=teal:s=640x360:r=30:d=4",
+        `${options.sourceSize ? "testsrc2=" : "color=teal:"}s=${options.sourceSize?.width ?? 640}x${options.sourceSize?.height ?? 360}:r=30:d=${(options.durationFrames ?? 120) / 30}`,
         "-f",
         "lavfi",
         "-i",
-        "sine=frequency=440:sample_rate=48000:duration=4",
+        `sine=frequency=440:sample_rate=48000:duration=${(options.durationFrames ?? 120) / 30}`,
         "-c:v",
         "libx264",
         "-pix_fmt",
@@ -498,8 +566,8 @@ export async function startHookEditorFixture(
       import {createRoot} from "react-dom/client";
       import {ClipEditor} from "./apps/frontend/src/features/local-editing/clip-editor.tsx";
       const clip=${JSON.stringify(clip)};
-      function Host(){const count=useRef(0);const [report,setReport]=useState({dirty:false});const [tick,setTick]=useState(0);
-        return <><button onClick={()=>setTick(tick+1)}>Render host</button><output aria-label="Activity reports">{count.current}</output><ClipEditor clip={clip} workspaceId="${workspace.id}" source={{width:640,height:360}} onAccepted={()=>{}} onDirty={(_,dirty)=>{if(++count.current>60)throw Error("editor_activity_loop");setReport({dirty});}} /></>;}
+      function Host(){const count=useRef(0),ready=useRef(0);const [report,setReport]=useState({dirty:false});const [tick,setTick]=useState(0);
+        return <><button onClick={()=>setTick(tick+1)}>Render host</button><output aria-label="Activity reports">{count.current}</output><output aria-label="Preview ready reports">{ready.current}</output><ClipEditor clip={clip} workspaceId="${workspace.id}" source={{width:640,height:360}} onAccepted={()=>{}} onPreviewReady={${options.readinessFeedback ? "()=>{document.documentElement.dataset.fixtureReadyReports=String(++ready.current);if(ready.current>60)throw Error('editor_preview_ready_loop');setReport({dirty:report.dirty})}" : "undefined"}} onDirty={(_,dirty)=>{if(++count.current>60)throw Error("editor_activity_loop");setReport({dirty});}} /></>;}
       createRoot(document.getElementById("root")).render(<Host/>);`;
     try {
       for (const baseline of baselineEditor ? [false, true] : [false]) {
@@ -538,7 +606,7 @@ export async function startHookEditorFixture(
         });
         await writeFile(
           join(ui, `${name}.html`),
-          `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script type="module" src="/${name}.js"></script></body></html>`,
+          `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css">${options.readinessFeedback ? `<script>const originalError=console.error;console.error=(...values)=>{if(values.some(v=>typeof v==='string'&&v.includes('Maximum update depth')))document.documentElement.dataset.fixtureUpdateDepth=String(Number(document.documentElement.dataset.fixtureUpdateDepth??0)+1);originalError(...values)};</script>` : ""}</head><body><div id="root"></div><script type="module" src="/${name}.js"></script></body></html>`,
         );
       }
     } finally {
@@ -599,9 +667,19 @@ export async function startHookEditorFixture(
         : undefined,
       clip,
       counts: () => ({ edits, unexpected }),
+      diagnostics: () => diagnostics.slice(),
+      audioReads: () => previewAudioReads,
       renameCounts: () => ({ renameAttempts, renames }),
       feedbackCounts: () => ({ injectedFailures }),
-      titleCounts: () => ({ titleSuggestions }),
+      titleCounts: () => ({
+        titleSuggestions,
+        titleCancellations,
+        titleFailures,
+        pendingTitles: pendingTitles.size,
+      }),
+      releaseTitles: (outcome: "ready" | "failed") => {
+        for (const finish of pendingTitles) finish(outcome);
+      },
       momentCounts: () => ({ analysesStarted, analysesClosed }),
       close: async () => {
         server.closeAllConnections();

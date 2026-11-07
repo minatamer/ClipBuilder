@@ -178,6 +178,7 @@ it("edits Media audio through the real authenticated API/worker with audition, u
   const port = await listenOwner(host.server),
     auth = { Authorization: `Bearer ${"a".repeat(64)}` },
     json = { ...auth, "Content-Type": "application/json" };
+  const reactIssues: string[] = [];
   let browser: Awaited<ReturnType<typeof openBrowser>> | undefined;
   try {
     const source = join(directory, "synthetic.mp4"),
@@ -227,7 +228,7 @@ it("edits Media audio through the real authenticated API/worker with audition, u
       headers: { ...auth, "Content-Type": "video/mp4" },
       body: await readFile(source),
     });
-    expect(uploaded.status).toBe(200);
+    expect(uploaded.status, uploaded.body.toString()).toBe(200);
     const workspace = JSON.parse(uploaded.body.toString()),
       endpoint = `/api/workspace/${workspace.id}`;
     const analyzed = await ownerRequest(port, `${endpoint}/analysis`, {
@@ -322,15 +323,22 @@ it("edits Media audio through the real authenticated API/worker with audition, u
       logLevel: "error",
       indent: false,
       pageIndex: 0,
-      onBrowserLog: null,
+      onBrowserLog: (log) => {
+        if (
+          /Maximum update depth|Too many re-renders|should be cached|simultaneously mount/.test(
+            log.text,
+          )
+        )
+          reactIssues.push("react_or_audio_lifecycle");
+      },
       onLog: () => {},
     });
     await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
     await page.goto({ url: `http://localhost:${port}/`, timeout: 10000 });
     const driver = `globalThis.audioRun=async action=>{
-      const wait=async(fn,label)=>{for(let i=0;i<1200;i++){if(fn())return;await new Promise(r=>setTimeout(r,25));}throw new Error('audio_ui_'+label);};
+      const wait=async(fn,label)=>{for(let i=0;i<1200;i++){if(fn())return;await new Promise(r=>setTimeout(r,25));}throw new Error('audio_ui_'+label+'_'+document.body.innerText.slice(-1300));};
       const button=text=>[...document.querySelectorAll('button,a')].find(n=>n.getClientRects().length&&n.textContent.trim()===text), named=label=>document.querySelector('[aria-label="'+label+'"]');
-      const tab=async(root,label)=>{const node=[...document.querySelectorAll('[aria-label="'+root+'"] [role=tab]')].find(n=>n.textContent===label||n.textContent.startsWith(label+' ('));await wait(()=>!node.matches(':disabled'),'tab_ready_'+label);node.click();await wait(()=>node.getAttribute('aria-selected')==='true'&&!document.getElementById(node.getAttribute('aria-controls'))?.hidden,'tab_'+label);};
+      const tab=async(root,label)=>{const find=()=>[...document.querySelectorAll('[aria-label="'+root+'"] [role=tab]')].find(n=>{const text=n.getAttribute('aria-label')??n.querySelector('span')?.textContent??n.textContent;return text===label||text.startsWith(label+' (')});await wait(()=>find()&&!find().matches(':disabled'),'tab_ready_'+label);find().click();await wait(()=>find()?.getAttribute('aria-selected')==='true'&&!document.getElementById(find().getAttribute('aria-controls'))?.hidden,'tab_'+label);};
       const set=async(label,value)=>{const n=named(label),type=n.tagName==='SELECT'?HTMLSelectElement:HTMLInputElement;Object.getOwnPropertyDescriptor(type.prototype,'value').set.call(n,value);n.dispatchEvent(new Event(n.tagName==='SELECT'?'change':'input',{bubbles:true}));await new Promise(r=>setTimeout(r,60));};
       await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'ready');
       if(action==='library'){await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Sound library');document.querySelector('.audio-inspector').scrollIntoView({block:'start'});await new Promise(r=>setTimeout(r,180));
@@ -343,7 +351,7 @@ it("edits Media audio through the real authenticated API/worker with audition, u
       if(action==='audition-check'){await wait(()=>globalThis.auditions===1,'audition');const n=document.querySelector('.audio-inspector > audio');await wait(()=>n.duration===.5,'discord_decoded');if(button('Apply changes'))throw new Error('audition_changed_edit');}
       if(action==='anchors'){
         await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Your audio');
-        await wait(()=>document.querySelector('.audio-inspector').textContent.includes('At picture start · 1.00s'),'visual_anchor');
+        await wait(()=>document.querySelector('.audio-inspector').textContent.includes('At picture start · 0.00s'),'visual_anchor');
         if(button('Apply changes'))throw new Error('auto_sound_dirty');
         await set('Added audio volume','12');await wait(()=>button('Apply changes'),'volume_dirty');
         if(named('Added audio volume').value!=='12')throw new Error('cue_volume');
@@ -359,13 +367,16 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         button('Remove sound').click();await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>!button('Apply changes')&&document.querySelector('.audio-inspector').textContent.includes('No added audio.'),'remove_accent');
       }
       if(action==='discard'){
+        const bodyCue=document.querySelector('[data-audio-cue][data-timeline-key^="body:"]').dataset.timelineKey.split(':').at(-1);const bodyTag=[...document.querySelectorAll('audio')].find(n=>n.src.endsWith('#builtin-'+bodyCue));if(!bodyTag)throw Error('body_track_not_prepared');
         for(let i=0;i<12;i++){await tab('Audio views','Sound library');named('Add Vine boom').click();await new Promise(r=>setTimeout(r,30));}
-        await wait(()=>[...document.querySelectorAll('audio')].filter(n=>n.src.startsWith('blob:')&&!n.closest('.audio-inspector')).length===12,'twelve_simultaneous_tracks');
+        await wait(()=>{const ids=[...document.querySelectorAll('[data-audio-cue][data-timeline-key^="hook:"]')].map(n=>n.dataset.timelineKey.split(':').at(-1));return ids.length===12&&[...document.querySelectorAll('audio')].filter(n=>ids.some(id=>n.src.endsWith('#builtin-'+id))&&!n.closest('.audio-inspector')).length===12},'twelve_simultaneous_tracks');
+        if(![...document.querySelectorAll('audio')].some(n=>n===bodyTag&&n.src.endsWith('#builtin-'+bodyCue)))throw Error('body_track_replaced_by_hook_insertion');
+        globalThis.audioCapacity={hookTracks:12,bodyTracks:1,bodyTagPreserved:true};
         if(button('Reload preview')||document.body.textContent.includes('Preview unavailable'))throw new Error('track_capacity');
         await wait(()=>button('Apply changes'),'dirty');button('Discard changes').click();await wait(()=>!button('Apply changes'),'discard');
       }
       if(action==='upload-bad'||action==='upload-good'||action==='upload-cancel'){
-        await tab('Audio views','Sound library');const n=named('Upload audio'),transfer=new DataTransfer();
+        await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Sound library');const n=named('Upload audio'),transfer=new DataTransfer();
         const bytes=action==='upload-bad'?new Uint8Array([1,2,3]):Uint8Array.from(atob('${(await readFile(wave)).toString("base64")}'),c=>c.charCodeAt(0));
         transfer.items.add(new File([bytes],'synthetic.wav',{type:'audio/wav'}));n.files=transfer.files;n.dispatchEvent(new Event('change',{bubbles:true}));
         if(action==='upload-cancel'){
@@ -382,15 +393,15 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         if(document.querySelectorAll('[data-audio-cue][data-timeline-key^="hook:"]').length!==1||!document.querySelector('[data-audio-cue][data-timeline-key^="hook:"]').textContent.includes('Picture'))throw Error('manual_hook_did_not_copy_main_accent');button('Discard changes').click();await wait(()=>!button('Apply changes'),'manual_discard');
       }
       if(action==='suggest-hook'||action==='suggest-hook-save'){
-        await tab('Clip settings','Hook');await wait(()=>button('Use suggestion'),'suggestion_ready');if(!button('Use suggestion').disabled){button('Use suggestion').click();await wait(()=>button('Apply changes')&&button('Use suggestion').disabled,'suggestion_added');}
+        await tab('Clip settings','Hook');await wait(()=>button('Use suggestion'),'suggestion_ready');const audioOption=[...document.querySelectorAll('.hook-options label')].find(n=>n.textContent.trim()==='Add Hook audio').querySelector('input');if(!audioOption.checked){audioOption.click();await new Promise(requestAnimationFrame);}if(!button('Use suggestion').disabled){button('Use suggestion').click();await wait(()=>button('Apply changes')&&button('Use suggestion').disabled,'suggestion_added');}
         await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Your audio');const cues=[...document.querySelectorAll('[data-audio-cue]')].filter(n=>n.textContent.includes('Riser'));if(cues.length!==1)throw Error('suggestion_duplicate_music');cues[0].click();await new Promise(requestAnimationFrame);
-        if(named('Audio placement').value!=='hook'||named('Audio offset seconds').value!=='0.3'||named('Added audio volume').value!=='35'||[...document.querySelectorAll('.audio-settings label')].find(n=>n.textContent.includes('Loop audio'))?.querySelector('input').checked)throw Error('suggestion_sound_defaults');
+        if(named('Audio placement').value!=='hook'||named('Audio offset seconds').value!=='0.3'||named('Added audio volume').value!=='100'||[...document.querySelectorAll('.audio-settings label')].find(n=>n.textContent.includes('Loop audio'))?.querySelector('input').checked)throw Error('suggestion_sound_defaults');
         if(action==='suggest-hook-save'){await set('Added audio volume','27');button('Apply changes').click();await wait(()=>!button('Apply changes'),'suggestion_saved');}
-        else {button('Apply changes').click();await wait(()=>!button('Discard changes'),'suggestion_initial_save');}
+        else {await wait(()=>button('Apply changes')&&!button('Apply changes').disabled,'audio_apply_ready');button('Apply changes').click();await wait(()=>!button('Discard changes'),'suggestion_initial_save');}
       }
       if(action==='add-discord'){await tab('Audio views','Sound library');named('Add Discord notification').click();await wait(()=>button('Apply changes'),'discord_added');if(named('Audio placement').value!=='clip'||named('Added audio volume').value!=='35')throw new Error('discord_defaults');await set('Added audio volume','42');button('Apply changes').click();await wait(()=>!button('Apply changes')&&!named('Audio placement').matches(':disabled'),'discord_saved');}
       if(action==='cue-preview-ready'){
-        await tab('Clip settings','Focus');await tab('Focus controls','Camera');await tab('Camera controls','Advanced');await set('Focus playhead seconds','.5');
+        await tab('Clip settings','Camera');await tab('Focus controls','Camera');await tab('Camera controls','Advanced');await set('Focus playhead seconds','.5');
         await tab('Clip settings','Media');await tab('Media controls','Audio');await tab('Audio views','Your audio');
         [...document.querySelectorAll('[data-audio-cue]')].find(n=>n.textContent.includes('Vine boom')).click();await new Promise(requestAnimationFrame);
         const preview=button('Preview in clip');await wait(()=>preview&&!preview.matches(':disabled'),'cue_preview_ready');preview.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);
@@ -439,9 +450,9 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         await wait(()=>named('Pause video'),'playing');await wait(()=>tracks().some(n=>!n.paused&&n.currentTime>.03),'added_audio_playing');
         named('Mute sound').click();await wait(()=>tracks().every(n=>n.muted||n.volume===0),'mute_all');named('Unmute sound').click();
         named('Pause video').click();await new Promise(r=>setTimeout(r,100));if(tracks().some(n=>!n.paused))throw new Error('added_audio_not_paused');
-        await tab('Clip settings','Focus');await tab('Focus controls','Camera');await tab('Camera controls','Advanced');await set('Focus playhead seconds','.5');
+        await tab('Clip settings','Camera');await tab('Focus controls','Camera');await tab('Camera controls','Advanced');await set('Focus playhead seconds','.5');
         await wait(()=>Math.abs(document.querySelector('.editor-preview video[data-editor-active=true]').currentTime-10.5)<.08,'video_seek');
-        await wait(()=>tracks().some(n=>n.src.includes('/audio-assets/')&&n.duration>0&&Math.abs(n.currentTime-(.5%n.duration))<.08),'music_seek_phase');
+        await wait(()=>tracks().some(n=>n.src.includes('#upload-')&&n.duration>0&&Math.abs(n.currentTime-(.5%n.duration))<.08),'music_seek_phase');
         if(tracks().some(n=>!n.paused))throw new Error('seek_started_audio');
       }
       if(action==='tracks'){[...document.querySelectorAll('[aria-label="Audio views"] button')].find(n=>n.textContent.startsWith('Your audio')).click();await new Promise(requestAnimationFrame);document.querySelector('.audio-inspector').scrollIntoView({block:'start'});await new Promise(r=>setTimeout(r,180));}
@@ -457,7 +468,9 @@ it("edits Media audio through the real authenticated API/worker with audition, u
         returnByValue: true,
       });
       if (result.value.exceptionDetails)
-        throw new Error(JSON.stringify(result.value.exceptionDetails));
+        throw new Error(
+          action + ": " + JSON.stringify(result.value.exceptionDetails),
+        );
       return result.value.result.value;
     };
     const click = async (position: { x: number; y: number }) => {
@@ -494,6 +507,15 @@ it("edits Media audio through the real authenticated API/worker with audition, u
     await click(await run("audition-ready"));
     await run("audition-check");
     await run("discard");
+    const capacity = await page._client().send("Runtime.evaluate", {
+      expression: "audioCapacity",
+      returnByValue: true,
+    });
+    expect(capacity.value.result.value).toEqual({
+      hookTracks: 12,
+      bodyTracks: 1,
+      bodyTagPreserved: true,
+    });
     await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
     await run("library");
     holdAudio = true;
@@ -630,6 +652,23 @@ it("edits Media audio through the real authenticated API/worker with audition, u
     expect(image).toHaveBeenCalledTimes(1);
     expect(plan).toHaveBeenCalledTimes(1);
     expect(select).not.toHaveBeenCalled();
+    expect(reactIssues).toEqual([]);
+    await writeFile(
+      resolve(".local-build/evidence/cl255-audio-workflow.json"),
+      JSON.stringify(
+        {
+          synthetic: true,
+          providerCalls: 0,
+          capacity: capacity.value.result.value,
+          reactIssues,
+          uploadCancel: 1,
+          reload: true,
+          nativeExport: true,
+        },
+        null,
+        2,
+      ),
+    );
   } finally {
     await browser?.close({ silent: true });
     await host.close();
