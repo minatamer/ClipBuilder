@@ -24,6 +24,7 @@
   transform: translateY(1px);
 }
 .primary {
+  --cb-focus: #f4f4f4;
   background: var(--cb-glass-sheen), var(--cb-action-fill, var(--cb-brand));
   border-color: var(--cb-cta-edge);
   box-shadow: var(--cb-cta-shadow);

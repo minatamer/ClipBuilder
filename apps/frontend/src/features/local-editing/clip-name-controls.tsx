@@ -115,12 +115,11 @@ export function ClipNameControls({
   }
   return (
     <div ref={root} className={styles.compact}>
-      <span id={nameId} className={styles.name} title={displayName}>
-        {displayName}
-      </span>
-      <IconButton
-        label="Rename clip"
-        icon={Pencil}
+      <Button
+        variant="quiet"
+        className={styles.rename}
+        aria-label="Rename clip"
+        title="Rename clip"
         disabled={disabled}
         tabIndex={tabIndex}
         aria-describedby={nameId}
@@ -131,7 +130,12 @@ export function ClipNameControls({
           setMessage("");
           setEditing(true);
         }}
-      />
+      >
+        <span id={nameId} className={styles.name} title={displayName}>
+          {displayName}
+        </span>
+        <Pencil size={16} aria-hidden="true" />
+      </Button>
       {editing && (
         <dialog
           ref={dialog}

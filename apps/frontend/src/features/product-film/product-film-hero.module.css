@@ -59,7 +59,3 @@
 .fallback a {
   color: white;
 }
-.fallback a:focus-visible {
-  outline: 3px solid #d5e6ff;
-  outline-offset: 3px;
-}

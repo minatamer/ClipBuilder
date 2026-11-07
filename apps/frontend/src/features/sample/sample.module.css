@@ -11,7 +11,7 @@
   --cb-success: #a4ebc9;
   --cb-success-soft: #123e3c;
   --cb-danger: #ffc0c5;
-  --cb-focus: #b7d3ff;
+  --cb-focus: #f4f4f4;
   --cb-radius: var(--cb-radius-card);
   --cb-text-title: clamp(1.375rem, 2.5vw, 2rem);
   --cb-action-fill: #245dcc;
@@ -46,10 +46,6 @@
   line-height: 1.5;
   letter-spacing: 0;
   padding: 0 var(--cb-page-gutter) 1rem;
-}
-.workspace :where(a, button, input, summary, [tabindex]):focus-visible {
-  outline: 3px solid var(--cb-focus);
-  outline-offset: 3px;
 }
 .workspace h1:focus {
   outline: none;

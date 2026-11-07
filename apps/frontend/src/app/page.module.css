@@ -47,7 +47,7 @@
   --brand: var(--cb-brand);
   --brand-strong: var(--cb-brand-strong);
   --brand-soft: var(--cb-brand-soft);
-  --focus: var(--cb-focus);
+  --cb-focus: #f4f4f4;
   --motion-press: var(--cb-motion-press);
   --motion-hover: var(--cb-motion-hover);
   --motion-panel: var(--cb-motion-panel);
@@ -62,11 +62,6 @@
   color: var(--ink);
   font-size: 1rem;
   line-height: 1.6;
-}
-
-.page :where(a, button, [tabindex]):focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 4px;
 }
 
 .page :where(h1, h2, h3, p, dl, dd) {
@@ -2481,11 +2476,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0 1.75rem 1.6rem;
-}
-.dialogGrid:focus-visible,
-.dialogClose:focus-visible {
-  outline: 2px solid #a8ccff;
-  outline-offset: -4px;
 }
 .dialogGrid section {
   display: grid;

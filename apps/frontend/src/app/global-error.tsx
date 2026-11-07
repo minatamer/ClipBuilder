@@ -1,4 +1,5 @@
 "use client";
+import "../styles/tokens.css";
 import { useEffect } from "react";
 import { reportBrowserViewFailure } from "../features/diagnostics/browser.diagnostics";
 import { Button } from "../shared/ui/button";

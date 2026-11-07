@@ -17,7 +17,9 @@
   --cb-success: #146953;
   --cb-success-soft: #e8f4ee;
   --cb-danger: #a52c35;
-  --cb-focus: #006bff;
+  --cb-focus: #525252;
+  --cb-focus-width: 1px;
+  --cb-focus-offset: -2px;
   --cb-scrollbar-size: 0.25rem;
   --cb-scrollbar-thumb: #a9b3c5;
   --cb-scrollbar-thumb-hover: #7f8da6;
@@ -74,6 +76,53 @@
   --cb-motion-entrance: 640ms;
   --cb-ease-direct: cubic-bezier(0.2, 0, 0, 1);
   --cb-ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* One quiet, inset focus treatment for every application surface. */
+:where(
+    a,
+    button,
+    input,
+    textarea,
+    select,
+    summary,
+    [tabindex],
+    [contenteditable],
+    video[controls],
+    audio[controls]
+  ):focus:not(:focus-visible) {
+  outline: none;
+}
+:where(
+  a,
+  button,
+  input,
+  textarea,
+  select,
+  summary,
+  [tabindex],
+  [contenteditable],
+  video[controls],
+  audio[controls]
+):focus-visible {
+  outline: var(--cb-focus-width) solid var(--cb-focus);
+  outline-offset: var(--cb-focus-offset);
+}
+@media (forced-colors: active) {
+  :where(
+    a,
+    button,
+    input,
+    textarea,
+    select,
+    summary,
+    [tabindex],
+    [contenteditable],
+    video[controls],
+    audio[controls]
+  ):focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 @media (max-width: 58rem) {

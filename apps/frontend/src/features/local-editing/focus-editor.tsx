@@ -19,6 +19,7 @@ import { Button } from "../../shared/ui/button";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { ControlTabs } from "./control-tabs.tsx";
 import { FocusPreviewTarget } from "./focus-preview-slot";
+import { useInspectorPlayback } from "./use-inspector-playback.ts";
 import {
   OWNER_FOCUS_LIMITS,
   ownerFocusAt,
@@ -175,15 +176,7 @@ export function FocusEditor({
     offsetX: number;
     offsetY: number;
   } | null>(null);
-  useEffect(() => {
-    const video = media.current;
-    if (
-      video &&
-      Number.isFinite(video.duration) &&
-      Math.abs(video.currentTime - sourceFrame / OWNER_FPS) > 0.04
-    )
-      video.currentTime = sourceFrame / OWNER_FPS;
-  }, [sourceFrame]);
+  useInspectorPlayback(media, sourceUrl, sourceFrame, timelineTab && playing);
   useEffect(() => {
     if (isAdding) newPerson.current?.focus();
     else if (focusAdded.current) {
@@ -392,6 +385,14 @@ export function FocusEditor({
     remembered.current.clear();
   }
 
+  const visibleError = [
+    tab === "camera" ? message : undefined,
+    feedback?.tab === tab ? feedback.message : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const visibleFeedback = [visibleError, notice].filter(Boolean).join(" ");
+
   return (
     <FocusPreviewTarget.Provider value={previewTarget}>
       <fieldset className="focus-editor" disabled={disabled}>
@@ -422,12 +423,8 @@ export function FocusEditor({
                   src={sourceUrl}
                   muted
                   playsInline
-                  preload="metadata"
+                  preload="auto"
                   aria-hidden="true"
-                  onLoadedMetadata={() => {
-                    if (media.current)
-                      media.current.currentTime = sourceFrame / OWNER_FPS;
-                  }}
                   style={{
                     position: "absolute",
                     width: `${(1080 / content.width) * 100}%`,
@@ -1084,13 +1081,9 @@ export function FocusEditor({
               </div>
             </div>
           </div>
-          {tab === "camera" && <InlineFeedback message={message} />}
-          <InlineFeedback
-            message={feedback?.tab === tab ? feedback.message : undefined}
-          />
-          <InlineFeedback message={notice} tone="status" />
           {tab !== "motion" && (
             <Button
+              className="focus-reset"
               variant="quiet"
               onClick={() => {
                 setAdding(null);
@@ -1105,6 +1098,10 @@ export function FocusEditor({
               Reset focus
             </Button>
           )}
+          <InlineFeedback
+            message={visibleFeedback}
+            tone={visibleError ? "error" : "status"}
+          />
         </div>
       </fieldset>
     </FocusPreviewTarget.Provider>

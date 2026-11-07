@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
 import type { OwnerClip } from "../../../../../packages/contracts/local/clips.ts";
 import { compileOwnerOverlay } from "../../../../../packages/contracts/local/edit-overlay.ts";
@@ -20,17 +20,47 @@ export function ClipRailPreview({
   const player = useRef<PlayerRef>(null);
   const [visible, setVisible] = useState(false);
   const [failed, setFailed] = useState(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = root.current;
     if (!node) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setVisible(entry?.isIntersecting === true);
-      },
-      { root: node.closest(".clip-list"), threshold: 0.05 },
-    );
+    const list = node.closest(".clip-list");
+    let disposed = false;
+    const threshold = 0.05;
+    const measure = () => {
+      if (disposed) return;
+      const box = node.getBoundingClientRect();
+      const bounds = list?.getBoundingClientRect();
+      const width = Math.max(
+        0,
+        Math.min(box.right, bounds?.right ?? innerWidth, innerWidth) -
+          Math.max(box.left, bounds?.left ?? 0, 0),
+      );
+      const height = Math.max(
+        0,
+        Math.min(box.bottom, bounds?.bottom ?? innerHeight, innerHeight) -
+          Math.max(box.top, bounds?.top ?? 0, 0),
+      );
+      setVisible(
+        box.width > 0 &&
+          box.height > 0 &&
+          (width * height) / (box.width * box.height) >= threshold,
+      );
+    };
+    // A restored card must not wait for the observer's first asynchronous entry.
+    // Its workflow can also become visible after mounting in the hidden view.
+    measure();
+    const observer = new IntersectionObserver(measure, {
+      threshold,
+    });
+    const resize = new ResizeObserver(measure);
     observer.observe(node);
-    return () => observer.disconnect();
+    resize.observe(node);
+    if (list) resize.observe(list);
+    return () => {
+      disposed = true;
+      observer.disconnect();
+      resize.disconnect();
+    };
   }, []);
   const overlay =
     clip.base && clip.edit

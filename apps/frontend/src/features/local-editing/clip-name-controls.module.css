@@ -1,9 +1,23 @@
 .compact {
   display: flex;
   align-items: center;
-  gap: var(--cb-space-1);
   min-width: 0;
-  padding-inline: var(--cb-space-1);
+  padding-inline: var(--clip-card-inset, var(--cb-space-1));
+}
+.compact > .rename {
+  width: 100%;
+  min-width: 0;
+  gap: var(--cb-space-1);
+  padding-inline: 0;
+}
+.compact > .rename:focus,
+.compact > .rename:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.compact > button > svg {
+  width: 1rem;
+  height: 1rem;
 }
 .name {
   flex: 0 1 auto;
