@@ -51,3 +51,14 @@ it("enforces clip and ten-second bounds and admits one-frame selections", () => 
     completeOwnerHookDraft({ startFrame: 1199, endFrame: 1200 }, 1200),
   ).toEqual({ startFrame: 1199, endFrame: 1200 });
 });
+
+it("retains an overlong managed-audio draft without accepting it or moving either endpoint", () => {
+  const draft = changeOwnerHookEndpoint(
+    { startFrame: 300, endFrame: 459 },
+    "endFrame",
+    523,
+  );
+  expect(draft).toEqual({ startFrame: 300, endFrame: 523 });
+  expect(completeOwnerHookDraft(draft, 900, 222)).toBeUndefined();
+  expect(completeOwnerHookDraft(draft, 900)).toEqual(draft);
+});

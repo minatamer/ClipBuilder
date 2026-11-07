@@ -153,6 +153,67 @@ it("debounces choices, reuses a settled result, suppresses stale replies and nev
   expect(apply).toHaveBeenCalledTimes(2);
 });
 
+it.each([false, true])(
+  "cancels the selected title before/after dispatch, ignores late replies and keeps the range canceled (%s)",
+  async (dispatched) => {
+    vi.useFakeTimers();
+    const clip = independentHookFixture();
+    const title = await hookTitlePlanner(async () => authored)(
+      { words: clip.base!.words, frames: 120, hook },
+      new AbortController().signal,
+    );
+    const result = ownerHookTitleResultSchema.parse({
+      clipId: clip.id,
+      expectedRevision: 0,
+      sourceRevision: 0,
+      hook,
+      title,
+    });
+    let finish: ((value: Response) => void) | undefined;
+    const transport = vi.fn<typeof fetch>(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const publish = vi.fn(),
+      apply = vi.fn();
+    const requests = new HookTitleRequests(publish, transport);
+    const input = {
+      workspaceId: randomUUID(),
+      clipId: clip.id,
+      revision: 0,
+      sourceRevision: 0,
+      hook,
+      apply,
+    };
+    requests.select(input);
+    expect(publish.mock.lastCall?.[0].phase).toBe("loading");
+    if (dispatched)
+      await vi.advanceTimersByTimeAsync(OWNER_HOOK_TITLE_SETTLE_MS);
+    requests.cancelCurrent();
+    expect(publish.mock.lastCall?.[0].phase).toBe("canceled");
+    if (dispatched) {
+      expect(transport.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
+      finish!(new Response(JSON.stringify(result)));
+    }
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(transport).toHaveBeenCalledTimes(dispatched ? 1 : 0);
+    expect(apply).toHaveBeenCalledTimes(0);
+    requests.select(input);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(publish.mock.lastCall?.[0].phase).toBe("canceled");
+    expect(transport).toHaveBeenCalledTimes(dispatched ? 1 : 0);
+    transport.mockResolvedValueOnce(new Response(JSON.stringify(result)));
+    requests.select(input, true);
+    await vi.advanceTimersByTimeAsync(OWNER_HOOK_TITLE_SETTLE_MS);
+    expect(transport).toHaveBeenCalledTimes(dispatched ? 2 : 1);
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(publish.mock.lastCall?.[0].phase).toBe("ready");
+    requests.cancel();
+  },
+);
+
 it("invokes the default browser transport without binding fetch to the request controller", async () => {
   vi.useFakeTimers();
   const clip = independentHookFixture();
@@ -437,17 +498,23 @@ it("carries a manually chosen Hook and styled title through real host HTTP and A
         ),
       ),
     ).toEqual(new Set(["spk_0", "spk_1"]));
-    const speakerColors = new Set(
-      captionOverlay.captions.map(
-        (caption) =>
-          ownerOverlayFrame(
-            captionOverlay,
-            45 + Math.ceil((caption.startMs * 30) / 1000),
-          ).colors?.color,
-      ),
+    const speakerFrames = captionOverlay.captions.map(
+      (caption) =>
+        ownerOverlayFrame(
+          captionOverlay,
+          45 + Math.ceil((caption.startMs * 30) / 1000),
+        ).colors,
     );
-    expect(speakerColors.has("#74b9ff")).toBe(true);
-    expect(speakerColors.has("#ffb86c")).toBe(true);
+    const speakerHighlights = new Set(
+      speakerFrames.map((frame) => frame?.highlight),
+    );
+    expect(speakerHighlights.has("#74b9ff")).toBe(true);
+    expect(speakerHighlights.has("#ffb86c")).toBe(true);
+    expect(
+      speakerFrames
+        .filter((frame) => frame !== undefined)
+        .every((frame) => frame.color === captionOverlay.captionStyle?.color),
+    ).toBe(true);
     expect(media).toHaveBeenCalledTimes(calls.media);
     expect(infer).toHaveBeenCalledTimes(1);
   } finally {

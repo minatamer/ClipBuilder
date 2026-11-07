@@ -1,4 +1,8 @@
 import { pictureLinkedAudio } from "./picture-audio.ts";
+import {
+  editorPreviewForm,
+  type EditorFormDraft,
+} from "./editor-preview-form.ts";
 import { EditorTimeline, PictureTimelineAudio } from "./editor-timeline.tsx";
 import {
   editorTimelineItems,
@@ -30,6 +34,7 @@ import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { ZodError } from "zod";
 import { textLayerErrors, captionWordError } from "./text-validation.ts";
 import { FocusPreviewControls } from "./focus-preview-controls.tsx";
+import { EditorLifecycleTrace } from "../diagnostics/editor-lifecycle";
 import { CameraPreviewVideo } from "./camera-preview-video.tsx";
 import { PictureTiming } from "./picture-timing.tsx";
 import { PictureImageDialog } from "./picture-image-dialog";
@@ -45,6 +50,7 @@ import {
   type OwnerHookDraft,
 } from "./hook-range-draft.ts";
 import { HookControls } from "./hook-controls.tsx";
+import { HookTitleProgress } from "./hook-title-progress.tsx";
 import {
   HookTitleRequests,
   hookTitleKey,
@@ -56,7 +62,12 @@ import { OWNER_HOOK_TITLE_LIMIT } from "../../../../../packages/contracts/local/
 import {
   changeManualOwnerHook,
   acceptSuggestedOwnerHook,
+  chooseOwnerHookSound,
+  removeOwnerHookSound,
+  OWNER_MANAGED_HOOK_MAX_FRAMES,
+  type OwnerHookSoundId,
 } from "./hook-edit.ts";
+import { OWNER_HOOK_SOUNDS } from "../../../../../packages/contracts/local/hook-sounds.ts";
 import { AudioInspector } from "./audio-inspector.tsx";
 import { YoutubeAudioIntake } from "./youtube-audio-intake.tsx";
 import { ownerYoutubeAudioImportSchema } from "../../../../../packages/contracts/local/youtube-audio.ts";
@@ -114,6 +125,7 @@ import {
   useContext,
   useEffectEvent,
   useCallback,
+  useMemo,
   useId,
   useRef,
   useState,
@@ -123,20 +135,13 @@ import {
 import { Player, type PlayerRef } from "@remotion/player";
 import {
   AbsoluteFill,
-  Img,
   Sequence,
   useCurrentFrame,
   useCurrentScale,
   useVideoConfig,
 } from "remotion";
-import {
-  OwnerAutomaticOverlay,
-  type OwnerOverlayImageProps,
-} from "../../../../../packages/composition/local/automatic-overlay.tsx";
-
-export const bufferedOverlayImage = (props: OwnerOverlayImageProps) => (
-  <Img {...props} pauseWhenLoading maxRetries={0} />
-);
+import { OwnerAutomaticOverlay } from "../../../../../packages/composition/local/automatic-overlay.tsx";
+import { usePreviewImages, previewOverlayImage } from "./preview-images.tsx";
 import { OwnerVideoLookLayer } from "../../../../../packages/composition/local/video-look.tsx";
 import {
   ownerVideoLookAt,
@@ -213,7 +218,7 @@ const SETTING_LABELS = {
   text: "Text",
   filters: "Filters",
   pictures: "Media",
-  focus: "Focus",
+  focus: "Camera",
   hook: "Hook",
 } as const;
 
@@ -412,6 +417,11 @@ export function Review({
   silent?: boolean;
   editingOccurrence?: OwnerEditOccurrence | undefined;
 } & LayerControls) {
+  const preparedImages = usePreviewImages(
+    playbackOverlay,
+    assets,
+    onPlaybackError,
+  );
   const presentationFrame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const frame = ownerSourceFrame(playbackOverlay, presentationFrame);
@@ -512,9 +522,9 @@ export function Review({
       )}
       <OwnerAutomaticOverlay
         overlay={paintedOverlay}
-        assets={assets}
+        assets={preparedImages}
         frame={presentationFrame}
-        renderImage={bufferedOverlayImage}
+        renderImage={previewOverlayImage}
         onImageError={onPlaybackError}
       />
       <AbsoluteFill
@@ -653,10 +663,26 @@ export function ClipEditor({
   onPending?: (pending: boolean) => void;
   onPreviewReady?: (() => void) | undefined;
 }) {
-  const [form, setForm] = useState(() => {
+  const [form, storeForm] = useState(() => {
     const original = initialOwnerEdit(clip);
-    return { original, draft: structuredClone(original) };
+    return editorPreviewForm(
+      null,
+      { original, draft: structuredClone(original) },
+      clip,
+    );
   });
+  const diagnostics = useMemo(() => new EditorLifecycleTrace(), []);
+  function setForm(
+    action: EditorFormDraft | ((current: EditorFormDraft) => EditorFormDraft),
+  ) {
+    storeForm((current) =>
+      editorPreviewForm(
+        current,
+        typeof action === "function" ? action(current) : action,
+        clip,
+      ),
+    );
+  }
   const [occurrence, setOccurrence] = useState<OwnerEditOccurrence>(
     clip.edit?.hook ? "hook" : "body",
   );
@@ -667,6 +693,8 @@ export function ClipEditor({
     null,
   );
   const [hookTitles] = useState(() => new HookTitleRequests(setHookTitleState));
+  const [generateHookTitle, setGenerateHookTitle] = useState(false);
+  const [preferHookAudio, setPreferHookAudio] = useState(false);
   useEffect(
     () => () => hookTitles.cancel(),
     [hookTitles, clip.revision, workspaceId],
@@ -707,9 +735,13 @@ export function ClipEditor({
   const alive = useRef(true);
   const [playbackFailed, setPlaybackFailed] = useState(false);
   const [previewLoaded, setPreviewLoaded] = useState(false);
+  const reportPreviewReady = useEffectEvent(() => {
+    diagnostics.ready();
+    onPreviewReady?.();
+  });
   useEffect(() => {
-    if (previewLoaded) onPreviewReady?.();
-  }, [previewLoaded, onPreviewReady]);
+    if (previewLoaded) reportPreviewReady();
+  }, [previewLoaded]);
   const previewReady = useCallback(() => {
     if (alive.current) setPreviewLoaded(true);
   }, []);
@@ -788,6 +820,17 @@ export function ClipEditor({
             (track) => track.occurrence === "body",
           ),
         };
+  const managedHookAudio =
+    hookContent?.edits.audio?.cues.some((cue) => cue.suggestedHook) ?? false;
+  const addHookAudio = masterDraft.hook ? managedHookAudio : preferHookAudio;
+  const titleUnavailable = !hookTitleSuggestions
+    ? "AI titles unavailable."
+    : (clip.hookTitleAttempts ?? 0) >= OWNER_HOOK_TITLE_LIMIT
+      ? "Title limit reached for this clip."
+      : undefined;
+  const hookMaxFrames = managedHookAudio
+    ? OWNER_MANAGED_HOOK_MAX_FRAMES
+    : 10 * OWNER_FPS;
   const dirty =
     hookDraft !== undefined || !sameOwnerEdit(original, masterDraft);
   const stale = forcedStale || (revisionChanged && changed);
@@ -917,7 +960,7 @@ export function ClipEditor({
                           hook: draft.hook,
                           cameraTracks: draft.cameraTracks,
                         }))
-                    ? "Keep zooms apart and leave room for their automatic return."
+                    ? "Keep zooms separate from other effects and within this clip."
                     : draft.cameraTracks &&
                         (!ownerCameraTracksSchema.safeParse(draft.cameraTracks)
                           .success ||
@@ -946,12 +989,15 @@ export function ClipEditor({
                             ? "Use a font size from 24 to 120."
                             : "Keep layers inside the preview and check their size.";
     try {
-      playbackOverlay = compileOwnerOverlay(
-        rootBase,
-        original,
-        clip.assets,
-        clip.audioAssets,
-      );
+      playbackOverlay =
+        form.original === original && form.preview
+          ? form.preview
+          : compileOwnerOverlay(
+              rootBase,
+              original,
+              clip.assets,
+              clip.audioAssets,
+            );
     } catch {
       previewUnavailable = true;
     }
@@ -967,17 +1013,37 @@ export function ClipEditor({
       request.current?.abort();
     };
   }, []);
-  const reportPending = useEffectEvent((value: boolean) => onPending?.(value));
-  const reportBusy = useEffectEvent((value: boolean) => onBusy?.(value));
-  const reportDirty = useEffectEvent((value: boolean) =>
-    onDirty(clip.id, value),
-  );
+  const reportPending = useEffectEvent((value: boolean) => {
+    diagnostics.activity();
+    onPending?.(value);
+  });
+  const reportBusy = useEffectEvent((value: boolean) => {
+    diagnostics.activity();
+    onBusy?.(value);
+  });
+  const reportDirty = useEffectEvent((value: boolean) => {
+    diagnostics.activity();
+    onDirty(clip.id, value);
+  });
   const editorDirty =
     dirty ||
     trackingMode ||
     captionConfirm ||
     generating ||
     (audioUploading && audioImport === null);
+  // Observe committed state only; the trace never schedules a React update.
+  useEffect(() => {
+    diagnostics.commit({
+      section: setting,
+      occurrence: activeOccurrence,
+      revision: clip.revision,
+      dirty: editorDirty,
+      pending: pending || titleLoading,
+      previewReady: previewLoaded,
+      hasHook: !!masterDraft.hook,
+    });
+  });
+  useEffect(() => () => diagnostics.close(), [diagnostics]);
   useEffect(() => {
     reportPending(pending || titleLoading);
   }, [pending, titleLoading]);
@@ -1025,6 +1091,7 @@ export function ClipEditor({
   }, [dirty, trackingMode]);
 
   function update(next: OwnerEditDocument, global = false) {
+    diagnostics.action("edit");
     if (next.cameraTracks?.length) {
       const hookChanged =
         JSON.stringify(next.hook) !== JSON.stringify(draft.hook);
@@ -1108,9 +1175,14 @@ export function ClipEditor({
     }
     setForm({ original, draft: next });
   }
-  function changeHook(hook: OwnerEditDocument["hook"], suggested = false) {
-    hookTitles.cancel();
-    setHookTitleState(null);
+  function changeHook(
+    hook: OwnerEditDocument["hook"],
+    options: {
+      suggested?: boolean;
+      soundId?: OwnerHookSoundId;
+      audio?: boolean;
+    } = {},
+  ) {
     ownMessage("hook");
     if (
       hook &&
@@ -1128,6 +1200,42 @@ export function ClipEditor({
           ? masterDraft.hook
           : undefined),
     };
+    const scopedPrior = { ...validPrior, ...(hookContent?.edits ?? {}) };
+    const wantsAudio = options.audio ?? addHookAudio;
+    const requestedFrames = hook ? hook.endFrame - hook.startFrame : 0;
+    const soundId =
+      options.soundId ??
+      (hook && wantsAudio && !managedHookAudio
+        ? (
+            OWNER_HOOK_SOUNDS.find(
+              (sound) => sound.frames >= requestedFrames,
+            ) ?? OWNER_HOOK_SOUNDS.at(-1)!
+          ).id
+        : undefined);
+    const soundEdit =
+      hook && wantsAudio && (options.suggested || soundId)
+        ? options.suggested
+          ? acceptSuggestedOwnerHook(
+              scopedPrior,
+              hook,
+              crypto.randomUUID(),
+              rootBase.overlay.frames,
+            )
+          : chooseOwnerHookSound(
+              scopedPrior,
+              hook,
+              crypto.randomUUID(),
+              rootBase.overlay.frames,
+              soundId,
+            )
+        : undefined;
+    if (soundEdit) hook = soundEdit.hook;
+    const rangeChanged =
+      JSON.stringify(hook) !== JSON.stringify(masterDraft.hook);
+    if (rangeChanged || !hook) {
+      hookTitles.cancel();
+      setHookTitleState(null);
+    }
     let next: OwnerEditDocument;
     try {
       next = withIndependentOwnerHook(
@@ -1144,13 +1252,13 @@ export function ClipEditor({
       return;
     }
     if (!hook) next = changeManualOwnerHook(next, undefined);
-    else if (suggested && next.hookContent) {
+    else if (next.hookContent) {
       const scoped = { ...next, ...next.hookContent.edits };
-      const accepted = acceptSuggestedOwnerHook(
-        scoped,
-        hook,
-        crypto.randomUUID(),
-      );
+      const accepted = soundEdit
+        ? { ...scoped, audio: soundEdit.audio }
+        : wantsAudio
+          ? changeManualOwnerHook(scoped, hook)
+          : removeOwnerHookSound(scoped);
       next = {
         ...next,
         hookContent: {
@@ -1160,8 +1268,7 @@ export function ClipEditor({
       };
     }
     update(next, true);
-    if (hook && JSON.stringify(hook) !== JSON.stringify(masterDraft.hook))
-      queueHookTitle(next, hook);
+    if (hook && rangeChanged && generateHookTitle) queueHookTitle(next, hook);
     if (
       hook &&
       JSON.stringify(hook) !== JSON.stringify(masterDraft.hook) &&
@@ -1174,6 +1281,41 @@ export function ClipEditor({
     setTimelineSelection(undefined);
     setAudioPicture(undefined);
     player.current?.seekTo(0);
+    return next;
+  }
+  function toggleHookAudio(enabled: boolean) {
+    setPreferHookAudio(enabled);
+    if (!masterDraft.hook) return;
+    player.current?.pause();
+    const completedDraft = hookDraft
+      ? completeOwnerHookDraft(hookDraft, rootBase.overlay.frames)
+      : undefined;
+    try {
+      const next = changeHook(completedDraft ?? masterDraft.hook, {
+        audio: enabled,
+      });
+      if (next && completedDraft) setHookDraft(undefined);
+    } catch {
+      ownMessage("hook");
+      setMessage("Remove an audio layer to make room for the Hook’s riser.");
+    }
+  }
+  function cancelHookTitle() {
+    setGenerateHookTitle(false);
+    hookTitles.cancelCurrent();
+  }
+  function toggleHookTitle(enabled: boolean) {
+    setGenerateHookTitle(enabled);
+    if (!enabled) {
+      hookTitles.cancel();
+      setHookTitleState(null);
+    } else if (masterDraft.hook && !hookDraft && !error) {
+      queueHookTitle(
+        masterDraft,
+        masterDraft.hook,
+        hookTitleState?.phase === "canceled",
+      );
+    }
   }
   function queueHookTitle(
     next: OwnerEditDocument,
@@ -1247,6 +1389,7 @@ export function ClipEditor({
   }
   function selectSetting(value: EditorSetting) {
     if (pending || trackingMode) return;
+    if (value !== setting) diagnostics.action("tab");
     setCaptionConfirm(false);
     if (value !== setting) setTextRange(null);
     setSetting(value);
@@ -1363,6 +1506,7 @@ export function ClipEditor({
     setMessage("");
   }
   function selectTimelineItem(item: EditorTimelineItem) {
+    diagnostics.action("selection");
     setTextRange(null);
     if (pending || trackingMode || audioImport !== null) return;
     player.current?.pause();
@@ -1513,6 +1657,8 @@ export function ClipEditor({
     if (kind === "reload") {
       hookTitles.cancel();
       setHookTitleState(null);
+      setGenerateHookTitle(false);
+      setPreferHookAudio(false);
     }
     ownMessage(
       kind === "picture"
@@ -1583,6 +1729,8 @@ export function ClipEditor({
       const acknowledged = value.clips.find((item) => item.id === clip.id);
       if (!acknowledged?.base) throw new Error("unacknowledged");
       if (!alive.current) return;
+      if (kind === "edit") diagnostics.action("apply");
+      if (kind === "reload" && dirty) diagnostics.action("discard");
       onAccepted(value);
       if (kind === "audio" || kind === "youtube-audio") {
         const asset = acknowledged.audioAssets?.find(
@@ -1990,78 +2138,88 @@ export function ClipEditor({
             tabIndex={0}
           >
             {setting === "hook" && (
-              <fieldset disabled={pending || !!error}>
-                <legend className="local-sr-only">Hook</legend>
-                <HookControls
-                  hook={hookDraft ?? draft.hook}
-                  suggestion={decodeOwnerHookSuggestion(
-                    base.hookSuggestion,
-                    base.overlay.frames,
-                  )}
-                  simulated={clip.mode === "synthetic-ai"}
-                  suggestedAudio={
-                    draft.audio?.cues.some((cue) => cue.suggestedHook) ?? false
-                  }
-                  frames={base.overlay.frames}
-                  player={player}
-                  available={!playbackFailed && previewLoaded && !pending}
-                  attempt={previewAttempt}
-                  valid={!error && !hookDraft}
-                  onChange={(next) => {
-                    hookTitles.cancel();
-                    setHookTitleState(null);
-                    player.current?.pause();
-                    setMessage("");
-                    const complete = next
-                      ? completeOwnerHookDraft(next, base.overlay.frames)
-                      : undefined;
-                    if (!next || complete) {
+              <>
+                <fieldset disabled={pending || !!error}>
+                  <legend className="local-sr-only">Hook</legend>
+                  <HookControls
+                    hook={hookDraft ?? draft.hook}
+                    suggestion={decodeOwnerHookSuggestion(
+                      base.hookSuggestion,
+                      base.overlay.frames,
+                    )}
+                    simulated={clip.mode === "synthetic-ai"}
+                    generateTitle={generateHookTitle}
+                    addAudio={addHookAudio}
+                    titleUnavailable={titleUnavailable}
+                    onGenerateTitle={toggleHookTitle}
+                    onAddAudio={toggleHookAudio}
+                    maxFrames={hookMaxFrames}
+                    frames={base.overlay.frames}
+                    player={player}
+                    available={!playbackFailed && previewLoaded && !pending}
+                    attempt={previewAttempt}
+                    valid={!error && !hookDraft}
+                    onChange={(next) => {
+                      hookTitles.cancel();
+                      setHookTitleState(null);
+                      player.current?.pause();
+                      setMessage("");
+                      const complete = next
+                        ? completeOwnerHookDraft(
+                            next,
+                            base.overlay.frames,
+                            hookMaxFrames,
+                          )
+                        : undefined;
+                      if (!next || complete) {
+                        try {
+                          changeHook(complete);
+                          setHookDraft(undefined);
+                        } catch {
+                          setHookDraft(next);
+                          setMessage(
+                            "Couldn’t update the Hook. Check its range and layers.",
+                          );
+                        }
+                      } else setHookDraft(next);
+                    }}
+                    onUseSuggestion={(hook) => {
+                      player.current?.pause();
                       try {
-                        changeHook(complete);
+                        changeHook(hook, { suggested: true });
                         setHookDraft(undefined);
+                        setMessage("");
                       } catch {
-                        setHookDraft(next);
                         setMessage(
-                          "Couldn’t update the Hook. Check its range and layers.",
+                          "Remove an audio layer to make room for the hook’s riser.",
                         );
                       }
-                    } else setHookDraft(next);
-                  }}
-                  onUseSuggestion={(hook) => {
-                    player.current?.pause();
-                    try {
-                      changeHook(hook, true);
-                      setHookDraft(undefined);
-                      setMessage("");
-                    } catch {
-                      setMessage(
-                        "Remove an audio layer to make room for the hook’s riser.",
-                      );
-                    }
-                  }}
-                />
+                    }}
+                  />
+                </fieldset>
                 {masterDraft.hook && !hookDraft && (
                   <>
-                    <InlineFeedback
-                      tone={
-                        titleLoading || !hookTitleSuggestions
-                          ? "status"
-                          : "error"
-                      }
-                      message={
-                        currentTitle?.phase === "failed"
-                          ? "Couldn’t suggest a title. Retry when ready."
-                          : titleLoading
-                            ? "Writing a title…"
-                            : !hookTitleSuggestions
-                              ? "AI titles unavailable."
-                              : currentTitle?.phase !== "ready" &&
-                                  (clip.hookTitleAttempts ?? 0) >=
-                                    OWNER_HOOK_TITLE_LIMIT
-                                ? "Title limit reached for this clip."
-                                : undefined
-                      }
-                    />
+                    {titleLoading ? (
+                      <HookTitleProgress
+                        id={`${tabsId}-hook-title-progress`}
+                        onCancel={cancelHookTitle}
+                      />
+                    ) : (
+                      <InlineFeedback
+                        tone={
+                          currentTitle?.phase === "canceled"
+                            ? "status"
+                            : "error"
+                        }
+                        message={
+                          currentTitle?.phase === "failed"
+                            ? "Couldn’t suggest a title. Retry when ready."
+                            : currentTitle?.phase === "canceled"
+                              ? "Current title kept."
+                              : undefined
+                        }
+                      />
+                    )}
                     {currentTitle?.result?.title && (
                       <p className="source-hint">
                         {clip.mode === "synthetic-ai"
@@ -2074,7 +2232,7 @@ export function ClipEditor({
                 )}
                 {sectionIssue("hook")}
                 <InlineFeedback message={messageFor("hook")} />
-              </fieldset>
+              </>
             )}
           </div>
           <div
@@ -2175,6 +2333,7 @@ export function ClipEditor({
                   )
                 }
                 cameraEffects={draft.cameraEffects ?? []}
+                cameraPreviewEffects={overlay.cameraEffects ?? []}
                 cameraTracks={draft.cameraTracks ?? []}
                 onCameraTracks={(cameraTracks) =>
                   update({ ...draft, cameraTracks })
@@ -3045,8 +3204,49 @@ export function ClipEditor({
                     player={player}
                     available={!playbackFailed && previewLoaded}
                     attempt={previewAttempt}
-                    pending={pending}
+                    pending={pending || !!hookDraft}
                     initialCueId={importedAudioCue}
+                    onHookSound={
+                      masterDraft.hook && !hookDraft && !audioPicture
+                        ? (soundId) => {
+                            player.current?.pause();
+                            ownMessage("audio");
+                            try {
+                              const next = changeHook(masterDraft.hook, {
+                                soundId,
+                                audio: true,
+                              });
+                              ownMessage("audio");
+                              const cue =
+                                next?.hookContent?.edits.audio?.cues.find(
+                                  (cue) => cue.suggestedHook,
+                                );
+                              if (cue) {
+                                setImportedAudioCue(cue.id);
+                                setTimelineSelection({
+                                  key: `hook:audio:${cue.id}`,
+                                  kind: "audio",
+                                  occurrence: "hook",
+                                  id: cue.id,
+                                  index:
+                                    next!.hookContent!.edits.audio!.cues.indexOf(
+                                      cue,
+                                    ),
+                                  title: "",
+                                  startFrame: 0,
+                                  endFrame: 0,
+                                });
+                                setMessage("");
+                              }
+                            } catch {
+                              ownMessage("audio");
+                              setMessage(
+                                "Remove an audio layer to make room for the Hook’s riser.",
+                              );
+                            }
+                          }
+                        : undefined
+                    }
                     onYoutube={
                       youtubeAudio
                         ? () => {
@@ -3162,6 +3362,15 @@ export function ClipEditor({
                 <Button
                   variant="primary"
                   type="button"
+                  aria-busy={titleLoading || undefined}
+                  aria-describedby={
+                    titleLoading ? `${tabsId}-hook-title-progress` : undefined
+                  }
+                  title={
+                    titleLoading
+                      ? "Apply is waiting for the Hook title."
+                      : undefined
+                  }
                   disabled={
                     !dirty ||
                     !!error ||
@@ -3206,6 +3415,18 @@ export function ClipEditor({
                 </Button>
               </WorkflowActions>
             )}
+          {actionsVisible && titleLoading && setting !== "hook" && (
+            <WorkflowActions
+              target={footerTarget}
+              feedback
+              label="Hook title progress"
+            >
+              <HookTitleProgress
+                id={`${tabsId}-hook-title-progress`}
+                onCancel={cancelHookTitle}
+              />
+            </WorkflowActions>
+          )}
           {actionsVisible &&
             setting === "hook" &&
             !hookDraft &&
@@ -3279,6 +3500,7 @@ export function ClipEditor({
               },
               select: (layer, start, end, editing) => {
                 if (pending) return;
+                diagnostics.action("selection");
                 const bounded = boundedTextSelection(layer.text, start, end);
                 setTextRange((prior) => {
                   const next = {

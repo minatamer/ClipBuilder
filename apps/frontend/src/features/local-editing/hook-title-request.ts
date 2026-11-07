@@ -10,7 +10,7 @@ import type { OwnerEditDocument } from "../../../../../packages/contracts/local/
 
 export type HookTitleState = {
   key: string;
-  phase: "loading" | "ready" | "failed";
+  phase: "loading" | "ready" | "failed" | "canceled";
   result?: OwnerHookTitleResult;
 };
 export const hookTitleKey = (revision: number, hook: OwnerHook) =>
@@ -58,6 +58,7 @@ export function acceptHookTitle(
 export class HookTitleRequests {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private controller: AbortController | undefined;
+  private currentRequest: { key: string; cacheKey: string } | undefined;
   private readonly cache = new Map<string, HookTitleState>();
   constructor(
     private readonly publish: (state: HookTitleState | null) => void,
@@ -69,6 +70,16 @@ export class HookTitleRequests {
     this.timer = undefined;
     this.controller?.abort();
     this.controller = undefined;
+    this.currentRequest = undefined;
+  }
+  /** User cancellation keeps the draft and prevents the same range auto-restarting. */
+  cancelCurrent() {
+    const current = this.currentRequest;
+    if (!current) return;
+    this.cancel();
+    const state: HookTitleState = { key: current.key, phase: "canceled" };
+    this.remember(current.cacheKey, state);
+    this.publish(state);
   }
   select(
     input: {
@@ -92,6 +103,7 @@ export class HookTitleRequests {
     }
     const controller = new AbortController();
     this.controller = controller;
+    this.currentRequest = { key, cacheKey };
     this.publish({ key, phase: "loading" });
     this.timer = setTimeout(() => {
       this.timer = undefined;
@@ -139,7 +151,10 @@ export class HookTitleRequests {
           this.remember(cacheKey, state);
           this.publish(state);
         } finally {
-          if (this.controller === controller) this.controller = undefined;
+          if (this.controller === controller) {
+            this.controller = undefined;
+            this.currentRequest = undefined;
+          }
         }
       };
       void attempt();

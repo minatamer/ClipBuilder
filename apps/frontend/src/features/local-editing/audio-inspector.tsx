@@ -19,6 +19,7 @@ import {
 } from "./editor-clock.ts";
 import { ownerHookFrames } from "../../../../../packages/contracts/local/hook.ts";
 import { PictureTiming } from "./picture-timing.tsx";
+import type { OwnerHookSoundId } from "./hook-edit.ts";
 import {
   ownerSoundAudio,
   ownerAudioSourceKey,
@@ -51,6 +52,7 @@ export function AudioInspector({
   attempt,
   pending,
   onChange,
+  onHookSound,
   onUpload,
   onYoutube,
   initialCueId,
@@ -70,6 +72,7 @@ export function AudioInspector({
   attempt: number;
   pending: boolean;
   onChange: (audio: OwnerAudioEdit) => void;
+  onHookSound?: ((sound: OwnerHookSoundId) => void) | undefined;
   onUpload: (file: File) => Promise<string | null>;
   onYoutube?: (() => void) | undefined;
   initialCueId?: string | undefined;
@@ -176,11 +179,22 @@ export function AudioInspector({
     setPreviewError(null);
   };
   const add = (source: OwnerAudioCue["source"]) => {
-    if (pending || current.cues.length >= OWNER_AUDIO_LIMITS.cues) return;
+    if (pending) return;
     const sound =
       source.kind === "builtin"
         ? OWNER_SOUNDS.find((item) => item.id === source.id)
         : undefined;
+    if (
+      sound?.hookOnly &&
+      onHookSound &&
+      (sound.id === "riser" || sound.id === "rising-tension")
+    ) {
+      stop();
+      onHookSound(sound.id);
+      setView("tracks");
+      return;
+    }
+    if (current.cues.length >= OWNER_AUDIO_LIMITS.cues) return;
     const placement =
       source.kind === "upload" || sound?.id === "pulse"
         ? "video"
@@ -211,7 +225,11 @@ export function AudioInspector({
             )
           : frames,
       offsetFrame: 0,
-      volume: sound?.music || source.kind === "upload" ? 20 : 35,
+      volume: sound?.hookOnly
+        ? 100
+        : sound?.music || source.kind === "upload"
+          ? 20
+          : 35,
       loop: (!!sound?.music && !sound.hookOnly) || source.kind === "upload",
     };
     if (linkedVisual)
@@ -247,7 +265,7 @@ export function AudioInspector({
       urls.current.set(key, url);
     }
     element.src = url;
-    element.volume = 0.35;
+    element.volume = sound.hookOnly ? 1 : 0.35;
     setPlaying(sound.id);
     setPreviewError(null);
     void element.play().catch(() => {
@@ -341,9 +359,12 @@ export function AudioInspector({
                 aria-label={`Add ${sound.label}`}
                 disabled={
                   pending ||
-                  current.cues.length >= OWNER_AUDIO_LIMITS.cues ||
+                  (current.cues.length >= OWNER_AUDIO_LIMITS.cues &&
+                    !(sound.hookOnly && onHookSound)) ||
                   ((sound.id === "tension" || sound.hookOnly) &&
-                    (!hook || occurrence === "body"))
+                    (!hook ||
+                      (occurrence === "body" &&
+                        !(sound.hookOnly && onHookSound))))
                 }
                 onClick={() => add({ kind: "builtin", id: sound.id })}
               >

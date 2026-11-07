@@ -2,6 +2,7 @@ import {
   ownerHookSchema,
   type OwnerHook,
 } from "../../../../../packages/contracts/local/hook.ts";
+import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 
 /** Incomplete endpoints belong only to the editor, never persisted media contracts. */
 export type OwnerHookDraft = {
@@ -29,9 +30,12 @@ export function changeOwnerHookEndpoint(
 export function completeOwnerHookDraft(
   draft: OwnerHookDraft,
   frames: number,
+  maxFrames = 10 * OWNER_FPS,
 ): OwnerHook | undefined {
   const parsed = ownerHookSchema.safeParse(draft);
-  return parsed.success && parsed.data.endFrame <= frames
+  return parsed.success &&
+    parsed.data.endFrame <= frames &&
+    parsed.data.endFrame - parsed.data.startFrame <= maxFrames
     ? parsed.data
     : undefined;
 }

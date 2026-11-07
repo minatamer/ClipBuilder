@@ -1,7 +1,8 @@
-import type { RefObject } from "react";
+import { useId, type RefObject } from "react";
 import type { PlayerRef } from "@remotion/player";
 import { Sparkles } from "lucide-react";
 import { Button } from "../../shared/ui/button";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { PictureTiming } from "./picture-timing.tsx";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import {
@@ -10,6 +11,7 @@ import {
   type OwnerHookDraft,
 } from "./hook-range-draft.ts";
 import type { OwnerHook } from "../../../../../packages/contracts/local/hook.ts";
+import { ownerHookSoundWindow } from "./hook-edit.ts";
 
 export function HookControls({
   hook,
@@ -22,7 +24,12 @@ export function HookControls({
   valid,
   onChange,
   onUseSuggestion,
-  suggestedAudio = false,
+  generateTitle,
+  addAudio,
+  titleUnavailable,
+  onGenerateTitle,
+  onAddAudio,
+  maxFrames = 10 * OWNER_FPS,
 }: {
   hook: OwnerHookDraft | undefined;
   suggestion?: OwnerHook | undefined;
@@ -34,15 +41,62 @@ export function HookControls({
   valid: boolean;
   onChange: (hook: OwnerHookDraft | undefined) => void;
   onUseSuggestion: (hook: OwnerHook) => void;
-  suggestedAudio?: boolean;
+  generateTitle: boolean;
+  addAudio: boolean;
+  titleUnavailable: string | undefined;
+  onGenerateTitle: (enabled: boolean) => void;
+  onAddAudio: (enabled: boolean) => void;
+  maxFrames?: number;
 }) {
-  const range = hook ? completeOwnerHookDraft(hook, frames) : undefined;
+  const optionFeedback = useId();
+  const range = hook
+    ? completeOwnerHookDraft(hook, frames, maxFrames)
+    : undefined;
+  const suggestionWindow = suggestion
+    ? addAudio
+      ? ownerHookSoundWindow(suggestion, frames)
+      : suggestion
+    : undefined;
   const view = hook
     ? { startFrame: hook.startFrame ?? NaN, endFrame: hook.endFrame ?? NaN }
     : undefined;
+  const rangeMessage =
+    !hook || range
+      ? undefined
+      : hook.startFrame === null
+        ? "Choose a start."
+        : hook.endFrame === null
+          ? "Choose an end to preview or apply the Hook."
+          : `Choose a valid range (up to ${maxFrames / OWNER_FPS}s).`;
   return (
     <div className="hook-controls">
       <p>Repeat a moment, then play the full clip.</p>
+      <div className="hook-options" role="group" aria-label="Hook options">
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={generateTitle}
+            disabled={!!titleUnavailable && !generateTitle}
+            aria-describedby={titleUnavailable ? optionFeedback : undefined}
+            onChange={(event) => onGenerateTitle(event.currentTarget.checked)}
+          />
+          Generate title
+        </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={addAudio}
+            disabled={!!hook && !range && !addAudio}
+            onChange={(event) => onAddAudio(event.currentTarget.checked)}
+          />
+          Add Hook audio
+        </label>
+      </div>
+      <InlineFeedback
+        id={optionFeedback}
+        tone="status"
+        message={titleUnavailable}
+      />
       {suggestion && (
         <div
           className="hook-suggestion"
@@ -58,7 +112,7 @@ export function HookControls({
             </span>
             <span>
               {(suggestion.startFrame / OWNER_FPS).toFixed(2)}s –{" "}
-              {(suggestion.endFrame / OWNER_FPS).toFixed(2)}s
+              {(suggestionWindow!.endFrame / OWNER_FPS).toFixed(2)}s
             </span>
           </div>
           <Button
@@ -66,9 +120,8 @@ export function HookControls({
             disabled={
               !available ||
               !valid ||
-              (suggestedAudio &&
-                hook?.startFrame === suggestion.startFrame &&
-                hook.endFrame === suggestion.endFrame)
+              (hook?.startFrame === suggestion.startFrame &&
+                hook.endFrame === suggestionWindow!.endFrame)
             }
             onClick={() => onUseSuggestion({ ...suggestion })}
           >
@@ -85,6 +138,7 @@ export function HookControls({
             player={player}
             available={available}
             attempt={attempt}
+            validationMessage={rangeMessage}
             onStartAfterEnd={(frame) =>
               onChange(changeOwnerHookEndpoint(hook, "startFrame", frame))
             }
@@ -96,13 +150,8 @@ export function HookControls({
             }}
           />
           <p className="focus-empty">
-            {hook.startFrame === null
-              ? "Choose a start."
-              : hook.endFrame === null
-                ? "Choose an end to preview or apply the Hook."
-                : !range
-                  ? "Choose an end after the start, inside this clip and within 10 seconds."
-                  : "Up to 10 seconds. Repeated items are marked [Hook]."}
+            Up to {maxFrames / OWNER_FPS} seconds. Repeated items are marked
+            [Hook].
           </p>
           <div className="caption-empty-actions">
             <Button

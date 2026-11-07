@@ -13,6 +13,11 @@ it("shows an empty End and disables preview/use while the Hook is incomplete", (
       available
       attempt={0}
       valid={false}
+      generateTitle={false}
+      addAudio={false}
+      titleUnavailable={undefined}
+      onGenerateTitle={() => {}}
+      onAddAudio={() => {}}
       onChange={() => {}}
       onUseSuggestion={() => {}}
     />,
