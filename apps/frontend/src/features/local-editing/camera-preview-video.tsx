@@ -12,9 +12,18 @@ import {
 } from "../../../../../packages/contracts/local/camera-motion.ts";
 import type { OwnerCameraTrack } from "../../../../../packages/contracts/local/camera-follow.ts";
 import type { OwnerFocus } from "../../../../../packages/contracts/local/focus.ts";
+import { cameraPreviewSourceFrame } from "./camera-preview-clock.ts";
 
 const NO_EFFECTS: readonly OwnerCameraEffect[] = [];
 const NO_TRACKS: readonly OwnerCameraTrack[] = [];
+
+const cameraTransform = (crop: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}) =>
+  `matrix(${1080 / crop.width}, 0, 0, ${1920 / crop.height}, ${(-crop.x * 1080) / crop.width}, ${(-crop.y * 1920) / crop.height})`;
 
 /** A camera cut belongs to the presented video frame, not the independent Player tick. */
 export function CameraPreviewVideo({
@@ -54,9 +63,12 @@ export function CameraPreviewVideo({
         !node.isConnected
       )
         return;
-      const frame = Math.max(
-        0,
-        Math.min(focus.frames - 1, Math.round(time * fps)),
+      const frame = cameraPreviewSourceFrame(
+        time,
+        fps,
+        start,
+        end,
+        focus.frames,
       );
       const crop = ownerCameraCropAt(
         focus,
@@ -66,24 +78,11 @@ export function CameraPreviewVideo({
         frame - start,
         tracks,
       );
-      node.style.setProperty(
-        "--camera-width",
-        `${(1080 * 1080) / crop.width}px`,
-      );
-      node.style.setProperty(
-        "--camera-height",
-        `${(1920 * 1920) / crop.height}px`,
-      );
-      node.style.setProperty(
-        "--camera-left",
-        `${(-crop.x * 1080) / crop.width}px`,
-      );
-      node.style.setProperty(
-        "--camera-top",
-        `${(-crop.y * 1920) / crop.height}px`,
-      );
+      // Keep the decoder's layout fixed. Camera motion changes only its
+      // compositor transform, sampled from this exact decoded source frame.
+      node.style.setProperty("--camera-transform", cameraTransform(crop));
     },
-    [focus, effects, tracks, kind, start, fps],
+    [focus, effects, tracks, kind, start, end, fps],
   );
   const onVideoFrame = useCallback<OnVideoFrame>(
     (frame, _now, metadata) => {
@@ -163,11 +162,14 @@ export function CameraPreviewVideo({
     const crop = ownerCameraCropAt(focus, effects, start, kind, 0, tracks);
     return {
       position: "absolute" as const,
-      width: `var(--camera-width, ${(1080 * 1080) / crop.width}px)`,
-      height: `var(--camera-height, ${(1920 * 1920) / crop.height}px)`,
+      width: 1080,
+      height: 1920,
       maxWidth: "none",
-      left: `var(--camera-left, ${(-crop.x * 1080) / crop.width}px)`,
-      top: `var(--camera-top, ${(-crop.y * 1920) / crop.height}px)`,
+      left: 0,
+      top: 0,
+      transformOrigin: "0 0",
+      transform: `var(--camera-transform, ${cameraTransform(crop)})`,
+      willChange: "transform",
     };
   }, [focus, effects, tracks, kind, start]);
 

@@ -22,6 +22,74 @@ export const BROWSER_CONSOLE_LEVELS = [
   "trace",
 ] as const;
 export const browserErrorDigestSchema = z.string().regex(/^[0-9]{1,20}$/);
+export const editorDiagnosticStateSchema = z
+  .object({
+    traceId: uuidV4Schema,
+    section: z.enum([
+      "captions",
+      "text",
+      "filters",
+      "pictures",
+      "focus",
+      "hook",
+    ]),
+    occurrence: z.enum(["hook", "body"]),
+    action: z.enum([
+      "opened",
+      "edit",
+      "tab",
+      "selection",
+      "apply",
+      "discard",
+      "closed",
+    ]),
+    revision: counter,
+    commits: counter,
+    readyReports: counter,
+    activityReports: counter,
+    selectionReports: counter,
+    previewSubscriptions: counter,
+    previewReleases: counter,
+    previewEvents: counter,
+    captures: counter,
+    abortedCaptures: counter,
+    seeks: counter,
+    previewSignal: z.enum([
+      "none",
+      "subscribe",
+      "dispose",
+      "frame",
+      "media-ready",
+      "capture",
+      "capture-aborted",
+      "seek",
+    ]),
+    edits: counter,
+    applies: counter,
+    discards: counter,
+    tabChanges: counter,
+    dirty: z.boolean(),
+    pending: z.boolean(),
+    previewReady: z.boolean(),
+    hasHook: z.boolean(),
+  })
+  .strict();
+export type EditorDiagnosticState = z.infer<typeof editorDiagnosticStateSchema>;
+export const BROWSER_REACT_COMPONENTS = [
+  "ClipEditor",
+  "FocusEditor",
+  "FocusPreviewControls",
+  "CameraMotionEditor",
+  "HeadMotionEditor",
+  "PreviewTextEditor",
+  "OwnerClipBatchPanel",
+  "LocalEditingExperience",
+  "OwnerAudioPreview",
+  "CameraPreviewVideo",
+  "Player",
+  "Html5Video",
+  "Html5Audio",
+] as const;
 export const browserConsoleDiagnosticSchema = z
   .object({
     kind: z.literal("browser-console"),
@@ -45,6 +113,14 @@ export const browserConsoleDiagnosticSchema = z
       ])
       .optional(),
     digest: browserErrorDigestSchema.optional(),
+    reactIssue: z
+      .enum(["maximum-update-depth", "too-many-renders", "uncached-snapshot"])
+      .optional(),
+    components: z
+      .array(z.enum(BROWSER_REACT_COMPONENTS))
+      .max(BROWSER_REACT_COMPONENTS.length)
+      .optional(),
+    editor: editorDiagnosticStateSchema.optional(),
   })
   .strict();
 export const cloudUploadDiagnosticSchema = z
@@ -114,6 +190,20 @@ export type PreviewDiagnostic = z.infer<typeof previewDiagnosticSchema>;
 // Client reports are untrusted counters/codes, never exception text or media.
 export const browserDiagnosticSchema = z.discriminatedUnion("kind", [
   browserConsoleDiagnosticSchema,
+  z
+    .object({
+      kind: z.literal("editor-lifecycle"),
+      event: z.enum([
+        "opened",
+        "preview-ready",
+        "applied",
+        "discarded",
+        "render-burst",
+        "closed",
+      ]),
+      state: editorDiagnosticStateSchema,
+    })
+    .strict(),
   z
     .object({
       kind: z.literal("cloud-upload"),

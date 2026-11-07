@@ -8,6 +8,7 @@ import {
 } from "../../../../../packages/contracts/local/hook.ts";
 import { ownerOccurrencePresentationFrame } from "../../../../../packages/contracts/local/hook-content.ts";
 import { EditorOccurrence, EditorHookClock } from "./editor-clock.ts";
+import { noteEditorPreview } from "../diagnostics/editor-lifecycle";
 
 function activeSourceVideo(
   container: HTMLElement | null | undefined,
@@ -51,8 +52,10 @@ export function useEditorPreview({
   useEffect(() => {
     const current = player.current;
     if (!available || !current) return;
+    noteEditorPreview("subscribe");
     const container = current.getContainerNode();
     const sync = () => {
+      noteEditorPreview("frame");
       setFrame(current.getCurrentFrame());
       mediaReady();
     };
@@ -71,6 +74,7 @@ export function useEditorPreview({
         current.getCurrentFrame(),
       );
       if (event && event.target !== video) return;
+      noteEditorPreview("media-ready");
       setReady(
         Boolean(
           video && video.readyState >= 2 && !video.seeking && !video.error,
@@ -96,6 +100,7 @@ export function useEditorPreview({
     mediaReady();
     playingNow();
     return () => {
+      noteEditorPreview("dispose");
       capture.current?.abort();
       current.removeEventListener("frameupdate", sync);
       current.removeEventListener("seeked", seekedNow);
@@ -124,6 +129,7 @@ export function useEditorPreview({
         !hook ||
         frame < ownerHookFrames({ hook }) === (occurrence === "hook")),
     captureFrame: async () => {
+      noteEditorPreview("capture");
       const current = player.current;
       const container = current?.getContainerNode();
       const video =
@@ -185,7 +191,10 @@ export function useEditorPreview({
           const seeked = () => {
             if (aligned()) finish(at);
           };
-          const canceled = () => finish(null);
+          const canceled = () => {
+            noteEditorPreview("capture-aborted");
+            finish(null);
+          };
           const timer = setTimeout(canceled, 1_000);
           video.addEventListener("seeked", seeked);
           video.addEventListener("loadeddata", seeked);
@@ -202,6 +211,7 @@ export function useEditorPreview({
       }
     },
     seekTo: (at: number) => {
+      noteEditorPreview("seek");
       player.current?.pause();
       const presentation = presentationClock
         ? occurrenceClock && occurrence === "body"

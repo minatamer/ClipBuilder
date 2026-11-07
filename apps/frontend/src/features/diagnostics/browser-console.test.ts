@@ -3,6 +3,33 @@ import { BROWSER_CONSOLE_LEVELS } from "@clipbuilder/contracts";
 import { installPrivateBrowserConsole } from "./browser-console";
 
 describe("private framework/client console routing", () => {
+  it("classifies update loops with allowlisted component names, drops raw content and bounds repeated reports", () => {
+    const target = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      trace: vi.fn(),
+    };
+    const report = vi.fn(),
+      events = new EventTarget();
+    const dispose = installPrivateBrowserConsole(target, events, report);
+    for (let i = 0; i < 100; i++)
+      target.error(
+        "Maximum update depth exceeded synthetic-private-sentinel",
+        " at FocusPreviewControls (/private/path.tsx:10)\n at ClipEditor",
+      );
+    expect(report).toHaveBeenCalledTimes(12);
+    expect(report.mock.calls[0]?.[0]).toMatchObject({
+      reactIssue: "maximum-update-depth",
+      components: ["ClipEditor", "FocusPreviewControls"],
+    });
+    expect(JSON.stringify(report.mock.calls)).not.toMatch(
+      /sentinel|private|path\.tsx/u,
+    );
+    dispose();
+  });
   it("routes every supported level without printing raw arguments and restores ownership", () => {
     const target: Pick<Console, (typeof BROWSER_CONSOLE_LEVELS)[number]> = {
       debug: vi.fn(),

@@ -27,6 +27,7 @@ type Props = Omit<
   available: boolean;
   attempt: number;
   cameraEffects: OwnerCameraEffect[];
+  cameraPreviewEffects: readonly OwnerCameraEffect[];
   onCameraEffects: (effects: OwnerCameraEffect[]) => void;
   cameraAvailable: boolean;
   cameraTracks: OwnerCameraTrack[];
@@ -41,6 +42,7 @@ export function FocusPreviewControls({
   available,
   attempt,
   cameraEffects,
+  cameraPreviewEffects,
   onCameraEffects,
   cameraAvailable,
   cameraTracks,
@@ -135,7 +137,9 @@ export function FocusPreviewControls({
       motion={
         <CameraMotionEditor
           focus={props.focus}
+          positionIndex={props.positionRequest?.index}
           effects={cameraEffects}
+          previewEffects={cameraPreviewEffects}
           tracks={cameraTracks}
           hook={hook}
           sourceUrl={props.sourceUrl}

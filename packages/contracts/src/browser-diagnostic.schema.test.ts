@@ -5,6 +5,50 @@ import {
   previewDiagnosticSchema,
 } from "./browser-diagnostic.schema.js";
 describe("content-free browser diagnostics", () => {
+  it("allows only bounded editor codes/counters, rejecting clip content and arbitrary component paths", () => {
+    const record = {
+      kind: "browser-console",
+      level: "error",
+      source: "console",
+      argumentCount: 1,
+      reactIssue: "maximum-update-depth",
+      components: ["FocusPreviewControls"],
+      editor: {
+        traceId: "12345678-1234-4234-9234-123456789012",
+        section: "focus",
+        occurrence: "hook",
+        action: "edit",
+        revision: 1,
+        commits: 50,
+        readyReports: 1,
+        activityReports: 2,
+        selectionReports: 1,
+        previewSubscriptions: 2,
+        previewReleases: 0,
+        previewEvents: 20,
+        captures: 0,
+        abortedCaptures: 0,
+        seeks: 1,
+        previewSignal: "frame",
+        edits: 40,
+        applies: 1,
+        discards: 0,
+        tabChanges: 3,
+        dirty: true,
+        pending: false,
+        previewReady: true,
+        hasHook: true,
+      },
+    };
+    expect(browserDiagnosticSchema.safeParse(record).success).toBe(true);
+    for (const invalid of [
+      { ...record, components: ["/private/ClipEditor.tsx"] },
+      { ...record, editor: { ...record.editor, text: "synthetic-private" } },
+      { ...record, editor: { ...record.editor, commits: 1_000_001 } },
+      { ...record, reactIssue: "raw exception" },
+    ])
+      expect(browserDiagnosticSchema.safeParse(invalid).success).toBe(false);
+  });
   it("accepts a content-free worker failure while rejecting raw worker error details", () => {
     const record = {
       kind: "browser-console",
