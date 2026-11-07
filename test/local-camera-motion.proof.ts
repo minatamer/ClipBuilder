@@ -29,6 +29,7 @@ import {
   type OwnerCameraTrack,
 } from "../packages/contracts/local/camera-follow.ts";
 import { prepareLocalOverlayFixture } from "./owner-controls-browser.ts";
+import { defaultCameraZoom } from "../apps/frontend/src/features/local-editing/camera-zoom-default.ts";
 it("renders manual Zoom and tracked Hook/body camera paths at 24/25/29.97/30/60fps from original pixels", async () => {
   const root = await mkdtemp(join(tmpdir(), "clipbuilder-camera-motion-")),
     tools = await ownerNativeTools(resolve(".")),
@@ -42,7 +43,16 @@ it("renders manual Zoom and tracked Hook/body camera paths at 24/25/29.97/30/60f
   try {
     const bundle = await prepareLocalOverlayFixture(root),
       evidence: unknown[] = [];
-    for (const rate of ["24", "25", "30000/1001", "30", "60"]) {
+    for (const scenario of [
+      "24",
+      "25",
+      "30000/1001",
+      "30",
+      "60",
+      "position-default",
+    ]) {
+      const positionDefaults = scenario === "position-default",
+        rate = positionDefaults ? "30" : scenario;
       const workspaceId = randomUUID(),
         clipId = randomUUID(),
         directory = join(root, workspaceId);
@@ -72,14 +82,21 @@ it("renders manual Zoom and tracked Hook/body camera paths at 24/25/29.97/30/60f
         "aac",
         source,
       ]);
-      const metadata = await inspectOwnerSource(source, tools, signal),
+      const metadata = await inspectOwnerSource(source, tools, signal).catch(
+          (cause: unknown) => {
+            throw new Error(`synthetic_motion_source_clock_${scenario}`, {
+              cause,
+            });
+          },
+        ),
         original = createHash("sha256")
           .update(await readFile(source))
           .digest("hex");
       const focus = defaultOwnerFocus(metadata, 60);
+      const cut = positionDefaults ? 45 : 30;
       focus.shots = [
-        { ...focus.shots[0]!, endFrame: 30, centerX: 0.25 },
-        { ...focus.shots[0]!, startFrame: 30, endFrame: 60, centerX: 0.75 },
+        { ...focus.shots[0]!, endFrame: cut, centerX: 0.25 },
+        { ...focus.shots[0]!, startFrame: cut, endFrame: 60, centerX: 0.75 },
       ];
       const effect: OwnerCameraEffect = {
           id: randomUUID(),
@@ -152,6 +169,27 @@ it("renders manual Zoom and tracked Hook/body camera paths at 24/25/29.97/30/60f
         })),
       };
       tracks.splice(tracks.indexOf(bodyTrack), 1, firstBody, secondBody);
+      if (positionDefaults) {
+        tracks.splice(0);
+        effects.splice(0);
+        for (const [frame, positionIndex] of [
+          [48, 0],
+          [30, 1],
+        ] as const) {
+          const result = defaultCameraZoom({
+            focus,
+            hook,
+            frame,
+            positionIndex,
+          });
+          if (!("effect" in result)) throw new Error("missing_zoom_default");
+          effects.push({
+            id: randomUUID(),
+            ...result.effect,
+            ...(result.effect.occurrence === "body" ? { zoomFrames: 12 } : {}),
+          });
+        }
+      }
       await renderOwnerClip(
         {
           root,
@@ -207,9 +245,13 @@ it("renders manual Zoom and tracked Hook/body camera paths at 24/25/29.97/30/60f
       expect(num / den).toBeCloseTo(metadata.fps, 4);
       const comparisons: unknown[] = [];
       for (const occurrence of ["hook", "body"] as const)
-        for (const logical of occurrence === "hook"
-          ? [0, 9, 15, 27, 36, 39, 42, 44]
-          : [0, 9, 15, 27, 36, 39, 42, 51, 57, 59]) {
+        for (const logical of positionDefaults
+          ? occurrence === "hook"
+            ? [0, 29, 30, 31, 33, 39, 44]
+            : [0, 3, 10, 18, 32, 33, 39, 44, 45, 59]
+          : occurrence === "hook"
+            ? [0, 9, 15, 27, 36, 39, 42, 44]
+            : [0, 9, 15, 27, 36, 39, 42, 51, 57, 59]) {
           const index = Math.round((logical * metadata.fps) / 30),
             phase = (index * 30) / metadata.fps;
           const sourceFrame =
@@ -274,6 +316,7 @@ it("renders manual Zoom and tracked Hook/body camera paths at 24/25/29.97/30/60f
         ),
       ).toBe(false);
       evidence.push({
+        scenario,
         rate,
         profile: probe,
         comparisons,
@@ -288,6 +331,14 @@ it("renders manual Zoom and tracked Hook/body camera paths at 24/25/29.97/30/60f
     await writeFile(
       resolve(".local-build/evidence/cl203-native.json"),
       JSON.stringify({ synthetic: true, providerCalls: 0, evidence }, null, 2),
+    );
+    await writeFile(
+      resolve(".local-build/evidence/cl250-native.json"),
+      JSON.stringify(
+        { synthetic: true, providerCalls: 0, evidence: evidence.slice(-1) },
+        null,
+        2,
+      ),
     );
   } finally {
     await clearMotionScratch(root);

@@ -14,10 +14,8 @@ import {
 
 export const OWNER_CAMERA_MOTION = {
   effects: 60,
-  holdFrames: 9,
   returnFrames: 12,
   settleFrames: 3,
-  defaultZoomFrames: 15,
 } as const;
 const frame = z
   .number()
@@ -37,8 +35,11 @@ export const ownerCameraEffectSchema = z
     occurrence: z.enum(["hook", "body"]),
     startFrame: frame,
     zoomFrames: frame.refine((value) => value > 0),
-    holdFrames: z.literal(OWNER_CAMERA_MOTION.holdFrames),
-    returnFrames: z.literal(OWNER_CAMERA_MOTION.returnFrames),
+    holdFrames: frame,
+    returnFrames: z.union([
+      z.literal(0),
+      z.literal(OWNER_CAMERA_MOTION.returnFrames),
+    ]),
     target: ownerCameraTargetSchema,
   })
   .strict();
@@ -68,6 +69,7 @@ export type OwnerCameraRect = {
   width: number;
   height: number;
 };
+/** Serialized interval bound; visual hold ends at its camera/successor instead. */
 export function ownerCameraEffectEnd(effect: OwnerCameraEffect) {
   return (
     effect.startFrame +
@@ -86,7 +88,7 @@ export function ownerCameraEffectsFit(
 ) {
   return items.every(
     (item) =>
-      ownerCameraEffectEnd(item) + OWNER_CAMERA_MOTION.settleFrames <=
+      ownerCameraEffectEnd(item) <=
         (item.occurrence === "hook" ? ownerHookFrames(clock) : clock.frames) &&
       !clock.cameraTracks?.some(
         (track) =>
@@ -154,23 +156,45 @@ export function ownerCameraCropAt(
     occurrence,
     occurrenceFrame,
   );
-  const effect = effects.find(
-    (item) =>
-      item.occurrence === occurrence &&
-      occurrenceFrame >= item.startFrame &&
-      occurrenceFrame < ownerCameraEffectEnd(item),
-  );
+  const sourceOffset = Math.round(sourceFrame - occurrenceFrame);
+  // Arrival/legacy pulse clocks never release a position's zoom. A later camera
+  // row or explicit Zoom/Motion owns the next framing, including repeated people.
+  const zoomAt = (at: number) => {
+    let chosen: OwnerCameraEffect | undefined;
+    for (const item of effects) {
+      if (item.occurrence !== occurrence || at < item.startFrame) continue;
+      const position = ownerFocusAt(focus, sourceOffset + item.startFrame);
+      const sourceAt = sourceOffset + at;
+      if (sourceAt < position.startFrame || sourceAt >= position.endFrame)
+        continue;
+      if (
+        tracks.some(
+          (track) =>
+            track.occurrence === occurrence &&
+            track.startFrame >= item.startFrame &&
+            track.startFrame <= at,
+        )
+      )
+        continue;
+      if (!chosen || item.startFrame > chosen.startFrame) chosen = item;
+    }
+    return chosen;
+  };
+  const effect = zoomAt(occurrenceFrame);
   if (!effect) return baseline;
   const at = occurrenceFrame - effect.startFrame,
     target = ownerCameraTargetCrop(focus, effect.target);
   if (at < effect.zoomFrames) {
-    const start = ownerFocusCrop(focus, ownerFocusAt(focus, sourceFrame - at));
-    return blend(start, target, ease(at / effect.zoomFrames));
+    const position = ownerFocusAt(focus, sourceOffset + effect.startFrame);
+    const previous = zoomAt(effect.startFrame - 1);
+    const start =
+      previous &&
+      ownerFocusAt(focus, sourceOffset + previous.startFrame) === position
+        ? ownerCameraTargetCrop(focus, previous.target)
+        : ownerFocusCrop(focus, position);
+    const duration =
+      effect.returnFrames === 0 ? effect.zoomFrames - 1 : effect.zoomFrames;
+    return blend(start, target, duration > 0 ? ease(at / duration) : 1);
   }
-  if (at < effect.zoomFrames + effect.holdFrames) return target;
-  return blend(
-    target,
-    baseline,
-    ease((at - effect.zoomFrames - effect.holdFrames) / effect.returnFrames),
-  );
+  return target;
 }

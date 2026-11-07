@@ -10,9 +10,11 @@ import {
   ownerCameraTargetCrop,
   ownerCameraEffectsSchema,
   ownerCameraEffectsFit,
+  ownerCameraEffectEnd,
   type OwnerCameraEffect,
 } from "./camera-motion.ts";
 import { ownerOverlaySchema, ownerClipBaseSchema } from "./clips.ts";
+import { OWNER_FPS, OWNER_LIMITS } from "./policy.ts";
 const effect: OwnerCameraEffect = {
   id: "11111111-1111-4111-8111-111111111111",
   occurrence: "body",
@@ -22,7 +24,7 @@ const effect: OwnerCameraEffect = {
   returnFrames: 12,
   target: { centerX: 0.7, centerY: 0.4, zoom: 2.4 },
 };
-it("arrives exactly, dwells, and returns to the advancing baseline across a camera cut", () => {
+it("holds the target until the actual camera cut, including legacy implicit-return documents", () => {
   const focus = defaultOwnerFocus({ width: 1920, height: 1080 }, 60);
   focus.shots = [
     { ...focus.shots[0]!, endFrame: 30, centerX: 0.2 },
@@ -39,7 +41,8 @@ it("arrives exactly, dwells, and returns to the advancing baseline across a came
   expect(at(23)).toEqual(target);
   const baseline = ownerFocusCrop(focus, ownerFocusAt(focus, 30));
   for (const key of ["x", "y", "width", "height"] as const)
-    expect(at(30)[key]).toBeCloseTo((baseline[key] + target[key]) / 2, 10);
+    expect(at(30)[key]).toBeCloseTo(baseline[key], 10);
+  expect(at(29)).toEqual(target);
   expect(at(36)).toEqual(baseline);
   expect(at(59)).toEqual(baseline);
   expect(ownerCameraCropAt(focus, [effect], 9, "hook", 9)).toEqual(start);
@@ -95,18 +98,155 @@ it("rejects overlap, duplicate IDs, invalid clocks/targets and end-bound effects
     { ...effect, startFrame: NaN },
     { ...effect, zoomFrames: 0 },
     { ...effect, target: { ...effect.target, zoom: 9 } },
-    { ...effect, holdFrames: 0 },
+    { ...effect, holdFrames: -1 },
+    { ...effect, holdFrames: 1.5 },
+    { ...effect, holdFrames: Infinity },
+    { ...effect, returnFrames: 1 },
+    { ...effect, holdFrames: (OWNER_LIMITS.clipMs * OWNER_FPS) / 1000 + 1 },
   ])
     expect(ownerCameraEffectsSchema.safeParse([invalid]).success).toBe(false);
-  expect(ownerCameraEffectsFit([effect], { frames: 39 })).toBe(true);
-  expect(ownerCameraEffectsFit([effect], { frames: 38 })).toBe(false);
+  expect(ownerCameraEffectsFit([effect], { frames: 36 })).toBe(true);
+  expect(ownerCameraEffectsFit([effect], { frames: 35 })).toBe(false);
   expect(
     ownerCameraEffectsFit([{ ...effect, occurrence: "hook" }], { frames: 60 }),
   ).toBe(false);
   expect(
     ownerCameraEffectsFit([{ ...effect, occurrence: "hook" }], {
       frames: 60,
-      hook: { startFrame: 15, endFrame: 54 },
+      hook: { startFrame: 15, endFrame: 51 },
+    }),
+  ).toBe(true);
+});
+it("retains legacy holds and renders variable holds through the exact occurrence boundary", () => {
+  const focus = defaultOwnerFocus({ width: 1920, height: 1080 }, 90);
+  for (const holdFrames of [0, 9, 63]) {
+    const next = { ...effect, holdFrames };
+    expect(ownerCameraEffectsSchema.parse([next])).toEqual([next]);
+    const end = ownerCameraEffectEnd(next);
+    expect(ownerCameraEffectsFit([next], { frames: end })).toBe(true);
+    expect(ownerCameraEffectsFit([next], { frames: end - 1 })).toBe(false);
+    expect(ownerCameraCropAt(focus, [next], 15, "body", 15)).toEqual(
+      ownerCameraTargetCrop(focus, next.target),
+    );
+    expect(ownerCameraCropAt(focus, [next], end, "body", end)).toEqual(
+      end < focus.frames
+        ? ownerCameraTargetCrop(focus, next.target)
+        : ownerFocusCrop(focus, ownerFocusAt(focus, end)),
+    );
+  }
+});
+it("holds an early arrival through every remaining frame and separates repeated camera rows", () => {
+  const focus = defaultOwnerFocus({ width: 640, height: 360 }, 120);
+  focus.shots = [
+    { ...focus.shots[0]!, endFrame: 60 },
+    { ...focus.shots[0]!, startFrame: 60, endFrame: 120 },
+  ];
+  for (const returnFrames of [0, 12] as const) {
+    const early = {
+      ...effect,
+      startFrame: 3,
+      zoomFrames: 9,
+      holdFrames: 0,
+      returnFrames,
+      target: { ...effect.target, zoom: 1.5 },
+    };
+    const target = ownerCameraTargetCrop(focus, early.target);
+    for (const frame of [12, 24, 40, 59, 59.99])
+      expect(ownerCameraCropAt(focus, [early], frame, "body", frame)).toEqual(
+        target,
+      );
+    expect(ownerCameraCropAt(focus, [early], 60, "body", 60)).toEqual(
+      ownerFocusCrop(focus, focus.shots[1]!),
+    );
+    const hook = { ...early, occurrence: "hook" as const, startFrame: 0 };
+    for (const local of [9, 20, 29])
+      expect(
+        ownerCameraCropAt(focus, [hook], 30 + local, "hook", local),
+      ).toEqual(target);
+    expect(ownerCameraCropAt(focus, [hook], 60, "hook", 30)).toEqual(
+      ownerFocusCrop(focus, focus.shots[1]!),
+    );
+  }
+});
+it("hands off to later Zoom and Motion without reviving old held targets", () => {
+  const focus = defaultOwnerFocus({ width: 640, height: 360 }, 120);
+  const first = {
+    ...effect,
+    startFrame: 0,
+    zoomFrames: 10,
+    holdFrames: 0,
+    returnFrames: 0 as const,
+  };
+  const next = {
+    ...first,
+    id: crypto.randomUUID(),
+    startFrame: 30,
+    target: { ...first.target, zoom: 3 },
+  };
+  expect(ownerCameraCropAt(focus, [first, next], 30, "body", 30)).toEqual(
+    ownerCameraTargetCrop(focus, first.target),
+  );
+  expect(ownerCameraCropAt(focus, [next, first], 39, "body", 39)).toEqual(
+    ownerCameraTargetCrop(focus, next.target),
+  );
+  const track = {
+    id: crypto.randomUUID(),
+    occurrence: "body" as const,
+    startFrame: 50,
+    endFrame: 70,
+    sourceStartFrame: 50,
+    personId: null,
+    focusKey: "f".repeat(64),
+    seed: { x: 0.2, y: 0.2, width: 0.1, height: 0.1 },
+    outcome: "complete" as const,
+    points: [
+      { frame: 0, x: 0.25, y: 0.25 },
+      { frame: 19, x: 0.3, y: 0.25 },
+    ],
+  };
+  for (const at of [50, 60, 70, 90])
+    expect(
+      ownerCameraCropAt(focus, [first, next], at, "body", at, [track]),
+    ).toEqual(ownerCameraCropAt(focus, [], at, "body", at, [track]));
+});
+it("gradually reaches the exact target on the last visible frame and resets only for the next position", () => {
+  const focus = defaultOwnerFocus({ width: 1920, height: 1080 }, 90);
+  focus.shots = [
+    { ...focus.shots[0]!, endFrame: 60 },
+    { ...focus.shots[0]!, startFrame: 60, endFrame: 90, centerX: 0.8 },
+  ];
+  const gradual = {
+    ...effect,
+    startFrame: 9,
+    zoomFrames: 51,
+    holdFrames: 0,
+    returnFrames: 0 as const,
+    target: { ...effect.target, zoom: 1.5 },
+  };
+  expect(ownerCameraEffectsSchema.parse([gradual])).toEqual([gradual]);
+  const start = ownerFocusCrop(focus, focus.shots[0]!),
+    target = ownerCameraTargetCrop(focus, gradual.target);
+  expect(ownerCameraCropAt(focus, [gradual], 9, "body", 9)).toEqual(start);
+  const half = ownerCameraCropAt(focus, [gradual], 34, "body", 34);
+  for (const key of ["x", "y", "width", "height"] as const)
+    expect(half[key]).toBeCloseTo((start[key] + target[key]) / 2, 9);
+  expect(ownerCameraCropAt(focus, [gradual], 59, "body", 59)).toEqual(target);
+  expect(ownerCameraCropAt(focus, [gradual], 60, "body", 60)).toEqual(
+    ownerFocusCrop(focus, focus.shots[1]!),
+  );
+  const hookEffect = {
+    ...gradual,
+    occurrence: "hook" as const,
+    startFrame: 0,
+    zoomFrames: 30,
+  };
+  expect(ownerCameraCropAt(focus, [hookEffect], 59, "hook", 29)).toEqual(
+    target,
+  );
+  expect(
+    ownerCameraEffectsFit([hookEffect], {
+      frames: 90,
+      hook: { startFrame: 30, endFrame: 60 },
     }),
   ).toBe(true);
 });

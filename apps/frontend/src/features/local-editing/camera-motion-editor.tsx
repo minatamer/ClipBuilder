@@ -3,6 +3,7 @@ import { Clock3, Play, Trash2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { FocusPreviewSlot } from "./focus-preview-slot";
+import { defaultCameraZoom } from "./camera-zoom-default.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import {
   ownerHookFrames,
@@ -31,8 +32,10 @@ const seconds = (frames: number) =>
 export function CameraMotionEditor({
   focus,
   effects,
+  previewEffects,
   tracks = [],
   hook,
+  positionIndex,
   sourceUrl,
   onChange,
   captureReady,
@@ -44,8 +47,10 @@ export function CameraMotionEditor({
 }: {
   focus: OwnerFocus;
   effects: OwnerCameraEffect[];
+  previewEffects?: readonly OwnerCameraEffect[] | undefined;
   tracks?: OwnerCameraTrack[];
   hook: OwnerHook | undefined;
+  positionIndex?: number | undefined;
   sourceUrl: string;
   onChange: (effects: OwnerCameraEffect[]) => void;
   captureReady: boolean;
@@ -59,33 +64,41 @@ export function CameraMotionEditor({
     [capturingStart, setCapturingStart] = useState(false),
     [message, setMessage] = useState("");
   const effect = effects.find((item) => item.id === selected) ?? effects[0];
+  const paintedEffect =
+    previewEffects?.find((item) => item.id === effect?.id) ?? effect;
   const prefix = ownerHookFrames({ hook }),
     offset = effect?.occurrence === "body" ? prefix : 0;
   const start =
-    effect && Number.isFinite(effect.startFrame) ? effect.startFrame : 0;
-  const sourceStart = effect
-    ? (effect.occurrence === "hook" ? (hook?.startFrame ?? 0) : 0) + start
+    paintedEffect && Number.isFinite(paintedEffect.startFrame)
+      ? paintedEffect.startFrame
+      : 0;
+  const sourceStart = paintedEffect
+    ? (paintedEffect.occurrence === "hook" ? (hook?.startFrame ?? 0) : 0) +
+      start
     : 0;
   const baseline = ownerFocusCrop(focus, ownerFocusAt(focus, sourceStart));
   const content = ownerSourceContent(focus.source);
   const fallback = { centerX: 0.5, centerY: 0.5, zoom: 2 };
   const target =
-    effect && ownerCameraTargetSchema.safeParse(effect.target).success
-      ? effect.target
+    paintedEffect &&
+    ownerCameraTargetSchema.safeParse(paintedEffect.target).success
+      ? paintedEffect.target
       : fallback;
   const crop = ownerCameraTargetCrop(focus, target);
   const x = (crop.x + crop.width / 2 - baseline.x) / baseline.width,
     y = (crop.y + crop.height / 2 - baseline.y) / baseline.height;
-  const arrival = effect
-    ? offset +
+  const arrival = effect ? offset + effect.startFrame + effect.zoomFrames : 0;
+  const sourceFrame = paintedEffect
+    ? (paintedEffect.occurrence === "hook" ? (hook?.startFrame ?? 0) : 0) +
       start +
-      (Number.isFinite(effect.zoomFrames) ? effect.zoomFrames : 1)
+      (Number.isFinite(paintedEffect.zoomFrames)
+        ? paintedEffect.zoomFrames
+        : 1) -
+      (paintedEffect.returnFrames === 0 ? 1 : 0)
     : 0;
-  const sourceFrame = effect
-    ? (effect.occurrence === "hook" ? (hook?.startFrame ?? 0) : 0) +
-      start +
-      (Number.isFinite(effect.zoomFrames) ? effect.zoomFrames : 1)
-    : 0;
+  const targetFrame =
+    sourceFrame +
+    (paintedEffect?.occurrence === "hook" ? -(hook?.startFrame ?? 0) : prefix);
   const valid = !!effect && ownerCameraEffectSchema.safeParse(effect).success;
   const requestedX = effect
       ? (content.x + effect.target.centerX * content.width - baseline.x) /
@@ -112,6 +125,21 @@ export function CameraMotionEditor({
   }, [sourceFrame]);
   function update(change: Partial<OwnerCameraEffect>) {
     if (!effect) return;
+    if (
+      effect.returnFrames === 0 &&
+      change.zoomFrames !== undefined &&
+      Number.isInteger(change.zoomFrames) &&
+      change.zoomFrames > 0
+    )
+      change = {
+        ...change,
+        holdFrames: Math.max(
+          0,
+          ownerCameraEffectEnd(paintedEffect ?? effect) -
+            effect.startFrame -
+            change.zoomFrames,
+        ),
+      };
     onChange(
       effects.map((item) =>
         item.id === effect.id ? { ...item, ...change } : item,
@@ -145,7 +173,7 @@ export function CameraMotionEditor({
         })
       ) {
         setMessage(
-          "Choose a frame in this occurrence with room for the zoom and return, without overlapping another Zoom or Motion.",
+          "Choose a frame in this occurrence with room for the effect, without overlapping another Zoom or Motion.",
         );
         return;
       }
@@ -195,40 +223,33 @@ export function CameraMotionEditor({
       setMessage("Wait for the preview to finish seeking.");
       return;
     }
-    const occurrence = hook && at < prefix ? "hook" : "body",
-      local = occurrence === "hook" ? at : at - prefix;
-    const length = occurrence === "hook" ? prefix : focus.frames;
-    const room =
-      length -
-      local -
-      OWNER_CAMERA_MOTION.holdFrames -
-      OWNER_CAMERA_MOTION.returnFrames -
-      OWNER_CAMERA_MOTION.settleFrames;
-    if (room < 1) {
+    const initial = defaultCameraZoom({
+      focus,
+      hook,
+      frame: at,
+      positionIndex,
+    });
+    if ("error" in initial) {
       setMessage(
-        "Choose an earlier start to leave room for the zoom and return.",
+        initial.error === "position"
+          ? "Move the playhead inside the selected camera position."
+          : "Choose an earlier start in this position for a gradual zoom.",
       );
       return;
     }
-    const initial = ownerFocusAt(
-      focus,
-      occurrence === "hook" ? hook!.startFrame + local : local,
-    );
     const next: OwnerCameraEffect = {
       id: crypto.randomUUID(),
-      occurrence,
-      startFrame: local,
-      zoomFrames: Math.min(OWNER_CAMERA_MOTION.defaultZoomFrames, room),
-      holdFrames: OWNER_CAMERA_MOTION.holdFrames,
-      returnFrames: OWNER_CAMERA_MOTION.returnFrames,
-      target: {
-        centerX: initial.centerX,
-        centerY: initial.centerY,
-        zoom: Math.min(8, initial.zoom * 1.8),
-      },
+      ...initial.effect,
     };
-    if (!ownerCameraEffectsSchema.safeParse([...effects, next]).success) {
-      setMessage("Leave space between zoom effects.");
+    if (
+      !ownerCameraEffectsSchema.safeParse([...effects, next]).success ||
+      !ownerCameraEffectsFit([...effects, next], {
+        frames: focus.frames,
+        hook,
+        cameraTracks: tracks,
+      })
+    ) {
+      setMessage("Leave space between Zoom and Motion effects.");
       return;
     }
     onChange([...effects, next]);
@@ -244,7 +265,7 @@ export function CameraMotionEditor({
       {!available && (
         <p role="status">Set a camera position before adding a zoom.</p>
       )}
-      <div className="collection-navigation">
+      <div className="collection-navigation zoom-effect-actions">
         <label>
           Zoom effect
           <select
@@ -333,7 +354,10 @@ export function CameraMotionEditor({
                   event.currentTarget.setPointerCapture(event.pointerId);
                   pointer.current = event.pointerId;
                   seek(
-                    Math.max(0, Math.min(focus.frames + prefix - 1, arrival)),
+                    Math.max(
+                      0,
+                      Math.min(focus.frames + prefix - 1, targetFrame),
+                    ),
                   );
                   point(event);
                 }}
@@ -366,7 +390,10 @@ export function CameraMotionEditor({
                   if (dx || dy) {
                     event.preventDefault();
                     seek(
-                      Math.max(0, Math.min(focus.frames + prefix - 1, arrival)),
+                      Math.max(
+                        0,
+                        Math.min(focus.frames + prefix - 1, targetFrame),
+                      ),
                     );
                     move(x + dx, y + dy);
                   }
@@ -522,8 +549,7 @@ export function CameraMotionEditor({
           <p className="focus-context">
             <span>
               {effect.occurrence === "hook" ? "Hook" : "Body"} · Target at{" "}
-              {seconds(arrival)}s · Back at{" "}
-              {seconds(offset + ownerCameraEffectEnd(effect))}s
+              {Number.isFinite(arrival) ? `${seconds(arrival)}s` : "—"}
             </span>
           </p>
           <div className="collection-navigation">
