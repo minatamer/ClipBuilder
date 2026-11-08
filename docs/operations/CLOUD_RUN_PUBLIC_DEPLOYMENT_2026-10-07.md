@@ -4,10 +4,13 @@ CL-015 owns this checkpoint. The owner reports the local paid upload-to-export
 walkthrough working and authorizes frontend/backend Cloud Run deployment and
 ticket-prefixed commits. The owner manages Cloudflare DNS, Turnstile dashboard
 and secret values. Agents do not run paid processing or inspect local secrets.
-Paid mode is now enabled at the managed frontend for the owner's explicitly
-requested manual walkthrough. The initial paid-off checkpoint is retained below.
-Custom-domain TLS/cutover, general public traffic review and live owner acceptance
-remain separate; this does not mark the full public release complete.
+CL-270 (2026-11-08) completes the configuration cutover to
+`https://tryclipbuilder.com`, following the owner's startup-connection report.
+Paid mode is enabled at that single canonical origin. Five startup GETs and the
+Codex browser upload screen pass; the managed host's processing API is rejected.
+The initial checkpoints remain below. General public traffic review, the real
+Turnstile/upload flow and live owner acceptance remain separate; this does not
+mark the full public release complete or claim another Gemini test.
 
 ## Current topology and settings
 
@@ -29,7 +32,7 @@ remain separate; this does not mark the full public release complete.
   Secret payloads were not read; widget pairing/key-project correspondence still
   needs the owner's real test. There is no local AI model/weights path.
 - Renderer preserves `FRONTEND_ORIGIN=http://localhost:3000` and accepts the
-  exact managed frontend through `HOSTED_FRONTEND_ORIGIN`. Bucket CORS includes
+  exact custom frontend through `HOSTED_FRONTEND_ORIGIN`. Bucket CORS includes
   both exact origins. No wildcard, private IAM or other bucket policy change.
 - Existing spend controls carry forward. One instance and four media operations
   per session are capacity/work bounds, not a global DDoS or cost guarantee.
@@ -158,9 +161,13 @@ anonymous paid launch. No extra paid Cloudflare plan is required by this guide.
 
 ## Domain, Turnstile and upload cutover
 
-Paid mode currently serves the managed frontend for the owner test. For the
-later custom-domain cutover, first disable hosted paid processing and finish or
-Exit existing sessions, then apply these settings and start a fresh session:
+CL-270 completed the custom-domain cutover using the existing application images,
+domain mapping/TLS and private identities. Backend expected challenge hostname,
+both frontend origins, renderer hosted origin and exact bucket CORS are aligned;
+localhost is preserved. No widget dashboard setting or real challenge/upload/AI
+acceptance was exercised. For a future canonical-origin change, first disable
+hosted paid processing and finish or Exit existing sessions, then apply these
+settings and start a fresh session:
 
 1. Cloudflare dashboard → Turnstile → widget → Settings → Hostnames: add
    `tryclipbuilder.com`, without protocol/path/port. Keep `localhost` if retaining

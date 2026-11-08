@@ -1,5 +1,16 @@
 # ClipBuilder canonical ticket index
 
+## Custom-domain connection — 2026-11-08
+
+[CL-270](CL-270-custom-domain-connection-cutover.md) owns the reported connection
+failure on `tryclipbuilder.com`: deployed processing-origin settings still named
+the managed host. Fixed through configuration-only revisions and exact upload
+CORS cutover. Five custom-host startup GETs return 200 and the Codex browser
+loads without the retry error; 26 fake/no-key origin tests pass. Images, private
+access and paid limits are preserved, old-host processing is rejected and local
+services remain stopped. No additional Gemini run; real hosted acceptance remains
+owner-only.
+
 ## Push, paid release and local shutdown — 2026-11-08
 
 [CL-269](CL-269-push-paid-cloud-release-and-local-shutdown.md) records explicit
