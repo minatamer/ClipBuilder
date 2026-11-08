@@ -10,6 +10,7 @@ import {
 } from "../../../../../packages/contracts/local/audio.ts";
 
 export type OwnerHookSoundId = (typeof OWNER_HOOK_SOUNDS)[number]["id"];
+export const OWNER_HOOK_AUDIO_DEFAULT_VOLUME = 85;
 export const OWNER_MANAGED_HOOK_MAX_FRAMES = Math.max(
   ...OWNER_HOOK_SOUNDS.map((sound) => sound.frames),
 );
@@ -46,7 +47,7 @@ function alignSound(
     endFrame: frames,
     // Preserve the rise's ending at the cut; trim only the lead-in when shorter.
     offsetFrame: sound.frames - frames,
-    volume: previous?.volume ?? 100,
+    volume: previous?.volume ?? OWNER_HOOK_AUDIO_DEFAULT_VOLUME,
     loop: false,
     suggestedHook: true,
   };

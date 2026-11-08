@@ -177,7 +177,7 @@ it("requires independent Hook title/audio opt-ins through fake HTTP, cancellatio
     await run("audio-on");
     const audio = fixture.clip.edit!.hookContent!.edits.audio!;
     expect(audio.cues.find((c) => c.suggestedHook)).toMatchObject({
-      volume: 100,
+      volume: 85,
       offsetFrame: 0,
       endFrame: 159,
       loop: false,

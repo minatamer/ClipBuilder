@@ -102,7 +102,7 @@ or Cancel stops pending work and keeps existing title content. Never infer
 consent to new work from a saved title. Actual generated content still persists
 through normal Apply; title opt-in is not a saved media/render setting.
 
-Add Hook audio reflects the managed cue; checking it adds one recording at 100%
+Add Hook audio reflects the managed cue; checking it adds one recording at 85%
 with CL-259's bounded recording-led duration. Unchecking removes only that cue
 and keeps the Hook window, title and independent audio. Saved managed cues appear
 checked without changes or dispatch. Audio-free manual Hooks keep the ten-second
@@ -1507,8 +1507,10 @@ Selecting Riser or Rising tension, or Use suggestion with Add Hook audio checked
 default Hook duration to the selected recording's 159/222 frames (5.3/7.4s).
 Keep the excerpt's Start and bound End by the remaining source; if necessary
 trim only the recording's lead-in so its ending meets the Hook cut. New Hook
-recordings default to 100% volume. Preserve edited gain on the managed cue.
-These defaults supersede CL-162's 35% and shorter-excerpt defaults below.
+recordings default to 85% volume, including their library audition. The owner's
+2026-11-08 revision (CL-262) supersedes CL-259's 100% default. Preserve existing
+and edited gain on the managed cue, plus original/body audio levels. These
+defaults supersede CL-162's 35% and shorter-excerpt defaults below.
 CL-260 makes music explicit: Use suggestion alone adds no sound when its audio
 checkbox is off. Manual Hooks also keep audio off until selected.
 

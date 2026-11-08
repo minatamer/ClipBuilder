@@ -1,5 +1,9 @@
 # CL-259 — Keep Hook audio aligned with its cut
 
+Owner revision CL-262 (2026-11-08): new Hook audio and its audition now default
+to 85%, preserving existing/edited gains. The 100% implementation/evidence below
+is historical; recording lengths and synchronization remain unchanged.
+
 Follow-up: CL-260 adds explicit Hook title/audio checkboxes. Use suggestion adds
 a riser only when Add Hook audio is checked; recording clocks and 100% gain below
 remain authoritative. Verification here predates that opt-in revision.

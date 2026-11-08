@@ -68,11 +68,11 @@ it("keeps fresh short/long Hook recording edits aligned through HTTP Apply, relo
       const defaults=(volume,offset)=>{if(field('Added audio volume').value!==volume||field('Audio offset seconds').value!==offset||field('Audio placement').value!=='hook')throw Error('sound_defaults_'+field('Added audio volume').value+'_'+field('Audio offset seconds').value);};
       await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'ready');
       if(action==='suggest'){
-        await setting('Hook');[...document.querySelectorAll('.hook-options label')].find(n=>n.textContent.trim()==='Add Hook audio').querySelector('input').click();await new Promise(requestAnimationFrame);await click('Use suggestion');await wait(()=>field('Hook end seconds').value==='15.3','short_window');if(field('Hook start seconds').value!=='10')throw Error('start_changed');await choose();defaults('100','0');await save();
+        await setting('Hook');[...document.querySelectorAll('.hook-options label')].find(n=>n.textContent.trim()==='Add Hook audio').querySelector('input').click();await new Promise(requestAnimationFrame);await click('Use suggestion');await wait(()=>field('Hook end seconds').value==='15.3','short_window');if(field('Hook start seconds').value!=='10')throw Error('start_changed');await choose();defaults('85','0');await save();
       }else if(action==='long'||action==='short'){
         await audio();
         if(action==='short'){const n=document.querySelector('[data-timeline-key="body:audio:original"]');n.click();await new Promise(requestAnimationFrame);}
-        await click('Sound library');field(action==='long'?'Preview Rising tension':'Preview Riser').click();if(document.querySelector('.audio-inspector > audio').volume!==1)throw Error('recording_audition_gain');field(action==='long'?'Add Rising tension':'Add Riser').click();await wait(()=>field('Added audio volume'),'recording_selected');defaults(action==='long'?'100':'63','0');
+        await click('Sound library');field(action==='long'?'Preview Rising tension':'Preview Riser').click();if(document.querySelector('.audio-inspector > audio').volume!==0.85)throw Error('recording_audition_gain');field(action==='long'?'Add Rising tension':'Add Riser').click();await wait(()=>field('Added audio volume'),'recording_selected');defaults(action==='long'?'85':'63','0');
         await setting('Hook');if(field('Hook end seconds').value!==(action==='long'?'17.4':'15.3'))throw Error('recording_window');
         await choose();if(action==='long')await set('Added audio volume','63');await save();
       }else if(action==='manual'){

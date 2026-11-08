@@ -19,7 +19,10 @@ import {
 } from "./editor-clock.ts";
 import { ownerHookFrames } from "../../../../../packages/contracts/local/hook.ts";
 import { PictureTiming } from "./picture-timing.tsx";
-import type { OwnerHookSoundId } from "./hook-edit.ts";
+import {
+  OWNER_HOOK_AUDIO_DEFAULT_VOLUME,
+  type OwnerHookSoundId,
+} from "./hook-edit.ts";
 import {
   ownerSoundAudio,
   ownerAudioSourceKey,
@@ -226,7 +229,7 @@ export function AudioInspector({
           : frames,
       offsetFrame: 0,
       volume: sound?.hookOnly
-        ? 100
+        ? OWNER_HOOK_AUDIO_DEFAULT_VOLUME
         : sound?.music || source.kind === "upload"
           ? 20
           : 35,
@@ -265,7 +268,9 @@ export function AudioInspector({
       urls.current.set(key, url);
     }
     element.src = url;
-    element.volume = sound.hookOnly ? 1 : 0.35;
+    element.volume = sound.hookOnly
+      ? OWNER_HOOK_AUDIO_DEFAULT_VOLUME / 100
+      : 0.35;
     setPlaying(sound.id);
     setPreviewError(null);
     void element.play().catch(() => {

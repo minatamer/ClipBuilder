@@ -30,7 +30,8 @@ CL-259 (2026-11-07) supersedes the original defaults: explicit Use suggestion wi
 Add Hook audio checked, or
 recording choice sets the Hook's default duration to the selected full 159/222
 frames, bounded by remaining source while preserving Start. New Hook recordings
-start at 100%; edited gain survives replacement and timing changes. Manual
+start at 85%, including audition (owner revision CL-262, 2026-11-08); existing
+and edited gain survives replacement and timing changes. Manual
 endpoints remain exact; managed audio realigns its offset and upgrades to the
 long recording when required, with local draft validation above 7.4s. Hooks
 without managed sound retain the independent ten-second limit and add no music.

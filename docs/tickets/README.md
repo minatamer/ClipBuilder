@@ -1,5 +1,20 @@
 # ClipBuilder canonical ticket index
 
+## Hook audio acceptance and 85% default — 2026-11-08
+
+[CL-262](CL-262-owner-hook-and-codex-ui-testing.md) now owns the requested
+normal-app startup and agent-run short/long Hook checks on a separate fresh
+copy of the designated public source, using the retained 1:04–1:45 range.
+The owner revised new Hook audio/audition gain to 85%; saved/edited gains stay
+preserved. Fresh real Codex/editor checks pass for 5.3s/7.4s recording selection,
+playback/cut isolation, source bounds, invalid ranges, opt-out, gain and reload.
+Twenty fake/no-key cases and three updated HTTP/native proofs pass. Existing
+owner clips/configuration are preserved; broader UI acceptance remains planned.
+No Gemini fallback or deployment occurred. The owner subsequently authorized
+one local CL-262 commit for the twelve pending implementation/test/documentation
+files; the whole-file allocation and existing verification are recorded in the
+packet. Broader UI work remains outside this packaging request.
+
 ## Local commits and tomorrow's list — 2026-11-07
 
 [CL-261](CL-261-file-level-local-commits-and-next-day-checklist.md) owns the

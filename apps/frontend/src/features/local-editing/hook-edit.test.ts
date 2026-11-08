@@ -58,7 +58,7 @@ it.each([
     expect(cue).toMatchObject({
       source: { kind: "builtin", id },
       offsetFrame: 0,
-      volume: 100,
+      volume: 85,
       placement: "hook",
       loop: false,
       suggestedHook: true,
@@ -233,7 +233,7 @@ it.each(["riser", "rising-tension"] as const)(
     expect(first.hook).toEqual({ startFrame: 30, endFrame: 30 + full });
     expect(first.audio!.cues[0]).toMatchObject({
       source: { id },
-      volume: 100,
+      volume: 85,
       offsetFrame: 0,
       loop: false,
     });

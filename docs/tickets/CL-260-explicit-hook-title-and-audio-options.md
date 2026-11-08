@@ -1,5 +1,9 @@
 # CL-260 — Explicit Hook title and audio checkboxes
 
+Owner revision CL-262 (2026-11-08): the new Hook audio/audition default is now
+85%, preserving existing/edited gains. The 100% defaults below describe the
+earlier verification; explicit opt-in behavior remains unchanged.
+
 Status: implemented and locally verified, 2026-11-07. Recorded before code.
 
 The owner confirms a manual Hook adding no audio is desirable, and requests two
