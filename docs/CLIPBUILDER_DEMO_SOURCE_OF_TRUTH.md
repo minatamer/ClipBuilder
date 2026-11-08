@@ -1,5 +1,29 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Local Gemini source duration — CL-268, 2026-11-08
+
+Local Gemini has no product source-duration quota. Trusted composition admits
+long source clocks up to the shared safe arithmetic bound, allowing a two-hour
+source with a bounded manual excerpt. Preserve local Gemini's source-byte,
+scratch/disk-reserve, clip-count, result and individual provider-input limits;
+this does not enable Codex's chunked full-source analysis or larger collections.
+Manual-only analysis transcribes the requested bounded excerpt and never calls
+AI moment selection. Hosted/default source and usage limits remain unchanged.
+No admission, restore or restart starts inference; real Gemini acceptance uses
+existing keys/live approvals and explicit owner authorization. CL-265 records
+the separately authorized one-run acceptance; it grants no further AI attempts.
+
+## Hosted Hook titles and visual discovery — CL-267, 2026-11-08
+
+Hosted Gemini enables the existing explicit Generate title choice for a selected
+Hook. Advertise it only when composed and charge each fresh title inference
+through existing hosted provider-operation budgets and durable usage before
+dispatch; operation-ID replay reuses its result without another charge. Keep
+manual Find visuals disabled in hosted UI and server dispatch. This restriction
+does not disable initial automatic clip visuals, uploaded pictures or local
+Find visuals. No new route, automatic generation, retry or deployment follows
+from this decision; existing provider/readiness/consent and session gates apply.
+
 ## Manual clip intent — CL-266, 2026-11-08
 
 Successfully adding a manual clip automatically unchecks Suggest clips in the

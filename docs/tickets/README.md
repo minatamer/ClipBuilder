@@ -1,5 +1,75 @@
 # ClipBuilder canonical ticket index
 
+## Whole-file local commit plan — 2026-11-08
+
+The owner explicitly authorizes staging and local commits of the 23 pending
+files. [CL-268's exact allocation](CL-268-local-gemini-source-duration.md#owner-authorized-whole-file-commit-plan--2026-11-08)
+groups five hosted Hook-title files, fourteen local Gemini duration files and
+four shared comparison/acceptance/authority docs. Verify whole-file staged and
+committed paths/blobs per group and a clean final worktree. No push, deployment,
+configuration change or further real processing; the running app is preserved.
+
+Feature commits completed: `617a415` records the five CL-267
+files; `f328f8e` records the fourteen CL-268 files. Exact staged/
+committed path sets and normalized whole-file blobs were verified for each;
+the index was empty after both commits. The remaining four authority/comparison/
+acceptance docs form the final planned commit, using the same guards. Refreshed
+verification passed 272 fake/no-key cases, scoped types/lint/format and whitespace
+checks. Final worktree/index cleanliness is checked after that docs commit.
+
+## One authorized Gemini acceptance run — 2026-11-08
+
+[CL-265](CL-265-gemini-before-deployment-decision.md) now records explicit
+agent authorization for ONE fresh manual clip from the designated public source.
+Completed: one analysis/processing submission without retry, visual speaker
+handoff/B-roll checks, short/long/boundary Hook previews, 85% added-audio default,
+incomplete-range guard, Apply/Discard and one local export. Final counts:
+plan 1 / image 2 / render 1; extra AI actions zero. Independent listening quality
+is unverified because this agent cannot consume audio input. The completed clip
+is left open in Codex; this one-run authorization is consumed. No deployment/Git.
+
+## Local Gemini source-duration quota — 2026-11-08
+
+[CL-268](CL-268-local-gemini-source-duration.md) owns removing the local Gemini
+one-hour source-duration cap for the owner's two-hour source/manual 41-second
+clip. Hosted limits and other resource/provider bounds stay unchanged. Complete:
+237 focused fake/no-key cases, two native proofs including a generated two-hour
+MP4, scoped type/lint/format checks and read-only validation pass. Contracts and
+the normal backend/worker were rebuilt/reloaded with Gemini; frontend preserved.
+Exposed sourceMs is null and all three readiness GETs return 200. CL-268's
+implementation checks used no API spend; CL-265 subsequently records the one
+separately authorized real run on the long source. No deployment or Git mutation.
+
+## Owner Gemini test startup — 2026-11-08
+
+[CL-265](CL-265-gemini-before-deployment-decision.md) owns the requested full
+local restart with a launch-scoped Gemini selection and the UI charge-boundary
+recap. Its original startup scope covered non-metered checks; the later explicit
+one-run authorization and actual results are recorded above and in the packet.
+Saved configuration/media remain preserved; no deployment or Git action.
+Full owned shutdown and replacement ownership are verified; health, `/start`
+and bridge return 200 with Gemini planning/captions/Hook titles available.
+
+## Hosted Hook-title availability — 2026-11-08
+
+[CL-267](CL-267-hosted-hook-titles-without-find-visuals.md) owns the owner's
+decision to enable deployed AI Hook titles while keeping manual Find visuals
+disabled. Implementation includes truthful capabilities, hosted title metering
+and generated/no-key authenticated HTTP/UI verification. Complete: 86 focused
+unit cases, hosted editor and Hook-options browser proofs, scoped types/lint/
+format and read-only validation pass. No deployment or real provider call.
+
+## Codex/Gemini allowances and hosted limits — 2026-11-08
+
+[CL-264](CL-264-gemini-codex-behavior-comparison.md) records the requested
+repository-based local Codex/local Gemini/hosted Gemini capability and limit
+comparison. Expanded Codex capacity, ordinary three-clip/24-hour hosted quotas,
+source/session/resource/global limits and owner exemptions are distinguished.
+It also records the original missing hosted capability flags and CL-267's
+subsequent decision to enable Hook titles while disabling manual Find visuals. No
+provider call, private configuration read, live-deployment check or behavior
+change; measured quality/latency comparison remains separate.
+
 ## Owner approval and local whole-file commits — 2026-11-08
 
 The owner approved the CL-263 tour, requested removal of temporary refresh replay
