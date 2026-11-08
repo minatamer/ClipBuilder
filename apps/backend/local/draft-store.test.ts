@@ -22,6 +22,7 @@ import {
 } from "../../../packages/contracts/local/clips.ts";
 import { type OwnerDraftSnapshot } from "../../../packages/contracts/local/drafts.ts";
 import { automaticOwnerEdit } from "../../../packages/contracts/local/edit-overlay.ts";
+import { resolveOwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
@@ -39,6 +40,20 @@ const sourceBytes = Buffer.from("synthetic owner source");
 const pictureBytes = Buffer.from("synthetic canonical JPEG");
 const rawBytes = Buffer.from("synthetic normalized clip");
 const outputBytes = Buffer.from("synthetic native output");
+
+it("round-trips the two-hour local Gemini source with its existing bounded clip edits", async () => {
+  const original = await fixture();
+  original.workspace.source.durationMs = 7_200_000;
+  store = new OwnerDraftStore(
+    storage,
+    undefined,
+    resolveOwnerCapacity({ aiProvider: "gemini" }),
+  );
+  const saved = await store.save(undefined, original, files);
+  const restored = await store.load(saved.id, files);
+  expect(restored.workspace.source.durationMs).toBe(7_200_000);
+  expect(restored.clips).toEqual(original.clips);
+});
 
 it("round-trips admitted audio files and cue bindings, rejects missing references, and retains old silent drafts", async () => {
   const original = await fixture(),

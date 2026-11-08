@@ -25,7 +25,7 @@ it("admits large/long measured metadata only for the completed local Codex profi
   expect(ownerSourceSchema.safeParse(source).success).toBe(true);
   for (const composition of [
     {},
-    { aiProvider: "gemini" as const },
+    { hosted: true, aiProvider: "gemini" as const },
     { hosted: true, aiProvider: "codex" as const },
   ]) {
     const policy = resolveOwnerCapacity(composition, ready);
@@ -42,6 +42,47 @@ it("admits large/long measured metadata only for the completed local Codex profi
   expect(pending.longSources).toBe(false);
   expect(pending.manyClips).toBe(false);
   expect(ownerSourceForCapacity(pending).safeParse(source).success).toBe(false);
+});
+
+it("admits two-hour local Gemini clocks without lifting byte, disk, collection or hosted bounds", () => {
+  const gemini = resolveOwnerCapacity({ aiProvider: "gemini" });
+  const long = { ...source, bytes: 1024 * 1024 };
+  expect(gemini).toEqual({
+    profile: "local-gemini",
+    longSources: false,
+    manyClips: false,
+    sourceBytes: OWNER_LIMITS.sourceBytes,
+    sourceMs: null,
+    scratchBytes: OWNER_LIMITS.scratchBytes,
+    clips: OWNER_LIMITS.clips,
+    moments: 360,
+  });
+  expect(ownerSourceForCapacity(gemini).parse(long)).toEqual(long);
+  expect(ownerSourceForCapacity(gemini).safeParse(source).success).toBe(false);
+  for (const composition of [
+    {},
+    { hosted: true, aiProvider: "gemini" as const },
+    {
+      hosted: true,
+      aiProvider: "gemini" as const,
+      sourceLimits: { bytes: 500 * 1024 ** 2, durationMs: 20 * 60_000 },
+    },
+  ])
+    expect(
+      ownerSourceForCapacity(resolveOwnerCapacity(composition)).safeParse(long)
+        .success,
+    ).toBe(false);
+  for (const patch of [
+    { sourceBytes: null },
+    { scratchBytes: null },
+    { clips: null },
+    { moments: null },
+    { longSources: true },
+    { manyClips: true },
+  ])
+    expect(ownerCapacitySchema.safeParse({ ...gemini, ...patch }).success).toBe(
+      false,
+    );
 });
 
 it("keeps hosted and Gemini budgets independent, including hosted owner exemptions", () => {

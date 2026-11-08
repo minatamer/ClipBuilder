@@ -101,6 +101,7 @@ export type OwnerHostProviders = {
 export type OwnerHostOptions = {
   authorize?: (request: IncomingMessage) => boolean;
   hosted?: boolean;
+  aiProvider?: "codex" | "gemini" | undefined;
   clipLimit?: number | undefined;
   exported?: (() => Promise<void>) | undefined;
   capacity?: typeof requireDisk;
@@ -141,7 +142,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
   const providers = options.providers?.(files);
   const capacityPolicy = resolveOwnerCapacity({
     hosted: options.hosted,
-    aiProvider: providers?.localAi?.aiProvider,
+    aiProvider: options.aiProvider ?? providers?.localAi?.aiProvider,
     sourceLimits: options.sourceLimits,
   });
   const capacity =

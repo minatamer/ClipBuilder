@@ -1,5 +1,17 @@
 # Local Codex capacity ownership — CL-185–190
 
+## Local Gemini source-duration follow-up — CL-268
+
+Local Gemini now has a separate trusted `local-gemini` profile with null
+sourceMs and otherwise bounded source bytes, scratch/disk reserve, clips and
+moments. It admits long source clocks for bounded manual excerpts without
+enabling Codex's longSources/manyClips features. Hosted/default profiles retain
+their existing source and usage limits. Earlier references below to unchanged
+Gemini source duration are historical; individual Gemini requests remain bounded.
+See [CL-268](../tickets/CL-268-local-gemini-source-duration.md) for generated
+two-hour native/HTTP evidence and [CL-265](../tickets/CL-265-gemini-before-deployment-decision.md)
+for the separately authorized one-run real acceptance and its quality limits.
+
 ## Collection readiness delivered — CL-190
 
 Both local Codex readiness flags are enabled. Total moments/clips are

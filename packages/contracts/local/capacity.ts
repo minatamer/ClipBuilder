@@ -20,7 +20,7 @@ const quota = z
   .nullable();
 export const ownerCapacitySchema = z
   .object({
-    profile: z.enum(["bounded", "local-codex"]),
+    profile: z.enum(["bounded", "local-codex", "local-gemini"]),
     longSources: z.boolean(),
     manyClips: z.boolean(),
     sourceBytes: quota,
@@ -35,8 +35,17 @@ export const ownerCapacitySchema = z
       (value.profile === "local-codex" ||
         (!value.longSources &&
           !value.manyClips &&
-          Object.values(value).every((item) => item !== null))) &&
-      (value.longSources ||
+          [
+            value.sourceBytes,
+            value.scratchBytes,
+            value.clips,
+            value.moments,
+          ].every((item) => item !== null) &&
+          (value.profile === "local-gemini"
+            ? value.sourceMs === null
+            : value.sourceMs !== null))) &&
+      (value.profile === "local-gemini" ||
+        value.longSources ||
         (value.sourceBytes !== null && value.sourceMs !== null)) &&
       (value.manyClips || (value.clips !== null && value.moments !== null)),
   );
@@ -55,10 +64,11 @@ export function resolveOwnerCapacity(
   } = LOCAL_CODEX_CAPACITY_READINESS,
 ): OwnerCapacity {
   const codex = !composition.hosted && composition.aiProvider === "codex";
+  const gemini = !composition.hosted && composition.aiProvider === "gemini";
   const longSources = codex && ready.longSources;
   const manyClips = codex && ready.manyClips;
   return ownerCapacitySchema.parse({
-    profile: codex ? "local-codex" : "bounded",
+    profile: codex ? "local-codex" : gemini ? "local-gemini" : "bounded",
     longSources,
     manyClips,
     sourceBytes: longSources
@@ -67,12 +77,13 @@ export function resolveOwnerCapacity(
           OWNER_LIMITS.sourceBytes,
           composition.sourceLimits?.bytes ?? OWNER_LIMITS.sourceBytes,
         ),
-    sourceMs: longSources
-      ? null
-      : Math.min(
-          OWNER_LIMITS.sourceMs,
-          composition.sourceLimits?.durationMs ?? OWNER_LIMITS.sourceMs,
-        ),
+    sourceMs:
+      longSources || gemini
+        ? null
+        : Math.min(
+            OWNER_LIMITS.sourceMs,
+            composition.sourceLimits?.durationMs ?? OWNER_LIMITS.sourceMs,
+          ),
     scratchBytes: codex ? null : OWNER_LIMITS.scratchBytes,
     clips: manyClips ? null : OWNER_LIMITS.clips,
     moments: manyClips ? null : OWNER_ALL_AI_MOMENTS_LIMIT,

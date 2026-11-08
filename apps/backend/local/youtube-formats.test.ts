@@ -11,6 +11,7 @@ import {
   type OwnerYoutubeVideo,
 } from "../../../packages/contracts/local/acquisition.ts";
 import { OWNER_LIMITS } from "../../../packages/contracts/local/policy.ts";
+import { resolveOwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
 import { ownerMediaJobSchema } from "../../../packages/contracts/local/index.ts";
 import {
   buildOwnerYoutubeOffer,
@@ -81,6 +82,39 @@ const request = (
   revision: offer.revision,
   choiceId,
   selection,
+});
+it("admits a full two-hour local Gemini offer while retaining hosted duration and local byte limits", () => {
+  const long = metadata({ durationMs: 7_200_000 });
+  const capacity = resolveOwnerCapacity({ aiProvider: "gemini" });
+  const offer = buildOwnerYoutubeOffer(long, capacity);
+  expect(offer.bestChoiceId).not.toBeNull();
+  expect(
+    selectOwnerYoutubeFormat(offer, request(offer), capacity).expected
+      .durationMs,
+  ).toBe(7_200_000);
+  for (const bounded of [
+    resolveOwnerCapacity({}),
+    resolveOwnerCapacity({
+      hosted: true,
+      aiProvider: "gemini",
+      sourceLimits: { bytes: 500 * 1024 ** 2, durationMs: 1_200_000 },
+    }),
+  ]) {
+    const rejected = buildOwnerYoutubeOffer(long, bounded);
+    expect(() =>
+      selectOwnerYoutubeFormat(rejected, request(rejected), bounded),
+    ).toThrow("owner_youtube_format_unsupported");
+  }
+  const oversized = buildOwnerYoutubeOffer(
+    {
+      ...long,
+      videos: [video("137", 1080, { bytes: OWNER_LIMITS.sourceBytes + 1 })],
+    },
+    capacity,
+  );
+  expect(() =>
+    selectOwnerYoutubeFormat(oversized, request(oversized), capacity),
+  ).toThrow("owner_youtube_format_unsupported");
 });
 const projection = () => ({
   meta: {

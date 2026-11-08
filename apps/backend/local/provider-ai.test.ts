@@ -21,6 +21,7 @@ import type {
 import type { OwnerMoment } from "../../../packages/contracts/local/selection.ts";
 import type { GeminiPictureGenerator } from "../src/assembly/gemini-pictures.ts";
 import type { ContextualPictureSource } from "../src/assembly/commons-pictures.ts";
+import { resolveOwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
 
 // All provider-shaped adapters below are synthetic injected doubles, with no SDK,
 // API key, source file, cloud resource or external request.
@@ -51,6 +52,65 @@ const interaction = (values = annotations) => ({
   ],
 });
 const words = normalizeTranscription(interaction()).words;
+it("processes only the manual 64–105 second excerpt of a two-hour local Gemini source", async () => {
+  const f = fixture();
+  f.workspace.source.durationMs = 7_200_000;
+  try {
+    const result = await analyzeOwner(
+      f.workspace,
+      {
+        sourceRevision: f.workspace.revision,
+        policyRevision: 0,
+        ranges: [{ id: randomUUID(), startMs: 64_000, endMs: 105_000 }],
+        aiDuration: { minMs: 10_000, maxMs: 60_000 },
+        manualOnly: true,
+      },
+      f.ports.analysis,
+      f.signal,
+      undefined,
+      resolveOwnerCapacity({ aiProvider: "gemini" }),
+    );
+    const moment = result.manual[0]!;
+    expect(moment.cut).toEqual({ startFrame: 1920, endFrame: 3150 });
+    await f.ports.clipPreparation.plan(
+      { workspace: f.workspace, clipId: f.clipId, moment },
+      f.signal,
+    );
+    expect(
+      f.media.mock.calls.map(([job]) => ({
+        operation: job.operation,
+        ...("cut" in job ? { cut: job.cut } : {}),
+      })),
+    ).toEqual([
+      { operation: "prepare-owner-audio", cut: moment.cut },
+      { operation: "prepare-owner-video", cut: moment.cut },
+    ]);
+    expect(f.transport.transcribe).toHaveBeenCalledTimes(1);
+    expect(f.transport.generate).toHaveBeenCalledTimes(1);
+    expect(f.transport.candidates).not.toHaveBeenCalled();
+    expect(f.transport.upload).toHaveBeenCalledTimes(2);
+    expect(f.transport.delete).toHaveBeenCalledTimes(2);
+    expect(f.files.removeProviderInput).toHaveBeenCalledTimes(2);
+    expect(f.pictures.find).not.toHaveBeenCalled();
+  } finally {
+    await f.ports.close(f.signal);
+  }
+});
+it("retains the individual audio-input bound before Gemini dispatch on an uncapped local source", async () => {
+  const f = fixture();
+  f.workspace.source.durationMs = 7_200_000;
+  try {
+    await expect(
+      f.ports.analysis.transcribe(f.workspace, f.signal),
+    ).rejects.toThrow();
+    expect(f.media).toHaveBeenCalledTimes(1);
+    expect(f.transport.upload).not.toHaveBeenCalled();
+    expect(f.transport.transcribe).not.toHaveBeenCalled();
+    expect(f.transport.candidates).not.toHaveBeenCalled();
+  } finally {
+    await f.ports.close(f.signal);
+  }
+});
 const proposal = {
   startWordId: "w_000003",
   endWordId: "w_000004",

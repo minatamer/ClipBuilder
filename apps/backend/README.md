@@ -1,5 +1,14 @@
 # ClipBuilder backend
 
+CL-268 removes the local Gemini source-duration quota while retaining its
+ten-GiB source, disk/scratch, clip-count and individual provider-input bounds.
+The normal host and worker receive the same trusted capacity; hosted source and
+usage limits stay unchanged. A two-hour source can supply a manual 1:04–1:45
+clip: only those 41 seconds are transcribed/planned with Suggest clips off.
+This does not enable Codex's chunked whole-source analysis for Gemini. Generated
+two-hour native/HTTP and fake-provider checks need no keys; real Gemini quality
+and the owner's video test still require existing keys/live approvals.
+
 CL-239 adds a bounded title-only operation for the actual chosen Hook, including
 manual ranges, using admitted words and the shared title/emphasis policy. Both
 configured providers compose it without another transcription, image request or

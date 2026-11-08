@@ -64,10 +64,33 @@ it("binds native duration admission to trusted tool composition while preserving
         file,
         {
           ...tools,
+          capacity: resolveOwnerCapacity({ aiProvider: "gemini" }),
+        },
+        signal,
+      ),
+    ).resolves.toMatchObject({ durationMs: 7_200_000 });
+    await expect(
+      inspectOwnerSource(
+        file,
+        {
+          ...tools,
           capacity: resolveOwnerCapacity(
             { hosted: true, aiProvider: "codex" },
             ready,
           ),
+        },
+        signal,
+      ),
+    ).rejects.toThrow();
+    await expect(
+      inspectOwnerSource(
+        file,
+        {
+          ...tools,
+          capacity: resolveOwnerCapacity({
+            hosted: true,
+            aiProvider: "gemini",
+          }),
         },
         signal,
       ),

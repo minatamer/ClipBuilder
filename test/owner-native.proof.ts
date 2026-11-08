@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import { join, resolve } from "node:path";
 import { mkdtemp, mkdir, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
 import { createOwnerHost } from "../apps/backend/local/server.ts";
 import { createOwnerWorker } from "../apps/renderer/local/server.ts";
 import { ownerNativeTools } from "../scripts/native-tools.ts";
@@ -10,6 +11,99 @@ import { ownerWorkspaceSchema } from "../packages/contracts/local/index.ts";
 import { listenOwner, ownerRequest } from "./owner-http.ts";
 import { fakeOwnerAnalysis } from "../apps/backend/local/fake-analysis.ts";
 import { ownerAnalysisSchema } from "../packages/contracts/local/selection.ts";
+import { resolveOwnerCapacity } from "../packages/contracts/local/capacity.ts";
+import {
+  ownerMediaResultSchema,
+  type OwnerMediaJob,
+} from "../packages/contracts/local/index.ts";
+
+it("inspects a real synthetic two-hour local Gemini MP4 and extracts only the 41-second audio/video through worker HTTP", async () => {
+  const tools = {
+    ...(await ownerNativeTools(resolve("."))),
+    capacity: resolveOwnerCapacity({ aiProvider: "gemini" }),
+  };
+  const directory = await mkdtemp(
+    join(tmpdir(), "clipbuilder-gemini-duration-proof-"),
+  );
+  const workspaceId = randomUUID(),
+    clipId = randomUUID(),
+    root = join(directory, "workspaces");
+  const folder = join(root, workspaceId);
+  await mkdir(folder, { recursive: true });
+  const signal = AbortSignal.timeout(150_000);
+  const worker = createOwnerWorker({ root, token: "synthetic-worker", tools });
+  try {
+    await runOwnedProcess(
+      tools.ffmpeg,
+      [
+        "-nostdin",
+        "-v",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=blue:size=160x90:rate=12:duration=7200",
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc=r=8000:cl=mono",
+        "-t",
+        "7200",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "8k",
+        "-threads",
+        "2",
+        join(folder, "source.mp4"),
+      ],
+      signal,
+    );
+    const port = await listenOwner(worker.server);
+    const run = async (job: OwnerMediaJob) => {
+      const response = await ownerRequest(port, "/media", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer synthetic-worker",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(job),
+        signal,
+      });
+      expect(response.status).toBe(200);
+      return ownerMediaResultSchema.parse(JSON.parse(response.body.toString()));
+    };
+    const inspected = await run({ operation: "inspect", workspaceId });
+    if (inspected.operation !== "inspect")
+      throw Error("synthetic_inspection_missing");
+    expect(inspected.source.durationMs).toBe(7_200_000);
+    for (const operation of [
+      "prepare-owner-audio",
+      "prepare-owner-video",
+    ] as const) {
+      const result = await run({
+        operation,
+        workspaceId,
+        clipId,
+        jobId: randomUUID(),
+        fingerprint: inspected.source.fingerprint,
+        cut: { startFrame: 1920, endFrame: 3150 },
+      });
+      expect(result).toMatchObject({ operation, durationMs: 41_000 });
+      expect("bytes" in result && result.bytes).toBeGreaterThan(0);
+    }
+  } finally {
+    await worker.close();
+    expect(worker.server.listening).toBe(false);
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 180_000);
 
 it("encodes and decodes a real synthetic portrait MP4 offline, then drains all scratch/listeners", async () => {
   const tools = await ownerNativeTools(resolve("."));

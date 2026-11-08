@@ -304,6 +304,8 @@ async function composeLocalWorkflow(
       diagnostics,
       token: state.token,
       port: 4000,
+      aiProvider:
+        config.providerMode === "live" ? config.aiProvider : undefined,
       frontendOrigin: config.frontendOrigin,
       storageRoot: state.storageRoot,
       recoverSession: true,

@@ -14,6 +14,7 @@ import {
 } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { resolveOwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
 import {
   OwnerSourceLibrary,
   type OwnerSourcePublication,
@@ -143,6 +144,37 @@ it("admits a saved preview after restart without creating a workspace and reject
   expect(await readFile(await files.file(original.id, "source.mp4"))).toEqual(
     bytes,
   );
+});
+
+it("retains a two-hour local Gemini source across reopen without weakening default source admission", async () => {
+  const policy = resolveOwnerCapacity({ aiProvider: "gemini" });
+  library = new OwnerSourceLibrary(
+    storage,
+    undefined,
+    policy.scratchBytes,
+    policy,
+  );
+  const original = await workspace();
+  original.source.durationMs = 7_200_000;
+  const saved = await library.publish(publication(), original, files);
+  library = new OwnerSourceLibrary(
+    storage,
+    undefined,
+    policy.scratchBytes,
+    policy,
+  );
+  expect(
+    await readFile(
+      await library.preview(saved.id, new AbortController().signal),
+    ),
+  ).toEqual(bytes);
+  expect(() =>
+    new OwnerSourceLibrary(storage).publish(
+      publication("bbbbbbbbbbb"),
+      original,
+      files,
+    ),
+  ).toThrow("owner_source_unsupported");
 });
 
 it("keeps measured NTSC source clocks ready when the frozen offer used nominal 30 fps", async () => {
