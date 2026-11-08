@@ -1,5 +1,53 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Manual clip intent — CL-266, 2026-11-08
+
+Successfully adding a manual clip automatically unchecks Suggest clips in the
+shared local/hosted selection flow. Users can explicitly re-enable AI suggestions
+for a combined request; editing timestamps preserves that choice. Removing rows
+never opts back into AI. Rejected additions, initial defaults and restored
+analyses preserve their existing choices. Add clip does not submit work.
+
+## First ready editor tour — CL-263, 2026-11-08
+
+The initial tour dialog is a centered Welcome to the editor with Start tour and
+Skip actions. Show it after editor readiness, with a uniformly dimmed backdrop
+and no highlighted control or step progress. Start tour enters the anchored
+walkthrough; Skip/Close/Escape dismiss without navigating or processing. Replay
+begins with the same welcome. Keep welcome/step transitions smooth and all
+actions in the shared card footer.
+
+Owner acceptance, 2026-11-08: the tour is approved and the temporary refresh
+replay is removed. Retain normal once-only completion across page refreshes;
+explicit replay and successful Start over remain available.
+
+The first fully usable clip editor automatically introduces its controls with
+rectangular spotlights and anchored guide cards, following the owner's
+Retrosum/Retailor interaction style and ClipBuilder's shared design system.
+Wait for completed clip preparation, actual loaded preview and settled layout;
+never interrupt loading/restoration, hidden views, typing, dirty or busy work.
+Pause playback while guiding. Navigation highlights existing controls only;
+never add content, generate a title, Apply, process or export on the user's behalf.
+
+The normal once-only policy remembers a versioned seen preference per browser
+origin once the guide is shown. Closing/skipping/completing prevents automatic
+repetition across edits, clips and reloads. Provide explicit replay from a compact
+editor help control.
+If storage is unavailable, keep an in-memory page-lifetime preference and leave
+editing usable. A successful explicit Start over clears this tour preference
+and re-arms it for the next first fully ready editor. Cancelled, blocked or
+failed resets keep the current seen state. Ordinary reloads and clip switching
+do not re-arm it. Restore prior controls, scrolling and focus when dismissed.
+Keep guide actions in the card footer and preserve application footer geometry.
+Section rectangles include the selected main tab and relevant selected sub-tab
+with the visible controls. Entry, step changes and exit use smooth, coordinated
+fades: settle the destination before revealing it and restore the prior view
+before the final fade. Keep the guide mounted during navigation.
+Rectangles follow visible targets through scrolling/resizing; cards stay usable
+on narrow/short viewports and keyboard focus has a clear Escape/Skip/Close path.
+Use shared buttons, tokens and neutral inset focus; retain normal motion under
+all OS/browser preferences. Tour startup never calls a provider.
+
 ## Speaker turns, Word pop and aligned forms — CL-243–245, 2026-11-07
 
 Local Codex speaker preparation must distinguish actual voice turns, including a

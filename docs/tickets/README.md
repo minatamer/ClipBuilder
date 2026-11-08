@@ -1,5 +1,49 @@
 # ClipBuilder canonical ticket index
 
+## Owner approval and local whole-file commits — 2026-11-08
+
+The owner approved the CL-263 tour, requested removal of temporary refresh replay
+and authorized local whole-file staging/commits of all 24 pending files. The
+[CL-263 allocation](CL-263-first-editor-guided-tour.md#owner-approval-and-whole-file-local-commit-plan--2026-11-08)
+owns three commits: `d020bff` records the 18 tour files; `e1ebf37` records the four
+CL-266 manual-clip files; the final CL-263-266 docs commit records these two
+shared authority/index files. Exact staged/committed path sets, normalized blob
+equality and unchanged verified source bytes are checked per group. Final clean
+worktree/index verification is required before handoff. All 12 focused cases and
+four generated/no-key browser proofs pass, along with scoped types/lint/format.
+No push, provider action, configuration change or deployment is included.
+
+## Manual clips disable AI suggestions — 2026-11-08
+
+[CL-266](CL-266-manual-clips-disable-ai-suggestions.md) owns the requested
+automatic Suggest clips opt-out after successfully adding a manual clip, with
+explicit re-opt-in and existing validation/submission preserved. Local/hosted
+desktop/phone browser and HTTP-intent checks pass with generated/no-key fixtures;
+timestamp exchange/capture regression also passes. No real processing or AI call.
+
+## First ready editor tour — 2026-11-08
+
+[CL-263](CL-263-first-editor-guided-tour.md) includes the owner's revision for
+an initial centered welcome with Start tour / Skip; four-width and normal-route
+centering checks pass. The walkthrough starts only after Start tour.
+The owner approved the guide and requested removal of temporary refresh replay.
+Stored once-only completion is restored; explicit replay and successful Start
+over remain. Whole-file local staging/commits of all pending work are authorized.
+The existing tour includes
+smooth entry/step/exit fades and highlights including selected tabs. Generated
+animation-frame, active-resize and interrupted-close checks pass.
+Successful Start over now re-arms the next first ready editor's tour on the
+existing `/start` route. Same-page/reload, pending/failure/conflict/blocked reset
+and held-preview HTTP checks pass with generated no-key media.
+The tour automatically guides
+the first fully loaded editor using Retrosum/Retailor-style rectangles/cards,
+shared design tokens and one declarative renderer. Remember first use, offer
+replay, preserve editing/scroll/focus and consolidate repeated editor sections.
+Four-width browser/HTTP, keyboard, once-only, scroll/focus and unchanged-document
+checks pass with generated fake/no-key media. Shared section metadata and six
+panel wrappers remove repetition. No real inference or deployment; owner
+tour visual acceptance is approved; real-provider quality remains separate.
+
 ## Hook audio acceptance and 85% default — 2026-11-08
 
 [CL-262](CL-262-owner-hook-and-codex-ui-testing.md) now owns the requested
