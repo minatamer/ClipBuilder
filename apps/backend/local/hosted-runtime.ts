@@ -146,6 +146,7 @@ export async function startHostedEditingWorkflow(
       ttlMs: config.session.accessTtlSeconds * 1000,
       siteKey: config.turnstile.siteKey!,
       aiMode: "provider-ai",
+      hookTitleSuggestions: true,
       usage: new HostedDemoUsage(
         composeDemoUsageStore(config.admission.demoLedgerBucket!),
         config.session.processingGrantKey!,

@@ -17,6 +17,8 @@ import { loadConfig } from "../src/config/loadConfig.ts";
 import { demoUsageFixture } from "../../../test/demo-usage-fixture.ts";
 import type { HostedDemoUsage } from "./demo-usage.ts";
 import type { OwnerAnalysisPorts } from "./analysis.ts";
+import type { HookTitlePlanning } from "./hook-title-planner.ts";
+import { ownerClipListSchema } from "../../../packages/contracts/local/clips.ts";
 let root: string, flow: ReturnType<typeof createHostedEditingWorkflow>;
 let now: number;
 let usage: HostedDemoUsage;
@@ -28,6 +30,7 @@ const media = vi.fn(),
   select = vi.fn(fakeOwnerAnalysis.select),
   plan = vi.fn(fakeOwnerClipPreparation.plan),
   image = vi.fn(fakeOwnerClipPreparation.image),
+  hookTitle = vi.fn<HookTitlePlanning>(async () => null),
   abuse = vi.fn(async () => true);
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -74,13 +77,19 @@ beforeEach(async () => {
     };
   });
   usage = demoUsageFixture(() => now).usage;
-  flow = createHostedEditingWorkflow({
+  flow = createFlow();
+});
+function createFlow(
+  overrides: Partial<Parameters<typeof createHostedEditingWorkflow>[0]> = {},
+) {
+  return createHostedEditingWorkflow({
     usage,
     root,
     origin,
     ttlMs: 5000,
     now: () => now,
     aiMode: "synthetic-ai",
+    hookTitleSuggestions: true,
     siteKey: "synthetic-site-key",
     sourceLimits: { bytes: 100, durationMs: 60000 },
     abuse: { verify: abuse },
@@ -93,10 +102,11 @@ beforeEach(async () => {
         select,
         ...(boundedTranscription ? { transcribeCut } : {}),
       },
-      clipPreparation: { ...fakeOwnerClipPreparation, plan, image },
+      clipPreparation: { ...fakeOwnerClipPreparation, plan, image, hookTitle },
     }),
+    ...overrides,
   });
-});
+}
 afterEach(async () => {
   await flow.close();
   expect(await readdir(root)).toEqual([]);
@@ -130,6 +140,192 @@ const start = async (app: ReturnType<typeof server>, ip = "192.0.2.1") => {
     "X-ClipBuilder-Client-IP": ip,
   };
 };
+async function preparedClip(
+  app: ReturnType<typeof server>,
+  headers: Awaited<ReturnType<typeof start>>,
+) {
+  const upload = await request(app)
+    .post("/upload")
+    .set(headers)
+    .send({ bytes: 9 });
+  expect(upload.status).toBe(201);
+  expect(
+    (
+      await request(app)
+        .put(`/upload/${upload.body.uploadId}/0`)
+        .set(headers)
+        .set("Content-Type", "application/octet-stream")
+        .send(Buffer.from("synthetic"))
+    ).status,
+  ).toBe(200);
+  const opened = await request(app)
+    .post("/open/video")
+    .set(headers)
+    .send({ uploadId: upload.body.uploadId });
+  expect(opened.status).toBe(200);
+  const base = `/workspace/${opened.body.workspace.id}`;
+  const analysis = await request(app)
+    .post(base + "/analysis")
+    .set(headers)
+    .send({
+      sourceRevision: 0,
+      policyRevision: 0,
+      ranges: [{ id: randomUUID(), startMs: 1000, endMs: 2000 }],
+      aiDuration: { minMs: 10000, maxMs: 10000 },
+      manualOnly: true,
+    });
+  expect(analysis.status).toBe(200);
+  expect(
+    (
+      await request(app)
+        .post(base + "/clips")
+        .set(headers)
+        .send({
+          operationId: randomUUID(),
+          analysisId: analysis.body.id,
+          sourceRevision: 0,
+          policyRevision: 0,
+          momentIds: [analysis.body.manual[0].id],
+        })
+    ).status,
+  ).toBe(202);
+  for (let index = 0; index < 200; index++) {
+    const response = await request(app)
+      .get(base + "/clips")
+      .set(headers);
+    expect(response.status).toBe(200);
+    const list = ownerClipListSchema.parse(response.body);
+    if (!list.active) {
+      const clip = list.clips[0]!;
+      expect(clip.state).toBe("review-ready");
+      return { base, clip };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error("synthetic_timeout");
+}
+it.each([false, true])(
+  "advertises hosted Hook titles only when configured (%s), with Find visuals always off",
+  async (enabled) => {
+    await flow.close();
+    flow = createFlow({ hookTitleSuggestions: enabled });
+    const app = server(),
+      headers = await start(app);
+    const response = await request(app).get("/capabilities").set(headers);
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      hookTitleSuggestions: enabled,
+      visualDiscovery: false,
+    });
+    if (!enabled)
+      expect(
+        (
+          await request(app)
+            .post(`/workspace/${randomUUID()}/clips/${randomUUID()}/hook-title`)
+            .set(headers)
+            .send({})
+        ).status,
+      ).toBe(404);
+    expect(hookTitle).not.toHaveBeenCalled();
+    expect(media).not.toHaveBeenCalled();
+    expect(transcribe).not.toHaveBeenCalled();
+  },
+);
+it.each([false, true])(
+  "meters each new hosted Hook title, reuses receipts, and refuses Find visuals even with exemption (%s)",
+  async (exempt) => {
+    const identity = usage.identity.bind(usage);
+    vi.spyOn(usage, "identity").mockImplementation((ip) => ({
+      ...identity(ip),
+      exempt,
+    }));
+    const app = server(),
+      headers = await start(app);
+    const { base, clip } = await preparedClip(app, headers);
+    expect(hookTitle).not.toHaveBeenCalled();
+    const charge = vi.spyOn(usage, "charge"),
+      path = `${base}/clips/${clip.id}/hook-title`,
+      operation = {
+        operationId: randomUUID(),
+        expectedRevision: clip.revision,
+        sourceRevision: 0,
+        hook: { startFrame: 0, endFrame: 15 },
+      };
+    for (const [invalid, status] of [
+      [{ ...operation, expectedRevision: clip.revision + 1 }, 409],
+      [{ ...operation, hook: { startFrame: 0, endFrame: 31 } }, 400],
+    ] as const)
+      expect(
+        (await request(app).post(path).set(headers).send(invalid)).status,
+      ).toBe(status);
+    expect(charge).not.toHaveBeenCalled();
+    const first = await request(app).post(path).set(headers).send(operation);
+    expect(first.status).toBe(200);
+    expect(first.body).toMatchObject({
+      clipId: clip.id,
+      title: null,
+      hook: operation.hook,
+    });
+    const replay = await request(app).post(path).set(headers).send(operation);
+    expect(replay.status).toBe(200);
+    expect(replay.body).toEqual(first.body);
+    expect(hookTitle).toHaveBeenCalledTimes(1);
+    expect(charge.mock.calls.map(([, kind]) => kind)).toEqual(["provider"]);
+    expect(
+      (
+        await request(app)
+          .post(`${base}/clips/${clip.id}/visuals`)
+          .set(headers)
+          .send({ operationId: randomUUID(), expectedRevision: clip.revision })
+      ).status,
+    ).toBe(404);
+    expect(charge).toHaveBeenCalledTimes(1);
+    expect(transcribe).toHaveBeenCalledTimes(1);
+    expect(plan).toHaveBeenCalledTimes(1);
+    expect(image).toHaveBeenCalledTimes(1);
+    expect(media).toHaveBeenCalledTimes(2);
+  },
+);
+it.each(["ledger", "budget", "provider"] as const)(
+  "keeps hosted title %s failures bounded without automatic retry",
+  async (failure) => {
+    await flow.close();
+    flow = createFlow({ providerCalls: 5 });
+    const app = server(),
+      headers = await start(app);
+    const { base, clip } = await preparedClip(app, headers);
+    const charge = vi.spyOn(usage, "charge"),
+      path = `${base}/clips/${clip.id}/hook-title`,
+      operation = {
+        operationId: randomUUID(),
+        expectedRevision: clip.revision,
+        sourceRevision: 0,
+        hook: { startFrame: 0, endFrame: 15 },
+      };
+    if (failure === "ledger")
+      charge.mockRejectedValueOnce(Error("synthetic_ledger_failure"));
+    if (failure === "provider")
+      hookTitle.mockRejectedValueOnce(Error("synthetic_title_failure"));
+    const first = await request(app).post(path).set(headers).send(operation);
+    expect(first.status).toBe(failure === "budget" ? 200 : 400);
+    expect(hookTitle).toHaveBeenCalledTimes(failure === "ledger" ? 0 : 1);
+    // Four preparation reservations plus the first title exhaust the five-operation runtime budget.
+    expect(
+      (
+        await request(app)
+          .post(path)
+          .set(headers)
+          .send({ ...operation, operationId: randomUUID() })
+      ).status,
+    ).toBe(400);
+    if (failure !== "budget")
+      expect(
+        (await request(app).post(path).set(headers).send(operation)).status,
+      ).toBe(400);
+    expect(charge).toHaveBeenCalledTimes(1);
+    expect(hookTitle).toHaveBeenCalledTimes(failure === "ledger" ? 0 : 1);
+  },
+);
 it("rejects every hosted YouTube/library/agent path before proof verification, media or AI", async () => {
   const app = server();
   for (const path of [
@@ -146,6 +342,7 @@ it("rejects every hosted YouTube/library/agent path before proof verification, m
     "/shutdown",
     `/workspace/${randomUUID()}/portrait`,
     `/workspace/${randomUUID()}/clips/${randomUUID()}/youtube-audio`,
+    `/workspace/${randomUUID()}/clips/${randomUUID()}/visuals`,
   ]) {
     expect(
       (

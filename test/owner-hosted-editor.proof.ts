@@ -62,7 +62,8 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
     ),
     transcribe = vi.fn(fakeOwnerAnalysis.transcribe),
     plan = vi.fn(fakeOwnerClipPreparation.plan),
-    image = vi.fn(fakeOwnerClipPreparation.image);
+    image = vi.fn(fakeOwnerClipPreparation.image),
+    hookTitle = vi.fn(fakeOwnerClipPreparation.hookTitle!);
   const captionTranscription = vi.fn(async (_workspace, clip) => {
     if (captionTranscription.mock.calls.length === 1)
       throw new Error("synthetic_caption_failure");
@@ -128,6 +129,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
     siteKey: "synthetic-site-key",
     aiMode: "synthetic-ai",
     captionGeneration: true,
+    hookTitleSuggestions: true,
     sourceLimits: { bytes: 10 * 1024 ** 2, durationMs: 60000 },
     abuse: { verify: async () => true },
     capacity: async () => {},
@@ -135,7 +137,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
     providers: () => ({
       analysis: { ...fakeOwnerAnalysis, transcribe },
       captionTranscription,
-      clipPreparation: { ...fakeOwnerClipPreparation, plan, image },
+      clipPreparation: { ...fakeOwnerClipPreparation, plan, image, hookTitle },
     }),
   });
   const browser = await openBrowser("chrome", {
@@ -302,6 +304,13 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
         if(path.endsWith('/edit')&&init?.method==='POST'&&globalThis.holdPictureSave)await longWait(()=>globalThis.releasePictureSave,'picture_save_release');
         const response=await originalFetch(input,init);
         if(path.endsWith('/edit')&&response.ok)globalThis.pictureSavedList=await response.clone().json();if(path.endsWith('/picture')&&response.ok)globalThis.alphaAssetList=await response.clone().json();
+        if((init?.method??'GET')==='GET'&&path.endsWith('/clips')&&response.ok&&globalThis.loadingClipState){
+          const list=await response.json();
+          list.clips[0].state=globalThis.loadingClipState;
+          list.clips[0].error=globalThis.loadingClipState==='failed'?'local_clip_failed':null;
+          list.active=['queued','preparing','rendering','canceling'].includes(globalThis.loadingClipState);
+          return Response.json(list);
+        }
         return response;
       };
       const input=document.querySelector('.upload-card input');const transfer=new DataTransfer();transfer.items.add(new File([Uint8Array.from(atob(${JSON.stringify(encoded)}),c=>c.charCodeAt(0))],'synthetic.mp4',{type:'video/mp4'}));input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));
@@ -318,7 +327,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
       const prepared=await (await fetch('/api/local/workspace/'+globalThis.pictureWorkspace+'/clips')).json();if(prepared.clips[0].outputs.length||!prepared.clips[0].preview||prepared.clips[0].calls.render)throw new Error('unexpected_eager_export');if(prepared.clips[0].base.overlay.texts?.length)throw new Error('unexpected_automatic_text');
       if(document.querySelector('.moment-selection').getClientRects().length || document.querySelectorAll('.clip-editor').length!==1)throw new Error('hosted_editor_not_exclusive');
       const captionPause=async stage=>{globalThis.captionStage=stage;globalThis.captionStageReleased=false;await wait(()=>globalThis.captionStageReleased,'caption_'+stage);globalThis.captionStage=null;};
-      if(button('Generate fake captions')||!document.querySelector('.caption-empty')||document.querySelectorAll('.picture-choice').length||document.querySelector('[aria-label="Select and move captions"]'))throw new Error('fake_content_not_empty');
+      if(button('Generate fake captions')||!document.querySelector('.caption-empty')||document.querySelectorAll('.focus-shot[data-picture]').length||document.querySelector('[aria-label="Select and move captions"]'))throw new Error('fake_content_not_empty');
       await captionPause('empty');button('Generate captions').click();await wait(()=>document.querySelector('[aria-label="Caption generation actions"]'));await captionPause('confirm');if(!document.querySelector('.caption-empty').textContent.includes('Gemini credits'))throw new Error('caption_paid_consent_missing');button('Cancel').click();await wait(()=>!document.querySelector('[aria-label="Caption generation actions"]'));
       button('Generate captions').click();await wait(()=>document.querySelector('[aria-label="Caption generation actions"]'));[...document.querySelectorAll('[aria-label="Caption generation actions"] button')].find(n=>n.textContent==='Generate captions').click();await wait(()=>[...document.querySelectorAll('.caption-empty [data-inline-feedback]')].some(node=>node.textContent.includes('generate captions.')));await new Promise(done=>setTimeout(done,200));
       [...document.querySelectorAll('[aria-label="Caption generation actions"] button')].find(n=>n.textContent==='Generate captions').click();await wait(()=>document.querySelector('[aria-label="Caption 1 word 1"]'));
@@ -326,11 +335,15 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
       const font=[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim().startsWith('Font size')).querySelector('input');await change(font,'72');
       const named=label=>document.querySelector('[aria-label="'+label+'"]');
       [...document.querySelectorAll('[aria-label="Caption controls"] button')].find(n=>n.textContent==='Text').click();await new Promise(requestAnimationFrame);const first=named('Caption 1 word 1');const originalWord=first.value;await change(first,'Martian');button('Discard changes').click();await wait(()=>named('Caption 1 word 1')?.value===originalWord);await change(named('Caption 1 word 1'),'Martian');await captionPause('text');
-      const canvas=document.createElement('canvas');canvas.width=100;canvas.height=100;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,100,100);ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillRect(25,0,25,100);ctx.fillStyle='#fff';ctx.fillRect(50,0,25,100);const blob=await new Promise(done=>canvas.toBlob(done,'image/png'));const transferPicture=new DataTransfer();transferPicture.items.add(new File([blob],'synthetic-picture.png',{type:'image/png'}));[...document.querySelectorAll('[aria-label="Clip settings"] button')].find(n=>n.textContent==='Media').click();await new Promise(requestAnimationFrame);const pictureInput=named('Upload picture');pictureInput.files=transferPicture.files;pictureInput.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('.picture-choice')&&!button('Uploading…'));const assetResponse=await fetch('/api/local/workspace/'+globalThis.pictureWorkspace+'/assets/'+globalThis.alphaAssetList.pictureAssetId);if(assetResponse.headers.get('content-type')!=='image/png')throw new Error('transparent_asset_mime');const bitmap=await createImageBitmap(await assetResponse.blob());const check=document.createElement('canvas');check.width=100;check.height=100;const checkContext=check.getContext('2d');checkContext.drawImage(bitmap,0,0);bitmap.close();if(checkContext.getImageData(10,40,1,1).data[3]!==0||checkContext.getImageData(40,40,1,1).data[3]!==128||checkContext.getImageData(60,40,1,1).data[3]!==255)throw new Error('browser_transparency_lost');[...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Motion').click();await new Promise(requestAnimationFrame);for(const label of ['Entrance','Exit']){const select=[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim()===label).querySelector('select');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,'none');select.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(requestAnimationFrame);}[...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Position').click();await new Promise(requestAnimationFrame);[...document.querySelectorAll('[aria-label="Picture position"] button')].find(n=>n.textContent==='Center').click();await new Promise(requestAnimationFrame);
+      const canvas=document.createElement('canvas');canvas.width=100;canvas.height=100;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,100,100);ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillRect(25,0,25,100);ctx.fillStyle='#fff';ctx.fillRect(50,0,25,100);const blob=await new Promise(done=>canvas.toBlob(done,'image/png'));const transferPicture=new DataTransfer();transferPicture.items.add(new File([blob],'synthetic-picture.png',{type:'image/png'}));[...document.querySelectorAll('[aria-label="Clip settings"] button')].find(n=>n.textContent==='Media').click();await new Promise(requestAnimationFrame);const pictureInput=named('Upload picture');pictureInput.files=transferPicture.files;pictureInput.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('.focus-shot[data-picture]')&&!button('Uploading…'));
+      const assetResponse=await fetch('/api/local/workspace/'+globalThis.pictureWorkspace+'/assets/'+globalThis.alphaAssetList.pictureAssetId);if(assetResponse.headers.get('content-type')!=='image/png')throw new Error('transparent_asset_mime');
+      const bitmap=await createImageBitmap(await assetResponse.blob());const check=document.createElement('canvas');check.width=100;check.height=100;const checkContext=check.getContext('2d');checkContext.drawImage(bitmap,0,0);bitmap.close();if(checkContext.getImageData(10,40,1,1).data[3]!==0||checkContext.getImageData(40,40,1,1).data[3]!==128||checkContext.getImageData(60,40,1,1).data[3]!==255)throw new Error('browser_transparency_lost');
+      [...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Motion').click();await new Promise(requestAnimationFrame);for(const label of ['Entrance','Exit']){const select=[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim()===label).querySelector('select');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,'none');select.dispatchEvent(new Event('change',{bubbles:true}));await new Promise(requestAnimationFrame);}
+      [...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Position').click();await new Promise(requestAnimationFrame);[...document.querySelectorAll('[aria-label="Picture position"] button')].find(n=>n.textContent==='Center').click();await new Promise(requestAnimationFrame);
 
       const pictureWait=async(fn,phase)=>{for(let i=0;i<200;i++){const value=fn();if(value)return value;await new Promise(done=>setTimeout(done,20));}const v=document.querySelector('.editor-preview video');throw new Error('picture_timeout_'+phase+'_'+globalThis.picturePhase+'_'+JSON.stringify({time:v?.currentTime,ready:v?.readyState,seeking:v?.seeking,disabled:named('Capture picture start')?.disabled,start:named('Picture start seconds')?.value,end:named('Picture end seconds')?.value}));};
       const settings=async label=>{[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent===label).click();await new Promise(requestAnimationFrame);};
-      const timing=async(index=0)=>{await settings('Media');document.querySelectorAll('.picture-choice')[index].click();await new Promise(requestAnimationFrame);[...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Timing').click();await pictureWait(()=>named('Capture picture start')&&!named('Capture picture start').disabled,'picture_capture_ready');};
+      const timing=async(index=0)=>{await settings('Media');document.querySelectorAll('.focus-shot[data-picture]')[index].click();await new Promise(requestAnimationFrame);[...document.querySelectorAll('[aria-label="Picture controls"] button')].find(n=>n.textContent==='Timing').click();await pictureWait(()=>named('Capture picture start')&&!named('Capture picture start').disabled,'picture_capture_ready');};
       const values=()=>['start','end'].map(key=>Math.round(Number(named('Picture '+key+' seconds').value)*30));
       const seek=async(frame,index=0)=>{globalThis.picturePhase='seek_'+frame;await timing(index);const bar=[...document.querySelectorAll('.editor-preview div')].find(n=>n.style.touchAction==='none'&&n.style.cursor==='pointer'&&n.style.paddingTop);if(!bar)throw new Error('preview_seek_bar_missing');const rect=bar.getBoundingClientRect();bar.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,buttons:1,pointerId:17,clientX:rect.left+rect.width*frame/29,clientY:rect.top+rect.height/2}));await new Promise(requestAnimationFrame);document.documentElement.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,button:0,pointerId:17}));await pictureWait(()=>{const v=document.querySelector('.editor-preview video');return v&&!v.seeking&&Math.abs(v.currentTime-frame/30)<.035&&!named('Capture picture start').disabled;},'picture_seek');};
       const capture=async(key,frame,index=0)=>{await seek(frame,index);await new Promise(requestAnimationFrame);await pictureWait(()=>{const v=document.querySelector('.editor-preview video');return v.readyState>=2&&!v.seeking&&!named('Capture picture '+key).matches(':disabled');},'capture_decoded');const video=document.querySelector('.editor-preview video'),before=video.currentTime,previous=values(),next=previous.map((value,index)=>index===(key==='start'?0:1)?frame+(key==='end'?1:0):value),valid=next[0]<next[1];named('Capture picture '+key).click();await pictureWait(()=>valid?JSON.stringify(values())===JSON.stringify(next):!!document.querySelector('[id$="-picture-timing-panel"] [role=alert]'),'capture_ack');await new Promise(requestAnimationFrame);if(!video.paused||Math.abs(video.currentTime-before)>.035)throw new Error('picture_capture_sought_or_not_paused');};
@@ -473,7 +486,8 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
         "-i",
         output,
         "-vf",
-        "select='eq(n,5)+eq(n,6)+eq(n,23)+eq(n,24)',crop=8:8:20:48,signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-",
+        // Sample above the changing caption glyphs, inside the centered picture.
+        "select='eq(n,5)+eq(n,6)+eq(n,23)+eq(n,24)',crop=8:8:20:34,signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-",
         "-an",
         "-f",
         "null",
@@ -557,20 +571,33 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
       "clip-preview",
       "clip",
     ]);
+    expect(hookTitle).not.toHaveBeenCalled();
+    await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+    await evaluate(`(async()=>{
+      const wait=globalThis.hostedWait;
+      const button=text=>[...document.querySelectorAll('button')].find(n=>n.getClientRects().length&&n.textContent.trim()===text);
+      const setting=async text=>{document.querySelectorAll('.editor-tabs button').forEach(n=>{if(n.textContent.trim()===text)n.click();});await new Promise(requestAnimationFrame);};
+      await setting('Media');
+      if(!button('Find visuals')?.disabled)throw Error('hosted_visuals_enabled');
+      await setting('Hook');
+      const option=[...document.querySelectorAll('.hook-options label')].find(n=>n.textContent.trim()==='Generate title')?.querySelector('input');
+      if(!option||option.disabled||option.checked)throw Error('hosted_title_not_opt_in');
+      button('Add hook').click();await new Promise(requestAnimationFrame);
+      option.click();
+      await wait(()=>document.querySelector('.source-hint')?.textContent.includes('A different way to see this moment'),'hosted_hook_title');
+      if(!document.querySelector('.hook-options input').checked)throw Error('hosted_title_choice_lost');
+      button('Discard changes').click();
+      await wait(()=>!button('Discard changes'),'hosted_title_discard');
+    })().then(()=>true)`);
+    expect(hookTitle).toHaveBeenCalledTimes(1);
+    expect(transcribe).toHaveBeenCalledTimes(1);
+    expect(plan).toHaveBeenCalledTimes(1);
+    expect(image).not.toHaveBeenCalled();
+    expect(media).toHaveBeenCalledTimes(3);
     // Retain real synthetic prepared data and exercise response-driven readiness states.
     // These overrides never call a provider or mutate a saved workspace.
-    await evaluate(`globalThis.loadingClipState='queued';
-      const fetchBeforeStates=window.fetch;
-      window.fetch=async(input,init)=>{
-        const response=await fetchBeforeStates(input,init),path=new URL(String(input),location.href).pathname;
-        if((init?.method??'GET')==='GET'&&path.endsWith('/clips')&&response.ok){
-          const list=await response.json();
-          list.clips[0].state=globalThis.loadingClipState;
-          list.clips[0].error=globalThis.loadingClipState==='failed'?'local_clip_failed':null;
-          list.active=['queued','preparing','rendering','canceling'].includes(globalThis.loadingClipState);
-          return Response.json(list);
-        }return response;
-      };`);
+    // The poller captures fetch on mount; its original wrapper reads this switch.
+    await evaluate("globalThis.loadingClipState='queued'");
     for (const [state, label] of [
       ["queued", "Queued"],
       ["preparing", "Preparing clip"],

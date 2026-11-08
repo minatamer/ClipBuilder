@@ -73,6 +73,7 @@ type Options = {
   siteKey?: string;
   aiMode: OwnerAiMode;
   captionGeneration?: boolean;
+  hookTitleSuggestions?: boolean;
   providerCalls?: number;
   sourceLimits: { bytes: number; durationMs: number };
   abuse: AbuseVerifier;
@@ -162,7 +163,11 @@ export function createHostedEditingWorkflow(options: Options) {
   async function dispatch(req: IncomingMessage, res: ServerResponse) {
     const path = req.url ?? "",
       method = req.method ?? "";
-    if (closing || !hostedEditingPath(method, path)) {
+    const disabledAction =
+      method === "POST" &&
+      (path.endsWith("/visuals") ||
+        (path.endsWith("/hook-title") && !options.hookTitleSuggestions));
+    if (closing || !hostedEditingPath(method, path) || disabledAction) {
       res.writeHead(404).end();
       return;
     }
@@ -197,6 +202,8 @@ export function createHostedEditingWorkflow(options: Options) {
         planningAvailable: true,
         captionGeneration:
           options.captionGeneration ?? options.aiMode === "provider-ai",
+        hookTitleSuggestions: options.hookTitleSuggestions ?? false,
+        visualDiscovery: false,
         localMedia: false,
         cloud: true,
         demoClipLimit:
@@ -410,6 +417,21 @@ export function createHostedEditingWorkflow(options: Options) {
                 ? {
                     clipPreparation: {
                       ...ports.clipPreparation,
+                      ...(ports.clipPreparation.hookTitle
+                        ? {
+                            hookTitle: async (
+                              ...args: Parameters<
+                                NonNullable<
+                                  typeof ports.clipPreparation.hookTitle
+                                >
+                              >
+                            ) => {
+                              await charge();
+                              args[1].throwIfAborted();
+                              return ports.clipPreparation!.hookTitle!(...args);
+                            },
+                          }
+                        : {}),
                       ...(ports.clipPreparation.planVisuals
                         ? {
                             planVisuals: async (
