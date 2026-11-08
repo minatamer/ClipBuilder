@@ -899,6 +899,15 @@
   .editor-panels {
     min-width: 0;
   }
+  .editor-navigation {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--cb-space-2);
+    min-width: 0;
+  }
+  .editor-navigation > .editor-tabs {
+    flex: 1;
+  }
   .audio-inspector > audio {
     display: none;
   }

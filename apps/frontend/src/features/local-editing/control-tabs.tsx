@@ -1,5 +1,34 @@
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { CircleAlert, type LucideIcon } from "lucide-react";
+
+/** The tab and panel IDs/visibility follow the same convention everywhere. */
+export function ControlPanel({
+  id,
+  value,
+  active,
+  className,
+  children,
+}: {
+  id: string;
+  value: string;
+  active: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      id={`${id}-${value}-panel`}
+      role="tabpanel"
+      aria-labelledby={`${id}-${value}`}
+      hidden={active !== value}
+      tabIndex={0}
+      className={className}
+      data-editor-panel={value}
+    >
+      {children}
+    </div>
+  );
+}
 
 /** Compact inspector navigation; only the matching labelled panel is visible. */
 export function ControlTabs<T extends string>({

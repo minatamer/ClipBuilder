@@ -18,6 +18,8 @@ import { ownerNativeTools } from "../scripts/native-tools.ts";
 import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
 import { ownerClipSchema } from "../packages/contracts/local/clips.ts";
 import { automaticOwnerEdit } from "../packages/contracts/local/edit-overlay.ts";
+import { EDITOR_TOUR_SEEN_KEY } from "../apps/frontend/src/features/local-editing/editor-tour-preference.ts";
+import { browserDiagnosticSchema } from "../packages/contracts/src/browser-diagnostic.schema.ts";
 
 declare global {
   function resetRun(action: string): Promise<boolean>;
@@ -108,9 +110,19 @@ it("resets the shared workspace through its visible footer, preserving failures 
         res
           .writeHead(200, { "Content-Type": "application/json" })
           .end(JSON.stringify(value));
+      if (req.method === "POST" && req.url === "/api/diagnostics") {
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) chunks.push(Buffer.from(chunk));
+        browserDiagnosticSchema.parse(
+          JSON.parse(Buffer.concat(chunks).toString()),
+        );
+        res.writeHead(204).end();
+        return;
+      }
       if (
         req.method === "DELETE" &&
-        req.url === `/api/local/workspace/${workspace.id}`
+        (req.url === `/api/local/workspace/${workspace.id}` ||
+          (hosted && req.url === "/api/local/session"))
       ) {
         const chunks: Buffer[] = [];
         for await (const chunk of req) chunks.push(Buffer.from(chunk));
@@ -128,6 +140,10 @@ it("resets the shared workspace through its visible footer, preserving failures 
       if (req.method !== "GET") {
         unexpectedMutations++;
         res.writeHead(400).end();
+        return;
+      }
+      if (hosted && req.url === "/api/local/session") {
+        json({ active: current !== null, limited: false, retryAt: null });
         return;
       }
       if (req.url === "/api/local/capabilities") {
@@ -257,13 +273,15 @@ it("resets the shared workspace through its visible footer, preserving failures 
       const button=t=>[...document.querySelectorAll('#sample-main > footer button')].find(n=>n.textContent.trim()===t);
       globalThis.resetRun=async action=>{
         if(action==='ready'){await wait(()=>button('Start over')&&!button('Start over').disabled);return true;}
-        if(action==='layout'){const n=button('Start over')||button('Retry reset'),r=n.getBoundingClientRect(),f=n.closest('footer').getBoundingClientRect();n.focus();return document.activeElement===n&&r.width>=44&&r.height>=44&&r.top>=f.top&&r.bottom<=f.bottom&&f.bottom<=innerHeight+1&&document.documentElement.scrollWidth<=innerWidth;}
+        if(action==='tour-seen')return localStorage.getItem(${JSON.stringify(EDITOR_TOUR_SEEN_KEY)})==='seen';
+        if(action==='tour-armed')return localStorage.getItem(${JSON.stringify(EDITOR_TOUR_SEEN_KEY)})===null;
+        if(action==='layout'){const n=button('Start over')||button('Reset options'),r=n.getBoundingClientRect(),f=n.closest('footer').getBoundingClientRect();n.focus();return document.activeElement===n&&r.width>=44&&r.height>=44&&r.top>=f.top&&r.bottom<=f.bottom&&f.bottom<=innerHeight+1&&document.documentElement.scrollWidth<=innerWidth;}
         if(action==='dirty'){await wait(()=>document.querySelector('.editor-panels:not([hidden])'));document.querySelector('[role="tab"][id$="-text"]').click();const add=()=>[...document.querySelectorAll('.clip-editor button')].find(n=>n.textContent.trim()==='Add text');await wait(()=>add());add().click();await wait(()=>button('Apply changes'));return !button('Start over').disabled;}
         if(action==='start'){button('Start over').click();return true;}
         if(action==='pending'){await wait(()=>button('Start over')?.disabled);return true;}
         if(action==='cleared'){await wait(()=>document.querySelector('h1').textContent.includes('Choose your video'));return !document.querySelector('.clip-editor,.moment-selection,.clip-choice')&&!button('Start over')&&document.activeElement===document.querySelector('h1')&&!!document.querySelector('.upload-card input')&&(!document.querySelector('input[type=url]')||document.querySelector('input[type=url]').value==='');}
-        if(action==='failed'){await wait(()=>document.querySelector('.flow-notice').textContent.includes('could not be cleared'));return !!document.querySelector('.clip-editor')&&!button('Start over').disabled;}
-        if(action==='conflict'){await wait(()=>button('Retry reset')&&button('Discard session'));return !!document.querySelector('.clip-editor')&&!button('Retry reset').disabled;}
+        if(action==='failed'){await wait(()=>document.querySelector('.session-feedback [role="alert"]')?.textContent.includes('Couldn’t reset'));return !!document.querySelector('.clip-editor')&&!button('Start over').disabled;}
+        if(action==='conflict'){await wait(()=>button('Reset options')&&!button('Reset options').disabled);button('Reset options').click();await wait(()=>button('Retry reset')&&button('Discard session'));return !!document.querySelector('.clip-editor')&&!button('Retry reset').disabled;}
         if(action==='discard'){button('Discard session').click();return true;}
         if(action==='blocked'){await wait(()=>document.querySelector('.clip-choice')&&button('Start over')?.disabled);return true;}
         if(action==='local-intake')return !!document.querySelector('input[type=url]')&&document.querySelector('input[type=url]').value==='';
@@ -295,7 +313,9 @@ it("resets the shared workspace through its visible footer, preserving failures 
       );
       await run("start");
       expect(await run("pending")).toBe(true);
+      expect(await run("tour-seen")).toBe(true);
       expect(await run("cleared")).toBe(true);
+      expect(await run("tour-armed")).toBe(true);
       expect(await run("local-intake")).toBe(true);
       expect(current).toBeNull();
     }
@@ -305,6 +325,7 @@ it("resets the shared workspace through its visible footer, preserving failures 
     await run("ready");
     await run("start");
     expect(await run("failed")).toBe(true);
+    expect(await run("tour-seen")).toBe(true);
     expect(current).toBe(workspace);
     fail = 0;
     await run("start");
@@ -316,6 +337,7 @@ it("resets the shared workspace through its visible footer, preserving failures 
     await run("dirty");
     await run("start");
     expect(await run("conflict")).toBe(true);
+    expect(await run("tour-seen")).toBe(true);
     expect(await run("layout")).toBe(true);
     fail = 0;
     await run("discard");
@@ -331,6 +353,7 @@ it("resets the shared workspace through its visible footer, preserving failures 
     active = true;
     await open(390, 844);
     expect(await run("blocked")).toBe(true);
+    expect(await run("tour-seen")).toBe(true);
     active = false;
     hosted = true;
     ui = hostedUi;
@@ -339,6 +362,7 @@ it("resets the shared workspace through its visible footer, preserving failures 
     await run("ready");
     await run("start");
     expect(await run("cleared")).toBe(true);
+    expect(await run("tour-armed")).toBe(true);
     expect(await run("hosted-intake")).toBe(true);
     expect(deletes).toEqual([
       false,

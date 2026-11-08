@@ -38,6 +38,8 @@ export async function startHookEditorFixture(
     readinessFeedback?: boolean;
     sourceSize?: { width: number; height: number };
     previewAudio?: { id: string; bytes: Uint8Array; contentType: string };
+    editorTour?: boolean;
+    holdPreview?: boolean;
   } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), "clipbuilder-hook-editor-"));
@@ -168,10 +170,57 @@ export async function startHookEditorFixture(
     digest: createHash("sha256").update(picture).digest("hex"),
   };
   clip.base!.overlay.visuals[0]!.digest = clip.assets[0]!.digest;
-  const list = () => ({ clips: [clip], active: false, workers: 1 });
+  const sibling = options.editorTour ? structuredClone(clip) : null;
+  if (sibling) {
+    sibling.id = randomUUID();
+    if (sibling.edit) sibling.edit.clipId = sibling.id;
+  }
+  let previewHeld = options.holdPreview ?? false;
+  let tourWorkspace: typeof workspace | null = workspace;
+  let tourResets = 0,
+    tourOpens = 0;
+  const pendingPreviews = new Set<() => void>();
+  const releasePreview = () => {
+    previewHeld = false;
+    for (const done of pendingPreviews) done();
+    pendingPreviews.clear();
+  };
+  const list = () => ({
+    clips: sibling ? [clip, sibling] : [clip],
+    active: false,
+    workers: 1,
+  });
   const server = createServer((req, res) => {
     void (async () => {
       res.setHeader("Content-Type", "application/json");
+      if (
+        options.editorTour &&
+        req.method === "DELETE" &&
+        req.url === `/api/local/workspace/${tourWorkspace?.id}`
+      ) {
+        req.resume();
+        tourWorkspace = null;
+        tourResets++;
+        res.writeHead(204).end();
+        return;
+      }
+      if (
+        options.editorTour &&
+        req.method === "POST" &&
+        req.url === "/api/local/open/video"
+      ) {
+        for await (const chunk of req) void chunk;
+        tourWorkspace = { ...workspace, id: randomUUID() };
+        tourOpens++;
+        res.end(
+          JSON.stringify({
+            kind: "video",
+            workspace: tourWorkspace,
+            clipId: null,
+          }),
+        );
+        return;
+      }
       if (req.url === "/api/diagnostics" && req.method === "POST") {
         const chunks: Buffer[] = [];
         let bytes = 0;
@@ -371,7 +420,19 @@ export async function startHookEditorFixture(
         return;
       }
       if (req.url === "/api/local/workspace") {
-        res.end(JSON.stringify(scenario === "/intake.html" ? null : workspace));
+        res.end(
+          JSON.stringify(
+            scenario === "/intake.html"
+              ? null
+              : options.editorTour
+                ? tourWorkspace
+                : workspace,
+          ),
+        );
+        return;
+      }
+      if (options.editorTour && req.url === "/api/local/sources/state") {
+        res.end("null");
         return;
       }
       if (req.url?.endsWith("/clips")) {
@@ -447,6 +508,17 @@ export async function startHookEditorFixture(
         return;
       }
       if (req.url?.endsWith("/source")) {
+        if (previewHeld)
+          await new Promise<void>((done) => {
+            const finish = () => {
+              pendingPreviews.delete(finish);
+              res.off("close", finish);
+              done();
+            };
+            pendingPreviews.add(finish);
+            res.once("close", finish);
+          });
+        if (res.destroyed) return;
         const match = req.headers.range?.match(/^bytes=(\d+)-(\d*)$/),
           start = Number(match?.[1] ?? 0),
           end = Math.min(
@@ -547,7 +619,7 @@ export async function startHookEditorFixture(
     bytes = await readFile(source);
     if (options.contextualFeedback)
       await writeFile(join(root, "synthetic-picture.png"), picture);
-    ui = await prepareLocalControlsFixture(root);
+    ui = await prepareLocalControlsFixture(root, false, options.editorTour);
     await writeFile(
       join(ui, "index.html"),
       '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>',
@@ -565,6 +637,8 @@ export async function startHookEditorFixture(
     const loopSource = `import React, {useRef,useState} from "react";
       import {createRoot} from "react-dom/client";
       import {ClipEditor} from "./apps/frontend/src/features/local-editing/clip-editor.tsx";
+      import {rememberEditorTour,editorTourStorage} from "./apps/frontend/src/features/local-editing/editor-tour-preference.ts";
+      if(!${Boolean(options.editorTour)})rememberEditorTour(editorTourStorage());
       const clip=${JSON.stringify(clip)};
       function Host(){const count=useRef(0),ready=useRef(0);const [report,setReport]=useState({dirty:false});const [tick,setTick]=useState(0);
         return <><button onClick={()=>setTick(tick+1)}>Render host</button><output aria-label="Activity reports">{count.current}</output><output aria-label="Preview ready reports">{ready.current}</output><ClipEditor clip={clip} workspaceId="${workspace.id}" source={{width:640,height:360}} onAccepted={()=>{}} onPreviewReady={${options.readinessFeedback ? "()=>{document.documentElement.dataset.fixtureReadyReports=String(++ready.current);if(ready.current>60)throw Error('editor_preview_ready_loop');setReport({dirty:report.dirty})}" : "undefined"}} onDirty={(_,dirty)=>{if(++count.current>60)throw Error("editor_activity_loop");setReport({dirty});}} /></>;}
@@ -628,7 +702,7 @@ export async function startHookEditorFixture(
       try {
         await build({
           stdin: {
-            contents: `import React from "react";import {createRoot} from "react-dom/client";import {LocalEditingExperience} from "./apps/frontend/src/features/local-editing/experience.tsx";import "./apps/frontend/src/styles/tokens.css";createRoot(document.getElementById("root")).render(<LocalEditingExperience/>);`,
+            contents: `import React from "react";import {createRoot} from "react-dom/client";import {LocalEditingExperience} from "./apps/frontend/src/features/local-editing/experience.tsx";import {rememberEditorTour,editorTourStorage} from "./apps/frontend/src/features/local-editing/editor-tour-preference.ts";import "./apps/frontend/src/styles/tokens.css";if(!${Boolean(options.editorTour)})rememberEditorTour(editorTourStorage());createRoot(document.getElementById("root")).render(<LocalEditingExperience/>);`,
             resolveDir: resolve("."),
             loader: "tsx",
           },
@@ -662,10 +736,21 @@ export async function startHookEditorFixture(
 
     return {
       url: `http://localhost:${port}/`,
-      syntheticMedia: options.contextualFeedback
-        ? { video: source, picture: join(root, "synthetic-picture.png") }
-        : undefined,
+      syntheticMedia:
+        options.contextualFeedback || options.editorTour
+          ? { video: source, picture: join(root, "synthetic-picture.png") }
+          : undefined,
       clip,
+      sibling,
+      releasePreview,
+      holdPreview: () => {
+        previewHeld = true;
+      },
+      tourSessionCounts: () => ({
+        resets: tourResets,
+        opens: tourOpens,
+        pendingPreviews: pendingPreviews.size,
+      }),
       counts: () => ({ edits, unexpected }),
       diagnostics: () => diagnostics.slice(),
       audioReads: () => previewAudioReads,
@@ -682,6 +767,7 @@ export async function startHookEditorFixture(
       },
       momentCounts: () => ({ analysesStarted, analysesClosed }),
       close: async () => {
+        releasePreview();
         server.closeAllConnections();
         if (server.listening)
           await new Promise<void>((done, reject) =>
@@ -691,6 +777,7 @@ export async function startHookEditorFixture(
       },
     };
   } catch (error) {
+    releasePreview();
     server.closeAllConnections();
     if (server.listening)
       await new Promise<void>((done) => server.close(() => done()));

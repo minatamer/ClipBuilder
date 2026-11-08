@@ -1,5 +1,21 @@
 # ClipBuilder frontend
 
+CL-263 adds an automatic guide for the first fully ready clip editor. A centered
+welcome offers Start tour / Skip before any highlighted walkthrough step. Shared
+buttons, glass tokens and neutral focus style frame rectangular spotlights and
+anchored cards across the existing sections. It waits for loaded media and clean,
+idle controls, pauses playback and starts no generation/edit/export request.
+Section spotlights include the selected main tab and its immediate sub-tab.
+Coordinated fades settle each destination before revealing it, including entry
+and exit. The question-mark control replays it; Close, Skip, Escape or Done restores the
+previous controls, scroll and focus. Only a versioned seen flag is stored per
+browser origin, with a page-lifetime fallback when storage is blocked. Successful
+Start over re-arms the tour for the next fully ready editor. The owner has
+approved the tour; refresh keeps the seen state and does not replay it.
+The question-mark control remains available for explicit replay. Generated
+fake/no-key fixtures cover the tour; normal real clip preparation retains its
+provider/runtime, live flags and approvals. See [CL-263](../../docs/tickets/CL-263-first-editor-guided-tour.md).
+
 CL-255 fixes a reproducible preview-readiness callback feedback loop and adds
 private editor diagnostics. The shared bridge receives only allowlisted React
 issue/component codes and bounded lifecycle/preview/activity counters, correlated

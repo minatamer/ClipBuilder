@@ -16,20 +16,12 @@ import {
 import { readOwnerClips } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
 import { ProcessingState } from "../../shared/ui/processing-state";
-import {
-  Captions,
-  Images,
-  LoaderCircle,
-  Magnet,
-  RotateCw,
-  ScanFace,
-  Sparkles,
-  SlidersHorizontal,
-  Type,
-  Upload,
-} from "lucide-react";
+import { LoaderCircle, RotateCw, Sparkles, Upload } from "lucide-react";
 import { WorkflowActions } from "./workflow-actions.tsx";
-import { ControlTabs } from "./control-tabs.tsx";
+import { ControlPanel, ControlTabs } from "./control-tabs.tsx";
+import { EDITOR_SECTIONS, type EditorSetting } from "./editor-sections";
+import { EditorTour } from "./editor-tour";
+import { isLocalClipEditable } from "./clip-readiness";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { ZodError } from "zod";
 import { textLayerErrors, captionWordError } from "./text-validation.ts";
@@ -195,32 +187,6 @@ type LayerControls = {
   onBox: (id: string, box: OwnerEditorBox) => void;
   onGestureStart: () => void;
 };
-
-const SETTINGS = [
-  "captions",
-  "text",
-  "filters",
-  "pictures",
-  "focus",
-  "hook",
-] as const;
-type EditorSetting = (typeof SETTINGS)[number];
-const SETTING_ICONS = {
-  captions: Captions,
-  text: Type,
-  filters: SlidersHorizontal,
-  pictures: Images,
-  focus: ScanFace,
-  hook: Magnet,
-} as const;
-const SETTING_LABELS = {
-  captions: "Captions",
-  text: "Text",
-  filters: "Filters",
-  pictures: "Media",
-  focus: "Camera",
-  hook: "Hook",
-} as const;
 
 function SelectionBox({
   id,
@@ -2054,89 +2020,119 @@ export function ClipEditor({
           )}
         </div>
         <div className="editor-panels" hidden={!previewLoaded}>
-          <ControlTabs
-            id={tabsId}
-            className="editor-tabs"
-            label="Clip settings"
-            items={SETTINGS.map((value) => ({
-              value,
-              label: SETTING_LABELS[value],
-              icon: SETTING_ICONS[value],
-              issue:
-                value === "text" && textIssues[0]
-                  ? Object.values(textIssues[0].issues).find(Boolean)
-                  : error && value === errorSection
-                    ? error
-                    : message &&
-                        value ===
-                          (messageArea === "audio" ? "pictures" : messageArea)
-                      ? message
-                      : value === "hook" && currentTitle?.phase === "failed"
-                        ? "Couldn’t suggest a title. Retry when ready."
-                        : undefined,
-            }))}
-            value={setting}
-            disabled={pending || trackingMode || audioImport !== null}
-            onChange={(next) => {
-              selectSetting(next);
-              if (error && next === errorSection) {
-                setOccurrence(errorOccurrence);
-                if (next === "captions") setCaptionTab(captionIssueTab);
-                if (next === "pictures")
-                  setMediaTab(errorField === "audio" ? "audio" : "pictures");
-                if (next === "pictures" && errorField === "visuals") {
-                  setPictureTab(pictureIssueTab);
-                  if (typeof errorPath[1] === "number") {
-                    const edits =
-                      errorOccurrence === "hook"
-                        ? masterDraft.hookContent?.edits
-                        : masterDraft;
-                    const cue = edits?.visuals[errorPath[1]];
-                    if (cue) setSelection(cue.id);
+          <div className="editor-navigation">
+            <ControlTabs
+              id={tabsId}
+              className="editor-tabs"
+              label="Clip settings"
+              items={EDITOR_SECTIONS.map(({ value, label, icon }) => ({
+                value,
+                label,
+                icon,
+                issue:
+                  value === "text" && textIssues[0]
+                    ? Object.values(textIssues[0].issues).find(Boolean)
+                    : error && value === errorSection
+                      ? error
+                      : message &&
+                          value ===
+                            (messageArea === "audio" ? "pictures" : messageArea)
+                        ? message
+                        : value === "hook" && currentTitle?.phase === "failed"
+                          ? "Couldn’t suggest a title. Retry when ready."
+                          : undefined,
+              }))}
+              value={setting}
+              disabled={pending || trackingMode || audioImport !== null}
+              onChange={(next) => {
+                selectSetting(next);
+                if (error && next === errorSection) {
+                  setOccurrence(errorOccurrence);
+                  if (next === "captions") setCaptionTab(captionIssueTab);
+                  if (next === "pictures")
+                    setMediaTab(errorField === "audio" ? "audio" : "pictures");
+                  if (next === "pictures" && errorField === "visuals") {
+                    setPictureTab(pictureIssueTab);
+                    if (typeof errorPath[1] === "number") {
+                      const edits =
+                        errorOccurrence === "hook"
+                          ? masterDraft.hookContent?.edits
+                          : masterDraft;
+                      const cue = edits?.visuals[errorPath[1]];
+                      if (cue) setSelection(cue.id);
+                    }
                   }
                 }
-              }
-              if (
-                message &&
-                next === (messageArea === "audio" ? "pictures" : messageArea)
-              ) {
-                setOccurrence(messageOccurrence);
-                if (messageArea === "audio") setMediaTab("audio");
-                if (messageArea === "pictures") setMediaTab("pictures");
-                if (messageArea === "text") setTextTab("content");
-              }
-              const issue = next === "text" ? textIssues[0] : undefined;
-              if (issue) {
-                const item = editorTimelineItems(playbackOverlay, "text").find(
-                  (item) =>
-                    item.id === issue.layer.id &&
-                    item.occurrence === issue.occurrence,
-                );
-                if (item) selectTimelineItem(item);
-                else {
-                  player.current?.pause();
-                  setOccurrence(issue.occurrence);
-                  setSelection(issue.layer.id);
-                  setTimelineSelection(undefined);
-                  setTextRange(null);
+                if (
+                  message &&
+                  next === (messageArea === "audio" ? "pictures" : messageArea)
+                ) {
+                  setOccurrence(messageOccurrence);
+                  if (messageArea === "audio") setMediaTab("audio");
+                  if (messageArea === "pictures") setMediaTab("pictures");
+                  if (messageArea === "text") setTextTab("content");
                 }
-                setTextTab(
-                  issue.issues.content
-                    ? "content"
-                    : issue.issues.timing
-                      ? "timing"
-                      : "style",
-                );
+                const issue = next === "text" ? textIssues[0] : undefined;
+                if (issue) {
+                  const item = editorTimelineItems(
+                    playbackOverlay,
+                    "text",
+                  ).find(
+                    (item) =>
+                      item.id === issue.layer.id &&
+                      item.occurrence === issue.occurrence,
+                  );
+                  if (item) selectTimelineItem(item);
+                  else {
+                    player.current?.pause();
+                    setOccurrence(issue.occurrence);
+                    setSelection(issue.layer.id);
+                    setTimelineSelection(undefined);
+                    setTextRange(null);
+                  }
+                  setTextTab(
+                    issue.issues.content
+                      ? "content"
+                      : issue.issues.timing
+                        ? "timing"
+                        : "style",
+                  );
+                }
+              }}
+            />
+            <EditorTour
+              ready={
+                actionsVisible &&
+                isLocalClipEditable(clip) &&
+                previewLoaded &&
+                !previewUnavailable &&
+                !playbackFailed &&
+                !pending &&
+                !dirty &&
+                !stale &&
+                !trackingMode &&
+                !captionConfirm &&
+                audioImport === null &&
+                !titleLoading &&
+                !generating &&
+                !findingVisuals &&
+                !error
               }
-            }}
-          />
-          <div
-            id={`${tabsId}-hook-panel`}
-            role="tabpanel"
-            aria-labelledby={`${tabsId}-hook`}
-            hidden={setting !== "hook"}
-            tabIndex={0}
-          >
+              footerTarget={footerTarget}
+              onStart={() => {
+                player.current?.pause();
+                return () => {
+                  setSetting(setting);
+                  setMediaTab(mediaTab);
+                };
+              }}
+              onNavigate={(step) => {
+                if (step.section) setSetting(step.section);
+                if (step.media) setMediaTab(step.media);
+              }}
+            />
+          </div>
+          <ControlPanel id={tabsId} value="hook" active={setting}>
             {setting === "hook" && (
               <>
                 <fieldset disabled={pending || !!error}>
@@ -2234,14 +2230,8 @@ export function ClipEditor({
                 <InlineFeedback message={messageFor("hook")} />
               </>
             )}
-          </div>
-          <div
-            id={`${tabsId}-text-panel`}
-            role="tabpanel"
-            aria-labelledby={`${tabsId}-text`}
-            hidden={setting !== "text"}
-            tabIndex={0}
-          >
+          </ControlPanel>
+          <ControlPanel id={tabsId} value="text" active={setting}>
             {setting === "text" && timeline("text", "Text layers")}
             {setting === "text" && (
               <fieldset disabled={pending}>
@@ -2268,14 +2258,12 @@ export function ClipEditor({
                 {sectionIssue("text")}
               </fieldset>
             )}
-          </div>
-          <div
-            id={`${tabsId}-focus-panel`}
+          </ControlPanel>
+          <ControlPanel
+            id={tabsId}
+            value="focus"
+            active={setting}
             className="focus-panel"
-            role="tabpanel"
-            aria-labelledby={`${tabsId}-focus`}
-            hidden={setting !== "focus"}
-            tabIndex={0}
           >
             {setting === "focus" && (
               <FocusPreviewControls
@@ -2364,14 +2352,8 @@ export function ClipEditor({
                 }}
               />
             )}
-          </div>
-          <div
-            id={`${tabsId}-captions-panel`}
-            role="tabpanel"
-            aria-labelledby={`${tabsId}-captions`}
-            hidden={setting !== "captions"}
-            tabIndex={0}
-          >
+          </ControlPanel>
+          <ControlPanel id={tabsId} value="captions" active={setting}>
             {setting === "captions" && timeline("caption", "Caption timeline")}
             {activeOccurrence === "hook" && !base.overlay.captions.length ? (
               <div className="caption-empty">
@@ -2692,14 +2674,8 @@ export function ClipEditor({
                 </fieldset>
               </>
             )}
-          </div>
-          <div
-            id={`${tabsId}-filters-panel`}
-            role="tabpanel"
-            aria-labelledby={`${tabsId}-filters`}
-            hidden={setting !== "filters"}
-            tabIndex={0}
-          >
+          </ControlPanel>
+          <ControlPanel id={tabsId} value="filters" active={setting}>
             {setting === "filters" && timeline("look", "Filter timeline")}
             {setting === "filters" && (
               <FilterInspector
@@ -2723,14 +2699,8 @@ export function ClipEditor({
                 onChange={changeFilter}
               />
             )}
-          </div>
-          <div
-            id={`${tabsId}-pictures-panel`}
-            role="tabpanel"
-            aria-labelledby={`${tabsId}-pictures`}
-            hidden={setting !== "pictures"}
-            tabIndex={0}
-          >
+          </ControlPanel>
+          <ControlPanel id={tabsId} value="pictures" active={setting}>
             <ControlTabs
               id={`${tabsId}-media`}
               label="Media controls"
@@ -3296,7 +3266,7 @@ export function ClipEditor({
                   />
                 )}
             </div>
-          </div>
+          </ControlPanel>
           {actionsVisible &&
             audioImport === null &&
             (stale || messageFor("action")) && (

@@ -207,13 +207,14 @@ export async function reviewFreshLocalFlow(
 export async function prepareLocalControlsFixture(
   directory: string,
   hosted = false,
+  editorTour = false,
 ) {
   const ui = join(directory, "synthetic-ui");
   await mkdir(ui);
   try {
     await build({
       stdin: {
-        contents: `import React from "react"; import {createRoot} from "react-dom/client"; import {LocalEditingExperience} from "./apps/frontend/src/features/local-editing/experience.tsx"; import "./apps/frontend/src/styles/tokens.css"; createRoot(document.getElementById("root")).render(<LocalEditingExperience hosted={${hosted}}/>);`,
+        contents: `import React from "react"; import {createRoot} from "react-dom/client"; import {LocalEditingExperience} from "./apps/frontend/src/features/local-editing/experience.tsx"; import {rememberEditorTour,editorTourStorage} from "./apps/frontend/src/features/local-editing/editor-tour-preference.ts"; import "./apps/frontend/src/styles/tokens.css"; if(!${editorTour})rememberEditorTour(editorTourStorage()); createRoot(document.getElementById("root")).render(<LocalEditingExperience hosted={${hosted}}/>);`,
         resolveDir: resolve("."),
         loader: "tsx",
       },

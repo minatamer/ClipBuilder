@@ -14,6 +14,7 @@ import { OwnerSelectionPanel } from "./selection-panel.tsx";
 import type { OwnerMomentExport } from "../../../../../packages/contracts/local/selection.ts";
 import { OwnerClipBatchPanel } from "./clip-batch-panel.tsx";
 import { SessionControls } from "./session-controls.tsx";
+import { editorTourStorage, resetEditorTour } from "./editor-tour-preference";
 import { openPickedFile } from "./open-local-file.ts";
 import { OwnerAcquisitionPanel } from "./acquisition-panel.tsx";
 import { capturePreviewTime } from "./manual-time.ts";
@@ -291,6 +292,7 @@ export function LocalEditingExperience({
       }
       if (!response.ok && response.status !== 404)
         throw new Error("unavailable");
+      resetEditorTour(editorTourStorage());
       setWorkspace(null);
       setPreviewReadyFor(null);
       setDragging(false);
@@ -648,6 +650,7 @@ export function LocalEditingExperience({
                   onRecovered={workspaceRecovered}
                   onConnected={setSessionConnected}
                   onStartOver={() => {
+                    resetEditorTour(editorTourStorage());
                     setWorkspace(null);
                     setSelection([]);
                     setHasClips(false);
