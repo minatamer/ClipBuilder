@@ -1,5 +1,33 @@
 # Shared upload/editor release preparation
 
+## Paid Cloud Run release — CL-269, 2026-11-08
+
+The owner explicitly requests pushing, deploying the current app in paid mode
+to the existing G Cloud services and then stopping the local stack. Application
+source `72b6e56` is pushed. Replacement secret-free Linux images pass non-root
+offline entrypoint checks and the full generated 500-MiB upload/editor/native
+export/cancel/retry/quota/cleanup proof. No further real Gemini run is authorized.
+Rollout/serving verification and local shutdown are complete; see
+[CL-269](../tickets/CL-269-push-paid-cloud-release-and-local-shutdown.md).
+
+The release refreshes stale runtime OS/Chromium packages and applies the
+maintainer's body-parser no-inflation workaround to the local sample parser.
+Offline scans have no remaining fixable criticals, but vendor/native findings
+and the existing FFmpeg risk deferral remain documented; this is not a zero-CVE
+or complete security/real-quality signoff. Container Analysis is disabled in the
+project and was not enabled; scanner inventory stayed local.
+
+The deployed backend uses the documented two CPUs/eight GiB with a bounded
+5376-MiB `/tmp`, background CPU, min zero/max one, existing private IAM, secret
+references/origins, ledger and paid approvals. Frontend allocation and the
+existing private renderer are preserved. Both exact replacement revisions are
+Ready and serve 100% of their service traffic. Non-processing live page/config/
+capability GETs return 200, Hook titles are available, Find visuals is false and
+direct anonymous backend health returns 403. Source/byte bounds remain unchanged.
+No real hosted AI session was created. All local launchers/watchers/worker
+identities are absent and ports 3000/4000/4200 remain free; media/config/logs are
+preserved. Previous immutable revisions/metadata remain available for rollback.
+
 ## Fresh Linux verification and commit packaging — CL-183, 2026-10-31
 
 Owner authorizes the [whole-file plan](CL180_183_COMMIT_PLAN.md) and multiple

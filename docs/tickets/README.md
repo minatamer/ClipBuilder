@@ -4,9 +4,13 @@
 
 [CL-269](CL-269-push-paid-cloud-release-and-local-shutdown.md) records explicit
 owner authorization to push the committed work, deploy to the existing G Cloud
-application in paid mode and then stop the local stack. In progress; preserve
-existing secrets/IAM/media/spend bounds, verify current artifacts and serving
-readiness, and make no further real Gemini test request.
+application in paid mode and then stop the local stack. Complete: pushed source
+`72b6e56`, refreshed/scanned immutable images, offline 500-MiB editor/native proof,
+both Ready revisions at 100%, live paid capability GETs and private backend denial.
+Hook titles are enabled and Find visuals stays off. All eighteen local process
+identities are gone and ports 3000/4000/4200 are free. Existing secrets/IAM/media/
+spend bounds are preserved; no further real Gemini run. Vendor/native findings
+and owner hosted quality/rights/device acceptance remain documented separately.
 
 ## Whole-file local commit plan — 2026-11-08
 

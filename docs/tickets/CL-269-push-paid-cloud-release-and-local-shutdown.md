@@ -1,6 +1,8 @@
 # CL-269 — Push, paid Cloud Run release and local shutdown
 
-Status: owner-authorized release preparation in progress, 2026-11-08.
+Status: scoped push, paid Cloud Run deployment and local shutdown completed,
+2026-11-08. Non-processing live readiness verified; no extra Gemini run.
+Real hosted media/quality/rights/device acceptance remains separate.
 
 The owner explicitly requests pushing the committed application, deploying it
 to the existing G Cloud application in paid mode using existing authentication,
@@ -147,3 +149,76 @@ both valid gzip and gzip with trailing bytes return 400 and subsequent health
 requests return 200. All eleven application HTTP tests pass; backend TypeScript,
 scoped lint/format and the earlier 272 relevant fake/no-key regressions provide
 the release-fix gate. No package pin or live/paid policy changed.
+
+## Replacement artifact gate
+
+The six-file whole-file release fix is committed and pushed as `72b6e56`.
+Rebuilt both closed contexts with the runtime stage cache disabled; current
+Chromium/OS patches replaced the stale cached packages without changing the
+FFmpeg pin. Both replacement entrypoint probes pass. The replacement maximum
+500-MiB upload/editor/native proof passes in 52.63 seconds, with zero external
+attempts/OOM events and complete quota/cancel/retry/exit/expiry checks. All 636
+image inputs byte/blob-match that pushed source revision.
+
+Offline Trivy reports no remaining fixable critical finding. Backend totals:
+1,561 findings (8 critical / 426 high); frontend: 215 (1 critical / 34 high).
+The only remaining fixable high entries are the duplicated body-parser copy
+covered by the documented no-inflation workaround and production sample exclusion.
+Do not present these reports as zero vulnerabilities or complete security signoff.
+
+Remaining native/vendor criticals are unfixed/deferred upstream library entries.
+The application admits only H.264/VP8/VP9 decoding and file/pipe MP4 protocols,
+excluding the reported AV1 and TLS functions; it exposes no ZIP creation, SQL,
+DBus/XML or arbitrary browser-document execution. The fixed compositor consumes
+bounded admitted assets. These are scoped reachability constraints, not library
+patches or a claim that every high finding is unreachable. Preserve the owner's
+existing SEC90-01/FFmpeg deferral and its recorded limits; no broad native upgrade
+or unrecorded risk waiver was applied. Current paid release authorization is
+explicit; real hosted quality/rights/device acceptance remains separate.
+
+Initial and replacement image/scan records remain private outside Git. Only
+replacement digests may be used for the application rollout. No cloud scan API,
+DNS, identity, secret payload or provider inference changed during this gate.
+
+## Deployment and shutdown receipt
+
+- Published the replacement immutable backend/frontend digests, preserving the
+  initial artifacts and previous serving revisions for rollback. Created both
+  replacement revisions at zero traffic, checked their exact digests/Ready
+  state and unchanged IAM, then routed both to 100% on the `cl269-72b6e56`
+  revision suffix. Actual service/resource identities and rollback metadata
+  remain outside Git. Backend digest starts `31f5b2c9`; frontend `eaacab86`.
+- Actual backend settings are two CPUs/eight GiB, 5376-MiB Memory volume mounted
+  at `/tmp`, CPU throttling false, min zero/max one, concurrency eight and
+  360-second timeout. Frontend remains one CPU/512 MiB with throttling. Existing
+  renderer, origin/identity/secret/ledger settings and DNS are preserved.
+- Live HTTPS `/start`, `/api/sample/config` and `/api/local/capabilities` return
+  200. CSP and no-store remain. Provider-ai planning/captions/Hook titles are
+  available; manual Find visuals is false. Paid analysis/assembly/render flags
+  are true. Public input remains 524,288,000 bytes / 1,200 seconds. Anonymous
+  direct backend health still returns 403; no public backend IAM was granted.
+- Verification used only non-processing GETs and metadata. No real source
+  upload, media session, new transcription/planning/image/title or paid pipeline
+  retry was performed. CL-265's single real-run allowance remains consumed.
+- Refreshed the local identity inventory after the parser edit's normal watcher
+  reload. Stopped frontend 9432, API 2036 and internal worker 8244, with dedicated
+  supervisors 8376/18884 and all eighteen captured process identities. Attempted
+  normal interruption, then used identity-checked tree cleanup for survivors.
+  Two stabilization snapshots show zero owned survivors and zero listeners on
+  3000/4000/4200. No replacement app was launched.
+- Archived then removed only the two skill-owned active runtime records after
+  cleanup. Source/library/recovery/drafts/exports, ignored configuration and
+  private diagnostics/logs were preserved. Removed the three completed owned
+  proof containers; scanner containers removed themselves after completion.
+- Operational deviations: the first traffic command's formatted response did
+  not prove its target, so actual service traffic was read back before proceeding;
+  the backend was already correctly promoted and was not submitted again. A
+  graceful-console helper detached its own console and could not launch the
+  forced fallback; a fresh shell completed the same verified cleanup. No
+  ambiguous process, unresolved cleanup or automatic provider retry remains.
+
+Final release evidence uses the planned three whole documentation files: this
+packet, ticket index and hosted release guide. Scope checks are format/whitespace,
+exact staged/committed whole-file blobs, source-code equality with deployed
+`72b6e56`, normal fast-forward push and final clean worktree/index. Detailed
+image/input/scan/traffic/health/process records remain private outside Git.
