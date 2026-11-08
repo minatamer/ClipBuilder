@@ -1023,14 +1023,7 @@ export function OwnerSelectionPanel({
                   return;
                 }
                 changed();
-                if (demoLimit && !manualOnly) {
-                  const remaining = demoLimit - rows.length - 1;
-                  if (Number(count) > remaining) {
-                    setCount(String(Math.max(1, remaining)));
-                    setLimitNotice((value) => value + 1);
-                  }
-                  if (!remaining) setManualOnly(true);
-                }
+                setManualOnly(true);
                 setRows((current) => [
                   ...current,
                   {

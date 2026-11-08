@@ -153,7 +153,7 @@ it("exports all retained pages and imports only manual rows on local desktop, ex
     });
     const driver = `globalThis.timestampProof=async action=>{
       const wait=async(fn,label)=>{for(let i=0;i<200;i++){if(fn())return;await new Promise(r=>setTimeout(r,25));}throw Error('timestamp_timeout_'+label);};
-      const button=text=>[...document.querySelectorAll('button')].find(n=>n.textContent.trim()===text);
+      const button=text=>[...document.querySelectorAll('button')].find(n=>n.getAttribute('aria-label')===text||n.textContent.trim()===text);
       if(action==='jump-keyboard-focus'){window.timestampKeyboardBefore=window.timestampJumps.length;document.querySelector('[aria-label="Jump to clip 1 start"]').focus();return true;}
       if(action==='jump-keyboard-check'){await wait(()=>window.timestampJumps.length===window.timestampKeyboardBefore+1,'keyboard_jump');return Math.abs(window.timestampJumps.at(-1)-.033)<.0001&&window.timestampPosts===0;}
       if(action==='jump'){

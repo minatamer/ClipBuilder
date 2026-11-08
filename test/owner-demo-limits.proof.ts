@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { openBrowser } from "../apps/renderer/node_modules/@remotion/renderer/dist/index.js";
 import { listenOwner } from "./owner-http.ts";
+import { ownerAnalysisRequestSchema } from "../packages/contracts/local/selection.ts";
 
 it("corrects hosted shared slots with a visible toast and replaces exhausted intake on desktop/phone while local stays open", async () => {
   const directory = await mkdtemp(join(tmpdir(), "clipbuilder-demo-limits-")),
@@ -45,11 +46,26 @@ it("corrects hosted shared slots with a visible toast and replaces exhausted int
     '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>',
   );
   let mutations = 0;
+  const submissions: ReturnType<typeof ownerAnalysisRequestSchema.parse>[] = [];
   const server = createServer((request, response) => {
     void (async () => {
       const path = new URL(request.url!, "http://localhost").pathname;
       if (path.startsWith("/api/")) {
         if (request.method !== "GET") mutations++;
+        if (request.method === "POST" && path.endsWith("/analysis")) {
+          const chunks: Buffer[] = [];
+          for await (const chunk of request) chunks.push(Buffer.from(chunk));
+          submissions.push(
+            ownerAnalysisRequestSchema.parse(
+              JSON.parse(Buffer.concat(chunks).toString()),
+            ),
+          );
+          // Transport verification only; never dispatch a provider or processing job.
+          response
+            .writeHead(503, { "Content-Type": "application/json" })
+            .end("{}");
+          return;
+        }
         let value: unknown = null;
         if (path.endsWith("/capabilities"))
           value = {
@@ -254,6 +270,68 @@ it("corrects hosted shared slots with a visible toast and replaces exhausted int
       await evaluate("!!document.querySelector('.demo-limit-feedback')"),
     ).toBe(false);
     expect(mutations).toBe(0);
+    for (const width of [1366, 390]) {
+      await page.setViewport({ width, height: 900, deviceScaleFactor: 1 });
+      for (const mode of ["local", "hosted"]) {
+        await page.goto({
+          url: `http://127.0.0.1:${port}/?mode=${mode}`,
+          timeout: 10000,
+        });
+        await wait(
+          "[...document.querySelectorAll('button')].some(n=>n.textContent==='Add clip'&&!n.disabled)",
+        );
+        const before = mutations;
+        expect(
+          await evaluate(`(async()=>{
+          const frame=()=>new Promise(requestAnimationFrame),button=text=>[...document.querySelectorAll('button')].find(n=>n.textContent===text);
+          const ai=()=>[...document.querySelectorAll('label')].find(n=>n.textContent.trim()==='Suggest clips').querySelector('input');
+          const check=(ok,label)=>{if(!ok)throw Error('manual_intent_'+label)};
+          const click=async text=>{button(text).click();await frame()};
+          const change=async(node,value)=>{const prototype=node.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(node,value);node.dispatchEvent(new Event(node.tagName==='SELECT'?'change':'input',{bubbles:true}));await frame()};
+          check(ai().checked,'default');
+          await click('Add clip');check(!ai().checked&&document.querySelectorAll('.range-row').length===1&&button('Use clips'),'first_add');
+          ai().click();await frame();check(ai().checked,'opt_in');
+          await change(document.querySelector('[aria-label="Clip 1 end"]'),'00:00:12');check(ai().checked,'edit_keeps_opt_in');
+          const window=document.querySelector('select');await change(window,'range');await change(document.querySelector('[aria-label="Analysis end"]'),'bad');
+          await click('Add clip');check(ai().checked&&document.querySelectorAll('.range-row').length===1,'rejected_add');
+          await change(window,'all');await click('Add clip');check(!ai().checked&&document.querySelectorAll('.range-row').length===2,'second_add');
+          document.querySelector('[aria-label="Remove clip 2"]').click();await frame();check(!ai().checked,'remove_keeps_opt_out');
+          document.querySelector('[aria-label="Remove clip 1"]').click();await frame();check(!ai().checked&&button('Use clips').disabled,'empty_keeps_opt_out');
+          await click('Add clip');check(!ai().checked,'manual_ready');
+          check(document.documentElement.scrollWidth<=innerWidth,'responsive_width');
+          return true;
+        })()`),
+        ).toBe(true);
+        expect(mutations).toBe(before);
+        await evaluate(
+          "[...document.querySelectorAll('button')].find(n=>n.textContent==='Use clips').click()",
+        );
+        await wait(
+          "[...document.querySelectorAll('button')].some(n=>n.textContent==='Use clips'&&!n.disabled)&&document.querySelector('.workflow-actions [role=alert],.inline-feedback[role=alert], [role=alert]')",
+        );
+        expect(submissions.at(-1)).toMatchObject({
+          manualOnly: true,
+          ranges: [{ startMs: 0, endMs: 10000 }],
+        });
+        expect(mutations).toBe(before + 1);
+        await evaluate(
+          "[...document.querySelectorAll('label')].find(n=>n.textContent.trim()==='Suggest clips').querySelector('input').click()",
+        );
+        await wait(
+          "[...document.querySelectorAll('button')].some(n=>n.textContent==='Find moments'&&!n.disabled)",
+        );
+        await evaluate(
+          "[...document.querySelectorAll('button')].find(n=>n.textContent==='Find moments').click()",
+        );
+        await wait("!!document.querySelector('[role=alert]')");
+        expect(submissions.at(-1)).toMatchObject({
+          manualOnly: false,
+          ranges: [{ startMs: 0, endMs: 10000 }],
+        });
+        expect(mutations).toBe(before + 2);
+      }
+    }
+    expect(submissions).toHaveLength(8);
     expect(interceptionFailed).toBe(false);
   } finally {
     closing = true;
