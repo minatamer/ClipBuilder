@@ -290,7 +290,7 @@ export function createApplication(
   if (sample) {
     application.use(
       "/v1/sample",
-      express.json({ limit: "8kb" }),
+      express.json({ limit: "8kb", inflate: false }),
       createSampleRouter(sample, config.frontendOrigin),
     );
   }

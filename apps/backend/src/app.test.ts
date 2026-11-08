@@ -1,5 +1,6 @@
 import { SAFE_ERROR_MESSAGES } from "@clipbuilder/contracts";
 import request from "supertest";
+import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { AnalysisDiagnostics } from "./analysis/analysis.diagnostics.js";
 
@@ -8,6 +9,24 @@ import { ApplicationError, mapError } from "./http/errorMapper.js";
 import { createSafeTestEnvironment } from "../test/environment.fixture.js";
 
 describe("backend application", () => {
+  it("rejects compressed sample JSON before inflation and remains healthy", async () => {
+    const { application } = composeBackend(createSafeTestEnvironment());
+    const compressed = gzipSync(Buffer.from("{}"));
+    for (const payload of [
+      compressed,
+      Buffer.concat([compressed, Buffer.from("trailing")]),
+    ]) {
+      const response = await request(application)
+        .post("/v1/sample/no-such-operation")
+        .set("Content-Type", "application/json")
+        .set("Content-Encoding", "gzip")
+        .send(payload)
+        .expect(400);
+      expect(response.body.error.code).toBe("INVALID_REQUEST");
+      expect(response.headers["cache-control"]).toBe("no-store");
+      await request(application).get("/v1/health").expect(200);
+    }
+  });
   it("correlates fixed analysis routes without logging request bodies, URLs or headers", async () => {
     const lines: string[] = [];
     const { application } = composeBackend(

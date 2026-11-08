@@ -1,5 +1,13 @@
 # ClipBuilder canonical ticket index
 
+## Push, paid release and local shutdown — 2026-11-08
+
+[CL-269](CL-269-push-paid-cloud-release-and-local-shutdown.md) records explicit
+owner authorization to push the committed work, deploy to the existing G Cloud
+application in paid mode and then stop the local stack. In progress; preserve
+existing secrets/IAM/media/spend bounds, verify current artifacts and serving
+readiness, and make no further real Gemini test request.
+
 ## Whole-file local commit plan — 2026-11-08
 
 The owner explicitly authorizes staging and local commits of the 23 pending

@@ -59,7 +59,8 @@ export function mapError(
     typeof error === "object" && error !== null && "type" in error
       ? error.type === "entity.too.large"
         ? "REQUEST_TOO_LARGE"
-        : error.type === "entity.parse.failed"
+        : error.type === "entity.parse.failed" ||
+            error.type === "encoding.unsupported"
           ? "INVALID_REQUEST"
           : null
       : null;

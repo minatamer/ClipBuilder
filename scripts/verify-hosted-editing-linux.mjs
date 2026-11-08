@@ -417,10 +417,10 @@ try {
     if(document.querySelector('.selection input[type="checkbox"]').checked)throw new Error('fake_ai_default_enabled');await wait(()=>button('Use clips')&&!button('Use clips').disabled);button('Use clips').click();await wait(()=>button('Process clips')&&!button('Process clips').disabled);button('Process clips').click();
     const ready=()=>document.querySelector('.editor-panels:not([hidden])')&&document.querySelector('a[aria-label="Download clip"]');
     await wait(()=>button('Export clip')&&document.querySelector('.editor-panels:not([hidden])'),'preview_ready');
-    if(!document.querySelector('.caption-empty')||document.querySelector('.picture-choice'))throw new Error('fake_defaults_not_empty');
+    if(!document.querySelector('.caption-empty')||document.querySelector('.focus-shot[data-picture]'))throw new Error('fake_defaults_not_empty');
     button('Generate captions').click();await wait(()=>document.querySelector('[aria-label="Caption generation actions"]'),'caption_consent');[...document.querySelectorAll('[aria-label="Caption generation actions"] button')].find(n=>n.textContent==='Generate captions').click();await wait(()=>!document.querySelector('.caption-empty')&&!document.querySelector('[aria-label="Caption generation actions"]'),'fake_caption_port');
     const settings=async label=>{[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent===label).click();await new Promise(requestAnimationFrame);};
-    await settings('Media');const canvas=document.createElement('canvas');canvas.width=100;canvas.height=100;const context=canvas.getContext('2d');context.fillStyle='#00ff00';context.fillRect(0,0,100,100);const blob=await new Promise(done=>canvas.toBlob(done,'image/png'));const imageTransfer=new DataTransfer();imageTransfer.items.add(new File([blob],'synthetic.png',{type:'image/png'}));const pictureInput=document.querySelector('[aria-label="Upload picture"]');pictureInput.files=imageTransfer.files;pictureInput.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('.picture-choice')&&button('Apply changes')&&!button('Apply changes').disabled,'explicit_picture');button('Apply changes').click();await wait(()=>button('Export clip')&&!button('Export clip').disabled,'picture_applied');
+    await settings('Media');const canvas=document.createElement('canvas');canvas.width=100;canvas.height=100;const context=canvas.getContext('2d');context.fillStyle='#00ff00';context.fillRect(0,0,100,100);const blob=await new Promise(done=>canvas.toBlob(done,'image/png'));const imageTransfer=new DataTransfer();imageTransfer.items.add(new File([blob],'synthetic.png',{type:'image/png'}));const pictureInput=document.querySelector('[aria-label="Upload picture"]');pictureInput.files=imageTransfer.files;pictureInput.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('.focus-shot[data-picture]')&&button('Apply changes')&&!button('Apply changes').disabled,'explicit_picture');button('Apply changes').click();await wait(()=>button('Export clip')&&!button('Export clip').disabled,'picture_applied');
     await wait(()=>{const action=button('Export clip');if(button('Apply changes')||!action||action.disabled)return false;action.click();return true;},'initial_export_start');await wait(ready,'initial_export');const first=await (await fetch(ready().href)).arrayBuffer();
     await settings('Captions');[...document.querySelectorAll('[aria-label="Caption controls"] [role="tab"]')].find(n=>n.textContent==='Style').click();await new Promise(requestAnimationFrame);const font=[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim().startsWith('Font size')).querySelector('input');await change(font,'72');
     await wait(()=>button('Apply changes'));button('Apply changes').click();await wait(()=>{const action=button('Export clip');if(button('Apply changes')||!action||action.disabled)return false;action.click();return true;},'edited_export_start');
@@ -572,29 +572,44 @@ try {
     "clip-preview": 1,
   });
   const finalRevision = (await api(base)).clips[0].outputs.at(-1).revision;
-  const monoPixel = (
-    await run(
-      "/usr/bin/ffmpeg",
-      [
-        "-nostdin",
-        "-v",
-        "error",
-        "-ss",
-        "0.5",
-        "-i",
-        join(workspace, result.clipId + `.r${finalRevision}.mp4`),
-        "-vf",
-        "crop=2:2:20:20,format=rgb24",
-        "-frames:v",
-        "1",
-        "-f",
-        "rawvideo",
-        "-",
-      ],
-      { encoding: "buffer", timeout: 20000 },
-    )
-  ).stdout;
+  const sourcePixel = async (path) =>
+    (
+      await run(
+        "/usr/bin/ffmpeg",
+        [
+          "-nostdin",
+          "-v",
+          "error",
+          "-ss",
+          "0.5",
+          "-i",
+          path,
+          "-vf",
+          // Left of the picture and below the title/captions, inside source video.
+          "crop=2:2:4:45,format=rgb24",
+          "-frames:v",
+          "1",
+          "-f",
+          "rawvideo",
+          "-",
+        ],
+        { encoding: "buffer", timeout: 20000 },
+      )
+    ).stdout;
+  const originalPixel = await sourcePixel(
+    join(workspace, result.clipId + ".r0.mp4"),
+  );
+  assert.equal(originalPixel.length, 12);
+  assert.ok(
+    originalPixel[2] - originalPixel[0] > 50 &&
+      originalPixel[2] - originalPixel[1] > 50,
+    "unfiltered_source_pixel_not_blue",
+  );
+  const monoPixel = await sourcePixel(
+    join(workspace, result.clipId + `.r${finalRevision}.mp4`),
+  );
   assert.equal(monoPixel.length, 12);
+  assert.ok(monoPixel[0] > 10, "filtered_source_pixel_missing");
   assert.ok(
     Math.max(...monoPixel.subarray(0, 3)) -
       Math.min(...monoPixel.subarray(0, 3)) <
