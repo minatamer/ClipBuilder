@@ -1,5 +1,121 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Layered visual media and optional tracking — CL-271, 2026-11-09
+
+The owner authorizes bounded manual video B-roll alongside Pictures and Audio,
+picture zoom and video pan/zoom, and explicit inset/full-frame presentation in
+the existing selected-clip editor. Several pictures and up to two active videos
+share one persisted back-to-front cue array. Selection does not change that order.
+Owner organization revision: Camera owns original-video camera settings plus
+Zoom, Pan, Face tracking and entrance/exit controls, with an explicit Camera
+target selector. Opening Camera from selected media keeps that target. Media
+owns upload/add/remove, layer selection/order, timing/trim, position/resize,
+fit/full-frame presentation and volume. Target navigation preserves independent
+effects and saved edits; effect errors belong to Camera, while media layout,
+trim and volume errors stay in Media.
+Selecting a media Camera target shows a named selection frame around that
+layer in the preview, including full-frame/covered layers. This indicator is
+read-only in Camera and never part of exports; movement/resize stays in Media.
+Original video and frames outside the cue do not retain a media selection frame.
+Media Camera targets use the same preview/inspector layout and visual crop picker
+as original Camera controls, with distinct Zoom and Pan tabs and a separate
+Transitions tab. Both pictures and videos support explicitly authored manual
+panning. Zoom edits magnification and its target frame; Pan edits start/end
+framing. The bounded saved path keeps one shared effect interval, and changes
+to magnification or pan preserve the other. Legacy fixed picture zoom and
+combined video paths remain compatible without migration or new inference.
+Preview zoom / Preview pan replay from the selected media's display Start,
+including any lead-in before the effect begins. Its Hook/body occurrence is mapped
+once; video source trim remains independent. Selecting a media Camera target or
+entering Camera from selected Media seeks its exact display Start. The small
+source preview follows the main preview's clock, with the selected name and
+current presentation timestamp in its context row. Crop adjustments pause at
+that moment without jumping to effect end. Explicit Pan Start/End choices
+seek their respective endpoints. Preserve saved timing, layout, order and the
+named selection frame; selection never rewrites an effect or applies an edit.
+While choosing a Zoom/Pan crop, the large preview temporarily shows that
+exact selected endpoint's framing and zoom at the current moment. Pan Start
+and End use their respective crops. Selected-media entrance/exit fades do not
+hide a crop being inspected; viewport, fit, layering and foreground captions stay
+intact. This inspection state belongs only to the editor. Preview / normal Play
+restore the real animation and transitions; navigation, Apply/Discard and preview
+recovery clear stale inspection. Saved edits and native exports retain the actual
+authored path and timing, with no migration or inference.
+Owner naming clarification: **Pan** means manual movement between framings;
+**Face tracking** means following a manually marked head through video frames.
+The original video also has a Pan tab, using its existing timed camera controls
+and preserving the preceding magnification. Legacy Zoom and tracking paths stay
+compatible. Original-video face tracking retains its established controls.
+Uploaded videos expose Face tracking using the same bounded browser pixel
+tracker, on the raw source rather than the main clip's padded source. Mark a
+region and explicitly Track face; opening a tab never starts tracking. Each
+saved path covers 0.2–30 seconds, binds to the immutable asset and raw trim clock,
+and is used by shared preview/native paint. Cancel discards pending work; a lost
+face keeps only a usable tracked prefix, with explicit retry. Tracking combines
+with Zoom/Pan without changing their authored paths or other layers. Manual
+crop inspection temporarily ignores tracking so the chosen crop remains exact.
+Pictures have Zoom/Pan; static pictures have no temporal face-tracking action.
+These controls need no provider key, model download or biometric identification.
+Owner hosted clarification: uploaded picture/video media and these Camera
+controls belong to the normal deployed Gemini workflow as well as local Codex.
+They are provider independent; the prior CL-271 hosted-video exclusion is lifted.
+Hosted keeps authentication, isolated temporary sessions, expiry/resource/spend
+gates and upload-only acquisition. YouTube remains local-only. Verification for
+this revision is generated/fake/no-key; no Gemini test or deployment is authorized.
+Full-frame media covers the vertical canvas with aspect-preserving crop and no
+corner gaps; its prior inset geometry remains available. A newly full-frame
+background goes behind existing visuals. Captions and titles remain above the
+visual stack; pictures, including logos, keep explicit owner-controlled ordering.
+
+Each video placement owns its source excerpt, display interval, optional effect,
+focal position and independent mute/gain. New placements are muted. Enabled sound
+joins the existing original/sound/music mix without ducking or replacing speech,
+and stays independent of visual coverage and ordering. The media element itself
+is silent; there is one derived audio cue in the existing mixer. Edits, Hook
+copies, Apply/Discard, local saved drafts and rolling recovery retain admitted
+assets and these settings without inference or reacquisition. Zoom alone keeps
+a fixed point; explicitly authored picture/video Pan interpolates framing.
+Effects use presentation
+frames, smooth deterministic easing and a held end state, retaining entrance/exit
+compatibility and normal motion under every browser/OS preference.
+
+Local and hosted processing offer tracked portrait framing or **No tracking · Fit original**.
+Fit keeps complete horizontal footage centered in the vertical frame with black
+padding and bypasses speaker-camera preparation, visual camera planning and
+automatic face follow. Transcription remains necessary for captions. Text-based
+contextual picture planning can continue. The processing choice survives retry,
+draft/recovery and preview/native export; legacy/default clips remain tracked.
+No fixed performance or credit-saving amount is promised.
+
+Video upload is available locally and in hosted sessions. It reuses authenticated transport,
+isolated asset IDs, fixed native probing/normalization and scratch accounting:
+MP4/MOV bytes up to 64 MiB, two minutes, bounded source pixels/cadence, normalized
+H.264 at 30 fps and at most a 1280-pixel edge; eight assets and twenty visual cues
+per clip, at most two overlapping video decoders. Excess overlap and invalid
+source/effect ranges block Apply contextually while preserving the draft and last
+valid preview. B-roll never loops or extends beyond its admitted frame count.
+Native export serves only verified normalized B-roll to its private authenticated
+same-origin raster page; original interview decoding remains in FFmpeg. Shared
+crop/effect/stacking math and the existing audio mixer own preview/export parity.
+Paused preview, source inspector and native rasterization sample inside the same
+logical video frame without changing persisted clocks. Native capture waits for
+that decoded frame to reach the compositor and writes a stable RGBA PNG sequence;
+opaque/transparent cue boundaries must not reset the final encoding clock.
+
+These manual media operations need no API keys on prepared/generated clips.
+Fresh real local captions use the prepared speech runtime; Codex planning needs
+the existing owner sign-in/allowance and live approvals. Fresh hosted Gemini
+processing keeps its existing provider keys, live flags and approvals. Fake/synthetic results
+remain distinct from real acceptance. CL-271 owns verification and the owner's
+single bounded paid acceptance authorization. No provider retry, configuration
+change, Git action, cloud action or deployment is implied.
+
+Earlier broad video-B-roll exclusions are superseded only for these manually
+uploaded layers. Automatic stock-video search, generated video, arbitrary remote
+URLs/downloader routes, montage/cut/splice/merge authoring and custom motion
+graphics remain outside ClipBuilder. Separate owner-requested local editing can
+produce one-off outputs without adding those capabilities to the application.
+
 ## Local Gemini source duration — CL-268, 2026-11-08
 
 Local Gemini has no product source-duration quota. Trusted composition admits

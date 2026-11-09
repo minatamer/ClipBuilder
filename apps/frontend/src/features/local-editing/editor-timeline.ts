@@ -63,7 +63,13 @@ export function editorTimelineItems(
     }
     if (kind === "picture")
       content.visuals.forEach((cue, i) =>
-        add(cue.id, i, `Picture ${i + 1}`, cue.startFrame, cue.endFrame),
+        add(
+          cue.id,
+          i,
+          `${cue.video ? "Video" : "Picture"} ${i + 1}`,
+          cue.startFrame,
+          cue.endFrame,
+        ),
       );
     if (kind === "text")
       content.texts?.forEach((layer, i) =>

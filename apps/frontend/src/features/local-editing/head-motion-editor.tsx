@@ -231,7 +231,7 @@ export function HeadMotionEditor({
       occurrence === "hook" ? prefix : focus.frames,
     );
     if (endFrame - startFrame < 6) {
-      setMessage("Choose an earlier start for Motion.");
+      setMessage("Choose an earlier start for face tracking.");
       return;
     }
     setDraft({
@@ -283,7 +283,7 @@ export function HeadMotionEditor({
         )
       ) {
         setMessage(
-          "Choose a frame in this occurrence with 0.2–30 seconds of Motion and no overlap with Zoom or another Motion interval.",
+          "Choose a frame in this occurrence with 0.2–30 seconds of face tracking and no overlap with Zoom, Pan or another tracking interval.",
         );
         return;
       }
@@ -304,7 +304,7 @@ export function HeadMotionEditor({
       duration < 6 ||
       duration > OWNER_CAMERA_FOLLOW.frames
     ) {
-      setMessage("Choose a Motion interval from 0.2 to 30 seconds.");
+      setMessage("Choose a face-tracking interval from 0.2 to 30 seconds.");
       return;
     }
     const shell = {
@@ -339,7 +339,7 @@ export function HeadMotionEditor({
       })
     ) {
       setMessage(
-        "Keep Motion inside this occurrence, up to 30 seconds, without overlapping Motion or Zoom.",
+        "Keep face tracking inside this occurrence, up to 30 seconds, without overlapping tracking, Zoom or Pan.",
       );
       return;
     }
@@ -405,7 +405,7 @@ export function HeadMotionEditor({
             <label>
               Follow
               <select
-                aria-label="Motion person"
+                aria-label="Face tracking person"
                 value={person ?? "camera"}
                 disabled={disabled || !!draft}
                 onChange={(e) => {
@@ -452,7 +452,7 @@ export function HeadMotionEditor({
         </div>
       )}
       {!available && (
-        <p role="status">Set a camera position before adding Motion.</p>
+        <p role="status">Set a camera position before adding face tracking.</p>
       )}
       {bulk ? (
         <BulkHeadMotionEditor
@@ -516,7 +516,7 @@ export function HeadMotionEditor({
                       End (seconds)
                       <input
                         type="number"
-                        aria-label="Motion end seconds"
+                        aria-label="Face tracking end seconds"
                         min={(offset + draft.startFrame + 6) / OWNER_FPS}
                         max={
                           (offset +
@@ -606,10 +606,7 @@ export function HeadMotionEditor({
               </>
             )}
           </div>
-          <WorkflowActions
-            target={footerTarget}
-            label="Motion tracking actions"
-          >
+          <WorkflowActions target={footerTarget} label="Face tracking actions">
             <span className="head-motion-actions">
               <InlineFeedback message={message} />
               <Button
@@ -645,9 +642,9 @@ export function HeadMotionEditor({
           {!!tracks.length && (
             <>
               <label>
-                Motion interval
+                Face tracking interval
                 <select
-                  aria-label="Motion interval"
+                  aria-label="Face tracking interval"
                   value={chosen?.id ?? ""}
                   onChange={(e) => {
                     const path = tracks.find(
@@ -663,11 +660,11 @@ export function HeadMotionEditor({
                   }}
                 >
                   <option value="" disabled>
-                    Choose Motion
+                    Choose tracking
                   </option>
                   {tracks.map((t, i) => (
                     <option key={t.id} value={t.id}>
-                      Motion {i + 1} · {name(t.personId)} ·{" "}
+                      Tracking {i + 1} · {name(t.personId)} ·{" "}
                       {t.occurrence === "hook" ? "Hook" : "Clip"} ·{" "}
                       {(
                         (t.startFrame +

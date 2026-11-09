@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ownerFocusSchema } from "./focus.ts";
 import { ownerCameraTracksSchema } from "./camera-follow.ts";
 import { ownerAudioAssetSchema } from "./audio.ts";
+import { ownerVideoAssetSchema } from "./video-assets.ts";
 import { localCodexJobSchema, localCodexReceiptSchema } from "./codex.ts";
 import { OWNER_PRESENTATION_MAX_FRAMES } from "./hook.ts";
 import {
@@ -96,6 +97,15 @@ export const OWNER_PROVIDER_MEDIA = {
 
 export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
   localCodexJobSchema,
+  z
+    .object({
+      operation: z.literal("normalize-video"),
+      workspaceId: ownerIdSchema,
+      jobId: ownerIdSchema,
+      assetId: ownerIdSchema,
+      audioAssetId: ownerIdSchema,
+    })
+    .strict(),
   z
     .object({
       operation: z.literal("normalize-audio"),
@@ -204,6 +214,13 @@ export const ownerMediaJobSchema = z.discriminatedUnion("operation", [
 export type OwnerMediaJob = z.infer<typeof ownerMediaJobSchema>;
 export const ownerMediaResultSchema = z.discriminatedUnion("operation", [
   localCodexReceiptSchema,
+  z
+    .object({
+      operation: z.literal("normalize-video"),
+      asset: ownerVideoAssetSchema,
+      audioAsset: ownerAudioAssetSchema.optional(),
+    })
+    .strict(),
   z
     .object({
       operation: z.literal("normalize-audio"),

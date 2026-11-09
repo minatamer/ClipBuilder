@@ -1,5 +1,20 @@
 # ClipBuilder backend
 
+CL-271 admits MP4/MOV B-roll through local and hosted authenticated workspace bridges,
+normalizes it to bounded silent H.264 plus optional PCM, and persists both in
+local hashed drafts/recovery or isolated expiring hosted sessions. Per-cue sound
+uses the existing mixer; sample-count bounds
+preserve delayed/trimmed cues and native audio resolves independently of visual
+decoding. **No tracking · Fit original** bypasses speaker-camera planning/follow
+while retaining captions and text-based picture planning. Manual edits/rendering
+need no provider keys; fresh real speech/planning retain their runtime/live gates.
+Run `corepack pnpm local:proof test/local-broll.proof.ts` for generated-only
+upload/worker/native/audio/save-reopen verification. Hosted fake transport checks
+cover video/picture upload, range reads, edit/render wiring and existing CSRF,
+session/expiry and budget guards. The controls and manual media jobs are provider
+independent; fresh Gemini processing retains its keys/live approvals. No actual
+Gemini test or hosted deployment is included in this verification.
+
 CL-268 removes the local Gemini source-duration quota while retaining its
 ten-GiB source, disk/scratch, clip-count and individual provider-input bounds.
 The normal host and worker receive the same trusted capacity; hosted source and

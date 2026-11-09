@@ -95,6 +95,10 @@ import {
 } from "../../../packages/contracts/local/text-layers.ts";
 import { critiqueOwnerVisualCue, ownerVisualClock } from "./gemini-critique.ts";
 import {
+  OWNER_VIDEO_LIMITS,
+  ownerVideoAssetSchema,
+} from "../../../packages/contracts/local/video-assets.ts";
+import {
   defaultOwnerFocus,
   ownerFocusCounts,
   type OwnerFocus,
@@ -316,6 +320,7 @@ export class OwnerClipBatch {
           clip.edit,
           clip.assets,
           clip.audioAssets,
+          clip.videoAssets,
         );
       }
       if (working(clip)) {
@@ -563,9 +568,16 @@ export class OwnerClipBatch {
             clip.audioAssets ?? [],
             edit.hook,
             prior,
+            clip.videoAssets,
           );
         }
-        compileOwnerOverlay(base, edit, clip.assets, clip.audioAssets);
+        compileOwnerOverlay(
+          base,
+          edit,
+          clip.assets,
+          clip.audioAssets,
+          clip.videoAssets,
+        );
         clip.base = base;
         clip.baseHash = baseHash;
         clip.edit = edit;
@@ -758,7 +770,13 @@ export class OwnerClipBatch {
             },
           });
           const assets = [...clip.assets, ...created.map((item) => item.asset)];
-          compileOwnerOverlay(clip.base, edit, assets, clip.audioAssets);
+          compileOwnerOverlay(
+            clip.base,
+            edit,
+            assets,
+            clip.audioAssets,
+            clip.videoAssets,
+          );
           clip.assets = assets;
           clip.edit = edit;
           clip.revision = edit.revision;
@@ -833,6 +851,78 @@ export class OwnerClipBatch {
       }
       this.changed();
       return { ...this.snapshot(), pictureAssetId: asset.id };
+    });
+  }
+  async video(id: string, bytes: Buffer, signal: AbortSignal) {
+    return this.serialize(async () => {
+      const clip = this.clips.get(id);
+      if (
+        this.closing ||
+        this.active ||
+        !clip?.base ||
+        bytes.length < 1 ||
+        bytes.length > OWNER_VIDEO_LIMITS.inputBytes ||
+        (clip.videoAssets?.length ?? 0) >= OWNER_VIDEO_LIMITS.assets
+      )
+        throw new Error("video_unavailable");
+      await this.reserve(
+        0,
+        0,
+        bytes.length + OWNER_VIDEO_LIMITS.bytes + OWNER_AUDIO_LIMITS.bytes,
+      );
+      const assetId = randomUUID(),
+        audioAssetId = randomUUID(),
+        input = await this.files.video(this.workspace.id, assetId, true),
+        output = await this.files.video(this.workspace.id, assetId),
+        audio = await this.files.audio(this.workspace.id, audioAssetId);
+      this.audioProcessing = true;
+      this.changed();
+      let accepted = false;
+      try {
+        signal.throwIfAborted();
+        await writeFile(input, bytes, { flag: "wx", mode: 0o600 });
+        const result = await this.ports.render(
+          {
+            operation: "normalize-video",
+            workspaceId: this.workspace.id,
+            jobId: randomUUID(),
+            assetId,
+            audioAssetId,
+          },
+          signal,
+        );
+        signal.throwIfAborted();
+        if (
+          this.closing ||
+          result.operation !== "normalize-video" ||
+          result.asset.id !== assetId ||
+          result.asset.hasAudio !== Boolean(result.audioAsset) ||
+          (result.audioAsset &&
+            (result.audioAsset.id !== audioAssetId ||
+              result.audioAsset.frames !== result.asset.frames ||
+              result.asset.audioAssetId !== audioAssetId ||
+              (clip.audioAssets?.length ?? 0) >= OWNER_AUDIO_LIMITS.assets))
+        )
+          throw new Error("video_unavailable");
+        (clip.videoAssets ??= []).push(
+          ownerVideoAssetSchema.parse(result.asset),
+        );
+        if (result.audioAsset)
+          (clip.audioAssets ??= []).push(
+            ownerAudioAssetSchema.parse(result.audioAsset),
+          );
+        accepted = true;
+        this.audioProcessing = false;
+        return { ...this.snapshot(), videoAssetId: assetId };
+      } finally {
+        await rm(input, { force: true });
+        if (!accepted) {
+          await rm(output, { force: true });
+          await rm(audio, { force: true });
+        }
+        this.audioProcessing = false;
+        this.changed();
+      }
     });
   }
   async audio(id: string, bytes: Buffer, signal: AbortSignal) {
@@ -984,6 +1074,7 @@ export class OwnerClipBatch {
         sourceRevision: this.workspace.revision,
         revision: 0,
         assemblyRevision: 0,
+        ...(request.framing ? { framing: request.framing } : {}),
         baseHash: null,
         state: "queued",
         base: null,
@@ -1031,6 +1122,10 @@ export class OwnerClipBatch {
           (sum, clip) =>
             sum +
             clip.assets.reduce((total, asset) => total + asset.bytes, 0) +
+            (clip.videoAssets ?? []).reduce(
+              (total, asset) => total + asset.bytes,
+              0,
+            ) +
             (clip.audioAssets ?? []).reduce(
               (total, asset) => total + asset.bytes,
               0,
@@ -1139,6 +1234,7 @@ export class OwnerClipBatch {
         clip.edit,
         clip.assets,
         clip.audioAssets,
+        clip.videoAssets,
       ),
       editRevision: clip.revision,
     });
@@ -1251,7 +1347,11 @@ export class OwnerClipBatch {
       // A completed partial checkpoint owns the refined words on retry/restore.
       if (preparation.moment.speakersPrepared === true) {
         moment = structuredClone(preparation.moment);
-      } else if (moment.speakersPrepared === false && this.ports.prepareWords) {
+      } else if (
+        clip.framing !== "fit" &&
+        moment.speakersPrepared === false &&
+        this.ports.prepareWords
+      ) {
         clip.preparationStage = "speakers";
         this.changed();
         const words = ownerWordsSchema.parse(
@@ -1274,7 +1374,11 @@ export class OwnerClipBatch {
       clip.calls.plan++;
       preparation.plan = timePlannedVisuals(
         ownerClipPlanSchema.parse(
-          await this.ports.plan(
+          await (
+            clip.framing === "fit"
+              ? (this.ports.planVisuals ?? (async () => []))
+              : this.ports.plan
+          )(
             {
               workspace: structuredClone(this.workspace),
               clipId: clip.id,
@@ -1288,11 +1392,13 @@ export class OwnerClipBatch {
       if (!hasPlannedVisualCoverage(preparation.plan, frames))
         this.diagnostics.critique("visual_validate", "visual_plan_shortfall");
       preparation.focus =
-        this.ports.focus?.({
-          workspace: structuredClone(this.workspace),
-          clipId: clip.id,
-          moment: structuredClone(moment),
-        }) ?? defaultOwnerFocus(this.workspace.source, frames);
+        clip.framing === "fit"
+          ? undefined
+          : (this.ports.focus?.({
+              workspace: structuredClone(this.workspace),
+              clipId: clip.id,
+              moment: structuredClone(moment),
+            }) ?? defaultOwnerFocus(this.workspace.source, frames));
       preparation.texts = ownerTextLayersSchema.parse(
         this.ports.texts?.({
           workspace: structuredClone(this.workspace),
@@ -1309,10 +1415,11 @@ export class OwnerClipBatch {
         frames,
       );
       if (suggested) preparation.hookSuggestion = suggested;
-      this.diagnostics.focus(
-        "focus_compile",
-        ownerFocusCounts(preparation.focus),
-      );
+      if (preparation.focus)
+        this.diagnostics.focus(
+          "focus_compile",
+          ownerFocusCounts(preparation.focus),
+        );
       this.changed();
     }
     const plan = preparation.plan;
@@ -1431,8 +1538,13 @@ export class OwnerClipBatch {
               },
             }
           : {}),
-        focus:
-          preparation.focus ?? defaultOwnerFocus(this.workspace.source, frames),
+        ...(clip.framing === "fit"
+          ? { framing: "fit" }
+          : {
+              focus:
+                preparation.focus ??
+                defaultOwnerFocus(this.workspace.source, frames),
+            }),
       },
     });
   }

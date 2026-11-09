@@ -1,9 +1,10 @@
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
-import { constants } from "node:fs";
+import { constants, createReadStream } from "node:fs";
 import { lstat, readFile, writeFile, link, copyFile } from "node:fs/promises";
 import { join } from "node:path";
 import { openBrowser } from "@remotion/renderer";
+import sharp from "sharp";
 import {
   OWNER_BATCH_POLICY,
   type OwnerOverlay,
@@ -16,6 +17,12 @@ import type { OwnerOverlayClock } from "../../../packages/contracts/local/visual
 // Keep each shared PNG below Windows' per-file hardlink limit.
 const OVERLAY_LINKS_PER_FILE = 512;
 
+/** Opaque Chromium screenshots become RGB. Keep one pixel format throughout
+ * the PNG sequence so FFmpeg does not reset its filter clock at cue boundaries. */
+export async function normalizeOwnerOverlayPng(png: Buffer): Promise<Buffer> {
+  return png[25] === 6 ? png : sharp(png).ensureAlpha().png().toBuffer();
+}
+
 /** Fixed local React page; no Remotion media proxy, arbitrary URL or source video. */
 export async function rasterizeOwnerOverlay(
   options: {
@@ -27,6 +34,7 @@ export async function rasterizeOwnerOverlay(
     pixelRatio?: number;
     clock?: OwnerOverlayClock;
     budget?: { bytes: number };
+    videos?: Record<string, { file: string; bytes: number }> | undefined;
   },
   signal: AbortSignal,
 ) {
@@ -64,6 +72,40 @@ export async function rasterizeOwnerOverlay(
     }
     if (req.url === "/favicon.ico") {
       res.writeHead(204).end();
+      return;
+    }
+    const videoId = /^\/video\/([a-f0-9-]{36})\.mp4$/.exec(req.url ?? "")?.[1];
+    const video = videoId ? options.videos?.[videoId] : undefined;
+    if (video && cookie) {
+      const range = req.headers.range;
+      const match = range ? /^bytes=(\d+)-(\d*)$/.exec(range) : null;
+      const start = match ? Number(match[1]) : 0,
+        end = match?.[2] ? Number(match[2]) : video.bytes - 1;
+      if (
+        (range && !match) ||
+        !Number.isSafeInteger(start) ||
+        !Number.isSafeInteger(end) ||
+        start < 0 ||
+        end < start ||
+        end >= video.bytes
+      ) {
+        res.writeHead(416, { "Content-Range": `bytes */${video.bytes}` }).end();
+        return;
+      }
+      res.writeHead(range ? 206 : 200, {
+        "Content-Type": "video/mp4",
+        "Content-Length": end - start + 1,
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        ...(range
+          ? { "Content-Range": `bytes ${start}-${end}/${video.bytes}` }
+          : {}),
+      });
+      const stream = createReadStream(video.file, { start, end });
+      stream.on("error", () => res.destroy());
+      res.on("close", () => stream.destroy());
+      stream.pipe(res);
       return;
     }
     const file = staticFiles.get(req.url ?? "");
@@ -131,7 +173,15 @@ export async function rasterizeOwnerOverlay(
       (value) => globalThis.clipbuilderOwnerPrepare(value),
       JSON.stringify({
         overlay: options.overlay,
-        assets: options.assets,
+        assets: {
+          ...options.assets,
+          ...Object.fromEntries(
+            Object.keys(options.videos ?? {}).map((id) => [
+              id,
+              `http://127.0.0.1:${address.port}/video/${id}.mp4`,
+            ]),
+          ),
+        },
         ...(options.clock ? { clock: options.clock } : {}),
       }),
     );
@@ -173,7 +223,9 @@ export async function rasterizeOwnerOverlay(
       const captured = await page
         ._client()
         .send("Page.captureScreenshot", { format: "png", fromSurface: true });
-      const buffer = Buffer.from(captured.value.data, "base64");
+      const buffer = await normalizeOwnerOverlayPng(
+        Buffer.from(captured.value.data, "base64"),
+      );
       budget.bytes += buffer.length;
       if (budget.bytes > OWNER_BATCH_POLICY.overlayBytes)
         throw new Error("overlay_capacity");

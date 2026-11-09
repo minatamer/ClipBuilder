@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Clock3, Play, Trash2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
+import { CameraTargetSurface } from "./camera-target-surface.tsx";
 import { FocusPreviewSlot } from "./focus-preview-slot";
 import { defaultCameraZoom } from "./camera-zoom-default.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
@@ -23,6 +24,8 @@ import {
   ownerCameraTargetSchema,
   ownerCameraTargetCrop,
   ownerCameraEffectsFit,
+  ownerCameraCropAt,
+  ownerCameraPanCrop,
   type OwnerCameraEffect,
 } from "../../../../../packages/contracts/local/camera-motion.ts";
 import type { OwnerCameraTrack } from "../../../../../packages/contracts/local/camera-follow.ts";
@@ -30,6 +33,7 @@ import type { OwnerCameraTrack } from "../../../../../packages/contracts/local/c
 const seconds = (frames: number) =>
   Number.isFinite(frames) ? Number((frames / OWNER_FPS).toFixed(3)) : "";
 export function CameraMotionEditor({
+  mode = "zoom",
   focus,
   effects,
   previewEffects,
@@ -45,6 +49,7 @@ export function CameraMotionEditor({
   available,
   disabled,
 }: {
+  mode?: "zoom" | "pan";
   focus: OwnerFocus;
   effects: OwnerCameraEffect[];
   previewEffects?: readonly OwnerCameraEffect[] | undefined;
@@ -63,7 +68,9 @@ export function CameraMotionEditor({
   const [selected, setSelected] = useState<string | null>(null),
     [capturingStart, setCapturingStart] = useState(false),
     [message, setMessage] = useState("");
-  const effect = effects.find((item) => item.id === selected) ?? effects[0];
+  const choices = effects.filter((item) => (item.kind ?? "zoom") === mode);
+  const label = mode === "pan" ? "Pan" : "Zoom";
+  const effect = choices.find((item) => item.id === selected) ?? choices[0];
   const paintedEffect =
     previewEffects?.find((item) => item.id === effect?.id) ?? effect;
   const prefix = ownerHookFrames({ hook }),
@@ -76,15 +83,34 @@ export function CameraMotionEditor({
     ? (paintedEffect.occurrence === "hook" ? (hook?.startFrame ?? 0) : 0) +
       start
     : 0;
-  const baseline = ownerFocusCrop(focus, ownerFocusAt(focus, sourceStart));
   const content = ownerSourceContent(focus.source);
+  const baseline =
+    mode === "pan"
+      ? content
+      : ownerFocusCrop(focus, ownerFocusAt(focus, sourceStart));
   const fallback = { centerX: 0.5, centerY: 0.5, zoom: 2 };
   const target =
     paintedEffect &&
     ownerCameraTargetSchema.safeParse(paintedEffect.target).success
       ? paintedEffect.target
       : fallback;
-  const crop = ownerCameraTargetCrop(focus, target);
+  const crop =
+    mode === "pan" && paintedEffect
+      ? ownerCameraPanCrop(
+          focus,
+          target,
+          ownerCameraCropAt(
+            focus,
+            (previewEffects ?? effects).filter(
+              (item) => item.id !== paintedEffect.id,
+            ),
+            sourceStart,
+            paintedEffect.occurrence,
+            start,
+            tracks,
+          ),
+        )
+      : ownerCameraTargetCrop(focus, target);
   const x = (crop.x + crop.width / 2 - baseline.x) / baseline.width,
     y = (crop.y + crop.height / 2 - baseline.y) / baseline.height;
   const arrival = effect ? offset + effect.startFrame + effect.zoomFrames : 0;
@@ -108,9 +134,7 @@ export function CameraMotionEditor({
       ? (content.y + effect.target.centerY * content.height - baseline.y) /
         baseline.height
       : 0.5;
-  const media = useRef<HTMLVideoElement>(null),
-    surface = useRef<HTMLButtonElement>(null),
-    pointer = useRef<number | null>(null);
+  const media = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const video = media.current;
     if (
@@ -210,13 +234,6 @@ export function CameraMotionEditor({
       },
     });
   }
-  function point(event: PointerEvent<HTMLButtonElement>) {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    move(
-      (event.clientX - bounds.left) / bounds.width,
-      (event.clientY - bounds.top) / bounds.height,
-    );
-  }
   async function add() {
     const at = await capture();
     if (at === null) {
@@ -233,7 +250,7 @@ export function CameraMotionEditor({
       setMessage(
         initial.error === "position"
           ? "Move the playhead inside the selected camera position."
-          : "Choose an earlier start in this position for a gradual zoom.",
+          : `Choose an earlier start in this position for a gradual ${mode}.`,
       );
       return;
     }
@@ -241,6 +258,36 @@ export function CameraMotionEditor({
       id: crypto.randomUUID(),
       ...initial.effect,
     };
+    if (mode === "pan") {
+      const sourceAt =
+        (next.occurrence === "hook" ? (hook?.startFrame ?? 0) : 0) +
+        next.startFrame;
+      const current = ownerCameraCropAt(
+        focus,
+        effects,
+        sourceAt,
+        next.occurrence,
+        next.startFrame,
+        tracks,
+      );
+      const unit = ownerCameraTargetCrop(focus, {
+        centerX: 0.5,
+        centerY: 0.5,
+        zoom: 1,
+      });
+      next.kind = "pan";
+      next.target = {
+        centerX: Math.max(
+          0,
+          Math.min(
+            1,
+            (current.x + current.width / 2 - content.x) / content.width + 0.15,
+          ),
+        ),
+        centerY: (current.y + current.height / 2 - content.y) / content.height,
+        zoom: Math.max(1, Math.min(8, unit.width / current.width)),
+      };
+    }
     if (
       !ownerCameraEffectsSchema.safeParse([...effects, next]).success ||
       !ownerCameraEffectsFit([...effects, next], {
@@ -249,7 +296,7 @@ export function CameraMotionEditor({
         cameraTracks: tracks,
       })
     ) {
-      setMessage("Leave space between Zoom and Motion effects.");
+      setMessage("Leave space between Zoom, Pan and face-tracking intervals.");
       return;
     }
     onChange([...effects, next]);
@@ -261,16 +308,16 @@ export function CameraMotionEditor({
       className="camera-motion-editor"
       disabled={disabled || capturingStart}
     >
-      <legend className="local-sr-only">Manual zoom</legend>
+      <legend className="local-sr-only">Manual {mode}</legend>
       {!available && (
         <p role="status">Set a camera position before adding a zoom.</p>
       )}
       <div className="collection-navigation zoom-effect-actions">
         <label>
-          Zoom effect
+          {label} effect
           <select
             className="select-control"
-            aria-label="Zoom effect"
+            aria-label={`${label} effect`}
             value={effect?.id ?? ""}
             onChange={(event) => {
               setSelected(event.currentTarget.value);
@@ -285,9 +332,9 @@ export function CameraMotionEditor({
             }}
           >
             <option value="" disabled>
-              No zooms
+              No {mode === "pan" ? "pans" : "zooms"}
             </option>
-            {effects.map((item, index) => (
+            {choices.map((item, index) => (
               <option key={item.id} value={item.id}>
                 {index + 1} · {item.occurrence === "hook" ? "Hook" : "Body"} ·{" "}
                 {seconds(
@@ -316,7 +363,10 @@ export function CameraMotionEditor({
           <FocusPreviewSlot>
             <div
               className="focus-source zoom-target-preview"
-              style={{ aspectRatio: "9/16", maxWidth: 150 }}
+              style={{
+                aspectRatio: `${baseline.width}/${baseline.height}`,
+                maxWidth: mode === "pan" ? undefined : 150,
+              }}
             >
               <video
                 ref={media}
@@ -341,80 +391,27 @@ export function CameraMotionEditor({
                   top: `${(-baseline.y / baseline.height) * 100}%`,
                 }}
               />
-              <button
-                ref={surface}
-                type="button"
-                className="zoom-target-surface"
-                aria-label="Zoom target"
+              <CameraTargetSurface
+                label={`${label} target`}
                 disabled={disabled || capturingStart}
-                onPointerDown={(event) => {
-                  if (event.button !== 0) return;
-                  event.preventDefault();
-                  event.currentTarget.focus();
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  pointer.current = event.pointerId;
+                x={x}
+                y={y}
+                crop={{
+                  x: (crop.x - baseline.x) / baseline.width,
+                  y: (crop.y - baseline.y) / baseline.height,
+                  width: crop.width / baseline.width,
+                  height: crop.height / baseline.height,
+                }}
+                onSelect={() =>
                   seek(
                     Math.max(
                       0,
                       Math.min(focus.frames + prefix - 1, targetFrame),
                     ),
-                  );
-                  point(event);
-                }}
-                onPointerMove={(event) => {
-                  if (pointer.current === event.pointerId) point(event);
-                }}
-                onPointerUp={() => {
-                  pointer.current = null;
-                }}
-                onPointerCancel={() => {
-                  pointer.current = null;
-                }}
-                onLostPointerCapture={() => {
-                  pointer.current = null;
-                }}
-                onKeyDown={(event) => {
-                  const step = event.shiftKey ? 0.05 : 0.01,
-                    dx =
-                      event.key === "ArrowRight"
-                        ? step
-                        : event.key === "ArrowLeft"
-                          ? -step
-                          : 0,
-                    dy =
-                      event.key === "ArrowDown"
-                        ? step
-                        : event.key === "ArrowUp"
-                          ? -step
-                          : 0;
-                  if (dx || dy) {
-                    event.preventDefault();
-                    seek(
-                      Math.max(
-                        0,
-                        Math.min(focus.frames + prefix - 1, targetFrame),
-                      ),
-                    );
-                    move(x + dx, y + dy);
-                  }
-                }}
-              >
-                <span
-                  className="focus-crop"
-                  style={{
-                    left: `${((crop.x - baseline.x) / baseline.width) * 100}%`,
-                    top: `${((crop.y - baseline.y) / baseline.height) * 100}%`,
-                    width: `${(crop.width / baseline.width) * 100}%`,
-                    height: `${(crop.height / baseline.height) * 100}%`,
-                  }}
-                />
-                <span
-                  className="zoom-target-marker"
-                  style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
-                >
-                  +
-                </span>
-              </button>
+                  )
+                }
+                onMove={move}
+              />
             </div>
           </FocusPreviewSlot>
           <div className="editor-fields focus-fields">
@@ -422,7 +419,7 @@ export function CameraMotionEditor({
               <label>
                 Start (s)
                 <input
-                  aria-label="Zoom start seconds"
+                  aria-label={`${label} start seconds`}
                   type="number"
                   min={offset / OWNER_FPS}
                   step={1 / OWNER_FPS}
@@ -442,7 +439,7 @@ export function CameraMotionEditor({
               <Button
                 variant="quiet"
                 icon={Clock3}
-                aria-label="Capture zoom start"
+                aria-label={`Capture ${mode} start`}
                 title="Use current preview frame"
                 disabled={disabled || capturingStart || !captureReady}
                 onClick={() => void captureStart()}
@@ -453,7 +450,7 @@ export function CameraMotionEditor({
             <label>
               Reach target in (s)
               <input
-                aria-label="Zoom duration seconds"
+                aria-label={`${label} duration seconds`}
                 type="number"
                 min={1 / OWNER_FPS}
                 step={1 / OWNER_FPS}
@@ -470,35 +467,39 @@ export function CameraMotionEditor({
                 }
               />
             </label>
-            <label>
-              Target zoom
-              <input
-                aria-label="Zoom magnification"
-                type="number"
-                min={1}
-                max={8}
-                step={0.05}
-                value={
-                  Number.isFinite(effect.target.zoom) ? effect.target.zoom : ""
-                }
-                onChange={(event) =>
-                  update({
-                    target: {
-                      ...effect.target,
-                      zoom:
-                        event.currentTarget.value === ""
-                          ? NaN
-                          : Number(event.currentTarget.value),
-                    },
-                  })
-                }
-              />
-            </label>
+            {mode === "zoom" && (
+              <label>
+                Target zoom
+                <input
+                  aria-label="Zoom magnification"
+                  type="number"
+                  min={1}
+                  max={8}
+                  step={0.05}
+                  value={
+                    Number.isFinite(effect.target.zoom)
+                      ? effect.target.zoom
+                      : ""
+                  }
+                  onChange={(event) =>
+                    update({
+                      target: {
+                        ...effect.target,
+                        zoom:
+                          event.currentTarget.value === ""
+                            ? NaN
+                            : Number(event.currentTarget.value),
+                      },
+                    })
+                  }
+                />
+              </label>
+            )}
             {(["x", "y"] as const).map((axis) => (
               <label key={axis}>
                 Target {axis.toUpperCase()} (%)
                 <input
-                  aria-label={`Zoom target ${axis}`}
+                  aria-label={`${label} target ${axis}`}
                   type="number"
                   min={0}
                   max={100}
@@ -559,7 +560,7 @@ export function CameraMotionEditor({
               disabled={!captureReady || !valid}
               onClick={() => preview(offset + effect.startFrame)}
             >
-              Preview zoom
+              Preview {mode}
             </Button>
             <Button
               variant="quiet"
@@ -568,7 +569,7 @@ export function CameraMotionEditor({
                 onChange(effects.filter((item) => item.id !== effect.id))
               }
             >
-              Remove zoom
+              Remove {mode}
             </Button>
           </div>
         </>

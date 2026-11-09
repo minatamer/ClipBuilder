@@ -96,6 +96,19 @@ export async function ownerAudioMediaPath(
     `${assetId}.${input ? "audio-input" : "wav"}`,
   );
 }
+export async function ownerVideoMediaPath(
+  root: string,
+  id: string,
+  assetId: string,
+  input = false,
+) {
+  ownerIdSchema.parse(assetId);
+  return admittedMediaPath(
+    root,
+    id,
+    `${assetId}.${input ? "video-input" : "video.mp4"}`,
+  );
+}
 export async function ownerAcquisitionMediaPath(
   root: string,
   id: string,
@@ -262,46 +275,80 @@ export async function inspectOwnerMedia(
   // the decoder never emits. Use packet presentation ends so endpoint cuts do
   // not ask the CFR filter for nonexistent source frames. B-frame decode order
   // is irrelevant to this maximum; the bounded probe never decodes source pixels.
-  const packets = await runOwnedProcess(
-    tools.ffprobe,
-    [
-      "-v",
-      "error",
-      ...SOURCE_INPUT_OPTIONS,
-      "-select_streams",
-      "v:0",
-      "-read_intervals",
-      `${Math.max(videoStart, videoStart + (video.duration ?? probe.format.duration) - 60)}%`,
-      "-show_packets",
-      "-show_entries",
-      "packet=pts_time,duration_time",
-      "-of",
-      "csv=p=0",
-      file,
-    ],
-    signal,
-    {
-      maxStdout: 16 * 1024 ** 2,
-      timeoutMs: capacity.longSources
-        ? OWNER_ACQUISITION_LIMITS.metadataMs
-        : undefined,
-    },
-  );
-  let videoEnd = videoStart;
-  for (const row of packets.trim().split(/\r?\n/)) {
-    const parts = row.split(",");
-    if (parts.length !== 2 || parts.some((part) => part.trim() === ""))
+  const streamDuration = video.duration ?? probe.format.duration;
+  const tailStart = Math.max(videoStart, videoStart + streamDuration - 60);
+  const readPackets = (start?: number) =>
+    runOwnedProcess(
+      tools.ffprobe,
+      [
+        "-v",
+        "error",
+        ...SOURCE_INPUT_OPTIONS,
+        "-select_streams",
+        "v:0",
+        ...(start === undefined ? [] : ["-read_intervals", `${start}%`]),
+        "-show_packets",
+        "-show_entries",
+        "packet=pts_time,duration_time:packet_side_data=",
+        "-of",
+        "json",
+        file,
+      ],
+      signal,
+      {
+        maxStdout: 16 * 1024 ** 2,
+        timeoutMs: capacity.longSources
+          ? OWNER_ACQUISITION_LIMITS.metadataMs
+          : undefined,
+      },
+    );
+  let packets = await readPackets(streamDuration > 60 ? tailStart : undefined);
+  // CSV may add columns/blank records for optional packet sections. Read named
+  // clock fields instead; ancillary metadata cannot change the packet shape.
+  const numericClock = z
+    .string()
+    .trim()
+    .min(1)
+    .transform(Number)
+    .pipe(z.number().finite());
+  const decodePackets = (value: string): unknown => {
+    try {
+      return JSON.parse(value);
+    } catch {
       throw new Error("invalid_video_clock");
-    const [pts, duration] = parts.map(Number);
-    if (
-      !Number.isFinite(pts) ||
-      !Number.isFinite(duration) ||
-      !duration ||
-      duration < 0
-    )
-      throw new Error("invalid_video_clock");
-    videoEnd = Math.max(videoEnd, pts! + duration);
+    }
+  };
+  let packetData = decodePackets(packets);
+  // An MP4 tail seek can land beyond its last readable packet. A short source
+  // needs no seek; a long source gets one bounded earlier metadata window.
+  if (
+    streamDuration > 60 &&
+    typeof packetData === "object" &&
+    packetData !== null &&
+    "packets" in packetData &&
+    Array.isArray(packetData.packets) &&
+    packetData.packets.length === 0
+  ) {
+    packets = await readPackets(Math.max(videoStart, tailStart - 60));
+    packetData = decodePackets(packets);
   }
+  const clock = z
+    .object({
+      packets: z
+        .array(
+          z.object({
+            pts_time: numericClock,
+            duration_time: numericClock.pipe(z.number().positive()),
+          }),
+        )
+        .min(1),
+    })
+    .safeParse(packetData);
+  if (!clock.success) throw new Error("invalid_video_clock");
+  const videoEnd = clock.data.packets.reduce(
+    (end, packet) => Math.max(end, packet.pts_time + packet.duration_time),
+    videoStart,
+  );
   const hash = createHash("sha256");
   const input = createReadStream(file, { signal });
   let lastRead = Date.now();
@@ -514,8 +561,9 @@ export async function validateOwnerOutput(
     Math.abs((video.duration ?? Infinity) * 1000 - durationMs) > 100 ||
     Math.abs((audio.duration ?? Infinity) * 1000 - durationMs) > 100 ||
     Math.abs(result.format.duration * 1000 - durationMs) > 100
-  )
+  ) {
     throw new Error("invalid_output");
+  }
   const counted = z
     .object({
       streams: z

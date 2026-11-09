@@ -24,6 +24,37 @@ const effect: OwnerCameraEffect = {
   returnFrames: 12,
   target: { centerX: 0.7, centerY: 0.4, zoom: 2.4 },
 };
+it("pans at constant magnification after a zoom, holds to the next camera cut and keeps Hook/body independent", () => {
+  const focus = defaultOwnerFocus({ width: 1920, height: 1080 }, 90);
+  const zoom = {
+    ...effect,
+    startFrame: 0,
+    zoomFrames: 6,
+    holdFrames: 6,
+    returnFrames: 0 as const,
+  };
+  const pan = {
+    ...effect,
+    id: crypto.randomUUID(),
+    kind: "pan" as const,
+    startFrame: 15,
+    zoomFrames: 12,
+    holdFrames: 3,
+    returnFrames: 0 as const,
+    target: { centerX: 0.2, centerY: 0.7, zoom: 1 },
+  };
+  const at = (frame: number) =>
+    ownerCameraCropAt(focus, [zoom, pan], frame, "body", frame);
+  for (const frame of [15, 20, 26, 29, 70]) {
+    expect(at(frame).width).toBeCloseTo(at(14).width, 10);
+    expect(at(frame).height).toBeCloseTo(at(14).height, 10);
+  }
+  expect(at(26).x).toBeLessThan(at(15).x);
+  expect(ownerCameraEffectsSchema.parse([zoom, pan])[1]!.kind).toBe("pan");
+  expect(ownerCameraCropAt(focus, [zoom, pan], 26, "hook", 26)).toEqual(
+    ownerFocusCrop(focus, focus.shots[0]!),
+  );
+});
 it("holds the target until the actual camera cut, including legacy implicit-return documents", () => {
   const focus = defaultOwnerFocus({ width: 1920, height: 1080 }, 60);
   focus.shots = [

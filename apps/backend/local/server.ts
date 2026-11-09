@@ -32,6 +32,7 @@ import {
 import { readOwnerJson } from "./request-body.ts";
 import { OwnerClipBatch, type OwnerClipPorts } from "./clip-batch.ts";
 import { OWNER_AUDIO_LIMITS } from "../../../packages/contracts/local/audio.ts";
+import { OWNER_VIDEO_LIMITS } from "../../../packages/contracts/local/video-assets.ts";
 import { localCodexFailureSchema } from "../../../packages/contracts/local/codex.ts";
 import { OwnerDraftStore } from "./draft-store.ts";
 import { ownerCollectionPage } from "../../../packages/contracts/local/collection-pages.ts";
@@ -994,7 +995,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
           ? req.url?.replace("/api/agent/workspace/", "/api/workspace/")
           : req.url
       )?.match(
-        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|codex-progress|clips|assets|audio-assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|rename|remove|picture|visuals|audio|youtube-audio|validate|captions|fake-captions|hook-title)(?:\/(\d+))?)?)?)?$/,
+        /^\/api\/workspace\/([a-f0-9-]{36})(?:\/(source|portrait|analysis|codex-progress|clips|assets|audio-assets|video-assets|draft)(?:\/([a-f0-9-]{36}|cancel)(?:\/(render|retry|cancel|output|source|edit|rename|remove|picture|video|visuals|audio|youtube-audio|validate|captions|fake-captions|hook-title)(?:\/(\d+))?)?)?)?$/,
       );
       if (
         agent &&
@@ -1124,12 +1125,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
           }
           busy.add(workspace.id);
           try {
+            const request = await readOwnerJson(req);
             batch ??= createBatch(workspace);
             batches.set(workspace.id, batch);
-            const result = await batch.submit(
-              await readOwnerJson(req),
-              analysis,
-            );
+            const result = await batch.submit(request, analysis);
             res
               .writeHead(202, { "Content-Type": "application/json" })
               .end(wireJson(result));
@@ -1371,7 +1370,9 @@ export function createOwnerHost(options: OwnerHostOptions) {
           req.method === "POST" &&
           batch &&
           route[3] &&
-          (route[4] === "picture" || route[4] === "audio")
+          (route[4] === "picture" ||
+            route[4] === "audio" ||
+            route[4] === "video")
         ) {
           if (busy.has(workspace.id)) {
             res.writeHead(409).end();
@@ -1380,26 +1381,34 @@ export function createOwnerHost(options: OwnerHostOptions) {
           busy.add(workspace.id);
           try {
             const invalidMedia =
-              route[4] === "audio" ? "invalid_audio_asset" : "invalid_picture";
+              route[4] === "audio"
+                ? "invalid_audio_asset"
+                : route[4] === "video"
+                  ? "invalid_video_asset"
+                  : "invalid_picture";
             const size = Number(req.headers["content-length"]);
             if (
               !Number.isSafeInteger(size) ||
               size <= 0 ||
               size >
-                (route[4] === "audio"
-                  ? OWNER_AUDIO_LIMITS.inputBytes
-                  : OWNER_PICTURE_LIMITS.inputBytes) ||
+                (route[4] === "video"
+                  ? OWNER_VIDEO_LIMITS.inputBytes
+                  : route[4] === "audio"
+                    ? OWNER_AUDIO_LIMITS.inputBytes
+                    : OWNER_PICTURE_LIMITS.inputBytes) ||
               !(
-                route[4] === "audio"
-                  ? [
-                      "audio/mpeg",
-                      "audio/mp3",
-                      "audio/wav",
-                      "audio/x-wav",
-                      "audio/mp4",
-                      "audio/x-m4a",
-                    ]
-                  : ["image/jpeg", "image/png", "image/webp"]
+                route[4] === "video"
+                  ? ["video/mp4", "video/quicktime"]
+                  : route[4] === "audio"
+                    ? [
+                        "audio/mpeg",
+                        "audio/mp3",
+                        "audio/wav",
+                        "audio/x-wav",
+                        "audio/mp4",
+                        "audio/x-m4a",
+                      ]
+                    : ["image/jpeg", "image/png", "image/webp"]
               ).includes(String(req.headers["content-type"]))
             )
               throw new Error(invalidMedia);
@@ -1413,7 +1422,11 @@ export function createOwnerHost(options: OwnerHostOptions) {
             }
             if (received !== size) throw new Error(invalidMedia);
             const result = await batch[
-              route[4] === "audio" ? "audio" : "picture"
+              route[4] === "video"
+                ? "video"
+                : route[4] === "audio"
+                  ? "audio"
+                  : "picture"
             ](route[3], Buffer.concat(chunks), controller.signal);
             res
               .writeHead(200, { "Content-Type": "application/json" })
@@ -1524,11 +1537,30 @@ export function createOwnerHost(options: OwnerHostOptions) {
       }
       if (
         req.method === "GET" &&
-        (route?.[2] === "assets" || route?.[2] === "audio-assets") &&
+        (route?.[2] === "assets" ||
+          route?.[2] === "audio-assets" ||
+          route?.[2] === "video-assets") &&
         route[3] &&
         !route[4]
       ) {
         const currentClips = batches.get(workspace.id)?.snapshot().clips ?? [];
+        if (route[2] === "video-assets") {
+          const video = currentClips
+            .flatMap((clip) => clip.videoAssets ?? [])
+            .find((asset) => asset.id === route[3]);
+          if (!video) {
+            res.writeHead(404).end();
+            return;
+          }
+          await stream(
+            await files.video(workspace.id, video.id),
+            req,
+            res,
+            "video/mp4",
+            workspace.id,
+          );
+          return;
+        }
         if (route[2] === "audio-assets") {
           const audio = currentClips
             .flatMap((clip) => clip.audioAssets ?? [])

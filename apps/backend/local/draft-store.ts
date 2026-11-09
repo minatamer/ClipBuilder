@@ -29,6 +29,7 @@ import {
   ownerPictureExtension,
 } from "../../../packages/contracts/local/assets.ts";
 import { type OwnerAudioAsset } from "../../../packages/contracts/local/audio.ts";
+import type { OwnerVideoAsset } from "../../../packages/contracts/local/video-assets.ts";
 import { compileOwnerOverlay } from "../../../packages/contracts/local/edit-overlay.ts";
 import {
   confinedPath,
@@ -54,7 +55,7 @@ type FileCache = Map<string, { identity: string; file: StoredFile }>;
 const assetFileSchema = fileSchema
   .extend({
     id: ownerIdSchema,
-    format: z.enum(["jpeg", "png", "wav"]).optional(),
+    format: z.enum(["jpeg", "png", "wav", "mp4"]).optional(),
   })
   .strict();
 const rawFileSchema = fileSchema.extend({ clipId: ownerIdSchema }).strict();
@@ -79,17 +80,19 @@ const recordSchema = z
   .strict();
 type DraftRecord = z.infer<typeof recordSchema>;
 type Copy = { from: string; to: string; file: StoredFile };
-const assetExtension = (format?: "jpeg" | "png" | "wav") =>
-  format === "wav" ? "wav" : ownerPictureExtension(format);
+const assetExtension = (format?: "jpeg" | "png" | "wav" | "mp4") =>
+  format === "wav" || format === "mp4" ? format : ownerPictureExtension(format);
 const draftAssetPath = (
   files: WorkspaceFiles,
   workspaceId: string,
   id: string,
-  format?: "jpeg" | "png" | "wav",
+  format?: "jpeg" | "png" | "wav" | "mp4",
 ) =>
-  format === "wav"
-    ? files.audio(workspaceId, id)
-    : files.asset(workspaceId, id, format);
+  format === "mp4"
+    ? files.video(workspaceId, id)
+    : format === "wav"
+      ? files.audio(workspaceId, id)
+      : files.asset(workspaceId, id, format);
 const digest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const missing = (error: unknown) =>
@@ -308,6 +311,7 @@ function validateRelations(record: DraftRecord): void {
     string,
     | OwnerDraftSnapshot["clips"][number]["assets"][number]
     | (OwnerAudioAsset & { format: "wav" })
+    | (OwnerVideoAsset & { format: "mp4" })
   >();
   for (const clip of snapshot.clips) {
     if (
@@ -326,6 +330,10 @@ function validateRelations(record: DraftRecord): void {
       throw new Error("draft_document_invalid");
     for (const asset of [
       ...clip.assets,
+      ...(clip.videoAssets ?? []).map((asset) => ({
+        ...asset,
+        format: "mp4" as const,
+      })),
       ...(clip.audioAssets ?? []).map((asset) => ({
         ...asset,
         format: "wav" as const,
@@ -399,11 +407,21 @@ function validateRelations(record: DraftRecord): void {
         throw new Error("draft_document_invalid");
     }
     for (const cue of clip.edit?.visuals ?? []) {
-      if (!clip.assets.some((asset) => asset.id === cue.assetId))
+      if (
+        !(cue.video ? (clip.videoAssets ?? []) : clip.assets).some(
+          (asset) => asset.id === cue.assetId,
+        )
+      )
         throw new Error("draft_document_invalid");
     }
     if (clip.base)
-      compileOwnerOverlay(clip.base, clip.edit, clip.assets, clip.audioAssets);
+      compileOwnerOverlay(
+        clip.base,
+        clip.edit,
+        clip.assets,
+        clip.audioAssets,
+        clip.videoAssets,
+      );
     for (const output of clip.outputs) {
       if (
         !outputs.some(
@@ -588,6 +606,10 @@ export class OwnerDraftStore {
         snapshot.clips.flatMap((clip) =>
           [
             ...clip.assets,
+            ...(clip.videoAssets ?? []).map((asset) => ({
+              ...asset,
+              format: "mp4" as const,
+            })),
             ...(clip.audioAssets ?? []).map((asset) => ({
               ...asset,
               format: "wav" as const,

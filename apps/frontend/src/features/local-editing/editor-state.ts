@@ -198,6 +198,22 @@ export function ownerEditOperations(
           ) !== JSON.stringify(cue)
         )
           operations.push({ kind: "visual-upsert", cue });
+      const dispatched = [
+        ...original.visuals
+          .filter((cue) => draft.visuals.some((item) => item.id === cue.id))
+          .map((cue) => cue.id),
+        ...draft.visuals
+          .filter((cue) => !original.visuals.some((item) => item.id === cue.id))
+          .map((cue) => cue.id),
+      ];
+      if (
+        JSON.stringify(dispatched) !==
+        JSON.stringify(draft.visuals.map((cue) => cue.id))
+      )
+        operations.push({
+          kind: "visual-order",
+          ids: draft.visuals.map((cue) => cue.id),
+        });
     }
   }
   return operations;

@@ -19,6 +19,8 @@ import type { HostedDemoUsage } from "./demo-usage.ts";
 import type { OwnerAnalysisPorts } from "./analysis.ts";
 import type { HookTitlePlanning } from "./hook-title-planner.ts";
 import { ownerClipListSchema } from "../../../packages/contracts/local/clips.ts";
+import sharp from "sharp";
+import { applyOwnerEdit } from "./edit-clip.ts";
 let root: string, flow: ReturnType<typeof createHostedEditingWorkflow>;
 let now: number;
 let usage: HostedDemoUsage;
@@ -38,6 +40,38 @@ beforeEach(async () => {
   now = 1000;
   root = await mkdtemp(join(tmpdir(), "clipbuilder-hosted-editing-test-"));
   media.mockImplementation(async (job) => {
+    if (job.operation === "normalize-video") {
+      const video = Buffer.from("synthetic-broll"),
+        audio = Buffer.from("synthetic-audio");
+      await writeFile(
+        join(root, job.workspaceId, `${job.assetId}.video.mp4`),
+        video,
+      );
+      await writeFile(
+        join(root, job.workspaceId, `${job.audioAssetId}.wav`),
+        audio,
+      );
+      return {
+        operation: "normalize-video",
+        asset: {
+          id: job.assetId,
+          digest: createHash("sha256").update(video).digest("hex"),
+          bytes: video.length,
+          width: 320,
+          height: 180,
+          frames: 90,
+          hasAudio: true,
+          audioAssetId: job.audioAssetId,
+        },
+        audioAsset: {
+          id: job.audioAssetId,
+          digest: createHash("sha256").update(audio).digest("hex"),
+          bytes: audio.length,
+          frames: 90,
+          durationMs: 3000,
+        },
+      };
+    }
     if (job.operation === "inspect")
       return {
         operation: "inspect",
@@ -143,6 +177,7 @@ const start = async (app: ReturnType<typeof server>, ip = "192.0.2.1") => {
 async function preparedClip(
   app: ReturnType<typeof server>,
   headers: Awaited<ReturnType<typeof start>>,
+  framing?: "fit",
 ) {
   const upload = await request(app)
     .post("/upload")
@@ -186,6 +221,7 @@ async function preparedClip(
           sourceRevision: 0,
           policyRevision: 0,
           momentIds: [analysis.body.manual[0].id],
+          ...(framing ? { framing } : {}),
         })
     ).status,
   ).toBe(202);
@@ -204,6 +240,166 @@ async function preparedClip(
   }
   throw new Error("synthetic_timeout");
 }
+
+it("admits hosted uploaded videos, streams isolated assets, and exports layered picture/video camera edits without new AI", async () => {
+  const app = server(),
+    headers = await start(app);
+  const { base, clip } = await preparedClip(app, headers, "fit");
+  expect(clip.framing).toBe("fit");
+  expect(plan).not.toHaveBeenCalled();
+  const counts = {
+    transcribe: transcribe.mock.calls.length,
+    image: image.mock.calls.length,
+  };
+  const path = `${base}/clips/${clip.id}`;
+  const before = media.mock.calls.length;
+  expect(
+    (
+      await request(app)
+        .post(path + "/video")
+        .set({ ...headers, "X-CSRF-Token": "invalid" })
+        .set("Content-Type", "video/mp4")
+        .send(Buffer.from("synthetic"))
+    ).status,
+  ).toBe(403);
+  expect(
+    (
+      await request(app)
+        .post(path + "/video")
+        .set(headers)
+        .set("Content-Type", "text/plain")
+        .send("synthetic")
+    ).status,
+  ).toBe(400);
+  expect(media).toHaveBeenCalledTimes(before);
+  const uploaded = await request(app)
+    .post(path + "/video")
+    .set(headers)
+    .set("Content-Type", "video/mp4")
+    .send(Buffer.from("synthetic"));
+  expect(uploaded.status).toBe(200);
+  const video = ownerClipListSchema.parse(uploaded.body).clips[0]!
+    .videoAssets![0]!;
+  const assetPath = `${base}/video-assets/${video.id}`;
+  expect(
+    (
+      await request(app)
+        .get(assetPath)
+        .set({ ...headers, Cookie: "__Host-clipping_editor=" + "x".repeat(43) })
+    ).status,
+  ).toBe(401);
+  const streamed = await request(app)
+    .get(assetPath)
+    .set(headers)
+    .set("Range", "bytes=0-8");
+  expect(streamed.status).toBe(206);
+  expect(streamed.headers["content-type"]).toContain("video/mp4");
+  expect(streamed.headers["cache-control"]).toContain("no-store");
+  const png = await sharp({
+    create: { width: 64, height: 64, channels: 4, background: "#8833aa" },
+  })
+    .png()
+    .toBuffer();
+  const pictured = await request(app)
+    .post(path + "/picture")
+    .set(headers)
+    .set("Content-Type", "image/png")
+    .send(png);
+  expect(pictured.status).toBe(200);
+  const current = ownerClipListSchema.parse(pictured.body).clips[0]!;
+  const effect = {
+    startFrame: 0,
+    endFrame: 30,
+    zoom: 1.4,
+    fromX: 0.2,
+    fromY: 0.5,
+    toX: 0.8,
+    toY: 0.5,
+  };
+  const visual = {
+    id: randomUUID(),
+    assetId: video.id,
+    startFrame: 0,
+    endFrame: 30,
+    box: { x: 0.1, y: 0.1, width: 0.5, height: 0.3 },
+    fit: "cover",
+    presentation: "full-frame",
+    effect,
+    video: { offsetFrame: 0, sourceEndFrame: 90, volume: 35, muted: false },
+  };
+  const inset = {
+    ...visual,
+    id: randomUUID(),
+    presentation: "inset",
+    video: { ...visual.video, offsetFrame: 15, muted: true },
+  };
+  const picture = {
+    ...visual,
+    id: randomUUID(),
+    assetId: current.assets[0]!.id,
+    presentation: "inset",
+    video: undefined,
+  };
+  const editRequest = {
+    operationId: randomUUID(),
+    expectedRevision: current.revision,
+    baseHash: current.baseHash,
+    operations: [
+      ...[visual, inset, picture].map((cue) => ({
+        kind: "visual-upsert",
+        cue,
+      })),
+      { kind: "visual-order", ids: [visual.id, inset.id, picture.id] },
+    ],
+  };
+  applyOwnerEdit(current, editRequest, { width: 320, height: 180 });
+  const edited = await request(app)
+    .post(path + "/edit")
+    .set(headers)
+    .send(editRequest);
+  expect(edited.status).toBe(200);
+  const saved = ownerClipListSchema.parse(edited.body).clips[0]!;
+  expect(saved.edit!.visuals.map((cue) => cue.id)).toEqual([
+    visual.id,
+    inset.id,
+    picture.id,
+  ]);
+  expect(
+    (
+      await request(app)
+        .post(path + "/render")
+        .set(headers)
+        .send({ operationId: randomUUID(), expectedRevision: saved.revision })
+    ).status,
+  ).toBe(202);
+  await vi.waitFor(async () =>
+    expect(
+      (
+        await request(app)
+          .get(base + "/clips")
+          .set(headers)
+      ).body.active,
+    ).toBe(false),
+  );
+  const exportJob = media.mock.calls
+    .map(([job]) => job)
+    .findLast((job) => job.operation === "clip");
+  expect(exportJob?.operation).toBe("clip");
+  if (exportJob?.operation !== "clip") throw Error("missing_synthetic_export");
+  expect(exportJob.overlay.visuals).toHaveLength(3);
+  expect(exportJob.overlay.visuals[2]!.effect).toEqual(effect);
+  expect(exportJob.overlay.audio?.cues).toHaveLength(1);
+  expect(exportJob.overlay.audio?.cues[0]!.volume).toBe(35);
+  expect(exportJob.overlay.captions).toEqual(clip.base!.overlay.captions);
+  expect(transcribe).toHaveBeenCalledTimes(counts.transcribe);
+  expect(image).toHaveBeenCalledTimes(counts.image);
+  expect(plan).not.toHaveBeenCalled();
+  expect(
+    media.mock.calls.filter(([job]) => job.operation === "normalize-video"),
+  ).toHaveLength(1);
+  now += 5001;
+  expect((await request(app).get(assetPath).set(headers)).status).toBe(401);
+});
 it.each([false, true])(
   "advertises hosted Hook titles only when configured (%s), with Find visuals always off",
   async (enabled) => {

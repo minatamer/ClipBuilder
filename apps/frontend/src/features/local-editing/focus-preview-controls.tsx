@@ -21,6 +21,7 @@ type Props = Omit<
   | "onCaptureFrame"
   | "captureReady"
   | "motion"
+  | "pan"
   | "tracking"
 > & {
   player: RefObject<PlayerRef | null>;
@@ -156,6 +157,28 @@ export function FocusPreviewControls({
         />
       }
       frame={sourceFrame}
+      pan={
+        <CameraMotionEditor
+          mode="pan"
+          focus={props.focus}
+          positionIndex={props.positionRequest?.index}
+          effects={cameraEffects}
+          previewEffects={cameraPreviewEffects}
+          tracks={cameraTracks}
+          hook={hook}
+          sourceUrl={props.sourceUrl}
+          onChange={onCameraEffects}
+          captureReady={motion.captureReady}
+          capture={motion.captureFrame}
+          seek={motion.seekTo}
+          preview={(at) => {
+            motion.seekTo(at);
+            void player.current?.play();
+          }}
+          available={cameraAvailable}
+          disabled={props.disabled}
+        />
+      }
       playing={preview.playing}
       captureReady={preview.captureReady}
       onCaptureFrame={preview.captureFrame}

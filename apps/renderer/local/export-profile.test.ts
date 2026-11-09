@@ -73,7 +73,7 @@ it("converts physical frame counts while keeping logical cuts and audio clocks",
   );
   expect(ownerCutVideoFilter(2.5, cut, profile)).toContain("fps=fps=60:");
   expect(ownerCutAudioFilter(2.5, cut)).toContain(
-    "atrim=start=0.9666666666666667:end=2.966666666666667",
+    "atrim=start_sample=46400:end_sample=142400",
   );
   expect(cut).toEqual({ startFrame: 29, endFrame: 89 });
   const late = { startFrame: 89, endFrame: 119 },

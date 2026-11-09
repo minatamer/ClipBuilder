@@ -38,11 +38,11 @@ export function useInspectorPlayback(
     const video = media.current;
     if (!video) return;
     const loaded = () => synchronize();
-    video.addEventListener("loadeddata", loaded);
-    video.addEventListener("seeked", loaded);
+    for (const event of ["loadedmetadata", "loadeddata", "seeked"])
+      video.addEventListener(event, loaded);
     return () => {
-      video.removeEventListener("loadeddata", loaded);
-      video.removeEventListener("seeked", loaded);
+      for (const event of ["loadedmetadata", "loadeddata", "seeked"])
+        video.removeEventListener(event, loaded);
       video.pause();
     };
   }, [media, sourceUrl]);

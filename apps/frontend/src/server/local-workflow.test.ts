@@ -158,6 +158,83 @@ it("forwards hosted editor requests through authenticated control transport with
   expect(headers.has("Authorization")).toBe(false);
   expect(headers.get("X-ClipBuilder-Client-IP")).toBe("192.0.2.7");
 });
+
+it("streams hosted B-roll uploads and range reads through the same authenticated bridge", async () => {
+  vi.stubEnv("HOSTED_DEMO_IP_VERIFIED", "true");
+  vi.stubEnv("APP_ENV", "production");
+  vi.stubEnv("PRIVATE_BACKEND_ORIGIN", "https://backend.run.app");
+  vi.stubEnv("BACKEND_AUDIENCE", "https://backend.run.app");
+  vi.stubEnv("FRONTEND_ORIGIN", "https://frontend.run.app");
+  const id = "00000000-0000-4000-8000-000000000001";
+  const cookie = `__Host-clipping_editor=${"a".repeat(43)}; __Host-clipping_editor_csrf=${"b".repeat(43)}`;
+  vi.mocked(fetchControlApi).mockResolvedValueOnce(
+    Response.json({ synthetic: true }),
+  );
+  const upload = await proxyLocalWorkflow(
+    new Request(
+      "https://frontend.run.app/api/local/workspace/" +
+        id +
+        "/clips/" +
+        id +
+        "/video",
+      {
+        method: "POST",
+        headers: {
+          Origin: "https://frontend.run.app",
+          Host: "frontend.run.app",
+          "X-Forwarded-Proto": "https",
+          "X-Forwarded-For": "192.0.2.7",
+          "Content-Type": "video/mp4",
+          "Content-Length": "9",
+          Cookie: cookie,
+        },
+        body: "synthetic",
+      },
+    ),
+    ["workspace", id, "clips", id, "video"],
+  );
+  expect(upload.status).toBe(200);
+  await upload.body!.cancel();
+  const [path, options] = vi.mocked(fetchControlApi).mock.calls[0]!;
+  expect(path).toBe(`/v1/editing/workspace/${id}/clips/${id}/video`);
+  expect(new Headers(options.headers).get("X-CSRF-Token")).toBe("b".repeat(43));
+  expect(new Headers(options.headers).get("Content-Length")).toBe("9");
+  expect(options.body).toBeInstanceOf(ReadableStream);
+  vi.mocked(fetchControlApi).mockResolvedValueOnce(
+    new Response("synthetic", {
+      status: 206,
+      headers: { "Content-Type": "video/mp4", "Content-Range": "bytes 0-8/9" },
+    }),
+  );
+  const read = await proxyLocalWorkflow(
+    new Request(
+      "https://frontend.run.app/api/local/workspace/" +
+        id +
+        "/video-assets/" +
+        id,
+      {
+        headers: {
+          Host: "frontend.run.app",
+          "X-Forwarded-Proto": "https",
+          "X-Forwarded-For": "192.0.2.7",
+          Cookie: cookie,
+          Range: "bytes=0-8",
+        },
+      },
+    ),
+    ["workspace", id, "video-assets", id],
+  );
+  expect(read.status).toBe(206);
+  expect(read.headers.get("Content-Range")).toBe("bytes 0-8/9");
+  await read.body!.cancel();
+  expect(
+    new Headers(vi.mocked(fetchControlApi).mock.calls[1]![1].headers).get(
+      "Range",
+    ),
+  ).toBe("bytes=0-8");
+  expect(fetchControlApi).toHaveBeenCalledTimes(2);
+  expect(discoverOwnerHost).not.toHaveBeenCalled();
+});
 it("dispatches no hosted request while ingress verification is disabled", async () => {
   vi.stubEnv("HOSTED_DEMO_IP_VERIFIED", "false");
   vi.stubEnv("APP_ENV", "production");

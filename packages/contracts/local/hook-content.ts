@@ -10,6 +10,8 @@ import { correctedOwnerCaptions } from "./caption-text.ts";
 import { compileOwnerOverlay } from "./edit-overlay.ts";
 import type { OwnerAsset } from "./assets.ts";
 import type { OwnerAudioAsset } from "./audio.ts";
+import type { OwnerVideoAsset } from "./video-assets.ts";
+import type { OwnerVisualEdit } from "./assets.ts";
 import type { OwnerClipBase, OwnerOverlay } from "./clips.ts";
 import { OWNER_FPS } from "./policy.ts";
 import {
@@ -95,13 +97,20 @@ export function copyOwnerHookContent(
   audioAssets: readonly OwnerAudioAsset[],
   hook: OwnerHook,
   prior?: OwnerHookContent,
+  videoAssets: readonly OwnerVideoAsset[] = [],
 ): OwnerHookContent {
   ownerHookSchema.parse(hook);
   if (hook.endFrame > base.overlay.frames)
     throw new Error("invalid_hook_window");
   const bodyDocument = ownerEditDocumentSchema.parse(document);
   delete bodyDocument.hookContent;
-  const body = compileOwnerOverlay(base, bodyDocument, assets, audioAssets);
+  const body = compileOwnerOverlay(
+    base,
+    bodyDocument,
+    assets,
+    audioAssets,
+    videoAssets,
+  );
   let captions = body.captions.flatMap((caption) => {
     const clipped = ownerHookCaption(caption, hook);
     return clipped
@@ -137,7 +146,11 @@ export function copyOwnerHookContent(
   edits.captions = body.captionStyle ?? null;
   edits.audio = {
     originalVolume: body.audio?.originalVolume ?? 100,
-    cues: body.audio?.cues ?? [],
+    cues:
+      body.audio?.cues.filter(
+        (cue) =>
+          !body.visuals.some((visual) => visual.video && visual.id === cue.id),
+      ) ?? [],
   };
   edits.captionText = [];
   edits.captionSpeakers = body.captionSpeakers
@@ -166,7 +179,7 @@ export function copyOwnerHookContent(
     );
   edits.visuals = edits.visuals
     .filter((cue) => intersects(cue, hook))
-    .map(clipTiming);
+    .map((cue) => clipOwnerVisual(cue, hook));
   if (body.videoLooks)
     edits.videoLooks = clipOwnerVideoLooks(body.videoLooks, hook);
   edits.cameraEffects = edits.cameraEffects?.filter(
@@ -206,7 +219,18 @@ export function copyOwnerHookContent(
           !old.some((saved) => saved.id === item.id && intersects(saved, hook)),
       ),
     ];
-    preserved.visuals = mergeTimed(preserved.visuals, edits.visuals);
+    preserved.visuals = [
+      ...preserved.visuals
+        .filter((cue) => intersects(cue, hook))
+        .map((cue) => clipOwnerVisual(cue, hook)),
+      ...edits.visuals.filter(
+        (cue) =>
+          !intersects(cue, prior.window) &&
+          !preserved.visuals.some(
+            (saved) => saved.id === cue.id && intersects(saved, hook),
+          ),
+      ),
+    ];
     const inheritedLooks = subtractOwnerVideoLookWindow(
       ownerVideoLookSegments(body, hook),
       prior.window,
@@ -271,6 +295,7 @@ export function withIndependentOwnerHook(
   assets: readonly OwnerAsset[],
   audioAssets: readonly OwnerAudioAsset[],
   hook: OwnerHook | undefined,
+  videoAssets: readonly OwnerVideoAsset[] = [],
 ): OwnerEditDocument {
   const next = ownerEditDocumentSchema.parse(document);
   if (!hook) {
@@ -290,9 +315,51 @@ export function withIndependentOwnerHook(
     audioAssets,
     hook,
     next.hookContent,
+    videoAssets,
   );
   next.hook = { ...hook };
   if (next.audio)
     next.audio.cues = next.audio.cues.filter((cue) => cue.placement !== "hook");
+  return next;
+}
+
+/** A Hook keeps the source trim and exact partial easing of the original cue. */
+function clipOwnerVisual(
+  cue: OwnerVisualEdit,
+  window: OwnerHook,
+): OwnerVisualEdit {
+  const startFrame = Math.max(cue.startFrame, window.startFrame),
+    endFrame = Math.min(cue.endFrame, window.endFrame);
+  const next = { ...cue, startFrame, endFrame };
+  if (cue.video)
+    next.video = {
+      ...cue.video,
+      offsetFrame: cue.video.offsetFrame + startFrame - cue.startFrame,
+    };
+  if (cue.effect) {
+    const effect = cue.effect;
+    const start = Math.max(
+      startFrame,
+      Math.min(endFrame - 1, effect.startFrame),
+    );
+    const end = Math.max(start + 1, Math.min(endFrame, effect.endFrame));
+    const at = (frame: number) =>
+      (effect.progressStart ?? 0) +
+      ((effect.progressEnd ?? 1) - (effect.progressStart ?? 0)) *
+        Math.max(
+          0,
+          Math.min(
+            1,
+            (frame - effect.startFrame) / (effect.endFrame - effect.startFrame),
+          ),
+        );
+    next.effect = {
+      ...effect,
+      startFrame: start,
+      endFrame: end,
+      progressStart: at(start),
+      progressEnd: at(end),
+    };
+  }
   return next;
 }

@@ -1,5 +1,12 @@
 # Private media renderer
 
+CL-271 rasterization seeks inside each intended normalized B-roll frame and
+waits for its decoded frame and compositor paint before capture. Chromium's RGB
+and RGBA screenshots are written as one RGBA sequence using pinned Sharp, so
+opaque visual boundaries do not reset FFmpeg's filter clock. Generated no-key
+frame/encoding and B-roll HTTP/draft proofs exercise this path; real-provider
+quality and hosted release acceptance remain separate.
+
 CL-216 shares the region-seeded pixel tracker with the browser. A fresh protected
 clip-preview request may supply exact focus evidence; the worker samples the
 already prepared clip, retaining verified paths whose selected head escapes

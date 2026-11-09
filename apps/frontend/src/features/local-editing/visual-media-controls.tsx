@@ -1,0 +1,371 @@
+import { useEffect, useId, useRef, useState } from "react";
+import { Button } from "../../shared/ui/button";
+import { InlineFeedback } from "../../shared/ui/inline-feedback";
+import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
+import type { OwnerVisualEdit } from "../../../../../packages/contracts/local/assets.ts";
+import type { OwnerVideoAsset } from "../../../../../packages/contracts/local/video-assets.ts";
+
+export function VisualLayers({
+  cues,
+  selected,
+  disabled,
+  onSelect,
+  onChange,
+}: {
+  cues: OwnerVisualEdit[];
+  selected: string;
+  disabled: boolean;
+  onSelect: (cue: OwnerVisualEdit) => void;
+  onChange: (cues: OwnerVisualEdit[]) => void;
+}) {
+  const index = cues.findIndex((cue) => cue.id === selected);
+  function move(to: number) {
+    if (index < 0 || to === index) return;
+    const next = [...cues],
+      [cue] = next.splice(index, 1);
+    next.splice(to, 0, cue!);
+    onChange(next);
+  }
+  return (
+    <fieldset disabled={disabled}>
+      <legend>Visual layers · Front to back</legend>
+      <div className="editor-fields">
+        <label>
+          Selected layer
+          <select
+            className="select-control"
+            aria-label="Visual layer"
+            value={index < 0 ? "" : selected}
+            onChange={(event) => {
+              const cue = cues.find(
+                (cue) => cue.id === event.currentTarget.value,
+              );
+              if (cue) onSelect(cue);
+            }}
+          >
+            {index < 0 && <option value="">Choose a layer</option>}
+            {[...cues].reverse().map((cue, front) => (
+              <option key={cue.id} value={cue.id}>
+                {front + 1}. {cue.video ? "Video" : "Picture"}{" "}
+                {cues.indexOf(cue) + 1}
+                {cue.presentation === "full-frame" ? " · Full frame" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div
+        className="picture-tools"
+        role="group"
+        aria-label="Visual layer order"
+      >
+        <Button
+          variant="quiet"
+          disabled={index < 0 || index === cues.length - 1}
+          onClick={() => move(cues.length - 1)}
+        >
+          Bring to front
+        </Button>
+        <Button
+          variant="quiet"
+          disabled={index < 0 || index === cues.length - 1}
+          onClick={() => move(index + 1)}
+        >
+          Move forward
+        </Button>
+        <Button
+          variant="quiet"
+          disabled={index <= 0}
+          onClick={() => move(index - 1)}
+        >
+          Move backward
+        </Button>
+        <Button variant="quiet" disabled={index <= 0} onClick={() => move(0)}>
+          Send to back
+        </Button>
+      </div>
+    </fieldset>
+  );
+}
+
+export function VisualPresentation({
+  cue,
+  onChange,
+  onBackground,
+  validationMessage,
+}: {
+  cue: OwnerVisualEdit;
+  onChange: (cue: OwnerVisualEdit) => void;
+  onBackground: (cue: OwnerVisualEdit) => void;
+  validationMessage?: string | undefined;
+}) {
+  const feedbackId = useId();
+  const focal = cue.focal ?? { x: 0.5, y: 0.5 };
+  const coordinate = (
+    label: string,
+    value: number,
+    change: (value: number) => void,
+  ) => (
+    <label>
+      {label}
+      <input
+        type="number"
+        aria-label={label}
+        aria-invalid={!!validationMessage || undefined}
+        aria-describedby={validationMessage ? feedbackId : undefined}
+        min={0}
+        max={100}
+        step={1}
+        value={Number.isFinite(value) ? Number((value * 100).toFixed(2)) : ""}
+        onChange={(event) =>
+          change(
+            event.currentTarget.value === ""
+              ? NaN
+              : Number(event.currentTarget.value) / 100,
+          )
+        }
+      />
+    </label>
+  );
+
+  return (
+    <>
+      <div className="editor-fields">
+        <label>
+          Presentation
+          <select
+            className="select-control"
+            aria-label="Visual presentation"
+            value={cue.presentation ?? "inset"}
+            onChange={(event) => {
+              const next = {
+                ...cue,
+                presentation:
+                  event.currentTarget.value === "full-frame"
+                    ? ("full-frame" as const)
+                    : ("inset" as const),
+              };
+              if (
+                next.presentation === "full-frame" &&
+                cue.presentation !== "full-frame"
+              )
+                onBackground(next);
+              else onChange(next);
+            }}
+          >
+            <option value="inset">Inset</option>
+            <option value="full-frame">Full frame</option>
+          </select>
+        </label>
+        {coordinate("Focal X (%)", focal.x, (x) =>
+          onChange({ ...cue, focal: { ...focal, x } }),
+        )}
+        {coordinate("Focal Y (%)", focal.y, (y) =>
+          onChange({ ...cue, focal: { ...focal, y } }),
+        )}
+      </div>
+      <InlineFeedback id={feedbackId} message={validationMessage} />
+    </>
+  );
+}
+
+export function VideoSourceControls({
+  workspaceId,
+  cue,
+  asset,
+  onChange,
+  validationMessage,
+  active,
+}: {
+  workspaceId: string;
+  cue: OwnerVisualEdit;
+  asset: OwnerVideoAsset;
+  onChange: (cue: OwnerVisualEdit) => void;
+  validationMessage?: string | undefined;
+  active: boolean;
+}) {
+  const feedbackId = useId();
+  const video = useRef<HTMLVideoElement>(null),
+    [ready, setReady] = useState(false),
+    [message, setMessage] = useState("");
+  const sound = cue.video!;
+  const feedback = message || validationMessage;
+  const end = sound.sourceEndFrame ?? asset.frames;
+  const source = `/api/local/workspace/${workspaceId}/video-assets/${asset.id}`;
+  useEffect(() => {
+    if (!active) video.current?.pause();
+  }, [active]);
+  useEffect(() => {
+    const node = video.current;
+    if (node) {
+      node.src = source;
+      node.load();
+    }
+    return () => {
+      if (node) {
+        node.pause();
+        node.removeAttribute("src");
+        node.load();
+      }
+    };
+  }, [source]);
+  function endpoint(key: "start" | "end", frame: number) {
+    setMessage("");
+    onChange(
+      key === "start"
+        ? { ...cue, video: { ...sound, offsetFrame: frame } }
+        : { ...cue, video: { ...sound, sourceEndFrame: frame } },
+    );
+  }
+  function capture(key: "start" | "end") {
+    const node = video.current;
+    if (
+      !node ||
+      node.seeking ||
+      node.readyState < 2 ||
+      node.error ||
+      !Number.isFinite(node.currentTime)
+    ) {
+      setMessage("Wait for the source preview to finish seeking.");
+      return;
+    }
+    node.pause();
+    const frame =
+      Math.floor(node.currentTime * OWNER_FPS) + (key === "end" ? 1 : 0);
+    const length = cue.endFrame - cue.startFrame;
+    const nextStart = key === "start" ? frame : sound.offsetFrame;
+    const nextEnd = key === "end" ? frame : end;
+    if (
+      !Number.isInteger(length) ||
+      length < 1 ||
+      !Number.isInteger(nextStart) ||
+      !Number.isInteger(nextEnd) ||
+      nextStart < 0 ||
+      nextEnd > asset.frames ||
+      nextStart + length > nextEnd
+    ) {
+      setMessage("Choose a source range inside this video.");
+      return;
+    }
+    endpoint(key, frame);
+  }
+  return (
+    <>
+      <video
+        ref={video}
+        aria-label="B-roll source preview"
+        src={source}
+        controls
+        muted
+        playsInline
+        preload="metadata"
+        style={{
+          display: "block",
+          width: Math.min(320, (180 * asset.width) / asset.height),
+          maxWidth: "100%",
+          height: "auto",
+          aspectRatio: `${asset.width} / ${asset.height}`,
+          marginInline: "auto",
+          background: "#000",
+        }}
+        onLoadStart={() => {
+          setReady(false);
+          setMessage("");
+        }}
+        onLoadedData={() => setReady(true)}
+        onError={() => {
+          setReady(false);
+          setMessage("Source preview unavailable.");
+        }}
+      />
+      <div className="editor-fields picture-timing">
+        {(["start", "end"] as const).map((key) => (
+          <div className="range-time" key={key}>
+            <label>
+              Source {key} (s)
+              <input
+                type="number"
+                aria-label={`Video source ${key} seconds`}
+                aria-invalid={!!feedback || undefined}
+                aria-describedby={feedback ? feedbackId : undefined}
+                min={0}
+                max={asset.frames / OWNER_FPS}
+                step={1 / OWNER_FPS}
+                value={
+                  Number.isFinite(key === "start" ? sound.offsetFrame : end)
+                    ? Number(
+                        (
+                          (key === "start" ? sound.offsetFrame : end) /
+                          OWNER_FPS
+                        ).toFixed(3),
+                      )
+                    : ""
+                }
+                onChange={(event) =>
+                  endpoint(
+                    key,
+                    event.currentTarget.value === ""
+                      ? NaN
+                      : Math.round(
+                          Number(event.currentTarget.value) * OWNER_FPS,
+                        ),
+                  )
+                }
+              />
+            </label>
+            <Button
+              variant="quiet"
+              disabled={!ready}
+              aria-label={`Capture video source ${key}`}
+              onClick={() => capture(key)}
+            >
+              Capture
+            </Button>
+          </div>
+        ))}
+      </div>
+      <InlineFeedback id={feedbackId} message={feedback} />
+      <div className="editor-fields">
+        <label>
+          Video volume (%)
+          <input
+            type="range"
+            aria-label="Video volume"
+            min={0}
+            max={100}
+            step={1}
+            value={sound.volume}
+            disabled={!asset.hasAudio}
+            onChange={(event) => {
+              const volume = Number(event.currentTarget.value);
+              onChange({
+                ...cue,
+                video: { ...sound, volume, muted: volume === 0 },
+              });
+            }}
+          />
+        </label>
+        <Button
+          variant="secondary"
+          disabled={!asset.hasAudio}
+          aria-pressed={sound.muted}
+          onClick={() =>
+            onChange({
+              ...cue,
+              video: {
+                ...sound,
+                muted: !sound.muted,
+                volume: sound.volume || 100,
+              },
+            })
+          }
+        >
+          {sound.muted ? "Unmute video" : "Mute video"}
+        </Button>
+      </div>
+      {!asset.hasAudio && (
+        <p className="source-hint">This video has no audio track.</p>
+      )}
+    </>
+  );
+}

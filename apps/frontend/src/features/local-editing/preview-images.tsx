@@ -43,6 +43,7 @@ export function usePreviewImages(
         [
           ...new Set(
             [...overlay.visuals, ...(overlay.hookContent?.visuals ?? [])]
+              .filter((cue) => !cue.video)
               .map((cue) => assets[cue.assetId])
               .filter((url): url is string => Boolean(url)),
           ),

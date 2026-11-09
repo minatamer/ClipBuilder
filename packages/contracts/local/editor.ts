@@ -248,6 +248,12 @@ export type OwnerEditDocument = z.infer<typeof ownerEditDocumentSchema>;
 export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
   z
     .object({
+      kind: z.literal("visual-order"),
+      ids: z.array(ownerIdSchema).max(OWNER_PICTURE_LIMITS.cuesPerClip),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal("hook-content"),
       content: ownerHookContentSchema.nullable(),
     })

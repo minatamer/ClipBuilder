@@ -36,12 +36,13 @@ import {
 import { SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 import { prepareOwnerAudioMix } from "./audio-mix.ts";
+import { prepareOwnerVideoFiles } from "./video-frames.ts";
 
 import { prepareOwnerClipPreview, type OwnerCutCache } from "./clip-preview.ts";
 export type { OwnerCutCache } from "./clip-preview.ts";
 
 /** A fixed transparent React overlay, then the admitted FFmpeg performs muxing.
- * Chromium never decodes source media and no Remotion FFmpeg binary is used. */
+ * Chromium sees only admitted normalized B-roll; the interview stays in FFmpeg. */
 export async function renderOwnerClip(
   options: {
     root: string;
@@ -136,13 +137,17 @@ export async function renderOwnerClip(
   // Independent source decoders avoid buffering a full raw-video branch in split.
   // Both occurrences read original pixels and meet in one final encode.
   const sourceGraph = hook
-    ? `[0:v:0]${bodyVideo},${bodyLook}[body];[1:v:0]${hookVideo},${hookLook}[hook];[0:a:0]${bodyAudio},volume=${bodyGain},apad,atrim=duration=${bodyProfile.frames / profile.fps}[bodyAudio];[1:a:0]${bodyAudio},atrim=start=${hookStartFrame / profile.fps}:duration=${hookProfile!.frames / profile.fps},asetpts=PTS-STARTPTS,volume=${hookGain},apad,atrim=duration=${hookProfile!.frames / profile.fps}[hookAudio];[hook][hookAudio][body][bodyAudio]concat=n=2:v=1:a=1[sequence][audio];[sequence]fps=fps=${profile.fps}:start_time=0:round=near,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${profile.frames}[source]`
-    : `[0:v:0]${bodyVideo},${bodyLook}[source];[0:a:0]${bodyAudio},volume=${bodyGain}[audio]`;
+    ? `[0:v:0]${bodyVideo},${bodyLook}[body];[1:v:0]${hookVideo},${hookLook}[hook];[hook][body]concat=n=2:v=1:a=0[sequence];[sequence]fps=fps=${profile.fps}:start_time=0:round=near,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${profile.frames}[source]`
+    : `[0:v:0]${bodyVideo},${bodyLook}[source]`;
+  const speechGraph = hook
+    ? `[0:a:0]${bodyAudio},volume=${bodyGain},apad,atrim=duration=${bodyProfile.frames / profile.fps}[bodyAudio];[1:a:0]${bodyAudio},atrim=start=${hookStartFrame / profile.fps}:duration=${hookProfile!.frames / profile.fps},asetpts=PTS-STARTPTS,volume=${hookGain},apad,atrim=duration=${hookProfile!.frames / profile.fps}[hookAudio];[hookAudio][bodyAudio]concat=n=2:v=0:a=1[audio]`
+    : `[0:a:0]${bodyAudio},volume=${bodyGain}[audio]`;
   const assets: Record<string, string> = {};
   for (const cue of [
     ...job.overlay.visuals,
     ...(job.overlay.hookContent?.visuals ?? []),
   ]) {
+    if (cue.video) continue;
     const file = await ownerAssetMediaPath(
       options.root,
       job.workspaceId,
@@ -168,6 +173,14 @@ export async function renderOwnerClip(
   const frames = await mkdtemp(join(dirname(output), "overlay-"));
   try {
     signal.throwIfAborted();
+    const videos = await prepareOwnerVideoFiles(
+      {
+        root: options.root,
+        workspaceId: job.workspaceId,
+        overlay: job.overlay,
+      },
+      signal,
+    );
     const bodyFrames = join(frames, "body"),
       hookFrames = join(frames, "hook");
     await mkdir(bodyFrames);
@@ -177,18 +190,67 @@ export async function renderOwnerClip(
       workspaceId: job.workspaceId,
       overlay: job.overlay,
       scratch: frames,
-      firstInput: hook ? 4 : 2,
+      firstInput: hook ? 2 : 1,
       hookSeconds: (hookProfile?.frames ?? 0) / profile.fps,
       bodySeconds: bodyProfile.frames / profile.fps,
       hookSourceSeconds: hookStartFrame / profile.fps,
       fps: profile.fps,
       signal,
     });
+    // Resolve the complete sample clock independently of variable-cost visual
+    // decoding. Slow overlay frames cannot introduce silent/backdated AAC packets.
+    const audioFile = join(frames, "mixed.wav");
+    await runOwnedProcess(
+      options.tools.ffmpeg,
+      [
+        "-nostdin",
+        "-n",
+        "-v",
+        "error",
+        ...SOURCE_INPUT_OPTIONS,
+        "-threads",
+        "2",
+        "-copyts",
+        "-i",
+        original,
+        ...(hook
+          ? [
+              ...SOURCE_INPUT_OPTIONS,
+              "-threads",
+              "2",
+              "-copyts",
+              "-i",
+              original,
+            ]
+          : []),
+        ...mix.inputs,
+        "-filter_complex",
+        `${speechGraph}${mix.graph ? `;${mix.graph}` : ""}`,
+        "-filter_complex_threads",
+        "2",
+        "-map",
+        `[${mix.label}]`,
+        "-vn",
+        "-t",
+        String(profile.frames / profile.fps),
+        "-c:a",
+        "pcm_s16le",
+        "-ar",
+        "48000",
+        "-ac",
+        "2",
+        "-map_metadata",
+        "-1",
+        audioFile,
+      ],
+      signal,
+    );
     const raster = {
       bundle: options.bundle,
       chromium: options.chromium,
       overlay: job.overlay,
       assets,
+      videos,
       pixelRatio: Math.max(1, profile.width / 1080, profile.height / 1920),
       budget: { bytes: 0 },
     };
@@ -237,7 +299,7 @@ export async function renderOwnerClip(
       ? `${artBranch(2, hookProfile!.frames, "hookArt")};${artBranch(3, bodyProfile.frames, "bodyArt")};anullsrc=r=48000:cl=mono,atrim=duration=${hookProfile!.frames / profile.fps}[hookArtClock];anullsrc=r=48000:cl=mono,atrim=duration=${bodyProfile.frames / profile.fps}[bodyArtClock];[hookArt][hookArtClock][bodyArt][bodyArtClock]concat=n=2:v=1:a=1[artSequence][artClock];[artClock]anullsink;[artSequence]fps=fps=${profile.fps}:start_time=0:round=near,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${profile.frames},scale=${profile.width}:${profile.height}[art]`
       : `${artBranch(1, bodyProfile.frames, "bodyArt")};[bodyArt]scale=${profile.width}:${profile.height}[art]`;
     signal.throwIfAborted();
-    const graph = `${sourceGraph}${mix.graph ? `;${mix.graph}` : ""};${artGraph};[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`;
+    const graph = `${sourceGraph};${artGraph};[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`;
     const graphFile = join(frames, "camera.ffgraph");
     const movingCamera = !!(
       job.overlay.cameraEffects?.length ||
@@ -278,7 +340,16 @@ export async function renderOwnerClip(
           "-i",
           join(directory, "%06d.png"),
         ]),
-        ...mix.inputs,
+        "-protocol_whitelist",
+        "file,pipe",
+        "-format_whitelist",
+        "wav",
+        "-codec_whitelist",
+        "pcm_s16le",
+        "-threads",
+        "1",
+        "-i",
+        audioFile,
         movingCamera
           ? process.platform === "win32"
             ? "-/filter_complex" // Admitted Windows FFmpeg 9 removed the legacy option.
@@ -293,7 +364,7 @@ export async function renderOwnerClip(
         "-map",
         "[v]",
         "-map",
-        `[${mix.label}]`,
+        `${hook ? 4 : 2}:a:0`,
         "-t",
         String(profile.frames / profile.fps),
         "-frames:v",

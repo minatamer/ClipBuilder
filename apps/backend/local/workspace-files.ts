@@ -100,6 +100,15 @@ export class WorkspaceFiles {
       `${assetId}.${input ? "audio-input" : "wav"}`,
     );
   }
+  async video(id: string, assetId: string, input = false): Promise<string> {
+    ownerIdSchema.parse(assetId);
+    await this.file(id, "source.mp4");
+    return confinedPath(
+      this.root,
+      id,
+      `${assetId}.${input ? "video-input" : "video.mp4"}`,
+    );
+  }
   async codexInput(id: string, jobId: string): Promise<string> {
     ownerIdSchema.parse(jobId);
     await this.file(id, "source.mp4");

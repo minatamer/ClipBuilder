@@ -1,4 +1,5 @@
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
+import { ownerVideoFrameSampleTime } from "../../../../../packages/contracts/local/video-assets.ts";
 import {
   OWNER_CAMERA_FOLLOW,
   ownerHeadBoxSchema,
@@ -60,6 +61,7 @@ export async function trackHeadVideo({
   frames,
   signal,
   progress,
+  rawSource = false,
 }: {
   sourceUrl: string;
   source: OwnerFocus["source"];
@@ -68,6 +70,7 @@ export async function trackHeadVideo({
   frames: number;
   signal: AbortSignal;
   progress: (done: number, total: number) => void;
+  rawSource?: boolean;
 }) {
   ownerHeadBoxSchema.parse(seed);
   if (
@@ -83,7 +86,9 @@ export async function trackHeadVideo({
   video.muted = true;
   video.playsInline = true;
   video.preload = "metadata";
-  const content = ownerSourceContent(source),
+  const content = rawSource
+      ? { x: 0, y: 0, width: 1080, height: 1920 }
+      : ownerSourceContent(source),
     longest = Math.max(source.width, source.height);
   canvas.width = Math.max(32, Math.round((source.width / longest) * 512));
   canvas.height = Math.max(32, Math.round((source.height / longest) * 512));
@@ -115,7 +120,7 @@ export async function trackHeadVideo({
     let tracker: HeadPixelTracker | undefined;
     const points: { frame: number; x: number; y: number }[] = [];
     for (const [index, frame] of indices.entries()) {
-      const time = (startFrame + frame + 0.25) / OWNER_FPS;
+      const time = ownerVideoFrameSampleTime(startFrame + frame);
       await mediaReady(
         video,
         () =>

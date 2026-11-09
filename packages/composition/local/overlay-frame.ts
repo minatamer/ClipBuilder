@@ -2,6 +2,7 @@ import { FIXED_COMPOSITION_POLICY } from "@clipbuilder/contracts";
 import { OWNER_FPS } from "../../contracts/local/policy.ts";
 import type { OwnerOverlay } from "../../contracts/local/clips.ts";
 import { ownerVisualMotion } from "./visual-motion.ts";
+import { ownerVisualTransform } from "../../contracts/local/visual-effects.ts";
 import { captionSpeakerFrame } from "../../contracts/local/caption-speakers.ts";
 import { OWNER_CAPTION_PRESETS } from "../../contracts/local/editor.ts";
 import type { OwnerOverlayClock } from "../../contracts/local/visual-clock.ts";
@@ -111,7 +112,18 @@ export function ownerOverlayFrame(
         ? Math.min(1, (ms - caption.startMs) / 120)
         : null,
       highlights,
-      visuals.map((cue) => [cue.id, ownerVisualMotion(cue, frame)]),
+      visuals.map((cue) => [
+        cue.id,
+        ownerVisualMotion(cue, frame),
+        ownerVisualTransform(
+          cue,
+          frame,
+          overlay.videoAssets?.find((asset) => asset.id === cue.assetId),
+        ),
+        cue.video
+          ? Math.floor(frame - cue.startFrame + cue.video.offsetFrame)
+          : null,
+      ]),
     ]),
   };
 }

@@ -32,6 +32,7 @@ export async function prepareOwnerAudioMix(options: {
     inputs: string[] = [],
     filters: string[] = [];
   const duration = options.hookSeconds + options.bodySeconds;
+  const samples = Math.round(duration * OWNER_AUDIO_LIMITS.sampleRate);
   for (const [index, segment] of segments.entries()) {
     options.signal.throwIfAborted();
     const source = segment.cue.source;
@@ -91,12 +92,14 @@ export async function prepareOwnerAudioMix(options: {
     const span = segment.end - segment.start,
       fade = Math.min(OWNER_AUDIO_LIMITS.fadeSeconds, span / 2);
     filters.push(
-      `[${options.firstInput + index}:a:0]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,atrim=start=${segment.offset}:duration=${span},asetpts=PTS-STARTPTS,afade=t=in:d=${fade},afade=t=out:st=${span - fade}:d=${fade},volume=${segment.cue.volume / 100},adelay=${Math.round(segment.start * OWNER_AUDIO_LIMITS.sampleRate)}S:all=1,apad,atrim=duration=${duration}[added${index}]`,
+      `[${options.firstInput + index}:a:0]aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo,atrim=start=${segment.offset}:duration=${span},asetpts=PTS-STARTPTS,afade=t=in:d=${fade},afade=t=out:st=${span - fade}:d=${fade},volume=${segment.cue.volume / 100},adelay=${Math.round(segment.start * OWNER_AUDIO_LIMITS.sampleRate)}S:all=1,apad,atrim=end_sample=${samples},asetpts=N/SR/TB[added${index}]`,
     );
   }
-  filters.push(`[audio]apad,atrim=duration=${duration}[originalAudio]`);
   filters.push(
-    `[originalAudio]${segments.map((_, index) => `[added${index}]`).join("")}amix=inputs=${segments.length + 1}:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.95:level=0,atrim=duration=${duration}[mixedAudio]`,
+    `[audio]apad,atrim=end_sample=${samples},asetpts=N/SR/TB[originalAudio]`,
+  );
+  filters.push(
+    `[originalAudio]${segments.map((_, index) => `[added${index}]`).join("")}amix=inputs=${segments.length + 1}:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.95:level=0,atrim=end_sample=${samples},asetpts=N/SR/TB[mixedAudio]`,
   );
   return { inputs, graph: filters.join(";"), label: "mixedAudio" };
 }

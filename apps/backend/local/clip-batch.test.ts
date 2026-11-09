@@ -132,6 +132,60 @@ const request = () => ({
     (moment) => moment.id,
   ),
 });
+it("fits original footage with zero speaker/camera preparation and no automatic follow, preserving the choice on restore/export", async () => {
+  await batch.close();
+  const prepareWords = vi.fn<NonNullable<OwnerClipPorts["prepareWords"]>>(
+    async () => {
+      throw Error("unexpected_speaker_work");
+    },
+  );
+  const focus = vi.fn<NonNullable<OwnerClipPorts["focus"]>>(() => {
+    throw Error("unexpected_camera_work");
+  });
+  const planVisuals = vi.fn<OwnerClipPorts["plan"]>(async () => []);
+  ports.mode = "provider-ai";
+  analysis.mode = "provider-ai";
+  for (const moment of analysis.manual) moment.speakersPrepared = false;
+  batch = new OwnerClipBatch(workspace, files, {
+    ...ports,
+    prepareWords,
+    focus,
+    planVisuals,
+  });
+  await batch.submit(
+    { ...request(), framing: "fit", momentIds: [analysis.manual[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const clip = batch.snapshot().clips[0]!;
+  expect(clip.state).toBe("review-ready");
+  expect(clip.framing).toBe("fit");
+  expect(clip.base!.overlay.framing).toBe("fit");
+  expect(clip.base!.overlay.focus).toBeUndefined();
+  expect(prepareWords).toHaveBeenCalledTimes(0);
+  expect(focus).toHaveBeenCalledTimes(0);
+  expect(ports.plan).toHaveBeenCalledTimes(0);
+  expect(planVisuals).toHaveBeenCalledTimes(1);
+  expect(ports.image).toHaveBeenCalledTimes(0);
+  expect(ports.render.mock.calls[0]![0]).not.toHaveProperty("followFocus");
+  await batch.close();
+  batch = new OwnerClipBatch(workspace, files, {
+    ...ports,
+    prepareWords,
+    focus,
+    planVisuals,
+  });
+  batch.restore([clip]);
+  await batch.render(clip.id, {
+    operationId: randomUUID(),
+    expectedRevision: clip.revision,
+  });
+  await batch.drain();
+  expect(batch.snapshot().clips[0]!.framing).toBe("fit");
+  expect(planVisuals).toHaveBeenCalledTimes(1);
+  expect(prepareWords).toHaveBeenCalledTimes(0);
+  expect(focus).toHaveBeenCalledTimes(0);
+});
 it.each([
   "provider-ai",
   "partial-path",

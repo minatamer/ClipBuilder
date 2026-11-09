@@ -32,6 +32,7 @@ export const ownerCameraTargetSchema = z
 export const ownerCameraEffectSchema = z
   .object({
     id: ownerIdSchema,
+    kind: z.literal("pan").optional(),
     occurrence: z.enum(["hook", "body"]),
     startFrame: frame,
     zoomFrames: frame.refine((value) => value > 0),
@@ -140,6 +141,31 @@ const blend = (
   width: left.width + (right.width - left.width) * p,
   height: left.height + (right.height - left.height) * p,
 });
+/** Pan changes center while retaining the preceding camera magnification. */
+export function ownerCameraPanCrop(
+  focus: Pick<OwnerFocus, "source">,
+  target: OwnerCameraEffect["target"],
+  start: OwnerCameraRect,
+): OwnerCameraRect {
+  const content = ownerSourceContent(focus.source);
+  return {
+    ...start,
+    x: Math.max(
+      content.x,
+      Math.min(
+        content.x + content.width - start.width,
+        content.x + target.centerX * content.width - start.width / 2,
+      ),
+    ),
+    y: Math.max(
+      content.y,
+      Math.min(
+        content.y + content.height - start.height,
+        content.y + target.centerY * content.height - start.height / 2,
+      ),
+    ),
+  };
+}
 /** Shared by the Player and native frame sampler. Baseline shots are never rewritten. */
 export function ownerCameraCropAt(
   focus: OwnerFocus,
@@ -182,15 +208,26 @@ export function ownerCameraCropAt(
   };
   const effect = zoomAt(occurrenceFrame);
   if (!effect) return baseline;
+  const targetFor = (item: OwnerCameraEffect): OwnerCameraRect => {
+    if (item.kind !== "pan") return ownerCameraTargetCrop(focus, item.target);
+    const position = ownerFocusAt(focus, sourceOffset + item.startFrame);
+    const previous = zoomAt(item.startFrame - 1);
+    const start =
+      previous &&
+      ownerFocusAt(focus, sourceOffset + previous.startFrame) === position
+        ? targetFor(previous)
+        : ownerFocusCrop(focus, position);
+    return ownerCameraPanCrop(focus, item.target, start);
+  };
   const at = occurrenceFrame - effect.startFrame,
-    target = ownerCameraTargetCrop(focus, effect.target);
+    target = targetFor(effect);
   if (at < effect.zoomFrames) {
     const position = ownerFocusAt(focus, sourceOffset + effect.startFrame);
     const previous = zoomAt(effect.startFrame - 1);
     const start =
       previous &&
       ownerFocusAt(focus, sourceOffset + previous.startFrame) === position
-        ? ownerCameraTargetCrop(focus, previous.target)
+        ? targetFor(previous)
         : ownerFocusCrop(focus, position);
     const duration =
       effect.returnFrames === 0 ? effect.zoomFrames - 1 : effect.zoomFrames;

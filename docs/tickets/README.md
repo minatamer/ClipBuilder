@@ -1,5 +1,83 @@
 # ClipBuilder canonical ticket index
 
+## Layered visual media, zoom and full-frame presentation — 2026-11-09
+
+Final added-video Pan/face-tracking acceptance passes generated browser/native
+pixel comparisons at three matching timestamps and byte-identical draft reopen
+without a new render. Interior-frame sampling and stable RGBA raster capture fix
+the observed preview/export frame shifts. New native regressions pass; no further
+paid run or Gemini test. Whole-file local commit is owner-authorized, with their
+manual visual review remaining pending.
+
+Latest naming/scope clarification: manual movement is **Pan**; following a marked
+head is **Face tracking**. CL-271 adds original-video Pan beside Zoom and shared
+uploaded-video tracking using the existing no-key pixel tracker. Picture/video
+Pan retains the source picker and exact large-preview crop. Paths bind to their
+asset/trim, persist through Apply/reload/Hook/drafts and share native rendering.
+Generated browser tracking/cancel and all-three-target Pan checks, stable
+desktop/tablet/phone feedback, 53 focused regressions and the synthetic native
+export/reopen proof pass. Hosted code is shared; no Gemini test or new paid run.
+
+[CL-271](CL-271-muted-video-b-roll-with-continuous-captions.md) records the owner's
+request for Videos alongside Pictures and Audio in Media. Timed uploaded B-roll
+starts muted over the interview while its audio and captions continue; existing
+foreground titles/logo overlays remain visible. Extended with picture zoom,
+combined video motion/zoom and full-frame 9:16 presentation for either media type,
+keeping captions above the visual. Multiple pictures/videos can share a frame
+with explicit shared front/back ordering, independent positioning/effects and
+at least two concurrent videos. Each video has independent volume/mute controls
+and can explicitly mix its sound with the interview and existing sound effects
+or music. The owner now authorizes implementation and execute/validate/test loops,
+normal local startup alongside Voyagenda, review drafts in Downloads and one
+bounded paid acceptance only after generated/no-key gates. CL-271 also owns an
+optional no-tracking processing mode that fits the horizontal original inside
+the vertical frame. Implementation and the source-clock follow-up pass 127
+relevant regression tests and generated native checks, including landscape,
+portrait and square B-roll. One authorized real processing run completed; three
+editable review drafts and one layered MP4 are saved in Downloads, with normal
+picker reopen verified without regeneration. The normal app remains running in
+Codex, with Voyagenda preserved. Owner visual/release acceptance remains personal.
+The source-player sizing follow-up now keeps a compact natural aspect ratio;
+desktop/tablet/phone browser checks and scoped static checks passed without any
+additional processing or provider call.
+The owner's Camera/Media organization revision moves per-picture/video zoom,
+motion and transitions into Camera with an explicit target selector. Media
+retains assets, timing/trim, layers, fit/geometry and volume. Generated browser
+navigation/Apply/error/responsive checks and 22 focused regressions pass;
+existing saved effects remain available without migration or new processing.
+Camera media targets now show a named read-only selection border in the preview.
+Picture/video/full-frame, cue-boundary, Original-video and responsive generated
+checks pass; selection retains clean edits and stays outside exports.
+The latest consistency revision replaces the combined effect form with Camera's
+separate Zoom/Motion tabs and shared visual crop picker, including picture Motion
+and start/end frame selection. Seventy-two focused fake/no-key tests, generated
+native rendering, saved-edit reload, real pointer/keyboard gestures and stable
+desktop/tablet/phone validation geometry pass. Uploaded B-roll, effects and
+no-tracking fit are also wired into protected hosted Gemini sessions, superseding
+the earlier local-only exclusion. No Gemini run or deployment was performed;
+the normal worker was rebuilt/reloaded while preserving the frontend and Voyagenda.
+CL-271 also owns the reported Zoom/Motion preview-start correction: replay must
+begin at the selected media's display Start, including a later effect's lead-in,
+with video trim and Hook/body clocks preserved. The shared Preview handler is
+fixed. Generated picture/video replay, later effect starts, trim, repeat playback,
+Hook/body mapping and invalid guards pass, alongside 13 focused regressions and
+scoped static checks. No additional provider test or deployment was performed.
+The owner's selection-time clarification is also fixed: Camera entry/target
+selection seeks the exact media start; source and main previews share a clock,
+and crop gestures no longer jump to the faded final frame. Generated clock,
+pointer/keyboard, first-decoded-frame, Hook/body and responsive checks pass with
+14 focused regressions and scoped static checks. The normal Video 1 was visibly
+verified full-frame at 18.000 s with clean retained edits and no new processing.
+The large preview now also shows the exact Zoom/Motion crop being adjusted,
+including each Motion endpoint. Editor-only inspection clears for playback,
+navigation and Apply/Discard; saved/native animation stays intact. Twenty focused
+tests plus picture/video gesture, crop-math, replay, save/reload and responsive
+browser checks pass. An existing-Motion drag remains active through equal endpoints.
+Custom motion-graphics authoring, arbitrary cuts/splices and clip merging stay
+outside ClipBuilder for separate owner-requested local editing tasks.
+The current execution grant supersedes the earlier planning-only hold. No
+configuration, Git, cloud or deployment action is authorized.
+
 ## Custom-domain connection — 2026-11-08
 
 [CL-270](CL-270-custom-domain-connection-cutover.md) owns the reported connection

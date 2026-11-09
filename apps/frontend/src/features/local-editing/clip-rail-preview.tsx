@@ -64,7 +64,13 @@ export function ClipRailPreview({
   }, []);
   const overlay =
     clip.base && clip.edit
-      ? compileOwnerOverlay(clip.base, clip.edit, clip.assets, clip.audioAssets)
+      ? compileOwnerOverlay(
+          clip.base,
+          clip.edit,
+          clip.assets,
+          clip.audioAssets,
+          clip.videoAssets,
+        )
       : clip.base?.overlay;
   return (
     <span

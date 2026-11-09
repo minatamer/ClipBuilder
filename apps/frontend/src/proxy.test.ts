@@ -10,7 +10,12 @@ import { createHash } from "node:crypto";
 import { Internals } from "remotion";
 describe("request-scoped browser security", () => {
   it("lets large picked-video bodies stream without document cloning while retaining adjacent coverage", () => {
-    for (const path of ["/api/local/open/video", "/api/local/open/video/"])
+    for (const path of [
+      "/api/local/open/video",
+      "/api/local/open/video/",
+      "/api/local/workspace/00000000-0000-4000-8000-000000000001/clips/00000000-0000-4000-8000-000000000002/video",
+      "/api/local/workspace/00000000-0000-4000-8000-000000000001/clips/00000000-0000-4000-8000-000000000002/audio/",
+    ])
       expect(
         doesProxyMatch({ config, url: `http://localhost:3000${path}` }),
       ).toBe(false);
@@ -19,6 +24,7 @@ describe("request-scoped browser security", () => {
       "/api/local/open/draft",
       "/api/local/open/videox",
       "/api/local/open/video/extra",
+      "/api/local/workspace/00000000-0000-4000-8000-000000000001/clips/00000000-0000-4000-8000-000000000002/videox",
       "/api/local/uploads/synthetic/chunk",
     ])
       expect(

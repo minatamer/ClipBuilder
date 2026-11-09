@@ -17,7 +17,10 @@ export type EditorPreviewForm = EditorFormDraft & {
 export function editorPreviewForm(
   previous: EditorPreviewForm | null,
   next: EditorFormDraft,
-  clip: Pick<OwnerClip, "base" | "baseHash" | "assets" | "audioAssets">,
+  clip: Pick<
+    OwnerClip,
+    "base" | "baseHash" | "assets" | "audioAssets" | "videoAssets"
+  >,
 ): EditorPreviewForm {
   let preview =
     previous?.original === next.original &&
@@ -32,6 +35,7 @@ export function editorPreviewForm(
         next.draft,
         clip.assets,
         clip.audioAssets,
+        clip.videoAssets,
       );
   } catch {
     // The draft stays invalid and Apply remains guarded; only its paint is held.

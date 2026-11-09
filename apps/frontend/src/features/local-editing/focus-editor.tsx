@@ -61,6 +61,7 @@ export function FocusEditor({
   captureReady,
   disabled,
   motion,
+  pan,
   tracking,
   timeline,
   positionRequest,
@@ -80,6 +81,7 @@ export function FocusEditor({
   captureReady: boolean;
   disabled: boolean;
   motion?: ReactNode;
+  pan?: ReactNode;
   tracking?: ReactNode;
   timeline?: ReactNode;
   positionRequest?:
@@ -87,7 +89,7 @@ export function FocusEditor({
   navigationDisabled?: boolean;
   onPositionSelect?: ((index: number) => void) | undefined;
   feedback?:
-    | { tab: "camera" | "people" | "zoom" | "motion"; message: string }
+    | { tab: "camera" | "people" | "zoom" | "pan" | "motion"; message: string }
     | undefined;
   notice?: string | undefined;
 }) {
@@ -612,11 +614,21 @@ export function FocusEditor({
                     },
                   ]
                 : []),
+              ...(pan
+                ? [
+                    {
+                      value: "pan",
+                      label: "Pan",
+                      issue:
+                        feedback?.tab === "pan" ? feedback.message : undefined,
+                    },
+                  ]
+                : []),
               ...(tracking
                 ? [
                     {
                       value: "motion",
-                      label: "Motion",
+                      label: "Face tracking",
                       issue:
                         feedback?.tab === "motion"
                           ? feedback.message
@@ -632,6 +644,15 @@ export function FocusEditor({
               if (next === "camera") setPersonId(shot.personId);
             }}
           />
+          <div
+            role="tabpanel"
+            id={`${tabsId}-pan-panel`}
+            aria-labelledby={`${tabsId}-pan`}
+            hidden={tab !== "pan"}
+            tabIndex={0}
+          >
+            {tab === "pan" && pan}
+          </div>
           <div
             role="tabpanel"
             id={`${tabsId}-motion-panel`}

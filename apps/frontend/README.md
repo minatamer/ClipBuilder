@@ -1,5 +1,33 @@
 # ClipBuilder frontend
 
+CL-271 adds Media / Videos and one shared front-to-back picture/video
+layer list. Select covered layers, reorder, drag/resize, choose inset or full frame,
+and select a Camera target for picture/video effects. Camera keeps its established
+preview/inspector layout with separate Zoom and Pan tabs, visual crop picking,
+Pan start/end frames and a separate Transitions tab. The selected layer has a
+named read-only frame in the main preview. Camera selection starts at the media's
+display Start, and the source picker follows the main preview clock; crop edits
+keep that moment, while explicit Pan endpoints seek their chosen frame.
+During crop adjustment the large preview shows the exact chosen framing and zoom;
+Preview or normal Play returns to the saved animation. This temporary inspection
+is cleared on navigation and Apply/Discard and is never saved or exported.
+The original video also has Pan, retaining the preceding camera magnification.
+Face tracking names the existing manually marked head-follow workflow; uploaded
+videos use that same browser pixel tracker on their raw source. Mark a region and
+explicitly Track face, or cancel. A bounded saved path follows the same immutable
+asset/trim in preview/export, combines with Zoom/Pan and survives draft/Hook copies.
+Pictures retain Zoom/Pan without a temporal tracking action. No provider keys,
+downloaded model or biometric identification are needed for these controls.
+Videos have separate source and
+display ranges, Capture controls, and per-placement mute/volume; they start muted.
+Captions/titles stay above visuals and inset geometry survives full-frame mode.
+Invalid trims/effects or more than two simultaneous videos retain the draft and
+last valid preview with contextual feedback. Manual media editing on prepared
+clips needs no API keys. These controls, uploads and the no-tracking fit choice
+work in both local Codex and hosted Gemini; YouTube stays local-only. Fresh real
+preparation keeps its provider/runtime, live flags and approvals. Hosted wiring
+is verified with generated/fake transports; no Gemini run or deployment is claimed.
+
 CL-263 adds an automatic guide for the first fully ready clip editor. A centered
 welcome offers Start tour / Skip before any highlighted walkthrough step. Shared
 buttons, glass tokens and neutral focus style frame rectangular spotlights and

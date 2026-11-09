@@ -58,7 +58,9 @@ export function ownerCutVideoFilter(
 }
 
 export function ownerCutAudioFilter(videoStart: number, cut: OwnerCut): string {
-  return `asetpts=PTS-(${videoStart.toFixed(6)})/TB,aresample=async=1:first_pts=0,apad,atrim=start=${cut.startFrame / OWNER_FPS}:end=${cut.endFrame / OWNER_FPS},asetpts=PTS-STARTPTS`;
+  // Bound physical samples after anchoring to the video clock. Timestamp trims
+  // downstream of inserted silence can otherwise discard that silence.
+  return `asetpts=PTS-(${videoStart.toFixed(6)})/TB,aresample=48000:async=1:first_pts=0,apad,atrim=start_sample=${cut.startFrame * (48000 / OWNER_FPS)}:end_sample=${cut.endFrame * (48000 / OWNER_FPS)},asetpts=N/SR/TB`;
 }
 
 /** Project accepted preview geometry to original pixels, never through preview video. */

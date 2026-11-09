@@ -3,6 +3,12 @@ import {
   ownerCameraEffectsFit,
 } from "./camera-motion.ts";
 import { z } from "zod";
+import { ownerVisualTrackingFits } from "./visual-tracking.ts";
+import {
+  ownerVideoAssetSchema,
+  OWNER_VIDEO_LIMITS,
+  ownerVideoOverlapFits,
+} from "./video-assets.ts";
 import {
   ownerCameraTracksSchema,
   ownerCameraTracksFit,
@@ -59,6 +65,7 @@ export const OWNER_BATCH_POLICY = {
   operations: 200,
   visualDiscoveryAttempts: 5,
 } as const;
+const ownerClipFramingSchema = z.enum(["tracked", "fit"]);
 export const ownerOutputRevisionSchema = z
   .number()
   .int()
@@ -84,9 +91,66 @@ export const ownerOverlayContentSchema = z
     cameraEffects: ownerCameraEffectsSchema.optional(),
     cameraTracks: ownerCameraTracksSchema.optional(),
     visuals: z.array(ownerVisualSchema).max(OWNER_PICTURE_LIMITS.cuesPerClip),
+    videoAssets: z
+      .array(ownerVideoAssetSchema)
+      .max(OWNER_VIDEO_LIMITS.assets)
+      .optional(),
+    framing: ownerClipFramingSchema.optional(),
   })
   .strict()
   .superRefine((overlay, ctx) => {
+    if (!ownerVideoOverlapFits(overlay.visuals))
+      ctx.addIssue({
+        code: "custom",
+        path: ["visuals"],
+        message: "Only two videos can play together.",
+      });
+    overlay.visuals.forEach((cue, index) => {
+      if (
+        !ownerVisualTrackingFits(cue) ||
+        (cue.tracking &&
+          !(overlay.videoAssets ?? []).some(
+            (asset) =>
+              asset.id === cue.assetId &&
+              cue.tracking!.sourceStartFrame +
+                cue.tracking!.endFrame -
+                cue.tracking!.startFrame <=
+                asset.frames,
+          ))
+      )
+        ctx.addIssue({
+          code: "custom",
+          path: ["visuals", index, "tracking"],
+          message:
+            "Face tracking no longer matches this source trim. Remove it or track again.",
+        });
+      if (
+        cue.effect &&
+        (cue.effect.startFrame < cue.startFrame ||
+          cue.effect.endFrame > cue.endFrame)
+      )
+        ctx.addIssue({
+          code: "custom",
+          path: ["visuals", index, "effect"],
+          message: "Keep the effect inside its visual interval.",
+        });
+      if (
+        cue.video &&
+        !(overlay.videoAssets ?? []).some(
+          (asset) =>
+            asset.id === cue.assetId &&
+            asset.digest === cue.digest &&
+            cue.video!.offsetFrame + cue.endFrame - cue.startFrame <=
+              (cue.video!.sourceEndFrame ?? asset.frames) &&
+            (cue.video!.sourceEndFrame ?? asset.frames) <= asset.frames,
+        )
+      )
+        ctx.addIssue({
+          code: "custom",
+          path: ["visuals", index, "video"],
+          message: "Keep the excerpt inside its video asset.",
+        });
+    });
     if (
       (overlay.hook && overlay.hook.endFrame > overlay.frames) ||
       overlay.videoLooks?.some((range) => range.endFrame > overlay.frames) ||
@@ -306,6 +370,11 @@ export const ownerClipSchema = z
     preparation: ownerClipPreparationSchema.optional(),
     edit: ownerEditDocumentSchema.nullable().default(null),
     assets: z.array(ownerAssetSchema).max(OWNER_PICTURE_LIMITS.assetsPerClip),
+    videoAssets: z
+      .array(ownerVideoAssetSchema)
+      .max(OWNER_VIDEO_LIMITS.assets)
+      .optional(),
+    framing: ownerClipFramingSchema.optional(),
     audioAssets: z
       .array(ownerAudioAssetSchema)
       .max(OWNER_AUDIO_LIMITS.assets)
@@ -343,6 +412,7 @@ export const ownerClipListSchema = z
     workers: z.literal(1),
     pictureAssetId: ownerIdSchema.optional(),
     audioAssetId: ownerIdSchema.optional(),
+    videoAssetId: ownerIdSchema.optional(),
   })
   .strict();
 export type OwnerClipList = z.infer<typeof ownerClipListSchema>;
@@ -353,6 +423,7 @@ export const ownerBatchRequestSchema = z
     sourceRevision: z.number().int().nonnegative(),
     policyRevision: z.number().int().nonnegative(),
     momentIds: z.array(ownerIdSchema).min(1),
+    framing: ownerClipFramingSchema.optional(),
   })
   .strict()
   .refine(

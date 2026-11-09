@@ -90,6 +90,7 @@ export function OwnerClipBatchPanel({
         ? Number.MAX_SAFE_INTEGER
         : OWNER_LIMITS.clips;
   const [limitNotice, setLimitNotice] = useState(0);
+  const [framing, setFraming] = useState<"tracked" | "fit">("tracked");
   const [connection, setConnection] = useState<ClipConnection>("connected");
   const [connectionAttempt, setConnectionAttempt] = useState(0);
   const planningAvailable =
@@ -333,6 +334,25 @@ export function OwnerClipBatchPanel({
           Your clips
         </h2>
       )}
+      {showProcessing && selectionReady && !list.active && (
+        <label>
+          Framing
+          <select
+            className="select-control"
+            aria-label="Clip framing"
+            value={framing}
+            disabled={pending || list.active}
+            onChange={(event) =>
+              setFraming(
+                event.currentTarget.value === "fit" ? "fit" : "tracked",
+              )
+            }
+          >
+            <option value="tracked">Face tracking · Portrait</option>
+            <option value="fit">No tracking · Fit original</option>
+          </select>
+        </label>
+      )}
       {message &&
         ((message.clipId === null && showProcessing) ||
           (message.clipId === currentId &&
@@ -424,6 +444,7 @@ export function OwnerClipBatchPanel({
                     policyRevision: first.policyRevision,
                     sourceRevision: workspace.revision,
                     momentIds: selected.map((item) => item.momentId),
+                    framing,
                   });
                 }}
               >

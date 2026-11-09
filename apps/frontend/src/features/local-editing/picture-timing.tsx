@@ -26,6 +26,7 @@ export function PictureTiming<
   presentationClock = false,
   onStartAfterEnd,
   validationMessage,
+  className = "",
 }: {
   cue: T;
   frames: number;
@@ -37,6 +38,7 @@ export function PictureTiming<
   presentationClock?: boolean;
   onStartAfterEnd?: ((frame: number) => void) | undefined;
   validationMessage?: string | undefined;
+  className?: string;
 }) {
   const hook = useContext(EditorHookClock);
   const occurrence = useContext(EditorOccurrence);
@@ -101,7 +103,7 @@ export function PictureTiming<
   }
   return (
     <>
-      <div className="editor-fields picture-timing">
+      <div className={`editor-fields picture-timing ${className}`}>
         {(["startFrame", "endFrame"] as const).map((key) => {
           const start = key === "startFrame";
           return (

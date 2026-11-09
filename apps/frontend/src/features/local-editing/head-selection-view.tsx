@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
 import { Maximize2, X } from "lucide-react";
 import { Button } from "../../shared/ui/button";
-import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
+import { ownerVideoFrameSampleTime } from "../../../../../packages/contracts/local/video-assets.ts";
 import type { ownerSourceContent } from "../../../../../packages/contracts/local/focus.ts";
 import type { HeadBox } from "../../../../../packages/composition/local/head-pixel-tracker.ts";
 
@@ -16,6 +16,7 @@ export function HeadSelectionView({
   followWindow,
   onChange,
   onConfirm,
+  rawSource = false,
 }: {
   sourceUrl: string;
   content: ReturnType<typeof ownerSourceContent>;
@@ -26,6 +27,7 @@ export function HeadSelectionView({
   followWindow?: HeadBox;
   onChange: (seed: HeadBox) => void;
   onConfirm: () => void;
+  rawSource?: boolean;
 }) {
   const titleId = useId();
   const [expanded, setExpanded] = useState(false);
@@ -37,7 +39,7 @@ export function HeadSelectionView({
   );
   useEffect(() => {
     if (media.current && media.current.readyState >= 1)
-      media.current.currentTime = (sourceFrame + 0.25) / OWNER_FPS;
+      media.current.currentTime = ownerVideoFrameSampleTime(sourceFrame);
   }, [sourceFrame, sourceUrl, expanded]);
   function pointer(event: PointerEvent<HTMLButtonElement>) {
     const r = event.currentTarget.getBoundingClientRect();
@@ -69,15 +71,15 @@ export function HeadSelectionView({
         aria-hidden="true"
         onLoadedMetadata={() => {
           if (media.current)
-            media.current.currentTime = (sourceFrame + 0.25) / OWNER_FPS;
+            media.current.currentTime = ownerVideoFrameSampleTime(sourceFrame);
         }}
         style={{
           position: "absolute",
-          width: `${(1080 / content.width) * 100}%`,
-          height: `${(1920 / content.height) * 100}%`,
+          width: rawSource ? "100%" : `${(1080 / content.width) * 100}%`,
+          height: rawSource ? "100%" : `${(1920 / content.height) * 100}%`,
           maxWidth: "none",
-          left: `${(-content.x / content.width) * 100}%`,
-          top: `${(-content.y / content.height) * 100}%`,
+          left: rawSource ? 0 : `${(-content.x / content.width) * 100}%`,
+          top: rawSource ? 0 : `${(-content.y / content.height) * 100}%`,
         }}
       />
       <button

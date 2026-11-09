@@ -166,6 +166,9 @@ importers:
       remotion:
         specifier: 4.0.534
         version: 4.0.534(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@24.19.0)
       zod:
         specifier: 4.6.6
         version: 4.6.6

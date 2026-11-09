@@ -113,6 +113,26 @@ it("blocks new automatic plans separately from local prepared-clip work", () => 
   expect(unavailable).not.toContain("Actual AI calls: zero");
 });
 
+it("keeps framing available for the hosted provider workflow without local library capabilities", () => {
+  const html = renderToStaticMarkup(
+    <OwnerClipBatchPanel
+      workspace={workspace}
+      capabilities={{
+        ...capabilities,
+        localMedia: false,
+        cloud: true,
+        execution: "hosted",
+        sourceMode: null,
+      }}
+      selected={[]}
+      selectionReady
+      onActive={noop}
+    />,
+  );
+  expect(html).toContain('aria-label="Clip framing"');
+  expect(html).toContain("No tracking · Fit original");
+});
+
 it("keeps processing in the results view and disables it after every clip is removed", () => {
   const render = (selectionReady: boolean) =>
     renderToStaticMarkup(

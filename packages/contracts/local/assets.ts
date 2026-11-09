@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { normalizedBoxSchema } from "@clipbuilder/contracts";
 import { ownerIdSchema } from "./policy.ts";
+import { ownerVisualEffectSchema } from "./visual-effects.ts";
+import { ownerVisualTrackingSchema } from "./visual-tracking.ts";
 
 export const OWNER_PICTURE_LIMITS = {
   inputBytes: 4 * 1024 ** 2,
@@ -49,6 +51,25 @@ export const ownerVisualSchema = z
     endFrame: z.number().int().positive(),
     box: normalizedBoxSchema,
     fit: z.enum(["contain", "cover"]),
+    presentation: z.enum(["inset", "full-frame"]).optional(),
+    focal: z
+      .object({
+        x: z.number().finite().min(0).max(1),
+        y: z.number().finite().min(0).max(1),
+      })
+      .strict()
+      .optional(),
+    effect: ownerVisualEffectSchema.optional(),
+    tracking: ownerVisualTrackingSchema.optional(),
+    video: z
+      .object({
+        offsetFrame: z.number().int().nonnegative(),
+        sourceEndFrame: z.number().int().positive().optional(),
+        volume: z.number().int().min(0).max(100),
+        muted: z.boolean(),
+      })
+      .strict()
+      .optional(),
     entrance: z.enum(OWNER_VISUAL_ANIMATIONS).optional(),
     exit: z.enum(OWNER_VISUAL_ANIMATIONS).optional(),
     animationFrames: z.number().int().min(1).max(30).optional(),

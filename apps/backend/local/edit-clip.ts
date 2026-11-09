@@ -41,10 +41,24 @@ export function applyOwnerEdit(
       clip.assets,
       clip.audioAssets ?? [],
       next.hook,
+      clip.videoAssets,
     );
   const priorHook = JSON.stringify(next.hook);
   for (const operation of request.operations) {
     switch (operation.kind) {
+      case "visual-order": {
+        const ordered = operation.ids.map((id) =>
+          next.visuals.find((cue) => cue.id === id),
+        );
+        if (
+          ordered.length !== next.visuals.length ||
+          new Set(operation.ids).size !== ordered.length ||
+          ordered.some((cue) => !cue)
+        )
+          throw new Error("invalid_visual_order");
+        next.visuals = ordered.filter((cue) => cue !== undefined);
+        break;
+      }
       case "hook-content":
         if (operation.content) next.hookContent = operation.content;
         else delete next.hookContent;
@@ -176,6 +190,7 @@ export function applyOwnerEdit(
       clip.assets,
       clip.audioAssets ?? [],
       selectedHook,
+      clip.videoAssets,
     );
     // Range changes preserve scoped edits through the shared bounded-copy helper.
     if (priorContent) {
@@ -186,6 +201,7 @@ export function applyOwnerEdit(
         clip.audioAssets ?? [],
         selectedHook,
         priorContent,
+        clip.videoAssets,
       );
     }
   }
@@ -225,6 +241,12 @@ export function applyOwnerEdit(
   }
   next.revision = clip.revision + 1;
   const validated = ownerEditDocumentSchema.parse(next);
-  compileOwnerOverlay(clip.base, validated, clip.assets, clip.audioAssets);
+  compileOwnerOverlay(
+    clip.base,
+    validated,
+    clip.assets,
+    clip.audioAssets,
+    clip.videoAssets,
+  );
   return validated;
 }
