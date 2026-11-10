@@ -1,6 +1,5 @@
-import { LoaderCircle } from "lucide-react";
 import type { ReactNode } from "react";
-import { BrandMark } from "./brand-mark";
+import { BrandedSpinner, type BrandedSpinnerSize } from "./branded-spinner";
 import { Progress } from "./progress";
 import styles from "./processing-state.module.css";
 
@@ -10,20 +9,17 @@ export function ProcessingState({
   className,
   progress,
   children,
+  indicatorSize = "standard",
 }: {
   label: string;
   className?: string;
   progress?: { fraction: number; valueText: string };
   children?: ReactNode;
+  indicatorSize?: BrandedSpinnerSize;
 }) {
   return (
     <div className={[styles.state, className].filter(Boolean).join(" ")}>
-      <div className={styles.visual} aria-hidden="true">
-        <span className={styles.halo} />
-        <span className={styles.orbit} />
-        <LoaderCircle className={styles.spinner} strokeWidth={0.8} />
-        <BrandMark className={styles.mark} />
-      </div>
+      <BrandedSpinner size={indicatorSize} />
       <p className={styles.title} role="status" aria-live="polite">
         {label}
       </p>

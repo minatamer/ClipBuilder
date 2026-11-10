@@ -56,36 +56,38 @@ export function Workspace({
             <BrandMark className={styles.brandMark} />
             <span className={styles.brandText}>ClipBuilder</span>
           </a>
-          <div ref={setTools} className={styles.tools} />
-          <div ref={setActions} className={styles.headerActions} />
-          <div ref={setHelp} className={styles.help} />
-          <details
-            className={styles.sessionMenu}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.currentTarget.open = false;
-                event.currentTarget.querySelector("summary")?.focus();
-              }
-            }}
-          >
-            <summary aria-label="Session options" title="Session options">
-              <Ellipsis size={20} aria-hidden="true" />
-            </summary>
-            <div className={styles.menuContent}>
-              {sessionActions}
-              <PrivacyDialog
-                localMedia={localMode}
-                cloudMedia={cloudMode}
-                illustrativePictures={illustrativePictures}
-                triggerVariant="secondary"
-              />
-              {clear !== undefined && (
-                <Button variant="secondary" onClick={clear}>
-                  Exit
-                </Button>
-              )}
-            </div>
-          </details>
+          <div className={styles.controls}>
+            <div ref={setTools} className={styles.tools} />
+            <div ref={setActions} className={styles.headerActions} />
+            <div ref={setHelp} className={styles.help} />
+            <details
+              className={styles.sessionMenu}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector("summary")?.focus();
+                }
+              }}
+            >
+              <summary aria-label="Session options" title="Session options">
+                <Ellipsis size={20} aria-hidden="true" />
+              </summary>
+              <div className={styles.menuContent}>
+                {sessionActions}
+                <PrivacyDialog
+                  localMedia={localMode}
+                  cloudMedia={cloudMode}
+                  illustrativePictures={illustrativePictures}
+                  triggerVariant="quiet"
+                />
+                {clear !== undefined && (
+                  <Button variant="quiet" onClick={clear}>
+                    Exit
+                  </Button>
+                )}
+              </div>
+            </details>
+          </div>
         </header>
         {children}
       </div>

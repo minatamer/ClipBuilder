@@ -1,0 +1,86 @@
+.visual {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  width: min(100%, clamp(6.5rem, 12vw, 8rem));
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+.visual[data-size="compact"] {
+  width: min(100%, 5rem);
+}
+.halo {
+  position: absolute;
+  inset: -35%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(92 157 255 / 24%), transparent 68%);
+  animation: breathe 3.2s ease-in-out infinite;
+}
+.visual > .mark {
+  z-index: 1;
+  /* Half the diagonal plus full floating travel stays inside the ring's inner radius. */
+  width: 44%;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 32%;
+  box-shadow: var(--cb-glass-edge-shadow);
+  animation: float 3.2s ease-in-out infinite;
+}
+.visual > .mark > span {
+  left: 23.5%;
+  width: 52.4%;
+  height: 14.3%;
+}
+.visual > .mark > span:first-child {
+  top: 30.2%;
+}
+.visual > .mark > span:last-child {
+  bottom: 30.2%;
+  width: 41.3%;
+}
+.rings {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  animation: spin 2.4s linear infinite;
+}
+.orbit {
+  stroke: rgb(154 194 255 / 15%);
+}
+.spinner {
+  stroke: var(--cb-blue-light);
+  opacity: 0.9;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes breathe {
+  50% {
+    opacity: 0.6;
+    transform: scale(0.88);
+  }
+}
+@keyframes float {
+  50% {
+    transform: translateY(-5%);
+  }
+}
+@media (forced-colors: active) {
+  .halo {
+    background: none;
+  }
+  .orbit {
+    stroke: CanvasText;
+  }
+  .spinner {
+    stroke: Highlight;
+  }
+}

@@ -9,7 +9,7 @@ import styles from "./page.module.css";
 type PrivacyDialogProperties = {
   triggerClassName?: string | undefined;
   triggerLabel?: string;
-  triggerVariant?: "secondary";
+  triggerVariant?: "secondary" | "quiet";
   localMedia?: boolean;
   cloudMedia?: boolean;
   illustrativePictures?: boolean;
@@ -39,9 +39,9 @@ export function PrivacyDialog({
 
   return (
     <>
-      {triggerVariant === "secondary" ? (
+      {triggerVariant ? (
         <Button
-          variant="secondary"
+          variant={triggerVariant}
           className={triggerClassName}
           aria-haspopup="dialog"
           onClick={openDialog}

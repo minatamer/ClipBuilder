@@ -46,7 +46,8 @@ describe("shared workflow primitives", () => {
       expect(markup.match(/<h1/g)).toHaveLength(1);
       expect(markup).toContain(`tabindex="-1">${title}</h1>`);
       expect(markup).not.toContain("Clip preparation steps");
-      expect(markup).toContain('aria-current="step"');
+      expect(markup).toContain(`data-stage="${step}"`);
+      expect(markup).not.toContain("Workflow progress");
       expect(markup).not.toContain("<footer");
       expect(markup).toContain('disabled=""');
     },

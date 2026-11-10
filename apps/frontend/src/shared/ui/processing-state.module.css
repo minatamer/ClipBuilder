@@ -20,57 +20,6 @@
   box-shadow: var(--cb-glass-edge-shadow);
   overflow: hidden;
 }
-.visual {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: clamp(6.5rem, 12vw, 8rem);
-  aspect-ratio: 1;
-  flex: 0 0 auto;
-}
-.halo {
-  position: absolute;
-  inset: -35%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(92 157 255 / 24%), transparent 68%);
-  animation: breathe 3.2s ease-in-out infinite;
-}
-.orbit {
-  position: absolute;
-  inset: 0.1rem;
-  border: 1px solid rgb(154 194 255 / 15%);
-  border-radius: 50%;
-}
-.spinner {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  color: var(--cb-blue-light);
-  opacity: 0.9;
-  animation: spin 2.4s linear infinite;
-}
-.mark {
-  width: 3.15rem;
-  height: 3.15rem;
-  border-radius: 1rem;
-  box-shadow:
-    var(--cb-glass-edge-shadow),
-    0 0.75rem 2.25rem rgb(0 8 28 / 24%);
-  animation: float 3.2s ease-in-out infinite;
-}
-.mark > span {
-  left: 0.74rem;
-  width: 1.65rem;
-  height: 0.45rem;
-}
-.mark > span:first-child {
-  top: 0.95rem;
-}
-.mark > span:last-child {
-  bottom: 0.95rem;
-  width: 1.3rem;
-}
 .state .title {
   position: relative;
   margin: 0;
@@ -85,28 +34,9 @@
   width: min(100%, 20rem);
   text-align: left;
 }
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@keyframes breathe {
-  50% {
-    opacity: 0.6;
-    transform: scale(0.88);
-  }
-}
-@keyframes float {
-  50% {
-    transform: translateY(-0.3rem);
-  }
-}
 @media (forced-colors: active) {
   .state {
     border-color: ButtonText;
     background: Canvas;
-  }
-  .spinner {
-    color: Highlight;
   }
 }

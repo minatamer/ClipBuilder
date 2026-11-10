@@ -67,23 +67,14 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(min-content, 1fr);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
 }
 .heading {
   padding: 1.25rem 1.5rem 0.5rem;
-}
-.stages {
-  display: flex;
-  gap: 1.5rem;
-  padding: 0;
-  margin: 0 0 0.75rem;
-  list-style: none;
-  color: var(--cb-ink-soft);
-  font-size: 0.8125rem;
-}
-.stages [aria-current="step"] {
-  color: var(--cb-ink);
-  font-weight: 700;
 }
 .heading h1 {
   margin: 0;
@@ -100,8 +91,7 @@
 .content {
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
+  overflow: visible;
   padding: 0.75rem 1.5rem 1.5rem;
 }
 .actions {
@@ -113,18 +103,33 @@
 .actions:not(:has(button, a[href], [role="status"])) {
   display: none;
 }
+.frame:has(> .boundedContent) {
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
 .frame[data-stage="2"] {
   height: auto;
   min-height: 0;
   grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+  scrollbar-gutter: auto;
 }
-.frame[data-stage="2"] > .heading {
+.frame[data-stage="2"] > .heading,
+.frame[data-stage="opening"] > .heading {
   position: absolute;
   width: 1px;
   height: 1px;
   padding: 0;
   overflow: hidden;
   clip-path: inset(50%);
+}
+.frame[data-stage="opening"] {
+  grid-template-rows: minmax(0, 1fr);
+}
+.frame[data-stage="0"] > .heading {
+  width: min(100%, 71rem);
+  margin-inline: auto;
 }
 .frame[data-stage="2"] > .content {
   padding: 0;

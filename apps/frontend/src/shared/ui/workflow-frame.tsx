@@ -16,7 +16,7 @@ export function WorkflowFrame({
   title: string;
   subtitle?: string | undefined;
   headingRef?: Ref<HTMLHeadingElement>;
-  step: 0 | 1 | 2;
+  step: 0 | 1 | 2 | null;
   children: ReactNode;
   actions?: ReactNode;
   bounded?: boolean;
@@ -29,16 +29,9 @@ export function WorkflowFrame({
       id="sample-main"
       tabIndex={-1}
       className={styles.frame}
-      data-stage={step}
+      data-stage={step ?? "opening"}
     >
       <header className={styles.heading}>
-        <ol className={styles.stages} aria-label="Workflow progress">
-          {["Source", "Moments", "Editor"].map((label, index) => (
-            <li key={label} aria-current={step === index ? "step" : undefined}>
-              {label}
-            </li>
-          ))}
-        </ol>
         <h1 ref={headingRef} tabIndex={-1}>
           {title}
         </h1>

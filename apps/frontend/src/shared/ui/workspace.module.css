@@ -21,7 +21,8 @@
   font-family: var(--cb-font-sans);
   font-size: 1rem;
   line-height: 1.5;
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -30,10 +31,6 @@
 }
 .workspace h1:focus {
   outline: none;
-}
-.workspace[data-editing] {
-  height: 100dvh;
-  overflow: hidden;
 }
 .header {
   flex-shrink: 0;
@@ -67,6 +64,7 @@
 .brandText {
   white-space: nowrap;
 }
+.controls,
 .tools,
 .help,
 .headerActions {
@@ -75,8 +73,11 @@
   gap: 0.5rem;
   min-width: 0;
 }
-.headerActions {
+.controls {
   margin-left: auto;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  max-width: 100%;
 }
 .headerActions:empty,
 .tools:empty,
@@ -86,9 +87,6 @@
 .sessionMenu {
   position: relative;
   flex: 0 0 auto;
-}
-.header:has(.headerActions:empty) .sessionMenu {
-  margin-left: auto;
 }
 .sessionMenu summary {
   min-height: var(--cb-target);
@@ -124,6 +122,9 @@
 .menuContent > * {
   width: 100%;
 }
+.menuContent > div > button {
+  width: 100%;
+}
 .menuContent button {
   justify-content: flex-start;
 }
@@ -145,10 +146,12 @@
     padding-inline: 0.5rem;
     gap: 0.25rem;
     flex-wrap: wrap;
+    justify-content: flex-end;
   }
   .brand {
     gap: 0.35rem;
     font-size: 1rem;
+    margin-right: auto;
   }
   .brandMark {
     width: 1.6rem;
@@ -156,6 +159,9 @@
   }
   .tools {
     gap: 0.1rem;
+  }
+  .controls {
+    display: contents;
   }
   .headerActions {
     gap: 0.25rem;
