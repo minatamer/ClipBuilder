@@ -2,6 +2,105 @@
 
 ## Full-window editor design exploration — 2026-11-10
 
+Overnight stop: completed work passed validation and whole-file local commits;
+owner manual review remains tomorrow. No further feature work tonight.
+Planned follow-ups, not implemented:
+
+- [CL-274 — Moments and Your clips redesign](CL-274-moments-and-your-clips-redesign.md)
+- [CL-275 — Glass single-word caption style](CL-275-glass-one-word-caption-style.md)
+
+Latest CL-273 review: fixed glitched Moments scrolling with one main scrollport,
+natural content, stable gutter and bounded editor panes. Five responsive sizes,
+wheel/keyboard, sticky preview, long list and conditional Jump reveal pass
+generated/no-key Codex checks. Seventeen focused tests, frontend/test-source types,
+all changed-source lint/format and all 15 asset hashes pass. Test tab and owned
+fixtures closed. Owner visual/live acceptance remains separate.
+
+Latest CL-273 review: remove the shared Source / Moments / Editor progress row
+and its unused styles. Complete locally: headings/internal stages retained;
+Source/Moments fit at desktop/tablet/phone widths. Six demo stills and targets
+updated; 11 focused tests, types/lint/format and all 15 asset hashes pass.
+Zero edits/provider calls; no owner-session, Voyagenda or Git changes.
+
+Latest CL-273 review: return Source/Moments workflow actions to the bottom-right
+of their owning cards, leaving the navbar for editor controls. Complete locally:
+local/hosted upload, YouTube stages, moment tabs, empty selection, Back/editor,
+recovery and responsive/error geometry pass Codex checks. Six fictional demo
+frames/click targets refreshed. 20 focused tests, app/test types, lint, formatting
+and all 15 delivery hashes pass. No real downloads, providers or Git mutation.
+
+Latest CL-273 review: replace layer-order arrows with one draggable mixed
+picture/video stack shared by both media tabs. Complete locally: actual Codex
+drag/keyboard, cancellation, preview paint order, saved reload and Undo/Redo pass.
+Six widths fit with 44px targets; fixed layers stay out. 15 focused tests,
+application/test types, lint and formatting pass. No paid/provider calls,
+owner-session changes, Voyagenda operations or Git mutation.
+
+Latest CL-273 review: repeated active-item clicks toggle contextual inspectors
+across the shared timelines. Complete locally: Codex verifies all six media/item
+kinds, five viewport widths, retained input, keyboard, explicit navigation and
+save/Undo/Redo. Linked audio now returns to the correct video/picture inspector.
+24 focused tests, frontend types, lint and formatting pass; no paid runs or
+owner-session/Voyagenda changes.
+
+Latest CL-273 review: integrate Add audio and View into media cards, with a
+trailing wide action area and an internal narrow footer. Complete locally:
+Codex responsive/View/audio-handoff checks and 7 timeline tests pass. Fixed the
+stale picture inspector hiding Audio's library on phones. Types/lint/format pass;
+zero edits/provider/render calls, with owner clips/apps and Voyagenda preserved.
+
+Latest CL-273 review: equalize all five Looks previews at the larger reference
+size. Complete locally: each image/frame is 80×45px across five device widths.
+Codex confirms typography cards, filter keyboard selection/save/reset and no
+page overflow; no provider/render calls, owner changes or Git action.
+
+Latest CL-273 review: remove Rename's empty feedback reservation and let its
+height follow actual content. Complete locally: compact normal spacing, natural
+feedback height and stable scrollbar gutter. Codex responsive/long-name/error/
+pending/recovery checks and 15 existing feedback tests pass; no paid/Git action.
+
+Latest CL-273 review: replace text-only position presets with shared visual
+portrait canvases across captions, text, pictures and videos. Complete locally:
+exact fitted-box miniatures, labels/checks, preserved manual fields and selection.
+Codex click/responsive/preview/save/Undo/reload checks and 15 focused units pass;
+zero provider/render calls, with owner session/apps preserved and no Git action.
+
+Latest CL-273 review: branding stays alone on the left; saved state leads one
+right-aligned action group, followed by history, current action, Help and menu.
+Complete locally: Codex-only no-key checks pass 25 save-state/size and 12
+workflow-slot cases, with preserved history/Retry and no layout shifts/overflow.
+Existing 18 units, types/lint/format pass; owner session/services are untouched.
+
+Latest CL-273 review: unify Privacy/Start over/Exit session-menu presentation
+using shared quiet menu items. Complete locally: equal full-width rows, shared
+type/padding/hover/focus; Codex desktop/phone dialog checks and 18 units pass.
+
+Latest CL-273 review: restyle the out-of-place green Saved pill as an integrated
+toolbar status using the editor's typography, colors and spacing. Complete
+locally: blue icon, muted inline copy, slim divider and larger type; no green
+capsule. Existing fake autosave proof and Codex's final five-state/four-width
+checks pass, preserving history, contextual failure/Retry and stable geometry.
+
+Latest CL-273 review: shared proportional branded loading is complete locally.
+Logo/ring/glyph/motion scale together, with an explicit compact size and no
+page-level internal sizing overrides. No-key browser geometry/animation/zoom/
+forced-colors checks and six workflow units pass, with Codex visual inspection.
+Owner session/media, services and Voyagenda are preserved; no paid/Git action.
+
+Latest CL-273 review: consistent inspector ownership is complete locally.
+Caption words remain beside Text in the right inspector, with the timeline on
+the left. The audit also moved local YouTube audio intake into that inspector.
+Generated pane/save/Undo and responsive proofs, 23 focused units, types/lint pass;
+all functions and earlier uncommitted changes are preserved. Checks are synthetic.
+
+Latest CL-273 owner review: direct saved-session restoration and Source/Moments
+presentation follow-up is complete locally. Held synthetic transports verify
+direct Editor restoration without Source/Moments flashes or unnecessary source/
+analysis reads. Preview loading stays inside its canvas; Source/Moments use
+flatter navigation, grouped controls and compact review rows. All 750 frontend
+tests, entry/layout/tour/film proofs and lint/types/workflow build pass. Owner
+media/services and Voyagenda are preserved. No paid run or new Git action.
+
 [CL-273](CL-273-full-window-editor-design-exploration.md) now owns the approved
 complete responsive workspace migration under AFK execute/validate/fix loops.
 The packet inventories every current feature/security guard, prohibits redundant
