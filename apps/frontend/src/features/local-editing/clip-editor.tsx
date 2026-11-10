@@ -4,6 +4,7 @@ import {
   type EditorFormDraft,
 } from "./editor-preview-form.ts";
 import { EditorTimeline, PictureTimelineAudio } from "./editor-timeline.tsx";
+import { VideoTimelineThumbnail } from "./video-timeline-thumbnail.tsx";
 import {
   editorTimelineItems,
   type EditorTimelineItem,
@@ -1687,20 +1688,31 @@ export function ClipEditor({
         onSelect={selectTimelineItem}
         preview={
           kind === "picture"
-            ? (item) => (
-                <span
-                  className="picture-thumb"
-                  aria-hidden="true"
-                  style={{
-                    backgroundImage: ownerOccurrenceOverlay(
-                      playbackOverlay,
-                      item.occurrence,
-                    ).visuals[item.index]!.video
-                      ? undefined
-                      : `url(/api/local/workspace/${workspaceId}/assets/${ownerOccurrenceOverlay(playbackOverlay, item.occurrence).visuals[item.index]!.assetId})`,
-                  }}
-                />
-              )
+            ? (item) => {
+                const cue = ownerOccurrenceOverlay(
+                  playbackOverlay,
+                  item.occurrence,
+                ).visuals[item.index]!;
+                return cue.video ? (
+                  <VideoTimelineThumbnail
+                    workspaceId={workspaceId}
+                    assetId={cue.assetId}
+                    frame={
+                      cue.video.offsetFrame +
+                      ownerSourceFrame(playbackOverlay, item.startFrame) -
+                      cue.startFrame
+                    }
+                  />
+                ) : (
+                  <span
+                    className="picture-thumb"
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage: `url(/api/local/workspace/${workspaceId}/assets/${cue.assetId})`,
+                    }}
+                  />
+                );
+              }
             : undefined
         }
         accessory={

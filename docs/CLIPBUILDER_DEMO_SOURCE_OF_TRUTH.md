@@ -17,6 +17,10 @@ Selecting a media Camera target shows a named selection frame around that
 layer in the preview, including full-frame/covered layers. This indicator is
 read-only in Camera and never part of exports; movement/resize stays in Media.
 Original video and frames outside the cue do not retain a media selection frame.
+The visual timeline shows pictures and source-trim-aware video stills. Thumbnail
+decoding is silent and bounded, independent of playback/effects, and shared by
+repeated source/frame placements. Loading/failure keeps the same tile geometry;
+leaving the timeline releases thumbnail resources without changing saved edits.
 Media Camera targets use the same preview/inspector layout and visual crop picker
 as original Camera controls, with distinct Zoom and Pan tabs and a separate
 Transitions tab. Both pictures and videos support explicitly authored manual

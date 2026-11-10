@@ -2,6 +2,13 @@
 
 ## Layered visual media, zoom and full-frame presentation — 2026-11-09
 
+Owner manual review, 2026-11-10: blank video timeline tiles are a confirmed
+CL-271 rendering omission, now fixed. Trim-aware video stills are decoded serially
+and shared by repeated placements, with stable icon fallbacks and resource cleanup.
+Generated Hook/body/reload/pixel/failure proofs and normal saved-draft checks pass.
+The existing pre-process Framing selector was shown without processing; no new
+paid run or Voyagenda changes.
+
 Final added-video Pan/face-tracking acceptance passes generated browser/native
 pixel comparisons at three matching timestamps and byte-identical draft reopen
 without a new render. Interior-frame sampling and stable RGBA raster capture fix

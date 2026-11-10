@@ -16,7 +16,12 @@ import { listenOwner } from "./owner-http.ts";
 
 /** Generated media and actual editor/Apply compiler; isolated from owner sessions. */
 export async function startBrollBrowserFixture(
-  options: { delayedMedia?: boolean; hook?: boolean; tracking?: boolean } = {},
+  options: {
+    delayedMedia?: boolean;
+    hook?: boolean;
+    tracking?: boolean;
+    thumbnails?: boolean;
+  } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), "clipbuilder-broll-browser-"));
   const tools = await ownerNativeTools(resolve(".")),
@@ -98,11 +103,13 @@ export async function startBrollBrowserFixture(
           "-f",
           "lavfi",
           "-i",
-          color === "testsrc2"
-            ? options.tracking
-              ? "color=c=black:s=320x180:r=30:d=3[bg];nullsrc=s=64x64:r=30:d=3,geq=r='mod(X*13+Y*7,255)':g='mod(X*5+Y*17,255)':b='mod(X*19+Y*3,255)'[head];[bg][head]overlay=x='40+15*t':y=50:shortest=1"
-              : "testsrc2=s=320x180:r=30:d=3"
-            : `color=c=${color}:s=320x180:r=30:d=3`,
+          options.thumbnails && color === "testsrc2"
+            ? "nullsrc=s=320x180:r=30:d=3,geq=lum='16+mod(N*17,200)':cb=128:cr=128"
+            : color === "testsrc2"
+              ? options.tracking
+                ? "color=c=black:s=320x180:r=30:d=3[bg];nullsrc=s=64x64:r=30:d=3,geq=r='mod(X*13+Y*7,255)':g='mod(X*5+Y*17,255)':b='mod(X*19+Y*3,255)'[head];[bg][head]overlay=x='40+15*t':y=50:shortest=1"
+                : "testsrc2=s=320x180:r=30:d=3"
+              : `color=c=${color}:s=320x180:r=30:d=3`,
           ...(index === 0
             ? [
                 "-f",
@@ -242,6 +249,18 @@ export async function startBrollBrowserFixture(
         exit: "none",
       },
     ];
+    if (options.thumbnails) {
+      const repeated = clip.edit.visuals[1]!;
+      repeated.assetId = clip.videoAssets![0]!.id;
+      repeated.endFrame = 60;
+      repeated.video!.offsetFrame = 30;
+      clip.edit.visuals.push({
+        ...clip.edit.visuals[0]!,
+        id: randomUUID(),
+        startFrame: 60,
+        video: { offsetFrame: 0, volume: 100, muted: true },
+      });
+    }
     if (options.delayedMedia) {
       const background = clip.edit.visuals[0]!;
       background.startFrame = 30;

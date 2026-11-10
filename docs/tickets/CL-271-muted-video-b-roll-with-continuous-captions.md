@@ -7,6 +7,97 @@ Reopening the layered draft retained its media, edits and export without new
 processing. The normal app remains running in Codex; Voyagenda was preserved.
 Personal visual/release acceptance remains owner-only.
 
+## Owner timeline-thumbnail investigation — 2026-11-10
+
+The owner now requests fixing the omission, then seeing the existing pre-process
+face-tracking choice and receiving the retained public YouTube URL. Implement
+bounded, serial, source-trim-aware thumbnails using existing admitted video bytes;
+deduplicate repeated source/frame requests, retain picture thumbnails and stable
+row geometry, and release readers/decoders/canvases/object URLs on cleanup.
+Verify actual pixels, trimmed/repeated/Hook placements, reload, failure and
+unmount in generated fake/paid-off checks. Preserve the normal review session and
+Voyagenda; no further paid/provider runs. Show Framing (currently a selector,
+not a checkbox) in an isolated generated processing view without submitting it.
+Current follow-up status: fixed and verified; personal review remains owner-only.
+
+Implementation: VideoTimelineThumbnail now extracts a 160x120 still from the
+first visible raw source frame, using the existing pinned Mediabunny reader.
+The shared occurrence clock accounts for independent source trim and Hook/body
+clipping once. Mounted rows share source/frame results; a serial queue owns one
+silent decoder, a 4 MiB range cache and a ten-second timeout, without retries.
+Leaving the timeline releases its inputs, canvases and blob URLs. Pending/failed
+stills use a video icon in the same fixed tile, preserving row size and actions.
+Pictures keep their existing image backgrounds. No backend/worker, contract,
+saved-edit shape, provider, dependency or configuration change is required.
+
+Verification: the generated StrictMode browser proof passes at 1440 and 390
+pixels, including six Hook/body placements sharing four unique stills at raw
+frames 0, 15, 30 and 45. Decoded grayscale pixels establish the chosen frame;
+reload retains source trims, repeat placements share URLs, the maximum live
+VideoDecoder count is one and the settled count is zero. Panel unmount revokes
+all still URLs; remount paints again without changing tile geometry or creating
+Apply edits. Both picture rows remain. Four injected missing-frame reads produce
+four failures total, no retry, and stable icon fallbacks. All requests remain
+loopback and fixture Apply count is zero. Frontend/test TypeScript, scoped ESLint,
+formatting and diff checks pass. The earlier color-palette test was replaced by
+unambiguous grayscale levels to avoid treating video color-matrix differences as
+frame-selection errors; the strict pixel threshold was retained.
+
+Codex read-only verification of the normal restored layered draft confirms both
+real video rows have ready blob-backed thumbnails at raw frames 0 and 90. During
+verification its previous working session reported unavailable; reopening the
+preserved review reference restored it without processing or applying edits. The
+normal editor remains open at Video 1 / 18s. Saved media, edits and exports and
+Voyagenda are preserved. A separate generated processing view shows the existing
+Framing selector, including No tracking · Fit original, without pressing Process
+clips. Screenshots remain owner-local outside Git. No new paid/API/Gemini run.
+
+Final validation: **Meets this follow-up; no actionable findings.** The initial
+omission is resolved. Thumbnail decoding works with fake AI and no API keys;
+fresh provider work still needs its normal credentials/live flags/approvals.
+
+Whole-file follow-up allocation under the owner's existing local-commit
+authorization, with no push:
+
+- apps/frontend/src/features/local-editing/clip-editor.tsx
+- apps/frontend/src/features/local-editing/video-timeline-thumbnail.tsx
+- apps/frontend/src/features/local-editing/style.css
+- apps/frontend/README.md
+- test/owner-broll-browser-fixture.ts
+- test/local-video-thumbnails.proof.ts
+- docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md
+- docs/tickets/CL-271-muted-video-b-roll-with-continuous-captions.md
+- docs/tickets/README.md
+
+Initial investigation (superseded by the fix above):
+
+The owner reports blank thumbnail tiles on the Video 1 / Video 4 timeline rows
+and asks why. Expected behavior is a recognizable thumbnail for each visual
+row, including uploaded videos, while retaining row selection, clocks and layout.
+
+The initial cause was confirmed: video timeline thumbnails were unimplemented. In
+clip-editor.tsx, the picture-kind timeline preview always creates picture-thumb,
+but explicitly sets backgroundImage to undefined when the cue has video. No
+video, canvas, poster image or thumbnail source replaces it. The shared visual
+timeline therefore displays an empty styled tile for every video placement.
+
+Read-only inspection of the running restored project confirms both video rows
+have a thumbnail element with no background or media children, while both picture
+rows have image backgrounds. Both admitted video elements are at readyState 4,
+with a usable source/duration and no media error. The media and draft restoration
+are intact; the omission is in timeline rendering. No application code, owner
+edits, media, configuration, provider processing or Voyagenda process was changed.
+No paid/API/Gemini call, test pipeline, staging or commit was performed.
+
+A future fix should derive a bounded still from each placement's admitted video
+source and source trim, handle repeated assets and Hook occurrences, preserve
+selection/row geometry, and release any decoder/canvas/object URL on cleanup.
+This manual-media thumbnail path needs no API key or provider/model call; fresh
+provider processing retains its existing live flags and approval requirements.
+Generated fake/paid-off browser verification should check actual thumbnail pixels,
+trim clock, restore, failure/cleanup and the existing picture rows before claiming
+the omission fixed. This investigation establishes the cause only.
+
 ## Owner added-video preview/export/draft acceptance — 2026-11-09
 
 The owner requests a connected acceptance test of Pan and Face tracking on an

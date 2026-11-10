@@ -1177,6 +1177,10 @@
     width: 3.5rem;
     grid-row: span 2;
   }
+  .editor-timeline .video-timeline-thumb {
+    display: grid;
+    place-items: center;
+  }
   .editor-timeline-name {
     overflow-wrap: anywhere;
     min-width: 0;

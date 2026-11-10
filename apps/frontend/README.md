@@ -1,7 +1,12 @@
 # ClipBuilder frontend
 
 CL-271 adds Media / Videos and one shared front-to-back picture/video
-layer list. Select covered layers, reorder, drag/resize, choose inset or full frame,
+layer list. Videos show trimmed-source thumbnails. Stills share a serial,
+bounded no-key decoder, reuse matching source frames and release blob URLs when
+the timeline unmounts. Generated Hook/body, frame-pixel, reload, missing-media
+and cleanup checks run with
+`corepack pnpm local:proof test/local-video-thumbnails.proof.ts`.
+Select covered layers, reorder, drag/resize, choose inset or full frame,
 and select a Camera target for picture/video effects. Camera keeps its established
 preview/inspector layout with separate Zoom and Pan tabs, visual crop picking,
 Pan start/end frames and a separate Transitions tab. The selected layer has a
