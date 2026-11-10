@@ -18,21 +18,89 @@ The owner requests a dedicated full-window editor rather than reusing the Step
 list, large left playback, existing category tabs and contextual right inspector.
 Add Home as the initial ready-editor overview of existing layer/audio/camera/
 effect timing.
-The compact top bar owns Undo/Redo, honest autosave state, Export, tour Help and
-a far-right Session options ellipsis for reset/recovery/privacy. The owner
-removed File and unused menu labels. Save status uses a fixed-size icon/tinted
-badge for saved, saving, invalid, failed and conflicted states; Retry/Reload
-remain explicit. There is no invented project-title/slogan. Add clips belongs
+The compact top bar keeps only the logo/name on the left. One right-aligned
+group starts with honest autosave state, followed by Undo/Redo, the current
+primary action (Export in Editor), tour Help and Session options for
+reset/recovery/privacy. Visual and DOM order agree; narrow screens wrap the
+same controls without hiding labels or changing touch targets. The owner
+removed File and unused menu labels. Save status reserves stable inline space
+for saved, saving, invalid, failed and conflicted states, using
+toolbar typography, a blue status icon, muted copy and a slim divider rather
+than a colored pill. Invalid/failure/conflict use the shared danger color;
+Retry/Reload remain explicit. There is no invented project-title/slogan. Add clips belongs
 in the clip rail or top bar. There is no bottom editor action/navigation bar.
+
+Source and Moments keep workflow CTAs out of the navbar. Upload and YouTube
+cards own their bottom-right action row through URL, quality/range, saved-video,
+download, failure and retry states. Secondary actions such as Change link precede
+the rightmost primary action. Moments owns Find/Use clips, Process clips and Back
+to editor in its work-area footer; only its active view exposes a proceed action.
+Recovery owns a local action slot so reconnect/start-new actions remain reachable
+while opening. The editor retains its toolbar. These placement changes preserve
+form submission, keyboard operation, validation, source boundaries and spend gates.
+The redundant Source / Moments / Editor progress row is removed everywhere.
+Page headings remain the accessible context; internal stage markers still own
+layout/readiness behavior and are not presented as another navigation row.
+
+The workspace shell is bounded to the dynamic viewport. Source/Moments use one
+focusable main page scroller with a stable gutter; their natural content wrapper
+must not become a competing zero-range wheel catcher. Desktop source preview
+sticks inside that scrollport below the navbar; narrow columns stack naturally.
+Opening and editor remain bounded, with intentional editor pane/list scrolling.
+Jump to reveals the source preview only when it is outside main's visible bounds,
+preserving the desktop list position and the existing source seek/playback rules.
 
 The inner editors share a compact context header, narrow layer collection and
 larger canonical properties area, with lighter sub-tabs and related controls
-grouped under small headings. Existing typography presets and timed looks use
-one visual keyboard-accessible picker each. Colour swatches retain native
+grouped under small headings in the right inspector. Every caption/authored-text/picture/added-video
+position preset uses the same portrait-card picker: an empty 9:16 miniature
+shows the fitted resulting box, with a readable label and selected check.
+Previews and click results share the existing safe-bound positioning function;
+manual geometry, exact preset coordinates and separate camera/fit/presentation
+controls retain their behavior. Invalid draft geometry cannot emit invalid SVG
+coordinates. This manual UI works locally and hosted without API keys.
+
+Existing typography presets and timed looks use
+one visual keyboard-accessible picker each. Looks share one bounded 16:9 image
+frame; label length cannot determine preview size. Colour swatches retain native
 pickers and readable hex labels. Media owns trim/layout/volume; Camera retains
 the visual crop picker, Zoom/Pan/Face tracking/Transitions. No parameter gains a
 second editing location. Narrow workbenches switch Layers/Properties and retain
 scope; phone style presets scroll horizontally without removing options.
+Visual media rows contain their own Add audio and available View actions as
+independent sibling buttons. Wide rows use a trailing action area; narrow
+collections use an internal footer with full labels and normal touch targets.
+Their common frame owns selection and the timing bar. Add audio opens the linked
+library directly; a hidden picture/video tab cannot leave its inspector mounted
+over Audio. View retains pause, modal and focus-return behavior.
+
+Layer order is one mixed thumbnail stack shared by Pictures and Videos. It lists
+all added pictures/videos in the active Hook/main-clip scope, including items
+outside the playback time, with Front at the top and Back at the bottom. Drag
+handles and keyboard pick/move/drop reorder through the existing visual-order
+operation; each completed move is one undoable save. Cancel/no-op/busy gestures
+do not submit an order. Original footage, captions, authored text and audio are
+excluded; their separate placement remains unchanged. Row selection opens the
+correct media inspector and retains repeat-click dismissal. Reordering preserves
+cue settings, the selected media and playback clock. Manual ordering needs no
+API keys and uses the shared local/hosted editor and renderer order contract.
+
+Collection/navigation stays on the left and the active editing form stays with
+its sub-tabs in the right inspector. Caption Text follows the same rule as
+Style/Position/Speakers; it never replaces the timeline with a left-only word
+form. Empty caption/generation states and local audio import also use the
+inspector. Narrow screens expose that same form under Properties. Collection
+library/acquisition/order actions and Camera's visual source canvas retain their
+intentional roles; they do not move the active settings form out of its pane.
+
+Item-driven picture/video, text, caption, filter and audio timelines share
+repeat-click disclosure: clicking the active item dismisses its inspector;
+clicking it again reopens without seeking or editing. Hidden forms retain their
+unfinished input. The collection reclaims the column, and narrow Layers returns
+to the list. Different-item and explicit category/Home/preview/error navigation
+reveal the target. Empty lists retain creation controls. Presets, actions and
+Camera/Hook's permanent workflows retain their own behavior. Linked audio returns
+to the correct picture/video category. These manual interactions need no API keys.
 
 Validated autosave and successive action-history Undo replace the normal
 Apply/Discard/manual-save cycle, preserving validation, source/media retention,
@@ -54,6 +122,28 @@ and 8 MiB per workspace, including incomplete Hook input. Acknowledged edits use
 the existing local recovery/draft stores; hosted persistence stays temporary.
 CL-273 records generated browser/native, responsive, integrity and build evidence;
 owner visual, real-provider quality and release acceptance are distinct.
+
+Restoration resolves its destination before presenting a workflow stage. Until
+the initial clip snapshot is acknowledged, show one neutral Opening workspace
+surface. Existing clips enter Editor directly; an empty workspace enters the
+appropriate Source/Moments state. Do not mount a full-source player or analysis
+reader just to pass through Moments on the way to Editor. After an explicit
+Moments visit, retain its inputs/playback state across Add/Back navigation.
+Preview decoding uses a local spinner within the stable editor canvas, with
+the real rail/work area painted and interaction/readiness/tour guards intact.
+Source/Moments share compact method/sub-tab navigation, quieter surfaces,
+grouped controls and compact review rows. Local Framing belongs beside the clip
+choices, remains tracked by default and stays excluded when hosted. Genuine AI
+preparation keeps measured/indeterminate progress; metadata loading is not AI
+processing and must not present unnecessary workflow stages.
+
+All branded loading states use the shared BrandedSpinner through ProcessingState.
+The logo, ring, glyph and floating travel scale proportionally as one assembly,
+with clearance for the full animation and the ring above logo shadows. Callers
+choose the shared standard/compact size, never resize its internal children.
+Keep status/progress semantics separate from this decorative visual, normal
+motion and forced-colors readability. This presentation works without API keys
+locally and hosted; it changes no provider or processing gates.
 
 The tour and product motion/demo-film have been aligned with the finished
 workflow under CL-273, preserving the brand and unrelated landing behavior.
@@ -487,8 +577,11 @@ pending/failure/retry and optimistic rename semantics. Names remain metadata,
 separate from rendered titles; renaming calls no AI or renderer. This supersedes
 the older centered-name/inline rename presentation. Generated checks need no
 API keys; real AI preparation retains its configured setup/live approvals.
-CL-233 owns implementation and responsive evidence; owner device acceptance
-remains manual.
+Rename height follows actual content: empty feedback reserves no row, real
+feedback grows within the viewport cap, and a stable body scrollbar gutter
+preserves input width when scrolling begins. CL-233 owns initial implementation
+and responsive evidence; CL-273 owns this content-sizing follow-up. Owner device
+acceptance remains manual.
 
 Owner visual correction (CL-252, 2026-11-07): the compound clip-card rename
 header has no additional blue outline/shadow ring, including keyboard and

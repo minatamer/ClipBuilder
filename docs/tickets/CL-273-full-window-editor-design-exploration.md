@@ -4,6 +4,891 @@ Status: complete — implemented and locally validated, 2026-11-10. The
 inner-editor revision is included in the full CL-273 migration. Owner visual,
 live-provider quality and release acceptance remain distinct.
 
+## Overnight handoff — owner stopped work, 2026-11-10
+
+Feature work is stopped at the owner's request. Preserve the running normal app,
+owner session/media, configuration and Voyagenda. No paid runs remain authorized.
+The owner will manually review tomorrow; do not treat local checks as visual or
+live-provider acceptance. Test media was audible during a scroll check; its tab
+was immediately closed and all owned temporary fixture servers have exited.
+Future agent browser checks must mute generated media before playback, without
+changing the owner's application audio settings. Use only Codex's in-app browser.
+
+The latest completed implementation is the Moments scroll correction below.
+The owner subsequently requested a more thorough redesign of Add clips AND Your
+clips; that new design is deliberately not implemented tonight. Continue from
+[CL-274](CL-274-moments-and-your-clips-redesign.md) only after the owner resumes.
+The glassy single-word caption reference is separately recorded in
+[CL-275](CL-275-glass-one-word-caption-style.md); no style implementation or
+texture research has been performed tonight. Both packets are planned work.
+
+The owner expressly authorizes local whole-file staging and ticket-prefixed
+commits for the completed changes and handoff documents; never push. Allocation:
+
+1. Shared workspace chrome/workflow/loading components, privacy trigger and their
+   directly associated spinner/workflow checks and fixture.
+2. Local editor/intake/selection files and remaining editor regression proofs,
+   including the generated entry/pane fixtures. Shared files stay in one commit;
+   do not split a file into staged hunks to manufacture more commits.
+3. Fictional product-film captures, asset hashes, measured targets/camera tests,
+   capture script and frontend verification guide.
+4. CL-273 evidence/source-of-truth handoff documentation.
+5. CL-274/CL-275 planned packets and the canonical ticket index.
+
+All existing CL-273 revisions remain in scope; no new product feature is being
+implemented after the stop request. Final checks and commit receipts are recorded
+below when actually complete. Resume with the owner review and new packets,
+without reprocessing the saved 1:04–1:45 session or modifying its media.
+
+Final pre-commit checks: 17 focused unit tests pass, frontend and test-source
+TypeScript pass, ESLint passes for all 51 changed source/proof files, all changed
+text files pass Prettier, all 15 delivery hashes verify and whitespace checks
+pass. Read-only validation of the completed revisions and latest scroll fix finds
+no actionable issue. Earlier native/browser/full-suite evidence remains recorded
+in its owning sections; those historical checks were not all rerun tonight.
+CL-274/275 have documentation only, with implementation and owner visual review
+still pending. No push, paid processing, cloud action or normal service restart.
+
+Completed whole-file code commits: `7649d49` (shared UI, 12 files), `8c4b8d8`
+(editor/intake and proofs, 46 files), `ff49094` (film captures/framing, 15 files).
+Documentation is committed separately under the ticket prefixes. The final
+handoff is this section plus CL-274/275; no running test fixture needs resuming.
+
+## Owner review revision — Moments scrolling, 2026-11-10
+
+Status: complete locally; owner visual review remains pending. The owner reports
+glitched scrolling on Choose your moments. Acceptance covers generated media at
+small-laptop and narrow viewports, actual scroll owners, sticky containment and
+wheel/keyboard behavior. Establish one clear page scroller, preserve
+intentional bounded lists/editor panes, reachable actions, inputs, focus and
+preview clocks. Check Source/Moments/opening/editor and long results without
+paid work or owner-session changes. Preserve prior revisions, normal services,
+media, provider/security boundaries and Voyagenda; no deployment action.
+
+Reproduced at 1366×681: document range 305px while the inner workflow content
+has overflow:auto/overscroll containment but zero scroll range. Wheel over that
+content does nothing; wheel over the header moves the document to its bottom
+and the preview above/behind the navbar. Bound the app shell to the viewport,
+make the focusable main the single page scroller and leave its content visible.
+Keep editor/bounded work areas constrained with their intentional pane scrollers.
+
+Long-results acceptance also reproduced Jump to scrolling the list from 1426px
+to 1279px while its sticky preview was already fully visible. Only reveal when
+the video extends outside the main scrollport, using nearest smooth alignment;
+retain seeking/playback/focus. Actual pointer acceptance keeps desktop at 1426px.
+On phone, it reveals an offscreen preview from the bottom of the long list while
+the document remains at zero. Locator-focus scrolling is not used as proof of
+actual pointer behavior; real Codex clicks verify these two cases.
+
+Implementation bounds the shared shell to 100dvh and gives focusable main one
+page scroller with a stable gutter and a min-content floor for natural content.
+The content wrapper no longer catches wheel input with a zero-range scroller.
+Editor and explicitly bounded work areas retain their own pane scroll ownership.
+
+Generated/no-key Codex acceptance at 1366×681, 1024×640, 768×900, 390×844 and
+320×600 finds no document or horizontal range. Main ranges are respectively
+305/346/432/377/582px; bottom actions remain reachable. Desktop sticky preview
+stays below the 64px navbar; narrow columns stack naturally. Wheel works over
+video, left blank space and the form. Home/End/PageUp/PageDown move main alone.
+Inputs and preview clock survive scrolling. A 12-result list, narrow Source
+upload, held opening at desktop/phone and editor layout also pass. Ready editor
+geometry at 1440×1000 is byte-for-byte equal to its baseline; narrow editor
+retains zero main/document range with intentional panel scrolling.
+
+Six fictional workflow film stills and measured bounds/click centers are refreshed
+for the stable scrollbar gutter. Captures are normalized to 1440×1000 PNG with
+edge padding only; four editor stills are unaffected by this scroll revision.
+All 15 delivery hashes verify. Seventeen focused tests pass (workflow, film
+camera, positioning and visual-layer ordering). Temporary fixtures record zero
+edits/unexpected requests and zero plan/image/render calls; the one held fake
+analysis stream closes on navigation. All temporary fixture servers exited and
+scratch launchers are removed. No real provider/download/upload, owner session,
+normal-app restart, configuration or Voyagenda change. Layout works with
+FAKE_MODE=true and no API keys; live-provider setup/flags/approvals are unchanged
+and live quality remains untested. Frontend/test-source types, all changed-source
+lint, formatting and whitespace checks pass; no actionable validation finding.
+
+## Owner review revision — remove workflow progress row, 2026-11-10
+
+Status: complete locally. Remove the redundant Source / Moments / Editor row from
+the shared workflow header everywhere, without replacing it with another step
+indicator. Retain page headings, internal stage/layout/readiness markers and
+all existing navigation/actions. Remove unused row styles and update the old
+accessibility assertion. Check Source/Moments spacing at desktop and phone,
+using generated/no-key fixtures only. Refresh affected fictional demo stills
+and measured targets if the removed row shifts their geometry. Preserve earlier
+work, owner sessions, normal apps and Voyagenda; no paid/provider/Git action.
+
+Removed the row's shared markup and `.stages` rules rather than hiding them.
+The existing workflow test now checks retained data-stage/heading semantics and
+the missing progress row. Codex verifies Source and Moments at 1440/768/320px:
+one h1, zero progress rows, retained internal stages and no horizontal overflow.
+Six fictional demo stills, media/card bounds and action targets are refreshed
+for the shorter header; the four editor stills remain unchanged. PNG edge-padding
+preserves captured pixels/coordinates. All 15 delivery hashes verify. Six workflow
+tests and five film camera/coverage tests pass, along with frontend TypeScript,
+focused lint, formatting and whitespace. Read-only validation found no remaining
+actionable issue. Generated fixture: zero edits/unexpected requests and zero
+plan/image/render calls; its fake analysis stream closes on navigation. No real
+provider/download/upload, configuration, normal-app restart, owner-media change,
+Voyagenda operation or Git mutation. The fixture and scratch launcher are cleaned
+up. Screenshot outside Git: `cl273-no-progress-row.png` in the CL-273 visualization
+directory. Layout works without API keys; live providers are unchanged/untested
+and still require their existing setup and approvals. Owner visual review remains.
+
+## Owner review revision — card-owned Source/Moments actions, 2026-11-10
+
+Status: complete locally. Source and Moments must not put workflow CTAs in the top
+navbar. Upload/YouTube cards own their bottom-right actions, including Continue,
+Use/Download video, Change link, retry and cancel. Moments owns Find/Use clips,
+Process clips and related navigation/recovery in its card footer. Keep secondary
+actions before the rightmost primary action. Preserve form submission, disabled
+guards, contextual feedback, progress, cancel/retry, input/tab retention and
+local-only YouTube/hosted-upload boundaries. Editor actions keep their toolbar.
+Verify startup, source stages and moment stages at desktop/tablet/phone using
+generated/fake/no-key fixtures in Codex; no paid/download/provider action,
+owner-session changes, app restart, Git mutation or Voyagenda operation.
+
+The existing product film records Source/Moments buttons at their old navbar
+coordinates. Refresh its affected fictional workflow stills, asset hashes and
+measured Upload/Analyze/Process click targets using Codex captures; preserve
+unaffected editor stills and never run the external-browser capture script.
+
+Implementation: acquisition actions render directly in their existing source
+footer instead of Workspace's navbar portal. Change link precedes the primary
+action in both DOM and visual order. Upload and YouTube share a wrapping footer
+row: note at left, controls at right, reserved contextual feedback above. Narrow
+controls retain 44px height and keep the pair on one row at 320px. Experience
+mounts its canonical action target inside the active Moments work area or the
+editor toolbar, with no duplicated actions. Back to editor joins the Moments
+footer. Opening/recovery has its own local target; startup failure returns to
+that view so Retry remains reachable. WorkflowActions still owns callbacks and
+supports inline, card-footer and editor-toolbar targets. Existing form IDs,
+Capture controls, disabled/busy/selection guards and source/provider paths remain.
+
+Codex generated/no-key acceptance covers local Upload and YouTube URL submission
+(including Enter), saved-video Use/Change link, quality loading, Range, Download
+and simulated open/download failures. Hidden Upload/YouTube switching retains
+inputs. Every active Source action is inside its card, with no navbar workflow
+controls. Settled valid/error/corrected fields and paired actions have identical
+rectangles at 1440/768/320px; the initial responsive pass also covered 1024/390px.
+Hosted fixture excludes YouTube and places its 44px upload button at the same
+card bottom/right padding at desktop/tablet/phone widths. No real upload was sent.
+
+Moments Add clips / Your clips swap Use/Find and Process in the work-area footer.
+Removing all three fictional choices retains a disabled Process clips action.
+At 1440/768/320px, Process stays right-aligned in that pane with no overflow or
+navbar CTA. Back to editor restores the editor toolbar, with no stale Moments
+footer. Simulated missing-session and startup failures expose their local Retry
+controls; both recover normally, and session recovery retains Start new session.
+Prepared editor/media, autosave and history behavior remain unchanged.
+
+The six affected product-film stills (intake/preparation/source/analysis/candidates/
+selected) now depict these controls. Captures use existing fictional artwork and
+native generated media in Codex, normalized to 1440×1000 PNG with edge padding
+only (no pixel scaling/cropping). Updated measured click centers: Upload 1156/843,
+Analyze 1346/947, Process 1352/907. Other editor stills remain untouched. All 15
+delivery hashes verify. Twenty existing focused tests pass (15 workflow/moment
+tests plus five camera continuity/coverage tests). App and test-source TypeScript,
+focused ESLint, Prettier and whitespace checks pass. Read-only validation found
+no remaining actionable issue for this revision.
+
+All fake clip fixtures report zero edits/unexpected requests and zero plan/image/
+render calls. The first intake fixture records two lookups, one metadata request
+and one deliberately failed fake import; none downloads from YouTube or invokes
+providers. The held fictional analysis stream closes on navigation. No contracts,
+worker, renderer, security, configuration or provider implementation changed.
+Manual layout works without keys; real acquisition/AI still requires its existing
+prerequisites/keys/live approvals and is untested here. No paid run, deployment,
+normal-app restart, owner session/media change or Voyagenda operation. Nothing
+staged or committed. Fixtures/listeners and scratch launchers are cleaned up.
+Review screenshots outside Git: `cl273-source-card-actions.png` and
+`cl273-moments-card-actions.png` in the CL-273 visualization directory. Owner
+visual acceptance remains separate.
+
+## Owner review revision — draggable visual layer stack, 2026-11-10
+
+Status: complete locally. Replace Layer order's selected-item arrow toolbar with a
+thumbnail stack that can be dragged into front/back order. Both Pictures and
+Videos show the same complete mixed stack of added pictures/videos, including
+items outside the current playback time. Do not include original footage,
+captions, text or audio, whose placement is outside this visual stack. Preserve
+independent Hook/main-clip scope rather than merging their separate edits.
+
+Display Front first and Back last with readable media names, thumbnails, timing,
+selected state and a dedicated touch drag handle. A completed drag commits one
+existing visual-order edit, preserving every cue property, selection and clock.
+Cancel/no-op/disabled gestures submit nothing. Add keyboard pick/move/drop/cancel,
+live status and focus retention. Clicking an item explicitly opens that item's
+correct media tab/inspector. Keep thumbnail loading/error behavior shared.
+Remove the old arrow UI rather than duplicate controls. Verify mixed media from
+both tabs, real pointer and keyboard moves, cancel/edge/disabled behavior,
+preview stack, autosave/Undo/Redo/reload and responsive sizing with synthetic
+no-key media in Codex only. No paid/provider/cloud/Git action, owner media/session
+changes, app restart or Voyagenda operation is included.
+
+Implementation: new VisualLayers in `visual-layer-order.tsx` owns the scoped
+mixed stack and its CSS module. It reverses the existing back-first array for
+Front-first presentation, reuses MediaTimelineThumbnail for both media kinds
+and retains finite thumbnail clocks during invalid input. Dedicated 44px handles
+use pointer capture, insertion markers and bounded edge scrolling. Space/Enter
+pick/drop, arrows/Home/End move, Escape/Tab cancel; status announcements remain
+accessible without visible success-message clutter. Reorder commits only on drop,
+keeps cue objects intact and restores handle focus. Busy or external-order changes
+cancel the grab permanently; RAF cleanup follows drop/cancel/unmount. Disabled
+controls and guards were inspected in source; no artificial busy UI run was added.
+The existing VisualPresentation/VideoSourceControls remain in their original
+module; its old arrow component/imports are removed. ClipEditor passes every
+active-scope visual, correct presentation-clock offset and existing update path.
+Mixed-list selection clears stale timeline selection, navigates to the actual
+media type and shares repeat-click disclosure without seeking on toggles.
+
+Actual generated-media Codex checks: Pictures and Videos each show the same three
+mixed rows (two added videos, one picture), without original/caption/text/audio
+rows. All three thumbnails load. A real pointer drag moves the back video to
+Front, changing the large preview's DOM paint order to the exact reverse of the
+stack. Source clocks stay identical. Keyboard moving the picture to Front retains
+its selected ID and exact clocks (0.3/0.308333 seconds); handle focus follows it.
+Escape and outside-stack pointer release cancel, and pick/drop at an existing
+edge is a no-op. Repeat row selection closes/reopens without changing the clock;
+cross-type selection opens Pictures from Videos. Autosave, Undo, Redo and reload
+through actual fake HTTP edit/list boundaries preserve the expected order. The
+first acceptance pass has exactly four writes (pointer, keyboard, Undo, Redo);
+cancel/no-op/navigation add none. A fresh final-source pass has exactly two
+writes for its pointer and keyboard moves, with no stuck grab or marker.
+
+At 1440/1280/1024/768/390/320px all three rows fit without local/page overflow;
+every visible row action/handle remains at least 44px. Thumbnails remain 42×34px
+and timing stays readable even in the narrow desktop collection. Six responsive
+checks include the selected inspector and phone Layers navigation. Touch handle
+styling is present; physical touch hardware was not separately exercised.
+
+15 focused tests pass: three new ordering invariants/operation-boundary checks
+plus twelve existing editor-state tests. Application and test-source TypeScript,
+focused ESLint, formatting and whitespace pass. Read-only validation found no
+remaining actionable issue. No contract, renderer, worker, provider, security or
+persistence implementation changed; export rendering was not rerun because it
+consumes the same existing visual-order contract. Generated/fake/no-key checks
+do not prove live provider output; real AI still requires its configured keys,
+live flags and approvals. Local and hosted use this same manual UI. No paid runs,
+deployment, app restart, owner source/session changes or Voyagenda operations.
+Changes are unstaged/uncommitted. Generated fixture/listeners are closed and the
+scratch launcher removed. Screenshot: `cl273-draggable-media-layers.png` in the
+CL-273 visualization directory outside Git. Owner visual acceptance stays open.
+
+## Owner review revision — toggle item inspectors, 2026-11-10
+
+Status: complete locally. The owner requests that clicking the active picture again
+dismiss its right inspector, consistently across comparable editor selections.
+Apply one shared disclosure behavior to picture/video, text, caption, filter and
+audio timeline items. A repeated active-item click closes the inspector; another
+reopens it without reseeking or changing the draft. Different items select/open
+normally. Reclaim the empty inspector column; on narrow screens return to Layers.
+Keep forms mounted while hidden so partial input, validation and local form state
+survive. Reflect visibility accessibly and clear the item's active appearance
+while its inspector is closed. Dismissal must not write edits, reset playback,
+remove media or invoke providers.
+
+Audit distinctions: main clip/category navigation and explicit Home/preview/error
+inspection must still reveal the target. Presets, tabs, Add/View/generation
+actions and Camera's permanent source/settings or Hook workflow are not item
+disclosures and must not toggle off. Audio library entries with no current
+inspector must select/open on the first click, not count as a repeat dismissal.
+Verify all shared timeline kinds, different-item/occurrence changes, keyboard,
+pending guards, retained input/save/Undo and responsive no-key behavior in Codex.
+Preserve owner session/media, normal apps, earlier edits and Voyagenda. No paid,
+configuration, deployment or Git action is included.
+
+Video acceptance found a related explicit-inspection defect: linked audio's
+return action always navigates to Pictures, hiding the selected video's form.
+Return to the linked visual's correct Pictures/Videos category and label the
+context/action by its actual media kind. Verify return reveals the same target
+without changing its clock or saving an edit.
+
+Implementation: EditorInspectorLayout owns transient disclosure state, separately
+from the retained edit target. Mounted inspector registration distinguishes an
+actual selected form from Audio's fallback highlighted item/library. EditorTimeline
+applies shared click/Enter/Space toggling, pressed/expanded/controls attributes
+and clears visual selection while closed. Hidden forms remain mounted; an empty
+timeline reveals creation controls. CSS reclaims the column, and narrow Layers
+dismisses item properties. Hook's permanent pane switch is unchanged. An explicit
+navigation request counter reopens the target even when its ID has not changed;
+typing/autosave/playback do not trigger it. Linked audio now derives return tab
+and accessible context/action labels from picture/video kind.
+
+Codex-only generated-media acceptance: pictures, added videos, text, captions,
+timed filters, original audio and added audio close/reopen correctly; changing
+items opens normally. Enter/Space work. Picture timing's blank draft input and
+sub-tab survive hiding. Picture toggle preserves exact video time (0.3 seconds)
+and preview bounds. Main-category, Home and preview selection reopen; Audio's
+first Original selection opens from its library. Preset controls stay open.
+Add audio remains independent and Back to video reveals the original video with
+loaded generated media. Hook's phone Layers/Properties switch stays usable.
+
+At 1440/1024/768/390/320px, opened properties and collapsed full-width collections
+fit without page overflow. Narrow Layers closes, then item selection reopens;
+explicit caption navigation also reopens when no timeline key exists. Actual
+fake edit transport verifies Add text, save, collapse, Undo to an empty list
+(Add text remains reachable), then Redo/save. This uses three synthetic writes;
+the independent responsive/navigation pass uses zero edits/unexpected requests,
+zero plan/image/render calls and zero pending writes. The earlier preset check
+uses one explicit synthetic write; toggling itself submits none.
+
+24 unique existing timeline/clock, contextual-feedback and linked-audio tests
+pass (22 + 9 with seven shared timeline tests). Frontend TypeScript, focused
+ESLint, formatting and whitespace checks pass. Read-only validation found no
+remaining actionable issue for this revision. No new contracts, worker, renderer,
+provider, persistence or security boundary changed. Shared local/hosted manual
+UI needs no keys; real AI still requires configured providers/live approvals
+and is untested here. All generated fixtures/timers/listeners are closed and
+scratch helpers removed. Owner source/media/session and Voyagenda are untouched;
+no Git mutation, paid run or deployment. Screenshots retained outside Git:
+`cl273-inspector-open.png` and `cl273-inspector-dismissed.png` in the CL-273
+visualization directory. Owner visual acceptance remains separate.
+
+## Owner review revision — integrated media-row actions, 2026-11-10
+
+Status: complete locally. The owner requests Add audio and View inside each picture
+row rather than detached below it. Use one framed media row with thumbnail,
+name/time, timeline bar and a compact trailing action area. On wide collections
+keep it on one row; narrow selected-media columns can put the same actions on
+an internal second line. Preserve readable labels and 44px targets rather than
+hiding actions on hover or squeezing metadata. Apply the shared visual-row
+layout to added-video Add audio as well; retain View's existing picture-only
+availability. Keep row selection and action buttons as siblings, never nested
+interactive controls. Preserve occurrence/time mapping, selection indication,
+pending guards, view pause/modal/focus, audio association and every callback.
+Keep other timeline kinds unchanged. Verify wide/narrow/phone, selection and
+both actions in Codex using generated/fake/no-key fixtures. No provider, owner
+media/session, normal-app, Voyagenda or Git mutation is requested.
+
+Action verification found an existing related handoff bug: selecting Audio while
+a picture is selected still mounts that hidden picture panel's inspector portal.
+On phones Add audio therefore lands in picture properties and hides its sound
+library. Mount visual properties only for Pictures/Videos, so Audio's own form
+or library owns the pane. Verify a single Add audio click exposes the correctly
+linked library without manually switching Layers, then Back to picture.
+
+Implementation/evidence: EditorTimeline marks visual entries as media rows and
+keeps selected state on their shared frame. Selection and action buttons remain
+siblings. The frame owns the border/background/timing bar; wide rows place the
+music-icon Add audio and existing View at the right behind a quiet divider.
+An inline-size container query moves them into an internal footer at 26rem and
+below. Labels stay visible and actions keep 44px minimum height. Other timeline
+kinds retain their original styling; videos use the same visual-row path and
+retain their existing Add audio-only availability.
+
+Codex verifies three rows at 1440/1024/768/390/320px: actions stay inside their
+cards, metadata fits, bars remain at the card bottom, visible targets are at
+least 44px, no interactive controls are nested and no page overflow occurs.
+Wide rows measure about 62px high; the selected narrow column uses an internal
+footer. View loads the protected generated image, pauses muted test playback,
+retains a different selected row and returns focus to its trigger on close.
+The related inspector guard now mounts picture/video properties only when their
+own tab is active. On phone, Add audio from another selected picture opens the
+sound library directly with the chosen Hook picture context, no stale picture
+properties; Back to picture returns to the same picture. No sound was added or
+generated and no owner clip was edited. Both fixture passes report zero edits,
+unexpected requests, plan/image/render calls and pending writes.
+
+Seven existing timeline/clock tests, frontend TypeScript, focused lint, formatting
+and whitespace checks pass. No composition/worker/persistence contract changed;
+manual controls work with no API keys locally and hosted, while real AI retains
+normal keys/live flags/approvals. cl273-integrated-media-actions.png is outside
+Git; Codex tab closed, viewport reset, fixtures/scratch/helper removed. Owner
+session/media, normal apps, earlier changes and Voyagenda are preserved. No
+staging/commit.
+
+## Owner review revision — equal Looks preview sizes, 2026-11-10
+
+Status: complete locally. The owner requests every Looks thumbnail match the larger
+Black and white preview. The shared Button centers grid tracks; EditorChoiceGrid
+never declares its content column. Its absolutely positioned thumbnail contents
+therefore let that column shrink to label width, producing different image sizes.
+Give choice cards one explicit flexible content column, and cap each Looks
+preview at the same 5rem-wide 16:9 frame (approximately the existing largest
+example), constrained to available width on small screens. Preserve aspect,
+loading/failure sizing, filters/matrices/strength, radio keyboard behavior,
+selection, timing and autosave. Audit the shared typography picker for sizing
+regressions. Use Codex-only generated/no-key responsive checks. No provider,
+owner-session/media, normal-service, Voyagenda or Git operation is requested.
+
+Actual evidence: the shared choice card now has grid-template-columns:
+minmax(0,1fr), and Looks frames use width:min(100%,5rem) with their existing
+16:9 aspect. No provider, thumbnail service, color matrix or interaction logic
+changed. Codex measured every loaded thumbnail and its image at exactly 80×45px
+at 1440, 1024, 768, 390 and 320px, with no page overflow. All nine shared
+typography samples still fit their cards on desktop and phone. Vivid → Right
+selects/focuses Warm and acknowledges saving; Reset returns Original. The first
+selection read accidentally found a hidden typography radio; scoped the check
+to Filter and confirmed Warm correctly. Checks use generated/fake/no-key media,
+with zero provider/render calls or unexpected requests. Formatting/whitespace
+checks pass; no unit suite, lint/type rebuild or worker reload is needed for two
+CSS declarations. Saved cl273-equal-looks.png outside Git; Codex tab closed,
+viewport reset, fixture/scratch/helper removed. Owner clips, normal apps and
+Voyagenda are untouched; changes remain unstaged/uncommitted. Real AI retains
+its existing keys/live flags/approvals and was not exercised.
+
+## Owner review revision — content-sized rename dialog, 2026-11-10
+
+Status: complete locally. The owner reports excessive empty space below the name
+field and requests dynamic sizing. The gap is the shared feedback component's
+empty two-line reservation plus the surrounding grid gap. In Rename only,
+render feedback when present instead of reserving an empty row. Keep the
+existing natural dialog height, viewport cap and scrolling body: valid and
+corrected states stay compact; validation/network feedback grows naturally.
+Keep the scrolling body's gutter stable so reaching the viewport cap cannot
+squeeze the field when feedback appears.
+Preserve field width/height, readable wrapping, action-row layout, focus/caret,
+pending/duplicate-submit/cancel guards, error association and rename transport.
+This owner request intentionally makes the dialog height content-dependent;
+do not change the shared stable-feedback default or other editor geometry.
+Inspect valid/error/corrected/pending and constrained desktop/tablet/phone
+states in Codex with fake/no-key rename calls, never the owner's clip. Preserve
+normal services, earlier changes and Voyagenda; no paid/provider/Git action.
+
+Actual implementation/verification:
+
+- Rename passes reserve=false to InlineFeedback. No message means no empty
+  grid row; real feedback uses natural wrapping. The shared reservation default
+  remains unchanged. Added a stable scrollbar gutter to Rename's body after
+  checks exposed a 4px input-width change when a long name reaches the viewport
+  cap. Existing dialog max-height, body scrolling and pinned actions are reused.
+- Codex measured the compact desktop dialog at 480×263.77px, with a normal 16px
+  gap from input to footer. Valid/error/corrected checks at 1440×900, 768×1024,
+  390×844, 320×568 and 320×320 pass. Final current-source checks with an 80-character
+  existing name also cover 390×320: feedback height adapts/restores, field width/
+  height and the preview behind it stay stable, actions remain on one row, and
+  all dialog bounds fit. Constrained bodies scroll without squeezing the input.
+- Client validation stays associated with the field and clearing it removes the
+  row. Saving disables the field/actions and Escape cannot dismiss pending work.
+  An intentional fake rename failure stays editable; a second explicit save
+  succeeds, and focus returns to Rename clip. Exactly two fake rename attempts,
+  one successful rename, zero unexpected requests and zero plan/image/render
+  calls. The final long-name/layout fixture adds zero rename requests. No owner
+  clip was renamed and no new provider-quality/export acceptance is claimed.
+- Existing contextual-feedback tests pass (15), including the unchanged shared
+  reservation default. Focused lint, formatting and whitespace checks pass. No
+  new unit suite, TypeScript rebuild or worker reload was needed for the boolean
+  prop/CSS change. It works locally and hosted with no API keys; real AI keeps
+  its existing provider flags/approvals and was not exercised.
+- cl273-compact-rename.png is saved outside Git. Codex tab closed, viewport reset,
+  both generated fixtures/listeners and their synthetic media scratch closed,
+  helper removed. Normal services, owner session/media, previous edits and
+  Voyagenda are untouched. No staging/commit.
+
+## Owner review revision — visual position preset canvases, 2026-11-10
+
+Status: complete locally. The owner requests designed empty vertical canvases that
+show where preset positions place content, applied consistently to every
+position-preset control. Audit identifies shared caption/authored-text presets
+and duplicate picture/added-video presets. Replace their text-only buttons with
+one reusable portrait-card picker: empty 9:16 frame, quiet composition guides,
+the actual resulting box footprint, contextual text/picture/video mark, clear
+label and selected check. Use existing navy/blue theme, typography, shared Button
+and neutral focus. Keep all exact labels, default/quarter/center coordinates,
+selection semantics, safe-bound fitting, manual fields, preview/autosave/Undo and
+validation behavior. Do not turn Camera source-crop/zoom controls, text alignment,
+layer ordering, fit/presentation or style presets into competing position forms.
+Those are distinct controls and the audit must record them.
+
+Previews use the same centeredOwnerBox result that a click applies; guard invalid
+draft geometry from emitting invalid SVG coordinates without changing draft data.
+Decorative SVG adds no focus target or accessible-name noise. Keep a responsive
+grid and readable full labels; no fixed desktop-only canvas or duplicate picker.
+Verify captions/text/pictures/videos, default/manual selection and resized boxes
+through fake/no-key components and Codex-only responsive checks. Preserve owner
+media/session, running apps, earlier work and Voyagenda; no provider/model/API
+key, new paid run, configuration, deployment or Git action is needed.
+
+Implementation and actual verification:
+
+- Added one PositionPresets component and scoped stylesheet. Cards use shared
+  Buttons, empty portrait frames, quiet composition guides and the exact fitted
+  box. Abstract text strokes, picture outlines and a video play mark distinguish
+  content without loading thumbnails or showing user media. Default and center
+  retain their different actual coordinates. Selected checks are decorative;
+  accessible labels/pressed state and native disabled/keyboard behavior remain.
+- TextPositionFields supplies caption/authored-text geometry and keeps its
+  manual fields and centered-alignment callback. ClipEditor now uses the same
+  picker for pictures and added videos, with correctly named media groups.
+  Removed the duplicate preset arrays/handlers, unused import and both obsolete
+  global preset-layout rules. Hook captions/text and opening-title text share
+  these same consumers. Audit found no other position presets; camera source
+  cropping, authored focus paths, Zoom/Pan endpoints, text alignment, layers,
+  fit/presentation and style presets are distinct and remain intact.
+- The current shared components pass 13 click cases across all four kinds:
+  miniatures exactly match applied boxes, horizontal/vertical centers and
+  selected state. Twenty picker/viewport cases at 1440/1024/768/390/320px keep
+  portrait aspect, full labels, valid touch targets and no extra focus targets
+  or picker overflow. An initial gallery-level overflow flag came from its long
+  synthetic JSON readout rather than the cards. Verified the actual editor
+  separately at 1024/768/390/320px: no page overflow, all cards fit and manual
+  fields remain available. The readout is fixture-only and is removed with it.
+- In the real generated editor, caption/text Upper half and picture Center
+  match the large preview to within rounding (0.25001/0.50001). Caption Lower
+  half → Undo restores Upper half; Default positioning restores correctly.
+  Reloaded the fake session and confirmed caption Default, text Upper half and
+  picture Center survive acknowledged HTTP saves. Exactly six fake edit writes,
+  zero unexpected requests, zero plan/image/render calls and no pending writes.
+  The video picker is checked through the same shared component/callback, with
+  its production integration reviewed; no new video decode/native export or
+  provider-quality acceptance is claimed for this presentation-only change.
+- Clearing manual width emits no NaN SVG coordinates and leaves the input
+  editable; correcting it restores previews. A manual horizontal offset clears
+  preset selection, and a disabled fieldset disables every preset. Existing
+  placement tests retain their assertions using named buttons rather than the
+  obsolete text-only markup. Added the incomplete-width regression. All 15
+  focused selection/geometry units, frontend types, focused lint, formatting and
+  whitespace checks pass. No composition, persistence or rendering contract
+  changed; provider keys/live flags/approvals remain required for real AI.
+- Codex inspected actual desktop and phone editor controls and all picker
+  variants; cl273-visual-position-presets.png is outside Git. Review tab closed,
+  viewport reset, in-memory gallery and generated editor listeners closed,
+  synthetic media scratch and helper removed. Owner session/media, normal apps,
+  prior uncommitted changes and Voyagenda are untouched. No staging or commit.
+
+## Owner review revision — right-aligned workspace actions, 2026-11-10
+
+Status: complete locally. The owner requests branding alone on the left and every
+workspace control grouped on the right, with saved state first. Use one shared
+right-aligned group in actual DOM order: saved state, Undo, Redo, the current
+primary action, tour Help, Session options. Preserve source/Moments actions,
+autosave/history/readiness, explicit Retry and menu/dialog behavior. Place the
+status divider after it and anchor Retry beside its new location. On narrow
+screens wrap the right group cleanly, preserving labels, touch targets and
+keyboard order without duplicating controls or moving branding into the group.
+Verify populated/empty action slots and all save states at desktop/tablet/phone
+widths in Codex's in-app browser using fake/no-key components. Preserve owner
+session/media, prior uncommitted edits, running services and Voyagenda. No paid,
+configuration, deployment or Git action is requested.
+
+Implementation/evidence: Workspace now owns one right-aligned controls group;
+removed the old primary-action/session-menu auto-margin special cases. Moved
+saved status before history in JSX rather than using visual-only CSS ordering.
+Its divider now follows it and Retry anchors below its new location. Narrow
+CSS lets the same group children participate in header wrapping, keeping the
+brand left and controls right; this avoids an unnecessary third row at 390px.
+
+Codex checked the final production components at 1440, 1024, 768, 390 and 320px
+across saved/saving/invalid/failed/conflict (25 cases): status/history order,
+right alignment, separate branding, readable copy, Retry anchor, no horizontal
+overflow and identical per-size geometry all pass. Header height is 64px on
+desktop/tablet, 107.375px at 390px and 155.375px at 320px. Twelve additional
+Source/Moments/empty-slot cases preserve their correct primary action, right
+alignment and absent editor history. Injected Undo/Redo callbacks and Retry
+remain connected; these are synthetic UI callbacks, not owner edits or real
+provider acceptance. Existing privacy/workflow units pass (18), frontend types,
+focused lint, formatting and whitespace checks pass. No new behavior test suite,
+worker rebuild or paid run was needed. Shared layout applies locally and hosted;
+real AI retains its normal keys/live flags/approvals.
+
+Saved cl273-right-aligned-toolbar.png outside Git. The Codex review tab is
+closed, viewport reset, both in-memory fixture listeners closed and temporary
+helper removed. Owner session/media, normal services, earlier uncommitted work
+and Voyagenda are preserved. No staging/commit.
+
+## Owner review revision — consistent session menu items, 2026-11-10
+
+Status: complete locally. Privacy renders as a bordered secondary button while Start
+over is a quiet menu item. The owner requests one consistent design. Use the
+existing shared quiet Button variant for Privacy and optional Exit in the
+workspace menu, matching Start over's typography, padding, target, radius,
+hover and neutral keyboard focus. Preserve landing privacy styling, dialog
+content, modal focus/Escape/close behavior and session actions. Inspect desktop
+and phone in Codex's in-app browser using a generated no-key fixture; no owner
+reset, processing, paid calls, Voyagenda changes or Git action.
+
+Actual verification: PrivacyDialog accepts the existing quiet Button variant;
+Workspace uses it for Privacy and optional Exit. Start over's wrapped button now
+fills the same row width. Landing/default/secondary privacy triggers are
+preserved. Codex's generated fixture confirms all three rows have identical
+206×44px geometry, transparent background/border, 14px/650 font and padding at
+desktop, with the same shared hover/focus rules. Phone (390×844) menu/dialog fit;
+opening focuses the dialog heading, Close returns focus to Privacy, menu Escape
+focuses Session options, and modal Escape dismisses correctly. No reset/Exit was
+executed. Existing privacy/workflow units pass (18 tests), frontend TypeScript,
+focused lint, formatting and whitespace checks pass. The screenshot
+cl273-session-menu.png is outside Git; review tab/fixture/helper are closed and
+viewport reset. Checks need no API keys and make no processing/provider call;
+real AI retains its existing keys/live flags/approvals. Normal app/media/session
+and Voyagenda are preserved; changes remain unstaged/uncommitted.
+
+## Owner review revision — integrated save status, 2026-11-10
+
+Status: complete locally. The owner rejects the green rounded Saved badge as out of
+place in the editor toolbar and requests styling consistent with the theme,
+colors and typography. Replace the oversized pill with quiet inline status,
+the shared blue icon treatment and toolbar typography, separated from Undo/Redo
+by a subtle divider. Preserve stable space across saved/saving/invalid/failure/
+conflict states, accessible announcements, explicit Retry and all autosave/history
+behavior. Keep phone/tablet labels readable without enlarging the toolbar or
+moving its actions. Verify real shared UI in a synthetic no-key browser fixture
+at desktop/tablet/phone widths and reuse existing autosave checks as appropriate.
+Preserve all earlier uncommitted CL-273 changes, owner session/media and Voyagenda;
+no provider, configuration, deployment or Git action is included.
+
+Actual verification:
+
+- Replaced the capsule border/green fill with an inline muted status, shared blue
+  icon and a short neutral divider. Typography now uses the toolbar's inherited
+  font at 14px/550 (13px on phones). Saving uses the existing spinner, while
+  invalid/failure/conflict retain the shared danger color. Reserved width and
+  height keep state changes from moving actions; Retry remains outside sizing
+  flow. No JSX, callback, state, transport or persistence change was needed.
+- The existing fake/paid-off autosave HTTP proof passed, covering acknowledgement,
+  serial edits, Undo/Redo, invalid input, failure/Retry, conflict/reload and stable
+  geometry across desktop/tablet/phone. Following a compact-spacing refinement,
+  the final current CSS was checked entirely in Codex's in-app browser using the
+  actual shared Workspace/EditorSaveTools components. All five states at 320,
+  390, 768 and 1440px keep readable copy inside the reserved slot, with no page
+  overflow and identical toolbar height within each size. Retry appears only in
+  the failed state. The real generated editor was also inspected at desktop and
+  phone widths. Screenshot cl273-save-status.png is retained outside Git.
+- Formatting and whitespace checks pass. This CSS-only revision needs no new
+  unit tests, TypeScript rebuild, worker reload, provider key or live processing.
+  Shared styling applies locally and hosted. Real provider actions retain their
+  existing keys/live flags/approvals and were not exercised. The isolated review
+  fixtures/helpers are cleaned up; the normal app, owner session/media and
+  Voyagenda are untouched. No staging or commit.
+
+## Owner review revision — shared proportional branded spinner, 2026-11-10
+
+Status: complete locally. The owner reports the logo obscuring the spinning ring on
+Opening workspace and requests a dynamically sized shared component that avoids
+this everywhere. Preserve prior uncommitted CL-273 revisions and owner media.
+
+Confirmed cause: page CSS shrinks ProcessingState's visual container to 5rem,
+while its logo remains 3.15rem with fixed internal bars and fixed floating travel.
+The ring follows the container; the logo does not. Shrinking the container can
+therefore put the logo/corners/motion over the ring.
+
+Implement one shared branded-spinner visual with owned proportional geometry,
+normal motion and a bounded logo animation envelope, separate from accessible
+status/progress semantics. ProcessingState uses it for every branded loading
+state. Callers choose a supported size rather than styling internal children;
+remove the workspace/Moments overrides. Plain thumbnail/button spinners are
+unbranded and retain their existing shared primitives/semantics.
+
+Verify actual rendered ring/logo clearance over animation phases, supported and
+constrained widths, desktop/phone, enlarged root text and zoom. Include the old
+fixed-logo failure as a negative regression. Preserve indeterminate/measured
+progress, forced-colors readability and the permanent normal-motion rule. Use
+synthetic/no-key checks and Codex screenshots, with no real processing, owner
+session edits, ignored configuration, Voyagenda operation or new Git action.
+
+Implementation and actual verification:
+
+- Extracted BrandedSpinner with standard/compact sizes and proportional logo,
+  glyph, SVG ring and floating travel. Its full logo rectangle remains inside
+  the inner ring throughout the animation; SVG stacking also protects the ring
+  from logo shadows. ProcessingState keeps accessible status and measured
+  progress ownership and supplies this one visual at every branded call site.
+- Opening workspace now requests compact size explicitly. Removed both internal
+  child-size overrides and the obsolete fixed-logo/ring CSS and keyframes from
+  ProcessingState. Audited all BrandMark/ProcessingState consumers: the other
+  marks are static header/landing branding; plain spinners have no central logo.
+- A generated in-memory browser fixture renders the real production components,
+  workspace theme and local page CSS. The geometry proof sweeps nine animation
+  phases at four viewports (320/390/768/1440px), four text/zoom combinations
+  (12/16/24/32px root text, up to 200% zoom), both size variants and six
+  constrained parent widths (48–160px). It verifies ring stacking, running
+  animations, status/progress semantics and forced-colors geometry/readability.
+  Restoring the old 3.15rem logo fails the same clearance assertion, as expected.
+  The initial test counted Progress's additional status as a loading label;
+  corrected the selector to the six actual status paragraphs. Production status
+  behavior was already correct.
+- Shared workflow units pass (6 tests). Frontend/test-source TypeScript, focused
+  lint, formatting and whitespace checks pass. The focused final proof passes
+  with fake/paid-off network-blocked composition and no ignored env reads.
+  Earlier CL-273 full-suite/build evidence remains valid; this change touches no
+  composition, media, worker, provider, persistence or security contract.
+- Codex browser inspected compact and standard loading visuals at 390×844 and
+  1440×900. Saved cl273-branded-spinner.png outside Git. The first fixture launch
+  was sandbox-isolated; its browser navigation timed out. Relaunched only that
+  synthetic fixture with normal approved local access. The successful review
+  tab is closed and viewport reset; the unmarked failed temporary tab expires
+  normally. Fixture processes/helpers are removed after review. Owner app,
+  saved session/media and Voyagenda remain untouched. No paid run or Git action.
+
+## Owner review revision — consistent inspector ownership, 2026-11-10
+
+Status: complete locally. The owner reports Captions → Text displaying editable words
+in the left collection while its Text sub-tab sits above an empty right pane.
+They request text editing on the right and an audit for the same inconsistency
+across all editor tabs/sub-tabs. This extends CL-273; preserve the earlier
+uncommitted restoration/intake revision and all owner sessions/media.
+
+Confirmed cause: Captions Text deliberately portals CaptionTextEditor through
+EditorCollection and passes a collection-primary layout exception, suppressing
+the caption timeline. Remove that exception and obsolete shared layout support.
+Keep the caption timeline on the left for all caption sub-tabs; words, speakers,
+style, position and empty/generation states belong to the right inspector.
+
+Audit every EditorInspectorLayout/EditorCollection consumer and the Camera split:
+collection navigation, library/acquisition and collection-order actions remain
+on the left; the active form stays with its owning sub-tabs on the right. Camera
+keeps its intended source canvas and settings split. Preserve every callback,
+word ID/time, Hook/body clock, validation, autosave, Undo and keyboard behavior.
+Narrow screens use the same canonical form under Properties, never a left-only
+text editor with an empty right pane.
+
+Verify generated/no-key browser pane ownership across sections/sub-tabs,
+caption correction → acknowledged save → Undo, timeline selection/preview and
+desktop/tablet/phone navigation. Use focused checks, not another paid run or
+owner-clip mutation. No new Git action or Voyagenda operation is requested.
+
+Implementation/audit evidence:
+
+- Caption text now renders directly inside the same right-hand inspector as its
+  Text sub-tab. The chronological caption timeline remains on the left for all
+  caption sub-tabs. Empty/Hook-copy/generation states also use that inspector.
+  Removed paneRequest, data-primary and the collection-primary CSS exception,
+  instead of adding another placement override.
+- Audited every shared inspector/collection portal and all section/sub-tab
+  render paths. The other misplaced form was the local YouTube audio intake;
+  it now uses the right inspector. Its own pending/Back cancellation behavior is
+  preserved, without disabling the whole wrapper. Text content/style/timing/
+  position, filters, picture/video properties, audio mixing/trim, Hook range/
+  options/title status and Camera settings already use their intended settings
+  panes. Collection navigation/library/upload/order actions and Camera's visual
+  source picker remain intentionally separate from active editing forms.
+  EditorCollection now has only the Hook suggestion/action consumer, with an
+  explicit ownership comment. No second word editor or stale layout flag remains.
+- The new generated HTTP/browser pane proof passes caption Style/Position/Text/
+  Speakers, independent Text sub-tabs, Filters, picture sub-tabs, Audio tracks/
+  import, original Camera sub-tabs and Hook. It verifies no visible editable
+  input/select/textarea leaks into a collection. Caption correction saves
+  through the actual edit transport and Undo restores it: exactly two fake edit
+  requests, zero plan/image/render calls and zero unexpected requests.
+- At 1440×900, 1024×768 and 390×844, words remain in the canonical inspector;
+  narrow Layers contains only the timeline and Properties restores the form.
+  The full existing nine-size/seven-section responsive layout proof also passes.
+  The expanded Camera check explicitly selects Original video rather than
+  mistaking a retained picture target's different sub-tabs for a failure.
+- Focused feedback/timeline/Hook units pass: 23 tests across three files. Frontend
+  and test-source TypeScript, focused lint, formatting and whitespace checks pass.
+  Prior broad restoration/security/build evidence is retained; no composition,
+  worker, provider or persisted contract changed. Another paid/native-owner run
+  or unchanged demo-film capture would add no evidence for this presentation fix.
+- Codex inspected the actual generated desktop and phone caption forms and the
+  YouTube audio form/Back action. cl273-caption-text-right.png is saved outside
+  Git. The review tab/fixture are closed and viewport reset; owner media/session
+  and Voyagenda are untouched. The temporary helper is removed. No upload,
+  YouTube download, paid processing or Git action was performed.
+
+Final scoped validate: meets this owner revision, no actionable findings. All
+checks are synthetic/no-key mechanics; normal real-provider keys/runtime/live
+flags and approval gates remain unchanged. This revision and the earlier
+restoration/intake follow-up remain unstaged/uncommitted for owner review.
+
+## Owner review revision — direct restoration and intake quality, 2026-11-10
+
+Status: complete locally; owner visual acceptance remains open. The owner reports a saved clip flashing through Connecting
+under Source, Loading moments, restored moment cards and a full-page Loading
+preview before Editor. They request a coherent return to the existing clip and
+verification that Source/Moments meet the redesigned workspace quality.
+
+Confirmed cause: Experience initially assumes Moments, mounts the source player
+and selection workflow before the batch's first clip snapshot, and the batch
+reports its initial empty placeholder list as if it were an acknowledged empty
+collection. ClipEditor then replaces its entire layout with a second oversized
+processing card while media decodes. These are separate asynchronous boundaries,
+not new processing work, but the stage changes misrepresent session state.
+
+Implement and verify:
+
+- An unresolved destination uses one neutral workspace-opening surface, with no
+  Source/Moments breadcrumb or controls. Only the first acknowledged clip list
+  determines Editor versus Moments. Preserve reconnect/missing/retry actions,
+  bounded polling, abort cleanup and local/hosted security boundaries.
+- Saved/draft/recovered clips enter Editor directly. Do not mount the original
+  source preview or Moments analysis reader until Moments is actually visited.
+  Preserve their inputs/player state across later Add/Back navigation.
+- Media readiness belongs inside the real editor preview. Keep the editor/rail/
+  canonical work area geometry visible while loading, block interactions until
+  ready, preserve explicit failure/retry and tour readiness, and remove the
+  full-workspace Loading preview replacement. Never fake instant readiness.
+- Refine Source/Moments presentation to the same flatter, grouped professional
+  workspace family: clear source-method navigation, coherent intake state slots,
+  generous preview, purposeful editing/review panes and compact clip rows. Keep
+  every acquisition, timestamp/Capture, manual/AI, exchange, framing and explicit
+  processing function. No duplicate range controls or new paid features.
+- Use generated no-key HTTP/browser fixtures with deliberately held workspace,
+  clip-list and media responses. Assert no Source/Moments flash for restored
+  clips, no unnecessary full-source/analysis requests, correct empty-session
+  destination, reachable failure/retry, Add/Back preservation and stable editor
+  geometry. Inspect desktop/tablet/phone layouts and refresh affected film stills.
+
+This request authorizes the revision and synthetic/paid-off checks only. Preserve
+the owner's open saved project, all media/exports, normal services and Voyagenda.
+No paid processing, ignored configuration change, deployment or new Git action
+is inferred from the earlier completed commit authorization.
+
+Produced revision evidence:
+
+- Experience now has an explicit unresolved destination. The batch notifies it
+  only after an acknowledged clip snapshot, never its initial empty placeholder.
+  Source/breadcrumbs and Moments cannot flash before a restored Editor. Genuine
+  empty intake/selection and missing/retry paths remain distinct. No route,
+  persisted schema, cached private destination hint or extra bootstrap request
+  was introduced. Source/selection mount on the first deliberate Moments visit
+  and remain mounted thereafter, preserving inputs and paused playback.
+- Clip decoding now uses a small spinner inside the actual preview canvas. The
+  rail, tabs and existing Home/properties layout remain painted with unchanged
+  geometry; inert/readiness guards block interaction until ready. Error/retry,
+  compact transport space and tour readiness remain. Existing proof consumers
+  now wait for the real data-loading readiness condition rather than hidden
+  panels; optional historical proofs are not claimed as newly executed.
+- Source has compact method tabs, aligned headings, coherent upload/drop and
+  acquisition state slots with quieter borders. Moments has a generous preview,
+  flatter Add/Your clips navigation, grouped controls, compact review rows and
+  one Framing control beside the results. The control remains owned by the
+  batch through a portal; hosted still excludes this local choice. Timestamp
+  Capture/jump/exchange, manual/AI choices and explicit submission are retained.
+  Loading existing analysis is a local compact status; actual AI preparation
+  keeps its real progress/steps.
+- New generated HTTP entry proof passes held workspace/clip/media boundaries:
+  observed stages are exactly opening then Editor; zero whole-source/analysis
+  reads occur before explicit Add. Preview/canvas/panel rectangles are identical
+  before/after media release on desktop and phone. Add/Back preserves typed
+  timestamps without another analysis read. A 410 stays neutral with explicit
+  retry and no automatic request; recovery works. Empty sessions select Source
+  or Moments correctly. Fake plan/image/render and edit counts remain zero.
+- A first fixture recovery attempt exposed a cacheable synthetic 410 response;
+  its no-store header now matches the actual protected server/bridge policy.
+  A first input-preservation attempt had clicked hidden still-restoring controls;
+  the proof now waits for genuine selection readiness. Neither fix weakens app
+  guards or substitutes saved owner data.
+- Responsive editor matrix, tour and final integrated product-film proofs pass.
+  Codex inspected current-source Source/Moments at desktop, tablet and phone,
+  invalid/corrected manual time feedback, and held/released editor preview.
+  Screenshots cl273-source-refined.png, cl273-moments-refined.png and
+  cl273-preview-local-loading.png remain outside Git. The viewport is reset and
+  temporary review tab is closed; the owner's real tab/session was not used.
+- Final frontend gate passes **750/750 tests in 97 files** with bounded worker
+  concurrency. An earlier concurrent run had two timeout-sensitive cases and a
+  stale demo cursor coordinate assertion; all focused reruns and the settled
+  complete suite pass without widening timeouts. Current measured film targets,
+  preview/card regions, ten fictional stills and integrity hashes are updated.
+- Repository lint, frontend/test type checks, isolated production workflow build
+  and strict self-contained artifact verification pass. The existing dynamic
+  local-discovery tracing warning remains. The final demo coordinate/still
+  alignment is additionally covered by the full frontend and integrated film
+  gates. No ignored environment, external package links or private assets enter
+  the closed build. Final repository formatting/diff checks and both closed
+  image-input cases pass. Review fixtures and temporary helpers are removed;
+  only the original 3000/4000/4200 listeners remain with unchanged PIDs, and all
+  three content-free readiness GETs return 200. Nothing is staged or committed
+  for this follow-up.
+
+Scoped validate against f636e1f: no actionable finding remains for restoration,
+Source/Moments presentation, feature/security preservation, lifecycle cleanup
+or readiness. These are synthetic/no-key mechanics checks; they do not measure
+real AI quality. Normal provider/runtime/live-approval requirements are unchanged.
+No paid run, native render of owner media, configuration change, deployment,
+Voyagenda operation or Git mutation was performed for this revision.
+
 ## Owner review revision — inner editors and toolbar, 2026-11-10
 
 The owner approves the larger workspace but finds Captions, Text, Filters,
@@ -27,8 +912,8 @@ Implementation guidelines for this revision:
 - Keep deliberate touch targets and stable contextual feedback. Do not obtain
   density by shrinking inputs below usable targets, hiding errors or removing
   advanced functionality. Collapse panes deliberately on tablet/phone.
-- Save status becomes a compact designed status badge with meaningful icon,
-  tint and gentle transition: acknowledged, saving, check edits, failed/conflict.
+- Save status is a compact inline status with meaningful icon, toolbar typography
+  and gentle color transition: acknowledged, saving, check edits, failed/conflict.
   Preserve exact honest state, explicit Retry/Reload and unchanged toolbar/
   preview geometry. No fake success timer or new provider work.
 - Image references are design aids outside Git; generated text/layout cannot
@@ -65,7 +950,7 @@ caption search and new camera modes) were deliberately excluded from code.
   controls. All domain callbacks and availability/validation guards remain.
 - File is removed. The far-right Session options ellipsis retains reset,
   recovery, privacy and applicable Exit, including Escape/focus handling. The
-  save badge uses a real state icon/tint and fixed geometry for acknowledged,
+  inline save status uses a real state icon/tint and fixed geometry for acknowledged,
   pending, invalid, failed and conflicting edits, with explicit Retry/Reload.
 - The full frontend suite passes **750/750 tests in 97 files**. A legacy
   typography-feedback fixture previously spread an absent optional caption
@@ -698,7 +1583,7 @@ owner-selected direction needs explicit implementation work, responsive and
 keyboard/feedback states, component reuse and regression acceptance against the
 capability map before replacing the current authoritative layout.
 
-## Final whole-file commit allocation
+## Original whole-file commit allocation — f636e1f
 
 Every path below belongs to CL-273; no hunk staging or unrelated work is included.
 The removed capture script is included as a whole-file deletion. No push.
