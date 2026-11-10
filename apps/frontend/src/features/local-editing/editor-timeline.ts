@@ -1,5 +1,8 @@
 import type { OwnerOverlay } from "../../../../../packages/contracts/local/clips.ts";
-import { ownerHookFrames } from "../../../../../packages/contracts/local/hook.ts";
+import {
+  ownerHookFrames,
+  ownerSourceFrame,
+} from "../../../../../packages/contracts/local/hook.ts";
 import { ownerOccurrenceOverlay } from "../../../../../packages/contracts/local/hook-content.ts";
 import { ownerOverlayAudioSegments } from "../../../../../packages/contracts/local/occurrence-audio.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
@@ -7,9 +10,10 @@ import { OWNER_SOUNDS } from "../../../../../packages/contracts/local/audio.ts";
 import { focusPositions, focusPositionName } from "./focus-positions.ts";
 import { filterTimelineRanges, filterRangeKey } from "./filter-ranges.ts";
 import { OWNER_VIDEO_LOOK_LABELS } from "../../../../../packages/contracts/local/video-look.ts";
+import { ownerCameraEffectEnd } from "../../../../../packages/contracts/local/camera-motion.ts";
 
 export type EditorTimelineKind =
-  "picture" | "text" | "caption" | "audio" | "camera" | "look";
+  "picture" | "text" | "caption" | "audio" | "camera" | "look" | "effect";
 export type EditorTimelineItem = {
   key: string;
   kind: EditorTimelineKind;
@@ -19,7 +23,26 @@ export type EditorTimelineItem = {
   title: string;
   startFrame: number;
   endFrame: number;
+  targetId?: string;
+  effectTab?: "zoom" | "pan" | "motion";
 };
+
+export function editorTimelineVisual(
+  overlay: OwnerOverlay,
+  item: EditorTimelineItem,
+) {
+  const cue = ownerOccurrenceOverlay(overlay, item.occurrence).visuals[
+    item.index
+  ]!;
+  return {
+    cue,
+    frame: cue.video
+      ? cue.video.offsetFrame +
+        ownerSourceFrame(overlay, item.startFrame) -
+        cue.startFrame
+      : undefined,
+  };
+}
 
 /** Display clocks only. Source-bound edit data never receives these offsets. */
 export function editorTimelineItems(
@@ -43,6 +66,7 @@ export function editorTimelineItems(
       start: number,
       end: number,
       local = false,
+      target?: Pick<EditorTimelineItem, "targetId" | "effectTab">,
     ) {
       const from = local ? 0 : first,
         to = local ? last - first : last;
@@ -59,6 +83,7 @@ export function editorTimelineItems(
         title: `${title}${occurrence === "hook" ? " [Hook]" : ""}`,
         startFrame: start + shift,
         endFrame: end + shift,
+        ...target,
       });
     }
     if (kind === "picture")
@@ -71,6 +96,68 @@ export function editorTimelineItems(
           cue.endFrame,
         ),
       );
+    if (kind === "effect") {
+      overlay.cameraEffects
+        ?.filter((effect) => effect.occurrence === occurrence)
+        .forEach((effect, index) => {
+          add(
+            effect.id,
+            index,
+            effect.kind === "pan"
+              ? "Pan · Original video"
+              : "Zoom · Original video",
+            effect.startFrame,
+            ownerCameraEffectEnd(effect),
+            true,
+            {
+              targetId: "original",
+              effectTab: effect.kind === "pan" ? "pan" : "zoom",
+            },
+          );
+        });
+      overlay.cameraTracks
+        ?.filter((track) => track.occurrence === occurrence)
+        .forEach((track, index) => {
+          add(
+            track.id,
+            index,
+            "Face tracking · Original video",
+            track.startFrame,
+            track.endFrame,
+            true,
+            { targetId: "original", effectTab: "motion" },
+          );
+        });
+      content.visuals.forEach((cue, index) => {
+        if (cue.effect)
+          add(
+            cue.id,
+            index,
+            `Zoom / Pan · ${cue.video ? "Video" : "Picture"} ${index + 1}`,
+            cue.effect.startFrame,
+            cue.effect.endFrame,
+            false,
+            {
+              targetId: cue.id,
+              effectTab:
+                cue.effect.fromX !== cue.effect.toX ||
+                cue.effect.fromY !== cue.effect.toY
+                  ? "pan"
+                  : "zoom",
+            },
+          );
+        if (cue.tracking)
+          add(
+            `${cue.id}:tracking`,
+            index,
+            `Face tracking · Video ${index + 1}`,
+            Math.max(cue.startFrame, cue.tracking.startFrame),
+            Math.min(cue.endFrame, cue.tracking.endFrame),
+            false,
+            { targetId: cue.id, effectTab: "motion" },
+          );
+      });
+    }
     if (kind === "text")
       content.texts?.forEach((layer, i) =>
         add(

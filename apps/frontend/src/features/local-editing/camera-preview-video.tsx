@@ -4,6 +4,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  type SyntheticEvent,
 } from "react";
 import { Html5Video, useVideoConfig, type OnVideoFrame } from "remotion";
 import {
@@ -188,7 +189,7 @@ export function CameraPreviewVideo({
       onVideoFrame={onVideoFrame}
       pauseWhenBuffering
       onLoadedData={onPreviewReady}
-      onErrorCapture={(event) => {
+      onErrorCapture={(event: SyntheticEvent<HTMLVideoElement>) => {
         event.stopPropagation();
         onPlaybackError();
       }}

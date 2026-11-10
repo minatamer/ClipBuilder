@@ -367,7 +367,7 @@ it("tracks a manually marked moving head through real editor controls, cancel, A
         button('Add at playhead').click();await wait(()=>named('Head to follow'),'seed');
         if(!button('Track head')?.disabled)throw Error('unmarked_head_allowed');
         const target=named('Head to follow');target.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const r=target.getBoundingClientRect();footer();
-        const slot=document.querySelector('.workflow-footer-slot'),notice=document.createElement('nav');notice.className='workflow-actions';const status=document.createElement('span');status.className='connection-status';status.textContent='Reconnecting…';notice.append(status);slot.append(notice);
+        const slot=document.querySelector('.workflow-action-slot'),notice=document.createElement('nav');notice.className='workflow-actions';const status=document.createElement('span');status.className='connection-status';status.textContent='Reconnecting…';notice.append(status);slot.append(notice);
         if(!notice.getClientRects().length)throw Error('hidden_reconnection');notice.remove();
         const media=document.querySelector('.head-motion-source video');await wait(()=>media.readyState>=2&&!media.seeking,'seed_frame');const t=Math.floor(media.currentTime*30)/30,x=70+25*t,y=70+5*Math.sin(t*2);
         return {x:r.left+r.width*x/480,y:r.top+r.height*y/270,endX:r.left+r.width*(x+72)/480,endY:r.top+r.height*(y+96)/270};

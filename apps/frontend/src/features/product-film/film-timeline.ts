@@ -84,7 +84,7 @@ export const FILM_COPY: Record<FilmBeat, { title: string; detail: string }> = {
   },
   review: {
     title: "Make the\ncut yours.",
-    detail: "Edit captions, pictures and style.",
+    detail: "Your layers. Your camera. Every edit saved.",
   },
   result: {
     title: "Your next\nstandout clip.",

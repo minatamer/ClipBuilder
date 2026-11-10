@@ -1,4 +1,5 @@
 import { screenCamera, type ScreenBeat } from "./film-camera";
+import { FILM_WORKSPACE } from "./film-workspace";
 import {
   FILM_TIMELINES,
   filmDuration,
@@ -76,10 +77,10 @@ export function filmNarrative(beat: FilmBeat, frame: number, height: number) {
 }
 export const isScreenBeat = (beat: FilmBeat): beat is ScreenBeat =>
   ["intake", "analysis", "choose", "review"].includes(beat);
-const editorSource = { x: 532, y: 171, width: 400, height: 711.111111 };
-const selectedSource = { x: 386, y: 269, width: 879, height: 494 };
+const editorSource = FILM_WORKSPACE.editor;
+const selectedSource = FILM_WORKSPACE.source;
 const uploadSource = { x: 690, y: 430, width: 60, height: 60 };
-const sourcePreview = { x: 350, y: 180, width: 740, height: 500 };
+const sourcePreview = FILM_WORKSPACE.source;
 
 export function filmStage(
   variant: FilmVariant,
@@ -138,7 +139,7 @@ export function filmStage(
                 anchorX: 0.5 + 0.2 * editorial,
                 anchorY: 0.5 + 0.05 * editorial,
                 lens: 1.18,
-                focus: { x: 732, y: 526 },
+                focus: { x: 344, y: 482 },
                 focusWeight: editorial,
               };
     return screenCamera(
@@ -259,11 +260,7 @@ export function filmStage(
       cardsOpacity = 1 - sceneProgress(local, span * 0.6, span);
       if (!fromAnalysis)
         conversation = {
-          rect: moveRect(
-            wide,
-            project({ x: 119, y: 436, width: 378, height: 214 }, pose),
-            t,
-          ),
+          rect: moveRect(wide, project(FILM_WORKSPACE.source, pose), t),
           opacity: 1 - t,
         };
       if (local >= 42)

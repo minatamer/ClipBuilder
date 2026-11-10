@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { ControlTabs } from "./control-tabs";
 import { ThumbnailVideo } from "../../shared/ui/video-thumbnail";
 import { Upload } from "lucide-react";
 import { Workspace } from "../../shared/ui/workspace";
@@ -10,7 +11,6 @@ import {
   ownerWorkspaceSchema,
   type OwnerWorkspace,
 } from "../../../../../packages/contracts/local/index.ts";
-import "./style.css";
 import { OwnerSelectionPanel } from "./selection-panel.tsx";
 import type { OwnerMomentExport } from "../../../../../packages/contracts/local/selection.ts";
 import { OwnerClipBatchPanel } from "./clip-batch-panel.tsx";
@@ -69,6 +69,14 @@ export function LocalEditingExperience({
   const sourcePreview = useRef<HTMLVideoElement>(null);
   const [previewReadyFor, setPreviewReadyFor] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [sourceMethod, setSourceMethod] = useState<"upload" | "youtube">(
+    "upload",
+  );
+  const sourceMethodsId = useId();
+  const acquisitionBusyChanged = useCallback((value: boolean) => {
+    setAcquisitionBusy(value);
+    if (value) setSourceMethod("youtube");
+  }, []);
   const opening = useRef<AbortController | null>(null);
   const [initialClip, setInitialClip] = useState<string | null>(null);
   useEffect(
@@ -90,11 +98,16 @@ export function LocalEditingExperience({
   useEffect(() => {
     if (view === "editor") sourcePreview.current?.pause();
     heading.current?.focus({ preventScroll: true });
-    heading.current?.scrollIntoView({ block: "start" });
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, [view, workspace?.id]);
   const [unapplied, setUnapplied] = useState(false);
   const [clearBlocked, setClearBlocked] = useState(false);
-  const [footerTarget, setFooterTarget] = useState<HTMLDivElement | null>(null);
+  const [resetWaiting, setResetWaiting] = useState(false);
+  const editDirtyChanged = useCallback((value: boolean) => {
+    setUnapplied(value);
+    if (!value) setResetWaiting(false);
+  }, []);
+  const [actionTarget, setActionTarget] = useState<HTMLDivElement | null>(null);
   const choose = useCallback((value: OwnerMomentExport[]) => {
     setSelection(value);
   }, []);
@@ -271,6 +284,10 @@ export function LocalEditingExperience({
   }
   async function clear(discardUnsaved = false) {
     if (!workspace || blocked || clipWork) return;
+    if (unapplied && !discardUnsaved) {
+      setResetWaiting(true);
+      return;
+    }
     setBusy(true);
     try {
       const response = await fetch(
@@ -305,6 +322,7 @@ export function LocalEditingExperience({
       setHasClips(false);
       setView("moments");
       setClearBlocked(false);
+      setResetWaiting(false);
       setMessage("");
       if (hosted) {
         const status = await fetch("/api/local/session");
@@ -319,7 +337,28 @@ export function LocalEditingExperience({
     }
   }
   return (
-    <Workspace localMode={!hosted} cloudMode={hosted} illustrativePictures>
+    <Workspace
+      localMode={!hosted}
+      cloudMode={hosted}
+      illustrativePictures
+      editing={!!workspace && view === "editor"}
+      sessionActions={
+        workspace && (
+          <SessionControls
+            recovery={clearBlocked || resetWaiting}
+            disabled={blocked || clipWork || !sessionConnected}
+            onClear={(discard) => void clear(discard)}
+            message={
+              resetWaiting
+                ? "Edits aren’t saved. Retry or discard this session."
+                : messageArea === "session"
+                  ? message
+                  : undefined
+            }
+          />
+        )
+      }
+    >
       <WorkflowFrame
         headingRef={heading}
         title={
@@ -341,35 +380,24 @@ export function LocalEditingExperience({
                 : "Start with a video on your computer or a YouTube link."
               : undefined
         }
-        footer={
+        actions={
           workspace ? (
             <>
-              <SessionControls
-                recovery={clearBlocked}
-                disabled={blocked || clipWork || !sessionConnected}
-                onClear={(discard) => void clear(discard)}
-                message={messageArea === "session" ? message : undefined}
-              />
-              <div className="local-footer-actions">
-                {hasClips && !unapplied && !clipWork && !blocked && (
-                  <Button
-                    variant="secondary"
-                    disabled={blocked}
-                    onClick={() =>
-                      setView(view === "editor" ? "moments" : "editor")
-                    }
-                  >
-                    {view === "editor" ? (
-                      <span>
-                        Add<span className="local-action-detail"> more</span>{" "}
-                        clips
-                      </span>
-                    ) : (
-                      "Back to editor"
-                    )}
-                  </Button>
-                )}
-                <div className="workflow-footer-slot" ref={setFooterTarget} />
+              <div className="workflow-session-actions">
+                {hasClips &&
+                  view === "moments" &&
+                  !unapplied &&
+                  !clipWork &&
+                  !blocked && (
+                    <Button
+                      variant="secondary"
+                      disabled={blocked}
+                      onClick={() => setView("editor")}
+                    >
+                      Back to editor
+                    </Button>
+                  )}
+                <div className="workflow-action-slot" ref={setActionTarget} />
               </div>
             </>
           ) : startupFailed ? (
@@ -420,97 +448,114 @@ export function LocalEditingExperience({
             />
           ) : (
             !workspace && (
-              <div
-                className={`source-options${hosted ? " source-options-upload" : ""}`}
-              >
-                <section
-                  className={`source-card upload-card ${dragging ? "is-dragging" : ""}`}
-                  aria-labelledby="upload-title"
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    if (!blocked) setDragging(true);
-                  }}
-                  onDragLeave={(event) => {
-                    if (
-                      !(event.relatedTarget instanceof Node) ||
-                      !event.currentTarget.contains(event.relatedTarget)
-                    )
-                      setDragging(false);
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    setDragging(false);
-                    void upload(event.dataTransfer.files[0]);
-                  }}
-                >
-                  <div className="source-card-heading">
-                    <span className="source-icon">
-                      <Upload size={24} aria-hidden="true" />
-                    </span>
-                    <h2 id="upload-title">Upload a video</h2>
-                  </div>
-                  <div className="source-card-body">
-                    <div className="upload-drop-area" data-disabled={blocked}>
-                      <Upload aria-hidden="true" />
-                      <strong>
-                        {dragging ? "Drop to upload" : "Drop your video here"}
-                      </strong>
-                      <span>or choose a file below</span>
-                    </div>
-                  </div>
-                  <footer className="source-card-footer">
-                    <InlineFeedback
-                      id="upload-feedback"
-                      message={messageArea === "upload" ? message : undefined}
-                    />
-                    <div className="source-actions">
-                      <Button
-                        icon={Upload}
-                        disabled={blocked}
-                        onClick={() => fileInput.current?.click()}
-                      >
-                        Choose a video
-                      </Button>
-                    </div>
-                    <input
-                      ref={fileInput}
-                      className="local-file-input"
-                      type="file"
-                      accept={hosted ? "video/mp4" : "video/mp4,.json"}
-                      aria-label={
-                        hosted
-                          ? "Choose a video"
-                          : "Choose a video or saved ClipBuilder draft"
-                      }
-                      aria-describedby={
-                        messageArea === "upload" && message
-                          ? "upload-feedback"
-                          : undefined
-                      }
-                      tabIndex={-1}
-                      disabled={blocked}
-                      onChange={(event) => {
-                        void upload(event.target.files?.[0]);
-                        event.target.value = "";
-                      }}
-                    />
-                    <span className="source-card-footnote source-hint">
-                      {hosted
-                        ? "MP4 video · Temporary editing session"
-                        : "MP4 or ClipBuilder draft · Saved edits reopen automatically"}
-                    </span>
-                  </footer>
-                </section>
+              <div className="source-intake">
                 {!hosted && (
-                  <OwnerAcquisitionPanel
-                    workspace={workspace}
-                    capabilities={capabilities}
-                    busy={busy || clipWork}
-                    initializing={busy && !capabilities}
-                    onBusy={setAcquisitionBusy}
-                    onOpen={sourceOpened}
+                  <ControlTabs
+                    id={sourceMethodsId}
+                    label="Video source"
+                    items={[
+                      { value: "upload", label: "Upload" },
+                      { value: "youtube", label: "YouTube" },
+                    ]}
+                    value={sourceMethod}
+                    onChange={setSourceMethod}
+                    disabled={blocked}
                   />
                 )}
+                <div
+                  className={`source-options${hosted ? " source-options-upload" : ""}`}
+                >
+                  <section
+                    className={`source-card upload-card ${dragging ? "is-dragging" : ""}`}
+                    aria-labelledby="upload-title"
+                    hidden={!hosted && sourceMethod !== "upload"}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      if (!blocked) setDragging(true);
+                    }}
+                    onDragLeave={(event) => {
+                      if (
+                        !(event.relatedTarget instanceof Node) ||
+                        !event.currentTarget.contains(event.relatedTarget)
+                      )
+                        setDragging(false);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      setDragging(false);
+                      void upload(event.dataTransfer.files[0]);
+                    }}
+                  >
+                    <div className="source-card-heading">
+                      <span className="source-icon">
+                        <Upload size={24} aria-hidden="true" />
+                      </span>
+                      <h2 id="upload-title">Upload a video</h2>
+                    </div>
+                    <div className="source-card-body">
+                      <div className="upload-drop-area" data-disabled={blocked}>
+                        <Upload aria-hidden="true" />
+                        <strong>
+                          {dragging ? "Drop to upload" : "Drop your video here"}
+                        </strong>
+                        <span>or choose a file below</span>
+                      </div>
+                    </div>
+                    <div className="source-card-actions">
+                      <InlineFeedback
+                        id="upload-feedback"
+                        message={messageArea === "upload" ? message : undefined}
+                      />
+                      <div className="source-actions">
+                        <Button
+                          icon={Upload}
+                          disabled={blocked}
+                          onClick={() => fileInput.current?.click()}
+                        >
+                          Choose a video
+                        </Button>
+                      </div>
+                      <input
+                        ref={fileInput}
+                        className="local-file-input"
+                        type="file"
+                        accept={hosted ? "video/mp4" : "video/mp4,.json"}
+                        aria-label={
+                          hosted
+                            ? "Choose a video"
+                            : "Choose a video or saved ClipBuilder draft"
+                        }
+                        aria-describedby={
+                          messageArea === "upload" && message
+                            ? "upload-feedback"
+                            : undefined
+                        }
+                        tabIndex={-1}
+                        disabled={blocked}
+                        onChange={(event) => {
+                          void upload(event.target.files?.[0]);
+                          event.target.value = "";
+                        }}
+                      />
+                      <span className="source-card-footnote source-hint">
+                        {hosted
+                          ? "MP4 video · Temporary editing session"
+                          : "MP4 or ClipBuilder draft · Saved edits reopen automatically"}
+                      </span>
+                    </div>
+                  </section>
+                  {!hosted && (
+                    <OwnerAcquisitionPanel
+                      workspace={workspace}
+                      capabilities={capabilities}
+                      hidden={sourceMethod !== "youtube"}
+                      busy={busy || clipWork}
+                      initializing={busy && !capabilities}
+                      onBusy={acquisitionBusyChanged}
+                      onOpen={sourceOpened}
+                    />
+                  )}
+                </div>
               </div>
             )
           )}
@@ -600,7 +645,7 @@ export function LocalEditingExperience({
                       workspace={workspace}
                       capabilities={capabilities}
                       busy={blocked || clipWork}
-                      footerTarget={footerTarget}
+                      actionTarget={actionTarget}
                       actionsVisible={view === "moments"}
                       onBusy={setBusy}
                       onChoose={choose}
@@ -659,10 +704,11 @@ export function LocalEditingExperience({
                   onClipsChange={clipsChanged}
                   onProcessed={() => setView("editor")}
                   initialReviewId={initialClip}
-                  onDirtyChange={setUnapplied}
+                  onDirtyChange={editDirtyChanged}
+                  onAddClips={() => setView("moments")}
                   showProcessing={view === "moments"}
                   selectionReady={showMomentResults}
-                  footerTarget={footerTarget}
+                  actionTarget={actionTarget}
                   onRecovered={workspaceRecovered}
                   onConnected={setSessionConnected}
                   onStartOver={() => {

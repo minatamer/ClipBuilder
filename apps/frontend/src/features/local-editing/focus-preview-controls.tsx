@@ -35,7 +35,7 @@ type Props = Omit<
   onCameraTracks: (tracks: OwnerCameraTrack[]) => void;
   onTrackingMode: (active: boolean) => void;
   onTrackingBusy: (active: boolean) => void;
-  footerTarget?: HTMLElement | null | undefined;
+  actionTarget?: HTMLElement | null | undefined;
 };
 
 export function FocusPreviewControls({
@@ -50,7 +50,7 @@ export function FocusPreviewControls({
   onCameraTracks,
   onTrackingMode,
   onTrackingBusy,
-  footerTarget,
+  actionTarget,
   ...props
 }: Props) {
   const preview = useEditorPreview({
@@ -96,6 +96,7 @@ export function FocusPreviewControls({
             )
           }
           selectionKey={props.positionRequest?.key}
+          navigationRequest={props.navigationRequest}
           selectionFrame={
             props.positionRequest
               ? ownerSourceFrame({ hook }, props.positionRequest.startFrame)
@@ -130,13 +131,14 @@ export function FocusPreviewControls({
           onChange={onCameraTracks}
           onMode={onTrackingMode}
           onBusy={onTrackingBusy}
-          footerTarget={footerTarget}
+          actionTarget={actionTarget}
           disabled={props.disabled}
           available={cameraAvailable}
         />
       }
       motion={
         <CameraMotionEditor
+          navigationRequest={props.navigationRequest}
           focus={props.focus}
           positionIndex={props.positionRequest?.index}
           effects={cameraEffects}
@@ -160,6 +162,7 @@ export function FocusPreviewControls({
       pan={
         <CameraMotionEditor
           mode="pan"
+          navigationRequest={props.navigationRequest}
           focus={props.focus}
           positionIndex={props.positionRequest?.index}
           effects={cameraEffects}

@@ -1,4 +1,6 @@
 import type { ReactNode, Ref } from "react";
+import { createPortal } from "react-dom";
+import { useWorkspaceChrome } from "./workspace";
 
 import styles from "./workflow.module.css";
 
@@ -8,7 +10,7 @@ export function WorkflowFrame({
   headingRef,
   step,
   children,
-  footer,
+  actions = null,
   bounded = false,
 }: {
   title: string;
@@ -16,14 +18,29 @@ export function WorkflowFrame({
   headingRef?: Ref<HTMLHeadingElement>;
   step: 0 | 1 | 2;
   children: ReactNode;
-  footer: ReactNode;
+  actions?: ReactNode;
   bounded?: boolean;
 }) {
+  const chrome = useWorkspaceChrome();
+  const toolbar =
+    actions !== null ? <div className={styles.actions}>{actions}</div> : null;
   return (
-    <main id="sample-main" tabIndex={-1} className={styles.frame}>
+    <main
+      id="sample-main"
+      tabIndex={-1}
+      className={styles.frame}
+      data-stage={step}
+    >
       <header className={styles.heading}>
+        <ol className={styles.stages} aria-label="Workflow progress">
+          {["Source", "Moments", "Editor"].map((label, index) => (
+            <li key={label} aria-current={step === index ? "step" : undefined}>
+              {label}
+            </li>
+          ))}
+        </ol>
         <h1 ref={headingRef} tabIndex={-1}>
-          Step {step + 1} of 3: {title}
+          {title}
         </h1>
         {subtitle && <p>{subtitle}</p>}
       </header>
@@ -32,7 +49,9 @@ export function WorkflowFrame({
       >
         {children}
       </div>
-      {footer !== null && <footer className={styles.footer}>{footer}</footer>}
+      {chrome
+        ? chrome.actions && toolbar && createPortal(toolbar, chrome.actions)
+        : toolbar}
     </main>
   );
 }

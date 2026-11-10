@@ -31,25 +31,23 @@ describe("shared workflow primitives", () => {
     { step: 1 as const, title: "Pick one moment", number: 2 },
     { step: 2 as const, title: "Building your clip", number: 3 },
   ])(
-    "combines step $number and its title in one focusable heading without a separate tracker",
-    ({ step, title, number }) => {
+    "keeps stage $number accessible with a plain heading and no bottom action footer",
+    ({ step, title }) => {
       const markup = renderToStaticMarkup(
         <WorkflowFrame
           title={title}
           step={step}
-          footer={<Button disabled>Build this clip</Button>}
+          actions={<Button disabled>Build this clip</Button>}
         >
           <p>Prepared choices</p>
         </WorkflowFrame>,
       );
       expect(markup.match(/<main/g)).toHaveLength(1);
       expect(markup.match(/<h1/g)).toHaveLength(1);
-      expect(markup).toContain(
-        `tabindex="-1">Step ${number} of 3: ${title}</h1>`,
-      );
+      expect(markup).toContain(`tabindex="-1">${title}</h1>`);
       expect(markup).not.toContain("Clip preparation steps");
-      expect(markup).not.toContain('aria-current="step"');
-      expect(markup).toContain("<footer");
+      expect(markup).toContain('aria-current="step"');
+      expect(markup).not.toContain("<footer");
       expect(markup).toContain('disabled=""');
     },
   );

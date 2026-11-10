@@ -1,5 +1,6 @@
 import { OWNER_COLLECTION_PAGE_ITEMS as REQUEST_PAGE_ITEMS } from "../../../../../packages/contracts/local/collection-pages.ts";
 import { readOwnerClips } from "./collection-pages.ts";
+import { WorkspaceEditHistory } from "./edit-history";
 import { Button } from "../../shared/ui/button";
 import buttonStyles from "../../shared/ui/workflow.module.css";
 import {
@@ -42,9 +43,8 @@ import { CodexPreparationSteps } from "./codex-preparation-steps.tsx";
 
 const RAIL_PAGE_ITEMS = 20;
 const initial: OwnerClipList = { clips: [], active: false, workers: 1 };
-// Keep aligned with the clip-strip media query in style.css, including large tablets.
-const clipStripQuery =
-  "(max-width: 75rem), (hover: none) and (pointer: coarse)";
+// Keep aligned with the clip-rail breakpoint in editor-workspace.css.
+const clipStripQuery = "(max-width: 63.999rem)";
 function subscribeClipLayout(update: () => void) {
   const media = window.matchMedia(clipStripQuery);
   media.addEventListener("change", update);
@@ -63,10 +63,11 @@ export function OwnerClipBatchPanel({
   onDirtyChange,
   showProcessing = true,
   selectionReady = selected.length > 0,
-  footerTarget,
+  actionTarget,
   onRecovered,
   onStartOver,
   onConnected,
+  onAddClips,
 }: {
   workspace: OwnerWorkspace;
   capabilities: OwnerRuntimeCapabilities;
@@ -78,10 +79,11 @@ export function OwnerClipBatchPanel({
   onDirtyChange?: (dirty: boolean) => void;
   showProcessing?: boolean;
   selectionReady?: boolean;
-  footerTarget?: HTMLElement | null | undefined;
+  actionTarget?: HTMLElement | null | undefined;
   onRecovered?: ((workspace: OwnerWorkspace) => void) | undefined;
   onStartOver?: (() => void) | undefined;
   onConnected?: ((connected: boolean) => void) | undefined;
+  onAddClips?: (() => void) | undefined;
 }) {
   const clipLimit =
     "execution" in capabilities && capabilities.demoClipLimit !== null
@@ -91,6 +93,7 @@ export function OwnerClipBatchPanel({
         : OWNER_LIMITS.clips;
   const [limitNotice, setLimitNotice] = useState(0);
   const [framing, setFraming] = useState<"tracked" | "fit">("tracked");
+  const [editHistory] = useState(() => new WorkspaceEditHistory());
   const [connection, setConnection] = useState<ClipConnection>("connected");
   const [connectionAttempt, setConnectionAttempt] = useState(0);
   const planningAvailable =
@@ -134,6 +137,10 @@ export function OwnerClipBatchPanel({
     onDirtyChange?.(Boolean(dirtyClip));
   }, [dirtyClip, onDirtyChange]);
   const hasClips = list.clips.length > 0;
+  useEffect(
+    () => editHistory.retain(new Set(list.clips.map((clip) => clip.id))),
+    [editHistory, list.clips],
+  );
   useEffect(() => {
     onClipsChange?.(hasClips);
   }, [hasClips, onClipsChange]);
@@ -368,7 +375,7 @@ export function OwnerClipBatchPanel({
             !dirtyClip &&
             !editorPending)) && (
           <WorkflowActions
-            target={footerTarget}
+            target={actionTarget}
             label="Clip action feedback"
             feedback
           >
@@ -379,7 +386,7 @@ export function OwnerClipBatchPanel({
         <p role="status">AI unavailable. Prepared clips still work.</p>
       )}
       {connection !== "connected" && (
-        <WorkflowActions target={footerTarget} label="Session connection">
+        <WorkflowActions target={actionTarget} label="Session connection">
           <span
             className="connection-status"
             data-missing={connection === "missing" || undefined}
@@ -420,7 +427,7 @@ export function OwnerClipBatchPanel({
       {connection === "connected" &&
         ((showProcessing && selectionReady) ||
           (!showProcessing && list.active && !dirtyClip)) && (
-          <WorkflowActions target={footerTarget} label="Clip processing">
+          <WorkflowActions target={actionTarget} label="Clip processing">
             {limitNotice > 0 && (
               <DemoLimitToast
                 key={limitNotice}
@@ -473,88 +480,109 @@ export function OwnerClipBatchPanel({
           </WorkflowActions>
         )}
       <div className="clip-workspace" hidden={showProcessing}>
-        <div
-          ref={clipList}
-          className="clip-list"
-          role="tablist"
-          aria-label="Choose a clip"
-          aria-orientation={horizontal ? "horizontal" : "vertical"}
-        >
-          {list.clips
-            .slice(railStart, railStart + RAIL_PAGE_ITEMS)
-            .map((clip) => {
-              const index = list.clips.findIndex((item) => item.id === clip.id);
-              return (
-                <div
-                  key={clip.id}
-                  className="clip-card"
-                  role="presentation"
-                  data-selected={current?.id === clip.id || undefined}
-                >
-                  <ClipNameControls
-                    clip={clip}
-                    index={index + 1}
-                    workspaceId={workspace.id}
-                    onAccepted={acceptEdit}
-                    disabled={
-                      !!dirtyClip ||
-                      pending ||
-                      editorPending ||
-                      connection !== "connected"
-                    }
-                    tabIndex={current?.id === clip.id ? 0 : -1}
-                  />
-                  <Button
-                    variant="secondary"
-                    className="clip-choice"
-                    role="tab"
-                    id={`${tabsId}-${clip.id}`}
-                    aria-controls={`${tabsId}-panel`}
-                    aria-selected={current?.id === clip.id}
-                    tabIndex={current?.id === clip.id ? 0 : -1}
-                    aria-label={`Edit ${ownerClipDisplayName(clip, index + 1)}`}
-                    disabled={!!dirtyClip && dirtyClip !== clip.id}
-                    onClick={() => chooseClip(clip.id)}
-                    onKeyDown={(event) => {
-                      const previous = horizontal ? "ArrowLeft" : "ArrowUp",
-                        following = horizontal ? "ArrowRight" : "ArrowDown";
-                      if (
-                        dirtyClip ||
-                        ![previous, following, "Home", "End"].includes(
-                          event.key,
-                        )
-                      )
-                        return;
-                      event.preventDefault();
-                      const next =
-                        list.clips[
-                          event.key === "Home"
-                            ? 0
-                            : event.key === "End"
-                              ? list.clips.length - 1
-                              : (index +
-                                  (event.key === following ? 1 : -1) +
-                                  list.clips.length) %
-                                list.clips.length
-                        ]!;
-                      if (next.id === current?.id) {
-                        keyboardClip.current = null;
-                        event.currentTarget.focus();
-                      } else {
-                        keyboardClip.current = next.id;
-                        chooseClip(next.id);
-                      }
-                    }}
+        <aside className="clip-rail" aria-label="Clips">
+          <div className="clip-rail-heading">
+            <strong>Clips</strong>
+            {onAddClips && (
+              <Button
+                variant="secondary"
+                disabled={
+                  !!dirtyClip || pending || editorPending || list.active
+                }
+                onClick={onAddClips}
+              >
+                + Add
+              </Button>
+            )}
+          </div>
+          <div
+            ref={clipList}
+            className="clip-list"
+            role="tablist"
+            aria-label="Choose a clip"
+            aria-orientation={horizontal ? "horizontal" : "vertical"}
+          >
+            {list.clips
+              .slice(railStart, railStart + RAIL_PAGE_ITEMS)
+              .map((clip) => {
+                const index = list.clips.findIndex(
+                  (item) => item.id === clip.id,
+                );
+                return (
+                  <div
+                    key={clip.id}
+                    className="clip-card"
+                    role="presentation"
+                    data-selected={current?.id === clip.id || undefined}
                   >
-                    {!horizontal && isLocalClipEditable(clip) && (
-                      <ClipRailPreview clip={clip} workspaceId={workspace.id} />
-                    )}
-                    <span className="clip-state">{clipStageLabel(clip)}</span>
-                  </Button>
-                </div>
-              );
-            })}
-        </div>
+                    <ClipNameControls
+                      clip={clip}
+                      index={index + 1}
+                      workspaceId={workspace.id}
+                      onAccepted={acceptEdit}
+                      disabled={
+                        !!dirtyClip ||
+                        pending ||
+                        editorPending ||
+                        connection !== "connected"
+                      }
+                      tabIndex={current?.id === clip.id ? 0 : -1}
+                    />
+                    <Button
+                      variant="secondary"
+                      className="clip-choice"
+                      role="tab"
+                      id={`${tabsId}-${clip.id}`}
+                      aria-controls={`${tabsId}-panel`}
+                      aria-selected={current?.id === clip.id}
+                      tabIndex={current?.id === clip.id ? 0 : -1}
+                      aria-label={`Edit ${ownerClipDisplayName(clip, index + 1)}`}
+                      disabled={!!dirtyClip && dirtyClip !== clip.id}
+                      onClick={() => chooseClip(clip.id)}
+                      onKeyDown={(event) => {
+                        const previous = horizontal ? "ArrowLeft" : "ArrowUp",
+                          following = horizontal ? "ArrowRight" : "ArrowDown";
+                        if (
+                          dirtyClip ||
+                          ![previous, following, "Home", "End"].includes(
+                            event.key,
+                          )
+                        )
+                          return;
+                        event.preventDefault();
+                        const next =
+                          list.clips[
+                            event.key === "Home"
+                              ? 0
+                              : event.key === "End"
+                                ? list.clips.length - 1
+                                : (index +
+                                    (event.key === following ? 1 : -1) +
+                                    list.clips.length) %
+                                  list.clips.length
+                          ]!;
+                        if (next.id === current?.id) {
+                          keyboardClip.current = null;
+                          event.currentTarget.focus();
+                        } else {
+                          keyboardClip.current = next.id;
+                          chooseClip(next.id);
+                        }
+                      }}
+                    >
+                      {isLocalClipEditable(clip) && (
+                        <ClipRailPreview
+                          clip={clip}
+                          workspaceId={workspace.id}
+                        />
+                      )}
+                      <span className="clip-state">{clipStageLabel(clip)}</span>
+                    </Button>
+                  </div>
+                );
+              })}
+          </div>
+        </aside>
         {current && (
           <article
             className="clip-review"
@@ -605,7 +633,7 @@ export function OwnerClipBatchPanel({
                 !showProcessing &&
                 (!list.active || retryable) && (
                   <WorkflowActions
-                    target={footerTarget}
+                    target={actionTarget}
                     label={`Clip ${currentIndex} actions`}
                   >
                     {current.state === "canceled" && !dirtyClip && (
@@ -643,41 +671,44 @@ export function OwnerClipBatchPanel({
                     {(retryable ||
                       (current.base &&
                         editable &&
-                        latest?.editRevision !== current.revision)) &&
-                      !dirtyClip && (
-                        <Button
-                          variant="primary"
-                          disabled={
-                            working(current) ||
-                            pending ||
-                            editorPending ||
-                            (!current.base && !planningAvailable) ||
-                            dirtyClip === current.id
-                          }
-                          onClick={() =>
-                            void action(
-                              `${endpoint}/${current.id}/${retryable ? "retry" : "render"}`,
-                              {
-                                operationId: crypto.randomUUID(),
-                                expectedRevision: current.revision,
-                              },
-                            )
-                          }
-                        >
-                          {retryable ? (
-                            <span>
-                              Retry
-                              <span className="local-action-detail"> clip</span>
-                            </span>
-                          ) : (
-                            "Export clip"
-                          )}
-                        </Button>
-                      )}
+                        latest?.editRevision !== current.revision)) && (
+                      <Button
+                        variant="primary"
+                        disabled={
+                          working(current) ||
+                          pending ||
+                          editorPending ||
+                          (!current.base && !planningAvailable) ||
+                          dirtyClip === current.id
+                        }
+                        onClick={() =>
+                          void action(
+                            `${endpoint}/${current.id}/${retryable ? "retry" : "render"}`,
+                            {
+                              operationId: crypto.randomUUID(),
+                              expectedRevision: current.revision,
+                            },
+                          )
+                        }
+                      >
+                        {retryable ? (
+                          <span>
+                            Retry
+                            <span className="local-action-detail"> clip</span>
+                          </span>
+                        ) : (
+                          "Export clip"
+                        )}
+                      </Button>
+                    )}
                     {latest &&
                       editable &&
-                      !dirtyClip &&
-                      latest.editRevision === current.revision && (
+                      latest.editRevision === current.revision &&
+                      (dirtyClip || editorPending ? (
+                        <Button variant="primary" disabled>
+                          Download clip
+                        </Button>
+                      ) : (
                         <a
                           className={`${buttonStyles.button} ${buttonStyles.primary}`}
                           aria-label={
@@ -696,7 +727,7 @@ export function OwnerClipBatchPanel({
                             ? "Download clip"
                             : "Previous export"}
                         </a>
-                      )}
+                      ))}
                   </WorkflowActions>
                 )}
             </>
@@ -732,8 +763,9 @@ export function OwnerClipBatchPanel({
                 workspaceId={workspace.id}
                 source={workspace.source}
                 onAccepted={acceptEdit}
+                history={editHistory}
                 onDirty={editDirty}
-                footerTarget={footerTarget}
+                actionTarget={actionTarget}
                 actionsVisible={!showProcessing}
                 captionGeneration={capabilities.captionGeneration ?? false}
                 visualDiscovery={capabilities.visualDiscovery ?? false}

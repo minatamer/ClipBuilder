@@ -39,13 +39,13 @@ export function editorTourLayout(
     maxHeight: height,
   };
   if (!raw) return { spotlight: null, card: centered };
-  const left = Math.max(view.left + edge, raw.left - 5);
-  const top = Math.max(view.top + edge, raw.top - 5);
+  const left = Math.max(view.left, raw.left - 5);
+  const top = Math.max(view.top, raw.top - 5);
   const spotlight: TourBox = {
     left,
     top,
-    width: Math.min(right, raw.left + raw.width + 5) - left,
-    height: Math.min(bottom, raw.top + raw.height + 5) - top,
+    width: Math.min(view.left + view.width, raw.left + raw.width + 5) - left,
+    height: Math.min(view.top + view.height, raw.top + raw.height + 5) - top,
   };
   if (spotlight.width < 1 || spotlight.height < 1)
     return { spotlight: null, card: centered };

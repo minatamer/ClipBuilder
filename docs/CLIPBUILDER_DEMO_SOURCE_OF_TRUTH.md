@@ -1,5 +1,65 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Responsive editing workspace — CL-273, 2026-11-10
+
+The owner approved this direction and authorized the complete responsive AFK
+migration, preserving every current function and security boundary. CL-273 now
+owns implementation, feature/security inventory, explicit non-redundancy,
+tablet/phone/intake/selection references and removal of superseded UI/code.
+One canonical editor owns each parameter; Home/timelines navigate to it. Source
+trim, display placement, effect intervals, Hook and acquisition bounds remain
+distinct. No duplicate competing forms or silent removal of small functions.
+Focused generated/no-key checks run during the migration; no paid run or
+Voyagenda/media/configuration change is implied. Earlier design-only holds are
+superseded; earlier fixed-footer rules are superseded for the migrated workflow.
+
+The owner requests a dedicated full-window editor rather than reusing the Step
+1/2 form frame. Retain the navy/blue/system typography identity, far-left clip
+list, large left playback, existing category tabs and contextual right inspector.
+Add Home as the initial ready-editor overview of existing layer/audio/camera/
+effect timing.
+The compact top bar owns Undo/Redo, honest autosave state, Export, tour Help and
+a far-right Session options ellipsis for reset/recovery/privacy. The owner
+removed File and unused menu labels. Save status uses a fixed-size icon/tinted
+badge for saved, saving, invalid, failed and conflicted states; Retry/Reload
+remain explicit. There is no invented project-title/slogan. Add clips belongs
+in the clip rail or top bar. There is no bottom editor action/navigation bar.
+
+The inner editors share a compact context header, narrow layer collection and
+larger canonical properties area, with lighter sub-tabs and related controls
+grouped under small headings. Existing typography presets and timed looks use
+one visual keyboard-accessible picker each. Colour swatches retain native
+pickers and readable hex labels. Media owns trim/layout/volume; Camera retains
+the visual crop picker, Zoom/Pan/Face tracking/Transitions. No parameter gains a
+second editing location. Narrow workbenches switch Layers/Properties and retain
+scope; phone style presets scroll horizontally without removing options.
+
+Validated autosave and successive action-history Undo replace the normal
+Apply/Discard/manual-save cycle, preserving validation, source/media retention,
+revision coherence and local/hosted isolation. Autosave/history cannot trigger
+new paid processing or silently rerun generation/export. Temporary hosted state
+does not become a durable library. Existing rolling recovery is distinct from
+the requested feature. CL-273 records the design exploration, capability map and
+implementation checks. The migration replaces the footer/Apply flow in source;
+its packet records actual local verification separately from design references.
+Images alone do not establish functional parity or live AI quality.
+
+The migration is implemented and locally validated. Wide editors show canonical
+collection/properties panes; narrow editors switch those panes while playback
+remains visible. Compact playback has a separate full-width transport. Saves
+serialize valid edits, retain failed receipts for explicit retry, and preserve
+later typing. Export/navigation/reset guard unacknowledged state; invalid input
+keeps the last valid paint. Memory-only history is bounded to 50 states per clip
+and 8 MiB per workspace, including incomplete Hook input. Acknowledged edits use
+the existing local recovery/draft stores; hosted persistence stays temporary.
+CL-273 records generated browser/native, responsive, integrity and build evidence;
+owner visual, real-provider quality and release acceptance are distinct.
+
+The tour and product motion/demo-film have been aligned with the finished
+workflow under CL-273, preserving the brand and unrelated landing behavior.
+The owner authorized a local whole-file CL-273 commit after clean validation.
+Deployment, paid tests, editing owner media and push are not included.
+
 ## Shared video thumbnails — CL-272, 2026-11-10
 
 Every video-thumbnail surface uses one browser media service: uploaded/source

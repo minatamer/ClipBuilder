@@ -1,4 +1,5 @@
 import { pictureLinkedAudio } from "./picture-audio.ts";
+import { EditorInspector } from "./editor-inspector-layout";
 import {
   useContext,
   useEffect,
@@ -477,23 +478,27 @@ export function AudioInspector({
         aria-labelledby={`${id}-view-tracks`}
         hidden={view !== "tracks"}
       >
-        <label>
-          Original audio ({current.originalVolume}%)
-          <input
-            aria-label="Original audio volume"
-            type="range"
-            min="0"
-            max="100"
-            value={current.originalVolume}
-            disabled={pending}
-            onChange={(event) =>
-              onChange({
-                ...current,
-                originalVolume: Number(event.currentTarget.value),
-              })
-            }
-          />
-        </label>
+        {view === "tracks" && (
+          <EditorInspector title="Audio properties" disabled={pending}>
+            <label>
+              Original audio ({current.originalVolume}%)
+              <input
+                aria-label="Original audio volume"
+                type="range"
+                min="0"
+                max="100"
+                value={current.originalVolume}
+                disabled={pending}
+                onChange={(event) =>
+                  onChange({
+                    ...current,
+                    originalVolume: Number(event.currentTarget.value),
+                  })
+                }
+              />
+            </label>
+          </EditorInspector>
+        )}
         {!activeCues.length && <p className="focus-empty">No added audio.</p>}
         {!hideCueList && (
           <div className="audio-cue-list" role="group" aria-label="Added audio">
@@ -514,9 +519,8 @@ export function AudioInspector({
             ))}
           </div>
         )}
-        {selected && (
-          <fieldset disabled={pending} className="audio-settings">
-            <legend className="local-sr-only">Audio settings</legend>
+        {selected && view === "tracks" && (
+          <EditorInspector disabled={pending} title="Selected sound">
             <Button
               variant="secondary"
               icon={Play}
@@ -668,9 +672,9 @@ export function AudioInspector({
             >
               Remove sound
             </Button>
-          </fieldset>
+            <InlineFeedback message={validationFeedback} />
+          </EditorInspector>
         )}
-        <InlineFeedback message={validationFeedback} />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-/** Keep action ownership with its form while mounting submissions in the frame footer. */
+/** Keep action ownership with its form while mounting submissions in the workspace toolbar. */
 export function WorkflowActions({
   target,
   label,
@@ -21,7 +21,8 @@ export function WorkflowActions({
       {children}
     </nav>
   );
-  // Isolated component previews own a footer; the running workflow supplies its frame slot.
-  if (target === undefined) return <footer>{actions}</footer>;
+  // Standalone fixtures retain action ownership without requiring workspace chrome.
+  if (target === undefined)
+    return <div className="workflow-action-slot">{actions}</div>;
   return target ? createPortal(actions, target) : null;
 }

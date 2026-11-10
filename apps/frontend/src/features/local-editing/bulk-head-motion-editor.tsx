@@ -21,7 +21,7 @@ export function BulkHeadMotionEditor(props: {
   hook: OwnerHook | undefined;
   sourceUrl: string;
   disabled: boolean;
-  footerTarget?: HTMLElement | null | undefined;
+  actionTarget?: HTMLElement | null | undefined;
   onChange: (tracks: OwnerCameraTrack[]) => void;
   onBusy: (busy: boolean) => void;
   pause: () => void;
@@ -82,7 +82,7 @@ export function BulkHeadMotionEditor(props: {
       if (alive.current) {
         if (result.complete + result.partial) props.onChange(result.tracks);
         props.onResult(
-          `${result.complete} complete · ${result.partial} partial · ${result.failed} need attention. Preview the paths before applying.`,
+          `${result.complete} complete · ${result.partial} partial · ${result.failed} need attention. Review the paths in the preview.`,
         );
         props.onClose();
       }
@@ -139,7 +139,7 @@ export function BulkHeadMotionEditor(props: {
           </p>
         </>
       )}
-      <WorkflowActions target={props.footerTarget} label="Bulk Motion actions">
+      <WorkflowActions target={props.actionTarget} label="Bulk Motion actions">
         <span className="head-motion-actions">
           <Button
             variant="primary"

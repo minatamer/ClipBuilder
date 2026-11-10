@@ -69,8 +69,11 @@ export function FocusEditor({
   onPositionSelect,
   feedback,
   notice,
+  navigationRequest,
 }: {
   focus: OwnerFocus;
+  navigationRequest?:
+    import("./editor-camera-request").EditorCameraRequest | undefined;
   automatic: OwnerFocus | undefined;
   sourceUrl: string;
   frame: number;
@@ -108,7 +111,20 @@ export function FocusEditor({
       ? hook.endFrame
       : focus.frames;
   const cameraTabsId = useId();
-  const [tab, setTab] = useState("camera");
+  const [tab, setTab] = useState<string>(
+    navigationRequest?.targetId === "original"
+      ? navigationRequest.tab
+      : "camera",
+  );
+  const [navigationKey, setNavigationKey] = useState(navigationRequest?.key);
+  if (
+    navigationRequest &&
+    navigationRequest.targetId === "original" &&
+    navigationKey !== navigationRequest.key
+  ) {
+    setNavigationKey(navigationRequest.key);
+    setTab(navigationRequest.tab);
+  }
   const [cameraTab, setCameraTab] = useState("timing");
   const [selected, setSelected] = useState(positionRequest?.index ?? 0);
   const [personId, setPersonId] = useState<string | null>(

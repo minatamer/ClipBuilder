@@ -1,5 +1,33 @@
 # ClipBuilder canonical ticket index
 
+## Full-window editor design exploration — 2026-11-10
+
+[CL-273](CL-273-full-window-editor-design-exploration.md) now owns the approved
+complete responsive workspace migration under AFK execute/validate/fix loops.
+The packet inventories every current feature/security guard, prohibits redundant
+controls, defines autosave/history and requires removal of superseded UI code.
+Additional intake/selection/tablet/phone references are generated outside Git.
+Implementation and local validation include the owner's inner-editor revision:
+wider grouped controls, visual existing-preset pickers, lighter sub-tabs, no
+File button and a designed honest save badge. The packet records full feature/
+security coverage, generated native/browser checks and remaining owner visual/
+live-provider/release acceptance. The owner authorized whole-file staging and a
+local CL-273 commit after clean validation. No paid test, deployment, push or
+Voyagenda work.
+
+Initial design history: CL-273 started the owner's
+requested image-generation exploration: professional full-window editor,
+large playback on the left, unchanged AI/manual functionality and ClipBuilder
+typography/navy/blue identity. Includes competitor-inspired layout research and
+supporting workflow planning. The owner now requests three consistent Home/Media/
+Camera states, top-bar actions only, no project-title text or bottom footer,
+and future validated autosave plus action-history Undo/Redo. Home includes layer,
+camera and audio timing. Tour, product motion/demo film and landing updates are
+dependent future work. Design only; no app changes, new processing, deployment
+or Git mutation. Three matching Home/Media/Camera images and their prompt set
+are generated outside Git; owner review is pending. Autosave/history and the
+new shell remain unimplemented proposals.
+
 ## Validated whole-file commit — 2026-11-10
 
 The owner authorizes staging/committing all fixes after clean validation.

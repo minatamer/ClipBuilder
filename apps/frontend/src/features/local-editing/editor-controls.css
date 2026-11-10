@@ -1,0 +1,614 @@
+/* Canonical inner work areas. Control/domain modules retain their own behavior. */
+.clip-editor
+  .editor-panels
+  > [role="tabpanel"]:has(> .editor-inspector-layout) {
+  padding: 0;
+  overflow: hidden;
+}
+.clip-editor .editor-inspector-layout {
+  display: grid;
+  grid-template-columns: clamp(14rem, 28%, 18rem) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+.clip-editor .editor-inspector-layout[data-primary="collection"] {
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 38%);
+}
+.editor-workarea-heading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--cb-border);
+}
+.clip-editor .editor-workarea-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: -0.015em;
+}
+.editor-scope-badge {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  color: var(--cb-ink-soft);
+  border-left: 1px solid var(--cb-border);
+  padding-left: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.clip-editor .editor-collection {
+  grid-column: 1;
+  grid-row: 2;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 1rem;
+  overflow-y: auto;
+  background: rgb(12 33 69 / 25%);
+}
+.clip-editor .editor-collection-heading {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  color: var(--cb-ink-soft);
+  font-weight: 600;
+}
+.clip-editor .editor-context-inspector {
+  grid-column: 2;
+  grid-row: 2;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--cb-border);
+  container: editor-properties-space / inline-size;
+}
+.clip-editor .editor-context-inspector:empty {
+  display: none;
+}
+.clip-editor .editor-inspector-layout:has(> .editor-context-inspector:empty) {
+  grid-template-columns: minmax(0, 1fr);
+}
+.clip-editor .editor-panels fieldset {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.clip-editor .editor-panels .editor-properties {
+  padding: 1rem 1.25rem;
+}
+.clip-editor .editor-panels .editor-collection-detail {
+  padding: 0;
+}
+.editor-narrow-navigation {
+  display: none;
+}
+
+/* Secondary navigation is lighter than the main category strip. */
+.clip-editor .editor-tab-strip:not(.editor-tabs) {
+  border: 0;
+  border-bottom: 1px solid var(--cb-border);
+  border-radius: 0;
+  padding: 0;
+  gap: 1.15rem;
+  background: transparent;
+  margin: 0 0 1rem;
+}
+.clip-editor .editor-tab-strip:not(.editor-tabs) > button {
+  flex: 0 0 auto;
+  padding: 0.5rem 0.15rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  min-height: var(--cb-target);
+  background: transparent;
+  box-shadow: none;
+  color: var(--cb-ink-soft);
+  transition:
+    color 150ms ease,
+    border-color 150ms ease;
+}
+.clip-editor
+  .editor-tab-strip:not(.editor-tabs)
+  > button[aria-selected="true"] {
+  border-bottom-color: var(--cb-brand);
+  color: var(--cb-brand-strong);
+}
+.clip-editor .editor-tab-strip:not(.editor-tabs) > button:hover:not(:disabled) {
+  color: var(--cb-ink);
+}
+.clip-editor .editor-control-group {
+  margin: 0 0 1rem;
+  padding: 0 0 1rem;
+  border-bottom: 1px solid var(--cb-border);
+  min-width: 0;
+}
+.clip-editor .editor-control-group > h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+.clip-editor .editor-control-group:last-child {
+  margin-bottom: 0;
+}
+.clip-editor .editor-fields,
+.clip-editor .editor-box-fields {
+  gap: 0.75rem 1rem;
+  margin-block: 0.75rem;
+}
+.clip-editor .editor-panels label:not(.check, .file) {
+  gap: 0.3rem;
+  font-size: 0.8125rem;
+}
+.clip-editor
+  .editor-panels
+  :is(input:not([type="checkbox"], [type="file"]), select, textarea) {
+  border-radius: var(--cb-radius-control);
+  padding-inline: 0.75rem;
+  background-color: rgb(5 17 40 / 70%);
+}
+.clip-editor .typography-fields > label > [data-inline-feedback] {
+  min-block-size: 1.4em;
+}
+.clip-editor .typography-fields {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+}
+.editor-color-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: var(--cb-target);
+  padding-right: 0.6rem;
+  border: 1px solid var(--cb-border);
+  border-radius: var(--cb-radius-control);
+  background: rgb(5 17 40 / 70%);
+}
+.clip-editor .editor-color-control input[type="color"] {
+  width: var(--cb-target);
+  min-width: var(--cb-target);
+  height: var(--cb-target);
+  padding: 0.6rem;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.editor-color-control input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.editor-color-control input::-webkit-color-swatch {
+  border: 0;
+  border-radius: 0.2rem;
+}
+.editor-color-control input::-moz-color-swatch {
+  border: 0;
+  border-radius: 0.2rem;
+}
+.editor-color-control output {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font: 0.6875rem var(--cb-font-mono);
+  color: var(--cb-ink-soft);
+}
+.clip-editor .typography-feedback {
+  margin-top: 0.5rem;
+}
+
+.editor-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.25rem), 1fr));
+  gap: 0.5rem;
+  min-width: 0;
+}
+.clip-editor .editor-choice {
+  display: grid;
+  grid-template-rows: minmax(2rem, 1fr) auto;
+  align-items: center;
+  justify-items: center;
+  gap: 0.35rem;
+  position: relative;
+  min-width: 0;
+  min-height: 5rem;
+  padding: 0.65rem 0.4rem;
+  border: 1px solid var(--cb-border);
+  border-radius: 0.5rem;
+  background: rgb(21 47 88 / 35%);
+  box-shadow: none;
+  text-align: center;
+}
+.clip-editor .editor-choice[aria-checked="true"] {
+  border-color: var(--cb-brand);
+  background: rgb(36 93 204 / 18%);
+}
+.clip-editor .editor-choice:hover:not(:disabled) {
+  background: rgb(36 93 204 / 25%);
+}
+.editor-choice-preview {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+}
+.editor-choice-name {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.3;
+  min-height: 2.6em;
+  display: grid;
+  align-items: center;
+}
+.editor-choice-check {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  color: var(--cb-brand-strong);
+}
+.typography-preset-sample {
+  display: inline-block;
+  min-width: 2rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.2rem;
+  font-size: 1.4rem;
+  line-height: 1.25;
+}
+.filter-preset-preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 0.25rem;
+}
+.filter-preset-preview [data-thumbnail-state] {
+  position: absolute;
+  inset: 0;
+}
+.clip-editor .filter-editor {
+  gap: 0.75rem;
+}
+.clip-editor .filter-editor .filter-settings {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 30rem;
+}
+.clip-editor .filter-editor .picture-timing {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+}
+
+/* Collections navigate; only the main workspace edits each value. */
+.clip-editor .editor-collection .editor-timeline {
+  max-height: none;
+  overflow: visible;
+  margin: 0 0 1rem;
+  padding: 0;
+  gap: 0.4rem;
+}
+.clip-editor .editor-timeline-entry > .focus-shot {
+  padding: 0.65rem;
+  gap: 0.35rem;
+  border-radius: 0.4rem;
+  background: transparent;
+  box-shadow: none;
+}
+.clip-editor .editor-timeline-entry > .focus-shot[aria-pressed="true"] {
+  background: rgb(36 93 204 / 18%);
+  border-color: var(--cb-brand);
+}
+.clip-editor .editor-timeline-entry > .focus-shot[data-picture] {
+  grid-template-columns: 3rem minmax(0, 1fr);
+}
+.clip-editor .editor-timeline-time {
+  grid-column: 1 / -1;
+  font-size: 0.6875rem;
+  color: var(--cb-ink-soft);
+}
+.clip-editor
+  .editor-timeline-entry
+  > .focus-shot[data-picture]
+  .editor-timeline-time {
+  grid-column: 2;
+}
+.clip-editor .editor-timeline .picture-thumb {
+  width: 3rem;
+}
+.clip-editor .editor-timeline-actions {
+  gap: 0.25rem;
+}
+.clip-editor .editor-timeline-actions button {
+  font-size: 0.75rem;
+}
+.clip-editor .editor-collection > div > div > fieldset {
+  margin-block: 1rem;
+}
+.clip-editor .editor-collection .picture-tools {
+  gap: 0.35rem;
+  margin-block: 0.5rem;
+}
+.clip-editor .text-tools,
+.clip-editor .text-selection-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+.clip-editor .text-selection-tools {
+  padding-block: 0.5rem;
+  border-block: 1px solid var(--cb-border);
+}
+.clip-editor .text-selection-tools [role="status"] {
+  color: var(--cb-ink-soft);
+  font-size: 0.75rem;
+}
+.clip-editor .editor-properties:has(> .text-tools) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+}
+.clip-editor
+  .editor-properties:has(> .text-tools)
+  > :not(.text-tools, .text-selection-tools) {
+  grid-column: 1 / -1;
+}
+.clip-editor .editor-properties > .text-tools {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+}
+.clip-editor .editor-properties > .text-selection-tools {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.clip-editor .text-selection-tools [role="status"] {
+  flex: 1 1 6rem;
+  min-width: 0;
+}
+@container editor-properties-space (max-width: 36rem) {
+  .clip-editor .editor-properties:has(> .text-tools) {
+    display: block;
+  }
+  .clip-editor .editor-properties > .text-selection-tools {
+    margin-block: 0.75rem;
+  }
+}
+.clip-editor textarea[aria-label="Text content"] {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  padding: 1rem;
+  min-height: 10rem;
+  resize: vertical;
+}
+.clip-editor .caption-word-group {
+  padding-block: 0.75rem;
+  border-bottom: 1px solid var(--cb-border);
+}
+.clip-editor .caption-word-group[data-selected] {
+  background: rgb(36 93 204 / 10%);
+}
+.clip-editor .caption-words {
+  gap: 0.5rem;
+}
+.clip-editor .position-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  margin-block: 0.75rem 1rem;
+}
+.clip-editor .geometry-controls {
+  border-top: 1px solid var(--cb-border);
+  margin-top: 1rem;
+}
+.clip-editor .video-source-editor {
+  padding-top: 0.75rem;
+}
+.clip-editor .video-source-editor > video {
+  border-radius: 0.5rem;
+}
+.clip-editor .video-source-editor .picture-timing {
+  margin-top: 1rem;
+}
+
+.clip-editor .camera-target-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(16rem, 28rem);
+  align-items: center;
+  gap: 0 1.5rem;
+  border-bottom: 1px solid var(--cb-border);
+  padding: 0 0 0.35rem;
+}
+.clip-editor .camera-target-toolbar .editor-workarea-heading {
+  grid-column: auto;
+  border: 0;
+  padding: 0;
+}
+.clip-editor .camera-target-toolbar > .editor-fields {
+  margin: 0;
+}
+.clip-editor .camera-target-toolbar label {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+.clip-editor .camera-target-toolbar > [data-inline-feedback] {
+  grid-column: 1 / -1;
+}
+.clip-editor .focus-panel {
+  padding: 1rem;
+}
+.clip-editor .focus-editor {
+  padding-block: 1rem;
+  gap: 1.25rem;
+}
+.clip-editor .focus-inspector {
+  border-left: 1px solid var(--cb-border);
+  padding-left: 1rem;
+}
+.clip-editor .focus-source {
+  border-radius: 0.5rem;
+}
+.clip-editor .focus-context {
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+}
+.clip-editor .camera-motion-editor,
+.clip-editor .head-motion-editor {
+  gap: 0.75rem;
+}
+.clip-editor .focus-inspector > .editor-tab-strip {
+  margin-top: 0;
+}
+.clip-editor .hook-controls > p {
+  color: var(--cb-ink-soft);
+  font-size: 0.75rem;
+}
+.clip-editor .hook-suggestion {
+  padding: 0.85rem;
+  border: 1px solid var(--cb-border);
+  border-radius: 0.5rem;
+  background: rgb(36 93 204 / 10%);
+}
+.clip-editor .hook-suggestion-copy {
+  gap: 0.75rem;
+}
+.clip-editor .hook-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.5rem;
+}
+.clip-editor .hook-options .check {
+  min-height: var(--cb-target);
+  font-size: 0.8125rem;
+  gap: 0.65rem;
+}
+.clip-editor .hook-options input[type="checkbox"] {
+  appearance: none;
+  width: 2.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--cb-border);
+  border-radius: 2rem;
+  background: var(--cb-surface-muted);
+  position: relative;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+.clip-editor .hook-options input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+  background: var(--cb-ink-soft);
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease;
+}
+.clip-editor .hook-options input[type="checkbox"]:checked {
+  background: var(--cb-action-fill);
+  border-color: var(--cb-brand);
+}
+.clip-editor .hook-options input[type="checkbox"]:checked::before {
+  transform: translateX(1rem);
+  background: white;
+}
+
+@container editor-workbench (max-width: 42rem) {
+  .clip-editor .editor-inspector-layout {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .editor-inspector-layout > .editor-workarea-heading {
+    display: none;
+  }
+  .editor-narrow-navigation {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--cb-border);
+  }
+  .editor-narrow-navigation > .editor-tab-strip {
+    flex: 1;
+    margin: 0 !important;
+    border: 0 !important;
+  }
+  .clip-editor
+    .editor-inspector-layout:has(> .editor-context-inspector:empty)
+    > .editor-narrow-navigation {
+    display: none;
+  }
+  .clip-editor
+    .editor-inspector-layout:has(
+      > .editor-context-inspector:not(:empty)
+    )[data-view="properties"]
+    > .editor-collection,
+  .clip-editor
+    .editor-inspector-layout[data-view="collection"]
+    > .editor-context-inspector {
+    display: none;
+  }
+  .clip-editor .editor-collection,
+  .clip-editor .editor-context-inspector {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .clip-editor .editor-context-inspector {
+    border-left: 0;
+  }
+  .clip-editor .editor-panels .editor-properties {
+    padding: 1rem;
+  }
+  .clip-editor .camera-target-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .clip-editor .camera-target-toolbar > .editor-workarea-heading {
+    display: none;
+  }
+}
+@media (max-width: 47.5rem) {
+  .clip-editor .editor-panels .editor-properties {
+    padding: 0.75rem;
+  }
+  .editor-choice-grid:has(.typography-preset-sample) {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 6rem;
+    overflow-x: auto;
+    padding-bottom: 0.4rem;
+  }
+  .clip-editor .editor-choice {
+    min-height: 4.75rem;
+  }
+  .clip-editor .editor-fields,
+  .clip-editor .editor-box-fields {
+    gap: 0.65rem;
+  }
+  .clip-editor .editor-tab-strip:not(.editor-tabs) {
+    gap: 1rem;
+  }
+  .clip-editor .focus-inspector {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+@media (forced-colors: active) {
+  .clip-editor .hook-options input[type="checkbox"] {
+    border-color: ButtonText;
+  }
+  .clip-editor .hook-options input[type="checkbox"]:checked {
+    background: Highlight;
+  }
+  .clip-editor .hook-options input[type="checkbox"]::before {
+    background: ButtonText;
+  }
+}

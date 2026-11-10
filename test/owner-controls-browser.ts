@@ -584,7 +584,7 @@ globalThis.clipbuilderReviewControls = async () => {
         button('Discard changes').click();
         await wait(() => !clip(2).disabled && control('Filter').value === 'warm');
         if (!button('Export clip') || !footer.contains(button('Export clip')) || document.querySelector('.processing-details')) throw new Error('exports_missing');
-        await wait(()=>button('Add more clips') && footer.querySelectorAll('.local-footer-actions button,.local-footer-actions a').length===2);
+        await wait(()=>button('Add more clips') && footer.querySelectorAll('.workflow-session-actions button,.workflow-session-actions a').length===2);
         clip(1).focus();
         const lastClip=document.querySelectorAll('.clip-choice').length;
         for(const [key,expected] of [['ArrowDown',2],['ArrowUp',1],['End',lastClip],['ArrowDown',1],['ArrowUp',lastClip]]) {

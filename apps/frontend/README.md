@@ -1,5 +1,27 @@
 # ClipBuilder frontend
 
+CL-273 replaces the bounded workflow/editor shell with a responsive workspace.
+Source and Moments keep their acquisition/selection guards; the editor opens
+Home with the combined layer timeline, a large preview, clip rail, canonical
+section controls and a contextual inspector. Narrow screens switch Layers and
+Properties while playback remains visible. The top toolbar owns actions,
+Undo/Redo, an honest saved/saving/error badge and Help. Session options at the
+far right retains reset/recovery/privacy; there is no File button. Inner editors
+use compact collections, wider grouped properties, lighter sub-tabs and visual
+pickers for the existing typography presets/looks, with one editor per value.
+Earlier footer/Apply layout notes below are historical and superseded here.
+
+Valid edits debounce for 650 ms, serialize through the existing protected edit
+endpoint and preserve later input. Export/navigation wait for acknowledgement.
+Invalid/incomplete edits stay local; failed saves require Retry and conflicts
+require deliberate Reload. History retains up to 50 edit states per clip within
+8 MiB for the current workspace; acknowledged edits survive normal recovery,
+while Undo/Redo history is session memory. Native input Undo remains available
+while typing. Autosave/history/manual editing work with `FAKE_MODE=true` and no
+API keys and never generate media or render automatically. Real AI still needs
+the configured provider/runtime, live flags and applicable approvals. The
+updated tour and landing film use current-workspace UI and fictional media.
+
 CL-272 consolidates video thumbnails in
 `src/features/media/video-thumbnail.ts`, with `useVideoThumbnail` and shared
 `VideoThumbnail` / `ThumbnailVideo` adapters. Upload/source posters, saved videos,
@@ -1090,13 +1112,13 @@ corepack pnpm --filter @clipbuilder/frontend film:poster --browser-executable=<a
 corepack pnpm --filter @clipbuilder/frontend film:studio
 ```
 
-The capture command first verifies the local frontend exposes fake mode with
-live capabilities off. It uses an isolated browser, chooses the synthetic sample
-and Moment 1, preserves the disabled download, and exits that disposable
-session. It does not read environment files, real media or credentials, change
-operating flags, call providers, download Chromium, or trigger a paid flow. The
-existing cached headless-shell executable can be used. The normal frontend and
-backend must already be running; follow the startup guides below.
+The capture command installs the shared fake/paid-off environment before imports
+and starts separate loopback fixtures compiled from the current workspace. It
+uses original fictional vector media and synthetic selection/edit data, then
+closes its browser, servers and scratch. It does not connect to the normal app,
+read environment files or owner media, call providers, download Chromium or
+trigger a paid flow. An existing Chromium executable and local native tools are
+required; the normal frontend/backend can stay running independently.
 
 Ten 1440×1000 PNG captures and a cursor/state index are written to the ignored
 `public/generated/product-film/` directory. The poster command renders only an optional

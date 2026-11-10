@@ -34,7 +34,7 @@ export function MediaFaceTracking({
   disabled,
   frames,
   previewTarget,
-  footerTarget,
+  actionTarget,
   onChange,
   onMode,
   onBusy,
@@ -49,7 +49,7 @@ export function MediaFaceTracking({
   disabled: boolean;
   frames: number;
   previewTarget: HTMLElement | null;
-  footerTarget?: HTMLElement | null | undefined;
+  actionTarget?: HTMLElement | null | undefined;
   onChange: (cue: OwnerVisualEdit) => void;
   onMode: (active: boolean) => void;
   onBusy: (active: boolean) => void;
@@ -304,7 +304,7 @@ export function MediaFaceTracking({
             {busy && <Progress label="Tracking face" fraction={progress} />}
           </div>
           <WorkflowActions
-            target={footerTarget}
+            target={actionTarget}
             label="Media face tracking actions"
           >
             <Button

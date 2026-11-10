@@ -82,7 +82,8 @@ describe("CL-004 sample browser boundary", () => {
         sourceUrl="blob:synthetic-local"
       />,
     );
-    expect(gallery.match(/<canvas/g)).toHaveLength(3);
+    // Server markup owns loading feedback; the shared browser decoder supplies pixels later.
+    expect(gallery.match(/data-thumbnail-state="loading"/g)).toHaveLength(3);
     expect(gallery).not.toContain("<video");
     expect(gallery).not.toContain('aria-label="Selected moment transcript"');
     expect(gallery).not.toContain("Transcript</button>");
@@ -97,7 +98,7 @@ describe("CL-004 sample browser boundary", () => {
       />,
     );
     expect(preview.match(/<video/g)).toHaveLength(1);
-    expect(preview.match(/<canvas/g)).toHaveLength(2);
+    expect(preview.match(/data-thumbnail-state="loading"/g)).toHaveLength(2);
     expect(preview).toContain('aria-label="Selected moment transcript"');
     expect(preview).toContain('value="15000"');
   });

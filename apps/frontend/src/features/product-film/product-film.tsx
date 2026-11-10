@@ -12,6 +12,7 @@ import {
   type FilmVariant,
 } from "./film-timeline";
 import { IllustratedClip } from "./illustrated-conversation";
+import { FILM_WORKSPACE } from "./film-workspace";
 import {
   FILM_CAPTURE_SIZE,
   screenCamera,
@@ -161,9 +162,9 @@ function Cursor({
 
 function captureAt(beat: ScreenBeat, frame: number) {
   if (beat === "intake")
-    return frame < 32
+    return frame < 40
       ? FILM_CAPTURES.intake
-      : frame < 52
+      : frame < 60
         ? FILM_CAPTURES.preparation
         : FILM_CAPTURES.source;
   if (beat === "choose")
@@ -181,12 +182,7 @@ function MomentCards({
   return (
     <>
       {[0, 1, 2].map((index) => {
-        const source = {
-          x: 119 + index * 410,
-          y: 436,
-          width: 378,
-          height: 300,
-        };
+        const source = FILM_WORKSPACE.cards[index]!;
         const rect = moveRect(
           { x: 716, y: 552, width: 8, height: 8 },
           source,
@@ -237,10 +233,10 @@ function ScreenScene({ stage }: { stage: ReturnType<typeof filmStage> }) {
   const current = captureAt(beat, frame);
   const stateAt =
     beat === "intake"
-      ? frame >= 52
-        ? 52
-        : frame >= 32
-          ? 32
+      ? frame >= 60
+        ? 60
+        : frame >= 40
+          ? 40
           : 0
       : beat === "choose" && frame >= 42
         ? 42
@@ -297,7 +293,6 @@ function ScreenScene({ stage }: { stage: ReturnType<typeof filmStage> }) {
           height: FILM_CAPTURE_SIZE.height,
           transformOrigin: "0 0",
           transform: `scale(${pose.scale})`,
-          maskImage: "linear-gradient(180deg,transparent 190px,#000 245px)",
           background:
             "linear-gradient(135deg,#193d76 0%,#0b2c67 52%,#081b40 100%)",
         }}

@@ -7,6 +7,10 @@ import {
 } from "../../../../../packages/contracts/local/video-look.ts";
 import { PictureTiming } from "./picture-timing.tsx";
 import { Button } from "../../shared/ui/button";
+import { EditorChoiceGrid } from "./editor-choice-grid";
+import { VideoThumbnail } from "../../shared/ui/video-thumbnail";
+import { OwnerVideoLookLayer } from "../../../../../packages/composition/local/video-look.tsx";
+import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 
 export function FilterInspector({
   cue,
@@ -17,6 +21,7 @@ export function FilterInspector({
   disabled,
   onChange,
   feedback,
+  sourceUrl,
 }: {
   cue: OwnerVideoLookRange;
   frames: number;
@@ -26,40 +31,38 @@ export function FilterInspector({
   disabled: boolean;
   onChange: (cue: OwnerVideoLookRange) => void;
   feedback?: string | undefined;
+  sourceUrl: string;
 }) {
   return (
     <fieldset className="filter-editor" disabled={disabled}>
       <legend className="local-sr-only">Filter range</legend>
-      <PictureTiming
-        cue={cue}
-        frames={frames}
-        player={player}
-        available={available}
-        attempt={attempt}
-        label="Filter"
-        validationMessage={feedback}
-        onChange={onChange}
-      />
+      <section className="editor-control-group" aria-label="Video looks">
+        <h3>Looks</h3>
+        <EditorChoiceGrid
+          label="Filter"
+          value={cue.preset}
+          onChange={(preset) => onChange({ ...cue, preset })}
+          items={OWNER_VIDEO_LOOKS.map((preset) => ({
+            value: preset,
+            label: OWNER_VIDEO_LOOK_LABELS[preset],
+            preview: (
+              <span className="filter-preset-preview">
+                <OwnerVideoLookLayer look={{ preset, strength: 100 }}>
+                  <VideoThumbnail
+                    request={{
+                      source: sourceUrl,
+                      timeMs: (cue.startFrame * 1000) / OWNER_FPS,
+                      width: 240,
+                      height: 135,
+                    }}
+                  />
+                </OwnerVideoLookLayer>
+              </span>
+            ),
+          }))}
+        />
+      </section>
       <div className="filter-settings">
-        <label>
-          Filter
-          <select
-            className="select-control"
-            value={cue.preset}
-            onChange={(event) => {
-              const preset = OWNER_VIDEO_LOOKS.find(
-                (value) => value === event.currentTarget.value,
-              );
-              if (preset) onChange({ ...cue, preset });
-            }}
-          >
-            {OWNER_VIDEO_LOOKS.map((value) => (
-              <option key={value} value={value}>
-                {OWNER_VIDEO_LOOK_LABELS[value]}
-              </option>
-            ))}
-          </select>
-        </label>
         <label>
           Strength ({cue.strength}%)
           <input
@@ -76,6 +79,19 @@ export function FilterInspector({
           />
         </label>
       </div>
+      <section className="editor-control-group" aria-label="Filter timing">
+        <h3>Timing</h3>
+        <PictureTiming
+          cue={cue}
+          frames={frames}
+          player={player}
+          available={available}
+          attempt={attempt}
+          label="Filter"
+          validationMessage={feedback}
+          onChange={onChange}
+        />
+      </section>
       <Button
         variant="secondary"
         onClick={() => onChange({ ...cue, preset: "original", strength: 100 })}

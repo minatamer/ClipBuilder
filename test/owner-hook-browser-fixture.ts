@@ -40,6 +40,11 @@ export async function startHookEditorFixture(
     previewAudio?: { id: string; bytes: Uint8Array; contentType: string };
     editorTour?: boolean;
     holdPreview?: boolean;
+    workflowScreens?: boolean;
+    sourceArtwork?: Uint8Array;
+    pictureArtwork?: Uint8Array;
+    manyMomentCount?: number;
+    siblingClip?: boolean;
   } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), "clipbuilder-hook-editor-"));
@@ -103,6 +108,16 @@ export async function startHookEditorFixture(
     renames = 0;
   let injectedFailures = 0;
   let titleSuggestions = 0;
+  let editOutcome:
+    "ready" | "hold" | "fail-before" | "fail-after" | "conflict" = "ready";
+  const editRequests: string[] = [];
+  const acknowledgedEdits = new Map<string, string>();
+  const pendingEdits = new Set<() => void>();
+  const releaseEdits = () => {
+    editOutcome = "ready";
+    for (const finish of pendingEdits) finish();
+    pendingEdits.clear();
+  };
   let titleCancellations = 0,
     titleFailures = 0;
   const pendingTitles = new Set<
@@ -113,31 +128,46 @@ export async function startHookEditorFixture(
   let analysesStarted = 0;
   let analysesClosed = 0;
   const momentsAnalysis = (many: boolean) => {
-    const moments = Array.from({ length: many ? 12 : 1 }, (_, index) => ({
-      id: randomUUID(),
-      processingIdentity: createHash("sha256")
-        .update(`synthetic-moment-${index}`)
-        .digest("hex"),
-      cut: { startFrame: index, endFrame: index + 60 },
-      rangeIds: [],
-      cues: [],
-      evidence:
-        many && index > 2
-          ? {
-              startWordId: "w_000001",
-              endWordId: "w_000002",
-              title:
-                `Synthetic ${index + 1}: a deliberately long headline that stays inside its result card`.slice(
-                  0,
-                  80,
-                ),
-              hook: "Synthetic hook",
-              rationale: "Generated layout example",
-              evidence: [],
-              caveats: [],
-            }
-          : null,
-    }));
+    const moments = Array.from(
+      { length: many ? (options.manyMomentCount ?? 12) : 1 },
+      (_, index) => ({
+        id: randomUUID(),
+        processingIdentity: createHash("sha256")
+          .update(`synthetic-moment-${index}`)
+          .digest("hex"),
+        cut:
+          options.manyMomentCount === undefined
+            ? { startFrame: index, endFrame: index + 60 }
+            : {
+                startFrame: [120, 600, 1170][index] ?? 0,
+                endFrame: [450, 900, 1650][index] ?? 300,
+              },
+        rangeIds: [],
+        cues: [],
+        evidence:
+          many && (options.manyMomentCount !== undefined || index > 2)
+            ? {
+                startWordId: "w_000001",
+                endWordId: "w_000002",
+                title:
+                  options.manyMomentCount !== undefined
+                    ? ([
+                        "Why context makes a clip work",
+                        "One clear thought is enough",
+                        "Make the next cut yours",
+                      ][index] ?? "A complete idea")
+                    : `Synthetic ${index + 1}: a deliberately long headline that stays inside its result card`.slice(
+                        0,
+                        80,
+                      ),
+                hook: "Synthetic hook",
+                rationale: "Generated layout example",
+                evidence: [],
+                caveats: [],
+              }
+            : null,
+      }),
+    );
     return ownerAnalysisSchema.parse({
       id: randomUUID(),
       inputs: {
@@ -158,9 +188,14 @@ export async function startHookEditorFixture(
   const oneAnalysis = options.momentsLayout ? momentsAnalysis(false) : null,
     manyAnalysis = options.momentsLayout ? momentsAnalysis(true) : null;
   const pictureSize = options.pictureSize ?? { width: 100, height: 100 };
-  const picture = await sharp({
-    create: { ...pictureSize, channels: 3, background: "yellow" },
-  })
+  const picture = await (
+    options.pictureArtwork
+      ? sharp(options.pictureArtwork)
+      : sharp({
+          create: { ...pictureSize, channels: 3, background: "yellow" },
+        })
+  )
+    .resize(pictureSize.width, pictureSize.height)
     .png()
     .toBuffer();
   clip.assets[0] = {
@@ -170,7 +205,8 @@ export async function startHookEditorFixture(
     digest: createHash("sha256").update(picture).digest("hex"),
   };
   clip.base!.overlay.visuals[0]!.digest = clip.assets[0]!.digest;
-  const sibling = options.editorTour ? structuredClone(clip) : null;
+  const sibling =
+    options.editorTour || options.siblingClip ? structuredClone(clip) : null;
   if (sibling) {
     sibling.id = randomUUID();
     if (sibling.edit) sibling.edit.clipId = sibling.id;
@@ -308,7 +344,9 @@ export async function startHookEditorFixture(
         return;
       }
       const scenario =
-        options.contextualFeedback || options.momentsLayout
+        options.contextualFeedback ||
+        options.momentsLayout ||
+        options.workflowScreens
           ? req.headers["x-fixture-view"]
           : undefined;
       if (
@@ -338,7 +376,8 @@ export async function startHookEditorFixture(
         return;
       }
       if (scenario && req.url === "/api/local/sources/state") {
-        res.writeHead(503).end("{}");
+        if (options.workflowScreens) res.end("null");
+        else res.writeHead(503).end("{}");
         return;
       }
       if (options.contextualFeedback && scenario && req.method !== "GET") {
@@ -385,17 +424,40 @@ export async function startHookEditorFixture(
       if (req.method === "POST" && req.url?.endsWith("/edit")) {
         const chunks: Buffer[] = [];
         for await (const chunk of req) chunks.push(Buffer.from(chunk));
-        const edit = applyOwnerEdit(
-          clip,
-          JSON.parse(Buffer.concat(chunks).toString()),
-          { width: 640, height: 360 },
-        );
-        Object.assign(clip, {
+        const body = Buffer.concat(chunks).toString();
+        const input = JSON.parse(body);
+        const target =
+          sibling && req.url?.includes(`/clips/${sibling.id}/`)
+            ? sibling
+            : clip;
+        editRequests.push(body);
+        const outcome = editOutcome;
+        if (outcome === "hold")
+          await new Promise<void>((done) => pendingEdits.add(done));
+        if (res.destroyed) return;
+        if (outcome === "fail-before" || outcome === "conflict") {
+          res.writeHead(outcome === "conflict" ? 409 : 503).end("{}");
+          return;
+        }
+        const receipt = `${target.id}:${input.operationId}`;
+        const prior = acknowledgedEdits.get(receipt);
+        if (prior) {
+          if (prior !== body) throw Error("synthetic_edit_identity_changed");
+          res.end(JSON.stringify(list()));
+          return;
+        }
+        const edit = applyOwnerEdit(target, input, { width: 640, height: 360 });
+        Object.assign(target, {
           edit,
           revision: edit.revision,
           state: "validated-revision",
         });
         edits++;
+        acknowledgedEdits.set(receipt, body);
+        if (outcome === "fail-after") {
+          res.writeHead(503).end("{}");
+          return;
+        }
         res.end(JSON.stringify(list()));
         return;
       }
@@ -556,7 +618,8 @@ export async function startHookEditorFixture(
                     ? "loop-baseline.js"
                     : req.url === "/" ||
                         ((options.contextualFeedback ||
-                          options.momentsLayout) &&
+                          options.momentsLayout ||
+                          options.workflowScreens) &&
                           [
                             "/intake.html",
                             "/moments.html",
@@ -590,20 +653,36 @@ export async function startHookEditorFixture(
   try {
     const tools = await ownerNativeTools(resolve(".")),
       source = join(root, "synthetic.mp4");
+    const art = join(root, "synthetic-art.png");
+    if (options.sourceArtwork)
+      await sharp(options.sourceArtwork)
+        .resize(
+          options.sourceSize?.width ?? 640,
+          options.sourceSize?.height ?? 360,
+          { fit: "cover" },
+        )
+        .png()
+        .toFile(art);
     await runOwnedProcess(
       tools.ffmpeg,
       [
         "-nostdin",
         "-v",
         "error",
-        "-f",
-        "lavfi",
-        "-i",
-        `${options.sourceSize ? "testsrc2=" : "color=teal:"}s=${options.sourceSize?.width ?? 640}x${options.sourceSize?.height ?? 360}:r=30:d=${(options.durationFrames ?? 120) / 30}`,
+        ...(options.sourceArtwork
+          ? ["-loop", "1", "-framerate", "30", "-i", art]
+          : [
+              "-f",
+              "lavfi",
+              "-i",
+              `${options.sourceSize ? "testsrc2=" : "color=teal:"}s=${options.sourceSize?.width ?? 640}x${options.sourceSize?.height ?? 360}:r=30:d=${(options.durationFrames ?? 120) / 30}`,
+            ]),
         "-f",
         "lavfi",
         "-i",
         `sine=frequency=440:sample_rate=48000:duration=${(options.durationFrames ?? 120) / 30}`,
+        "-t",
+        String((options.durationFrames ?? 120) / 30),
         "-c:v",
         "libx264",
         "-pix_fmt",
@@ -624,13 +703,17 @@ export async function startHookEditorFixture(
       join(ui, "index.html"),
       '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/app.css"></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>',
     );
-    if (options.contextualFeedback || options.momentsLayout) {
+    if (
+      options.contextualFeedback ||
+      options.momentsLayout ||
+      options.workflowScreens
+    ) {
       const html = await readFile(join(ui, "index.html"), "utf8");
       await writeFile(
         join(ui, "index.html"),
         html.replace(
           "<head>",
-          `<head><script>const originalFetch=window.fetch;window.fetch=(input,init={})=>{const headers=new Headers(init.headers);headers.set('x-fixture-view',location.pathname);return originalFetch(input,{...init,headers})};document.addEventListener('click',()=>{document.querySelectorAll('audio').forEach(audio=>audio.muted=true)},true);document.addEventListener('DOMContentLoaded',()=>{if(${Boolean(options.momentsLayout)})return;const button=document.createElement('button');button.textContent='Simulate audition failure (fixture)';button.style.cssText='position:fixed;bottom:4px;left:4px;z-index:10000';button.onclick=()=>{document.querySelector('.audio-inspector audio')?.dispatchEvent(new Event('error'));button.remove()};document.body.append(button)});</script>`,
+          `<head><script>const originalFetch=window.fetch;window.fetch=(input,init={})=>{const headers=new Headers(init.headers);headers.set('x-fixture-view',location.pathname);return originalFetch(input,{...init,headers})};document.addEventListener('click',()=>{document.querySelectorAll('audio').forEach(audio=>audio.muted=true)},true);document.addEventListener('DOMContentLoaded',()=>{if(${Boolean(options.momentsLayout || options.workflowScreens)})return;const button=document.createElement('button');button.textContent='Simulate audition failure (fixture)';button.style.cssText='position:fixed;bottom:4px;left:4px;z-index:10000';button.onclick=()=>{document.querySelector('.audio-inspector audio')?.dispatchEvent(new Event('error'));button.remove()};document.body.append(button)});</script>`,
         ),
       );
     }
@@ -752,6 +835,14 @@ export async function startHookEditorFixture(
         pendingPreviews: pendingPreviews.size,
       }),
       counts: () => ({ edits, unexpected }),
+      editTransport: () => ({
+        requests: editRequests.slice(),
+        pending: pendingEdits.size,
+      }),
+      setEditOutcome: (outcome: typeof editOutcome) => {
+        editOutcome = outcome;
+      },
+      releaseEdits,
       diagnostics: () => diagnostics.slice(),
       audioReads: () => previewAudioReads,
       renameCounts: () => ({ renameAttempts, renames }),
@@ -767,6 +858,7 @@ export async function startHookEditorFixture(
       },
       momentCounts: () => ({ analysesStarted, analysesClosed }),
       close: async () => {
+        releaseEdits();
         releasePreview();
         server.closeAllConnections();
         if (server.listening)
@@ -777,6 +869,7 @@ export async function startHookEditorFixture(
       },
     };
   } catch (error) {
+    releaseEdits();
     releasePreview();
     server.closeAllConnections();
     if (server.listening)

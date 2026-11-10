@@ -1,4 +1,4 @@
-import { useContext, useId, type RefObject } from "react";
+import { useContext, useEffect, useId, useRef, type RefObject } from "react";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { captionWordError } from "./text-validation";
 import type { PlayerRef } from "@remotion/player";
@@ -23,6 +23,7 @@ export function CaptionTextEditor({
   frames,
   onChange,
   startIndex = 0,
+  selectedIndex,
 }: {
   captions: OwnerOverlay["captions"];
   edits: OwnerEditDocument["captionText"];
@@ -30,6 +31,7 @@ export function CaptionTextEditor({
   available: boolean;
   frames: number;
   startIndex?: number;
+  selectedIndex?: number | undefined;
   onChange: (edits: NonNullable<OwnerEditDocument["captionText"]>) => void;
 }) {
   const hook = useContext(EditorHookClock);
@@ -40,12 +42,25 @@ export function CaptionTextEditor({
     ? editorClockOffset(hook, occurrence) / OWNER_FPS
     : 0;
   const replacements = new Map(edits?.map((edit) => [edit.wordId, edit.text]));
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (
+      selectedIndex !== undefined &&
+      selectedIndex >= 0 &&
+      selectedIndex < captions.length
+    )
+      root.current
+        ?.querySelector(`[data-caption-index="${selectedIndex}"]`)
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selectedIndex, captions.length]);
   return (
-    <div className="caption-text-editor">
+    <div className="caption-text-editor" ref={root}>
       {captions.map((caption, index) => (
         <fieldset
           key={`${caption.startMs}:${index}`}
           className="caption-word-group"
+          data-caption-index={index}
+          data-selected={selectedIndex === index || undefined}
         >
           <legend className="local-sr-only">
             Caption {startIndex + index + 1}

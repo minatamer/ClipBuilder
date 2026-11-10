@@ -1,7 +1,7 @@
 import { LoaderCircle } from "lucide-react";
 import { Button } from "../../shared/ui/button";
 
-/** The same task and cancellation remain reachable from Hook or its Apply action. */
+/** One title task stays reachable from Hook or the workspace toolbar. */
 export function HookTitleProgress({
   id,
   onCancel,
@@ -25,7 +25,7 @@ export function HookTitleProgress({
           />
           <span>Writing a title…</span>
         </strong>
-        <p>Apply is paused. Cancel to keep your current title.</p>
+        <p>Autosave waits for this title. Cancel to keep the current title.</p>
       </div>
       <Button variant="secondary" aria-label="Cancel title" onClick={onCancel}>
         Cancel

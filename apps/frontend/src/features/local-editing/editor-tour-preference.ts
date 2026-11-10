@@ -1,4 +1,4 @@
-export const EDITOR_TOUR_SEEN_KEY = "clipbuilder.editor-tour.v1";
+export const EDITOR_TOUR_SEEN_KEY = "clipbuilder.editor-tour.v2";
 let seenInPage: boolean | undefined;
 
 export function editorTourStorage(): Storage | null {

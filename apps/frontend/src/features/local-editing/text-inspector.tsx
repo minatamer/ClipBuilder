@@ -1,3 +1,4 @@
+import { EditorColorControl } from "./editor-color-control";
 import { useContext, useState, useRef, type RefObject } from "react";
 import { TextSelectionContext } from "./text-selection.tsx";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
@@ -12,7 +13,7 @@ import { EditorOccurrence, EditorHookClock } from "./editor-clock.ts";
 import { ownerPresentationFrames } from "../../../../../packages/contracts/local/hook.ts";
 import type { PlayerRef } from "@remotion/player";
 import { Plus, Trash2 } from "lucide-react";
-import { Button } from "../../shared/ui/button";
+import { Button, IconButton } from "../../shared/ui/button";
 import { ControlTabs } from "./control-tabs.tsx";
 import { TypographyFields } from "./typography-fields.tsx";
 import { TextPositionFields } from "./position-fields.tsx";
@@ -216,19 +217,16 @@ export function TextInspector({
           Add text
         </Button>
         {current && (
-          <Button
-            variant="quiet"
+          <IconButton
             icon={Trash2}
-            aria-label={`Remove text ${index + 1}`}
+            label={`Remove text ${index + 1}`}
             onClick={() => {
               onChange(layers.filter((layer) => layer.id !== current.id));
               const next = layers[index + 1] ?? layers[index - 1];
               if (next) onSelect(next);
               else document.getElementById(`${id}-add`)?.focus();
             }}
-          >
-            Remove text
-          </Button>
+          />
         )}
       </div>
       {!layers.length && <p>No text yet.</p>}
@@ -485,8 +483,7 @@ export function TextInspector({
                         <label>
                           Word highlight
                           {highlightMixed && <span>Mixed</span>}
-                          <input
-                            type="color"
+                          <EditorColorControl
                             value={
                               selectedRange
                                 ? (ownerCharacterStyleAt(

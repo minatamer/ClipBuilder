@@ -10,6 +10,7 @@ import { DemoLimitToast } from "./demo-limit-toast";
 import { WorkflowActions } from "./workflow-actions";
 import { captionWordError } from "./text-validation";
 import { syntheticTextClip } from "../../../../../test/owner-text-fixture.ts";
+import { OWNER_CAPTION_PRESETS } from "../../../../../packages/contracts/local/editor.ts";
 
 it("reserves local feedback space without announcing empty messages, and safely announces supplied feedback", () => {
   const empty = renderToStaticMarkup(createElement(InlineFeedback, {}));
@@ -123,7 +124,7 @@ it.each([
   "places invalid typography feedback at its numeric control (%j)",
   ({ message, ...patch }) => {
     const value = {
-      ...syntheticTextClip().base!.overlay.captionStyle!,
+      ...OWNER_CAPTION_PRESETS.clean,
       ...patch,
     };
     const html = renderToStaticMarkup(

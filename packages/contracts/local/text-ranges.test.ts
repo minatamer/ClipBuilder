@@ -1,8 +1,6 @@
 import { expect, it } from "vitest";
-import {
-  syntheticTextLayer,
-  syntheticTextClip,
-} from "../../../test/owner-text-fixture.ts";
+import { ownerClipSchema } from "./clips.ts";
+import { OWNER_SOCIAL_TEXT_PRESETS } from "./text-style.ts";
 import { ownerTextLayerSchema } from "./text-layers.ts";
 import {
   editOwnerStyledText,
@@ -12,6 +10,53 @@ import {
 } from "./text-ranges.ts";
 import { automaticOwnerEdit, compileOwnerOverlay } from "./edit-overlay.ts";
 import { withIndependentOwnerHook } from "./hook-content.ts";
+
+// Contract-only values: no fixture/application dependency enters this boundary.
+function syntheticTextLayer() {
+  return ownerTextLayerSchema.parse({
+    id: crypto.randomUUID(),
+    text: "A synthetic title",
+    startFrame: 15,
+    endFrame: 60,
+    style: {
+      ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
+      box: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
+    },
+  });
+}
+function syntheticTextClip() {
+  const id = crypto.randomUUID(),
+    analysisId = crypto.randomUUID(),
+    momentId = crypto.randomUUID();
+  return ownerClipSchema.parse({
+    id,
+    analysisId,
+    momentId,
+    mode: "synthetic-ai",
+    sourceRevision: 0,
+    revision: 0,
+    assemblyRevision: 0,
+    state: "review-ready",
+    assets: [],
+    outputs: [],
+    preview: { frames: 90, bytes: 1000 },
+    calls: { plan: 0, image: 0, render: 0 },
+    error: null,
+    baseHash: "a".repeat(64),
+    edit: null,
+    base: {
+      version: 1,
+      analysisId,
+      momentId,
+      sourceRevision: 0,
+      fingerprint: "b".repeat(64),
+      processingIdentity: "c".repeat(64),
+      cut: { startFrame: 0, endFrame: 90 },
+      words: [],
+      overlay: { version: 1, frames: 90, visuals: [], captions: [], texts: [] },
+    },
+  });
+}
 
 it("patches only selected properties, splits/merges ranges and clears only the selection", () => {
   const text = "Why buyers wait";

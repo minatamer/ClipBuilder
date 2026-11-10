@@ -26,5 +26,5 @@ it("shows an empty End and disables preview/use while the Hook is incomplete", (
   expect(html).toContain('value="33"');
   expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Use suggestion<\/button>/);
   expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Preview hook<\/button>/);
-  expect(html).toContain("Choose an end to preview or apply the Hook.");
+  expect(html).toContain("Choose an end to preview or save the Hook.");
 });

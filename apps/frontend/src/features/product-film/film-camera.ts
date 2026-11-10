@@ -1,4 +1,5 @@
 export type ScreenBeat = "intake" | "analysis" | "choose" | "review";
+import { FILM_WORKSPACE } from "./film-workspace";
 export const FILM_CAPTURE_SIZE = { width: 1440, height: 1000 } as const;
 
 type Point = { x: number; y: number };
@@ -19,21 +20,21 @@ const progress = (frame: number, from: number, to: number) => {
   return t * t * t * (t * (t * 6 - 15) + 10);
 };
 
-/** A single continuous path: pick, then proceed. The camera never invents a move. */
+/** A continuous path through the current source, jump-to and top-toolbar actions. */
 function actionAt(beat: ScreenBeat, frame: number, duration: number) {
   if (beat === "analysis") return null;
   const actions: Action[] =
     beat === "intake"
       ? [
-          { from: 0, click: 25, to: { x: 650, y: 590 } },
-          { from: 32, click: 76, to: { x: 1256, y: 945 } },
+          { from: 0, click: 34, to: FILM_WORKSPACE.upload },
+          { from: 36, click: 86, to: FILM_WORKSPACE.analyze },
         ]
       : beat === "choose"
         ? [
-            { from: 0, click: 28, to: { x: 307, y: 575 } },
-            { from: 36, click: duration - 14, to: { x: 1264, y: 945 } },
+            { from: 0, click: 28, to: FILM_WORKSPACE.jump },
+            { from: 36, click: duration - 14, to: FILM_WORKSPACE.process },
           ]
-        : [{ from: 32, click: 80, to: { x: 1240, y: 945 } }];
+        : [{ from: 32, click: 80, to: FILM_WORKSPACE.download }];
   let from: Point =
     beat === "intake"
       ? { x: 805, y: 430 }
@@ -51,6 +52,9 @@ function actionAt(beat: ScreenBeat, frame: number, duration: number) {
     x: from.x + (current.to.x - from.x) * travel,
     y: from.y + (current.to.y - from.y) * travel,
     opacity: progress(frame, 0, 8),
+    origin: from,
+    destination: current.to,
+    travel,
     ring:
       frame < current.click
         ? 0
@@ -70,7 +74,10 @@ export function screenCamera(
     width / FILM_CAPTURE_SIZE.width,
     height / FILM_CAPTURE_SIZE.height,
   );
-  const cursor = actionAt(beat, frame, duration);
+  const actor = actionAt(beat, frame, duration);
+  const cursor = actor
+    ? { x: actor.x, y: actor.y, opacity: actor.opacity, ring: actor.ring }
+    : null;
   const targetAt = (sample: number) => {
     const pointer = actionAt(beat, sample, duration);
     const zoom =
@@ -79,24 +86,31 @@ export function screenCamera(
         : 1.1 + 0.12 * progress(sample, 0, duration - 1);
     const scale = cover * zoom * (framing?.lens ?? 1);
     const focusWeight = framing?.focusWeight ?? 0;
-    const focusX =
-      (pointer?.x ?? 720) * (1 - focusWeight) +
-      (framing?.focus?.x ?? 720) * focusWeight;
-    const focusY =
-      (pointer?.y ?? 500) * (1 - focusWeight) +
-      (framing?.focus?.y ?? 500) * focusWeight;
-    return {
-      scale,
+    const pointPose = (point: Point) => ({
       x: clamp(
-        width * (framing?.anchorX ?? 0.5) - focusX * scale,
+        width * (framing?.anchorX ?? 0.5) -
+          (point.x * (1 - focusWeight) +
+            (framing?.focus?.x ?? 720) * focusWeight) *
+            scale,
         width - 1440 * scale,
         0,
       ),
       y: clamp(
-        height * (framing?.anchorY ?? 0.5) - focusY * scale,
+        height * (framing?.anchorY ?? 0.5) -
+          (point.y * (1 - focusWeight) +
+            (framing?.focus?.y ?? 500) * focusWeight) *
+            scale,
         height - 1000 * scale,
         0,
       ),
+    });
+    const from = pointPose(pointer?.origin ?? { x: 720, y: 500 });
+    const to = pointPose(pointer?.destination ?? { x: 720, y: 500 });
+    const travel = pointer?.travel ?? 0;
+    return {
+      scale,
+      x: from.x + (to.x - from.x) * travel,
+      y: from.y + (to.y - from.y) * travel,
     };
   };
   // Symmetric finite filtering is seek-safe and anticipates the same eased mouse
@@ -105,9 +119,11 @@ export function screenCamera(
     x = 0,
     y = 0,
     scale = 0;
+  const filterSpan =
+    progress(frame, 0, 24) * progress(duration - 1 - frame, 0, 24);
   for (let offset = -12; offset <= 12; offset++) {
     const influence = Math.exp(-(offset * offset) / 50);
-    const pose = targetAt(clamp(frame + offset, 0, duration - 1));
+    const pose = targetAt(clamp(frame + offset * filterSpan, 0, duration - 1));
     x += pose.x * influence;
     y += pose.y * influence;
     scale += pose.scale * influence;
@@ -116,22 +132,23 @@ export function screenCamera(
   scale /= weight;
   x /= weight;
   y /= weight;
-  if (cursor && (framing?.focusWeight ?? 0) < 0.01) {
-    // Retain the complete pointer and nearby control label during a close-up.
-    const left = Math.max(0, cursor.x - 120);
-    const right = Math.min(1440, cursor.x + 120);
-    const top = Math.max(0, cursor.y - 60);
-    const bottom = Math.min(1000, cursor.y + 52);
-    x = clamp(
-      x,
-      Math.max(width - 1440 * scale, -left * scale),
-      Math.min(0, width - right * scale),
-    );
-    y = clamp(
-      y,
-      Math.max(height - 1000 * scale, -top * scale),
-      Math.min(0, height - bottom * scale),
-    );
-  }
-  return { x, y, scale, zoom: scale / cover, cursor };
+  // Fade a travelling pointer at the edge rather than snapping the filtered camera.
+  // Settled toolbar actions remain visible; a cut never reveals image edges.
+  const room = cursor
+    ? Math.min(
+        x + cursor.x * scale,
+        y + cursor.y * scale,
+        width - x - (cursor.x + 40) * scale,
+        height - y - (cursor.y + 48) * scale,
+      )
+    : 0;
+  return {
+    x,
+    y,
+    scale,
+    zoom: scale / cover,
+    cursor: cursor
+      ? { ...cursor, opacity: cursor.opacity * progress(room, 0, 20) }
+      : null,
+  };
 }

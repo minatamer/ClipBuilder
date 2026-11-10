@@ -38,7 +38,7 @@ export function editorPreviewForm(
         clip.videoAssets,
       );
   } catch {
-    // The draft stays invalid and Apply remains guarded; only its paint is held.
+    // The draft stays invalid and autosave remains guarded; only its paint is held.
   }
   return { ...next, preview };
 }

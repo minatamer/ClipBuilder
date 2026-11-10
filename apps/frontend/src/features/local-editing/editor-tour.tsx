@@ -7,6 +7,8 @@ import {
   useState,
 } from "react";
 import { CircleHelp, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { useWorkspaceChrome } from "../../shared/ui/workspace";
 import { Button, IconButton } from "../../shared/ui/button";
 import { motionDurationMs } from "../sample/use-moment-layout";
 import {
@@ -55,16 +57,17 @@ const sameBox = (a: TourBox, b: TourBox) =>
 /** One native modal and one card renderer serve every editor section. */
 export function EditorTour({
   ready,
-  footerTarget,
+  actionTarget,
   onNavigate,
   onStart,
 }: {
   ready: boolean;
-  footerTarget?: HTMLElement | null | undefined;
+  actionTarget?: HTMLElement | null | undefined;
   onNavigate: (step: EditorTourStep) => void;
   onStart: () => () => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
+  const chrome = useWorkspaceChrome();
   const dialog = useRef<HTMLDialogElement>(null);
   const card = useRef<HTMLElement>(null);
   const opener = useRef<HTMLElement | null>(null);
@@ -117,7 +120,12 @@ export function EditorTour({
           ?.querySelector('.clip-list [aria-selected="true"]') ?? null
       );
     if (item.target === "actions")
-      return footerTarget ?? editor?.querySelector(".editor-actions") ?? null;
+      return (
+        chrome?.actions?.closest("header") ??
+        actionTarget ??
+        editor?.querySelector(".editor-actions") ??
+        null
+      );
     if (item.target === "audio")
       return (
         editor
@@ -436,12 +444,25 @@ export function EditorTour({
       : layout?.card;
   return (
     <div ref={root} className={styles.trigger}>
-      <IconButton
-        icon={CircleHelp}
-        label="Replay editor tour"
-        disabled={!ready}
-        onClick={(event) => begin(event.currentTarget)}
-      />
+      {chrome ? (
+        chrome.help &&
+        createPortal(
+          <IconButton
+            icon={CircleHelp}
+            label="Replay editor tour"
+            disabled={!ready}
+            onClick={(event) => begin(event.currentTarget)}
+          />,
+          chrome.help,
+        )
+      ) : (
+        <IconButton
+          icon={CircleHelp}
+          label="Replay editor tour"
+          disabled={!ready}
+          onClick={(event) => begin(event.currentTarget)}
+        />
+      )}
       <dialog
         ref={dialog}
         className={styles.layer}

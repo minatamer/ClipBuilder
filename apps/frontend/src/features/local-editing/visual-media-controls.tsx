@@ -1,5 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Button } from "../../shared/ui/button";
+import {
+  ArrowDown,
+  ArrowDownToLine,
+  ArrowUp,
+  ArrowUpToLine,
+} from "lucide-react";
+import { Button, IconButton } from "../../shared/ui/button";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import type { OwnerVisualEdit } from "../../../../../packages/contracts/local/assets.ts";
@@ -9,13 +15,11 @@ export function VisualLayers({
   cues,
   selected,
   disabled,
-  onSelect,
   onChange,
 }: {
   cues: OwnerVisualEdit[];
   selected: string;
   disabled: boolean;
-  onSelect: (cue: OwnerVisualEdit) => void;
   onChange: (cues: OwnerVisualEdit[]) => void;
 }) {
   const index = cues.findIndex((cue) => cue.id === selected);
@@ -28,61 +32,41 @@ export function VisualLayers({
   }
   return (
     <fieldset disabled={disabled}>
-      <legend>Visual layers · Front to back</legend>
-      <div className="editor-fields">
-        <label>
-          Selected layer
-          <select
-            className="select-control"
-            aria-label="Visual layer"
-            value={index < 0 ? "" : selected}
-            onChange={(event) => {
-              const cue = cues.find(
-                (cue) => cue.id === event.currentTarget.value,
-              );
-              if (cue) onSelect(cue);
-            }}
-          >
-            {index < 0 && <option value="">Choose a layer</option>}
-            {[...cues].reverse().map((cue, front) => (
-              <option key={cue.id} value={cue.id}>
-                {front + 1}. {cue.video ? "Video" : "Picture"}{" "}
-                {cues.indexOf(cue) + 1}
-                {cue.presentation === "full-frame" ? " · Full frame" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <legend>Layer order</legend>
+      <p className="source-hint">
+        {index < 0
+          ? "Select a visual in the list."
+          : `${cues[index]!.video ? "Video" : "Picture"} ${index + 1} · Layer ${cues.length - index} of ${cues.length}`}
+      </p>
       <div
         className="picture-tools"
         role="group"
         aria-label="Visual layer order"
       >
-        <Button
-          variant="quiet"
+        <IconButton
+          label="Bring to front"
+          icon={ArrowUpToLine}
           disabled={index < 0 || index === cues.length - 1}
           onClick={() => move(cues.length - 1)}
-        >
-          Bring to front
-        </Button>
-        <Button
-          variant="quiet"
+        />
+        <IconButton
+          label="Move forward"
+          icon={ArrowUp}
           disabled={index < 0 || index === cues.length - 1}
           onClick={() => move(index + 1)}
-        >
-          Move forward
-        </Button>
-        <Button
-          variant="quiet"
+        />
+        <IconButton
+          label="Move backward"
+          icon={ArrowDown}
           disabled={index <= 0}
           onClick={() => move(index - 1)}
-        >
-          Move backward
-        </Button>
-        <Button variant="quiet" disabled={index <= 0} onClick={() => move(0)}>
-          Send to back
-        </Button>
+        />
+        <IconButton
+          label="Send to back"
+          icon={ArrowDownToLine}
+          disabled={index <= 0}
+          onClick={() => move(0)}
+        />
       </div>
     </fieldset>
   );
@@ -250,7 +234,11 @@ export function VideoSourceControls({
     endpoint(key, frame);
   }
   return (
-    <>
+    <section
+      className="video-source-editor editor-control-group"
+      aria-label="Video source"
+    >
+      <h3>Source video</h3>
       <video
         ref={video}
         aria-label="B-roll source preview"
@@ -261,7 +249,7 @@ export function VideoSourceControls({
         preload="metadata"
         style={{
           display: "block",
-          width: Math.min(320, (180 * asset.width) / asset.height),
+          width: Math.min(640, (288 * asset.width) / asset.height),
           maxWidth: "100%",
           height: "auto",
           aspectRatio: `${asset.width} / ${asset.height}`,
@@ -366,6 +354,6 @@ export function VideoSourceControls({
       {!asset.hasAudio && (
         <p className="source-hint">This video has no audio track.</p>
       )}
-    </>
+    </section>
   );
 }

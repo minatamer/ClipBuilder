@@ -5,17 +5,25 @@ import {
   ScanFace,
   SlidersHorizontal,
   Type,
+  House,
 } from "lucide-react";
 import { OWNER_HOOK_AUDIO_DEFAULT_VOLUME } from "./hook-edit.ts";
 
 /** Navigation and its guide share one catalogue; labels never drift apart. */
 export const EDITOR_SECTIONS = [
   {
+    value: "home",
+    label: "Home",
+    icon: House,
+    title: "See the whole clip",
+    text: "Review layers, camera positions and audio together. Select an item to open its controls. Valid changes save automatically; Undo and Redo are in the top bar.",
+  },
+  {
     value: "captions",
     label: "Captions",
     icon: Captions,
     title: "Make every word readable",
-    text: "Choose caption style, placement and animation here. Text and Speakers let you correct words and adjust speaker colours. Changes stay in your preview until you Apply.",
+    text: "Choose caption style, placement and animation here. Text and Speakers let you correct words and adjust speaker colours. Valid changes save automatically.",
   },
   {
     value: "text",
@@ -36,14 +44,14 @@ export const EDITOR_SECTIONS = [
     label: "Media",
     icon: Images,
     title: "Shape the visual story",
-    text: "Select a picture to change its image, placement, timing and motion, or upload one of your own. Use the preview to position it and Capture to use the current playback time.",
+    text: "Upload pictures or videos, then select a visual to adjust its timing, fit, position, layer order and volume. Camera owns zoom, pan and tracking. Capture uses the settled preview time.",
   },
   {
     value: "focus",
     label: "Camera",
     icon: ScanFace,
     title: "Keep the right subject in frame",
-    text: "Adjust camera positions, zoom and motion here. Preview each change against the video before applying it. Tracking starts only when you choose its action.",
+    text: "Choose the original video or an added visual, then adjust camera positions, zoom, pan or face tracking. The selected frame and the main preview show the same crop. Tracking starts only when you choose its action.",
   },
   {
     value: "hook",
@@ -80,12 +88,12 @@ export const EDITOR_TOUR_STEPS: readonly EditorTourStep[] = [
     target: "clips",
     optional: true,
     title: "One editor for each clip",
-    text: "Your clips live here. Choose a ready clip to open its editor; clips still preparing stay unavailable. Apply or discard a draft before switching clips.",
+    text: "Choose a ready clip here or use Add to choose more moments. Clips still preparing stay unavailable. Wait for the Saved indicator before switching clips.",
   },
   {
     target: "settings",
     title: "Everything has its place",
-    text: "These tabs keep captions, text, filters, media, camera and Hook controls together. Only the current section is open, with its own controls below.",
+    text: "Home shows the full layer timeline. The other tabs open one set of controls at a time, with the selected item’s properties alongside its collection.",
   },
   ...EDITOR_SECTIONS.flatMap((section): EditorTourStep[] => [
     {
@@ -109,7 +117,7 @@ export const EDITOR_TOUR_STEPS: readonly EditorTourStep[] = [
   ]),
   {
     target: "actions",
-    title: "Keep changes, then export",
-    text: "Edits show Apply and Discard here. Once you Apply, Export creates the current clip and Download retrieves the finished video. Nothing is submitted by this tour. Replay it anytime using the question-mark button.",
+    title: "Your workspace toolbar",
+    text: "Valid edits save automatically. Undo and Redo step through changes without processing again. Export creates the current clip; Download retrieves the finished video. File contains session actions and privacy details. Help replays this tour. Nothing is submitted by this tour.",
   },
 ];

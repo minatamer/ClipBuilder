@@ -5,7 +5,10 @@ import type { PlayerRef } from "@remotion/player";
 import { independentHookFixture } from "../../../../../test/owner-hook-fixture.ts";
 import { withIndependentOwnerHook } from "../../../../../packages/contracts/local/hook-content.ts";
 import { compileOwnerOverlay } from "../../../../../packages/contracts/local/edit-overlay.ts";
-import { editorTimelineItems } from "./editor-timeline.ts";
+import {
+  editorTimelineItems,
+  editorTimelineVisual,
+} from "./editor-timeline.ts";
 import {
   EditorHookClock,
   EditorOccurrence,
@@ -29,6 +32,85 @@ function fixture() {
     overlay: compileOwnerOverlay(clip.base!, edit, clip.assets, []),
   };
 }
+
+it("projects Home camera targets, partial tracking windows and video source thumbnails through each occurrence exactly once", () => {
+  const { overlay } = fixture();
+  overlay.cameraEffects = (["hook", "body"] as const).map((occurrence) => ({
+    id: crypto.randomUUID(),
+    occurrence,
+    startFrame: 12,
+    zoomFrames: 6,
+    holdFrames: 0,
+    returnFrames: 0,
+    target: { centerX: 0.5, centerY: 0.5, zoom: 2 },
+  }));
+  for (const content of [overlay, overlay.hookContent!]) {
+    const cue = content.visuals[0]!;
+    cue.startFrame = 0;
+    cue.endFrame = 150;
+    cue.video = {
+      offsetFrame: 10,
+      sourceEndFrame: 150,
+      muted: true,
+      volume: 100,
+    };
+    cue.effect = {
+      startFrame: 45,
+      endFrame: 60,
+      zoom: 1.5,
+      fromX: 0.4,
+      toX: 0.6,
+      fromY: 0.5,
+      toY: 0.5,
+    };
+    cue.tracking = {
+      assetId: cue.assetId,
+      startFrame: 45,
+      endFrame: 60,
+      sourceStartFrame: 55,
+      seed: { x: 0.4, y: 0.4, width: 0.2, height: 0.2 },
+      outcome: "complete",
+      points: Array.from({ length: 15 }, (_, frame) => ({
+        frame,
+        x: 0.5,
+        y: 0.5,
+      })),
+    };
+  }
+  const effects = editorTimelineItems(overlay, "effect");
+  expect(
+    effects
+      .filter((item) => item.targetId === "original")
+      .map((item) => [
+        item.occurrence,
+        item.startFrame,
+        item.endFrame,
+        item.effectTab,
+      ]),
+  ).toEqual([
+    ["hook", 12, 18, "zoom"],
+    ["body", 72, 78, "zoom"],
+  ]);
+  expect(
+    effects
+      .filter((item) => item.effectTab === "motion")
+      .map((item) => [
+        item.occurrence,
+        item.startFrame,
+        item.endFrame,
+        item.targetId,
+      ]),
+  ).toEqual([
+    ["hook", 15, 30, overlay.visuals[0]!.id],
+    ["body", 105, 120, overlay.visuals[0]!.id],
+  ]);
+  expect(effects.filter((item) => item.effectTab === "pan")).toHaveLength(2);
+  expect(
+    editorTimelineItems(overlay, "picture").map(
+      (item) => editorTimelineVisual(overlay, item).frame,
+    ),
+  ).toEqual([40, 10]);
+});
 
 it("seeds filter rows from camera positions and preserves custom ranges across positions", () => {
   const { overlay } = fixture();

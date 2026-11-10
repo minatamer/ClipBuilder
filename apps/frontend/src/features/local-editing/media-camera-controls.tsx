@@ -130,6 +130,7 @@ function MediaCameraSource({
 }
 
 export function MediaCameraControls({
+  navigationRequest,
   cue,
   previewCue,
   acceptedEdit,
@@ -145,10 +146,12 @@ export function MediaCameraControls({
   feedback,
   onChange,
   onInspect,
-  footerTarget,
+  actionTarget,
   onTrackingMode,
   onTrackingBusy,
 }: {
+  navigationRequest?:
+    import("./editor-camera-request").EditorCameraRequest | undefined;
   cue: OwnerVisualEdit;
   previewCue?: OwnerVisualEdit | undefined;
   acceptedEdit: OwnerEditDocument;
@@ -164,12 +167,29 @@ export function MediaCameraControls({
   feedback?: { message: string; path: readonly PropertyKey[] } | undefined;
   onChange: (cue: OwnerVisualEdit) => void;
   onInspect: (endpoint: "start" | "end" | null) => void;
-  footerTarget?: HTMLElement | null | undefined;
+  actionTarget?: HTMLElement | null | undefined;
   onTrackingMode: (active: boolean) => void;
   onTrackingBusy: (active: boolean) => void;
 }) {
   const id = useId();
-  const [tab, setTab] = useState("zoom");
+  const [tab, setTab] = useState(
+    navigationRequest?.targetId !== cue.id
+      ? "zoom"
+      : navigationRequest?.tab === "motion"
+        ? "tracking"
+        : (navigationRequest?.tab ?? "zoom"),
+  );
+  const [requestKey, setRequestKey] = useState(navigationRequest?.key);
+  if (
+    navigationRequest &&
+    requestKey !== navigationRequest.key &&
+    navigationRequest.targetId === cue.id
+  ) {
+    setRequestKey(navigationRequest.key);
+    setTab(
+      navigationRequest.tab === "motion" ? "tracking" : navigationRequest.tab,
+    );
+  }
   const [trackingTarget, setTrackingTarget] = useState<HTMLDivElement | null>(
     null,
   );
@@ -182,8 +202,11 @@ export function MediaCameraControls({
   const [acknowledgedEdit, setAcknowledgedEdit] = useState(acceptedEdit);
   if (acknowledgedEdit !== acceptedEdit) {
     setAcknowledgedEdit(acceptedEdit);
-    setMotionEditing(false);
-    setMessage("");
+    // Autosave acknowledgements must not turn an unfinished Pan into a Zoom.
+    if (acknowledgedEdit.baseHash !== acceptedEdit.baseHash) {
+      setMotionEditing(false);
+      setMessage("");
+    }
   }
   const alive = useRef(true);
   useEffect(() => {
@@ -590,7 +613,7 @@ export function MediaCameraControls({
               disabled={disabled}
               frames={frames}
               previewTarget={trackingTarget}
-              footerTarget={footerTarget}
+              actionTarget={actionTarget}
               onChange={onChange}
               onMode={onTrackingMode}
               onBusy={onTrackingBusy}

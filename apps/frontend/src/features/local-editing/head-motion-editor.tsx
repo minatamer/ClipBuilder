@@ -113,12 +113,13 @@ export function HeadMotionEditor({
   onChange,
   onMode,
   onBusy,
-  footerTarget,
+  actionTarget,
   disabled,
   available,
   selectionKey,
   selectionFrame,
   onCameraPositionSelect,
+  navigationRequest,
 }: {
   focus: OwnerFocus;
   tracks: OwnerCameraTrack[];
@@ -135,12 +136,14 @@ export function HeadMotionEditor({
   onChange: (tracks: OwnerCameraTrack[]) => void;
   onMode: (active: boolean) => void;
   onBusy: (active: boolean) => void;
-  footerTarget?: HTMLElement | null | undefined;
+  actionTarget?: HTMLElement | null | undefined;
   disabled: boolean;
   available: boolean;
   selectionKey?: string | undefined;
   selectionFrame?: number | undefined;
   onCameraPositionSelect?: ((frame: number) => void) | undefined;
+  navigationRequest?:
+    import("./editor-camera-request").EditorCameraRequest | undefined;
 }) {
   const [draft, setDraft] = useState<Draft | null>(null),
     [bulk, setBulk] = useState(false),
@@ -164,18 +167,31 @@ export function HeadMotionEditor({
     if (
       !selectionKey ||
       selectionFrame === undefined ||
-      selectionRequest.current === `${selectionKey}:${selectionFrame}`
+      selectionRequest.current ===
+        `${selectionKey}:${selectionFrame}:${navigationRequest?.key ?? ""}`
     )
       return;
-    selectionRequest.current = `${selectionKey}:${selectionFrame}`;
+    selectionRequest.current = `${selectionKey}:${selectionFrame}:${navigationRequest?.key ?? ""}`;
+    const requested =
+      navigationRequest?.targetId === "original" &&
+      navigationRequest.tab === "motion"
+        ? navigationRequest.id
+        : selected;
     const path = motionForCameraPosition(
       focus,
       tracks,
       selectionFrame,
-      selected,
+      requested,
     );
     setSelected(path?.id ?? null);
-  }, [selectionKey, selectionFrame, tracks, focus, selected]);
+  }, [
+    selectionKey,
+    selectionFrame,
+    tracks,
+    focus,
+    selected,
+    navigationRequest,
+  ]);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -462,7 +478,7 @@ export function HeadMotionEditor({
           hook={hook}
           sourceUrl={sourceUrl}
           disabled={disabled}
-          footerTarget={footerTarget}
+          actionTarget={actionTarget}
           pause={pause}
           seek={seek}
           onChange={(next) => {
@@ -606,7 +622,7 @@ export function HeadMotionEditor({
               </>
             )}
           </div>
-          <WorkflowActions target={footerTarget} label="Face tracking actions">
+          <WorkflowActions target={actionTarget} label="Face tracking actions">
             <span className="head-motion-actions">
               <InlineFeedback message={message} />
               <Button

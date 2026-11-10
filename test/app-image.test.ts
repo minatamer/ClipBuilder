@@ -65,7 +65,9 @@ describe("closed frontend/backend image inputs", () => {
           ).toBe(15);
           expect(
             paths.some((path) =>
-              /capture-index|capture-product-film|studio/.test(path),
+              /capture-index|capture-(?:product|workspace)-film|studio/.test(
+                path,
+              ),
             ),
           ).toBe(false);
         } else {

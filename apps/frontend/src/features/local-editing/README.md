@@ -1,4 +1,46 @@
-# Local editing controls
+# Editing workspace
+
+CL-273 replaces the old step-three form with a full-window workspace. Home
+provides a combined timing overview; selecting an item opens its canonical
+Captions, Text, Filters, Media, Camera or Hook inspector. The top toolbar owns
+Session options/privacy, Undo/Redo, honest save status, Export/download and tour
+replay. Add clips belongs to the clip rail. There is no bottom workspace bar.
+
+Valid edits autosave through the existing protected revision-bound edit route
+after a short debounce. Saves serialize and preserve newer typing. Failure keeps
+input and the operation receipt for explicit Retry; conflicts need Reload.
+Invalid/incomplete input never saves. Export and navigation wait for an
+acknowledged revision. Start over cannot race an unacknowledged edit; explicit
+session discard remains available through recovery options. No autosave/history
+action invokes AI, tracking or native rendering.
+
+History retains up to 50 edit states per clip and 8 MiB across the workspace,
+including transient incomplete Hook endpoints. It survives section/clip changes
+in memory; acknowledged values use existing local drafts/rolling recovery.
+History itself is not persisted after reload. Native input Undo remains available
+while typing; toolbar Undo/Redo and editor shortcuts address editor actions.
+
+Wide screens show the large left preview and separate collection/inspector.
+Narrow workbenches switch Layers/Properties; phones keep playback visible above
+independently scrolling controls, with a full-width transport separate from the
+scaled portrait canvas. Tablet/landscape layouts retain reachable controls.
+Inner editors use compact collection rows, wide grouped properties and lighter
+sub-tabs. Shared keyboard radio grids replace the typography/look dropdowns;
+they offer exactly the existing presets and native colour controls. Media keeps
+source/layout/mix controls, Camera keeps visual crop/effects, and Hook keeps its
+independent range and explicit title/audio options. File is removed; the
+far-right Session options ellipsis retains reset/recovery/privacy. The save
+badge has stable geometry across saved/saving/invalid/failure/conflict states.
+
+Manual editing and generated fixture checks work in fake mode with no API keys.
+Fresh AI preparation still needs the configured local Codex or hosted Gemini
+capabilities, speech/runtime assets, live flags and applicable approvals. Browser
+tracking is local pixel processing; native export needs installed media tooling.
+Hosted intake remains upload-only/temporary and the framing choice local-only.
+
+The feature-specific notes below describe retained behavior. CL-273 supersedes
+older ticket references to manual Apply/Discard or a workspace footer; those
+references are historical evidence, not the current interaction contract.
 
 CL-224 combines Hook/main items in chronological collections with [Hook] labels.
 Selecting a row chooses its independent inspector and final-video clock; playback

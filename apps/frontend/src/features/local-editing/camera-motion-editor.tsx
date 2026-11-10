@@ -48,6 +48,7 @@ export function CameraMotionEditor({
   preview,
   available,
   disabled,
+  navigationRequest,
 }: {
   mode?: "zoom" | "pan";
   focus: OwnerFocus;
@@ -64,10 +65,23 @@ export function CameraMotionEditor({
   preview: (frame: number) => void;
   available: boolean;
   disabled: boolean;
+  navigationRequest?:
+    import("./editor-camera-request").EditorCameraRequest | undefined;
 }) {
-  const [selected, setSelected] = useState<string | null>(null),
+  const [selected, setSelected] = useState<string | null>(
+      navigationRequest?.tab === mode ? navigationRequest.id : null,
+    ),
     [capturingStart, setCapturingStart] = useState(false),
     [message, setMessage] = useState("");
+  const [requestKey, setRequestKey] = useState(navigationRequest?.key);
+  if (
+    navigationRequest &&
+    navigationRequest.tab === mode &&
+    requestKey !== navigationRequest.key
+  ) {
+    setRequestKey(navigationRequest.key);
+    setSelected(navigationRequest.id);
+  }
   const choices = effects.filter((item) => (item.kind ?? "zoom") === mode);
   const label = mode === "pan" ? "Pan" : "Zoom";
   const effect = choices.find((item) => item.id === selected) ?? choices[0];

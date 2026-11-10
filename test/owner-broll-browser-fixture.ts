@@ -14,7 +14,7 @@ import { copyOwnerHookContent } from "../packages/contracts/local/hook-content.t
 import { applyOwnerEdit } from "../apps/backend/local/edit-clip.ts";
 import { listenOwner } from "./owner-http.ts";
 
-/** Generated media and actual editor/Apply compiler; isolated from owner sessions. */
+/** Generated media and actual edit compiler; isolated from owner sessions. */
 export async function startBrollBrowserFixture(
   options: {
     delayedMedia?: boolean;
@@ -341,7 +341,7 @@ export async function startBrollBrowserFixture(
       import {rememberEditorTour,editorTourStorage} from './apps/frontend/src/features/local-editing/editor-tour-preference.ts';
       import './apps/frontend/src/styles/tokens.css';import './apps/frontend/src/features/local-editing/style.css';
       rememberEditorTour(editorTourStorage());
-      const initialClip=(await fetch('/api/local/workspace/${workspaceId}/clips').then(response=>response.json())).clips[0]; function App(){const[clip,setClip]=useState(initialClip),[footer,setFooter]=useState(null);return <Workspace localMode><WorkflowFrame title='CL-271 generated media check' step={2} footer={<div className='local-footer-actions'><div className='workflow-footer-slot' ref={setFooter}/></div>}><div className='local-editing local-editor'>{window.location.pathname==='/processing'?<OwnerClipBatchPanel workspace={{id:'${workspaceId}',revision:0,mode:'synthetic-ai',source:{fingerprint:'${"b".repeat(64)}',bytes:1000,durationMs:3000,width:320,height:180,fps:30}}} capabilities={{aiMode:'synthetic-ai',sourceMode:'synthetic-source',localMedia:true,cloud:false,planningAvailable:true}} selected={[{analysisId:clip.analysisId,momentId:clip.momentId,policyRevision:1}]} onActive={()=>{}} footerTarget={footer}/>:<ClipEditor clip={clip} workspaceId='${workspaceId}' source={{width:320,height:180}} onDirty={()=>{}} footerTarget={footer} onAccepted={list=>setClip(list.clips[0])}/>}</div></WorkflowFrame></Workspace>;}createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);`;
+      const initialClip=(await fetch('/api/local/workspace/${workspaceId}/clips').then(response=>response.json())).clips[0]; function App(){const[clip,setClip]=useState(initialClip),[footer,setFooter]=useState(null);return <Workspace localMode editing><WorkflowFrame title='CL-271 generated media check' step={2} actions={<div className='workflow-session-actions'><div className='workflow-action-slot' ref={setFooter}/></div>}><div className='local-editing local-editor'>{window.location.pathname==='/processing'?<OwnerClipBatchPanel workspace={{id:'${workspaceId}',revision:0,mode:'synthetic-ai',source:{fingerprint:'${"b".repeat(64)}',bytes:1000,durationMs:3000,width:320,height:180,fps:30}}} capabilities={{aiMode:'synthetic-ai',sourceMode:'synthetic-source',localMedia:true,cloud:false,planningAvailable:true}} selected={[{analysisId:clip.analysisId,momentId:clip.momentId,policyRevision:1}]} onActive={()=>{}} actionTarget={footer}/>:<ClipEditor clip={clip} workspaceId='${workspaceId}' source={{width:320,height:180}} onDirty={()=>{}} actionTarget={footer} onAccepted={list=>setClip(list.clips[0])}/>}</div></WorkflowFrame></Workspace>;}createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);`;
     await build({
       stdin: { contents: source, resolveDir: resolve("."), loader: "tsx" },
       nodePaths: [resolve("apps/frontend/node_modules")],

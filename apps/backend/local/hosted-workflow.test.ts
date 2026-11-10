@@ -19,6 +19,7 @@ import type { HostedDemoUsage } from "./demo-usage.ts";
 import type { OwnerAnalysisPorts } from "./analysis.ts";
 import type { HookTitlePlanning } from "./hook-title-planner.ts";
 import { ownerClipListSchema } from "../../../packages/contracts/local/clips.ts";
+import { ownerMediaJobSchema } from "../../../packages/contracts/local/index.ts";
 import sharp from "sharp";
 import { applyOwnerEdit } from "./edit-clip.ts";
 let root: string, flow: ReturnType<typeof createHostedEditingWorkflow>;
@@ -385,7 +386,7 @@ it("admits hosted uploaded videos, streams isolated assets, and exports layered 
     ).toBe(false),
   );
   const exportJob = media.mock.calls
-    .map(([job]) => job)
+    .map(([job]) => ownerMediaJobSchema.parse(job))
     .findLast((job) => job.operation === "clip");
   expect(exportJob?.operation).toBe("clip");
   if (exportJob?.operation !== "clip") throw Error("missing_synthetic_export");

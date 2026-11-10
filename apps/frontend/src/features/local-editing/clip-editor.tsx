@@ -1,4 +1,22 @@
+import { EditorColorControl } from "./editor-color-control";
+import {
+  EditorInspectorLayout,
+  EditorInspector,
+  EditorCollection,
+} from "./editor-inspector-layout";
 import { pictureLinkedAudio } from "./picture-audio.ts";
+import "./style.css";
+import "./editor-workspace.css";
+import "./editor-controls.css";
+import { WorkspaceEditHistory } from "./edit-history";
+import { useEditorAutosave } from "./use-editor-autosave";
+import { EditorSaveTools } from "./editor-save-tools";
+import { EditorOverview } from "./editor-overview";
+import {
+  CompactEditorPlayback,
+  useCompactEditorPlayback,
+} from "./compact-editor-playback";
+import type { EditorCameraRequest } from "./editor-camera-request";
 import {
   editorPreviewForm,
   type EditorFormDraft,
@@ -8,6 +26,7 @@ import { MediaTimelineThumbnail } from "./media-timeline-thumbnail.tsx";
 import { placeOwnerFitOriginalVisual } from "../../../../../packages/contracts/local/visual-placement.ts";
 import {
   editorTimelineItems,
+  editorTimelineVisual,
   type EditorTimelineItem,
   type EditorTimelineKind,
 } from "./editor-timeline.ts";
@@ -174,7 +193,6 @@ import {
   OWNER_CAPTION_DEFAULT_CENTER_Y,
   OWNER_CAPTION_ANIMATIONS,
   ownerEditDocumentSchema,
-  ownerEditRequestSchema,
   type OwnerCaptionStyle,
   type OwnerEditDocument,
 } from "../../../../../packages/contracts/local/editor.ts";
@@ -188,7 +206,6 @@ import {
   captionForOwnerEdit,
   constrainOwnerBox,
   initialOwnerEdit,
-  ownerEditOperations,
   ownerGestureBox,
   sameOwnerEdit,
   centeredOwnerBox,
@@ -679,14 +696,14 @@ function PreviewFailure({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-/** Hook choices may request a title; only Apply writes the editor revision. */
+/** Hook choices may request a title; autosave writes only valid edit values. */
 export function ClipEditor({
   clip,
   workspaceId,
   source,
   onAccepted,
   onDirty,
-  footerTarget,
+  actionTarget,
   actionsVisible = true,
   captionGeneration = false,
   visualDiscovery = false,
@@ -697,13 +714,14 @@ export function ClipEditor({
   onBusy,
   onPending,
   onPreviewReady,
+  history: providedHistory,
 }: {
   clip: OwnerClip;
   workspaceId: string;
   source?: { width: number; height: number };
   onAccepted: (list: OwnerClipList) => void;
   onDirty: (clipId: string, dirty: boolean) => void;
-  footerTarget?: HTMLElement | null | undefined;
+  actionTarget?: HTMLElement | null | undefined;
   actionsVisible?: boolean;
   captionGeneration?: boolean;
   visualDiscovery?: boolean;
@@ -714,6 +732,7 @@ export function ClipEditor({
   onBusy?: (busy: boolean) => void;
   onPending?: (pending: boolean) => void;
   onPreviewReady?: (() => void) | undefined;
+  history?: WorkspaceEditHistory;
 }) {
   const [form, storeForm] = useState(() => {
     const original = initialOwnerEdit(clip);
@@ -723,24 +742,52 @@ export function ClipEditor({
       clip,
     );
   });
+  const currentForm = useRef(form);
+  const [localHistory] = useState(() => new WorkspaceEditHistory());
+  const history = providedHistory ?? localHistory;
+  const editGroup = useRef<string | undefined>(undefined);
+  const gestureGroup = useRef<string | undefined>(undefined);
+  const inputGroups = useRef(new WeakMap<HTMLElement, string>());
+  const [gestureActive, setGestureActive] = useState(false);
+  const [hookDraft, storeHookDraft] = useState<OwnerHookDraft | undefined>(
+    undefined,
+  );
+  const currentHookDraft = useRef(hookDraft);
   const diagnostics = useMemo(() => new EditorLifecycleTrace(), []);
   function setForm(
     action: EditorFormDraft | ((current: EditorFormDraft) => EditorFormDraft),
+    record = true,
   ) {
-    storeForm((current) =>
-      editorPreviewForm(
-        current,
-        typeof action === "function" ? action(current) : action,
-        clip,
-      ),
-    );
+    const current = currentForm.current;
+    const next = typeof action === "function" ? action(current) : action;
+    if (record)
+      history.record(
+        clip.id,
+        { draft: current.draft, hookDraft: currentHookDraft.current },
+        { draft: next.draft, hookDraft: currentHookDraft.current },
+        editGroup.current,
+      );
+    const value = editorPreviewForm(current, next, clip);
+    currentForm.current = value;
+    storeForm(value);
   }
   const [occurrence, setOccurrence] = useState<OwnerEditOccurrence>(
     clip.edit?.hook ? "hook" : "body",
   );
-  const [hookDraft, setHookDraft] = useState<OwnerHookDraft | undefined>(
-    undefined,
-  );
+  function setHookDraft(next: OwnerHookDraft | undefined, record = true) {
+    if (record)
+      history.record(
+        clip.id,
+        {
+          draft: currentForm.current.draft,
+          hookDraft: currentHookDraft.current,
+        },
+        { draft: currentForm.current.draft, hookDraft: next },
+        editGroup.current,
+      );
+    currentHookDraft.current = next;
+    storeHookDraft(next);
+  }
   const [hookTitleState, setHookTitleState] = useState<HookTitleState | null>(
     null,
   );
@@ -755,8 +802,9 @@ export function ClipEditor({
   const [timelineSelection, setTimelineSelection] = useState<
     EditorTimelineItem | undefined
   >();
+  const [cameraRequest, setCameraRequest] = useState<EditorCameraRequest>();
   const [audioPicture, setAudioPicture] = useState<string | undefined>();
-  const [setting, setSetting] = useState<EditorSetting>("captions");
+  const [setting, setSetting] = useState<EditorSetting>("home");
   const [mediaTab, setMediaTab] = useState("pictures");
   const [captionTab, setCaptionTab] = useState("style");
   const [textTab, setTextTab] = useState("content");
@@ -804,6 +852,7 @@ export function ClipEditor({
     if (alive.current) setPreviewLoaded(true);
   }, []);
   const [previewAttempt, setPreviewAttempt] = useState(0);
+  const compactPlayback = useCompactEditorPlayback(player, previewLoaded);
   useEffect(() => {
     const current = player.current;
     if (!previewLoaded || !current) return;
@@ -1119,6 +1168,103 @@ export function ClipEditor({
   const caption = captionForOwnerEdit(draft, base.overlay.captionStyle);
   const selectedCue = draft.visuals.find((cue) => cue.id === selection);
   const endpoint = `/api/local/workspace/${workspaceId}/clips/${clip.id}`;
+  const autosave = useEditorAutosave({
+    workspaceId,
+    clip,
+    original,
+    draft: masterDraft,
+    dirty,
+    stale,
+    blocked:
+      !!error ||
+      !!hookDraft ||
+      pending ||
+      titleLoading ||
+      trackingMode ||
+      captionConfirm ||
+      generating ||
+      findingVisuals ||
+      audioUploading ||
+      gestureActive ||
+      !previewLoaded,
+    onAcknowledged: (accepted, submitted) => {
+      diagnostics.action("apply");
+      setCameraInspection((current) =>
+        current ? { ...current, original: accepted } : null,
+      );
+      setForm(
+        (current) => ({
+          original: accepted,
+          draft: sameOwnerEdit(current.draft, submitted)
+            ? structuredClone(accepted)
+            : {
+                ...current.draft,
+                revision: accepted.revision,
+                baseHash: accepted.baseHash,
+                fingerprint: accepted.fingerprint,
+              },
+        }),
+        false,
+      );
+    },
+    onAccepted,
+  });
+  const historyAvailable = history.availability(clip.id, masterDraft);
+  function moveHistory(direction: "undo" | "redo") {
+    if (pending || trackingMode || titleLoading) return;
+    const restored = history.move(
+      clip.id,
+      { draft: masterDraft, hookDraft },
+      direction,
+    );
+    if (!restored) return;
+    setHookDraft(restored.hookDraft, false);
+    setCameraInspection(null);
+    setTextRange(null);
+    setForm({ original, draft: restored.draft }, false);
+  }
+  const historyShortcut = useEffectEvent((event: globalThis.KeyboardEvent) => {
+    if (
+      !actionsVisible ||
+      !previewLoaded ||
+      pending ||
+      trackingMode ||
+      titleLoading ||
+      !(event.ctrlKey || event.metaKey) ||
+      event.altKey
+    )
+      return;
+    if (
+      event.target instanceof HTMLElement &&
+      event.target.closest("input, textarea, [contenteditable=true]")
+    )
+      return;
+    const key = event.key.toLowerCase();
+    const direction =
+      key === "y" || (key === "z" && event.shiftKey)
+        ? "redo"
+        : key === "z"
+          ? "undo"
+          : null;
+    if (!direction || !historyAvailable[direction]) return;
+    event.preventDefault();
+    moveHistory(direction);
+  });
+  useEffect(() => {
+    const key = (event: globalThis.KeyboardEvent) => historyShortcut(event);
+    const release = () => {
+      gestureGroup.current = undefined;
+      setGestureActive(false);
+    };
+    document.addEventListener("keydown", key);
+    window.addEventListener("pointerup", release);
+    window.addEventListener("blur", release);
+    return () => {
+      document.removeEventListener("keydown", key);
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("blur", release);
+    };
+  }, []);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -1140,6 +1286,9 @@ export function ClipEditor({
   });
   const editorDirty =
     dirty ||
+    autosave.phase === "saving" ||
+    autosave.phase === "failed" ||
+    autosave.phase === "conflict" ||
     trackingMode ||
     captionConfirm ||
     generating ||
@@ -1158,8 +1307,8 @@ export function ClipEditor({
   });
   useEffect(() => () => diagnostics.close(), [diagnostics]);
   useEffect(() => {
-    reportPending(pending || titleLoading);
-  }, [pending, titleLoading]);
+    reportPending(pending || titleLoading || autosave.phase === "saving");
+  }, [pending, titleLoading, autosave.phase]);
   useEffect(() => {
     if (trackingBusy) reportBusy(true);
     return () => {
@@ -1178,7 +1327,7 @@ export function ClipEditor({
   );
   useEffect(() => {
     if (captionConfirm) {
-      const target = footerTarget ?? document.querySelector(".clip-editor");
+      const target = actionTarget ?? document.querySelector(".clip-editor");
       target
         ?.querySelector<HTMLButtonElement>(
           '[aria-label="Caption generation actions"] button',
@@ -1193,15 +1342,15 @@ export function ClipEditor({
           ?.focus();
     }
     captionWasConfirming.current = captionConfirm;
-  }, [captionConfirm, footerTarget, base.overlay.captions.length, tabsId]);
+  }, [captionConfirm, actionTarget, base.overlay.captions.length, tabsId]);
   useEffect(() => {
-    if (!dirty && !trackingMode) return;
+    if (!editorDirty) return;
     const warn = (event: BeforeUnloadEvent) => {
       event.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty, trackingMode]);
+  }, [editorDirty]);
 
   function update(next: OwnerEditDocument, global = false) {
     diagnostics.action("edit");
@@ -1514,6 +1663,7 @@ export function ClipEditor({
   function selectSetting(value: EditorSetting) {
     if (pending || trackingMode) return;
     setCameraInspection(null);
+    setCameraRequest(undefined);
     if (value !== setting) diagnostics.action("tab");
     setCaptionConfirm(false);
     if (value !== setting) setTextRange(null);
@@ -1651,6 +1801,10 @@ export function ClipEditor({
           : "pictures",
       );
     if (item.kind === "caption") setSelection("captions");
+    if (item.kind === "camera") {
+      setSelection("focus");
+      setCameraRequest(undefined);
+    }
     if (item.kind === "audio")
       setImportedAudioCue(item.index < 0 ? "original" : item.id);
     const inset =
@@ -1666,7 +1820,12 @@ export function ClipEditor({
     setMediaTab("audio");
   }
   function timeline(kind: EditorTimelineKind, label: string) {
-    const items = editorTimelineItems(playbackOverlay, kind);
+    const items = editorTimelineItems(playbackOverlay, kind).filter(
+      (item) =>
+        kind !== "picture" ||
+        Boolean(editorTimelineVisual(playbackOverlay, item).cue.video) ===
+          (mediaTab === "videos"),
+    );
     const selected =
       timelineSelection?.kind === kind &&
       (kind === "look" ||
@@ -1690,21 +1849,15 @@ export function ClipEditor({
         preview={
           kind === "picture"
             ? (item) => {
-                const cue = ownerOccurrenceOverlay(
+                const { cue, frame } = editorTimelineVisual(
                   playbackOverlay,
-                  item.occurrence,
-                ).visuals[item.index]!;
+                  item,
+                );
                 return (
                   <MediaTimelineThumbnail
                     workspaceId={workspaceId}
                     assetId={cue.assetId}
-                    frame={
-                      cue.video
-                        ? cue.video.offsetFrame +
-                          ownerSourceFrame(playbackOverlay, item.startFrame) -
-                          cue.startFrame
-                        : undefined
-                    }
+                    frame={frame}
                   />
                 );
               }
@@ -1812,12 +1965,11 @@ export function ClipEditor({
     );
   }
   async function perform(
-    kind: "edit" | "picture" | "video" | "reload" | "audio" | "youtube-audio",
+    kind: "picture" | "video" | "reload" | "audio" | "youtube-audio",
     file?: File,
   ) {
-    if (request.current || (kind === "edit" && hookDraft)) return;
-    if (kind === "edit" && titleLoading) return;
-    if (kind === "edit" || kind === "reload") setCameraInspection(null);
+    if (request.current || autosave.phase === "saving") return;
+    if (kind === "reload") setCameraInspection(null);
     if (kind === "reload") {
       hookTitles.cancel();
       setHookTitleState(null);
@@ -1839,14 +1991,7 @@ export function ClipEditor({
       const body =
         kind === "youtube-audio"
           ? ownerYoutubeAudioImportSchema.parse({ url: audioImport ?? "" })
-          : kind === "edit"
-            ? ownerEditRequestSchema.parse({
-                operationId: crypto.randomUUID(),
-                expectedRevision: original.revision,
-                baseHash: original.baseHash,
-                operations: ownerEditOperations(original, masterDraft, clip),
-              })
-            : null;
+          : null;
       const response = await fetch(
         kind === "reload"
           ? `/api/local/workspace/${workspaceId}/clips`
@@ -1854,7 +1999,7 @@ export function ClipEditor({
         {
           method: kind === "reload" ? "GET" : "POST",
           signal: controller.signal,
-          ...(kind === "edit" || kind === "youtube-audio"
+          ...(kind === "youtube-audio"
             ? {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
@@ -1893,8 +2038,6 @@ export function ClipEditor({
       const acknowledged = value.clips.find((item) => item.id === clip.id);
       if (!acknowledged?.base) throw new Error("unacknowledged");
       if (!alive.current) return;
-      if (kind === "edit") diagnostics.action("apply");
-      if (kind === "reload" && dirty) diagnostics.action("discard");
       onAccepted(value);
       if (kind === "audio" || kind === "youtube-audio") {
         const asset = acknowledged.audioAssets?.find(
@@ -1933,6 +2076,7 @@ export function ClipEditor({
         setAudioPicture(undefined);
         const accepted = initialOwnerEdit(acknowledged);
         setForm({ original: accepted, draft: structuredClone(accepted) });
+        autosave.reset();
         setForcedStale(false);
       } else {
         const assetId =
@@ -2178,7 +2322,49 @@ export function ClipEditor({
     />
   );
   const content = (
-    <section className="clip-editor" aria-label="Clip editor">
+    <section
+      className="clip-editor"
+      aria-label="Clip editor"
+      onClickCapture={(event) => {
+        if (
+          event.target instanceof HTMLElement &&
+          event.target.closest(
+            'button, input[type="checkbox"], input[type="radio"]',
+          )
+        )
+          editGroup.current = crypto.randomUUID();
+      }}
+      onInputCapture={(event) => {
+        const target = event.target;
+        if (target instanceof HTMLElement) {
+          let group = inputGroups.current.get(target);
+          if (!group) {
+            group = crypto.randomUUID();
+            inputGroups.current.set(target, group);
+          }
+          editGroup.current = gestureGroup.current ?? group;
+        }
+      }}
+      onPointerDownCapture={() => {
+        editGroup.current = crypto.randomUUID();
+        gestureGroup.current = editGroup.current;
+        setGestureActive(true);
+      }}
+      onPointerUpCapture={() => setGestureActive(false)}
+      onPointerCancelCapture={() => setGestureActive(false)}
+      onLostPointerCaptureCapture={() => setGestureActive(false)}
+    >
+      <EditorSaveTools
+        phase={autosave.phase}
+        dirty={dirty}
+        invalid={!!error || !!hookDraft}
+        disabled={pending || trackingMode || titleLoading}
+        canUndo={historyAvailable.undo}
+        canRedo={historyAvailable.redo}
+        onUndo={() => moveHistory("undo")}
+        onRedo={() => moveHistory("redo")}
+        onRetry={autosave.retry}
+      />
       {previewLoading && (
         <ProcessingState className="clip-preparing" label="Loading preview" />
       )}
@@ -2188,67 +2374,81 @@ export function ClipEditor({
         aria-hidden={previewLoading || undefined}
         inert={previewLoading}
       >
-        <div className="editor-preview">
-          {previewUnavailable ? (
-            <p role="alert">Preview unavailable. Reload this clip.</p>
-          ) : playbackFailed ? (
-            <PreviewFailure onRetry={retryPreview} />
-          ) : (
-            <Player
-              ref={player}
-              key={`${clip.id}-${previewAttempt}`}
-              component={Review}
-              inputProps={{
-                overlay: playbackOverlay,
-                workspaceId,
-                sourceUrl: `${endpoint}/source`,
-                assets: Object.fromEntries(
-                  clip.assets.map((asset) => [
-                    asset.id,
-                    `/api/local/workspace/${workspaceId}/assets/${asset.id}`,
-                  ]),
-                ),
-                selection,
-                onSelect: selectLayer,
-                onBox: setBox,
-                onGestureStart: () => player.current?.pause(),
-                onPlaybackError: playbackError,
-                onPreviewReady: previewReady,
-                interactive: previewLoaded,
-                editingOccurrence: activeOccurrence,
-                cameraInspection:
-                  setting === "focus" &&
-                  cameraInspection?.cueId === selection &&
-                  cameraInspection.occurrence === activeOccurrence &&
-                  cameraInspection.original === original
-                    ? {
-                        cueId: cameraInspection.cueId,
-                        occurrence: cameraInspection.occurrence,
-                        endpoint: cameraInspection.endpoint,
-                      }
-                    : null,
-                setting:
-                  setting === "pictures" && mediaTab === "audio"
-                    ? "filters"
-                    : setting,
-              }}
-              durationInFrames={ownerPresentationFrames(overlay)}
-              compositionWidth={1080}
-              compositionHeight={1920}
-              numberOfSharedAudioTags={OWNER_AUDIO_LIMITS.cues * 2}
-              fps={OWNER_FPS}
-              initialFrame={Math.min(
-                previewFrame,
-                ownerPresentationFrames(overlay) - 1,
-              )}
-              errorFallback={() => <PreviewFailure onRetry={retryPreview} />}
-              controls
-              clickToPlay={false}
-              doubleClickToFullscreen={false}
-              spaceKeyToPlayOrPause={false}
-              style={{ width: "100%" }}
-            />
-          )}
+        <div
+          className="editor-preview"
+          data-compact={compactPlayback || undefined}
+        >
+          <div className="editor-preview-canvas">
+            {previewUnavailable ? (
+              <p role="alert">Preview unavailable. Reload this clip.</p>
+            ) : playbackFailed ? (
+              <PreviewFailure onRetry={retryPreview} />
+            ) : (
+              <Player
+                ref={player}
+                key={`${clip.id}-${previewAttempt}`}
+                component={Review}
+                inputProps={{
+                  overlay: playbackOverlay,
+                  workspaceId,
+                  sourceUrl: `${endpoint}/source`,
+                  assets: Object.fromEntries(
+                    clip.assets.map((asset) => [
+                      asset.id,
+                      `/api/local/workspace/${workspaceId}/assets/${asset.id}`,
+                    ]),
+                  ),
+                  selection,
+                  onSelect: selectLayer,
+                  onBox: setBox,
+                  onGestureStart: () => player.current?.pause(),
+                  onPlaybackError: playbackError,
+                  onPreviewReady: previewReady,
+                  interactive: previewLoaded,
+                  editingOccurrence: activeOccurrence,
+                  cameraInspection:
+                    setting === "focus" &&
+                    cameraInspection?.cueId === selection &&
+                    cameraInspection.occurrence === activeOccurrence &&
+                    cameraInspection.original === original
+                      ? {
+                          cueId: cameraInspection.cueId,
+                          occurrence: cameraInspection.occurrence,
+                          endpoint: cameraInspection.endpoint,
+                        }
+                      : null,
+                  setting:
+                    setting === "pictures" && mediaTab === "audio"
+                      ? "filters"
+                      : setting,
+                }}
+                durationInFrames={ownerPresentationFrames(overlay)}
+                compositionWidth={1080}
+                compositionHeight={1920}
+                numberOfSharedAudioTags={OWNER_AUDIO_LIMITS.cues * 2}
+                fps={OWNER_FPS}
+                initialFrame={Math.min(
+                  previewFrame,
+                  ownerPresentationFrames(overlay) - 1,
+                )}
+                errorFallback={() => <PreviewFailure onRetry={retryPreview} />}
+                controls={!compactPlayback}
+                clickToPlay={false}
+                doubleClickToFullscreen={false}
+                spaceKeyToPlayOrPause={false}
+                style={{ width: "100%" }}
+              />
+            )}
+          </div>
+          {compactPlayback &&
+            previewLoaded &&
+            !playbackFailed &&
+            !previewUnavailable && (
+              <CompactEditorPlayback
+                player={player}
+                frames={ownerPresentationFrames(overlay)}
+              />
+            )}
         </div>
         <div className="editor-panels" hidden={!previewLoaded}>
           <div className="editor-navigation">
@@ -2357,7 +2557,7 @@ export function ClipEditor({
                 !findingVisuals &&
                 !error
               }
-              footerTarget={footerTarget}
+              actionTarget={actionTarget}
               onStart={() => {
                 player.current?.pause();
                 return () => {
@@ -2371,132 +2571,207 @@ export function ClipEditor({
               }}
             />
           </div>
+          <ControlPanel id={tabsId} value="home" active={setting}>
+            {setting === "home" && (
+              <EditorOverview
+                overlay={playbackOverlay}
+                workspaceId={workspaceId}
+                player={player}
+                disabled={pending || trackingMode}
+                onSelect={(item) => {
+                  if (pending || trackingMode || audioImport !== null) return;
+                  setSetting(
+                    item.kind === "text"
+                      ? "text"
+                      : item.kind === "caption"
+                        ? "captions"
+                        : item.kind === "look"
+                          ? "filters"
+                          : item.kind === "camera" || item.kind === "effect"
+                            ? "focus"
+                            : "pictures",
+                  );
+                  if (item.kind === "audio") setMediaTab("audio");
+                  if (item.kind === "caption") setCaptionTab("text");
+                  selectTimelineItem(item);
+                  if (item.kind === "effect") {
+                    setSelection(
+                      item.targetId === "original"
+                        ? "focus"
+                        : (item.targetId ?? "focus"),
+                    );
+                    setCameraRequest({
+                      key: crypto.randomUUID(),
+                      id: item.id,
+                      targetId: item.targetId ?? "original",
+                      tab: item.effectTab ?? "zoom",
+                    });
+                    if (item.targetId === "original")
+                      setTimelineSelection(
+                        editorTimelineItems(playbackOverlay, "camera").find(
+                          (position) =>
+                            position.occurrence === item.occurrence &&
+                            position.startFrame <= item.startFrame &&
+                            item.startFrame < position.endFrame,
+                        ),
+                      );
+                  }
+                }}
+              />
+            )}
+          </ControlPanel>
           <ControlPanel id={tabsId} value="hook" active={setting}>
-            {setting === "hook" && (
-              <>
-                <fieldset disabled={pending || !!error}>
-                  <legend className="local-sr-only">Hook</legend>
-                  <HookControls
-                    hook={hookDraft ?? draft.hook}
-                    suggestion={decodeOwnerHookSuggestion(
-                      base.hookSuggestion,
-                      base.overlay.frames,
+            <EditorInspectorLayout
+              label="Hook properties"
+              title="Hook"
+              collectionLabel="Suggestion"
+              context={activeOccurrence === "hook" ? "Hook" : "Main clip"}
+            >
+              {setting === "hook" && (
+                <>
+                  <fieldset disabled={pending || !!error}>
+                    <legend className="local-sr-only">Hook</legend>
+                    <HookControls
+                      disabled={pending || !!error}
+                      hook={hookDraft ?? draft.hook}
+                      suggestion={decodeOwnerHookSuggestion(
+                        base.hookSuggestion,
+                        base.overlay.frames,
+                      )}
+                      simulated={clip.mode === "synthetic-ai"}
+                      generateTitle={generateHookTitle}
+                      addAudio={addHookAudio}
+                      titleUnavailable={titleUnavailable}
+                      onGenerateTitle={toggleHookTitle}
+                      onAddAudio={toggleHookAudio}
+                      maxFrames={hookMaxFrames}
+                      frames={base.overlay.frames}
+                      player={player}
+                      available={!playbackFailed && previewLoaded && !pending}
+                      attempt={previewAttempt}
+                      valid={!error && !hookDraft}
+                      onChange={(next) => {
+                        hookTitles.cancel();
+                        setHookTitleState(null);
+                        player.current?.pause();
+                        setMessage("");
+                        const complete = next
+                          ? completeOwnerHookDraft(
+                              next,
+                              base.overlay.frames,
+                              hookMaxFrames,
+                            )
+                          : undefined;
+                        if (!next || complete) {
+                          try {
+                            changeHook(complete);
+                            setHookDraft(undefined);
+                          } catch {
+                            setHookDraft(next);
+                            setMessage(
+                              "Couldn’t update the Hook. Check its range and layers.",
+                            );
+                          }
+                        } else setHookDraft(next);
+                      }}
+                      onUseSuggestion={(hook) => {
+                        player.current?.pause();
+                        try {
+                          changeHook(hook, { suggested: true });
+                          setHookDraft(undefined);
+                          setMessage("");
+                        } catch {
+                          setMessage(
+                            "Remove an audio layer to make room for the hook’s riser.",
+                          );
+                        }
+                      }}
+                    />
+                  </fieldset>
+                  {masterDraft.hook &&
+                    !hookDraft &&
+                    (titleLoading || currentTitle) && (
+                      <EditorInspector
+                        title="Title suggestion"
+                        disabled={pending}
+                      >
+                        {titleLoading ? (
+                          <HookTitleProgress
+                            id={`${tabsId}-hook-title-progress`}
+                            onCancel={cancelHookTitle}
+                          />
+                        ) : (
+                          <InlineFeedback
+                            tone={
+                              currentTitle?.phase === "canceled"
+                                ? "status"
+                                : "error"
+                            }
+                            message={
+                              currentTitle?.phase === "failed"
+                                ? "Couldn’t suggest a title. Retry when ready."
+                                : currentTitle?.phase === "canceled"
+                                  ? "Current title kept."
+                                  : undefined
+                            }
+                          />
+                        )}
+                        {currentTitle?.result?.title && (
+                          <p className="source-hint">
+                            {clip.mode === "synthetic-ai"
+                              ? "Simulated title"
+                              : "AI title"}
+                            : {currentTitle.result.title.text}
+                          </p>
+                        )}
+                      </EditorInspector>
                     )}
-                    simulated={clip.mode === "synthetic-ai"}
-                    generateTitle={generateHookTitle}
-                    addAudio={addHookAudio}
-                    titleUnavailable={titleUnavailable}
-                    onGenerateTitle={toggleHookTitle}
-                    onAddAudio={toggleHookAudio}
-                    maxFrames={hookMaxFrames}
+                  {((error && errorSection === "hook") ||
+                    messageFor("hook")) && (
+                    <EditorInspector title="Hook status" disabled={pending}>
+                      {sectionIssue("hook")}
+                      <InlineFeedback message={messageFor("hook")} />
+                    </EditorInspector>
+                  )}
+                </>
+              )}
+            </EditorInspectorLayout>
+          </ControlPanel>
+          <ControlPanel id={tabsId} value="text" active={setting}>
+            <EditorInspectorLayout
+              title="Text"
+              collectionLabel="Text layers"
+              context={activeOccurrence === "hook" ? "Hook" : "Main clip"}
+              label="Text panes"
+              selectionKey={`${activeOccurrence}:${selection}`}
+            >
+              {setting === "text" && timeline("text", "Text layers")}
+              {setting === "text" && (
+                <EditorInspector title="Text properties" disabled={pending}>
+                  <legend className="local-sr-only">Text</legend>
+                  <TextInspector
+                    id={`${tabsId}-text-controls`}
+                    hidePicker
+                    layers={draft.texts ?? []}
+                    selected={selection}
+                    onSelect={chooseText}
+                    onAdd={addText}
+                    onChange={(texts) => {
+                      if (messageArea === "text") setMessage("");
+                      update({ ...draft, texts });
+                    }}
+                    feedback={messageFor("text")}
                     frames={base.overlay.frames}
                     player={player}
                     available={!playbackFailed && previewLoaded && !pending}
                     attempt={previewAttempt}
-                    valid={!error && !hookDraft}
-                    onChange={(next) => {
-                      hookTitles.cancel();
-                      setHookTitleState(null);
-                      player.current?.pause();
-                      setMessage("");
-                      const complete = next
-                        ? completeOwnerHookDraft(
-                            next,
-                            base.overlay.frames,
-                            hookMaxFrames,
-                          )
-                        : undefined;
-                      if (!next || complete) {
-                        try {
-                          changeHook(complete);
-                          setHookDraft(undefined);
-                        } catch {
-                          setHookDraft(next);
-                          setMessage(
-                            "Couldn’t update the Hook. Check its range and layers.",
-                          );
-                        }
-                      } else setHookDraft(next);
-                    }}
-                    onUseSuggestion={(hook) => {
-                      player.current?.pause();
-                      try {
-                        changeHook(hook, { suggested: true });
-                        setHookDraft(undefined);
-                        setMessage("");
-                      } catch {
-                        setMessage(
-                          "Remove an audio layer to make room for the hook’s riser.",
-                        );
-                      }
-                    }}
+                    tab={textTab}
+                    onTab={setTextTab}
                   />
-                </fieldset>
-                {masterDraft.hook && !hookDraft && (
-                  <>
-                    {titleLoading ? (
-                      <HookTitleProgress
-                        id={`${tabsId}-hook-title-progress`}
-                        onCancel={cancelHookTitle}
-                      />
-                    ) : (
-                      <InlineFeedback
-                        tone={
-                          currentTitle?.phase === "canceled"
-                            ? "status"
-                            : "error"
-                        }
-                        message={
-                          currentTitle?.phase === "failed"
-                            ? "Couldn’t suggest a title. Retry when ready."
-                            : currentTitle?.phase === "canceled"
-                              ? "Current title kept."
-                              : undefined
-                        }
-                      />
-                    )}
-                    {currentTitle?.result?.title && (
-                      <p className="source-hint">
-                        {clip.mode === "synthetic-ai"
-                          ? "Simulated title"
-                          : "AI title"}
-                        : {currentTitle.result.title.text}
-                      </p>
-                    )}
-                  </>
-                )}
-                {sectionIssue("hook")}
-                <InlineFeedback message={messageFor("hook")} />
-              </>
-            )}
-          </ControlPanel>
-          <ControlPanel id={tabsId} value="text" active={setting}>
-            {setting === "text" && timeline("text", "Text layers")}
-            {setting === "text" && (
-              <fieldset disabled={pending}>
-                <legend className="local-sr-only">Text</legend>
-                <TextInspector
-                  id={`${tabsId}-text-controls`}
-                  hidePicker
-                  layers={draft.texts ?? []}
-                  selected={selection}
-                  onSelect={chooseText}
-                  onAdd={addText}
-                  onChange={(texts) => {
-                    if (messageArea === "text") setMessage("");
-                    update({ ...draft, texts });
-                  }}
-                  feedback={messageFor("text")}
-                  frames={base.overlay.frames}
-                  player={player}
-                  available={!playbackFailed && previewLoaded && !pending}
-                  attempt={previewAttempt}
-                  tab={textTab}
-                  onTab={setTextTab}
-                />
-                {sectionIssue("text")}
-              </fieldset>
-            )}
+                  {sectionIssue("text")}
+                </EditorInspector>
+              )}
+            </EditorInspectorLayout>
           </ControlPanel>
           <ControlPanel
             id={tabsId}
@@ -2506,7 +2781,16 @@ export function ClipEditor({
           >
             {setting === "focus" && (
               <>
-                <fieldset disabled={pending || trackingMode}>
+                <fieldset
+                  disabled={pending || trackingMode}
+                  className="camera-target-toolbar"
+                >
+                  <div className="editor-workarea-heading">
+                    <h2>Camera</h2>
+                    <span className="editor-scope-badge">
+                      {activeOccurrence === "hook" ? "Hook" : "Main clip"}
+                    </span>
+                  </div>
                   <div className="editor-fields">
                     <label>
                       Camera target
@@ -2515,6 +2799,7 @@ export function ClipEditor({
                         aria-label="Camera target"
                         value={selectedCue?.id ?? "original"}
                         onChange={(event) => {
+                          setCameraRequest(undefined);
                           const cue = draft.visuals.find(
                             (cue) => cue.id === event.currentTarget.value,
                           );
@@ -2554,6 +2839,7 @@ export function ClipEditor({
                 </fieldset>
                 {selectedCue ? (
                   <MediaCameraControls
+                    navigationRequest={cameraRequest}
                     key={activeOccurrence + selectedCue.id}
                     cue={selectedCue}
                     previewCue={overlay.visuals.find(
@@ -2583,7 +2869,7 @@ export function ClipEditor({
                         : undefined
                     }
                     onChange={setCue}
-                    footerTarget={footerTarget}
+                    actionTarget={actionTarget}
                     onTrackingMode={setTrackingMode}
                     onTrackingBusy={setTrackingBusy}
                     onInspect={(endpoint) =>
@@ -2601,6 +2887,7 @@ export function ClipEditor({
                   />
                 ) : (
                   <FocusPreviewControls
+                    navigationRequest={cameraRequest}
                     feedback={
                       error &&
                       errorSection === "focus" &&
@@ -2667,7 +2954,7 @@ export function ClipEditor({
                     }
                     onTrackingMode={setTrackingMode}
                     onTrackingBusy={setTrackingBusy}
-                    footerTarget={footerTarget}
+                    actionTarget={actionTarget}
                     cameraAvailable={Boolean(draft.focus ?? base.overlay.focus)}
                     onCameraEffects={(cameraEffects) =>
                       update({ ...draft, cameraEffects })
@@ -2695,447 +2982,557 @@ export function ClipEditor({
             )}
           </ControlPanel>
           <ControlPanel id={tabsId} value="captions" active={setting}>
-            {setting === "captions" && timeline("caption", "Caption timeline")}
-            {activeOccurrence === "hook" && !base.overlay.captions.length ? (
-              <div className="caption-empty">
-                <h4>No captions in this Hook</h4>
-                <Button
-                  variant="secondary"
-                  disabled={pending || !rootBase.overlay.captions.length}
-                  onClick={() => {
-                    const fresh = copyOwnerHookContent(
-                      rootBase,
-                      masterDraft,
-                      clip.assets,
-                      clip.audioAssets ?? [],
-                      masterDraft.hook!,
-                      undefined,
-                      clip.videoAssets,
-                    );
-                    const detached = withIndependentOwnerHook(
-                      rootBase,
-                      masterDraft,
-                      clip.assets,
-                      clip.audioAssets ?? [],
-                      masterDraft.hook,
-                      clip.videoAssets,
-                    );
-                    update(
-                      {
-                        ...detached,
-                        hookContent: {
-                          ...detached.hookContent!,
-                          captions: fresh.captions,
-                          words: fresh.words,
-                          edits: {
-                            ...detached.hookContent!.edits,
-                            captionText: [],
-                            captionSpeakers: fresh.edits.captionSpeakers,
-                            captions: fresh.edits.captions,
+            <EditorInspectorLayout
+              title="Captions"
+              collectionLabel="Caption timeline"
+              context={activeOccurrence === "hook" ? "Hook" : "Main clip"}
+              label="Caption panes"
+              paneRequest={captionTab === "text" ? "collection" : "properties"}
+              selectionKey={
+                captionTab === "text" ? undefined : timelineSelection?.key
+              }
+            >
+              {setting === "captions" &&
+                captionTab !== "text" &&
+                timeline("caption", "Caption timeline")}
+              {activeOccurrence === "hook" && !base.overlay.captions.length ? (
+                <div className="caption-empty">
+                  <h4>No captions in this Hook</h4>
+                  <Button
+                    variant="secondary"
+                    disabled={pending || !rootBase.overlay.captions.length}
+                    onClick={() => {
+                      const fresh = copyOwnerHookContent(
+                        rootBase,
+                        masterDraft,
+                        clip.assets,
+                        clip.audioAssets ?? [],
+                        masterDraft.hook!,
+                        undefined,
+                        clip.videoAssets,
+                      );
+                      const detached = withIndependentOwnerHook(
+                        rootBase,
+                        masterDraft,
+                        clip.assets,
+                        clip.audioAssets ?? [],
+                        masterDraft.hook,
+                        clip.videoAssets,
+                      );
+                      update(
+                        {
+                          ...detached,
+                          hookContent: {
+                            ...detached.hookContent!,
+                            captions: fresh.captions,
+                            words: fresh.words,
+                            edits: {
+                              ...detached.hookContent!.edits,
+                              captionText: [],
+                              captionSpeakers: fresh.edits.captionSpeakers,
+                              captions: fresh.edits.captions,
+                            },
                           },
                         },
-                      },
-                      true,
-                    );
-                  }}
-                >
-                  Copy main captions
-                </Button>
-              </div>
-            ) : !base.overlay.captions.length ? (
-              <div className="caption-empty">
-                <h4>No captions yet</h4>
-                {generating ? (
-                  <ProcessingState label="Generating captions" />
-                ) : captionConfirm ? (
-                  <p>
-                    {captionProvider === "local-speech"
-                      ? "Generate captions on this computer? This clip’s audio stays local."
-                      : "Send this clip’s audio to Gemini to generate captions? This uses Gemini credits, including in fake mode."}
-                  </p>
-                ) : (
-                  <>
-                    <div className="caption-empty-actions">
-                      <Button
-                        variant="secondary"
-                        disabled={
-                          pending ||
-                          dirty ||
-                          stale ||
-                          !captionGeneration ||
-                          (clip.captionAttempts ?? 0) >=
-                            OWNER_CAPTION_GENERATION_ATTEMPTS
-                        }
-                        onClick={() => {
-                          setCaptionConfirm(true);
-                          setMessage("");
-                        }}
-                      >
-                        Generate captions
-                      </Button>
-                      {fakeCaptionGeneration && (
+                        true,
+                      );
+                    }}
+                  >
+                    Copy main captions
+                  </Button>
+                </div>
+              ) : !base.overlay.captions.length ? (
+                <div className="caption-empty">
+                  <h4>No captions yet</h4>
+                  {generating ? (
+                    <ProcessingState label="Generating captions" />
+                  ) : captionConfirm ? (
+                    <p>
+                      {captionProvider === "local-speech"
+                        ? "Generate captions on this computer? This clip’s audio stays local."
+                        : "Send this clip’s audio to Gemini to generate captions? This uses Gemini credits, including in fake mode."}
+                    </p>
+                  ) : (
+                    <>
+                      <div className="caption-empty-actions">
                         <Button
-                          variant="quiet"
-                          disabled={pending || dirty || stale}
-                          onClick={() => void generateCaptions(true)}
+                          variant="secondary"
+                          disabled={
+                            pending ||
+                            dirty ||
+                            stale ||
+                            !captionGeneration ||
+                            (clip.captionAttempts ?? 0) >=
+                              OWNER_CAPTION_GENERATION_ATTEMPTS
+                          }
+                          onClick={() => {
+                            setCaptionConfirm(true);
+                            setMessage("");
+                          }}
                         >
-                          Generate fake captions
+                          Generate captions
                         </Button>
+                        {fakeCaptionGeneration && (
+                          <Button
+                            variant="quiet"
+                            disabled={pending || dirty || stale}
+                            onClick={() => void generateCaptions(true)}
+                          >
+                            Generate fake captions
+                          </Button>
+                        )}
+                      </div>
+                      {!captionGeneration && (
+                        <p>
+                          {captionProvider === "local-speech"
+                            ? "Local captions are unavailable. Check backend setup."
+                            : "Gemini setup is required to generate captions."}
+                        </p>
                       )}
+                      {(clip.captionAttempts ?? 0) >=
+                        OWNER_CAPTION_GENERATION_ATTEMPTS && (
+                        <p>Caption generation limit reached for this clip.</p>
+                      )}
+                      {dirty && <p>Wait for your changes to save.</p>}
+                    </>
+                  )}
+                  <InlineFeedback message={messageFor("captions")} />
+                </div>
+              ) : (
+                <>
+                  <EditorInspector
+                    title="Caption properties"
+                    disabled={pending}
+                  >
+                    <legend className="local-sr-only">Captions</legend>
+                    <ControlTabs
+                      id={`${tabsId}-caption`}
+                      label="Caption controls"
+                      items={[
+                        {
+                          value: "style",
+                          label: "Style",
+                          issue:
+                            captionIssueTab === "style"
+                              ? captionIssue
+                              : undefined,
+                        },
+                        {
+                          value: "position",
+                          label: "Position",
+                          issue:
+                            captionIssueTab === "position"
+                              ? captionIssue
+                              : undefined,
+                        },
+                        {
+                          value: "text",
+                          label: "Text",
+                          issue:
+                            captionIssueTab === "text"
+                              ? captionIssue
+                              : undefined,
+                        },
+                        {
+                          value: "speakers",
+                          label: "Speakers",
+                          issue:
+                            captionIssueTab === "speakers"
+                              ? captionIssue
+                              : undefined,
+                        },
+                      ]}
+                      value={captionTab}
+                      onChange={setCaptionTab}
+                    />
+                    <div
+                      role="tabpanel"
+                      id={`${tabsId}-caption-style-panel`}
+                      aria-labelledby={`${tabsId}-caption-style`}
+                      hidden={captionTab !== "style"}
+                      tabIndex={0}
+                    >
+                      <TypographyFields
+                        feedback={
+                          <InlineFeedback
+                            message={
+                              !draft.captionText?.some((word) =>
+                                captionWordError(word.text),
+                              ) && captionIssueTab === "style"
+                                ? captionIssue
+                                : undefined
+                            }
+                          />
+                        }
+                        value={caption}
+                        onChange={(style) =>
+                          setCaption({ ...caption, ...style })
+                        }
+                        onPreset={(preset) =>
+                          setCaption(ownerCaptionPreset(caption, preset))
+                        }
+                      />
+                      <div className="editor-fields">
+                        <label>
+                          Animation
+                          <select
+                            className="select-control"
+                            value={caption.animation ?? "highlight"}
+                            onChange={(event) =>
+                              setCaption({
+                                ...caption,
+                                animation: event.currentTarget
+                                  .value as NonNullable<
+                                  OwnerCaptionStyle["animation"]
+                                >,
+                              })
+                            }
+                          >
+                            {OWNER_CAPTION_ANIMATIONS.map((animation) => (
+                              <option key={animation} value={animation}>
+                                {
+                                  {
+                                    highlight: "Spoken-word highlight",
+                                    pop: "Word pop",
+                                    slide: "Sliding highlight",
+                                    bounce: "Word bounce",
+                                    reveal: "Typewriter reveal",
+                                    "single-word": "Word by word",
+                                    fade: "Line fade",
+                                    none: "Static",
+                                  }[animation]
+                                }
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Highlight
+                          <EditorColorControl
+                            value={caption.highlight}
+                            onChange={(event) =>
+                              setCaption({
+                                ...caption,
+                                highlight: event.currentTarget.value,
+                              })
+                            }
+                          />
+                        </label>
+                      </div>
                     </div>
-                    {!captionGeneration && (
-                      <p>
-                        {captionProvider === "local-speech"
-                          ? "Local captions are unavailable. Check backend setup."
-                          : "Gemini setup is required to generate captions."}
-                      </p>
-                    )}
-                    {(clip.captionAttempts ?? 0) >=
-                      OWNER_CAPTION_GENERATION_ATTEMPTS && (
-                      <p>Caption generation limit reached for this clip.</p>
-                    )}
-                    {dirty && <p>Apply or discard your changes first.</p>}
-                  </>
-                )}
-                <InlineFeedback message={messageFor("captions")} />
-              </div>
-            ) : (
-              <>
-                <fieldset disabled={pending}>
-                  <legend className="local-sr-only">Captions</legend>
-                  <ControlTabs
-                    id={`${tabsId}-caption`}
-                    label="Caption controls"
-                    items={[
-                      {
-                        value: "style",
-                        label: "Style",
-                        issue:
-                          captionIssueTab === "style"
-                            ? captionIssue
-                            : undefined,
-                      },
-                      {
-                        value: "position",
-                        label: "Position",
-                        issue:
+                    <div
+                      role="tabpanel"
+                      id={`${tabsId}-caption-position-panel`}
+                      aria-labelledby={`${tabsId}-caption-position`}
+                      hidden={captionTab !== "position"}
+                      tabIndex={0}
+                    >
+                      <TextPositionFields
+                        label="Caption"
+                        defaultCenter={OWNER_CAPTION_DEFAULT_CENTER_Y}
+                        style={caption}
+                        onChange={(box, centered) =>
+                          setCaption({
+                            ...caption,
+                            ...(centered
+                              ? { align: "center", verticalAlign: "center" }
+                              : {}),
+                            box,
+                          })
+                        }
+                      />
+                      <InlineFeedback
+                        message={
                           captionIssueTab === "position"
                             ? captionIssue
-                            : undefined,
-                      },
-                      {
-                        value: "text",
-                        label: "Text",
-                        issue:
-                          captionIssueTab === "text" ? captionIssue : undefined,
-                      },
-                      {
-                        value: "speakers",
-                        label: "Speakers",
-                        issue:
+                            : undefined
+                        }
+                      />
+                    </div>
+                    <Button
+                      variant="secondary"
+                      type="button"
+                      hidden={
+                        captionTab === "text" || captionTab === "speakers"
+                      }
+                      onClick={() => update({ ...draft, captions: null })}
+                    >
+                      Reset captions
+                    </Button>
+                    <div
+                      role="tabpanel"
+                      id={`${tabsId}-caption-text-panel`}
+                      aria-labelledby={`${tabsId}-caption-text`}
+                      hidden={captionTab !== "text"}
+                      tabIndex={0}
+                    >
+                      {captionTab === "text" && (
+                        <EditorCollection disabled={pending}>
+                          <CaptionTextEditor
+                            selectedIndex={
+                              timelineSelection?.kind === "caption"
+                                ? timelineSelection.index
+                                : undefined
+                            }
+                            startIndex={0}
+                            captions={base.overlay.captions}
+                            edits={draft.captionText}
+                            player={player}
+                            available={
+                              setting === "captions" &&
+                              previewLoaded &&
+                              !playbackFailed &&
+                              !pending
+                            }
+
+                            frames={base.overlay.frames}
+                            onChange={(captionText) =>
+                              update({ ...draft, captionText })
+                            }
+                          />
+                        </EditorCollection>
+                      )}
+                    </div>
+                    <div
+                      role="tabpanel"
+                      id={`${tabsId}-caption-speakers-panel`}
+                      aria-labelledby={`${tabsId}-caption-speakers`}
+                      hidden={captionTab !== "speakers"}
+                      tabIndex={0}
+                    >
+                      {captionTab === "speakers" && overlay.captionSpeakers && (
+                        <CaptionSpeakers
+                          value={overlay.captionSpeakers}
+                          captions={overlay.captions}
+                          style={caption}
+                          onChange={(captionSpeakers) =>
+                            update({ ...draft, captionSpeakers })
+                          }
+                        />
+                      )}
+                      <InlineFeedback
+                        message={
                           captionIssueTab === "speakers"
                             ? captionIssue
-                            : undefined,
-                      },
-                    ]}
-                    value={captionTab}
-                    onChange={setCaptionTab}
-                  />
-                  <div
-                    role="tabpanel"
-                    id={`${tabsId}-caption-style-panel`}
-                    aria-labelledby={`${tabsId}-caption-style`}
-                    hidden={captionTab !== "style"}
-                    tabIndex={0}
-                  >
-                    <TypographyFields
-                      feedback={
-                        <InlineFeedback
-                          message={
-                            !draft.captionText?.some((word) =>
-                              captionWordError(word.text),
-                            ) && captionIssueTab === "style"
-                              ? captionIssue
-                              : undefined
-                          }
-                        />
-                      }
-                      value={caption}
-                      onChange={(style) => setCaption({ ...caption, ...style })}
-                      onPreset={(preset) =>
-                        setCaption(ownerCaptionPreset(caption, preset))
-                      }
-                    />
-                    <div className="editor-fields">
-                      <label>
-                        Animation
-                        <select
-                          className="select-control"
-                          value={caption.animation ?? "highlight"}
-                          onChange={(event) =>
-                            setCaption({
-                              ...caption,
-                              animation: event.currentTarget
-                                .value as NonNullable<
-                                OwnerCaptionStyle["animation"]
-                              >,
-                            })
-                          }
-                        >
-                          {OWNER_CAPTION_ANIMATIONS.map((animation) => (
-                            <option key={animation} value={animation}>
-                              {
-                                {
-                                  highlight: "Spoken-word highlight",
-                                  pop: "Word pop",
-                                  slide: "Sliding highlight",
-                                  bounce: "Word bounce",
-                                  reveal: "Typewriter reveal",
-                                  "single-word": "Word by word",
-                                  fade: "Line fade",
-                                  none: "Static",
-                                }[animation]
-                              }
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        Highlight
-                        <input
-                          type="color"
-                          value={caption.highlight}
-                          onChange={(event) =>
-                            setCaption({
-                              ...caption,
-                              highlight: event.currentTarget.value,
-                            })
-                          }
-                        />
-                      </label>
+                            : undefined
+                        }
+                      />
                     </div>
-                  </div>
-                  <div
-                    role="tabpanel"
-                    id={`${tabsId}-caption-position-panel`}
-                    aria-labelledby={`${tabsId}-caption-position`}
-                    hidden={captionTab !== "position"}
-                    tabIndex={0}
-                  >
-                    <TextPositionFields
-                      label="Caption"
-                      defaultCenter={OWNER_CAPTION_DEFAULT_CENTER_Y}
-                      style={caption}
-                      onChange={(box, centered) =>
-                        setCaption({
-                          ...caption,
-                          ...(centered
-                            ? { align: "center", verticalAlign: "center" }
-                            : {}),
-                          box,
-                        })
-                      }
-                    />
-                    <InlineFeedback
-                      message={
-                        captionIssueTab === "position"
-                          ? captionIssue
-                          : undefined
-                      }
-                    />
-                  </div>
-                  <Button
-                    variant="secondary"
-                    type="button"
-                    hidden={captionTab === "text" || captionTab === "speakers"}
-                    onClick={() => update({ ...draft, captions: null })}
-                  >
-                    Reset captions
-                  </Button>
-                  <div
-                    role="tabpanel"
-                    id={`${tabsId}-caption-text-panel`}
-                    aria-labelledby={`${tabsId}-caption-text`}
-                    hidden={captionTab !== "text"}
-                    tabIndex={0}
-                  >
-                    {captionTab === "text" && (
-                      <CaptionTextEditor
-                        startIndex={
-                          timelineSelection?.kind === "caption" &&
-                          timelineSelection.occurrence === activeOccurrence
-                            ? timelineSelection.index
-                            : 0
-                        }
-                        captions={
-                          timelineSelection?.kind === "caption" &&
-                          timelineSelection.occurrence === activeOccurrence &&
-                          base.overlay.captions[timelineSelection.index]
-                            ? [base.overlay.captions[timelineSelection.index]!]
-                            : base.overlay.captions
-                        }
-                        edits={draft.captionText}
-                        player={player}
-                        available={
-                          setting === "captions" &&
-                          previewLoaded &&
-                          !playbackFailed &&
-                          !pending
-                        }
-
-                        frames={base.overlay.frames}
-                        onChange={(captionText) =>
-                          update({ ...draft, captionText })
-                        }
-                      />
-                    )}
-                  </div>
-                  <div
-                    role="tabpanel"
-                    id={`${tabsId}-caption-speakers-panel`}
-                    aria-labelledby={`${tabsId}-caption-speakers`}
-                    hidden={captionTab !== "speakers"}
-                    tabIndex={0}
-                  >
-                    {captionTab === "speakers" && overlay.captionSpeakers && (
-                      <CaptionSpeakers
-                        value={overlay.captionSpeakers}
-                        captions={overlay.captions}
-                        style={caption}
-                        onChange={(captionSpeakers) =>
-                          update({ ...draft, captionSpeakers })
-                        }
-                      />
-                    )}
-                    <InlineFeedback
-                      message={
-                        captionIssueTab === "speakers"
-                          ? captionIssue
-                          : undefined
-                      }
-                    />
-                  </div>
-                </fieldset>
-              </>
-            )}
+                  </EditorInspector>
+                </>
+              )}
+            </EditorInspectorLayout>
           </ControlPanel>
           <ControlPanel id={tabsId} value="filters" active={setting}>
-            {setting === "filters" && timeline("look", "Filter timeline")}
-            {setting === "filters" && (
-              <FilterInspector
-                feedback={
-                  errorSection === "filters" &&
-                  errorOccurrence === activeOccurrence
-                    ? (error ?? messageFor("filters"))
-                    : messageFor("filters")
-                }
-                cue={selectedFilter}
-                frames={base.overlay.frames}
-                player={player}
-                available={
-                  previewLoaded &&
-                  !playbackFailed &&
-                  !pending &&
-                  !previewUnavailable
-                }
-                attempt={previewAttempt}
-                disabled={pending}
-                onChange={changeFilter}
-              />
-            )}
+            <EditorInspectorLayout
+              title="Filters"
+              collectionLabel="Timed ranges"
+              context={activeOccurrence === "hook" ? "Hook" : "Main clip"}
+              label="Filter panes"
+              selectionKey={timelineSelection?.key}
+            >
+              {setting === "filters" && timeline("look", "Filter timeline")}
+              {setting === "filters" && (
+                <EditorInspector title="Filter properties" disabled={pending}>
+                  <FilterInspector
+                    sourceUrl={`${endpoint}/source`}
+                    feedback={
+                      errorSection === "filters" &&
+                      errorOccurrence === activeOccurrence
+                        ? (error ?? messageFor("filters"))
+                        : messageFor("filters")
+                    }
+                    cue={selectedFilter}
+                    frames={base.overlay.frames}
+                    player={player}
+                    available={
+                      previewLoaded &&
+                      !playbackFailed &&
+                      !pending &&
+                      !previewUnavailable
+                    }
+                    attempt={previewAttempt}
+                    disabled={pending}
+                    onChange={changeFilter}
+                  />
+                </EditorInspector>
+              )}
+            </EditorInspectorLayout>
           </ControlPanel>
           <ControlPanel id={tabsId} value="pictures" active={setting}>
-            <ControlTabs
-              id={`${tabsId}-media`}
-              label="Media controls"
-              items={[
-                { value: "pictures", label: "Pictures" },
-                { value: "videos", label: "Videos" },
-                { value: "audio", label: "Audio" },
-              ]}
-              value={mediaTab}
-              onChange={(value) => {
-                setMediaTab(value);
-                if (value !== "audio") {
-                  const first = draft.visuals.find(
-                    (cue) => Boolean(cue.video) === (value === "videos"),
-                  );
-                  setSelection(first?.id ?? "");
-                }
-              }}
-              disabled={pending || audioImport !== null}
-            />
-            <div
-              role="tabpanel"
-              id={`${tabsId}-media-${mediaTab === "videos" ? "videos" : "pictures"}-panel`}
-              aria-labelledby={`${tabsId}-media-${mediaTab === "videos" ? "videos" : "pictures"}`}
-              hidden={mediaTab !== "pictures" && mediaTab !== "videos"}
+            <EditorInspectorLayout
+              title="Media"
+              collectionLabel="Your media"
+              context={activeOccurrence === "hook" ? "Hook" : "Main clip"}
+              label="Media panes"
+              selectionKey={`${mediaTab}:${timelineSelection?.key ?? selection}`}
             >
-              {setting === "pictures" &&
-                (mediaTab === "pictures" || mediaTab === "videos") &&
-                timeline("picture", "Visual timeline")}
-              <VisualLayers
-                cues={draft.visuals}
-                selected={selection}
-                disabled={pending}
-                onSelect={choosePicture}
-                onChange={(visuals) => update({ ...draft, visuals })}
+              <ControlTabs
+                id={`${tabsId}-media`}
+                label="Media controls"
+                items={[
+                  { value: "pictures", label: "Pictures" },
+                  { value: "videos", label: "Videos" },
+                  { value: "audio", label: "Audio" },
+                ]}
+                value={mediaTab}
+                onChange={(value) => {
+                  setMediaTab(value);
+                  if (value !== "audio") {
+                    const first = draft.visuals.find(
+                      (cue) => Boolean(cue.video) === (value === "videos"),
+                    );
+                    setSelection(first?.id ?? "");
+                  }
+                }}
+                disabled={pending || audioImport !== null}
               />
               <div
-                className="picture-tools"
-                aria-label="AI visuals"
-                hidden={mediaTab === "videos"}
+                role="tabpanel"
+                id={`${tabsId}-media-${mediaTab === "videos" ? "videos" : "pictures"}-panel`}
+                aria-labelledby={`${tabsId}-media-${mediaTab === "videos" ? "videos" : "pictures"}`}
+                hidden={mediaTab !== "pictures" && mediaTab !== "videos"}
               >
-                <Button
-                  variant="secondary"
-                  onClick={() => void findVisuals()}
-                  disabled={
-                    pending ||
-                    dirty ||
-                    stale ||
-                    !visualDiscovery ||
-                    activeOccurrence === "hook" ||
-                    draft.visuals.filter(
-                      (cue) =>
-                        clip.assets.find((asset) => asset.id === cue.assetId)
-                          ?.origin === "owner-supplied",
-                    ).length >= OWNER_PICTURE_LIMITS.cuesPerClip ||
-                    (clip.visualAttempts ?? 0) >=
-                      OWNER_BATCH_POLICY.visualDiscoveryAttempts ||
-                    clip.assets.length >= OWNER_PICTURE_LIMITS.assetsPerClip
-                  }
-                  title={
-                    dirty ? "Apply or discard your edits first" : undefined
-                  }
+                {setting === "pictures" &&
+                  (mediaTab === "pictures" || mediaTab === "videos") &&
+                  timeline("picture", "Visual timeline")}
+                <VisualLayers
+                  cues={draft.visuals}
+                  selected={selection}
+                  disabled={pending}
+                  onChange={(visuals) => update({ ...draft, visuals })}
+                />
+                <div
+                  className="picture-tools"
+                  aria-label="AI visuals"
+                  hidden={mediaTab === "videos"}
                 >
-                  {findingVisuals ? (
-                    <LoaderCircle
-                      size={18}
-                      className="acquisition-spinner"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <Sparkles size={18} aria-hidden="true" />
-                  )}
-                  {findingVisuals ? "Finding visuals…" : "Find visuals"}
-                </Button>
-                {findingVisuals && (
-                  <Button
-                    variant="quiet"
-                    aria-label="Cancel visual search"
-                    onClick={() => request.current?.abort()}
-                  >
-                    Cancel
-                  </Button>
-                )}
-              </div>
-              <fieldset disabled={pending}>
-                <legend className="local-sr-only">
-                  {mediaTab === "videos" ? "Videos" : "Pictures"}
-                </legend>
-                <div className="picture-tools">
                   <Button
                     variant="secondary"
+                    onClick={() => void findVisuals()}
+                    disabled={
+                      pending ||
+                      dirty ||
+                      stale ||
+                      !visualDiscovery ||
+                      activeOccurrence === "hook" ||
+                      draft.visuals.filter(
+                        (cue) =>
+                          clip.assets.find((asset) => asset.id === cue.assetId)
+                            ?.origin === "owner-supplied",
+                      ).length >= OWNER_PICTURE_LIMITS.cuesPerClip ||
+                      (clip.visualAttempts ?? 0) >=
+                        OWNER_BATCH_POLICY.visualDiscoveryAttempts ||
+                      clip.assets.length >= OWNER_PICTURE_LIMITS.assetsPerClip
+                    }
+                    title={dirty ? "Wait for your changes to save" : undefined}
+                  >
+                    {findingVisuals ? (
+                      <LoaderCircle
+                        size={18}
+                        className="acquisition-spinner"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <Sparkles size={18} aria-hidden="true" />
+                    )}
+                    {findingVisuals ? "Finding visuals…" : "Find visuals"}
+                  </Button>
+                  {findingVisuals && (
+                    <Button
+                      variant="quiet"
+                      aria-label="Cancel visual search"
+                      onClick={() => request.current?.abort()}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+                <fieldset disabled={pending}>
+                  <legend className="local-sr-only">
+                    {mediaTab === "videos" ? "Videos" : "Pictures"}
+                  </legend>
+                  <div className="picture-tools">
+                    <Button
+                      variant="secondary"
+                      disabled={
+                        pending ||
+                        (mediaTab === "videos"
+                          ? (clip.videoAssets?.length ?? 0) >=
+                            OWNER_VIDEO_LIMITS.assets
+                          : clip.assets.length >=
+                            OWNER_PICTURE_LIMITS.assetsPerClip) ||
+                        draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
+                      }
+                      onClick={() => pictureInput.current?.click()}
+                    >
+                      {pending && !findingVisuals ? (
+                        <LoaderCircle
+                          size={18}
+                          className="acquisition-spinner"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Upload size={18} aria-hidden="true" />
+                      )}
+                      {pending && !findingVisuals
+                        ? "Uploading…"
+                        : mediaTab === "videos"
+                          ? "Upload video"
+                          : "Upload image"}
+                    </Button>
+                    <Button
+                      variant="quiet"
+                      disabled={
+                        !(mediaTab === "videos"
+                          ? clip.videoAssets?.length
+                          : clip.assets.length) ||
+                        draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
+                      }
+                      onClick={() => {
+                        const cue = newPicture(
+                          (selectedCue &&
+                          Boolean(selectedCue.video) === (mediaTab === "videos")
+                            ? selectedCue.assetId
+                            : undefined) ??
+                            (mediaTab === "videos"
+                              ? clip.videoAssets![0]!.id
+                              : clip.assets[0]!.id),
+                        );
+                        if (mediaTab === "videos") {
+                          const asset = clip.videoAssets!.find(
+                            (asset) => asset.id === cue.assetId,
+                          )!;
+                          cue.video = {
+                            offsetFrame: 0,
+                            sourceEndFrame: asset.frames,
+                            volume: 100,
+                            muted: true,
+                          };
+                          cue.endFrame = Math.min(
+                            cue.endFrame,
+                            cue.startFrame + asset.frames,
+                          );
+                        }
+                        update({ ...draft, visuals: [...draft.visuals, cue] });
+                        choosePicture(cue);
+                      }}
+                    >
+                      {mediaTab === "videos" ? "Add video" : "Add picture"}
+                    </Button>
+                  </div>
+                  <input
+                    ref={pictureInput}
+                    className="local-file-input"
+                    aria-label={
+                      mediaTab === "videos" ? "Upload video" : "Upload picture"
+                    }
+                    type="file"
+                    accept={
+                      mediaTab === "videos"
+                        ? "video/mp4,video/quicktime"
+                        : "image/jpeg,image/png,image/webp"
+                    }
                     disabled={
                       pending ||
                       (mediaTab === "videos"
@@ -3145,517 +3542,447 @@ export function ClipEditor({
                           OWNER_PICTURE_LIMITS.assetsPerClip) ||
                       draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
                     }
-                    onClick={() => pictureInput.current?.click()}
-                  >
-                    {pending && !findingVisuals ? (
-                      <LoaderCircle
-                        size={18}
-                        className="acquisition-spinner"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <Upload size={18} aria-hidden="true" />
-                    )}
-                    {pending && !findingVisuals
-                      ? "Uploading…"
-                      : mediaTab === "videos"
-                        ? "Upload video"
-                        : "Upload image"}
-                  </Button>
-                  <Button
-                    variant="quiet"
-                    disabled={
-                      !(mediaTab === "videos"
-                        ? clip.videoAssets?.length
-                        : clip.assets.length) ||
-                      draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
-                    }
-                    onClick={() => {
-                      const cue = newPicture(
-                        (selectedCue &&
-                        Boolean(selectedCue.video) === (mediaTab === "videos")
-                          ? selectedCue.assetId
-                          : undefined) ??
-                          (mediaTab === "videos"
-                            ? clip.videoAssets![0]!.id
-                            : clip.assets[0]!.id),
-                      );
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
                       if (mediaTab === "videos") {
-                        const asset = clip.videoAssets!.find(
-                          (asset) => asset.id === cue.assetId,
-                        )!;
-                        cue.video = {
-                          offsetFrame: 0,
-                          sourceEndFrame: asset.frames,
-                          volume: 100,
-                          muted: true,
-                        };
-                        cue.endFrame = Math.min(
-                          cue.endFrame,
-                          cue.startFrame + asset.frames,
-                        );
-                      }
-                      update({ ...draft, visuals: [...draft.visuals, cue] });
-                      choosePicture(cue);
-                    }}
-                  >
-                    {mediaTab === "videos" ? "Add video" : "Add picture"}
-                  </Button>
-                </div>
-                <input
-                  ref={pictureInput}
-                  className="local-file-input"
-                  aria-label={
-                    mediaTab === "videos" ? "Upload video" : "Upload picture"
-                  }
-                  type="file"
-                  accept={
-                    mediaTab === "videos"
-                      ? "video/mp4,video/quicktime"
-                      : "image/jpeg,image/png,image/webp"
-                  }
-                  disabled={
-                    pending ||
-                    (mediaTab === "videos"
-                      ? (clip.videoAssets?.length ?? 0) >=
-                        OWNER_VIDEO_LIMITS.assets
-                      : clip.assets.length >=
-                        OWNER_PICTURE_LIMITS.assetsPerClip) ||
-                    draft.visuals.length >= OWNER_PICTURE_LIMITS.cuesPerClip
-                  }
-                  onChange={(event) => {
-                    const file = event.currentTarget.files?.[0];
-                    if (mediaTab === "videos") {
-                      if (
-                        file &&
-                        file.size > 0 &&
-                        file.size <= OWNER_VIDEO_LIMITS.inputBytes
-                      )
-                        void perform("video", file);
-                      else {
-                        ownMessage("pictures");
-                        setMessage("Choose an MP4 or MOV under 64 MB.");
-                      }
-                    } else upload(file);
-                    event.currentTarget.value = "";
-                  }}
-                />
-                <p className="source-hint">
-                  {mediaTab === "videos"
-                    ? "MP4, MOV · Max 64 MB · 2 minutes"
-                    : "JPEG, PNG, WebP · Max 4 MB"}
-                </p>
-                <InlineFeedback message={messageFor("pictures")} />
-                {selectedCue &&
-                  Boolean(selectedCue.video) === (mediaTab === "videos") && (
-                    <>
-                      <ControlTabs
-                        id={`${tabsId}-picture`}
-                        label={
-                          selectedCue.video
-                            ? "Video controls"
-                            : "Picture controls"
+                        if (
+                          file &&
+                          file.size > 0 &&
+                          file.size <= OWNER_VIDEO_LIMITS.inputBytes
+                        )
+                          void perform("video", file);
+                        else {
+                          ownMessage("pictures");
+                          setMessage("Choose an MP4 or MOV under 64 MB.");
                         }
-                        items={[
-                          {
-                            value: "image",
-                            label: selectedCue.video ? "Video" : "Image",
-                            issue:
-                              pictureIssueTab === "image"
-                                ? pictureIssue
-                                : undefined,
-                          },
-                          {
-                            value: "timing",
-                            label: "Timing",
-                            issue:
-                              pictureIssueTab === "timing"
-                                ? pictureIssue
-                                : undefined,
-                          },
-                          {
-                            value: "position",
-                            label: "Position",
-                            issue:
-                              pictureIssueTab === "position"
-                                ? pictureIssue
-                                : undefined,
-                          },
-                        ]}
-                        value={pictureTab}
-                        onChange={setPictureTab}
-                      />
-                      <div
-                        role="tabpanel"
-                        id={`${tabsId}-picture-image-panel`}
-                        aria-labelledby={`${tabsId}-picture-image`}
-                        hidden={pictureTab !== "image"}
-                        tabIndex={0}
+                      } else upload(file);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                  <p className="source-hint">
+                    {mediaTab === "videos"
+                      ? "MP4, MOV · Max 64 MB · 2 minutes"
+                      : "JPEG, PNG, WebP · Max 4 MB"}
+                  </p>
+                  <InlineFeedback message={messageFor("pictures")} />
+                  {selectedCue &&
+                    Boolean(selectedCue.video) === (mediaTab === "videos") && (
+                      <EditorInspector
+                        title={
+                          selectedCue.video
+                            ? "Video properties"
+                            : "Picture properties"
+                        }
+                        disabled={pending}
                       >
-                        <VisualPresentation
-                          validationMessage={
-                            errorPath.includes("focal") ||
-                            errorPath.includes("presentation")
-                              ? pictureIssue
-                              : undefined
+                        <ControlTabs
+                          id={`${tabsId}-picture`}
+                          label={
+                            selectedCue.video
+                              ? "Video controls"
+                              : "Picture controls"
                           }
-                          cue={selectedCue}
-                          onChange={setCue}
-                          onBackground={(cue) =>
-                            update({
-                              ...draft,
-                              visuals: [
-                                cue,
-                                ...draft.visuals.filter(
-                                  (item) => item.id !== cue.id,
-                                ),
-                              ],
-                            })
-                          }
-                        />
-                        {selectedCue.video &&
-                          clip.videoAssets?.find(
-                            (asset) => asset.id === selectedCue.assetId,
-                          ) && (
-                            <VideoSourceControls
-                              active={
-                                setting === "pictures" &&
-                                mediaTab === "videos" &&
-                                pictureTab === "image" &&
-                                !pending
-                              }
-                              validationMessage={
-                                errorPath.includes("video")
+                          items={[
+                            {
+                              value: "image",
+                              label: selectedCue.video ? "Video" : "Image",
+                              issue:
+                                pictureIssueTab === "image"
                                   ? pictureIssue
-                                  : undefined
-                              }
-                              key={selectedCue.id}
-                              workspaceId={workspaceId}
-                              cue={selectedCue}
-                              asset={clip.videoAssets.find(
-                                (asset) => asset.id === selectedCue.assetId,
-                              )!}
-                              onChange={setCue}
-                            />
-                          )}
-                        <div className="editor-fields">
-                          <label>
-                            {selectedCue.video ? "Video" : "Image"}
-                            <select
-                              className="select-control"
-                              value={selectedCue.assetId}
-                              onChange={(event) =>
-                                setCue({
-                                  ...selectedCue,
-                                  assetId: event.currentTarget.value,
-                                })
-                              }
-                            >
-                              {(selectedCue.video
-                                ? (clip.videoAssets ?? [])
-                                : clip.assets
-                              ).map((asset, index) => (
-                                <option key={asset.id} value={asset.id}>
-                                  {selectedCue.video ? "Video" : "Image"}{" "}
-                                  {index + 1}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label>
-                            Fit
-                            <select
-                              className="select-control"
-                              value={selectedCue.fit}
-                              onChange={(event) =>
-                                setCue({
-                                  ...selectedCue,
-                                  fit: event.currentTarget
-                                    .value as OwnerVisualEdit["fit"],
-                                })
-                              }
-                            >
-                              <option value="contain">Fit</option>
-                              <option value="cover">Fill</option>
-                            </select>
-                          </label>
-                        </div>
-                        <Button
-                          variant="quiet"
-                          onClick={() => {
-                            update({
-                              ...draft,
-                              visuals: draft.visuals.filter(
-                                (cue) => cue.id !== selectedCue.id,
-                              ),
-                            });
-                            setSelection(
-                              draft.visuals.find(
-                                (cue) => cue.id !== selectedCue.id,
-                              )?.id ?? "captions",
-                            );
-                          }}
-                        >
-                          {selectedCue.video
-                            ? "Remove video"
-                            : "Remove picture"}
-                        </Button>
-                        {pictureIssueTab === "image" &&
-                          !errorPath.some((part) =>
-                            ["video", "focal", "presentation"].includes(
-                              String(part),
-                            ),
-                          ) && <InlineFeedback message={pictureIssue} />}
-                      </div>
-                      <div
-                        role="tabpanel"
-                        id={`${tabsId}-picture-timing-panel`}
-                        aria-labelledby={`${tabsId}-picture-timing`}
-                        hidden={pictureTab !== "timing"}
-                        tabIndex={0}
-                      >
-                        <PictureTiming
-                          label={selectedCue.video ? "Video" : "Picture"}
-                          key={selectedCue.id}
-                          validationMessage={
-                            pictureIssueTab === "timing"
-                              ? (pictureIssue ?? undefined)
-                              : undefined
-                          }
-                          cue={selectedCue}
-                          frames={base.overlay.frames}
-                          player={player}
-                          available={
-                            setting === "pictures" &&
-                            pictureTab === "timing" &&
-                            previewLoaded &&
-                            !playbackFailed &&
-                            !pending
-                          }
-                          attempt={previewAttempt}
-                          onChange={setCue}
+                                  : undefined,
+                            },
+                            {
+                              value: "timing",
+                              label: "Timing",
+                              issue:
+                                pictureIssueTab === "timing"
+                                  ? pictureIssue
+                                  : undefined,
+                            },
+                            {
+                              value: "position",
+                              label: "Position",
+                              issue:
+                                pictureIssueTab === "position"
+                                  ? pictureIssue
+                                  : undefined,
+                            },
+                          ]}
+                          value={pictureTab}
+                          onChange={setPictureTab}
                         />
-                      </div>
-                      <div
-                        role="tabpanel"
-                        id={`${tabsId}-picture-position-panel`}
-                        aria-labelledby={`${tabsId}-picture-position`}
-                        hidden={pictureTab !== "position"}
-                        tabIndex={0}
-                      >
                         <div
-                          className="position-presets"
-                          role="group"
-                          aria-label="Picture position"
+                          role="tabpanel"
+                          id={`${tabsId}-picture-image-panel`}
+                          aria-labelledby={`${tabsId}-picture-image`}
+                          hidden={pictureTab !== "image"}
+                          tabIndex={0}
                         >
-                          {(
-                            [
-                              { center: 0.25, label: "Upper half" },
-                              { center: 0.5, label: "Center" },
-                              { center: 0.75, label: "Lower half" },
-                            ] as const
-                          ).map((item) => (
-                            <Button
-                              key={item.center}
-                              variant="secondary"
-                              aria-pressed={
-                                Math.abs(
-                                  selectedCue.box.x +
-                                    selectedCue.box.width / 2 -
-                                    0.5,
-                                ) < 0.00001 &&
-                                Math.abs(
-                                  selectedCue.box.y +
-                                    selectedCue.box.height / 2 -
-                                    item.center,
-                                ) < 0.00001
-                              }
-                              onClick={() =>
-                                setCue({
-                                  ...selectedCue,
-                                  box: centeredOwnerBox(
-                                    selectedCue.box,
-                                    item.center,
-                                    null,
-                                  ),
-                                })
-                              }
-                            >
-                              {item.label}
-                            </Button>
-                          ))}
-                        </div>
-                        <BoxFields
-                          label="Picture"
-                          box={selectedCue.box}
-                          onChange={(box) => setCue({ ...selectedCue, box })}
-                        />
-                        {pictureIssueTab === "position" && (
-                          <InlineFeedback message={pictureIssue} />
-                        )}
-                      </div>
-                    </>
-                  )}
-              </fieldset>
-            </div>
-            <div
-              role="tabpanel"
-              id={`${tabsId}-media-audio-panel`}
-              aria-labelledby={`${tabsId}-media-audio`}
-              hidden={mediaTab !== "audio"}
-            >
-              {setting === "pictures" &&
-                mediaTab === "audio" &&
-                audioImport === null &&
-                timeline("audio", "Audio timeline")}
-              {setting === "pictures" &&
-                mediaTab === "audio" &&
-                audioImport !== null && (
-                  <YoutubeAudioIntake
-                    value={audioImport}
-                    pending={pending}
-                    onChange={setAudioImport}
-                    message={message}
-                    onDownload={() => void perform("youtube-audio")}
-                    onBack={() => {
-                      request.current?.abort();
-                      setAudioUploading(false);
-                      setAudioImport(null);
-                      setMessage("");
-                    }}
-                  />
-                )}
-              {setting === "pictures" &&
-                mediaTab === "audio" &&
-                audioImport === null && (
-                  <AudioInspector
-                    uploadFeedback={messageFor("audio")}
-                    validationFeedback={
-                      errorSection === "pictures" &&
-                      errorField === "audio" &&
-                      errorOccurrence === activeOccurrence
-                        ? (error ?? undefined)
-                        : undefined
-                    }
-                    key={`${activeOccurrence}:${importedAudioCue ?? ""}:${audioPicture ?? ""}`}
-                    hideCueList
-                    linkedVisual={draft.visuals.find(
-                      (cue) => cue.id === audioPicture,
-                    )}
-                    onBackToPicture={
-                      audioPicture
-                        ? () => {
-                            setAudioPicture(undefined);
-                            setMediaTab("pictures");
-                          }
-                        : undefined
-                    }
-                    audio={draft.audio}
-                    visuals={overlay.visuals}
-                    assets={clip.audioAssets ?? []}
-                    frames={base.overlay.frames}
-                    hook={draft.hook}
-                    player={player}
-                    available={!playbackFailed && previewLoaded}
-                    attempt={previewAttempt}
-                    pending={pending || !!hookDraft}
-                    initialCueId={importedAudioCue}
-                    onHookSound={
-                      masterDraft.hook && !hookDraft && !audioPicture
-                        ? (soundId) => {
-                            player.current?.pause();
-                            ownMessage("audio");
-                            try {
-                              const next = changeHook(masterDraft.hook, {
-                                soundId,
-                                audio: true,
-                              });
-                              ownMessage("audio");
-                              const cue =
-                                next?.hookContent?.edits.audio?.cues.find(
-                                  (cue) => cue.suggestedHook,
-                                );
-                              if (cue) {
-                                setImportedAudioCue(cue.id);
-                                setTimelineSelection({
-                                  key: `hook:audio:${cue.id}`,
-                                  kind: "audio",
-                                  occurrence: "hook",
-                                  id: cue.id,
-                                  index:
-                                    next!.hookContent!.edits.audio!.cues.indexOf(
-                                      cue,
-                                    ),
-                                  title: "",
-                                  startFrame: 0,
-                                  endFrame: 0,
-                                });
-                                setMessage("");
-                              }
-                            } catch {
-                              ownMessage("audio");
-                              setMessage(
-                                "Remove an audio layer to make room for the Hook’s riser.",
-                              );
+                          <VisualPresentation
+                            validationMessage={
+                              errorPath.includes("focal") ||
+                              errorPath.includes("presentation")
+                                ? pictureIssue
+                                : undefined
                             }
-                          }
-                        : undefined
-                    }
-                    onYoutube={
-                      youtubeAudio
-                        ? () => {
-                            setMessage("");
-                            setCaptionConfirm(false);
-                            setImportedAudioCue(undefined);
-                            player.current?.pause();
-                            setAudioImport("");
-                          }
-                        : undefined
-                    }
-                    onChange={(audio) => {
-                      const added = audio.cues.find(
-                        (cue) =>
-                          !draft.audio?.cues.some((old) => old.id === cue.id),
-                      );
-                      if (added) {
-                        setImportedAudioCue(added.id);
-                        setTimelineSelection({
-                          key: `${activeOccurrence}:audio:${added.id}`,
-                          kind: "audio",
-                          occurrence: activeOccurrence,
-                          id: added.id,
-                          index: audio.cues.length - 1,
-                          title: "",
-                          startFrame: 0,
-                          endFrame: 0,
-                        });
+                            cue={selectedCue}
+                            onChange={setCue}
+                            onBackground={(cue) =>
+                              update({
+                                ...draft,
+                                visuals: [
+                                  cue,
+                                  ...draft.visuals.filter(
+                                    (item) => item.id !== cue.id,
+                                  ),
+                                ],
+                              })
+                            }
+                          />
+                          {selectedCue.video &&
+                            clip.videoAssets?.find(
+                              (asset) => asset.id === selectedCue.assetId,
+                            ) && (
+                              <VideoSourceControls
+                                active={
+                                  setting === "pictures" &&
+                                  mediaTab === "videos" &&
+                                  pictureTab === "image" &&
+                                  !pending
+                                }
+                                validationMessage={
+                                  errorPath.includes("video")
+                                    ? pictureIssue
+                                    : undefined
+                                }
+                                key={selectedCue.id}
+                                workspaceId={workspaceId}
+                                cue={selectedCue}
+                                asset={clip.videoAssets.find(
+                                  (asset) => asset.id === selectedCue.assetId,
+                                )!}
+                                onChange={setCue}
+                              />
+                            )}
+                          <div className="editor-fields">
+                            <label>
+                              {selectedCue.video ? "Video" : "Image"}
+                              <select
+                                className="select-control"
+                                value={selectedCue.assetId}
+                                onChange={(event) =>
+                                  setCue({
+                                    ...selectedCue,
+                                    assetId: event.currentTarget.value,
+                                  })
+                                }
+                              >
+                                {(selectedCue.video
+                                  ? (clip.videoAssets ?? [])
+                                  : clip.assets
+                                ).map((asset, index) => (
+                                  <option key={asset.id} value={asset.id}>
+                                    {selectedCue.video ? "Video" : "Image"}{" "}
+                                    {index + 1}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label>
+                              Fit
+                              <select
+                                className="select-control"
+                                value={selectedCue.fit}
+                                onChange={(event) =>
+                                  setCue({
+                                    ...selectedCue,
+                                    fit: event.currentTarget
+                                      .value as OwnerVisualEdit["fit"],
+                                  })
+                                }
+                              >
+                                <option value="contain">Fit</option>
+                                <option value="cover">Fill</option>
+                              </select>
+                            </label>
+                          </div>
+                          <Button
+                            variant="quiet"
+                            onClick={() => {
+                              update({
+                                ...draft,
+                                visuals: draft.visuals.filter(
+                                  (cue) => cue.id !== selectedCue.id,
+                                ),
+                              });
+                              setSelection(
+                                draft.visuals.find(
+                                  (cue) => cue.id !== selectedCue.id,
+                                )?.id ?? "captions",
+                              );
+                            }}
+                          >
+                            {selectedCue.video
+                              ? "Remove video"
+                              : "Remove picture"}
+                          </Button>
+                          {pictureIssueTab === "image" &&
+                            !errorPath.some((part) =>
+                              ["video", "focal", "presentation"].includes(
+                                String(part),
+                              ),
+                            ) && <InlineFeedback message={pictureIssue} />}
+                        </div>
+                        <div
+                          role="tabpanel"
+                          id={`${tabsId}-picture-timing-panel`}
+                          aria-labelledby={`${tabsId}-picture-timing`}
+                          hidden={pictureTab !== "timing"}
+                          tabIndex={0}
+                        >
+                          <PictureTiming
+                            label={selectedCue.video ? "Video" : "Picture"}
+                            key={selectedCue.id}
+                            validationMessage={
+                              pictureIssueTab === "timing"
+                                ? (pictureIssue ?? undefined)
+                                : undefined
+                            }
+                            cue={selectedCue}
+                            frames={base.overlay.frames}
+                            player={player}
+                            available={
+                              setting === "pictures" &&
+                              pictureTab === "timing" &&
+                              previewLoaded &&
+                              !playbackFailed &&
+                              !pending
+                            }
+                            attempt={previewAttempt}
+                            onChange={setCue}
+                          />
+                        </div>
+                        <div
+                          role="tabpanel"
+                          id={`${tabsId}-picture-position-panel`}
+                          aria-labelledby={`${tabsId}-picture-position`}
+                          hidden={pictureTab !== "position"}
+                          tabIndex={0}
+                        >
+                          <div
+                            className="position-presets"
+                            role="group"
+                            aria-label="Picture position"
+                          >
+                            {(
+                              [
+                                { center: 0.25, label: "Upper half" },
+                                { center: 0.5, label: "Center" },
+                                { center: 0.75, label: "Lower half" },
+                              ] as const
+                            ).map((item) => (
+                              <Button
+                                key={item.center}
+                                variant="secondary"
+                                aria-pressed={
+                                  Math.abs(
+                                    selectedCue.box.x +
+                                      selectedCue.box.width / 2 -
+                                      0.5,
+                                  ) < 0.00001 &&
+                                  Math.abs(
+                                    selectedCue.box.y +
+                                      selectedCue.box.height / 2 -
+                                      item.center,
+                                  ) < 0.00001
+                                }
+                                onClick={() =>
+                                  setCue({
+                                    ...selectedCue,
+                                    box: centeredOwnerBox(
+                                      selectedCue.box,
+                                      item.center,
+                                      null,
+                                    ),
+                                  })
+                                }
+                              >
+                                {item.label}
+                              </Button>
+                            ))}
+                          </div>
+                          <BoxFields
+                            label="Picture"
+                            box={selectedCue.box}
+                            onChange={(box) => setCue({ ...selectedCue, box })}
+                          />
+                          {pictureIssueTab === "position" && (
+                            <InlineFeedback message={pictureIssue} />
+                          )}
+                        </div>
+                      </EditorInspector>
+                    )}
+                </fieldset>
+              </div>
+              <div
+                role="tabpanel"
+                id={`${tabsId}-media-audio-panel`}
+                aria-labelledby={`${tabsId}-media-audio`}
+                hidden={mediaTab !== "audio"}
+              >
+                {setting === "pictures" &&
+                  mediaTab === "audio" &&
+                  audioImport === null &&
+                  timeline("audio", "Audio timeline")}
+                {setting === "pictures" &&
+                  mediaTab === "audio" &&
+                  audioImport !== null && (
+                    <YoutubeAudioIntake
+                      value={audioImport}
+                      pending={pending}
+                      onChange={setAudioImport}
+                      message={message}
+                      onDownload={() => void perform("youtube-audio")}
+                      onBack={() => {
+                        request.current?.abort();
+                        setAudioUploading(false);
+                        setAudioImport(null);
+                        setMessage("");
+                      }}
+                    />
+                  )}
+                {setting === "pictures" &&
+                  mediaTab === "audio" &&
+                  audioImport === null && (
+                    <AudioInspector
+                      uploadFeedback={messageFor("audio")}
+                      validationFeedback={
+                        errorSection === "pictures" &&
+                        errorField === "audio" &&
+                        errorOccurrence === activeOccurrence
+                          ? (error ?? undefined)
+                          : undefined
                       }
-                      update({ ...draft, audio });
-                    }}
-                    onUpload={async (file) => {
-                      if (
-                        file.size < 1 ||
-                        file.size > OWNER_AUDIO_LIMITS.inputBytes ||
-                        (clip.audioAssets?.length ?? 0) >=
-                          OWNER_AUDIO_LIMITS.assets ||
-                        (draft.audio?.cues.length ?? 0) >=
-                          OWNER_AUDIO_LIMITS.cues
-                      ) {
-                        ownMessage("audio");
-                        setMessage("Choose audio under 12 MB and 2 minutes.");
-                        return null;
+                      key={`${activeOccurrence}:${importedAudioCue ?? ""}:${audioPicture ?? ""}`}
+                      hideCueList
+                      linkedVisual={draft.visuals.find(
+                        (cue) => cue.id === audioPicture,
+                      )}
+                      onBackToPicture={
+                        audioPicture
+                          ? () => {
+                              setAudioPicture(undefined);
+                              setMediaTab("pictures");
+                            }
+                          : undefined
                       }
-                      return (await perform("audio", file)) ?? null;
-                    }}
-                  />
-                )}
-            </div>
+                      audio={draft.audio}
+                      visuals={overlay.visuals}
+                      assets={clip.audioAssets ?? []}
+                      frames={base.overlay.frames}
+                      hook={draft.hook}
+                      player={player}
+                      available={!playbackFailed && previewLoaded}
+                      attempt={previewAttempt}
+                      pending={pending || !!hookDraft}
+                      initialCueId={importedAudioCue}
+                      onHookSound={
+                        masterDraft.hook && !hookDraft && !audioPicture
+                          ? (soundId) => {
+                              player.current?.pause();
+                              ownMessage("audio");
+                              try {
+                                const next = changeHook(masterDraft.hook, {
+                                  soundId,
+                                  audio: true,
+                                });
+                                ownMessage("audio");
+                                const cue =
+                                  next?.hookContent?.edits.audio?.cues.find(
+                                    (cue) => cue.suggestedHook,
+                                  );
+                                if (cue) {
+                                  setImportedAudioCue(cue.id);
+                                  setTimelineSelection({
+                                    key: `hook:audio:${cue.id}`,
+                                    kind: "audio",
+                                    occurrence: "hook",
+                                    id: cue.id,
+                                    index:
+                                      next!.hookContent!.edits.audio!.cues.indexOf(
+                                        cue,
+                                      ),
+                                    title: "",
+                                    startFrame: 0,
+                                    endFrame: 0,
+                                  });
+                                  setMessage("");
+                                }
+                              } catch {
+                                ownMessage("audio");
+                                setMessage(
+                                  "Remove an audio layer to make room for the Hook’s riser.",
+                                );
+                              }
+                            }
+                          : undefined
+                      }
+                      onYoutube={
+                        youtubeAudio
+                          ? () => {
+                              setMessage("");
+                              setCaptionConfirm(false);
+                              setImportedAudioCue(undefined);
+                              player.current?.pause();
+                              setAudioImport("");
+                            }
+                          : undefined
+                      }
+                      onChange={(audio) => {
+                        const added = audio.cues.find(
+                          (cue) =>
+                            !draft.audio?.cues.some((old) => old.id === cue.id),
+                        );
+                        if (added) {
+                          setImportedAudioCue(added.id);
+                          setTimelineSelection({
+                            key: `${activeOccurrence}:audio:${added.id}`,
+                            kind: "audio",
+                            occurrence: activeOccurrence,
+                            id: added.id,
+                            index: audio.cues.length - 1,
+                            title: "",
+                            startFrame: 0,
+                            endFrame: 0,
+                          });
+                        }
+                        update({ ...draft, audio });
+                      }}
+                      onUpload={async (file) => {
+                        if (
+                          file.size < 1 ||
+                          file.size > OWNER_AUDIO_LIMITS.inputBytes ||
+                          (clip.audioAssets?.length ?? 0) >=
+                            OWNER_AUDIO_LIMITS.assets ||
+                          (draft.audio?.cues.length ?? 0) >=
+                            OWNER_AUDIO_LIMITS.cues
+                        ) {
+                          ownMessage("audio");
+                          setMessage("Choose audio under 12 MB and 2 minutes.");
+                          return null;
+                        }
+                        return (await perform("audio", file)) ?? null;
+                      }}
+                    />
+                  )}
+              </div>
+            </EditorInspectorLayout>
           </ControlPanel>
           {actionsVisible &&
             audioImport === null &&
             (stale || messageFor("action")) && (
               <WorkflowActions
-                target={footerTarget}
+                target={actionTarget}
                 label="Editor feedback"
                 feedback
               >
@@ -3669,7 +3996,7 @@ export function ClipEditor({
               </WorkflowActions>
             )}
           {actionsVisible && audioUploading && audioImport === null && (
-            <WorkflowActions target={footerTarget} label="Audio upload actions">
+            <WorkflowActions target={actionTarget} label="Audio upload actions">
               <Button
                 variant="secondary"
                 onClick={() => request.current?.abort()}
@@ -3683,7 +4010,7 @@ export function ClipEditor({
             !audioUploading &&
             captionConfirm && (
               <WorkflowActions
-                target={footerTarget}
+                target={actionTarget}
                 label="Caption generation actions"
               >
                 <Button
@@ -3708,70 +4035,20 @@ export function ClipEditor({
               </WorkflowActions>
             )}
           {actionsVisible &&
-            !trackingMode &&
-            !captionConfirm &&
-            (!audioUploading || audioImport !== null) &&
-            (dirty || stale || previewUnavailable) && (
-              <WorkflowActions target={footerTarget} label="Edit actions">
+            (stale || previewUnavailable || autosave.phase === "conflict") && (
+              <WorkflowActions target={actionTarget} label="Edit recovery">
                 <Button
-                  variant="primary"
-                  type="button"
-                  aria-busy={titleLoading || undefined}
-                  aria-describedby={
-                    titleLoading ? `${tabsId}-hook-title-progress` : undefined
-                  }
-                  title={
-                    titleLoading
-                      ? "Apply is waiting for the Hook title."
-                      : undefined
-                  }
-                  disabled={
-                    !dirty ||
-                    !!error ||
-                    !!hookDraft ||
-                    stale ||
-                    pending ||
-                    titleLoading
-                  }
-                  onClick={() => void perform("edit")}
-                >
-                  {pending && audioImport === null ? (
-                    <>
-                      <LoaderCircle
-                        size={18}
-                        className="acquisition-spinner"
-                        aria-hidden="true"
-                      />
-                      Working…
-                    </>
-                  ) : (
-                    <span>
-                      Apply<span className="local-action-detail"> changes</span>
-                    </span>
-                  )}
-                </Button>
-                <Button
-                  variant="quiet"
-                  type="button"
-                  disabled={
-                    pending || (!dirty && !stale && !previewUnavailable)
-                  }
+                  variant="secondary"
+                  disabled={pending || autosave.phase === "saving"}
                   onClick={() => void perform("reload")}
                 >
-                  {(previewUnavailable && !dirty) || stale ? (
-                    "Reload clip"
-                  ) : (
-                    <span>
-                      Discard
-                      <span className="local-action-detail"> changes</span>
-                    </span>
-                  )}
+                  Reload clip
                 </Button>
               </WorkflowActions>
             )}
           {actionsVisible && titleLoading && setting !== "hook" && (
             <WorkflowActions
-              target={footerTarget}
+              target={actionTarget}
               feedback
               label="Hook title progress"
             >
@@ -3789,7 +4066,7 @@ export function ClipEditor({
             !trackingMode &&
             !captionConfirm &&
             (titleCanRetry || titleNeedsAccept) && (
-              <WorkflowActions target={footerTarget} label="Hook title actions">
+              <WorkflowActions target={actionTarget} label="Hook title actions">
                 {titleCanRetry && (
                   <Button
                     variant="secondary"

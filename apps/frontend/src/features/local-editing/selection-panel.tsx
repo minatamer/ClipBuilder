@@ -85,7 +85,7 @@ type Props = {
   onCaptureTime: () => string | null;
   onJumpTo: (seconds: number) => void;
   onResultsViewChange: (visible: boolean) => void;
-  footerTarget?: HTMLElement | null | undefined;
+  actionTarget?: HTMLElement | null | undefined;
   actionsVisible?: boolean;
 };
 
@@ -99,7 +99,7 @@ export function OwnerSelectionPanel({
   onCaptureTime,
   onJumpTo,
   onResultsViewChange,
-  footerTarget,
+  actionTarget,
   actionsVisible = true,
 }: Props) {
   const demoLimit =
@@ -1207,7 +1207,7 @@ export function OwnerSelectionPanel({
         </fieldset>
       </div>
       {actionsVisible && tab === "add" && (
-        <WorkflowActions target={footerTarget} label="Moment actions">
+        <WorkflowActions target={actionTarget} label="Moment actions">
           <InlineFeedback
             message={messageArea === "action" ? message : undefined}
             tone={message === "Canceled." ? "status" : "error"}

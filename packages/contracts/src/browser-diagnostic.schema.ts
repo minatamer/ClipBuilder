@@ -26,6 +26,7 @@ export const editorDiagnosticStateSchema = z
   .object({
     traceId: uuidV4Schema,
     section: z.enum([
+      "home",
       "captions",
       "text",
       "filters",

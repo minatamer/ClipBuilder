@@ -24,6 +24,8 @@ import {
   savedResolutionChoices,
 } from "./resolution-choices.ts";
 import { YoutubePreview } from "./youtube-preview.tsx";
+import { WorkflowActions } from "./workflow-actions";
+import { useWorkspaceChrome } from "../../shared/ui/workspace";
 import {
   ownerAnalysisWindow,
   ownerSourceTimestamp,
@@ -61,6 +63,7 @@ export function OwnerAcquisitionPanel({
   initializing = false,
   onBusy,
   onOpen,
+  hidden = false,
 }: {
   workspace: OwnerWorkspace | null;
   capabilities: OwnerRuntimeCapabilities | null;
@@ -68,7 +71,9 @@ export function OwnerAcquisitionPanel({
   initializing?: boolean;
   onBusy: (busy: boolean) => void;
   onOpen: (workspace: OwnerWorkspace) => void;
+  hidden?: boolean;
 }) {
+  const chrome = useWorkspaceChrome();
   const formId = useId();
   const resolutionId = useId();
   const [url, setUrl] = useState("");
@@ -418,6 +423,7 @@ export function OwnerAcquisitionPanel({
     <section
       className="source-card youtube-card"
       aria-labelledby="acquisition-title"
+      hidden={hidden}
     >
       <div className="source-card-heading">
         <span className="source-icon">
@@ -736,7 +742,7 @@ export function OwnerAcquisitionPanel({
           />
         )}
       </div>
-      <footer className="source-card-footer">
+      <div className="source-card-actions">
         <InlineFeedback
           message={
             messageArea === "action" ||
@@ -745,75 +751,77 @@ export function OwnerAcquisitionPanel({
               : undefined
           }
         />
-        <nav
-          className="source-actions youtube-actions"
-          aria-label="YouTube actions"
-        >
-          {step === "url" ? (
-            <Button
-              type="submit"
-              form={formId}
-              disabled={disabled || !url.trim()}
-            >
-              {pending ? (
-                <>
-                  <LoaderCircle
-                    size={18}
-                    className="acquisition-spinner"
-                    aria-hidden="true"
-                  />
-                  Checking…
-                </>
-              ) : (
-                "Continue"
-              )}
-            </Button>
-          ) : transferring ? (
-            <Button
-              variant="secondary"
-              disabled={!!pending || transfer?.stage === "canceling"}
-              onClick={() => void action("cancel")}
-            >
-              Cancel download
-            </Button>
-          ) : retry ? (
-            <Button disabled={disabled} onClick={() => void action("metadata")}>
-              Try again
-            </Button>
-          ) : (
-            <Button
-              disabled={disabled || !canUse}
-              aria-busy={openingSaved}
-              aria-label={openingSaved ? "Opening video" : undefined}
-              onClick={() => void action("use")}
-            >
-              {openingSaved ? (
-                <>
-                  <LoaderCircle
-                    size={18}
-                    className="acquisition-spinner"
-                    aria-hidden="true"
-                  />
-                  Opening…
-                </>
-              ) : selectedSaved ? (
-                "Use video"
-              ) : (
-                "Download video"
-              )}
-            </Button>
-          )}
-          {step === "resolution" && (
-            <Button
-              variant="quiet"
-              icon={ArrowLeft}
-              disabled={disabled}
-              onClick={changeLink}
-            >
-              Change link
-            </Button>
-          )}
-        </nav>
+        {!hidden && (
+          <WorkflowActions target={chrome?.actions} label="YouTube actions">
+            {step === "url" ? (
+              <Button
+                type="submit"
+                form={formId}
+                disabled={disabled || !url.trim()}
+              >
+                {pending ? (
+                  <>
+                    <LoaderCircle
+                      size={18}
+                      className="acquisition-spinner"
+                      aria-hidden="true"
+                    />
+                    Checking…
+                  </>
+                ) : (
+                  "Continue"
+                )}
+              </Button>
+            ) : transferring ? (
+              <Button
+                variant="secondary"
+                disabled={!!pending || transfer?.stage === "canceling"}
+                onClick={() => void action("cancel")}
+              >
+                Cancel download
+              </Button>
+            ) : retry ? (
+              <Button
+                disabled={disabled}
+                onClick={() => void action("metadata")}
+              >
+                Try again
+              </Button>
+            ) : (
+              <Button
+                disabled={disabled || !canUse}
+                aria-busy={openingSaved}
+                aria-label={openingSaved ? "Opening video" : undefined}
+                onClick={() => void action("use")}
+              >
+                {openingSaved ? (
+                  <>
+                    <LoaderCircle
+                      size={18}
+                      className="acquisition-spinner"
+                      aria-hidden="true"
+                    />
+                    Opening…
+                  </>
+                ) : selectedSaved ? (
+                  "Use video"
+                ) : (
+                  "Download video"
+                )}
+              </Button>
+            )}
+            {step === "resolution" && (
+              <Button
+                variant="quiet"
+                icon={ArrowLeft}
+                disabled={disabled}
+                onClick={changeLink}
+              >
+                Change link
+              </Button>
+            )}
+          </WorkflowActions>
+        )}
         <span className="source-card-footnote source-hint">
           {capabilities?.sourceMode === "synthetic-source"
             ? "Simulated download."
@@ -821,7 +829,7 @@ export function OwnerAcquisitionPanel({
               ? "Downloads unavailable. Saved copies still work."
               : null}
         </span>
-      </footer>
+      </div>
     </section>
   );
 }
