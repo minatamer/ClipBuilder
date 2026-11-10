@@ -161,7 +161,15 @@ async function capture() {
             rect: n.getBoundingClientRect().toJSON(),
           })),
       );
-      shots.push({ state, targets });
+      const regions = await page.evaluate(() =>
+        Array.from(document.querySelectorAll(".editor-preview,.moment-card"))
+          .filter((n) => n.getClientRects().length && !n.closest("[hidden]"))
+          .map((n) => ({
+            kind: n.matches(".moment-card") ? "card" : "editor",
+            rect: n.getBoundingClientRect().toJSON(),
+          })),
+      );
+      shots.push({ state, targets, regions });
     };
     await page.goto({
       url: new URL("intake.html", moments.url).href,

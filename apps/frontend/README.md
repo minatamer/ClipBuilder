@@ -22,6 +22,14 @@ API keys and never generate media or render automatically. Real AI still needs
 the configured provider/runtime, live flags and applicable approvals. The
 updated tour and landing film use current-workspace UI and fictional media.
 
+Restored clips resolve through a neutral workspace-opening state directly into
+the editor. Source playback/Moments analysis readers mount only when needed;
+later Add/Back retains their inputs. Preview decoding stays inside the stable
+editor canvas, with controls and tour gated by actual readiness. Source/Moments
+use compact navigation, grouped controls and review rows; local Framing remains
+beside the clip choices. Synthetic held-response checks verify this without keys
+or new processing; real AI capabilities and approval gates are unchanged.
+
 CL-272 consolidates video thumbnails in
 `src/features/media/video-thumbnail.ts`, with `useVideoThumbnail` and shared
 `VideoThumbnail` / `ThumbnailVideo` adapters. Upload/source posters, saved videos,

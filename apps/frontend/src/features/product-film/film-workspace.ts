@@ -1,16 +1,16 @@
 /** Measured from the 1440×1000 current-workspace synthetic capture package (CL-273). */
 export const FILM_WORKSPACE = {
-  source: { x: 41, y: 243, width: 684, height: 385 },
-  editor: { x: 116, y: 76, width: 457, height: 812 },
-  upload: { x: 224, y: 817 },
-  analyze: { x: 1300, y: 32 },
-  jump: { x: 845, y: 446 },
-  process: { x: 1306, y: 32 },
+  source: { x: 24, y: 172, width: 623, height: 350 },
+  editor: { x: 116, y: 76, width: 456, height: 810 },
+  upload: { x: 1154, y: 827 },
+  analyze: { x: 1342, y: 916 },
+  jump: { x: 1349, y: 325 },
+  process: { x: 1348, y: 876 },
   download: { x: 1245, y: 32 },
   cards: [0, 1, 2].map((index) => ({
-    x: 767,
-    y: 331 + index * 174,
-    width: 645,
-    height: 158,
+    x: 704,
+    y: 287 + index * 129,
+    width: 704,
+    height: 129,
   })),
 } as const;

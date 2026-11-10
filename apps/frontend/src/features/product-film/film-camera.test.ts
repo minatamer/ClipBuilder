@@ -65,21 +65,21 @@ describe("contextual landing film", () => {
   it("follows the two useful selection actions with one steady lens and an uninterrupted mouse", () => {
     const pick = screenCamera("choose", 28, 90, 1776, 1056);
     const proceed = screenCamera("choose", 76, 90, 1776, 1056);
-    expect(pick.cursor).toMatchObject({ x: 845, y: 446, ring: 1 });
-    expect(proceed.cursor).toMatchObject({ x: 1360, y: 32, ring: 1 });
+    expect(pick.cursor).toMatchObject({ x: 1349, y: 325, ring: 1 });
+    expect(proceed.cursor).toMatchObject({ x: 1348, y: 876, ring: 1 });
     expect(proceed.x).toBeLessThan(pick.x);
-    expect(proceed.y).toBeGreaterThan(pick.y);
+    expect(proceed.y).toBeLessThan(pick.y);
     expect(proceed.zoom - pick.zoom).toBeLessThan(0.12);
     const middle = screenCamera("choose", 54, 90, 1776, 1056);
-    expect(middle.cursor!.x).toBeGreaterThan(845);
-    expect(middle.cursor!.x).toBeLessThan(1360);
-    expect(screenCamera("choose", 35, 90, 1776, 1056).cursor?.x).toBe(845);
-    expect(screenCamera("choose", 36, 90, 1776, 1056).cursor?.x).toBe(845);
-    let previousX = 845;
+    expect(middle.cursor!.x).toBeGreaterThan(1348);
+    expect(middle.cursor!.x).toBeLessThan(1349);
+    expect(screenCamera("choose", 35, 90, 1776, 1056).cursor?.x).toBe(1349);
+    expect(screenCamera("choose", 36, 90, 1776, 1056).cursor?.x).toBe(1349);
+    let previousX = 1349;
     for (let frame = 36; frame < 90; frame++) {
       const cursor = screenCamera("choose", frame, 90, 1776, 1056).cursor!;
       expect(cursor.opacity).toBeGreaterThanOrEqual(0);
-      expect(cursor.x).toBeGreaterThanOrEqual(previousX);
+      expect(cursor.x).toBeLessThanOrEqual(previousX);
       previousX = cursor.x;
     }
   });
