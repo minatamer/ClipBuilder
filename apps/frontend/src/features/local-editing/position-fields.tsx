@@ -1,9 +1,5 @@
-import { Button } from "../../shared/ui/button";
-import {
-  centeredOwnerBox,
-  type OwnerEditorBox,
-  type OwnerTextGeometry,
-} from "./editor-state.ts";
+import type { OwnerEditorBox, OwnerTextGeometry } from "./editor-state.ts";
+import { PositionPresets } from "./position-presets";
 
 export function BoxFields({
   label,
@@ -56,38 +52,13 @@ export function TextPositionFields({
 }) {
   return (
     <>
-      <div
-        className="position-presets"
-        role="group"
-        aria-label={`${label} position`}
-      >
-        {(
-          [
-            ...(defaultCenter === undefined
-              ? []
-              : [{ center: defaultCenter, label: "Default positioning" }]),
-            { center: 0.25, label: "Upper half" },
-            { center: 0.5, label: "Center" },
-            { center: 0.75, label: "Lower half" },
-          ] as const
-        ).map((item) => (
-          <Button
-            key={item.center}
-            variant="secondary"
-            aria-pressed={
-              Math.abs(style.box.y + style.box.height / 2 - item.center) <
-                0.00001 &&
-              Math.abs(style.box.x + style.box.width / 2 - 0.5) < 0.00001 &&
-              style.verticalAlign === "center"
-            }
-            onClick={() =>
-              onChange(centeredOwnerBox(style.box, item.center, style), true)
-            }
-          >
-            {item.label}
-          </Button>
-        ))}
-      </div>
+      <PositionPresets
+        label={label}
+        box={style.box}
+        geometry={style}
+        defaultCenter={defaultCenter}
+        onChange={(box) => onChange(box, true)}
+      />
       <BoxFields
         label={label}
         box={style.box}

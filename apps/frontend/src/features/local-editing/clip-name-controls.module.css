@@ -73,6 +73,7 @@
   gap: var(--cb-space-3);
   min-height: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   padding: var(--cb-space-2) var(--cb-space-4) var(--cb-space-4);
 }
 .body label {

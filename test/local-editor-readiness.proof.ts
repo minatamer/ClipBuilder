@@ -75,7 +75,7 @@ it("does not re-notify preview readiness when its consumer updates or rerenders"
         [...document.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.textContent==='Render host')?.click();
         await new Promise(r=>setTimeout(r,10));
       }
-      return {initial,afterRerenders:ready(),warnings:Number(document.documentElement.dataset.fixtureUpdateDepth??0),editor:Boolean(document.querySelector('.editor-panels:not([hidden])'))};
+      return {initial,afterRerenders:ready(),warnings:Number(document.documentElement.dataset.fixtureUpdateDepth??0),editor:Boolean(document.querySelector('.editor-layout:not([data-loading]) .editor-panels'))};
 
 };`,
       { loader: "ts" },

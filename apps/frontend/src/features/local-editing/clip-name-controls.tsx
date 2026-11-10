@@ -189,7 +189,7 @@ export function ClipNameControls({
                   }}
                 />
               </label>
-              <InlineFeedback id={errorId} message={message} />
+              <InlineFeedback id={errorId} message={message} reserve={false} />
             </div>
             <footer className={styles.actions}>
               <Button

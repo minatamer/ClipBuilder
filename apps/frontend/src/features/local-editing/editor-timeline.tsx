@@ -1,7 +1,9 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { Music2 } from "lucide-react";
 import { focusTimestamp } from "./focus-positions.ts";
 import type { EditorTimelineItem } from "./editor-timeline.ts";
 import { Button } from "../../shared/ui/button";
+import { useEditorInspectorDisclosure } from "./editor-inspector-layout";
 
 export function PictureTimelineAudio({
   item,
@@ -19,6 +21,7 @@ export function PictureTimelineAudio({
       disabled={disabled}
       onClick={() => onAdd(item)}
     >
+      <Music2 size={14} aria-hidden="true" />
       Add audio
     </Button>
   );
@@ -43,6 +46,12 @@ export function EditorTimeline({
   accessory?: ((item: EditorTimelineItem) => ReactNode) | undefined;
   preview?: ((item: EditorTimelineItem) => ReactNode) | undefined;
 }) {
+  const disclosure = useEditorInspectorDisclosure();
+  const { available, expanded, setExpanded } = disclosure ?? {};
+  const inspectorVisible = !disclosure || (available && expanded);
+  useEffect(() => {
+    if (!items.length && available && !expanded) setExpanded?.(true);
+  }, [items.length, available, expanded, setExpanded]);
   return (
     <div
       className="editor-timeline"
@@ -51,7 +60,13 @@ export function EditorTimeline({
       aria-label={label}
     >
       {items.map((item) => (
-        <div className="editor-timeline-entry" key={item.key}>
+        <div
+          className={`editor-timeline-entry${item.kind === "picture" ? " editor-media-row" : ""}`}
+          data-selected={
+            (selected === item.key && inspectorVisible) || undefined
+          }
+          key={item.key}
+        >
           <button
             type="button"
             className="focus-shot"
@@ -60,9 +75,24 @@ export function EditorTimeline({
             data-audio-cue={
               (item.kind === "audio" && item.index >= 0) || undefined
             }
-            aria-pressed={selected === item.key}
+            aria-pressed={selected === item.key && inspectorVisible}
+            aria-expanded={
+              disclosure
+                ? selected === item.key &&
+                  disclosure.available &&
+                  disclosure.expanded
+                : undefined
+            }
+            aria-controls={disclosure?.panelId}
             disabled={disabled}
-            onClick={() => onSelect(item)}
+            onClick={() => {
+              if (disclosure?.available && selected === item.key) {
+                disclosure.setExpanded(!disclosure.expanded);
+                return;
+              }
+              disclosure?.setExpanded(true);
+              onSelect(item);
+            }}
           >
             {preview?.(item)}
             <span className="editor-timeline-name">{item.title}</span>

@@ -459,7 +459,7 @@ it("runs the local Codex workflow through real controls/native worker with injec
       }
       if(action==='export'){button('Export clip').click();await wait(()=>named('Download clip'),'download');return true;}
       if(action==='local-captions'){
-        await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'restore');const clip=document.querySelector('[role=tab][aria-label="Edit Clip 2"]');if(!clip)throw new Error('clip_2');clip.click();
+        await wait(()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),'restore');const clip=document.querySelector('[role=tab][aria-label="Edit Clip 2"]');if(!clip)throw new Error('clip_2');clip.click();
         await wait(()=>button('Generate captions')&&!button('Generate captions').disabled,'caption_ready');button('Generate captions').click();await wait(()=>document.body.textContent.includes('This clip’s audio stays local.'),'local_confirmation');
         if(document.body.textContent.includes('uses Gemini credits'))throw new Error('paid_caption_copy');
         const footer=[...document.querySelectorAll('footer button')].find(n=>n.textContent.trim()==='Generate captions');if(!footer)throw new Error('caption_footer');footer.click();await wait(()=>!document.body.textContent.includes('No captions yet')&&!document.body.textContent.includes('Generating captions'),'captions_done');return true;

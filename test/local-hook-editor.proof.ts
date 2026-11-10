@@ -38,7 +38,7 @@ it("edits the unified Hook/main collections and preserves independent edits, clo
  const choose=async(kind,part,i=0)=>{const n=rows(kind,part)[i];if(!n)throw Error('missing_'+kind+'_'+part+'_'+i);n.click();await new Promise(requestAnimationFrame);};
  const actual=kind=>document.querySelector('.editor-preview video[data-editor-video="'+kind+'"][data-editor-active=true]');
  const fits=()=>{if(document.documentElement.scrollWidth>innerWidth)throw Error('editor_overflow');const f=document.querySelector('#sample-main>footer').getBoundingClientRect();if(f.bottom>innerHeight+1||f.top<0)throw Error('footer_outside');for(const n of document.querySelectorAll('.editor-panels input,.editor-panels select,.editor-panels textarea'))if(visible(n)){const r=n.getBoundingClientRect();if(r.left<0||r.right>innerWidth+1)throw Error('control_outside_'+n.getAttribute('aria-label'));}};
- await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'ready');
+ await wait(()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),'ready');
  if(document.querySelector('[aria-label="Editing occurrence"]'))throw Error('separate_occurrence_switch');
  if(action==='open-hook'){
   await setting('Camera');await choose('camera','body');await click('Advanced');set(field('Focus playhead seconds'),'5.5');await wait(()=>actual('body')&&!actual('body').seeking&&Math.abs(actual('body').currentTime-3.5)<.04,'hook_start_settled');

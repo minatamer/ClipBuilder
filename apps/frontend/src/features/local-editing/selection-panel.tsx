@@ -11,7 +11,14 @@ import { readOwnerAnalysis } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { ZodError } from "zod";
-import { Play, Trash2, Clock3, Sparkles, CircleAlert } from "lucide-react";
+import {
+  Play,
+  Trash2,
+  Clock3,
+  Sparkles,
+  CircleAlert,
+  LoaderCircle,
+} from "lucide-react";
 import { ProcessingState } from "../../shared/ui/processing-state";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -802,19 +809,22 @@ export function OwnerSelectionPanel({
             : "Reopen this video to use the current AI mode."}
         </p>
       )}
-      {waiting && (
+      {restoring && (
+        <div className="moment-restoring" role="status">
+          <LoaderCircle
+            size={18}
+            className="acquisition-spinner"
+            aria-hidden="true"
+          />
+          Loading moments
+        </div>
+      )}
+      {analyzing && (
         <ProcessingState
           className="moments-processing"
-          label={
-            restoring
-              ? "Loading moments"
-              : manualOnly
-                ? "Preparing moments"
-                : "Finding moments"
-          }
+          label={manualOnly ? "Preparing moments" : "Finding moments"}
         >
-          {analyzing &&
-            "aiProvider" in capabilities &&
+          {"aiProvider" in capabilities &&
             capabilities.aiProvider === "codex" && (
               <CodexPreparationSteps
                 key={workspace.id}

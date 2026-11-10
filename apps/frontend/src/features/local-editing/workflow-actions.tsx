@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-/** Keep action ownership with its form while mounting submissions in the workspace toolbar. */
+/** Forms own their actions; an explicit target may be a card footer or editor toolbar. */
 export function WorkflowActions({
   target,
   label,

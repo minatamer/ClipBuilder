@@ -1,6 +1,7 @@
 import { OWNER_COLLECTION_PAGE_ITEMS as REQUEST_PAGE_ITEMS } from "../../../../../packages/contracts/local/collection-pages.ts";
 import { readOwnerClips } from "./collection-pages.ts";
 import { WorkspaceEditHistory } from "./edit-history";
+import { createPortal } from "react-dom";
 import { Button } from "../../shared/ui/button";
 import buttonStyles from "../../shared/ui/workflow.module.css";
 import {
@@ -66,8 +67,10 @@ export function OwnerClipBatchPanel({
   actionTarget,
   onRecovered,
   onStartOver,
-  onConnected,
+  onConnectionChange,
   onAddClips,
+  initializing = false,
+  framingTarget,
 }: {
   workspace: OwnerWorkspace;
   capabilities: OwnerRuntimeCapabilities;
@@ -82,8 +85,10 @@ export function OwnerClipBatchPanel({
   actionTarget?: HTMLElement | null | undefined;
   onRecovered?: ((workspace: OwnerWorkspace) => void) | undefined;
   onStartOver?: (() => void) | undefined;
-  onConnected?: ((connected: boolean) => void) | undefined;
+  onConnectionChange?: ((state: ClipConnection) => void) | undefined;
   onAddClips?: (() => void) | undefined;
+  initializing?: boolean;
+  framingTarget?: HTMLElement | null;
 }) {
   const clipLimit =
     "execution" in capabilities && capabilities.demoClipLimit !== null
@@ -103,6 +108,7 @@ export function OwnerClipBatchPanel({
       clipId: string | null;
       text: string;
     } | null>(null);
+  const [listReady, setListReady] = useState(false);
   const [pending, setPending] = useState(false),
     [review, setReview] = useState<string | null>(initialReviewId ?? null);
   const [dirtyClip, setDirtyClip] = useState<string | null>(null);
@@ -142,8 +148,8 @@ export function OwnerClipBatchPanel({
     [editHistory, list.clips],
   );
   useEffect(() => {
-    onClipsChange?.(hasClips);
-  }, [hasClips, onClipsChange]);
+    if (listReady) onClipsChange?.(hasClips);
+  }, [hasClips, listReady, onClipsChange]);
   const editDirty = useCallback((id: string, dirty: boolean) => {
     setDirtyClip((current) => (dirty ? id : current === id ? null : current));
   }, []);
@@ -155,6 +161,7 @@ export function OwnerClipBatchPanel({
   const accept = useCallback(
     (value: OwnerClipList) => {
       setList(value);
+      setListReady(true);
       onActive(value.active);
     },
     [onActive],
@@ -184,7 +191,7 @@ export function OwnerClipBatchPanel({
       },
       state: (value) => {
         setConnection(value);
-        onConnected?.(value === "connected");
+        onConnectionChange?.(value);
         if (value === "missing") onActive(false);
       },
       recovered: onRecovered,
@@ -196,7 +203,7 @@ export function OwnerClipBatchPanel({
     connectionAttempt,
     onRecovered,
     onActive,
-    onConnected,
+    onConnectionChange,
   ]);
   async function action(
     path: string,
@@ -329,10 +336,37 @@ export function OwnerClipBatchPanel({
   const retryable = current && ["failed", "canceled"].includes(current.state);
   const working = (clip: OwnerClip) =>
     ["queued", "preparing", "rendering", "canceling"].includes(clip.state);
+  const framingControl =
+    capabilities.localMedia &&
+    showProcessing &&
+    selectionReady &&
+    !list.active ? (
+      <label>
+        Framing
+        <select
+          className="select-control"
+          aria-label="Clip framing"
+          aria-describedby={`${tabsId}-framing-help`}
+          value={framing}
+          disabled={pending || list.active}
+          onChange={(event) =>
+            setFraming(event.currentTarget.value === "fit" ? "fit" : "tracked")
+          }
+        >
+          <option value="tracked">Vertical framing (9:16)</option>
+          <option value="fit">No tracking · Fit original</option>
+        </select>
+        <span id={`${tabsId}-framing-help`} className="source-hint">
+          9:16 is the vertical format used for TikTok, YouTube Shorts and
+          Instagram Reels.
+        </span>
+      </label>
+    ) : null;
   return (
     <section
       ref={entryRoot}
       className="batch-section"
+      hidden={initializing}
       aria-labelledby={hasClips ? "batch-title" : undefined}
       aria-label={hasClips ? undefined : "Clips"}
     >
@@ -341,33 +375,11 @@ export function OwnerClipBatchPanel({
           Your clips
         </h2>
       )}
-      {capabilities.localMedia &&
-        showProcessing &&
-        selectionReady &&
-        !list.active && (
-          <label>
-            Framing
-            <select
-              className="select-control"
-              aria-label="Clip framing"
-              aria-describedby={`${tabsId}-framing-help`}
-              value={framing}
-              disabled={pending || list.active}
-              onChange={(event) =>
-                setFraming(
-                  event.currentTarget.value === "fit" ? "fit" : "tracked",
-                )
-              }
-            >
-              <option value="tracked">Vertical framing (9:16)</option>
-              <option value="fit">No tracking · Fit original</option>
-            </select>
-            <span id={`${tabsId}-framing-help`} className="source-hint">
-              9:16 is the vertical format used for TikTok, YouTube Shorts and
-              Instagram Reels.
-            </span>
-          </label>
-        )}
+      {framingTarget === undefined
+        ? framingControl
+        : framingTarget &&
+          framingControl &&
+          createPortal(framingControl, framingTarget)}
       {message &&
         ((message.clipId === null && showProcessing) ||
           (message.clipId === currentId &&

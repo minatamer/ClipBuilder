@@ -228,7 +228,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
           const panel=status.parentElement;
           panel.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);
           const rect=panel.getBoundingClientRect(), title=status.getBoundingClientRect(),footer=document.querySelector('#sample-main > footer')?.getBoundingClientRect()??{top:innerHeight,bottom:innerHeight};
-          return JSON.stringify({overflow:document.documentElement.scrollWidth>innerWidth,footer:footer.top>=0&&footer.bottom<=innerHeight+1,centered:Math.abs(title.left+title.width/2-(rect.left+rect.width/2))<2,animation:getComputedStyle(panel.querySelector('svg')).animationName!=='none',bar:!!panel.querySelector('[role="progressbar"]'),percentage:panel.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')??null,editor:!!document.querySelector('.editor-panels:not([hidden])'),titleVisible:title.top>=0&&title.bottom<=footer.top+1});
+          return JSON.stringify({overflow:document.documentElement.scrollWidth>innerWidth,footer:footer.top>=0&&footer.bottom<=innerHeight+1,centered:Math.abs(title.left+title.width/2-(rect.left+rect.width/2))<2,animation:getComputedStyle(panel.querySelector('svg')).animationName!=='none',bar:!!panel.querySelector('[role="progressbar"]'),percentage:panel.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')??null,editor:!!document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),titleVisible:title.top>=0&&title.bottom<=footer.top+1});
         })()`),
         );
         const shot = await page
@@ -323,7 +323,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
       add.focus();add.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));await new Promise(requestAnimationFrame);
       if(document.activeElement.textContent.trim()!=='Your clips'||document.activeElement.getAttribute('aria-selected')!=='true')throw new Error('loading_broke_keyboard_tabs');
       button('Process clips').click();
-      await wait(()=>button('Export clip')&&document.querySelector('.editor-panels:not([hidden])'));
+      await wait(()=>button('Export clip')&&document.querySelector('.editor-layout:not([data-loading]) .editor-panels'));
       const prepared=await (await fetch('/api/local/workspace/'+globalThis.pictureWorkspace+'/clips')).json();if(prepared.clips[0].outputs.length||!prepared.clips[0].preview||prepared.clips[0].calls.render)throw new Error('unexpected_eager_export');if(prepared.clips[0].base.overlay.texts?.length)throw new Error('unexpected_automatic_text');
       if(document.querySelector('.moment-selection').getClientRects().length || document.querySelectorAll('.clip-editor').length!==1)throw new Error('hosted_editor_not_exclusive');
       const captionPause=async stage=>{globalThis.captionStage=stage;globalThis.captionStageReleased=false;await wait(()=>globalThis.captionStageReleased,'caption_'+stage);globalThis.captionStage=null;};
@@ -362,7 +362,7 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
       await wait(()=>button('Apply changes'));globalThis.holdPictureSave=true;button('Apply changes').click();await pictureWait(()=>named('Capture picture start').matches(':disabled')&&named('Capture picture end').matches(':disabled'),'picture_busy_guard');globalThis.releasePictureSave=true;globalThis.picturePhase='apply_ack';await wait(()=>button('Export clip')&&!button('Export clip').disabled&&!button('Apply changes'));
       const saved=globalThis.pictureSavedList.clips[0].edit.visuals[0];if(saved.startFrame!==6||saved.endFrame!==24)throw new Error('picture_capture_not_saved');
       globalThis.picturePhase='download_wait';button('Export clip').click();
-      const download=await wait(()=>document.querySelector('a[aria-label="Download clip"]')&&document.querySelector('.editor-panels:not([hidden])')&&document.querySelector('a[aria-label="Download clip"]'));const response=await fetch(download.href);if(!response.ok)throw new Error('hosted_download_failed');return [...new Uint8Array(await response.arrayBuffer())];
+      const download=await wait(()=>document.querySelector('a[aria-label="Download clip"]')&&document.querySelector('.editor-layout:not([data-loading]) .editor-panels')&&document.querySelector('a[aria-label="Download clip"]'));const response=await fetch(download.href);if(!response.ok)throw new Error('hosted_download_failed');return [...new Uint8Array(await response.arrayBuffer())];
     };globalThis.hostedRun=()=>globalThis.hostedRunSteps().catch(error=>{globalThis.pictureCaptureError=String(error);throw error;});`,
     });
     const run = page.evaluate(() =>
@@ -656,11 +656,11 @@ it("takes a hosted-shaped upload through the shared editor and native re-export 
     await captureLoading("Loading preview", "preview");
     expect(
       await evaluate(
-        "!!document.querySelector('.editor-panels:not([hidden])')",
+        "!!document.querySelector('.editor-layout:not([data-loading]) .editor-panels')",
       ),
     ).toBe(false);
     await evaluate(
-      `document.removeEventListener('loadeddata',globalThis.holdLoadingPreview,true);document.querySelector('.editor-preview video').dispatchEvent(new Event('loadeddata'));globalThis.hostedWait(()=>document.querySelector('.editor-panels:not([hidden])')).then(()=>true)`,
+      `document.removeEventListener('loadeddata',globalThis.holdLoadingPreview,true);document.querySelector('.editor-preview video').dispatchEvent(new Event('loadeddata'));globalThis.hostedWait(()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels')).then(()=>true)`,
     );
     await page._client().send("Runtime.evaluate", {
       expression: `fetch('/api/local/session',{method:'DELETE'}).then(response=>{if(response.status!==204)throw new Error('hosted_exit_failed');})`,

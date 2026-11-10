@@ -317,7 +317,9 @@ it("surveys neutral inset focus across public, intake, moments, editor, dialogs 
         );
       }
       await page.goto({ url: editor.url, timeout: 15000 });
-      await page.evaluate(() => focusWait(".editor-panels:not([hidden])"));
+      await page.evaluate(() =>
+        focusWait(".editor-layout:not([data-loading]) .editor-panels"),
+      );
       for (const main of [
         "Captions",
         "Text",

@@ -113,7 +113,7 @@ export async function reviewFreshLocalFlow(
           while(globalThis.clipbuilderRetryPending)await new Promise(done=>setTimeout(done,50));
           retry.focus();retry.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));retry.click();
         }
-        await wait(()=>button('Export clip') && document.querySelector('.editor-panels:not([hidden])') && button('Add more clips'));
+        await wait(()=>button('Export clip') && document.querySelector('.editor-layout:not([data-loading]) .editor-panels') && button('Add more clips'));
         if(document.querySelector('.moment-selection').getClientRects().length || document.querySelector('.processing-details') || document.querySelectorAll('.clip-editor').length!==1)throw new Error('fresh_editor_stacked');
         const control=label=>[...document.querySelectorAll('.clip-editor label')].find(n=>n.firstChild?.textContent.trim()===label)?.querySelector('input,select');
         await change(control('Style'),'boxed');await change(control('Animation'),'bounce');
@@ -284,7 +284,7 @@ export async function reviewOwnerControls(
 globalThis.clipbuilderReviewReadiness = async () => {
   const wait=async fn=>{for(let i=0;i<240;i++){const value=fn();if(value)return value;await new Promise(done=>setTimeout(done,50));}throw new Error('editor_readiness_timeout_'+state);};
   const clip=index=>document.querySelector('[aria-label="Edit clip '+index+'"]');
-  const visibleSettings=()=>document.querySelector('.editor-panels:not([hidden])');
+  const visibleSettings=()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels');
   const originalFetch=window.fetch;
   const holdPreview=event=>event.stopImmediatePropagation();
   let state='rendering';
@@ -446,7 +446,7 @@ globalThis.clipbuilderReviewControls = async () => {
         const button = (label) => [...document.querySelectorAll('button')].find(node => node.textContent.trim() === label);
         const visiblePanels = () => [...document.querySelectorAll('.editor-panels > [role="tabpanel"]')].filter(node => node.getClientRects().length);
         const chooseTab = async (label) => {
-          await wait(() => document.querySelector('.editor-panels:not([hidden])'));
+          await wait(() => document.querySelector('.editor-layout:not([data-loading]) .editor-panels'));
           const video=document.querySelector('.editor-preview video');
           tab(label).click();
           await wait(() => tab(label).getAttribute('aria-selected') === 'true' && visiblePanels().length === 1);
@@ -462,7 +462,7 @@ globalThis.clipbuilderReviewControls = async () => {
         const canceledRetry = button('Retry clip');
         if(!canceledRetry || document.querySelector('.clip-editor') || !footer.contains(canceledRetry))throw new Error('canceled_clip_exposed_editor');
         canceledRetry.click();
-        await wait(() => document.querySelector('.editor-panels:not([hidden])'),'canceled_retry');
+        await wait(() => document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),'canceled_retry');
         await globalThis.clipbuilderReviewReadiness();
         if (!clip(2) || !document.querySelector('.moment-selection').hidden) throw new Error('clip_picker_or_selection_failed');
         const moments = document.querySelector('.moment-selection');

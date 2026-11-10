@@ -95,7 +95,7 @@ it("requires independent Hook title/audio opt-ins through fake HTTP, cancellatio
       const status=()=>document.querySelector('.editor-save-status')?.textContent.trim();
       const save=async()=>{await wait(()=>status()==='Saved','saved');};
       const undo=async()=>{await click('Undo');};
-      await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'ready');
+      await wait(()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),'ready');
       await setting('Hook');const layers=[...document.querySelectorAll('.editor-narrow-navigation button')].find(n=>visible(n)&&n.textContent.trim()==='Properties');if(layers){layers.click();await new Promise(requestAnimationFrame);}
       if(action==='before-hook'){
         if(option('Generate title').checked||option('Add Hook audio').checked)throw Error('implicit_options');await click('Remove hook');await tick('Generate title',true);await tick('Add Hook audio',true);

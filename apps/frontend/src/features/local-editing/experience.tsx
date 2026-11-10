@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ControlTabs } from "./control-tabs";
 import { ThumbnailVideo } from "../../shared/ui/video-thumbnail";
-import { Upload } from "lucide-react";
+import { CircleAlert, Upload } from "lucide-react";
 import { Workspace } from "../../shared/ui/workspace";
 import { WorkflowFrame } from "../../shared/ui/workflow-frame";
 import { Button } from "../../shared/ui/button";
@@ -22,6 +22,7 @@ import { capturePreviewTime } from "./manual-time.ts";
 import { AnalysisChallenge } from "../source-analysis/analysis-challenge";
 import { uploadHostedVideo, type HostedUploadProgress } from "./hosted-upload";
 import { ProcessingState } from "../../shared/ui/processing-state";
+import type { ClipConnection } from "./clip-connection";
 import {
   hostedDemoStatusSchema,
   type HostedDemoStatus,
@@ -64,7 +65,9 @@ export function LocalEditingExperience({
   >("upload");
   const [connectAttempt, setConnectAttempt] = useState(0);
   const [startupFailed, setStartupFailed] = useState(false);
-  const [sessionConnected, setSessionConnected] = useState(true);
+  const [sessionConnection, setSessionConnection] =
+    useState<ClipConnection>("connected");
+  const sessionConnected = sessionConnection === "connected";
   const fileInput = useRef<HTMLInputElement>(null);
   const sourcePreview = useRef<HTMLVideoElement>(null);
   const [previewReadyFor, setPreviewReadyFor] = useState<string | null>(null);
@@ -89,12 +92,17 @@ export function LocalEditingExperience({
   const [showMomentResults, setShowMomentResults] = useState(false);
   const [clipWork, setClipWork] = useState(false);
   const [hasClips, setHasClips] = useState(false);
-  const [view, setView] = useState<"moments" | "editor">("moments");
+  const [view, setView] = useState<"opening" | "moments" | "editor">("opening");
+  const [momentsVisited, setMomentsVisited] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
-  const clipsChanged = useCallback((value: boolean) => {
-    setHasClips(value);
-    setView(value ? "editor" : "moments");
-  }, []);
+  const clipsChanged = useCallback(
+    (value: boolean) => {
+      setHasClips(value);
+      if (!value) setMomentsVisited(workspace?.id ?? null);
+      setView(value ? "editor" : "moments");
+    },
+    [workspace?.id],
+  );
   useEffect(() => {
     if (view === "editor") sourcePreview.current?.pause();
     heading.current?.focus({ preventScroll: true });
@@ -108,6 +116,9 @@ export function LocalEditingExperience({
     if (!value) setResetWaiting(false);
   }, []);
   const [actionTarget, setActionTarget] = useState<HTMLDivElement | null>(null);
+  const [framingTarget, setFramingTarget] = useState<HTMLDivElement | null>(
+    null,
+  );
   const choose = useCallback((value: OwnerMomentExport[]) => {
     setSelection(value);
   }, []);
@@ -118,6 +129,7 @@ export function LocalEditingExperience({
     setUnapplied(false);
     setClearBlocked(false);
     setClipWork(false);
+    setView("opening");
   }, []);
   const sourceOpened = useCallback(
     (value: OwnerWorkspace) => {
@@ -127,7 +139,7 @@ export function LocalEditingExperience({
       setShowMomentResults(false);
       setClipWork(false);
       setHasClips(false);
-      setView("moments");
+      setView("opening");
       setUnapplied(false);
       setClearBlocked(false);
       setMessage("");
@@ -170,6 +182,8 @@ export function LocalEditingExperience({
           setCapabilities(currentCapabilities);
           setWorkspace(current);
           setDemoStatus(status);
+          // The batch's first acknowledged list chooses the saved destination.
+          setView(current ? "opening" : "moments");
           setBusy(false);
         }
       } catch {
@@ -177,6 +191,7 @@ export function LocalEditingExperience({
         controller.abort();
         setBusy(false);
         setStartupFailed(true);
+        setView("opening");
       }
     })();
     return () => controller.abort();
@@ -188,6 +203,8 @@ export function LocalEditingExperience({
     let releaseVerification = () => {};
     setBusy(true);
     setOpeningState("opening");
+    if (!hosted && file.name.toLowerCase().endsWith(".json"))
+      setView("opening");
     setMessage("");
     try {
       if (hosted) {
@@ -264,9 +281,10 @@ export function LocalEditingExperience({
       setShowMomentResults(false);
       choose([]);
       setHasClips(false);
-      setView("moments");
+      setView("opening");
       setMessage("");
     } catch (error) {
+      setView("moments");
       setMessageArea("upload");
       if (!controller.signal.aborted)
         setMessage(
@@ -336,6 +354,12 @@ export function LocalEditingExperience({
       setBusy(false);
     }
   }
+  function retryStartup() {
+    setBusy(true);
+    setStartupFailed(false);
+    setConnectAttempt((value) => value + 1);
+  }
+  const openingWorkspace = view === "opening";
   return (
     <Workspace
       localMode={!hosted}
@@ -362,17 +386,21 @@ export function LocalEditingExperience({
       <WorkflowFrame
         headingRef={heading}
         title={
-          !workspace && demoStatus?.limited
-            ? "Your free demo"
-            : !workspace
-              ? "Choose your video"
-              : view === "moments"
-                ? "Choose your moments"
-                : "Review and edit clips"
+          openingWorkspace
+            ? "Opening workspace"
+            : !workspace && demoStatus?.limited
+              ? "Your free demo"
+              : !workspace
+                ? "Choose your video"
+                : view === "moments"
+                  ? "Choose your moments"
+                  : "Review and edit clips"
         }
-        step={!workspace ? 0 : view === "moments" ? 1 : 2}
+        step={
+          openingWorkspace ? null : !workspace ? 0 : view === "moments" ? 1 : 2
+        }
         subtitle={
-          !workspace && demoStatus?.limited
+          openingWorkspace || (!workspace && demoStatus?.limited)
             ? undefined
             : !workspace
               ? hosted
@@ -381,48 +409,31 @@ export function LocalEditingExperience({
               : undefined
         }
         actions={
-          workspace ? (
-            <>
-              <div className="workflow-session-actions">
-                {hasClips &&
-                  view === "moments" &&
-                  !unapplied &&
-                  !clipWork &&
-                  !blocked && (
-                    <Button
-                      variant="secondary"
-                      disabled={blocked}
-                      onClick={() => setView("editor")}
-                    >
-                      Back to editor
-                    </Button>
-                  )}
-                <div className="workflow-action-slot" ref={setActionTarget} />
-              </div>
-            </>
-          ) : startupFailed ? (
-            <div className="workflow-actions">
-              <span className="connection-status" role="status">
-                Couldn’t connect.
-              </span>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setBusy(true);
-                  setStartupFailed(false);
-                  setConnectAttempt((value) => value + 1);
-                }}
-              >
-                Try again
-              </Button>
+          workspace && view === "editor" ? (
+            <div className="workflow-session-actions">
+              <div className="workflow-action-slot" ref={setActionTarget} />
             </div>
           ) : null
         }
       >
         <div
-          className={`local-editing ${!workspace ? "local-intake" : view === "editor" ? "local-editor" : "local-moments"}`}
+          className={`local-editing ${openingWorkspace ? "local-opening" : !workspace ? "local-intake" : view === "editor" ? "local-editor" : "local-moments"}`}
         >
-          {!workspace && demoStatus?.limited ? (
+          {openingWorkspace ? (
+            startupFailed ||
+            ["missing", "unavailable"].includes(sessionConnection) ? (
+              <div className="workspace-opening-failure" role="status">
+                <CircleAlert size={28} aria-hidden="true" />
+                <p>Couldn’t open workspace.</p>
+              </div>
+            ) : (
+              <ProcessingState
+                className="workspace-opening"
+                label="Opening workspace"
+                indicatorSize="compact"
+              />
+            )
+          ) : !workspace && demoStatus?.limited ? (
             <DemoLimitScreen retryAt={demoStatus.retryAt} />
           ) : !workspace && ((busy && !capabilities) || openingState) ? (
             <ProcessingState
@@ -452,6 +463,7 @@ export function LocalEditingExperience({
                 {!hosted && (
                   <ControlTabs
                     id={sourceMethodsId}
+                    className="source-method-tabs"
                     label="Video source"
                     items={[
                       { value: "upload", label: "Upload" },
@@ -487,9 +499,6 @@ export function LocalEditingExperience({
                     }}
                   >
                     <div className="source-card-heading">
-                      <span className="source-icon">
-                        <Upload size={24} aria-hidden="true" />
-                      </span>
                       <h2 id="upload-title">Upload a video</h2>
                     </div>
                     <div className="source-card-body">
@@ -506,6 +515,11 @@ export function LocalEditingExperience({
                         id="upload-feedback"
                         message={messageArea === "upload" ? message : undefined}
                       />
+                      <span className="source-card-footnote source-hint">
+                        {hosted
+                          ? "MP4 video · Temporary editing session"
+                          : "MP4 or ClipBuilder draft · Saved edits reopen automatically"}
+                      </span>
                       <div className="source-actions">
                         <Button
                           icon={Upload}
@@ -537,11 +551,6 @@ export function LocalEditingExperience({
                           event.target.value = "";
                         }}
                       />
-                      <span className="source-card-footnote source-hint">
-                        {hosted
-                          ? "MP4 video · Temporary editing session"
-                          : "MP4 or ClipBuilder draft · Saved edits reopen automatically"}
-                      </span>
                     </div>
                   </section>
                   {!hosted && (
@@ -559,141 +568,190 @@ export function LocalEditingExperience({
               </div>
             )
           )}
+          {openingWorkspace && (
+            <div className="workspace-opening-actions">
+              {startupFailed && (
+                <Button onClick={retryStartup}>Try again</Button>
+              )}
+              <div className="workflow-action-slot" ref={setActionTarget} />
+            </div>
+          )}
           {workspace && (
             <>
-              <section className="moment-selection" hidden={view !== "moments"}>
-                <div className="moment-layout">
-                  <aside className="source-preview" aria-label="Source preview">
-                    <div className="section-heading">
-                      <h2>Your video</h2>
-                    </div>
-                    <ThumbnailVideo
-                      thumbnailSource={`/api/local/workspace/${workspace.id}/source`}
-                      thumbnailAspectRatio={
-                        workspace.source.width / workspace.source.height
-                      }
-                      thumbnailTimeMs={
-                        workspace.source.availableWindow
-                          ? workspace.source.availableWindow.startMs +
-                            Math.min(
-                              10000,
-                              (workspace.source.availableWindow.endMs -
-                                workspace.source.availableWindow.startMs) /
-                                4,
-                            )
-                          : undefined
-                      }
-                      key={workspace.id}
-                      ref={sourcePreview}
-                      aria-label="Source video"
-                      controls
-                      preload="metadata"
-                      src={`/api/local/workspace/${workspace.id}/source`}
-                      onLoadedMetadata={(event) => {
-                        constrainSourcePlayback(
-                          event.currentTarget,
-                          workspace.source.availableWindow,
-                          "loaded",
-                        );
-                        setPreviewReadyFor(workspace.id);
-                        if (messageArea === "source") setMessage("");
-                      }}
-                      onTimeUpdate={(event) =>
-                        constrainSourcePlayback(
-                          event.currentTarget,
-                          workspace.source.availableWindow,
-                          "time",
-                        )
-                      }
-                      onPlay={(event) =>
-                        constrainSourcePlayback(
-                          event.currentTarget,
-                          workspace.source.availableWindow,
-                          "play",
-                        )
-                      }
-                      onSeeked={() => setPreviewReadyFor(workspace.id)}
-                      onSeeking={(event) => {
-                        constrainSourcePlayback(
-                          event.currentTarget,
-                          workspace.source.availableWindow,
-                          "seeking",
-                        );
-                        setPreviewReadyFor(null);
-                      }}
-                      onEmptied={() => setPreviewReadyFor(null)}
-                      onError={() => {
-                        setPreviewReadyFor(null);
-                        setMessageArea("source");
-                        setMessage("Couldn’t load the video preview.");
-                      }}
-                      onLoadStart={() => setPreviewReadyFor(null)}
-                    />
-                    <div
-                      className="source-preview-feedback"
-                      hidden={messageArea !== "source" || !message}
+              {(view === "moments" || momentsVisited === workspace.id) && (
+                <section
+                  className="moment-selection"
+                  hidden={view !== "moments"}
+                >
+                  <div className="moment-layout">
+                    <aside
+                      className="source-preview"
+                      aria-label="Source preview"
                     >
-                      <InlineFeedback
-                        reserve={false}
-                        message={messageArea === "source" ? message : undefined}
-                      />
-                    </div>
-                  </aside>
-                  {capabilities && (
-                    <OwnerSelectionPanel
-                      key={workspace.id}
-                      workspace={workspace}
-                      capabilities={capabilities}
-                      busy={blocked || clipWork}
-                      actionTarget={actionTarget}
-                      actionsVisible={view === "moments"}
-                      onBusy={setBusy}
-                      onChoose={choose}
-                      onResultsViewChange={setShowMomentResults}
-                      previewReady={previewReadyFor === workspace.id}
-                      onCaptureTime={() =>
-                        capturePreviewTime(
-                          sourcePreview.current,
-                          workspace.source.durationMs,
-                          workspace.source.origin?.startMs ?? 0,
-                        )
-                      }
-                      onJumpTo={(seconds) => {
-                        const video = sourcePreview.current;
-                        if (
-                          blocked ||
-                          clipWork ||
-                          !video ||
-                          video.readyState < 1 ||
-                          video.error ||
-                          !Number.isFinite(seconds) ||
-                          seconds < 0 ||
-                          seconds >= workspace.source.durationMs / 1000
-                        )
-                          return;
-                        try {
-                          setMessageArea("source");
-                          setMessage("");
-                          video.currentTime = seconds;
-                          video.scrollIntoView({
-                            block: "center",
-                            behavior: "smooth",
-                          });
-                          video.focus({ preventScroll: true });
-                          void video.play().catch(() => {
-                            if (sourcePreview.current === video)
-                              setMessage("Press play in the video preview.");
-                          });
-                        } catch {
-                          setMessage(
-                            "Couldn’t jump to this clip. Try the video controls.",
-                          );
+                      <div className="section-heading">
+                        <h2>Your video</h2>
+                      </div>
+                      <ThumbnailVideo
+                        thumbnailSource={`/api/local/workspace/${workspace.id}/source`}
+                        thumbnailAspectRatio={
+                          workspace.source.width / workspace.source.height
                         }
-                      }}
-                    />
-                  )}
-                </div>
-              </section>
+                        thumbnailTimeMs={
+                          workspace.source.availableWindow
+                            ? workspace.source.availableWindow.startMs +
+                              Math.min(
+                                10000,
+                                (workspace.source.availableWindow.endMs -
+                                  workspace.source.availableWindow.startMs) /
+                                  4,
+                              )
+                            : undefined
+                        }
+                        key={workspace.id}
+                        ref={sourcePreview}
+                        aria-label="Source video"
+                        controls
+                        preload="metadata"
+                        src={`/api/local/workspace/${workspace.id}/source`}
+                        onLoadedMetadata={(event) => {
+                          constrainSourcePlayback(
+                            event.currentTarget,
+                            workspace.source.availableWindow,
+                            "loaded",
+                          );
+                          setPreviewReadyFor(workspace.id);
+                          if (messageArea === "source") setMessage("");
+                        }}
+                        onTimeUpdate={(event) =>
+                          constrainSourcePlayback(
+                            event.currentTarget,
+                            workspace.source.availableWindow,
+                            "time",
+                          )
+                        }
+                        onPlay={(event) =>
+                          constrainSourcePlayback(
+                            event.currentTarget,
+                            workspace.source.availableWindow,
+                            "play",
+                          )
+                        }
+                        onSeeked={() => setPreviewReadyFor(workspace.id)}
+                        onSeeking={(event) => {
+                          constrainSourcePlayback(
+                            event.currentTarget,
+                            workspace.source.availableWindow,
+                            "seeking",
+                          );
+                          setPreviewReadyFor(null);
+                        }}
+                        onEmptied={() => setPreviewReadyFor(null)}
+                        onError={() => {
+                          setPreviewReadyFor(null);
+                          setMessageArea("source");
+                          setMessage("Couldn’t load the video preview.");
+                        }}
+                        onLoadStart={() => setPreviewReadyFor(null)}
+                      />
+                      <div
+                        className="source-preview-feedback"
+                        hidden={messageArea !== "source" || !message}
+                      >
+                        <InlineFeedback
+                          reserve={false}
+                          message={
+                            messageArea === "source" ? message : undefined
+                          }
+                        />
+                      </div>
+                    </aside>
+                    <div className="moment-workarea">
+                      {capabilities && (
+                        <OwnerSelectionPanel
+                          key={workspace.id}
+                          workspace={workspace}
+                          capabilities={capabilities}
+                          busy={blocked || clipWork}
+                          actionTarget={actionTarget}
+                          actionsVisible={view === "moments"}
+                          onBusy={setBusy}
+                          onChoose={choose}
+                          onResultsViewChange={setShowMomentResults}
+                          previewReady={previewReadyFor === workspace.id}
+                          onCaptureTime={() =>
+                            capturePreviewTime(
+                              sourcePreview.current,
+                              workspace.source.durationMs,
+                              workspace.source.origin?.startMs ?? 0,
+                            )
+                          }
+                          onJumpTo={(seconds) => {
+                            const video = sourcePreview.current;
+                            if (
+                              blocked ||
+                              clipWork ||
+                              !video ||
+                              video.readyState < 1 ||
+                              video.error ||
+                              !Number.isFinite(seconds) ||
+                              seconds < 0 ||
+                              seconds >= workspace.source.durationMs / 1000
+                            )
+                              return;
+                            try {
+                              setMessageArea("source");
+                              setMessage("");
+                              video.currentTime = seconds;
+                              const viewport = video
+                                .closest("main")
+                                ?.getBoundingClientRect();
+                              const frame = video.getBoundingClientRect();
+                              if (
+                                !viewport ||
+                                frame.top < viewport.top ||
+                                frame.bottom > viewport.bottom
+                              )
+                                video.scrollIntoView({
+                                  block: "nearest",
+                                  behavior: "smooth",
+                                });
+                              video.focus({ preventScroll: true });
+                              void video.play().catch(() => {
+                                if (sourcePreview.current === video)
+                                  setMessage(
+                                    "Press play in the video preview.",
+                                  );
+                              });
+                            } catch {
+                              setMessage(
+                                "Couldn’t jump to this clip. Try the video controls.",
+                              );
+                            }
+                          }}
+                        />
+                      )}
+                      <div className="moment-framing" ref={setFramingTarget} />
+                      {view === "moments" && (
+                        <div className="moment-workflow-actions">
+                          {hasClips && !unapplied && !clipWork && !blocked && (
+                            <Button
+                              variant="secondary"
+                              disabled={blocked}
+                              onClick={() => setView("editor")}
+                            >
+                              Back to editor
+                            </Button>
+                          )}
+                          <div
+                            className="workflow-action-slot"
+                            ref={setActionTarget}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              )}
               {capabilities && (
                 <OwnerClipBatchPanel
                   key={`clips-${workspace.id}`}
@@ -705,12 +763,17 @@ export function LocalEditingExperience({
                   onProcessed={() => setView("editor")}
                   initialReviewId={initialClip}
                   onDirtyChange={editDirtyChanged}
-                  onAddClips={() => setView("moments")}
-                  showProcessing={view === "moments"}
+                  onAddClips={() => {
+                    setMomentsVisited(workspace.id);
+                    setView("moments");
+                  }}
+                  initializing={openingWorkspace}
+                  showProcessing={view !== "editor"}
                   selectionReady={showMomentResults}
                   actionTarget={actionTarget}
+                  framingTarget={framingTarget}
                   onRecovered={workspaceRecovered}
-                  onConnected={setSessionConnected}
+                  onConnectionChange={setSessionConnection}
                   onStartOver={() => {
                     resetEditorTour(editorTourStorage());
                     setWorkspace(null);
@@ -719,7 +782,7 @@ export function LocalEditingExperience({
                     setUnapplied(false);
                     setClipWork(false);
                     setView("moments");
-                    setSessionConnected(true);
+                    setSessionConnection("connected");
                   }}
                 />
               )}

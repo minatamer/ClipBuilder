@@ -30,6 +30,7 @@ import {
 } from "../../../../../packages/composition/local/audio-sources.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import type { OwnerVisualTiming } from "../../../../../packages/contracts/local/visual-clock.ts";
+import type { OwnerVisualEdit } from "../../../../../packages/contracts/local/assets.ts";
 import {
   ownerSourceFrame,
   type OwnerHook,
@@ -81,7 +82,8 @@ export function AudioInspector({
   onYoutube?: (() => void) | undefined;
   initialCueId?: string | undefined;
   hideCueList?: boolean;
-  linkedVisual?: OwnerVisualTiming | undefined;
+  linkedVisual?:
+    (OwnerVisualTiming & Pick<OwnerVisualEdit, "video">) | undefined;
   onBackToPicture?: (() => void) | undefined;
   uploadFeedback?: string | undefined;
   validationFeedback?: string | undefined;
@@ -293,13 +295,14 @@ export function AudioInspector({
         <div
           className="picture-audio-context"
           role="group"
-          aria-label="Picture audio"
+          aria-label={linkedVisual.video ? "Video audio" : "Picture audio"}
         >
           <strong>
-            Audio for picture{occurrence === "hook" ? " [Hook]" : ""}
+            Audio for {linkedVisual.video ? "video" : "picture"}
+            {occurrence === "hook" ? " [Hook]" : ""}
           </strong>
           <Button variant="quiet" onClick={onBackToPicture}>
-            Back to picture
+            Back to {linkedVisual.video ? "video" : "picture"}
           </Button>
         </div>
       )}

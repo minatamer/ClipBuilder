@@ -66,10 +66,24 @@
   flex: 1;
 }
 .editor-layout[data-loading="true"] {
-  visibility: hidden;
-  height: 0;
-  overflow: hidden;
   pointer-events: none;
+}
+.editor-preview-canvas {
+  position: relative;
+}
+.editor-preview-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem;
+  background: var(--cb-canvas);
+  color: var(--cb-ink-soft);
+  font-size: 0.8125rem;
+  text-align: center;
 }
 .editor-preview {
   width: min(calc(100% - 1.5rem), calc((100cqh - 1.5rem) * 9 / 16));
@@ -213,53 +227,52 @@
   min-width: 0;
 }
 .editor-save-status {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   width: 8rem;
   min-width: 8rem;
-  height: 2.5rem;
+  height: var(--cb-target);
   flex: 0 0 8rem;
-  padding: 0.25rem 0.6rem;
-  border: 1px solid var(--cb-border);
-  border-radius: 2rem;
-  background: var(--cb-surface-muted);
-  font-size: 0.75rem;
+  margin-right: 0.35rem;
+  padding: 0.25rem 0.85rem 0.25rem 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 550;
+  letter-spacing: -0.01em;
   color: var(--cb-ink-soft);
-  line-height: 1.2;
-  transition:
-    background-color 180ms ease,
-    border-color 180ms ease,
-    color 180ms ease;
+  line-height: 1.25;
+  transition: color 180ms ease;
+}
+.editor-save-status::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  width: 1px;
+  height: 1.25rem;
+  background: var(--cb-border);
 }
 .editor-save-symbol {
   display: grid;
   place-items: center;
   flex: 0 0 1.125rem;
+  color: var(--cb-brand);
 }
 .editor-save-copy {
   min-width: 0;
 }
-.editor-save-status[data-state="saved"] {
-  color: var(--cb-success);
-  border-color: rgb(164 235 201 / 20%);
-  background: rgb(164 235 201 / 8%);
-}
-.editor-save-status[data-state="saving"] {
-  color: var(--cb-brand-strong);
-  border-color: rgb(120 175 255 / 25%);
-  background: rgb(120 175 255 / 9%);
-}
 .editor-save-status[data-state="invalid"],
 .editor-save-status[data-failed] {
   color: var(--cb-danger);
-  border-color: rgb(255 192 197 / 25%);
-  background: rgb(255 192 197 / 8%);
+}
+.editor-save-status[data-state="invalid"] .editor-save-symbol,
+.editor-save-status[data-failed] .editor-save-symbol {
+  color: inherit;
 }
 .editor-save-retry {
   position: absolute;
   top: calc(100% + 0.4rem);
-  right: 0;
+  left: 0;
   z-index: 30;
   background: var(--cb-surface);
   border: 1px solid var(--cb-border);
@@ -557,9 +570,11 @@
     width: 6rem;
     min-width: 6rem;
     flex-basis: 6rem;
-    padding-inline: 0.4rem;
-    gap: 0.3rem;
-    font-size: 0.6875rem;
+    margin-right: 0;
+    padding: 0 0.45rem 0 0.1rem;
+    gap: 0.35rem;
+    font-size: 0.8125rem;
+    line-height: 1.1;
   }
   .editor-save-tools {
     gap: 0.1rem;

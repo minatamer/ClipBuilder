@@ -12,9 +12,6 @@
   height: 100%;
   min-height: 0;
 }
-.clip-editor .editor-inspector-layout[data-primary="collection"] {
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 38%);
-}
 .editor-workarea-heading {
   grid-column: 1 / -1;
   display: flex;
@@ -65,10 +62,14 @@
   border-left: 1px solid var(--cb-border);
   container: editor-properties-space / inline-size;
 }
-.clip-editor .editor-context-inspector:empty {
+.clip-editor .editor-context-inspector:empty,
+.clip-editor .editor-context-inspector[hidden] {
   display: none;
 }
-.clip-editor .editor-inspector-layout:has(> .editor-context-inspector:empty) {
+.clip-editor
+  .editor-inspector-layout:has(
+    > .editor-context-inspector:is(:empty, [hidden])
+  ) {
   grid-template-columns: minmax(0, 1fr);
 }
 .clip-editor .editor-panels fieldset {
@@ -209,6 +210,7 @@
 }
 .clip-editor .editor-choice {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(2rem, 1fr) auto;
   align-items: center;
   justify-items: center;
@@ -261,7 +263,7 @@
 .filter-preset-preview {
   position: relative;
   display: block;
-  width: 100%;
+  width: min(100%, 5rem);
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border-radius: 0.25rem;
@@ -322,6 +324,60 @@
 }
 .clip-editor .editor-timeline-actions button {
   font-size: 0.75rem;
+}
+.clip-editor .editor-timeline[data-kind="picture"] {
+  container-name: media-rows;
+  container-type: inline-size;
+}
+.clip-editor .editor-timeline-entry.editor-media-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 0.25rem;
+  overflow: hidden;
+  border: 1px solid var(--cb-border);
+  border-radius: 0.5rem;
+  background: rgb(7 20 47 / 25%);
+}
+.clip-editor .editor-media-row[data-selected] {
+  border-color: var(--cb-brand);
+  background: rgb(36 93 204 / 18%);
+}
+.clip-editor
+  .editor-timeline-entry.editor-media-row
+  > .focus-shot[data-picture] {
+  position: static;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  min-height: 3.75rem;
+  padding: 0.625rem;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+}
+.clip-editor .editor-media-row > .editor-timeline-actions {
+  align-self: stretch;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  min-width: 0;
+  padding: 0.35rem;
+  border-left: 1px solid var(--cb-border);
+}
+.clip-editor .editor-media-row .editor-timeline-actions button {
+  padding: 0.5rem 0.6rem;
+  white-space: nowrap;
+}
+@container media-rows (max-width: 26rem) {
+  .clip-editor .editor-timeline-entry.editor-media-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .clip-editor .editor-media-row > .editor-timeline-actions {
+    padding: 0.15rem 0.35rem 0.35rem;
+    border-left: 0;
+    border-top: 1px solid var(--cb-border);
+  }
 }
 .clip-editor .editor-collection > div > div > fieldset {
   margin-block: 1rem;
@@ -396,11 +452,6 @@
 }
 .clip-editor .caption-words {
   gap: 0.5rem;
-}
-.clip-editor .position-presets {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
-  margin-block: 0.75rem 1rem;
 }
 .clip-editor .geometry-controls {
   border-top: 1px solid var(--cb-border);
@@ -543,13 +594,15 @@
     border: 0 !important;
   }
   .clip-editor
-    .editor-inspector-layout:has(> .editor-context-inspector:empty)
+    .editor-inspector-layout:has(
+      > .editor-context-inspector:is(:empty, [hidden])
+    )
     > .editor-narrow-navigation {
     display: none;
   }
   .clip-editor
     .editor-inspector-layout:has(
-      > .editor-context-inspector:not(:empty)
+      > .editor-context-inspector:not(:empty):not([hidden])
     )[data-view="properties"]
     > .editor-collection,
   .clip-editor

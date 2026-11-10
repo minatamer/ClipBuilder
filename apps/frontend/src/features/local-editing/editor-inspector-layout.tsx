@@ -1,7 +1,9 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useId,
+  useLayoutEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -12,53 +14,96 @@ const InspectorSlots = createContext<
   | {
       inspector: HTMLElement | null;
       collection: HTMLElement | null;
+      registerInspector: () => () => void;
+      disclosure: {
+        available: boolean;
+        expanded: boolean;
+        panelId: string;
+        setExpanded: (expanded: boolean) => void;
+      };
     }
   | undefined
 >(undefined);
+
+export function useEditorInspectorDisclosure() {
+  return useContext(InspectorSlots)?.disclosure;
+}
 
 /** One canonical form: alongside its collection on wide screens, switched in place on narrow screens. */
 export function EditorInspectorLayout({
   children,
   label,
   selectionKey,
-  paneRequest,
   title,
   context,
   collectionLabel,
+  revealKey = 0,
+  collapsible = false,
 }: {
   children: ReactNode;
   label: string;
   selectionKey?: string | undefined;
-  paneRequest?: "collection" | "properties" | undefined;
   title: string;
   context?: string;
   collectionLabel: string;
+  revealKey?: number;
+  collapsible?: boolean;
 }) {
   const [inspector, setInspector] = useState<HTMLElement | null>(null);
   const [collection, setCollection] = useState<HTMLDivElement | null>(null);
-  const [navigation, setNavigation] = useState({
+  const [inspectorCount, setInspectorCount] = useState(0);
+  const registerInspector = useCallback(() => {
+    setInspectorCount((count) => count + 1);
+    return () => setInspectorCount((count) => count - 1);
+  }, []);
+  const [navigation, setNavigation] = useState<{
+    selectionKey: string | undefined;
+    view: "collection" | "properties";
+    expanded: boolean;
+    revealKey: number;
+  }>({
     selectionKey,
-    paneRequest,
-    view: paneRequest ?? "properties",
+    view: "properties",
+    expanded: true,
+    revealKey,
   });
   if (
     navigation.selectionKey !== selectionKey ||
-    navigation.paneRequest !== paneRequest
+    navigation.revealKey !== revealKey
   ) {
     setNavigation({
       selectionKey,
-      paneRequest,
-      view: paneRequest ?? (selectionKey ? "properties" : navigation.view),
+      view:
+        selectionKey || navigation.revealKey !== revealKey
+          ? "properties"
+          : navigation.view,
+      expanded: true,
+      revealKey,
     });
   }
+  const setExpanded = useCallback((expanded: boolean) => {
+    setNavigation((current) => ({
+      ...current,
+      expanded,
+      view: expanded ? "properties" : "collection",
+    }));
+  }, []);
   const id = useId();
   return (
-    <InspectorSlots value={{ inspector, collection }}>
-      <div
-        className="editor-inspector-layout"
-        data-view={navigation.view}
-        data-primary={paneRequest ?? "properties"}
-      >
+    <InspectorSlots
+      value={{
+        inspector,
+        collection,
+        registerInspector,
+        disclosure: {
+          available: inspectorCount > 0,
+          expanded: navigation.expanded,
+          panelId: `${id}-properties-panel`,
+          setExpanded,
+        },
+      }}
+    >
+      <div className="editor-inspector-layout" data-view={navigation.view}>
         <header className="editor-workarea-heading">
           <h2>{title}</h2>
           {context && <span className="editor-scope-badge">{context}</span>}
@@ -72,9 +117,10 @@ export function EditorInspectorLayout({
               { value: "properties", label: "Properties" },
             ]}
             value={navigation.view}
-            onChange={(view) =>
-              setNavigation((current) => ({ ...current, view }))
-            }
+            onChange={(view) => {
+              if (collapsible) setExpanded(view === "properties");
+              else setNavigation((current) => ({ ...current, view }));
+            }}
           />
           {context && <span className="editor-scope-badge">{context}</span>}
         </div>
@@ -94,6 +140,7 @@ export function EditorInspectorLayout({
           aria-labelledby={`${id}-properties`}
           className="editor-context-inspector"
           aria-label={label}
+          hidden={!navigation.expanded}
           ref={setInspector}
         />
       </div>
@@ -111,6 +158,8 @@ export function EditorInspector({
   disabled?: boolean;
 }) {
   const slots = useContext(InspectorSlots);
+  const register = slots?.registerInspector;
+  useLayoutEffect(() => register?.(), [register]);
   const content = (
     <fieldset disabled={disabled} className="editor-properties">
       <legend className="local-sr-only">{title}</legend>
@@ -122,6 +171,7 @@ export function EditorInspector({
     : content;
 }
 
+/** Collection suggestions/actions only; editable forms use EditorInspector. */
 export function EditorCollection({
   children,
   disabled = false,

@@ -1,5 +1,5 @@
 import { build, stop } from "esbuild";
-import { createServer } from "node:http";
+import { createServer, type ServerResponse } from "node:http";
 import { mkdtemp, readFile, realpath, writeFile, rm } from "node:fs/promises";
 import { randomUUID, createHash } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -45,6 +45,9 @@ export async function startHookEditorFixture(
     pictureArtwork?: Uint8Array;
     manyMomentCount?: number;
     siblingClip?: boolean;
+    youtubeAudio?: boolean;
+    holdWorkspace?: boolean;
+    holdClips?: boolean;
   } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), "clipbuilder-hook-editor-"));
@@ -216,6 +219,41 @@ export async function startHookEditorFixture(
   let tourResets = 0,
     tourOpens = 0;
   const pendingPreviews = new Set<() => void>();
+  const entryHeld = {
+    workspace: options.holdWorkspace ?? false,
+    clips: options.holdClips ?? false,
+  };
+  const pendingEntry = {
+    workspace: new Set<() => void>(),
+    clips: new Set<() => void>(),
+  };
+  const entryReads = {
+    workspace: 0,
+    clips: 0,
+    analysis: 0,
+    source: 0,
+    clipSource: 0,
+  };
+  let entryMissing = false;
+  const releaseEntry = (part: keyof typeof entryHeld) => {
+    entryHeld[part] = false;
+    for (const finish of pendingEntry[part]) finish();
+  };
+  const waitForEntry = async (
+    part: keyof typeof entryHeld,
+    response: ServerResponse,
+  ) => {
+    if (!entryHeld[part]) return;
+    await new Promise<void>((done) => {
+      const finish = () => {
+        pendingEntry[part].delete(finish);
+        response.off("close", finish);
+        done();
+      };
+      pendingEntry[part].add(finish);
+      response.once("close", finish);
+    });
+  };
   const releasePreview = () => {
     previewHeld = false;
     for (const done of pendingPreviews) done();
@@ -474,6 +512,7 @@ export async function startHookEditorFixture(
             sourceMode: null,
             planningAvailable: true,
             captionGeneration: false,
+            ...(options.youtubeAudio ? { youtubeAudio: true } : {}),
             ...(options.momentsLayout ? { aiProvider: "codex" } : {}),
             localMedia: true,
             cloud: false,
@@ -482,6 +521,9 @@ export async function startHookEditorFixture(
         return;
       }
       if (req.url === "/api/local/workspace") {
+        entryReads.workspace++;
+        await waitForEntry("workspace", res);
+        if (res.destroyed) return;
         res.end(
           JSON.stringify(
             scenario === "/intake.html"
@@ -498,6 +540,13 @@ export async function startHookEditorFixture(
         return;
       }
       if (req.url?.endsWith("/clips")) {
+        entryReads.clips++;
+        await waitForEntry("clips", res);
+        if (res.destroyed) return;
+        if (entryMissing) {
+          res.writeHead(410, { "Cache-Control": "no-store" }).end();
+          return;
+        }
         res.end(
           JSON.stringify(
             options.momentsLayout ||
@@ -539,6 +588,7 @@ export async function startHookEditorFixture(
         return;
       }
       if (req.url?.endsWith("/analysis")) {
+        entryReads.analysis++;
         res.end(
           JSON.stringify(
             options.momentsLayout
@@ -570,6 +620,8 @@ export async function startHookEditorFixture(
         return;
       }
       if (req.url?.endsWith("/source")) {
+        if (req.url.includes("/clips/")) entryReads.clipSource++;
+        else entryReads.source++;
         if (previewHeld)
           await new Promise<void>((done) => {
             const finish = () => {
@@ -826,6 +878,11 @@ export async function startHookEditorFixture(
       clip,
       sibling,
       releasePreview,
+      releaseEntry,
+      entryReads: () => ({ ...entryReads }),
+      setEntryMissing: (value: boolean) => {
+        entryMissing = value;
+      },
       holdPreview: () => {
         previewHeld = true;
       },
@@ -858,6 +915,8 @@ export async function startHookEditorFixture(
       },
       momentCounts: () => ({ analysesStarted, analysesClosed }),
       close: async () => {
+        releaseEntry("workspace");
+        releaseEntry("clips");
         releaseEdits();
         releasePreview();
         server.closeAllConnections();
@@ -869,6 +928,8 @@ export async function startHookEditorFixture(
       },
     };
   } catch (error) {
+    releaseEntry("workspace");
+    releaseEntry("clips");
     releaseEdits();
     releasePreview();
     server.closeAllConnections();

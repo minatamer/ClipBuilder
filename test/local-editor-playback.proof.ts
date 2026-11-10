@@ -142,7 +142,7 @@ it("keeps full editor playback continuous while Zoom/Motion inspectors and live 
       const driver = await transform(
         `globalThis.editorPlaybackMeasure=async(tab:string)=>{
         const wait=async(fn:()=>unknown)=>{for(let i=0;i<400;i++){if(fn())return;await new Promise(r=>setTimeout(r,20))}throw Error('editor_playback_not_ready_'+document.body.innerText.slice(0,600))};
-        await wait(()=>document.querySelector('.editor-panels:not([hidden])'));
+        await wait(()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels'));
         document.querySelectorAll<HTMLButtonElement>('[aria-label="Clip settings"] [role="tab"]').forEach(b=>{if(b.textContent==='Camera')b.click()});
         await wait(()=>document.querySelector('[aria-label="Focus controls"]'));
         document.querySelectorAll<HTMLButtonElement>('[aria-label="Focus controls"] [role="tab"]').forEach(b=>{if(b.textContent===tab)b.click()});

@@ -50,7 +50,7 @@ it("keeps the preview and canonical controls reachable across laptop, tablet and
     await page.goto({ url: fixture.url, timeout: 15000 });
     await page.evaluate(`globalThis.checkWorkspaceSection=async section=>{
       const wait=async fn=>{for(let i=0;i<400;i++){if(fn())return;await new Promise(r=>setTimeout(r,25));}throw Error('workspace_not_ready');};
-      await wait(()=>document.querySelector('.editor-panels:not([hidden])'));
+      await wait(()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels'));
       const tab=[...document.querySelectorAll('.editor-tabs button')].find(n=>n.textContent.trim()===section);tab.click();
       for(let i=0;i<3;i++)await new Promise(requestAnimationFrame);
       if(section==='Media'){document.querySelector('[data-timeline-key^="body:picture:"]').click();for(let i=0;i<3;i++)await new Promise(requestAnimationFrame);}

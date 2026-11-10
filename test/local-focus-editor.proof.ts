@@ -399,7 +399,7 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
       const person=n=>[...document.querySelectorAll('.focus-person-select')].find(b=>b.textContent.trim()==='Person '+n);
       const sourceVideo=()=>document.querySelector('.editor-preview video[data-editor-active="true"]');
       const frameReady=async()=>{await wait(()=>sourceVideo()?.readyState>=2&&!sourceVideo().seeking&&(!named('Capture camera end').disabled||!named('Capture camera start').disabled),'seeked');};
-      globalThis.focusReady=async()=>{await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'preview');[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Camera').click();await wait(()=>document.querySelector('.focus-editor'));await frameReady();};
+      globalThis.focusReady=async()=>{await wait(()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),'preview');[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Camera').click();await wait(()=>document.querySelector('.focus-editor'));await frameReady();};
       globalThis.focusUiState=()=>{const f=document.querySelector('footer').getBoundingClientRect();return {shots:[...document.querySelectorAll('.focus-shot')].map(n=>n.firstChild.textContent),selected:[...document.querySelectorAll('.focus-shot')].findIndex(n=>n.getAttribute('aria-pressed')==='true'),dirty:!!button('Apply changes'),footer:f.top>=0&&f.bottom<=innerHeight+1,overflow:document.documentElement.scrollWidth>innerWidth,cropCount:document.querySelectorAll('.focus-crop').length,oldBoxes:document.querySelectorAll('.focus-person-box').length};};
       globalThis.focusCenter=()=>Number(field('Horizontal (%)').value);
       globalThis.focusPointer=()=>{const n=document.querySelector('.focus-person-handle[aria-pressed="true"]');n.scrollIntoView({block:'center'});const r=n.getBoundingClientRect(),s=document.querySelector('.focus-source').getBoundingClientRect();return {x:r.left+r.width/2+3,y:r.top+r.height/2,targetX:r.left+r.width/2+3+s.width*.1};};
@@ -433,10 +433,10 @@ it("edits person focus through real shared controls, pointer gestures, Apply/Dis
           return JSON.stringify(after)===JSON.stringify(['Person 1 · Position 1','Person 2 · Position 1','Person 1 · Position 2']);
         }
         if(action==='fake-empty'){
-          await wait(()=>document.querySelector('.caption-empty')&&document.querySelector('.editor-panels:not([hidden])'),'fake_empty_layout');const panel=document.querySelector('.caption-empty');panel.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const r=panel.getBoundingClientRect(),f=document.querySelector('footer').getBoundingClientRect();return document.documentElement.scrollWidth<=innerWidth&&f.top>=0&&f.bottom<=innerHeight+1&&[...panel.querySelectorAll('button')].every(n=>{const b=n.getBoundingClientRect();return b.width>=44&&b.height>=44&&b.left>=r.left-1&&b.right<=r.right+1;});
+          await wait(()=>document.querySelector('.caption-empty')&&document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),'fake_empty_layout');const panel=document.querySelector('.caption-empty');panel.scrollIntoView({block:'center'});await new Promise(requestAnimationFrame);const r=panel.getBoundingClientRect(),f=document.querySelector('footer').getBoundingClientRect();return document.documentElement.scrollWidth<=innerWidth&&f.top>=0&&f.bottom<=innerHeight+1&&[...panel.querySelectorAll('button')].every(n=>{const b=n.getBoundingClientRect();return b.width>=44&&b.height>=44&&b.left>=r.left-1&&b.right<=r.right+1;});
         }
         if(action==='fake-captions'){
-          await wait(()=>document.querySelector('.caption-empty')&&document.querySelector('.editor-panels:not([hidden])'),'fake_empty');
+          await wait(()=>document.querySelector('.caption-empty')&&document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),'fake_empty');
           const fake=button('Generate fake captions'),real=button('Generate captions');
           if(!fake||fake.disabled||!real?.disabled||document.querySelector('[aria-label="Select and move captions"]'))return false;
           fake.click();await wait(()=>document.querySelector('[aria-label="Caption 1 word 1"]'),'fake_added');

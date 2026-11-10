@@ -155,7 +155,7 @@ it("keeps repeated editor changes and acknowledgements free of update-depth loop
         await pause();
       };
       await wait(
-        () => document.querySelector(".editor-panels:not([hidden])"),
+        () => document.querySelector(".editor-layout:not([data-loading]) .editor-panels"),
         "preview",
       );
       let changes = 0;

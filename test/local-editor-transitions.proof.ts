@@ -175,7 +175,7 @@ it("survives real Next development Camera/Zoom/Motion and image edit transitions
       const input=(name:string)=>document.querySelector<HTMLInputElement>('input[aria-label="'+name+'"]');
       const set=async(name:string,value:string)=>{const n=input(name);if(!n)throw Error('missing_input_'+name);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(n,value);n.dispatchEvent(new Event('input',{bubbles:true}));actions++;await pause()};
       const key=async(selector:string,key:string)=>{const n=document.querySelector<HTMLElement>(selector);if(!n)throw Error('missing_key_'+selector);n.focus();n.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true}));actions++;await pause()};
-      await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'editor');
+      await wait(()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),'editor');
       for(let round=0;round<8;round++){
         await tab('Clip settings','Camera');
         for(const row of [...document.querySelectorAll<HTMLButtonElement>('[aria-label="Camera timeline"] button')]){row.click();actions++;await pause()}

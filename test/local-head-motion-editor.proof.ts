@@ -332,7 +332,7 @@ it("tracks a manually marked moving head through real editor controls, cancel, A
       const change=async(name,value)=>{const n=named(name);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(n,value);n.dispatchEvent(new Event('input',{bubbles:true}));await new Promise(requestAnimationFrame);};
       const footer=()=>{const f=document.querySelector('#sample-main > footer'),r=f.getBoundingClientRect();if(r.top<0||r.bottom>innerHeight+1)throw Error('tracking_footer_bounds');for(const n of f.querySelectorAll('button')){const b=n.getBoundingClientRect();if(b.width&&(b.left<r.left||b.right>r.right||b.bottom>r.bottom))throw Error('tracking_footer_overflow');}if(document.documentElement.scrollWidth>innerWidth)throw Error('tracking_document_overflow');};
       if(action==='open'){
-        await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'editor_ready');
+        await wait(()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),'editor_ready');
         [...named('Clip settings').querySelectorAll('[role=tab]')].find(n=>n.textContent==='Camera').click();
         await wait(()=>named('Focus controls'),'focus');const tabs=[...named('Focus controls').querySelectorAll('[role=tab]')];
         const motion=tabs.find(n=>n.textContent==='Motion');if(tabs[tabs.indexOf(motion)-1].textContent!=='Zoom')throw Error('motion_tab_position');motion.click();

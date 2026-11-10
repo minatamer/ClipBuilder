@@ -25,7 +25,6 @@ import {
 } from "./resolution-choices.ts";
 import { YoutubePreview } from "./youtube-preview.tsx";
 import { WorkflowActions } from "./workflow-actions";
-import { useWorkspaceChrome } from "../../shared/ui/workspace";
 import {
   ownerAnalysisWindow,
   ownerSourceTimestamp,
@@ -73,7 +72,6 @@ export function OwnerAcquisitionPanel({
   onOpen: (workspace: OwnerWorkspace) => void;
   hidden?: boolean;
 }) {
-  const chrome = useWorkspaceChrome();
   const formId = useId();
   const resolutionId = useId();
   const [url, setUrl] = useState("");
@@ -751,8 +749,25 @@ export function OwnerAcquisitionPanel({
               : undefined
           }
         />
+        <span className="source-card-footnote source-hint">
+          {capabilities?.sourceMode === "synthetic-source"
+            ? "Simulated download."
+            : capabilities && !capabilities.sourceMode
+              ? "Downloads unavailable. Saved copies still work."
+              : null}
+        </span>
         {!hidden && (
-          <WorkflowActions target={chrome?.actions} label="YouTube actions">
+          <WorkflowActions label="YouTube actions">
+            {step === "resolution" && (
+              <Button
+                variant="quiet"
+                icon={ArrowLeft}
+                disabled={disabled}
+                onClick={changeLink}
+              >
+                Change link
+              </Button>
+            )}
             {step === "url" ? (
               <Button
                 type="submit"
@@ -810,25 +825,8 @@ export function OwnerAcquisitionPanel({
                 )}
               </Button>
             )}
-            {step === "resolution" && (
-              <Button
-                variant="quiet"
-                icon={ArrowLeft}
-                disabled={disabled}
-                onClick={changeLink}
-              >
-                Change link
-              </Button>
-            )}
           </WorkflowActions>
         )}
-        <span className="source-card-footnote source-hint">
-          {capabilities?.sourceMode === "synthetic-source"
-            ? "Simulated download."
-            : capabilities && !capabilities.sourceMode
-              ? "Downloads unavailable. Saved copies still work."
-              : null}
-        </span>
       </div>
     </section>
   );

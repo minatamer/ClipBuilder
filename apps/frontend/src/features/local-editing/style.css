@@ -12,6 +12,24 @@
   &.local-intake:has(.source-options-upload) {
     justify-content: flex-start;
   }
+  &.local-opening {
+    justify-content: center;
+  }
+  .workspace-opening,
+  .workspace-opening-failure {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    min-height: min(30rem, 65dvh);
+  }
+  .workspace-opening-failure {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 1rem;
+    color: var(--cb-ink-soft);
+  }
   :where(h2, h3) {
     line-height: 1.3;
     letter-spacing: -0.02em;
@@ -86,8 +104,33 @@
   }
   .source-intake {
     width: 100%;
-    max-width: 76rem;
+    max-width: 68rem;
     margin-inline: auto;
+  }
+  .source-intake .source-method-tabs {
+    display: flex;
+    width: fit-content;
+    min-width: min(100%, 18rem);
+    border: 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--cb-border);
+    padding: 0;
+    margin-bottom: 1rem;
+    background: transparent;
+  }
+  .source-intake .source-method-tabs > button {
+    flex: 1;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .source-intake .source-method-tabs > button[aria-selected="true"] {
+    border-bottom-color: var(--cb-brand);
+    background: transparent;
+    color: var(--cb-brand-strong);
+    box-shadow: none;
   }
   .source-options {
     display: grid;
@@ -96,11 +139,11 @@
   }
   .source-card {
     position: relative;
-    padding: clamp(1rem, 3vw, 2rem);
+    padding: clamp(1rem, 2.25vw, 1.5rem);
     border-radius: 0.75rem;
     border: 1px solid var(--cb-border);
-    background: var(--cb-surface);
-    min-height: min(36rem, 66svh);
+    background: rgb(12 33 69 / 45%);
+    min-height: clamp(26rem, 62svh, 34rem);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -112,14 +155,18 @@
     flex: 1;
   }
   .source-card-heading {
+    width: 100%;
     display: flex;
     align-items: center;
     gap: 1rem;
     flex: 0 0 3.25rem;
     margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--cb-border);
   }
   .source-card-heading h2 {
     margin-bottom: 0;
+    font-size: 1rem;
   }
   .source-card-heading .source-icon {
     margin: 0;
@@ -134,19 +181,39 @@
     scrollbar-gutter: auto;
   }
   .source-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem 1rem;
     flex-shrink: 0;
     padding-top: 1rem;
     width: 100%;
+    margin-top: 1rem;
+    border-top: 1px solid var(--cb-border);
+  }
+  .source-card-actions > [data-inline-feedback] {
+    flex-basis: 100%;
+  }
+  .source-card-actions > .workflow-action-slot,
+  .source-card-actions > .source-actions {
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+  .source-card-actions .workflow-actions {
+    justify-content: flex-end;
+    margin: 0;
   }
   .source-card-actions .source-actions {
     margin: 0;
     padding: 0;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
   }
   .source-card-footnote {
     display: block;
-    height: 1.6em;
-    margin-top: 1.25rem;
+    flex: 1 1 12rem;
+    min-height: 1.6em;
+    margin: 0;
   }
   .youtube-preview {
     min-width: 0;
@@ -155,10 +222,9 @@
     gap: 1rem;
     padding: 0.65rem;
     margin-bottom: 0.75rem;
-    border: 1px solid var(--cb-glass-border);
-    border-radius: 1rem;
-    background: var(--cb-glass-sheen), rgb(7 22 52 / 24%);
-    box-shadow: var(--cb-glass-edge-shadow);
+    border: 1px solid var(--cb-border);
+    border-radius: 0.5rem;
+    background: var(--cb-canvas);
   }
   .youtube-preview-placeholder {
     height: 5.3rem;
@@ -213,7 +279,7 @@
     width: 3.25rem;
     height: 3.25rem;
     color: var(--cb-brand-strong);
-    border-radius: 1rem;
+    border-radius: 0.5rem;
     border: 1px solid var(--cb-glass-border);
     background: var(--cb-glass-sheen), var(--cb-brand-soft);
     box-shadow: var(--cb-glass-edge-shadow);
@@ -455,22 +521,85 @@
   }
   .moment-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(24rem, 0.9fr);
-    gap: 1.5rem;
+    grid-template-columns: minmax(0, 0.85fr) minmax(24rem, 1fr);
+    gap: 1.75rem;
     align-items: stretch;
     min-width: 0;
   }
-  .moment-layout > .selection {
+  .moment-workarea {
     min-width: 0;
+    border-left: 1px solid var(--cb-border);
+    padding-left: 1.75rem;
+  }
+  .moment-workflow-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--cb-border);
+  }
+  .workspace-opening-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    width: 100%;
+  }
+  .workspace-opening-actions:not(:has(button, a[href], [role="status"])) {
+    display: none;
+  }
+  .moment-workflow-actions .workflow-action-slot,
+  .moment-workflow-actions .workflow-actions {
+    justify-content: flex-end;
+  }
+  .moment-workflow-actions .workflow-actions {
+    margin: 0;
+  }
+  .moment-workarea > .selection fieldset {
+    border: 0;
+    border-bottom: 1px solid var(--cb-border);
+    border-radius: 0;
+    padding: 0 0 1rem;
+    margin: 1rem 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .moment-workarea > .selection legend {
+    padding: 0 0 0.75rem;
+    font-size: 0.875rem;
+  }
+  .moment-framing:empty {
+    display: none;
+  }
+  .moment-framing {
+    border-top: 1px solid var(--cb-border);
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+  }
+  .moment-framing > label {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .moment-restoring {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding-block: 1rem;
+    color: var(--cb-ink-soft);
+    font-size: 0.875rem;
   }
   .source-preview {
     position: relative;
     min-width: 0;
     box-sizing: border-box;
-    padding: 1rem;
-    border: 1px solid var(--cb-border);
-    border-radius: 0.75rem;
-    background: var(--cb-canvas);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
   .collection-navigation {
     display: flex;
@@ -490,6 +619,8 @@
   }
   .section-heading h2 {
     margin: 0;
+    font-size: 0.875rem;
+    color: var(--cb-ink-soft);
   }
   .source-preview video {
     display: block;
@@ -508,6 +639,7 @@
   }
   .selection-count {
     margin: 0.75rem 0;
+    font-size: 0.8125rem;
   }
   .range-row,
   .duration-row {
@@ -570,17 +702,20 @@
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 1rem;
+    gap: 0;
   }
   .moments li {
     min-width: 0;
-    border: 1px solid var(--cb-border);
-    border-radius: var(--cb-radius-card);
-    padding: 1.25rem;
-    background: var(--cb-glass-sheen), rgb(7 22 52 / 40%);
+    border: 0;
+    border-bottom: 1px solid var(--cb-border);
+    border-radius: 0;
+    padding: 1rem 0;
+    background: transparent;
   }
   .moment-card {
     display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
     gap: 1rem;
   }
   .moment-card-body {
@@ -616,16 +751,16 @@
   }
   .moment-card-actions {
     display: flex;
-    align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
   }
   .moment-card-actions > button {
     flex: 0 0 auto;
   }
   .moment-card-actions > .moment-remove {
-    margin-left: auto;
+    margin-left: 0;
   }
   button[aria-pressed="true"] {
     border-color: var(--cb-brand);
@@ -763,9 +898,6 @@
       padding: clamp(0.75rem, 2svh, 1.5rem) 1rem;
       gap: clamp(0.75rem, 2svh, 1.25rem);
     }
-    &.local-moments .moments-processing > div[aria-hidden="true"] {
-      width: clamp(6.5rem, 10svh, 7rem);
-    }
   }
   @media (max-width: 63.999rem) {
     .moment-layout {
@@ -878,12 +1010,6 @@
   .acquisition-tabs button[aria-pressed="true"] {
     color: var(--cb-ink);
     border-bottom-color: var(--cb-brand);
-  }
-  .position-presets {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: var(--local-editor-spacing, 1rem);
   }
   .picture-picker {
     display: flex;
@@ -1175,17 +1301,11 @@
     background: var(--cb-brand-soft);
   }
   .moment-tabs {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.25rem;
-    margin-bottom: var(--local-editor-spacing, 1rem);
-    padding: 0.3rem;
-    border: 1px solid var(--cb-border);
-    border-radius: 0.85rem;
-    background: rgb(7 22 52 / 40%);
-  }
-  .moment-tabs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    padding: 0;
+    border-bottom: 1px solid var(--cb-border);
   }
   .editor-section-icon {
     flex: 0 0 auto;
@@ -1709,8 +1829,9 @@
     min-width: 0;
     min-height: var(--cb-target);
     padding: 0.5rem 0.25rem;
-    border: 1px solid transparent;
-    border-radius: 0.6rem;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
     background: transparent;
     color: var(--cb-ink-soft);
     font: inherit;
@@ -1719,10 +1840,9 @@
     cursor: pointer;
   }
   .moment-tabs [aria-selected="true"] {
-    background: var(--cb-glass-sheen), var(--cb-brand-soft);
-    color: var(--cb-ink);
-    border-color: var(--cb-brand);
-    box-shadow: var(--cb-glass-edge-shadow);
+    background: transparent;
+    color: var(--cb-brand-strong);
+    border-bottom-color: var(--cb-brand);
   }
   .editor-panels [role="tabpanel"][hidden],
   .selection > [role="tabpanel"][hidden] {
@@ -1866,21 +1986,23 @@
     color: var(--cb-danger);
   }
   @media (max-width: 60rem) {
-    .source-actions > * {
+    .source-actions > *,
+    .source-card-actions .workflow-actions > button {
       flex: 1 1 0;
       min-width: 0;
       padding-inline: 0.4rem;
       font-size: 0.8125rem;
       white-space: nowrap;
     }
-    .source-actions > * svg:not(.acquisition-spinner) {
+    .source-actions > * svg:not(.acquisition-spinner),
+    .source-card-actions
+      .workflow-actions
+      > button
+      svg:not(.acquisition-spinner) {
       display: none;
     }
     .source-card-actions .source-actions {
       gap: 0.5rem;
-    }
-    .source-card-footnote {
-      height: 3.2em;
     }
     .moment-layout {
       grid-template-columns: 1fr;
@@ -1893,7 +2015,24 @@
       max-height: 18rem;
     }
   }
+  @media (max-width: 63.999rem) {
+    .moment-workarea {
+      padding-left: 0;
+      border-left: 0;
+    }
+  }
   @media (max-width: 47.5rem) {
+    .moment-card {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.5rem;
+    }
+    .moment-card-actions {
+      flex-direction: row;
+      align-items: center;
+    }
+    .moment-card-actions > .moment-remove {
+      margin-left: auto;
+    }
     .clip-choice {
       font-size: 0.8125rem;
     }

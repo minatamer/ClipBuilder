@@ -66,7 +66,7 @@ it("keeps fresh short/long Hook recording edits aligned through HTTP Apply, relo
       const choose=async()=>{await audio();await click('Your audio');await wait(()=>managed(),'managed');managed().click();await new Promise(requestAnimationFrame);};
       const save=async()=>{await click('Apply changes');await wait(()=>!button('Discard changes'),'saved');};
       const defaults=(volume,offset)=>{if(field('Added audio volume').value!==volume||field('Audio offset seconds').value!==offset||field('Audio placement').value!=='hook')throw Error('sound_defaults_'+field('Added audio volume').value+'_'+field('Audio offset seconds').value);};
-      await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'ready');
+      await wait(()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),'ready');
       if(action==='suggest'){
         await setting('Hook');[...document.querySelectorAll('.hook-options label')].find(n=>n.textContent.trim()==='Add Hook audio').querySelector('input').click();await new Promise(requestAnimationFrame);await click('Use suggestion');await wait(()=>field('Hook end seconds').value==='15.3','short_window');if(field('Hook start seconds').value!=='10')throw Error('start_changed');await choose();defaults('85','0');await save();
       }else if(action==='long'||action==='short'){

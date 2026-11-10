@@ -1,0 +1,126 @@
+.stack {
+  margin-block: 1.25rem;
+  min-width: 0;
+  container-type: inline-size;
+}
+.heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+.heading h3 {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+.heading > span {
+  color: var(--cb-ink-soft);
+  font-size: 0.6875rem;
+  white-space: nowrap;
+}
+.list {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.row {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--cb-border);
+  border-radius: var(--cb-radius-control);
+  background: rgb(5 17 40 / 65%);
+  transition:
+    background 150ms ease,
+    border-color 150ms ease;
+}
+.row[data-selected] {
+  border-color: var(--cb-brand);
+  background: rgb(31 67 124 / 45%);
+}
+.row[data-moving] {
+  opacity: 0.6;
+}
+.row[data-drop-edge]::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--cb-brand-strong);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.row[data-drop-edge="before"]::after {
+  top: -6px;
+}
+.row[data-drop-edge="after"]::after {
+  bottom: -6px;
+}
+.row > .handle {
+  flex: 0 0 44px;
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cb-radius-control) 0 0 var(--cb-radius-control);
+  color: var(--cb-ink-soft);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.row[data-moving] > .handle {
+  cursor: grabbing;
+}
+.row > .item {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+  border: 0;
+  border-radius: 0 var(--cb-radius-control) var(--cb-radius-control) 0;
+  padding: 0.5rem 0.5rem 0.5rem 0;
+  background: transparent;
+  text-align: left;
+}
+.row .item :global(.picture-thumb) {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 34px;
+  margin: 0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.details {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.details strong {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.details > span {
+  color: var(--cb-ink-soft);
+  font-size: 0.625rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.position {
+  margin-left: auto;
+  color: var(--cb-ink-soft);
+  font-size: 0.625rem;
+  font-weight: 500;
+}
+@container (max-width:16rem) {
+  .position {
+    display: none;
+  }
+}

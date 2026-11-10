@@ -301,7 +301,7 @@ it("edits Zoom and captures Zoom/Motion endpoints from real playback with a Hook
     const wait=async(fn,phase)=>{for(let i=0;i<500;i++){if(fn())return;await new Promise(r=>setTimeout(r,20));}throw Error('motion_timeout_'+phase);};
     const change=async(name,value)=>{const n=named(name);if(!n)throw Error('missing_'+name);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(n,value);n.dispatchEvent(new Event('input',{bubbles:true}));await new Promise(r=>setTimeout(r,50));};
     const tab=async label=>{[...document.querySelectorAll('[aria-label="Focus controls"] [role="tab"]')].find(n=>n.textContent===label).click();await new Promise(requestAnimationFrame);};
-    const open=async()=>{await wait(()=>document.querySelector('.editor-panels:not([hidden])'),'ready');[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Camera').click();await wait(()=>document.querySelector('.focus-editor'),'focus');};
+    const open=async()=>{await wait(()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels'),'ready');[...document.querySelectorAll('[aria-label="Clip settings"] [role="tab"]')].find(n=>n.textContent==='Camera').click();await wait(()=>document.querySelector('.focus-editor'),'focus');};
     const video=()=>document.querySelector('.editor-preview video[data-editor-active=true]');
     const settled=()=>wait(()=>!button('Apply changes')&&!document.querySelector('.focus-editor').disabled,'saved');
     const seek=async frame=>{

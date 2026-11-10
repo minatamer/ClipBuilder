@@ -1,76 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
-import {
-  ArrowDown,
-  ArrowDownToLine,
-  ArrowUp,
-  ArrowUpToLine,
-} from "lucide-react";
-import { Button, IconButton } from "../../shared/ui/button";
+import { Button } from "../../shared/ui/button";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import type { OwnerVisualEdit } from "../../../../../packages/contracts/local/assets.ts";
 import type { OwnerVideoAsset } from "../../../../../packages/contracts/local/video-assets.ts";
-
-export function VisualLayers({
-  cues,
-  selected,
-  disabled,
-  onChange,
-}: {
-  cues: OwnerVisualEdit[];
-  selected: string;
-  disabled: boolean;
-  onChange: (cues: OwnerVisualEdit[]) => void;
-}) {
-  const index = cues.findIndex((cue) => cue.id === selected);
-  function move(to: number) {
-    if (index < 0 || to === index) return;
-    const next = [...cues],
-      [cue] = next.splice(index, 1);
-    next.splice(to, 0, cue!);
-    onChange(next);
-  }
-  return (
-    <fieldset disabled={disabled}>
-      <legend>Layer order</legend>
-      <p className="source-hint">
-        {index < 0
-          ? "Select a visual in the list."
-          : `${cues[index]!.video ? "Video" : "Picture"} ${index + 1} · Layer ${cues.length - index} of ${cues.length}`}
-      </p>
-      <div
-        className="picture-tools"
-        role="group"
-        aria-label="Visual layer order"
-      >
-        <IconButton
-          label="Bring to front"
-          icon={ArrowUpToLine}
-          disabled={index < 0 || index === cues.length - 1}
-          onClick={() => move(cues.length - 1)}
-        />
-        <IconButton
-          label="Move forward"
-          icon={ArrowUp}
-          disabled={index < 0 || index === cues.length - 1}
-          onClick={() => move(index + 1)}
-        />
-        <IconButton
-          label="Move backward"
-          icon={ArrowDown}
-          disabled={index <= 0}
-          onClick={() => move(index - 1)}
-        />
-        <IconButton
-          label="Send to back"
-          icon={ArrowDownToLine}
-          disabled={index <= 0}
-          onClick={() => move(0)}
-        />
-      </div>
-    </fieldset>
-  );
-}
 
 export function VisualPresentation({
   cue,

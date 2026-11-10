@@ -394,7 +394,7 @@ it("uses the real editor, clip navigation and footer at phone, tablet and deskto
       const button=text=>[...document.querySelectorAll('button,a')].find(n=>n.textContent.trim()===text);
       const rail=()=>document.querySelector('.clip-list'), content=()=>document.querySelector('#sample-main > div');
       const tabs=()=>[...(rail()?.querySelectorAll('[role=tab]')??[])], selected=()=>tabs().find(n=>n.getAttribute('aria-selected')==='true');
-      const ready=()=>document.querySelector('.editor-panels:not([hidden])');
+      const ready=()=>document.querySelector('.editor-layout:not([data-loading]) .editor-panels');
       const rect=n=>n.getBoundingClientRect();
       const footer=()=>{const f=document.querySelector('#sample-main > footer'),r=rect(f),frame=rect(document.querySelector('#sample-main'));
         if(r.right>frame.right || r.left<frame.left)throw new Error('frame_footer_overflow');

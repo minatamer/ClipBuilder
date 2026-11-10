@@ -46,18 +46,6 @@ export function EditorSaveTools({
             : "Saved";
   const tools = (
     <div className="editor-save-tools" aria-label="Edit history and saving">
-      <IconButton
-        icon={Undo2}
-        label="Undo"
-        disabled={disabled || !canUndo}
-        onClick={onUndo}
-      />
-      <IconButton
-        icon={Redo2}
-        label="Redo"
-        disabled={disabled || !canRedo}
-        onClick={onRedo}
-      />
       <span
         className="editor-save-status"
         role="status"
@@ -81,6 +69,18 @@ export function EditorSaveTools({
         </span>
         <span className="editor-save-copy">{label}</span>
       </span>
+      <IconButton
+        icon={Undo2}
+        label="Undo"
+        disabled={disabled || !canUndo}
+        onClick={onUndo}
+      />
+      <IconButton
+        icon={Redo2}
+        label="Redo"
+        disabled={disabled || !canRedo}
+        onClick={onRedo}
+      />
       {phase === "failed" && (
         <Button variant="quiet" className="editor-save-retry" onClick={onRetry}>
           Retry save

@@ -2,7 +2,6 @@ import { EditorColorControl } from "./editor-color-control";
 import {
   EditorInspectorLayout,
   EditorInspector,
-  EditorCollection,
 } from "./editor-inspector-layout";
 import { pictureLinkedAudio } from "./picture-audio.ts";
 import "./style.css";
@@ -125,6 +124,7 @@ import {
   type TextSelection,
 } from "./text-selection.tsx";
 import { BoxFields, TextPositionFields } from "./position-fields.tsx";
+import { PositionPresets } from "./position-presets";
 import { OWNER_SOCIAL_TEXT_PRESETS } from "../../../../../packages/contracts/local/text-style.ts";
 import {
   OWNER_TEXT_LIMITS,
@@ -161,8 +161,8 @@ import {
 import { OwnerAutomaticOverlay } from "../../../../../packages/composition/local/automatic-overlay.tsx";
 import { usePreviewImages, previewOverlayImage } from "./preview-images.tsx";
 import { BrollVideo } from "./broll-video.tsx";
+import { VisualLayers } from "./visual-layer-order";
 import {
-  VisualLayers,
   VisualPresentation,
   VideoSourceControls,
 } from "./visual-media-controls.tsx";
@@ -208,7 +208,6 @@ import {
   initialOwnerEdit,
   ownerGestureBox,
   sameOwnerEdit,
-  centeredOwnerBox,
   type OwnerTextGeometry,
   ownerCaptionPreset,
   type OwnerEditorBox,
@@ -799,6 +798,10 @@ export function ClipEditor({
     [hookTitles, clip.revision, workspaceId],
   );
   const [selection, setSelection] = useState("captions");
+  const [inspectorRequest, setInspectorRequest] = useState(0);
+  function revealInspector() {
+    setInspectorRequest((request) => request + 1);
+  }
   const [timelineSelection, setTimelineSelection] = useState<
     EditorTimelineItem | undefined
   >();
@@ -1646,6 +1649,7 @@ export function ClipEditor({
     }
   }
   function selectLayer(id: string) {
+    revealInspector();
     if (id !== selection) setTextRange(null);
     setTimelineSelection(undefined);
     setMediaTab(
@@ -1662,6 +1666,7 @@ export function ClipEditor({
   }
   function selectSetting(value: EditorSetting) {
     if (pending || trackingMode) return;
+    revealInspector();
     setCameraInspection(null);
     setCameraRequest(undefined);
     if (value !== setting) diagnostics.action("tab");
@@ -1678,6 +1683,7 @@ export function ClipEditor({
       chooseText(draft.texts[0]);
   }
   function chooseText(layer: OwnerTextLayer) {
+    revealInspector();
     if (layer.id !== selection) setTextRange(null);
     setTimelineSelection(undefined);
     setSelection(layer.id);
@@ -1785,6 +1791,7 @@ export function ClipEditor({
     diagnostics.action("selection");
     setTextRange(null);
     if (pending || trackingMode || audioImport !== null) return;
+    revealInspector();
     setCameraInspection(null);
     player.current?.pause();
     setOccurrence(item.occurrence);
@@ -1946,6 +1953,7 @@ export function ClipEditor({
     };
   }
   function choosePicture(cue: OwnerVisualEdit, atStart = false) {
+    revealInspector();
     setCameraInspection(null);
     setMediaTab(cue.video ? "videos" : "pictures");
     setSelection(cue.id);
@@ -2358,7 +2366,7 @@ export function ClipEditor({
         phase={autosave.phase}
         dirty={dirty}
         invalid={!!error || !!hookDraft}
-        disabled={pending || trackingMode || titleLoading}
+        disabled={!previewLoaded || pending || trackingMode || titleLoading}
         canUndo={historyAvailable.undo}
         canRedo={historyAvailable.redo}
         onUndo={() => moveHistory("undo")}
@@ -2366,7 +2374,9 @@ export function ClipEditor({
         onRetry={autosave.retry}
       />
       {previewLoading && (
-        <ProcessingState className="clip-preparing" label="Loading preview" />
+        <span className="local-sr-only" role="status">
+          Loading preview
+        </span>
       )}
       <div
         className="editor-layout"
@@ -2379,6 +2389,12 @@ export function ClipEditor({
           data-compact={compactPlayback || undefined}
         >
           <div className="editor-preview-canvas">
+            {previewLoading && (
+              <div className="editor-preview-loading" aria-hidden="true">
+                <LoaderCircle size={24} className="acquisition-spinner" />
+                <span>Loading preview</span>
+              </div>
+            )}
             {previewUnavailable ? (
               <p role="alert">Preview unavailable. Reload this clip.</p>
             ) : playbackFailed ? (
@@ -2440,17 +2456,18 @@ export function ClipEditor({
               />
             )}
           </div>
-          {compactPlayback &&
-            previewLoaded &&
-            !playbackFailed &&
-            !previewUnavailable && (
-              <CompactEditorPlayback
-                player={player}
-                frames={ownerPresentationFrames(overlay)}
-              />
-            )}
+          {compactPlayback && !playbackFailed && !previewUnavailable && (
+            <CompactEditorPlayback
+              player={player}
+              frames={ownerPresentationFrames(overlay)}
+            />
+          )}
         </div>
-        <div className="editor-panels" hidden={!previewLoaded}>
+        <div
+          className="editor-panels"
+          inert={!previewLoaded}
+          aria-busy={previewLoading || undefined}
+        >
           <div className="editor-navigation">
             <ControlTabs
               id={tabsId}
@@ -2566,6 +2583,7 @@ export function ClipEditor({
                 };
               }}
               onNavigate={(step) => {
+                revealInspector();
                 if (step.section) setSetting(step.section);
                 if (step.media) setMediaTab(step.media);
               }}
@@ -2743,6 +2761,8 @@ export function ClipEditor({
               collectionLabel="Text layers"
               context={activeOccurrence === "hook" ? "Hook" : "Main clip"}
               label="Text panes"
+              collapsible
+              revealKey={inspectorRequest}
               selectionKey={`${activeOccurrence}:${selection}`}
             >
               {setting === "text" && timeline("text", "Text layers")}
@@ -2987,124 +3007,119 @@ export function ClipEditor({
               collectionLabel="Caption timeline"
               context={activeOccurrence === "hook" ? "Hook" : "Main clip"}
               label="Caption panes"
-              paneRequest={captionTab === "text" ? "collection" : "properties"}
-              selectionKey={
-                captionTab === "text" ? undefined : timelineSelection?.key
-              }
+              collapsible
+              revealKey={inspectorRequest}
+              selectionKey={timelineSelection?.key}
             >
               {setting === "captions" &&
-                captionTab !== "text" &&
                 timeline("caption", "Caption timeline")}
-              {activeOccurrence === "hook" && !base.overlay.captions.length ? (
-                <div className="caption-empty">
-                  <h4>No captions in this Hook</h4>
-                  <Button
-                    variant="secondary"
-                    disabled={pending || !rootBase.overlay.captions.length}
-                    onClick={() => {
-                      const fresh = copyOwnerHookContent(
-                        rootBase,
-                        masterDraft,
-                        clip.assets,
-                        clip.audioAssets ?? [],
-                        masterDraft.hook!,
-                        undefined,
-                        clip.videoAssets,
-                      );
-                      const detached = withIndependentOwnerHook(
-                        rootBase,
-                        masterDraft,
-                        clip.assets,
-                        clip.audioAssets ?? [],
-                        masterDraft.hook,
-                        clip.videoAssets,
-                      );
-                      update(
-                        {
-                          ...detached,
-                          hookContent: {
-                            ...detached.hookContent!,
-                            captions: fresh.captions,
-                            words: fresh.words,
-                            edits: {
-                              ...detached.hookContent!.edits,
-                              captionText: [],
-                              captionSpeakers: fresh.edits.captionSpeakers,
-                              captions: fresh.edits.captions,
+              <EditorInspector title="Caption properties" disabled={pending}>
+                {activeOccurrence === "hook" &&
+                !base.overlay.captions.length ? (
+                  <div className="caption-empty">
+                    <h4>No captions in this Hook</h4>
+                    <Button
+                      variant="secondary"
+                      disabled={pending || !rootBase.overlay.captions.length}
+                      onClick={() => {
+                        const fresh = copyOwnerHookContent(
+                          rootBase,
+                          masterDraft,
+                          clip.assets,
+                          clip.audioAssets ?? [],
+                          masterDraft.hook!,
+                          undefined,
+                          clip.videoAssets,
+                        );
+                        const detached = withIndependentOwnerHook(
+                          rootBase,
+                          masterDraft,
+                          clip.assets,
+                          clip.audioAssets ?? [],
+                          masterDraft.hook,
+                          clip.videoAssets,
+                        );
+                        update(
+                          {
+                            ...detached,
+                            hookContent: {
+                              ...detached.hookContent!,
+                              captions: fresh.captions,
+                              words: fresh.words,
+                              edits: {
+                                ...detached.hookContent!.edits,
+                                captionText: [],
+                                captionSpeakers: fresh.edits.captionSpeakers,
+                                captions: fresh.edits.captions,
+                              },
                             },
                           },
-                        },
-                        true,
-                      );
-                    }}
-                  >
-                    Copy main captions
-                  </Button>
-                </div>
-              ) : !base.overlay.captions.length ? (
-                <div className="caption-empty">
-                  <h4>No captions yet</h4>
-                  {generating ? (
-                    <ProcessingState label="Generating captions" />
-                  ) : captionConfirm ? (
-                    <p>
-                      {captionProvider === "local-speech"
-                        ? "Generate captions on this computer? This clip’s audio stays local."
-                        : "Send this clip’s audio to Gemini to generate captions? This uses Gemini credits, including in fake mode."}
-                    </p>
-                  ) : (
-                    <>
-                      <div className="caption-empty-actions">
-                        <Button
-                          variant="secondary"
-                          disabled={
-                            pending ||
-                            dirty ||
-                            stale ||
-                            !captionGeneration ||
-                            (clip.captionAttempts ?? 0) >=
-                              OWNER_CAPTION_GENERATION_ATTEMPTS
-                          }
-                          onClick={() => {
-                            setCaptionConfirm(true);
-                            setMessage("");
-                          }}
-                        >
-                          Generate captions
-                        </Button>
-                        {fakeCaptionGeneration && (
+                          true,
+                        );
+                      }}
+                    >
+                      Copy main captions
+                    </Button>
+                  </div>
+                ) : !base.overlay.captions.length ? (
+                  <div className="caption-empty">
+                    <h4>No captions yet</h4>
+                    {generating ? (
+                      <ProcessingState label="Generating captions" />
+                    ) : captionConfirm ? (
+                      <p>
+                        {captionProvider === "local-speech"
+                          ? "Generate captions on this computer? This clip’s audio stays local."
+                          : "Send this clip’s audio to Gemini to generate captions? This uses Gemini credits, including in fake mode."}
+                      </p>
+                    ) : (
+                      <>
+                        <div className="caption-empty-actions">
                           <Button
-                            variant="quiet"
-                            disabled={pending || dirty || stale}
-                            onClick={() => void generateCaptions(true)}
+                            variant="secondary"
+                            disabled={
+                              pending ||
+                              dirty ||
+                              stale ||
+                              !captionGeneration ||
+                              (clip.captionAttempts ?? 0) >=
+                                OWNER_CAPTION_GENERATION_ATTEMPTS
+                            }
+                            onClick={() => {
+                              setCaptionConfirm(true);
+                              setMessage("");
+                            }}
                           >
-                            Generate fake captions
+                            Generate captions
                           </Button>
+                          {fakeCaptionGeneration && (
+                            <Button
+                              variant="quiet"
+                              disabled={pending || dirty || stale}
+                              onClick={() => void generateCaptions(true)}
+                            >
+                              Generate fake captions
+                            </Button>
+                          )}
+                        </div>
+                        {!captionGeneration && (
+                          <p>
+                            {captionProvider === "local-speech"
+                              ? "Local captions are unavailable. Check backend setup."
+                              : "Gemini setup is required to generate captions."}
+                          </p>
                         )}
-                      </div>
-                      {!captionGeneration && (
-                        <p>
-                          {captionProvider === "local-speech"
-                            ? "Local captions are unavailable. Check backend setup."
-                            : "Gemini setup is required to generate captions."}
-                        </p>
-                      )}
-                      {(clip.captionAttempts ?? 0) >=
-                        OWNER_CAPTION_GENERATION_ATTEMPTS && (
-                        <p>Caption generation limit reached for this clip.</p>
-                      )}
-                      {dirty && <p>Wait for your changes to save.</p>}
-                    </>
-                  )}
-                  <InlineFeedback message={messageFor("captions")} />
-                </div>
-              ) : (
-                <>
-                  <EditorInspector
-                    title="Caption properties"
-                    disabled={pending}
-                  >
-                    <legend className="local-sr-only">Captions</legend>
+                        {(clip.captionAttempts ?? 0) >=
+                          OWNER_CAPTION_GENERATION_ATTEMPTS && (
+                          <p>Caption generation limit reached for this clip.</p>
+                        )}
+                        {dirty && <p>Wait for your changes to save.</p>}
+                      </>
+                    )}
+                    <InlineFeedback message={messageFor("captions")} />
+                  </div>
+                ) : (
+                  <>
                     <ControlTabs
                       id={`${tabsId}-caption`}
                       label="Caption controls"
@@ -3267,30 +3282,28 @@ export function ClipEditor({
                       tabIndex={0}
                     >
                       {captionTab === "text" && (
-                        <EditorCollection disabled={pending}>
-                          <CaptionTextEditor
-                            selectedIndex={
-                              timelineSelection?.kind === "caption"
-                                ? timelineSelection.index
-                                : undefined
-                            }
-                            startIndex={0}
-                            captions={base.overlay.captions}
-                            edits={draft.captionText}
-                            player={player}
-                            available={
-                              setting === "captions" &&
-                              previewLoaded &&
-                              !playbackFailed &&
-                              !pending
-                            }
+                        <CaptionTextEditor
+                          selectedIndex={
+                            timelineSelection?.kind === "caption"
+                              ? timelineSelection.index
+                              : undefined
+                          }
+                          startIndex={0}
+                          captions={base.overlay.captions}
+                          edits={draft.captionText}
+                          player={player}
+                          available={
+                            setting === "captions" &&
+                            previewLoaded &&
+                            !playbackFailed &&
+                            !pending
+                          }
 
-                            frames={base.overlay.frames}
-                            onChange={(captionText) =>
-                              update({ ...draft, captionText })
-                            }
-                          />
-                        </EditorCollection>
+                          frames={base.overlay.frames}
+                          onChange={(captionText) =>
+                            update({ ...draft, captionText })
+                          }
+                        />
                       )}
                     </div>
                     <div
@@ -3318,9 +3331,9 @@ export function ClipEditor({
                         }
                       />
                     </div>
-                  </EditorInspector>
-                </>
-              )}
+                  </>
+                )}
+              </EditorInspector>
             </EditorInspectorLayout>
           </ControlPanel>
           <ControlPanel id={tabsId} value="filters" active={setting}>
@@ -3329,6 +3342,8 @@ export function ClipEditor({
               collectionLabel="Timed ranges"
               context={activeOccurrence === "hook" ? "Hook" : "Main clip"}
               label="Filter panes"
+              collapsible
+              revealKey={inspectorRequest}
               selectionKey={timelineSelection?.key}
             >
               {setting === "filters" && timeline("look", "Filter timeline")}
@@ -3365,6 +3380,8 @@ export function ClipEditor({
               collectionLabel="Your media"
               context={activeOccurrence === "hook" ? "Hook" : "Main clip"}
               label="Media panes"
+              collapsible
+              revealKey={inspectorRequest}
               selectionKey={`${mediaTab}:${timelineSelection?.key ?? selection}`}
             >
               <ControlTabs
@@ -3399,8 +3416,14 @@ export function ClipEditor({
                 <VisualLayers
                   cues={draft.visuals}
                   selected={selection}
-                  disabled={pending}
+                  disabled={pending || trackingMode || audioImport !== null}
+                  workspaceId={workspaceId}
+                  frameOffset={filterOffset}
                   onChange={(visuals) => update({ ...draft, visuals })}
+                  onSelect={(cue) => {
+                    setTimelineSelection(undefined);
+                    choosePicture(cue);
+                  }}
                 />
                 <div
                   className="picture-tools"
@@ -3565,7 +3588,8 @@ export function ClipEditor({
                       : "JPEG, PNG, WebP · Max 4 MB"}
                   </p>
                   <InlineFeedback message={messageFor("pictures")} />
-                  {selectedCue &&
+                  {(mediaTab === "pictures" || mediaTab === "videos") &&
+                    selectedCue &&
                     Boolean(selectedCue.video) === (mediaTab === "videos") && (
                       <EditorInspector
                         title={
@@ -3769,50 +3793,14 @@ export function ClipEditor({
                           hidden={pictureTab !== "position"}
                           tabIndex={0}
                         >
-                          <div
-                            className="position-presets"
-                            role="group"
-                            aria-label="Picture position"
-                          >
-                            {(
-                              [
-                                { center: 0.25, label: "Upper half" },
-                                { center: 0.5, label: "Center" },
-                                { center: 0.75, label: "Lower half" },
-                              ] as const
-                            ).map((item) => (
-                              <Button
-                                key={item.center}
-                                variant="secondary"
-                                aria-pressed={
-                                  Math.abs(
-                                    selectedCue.box.x +
-                                      selectedCue.box.width / 2 -
-                                      0.5,
-                                  ) < 0.00001 &&
-                                  Math.abs(
-                                    selectedCue.box.y +
-                                      selectedCue.box.height / 2 -
-                                      item.center,
-                                  ) < 0.00001
-                                }
-                                onClick={() =>
-                                  setCue({
-                                    ...selectedCue,
-                                    box: centeredOwnerBox(
-                                      selectedCue.box,
-                                      item.center,
-                                      null,
-                                    ),
-                                  })
-                                }
-                              >
-                                {item.label}
-                              </Button>
-                            ))}
-                          </div>
+                          <PositionPresets
+                            label={selectedCue.video ? "Video" : "Picture"}
+                            kind={selectedCue.video ? "video" : "picture"}
+                            box={selectedCue.box}
+                            onChange={(box) => setCue({ ...selectedCue, box })}
+                          />
                           <BoxFields
-                            label="Picture"
+                            label={selectedCue.video ? "Video" : "Picture"}
                             box={selectedCue.box}
                             onChange={(box) => setCue({ ...selectedCue, box })}
                           />
@@ -3837,19 +3825,21 @@ export function ClipEditor({
                 {setting === "pictures" &&
                   mediaTab === "audio" &&
                   audioImport !== null && (
-                    <YoutubeAudioIntake
-                      value={audioImport}
-                      pending={pending}
-                      onChange={setAudioImport}
-                      message={message}
-                      onDownload={() => void perform("youtube-audio")}
-                      onBack={() => {
-                        request.current?.abort();
-                        setAudioUploading(false);
-                        setAudioImport(null);
-                        setMessage("");
-                      }}
-                    />
+                    <EditorInspector title="Import audio">
+                      <YoutubeAudioIntake
+                        value={audioImport}
+                        pending={pending}
+                        onChange={setAudioImport}
+                        message={message}
+                        onDownload={() => void perform("youtube-audio")}
+                        onBack={() => {
+                          request.current?.abort();
+                          setAudioUploading(false);
+                          setAudioImport(null);
+                          setMessage("");
+                        }}
+                      />
+                    </EditorInspector>
                   )}
                 {setting === "pictures" &&
                   mediaTab === "audio" &&
@@ -3871,8 +3861,15 @@ export function ClipEditor({
                       onBackToPicture={
                         audioPicture
                           ? () => {
+                              revealInspector();
+                              setMediaTab(
+                                draft.visuals.find(
+                                  (cue) => cue.id === audioPicture,
+                                )?.video
+                                  ? "videos"
+                                  : "pictures",
+                              );
                               setAudioPicture(undefined);
-                              setMediaTab("pictures");
                             }
                           : undefined
                       }
