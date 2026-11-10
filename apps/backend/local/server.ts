@@ -54,7 +54,10 @@ import {
   ownerAgentClipListSchema,
   ownerAgentStatusSchema,
 } from "../../../packages/contracts/local/agent.ts";
-import type { OwnerClipList } from "../../../packages/contracts/local/clips.ts";
+import {
+  ownerBatchRequestSchema,
+  type OwnerClipList,
+} from "../../../packages/contracts/local/clips.ts";
 import { ownerAgentClip } from "./agent-view.ts";
 import { OwnerSourceAcquisition } from "./source-acquisition.ts";
 import type { OwnerAcquisitionPort } from "./acquisition-port.ts";
@@ -1125,7 +1128,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
           }
           busy.add(workspace.id);
           try {
-            const request = await readOwnerJson(req);
+            const request = ownerBatchRequestSchema.parse(
+              await readOwnerJson(req),
+            );
+            if (options.hosted) request.framing = "tracked";
             batch ??= createBatch(workspace);
             batches.set(workspace.id, batch);
             const result = await batch.submit(request, analysis);

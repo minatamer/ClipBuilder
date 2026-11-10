@@ -1,9 +1,22 @@
 const thumbnailAspect = 16 / 9;
 
+/** Preserve a source-shaped card/poster while bounding both decoded edges. */
+export function thumbnailSize(aspectRatio = thumbnailAspect) {
+  const aspect =
+    Number.isFinite(aspectRatio) && aspectRatio > 0
+      ? aspectRatio
+      : thumbnailAspect;
+  return {
+    width: Math.max(1, Math.round(320 * Math.min(1, aspect))),
+    height: Math.max(1, Math.round(320 / Math.max(1, aspect))),
+  };
+}
+
 /** Only trim paired, almost-black bands around a visibly non-dark frame. */
 export function thumbnailZoom(
   pixels: { data: Uint8ClampedArray; width: number; height: number },
   sourceAspect = pixels.width / pixels.height,
+  targetAspect = thumbnailAspect,
 ): number {
   const { data, width, height } = pixels;
   if (
@@ -11,7 +24,9 @@ export function thumbnailZoom(
     height < 16 ||
     data.length !== width * height * 4 ||
     !Number.isFinite(sourceAspect) ||
-    sourceAspect <= 0
+    sourceAspect <= 0 ||
+    !Number.isFinite(targetAspect) ||
+    targetAspect <= 0
   )
     return 1;
   const dark = (x: number, y: number) => {
@@ -52,33 +67,7 @@ export function thumbnailZoom(
     vertical = paired(top, bottom, height);
   return Math.max(
     1,
-    Math.min(1, thumbnailAspect / sourceAspect) / (1 - 2 * horizontal),
-    Math.min(1, sourceAspect / thumbnailAspect) / (1 - 2 * vertical),
+    Math.min(1, targetAspect / sourceAspect) / (1 - 2 * horizontal),
+    Math.min(1, sourceAspect / targetAspect) / (1 - 2 * vertical),
   );
-}
-
-/** Read only a tiny copy of an already decoded same-origin thumbnail. */
-export function decodedThumbnailZoom(
-  media: HTMLVideoElement | HTMLImageElement,
-) {
-  const width = "videoWidth" in media ? media.videoWidth : media.naturalWidth,
-    height = "videoHeight" in media ? media.videoHeight : media.naturalHeight;
-  if (!width || !height) return 1;
-  const canvas = document.createElement("canvas");
-  canvas.width = 128;
-  canvas.height = 72;
-  try {
-    const context = canvas.getContext("2d", { willReadFrequently: true });
-    if (!context) return 1;
-    context.drawImage(media, 0, 0, canvas.width, canvas.height);
-    return thumbnailZoom(
-      context.getImageData(0, 0, canvas.width, canvas.height),
-      width / height,
-    );
-  } catch {
-    // A blocked/unsupported pixel read must not hide otherwise usable media.
-    return 1;
-  } finally {
-    canvas.width = canvas.height = 0;
-  }
 }

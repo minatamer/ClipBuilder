@@ -214,21 +214,6 @@
     display: block;
     margin-top: 0.4rem;
   }
-  .youtube-thumbnail img,
-  .youtube-thumbnail video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    object-fit: cover;
-  }
-  .youtube-thumbnail video[data-loaded="false"] {
-    opacity: 0;
-  }
-  .youtube-thumbnail > .acquisition-spinner {
-    position: absolute;
-  }
   .youtube-video-title {
     overflow: hidden;
     font-size: 0.9375rem;
@@ -750,6 +735,7 @@
     overflow-wrap: anywhere;
   }
   .clip-rail-preview {
+    position: relative;
     display: block;
     width: 100%;
     aspect-ratio: 9 / 16;
@@ -840,7 +826,7 @@
       gap: clamp(0.75rem, 2svh, 1.25rem);
     }
     &.local-moments .moments-processing > div[aria-hidden="true"] {
-      width: clamp(4rem, 10svh, 7rem);
+      width: clamp(6.5rem, 10svh, 7rem);
     }
   }
   @media (max-width: 63.999rem) {
@@ -1036,6 +1022,8 @@
     font-size: 0.75rem;
   }
   .picture-thumb {
+    position: relative;
+    overflow: hidden;
     display: block;
     width: 100%;
     aspect-ratio: 4/3;
@@ -1176,10 +1164,6 @@
   .editor-timeline .picture-thumb {
     width: 3.5rem;
     grid-row: span 2;
-  }
-  .editor-timeline .video-timeline-thumb {
-    display: grid;
-    place-items: center;
   }
   .editor-timeline-name {
     overflow-wrap: anywhere;

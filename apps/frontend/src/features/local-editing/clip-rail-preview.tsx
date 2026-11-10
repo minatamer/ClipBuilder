@@ -1,9 +1,13 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
-import type { OwnerClip } from "../../../../../packages/contracts/local/clips.ts";
+import type {
+  OwnerClip,
+  OwnerOverlay,
+} from "../../../../../packages/contracts/local/clips.ts";
 import { compileOwnerOverlay } from "../../../../../packages/contracts/local/edit-overlay.ts";
 import { ownerPresentationFrames } from "../../../../../packages/contracts/local/hook.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
+import { VideoThumbnail } from "../../shared/ui/video-thumbnail";
 import { Review } from "./clip-editor";
 
 const noop = () => {};
@@ -19,7 +23,6 @@ export function ClipRailPreview({
   const root = useRef<HTMLSpanElement>(null);
   const player = useRef<PlayerRef>(null);
   const [visible, setVisible] = useState(false);
-  const [failed, setFailed] = useState(false);
   useLayoutEffect(() => {
     const node = root.current;
     if (!node) return;
@@ -78,11 +81,54 @@ export function ClipRailPreview({
       className="clip-rail-preview"
       aria-hidden="true"
       onPointerEnter={() => {
-        if (!failed) player.current?.play();
+        player.current?.play();
       }}
       onPointerLeave={() => player.current?.pause()}
     >
-      {visible && overlay && !failed && (
+      {visible && overlay && (
+        <ClipRailSurface
+          key={`${clip.id}:${clip.revision}`}
+          clip={clip}
+          overlay={overlay}
+          workspaceId={workspaceId}
+          player={player}
+        />
+      )}
+    </span>
+  );
+}
+function ClipRailSurface({
+  clip,
+  overlay,
+  workspaceId,
+  player,
+}: {
+  clip: OwnerClip;
+  overlay: OwnerOverlay;
+  workspaceId: string;
+  player: RefObject<PlayerRef | null>;
+}) {
+  const [ready, setReady] = useState(false),
+    [failed, setFailed] = useState(false);
+  useLayoutEffect(() => {
+    const current = player.current;
+    const fail = () => setFailed(true);
+    current?.addEventListener("error", fail);
+    return () => current?.removeEventListener("error", fail);
+  }, [player, failed]);
+  return (
+    <>
+      {!ready && !failed && (
+        <VideoThumbnail
+          request={{
+            source: `/api/local/workspace/${workspaceId}/clips/${clip.id}/source`,
+            timeMs: 1000,
+            width: 160,
+            height: 284,
+          }}
+        />
+      )}
+      {!failed && (
         <Player
           ref={player}
           component={Review}
@@ -101,7 +147,7 @@ export function ClipRailPreview({
             onBox: noop,
             onGestureStart: noop,
             onPlaybackError: () => setFailed(true),
-            onPreviewReady: noop,
+            onPreviewReady: () => setReady(true),
             interactive: false,
             setting: "filters",
             silent: true,
@@ -120,12 +166,16 @@ export function ClipRailPreview({
           errorFallback={() => (
             <span className="clip-rail-placeholder">Preview unavailable</span>
           )}
-          style={{ width: "100%", pointerEvents: "none" }}
+          style={{
+            width: "100%",
+            pointerEvents: "none",
+            opacity: ready ? 1 : 0,
+          }}
         />
       )}
       {failed && (
         <span className="clip-rail-placeholder">Preview unavailable</span>
       )}
-    </span>
+    </>
   );
 }

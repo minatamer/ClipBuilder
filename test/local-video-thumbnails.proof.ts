@@ -4,6 +4,11 @@ import { openBrowser } from "../apps/renderer/node_modules/@remotion/renderer/di
 import { startBrollBrowserFixture } from "./owner-broll-browser-fixture.ts";
 
 declare global {
+  function thumbnailLoading(): Promise<{
+    loading: number;
+    animated: boolean;
+    overflow: boolean;
+  }>;
   function thumbnailProof(): Promise<{
     pixels: { frame: number; rgb: number[] }[];
     pictures: number;
@@ -27,7 +32,8 @@ it("paints trimmed and repeated video stills through Hook/body, reload and clean
   let browser: Awaited<ReturnType<typeof openBrowser>> | undefined;
   let external = 0;
   let failVideos = false,
-    failedRequests = 0;
+    failedRequests = 0,
+    failedPictures = 0;
   try {
     browser = await openBrowser("chrome", {
       browserExecutable:
@@ -50,8 +56,12 @@ it("paints trimmed and repeated video stills through Hook/body, reload and clean
         const allowed = ["localhost", "127.0.0.1"].includes(
           new URL(event.request.url).hostname,
         );
-        if (failVideos && event.request.url.includes("/video-assets/")) {
-          failedRequests++;
+        if (
+          failVideos &&
+          /\/(?:video-assets|assets)\//.test(event.request.url)
+        ) {
+          if (event.request.url.includes("/video-assets/")) failedRequests++;
+          else failedPictures++;
           // @ts-expect-error Chromium Fetch is outside Remotion's command subset.
           void client.send("Fetch.fulfillRequest", {
             requestId: event.requestId,
@@ -80,7 +90,11 @@ it("paints trimmed and repeated video stills through Hook/body, reload and clean
       await client.send("Runtime.evaluate", {
         expression: (
           await transform(
-            `globalThis.thumbnailProof=async()=>{
+            `globalThis.thumbnailLoading=async()=>{
+              let tab;for(let n=0;n<200;n++){tab=[...document.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(n=>n.textContent?.trim()==='Media');if(tab)break;await new Promise(r=>setTimeout(r,50));}
+              tab!.click();
+              for(let n=0;n<200;n++){const rows=document.querySelectorAll('.editor-timeline .picture-thumb [data-thumbnail-state="loading"]');if(rows.length===8){await new Promise(requestAnimationFrame);const spinner=rows[0]!.querySelector('svg')!,animation=spinner.getAnimations()[0];if(!animation)continue;const before=animation.currentTime;await new Promise(r=>setTimeout(r,80));return {loading:rows.length,animated:animation.currentTime!>before!,overflow:document.documentElement.scrollWidth>innerWidth}}await new Promise(r=>setTimeout(r,50));}throw Error('missing_thumbnail_spinners');
+            };globalThis.thumbnailProof=async()=>{
         const wait = async (check: () => boolean) => {
           for (let i = 0; i < 200; i++) {
             if (check()) return;
@@ -117,12 +131,12 @@ it("paints trimmed and repeated video stills through Hook/body, reload and clean
           await wait(
             () =>
               thumbs().length === 6 &&
-              thumbs().every((node) => node.dataset.videoThumbnail === "ready"),
+              document.querySelectorAll('.editor-timeline .picture-thumb [data-thumbnail-state="ready"]').length===8,
           );
           const sources = new Set<string>();
           const pixels = [];
           for (const node of thumbs()) {
-            const src = /"(blob:[^"]+)"/.exec(node.style.backgroundImage)?.[1];
+            const src = node.querySelector('img')?.src;
             if (!src) throw Error("thumbnail_blob_missing");
             sources.add(src);
             const image = new Image();
@@ -159,7 +173,7 @@ it("paints trimmed and repeated video stills through Hook/body, reload and clean
           await wait(
             () =>
               thumbs().length === 6 &&
-              thumbs().every((node) => node.dataset.videoThumbnail === "ready"),
+              document.querySelectorAll('.editor-timeline .picture-thumb [data-thumbnail-state="ready"]').length===8,
           );
           const after = thumbs()[0]!.getBoundingClientRect();
           return {
@@ -184,6 +198,11 @@ it("paints trimmed and repeated video stills through Hook/body, reload and clean
           )
         ).code,
       });
+      fixture.holdThumbnails();
+      const loading = await page.evaluate(() => thumbnailLoading());
+      expect(loading).toEqual({ loading: 8, animated: true, overflow: false });
+      expect(fixture.pendingThumbnails()).toBeGreaterThan(0);
+      fixture.releaseThumbnails();
       const results = await page.evaluate(() => thumbnailProof());
       expect(results.pictures).toBe(2);
       expect(results.unique).toBe(4);
@@ -219,15 +238,15 @@ it("paints trimmed and repeated video stills through Hook/body, reload and clean
         .click();
       for (let n = 0; n < 200; n++) {
         const rows = [
-          ...document.querySelectorAll<HTMLElement>("[data-video-thumbnail]"),
+          ...document.querySelectorAll<HTMLElement>(".editor-timeline .picture-thumb"),
         ];
         if (
-          rows.length === 6 &&
-          rows.every((node) => node.dataset.videoThumbnail === "unavailable")
+          rows.length === 8 &&
+          rows.every((node) => !!node.querySelector('[data-thumbnail-state="unavailable"]'))
         )
           return rows.every(
             (node) =>
-              !!node.querySelector("svg") && !node.style.backgroundImage,
+              !!node.querySelector("svg") && !node.querySelector('img'),
           );
         await new Promise((done) => setTimeout(done, 50));
       }
@@ -242,6 +261,7 @@ it("paints trimmed and repeated video stills through Hook/body, reload and clean
     const fallback = await page.evaluate(() => thumbnailFailure());
     expect(fallback).toBe(true);
     expect(failedRequests).toBe(4); // One failure per unique source frame, no retry.
+    expect(failedPictures).toBe(1); // Repeated pictures share their pending/failure read.
     expect(fixture.applies()).toBe(0);
     expect(external).toBe(0);
   } finally {

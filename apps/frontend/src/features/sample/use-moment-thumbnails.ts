@@ -3,10 +3,15 @@
 import { useEffect, useState } from "react";
 import type { AnalysisBundleV1 } from "@clipbuilder/contracts";
 import { candidateRange } from "./candidate.evidence";
-import { decodeMomentFrames } from "./moment-thumbnail";
+import {
+  subscribeVideoThumbnail,
+  videoThumbnailSnapshot,
+  type VideoThumbnailSnapshot,
+} from "../media/video-thumbnail";
 import { useSessionEffects } from "../session/session.provider";
+import { thumbnailSize } from "../media/thumbnail-framing";
 
-export type MomentFrame = HTMLCanvasElement | "unavailable";
+export type MomentFrame = VideoThumbnailSnapshot;
 
 export function useMomentThumbnails(
   analysis: AnalysisBundleV1,
@@ -20,35 +25,43 @@ export function useMomentThumbnails(
   }>();
   useEffect(() => {
     if (!sourceUrl) return;
-    const controller = new AbortController();
-    const video = document.createElement("video");
-    video.playsInline = true;
-    const frames: Record<string, MomentFrame> = {};
-    void decodeMomentFrames(
-      video,
-      sourceUrl,
-      analysis.candidates.map((candidate) => ({
-        id: candidate.id,
-        startMs: candidateRange(analysis, candidate).startMs,
-      })),
-      controller.signal,
-      (id, frame) => {
-        frames[id] = frame;
-        setCache({
-          sourceUrl,
-          revision: analysis.revision,
-          frames: { ...frames },
-        });
-      },
+    let active = true;
+    const swap =
+      analysis.media.rotationDegrees === 90 ||
+      analysis.media.rotationDegrees === 270;
+    const size = thumbnailSize(
+      swap
+        ? analysis.media.height / analysis.media.width
+        : analysis.media.width / analysis.media.height,
     );
-    const stop = () => {
-      controller.abort();
-      for (const frame of Object.values(frames)) {
-        if (frame !== "unavailable") {
-          frame.width = 0;
-          frame.height = 0;
-        }
+    const requests = analysis.candidates.map((candidate) => ({
+      id: candidate.id,
+      request: {
+        source: sourceUrl,
+        timeMs: candidateRange(analysis, candidate).startMs,
+        ...size,
+      },
+    }));
+    const publish = () => {
+      if (!active) return;
+      const frames: Record<string, MomentFrame> = {};
+      for (const { id, request } of requests) {
+        const snapshot = videoThumbnailSnapshot(request);
+        if (snapshot.state !== "loading") frames[id] = snapshot;
       }
+      setCache({
+        sourceUrl,
+        revision: analysis.revision,
+        frames,
+      });
+    };
+    const releases = requests.map(({ request }) =>
+      subscribeVideoThumbnail(request, publish),
+    );
+    void Promise.resolve().then(publish);
+    const stop = () => {
+      active = false;
+      for (const release of releases) release();
     };
     return effects ? effects.registerStopper(stop) : stop;
   }, [analysis, sourceUrl, effects]);

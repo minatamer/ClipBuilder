@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ThumbnailVideo } from "../../shared/ui/video-thumbnail";
 import { Upload } from "lucide-react";
 import { Workspace } from "../../shared/ui/workspace";
 import { WorkflowFrame } from "../../shared/ui/workflow-frame";
@@ -521,7 +522,22 @@ export function LocalEditingExperience({
                     <div className="section-heading">
                       <h2>Your video</h2>
                     </div>
-                    <video
+                    <ThumbnailVideo
+                      thumbnailSource={`/api/local/workspace/${workspace.id}/source`}
+                      thumbnailAspectRatio={
+                        workspace.source.width / workspace.source.height
+                      }
+                      thumbnailTimeMs={
+                        workspace.source.availableWindow
+                          ? workspace.source.availableWindow.startMs +
+                            Math.min(
+                              10000,
+                              (workspace.source.availableWindow.endMs -
+                                workspace.source.availableWindow.startMs) /
+                                4,
+                            )
+                          : undefined
+                      }
                       key={workspace.id}
                       ref={sourcePreview}
                       aria-label="Source video"

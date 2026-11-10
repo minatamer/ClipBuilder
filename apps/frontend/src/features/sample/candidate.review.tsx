@@ -77,24 +77,13 @@ function MomentChoice({
 }
 
 function MomentThumbnail({ frame }: { frame: MomentFrame | undefined }) {
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const state =
-    frame === "unavailable" ? "unavailable" : frame ? "ready" : "loading";
-  useLayoutEffect(() => {
-    const surface = canvas.current;
-    if (!surface || !frame || frame === "unavailable") return;
-    surface.width = frame.width;
-    surface.height = frame.height;
-    surface.getContext("2d")?.drawImage(frame, 0, 0);
-    return () => {
-      surface.width = 0;
-      surface.height = 0;
-    };
-  }, [frame]);
+  const state = frame?.state ?? "loading";
   return (
     <>
-      <canvas
-        ref={canvas}
+      {/* eslint-disable-next-line @next/next/no-img-element -- bounded locally decoded still. */}
+      <img
+        src={frame?.url}
+        alt=""
         className={styles.localVideo}
         aria-hidden="true"
         data-thumbnail-state={state}

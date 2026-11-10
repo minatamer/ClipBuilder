@@ -13,6 +13,22 @@ const initialBox: Box = {
   width: 920 / 1080,
   height: 520 / 1920,
 };
+
+/** Fresh fit-original defaults only. Saved/manual positions remain authoritative. */
+export function placeOwnerFitOriginalVisual(
+  source: OwnerFocus["source"],
+  region: "above" | "below",
+  preferred: Box = initialBox,
+  minimumHeight = 0,
+): Box {
+  const content = ownerSourceContent(source);
+  const start =
+    region === "above" ? 0.05 : (content.y + content.height) / 1920 + 0.02;
+  const end = region === "above" ? content.y / 1920 - 0.02 : 0.95;
+  const height = Math.min(preferred.height, end - start);
+  if (height < Math.max(0.02, minimumHeight)) return { ...preferred };
+  return { ...preferred, height, y: start + (end - start - height) / 2 };
+}
 const intersects = (a: Interval, b: Interval) =>
   a.startFrame < b.endFrame && b.startFrame < a.endFrame;
 const overlap = (a: Box, b: Box) =>

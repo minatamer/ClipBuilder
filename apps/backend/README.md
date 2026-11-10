@@ -5,9 +5,17 @@ normalizes it to bounded silent H.264 plus optional PCM, and persists both in
 local hashed drafts/recovery or isolated expiring hosted sessions. Per-cue sound
 uses the existing mixer; sample-count bounds
 preserve delayed/trimmed cues and native audio resolves independently of visual
-decoding. **No tracking · Fit original** bypasses speaker-camera planning/follow
-while retaining captions and text-based picture planning. Manual edits/rendering
-need no provider keys; fresh real speech/planning retain their runtime/live gates.
+decoding. The pre-processing framing choice is local-only and defaults to tracking.
+Hosted processing always tracks, normalizing valid explicit fit requests at its
+trusted API boundary. Locally, **No tracking · Fit original** bypasses speaker-camera planning/follow
+while retaining captions and text-based picture planning.
+The same transcript-only fit-original plan now retains optional Hook/title advice
+without another inference request; explicit Find visuals stays picture-only.
+Fit-original requests explicitly include one authored opening title. Fresh titles
+default above fitted footage and pictures below, using actual letterbox space;
+saved/manual coordinates remain authoritative, with bounded full-height fallback.
+Manual edits/rendering need no provider keys; fresh real speech/planning retain
+their runtime/live gates.
 Run `corepack pnpm local:proof test/local-broll.proof.ts` for generated-only
 upload/worker/native/audio/save-reopen verification. Hosted fake transport checks
 cover video/picture upload, range reads, edit/render wiring and existing CSRF,

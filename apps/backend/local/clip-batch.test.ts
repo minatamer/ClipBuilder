@@ -22,6 +22,8 @@ import { compileOwnerOverlay } from "../../../packages/contracts/local/edit-over
 import { OWNER_AUDIO_LIMITS } from "../../../packages/contracts/local/audio.ts";
 import { defaultOwnerFocus } from "../../../packages/contracts/local/focus.ts";
 import { ownerCameraFollowKey } from "../../../packages/contracts/local/camera-follow.ts";
+import { createLocalCodexAi } from "./codex-ai.ts";
+import { ownerSourceContent } from "../../../packages/contracts/local/focus.ts";
 import { placeOwnerPlannedVisual } from "../../../packages/contracts/local/visual-placement.ts";
 import {
   checkHostedScratch,
@@ -132,6 +134,110 @@ const request = () => ({
     (moment) => moment.id,
   ),
 });
+it("retains an authored fit-original title above footage and pictures below across fresh planning/edit/restore", async () => {
+  await batch.close();
+  workspace.mode = "provider-ai";
+  ports.mode = "provider-ai";
+  analysis.mode = "provider-ai";
+  const moment = analysis.manual[0]!;
+  moment.cut.endFrame = moment.cut.startFrame + 900;
+  moment.processingIdentity = createHash("sha256")
+    .update(
+      `${workspace.source.fingerprint}:${moment.cut.startFrame}:${moment.cut.endFrame}`,
+    )
+    .digest("hex");
+  const media = vi.fn();
+  const ai = createLocalCodexAi({
+    files,
+    media,
+    infer: vi.fn(async () => ({
+      pictures: await fakeOwnerClipPreparation.plan(
+        { workspace, clipId: randomUUID(), moment },
+        AbortSignal.timeout(2000),
+      ),
+      texts: [
+        {
+          title: "Why this idea matters",
+          hookStyle: "curiosity-gap",
+          wordIds: [moment.cues[0]!.id],
+          startFrame: 0,
+          endFrame: 30,
+        },
+      ],
+      hookSuggestion: null,
+    })),
+  });
+  const planVisuals = vi.fn(ai.clipPreparation!.planVisuals!);
+  const fitPorts = {
+    ...ports,
+    planVisuals,
+    texts: ai.clipPreparation!.texts!,
+    image: vi.fn<OwnerClipPorts["image"]>(async (request, signal) => {
+      const picture = await ports.image(request, signal);
+      return picture ? { ...picture, origin: "retrieved" } : null;
+    }),
+  };
+  batch = new OwnerClipBatch(workspace, files, fitPorts);
+  try {
+    await batch.submit(
+      { ...request(), framing: "fit", momentIds: [moment.id] },
+      analysis,
+    );
+    await batch.drain();
+    let clip = batch.snapshot().clips[0]!;
+    expect(clip.state).toBe("review-ready");
+    const title = clip.base!.overlay.texts![0]!,
+      picture = clip.base!.overlay.visuals[0]!,
+      content = ownerSourceContent(workspace.source);
+    expect(title).toMatchObject({
+      text: "Why this idea matters",
+      role: "opening-title",
+      startFrame: 0,
+    });
+    expect(title.style.box.y + title.style.box.height).toBeLessThan(
+      content.y / 1920,
+    );
+    expect(picture.box.y).toBeGreaterThan((content.y + content.height) / 1920);
+    expect(clip.edit!.texts![0]!.style.box).toEqual(title.style.box);
+    expect(planVisuals).toHaveBeenCalledTimes(1);
+    expect(media).not.toHaveBeenCalled();
+    expect(ports.plan).not.toHaveBeenCalled();
+    const manual = {
+      ...title,
+      style: { ...title.style, box: { ...title.style.box, y: 0.15 } },
+    };
+    await batch.edit(clip.id, {
+      operationId: randomUUID(),
+      expectedRevision: clip.revision,
+      baseHash: clip.baseHash,
+      operations: [{ kind: "text-layers", layers: [manual] }],
+    });
+    clip = batch.snapshot().clips[0]!;
+    await batch.close();
+    batch = new OwnerClipBatch(workspace, files, fitPorts);
+    batch.restore([clip]);
+    expect(batch.snapshot().clips[0]!.edit!.texts![0]!.style.box.y).toBe(0.15);
+    expect(batch.snapshot().clips[0]!.edit!.visuals[0]!.box).toEqual(
+      picture.box,
+    );
+    expect(planVisuals).toHaveBeenCalledTimes(1);
+    const found = (
+      await batch.findVisuals(
+        clip.id,
+        { operationId: randomUUID(), expectedRevision: clip.revision },
+        AbortSignal.timeout(2000),
+      )
+    ).clips[0]!;
+    expect(found.edit!.visuals[0]!.box.y).toBeGreaterThan(
+      (content.y + content.height) / 1920,
+    );
+    expect(found.edit!.texts![0]!.style.box.y).toBe(0.15);
+    expect(planVisuals).toHaveBeenCalledTimes(2);
+    expect(planVisuals.mock.calls[1]![0].includeEditorial).toBeUndefined();
+  } finally {
+    await ai.close!(AbortSignal.timeout(2000));
+  }
+});
 it("fits original footage with zero speaker/camera preparation and no automatic follow, preserving the choice on restore/export", async () => {
   await batch.close();
   const prepareWords = vi.fn<NonNullable<OwnerClipPorts["prepareWords"]>>(
@@ -146,11 +252,19 @@ it("fits original footage with zero speaker/camera preparation and no automatic 
   ports.mode = "provider-ai";
   analysis.mode = "provider-ai";
   for (const moment of analysis.manual) moment.speakersPrepared = false;
+  analysis.manual[0]!.cut.endFrame = analysis.manual[0]!.cut.startFrame + 900;
+  analysis.manual[0]!.processingIdentity = createHash("sha256")
+    .update(
+      `${workspace.source.fingerprint}:${analysis.manual[0]!.cut.startFrame}:${analysis.manual[0]!.cut.endFrame}`,
+    )
+    .digest("hex");
+  const hookSuggestion = vi.fn(() => ({ startFrame: 300, endFrame: 450 }));
   batch = new OwnerClipBatch(workspace, files, {
     ...ports,
     prepareWords,
     focus,
     planVisuals,
+    hookSuggestion,
   });
   await batch.submit(
     { ...request(), framing: "fit", momentIds: [analysis.manual[0]!.id] },
@@ -166,6 +280,9 @@ it("fits original footage with zero speaker/camera preparation and no automatic 
   expect(focus).toHaveBeenCalledTimes(0);
   expect(ports.plan).toHaveBeenCalledTimes(0);
   expect(planVisuals).toHaveBeenCalledTimes(1);
+  expect(planVisuals.mock.calls[0]![0].includeEditorial).toBe(true);
+  expect(clip.base!.hookSuggestion).toEqual({ startFrame: 300, endFrame: 450 });
+  expect(clip.base!.overlay.hook).toBeUndefined();
   expect(ports.image).toHaveBeenCalledTimes(0);
   expect(ports.render.mock.calls[0]![0]).not.toHaveProperty("followFocus");
   await batch.close();
@@ -182,6 +299,10 @@ it("fits original footage with zero speaker/camera preparation and no automatic 
   });
   await batch.drain();
   expect(batch.snapshot().clips[0]!.framing).toBe("fit");
+  expect(batch.snapshot().clips[0]!.base!.hookSuggestion).toEqual({
+    startFrame: 300,
+    endFrame: 450,
+  });
   expect(planVisuals).toHaveBeenCalledTimes(1);
   expect(prepareWords).toHaveBeenCalledTimes(0);
   expect(focus).toHaveBeenCalledTimes(0);

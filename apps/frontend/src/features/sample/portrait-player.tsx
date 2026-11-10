@@ -1,4 +1,5 @@
 "use client";
+import { ThumbnailVideo } from "../../shared/ui/video-thumbnail";
 
 import {
   useEffect,
@@ -56,6 +57,7 @@ export function PortraitPlaceholder({
 
 export function PortraitPlayer({
   label,
+  thumbnailSource,
   range,
   currentMs,
   playing,
@@ -77,6 +79,7 @@ export function PortraitPlayer({
   durationKnown = true,
 }: {
   label: string;
+  thumbnailSource?: string | undefined;
   range: { startMs: number; endMs: number };
   currentMs: number;
   playing: boolean;
@@ -145,7 +148,9 @@ export function PortraitPlayer({
   const videoSurface =
     surface ??
     (videoRef ? (
-      <video
+      <ThumbnailVideo
+        thumbnailSource={thumbnailSource}
+        thumbnailAspectRatio={aspectRatio}
         ref={videoRef}
         className={styles.localVideo}
         playsInline

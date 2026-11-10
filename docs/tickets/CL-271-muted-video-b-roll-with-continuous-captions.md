@@ -7,6 +7,198 @@ Reopening the layered draft retained its media, edits and export without new
 processing. The normal app remains running in Codex; Voyagenda was preserved.
 Personal visual/release acceptance remains owner-only.
 
+## Owner whole-file commit authorization — 2026-11-10
+
+The owner explicitly requests staging and committing all fixes after clean
+validation. Combined CL-271/CL-272/CL-062 validation has no actionable findings;
+39 focused frontend tests and all changed-file formatting/lint checks pass,
+alongside the recorded backend/types/native/generated/Codex checks below.
+The complete 50-path allocation is recorded in
+[CL-272](CL-272-shared-video-thumbnail-consistency.md#whole-file-commit-authorization-and-validation--2026-11-10).
+One local commit preserves whole shared files. Earlier unstaged/no-Git statements
+are historical and superseded by this request. No paid/provider run, push,
+deployment, owner-media change or Voyagenda action is included.
+
+## Owner local-only framing choice — 2026-11-10
+
+Status: implemented and fake/paid-off verified. The owner restricts the pre-processing tracking/no-tracking
+choice to the local app. Local processing defaults to tracked vertical framing
+and can explicitly choose No tracking · Fit original. Hosted processing exposes
+no framing selector and always uses the tracked path, including requests sent by
+older clients with `framing: "fit"`. Normalize valid hosted requests at the
+trusted API boundary; preserve request validation, admission/idempotency and
+the shared hosted picture/video/Camera editor. This supersedes the earlier
+hosted framing-choice wording and fit acceptance only.
+
+Acceptance: verify local selector/default and hosted omission, fresh hosted
+processing with omitted/explicit-fit payloads using tracked planning, retained
+hosted layered editing, and unchanged local fit behavior. Use generated/injected
+fake/paid-off checks without keys or another paid run. Preserve the owner's
+session/media, configuration, other pending work and Voyagenda. Real processing
+still requires its existing runtime/provider setup, live flags and approvals.
+No deployment or new Git mutation is included.
+
+The shared frontend gates the selector with the existing local-media capability
+and forces hosted submission to tracked. The hosted API parses the existing
+shared request schema before normalizing its framing, so invalid input retains
+normal rejection and valid older fit requests reach tracked planning. No schema,
+saved-edit, provider adapter or manual Camera behavior changes.
+
+Evidence: 91 focused checks pass across local fresh batches, hosted HTTP workflow
+and frontend capabilities. Hosted omitted/explicit-fit submissions produce tracked
+clips; the explicit-fit case invokes the injected planner exactly once and
+retains generated visuals/audio through layered picture/video edits and export
+without more planning. Existing local fit regressions remain passing.
+Local/test/frontend TypeScript, scoped ESLint, Prettier and diff checks pass.
+
+Codex checks use a separate generated loopback panel. Actual submitted payloads
+are tracked by default, fit when chosen locally, and tracked after switching the
+same fit-selected component to hosted capabilities. The hosted selector/help is
+absent, local default is tracked, and desktop/390px phone layouts retain a visible
+footer without horizontal overflow. Screenshots remain outside Git. The fixture
+tab/server/scratch and temporary viewport were cleaned; the normal owner session,
+configuration, media and Voyagenda were untouched. No paid/provider run or Gemini
+acceptance is claimed. Read-only validation: meets this follow-up; no actionable
+findings. Changes remain unstaged/uncommitted; deviations: none.
+
+## Owner fit-original titles and placement — 2026-11-10
+
+Status: implemented and generated/local verification passed. The owner reports missing generated titles in no-vertical
+framing and requests default title placement above the fitted source and picture
+placement below it. Explicitly request an authored opening title with the existing
+single transcript-only fit plan and prove nonempty returned copy reaches fresh
+base/edit state for both providers. Do not invent a title or add a paid retry if
+the provider returns no usable copy. The earlier Hook fix requested title advice
+but its fit regressions supplied empty texts; extend that verification.
+
+Use the actual even-pixel contain/pad source rectangle to place fresh titles and
+pictures in available upper/lower bands. Cover initial/Hook-generated titles,
+Find visuals and newly added pictures; retain manual/saved coordinates, timing,
+emphasis, retry/drafts and preview/export parity. Full-height sources without
+usable bands retain bounded editable fallback positions rather than shrinking
+or recropping the owner's source. Vertical-framing defaults remain unchanged.
+Verify generated/injected transport, fresh batch, placement and saved-state
+behavior plus a Codex visual check, with no keys, new paid run or Voyagenda work.
+Real provider quality still needs its normal keys/live flags/approvals.
+
+The fit-only editorial schema/prompt now explicitly asks for one authored title
+in the same planning request. Both injected provider tests return nonempty title
+copy and verify it reaches the opening-title cache at frame zero. Usable empty/
+malformed provider output remains advisory, without a retry or fabricated title.
+
+`placeOwnerFitOriginalVisual` uses the existing exact even-pixel contain/pad
+rectangle. New fit titles (including separately requested Hook titles and added
+text) default into the upper safe band; generated/Find visuals/newly added
+pictures default into the lower band. Tracked and added-video defaults retain
+their preceding behavior. No saved schema, source crop or renderer policy changes;
+positions are ordinary persisted editable boxes, shared by preview/export.
+Sources without sufficient band space keep bounded editable fallback geometry.
+
+Evidence: 149 checks pass across provider adapters, fresh batch and placement
+tests. The new connected Codex-shaped fresh fit batch retains actual authored
+copy and a generated picture through the real decode/cache/base/edit path, with
+one planning call and no native camera work. It proves above/below coordinates,
+manual text position persistence on restore and a subsequent Find visuals request
+that remains picture-only, preserves the manual title and places pictures below.
+Landscape, wide, square and full-height fallback geometry is covered.
+
+The current-source native text export proof passes, including typography and
+exact frame boundaries. Frontend/local/test/contracts TypeScript, scoped ESLint,
+Prettier and diff checks pass. The contracts build passed via direct pinned
+`corepack pnpm --filter @clipbuilder/contracts build`; the root wrapper had picked
+up a different global pnpm internally, so no install/configuration change was made.
+
+Codex inspection of an isolated generated fit editor confirms authored title above,
+fitted source centered and picture below at desktop/phone widths without overflow.
+Adding a picture placed it at y=0.678229, below the source's bottom; the temporary
+edit was discarded. Screenshots are outside Git. These are synthetic content and
+layout mechanics, not a claim about real provider title quality or owner acceptance.
+
+The documented native worker/overlay rebuild completed. After confirming idle
+processing and a current rolling recovery, the verified ClipBuilder watcher
+reloaded its API/internal worker; old processes exited, health returned 200 and
+the frontend PID stayed unchanged. The normal workspace restored its one clip;
+/start and /api/sample/config return 200. Saved media/configuration and Voyagenda
+were preserved. The isolated fixture/tab/scratch/temporary viewport were cleaned.
+
+Final read-only validation of this follow-up: meets ticket, no actionable findings.
+No paid/provider inference, owner-clip reprocessing, deployment, staging or commit.
+Earlier unstaged work is preserved. Personal visual/live-provider acceptance stays
+manual. Deviations: none.
+
+## Owner fit-original Hook follow-up — 2026-11-10
+
+Status: implemented and fake/paid-off verified. The owner reports no suggested Hook after choosing No
+tracking / Fit original. That path bypasses the camera planner and invokes the
+transcript-only picture planner, whose schema/prompt omit Hook and title advice.
+Retain optional valid Hook/title advice from the same transcript-only planning
+response, for both Codex and Gemini. Do not restore camera/speaker/frame work,
+add another inference call, auto-apply a Hook, fabricate a suggestion when null,
+or reprocess/change the owner's existing clip. Preserve save/retry/restore behavior.
+Manual Find visuals stays picture-only. Cover fresh fit processing and provider
+transport boundaries with injected fake calls, exact counts and retained advice.
+No more paid runs or Voyagenda changes. Real inference retains credentials,
+live flags and approvals; all agent verification is fake/paid-off with no keys.
+
+The fit-original batch marks its existing transcript-only request as including
+editorial advice. The shared planner conditionally adds the existing Hook/title
+schema and policies to that one request, retaining decoded advice in each
+provider adapter's existing clip cache. Camera focus remains absent. Explicit
+Find visuals requests omit this flag and remain picture-only. Hook advice is
+copied into the ordinary preparation/base checkpoint before image work, retaining
+the established retry/draft/restore behavior; a null/invalid/early suggestion stays
+absent and a usable suggestion is never automatically applied.
+
+134 checks pass across clip-batch, Codex adapter and Gemini adapter tests. New
+injected transport cases prove one text-only call, retained Hook advice, zero
+media/speaker/frame/upload/transcription work, and cleared advice on close. The
+fit batch check proves the request flag, no automatic Hook/follow, and retained
+suggestion through restore/export with no replanning. Local TypeScript, scoped
+ESLint and formatting pass. Read-only validation: no actionable findings.
+No owner clip was reprocessed or changed. This repairs fresh processing; the
+owner's prior result is preserved rather than retroactively claiming it fixed.
+
+## Owner framing wording revision — 2026-11-10
+
+Status: implemented and locally verified. The owner requests more intuitive pre-processing labels:
+replace Face tracking / Portrait with **Vertical framing (9:16)**, retain
+**No tracking · Fit original**, and mention that 9:16 is the vertical format
+used for TikTok, YouTube Shorts and Instagram Reels. Use a concise, accessible
+description beside the existing Framing control instead of a long option that
+clips on phones. The same shared control applies locally and when hosted.
+
+This is copy only: preserve tracked/fit values, defaults, behavior, saved edits,
+retry and Process clips gates. Verify both labels and the linked description,
+desktop/phone wrapping, select interaction and footer visibility without
+processing or touching the owner's current session, paid providers or Voyagenda.
+Existing no-key/fake-mode UI checks are sufficient; live provider processing
+still requires keys, enabled flags and applicable approvals. No Git mutation,
+configuration, backend/worker or deployment is part of this follow-up.
+
+Implemented in the shared OwnerClipBatchPanel: the tracked option is now
+Vertical framing (9:16), the fit option is unchanged, and a permanently reserved
+description below the select names TikTok, YouTube Shorts and Instagram Reels.
+The select references this description with aria-describedby, using its existing
+unique ID. No hook, value/default, contract, processing behavior or saved format
+changed. The same code renders the deployed workflow without provider-specific
+branching.
+
+Verification: the existing runtime-capabilities suite passes all 10 tests,
+including hosted framing availability and processing guards. Frontend TypeScript,
+scoped ESLint, Prettier and diff checks pass. Codex inspection uses a separate
+fake/paid-off hosted-shaped batch panel at 1342x586 and 390x844: both options
+switch correctly, the description is linked, the phone note wraps within the
+control width, there is no horizontal overflow and Process clips stays visible
+and disabled for the empty synthetic selection. No processing was submitted.
+Desktop/phone screenshots remain outside Git in the Codex visualization folder.
+The fixture tab/server/scratch and temporary viewport were closed/reset; the
+owner session, media/configuration, prior CL-062/272 work and Voyagenda remain.
+
+Read-only validation: meets this copy-only follow-up, no actionable findings.
+No new tests, provider/API/model calls, worker restart, deployment, staging or
+commit. Real-provider quality and owner personal visual acceptance are not
+claimed. Deviations: none.
+
 ## Owner timeline-thumbnail investigation — 2026-11-10
 
 The owner now requests fixing the omission, then seeing the existing pre-process

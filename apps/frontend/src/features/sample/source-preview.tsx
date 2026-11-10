@@ -46,6 +46,7 @@ export function SourcePreview({
   return (
     <section className={styles.sourcePreview} aria-label="Source preview">
       <PortraitPlayer
+        thumbnailSource={sourceUrl}
         label={sourceUrl ? "Source video" : "Simulated source preview"}
         range={range}
         {...playback}

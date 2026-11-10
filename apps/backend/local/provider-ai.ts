@@ -440,16 +440,30 @@ export function createOwnerProviderAi(options: Options): {
         }),
       ),
       mode: "provider-ai",
-      planVisuals: visualDiscoveryPlanner(async (prompt, schema, signal) => {
-        return run("visual_plan", signal, async () => {
-          const result = await options.transport.candidates(
-            `${prompt}\nJSON schema: ${JSON.stringify(schema)}`,
-            signal,
-            "Plan only the requested clip visuals. Return JSON with a pictures array. No web tools in this planning call; the app separately searches before generation.",
-          );
-          return decodeSearchJson(result.text ?? "");
-        });
-      }, diagnostics),
+      planVisuals: visualDiscoveryPlanner(
+        async (prompt, schema, signal) => {
+          return run("visual_plan", signal, async () => {
+            const result = await options.transport.candidates(
+              `${prompt}\nJSON schema: ${JSON.stringify(schema)}`,
+              signal,
+              "Return only the requested JSON fields matching the supplied schema. No web tools in this planning call; the app separately searches before generation.",
+            );
+            return decodeSearchJson(result.text ?? "");
+          });
+        },
+        diagnostics,
+        ({ workspace, clipId, moment }, advice) => {
+          if (closed) return;
+          scopes.add(workspace.id);
+          plans.set(clipId, {
+            workspaceId: workspace.id,
+            wordsHash: hash(words(moment.cues, diagnostics)),
+            frames: moment.cut.endFrame - moment.cut.startFrame,
+            cues: [],
+            ...advice,
+          });
+        },
+      ),
       focus({ clipId, workspace, moment }) {
         return structuredClone(
           plans.get(clipId)?.focus ??

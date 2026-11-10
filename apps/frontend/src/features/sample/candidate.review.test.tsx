@@ -51,9 +51,8 @@ describe("candidate source dimensions and edited-output separation", () => {
       expect(preview).toContain("Back to moments");
     },
   );
-  it("uses memory-only thumbnail canvases without parallel video loads", () => {
+  it("keeps thumbnail loading separate from parallel playable videos", () => {
     const markup = render(analysis, false, "blob:synthetic");
-    expect(markup).toContain("<canvas");
     expect(markup).toContain('data-thumbnail-state="loading"');
     expect(markup).toContain("Loading preview frame");
     expect(markup).not.toContain("autoplay");

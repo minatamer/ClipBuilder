@@ -234,6 +234,7 @@ async function preparedClip(
     if (!list.active) {
       const clip = list.clips[0]!;
       expect(clip.state).toBe("review-ready");
+      expect(clip.framing).toBe("tracked");
       return { base, clip };
     }
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -245,8 +246,8 @@ it("admits hosted uploaded videos, streams isolated assets, and exports layered 
   const app = server(),
     headers = await start(app);
   const { base, clip } = await preparedClip(app, headers, "fit");
-  expect(clip.framing).toBe("fit");
-  expect(plan).not.toHaveBeenCalled();
+  expect(clip.framing).toBe("tracked");
+  expect(plan).toHaveBeenCalledTimes(1);
   const counts = {
     transcribe: transcribe.mock.calls.length,
     image: image.mock.calls.length,
@@ -340,6 +341,12 @@ it("admits hosted uploaded videos, streams isolated assets, and exports layered 
     presentation: "inset",
     video: undefined,
   };
+  const visualIds = [
+    ...current.edit!.visuals.map((cue) => cue.id),
+    visual.id,
+    inset.id,
+    picture.id,
+  ];
   const editRequest = {
     operationId: randomUUID(),
     expectedRevision: current.revision,
@@ -349,7 +356,7 @@ it("admits hosted uploaded videos, streams isolated assets, and exports layered 
         kind: "visual-upsert",
         cue,
       })),
-      { kind: "visual-order", ids: [visual.id, inset.id, picture.id] },
+      { kind: "visual-order", ids: visualIds },
     ],
   };
   applyOwnerEdit(current, editRequest, { width: 320, height: 180 });
@@ -359,11 +366,7 @@ it("admits hosted uploaded videos, streams isolated assets, and exports layered 
     .send(editRequest);
   expect(edited.status).toBe(200);
   const saved = ownerClipListSchema.parse(edited.body).clips[0]!;
-  expect(saved.edit!.visuals.map((cue) => cue.id)).toEqual([
-    visual.id,
-    inset.id,
-    picture.id,
-  ]);
+  expect(saved.edit!.visuals.map((cue) => cue.id)).toEqual(visualIds);
   expect(
     (
       await request(app)
@@ -386,14 +389,18 @@ it("admits hosted uploaded videos, streams isolated assets, and exports layered 
     .findLast((job) => job.operation === "clip");
   expect(exportJob?.operation).toBe("clip");
   if (exportJob?.operation !== "clip") throw Error("missing_synthetic_export");
-  expect(exportJob.overlay.visuals).toHaveLength(3);
-  expect(exportJob.overlay.visuals[2]!.effect).toEqual(effect);
-  expect(exportJob.overlay.audio?.cues).toHaveLength(1);
-  expect(exportJob.overlay.audio?.cues[0]!.volume).toBe(35);
+  expect(exportJob.overlay.visuals).toHaveLength(visualIds.length);
+  expect(exportJob.overlay.visuals.at(-1)!.effect).toEqual(effect);
+  expect(exportJob.overlay.audio?.cues).toHaveLength(
+    (current.edit!.audio?.cues.length ?? 0) + 1,
+  );
+  expect(
+    exportJob.overlay.audio?.cues.find((cue) => cue.id === visual.id)?.volume,
+  ).toBe(35);
   expect(exportJob.overlay.captions).toEqual(clip.base!.overlay.captions);
   expect(transcribe).toHaveBeenCalledTimes(counts.transcribe);
   expect(image).toHaveBeenCalledTimes(counts.image);
-  expect(plan).not.toHaveBeenCalled();
+  expect(plan).toHaveBeenCalledTimes(1);
   expect(
     media.mock.calls.filter(([job]) => job.operation === "normalize-video"),
   ).toHaveLength(1);

@@ -1,5 +1,26 @@
 # ClipBuilder frontend
 
+CL-272 consolidates video thumbnails in
+`src/features/media/video-thumbnail.ts`, with `useVideoThumbnail` and shared
+`VideoThumbnail` / `ThumbnailVideo` adapters. Upload/source posters, saved videos,
+protected YouTube offer images, moment cards, Media rows and clip-card loading
+stills share serial decoding, bounded memory, framing, source replacement and
+abort/URL cleanup. Picture/video Media rows use the same presentation, with a
+rotating spinner through fetch/decode and image loading (including the tour),
+then pixels or a stable failure icon. No-key generated checks hold/release both
+media kinds. Native playback handles codecs unavailable to WebCodecs.
+Portrait/square sources keep their shape; real players and composed clip-card
+hover previews retain their own clocks. No provider keys/model are required,
+including with `FAKE_MODE=true`. Generated, externally network-blocked checks:
+
+```text
+corepack pnpm local:proof test/local-shared-thumbnails.proof.ts test/local-video-thumbnails.proof.ts test/local-intake-preview.proof.ts
+```
+
+This does not test live AI output. New provider processing still requires real
+API keys, enabled live flags and the applicable approvals. Hosted uses the same
+shared frontend behavior for admitted uploads; YouTube intake remains local-only.
+
 CL-271 adds Media / Videos and one shared front-to-back picture/video
 layer list. Videos show trimmed-source thumbnails. Stills share a serial,
 bounded no-key decoder, reuse matching source frames and release blob URLs when
@@ -28,8 +49,10 @@ display ranges, Capture controls, and per-placement mute/volume; they start mute
 Captions/titles stay above visuals and inset geometry survives full-frame mode.
 Invalid trims/effects or more than two simultaneous videos retain the draft and
 last valid preview with contextual feedback. Manual media editing on prepared
-clips needs no API keys. These controls, uploads and the no-tracking fit choice
-work in both local Codex and hosted Gemini; YouTube stays local-only. Fresh real
+clips needs no API keys. These controls and uploads work in both local Codex and
+hosted Gemini. The pre-processing tracking/no-tracking choice is local-only,
+defaults to tracking, and is hidden when hosted; hosted processing always tracks.
+YouTube stays local-only. Fresh real
 preparation keeps its provider/runtime, live flags and approvals. Hosted wiring
 is verified with generated/fake transports; no Gemini run or deployment is claimed.
 
@@ -852,12 +875,11 @@ phones/tablets; landscape selected review reuses the Video / Agentic Notes /
 Transcript swipeable slides and keyboard-accessible dots at all sizes. Other
 moments remain reachable in a side rail or compact horizontal rail. Portrait and
 square candidate previews keep their source proportions. The edited clip
-review/export remains vertical. Paused thumbnails preload frame data, seek to
-candidate start and report loading/decode failure. One decoder handles the
-choices serially, copies bounded frames to in-memory canvases and releases each
-native source before the next load. Gallery/side-rail switching reuses those
-frames; exit releases listeners, pending decoding and canvas memory. No frame
-file, server thumbnail job or provider call is added. Fake/no-key checks verify
+review/export remains vertical. CL-272 now supplies paused thumbnails from the
+shared browser service at each candidate start, preserving inspected source
+proportions and reporting loading/decode failure. Gallery/side-rail switching
+reuses mounted frame subscriptions; exit releases pending work and blob stills.
+No frame file, server thumbnail job or provider call is added. Fake/no-key checks verify
 synthetic layout/lifecycle, while real frame quality and paid editing require
 the owner's manual UI test with credentials and enabled live stages. Proceed
 requires public `liveAssemblyEnabled` and the processing challenge; successful

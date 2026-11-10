@@ -46,7 +46,10 @@ import {
   OWNER_PICTURE_LIMITS,
   OWNER_VISUAL_DEFAULT_MOTION,
 } from "../../../packages/contracts/local/assets.ts";
-import { placeOwnerPlannedVisual } from "../../../packages/contracts/local/visual-placement.ts";
+import {
+  placeOwnerPlannedVisual,
+  placeOwnerFitOriginalVisual,
+} from "../../../packages/contracts/local/visual-placement.ts";
 import {
   hasPlannedVisualCoverage,
   timePlannedVisuals,
@@ -133,7 +136,12 @@ export type OwnerClipPorts = {
     moment: OwnerMoment;
   }): OwnerTextLayer[];
   plan(
-    request: { workspace: OwnerWorkspace; clipId: string; moment: OwnerMoment },
+    request: {
+      workspace: OwnerWorkspace;
+      clipId: string;
+      moment: OwnerMoment;
+      includeEditorial?: boolean;
+    },
     signal: AbortSignal,
   ): Promise<z.infer<typeof ownerClipPlanSchema>>;
   image(
@@ -457,7 +465,21 @@ export class OwnerClipBatch {
           expectedRevision: clip.revision,
           sourceRevision: this.workspace.revision,
           hook: request.hook,
-          title,
+          title:
+            title && clip.base.overlay.framing === "fit"
+              ? {
+                  ...title,
+                  style: {
+                    ...title.style,
+                    box: placeOwnerFitOriginalVisual(
+                      this.workspace.source,
+                      "above",
+                      title.style.box,
+                      (title.style.fontSize * 1.2 + 32) / 1920,
+                    ),
+                  },
+                }
+              : title,
         });
         this.titleReceipts.set(key, { hash, result });
         return structuredClone(result);
@@ -709,6 +731,7 @@ export class OwnerClipBatch {
               frames,
               clip.edit?.focus ?? clip.base.overlay.focus,
               signal,
+              clip.base.overlay.framing,
             );
             const existing = (clip.edit?.visuals ?? []).filter(
               (visual) =>
@@ -1278,6 +1301,7 @@ export class OwnerClipBatch {
     frames: number,
     focus: OwnerFocus | undefined,
     signal: AbortSignal,
+    framing?: OwnerClip["framing"],
   ) {
     const storageStarted = performance.now();
     if (
@@ -1305,7 +1329,10 @@ export class OwnerClipBatch {
       assetId: asset.id,
       digest: asset.digest,
       ...clock,
-      box: placeOwnerPlannedVisual(focus, clock),
+      box:
+        framing === "fit"
+          ? placeOwnerFitOriginalVisual(this.workspace.source, "below")
+          : placeOwnerPlannedVisual(focus, clock),
       fit: "contain" as const,
       ...OWNER_VISUAL_DEFAULT_MOTION,
       origin: picture.origin,
@@ -1383,6 +1410,7 @@ export class OwnerClipBatch {
               workspace: structuredClone(this.workspace),
               clipId: clip.id,
               moment: structuredClone(moment),
+              ...(clip.framing === "fit" ? { includeEditorial: true } : {}),
             },
             signal,
           ),
@@ -1406,6 +1434,19 @@ export class OwnerClipBatch {
           moment: structuredClone(moment),
         }) ?? [],
       );
+      if (clip.framing === "fit")
+        preparation.texts = preparation.texts.map((layer) => ({
+          ...layer,
+          style: {
+            ...layer.style,
+            box: placeOwnerFitOriginalVisual(
+              this.workspace.source,
+              "above",
+              layer.style.box,
+              (layer.style.fontSize * 1.2 + 32) / 1920,
+            ),
+          },
+        }));
       const suggested = decodeOwnerHookSuggestion(
         this.ports.hookSuggestion?.({
           workspace: structuredClone(this.workspace),
@@ -1463,6 +1504,7 @@ export class OwnerClipBatch {
             frames,
             preparation.focus,
             signal,
+            clip.framing,
           );
       } catch (error) {
         this.diagnostics.trace({

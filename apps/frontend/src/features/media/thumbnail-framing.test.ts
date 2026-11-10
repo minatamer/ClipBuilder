@@ -1,5 +1,5 @@
-import { expect, it, vi } from "vitest";
-import { decodedThumbnailZoom, thumbnailZoom } from "./thumbnail-framing";
+import { expect, it } from "vitest";
+import { thumbnailZoom } from "./thumbnail-framing";
 
 function frame({
   top = 0,
@@ -69,35 +69,6 @@ it("does not treat transparent edges or a small bright object on black as bands"
     thumbnailZoom({ data: new Uint8ClampedArray(), width: 128, height: 72 }),
   ).toBe(1);
   expect(thumbnailZoom(frame(), NaN)).toBe(1);
-});
-
-it("bounds canvas reads, releases its pixels and degrades safely if inspection fails", () => {
-  const drawImage = vi.fn(),
-    getImageData = vi.fn(() => frame({ top: 10 }));
-  const canvas = {
-    width: 0,
-    height: 0,
-    getContext: vi.fn(() => ({ drawImage, getImageData })),
-  };
-  vi.stubGlobal("document", { createElement: vi.fn(() => canvas) });
-  try {
-    const video = { videoWidth: 1920, videoHeight: 1080 } as HTMLVideoElement;
-    expect(decodedThumbnailZoom(video)).toBeCloseTo(72 / 52);
-    expect(drawImage).toHaveBeenCalledExactlyOnceWith(video, 0, 0, 128, 72);
-    expect(getImageData).toHaveBeenCalledExactlyOnceWith(0, 0, 128, 72);
-    expect(canvas.width).toBe(0);
-    expect(canvas.height).toBe(0);
-    getImageData.mockImplementation(() => {
-      throw Error("synthetic blocked canvas");
-    });
-    expect(decodedThumbnailZoom(video)).toBe(1);
-    expect(
-      decodedThumbnailZoom({
-        naturalWidth: 0,
-        naturalHeight: 0,
-      } as HTMLImageElement),
-    ).toBe(1);
-  } finally {
-    vi.unstubAllGlobals();
-  }
+  expect(thumbnailZoom(frame(), 16 / 9, NaN)).toBe(1);
+  expect(thumbnailZoom(frame(), 16 / 9, 0)).toBe(1);
 });

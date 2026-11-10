@@ -119,3 +119,65 @@ The ring, logo, glow and normal spinner animation remain unchanged.
 This visual change works in fake mode without API keys. Real Gemini processing
 still requires owner-managed keys, live flags and explicit owner testing; no
 paid/provider call, configuration change, deployment or Git mutation occurred.
+
+## Owner whole-file commit authorization — 2026-11-10
+
+The owner explicitly authorizes staging and committing all fixes after clean
+validation. The compact ring correction shares style.css with CL-272; preserve
+that complete file in the combined local CL-271/CL-272/CL-062 commit. Its progress
+proof and this packet are included in the complete
+[50-path allocation](CL-272-shared-video-thumbnail-consistency.md#whole-file-commit-authorization-and-validation--2026-11-10).
+Read-only review has no actionable findings; the existing six-size/Codex evidence
+remains applicable and the settled shared workflow tests pass. Earlier no-Git
+statements describe the preceding scope. No paid/provider run, push, deployment
+or Voyagenda action is authorized or performed.
+
+## Owner follow-up — spinner behind logo, 2026-11-10
+
+Status: implemented and locally verified. The owner reports that Preparing moments now shows its
+spinner obscured by the brand mark. Restore the established ring around the
+logo without redesigning the loader or changing labels, stages, controls,
+motion timing or provider behavior. The compact desktop rule currently permits
+a 4rem visual around a 3.15rem logo; the SVG's painted circle is smaller than its
+box, so its ring crosses the mark at short desktop heights.
+
+Acceptance: the spinning ring clears the floating logo throughout its animation
+at regular and short desktop, tablet and phone sizes; title/stages/footer remain
+readable without horizontal overflow. Use the real shared component and compact
+moment-selector styles in a generated/no-key browser check, inspect it in Codex,
+run focused existing checks and record actual verification. Preserve all pending
+CL-272 work, owner sessions/media/configuration and Voyagenda. No paid/provider
+work, deployment or Git staging/commit is authorized by this visual correction.
+The loader works with `FAKE_MODE=true` and no keys; real provider processing
+retains its key/live-flag/approval requirements.
+
+The compact desktop minimum now matches the shared loader's 6.5rem minimum
+instead of shrinking to 4rem; the existing logo, ring, floating/spinning timing,
+title, progress stages and footer actions remain intact. This is one CSS value
+in `local-editing/style.css`, alongside preserved unstaged CL-272 changes.
+
+Verification:
+
+- Extended the existing `local-codex-progress.proof.ts` to mount the actual
+  compact moment-selector classes/styles. The clearance check failed before
+  the correction and passes afterward. It compares the SVG circle's inner
+  painted radius against the entire logo diagonal plus its maximum floating
+  offset, using untransformed dimensions so spinner rotation cannot skew it.
+- Passed at 1440x900, 1342x586, 1024x600, 834x1194, 390x844 and 320x568:
+  ring clearance, advancing animation, stage ticks/status, readable title,
+  no horizontal overflow and visible footer. Unmount stops progress polling.
+- Existing shared workflow tests: 6 passed. Test TypeScript, focused ESLint,
+  Prettier and `git diff --check` pass.
+- Codex browser inspection of the actual Workspace/WorkflowFrame/shared loader
+  with fake progress confirms the ring around the mark at 1342x586 and 390x844.
+  Screenshots are retained outside Git in the Codex visualization folder.
+  The isolated browser tab, temporary viewport, server and owned scratch were
+  closed/reset; the normal app/session and Voyagenda were preserved.
+- Read-only validate of this follow-up's CSS/test/doc changes: meets ticket,
+  no actionable findings. Existing CL-272 changes were excluded from this
+  correction's claim. No dependencies, provider boundaries, backend/worker,
+  configuration or saved media changed; no staging or commit occurred.
+
+All proof progress is synthetic with fake/paid-off setup, not real processing.
+No API/model key, paid run, provider call, cloud action or deployment occurred.
+Owner personal visual acceptance remains manual. Deviations: none.

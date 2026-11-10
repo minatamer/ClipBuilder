@@ -1,5 +1,71 @@
 # ClipBuilder canonical ticket index
 
+## Validated whole-file commit — 2026-11-10
+
+The owner authorizes staging/committing all fixes after clean validation.
+[CL-272's allocation](CL-272-shared-video-thumbnail-consistency.md#whole-file-commit-authorization-and-validation--2026-11-10)
+covers 50 whole paths for CL-271 framing/Hook/title/layout, CL-272 shared media
+thumbnails/loading and CL-062 ring clearance. Review has no actionable findings;
+39 focused frontend tests and changed-file lint/format pass, with the earlier
+backend/types/generated/native/Codex evidence retained. One local commit keeps
+shared files intact. Earlier unstaged/no-Git notes below describe prior scope.
+No paid run, provider/configuration change, push, deployment or Voyagenda work.
+
+## Local-only framing choice — 2026-11-10
+
+[CL-271](CL-271-muted-video-b-roll-with-continuous-captions.md#owner-local-only-framing-choice--2026-11-10)
+now restricts the tracked/fit choice to the local app, defaulting to tracking.
+Hosted processing always tracks; its shared media/Camera editor remains available.
+Implemented with 91 focused checks, TypeScript/lint and Codex desktop/phone
+verification passing. No new paid run, owner-session or Voyagenda changes;
+unstaged/uncommitted.
+
+## Fit-original titles and default layout — 2026-11-10
+
+[CL-271](CL-271-muted-video-b-roll-with-continuous-captions.md#owner-fit-original-titles-and-placement--2026-11-10)
+owns explicit generated-title verification plus title-above/pictures-below
+defaults in the fitted source's available bands. Implemented with 149 focused
+checks, native text export and Codex desktop/phone/new-picture checks passing.
+Saved edits/source framing and Voyagenda remain preserved; no paid/provider run.
+
+## Fit-original Hook and media loading feedback — 2026-11-10
+
+CL-271 owns retaining Hook/title advice in the same transcript-only fit-original
+planning call while keeping tracking off. CL-272 follows with visible picture/
+video thumbnail loading spinners, including the tour. Both follow-ups are
+implemented: 134 backend/injected-provider checks, 18 shared UI checks and two
+generated browser proofs pass, with Codex tour/loading/ready inspection. No new
+paid run, owner clip mutation or Voyagenda changes; unstaged.
+
+## Clearer framing labels — 2026-11-10
+
+[CL-271](CL-271-muted-video-b-roll-with-continuous-captions.md#owner-framing-wording-revision--2026-11-10)
+owns renaming the pre-process option to Vertical framing (9:16), retaining
+No tracking · Fit original, and adding a concise TikTok/Shorts/Reels format note.
+Copy only, originally shared local/hosted UI (the local-only revision above
+supersedes hosted availability); implemented with ten existing capability tests,
+type/lint checks and Codex desktop/phone inspection passing. No provider run;
+processing behavior and saved values are unchanged. Unstaged.
+
+## Loading ring clearance — 2026-11-10
+
+[CL-062](CL-062-designed-loading-states.md#owner-follow-up--spinner-behind-logo-2026-11-10)
+owns the reported Preparing moments ring overlapping the logo at compact desktop
+heights. The existing spinner's clearance is restored; six-size generated motion/
+geometry checks, six shared workflow tests and Codex desktop/phone inspection
+pass. No provider work; CL-272 changes and Voyagenda are preserved. Unstaged.
+
+## Shared thumbnails everywhere — 2026-11-10
+
+[CL-272](CL-272-shared-video-thumbnail-consistency.md) follows the owner's report
+that saved-source thumbnails still fail after the CL-271 Media-only correction.
+Implemented one shared decoder, subscription cache, hook and presentation
+adapters for upload/source, YouTube/saved, moment, Media and clip-card loading
+stills. Generated/no-key pixel, capped-Range, source-change, cancellation and
+responsive checks pass; composed clip-card playback remains. Real media and
+Voyagenda are preserved, with no further paid/provider runs. Owner source/codec
+and hosted release acceptance remain manual; changes are unstaged.
+
 ## Layered visual media, zoom and full-frame presentation — 2026-11-09
 
 Owner manual review, 2026-11-10: blank video timeline tiles are a confirmed

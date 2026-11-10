@@ -8,9 +8,45 @@ import {
 import {
   ownerVisualProtectedBoxes,
   placeOwnerPlannedVisual,
+  placeOwnerFitOriginalVisual,
 } from "./visual-placement.ts";
 
 const interval = { startFrame: 30, endFrame: 120 };
+it.each([
+  { width: 1920, height: 1080 },
+  { width: 1440, height: 1080 },
+  { width: 1080, height: 1080 },
+  { width: 1920, height: 800 },
+])(
+  "places fit-original defaults outside actual fitted footage %j",
+  (source) => {
+    const content = ownerSourceContent(source),
+      title = placeOwnerFitOriginalVisual(
+        source,
+        "above",
+        { x: 0.08, y: 0.08, width: 0.84, height: 0.18 },
+        0.07,
+      ),
+      picture = placeOwnerFitOriginalVisual(source, "below");
+    expect(title.y + title.height).toBeLessThan(content.y / 1920);
+    expect(picture.y).toBeGreaterThan((content.y + content.height) / 1920);
+    expect(picture.y + picture.height).toBeLessThanOrEqual(0.95);
+    expect(title.y).toBeGreaterThanOrEqual(0.05);
+  },
+);
+it("preserves bounded fallback and caller geometry when no usable letterbox band exists", () => {
+  const preferred = { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
+    snapshot = { ...preferred };
+  expect(
+    placeOwnerFitOriginalVisual(
+      { width: 1080, height: 1920 },
+      "above",
+      preferred,
+      0.07,
+    ),
+  ).toEqual(preferred);
+  expect(preferred).toEqual(snapshot);
+});
 function sample() {
   const focus = defaultOwnerFocus({ width: 1280, height: 720 }, 180);
   focus.people = [

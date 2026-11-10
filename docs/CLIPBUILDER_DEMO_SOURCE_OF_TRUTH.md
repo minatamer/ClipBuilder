@@ -1,5 +1,27 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Shared video thumbnails — CL-272, 2026-11-10
+
+Every video-thumbnail surface uses one browser media service: uploaded/source
+posters, saved variants, YouTube offer images, moment cards, Media video rows and
+the loading still beneath a clip card's actual edited preview. Use the existing
+protected media routes and source identity; keep playback clocks and the composed
+clip-card/hover preview independent. YouTube acquisition remains local-only;
+shared upload/editor thumbnail behavior also applies to hosted sessions.
+
+Decode one bounded still at a time, reuse matching source/time/size requests and
+release requests, decoders, temporary canvases, timers and blob URLs when their
+last consumer leaves. Source replacement starts a fresh lifecycle. Representative
+source stills retain the ten-seconds/first-quarter rule; moments and trimmed Media
+rows use their explicit source clocks. Preserve source-shaped portrait/square
+cards and posters. Loading/failure retains each existing thumbnail's geometry.
+Picture and video Media thumbnails show an animated spinner through queued
+loading, decoding and image presentation, including during the editor tour.
+Loaded pixels replace the spinner; a genuine failure shows a stable icon.
+These controls need no API keys or downloaded model. Generated fake/paid-off
+proofs establish transport, pixel and lifecycle behavior; new real provider work
+still needs configured keys, enabled live flags and the applicable approvals.
+
 ## Layered visual media and optional tracking — CL-271, 2026-11-09
 
 The owner authorizes bounded manual video B-roll alongside Pictures and Audio,
@@ -83,12 +105,29 @@ Effects use presentation
 frames, smooth deterministic easing and a held end state, retaining entrance/exit
 compatibility and normal motion under every browser/OS preference.
 
-Local and hosted processing offer tracked portrait framing or **No tracking · Fit original**.
+Local processing offers **Vertical framing (9:16)** or **No tracking · Fit original**,
+defaulting to vertical framing with automatic tracking. The pre-processing choice
+is local-only. Hosted processing shows no framing selector and always uses the
+tracked path; its trusted API normalizes valid explicit fit requests to tracked.
+Hosted picture/video editing and Camera controls remain available.
+The framing control explains that 9:16 is the vertical format used for TikTok,
+YouTube Shorts and Instagram Reels. The vertical option retains automatic
+camera/tracking preparation; the wording change does not change its behavior.
 Fit keeps complete horizontal footage centered in the vertical frame with black
 padding and bypasses speaker-camera preparation, visual camera planning and
 automatic face follow. Transcription remains necessary for captions. Text-based
 contextual picture planning can continue. The processing choice survives retry,
 draft/recovery and preview/native export; legacy/default clips remain tracked.
+Fit-original planning also retains optional Hook and opening-title advice from
+the same transcript-only response, without camera work or an additional call.
+Explicit Find visuals remains picture-only; null advice stays absent and Hooks
+are only applied by the owner.
+Fit-original editorial requests explicitly ask for one authored opening title.
+Fresh generated/Hook titles and added text default above the actual padded
+source; generated, Find visuals and added pictures default below it, using
+available safe letterbox bands. Saved/manual boxes remain authoritative. A source
+without sufficient band space retains bounded editable fallback positions;
+its footage is never recropped merely to make space for a default layer.
 No fixed performance or credit-saving amount is promised.
 
 Video upload is available locally and in hosted sessions. It reuses authenticated transport,

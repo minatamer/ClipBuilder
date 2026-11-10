@@ -334,25 +334,33 @@ export function OwnerClipBatchPanel({
           Your clips
         </h2>
       )}
-      {showProcessing && selectionReady && !list.active && (
-        <label>
-          Framing
-          <select
-            className="select-control"
-            aria-label="Clip framing"
-            value={framing}
-            disabled={pending || list.active}
-            onChange={(event) =>
-              setFraming(
-                event.currentTarget.value === "fit" ? "fit" : "tracked",
-              )
-            }
-          >
-            <option value="tracked">Face tracking · Portrait</option>
-            <option value="fit">No tracking · Fit original</option>
-          </select>
-        </label>
-      )}
+      {capabilities.localMedia &&
+        showProcessing &&
+        selectionReady &&
+        !list.active && (
+          <label>
+            Framing
+            <select
+              className="select-control"
+              aria-label="Clip framing"
+              aria-describedby={`${tabsId}-framing-help`}
+              value={framing}
+              disabled={pending || list.active}
+              onChange={(event) =>
+                setFraming(
+                  event.currentTarget.value === "fit" ? "fit" : "tracked",
+                )
+              }
+            >
+              <option value="tracked">Vertical framing (9:16)</option>
+              <option value="fit">No tracking · Fit original</option>
+            </select>
+            <span id={`${tabsId}-framing-help`} className="source-hint">
+              9:16 is the vertical format used for TikTok, YouTube Shorts and
+              Instagram Reels.
+            </span>
+          </label>
+        )}
       {message &&
         ((message.clipId === null && showProcessing) ||
           (message.clipId === currentId &&
@@ -444,7 +452,7 @@ export function OwnerClipBatchPanel({
                     policyRevision: first.policyRevision,
                     sourceRevision: workspace.revision,
                     momentIds: selected.map((item) => item.momentId),
-                    framing,
+                    framing: capabilities.localMedia ? framing : "tracked",
                   });
                 }}
               >

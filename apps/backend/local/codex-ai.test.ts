@@ -23,6 +23,81 @@ const words = ["Coral", "reefs", "recover."].map((text, index) => ({
   confidence: null,
 }));
 const policy = { minMs: 10_000, maxMs: 30_000 };
+it("retains fit-original Hook advice from one transcript-only Codex request without frame/speaker work", async () => {
+  const suggestion = { startFrame: 300, endFrame: 450 };
+  const infer = vi.fn<CodexInference>(async () => ({
+    pictures: [],
+    texts: [
+      {
+        title: "Why coral reefs can recover",
+        hookStyle: "curiosity-gap",
+        wordIds: [words[0]!.id],
+        startFrame: 0,
+        endFrame: 90,
+      },
+    ],
+    hookSuggestion: suggestion,
+  }));
+  const media = vi.fn();
+  const ai = createLocalCodexAi({
+    files: new WorkspaceFiles("unused-synthetic"),
+    media,
+    infer,
+  });
+  const workspace: OwnerWorkspace = {
+    id: crypto.randomUUID(),
+    revision: 0,
+    mode: "provider-ai",
+    source: {
+      fingerprint: "a".repeat(64),
+      bytes: 100,
+      durationMs: 30000,
+      width: 640,
+      height: 360,
+      fps: 30,
+    },
+  };
+  const moment: OwnerMoment = {
+    id: crypto.randomUUID(),
+    processingIdentity: "a".repeat(64),
+    cut: { startFrame: 0, endFrame: 900 },
+    cues: words,
+    rangeIds: [],
+    evidence: null,
+  };
+  const request = {
+    workspace,
+    moment,
+    clipId: crypto.randomUUID(),
+    includeEditorial: true,
+  };
+  try {
+    expect(
+      await ai.clipPreparation!.planVisuals!(
+        request,
+        AbortSignal.timeout(2000),
+      ),
+    ).toEqual([]);
+    expect(ai.clipPreparation!.hookSuggestion!(request)).toEqual(suggestion);
+    expect(ai.clipPreparation!.texts!(request)).toMatchObject([
+      {
+        text: "Why coral reefs can recover",
+        role: "opening-title",
+        startFrame: 0,
+      },
+    ]);
+    expect(infer.mock.calls[0]![0].schema).toMatchObject({
+      properties: { texts: { minItems: 1 } },
+    });
+    expect(infer).toHaveBeenCalledTimes(1);
+    expect(infer.mock.calls[0]![0].images).toBeUndefined();
+    expect(infer.mock.calls[0]![0].prompt).toContain("never activate a hook");
+    expect(media).not.toHaveBeenCalled();
+  } finally {
+    await ai.close!(AbortSignal.timeout(2000));
+  }
+  expect(ai.clipPreparation!.hookSuggestion!(request)).toBeUndefined();
+});
 it.each(["all", 1] as const)(
   "maps compact Find all references back to canonical words and leaves numeric input unchanged (%s)",
   async (count) => {

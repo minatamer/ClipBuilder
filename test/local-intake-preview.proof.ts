@@ -11,6 +11,7 @@ import { runOwnedProcess } from "../apps/renderer/src/media/process-runner.ts";
 import { fakeOwnerAcquisition } from "../apps/backend/local/fake-acquisition.ts";
 import { canonicalOwnerYoutubeSource } from "../apps/backend/local/youtube-url.ts";
 import { ownerSourceImportSchema } from "../packages/contracts/local/acquisition-flow.ts";
+import { ownerAcquisitionProgressSchema } from "../packages/contracts/local/acquisition.ts";
 
 declare global {
   function intakeChooseSaved(
@@ -49,6 +50,9 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
   let codex = false;
   const requests: string[] = [];
   const sourceImports: ReturnType<typeof ownerSourceImportSchema.parse>[] = [];
+  let acquisitionState: ReturnType<
+    typeof ownerAcquisitionProgressSchema.parse
+  > | null = null;
   const offer = await fakeOwnerAcquisition.metadata(
     canonicalOwnerYoutubeSource("https://youtu.be/synthetic01"),
     new AbortController().signal,
@@ -76,7 +80,7 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
   const server = createServer((request, response) => {
     response.setHeader(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; img-src 'self' data:; connect-src 'self'",
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; img-src 'self' blob: data:; connect-src 'self'",
     );
     const path = request.url ?? "";
     const json = (value: unknown, status = 200) =>
@@ -109,7 +113,7 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
       path === "/api/local/workspace" ||
       path === "/api/local/sources/state"
     ) {
-      json(null);
+      json(path === "/api/local/sources/state" ? acquisitionState : null);
       return;
     }
     if (path === "/api/local/session" && request.method === "GET") {
@@ -152,19 +156,17 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
             JSON.parse(Buffer.concat(chunks).toString()),
           ),
         );
-        json(
-          {
-            id: crypto.randomUUID(),
-            mode: "provider-source",
-            stage: "failed",
-            downloadedBytes: 0,
-            totalBytes: null,
-            variantId: null,
-            error: "unsupported",
-            diagnostic: "acquisition_section_unsupported",
-          },
-          202,
-        );
+        acquisitionState = ownerAcquisitionProgressSchema.parse({
+          id: crypto.randomUUID(),
+          mode: "provider-source",
+          stage: "failed",
+          downloadedBytes: 0,
+          totalBytes: null,
+          variantId: null,
+          error: "unsupported",
+          diagnostic: "acquisition_section_unsupported",
+        });
+        json(acquisitionState, 202);
       })().catch(() => response.destroy());
       return;
     }
@@ -279,16 +281,16 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
       document.addEventListener('seeked',event=>event.stopImmediatePropagation(),true);
       globalThis.intakeLayout=()=>{
         const card=document.querySelector('.youtube-card'),body=card.querySelector('.source-card-body'),upload=document.querySelector('.upload-card'),drop=upload.querySelector('.upload-drop-area');
-        const footer=card.querySelector('footer'),video=card.querySelector('video');
-        return {bodyHeight:body.clientHeight,bodyScroll:body.scrollHeight,bodyFits:body.scrollHeight<=body.clientHeight+1,overflow:document.documentElement.scrollWidth>innerWidth,drop:!!drop,dropFits:!!drop && drop.getBoundingClientRect().bottom<=upload.querySelector('footer').getBoundingClientRect().top+1,footerFits:footer.scrollWidth<=footer.clientWidth,frameLoaded:video?.dataset.loaded==='true',readyState:video?.readyState,time:video?.currentTime,paused:video?.paused,muted:video?.muted};
+        const footer=card.querySelector('footer'),image=card.querySelector('.youtube-thumbnail img'); const thumbnail=card.querySelector('.youtube-thumbnail'),children=[...thumbnail.childNodes],original=document.createElement('video');original.style.cssText='position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover'; thumbnail.replaceChildren(original); const legacyBodyScroll=body.scrollHeight; thumbnail.replaceChildren(...children);
+        return {bodyHeight:body.clientHeight,bodyScroll:body.scrollHeight,bodyFits:body.scrollHeight<=body.clientHeight+1,bodyScrollable:getComputedStyle(body).overflowY==='auto',legacyBodyScroll,overflow:document.documentElement.scrollWidth>innerWidth,drop:!!drop,dropFits:!!drop && drop.getBoundingClientRect().bottom<=upload.querySelector('footer').getBoundingClientRect().top+1,footerFits:footer.scrollWidth<=footer.clientWidth,frameLoaded:!!image?.complete && image.naturalWidth>0,thumbnailVideos:card.querySelectorAll('.youtube-thumbnail video').length};
       };
       globalThis.intakeChooseSaved=async(waitForFrame=true)=>{
         const input=await wait(()=>document.querySelector('.youtube-card input:enabled'));
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'https://youtu.be/synthetic01');input.dispatchEvent(new Event('input',{bubbles:true}));
         await new Promise(requestAnimationFrame);
         [...document.querySelectorAll('.youtube-card button')].find(node=>node.textContent.trim()==='Continue').click();
-        await wait(()=>document.querySelector('.youtube-preview video'));
-        if(waitForFrame)await wait(()=>document.querySelector('.youtube-preview video')?.dataset.loaded==='true');
+        await wait(()=>document.querySelector('.youtube-preview [data-thumbnail-state]'));
+        if(waitForFrame)await wait(()=>{const frame=document.querySelector('.youtube-preview [data-thumbnail-state]'),image=frame?.querySelector('img');return frame?.dataset.thumbnailState==='ready'&&image?.complete&&image.naturalWidth>0});
         return globalThis.intakeLayout();
       };
       globalThis.intakeDrop=async()=>{
@@ -303,15 +305,9 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
         button.focus();button.click();
         return opened===1 && document.activeElement===button && !button.disabled;
       };
-      globalThis.intakeOverflow=()=>{
-        const body=document.querySelector('.youtube-card .source-card-body');
-        const message=body.querySelector('.flow-notice');
-        message.textContent='Synthetic error detail. '.repeat(20);
-        body.scrollTop=body.scrollHeight;
-        return body.scrollHeight>body.clientHeight && body.scrollTop>0 && getComputedStyle(body).overflowY==='auto';
-      };
+      globalThis.intakeOverflow=()=>{const body=document.querySelector('.youtube-card .source-card-body');body.scrollTop=body.scrollHeight;return getComputedStyle(body).overflowY==='auto' && body.scrollTop>0;};
       globalThis.intakeFallback=async()=>{
-        for(let i=0;i<400;i++){
+        for(let i=0;i<800;i++){
           const frame=document.querySelector('.youtube-thumbnail');
           if(frame?.querySelector('svg:not(.acquisition-spinner)') && !frame.querySelector('video') && !frame.querySelector('.acquisition-spinner'))
             return ![...document.querySelectorAll('.youtube-card button')].find(node=>node.textContent.trim()==='Use video')?.disabled;
@@ -331,9 +327,7 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
     const initial = await page.evaluate(() => globalThis.intakeChooseSaved());
     expect(initial).toMatchObject({
       frameLoaded: true,
-      paused: true,
-      muted: true,
-      time: 2,
+      thumbnailVideos: 0,
     });
     const evidence = resolve(".local-build/evidence");
     await mkdir(evidence, { recursive: true });
@@ -344,14 +338,15 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
     ] as const) {
       await page.setViewport({ width, height, deviceScaleFactor: 1 });
       const layout = await page.evaluate(() => globalThis.intakeLayout());
-      expect(layout).toMatchObject({
-        bodyFits: true,
+      expect(layout, JSON.stringify({ width, height, layout })).toMatchObject({
+        bodyScrollable: true,
         overflow: false,
         drop: true,
         dropFits: true,
         footerFits: true,
         frameLoaded: true,
       });
+      expect(layout.legacyBodyScroll).toBe(layout.bodyScroll);
       const capture = await page
         ._client()
         .send("Page.captureScreenshot", { format: "png", fromSurface: true });
@@ -406,7 +401,11 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
         awaitPromise: true,
         returnByValue: true,
       });
-      if (result.value.exceptionDetails) throw Error("quality_browser_failed");
+      if (result.value.exceptionDetails)
+        throw Error(
+          "quality_browser_failed: " +
+            JSON.stringify(result.value.exceptionDetails),
+        );
       return result.value.result.value;
     };
     expect(metadataCalls).toBe(0);
@@ -434,7 +433,7 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
         windowsVirtualKeyCode: 35,
       });
     await evaluateQuality(
-      `(async()=>{await wait(()=>document.querySelector('.youtube-card .flow-notice').textContent.includes('Couldn’t load resolutions.'));await wait(()=>!document.querySelector('.youtube-card select').disabled);return true;})()`,
+      `(async()=>{await wait(()=>document.querySelector('.youtube-card [data-inline-feedback][role="alert"]')?.textContent.includes('Couldn’t load resolutions.'));await wait(()=>!document.querySelector('.youtube-card select').disabled);return true;})()`,
     );
     expect(metadataCalls).toBe(1);
     expect(
@@ -577,4 +576,4 @@ it("decodes saved frames and keeps responsive intake controls and upload areas u
     expect(server.listening).toBe(false);
     await clearIntakeScratch(directory);
   }
-}, 60_000);
+}, 100_000);

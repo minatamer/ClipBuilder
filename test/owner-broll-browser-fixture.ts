@@ -29,9 +29,31 @@ export async function startBrollBrowserFixture(
   const files = new Map<string, { bytes: Buffer; type: string }>();
   let clip = syntheticTextClip(),
     applies = 0;
+  let holdingThumbnails = false;
+  const thumbnailReads = new Set<() => void>();
+  const releaseThumbnails = () => {
+    holdingThumbnails = false;
+    for (const release of [...thumbnailReads]) release();
+  };
   const workspaceId = randomUUID();
   const server = createServer((req, res) => {
     void (async () => {
+      if (
+        holdingThumbnails &&
+        req.headers["sec-fetch-dest"] === "empty" &&
+        /\/(?:video-assets|assets)\//.test(req.url ?? "")
+      ) {
+        await new Promise<void>((done) => {
+          const release = () => {
+            res.off("close", release);
+            thumbnailReads.delete(release);
+            done();
+          };
+          thumbnailReads.add(release);
+          res.once("close", release);
+        });
+        if (res.destroyed) return;
+      }
       if (req.method === "POST" && req.url?.endsWith("/edit")) {
         const chunks: Buffer[] = [];
         let size = 0;
@@ -346,7 +368,13 @@ export async function startBrollBrowserFixture(
       url: `http://localhost:${port}/`,
       root,
       applies: () => applies,
+      holdThumbnails: () => {
+        holdingThumbnails = true;
+      },
+      releaseThumbnails,
+      pendingThumbnails: () => thumbnailReads.size,
       close: async () => {
+        releaseThumbnails();
         server.closeAllConnections();
         await new Promise<void>((done) => server.close(() => done()));
         if (dirname(await realpath(root)) !== (await realpath(tmpdir())))

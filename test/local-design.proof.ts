@@ -874,11 +874,8 @@ globalThis.clipbuilderFinishDownload = async () => {
 };
 globalThis.clipbuilderPrepareOffline = async () => {
   await fillLink();
-  const video=await wait(()=>{const node=document.querySelector('.youtube-preview video');return node?.dataset.loaded==='true' && node;});
-  const thumbnailTime=Math.min(10,video.duration/4);
-  await wait(()=>video.readyState>=2 && Math.abs(video.currentTime-thumbnailTime)<0.05);
-  if(video.videoWidth!==320 || video.videoHeight!==180 || !video.paused || !video.muted || video.autoplay || !video.playsInline || video.controls) throw new Error('saved_preview_not_silent_still');
-  if(document.querySelector('.youtube-preview img') || document.querySelector('.youtube-preview .acquisition-spinner') || document.querySelector('.youtube-video-title').textContent!=='Saved video') throw new Error('saved_preview_not_local');
+  const image=await wait(()=>{const node=document.querySelector('.youtube-preview img');return node?.complete && node.naturalWidth>0 && node;});
+  if(!image.src.startsWith('blob:') || document.querySelector('.youtube-preview video') || document.querySelector('.youtube-preview .acquisition-spinner') || document.querySelector('.youtube-video-title').textContent!=='Saved video') throw new Error('saved_preview_not_local_still');
   if (button('More resolutions') || button('Download video') || document.querySelector('.youtube-card input')) throw new Error('offline_picker_unavailable');
   return true;
 };
@@ -899,7 +896,7 @@ globalThis.clipbuilderOpenFailed = async () => {
 };
 globalThis.clipbuilderOpenedOffline = async () => {
   await wait(() => document.querySelector('h1')?.textContent.includes('Choose your moments'));
-  await wait(()=>!document.querySelector('.youtube-preview video'));
+  await wait(()=>!document.querySelector('.youtube-preview'));
   if(document.querySelector('.youtube-actions .acquisition-spinner')) throw new Error('open_spinner_survived_handoff');
   return true;
 };

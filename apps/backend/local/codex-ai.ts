@@ -94,7 +94,7 @@ export function createLocalCodexAi(options: {
       string,
       {
         workspaceId: string;
-        value: OwnerFocus;
+        value?: OwnerFocus;
         hookSuggestion?: OwnerHook | undefined;
         texts: OwnerTextLayer[];
       }
@@ -392,6 +392,10 @@ export function createLocalCodexAi(options: {
             ),
           ),
         diagnostics,
+        ({ workspace, clipId }, advice) => {
+          if (closed) return;
+          focus.set(clipId, { workspaceId: workspace.id, ...advice });
+        },
       ),
       mode: "provider-ai",
       prepareWords(current, signal) {

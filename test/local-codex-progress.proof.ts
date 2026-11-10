@@ -60,9 +60,10 @@ it("shows observed Codex spinners/ticks with a visible footer at desktop and pho
       import {CodexPreparationSteps} from './apps/frontend/src/features/local-editing/codex-preparation-steps.tsx';
       import {Button} from './apps/frontend/src/shared/ui/button.tsx';
       import './apps/frontend/src/styles/tokens.css';
+      import './apps/frontend/src/features/local-editing/style.css';
       const root=createRoot(document.getElementById('root'));
       globalThis.unmountProgress=()=>root.unmount();
-      root.render(<main><h1>Choose your moments</h1><section><ProcessingState label="Preparing moments"><CodexPreparationSteps workspaceId="${crypto.randomUUID()}"/></ProcessingState></section><footer><Button>Cancel analysis</Button></footer></main>);
+      root.render(<main><h1>Choose your moments</h1><section><div className='local-editing local-moments'><div className='selection' data-waiting><ProcessingState className='moments-processing' label="Preparing moments"><CodexPreparationSteps workspaceId="${crypto.randomUUID()}"/></ProcessingState></div></div></section><footer><Button>Cancel analysis</Button></footer></main>);
     `,
       },
       nodePaths: [resolve("apps/frontend/node_modules")],
@@ -80,6 +81,7 @@ it("shows observed Codex spinners/ticks with a visible footer at desktop and pho
       body{margin:0;background:#0b2459;color:white;font:16px Arial;--cb-ink:white;--cb-ink-soft:#bed2ed}
       main{height:100dvh;display:flex;flex-direction:column;box-sizing:border-box;padding:16px;gap:12px}
       h1{margin:0;font-size:24px}section{flex:1;min-height:0;overflow:auto}footer{flex:none;display:flex;justify-content:flex-end}
+      .selection{height:100%}
       </style></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>`,
     );
     const port = await listenOwner(server);
@@ -101,6 +103,9 @@ it("shows observed Codex spinners/ticks with a visible footer at desktop and pho
     await mkdir(resolve(".local-build/evidence"), { recursive: true });
     for (const [width, height] of [
       [1440, 900],
+      [1342, 586],
+      [1024, 600],
+      [834, 1194],
       [390, 844],
       [320, 568],
     ] as const) {
@@ -120,6 +125,26 @@ it("shows observed Codex spinners/ticks with a visible footer at desktop and pho
         done: 3,
         fits: true,
         footer: true,
+      });
+      const clearance = await page._client().send("Runtime.evaluate", {
+        expression: `(async()=>{
+          const visual=document.querySelector('.moments-processing > div[aria-hidden="true"]'),spinner=visual.querySelector('svg'),mark=visual.lastElementChild;
+          const width=parseFloat(getComputedStyle(spinner).width),box=mark.getBoundingClientRect();
+          const radius=width*9.6/24;
+          // Include the full square's diagonal and the float animation's maximum offset.
+          const needed=Math.hypot(box.width/2,box.height/2)+parseFloat(getComputedStyle(document.documentElement).fontSize)*0.3;
+          const animation=spinner.getAnimations()[0],before=animation?.currentTime;await new Promise(r=>setTimeout(r,80));
+          return {clear:radius>needed,width,needed,radius,animated:!!animation&&animation.currentTime>before,title:!!document.querySelector('[role="status"]')?.textContent.includes('Preparing moments'),overflow:document.documentElement.scrollWidth>innerWidth};
+        })()`,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      expect(clearance.value.exceptionDetails).toBeUndefined();
+      expect(clearance.value.result.value).toMatchObject({
+        clear: true,
+        animated: true,
+        title: true,
+        overflow: false,
       });
       await page._client().send("Runtime.evaluate", {
         expression:

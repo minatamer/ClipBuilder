@@ -4,7 +4,8 @@ import {
   type EditorFormDraft,
 } from "./editor-preview-form.ts";
 import { EditorTimeline, PictureTimelineAudio } from "./editor-timeline.tsx";
-import { VideoTimelineThumbnail } from "./video-timeline-thumbnail.tsx";
+import { MediaTimelineThumbnail } from "./media-timeline-thumbnail.tsx";
+import { placeOwnerFitOriginalVisual } from "../../../../../packages/contracts/local/visual-placement.ts";
 import {
   editorTimelineItems,
   type EditorTimelineItem,
@@ -1693,23 +1694,17 @@ export function ClipEditor({
                   playbackOverlay,
                   item.occurrence,
                 ).visuals[item.index]!;
-                return cue.video ? (
-                  <VideoTimelineThumbnail
+                return (
+                  <MediaTimelineThumbnail
                     workspaceId={workspaceId}
                     assetId={cue.assetId}
                     frame={
-                      cue.video.offsetFrame +
-                      ownerSourceFrame(playbackOverlay, item.startFrame) -
-                      cue.startFrame
+                      cue.video
+                        ? cue.video.offsetFrame +
+                          ownerSourceFrame(playbackOverlay, item.startFrame) -
+                          cue.startFrame
+                        : undefined
                     }
-                  />
-                ) : (
-                  <span
-                    className="picture-thumb"
-                    aria-hidden="true"
-                    style={{
-                      backgroundImage: `url(/api/local/workspace/${workspaceId}/assets/${cue.assetId})`,
-                    }}
                   />
                 );
               }
@@ -1761,14 +1756,22 @@ export function ClipEditor({
       endFrame: Math.min(windowEnd, startFrame + 4 * OWNER_FPS),
       style: {
         ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
-        box: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
+        box:
+          clip.base?.overlay.framing === "fit" && source
+            ? placeOwnerFitOriginalVisual(
+                source,
+                "above",
+                { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
+                (OWNER_SOCIAL_TEXT_PRESETS.tiktok.fontSize * 1.2 + 32) / 1920,
+              )
+            : { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
       },
     };
     update({ ...draft, texts: [...(draft.texts ?? []), layer] });
     setTextTab("content");
     chooseText(layer);
   }
-  function newPicture(assetId: string): OwnerVisualEdit {
+  function newPicture(assetId: string, video = false): OwnerVisualEdit {
     const startFrame = Math.max(
       windowStart,
       Math.min(
@@ -1781,7 +1784,10 @@ export function ClipEditor({
       assetId,
       startFrame,
       endFrame: Math.min(windowEnd, startFrame + 4 * OWNER_FPS),
-      box: { x: 0.1, y: 0.1, width: 0.8, height: 0.3 },
+      box:
+        !video && clip.base?.overlay.framing === "fit" && source
+          ? placeOwnerFitOriginalVisual(source, "below")
+          : { x: 0.1, y: 0.1, width: 0.8, height: 0.3 },
       fit: "contain",
       ...OWNER_VISUAL_DEFAULT_MOTION,
     };
@@ -1940,7 +1946,7 @@ export function ClipEditor({
           ).some((asset) => asset.id === assetId)
         )
           throw new Error("unacknowledged");
-        const cue = newPicture(assetId);
+        const cue = newPicture(assetId, kind === "video");
         if (kind === "video") {
           const asset = acknowledged.videoAssets!.find(
             (asset) => asset.id === assetId,

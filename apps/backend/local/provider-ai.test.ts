@@ -194,6 +194,58 @@ const cue = {
     avoidTerms: ["logos"],
   },
 };
+it("retains fit-original Hook advice from one transcript-only Gemini request without camera/media work", async () => {
+  const f = fixture(),
+    request = {
+      workspace: f.workspace,
+      clipId: f.clipId,
+      moment: f.moment,
+      includeEditorial: true,
+    };
+  const suggestion = { startFrame: 300, endFrame: 450 };
+  f.transport.candidates.mockResolvedValue({
+    text: JSON.stringify({
+      pictures: [],
+      texts: [
+        {
+          title: "Why coral reefs can recover",
+          hookStyle: "curiosity-gap",
+          wordIds: [words[0]!.id],
+          startFrame: 0,
+          endFrame: 90,
+        },
+      ],
+      hookSuggestion: suggestion,
+    }),
+    finished: true,
+  });
+  try {
+    expect(
+      await f.ports.clipPreparation.planVisuals!(request, f.signal),
+    ).toEqual([]);
+    expect(f.ports.clipPreparation.hookSuggestion!(request)).toEqual(
+      suggestion,
+    );
+    expect(f.ports.clipPreparation.texts!(request)).toMatchObject([
+      {
+        text: "Why coral reefs can recover",
+        role: "opening-title",
+        startFrame: 0,
+      },
+    ]);
+    expect(f.transport.candidates).toHaveBeenCalledTimes(1);
+    expect(f.transport.candidates.mock.calls[0]![0]).toContain(
+      "never activate a hook",
+    );
+    expect(f.transport.generate).not.toHaveBeenCalled();
+    expect(f.transport.transcribe).not.toHaveBeenCalled();
+    expect(f.transport.upload).not.toHaveBeenCalled();
+    expect(f.media).not.toHaveBeenCalled();
+  } finally {
+    await f.ports.close(f.signal);
+  }
+  expect(f.ports.clipPreparation.hookSuggestion!(request)).toBeUndefined();
+});
 it.each([
   { startFrame: 300, endFrame: 450 },
   { startFrame: 60, endFrame: 150 },
