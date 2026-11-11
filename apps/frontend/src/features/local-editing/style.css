@@ -559,18 +559,67 @@
   .moment-workflow-actions .workflow-actions {
     margin: 0;
   }
-  .moment-workarea > .selection fieldset {
-    border: 0;
-    border-bottom: 1px solid var(--cb-border);
-    border-radius: 0;
-    padding: 0 0 1rem;
-    margin: 1rem 0;
-    background: transparent;
+  .selection {
+    container: moments-controls / inline-size;
+  }
+  .moment-form-panel {
+    display: grid;
+    gap: 1rem;
+  }
+  .moment-workarea > .selection .moment-settings-card {
+    border: 1px solid var(--cb-border);
+    border-radius: 0.8rem;
+    padding: 1rem;
+    margin: 0;
+    background: linear-gradient(140deg, rgb(41 79 135 / 10%), transparent 70%);
     box-shadow: none;
   }
-  .moment-workarea > .selection legend {
-    padding: 0 0 0.75rem;
+  .moment-group-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.8rem;
+    color: var(--cb-ink-soft);
+  }
+  .moment-group-heading h3 {
+    margin: 0;
+    color: var(--cb-ink);
     font-size: 0.875rem;
+  }
+  .moment-group-heading > span {
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .manual-clips-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    min-height: 4.5rem;
+    border: 1px dashed var(--cb-border);
+    border-radius: 0.5rem;
+    color: var(--cb-ink-soft);
+    font-size: 0.8125rem;
+  }
+  .moment-settings-card > .manual-clip-actions {
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+  }
+  .moment-ai-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    align-items: end;
+  }
+  .moment-ai-options .duration-row {
+    margin-block: 0.5rem;
+  }
+  @container moments-controls (max-width: 34rem) {
+    .moment-ai-options {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0;
+    }
   }
   .moment-framing:empty {
     display: none;
@@ -641,7 +690,6 @@
     margin: 0.75rem 0;
     font-size: 0.8125rem;
   }
-  .range-row,
   .duration-row {
     display: flex;
     flex-wrap: wrap;
@@ -672,8 +720,41 @@
     font-size: 0.75rem;
   }
   .range-row {
-    border-bottom: 1px solid var(--cb-border);
-    padding-bottom: 1rem;
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    margin-top: 0.75rem;
+    border: 1px solid var(--cb-border);
+    border-radius: 0.6rem;
+    background: var(--cb-canvas);
+  }
+  .range-row-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.8125rem;
+  }
+  .range-row-heading > button {
+    padding-inline: 0.5rem;
+  }
+  .range-endpoints {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  .range-row .manual-time-actions {
+    flex-wrap: nowrap;
+  }
+  .range-row .manual-time-actions > button {
+    padding-inline: 0.45rem;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+  }
+  @container moments-controls (max-width: 26rem) {
+    .range-endpoints {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
   .range-row input {
     font-family: var(--cb-font-mono);
@@ -702,31 +783,57 @@
     margin: 0;
     padding: 0;
     display: grid;
-    gap: 0;
+    gap: 0.65rem;
   }
   .moments li {
     min-width: 0;
-    border: 0;
-    border-bottom: 1px solid var(--cb-border);
-    border-radius: 0;
-    padding: 1rem 0;
-    background: transparent;
+    border: 1px solid var(--cb-border);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    background: linear-gradient(140deg, rgb(41 79 135 / 12%), transparent 70%);
   }
   .moment-card {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 5.5rem minmax(0, 1fr) auto;
     align-items: center;
-    gap: 1rem;
+    gap: 0.8rem;
+  }
+  .moment-card-still {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border-radius: 0.4rem;
+    background: var(--cb-canvas);
+  }
+  .moment-card-still > span:first-child {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: inherit;
+  }
+  .moment-card-number {
+    position: absolute;
+    left: 0.3rem;
+    top: 0.3rem;
+    min-width: 1.2rem;
+    padding-inline: 0.25rem;
+    border-radius: 0.2rem;
+    background: rgb(7 20 47 / 85%);
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-align: center;
   }
   .moment-card-body {
     min-width: 0;
     display: grid;
-    gap: 0.75rem;
+    gap: 0.4rem;
   }
   .moment-card-title {
     margin: 0;
     color: var(--cb-ink);
-    font-size: 1rem;
+    font-size: 0.9375rem;
     line-height: 1.45;
     overflow-wrap: anywhere;
   }
@@ -736,7 +843,7 @@
     flex-wrap: wrap;
     gap: 0.5rem 1rem;
     color: var(--cb-ink-soft);
-    font-size: var(--cb-text-small);
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
   }
   .moment-card-range {
@@ -761,6 +868,17 @@
   }
   .moment-card-actions > .moment-remove {
     margin-left: 0;
+  }
+  @container moments-controls (max-width: 34rem) {
+    .moment-card {
+      grid-template-columns: 4.5rem minmax(0, 1fr);
+    }
+    .moment-card-actions {
+      grid-column: 1 / -1;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+    }
   }
   button[aria-pressed="true"] {
     border-color: var(--cb-brand);
@@ -1302,10 +1420,20 @@
   }
   .moment-tabs {
     display: flex;
-    gap: 1.5rem;
+    gap: 0.25rem;
     margin-bottom: 1rem;
-    padding: 0;
-    border-bottom: 1px solid var(--cb-border);
+    padding: 0.25rem;
+    border: 1px solid var(--cb-border);
+    border-radius: 0.65rem;
+    background: var(--cb-canvas);
+  }
+  .moment-tab-count {
+    min-width: 1.3rem;
+    padding-inline: 0.3rem;
+    border-radius: 0.25rem;
+    background: rgb(120 175 255 / 12%);
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
   }
   .editor-section-icon {
     flex: 0 0 auto;
@@ -1826,12 +1954,16 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .moment-tabs button {
+    display: inline-flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
     min-width: 0;
     min-height: var(--cb-target);
-    padding: 0.5rem 0.25rem;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
+    padding: 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 0.4rem;
     background: transparent;
     color: var(--cb-ink-soft);
     font: inherit;
@@ -1840,9 +1972,9 @@
     cursor: pointer;
   }
   .moment-tabs [aria-selected="true"] {
-    background: transparent;
-    color: var(--cb-brand-strong);
-    border-bottom-color: var(--cb-brand);
+    background: var(--cb-brand-soft);
+    color: var(--cb-ink);
+    border-color: rgb(120 175 255 / 45%);
   }
   .editor-panels [role="tabpanel"][hidden],
   .selection > [role="tabpanel"][hidden] {
@@ -2022,17 +2154,6 @@
     }
   }
   @media (max-width: 47.5rem) {
-    .moment-card {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 0.5rem;
-    }
-    .moment-card-actions {
-      flex-direction: row;
-      align-items: center;
-    }
-    .moment-card-actions > .moment-remove {
-      margin-left: auto;
-    }
     .clip-choice {
       font-size: 0.8125rem;
     }

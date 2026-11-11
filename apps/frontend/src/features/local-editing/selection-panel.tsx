@@ -18,8 +18,13 @@ import {
   Sparkles,
   CircleAlert,
   LoaderCircle,
+  Film,
+  Plus,
+  ScanLine,
+  ListVideo,
 } from "lucide-react";
 import { ProcessingState } from "../../shared/ui/processing-state";
+import { VideoThumbnail } from "../../shared/ui/video-thumbnail";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { localCodexError, LocalCodexError } from "./codex-errors.ts";
@@ -210,7 +215,6 @@ export function OwnerSelectionPanel({
   }, [selected, tabsId]);
   function openTab(value: SelectionTab) {
     setTab(value);
-    root.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
   useEffect(() => {
     mounted.current = true;
@@ -659,6 +663,21 @@ export function OwnerSelectionPanel({
         <ul className="moments">
           {retained.map(({ moment, number }) => (
             <li key={moment.id} className="moment-card">
+              <div className="moment-card-still">
+                <VideoThumbnail
+                  request={{
+                    source: `/api/local/workspace/${workspace.id}/source`,
+                    timeMs: Math.round(
+                      (moment.cut.startFrame * 1000) / OWNER_FPS,
+                    ),
+                    width: 160,
+                    height: 90,
+                  }}
+                />
+                <span className="moment-card-number" aria-hidden="true">
+                  {number}
+                </span>
+              </div>
               <div className="moment-card-body">
                 <h4 className="moment-card-title">
                   {moment.evidence?.title ?? `Clip ${number}`}
@@ -781,7 +800,17 @@ export function OwnerSelectionPanel({
               document.getElementById(`${tabsId}-${next}`)?.focus();
             }}
           >
+            {value === "add" ? (
+              <Plus size={16} aria-hidden="true" />
+            ) : (
+              <ListVideo size={16} aria-hidden="true" />
+            )}
             {value === "add" ? "Add clips" : "Your clips"}
+            {value === "clips" && analysis && (
+              <span className="moment-tab-count" aria-hidden="true">
+                {selected.length}
+              </span>
+            )}
             {message &&
               ((value === "add" && messageArea !== "results") ||
                 (value === "clips" && messageArea === "results")) && (
@@ -839,11 +868,19 @@ export function OwnerSelectionPanel({
         aria-labelledby={`${tabsId}-add`}
         hidden={waiting || tab !== "add"}
         tabIndex={0}
+        className="moment-form-panel"
       >
-        <fieldset disabled={busy} className="source-window">
-          <legend>Analysis range</legend>
+        <fieldset
+          disabled={busy}
+          className="source-window moment-settings-card"
+        >
+          <legend className="local-sr-only">Analysis range</legend>
+          <div className="moment-group-heading" aria-hidden="true">
+            <ScanLine size={17} />
+            <h3>Analysis range</h3>
+          </div>
           <label>
-            Video range
+            <span className="local-sr-only">Video range</span>
             <select
               aria-label="Analysis range"
               value={windowed ? "range" : "all"}
@@ -916,80 +953,97 @@ export function OwnerSelectionPanel({
               })}
             </div>
           )}
+          <InlineFeedback
+            id={`${tabsId}-analysis-feedback`}
+            message={messageArea === "analysis" ? message : undefined}
+          />
         </fieldset>
-        <InlineFeedback
-          id={`${tabsId}-analysis-feedback`}
-          message={messageArea === "analysis" ? message : undefined}
-        />
-        <fieldset disabled={busy}>
-          <legend>Manual clips</legend>
+        <fieldset disabled={busy} className="moment-settings-card">
+          <legend className="local-sr-only">Manual clips</legend>
+          <div className="moment-group-heading" aria-hidden="true">
+            <Film size={17} />
+            <h3>Manual clips</h3>
+            <span>{rows.length}</span>
+          </div>
+          {rows.length === 0 && (
+            <div className="manual-clips-empty">
+              <Film size={22} aria-hidden="true" />
+              <span>No manual clips</span>
+            </div>
+          )}
           {rows.map((row, index) => (
             <div className="range-row" key={row.id}>
-              {(["start", "end"] as const).map((field) => {
-                const jumpTime = manualJumpTime(row, field);
-                return (
-                  <div className="range-time" key={field}>
-                    <label>
-                      {field === "start" ? "Start" : "End"}
-                      <input
-                        value={row[field].text}
-                        maxLength={32}
-                        aria-label={`Clip ${index + 1} ${field}`}
-                        placeholder="HH:MM:SS"
-                        aria-describedby={`cut-${row.id}`}
-                        aria-invalid={
-                          !/^[\d.]+s$/u.test(rounded(row)) || undefined
-                        }
-                        onChange={(event) =>
-                          editTime(row.id, field, event.target.value)
-                        }
-                        onBlur={() => normalizeTime(row.id, field)}
-                      />
-                    </label>
-                    <div className="manual-time-actions">
-                      <Button
-                        variant="quiet"
-                        icon={Clock3}
-                        disabled={!previewReady}
-                        aria-label={`Set clip ${index + 1} ${field} to current time`}
-                        title="Use current preview time"
-                        onClick={() => {
-                          if (busy || !previewReady) return;
-                          const time = onCaptureTime();
-                          if (time !== null) editTime(row.id, field, time);
-                        }}
-                      >
-                        Capture
-                      </Button>
-                      <Button
-                        variant="quiet"
-                        icon={Play}
-                        disabled={busy || !previewReady || jumpTime === null}
-                        aria-label={`Jump to clip ${index + 1} ${field}`}
-                        title="Preview this time"
-                        onClick={() => {
-                          if (!busy && previewReady && jumpTime !== null)
-                            onJumpTo(jumpTime);
-                        }}
-                      >
-                        Jump to
-                      </Button>
+              <div className="range-row-heading">
+                <strong>Clip {index + 1}</strong>
+                <Button
+                  variant="quiet"
+                  icon={Trash2}
+                  aria-label={`Remove clip ${index + 1}`}
+                  onClick={() => {
+                    changed();
+                    setRows((current) =>
+                      current.filter((item) => item.id !== row.id),
+                    );
+                  }}
+                >
+                  Remove
+                </Button>
+              </div>
+              <div className="range-endpoints">
+                {(["start", "end"] as const).map((field) => {
+                  const jumpTime = manualJumpTime(row, field);
+                  return (
+                    <div className="range-time" key={field}>
+                      <label>
+                        {field === "start" ? "Start" : "End"}
+                        <input
+                          value={row[field].text}
+                          maxLength={32}
+                          aria-label={`Clip ${index + 1} ${field}`}
+                          placeholder="HH:MM:SS"
+                          aria-describedby={`cut-${row.id}`}
+                          aria-invalid={
+                            !/^[\d.]+s$/u.test(rounded(row)) || undefined
+                          }
+                          onChange={(event) =>
+                            editTime(row.id, field, event.target.value)
+                          }
+                          onBlur={() => normalizeTime(row.id, field)}
+                        />
+                      </label>
+                      <div className="manual-time-actions">
+                        <Button
+                          variant="quiet"
+                          icon={Clock3}
+                          disabled={!previewReady}
+                          aria-label={`Set clip ${index + 1} ${field} to current time`}
+                          title="Use current preview time"
+                          onClick={() => {
+                            if (busy || !previewReady) return;
+                            const time = onCaptureTime();
+                            if (time !== null) editTime(row.id, field, time);
+                          }}
+                        >
+                          Capture
+                        </Button>
+                        <Button
+                          variant="quiet"
+                          icon={Play}
+                          disabled={busy || !previewReady || jumpTime === null}
+                          aria-label={`Jump to clip ${index + 1} ${field}`}
+                          title="Preview this time"
+                          onClick={() => {
+                            if (!busy && previewReady && jumpTime !== null)
+                              onJumpTo(jumpTime);
+                          }}
+                        >
+                          Jump to
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-              <Button
-                variant="secondary"
-                aria-label={`Remove clip ${index + 1}`}
-                onClick={() => {
-                  changed();
-                  setRows((current) =>
-                    current.filter((item) => item.id !== row.id),
                   );
-                }}
-              >
-                Remove
-              </Button>
+                })}
+              </div>
               <InlineFeedback
                 id={`cut-${row.id}`}
                 message={rounded(row)}
@@ -1087,6 +1141,7 @@ export function OwnerSelectionPanel({
           )}
         </fieldset>
         <fieldset
+          className="moment-settings-card moment-ai-card"
           disabled={busy}
           aria-describedby={
             message && messageArea === "ai"
@@ -1094,7 +1149,11 @@ export function OwnerSelectionPanel({
               : undefined
           }
         >
-          <legend>AI moments</legend>
+          <legend className="local-sr-only">AI moments</legend>
+          <div className="moment-group-heading" aria-hidden="true">
+            <Sparkles size={17} />
+            <h3>AI moments</h3>
+          </div>
           <label className="check">
             <input
               type="checkbox"
@@ -1128,7 +1187,7 @@ export function OwnerSelectionPanel({
             Suggest clips
           </label>
           {!manualOnly && (
-            <>
+            <div className="moment-ai-options">
               <div className="duration-row">
                 <label>
                   Clips
@@ -1205,7 +1264,7 @@ export function OwnerSelectionPanel({
                   />
                 </label>
               </div>
-            </>
+            </div>
           )}
           <InlineFeedback
             id={`${tabsId}-ai-feedback`}

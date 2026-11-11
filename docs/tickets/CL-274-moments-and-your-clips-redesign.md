@@ -1,8 +1,20 @@
 # CL-274 — Refine Moments creation and Your clips review
 
-Status: planned — owner requested documentation only for tomorrow, 2026-11-10.
+Status: implemented and locally validated, 2026-11-11. Owner visual acceptance
+and live-provider quality remain separate.
 Dependency: CL-273 completed workspace, card actions and scrolling corrections.
-Implementation is paused until the owner resumes; no code changes in this packet.
+Dependency verified against the clean committed worktree. Use execute/validate
+loops sequentially, then continue CL-275; no paid/provider runs or Voyagenda work.
+
+## Implementation direction — 2026-11-11
+
+Replace disconnected form separators with compact settings groups, numbered
+manual-range cards, grouped endpoint actions and a deliberate empty state.
+Review uses source-frame thumbnails from the shared bounded thumbnail service,
+clear clip numbering, range/duration and trailing Jump/Remove. Keep one canonical
+form per value and all current callbacks, precision and capability guards.
+Tabs retain input without forcing an unnecessary page reveal. Final acceptance
+uses generated silent media through Codex only; real-provider quality is untested.
 
 ## Owner request
 
@@ -83,5 +95,52 @@ are authorized. Do not touch the saved owner media/session as a regression fixtu
 
 ## Stopping point
 
-Only this packet/reference has been prepared. No redesign or new tests have
-been executed for CL-274. Resume when the owner explicitly asks tomorrow.
+The owner resumed this packet on 2026-11-11. Implementation and local acceptance
+are complete; continue sequentially to CL-275. No normal service restart, owner
+session/media change, paid processing, cloud/deployment or Voyagenda operation.
+
+## Implementation and verification — 2026-11-11
+
+- Replaced the old form separators/result rows in place. Manual range cards
+  group their original fields and actions, with one shared feedback slot.
+  Cards retain all existing callbacks, bounds, precision and disabled guards.
+  Numbered source thumbnails use VideoThumbnail's loading/error/serial decoding
+  and URL cleanup rather than introducing another decoder. AI settings share a
+  wide row and stack by actual pane width. Empty manual/results states remain.
+- Generated Codex checks cover manual and combined fresh fake POST results,
+  Capture changing only Start, retained sub-second input, arrow-key tab changes,
+  JSON export/import, input retention, failed response recovery and cancellation.
+  Five analysis POSTs close normally/after cancellation; no real provider.
+  Manual-only yields one clip; removing it retains disabled Process. Find all
+  returns 13 generated choices and disables processing above the existing limit.
+- At 1440×1000, 1366×681, 1024×640, 768×900, 390×844 and 320×600 both tabs fit
+  without horizontal/document scrolling. Main owns page scrolling; desktop source
+  remains below the navbar. Invalid/corrected manual input has identical field
+  rectangles at all six widths. Footer actions remain reachable and result actions
+  keep 44px targets. Scrolling preserves inputs and the source clock. Final compact
+  default AI form fits at 1440×1000 without needing to scroll to Find moments.
+- The hosted-shaped fake shared app passes 1440/768/320 widths: three result
+  cards, no local-only Framing, Import JSON or Find all, and no YouTube intake.
+  Endpoint Capture and card-owned Process remain available. No Gemini/cloud call.
+- Five affected fictional film frames and measured click/card bounds are
+  refreshed in Codex; source/editor geometry and the other film scenes remain.
+  Captures use settled muted playback and PNG edge padding only. All 15 delivery
+  hashes verify. The capture fixture supports explicit ready/failed/held fake
+  responses and optional silent/hosted composition; production transports and
+  source/provider/security contracts are unchanged. The normal capture command
+  now requests silent fixture media too; its external-browser CLI was not run.
+- 41 focused selection/clock/collection/workflow tests and five film camera/
+  continuity tests pass. Frontend/test-source TypeScript and whitespace pass.
+  Focused ESLint and Prettier checks pass for every changed source/fixture/film
+  file. No full suite or historical external-browser proof was rerun.
+  Read-only validation found no actionable functional/architecture finding.
+  Editor tour targets are unaffected because it starts only in the ready editor.
+- Local/hosted fixtures report zero edits/unexpected requests and zero plan/image/
+  render calls. All owned servers exited and their scratch launcher was removed.
+  Review captures outside Git: cl274-add-clips.png, cl274-your-clips.png and
+  cl274-phone.png in the CL-273 visualization directory. The exported/imported
+  timestamp JSON contains only generated ranges, not owner media/transcripts.
+
+Works with FAKE_MODE=true and no keys. This is UI/transport evidence, not proof
+of real AI quality; live prerequisites and approvals remain unchanged. Current
+changes are unstaged/uncommitted for review; yesterday's commits remain intact.
