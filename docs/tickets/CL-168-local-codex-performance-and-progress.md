@@ -6,6 +6,44 @@ Dependencies: CL-135, CL-150, CL-152–167 implemented; initial worktree clean.
 
 ## Owner request and diagnosis
 
+### Owner-run timing observation — 2026-11-11
+
+The owner requested timing the current approximately 25-minute YouTube source
+and monitoring until its already-started processing finished. This authorized
+read-only status/progress and content-safe diagnostics inspection, without
+starting/retrying work or changing services/configuration/media. The agent made
+no provider, acquisition, render or other processing request.
+
+The correlated real Find moments request finished successfully at 18:07:17 Cairo
+time, after 1,434,862ms (23m54.862s). Existing persisted analysis contains ten
+suggestions and no manual moments. All four analysis sections are complete.
+Repeated status checks through 18:11:49 Cairo show no active clip work and no
+prepared/queued clip records: analysis finished; assembly/export was not started.
+
+| Observed boundary | Durations | Total |
+| --- | --- | --- |
+| Native speech-input preparation jobs | 347264, 299380, 300392, 35892ms | 982928ms (16m22.928s) |
+| Codex moment-selection jobs | 142209, 128443, 154753, 20086ms | 445491ms (7m25.491s) |
+| Remaining validation/persistence/coordination | Aggregate difference | 6443ms |
+
+No failed local-diagnostic outcome appears under this request's correlation.
+The durations alone do not establish why three input jobs took roughly five to
+six minutes. Input preparation includes more than ASR, so its total must not be
+labeled pure transcription time without native substage evidence.
+
+The progress snapshot retains the last section's transcription (35449ms) and
+selection (20087ms), rather than whole-video aggregate durations. An initial
+commentary transcription figure was corrected once the correlated log totals
+were available. Do not interpret those snapshot numbers as the total run.
+
+This is owner-started real-run timing evidence, not synthetic AI quality,
+before/after improvement, cost or release acceptance. Fake/no-key checks remain
+available for later implementation regressions. Any future real action retains
+its provider/runtime prerequisites, flags and approvals. No implementation,
+retry, private-content capture, restart, Voyagenda change, staging, commit,
+push or deployment occurred. Only aggregate metrics are recorded here; private
+media, words, URLs and opaque run/request identifiers remain excluded.
+
 Investigate the seven-minute manual-clip wait; add content-free stage timings,
 improve unnecessary/sequential local Codex work, and show small stage subtitles
 with running spinners and brand-blue completion ticks beneath the preparation
@@ -170,3 +208,14 @@ Real stage-by-stage before/after timing, ASR/anonymous speaker/camera quality an
 physical-device listening remain owner-manual. Hosted/release/cloud acceptance
 is outside this ticket. No provider calls, downloads, Git staging/commits, push
 or deployment. Changed files remain available for owner review.
+
+## Owner local commit authorization — 2026-11-11
+
+The owner now authorizes the file-level plan, staging and local ticket-prefixed
+commits for the pending work. This supersedes earlier no-Git limits for this
+batch only. Whole-file allocation, final checks and receipts are recorded in the
+[commit plan](../operations/CL-278-283-FILE-COMMIT-PLAN.md). Final validation is
+clean: 184 focused fake/paid-off cases, applicable types, scoped lint/format,
+CLI syntax, dependency guards and whitespace checks. Prior visual evidence and
+owner-only aesthetic/editorial/real-provider acceptance remain distinct. No
+push, provider action, configuration change, Voyagenda work or deployment.
