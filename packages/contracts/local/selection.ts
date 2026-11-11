@@ -5,6 +5,8 @@ import { OWNER_VALIDATION_LIMITS } from "@clipbuilder/contracts";
 import {
   ownerSourceWindowSchema,
   ownerSourceTimestamp,
+  ownerAnalysisWindow,
+  ownerWindowFrames,
 } from "./source-window.ts";
 import {
   OWNER_LIMITS,
@@ -188,6 +190,49 @@ export const ownerMomentExportSchema = z
   })
   .strict();
 export type OwnerMomentExport = z.infer<typeof ownerMomentExportSchema>;
+
+/** A manual correction of one retained result; never a discovery request. */
+export const ownerMomentRangeRequestSchema = ownerMomentExportSchema
+  .extend({
+    operationId: ownerIdSchema,
+    sourceRevision: z.number().int().nonnegative(),
+    expectedCut: ownerCutSchema,
+    range: ownerSourceWindowSchema,
+  })
+  .strict();
+export type OwnerMomentRangeRequest = z.infer<
+  typeof ownerMomentRangeRequestSchema
+>;
+
+/** Source-local bounds for an authored correction, shared by UI and server. */
+export function ownerReviewedMomentCut(
+  source: Parameters<typeof ownerAnalysisWindow>[0],
+  analysis: OwnerAnalysis,
+  moment: OwnerMoment,
+  range: OwnerMomentRangeRequest["range"],
+): OwnerCut {
+  const cut = ownerCut(range, source.durationMs);
+  const bound = ownerWindowFrames(
+    ownerAnalysisWindow(source, analysis.inputs.window),
+  );
+  const maxFrames = Math.max(
+    (OWNER_MAX_REQUESTED_CLIP_MS * OWNER_FPS) / 1000,
+    moment.cut.endFrame - moment.cut.startFrame,
+  );
+  if (
+    cut.startFrame < bound.startFrame ||
+    cut.endFrame > bound.endFrame ||
+    cut.endFrame - cut.startFrame > maxFrames ||
+    (analysis.coverage &&
+      cut.endFrame >
+        Math.floor((analysis.coverage.coveredThroughMs * OWNER_FPS) / 1000)) ||
+    (analysis.transcriptCut &&
+      (cut.startFrame < analysis.transcriptCut.startFrame ||
+        cut.endFrame > analysis.transcriptCut.endFrame))
+  )
+    throw Error("moment_range_invalid");
+  return cut;
+}
 
 /** Canonical [start,end) frame conversion. End rounding never extends beyond source. */
 export function ownerCut(

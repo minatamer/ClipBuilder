@@ -145,6 +145,21 @@ composition. Local Codex uses local speech; hosted processing remains Gemini.
 Other languages and translation are outside the supported demo scope. See the
 [language decision](../../docs/CLIPBUILDER_DEMO_SOURCE_OF_TRUTH.md#english-only-demo-scope--cl-209-2026-11-04).
 
+## Local developer analysis notebook
+
+Normal local source analysis automatically retains acknowledged speech and
+normalized moment results under OS Downloads/ClipBuilder/Research. This separate
+developer archive supports later Codex/editorial work without another model call;
+it adds no browser route or UI setting. Upload and local YouTube paths share it.
+`README.txt` and per-source `latest.json` point to readable original-clock
+transcripts, word JSONL and AI results, with separate capture attempts and the
+widest transcript preserved. Partial/failed selection keeps completed speech;
+archive errors are content-free storage diagnostics and do not reject AI output.
+Synthetic captures are labeled. Hosted sessions never archive here. Start over
+and rolling expiry preserve this owner-requested library; remove unwanted folders
+manually. Credentials, headers and provider transport dumps are excluded.
+See [CL-283](../../docs/tickets/CL-283-local-analysis-notebook-and-editorial-reuse.md).
+
 ## Long local Codex analysis
 
 CL-189 admits long/large local Codex sources with measured disk reserve, supported decoding and bounded speech/discovery windows. Compatible receipts recover through the existing rolling store; explicit retry resumes missing work. Progress polling and restore make no provider calls. Gemini and hosted limits are unchanged. Real long-video throughput and quality remain unverified. See the [capacity inventory](../../docs/operations/LOCAL_CODEX_CAPACITY.md).

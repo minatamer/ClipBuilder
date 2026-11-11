@@ -34,6 +34,8 @@ import { localWorkerPort } from "./worker-port.ts";
 import { fakeOwnerAnalysis } from "./fake-analysis.ts";
 import { fakeOwnerClipPreparation } from "./fake-clips.ts";
 import { resolveOwnerStorage } from "./owner-storage.ts";
+import { OwnerAnalysisNotebook } from "./analysis-notebook.ts";
+import { requireDisk } from "./workspace-files.ts";
 import { composeLocalCodex } from "./codex-composition.ts";
 import { composeOwnerProviders } from "./provider-composition.ts";
 import { localProviderReadiness } from "./provider-readiness.ts";
@@ -309,6 +311,10 @@ async function composeLocalWorkflow(
       frontendOrigin: config.frontendOrigin,
       storageRoot: state.storageRoot,
       recoverSession: true,
+      analysisNotebook: new OwnerAnalysisNotebook(
+        join(state.storageRoot, "Research"),
+        (directory, peak) => requireDisk(directory, peak, state.tools.capacity),
+      ),
       ...(desktopStorageRoot ? { desktopStorageRoot } : {}),
       media,
       acquisition: createYtDlpAcquisitionPort({

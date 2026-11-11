@@ -152,7 +152,7 @@ export async function analyzeOwner(
   signal: AbortSignal,
   reuse?: {
     transcript: OwnerTranscript | undefined;
-    completed(transcript: OwnerTranscript): void;
+    completed(transcript: OwnerTranscript): void | Promise<void>;
     reused?(): void;
   },
   capacity: OwnerCapacity = resolveOwnerCapacity({}),
@@ -276,7 +276,7 @@ export async function analyzeOwner(
     previousStart = word.startMs;
   }
   if (!reused && !emptyManual)
-    reuse?.completed({
+    await reuse?.completed({
       fingerprint: workspace.source.fingerprint,
       sourceRevision: workspace.revision,
       mode: workspace.mode,

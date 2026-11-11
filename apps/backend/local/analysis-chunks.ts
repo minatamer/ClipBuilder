@@ -86,6 +86,76 @@ export class AnalysisChunks {
     window: { startMs: number; endMs: number },
     signal: AbortSignal,
   ) {
+    for await (const record of this.speechReceipts(
+      compatibility,
+      fingerprint,
+      signal,
+    )) {
+      if (
+        record.coverage.startMs <= window.startMs &&
+        record.coverage.endMs >= window.endMs
+      )
+        return { kind: "speech" as const, words: record.words };
+    }
+    return undefined;
+  }
+  /** Reuse acknowledged speech across section boundaries without another ASR call. */
+  async rangeSpeech(
+    compatibility: string,
+    fingerprint: string,
+    window: { startMs: number; endMs: number },
+    signal: AbortSignal,
+  ) {
+    const records = [];
+    for await (const record of this.speechReceipts(
+      compatibility,
+      fingerprint,
+      signal,
+    ))
+      if (
+        record.coverage.endMs > window.startMs &&
+        record.coverage.startMs < window.endMs
+      )
+        records.push({
+          ...record,
+          words: record.words.filter(
+            (word) =>
+              word.endMs > window.startMs && word.startMs < window.endMs,
+          ),
+        });
+    records.sort(
+      (a, b) =>
+        a.coverage.startMs - b.coverage.startMs ||
+        b.coverage.endMs - a.coverage.endMs,
+    );
+    let covered = window.startMs;
+    const words = [];
+    for (const record of records) {
+      if (record.coverage.startMs > covered) return undefined;
+      if (record.coverage.endMs <= covered) continue;
+      const end = Math.min(window.endMs, record.coverage.endMs);
+      for (const word of record.words)
+        if (
+          (covered === window.startMs ||
+            (word.startMs + word.endMs) / 2 >= covered) &&
+          (end === window.endMs || (word.startMs + word.endMs) / 2 < end)
+        )
+          words.push(word);
+      covered = end;
+      if (covered === window.endMs)
+        return ownerWordsSchema.parse(
+          [...new Map(words.map((word) => [word.id, word])).values()].sort(
+            (a, b) => a.startMs - b.startMs,
+          ),
+        );
+    }
+    return undefined;
+  }
+  async *speechReceipts(
+    compatibility: string,
+    fingerprint: string,
+    signal: AbortSignal,
+  ) {
     const dir = await this.directory();
     for (const entry of await readdir(dir, { withFileTypes: true })) {
       signal.throwIfAborted();
@@ -114,15 +184,10 @@ export class AnalysisChunks {
           .object({ startMs: z.number(), endMs: z.number() })
           .strict()
           .parse(key[3]);
-        if (
-          coverage.startMs <= window.startMs &&
-          coverage.endMs >= window.endMs &&
-          record.value.kind === "speech"
-        )
-          return record.value;
+        if (record.value.kind === "speech")
+          yield { coverage, words: record.value.words };
       }
     }
-    return undefined;
   }
   async write(key: string, value: Receipt["value"], signal: AbortSignal) {
     const dir = await this.directory();

@@ -27,6 +27,8 @@ import {
 import {
   ownerAnalysisRequestForCapacity,
   ownerMomentExportSchema,
+  ownerMomentRangeRequestSchema,
+  OWNER_FPS,
   type OwnerAnalysis,
 } from "../../../packages/contracts/local/selection.ts";
 import { readOwnerJson } from "./request-body.ts";
@@ -37,6 +39,11 @@ import { localCodexFailureSchema } from "../../../packages/contracts/local/codex
 import { OwnerDraftStore } from "./draft-store.ts";
 import { ownerCollectionPage } from "../../../packages/contracts/local/collection-pages.ts";
 import { AnalysisChunks } from "./analysis-chunks.ts";
+import type {
+  AnalysisNotebookCapture,
+  OwnerAnalysisNotebook,
+} from "./analysis-notebook.ts";
+import { editOwnerMomentRange } from "./moment-range.ts";
 import { analyzeLongOwner, LONG_ANALYSIS_CHUNK_MS } from "./long-analysis.ts";
 import { OwnerWorkspaceDrafts } from "./workspace-drafts.ts";
 import { OwnerSessionRecovery } from "./session-recovery.ts";
@@ -125,6 +132,7 @@ export type OwnerHostOptions = {
   frontendOrigin?: string;
   storageRoot?: string;
   recoverSession?: boolean;
+  analysisNotebook?: Pick<OwnerAnalysisNotebook, "capture">;
   desktopStorageRoot?: string;
   acquisition?: OwnerAcquisitionPort;
   shutdown?: () => void;
@@ -180,6 +188,27 @@ export function createOwnerHost(options: OwnerHostOptions) {
     );
   const analyses = new Map<string, OwnerAnalysis>();
   const transcripts = new Map<string, OwnerTranscript>();
+  const captureNotebook = async (
+    workspace: OwnerWorkspace,
+    value: OwnerAnalysis | null,
+    outcome: AnalysisNotebookCapture["outcome"],
+  ) => {
+    if (options.hosted || !options.analysisNotebook) return;
+    const transcript = transcripts.get(workspace.id);
+    if (!value && !transcript) return;
+    try {
+      await options.analysisNotebook.capture({
+        workspace,
+        analysis: value,
+        transcript,
+        speechRoot: dirname(await files.file(workspace.id, "source.mp4")),
+        compatibility: analysis?.compatibility ?? "local-speech-v1",
+        outcome,
+      });
+    } catch (error) {
+      diagnostics.failure("storage", error);
+    }
+  };
   const batches = new Map<string, OwnerClipBatch>();
   const restoreCapacity =
     options.capacity ??
@@ -1620,7 +1649,73 @@ export function createOwnerHost(options: OwnerHostOptions) {
           .end(wireJson(analyses.get(workspace.id) ?? null));
         return;
       }
-      if (req.method === "POST" && route?.[2] === "analysis") {
+      if (
+        req.method === "POST" &&
+        route?.[2] === "analysis" &&
+        route[3] &&
+        route[4] === "edit" &&
+        !route[5]
+      ) {
+        if (busy.has(workspace.id) || batches.get(workspace.id)?.active) {
+          res.writeHead(409).end();
+          return;
+        }
+        busy.add(workspace.id);
+        try {
+          const current = analyses.get(workspace.id);
+          if (!current) {
+            res.writeHead(409).end();
+            return;
+          }
+          const value = await readOwnerJson(req);
+          if (
+            !value ||
+            typeof value !== "object" ||
+            !("momentId" in value) ||
+            value.momentId !== route[3]
+          ) {
+            res.writeHead(400).end();
+            return;
+          }
+          let result = editOwnerMomentRange(workspace, current, value);
+          if (result !== current && current.coverage && !current.words.length) {
+            const request = ownerMomentRangeRequestSchema.parse(value);
+            const chunks = new AnalysisChunks(
+              dirname(await files.file(workspace.id, "source.mp4")),
+              capacity,
+            );
+            const words = await chunks.rangeSpeech(
+              analysis?.compatibility ?? "local-speech-v1",
+              workspace.source.fingerprint,
+              request.range,
+              controller.signal,
+            );
+            const original = [...current.manual, ...current.suggestions].find(
+              (moment) => moment.id === request.momentId,
+            )!;
+            if (
+              !words &&
+              (request.range.startMs <
+                (original.cut.startFrame * 1000) / OWNER_FPS ||
+                request.range.endMs >
+                  (original.cut.endFrame * 1000) / OWNER_FPS)
+            )
+              throw Error("moment_speech_unavailable");
+            if (words)
+              result = editOwnerMomentRange(workspace, current, value, words);
+          }
+          controller.signal.throwIfAborted();
+          analyses.set(workspace.id, result);
+          if (result !== current) changed(workspace.id);
+          res
+            .writeHead(200, { "Content-Type": "application/json" })
+            .end(wireJson(result));
+          return;
+        } finally {
+          busy.delete(workspace.id);
+        }
+      }
+      if (req.method === "POST" && route?.[2] === "analysis" && !route[3]) {
         if (busy.has(workspace.id) || batches.get(workspace.id)?.active) {
           res.writeHead(409).end();
           return;
@@ -1649,56 +1744,78 @@ export function createOwnerHost(options: OwnerHostOptions) {
             res.writeHead(409).end();
             return;
           }
-          const result = await diagnostics.run("find_moments", () =>
-            capacityPolicy.longSources &&
-            ((inputs.window
-              ? inputs.window.endMs - inputs.window.startMs
-              : workspace.source.durationMs) > LONG_ANALYSIS_CHUNK_MS ||
-              !!analyses.get(workspace.id)?.coverage ||
-              (capacityPolicy.manyClips &&
-                (inputs.aiCount === "all" ||
-                  (typeof inputs.aiCount === "number" && inputs.aiCount > 10))))
-              ? (async () =>
-                  analyzeLongOwner({
+          const previousAnalysisId = analyses.get(workspace.id)?.id;
+          let result: OwnerAnalysis | undefined;
+          try {
+            result = await diagnostics.run("find_moments", () =>
+              capacityPolicy.longSources &&
+              ((inputs.window
+                ? inputs.window.endMs - inputs.window.startMs
+                : workspace.source.durationMs) > LONG_ANALYSIS_CHUNK_MS ||
+                !!analyses.get(workspace.id)?.coverage ||
+                (capacityPolicy.manyClips &&
+                  (inputs.aiCount === "all" ||
+                    (typeof inputs.aiCount === "number" &&
+                      inputs.aiCount > 10))))
+                ? (async () =>
+                    analyzeLongOwner({
+                      workspace,
+                      value: inputs,
+                      ports: analysis,
+                      signal: controller.signal,
+                      capacity: capacityPolicy,
+                      chunks: new AnalysisChunks(
+                        dirname(await files.file(workspace.id, "source.mp4")),
+                        capacity,
+                      ),
+                      async checkpoint(result) {
+                        analyses.set(workspace.id, result);
+                        changed(workspace.id);
+                        await captureNotebook(workspace, result, "partial");
+                        if (
+                          (await recovery?.flush(workspace.id))?.state ===
+                          "unsaved"
+                        )
+                          throw Error("disk_unavailable");
+                      },
+                    }))()
+                : analyzeOwner(
                     workspace,
-                    value: inputs,
-                    ports: analysis,
-                    signal: controller.signal,
-                    capacity: capacityPolicy,
-                    chunks: new AnalysisChunks(
-                      dirname(await files.file(workspace.id, "source.mp4")),
-                      capacity,
-                    ),
-                    async checkpoint(result) {
-                      analyses.set(workspace.id, result);
-                      changed(workspace.id);
-                      if (
-                        (await recovery?.flush(workspace.id))?.state ===
-                        "unsaved"
-                      )
-                        throw Error("disk_unavailable");
+                    inputs,
+                    analysis,
+                    controller.signal,
+                    {
+                      transcript: transcripts.get(workspace.id),
+                      async completed(transcript) {
+                        transcripts.set(workspace.id, transcript);
+                        await captureNotebook(workspace, null, "partial");
+                      },
+                      reused() {
+                        diagnostics.analysis.check(
+                          "transcription_reuse",
+                          () => {},
+                        );
+                      },
                     },
-                  }))()
-              : analyzeOwner(
-                  workspace,
-                  inputs,
-                  analysis,
-                  controller.signal,
-                  {
-                    transcript: transcripts.get(workspace.id),
-                    completed(transcript) {
-                      transcripts.set(workspace.id, transcript);
-                    },
-                    reused() {
-                      diagnostics.analysis.check(
-                        "transcription_reuse",
-                        () => {},
-                      );
-                    },
-                  },
-                  capacityPolicy,
-                ),
-          );
+                    capacityPolicy,
+                  ),
+            );
+          } finally {
+            const checkpoint = analyses.get(workspace.id);
+            const acknowledged =
+              result ??
+              (checkpoint?.id !== previousAnalysisId
+                ? (checkpoint ?? null)
+                : null);
+            await captureNotebook(
+              workspace,
+              acknowledged,
+              result &&
+                (!result.coverage || result.coverage.state === "complete")
+                ? "complete"
+                : "interrupted",
+            );
+          }
           controller.signal.throwIfAborted();
           analyses.set(workspace.id, result);
           changed(workspace.id);
