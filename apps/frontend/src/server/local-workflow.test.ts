@@ -12,7 +12,7 @@ vi.mock("./local-ai-request", async (original) => ({
 }));
 import { discoverOwnerHost } from "../../../../scripts/local-discovery.mjs";
 import { proxyLocalWorkflow } from "./local-workflow";
-import { fetchControlApi } from "./control-api";
+import { acquireControlRequest, fetchControlApi } from "./control-api";
 import { fetchLocalWork } from "./local-ai-request";
 import { resolveOwnerCapacity } from "../../../../packages/contracts/local/capacity.ts";
 const fetcher = vi.fn<typeof fetch>();
@@ -38,6 +38,65 @@ const input = (method = "GET", headers: Record<string, string> = {}) =>
     method,
     headers: { "sec-fetch-site": "same-origin", ...headers },
   });
+it("keeps manual saves available when eight preview streams fill ordinary capacity, and bounds the save lane", async () => {
+  const streams: Response[] = [];
+  fetcher.mockImplementation(async () => new Response(new ReadableStream()));
+  const path = ["workspace", "synthetic", "clips", "synthetic", "edit"];
+  try {
+    for (let i = 0; i < 8; i++)
+      streams.push(
+        await proxyLocalWorkflow(input(), ["workspace", "synthetic", "source"]),
+      );
+    expect(streams.every((stream) => stream.status === 200)).toBe(true);
+    expect(() => acquireControlRequest()).toThrow();
+    for (let i = 0; i < 2; i++)
+      streams.push(
+        await proxyLocalWorkflow(
+          input("POST", { Origin: "http://localhost:3000" }),
+          path,
+        ),
+      );
+    expect(streams.slice(8).every((stream) => stream.status === 200)).toBe(
+      true,
+    );
+    expect(
+      (
+        await proxyLocalWorkflow(
+          input("POST", { Origin: "http://localhost:3000" }),
+          path,
+        )
+      ).status,
+    ).toBe(503);
+    expect(
+      (
+        await proxyLocalWorkflow(
+          input("POST", { Origin: "http://localhost:3000" }),
+          [...path.slice(0, 4), "render"],
+        )
+      ).status,
+    ).toBe(503);
+    expect((await proxyLocalWorkflow(input("POST"), path)).status).toBe(403);
+    expect(fetcher).toHaveBeenCalledTimes(10);
+    expect(fetchLocalWork).not.toHaveBeenCalled();
+    expect(fetchControlApi).not.toHaveBeenCalled();
+    await streams.pop()!.body!.cancel();
+    const page = await proxyLocalWorkflow(input(), [
+      "workspace",
+      "synthetic",
+      "clip-pages",
+      "1",
+    ]);
+    streams.push(page);
+    expect(page.status).toBe(200);
+    expect(fetcher).toHaveBeenCalledTimes(11);
+  } finally {
+    await Promise.all(streams.map((stream) => stream.body!.cancel()));
+  }
+  // Canceling a stream releases precisely its own lane, even after saturation.
+  const release = acquireControlRequest("edit");
+  release();
+  release();
+});
 it("forwards a private capability and exact range only to the fixed backend, then streams without exposing it", async () => {
   fetcher.mockResolvedValue(
     new Response("synthetic", {

@@ -141,6 +141,22 @@
 .skipLink:focus {
   transform: none;
 }
+@media (max-width: 60rem) {
+  .workspace[data-editing] .header {
+    flex-wrap: wrap;
+  }
+  .workspace[data-editing] .controls {
+    display: contents;
+  }
+  .workspace[data-editing] .brand {
+    margin-right: auto;
+  }
+  .workspace[data-editing] .tools {
+    order: 1;
+    flex-basis: 100%;
+    justify-content: flex-end;
+  }
+}
 @media (max-width: 47.5rem) {
   .header {
     padding-inline: 0.5rem;

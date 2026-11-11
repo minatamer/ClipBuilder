@@ -7,7 +7,7 @@ import {
   ownerEditRequestSchema,
   type OwnerEditDocument,
 } from "../../../../../packages/contracts/local/editor.ts";
-import { readOwnerClips } from "./collection-pages";
+import { EditorSaveRejected, saveEditorEdit } from "./save-editor-edit";
 import { initialOwnerEdit, ownerEditOperations } from "./editor-state";
 
 export type AutosavePhase =
@@ -44,10 +44,6 @@ export function useEditorAutosave(options: {
     )
       return;
     const controller = new AbortController();
-    const signal = AbortSignal.any([
-      controller.signal,
-      AbortSignal.timeout(15_000),
-    ]);
     active.current = controller;
     setPhase("saving");
     try {
@@ -66,21 +62,16 @@ export function useEditorAutosave(options: {
           ),
         });
       submission.current = { body, draft: submitted };
-      const response = await fetch(
-        `/api/local/workspace/${options.workspaceId}/clips/${options.clip.id}/edit`,
-        {
-          method: "POST",
-          signal,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
+      const list = await saveEditorEdit(
+        options.workspaceId,
+        options.clip.id,
+        body,
+        controller.signal,
       );
-      if (response.status === 409) {
+      if (!list) {
         if (!controller.signal.aborted) setPhase("conflict");
         return;
       }
-      if (!response.ok) throw Error("edit_save_unavailable");
-      const list = await readOwnerClips(response, options.workspaceId, signal);
       const accepted = list.clips.find((clip) => clip.id === options.clip.id);
       if (!accepted?.base || !accepted.baseHash)
         throw Error("edit_save_unacknowledged");
@@ -89,7 +80,10 @@ export function useEditorAutosave(options: {
       options.onAcknowledged(initialOwnerEdit(accepted), submitted);
       options.onAccepted(list);
       setPhase("saved");
-    } catch {
+    } catch (failure) {
+      // A rejected operation was not applied; a corrected draft gets a fresh ID.
+      // Uncertain/transient outcomes retain their exact receipt for safe replay.
+      if (failure instanceof EditorSaveRejected) submission.current = null;
       if (!controller.signal.aborted) setPhase("failed");
     } finally {
       if (active.current === controller) active.current = null;

@@ -2373,6 +2373,13 @@ export function ClipEditor({
         onUndo={() => moveHistory("undo")}
         onRedo={() => moveHistory("redo")}
         onRetry={autosave.retry}
+        onReload={
+          actionsVisible &&
+          (stale || previewUnavailable || autosave.phase === "conflict")
+            ? () => void perform("reload")
+            : undefined
+        }
+        reloadDisabled={pending || autosave.phase === "saving"}
       />
       {previewLoading && (
         <span className="local-sr-only" role="status">
@@ -4037,18 +4044,6 @@ export function ClipEditor({
                   onClick={() => setCaptionConfirm(false)}
                 >
                   Cancel
-                </Button>
-              </WorkflowActions>
-            )}
-          {actionsVisible &&
-            (stale || previewUnavailable || autosave.phase === "conflict") && (
-              <WorkflowActions target={actionTarget} label="Edit recovery">
-                <Button
-                  variant="secondary"
-                  disabled={pending || autosave.phase === "saving"}
-                  onClick={() => void perform("reload")}
-                >
-                  Reload clip
                 </Button>
               </WorkflowActions>
             )}

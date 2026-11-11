@@ -118,7 +118,8 @@ export async function startHookEditorFixture(
   let injectedFailures = 0;
   let titleSuggestions = 0;
   let editOutcome:
-    "ready" | "hold" | "fail-before" | "fail-after" | "conflict" = "ready";
+    "ready" | "hold" | "fail-before" | "fail-after" | "rejected" | "conflict" =
+    "ready";
   const editRequests: string[] = [];
   const acknowledgedEdits = new Map<string, string>();
   const pendingEdits = new Set<() => void>();
@@ -514,8 +515,16 @@ export async function startHookEditorFixture(
         if (outcome === "hold")
           await new Promise<void>((done) => pendingEdits.add(done));
         if (res.destroyed) return;
-        if (outcome === "fail-before" || outcome === "conflict") {
-          res.writeHead(outcome === "conflict" ? 409 : 503).end("{}");
+        if (
+          outcome === "fail-before" ||
+          outcome === "conflict" ||
+          outcome === "rejected"
+        ) {
+          res
+            .writeHead(
+              outcome === "conflict" ? 409 : outcome === "rejected" ? 422 : 503,
+            )
+            .end("{}");
           return;
         }
         const receipt = `${target.id}:${input.operationId}`;

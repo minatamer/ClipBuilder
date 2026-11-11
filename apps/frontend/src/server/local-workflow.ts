@@ -67,7 +67,21 @@ export async function proxyLocalWorkflow(request: Request, segments: string[]) {
     release?.();
   };
   try {
-    release = acquireControlRequest();
+    const manualEdit =
+      request.method === "POST" &&
+      segments.length === 5 &&
+      segments[0] === "workspace" &&
+      segments[2] === "clips" &&
+      segments[4] === "edit";
+    const editAcknowledgement =
+      request.method === "GET" &&
+      segments.length === 4 &&
+      segments[0] === "workspace" &&
+      segments[2] === "clip-pages" &&
+      /^\d+$/.test(segments[3]!);
+    release = acquireControlRequest(
+      manualEdit || editAcknowledgement ? "edit" : "standard",
+    );
     if (request.signal.aborted) controller.abort();
     controller.signal.throwIfAborted();
     const headers = new Headers({

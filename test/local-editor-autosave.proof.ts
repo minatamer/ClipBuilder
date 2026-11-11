@@ -135,11 +135,23 @@ it("serializes autosave, preserves later changes, reconciles uncertain saves and
     await run("wait", "Saved");
     expect(fixture.clip.edit!.captions!.fontSize).toBe(74);
     fixture.setEditOutcome("fail-after");
+    const lostResponseIndex = fixture.editTransport().requests.length;
+    const acceptedBeforeLoss = fixture.counts().edits;
+    await run("set", "75");
+    await run("wait", "Saved");
+    expect(
+      fixture.editTransport().requests.slice(lostResponseIndex),
+    ).toHaveLength(2);
+    expect(fixture.editTransport().requests.at(-1)).toBe(
+      fixture.editTransport().requests.at(-2),
+    );
+    expect(fixture.counts().edits).toBe(acceptedBeforeLoss + 1);
+    fixture.setEditOutcome("fail-before");
     await run("set", "76");
     await run("wait", "Couldn’t save");
     expect(await geometryAtSizes()).toEqual(savedGeometry);
     const failedBody = fixture.editTransport().requests.at(-1);
-    expect(fixture.clip.edit!.captions!.fontSize).toBe(76);
+    expect(fixture.clip.edit!.captions!.fontSize).toBe(75);
     await run("set", "78");
     await new Promise((done) => setTimeout(done, 900));
     expect(fixture.editTransport().requests.at(-1)).toBe(failedBody);
@@ -173,7 +185,7 @@ it("serializes autosave, preserves later changes, reconciles uncertain saves and
     await run("click", "Reload clip");
     await run("wait", "Saved");
     expect(await run("get")).toBe("78");
-    expect(await run("preset-count")).toBe("9");
+    expect(await run("preset-count")).toBe("10");
     const captionBox = structuredClone(fixture.clip.edit!.captions!.box);
     await run("click", "Classic");
     await run("wait", "Saved");

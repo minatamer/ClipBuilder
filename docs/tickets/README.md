@@ -1,5 +1,15 @@
 # ClipBuilder canonical ticket index
 
+## Save recovery and reliability — 2026-11-11
+
+[CL-277](CL-277-inline-save-recovery-and-autosave-reliability.md) owns inline
+navbar Retry save placement (left of save status) and investigation/correction
+of intermittent autosave failures. Implemented and locally validated with
+bounded idempotent transport recovery, separate save/acknowledgement request
+capacity, 43 focused cases and responsive generated/fake Codex checks. Owner
+review remains open; the active owner clip and Voyagenda are preserved. No paid
+runs or Git mutation.
+
 ## Landing film and portfolio — 2026-11-11
 
 [CL-276](CL-276-landing-film-and-portfolio-captures.md) owns the requested new

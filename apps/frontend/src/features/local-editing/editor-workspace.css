@@ -269,13 +269,13 @@
 .editor-save-status[data-failed] .editor-save-symbol {
   color: inherit;
 }
+.editor-save-recovery {
+  display: flex;
+  justify-content: flex-end;
+  flex: 0 0 7rem;
+}
 .editor-save-retry {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  left: 0;
-  z-index: 30;
-  background: var(--cb-surface);
-  border: 1px solid var(--cb-border);
+  white-space: nowrap;
 }
 .workflow-actions {
   margin: 0;
@@ -293,16 +293,6 @@
 }
 .workflow-action-feedback:empty {
   display: none;
-}
-.workflow-actions[aria-label="Edit recovery"] {
-  position: absolute;
-  top: 100%;
-  right: 0.5rem;
-  z-index: 30;
-  padding: 0.25rem;
-  border: 1px solid var(--cb-border);
-  border-radius: 0.5rem;
-  background: var(--cb-surface);
 }
 .editor-overview {
   display: grid;

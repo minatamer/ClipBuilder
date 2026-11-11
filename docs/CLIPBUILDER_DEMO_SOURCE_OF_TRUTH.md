@@ -1,5 +1,34 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Reliable manual autosave recovery — CL-277, 2026-11-11
+
+Save recovery belongs inside the workspace navbar immediately left of the save
+status. Retry save and deliberate Reload clip share one reserved slot; saved,
+saving, failure and correction keep stable header/preview geometry. Responsive
+toolbars retain normal touch targets and wrap as a complete tools row. Save
+failures never create floating controls over editor tabs.
+
+Manual edit POSTs and their paged clip acknowledgements share two bounded proxy
+slots separate from the existing eight ordinary control/media requests, so
+preview streams cannot exhaust save capacity. Origin checks, local
+capability/hosted authentication, CSRF, path validation and backend limits
+remain mandatory. No generation/render action uses the edit lane.
+
+An idempotent manual save may make at most three transport attempts, with 1s/2s
+backoff for network/timeouts or HTTP 408/500/502/503/504. Every attempt replays
+the identical operation ID/body. Saving stays pending through backoff; later
+input remains local and is saved in order after acknowledgement. Unused error
+bodies are canceled, and unmount cancels requests/backoff. Exhaustion retains
+the receipt for explicit Retry. Definitive rejection permits correction with a
+fresh operation; validation/auth/expiry/rate-limit responses are never
+automatically retried. Revision conflicts require deliberate Reload, never
+automatic overwrite.
+
+This exception retries only non-metered manual edit transport. It never retries
+providers, analysis, generation or export, and needs no API keys in fake or live
+editing. Real AI retains its existing prerequisites, flags and approvals. Hosted
+session edits remain temporary rather than a durable autosave library.
+
 ## Current-workspace landing film — CL-276, 2026-11-11
 
 The landing film retains its navy/blue cinematic typography, eased camera and

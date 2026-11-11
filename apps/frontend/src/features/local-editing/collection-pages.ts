@@ -5,6 +5,12 @@ import {
 import { ownerAnalysisSchema } from "../../../../../packages/contracts/local/selection.ts";
 import { ownerClipListSchema } from "../../../../../packages/contracts/local/clips.ts";
 
+export class CollectionPageUnavailable extends Error {
+  constructor(readonly status: number) {
+    super("collection_unavailable");
+  }
+}
+
 /** Read-only pages never repeat the operation which produced the first response. */
 export async function readOwnerAnalysis(
   response: Response,
@@ -30,7 +36,10 @@ export async function readOwnerAnalysis(
         cache: "no-store",
       },
     );
-    if (!response.ok) throw Error("collection_unavailable");
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => {});
+      throw new CollectionPageUnavailable(response.status);
+    }
     const part = ownerAnalysisPageSchema.parse(await response.json());
     if (
       part.value.id !== result.id ||
@@ -68,7 +77,10 @@ export async function readOwnerClips(
         cache: "no-store",
       },
     );
-    if (!response.ok) throw Error("collection_unavailable");
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => {});
+      throw new CollectionPageUnavailable(response.status);
+    }
     const part = ownerClipsPageSchema.parse(await response.json());
     if (part.page.total !== parsed.data.page.total)
       throw Error("collection_changed");

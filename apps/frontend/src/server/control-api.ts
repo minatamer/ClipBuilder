@@ -87,14 +87,24 @@ export function controlEnvironment() {
 
 /** Bound control HTTP work before metadata/authentication or private API I/O. */
 let active = 0;
-export function acquireControlRequest(): () => void {
-  if (active >= 8) throw unavailable();
-  active++;
+let activeEdits = 0;
+export function acquireControlRequest(
+  lane: "standard" | "edit" = "standard",
+): () => void {
+  // Long-lived preview streams cannot consume the two bounded manual-save slots.
+  if (lane === "edit") {
+    if (activeEdits >= 2) throw unavailable();
+    activeEdits++;
+  } else {
+    if (active >= 8) throw unavailable();
+    active++;
+  }
   let released = false;
   return () => {
     if (!released) {
       released = true;
-      active--;
+      if (lane === "edit") activeEdits--;
+      else active--;
     }
   };
 }

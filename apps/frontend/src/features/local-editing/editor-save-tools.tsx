@@ -14,6 +14,8 @@ export function EditorSaveTools({
   onUndo,
   onRedo,
   onRetry,
+  onReload,
+  reloadDisabled,
 }: {
   phase: AutosavePhase;
   dirty: boolean;
@@ -24,6 +26,8 @@ export function EditorSaveTools({
   onUndo: () => void;
   onRedo: () => void;
   onRetry: () => void;
+  onReload?: (() => void) | undefined;
+  reloadDisabled?: boolean;
 }) {
   const chrome = useWorkspaceChrome();
   const failed = phase === "failed" || phase === "conflict";
@@ -46,6 +50,26 @@ export function EditorSaveTools({
             : "Saved";
   const tools = (
     <div className="editor-save-tools" aria-label="Edit history and saving">
+      <span className="editor-save-recovery">
+        {onReload ? (
+          <Button
+            variant="quiet"
+            className="editor-save-retry"
+            disabled={reloadDisabled}
+            onClick={onReload}
+          >
+            Reload clip
+          </Button>
+        ) : phase === "failed" ? (
+          <Button
+            variant="quiet"
+            className="editor-save-retry"
+            onClick={onRetry}
+          >
+            Retry save
+          </Button>
+        ) : null}
+      </span>
       <span
         className="editor-save-status"
         role="status"
@@ -81,11 +105,6 @@ export function EditorSaveTools({
         disabled={disabled || !canRedo}
         onClick={onRedo}
       />
-      {phase === "failed" && (
-        <Button variant="quiet" className="editor-save-retry" onClick={onRetry}>
-          Retry save
-        </Button>
-      )}
     </div>
   );
   return chrome ? chrome.tools && createPortal(tools, chrome.tools) : tools;
