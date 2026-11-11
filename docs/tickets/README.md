@@ -1,5 +1,93 @@
 # ClipBuilder canonical ticket index
 
+## Authorized local commit batch — 2026-11-11
+
+The owner authorized whole-file, ticket-prefixed local commits for pending
+CL-276/278–283 work and the CL-168 timing observation. All 184 focused fake/no-key
+checks pass, with types, scoped lint/format, dependency guards, CLI syntax and
+whitespace clean. See the [file allocation and commit receipts](../operations/CL-278-283-FILE-COMMIT-PLAN.md).
+Earlier no-Git notes below describe their original execution scope; this later
+authorization supersedes them for this batch. No push, paid processing,
+configuration change, deployment or Voyagenda work. Owner visual/editorial
+acceptance remains open.
+
+## Local developer transcript reuse — 2026-11-11
+
+[CL-283](CL-283-local-analysis-notebook-and-editorial-reuse.md) owns retained
+transcript/AI-result retrieval, alternative editorial ranges and durable local
+Downloads copies for later Codex collaboration. Implemented: current transcript/
+results and six alternatives are retained privately; source-bound import files
+are validated. Future local ASR/checkpoints/results archive automatically, with
+74 focused cases and types/lint/format passing. No new real processing, clip edits,
+paid or Git action; hosted retention remains temporary. Owner editorial review open.
+
+## Reliable source preview playback — 2026-11-11
+
+[CL-282](CL-282-source-playback-interruptions.md) owns the reported intermittent
+Jump/playback warning, current-request cancellation and contextual feedback clear
+of native controls, plus section-End no-rewind navigation. Implemented with 33
+focused tests, types/lint/format and silent current-source Codex checks passing.
+Owner visual review remains open; session, existing work and Voyagenda preserved.
+No paid or Git action.
+
+## Edit reviewed clip timestamps — 2026-11-11
+
+[CL-281](CL-281-edit-reviewed-clip-timestamps.md) owns a compact Edit action on
+manual/suggested review cards, a source range dialog and protected persisted range
+corrections without another AI analysis. Implemented and locally verified: 120
+focused cases, types/lint/format and silent Codex UI checks pass, including saved
+long-source speech reuse, retry/recovery, precise clocks and responsive geometry.
+Owner visual review remains open; existing work/session preserved. No paid run
+or Git action.
+Owner's short-window timestamp-dialog overlap follow-up is fixed in CL-281:
+responsive contained preview, nonshrinking content rows and body-only scrolling;
+six-width valid/error/recovery geometry and focus checks pass with silent data.
+
+## Owner-run processing timing observation — 2026-11-11
+
+[CL-168](CL-168-local-codex-performance-and-progress.md) records the requested
+read-only monitoring of the owner's current approximately 25-minute source.
+Find moments finished in 23m54.862s with ten suggestions: speech-input jobs
+16m22.928s, selection 7m25.491s, other work 6.443s. Four sections complete; no
+clip preparation/export was started. No agent processing/retry, configuration,
+Voyagenda or Git change. These are observed real-run metrics, not a quality or
+before/after acceptance claim.
+
+## Consistent unprepared clip rail — 2026-11-11
+
+[CL-280](CL-280-consistent-unprepared-clip-rail.md) owns a portrait placeholder
+with a faded shared brand mark while clips are not editable. Implemented and
+locally verified: six readiness/stage tests, types/lint/format and fake preparing,
+queued, failed and ready checks pass, including equal slot geometry and compact
+mark sizing. Matching portfolio shot refreshed. Owner visual review remains open;
+pending CL-276/278/279 work preserved, with no paid or Git action.
+
+## Simpler clip-creation controls — 2026-11-11
+
+[CL-279](CL-279-tabbed-clip-creation-and-empty-results.md) owns one tabbed Manual
+clips / AI moments card, a divider below Analysis range and disabled empty Your
+clips navigation. Implemented with retained inputs and existing controls/settings;
+43 focused checks, types/lint/format and responsive fake browser checks pass.
+Owner visual review remains pending. CL-278 changes preserved; no paid run or Git
+mutation.
+Owner's compact Analysis range follow-up is implemented: heading/dropdown share
+one row, with custom endpoints and stable feedback below. Fake valid/error/
+corrected geometry and narrow fallback, frontend types/lint/format pass.
+The follow-up removes empty feedback/margin space beneath Analysis/Manual/AI
+controls through shared inline feedback rows, with matching 17px bottom insets
+and stable range/import/AI error geometry across desktop/tablet/phone checks.
+
+## Shared loading polish — 2026-11-11
+
+[CL-278](CL-278-polished-shared-loading-states.md) owns the requested resolution
+loading redesign and consistency audit of similar pending states. Implemented
+with shared panel/media/control loading primitives and a complete app-authored
+source inventory. The wider owner follow-up fixes legacy/hosted result opening,
+source canvases, command activity and thumbnails; repository guidance and lint
+prevent raw spinner drift. 62 focused frontend and 31 boundary checks pass, plus
+four-width fake UI/media checks. Owner aesthetic review remains open. No paid
+work, Voyagenda changes or Git mutation.
+
 ## Save recovery and reliability — 2026-11-11
 
 [CL-277](CL-277-inline-save-recovery-and-autosave-reliability.md) owns inline
@@ -17,10 +105,14 @@ current-workspace landing motion, stronger editor showcase, more detailed human
 animation and Desktop portfolio captures. Upload-only marketing/screenshots;
 YouTube is excluded. Implemented and locally validated: new 36-second film,
 current upload/Moments/editor captures, detailed clock-driven vector speakers,
-12 focused motion tests and desktop/phone/tablet Codex checks. Twenty-one PNGs
-plus index/checksums are copied to the dated ClipBuilder portfolio folder on
-Desktop. Owner aesthetic review remains separate. No paid runs, owner-session
+12 focused motion tests and desktop/phone/tablet Codex checks. The rejected first
+portfolio set has been replaced with ten laptop-only JPEGs plus index/checksums
+in the same dated Desktop folder. Owner aesthetic review remains separate. No paid runs, owner-session
 edits, deployment or Voyagenda work; never fullscreen agent previews.
+Owner rejected the first portfolio set and authorized replacement: laptop-only
+sharp landing stills, AI processing and stronger caption/camera/filter editor
+views. Replacement is delivered and hash-verified under the same CL-276 packet;
+all old captures/metadata were recycled and isolated fixtures cleaned up.
 
 ## Full-window editor design exploration — 2026-11-10
 

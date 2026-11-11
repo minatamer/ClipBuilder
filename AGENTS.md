@@ -6,6 +6,16 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Owner app-wide loading rule (2026-11-11, CL-278): loading presentation uses
+  shared ProcessingState/BrandedSpinner for workflow/section/media waits,
+  ActivityIndicator for compact status/thumbnail cues, Button's busy state for
+  pending commands, and Progress for measured or explicitly indeterminate work.
+  Never introduce a bare loading paragraph, one-off spinner or blank async
+  placeholder. Scale to the context, retain real readiness/error/cancel/focus and
+  geometry, and invent no completion percentage or ETA. Landing lazy content
+  keeps its designed poster/fallback visible. The source of truth owns this
+  continuing product rule; CL-278 records the audit and actual fake/no-key checks.
+
 - Owner browser preview preference (2026-11-11, CL-276): never enter fullscreen
   during agent browser inspection, testing or screenshot capture. Keep previews
   in the normal Codex window. Preserve user-operated product fullscreen controls.

@@ -1,5 +1,70 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Local developer analysis notebook — CL-283, 2026-11-11
+
+The owner authorizes durable local copies of acknowledged source transcription
+and normalized AI moment results in OS Downloads/ClipBuilder/Research for later
+Codex/manual editorial work. This applies to local upload and YouTube analyses,
+with both configured providers; there is no second setting or product UI path.
+It is a developer filesystem archive, independent of rolling recovery, drafts,
+source/clip expiry and Start over. The owner removes unwanted archive folders
+manually. Hosted storage/expiry/privacy remain unchanged and never use this sink.
+
+Each source/clock has immutable capture runs, original-clock transcript text/word
+JSONL, normalized AI results, source/coverage/provenance metadata and a small
+latest pointer. Retain the widest transcript separately from the latest AI result;
+a failed/canceled selection preserves acknowledged speech and older useful work.
+Reuse bounded validated speech receipts and safe atomic/confined filesystem writes.
+Do not put transcript/model content into ordinary logs, Git, screenshots or docs;
+never archive credentials, request headers, signed capabilities or raw provider
+transport dumps. Archive failures cannot reject/hide usable paid results or cause
+an automatic provider retry. Capture adds no inference or source download.
+
+The normal application never reads this archive as an analysis replay/cache or
+as a bypass of its source/authentication/spend gates. Codex may read it only for
+owner-requested local editorial collaboration. Existing recovery/source/diagnostic
+retention policies still apply to their own stores. Previously processed content
+can be backfilled without another model call. Reuse and fake checks need no API
+keys; new real analysis retains existing provider/local-runtime flags and approvals.
+
+## Shared loading presentation — CL-278, 2026-11-11
+
+Every app-authored loading surface follows the shared design; do not add bare
+loading paragraphs, one-off spinner icons or blank async placeholders. This is
+an app-wide continuing rule, covering landing, local/hosted workflows, editor,
+sub-editors, media, dialogs, recovery and command/status controls. New loading
+surfaces must be checked against this inventory and the repository loading rule.
+
+Section/media loading uses the existing ProcessingState and BrandedSpinner.
+The compact layout pairs a safely separated logo/orbit, themed inset surface,
+strong status label and decorative animated placeholder lines. Resolution
+lookup, moment restoration, image opening, source-video opening and return-home
+recovery share that treatment. Narrow editor-preview opening uses the same
+component's centered compact indicator within the existing preview canvas.
+Full-workflow panels keep their existing branded layout; button, thumbnail and
+navbar indicators retain their smaller contextual scale.
+
+Compact cues use ActivityIndicator, pending commands can use Button's busy
+presentation, and Progress preserves measured/indeterminate semantics with the
+same activity cue. Thumbnails have a restrained animated pending surface.
+ESLint rejects raw Lucide spinner imports without weakening dependency rules.
+Source/camera/zoom/pan/tracking canvases use MediaLoadingOverlay to observe their
+existing media elements. It never starts a fetch, seek or retry, and never owns
+the operation's readiness gates. Ready/error removes loading paint; unmount or
+source disposal releases its listeners.
+small frames keep an accessible label while the graphic scales to their space.
+Existing contextual errors remain canonical; otherwise the source canvas can
+show concise failure feedback. Landing lazy work retains its designed poster,
+while OS/browser dialogs and third-party verification remain platform-owned.
+
+Never add artificial waiting, guessed progress percentages, fake available
+qualities, results or estimated completion. Pending/error/ready state is still
+owned by the actual operation. Decorative animation stays hidden from assistive
+technology; the owning status is announced once. Preserve normal motion,
+forced-colors support, keyboard focus, card actions and preview geometry.
+The UI needs no API keys; real processing retains its existing provider/runtime,
+live flags and approvals. No source acquisition or provider behavior changes.
+
 ## Reliable manual autosave recovery — CL-277, 2026-11-11
 
 Save recovery belongs inside the workspace navbar immediately left of the save
@@ -38,6 +103,10 @@ mixed picture/video layer ordering and Zoom/Pan. Marketing captures use the
 actual shared production UI with silent original fictional media and injected
 fake transport. YouTube is excluded from all film and portfolio captures;
 normal local acquisition capabilities remain unchanged.
+Owner portfolio revision: keep portfolio captures laptop-only, show settled sharp
+landing motion and emphasize AI preparation, captions, filters and camera work.
+Mobile/tablet validation remains distinct from portfolio-image selection. Disclose
+staged fake AI states in accompanying capture metadata.
 
 Detailed original vector speakers share one artwork source with captured source
 stills. Live conversation panels use the actual composition frame, with bounded
@@ -68,15 +137,35 @@ no-browser SVG/FFmpeg material proof are verified; full normal native MP4 export
 parity is explicitly unverified under the owner's Codex-only testing instruction.
 CL-275 records that remaining acceptance boundary and the actual evidence.
 
-## Moments creation and review — CL-274, 2026-11-11
+## Moments creation and review — CL-274, CL-279, 2026-11-11
 
-Add clips uses compact Analysis range, Manual clips and AI moments groups.
+Add clips uses an Analysis range card, a horizontal separator, then one creation
+card with Manual clips / AI moments tabs.
+Analysis range places its heading and dropdown on one row when space permits;
+chosen endpoints/Capture and stable feedback stay beneath, wrapping only in
+narrow containers. Moments feedback uses the existing inline primitive in stable Capture/action/
+option rows instead of reserving an empty strip below controls. Keep action
+widths independent of feedback, wrap responsively and retain error associations.
+Switching the creation tabs preserves inputs and does not change AI inclusion
+or submit work. Suggest clips retains its existing
+meaning, including combined manual/AI requests. Hidden-panel errors mark their tab.
+Your clips is disabled while no retained results exist; removing the last result
+returns focus to Add clips. Empty-result feedback remains beside the creation flow.
 Each manual range is one numbered card with its original endpoint Capture/Jump
 actions, duration/error slot and Remove action. Wide AI settings share one row;
 narrow panes stack them without removing options. Analysis range has one visible
 heading rather than a second competing label. Your clips uses numbered source
 stills from the shared bounded thumbnail service alongside title, range, duration,
-Jump and Remove. These are review cards, not another trim form.
+Jump, Edit and Remove. CL-281 keeps the card's two-row action geometry by pairing
+Edit/Remove below Jump. Edit opens one range dialog with a muted source preview,
+original-source timestamps, Capture/Jump and stable duration/error feedback.
+Saving corrects the retained result, thumbnail, duration, timestamp export and
+processing selection without new analysis. Server-bound source/analysis/policy/
+expected-cut guards and a new processing identity preserve existing prepared
+clips; normal draft/recovery snapshots retain the correction. Source/analyzed
+coverage and existing duration ceilings remain enforced. Manual corrections
+need no API keys; processing remains an explicit separate action. Keep these
+review cards free of a second inline trim form.
 Keyboard tabs retain inputs and do not force a page scroll. Keep the shared main
 scrollport/sticky preview, card-owned proceed actions, contextual stable feedback,
 timestamp precision, import/export, empty/over-limit guards and hosted/local
@@ -971,11 +1060,19 @@ remaining acceptance belong to the individual packets.
 
 ## Jump to manual timestamps — CL-215, 2026-11-04
 
+CL-282 keeps source Jump/playback requests tied to the latest explicit intent.
+Pause, native successful playback, source/view changes and disposal cancel stale
+failure reporting. Normal interrupted play requests are not autoplay failures;
+genuine blocked/media failures remain actionable, clear on actual playback and
+occupy stable contextual space below the video, never covering native controls.
+Do not add automatic playback retries or alter the owner's audio settings.
+
 Each manual clip's Start and End has a Jump to action beside Capture. Use the
 existing source preview to revisit typed or imported endpoints before Use clips,
 without editing timestamps or starting preparation. Map original-video offsets
-once; preserve imported millisecond precision. A valid End at physical EOF seeks
-the final playable logical frame. Invalid/outside-source, busy or unready actions
+once; preserve imported millisecond precision. A valid End at physical or
+available-section EOF seeks the final playable logical frame, avoiding a rewind
+to the section's start. Invalid/outside-source, busy or unready actions
 cannot navigate. A valid endpoint stays inspectable while its other endpoint is
 being corrected. Capture keeps its existing endpoint-only behavior.
 
@@ -1298,6 +1395,10 @@ media resource use. [CL-198](tickets/CL-198-desktop-portrait-clip-rail-and-edito
 owns implementation and visual evidence. CL-257 requires visible prepared desktop
 cards to paint their paused edited preview after refresh without hover. Hidden
 and offscreen previews remain lazy; compact phone/tablet navigation is preserved.
+CL-280 reserves that same portrait slot for noneditable clips with a softly faded
+shared brand mark. The placeholder is decorative; real stage labels remain
+visible, and readiness still prevents media/player/editing access while work is
+unprepared, queued, exporting or failed. Compact rails scale the mark to fit.
 
 The owner also requests optional custom clip names used consistently in clip UI
 and downloaded MP4 filenames, with Clip N fallback and safe filename derivation.
