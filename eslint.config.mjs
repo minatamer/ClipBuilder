@@ -29,6 +29,14 @@ const applicationBoundaryRules = {
   "no-restricted-imports": [
     "error",
     {
+      paths: [
+        {
+          name: "lucide-react",
+          importNames: ["LoaderCircle", "Loader", "Loader2"],
+          message:
+            "Use shared ActivityIndicator for control/thumbnail activity or ProcessingState for loading panels (CL-278).",
+        },
+      ],
       patterns: [
         {
           group: [

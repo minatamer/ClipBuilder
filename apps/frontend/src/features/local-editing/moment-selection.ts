@@ -22,6 +22,31 @@ export function defaultMomentSelection(
   }));
 }
 
+/** Range corrections replace results in place; preserve removals across tabs. */
+export function correctedMomentSelection(
+  before: OwnerAnalysis,
+  after: OwnerAnalysis,
+  retained: readonly string[],
+): OwnerMomentExport[] {
+  const previous = [...before.manual, ...before.suggestions];
+  const current = [...after.manual, ...after.suggestions];
+  const replacements = new Map(
+    previous.map((moment, index) => [moment.id, current[index]?.id]),
+  );
+  return retained.flatMap((id) => {
+    const momentId = replacements.get(id);
+    return momentId
+      ? [
+          {
+            analysisId: after.id,
+            momentId,
+            policyRevision: after.inputs.policyRevision,
+          },
+        ]
+      : [];
+  });
+}
+
 export function momentDuration(cut: OwnerCut): string {
   const seconds = Number(
     ((cut.endFrame - cut.startFrame) / OWNER_FPS).toFixed(2),

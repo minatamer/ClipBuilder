@@ -1,6 +1,10 @@
 import { expect, it } from "vitest";
 import { ownerAnalysisSchema } from "../../../../../packages/contracts/local/selection.ts";
-import { defaultMomentSelection, momentDuration } from "./moment-selection.ts";
+import {
+  correctedMomentSelection,
+  defaultMomentSelection,
+  momentDuration,
+} from "./moment-selection.ts";
 
 function analysis(manual: number, suggestions: number) {
   const moment = () => ({
@@ -56,6 +60,21 @@ it("never repeats a selected ID even if a result crosses groups", () => {
 });
 it("keeps empty results unselected", () => {
   expect(defaultMomentSelection(analysis(0, 0))).toEqual([]);
+});
+
+it("reconciles concurrent range corrections without re-adding removed clips or submitting stale IDs", () => {
+  const before = analysis(2, 2),
+    after = structuredClone(before);
+  after.manual[0]!.id = crypto.randomUUID();
+  after.suggestions[1]!.id = crypto.randomUUID();
+  const selected = [before.manual[0]!.id, before.suggestions[1]!.id];
+  expect(correctedMomentSelection(before, after, selected)).toEqual(
+    [after.manual[0]!, after.suggestions[1]!].map((moment) => ({
+      analysisId: after.id,
+      momentId: moment.id,
+      policyRevision: after.inputs.policyRevision,
+    })),
+  );
 });
 
 it.each([

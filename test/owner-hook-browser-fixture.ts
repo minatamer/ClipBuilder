@@ -11,6 +11,7 @@ import { independentHookFixture } from "./owner-hook-fixture.ts";
 import { withIndependentOwnerHook } from "../packages/contracts/local/hook-content.ts";
 import { applyOwnerEdit } from "../apps/backend/local/edit-clip.ts";
 import { ownerClipRenameSchema } from "../packages/contracts/local/clip-name.ts";
+import { editOwnerMomentRange } from "../apps/backend/local/moment-range.ts";
 import { ownerHookTitleRequestSchema } from "../packages/contracts/local/hook-title.ts";
 import { hookTitlePlanner } from "../apps/backend/local/hook-title-planner.ts";
 import {
@@ -20,6 +21,7 @@ import {
 } from "../packages/contracts/local/selection.ts";
 import { prepareLocalControlsFixture } from "./owner-controls-browser.ts";
 import { listenOwner } from "./owner-http.ts";
+import type { CodexProgress } from "../packages/contracts/local/codex-progress.ts";
 import {
   browserDiagnosticSchema,
   type BrowserDiagnostic,
@@ -55,12 +57,15 @@ export async function startHookEditorFixture(
     holdClips?: boolean;
     silentMedia?: boolean;
     hostedWorkflow?: boolean;
+    preparationProgress?: CodexProgress["steps"];
+    sourceOriginMs?: number;
+    sourcePlaybackControls?: boolean;
   } = {},
 ) {
   const clip = independentHookFixture(),
     workspace = {
       id: randomUUID(),
-      mode: "synthetic-ai",
+      mode: "synthetic-ai" as const,
       revision: 0,
       source: {
         fingerprint: "a".repeat(64),
@@ -69,6 +74,16 @@ export async function startHookEditorFixture(
         width: options.sourceSize?.width ?? 640,
         height: options.sourceSize?.height ?? 360,
         fps: 30,
+        ...(options.sourceOriginMs
+          ? {
+              origin: {
+                startMs: options.sourceOriginMs,
+                durationMs:
+                  options.sourceOriginMs +
+                  ((options.durationFrames ?? 120) / 30) * 1000,
+              },
+            }
+          : {}),
       },
     };
   clip.outputs = [
@@ -136,8 +151,16 @@ export async function startHookEditorFixture(
   const diagnostics: BrowserDiagnostic[] = [];
   let previewAudioReads = 0;
   let analysesStarted = 0;
+  let momentEdits = 0;
+  let momentEditOutcome: "ready" | "hold" | "fail-before" | "fail-after" =
+    "ready";
+  const heldMomentEdits = new Set<() => void>();
+  const releaseMomentEdits = () => {
+    for (const release of heldMomentEdits) release();
+    heldMomentEdits.clear();
+  };
   let analysesClosed = 0;
-  let momentOutcome: "hold" | "ready" | "failed" = "hold";
+  let momentOutcome: "hold" | "ready" | "empty" | "failed" = "hold";
   let momentInputs: ReturnType<typeof ownerAnalysisInputsSchema.parse> | null =
     null;
   let submittedAnalysis: ReturnType<typeof ownerAnalysisSchema.parse> | null =
@@ -402,6 +425,44 @@ export async function startHookEditorFixture(
           : undefined;
       if (
         options.momentsLayout &&
+        req.method === "POST" &&
+        /\/analysis\/[a-f0-9-]{36}\/edit$/u.test(req.url ?? "")
+      ) {
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) chunks.push(Buffer.from(chunk));
+        if (momentEditOutcome === "hold")
+          await new Promise<void>((done) => {
+            const release = () => {
+              heldMomentEdits.delete(release);
+              done();
+            };
+            heldMomentEdits.add(release);
+            res.once("close", release);
+          });
+        if (res.destroyed) return;
+        if (momentEditOutcome === "fail-before") {
+          res.writeHead(503).end("{}");
+          return;
+        }
+        const current =
+          submittedAnalysis ??
+          (scenario === "/moments-many.html" ? manyAnalysis : oneAnalysis);
+        if (!current) throw Error("fixture_analysis_missing");
+        submittedAnalysis = editOwnerMomentRange(
+          workspace,
+          current,
+          JSON.parse(Buffer.concat(chunks).toString()),
+        );
+        momentEdits++;
+        if (momentEditOutcome === "fail-after") {
+          res.writeHead(503).end("{}");
+          return;
+        }
+        res.end(JSON.stringify(submittedAnalysis));
+        return;
+      }
+      if (
+        options.momentsLayout &&
         req.url?.endsWith("/analysis") &&
         req.method === "POST"
       ) {
@@ -415,7 +476,7 @@ export async function startHookEditorFixture(
           JSON.parse(Buffer.concat(chunks).toString()),
         );
         if (momentOutcome === "failed") res.writeHead(503).end("{}");
-        else if (momentOutcome === "ready") {
+        else if (momentOutcome === "ready" || momentOutcome === "empty") {
           const result = momentsAnalysis(true);
           result.inputs = momentInputs;
           result.manual = momentInputs.ranges.map((range) => ({
@@ -428,17 +489,28 @@ export async function startHookEditorFixture(
             cues: [],
             evidence: null,
           }));
-          result.suggestions = momentInputs.manualOnly
-            ? []
-            : result.suggestions.slice(
-                0,
-                typeof momentInputs.aiCount === "number"
-                  ? momentInputs.aiCount
-                  : undefined,
-              );
+          result.suggestions =
+            momentInputs.manualOnly || momentOutcome === "empty"
+              ? []
+              : result.suggestions.slice(
+                  0,
+                  typeof momentInputs.aiCount === "number"
+                    ? momentInputs.aiCount
+                    : undefined,
+                );
           submittedAnalysis = ownerAnalysisSchema.parse(result);
           res.end(JSON.stringify(submittedAnalysis));
         }
+        return;
+      }
+      if (options.preparationProgress && req.url?.endsWith("/codex-progress")) {
+        res.end(
+          JSON.stringify({
+            runId: workspace.id,
+            clipId: clip.id,
+            steps: options.preparationProgress,
+          }),
+        );
         return;
       }
       if (options.momentsLayout && req.url?.endsWith("/codex-progress")) {
@@ -581,7 +653,9 @@ export async function startHookEditorFixture(
             planningAvailable: true,
             captionGeneration: false,
             ...(options.youtubeAudio ? { youtubeAudio: true } : {}),
-            ...(options.momentsLayout ? { aiProvider: "codex" } : {}),
+            ...(options.momentsLayout || options.preparationProgress
+              ? { aiProvider: "codex" }
+              : {}),
             localMedia: true,
             cloud: false,
           }),
@@ -823,6 +897,9 @@ export async function startHookEditorFixture(
         String((options.durationFrames ?? 120) / 30),
         "-c:v",
         "libx264",
+        ...(options.sourceArtwork
+          ? ["-preset", "ultrafast", "-crf", "18"]
+          : []),
         "-pix_fmt",
         "yuv420p",
         "-c:a",
@@ -856,6 +933,36 @@ export async function startHookEditorFixture(
         html.replace(
           "<head>",
           `<head><script>const originalFetch=window.fetch;window.fetch=(input,init={})=>{const headers=new Headers(init.headers);headers.set('x-fixture-view',location.pathname);return originalFetch(input,{...init,headers})};document.addEventListener('play',event=>{if(${Boolean(options.silentMedia)}&&event.target instanceof HTMLMediaElement)event.target.muted=true},true);document.addEventListener('click',()=>{document.querySelectorAll('audio').forEach(audio=>audio.muted=true)},true);document.addEventListener('DOMContentLoaded',()=>{if(${Boolean(options.momentsLayout || options.workflowScreens)})return;const button=document.createElement('button');button.textContent='Simulate audition failure (fixture)';button.style.cssText='position:fixed;bottom:4px;left:4px;z-index:10000';button.onclick=()=>{document.querySelector('.audio-inspector audio')?.dispatchEvent(new Event('error'));button.remove()};document.body.append(button)});</script>`,
+        ),
+      );
+    }
+    if (options.sourcePlaybackControls) {
+      const html = await readFile(join(ui, "index.html"), "utf8");
+      await writeFile(
+        join(ui, "index.html"),
+        html.replace(
+          "<head>",
+          `<head><script>
+        const nativePlay=HTMLMediaElement.prototype.play;let nextPlay='native',staleReject;
+        HTMLMediaElement.prototype.play=function(){
+          if(this.getAttribute('aria-label')!=='Source video')return nativePlay.call(this);
+          const outcome=nextPlay;nextPlay='native';
+          if(outcome==='hold')return new Promise((resolve,reject)=>{staleReject=reject});
+          if(outcome!=='native')return Promise.reject(new DOMException('Synthetic playback interruption',outcome));
+          return nativePlay.call(this);
+        };
+        document.addEventListener('DOMContentLoaded',()=>{
+          const bar=document.createElement('div');bar.style.cssText='position:fixed;bottom:4px;left:4px;z-index:10000;display:flex;gap:4px;flex-wrap:wrap;max-width:calc(100vw - 8px)';
+          for(const [name,action] of [
+            ['Block next Jump (fixture)',()=>nextPlay='NotAllowedError'],
+            ['Interrupt next Jump (fixture)',()=>nextPlay='AbortError'],
+            ['Hold next Jump (fixture)',()=>nextPlay='hold'],
+            ['Reject stale Jump (fixture)',()=>{staleReject?.(new DOMException('Obsolete request','NotAllowedError'));staleReject=undefined}],
+            ['Hide fixture controls',()=>bar.remove()],
+          ]){const button=document.createElement('button');button.textContent=name;button.onclick=action;bar.append(button)}
+          document.body.append(bar);
+        });
+      </script>`,
         ),
       );
     }
@@ -1005,6 +1112,11 @@ export async function startHookEditorFixture(
       },
       momentCounts: () => ({ analysesStarted, analysesClosed }),
       momentInputs: () => momentInputs,
+      momentEdits: () => momentEdits,
+      setMomentEditOutcome: (value: typeof momentEditOutcome) => {
+        momentEditOutcome = value;
+        if (value !== "hold") releaseMomentEdits();
+      },
       setMomentOutcome: (value: typeof momentOutcome) => {
         momentOutcome = value;
       },
@@ -1012,6 +1124,7 @@ export async function startHookEditorFixture(
         releaseEntry("workspace");
         releaseEntry("clips");
         releaseEdits();
+        releaseMomentEdits();
         releasePreview();
         server.closeAllConnections();
         if (server.listening)
@@ -1025,6 +1138,7 @@ export async function startHookEditorFixture(
     releaseEntry("workspace");
     releaseEntry("clips");
     releaseEdits();
+    releaseMomentEdits();
     releasePreview();
     server.closeAllConnections();
     if (server.listening)

@@ -24,6 +24,30 @@ async function lintFixture(relativePath: string, source: string) {
 }
 
 describe("repository dependency boundaries", () => {
+  it.each(["LoaderCircle", "Loader", "Loader2"])(
+    "requires shared loading primitives instead of raw %s imports",
+    async (icon) => {
+      const messages = await lintFixture(
+        "../apps/frontend/src/__loading-negative__.ts",
+        `import { ${icon} as Spinner } from "lucide-react"; void Spinner;`,
+      );
+      expect(messages).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            ruleId: "no-restricted-imports",
+            message: expect.stringContaining("ActivityIndicator"),
+          }),
+        ]),
+      );
+    },
+  );
+  it("admits shared loading primitives without weakening application boundaries", async () => {
+    const messages = await lintFixture(
+      "../apps/frontend/src/__loading-valid__.ts",
+      'import { ActivityIndicator } from "./shared/ui/activity-indicator"; import { ProcessingState } from "./shared/ui/processing-state"; void ActivityIndicator; void ProcessingState;',
+    );
+    expect(messages.filter((message) => message.severity === 2)).toEqual([]);
+  });
   it.each([
     "apps/frontend/src",
     "apps/backend/src",

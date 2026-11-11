@@ -1,4 +1,5 @@
 import { AnalysisCoverageStatus } from "./analysis-coverage-status";
+import { MomentRangeDialog } from "./moment-range-dialog";
 import { useTimestampExchange } from "./use-timestamp-exchange";
 import { manualPreviewJumpSeconds } from "./manual-time.ts";
 import {
@@ -9,6 +10,7 @@ import {
 import { OWNER_COLLECTION_PAGE_ITEMS as REVIEW_PAGE_ITEMS } from "../../../../../packages/contracts/local/collection-pages.ts";
 import { readOwnerAnalysis } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
+import { ControlPanel, ControlTabs } from "./control-tabs";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { ZodError } from "zod";
 import {
@@ -17,11 +19,11 @@ import {
   Clock3,
   Sparkles,
   CircleAlert,
-  LoaderCircle,
   Film,
   Plus,
   ScanLine,
   ListVideo,
+  Pencil,
 } from "lucide-react";
 import { ProcessingState } from "../../shared/ui/processing-state";
 import { VideoThumbnail } from "../../shared/ui/video-thumbnail";
@@ -55,7 +57,11 @@ import {
   parseOwnerSourceTimestamp,
   ownerWindowFrames,
 } from "../../../../../packages/contracts/local/source-window.ts";
-import { defaultMomentSelection, momentDuration } from "./moment-selection.ts";
+import {
+  correctedMomentSelection,
+  defaultMomentSelection,
+  momentDuration,
+} from "./moment-selection.ts";
 import {
   HOSTED_DEMO_POLICY,
   limitHostedDemoInputs,
@@ -157,6 +163,21 @@ export function OwnerSelectionPanel({
     String(Math.min(OWNER_DEFAULT_AI_COUNT, clipLimit)),
   );
   const [analysis, setAnalysis] = useState<OwnerAnalysis | null>(null);
+  const [editingMoment, setEditingMoment] = useState<{
+    moment: OwnerMoment;
+    number: number;
+  } | null>(null);
+  function closeMomentEditor(momentId = editingMoment?.moment.id) {
+    setEditingMoment(null);
+    if (momentId)
+      requestAnimationFrame(() =>
+        root.current
+          ?.querySelector<HTMLButtonElement>(
+            `[data-moment-id="${momentId}"] .moment-edit`,
+          )
+          ?.focus(),
+      );
+  }
   const [analyzing, setAnalyzing] = useState(false),
     [selected, setSelected] = useState<string[]>([]);
   const [reviewPage, setReviewPage] = useState(0);
@@ -180,7 +201,11 @@ export function OwnerSelectionPanel({
     "manual" | "ai" | "action" | "results"
   >("manual");
   const [tab, setTab] = useState<SelectionTab>("add");
+  const [creationTab, setCreationTab] = useState<"manual" | "ai">(
+    capabilities.aiMode === "synthetic-ai" ? "manual" : "ai",
+  );
   const tabsId = useId();
+  const creationTabsId = `${tabsId}-creation`;
   const root = useRef<HTMLElement>(null);
   const removedAt = useRef<number | null>(null);
   const pending = useRef<AbortController | null>(null),
@@ -197,7 +222,7 @@ export function OwnerSelectionPanel({
       setAnalysis(result);
       setSelected(next.map(({ momentId }) => momentId));
       onChoose(next);
-      setTab("clips");
+      setTab(next.length ? "clips" : "add");
     },
     [onChoose, demoLimit],
   );
@@ -210,10 +235,11 @@ export function OwnerSelectionPanel({
       root.current?.querySelectorAll<HTMLButtonElement>(".moment-remove");
     if (buttons?.length)
       buttons[Math.min(removedAt.current, buttons.length - 1)]?.focus();
-    else document.getElementById(`${tabsId}-clips-panel`)?.focus();
+    else document.getElementById(`${tabsId}-add`)?.focus();
     removedAt.current = null;
   }, [selected, tabsId]);
   function openTab(value: SelectionTab) {
+    if (value === "clips" && selected.length === 0) return;
     setTab(value);
   }
   useEffect(() => {
@@ -234,15 +260,32 @@ export function OwnerSelectionPanel({
         );
         if (restored && !controller.signal.aborted) {
           setRows(
-            restored.inputs.ranges.map((row) => ({
-              id: row.id,
-              start: restoredTime(row.startMs, originalOffset),
-              end: restoredTime(row.endMs, originalOffset),
-            })),
+            restored.inputs.ranges.map((input) => {
+              const corrected = restored.manual.find((moment) =>
+                moment.rangeIds.includes(input.id),
+              );
+              const row = corrected
+                ? {
+                    ...input,
+                    startMs: (corrected.cut.startFrame * 1000) / OWNER_FPS,
+                    endMs: (corrected.cut.endFrame * 1000) / OWNER_FPS,
+                  }
+                : input;
+              return {
+                id: row.id,
+                start: restoredTime(
+                  Math.round(row.startMs),
+                  originalOffset,
+                  true,
+                ),
+                end: restoredTime(Math.round(row.endMs), originalOffset, true),
+              };
+            }),
           );
           setMinimum(String(restored.inputs.aiDuration.minMs / 1000));
           setMaximum(String(restored.inputs.aiDuration.maxMs / 1000));
           setManualOnly(restored.inputs.manualOnly);
+          setCreationTab(restored.inputs.manualOnly ? "manual" : "ai");
           setWindowed(Boolean(restored.inputs.window));
           const savedWindow = ownerAnalysisWindow(
             workspace.source,
@@ -662,7 +705,11 @@ export function OwnerSelectionPanel({
         </div>
         <ul className="moments">
           {retained.map(({ moment, number }) => (
-            <li key={moment.id} className="moment-card">
+            <li
+              key={moment.id}
+              className="moment-card"
+              data-moment-id={moment.id}
+            >
               <div className="moment-card-still">
                 <VideoThumbnail
                   request={{
@@ -717,27 +764,42 @@ export function OwnerSelectionPanel({
                 >
                   Jump to
                 </Button>
-                <Button
-                  variant="quiet"
-                  className="moment-remove"
-                  icon={Trash2}
-                  aria-label={`Remove clip ${number}`}
-                  disabled={busy}
-                  onClick={() => {
-                    removedAt.current = selected.indexOf(moment.id);
-                    const next = selected.filter((id) => id !== moment.id);
-                    setSelected(next);
-                    onChoose(
-                      next.map((momentId) => ({
-                        analysisId: analysis!.id,
-                        momentId,
-                        policyRevision: analysis!.inputs.policyRevision,
-                      })),
-                    );
-                  }}
-                >
-                  Remove
-                </Button>
+                <div className="moment-card-secondary-actions">
+                  <Button
+                    variant="quiet"
+                    className="moment-edit"
+                    icon={Pencil}
+                    aria-label={`Edit timestamps for clip ${number}`}
+                    aria-haspopup="dialog"
+                    disabled={busy}
+                    onClick={() => setEditingMoment({ moment, number })}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="quiet"
+                    className="moment-remove"
+                    icon={Trash2}
+                    aria-label={`Remove clip ${number}`}
+                    title={`Remove clip ${number}`}
+                    disabled={busy}
+                    onClick={() => {
+                      removedAt.current = selected.indexOf(moment.id);
+                      const next = selected.filter((id) => id !== moment.id);
+                      setSelected(next);
+                      if (!next.length) setTab("add");
+                      onChoose(
+                        next.map((momentId) => ({
+                          analysisId: analysis!.id,
+                          momentId,
+                          policyRevision: analysis!.inputs.policyRevision,
+                        })),
+                      );
+                    }}
+                  >
+                    <span>Remove</span>
+                  </Button>
+                </div>
               </div>
             </li>
           ))}
@@ -771,14 +833,17 @@ export function OwnerSelectionPanel({
             aria-label={value === "add" ? "Add clips" : "Your clips"}
             aria-describedby={
               message &&
-              ((value === "add" && messageArea !== "results") ||
-                (value === "clips" && messageArea === "results"))
+              ((value === "add" &&
+                (messageArea !== "results" || selected.length === 0)) ||
+                (value === "clips" &&
+                  selected.length > 0 &&
+                  messageArea === "results"))
                 ? `${tabsId}-${value}-issue`
                 : undefined
             }
             aria-controls={`${tabsId}-${value}-panel`}
             tabIndex={tab === value ? 0 : -1}
-            disabled={busy || (value === "clips" && !analysis)}
+            disabled={busy || (value === "clips" && selected.length === 0)}
             onClick={() => openTab(value)}
             onKeyDown={(event) => {
               if (
@@ -795,7 +860,7 @@ export function OwnerSelectionPanel({
                       ? 1
                       : (index + 1) % 2
                 ]!;
-              if (next === "clips" && !analysis) return;
+              if (next === "clips" && selected.length === 0) return;
               openTab(next);
               document.getElementById(`${tabsId}-${next}`)?.focus();
             }}
@@ -806,14 +871,17 @@ export function OwnerSelectionPanel({
               <ListVideo size={16} aria-hidden="true" />
             )}
             {value === "add" ? "Add clips" : "Your clips"}
-            {value === "clips" && analysis && (
+            {value === "clips" && selected.length > 0 && (
               <span className="moment-tab-count" aria-hidden="true">
                 {selected.length}
               </span>
             )}
             {message &&
-              ((value === "add" && messageArea !== "results") ||
-                (value === "clips" && messageArea === "results")) && (
+              ((value === "add" &&
+                (messageArea !== "results" || selected.length === 0)) ||
+                (value === "clips" &&
+                  selected.length > 0 &&
+                  messageArea === "results")) && (
                 <>
                   <CircleAlert
                     size={14}
@@ -839,14 +907,11 @@ export function OwnerSelectionPanel({
         </p>
       )}
       {restoring && (
-        <div className="moment-restoring" role="status">
-          <LoaderCircle
-            size={18}
-            className="acquisition-spinner"
-            aria-hidden="true"
-          />
-          Loading moments
-        </div>
+        <ProcessingState
+          layout="compact"
+          className="moment-restoring"
+          label="Loading moments"
+        />
       )}
       {analyzing && (
         <ProcessingState
@@ -938,347 +1003,417 @@ export function OwnerSelectionPanel({
                         }}
                       />
                     </label>
-                    <Button
-                      variant="quiet"
-                      icon={Clock3}
-                      aria-label={`Capture analysis ${field}`}
-                      title="Use current source preview time"
-                      disabled={busy || analyzing || !previewReady}
-                      onClick={() => captureAnalysis(field)}
-                    >
-                      Capture
-                    </Button>
+                    <div className="moment-feedback-row">
+                      <Button
+                        variant="quiet"
+                        icon={Clock3}
+                        aria-label={`Capture analysis ${field}`}
+                        title="Use current source preview time"
+                        disabled={busy || analyzing || !previewReady}
+                        onClick={() => captureAnalysis(field)}
+                      >
+                        Capture
+                      </Button>
+                      {field === "start" && (
+                        <InlineFeedback
+                          id={`${tabsId}-analysis-feedback`}
+                          message={
+                            messageArea === "analysis" ? message : undefined
+                          }
+                          inline
+                        />
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
           )}
-          <InlineFeedback
-            id={`${tabsId}-analysis-feedback`}
-            message={messageArea === "analysis" ? message : undefined}
-          />
-        </fieldset>
-        <fieldset disabled={busy} className="moment-settings-card">
-          <legend className="local-sr-only">Manual clips</legend>
-          <div className="moment-group-heading" aria-hidden="true">
-            <Film size={17} />
-            <h3>Manual clips</h3>
-            <span>{rows.length}</span>
-          </div>
-          {rows.length === 0 && (
-            <div className="manual-clips-empty">
-              <Film size={22} aria-hidden="true" />
-              <span>No manual clips</span>
-            </div>
+          {!windowed && (
+            <InlineFeedback
+              id={`${tabsId}-analysis-feedback`}
+              message={messageArea === "analysis" ? message : undefined}
+              reserve={false}
+            />
           )}
-          {rows.map((row, index) => (
-            <div className="range-row" key={row.id}>
-              <div className="range-row-heading">
-                <strong>Clip {index + 1}</strong>
-                <Button
-                  variant="quiet"
-                  icon={Trash2}
-                  aria-label={`Remove clip ${index + 1}`}
-                  onClick={() => {
-                    changed();
-                    setRows((current) =>
-                      current.filter((item) => item.id !== row.id),
-                    );
-                  }}
-                >
-                  Remove
-                </Button>
-              </div>
-              <div className="range-endpoints">
-                {(["start", "end"] as const).map((field) => {
-                  const jumpTime = manualJumpTime(row, field);
-                  return (
-                    <div className="range-time" key={field}>
-                      <label>
-                        {field === "start" ? "Start" : "End"}
-                        <input
-                          value={row[field].text}
-                          maxLength={32}
-                          aria-label={`Clip ${index + 1} ${field}`}
-                          placeholder="HH:MM:SS"
-                          aria-describedby={`cut-${row.id}`}
-                          aria-invalid={
-                            !/^[\d.]+s$/u.test(rounded(row)) || undefined
-                          }
-                          onChange={(event) =>
-                            editTime(row.id, field, event.target.value)
-                          }
-                          onBlur={() => normalizeTime(row.id, field)}
-                        />
-                      </label>
-                      <div className="manual-time-actions">
-                        <Button
-                          variant="quiet"
-                          icon={Clock3}
-                          disabled={!previewReady}
-                          aria-label={`Set clip ${index + 1} ${field} to current time`}
-                          title="Use current preview time"
-                          onClick={() => {
-                            if (busy || !previewReady) return;
-                            const time = onCaptureTime();
-                            if (time !== null) editTime(row.id, field, time);
-                          }}
-                        >
-                          Capture
-                        </Button>
-                        <Button
-                          variant="quiet"
-                          icon={Play}
-                          disabled={busy || !previewReady || jumpTime === null}
-                          aria-label={`Jump to clip ${index + 1} ${field}`}
-                          title="Preview this time"
-                          onClick={() => {
-                            if (!busy && previewReady && jumpTime !== null)
-                              onJumpTo(jumpTime);
-                          }}
-                        >
-                          Jump to
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <InlineFeedback
-                id={`cut-${row.id}`}
-                message={rounded(row)}
-                tone={/^[\d.]+s$/u.test(rounded(row)) ? "status" : "error"}
-              />
-            </div>
-          ))}
-          <div className="manual-clip-actions">
-            <Button
-              variant="secondary"
-              disabled={
-                !demoLimit &&
-                rows.length >=
-                  (expanded ? OWNER_MANUAL_ROW_LIMIT : OWNER_LIMITS.ranges)
-              }
-              onClick={() => {
-                setLimitArea("manual");
-                if (demoLimit && rows.length >= demoLimit) {
-                  setLimitNotice((value) => value + 1);
-                  return;
-                }
-                let bounds = availableSource;
-                try {
-                  bounds = ownerAnalysisWindow(
-                    workspace.source,
-                    windowed
-                      ? {
-                          startMs: fieldMilliseconds(
-                            windowStart,
-                            originalOffset,
-                          ),
-                          endMs: fieldMilliseconds(windowEnd, originalOffset),
-                        }
-                      : undefined,
-                  );
-                } catch {
-                  setMessageArea("analysis");
-                  setMessage(
-                    "Choose a valid analysis range inside this video.",
-                  );
-                  return;
-                }
-                changed();
-                setManualOnly(true);
-                setRows((current) => [
-                  ...current,
-                  {
-                    id: crypto.randomUUID(),
-                    start: restoredTime(bounds.startMs, originalOffset),
-                    end: restoredTime(
-                      Math.min(bounds.startMs + 10_000, bounds.endMs),
-                      originalOffset,
-                    ),
-                  },
-                ]);
-              }}
-            >
-              Add clip
-            </Button>
-            {timestampExchange && (
-              <>
+        </fieldset>
+        <hr className="moment-creation-separator" />
+        <section
+          className="moment-settings-card moment-creation-card"
+          aria-label="Clip creation"
+        >
+          <ControlTabs
+            id={creationTabsId}
+            label="Clip creation method"
+            className="moment-creation-tabs"
+            value={creationTab}
+            onChange={setCreationTab}
+            disabled={busy}
+            items={[
+              {
+                value: "manual",
+                label: `Manual clips${rows.length ? ` · ${rows.length}` : ""}`,
+                icon: Film,
+                issue:
+                  messageArea === "manual" || messageArea === "import"
+                    ? message || undefined
+                    : undefined,
+              },
+              {
+                value: "ai",
+                label: "AI moments",
+                icon: Sparkles,
+                issue: messageArea === "ai" ? message || undefined : undefined,
+              },
+            ]}
+          />
+          <ControlPanel id={creationTabsId} value="manual" active={creationTab}>
+            <fieldset disabled={busy} className="moment-method-fields">
+              <legend className="local-sr-only">Manual clips</legend>
+              {rows.length === 0 && (
+                <div className="manual-clips-empty">
+                  <Film size={22} aria-hidden="true" />
+                  <span>No manual clips</span>
+                </div>
+              )}
+              {rows.map((row, index) => (
+                <div className="range-row" key={row.id}>
+                  <div className="range-row-heading">
+                    <strong>Clip {index + 1}</strong>
+                    <Button
+                      variant="quiet"
+                      icon={Trash2}
+                      aria-label={`Remove clip ${index + 1}`}
+                      onClick={() => {
+                        changed();
+                        setRows((current) =>
+                          current.filter((item) => item.id !== row.id),
+                        );
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  <div className="range-endpoints">
+                    {(["start", "end"] as const).map((field) => {
+                      const jumpTime = manualJumpTime(row, field);
+                      return (
+                        <div className="range-time" key={field}>
+                          <label>
+                            {field === "start" ? "Start" : "End"}
+                            <input
+                              value={row[field].text}
+                              maxLength={32}
+                              aria-label={`Clip ${index + 1} ${field}`}
+                              placeholder="HH:MM:SS"
+                              aria-describedby={`cut-${row.id}`}
+                              aria-invalid={
+                                !/^[\d.]+s$/u.test(rounded(row)) || undefined
+                              }
+                              onChange={(event) =>
+                                editTime(row.id, field, event.target.value)
+                              }
+                              onBlur={() => normalizeTime(row.id, field)}
+                            />
+                          </label>
+                          <div className="manual-time-actions">
+                            <Button
+                              variant="quiet"
+                              icon={Clock3}
+                              disabled={!previewReady}
+                              aria-label={`Set clip ${index + 1} ${field} to current time`}
+                              title="Use current preview time"
+                              onClick={() => {
+                                if (busy || !previewReady) return;
+                                const time = onCaptureTime();
+                                if (time !== null)
+                                  editTime(row.id, field, time);
+                              }}
+                            >
+                              Capture
+                            </Button>
+                            <Button
+                              variant="quiet"
+                              icon={Play}
+                              disabled={
+                                busy || !previewReady || jumpTime === null
+                              }
+                              aria-label={`Jump to clip ${index + 1} ${field}`}
+                              title="Preview this time"
+                              onClick={() => {
+                                if (!busy && previewReady && jumpTime !== null)
+                                  onJumpTo(jumpTime);
+                              }}
+                            >
+                              Jump to
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <InlineFeedback
+                    id={`cut-${row.id}`}
+                    message={rounded(row)}
+                    tone={/^[\d.]+s$/u.test(rounded(row)) ? "status" : "error"}
+                  />
+                </div>
+              ))}
+              <div className="manual-clip-actions moment-feedback-row">
+                <InlineFeedback
+                  message={
+                    (messageArea === "manual" &&
+                      rows.every((row) => /^[\d.]+s$/u.test(rounded(row)))) ||
+                    messageArea === "import"
+                      ? message
+                      : undefined
+                  }
+                  inline
+                />
                 <Button
                   variant="secondary"
-                  disabled={busy}
-                  onClick={() => timestampInput.current?.click()}
-                >
-                  Import JSON
-                </Button>
-                <input
-                  ref={timestampInput}
-                  type="file"
-                  accept="application/json,.json"
-                  hidden
-                  aria-label="Import timestamps JSON"
-                  onChange={(event) => {
-                    const file = event.currentTarget.files?.[0];
-                    event.currentTarget.value = "";
-                    if (file) importTimestamps(file);
-                  }}
-                />
-              </>
-            )}
-          </div>
-          <InlineFeedback
-            message={
-              (messageArea === "manual" &&
-                rows.every((row) => /^[\d.]+s$/u.test(rounded(row)))) ||
-              messageArea === "import"
-                ? message
-                : undefined
-            }
-          />
-          {limitNotice > 0 && limitArea === "manual" && (
-            <DemoLimitToast key={limitNotice} />
-          )}
-        </fieldset>
-        <fieldset
-          className="moment-settings-card moment-ai-card"
-          disabled={busy}
-          aria-describedby={
-            message && messageArea === "ai"
-              ? `${tabsId}-ai-feedback`
-              : undefined
-          }
-        >
-          <legend className="local-sr-only">AI moments</legend>
-          <div className="moment-group-heading" aria-hidden="true">
-            <Sparkles size={17} />
-            <h3>AI moments</h3>
-          </div>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={!manualOnly}
-              onChange={(event) => {
-                setLimitArea("ai");
-                if (
-                  event.target.checked &&
-                  demoLimit &&
-                  rows.length >= demoLimit
-                ) {
-                  setLimitNotice((value) => value + 1);
-                  return;
-                }
-                changed();
-                setManualOnly(!event.target.checked);
-                if (demoLimit) {
-                  if (
-                    event.target.checked &&
-                    Number(count) > demoLimit - rows.length
-                  )
-                    setLimitNotice((value) => value + 1);
-                  setCount(
-                    String(
-                      Math.min(Number(count) || 1, demoLimit - rows.length),
-                    ),
-                  );
-                }
-              }}
-            />
-            Suggest clips
-          </label>
-          {!manualOnly && (
-            <div className="moment-ai-options">
-              <div className="duration-row">
-                <label>
-                  Clips
-                  <input
-                    type="number"
-                    min="1"
-                    max={
-                      demoLimit
-                        ? Math.max(1, demoLimit - rows.length)
-                        : expanded
-                          ? undefined
-                          : OWNER_LIMITS.suggestions
+                  disabled={
+                    !demoLimit &&
+                    rows.length >=
+                      (expanded ? OWNER_MANUAL_ROW_LIMIT : OWNER_LIMITS.ranges)
+                  }
+                  onClick={() => {
+                    setLimitArea("manual");
+                    if (demoLimit && rows.length >= demoLimit) {
+                      setLimitNotice((value) => value + 1);
+                      return;
                     }
-                    step="1"
-                    value={count}
-                    disabled={manualOnly || (local && findAll)}
-                    onChange={(event) => {
-                      setLimitArea("ai");
-                      changed();
-                      const value = event.currentTarget.value;
-                      if (
-                        demoLimit &&
-                        value !== "" &&
-                        Number(value) > demoLimit - rows.length
-                      ) {
-                        setCount(String(Math.max(1, demoLimit - rows.length)));
-                        setLimitNotice((current) => current + 1);
-                      } else setCount(value);
-                    }}
-                  />
-                </label>
-                {local && (
-                  <label className="check">
+                    let bounds = availableSource;
+                    try {
+                      bounds = ownerAnalysisWindow(
+                        workspace.source,
+                        windowed
+                          ? {
+                              startMs: fieldMilliseconds(
+                                windowStart,
+                                originalOffset,
+                              ),
+                              endMs: fieldMilliseconds(
+                                windowEnd,
+                                originalOffset,
+                              ),
+                            }
+                          : undefined,
+                      );
+                    } catch {
+                      setMessageArea("analysis");
+                      setMessage(
+                        "Choose a valid analysis range inside this video.",
+                      );
+                      return;
+                    }
+                    changed();
+                    setManualOnly(true);
+                    setRows((current) => [
+                      ...current,
+                      {
+                        id: crypto.randomUUID(),
+                        start: restoredTime(bounds.startMs, originalOffset),
+                        end: restoredTime(
+                          Math.min(bounds.startMs + 10_000, bounds.endMs),
+                          originalOffset,
+                        ),
+                      },
+                    ]);
+                  }}
+                >
+                  Add clip
+                </Button>
+                {timestampExchange && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => timestampInput.current?.click()}
+                    >
+                      Import JSON
+                    </Button>
                     <input
-                      type="checkbox"
-                      checked={findAll}
+                      ref={timestampInput}
+                      type="file"
+                      accept="application/json,.json"
+                      hidden
+                      aria-label="Import timestamps JSON"
                       onChange={(event) => {
-                        changed();
-                        setFindAll(event.target.checked);
+                        const file = event.currentTarget.files?.[0];
+                        event.currentTarget.value = "";
+                        if (file) importTimestamps(file);
                       }}
                     />
-                    <Sparkles size={16} aria-hidden="true" />
-                    Find all
-                  </label>
+                  </>
                 )}
               </div>
-              <div className="duration-row">
-                <label>
-                  Min (s)
+              {limitNotice > 0 && limitArea === "manual" && (
+                <DemoLimitToast key={limitNotice} />
+              )}
+            </fieldset>
+          </ControlPanel>
+          <ControlPanel id={creationTabsId} value="ai" active={creationTab}>
+            <fieldset
+              className="moment-method-fields"
+              disabled={busy}
+              aria-describedby={
+                message && messageArea === "ai"
+                  ? `${tabsId}-ai-feedback`
+                  : undefined
+              }
+            >
+              <legend className="local-sr-only">AI moments</legend>
+              <div className="moment-feedback-row">
+                <label className="check">
                   <input
-                    type="number"
-                    min="10"
-                    max={OWNER_MAX_REQUESTED_CLIP_MS / 1000}
-                    step="1"
-                    value={minimum}
+                    type="checkbox"
+                    checked={!manualOnly}
                     onChange={(event) => {
+                      setLimitArea("ai");
+                      if (
+                        event.target.checked &&
+                        demoLimit &&
+                        rows.length >= demoLimit
+                      ) {
+                        setLimitNotice((value) => value + 1);
+                        return;
+                      }
                       changed();
-                      setMinimum(event.target.value);
+                      setManualOnly(!event.target.checked);
+                      if (demoLimit) {
+                        if (
+                          event.target.checked &&
+                          Number(count) > demoLimit - rows.length
+                        )
+                          setLimitNotice((value) => value + 1);
+                        setCount(
+                          String(
+                            Math.min(
+                              Number(count) || 1,
+                              demoLimit - rows.length,
+                            ),
+                          ),
+                        );
+                      }
                     }}
                   />
+                  Suggest clips
                 </label>
-                <label>
-                  Max (s)
-                  <input
-                    type="number"
-                    min="10"
-                    max={OWNER_MAX_REQUESTED_CLIP_MS / 1000}
-                    step="1"
-                    value={maximum}
-                    onChange={(event) => {
-                      changed();
-                      setMaximum(event.target.value);
-                    }}
-                  />
-                </label>
+                <InlineFeedback
+                  id={`${tabsId}-ai-feedback`}
+                  message={messageArea === "ai" ? message : undefined}
+                  inline
+                />
               </div>
-            </div>
-          )}
-          <InlineFeedback
-            id={`${tabsId}-ai-feedback`}
-            message={messageArea === "ai" ? message : undefined}
-          />
-          {limitNotice > 0 && limitArea === "ai" && (
-            <DemoLimitToast key={limitNotice} />
-          )}
-        </fieldset>
+              {!manualOnly && (
+                <div className="moment-ai-options">
+                  <div className="duration-row">
+                    <label>
+                      Clips
+                      <input
+                        type="number"
+                        min="1"
+                        max={
+                          demoLimit
+                            ? Math.max(1, demoLimit - rows.length)
+                            : expanded
+                              ? undefined
+                              : OWNER_LIMITS.suggestions
+                        }
+                        step="1"
+                        value={count}
+                        disabled={manualOnly || (local && findAll)}
+                        onChange={(event) => {
+                          setLimitArea("ai");
+                          changed();
+                          const value = event.currentTarget.value;
+                          if (
+                            demoLimit &&
+                            value !== "" &&
+                            Number(value) > demoLimit - rows.length
+                          ) {
+                            setCount(
+                              String(Math.max(1, demoLimit - rows.length)),
+                            );
+                            setLimitNotice((current) => current + 1);
+                          } else setCount(value);
+                        }}
+                      />
+                    </label>
+                    {local && (
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={findAll}
+                          onChange={(event) => {
+                            changed();
+                            setFindAll(event.target.checked);
+                          }}
+                        />
+                        <Sparkles size={16} aria-hidden="true" />
+                        Find all
+                      </label>
+                    )}
+                  </div>
+                  <div className="duration-row">
+                    <label>
+                      Min (s)
+                      <input
+                        type="number"
+                        min="10"
+                        max={OWNER_MAX_REQUESTED_CLIP_MS / 1000}
+                        step="1"
+                        value={minimum}
+                        onChange={(event) => {
+                          changed();
+                          setMinimum(event.target.value);
+                        }}
+                      />
+                    </label>
+                    <label>
+                      Max (s)
+                      <input
+                        type="number"
+                        min="10"
+                        max={OWNER_MAX_REQUESTED_CLIP_MS / 1000}
+                        step="1"
+                        value={maximum}
+                        onChange={(event) => {
+                          changed();
+                          setMaximum(event.target.value);
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+              {limitNotice > 0 && limitArea === "ai" && (
+                <DemoLimitToast key={limitNotice} />
+              )}
+            </fieldset>
+          </ControlPanel>
+        </section>
+        {analysis && selected.length === 0 && (
+          <div className="moment-empty-results">
+            <AnalysisCoverageStatus coverage={analysis.coverage} />
+            <InlineFeedback
+              message="No clips yet. Adjust your settings to try again."
+              tone="status"
+              reserve={false}
+            />
+          </div>
+        )}
       </div>
       {actionsVisible && tab === "add" && (
         <WorkflowActions target={actionTarget} label="Moment actions">
           <InlineFeedback
-            message={messageArea === "action" ? message : undefined}
+            message={
+              messageArea === "action" ||
+              (messageArea === "results" && selected.length === 0)
+                ? message
+                : undefined
+            }
             tone={message === "Canceled." ? "status" : "error"}
           />
           {limitNotice > 0 && limitArea === "action" && (
@@ -1341,7 +1476,6 @@ export function OwnerSelectionPanel({
               }
               tone="status"
             />
-            {selected.length === 0 && <p>No clips yet.</p>}
             {selected.length > REVIEW_PAGE_ITEMS && (
               <nav className="collection-navigation" aria-label="Moment pages">
                 <Button
@@ -1385,6 +1519,23 @@ export function OwnerSelectionPanel({
           </>
         )}
       </div>
+      {editingMoment && analysis && (
+        <MomentRangeDialog
+          workspace={workspace}
+          analysis={analysis}
+          moment={editingMoment.moment}
+          number={editingMoment.number}
+          onBusy={onBusy}
+          onClose={() => closeMomentEditor()}
+          onAccepted={(result, replacementId) => {
+            const next = correctedMomentSelection(analysis, result, selected);
+            setAnalysis(result);
+            setSelected(next.map((item) => item.momentId));
+            onChoose(next);
+            closeMomentEditor(replacementId);
+          }}
+        />
+      )}
     </section>
   );
 }
