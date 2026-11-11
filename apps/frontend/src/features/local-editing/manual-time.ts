@@ -42,8 +42,8 @@ export function manualPreviewJumpSeconds(
     (endpoint === "start" && localMs === available.endMs)
   )
     return null;
-  return localMs === source.durationMs
-    ? Math.max(0, Math.ceil((source.durationMs * OWNER_FPS) / 1000) - 1) /
+  return localMs === available.endMs
+    ? Math.max(0, Math.ceil((available.endMs * OWNER_FPS) / 1000) - 1) /
         OWNER_FPS
     : localMs / 1000;
 }

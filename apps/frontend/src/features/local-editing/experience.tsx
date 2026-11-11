@@ -60,9 +60,10 @@ export function LocalEditingExperience({
   const [acquisitionBusy, setAcquisitionBusy] = useState(false);
   const blocked = busy || acquisitionBusy || !capabilities;
   const [message, setMessage] = useState("");
-  const [messageArea, setMessageArea] = useState<
-    "upload" | "source" | "session"
-  >("upload");
+  const [sourceMessage, setSourceMessage] = useState("");
+  const [messageArea, setMessageArea] = useState<"upload" | "session">(
+    "upload",
+  );
   const [connectAttempt, setConnectAttempt] = useState(0);
   const [startupFailed, setStartupFailed] = useState(false);
   const [sessionConnection, setSessionConnection] =
@@ -70,6 +71,8 @@ export function LocalEditingExperience({
   const sessionConnected = sessionConnection === "connected";
   const fileInput = useRef<HTMLInputElement>(null);
   const sourcePreview = useRef<HTMLVideoElement>(null);
+  const [sourcePlayRequests] = useState(() => new SourcePlayRequests());
+  useEffect(() => () => sourcePlayRequests.cancel(), [sourcePlayRequests]);
   const [previewReadyFor, setPreviewReadyFor] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [sourceMethod, setSourceMethod] = useState<"upload" | "youtube">(
@@ -92,7 +95,17 @@ export function LocalEditingExperience({
   const [showMomentResults, setShowMomentResults] = useState(false);
   const [clipWork, setClipWork] = useState(false);
   const [hasClips, setHasClips] = useState(false);
-  const [view, setView] = useState<"opening" | "moments" | "editor">("opening");
+  const [view, setActiveView] = useState<"opening" | "moments" | "editor">(
+    "opening",
+  );
+  const setView = useCallback(
+    (next: typeof view) => {
+      sourcePlayRequests.cancel();
+      setSourceMessage("");
+      setActiveView(next);
+    },
+    [sourcePlayRequests],
+  );
   const [momentsVisited, setMomentsVisited] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const clipsChanged = useCallback(
@@ -101,13 +114,14 @@ export function LocalEditingExperience({
       if (!value) setMomentsVisited(workspace?.id ?? null);
       setView(value ? "editor" : "moments");
     },
-    [workspace?.id],
+    [workspace?.id, setView],
   );
   useEffect(() => {
+    sourcePlayRequests.cancel();
     if (view === "editor") sourcePreview.current?.pause();
     heading.current?.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: "instant" });
-  }, [view, workspace?.id]);
+  }, [view, workspace?.id, sourcePlayRequests]);
   const [unapplied, setUnapplied] = useState(false);
   const [clearBlocked, setClearBlocked] = useState(false);
   const [resetWaiting, setResetWaiting] = useState(false);
@@ -122,15 +136,18 @@ export function LocalEditingExperience({
   const choose = useCallback((value: OwnerMomentExport[]) => {
     setSelection(value);
   }, []);
-  const workspaceRecovered = useCallback((value: OwnerWorkspace) => {
-    setWorkspace(value);
-    setSelection([]);
-    setInitialClip(null);
-    setUnapplied(false);
-    setClearBlocked(false);
-    setClipWork(false);
-    setView("opening");
-  }, []);
+  const workspaceRecovered = useCallback(
+    (value: OwnerWorkspace) => {
+      setWorkspace(value);
+      setSelection([]);
+      setInitialClip(null);
+      setUnapplied(false);
+      setClearBlocked(false);
+      setClipWork(false);
+      setView("opening");
+    },
+    [setView],
+  );
   const sourceOpened = useCallback(
     (value: OwnerWorkspace) => {
       setWorkspace(value);
@@ -144,7 +161,7 @@ export function LocalEditingExperience({
       setClearBlocked(false);
       setMessage("");
     },
-    [choose],
+    [choose, setView],
   );
   useEffect(() => {
     const controller = new AbortController();
@@ -195,7 +212,7 @@ export function LocalEditingExperience({
       }
     })();
     return () => controller.abort();
-  }, [hosted, connectAttempt]);
+  }, [hosted, connectAttempt, setView]);
   async function upload(file: File | undefined) {
     if (!file || blocked || opening.current) return;
     const controller = new AbortController();
@@ -620,7 +637,7 @@ export function LocalEditingExperience({
                             "loaded",
                           );
                           setPreviewReadyFor(workspace.id);
-                          if (messageArea === "source") setMessage("");
+                          setSourceMessage("");
                         }}
                         onTimeUpdate={(event) =>
                           constrainSourcePlayback(
@@ -636,6 +653,11 @@ export function LocalEditingExperience({
                             "play",
                           )
                         }
+                        onPlaying={() => {
+                          sourcePlayRequests.cancel();
+                          setSourceMessage("");
+                        }}
+                        onPause={() => sourcePlayRequests.cancel()}
                         onSeeked={() => setPreviewReadyFor(workspace.id)}
                         onSeeking={(event) => {
                           constrainSourcePlayback(
@@ -645,24 +667,23 @@ export function LocalEditingExperience({
                           );
                           setPreviewReadyFor(null);
                         }}
-                        onEmptied={() => setPreviewReadyFor(null)}
-                        onError={() => {
+                        onEmptied={() => {
+                          sourcePlayRequests.cancel();
                           setPreviewReadyFor(null);
-                          setMessageArea("source");
-                          setMessage("Couldn’t load the video preview.");
                         }}
-                        onLoadStart={() => setPreviewReadyFor(null)}
+                        onError={() => {
+                          sourcePlayRequests.cancel();
+                          setPreviewReadyFor(null);
+                          setSourceMessage("Couldn’t load the video preview.");
+                        }}
+                        onLoadStart={() => {
+                          sourcePlayRequests.cancel();
+                          setSourceMessage("");
+                          setPreviewReadyFor(null);
+                        }}
                       />
-                      <div
-                        className="source-preview-feedback"
-                        hidden={messageArea !== "source" || !message}
-                      >
-                        <InlineFeedback
-                          reserve={false}
-                          message={
-                            messageArea === "source" ? message : undefined
-                          }
-                        />
+                      <div className="source-preview-feedback">
+                        <InlineFeedback message={sourceMessage} />
                       </div>
                     </aside>
                     <div className="moment-workarea">
@@ -699,8 +720,7 @@ export function LocalEditingExperience({
                             )
                               return;
                             try {
-                              setMessageArea("source");
-                              setMessage("");
+                              setSourceMessage("");
                               video.currentTime = seconds;
                               const viewport = video
                                 .closest("main")
@@ -716,14 +736,16 @@ export function LocalEditingExperience({
                                   behavior: "smooth",
                                 });
                               video.focus({ preventScroll: true });
-                              void video.play().catch(() => {
+                              sourcePlayRequests.play(video, (reason) => {
                                 if (sourcePreview.current === video)
-                                  setMessage(
-                                    "Press play in the video preview.",
+                                  setSourceMessage(
+                                    reason === "blocked"
+                                      ? "Playback was blocked. Press Play in the preview."
+                                      : "Couldn’t start playback. Try the video controls.",
                                   );
                               });
                             } catch {
-                              setMessage(
+                              setSourceMessage(
                                 "Couldn’t jump to this clip. Try the video controls.",
                               );
                             }
@@ -805,4 +827,7 @@ export function LocalEditingExperience({
     </Workspace>
   );
 }
-import { constrainSourcePlayback } from "./source-playback.ts";
+import {
+  constrainSourcePlayback,
+  SourcePlayRequests,
+} from "./source-playback.ts";

@@ -21,7 +21,7 @@ it("jumps to precise local endpoint clocks and uses the last playable frame for 
       { ...source, availableWindow: { startMs: 5000, endMs: 12000 } },
       "end",
     ),
-  ).toBe(12);
+  ).toBeCloseTo(11.9666667);
 });
 it("blocks invalid/outside endpoints without silently clipping them to the available source", () => {
   const source = {
