@@ -43,6 +43,67 @@ or portfolio screenshots. Improve the illustrated people: more detailed human
 anatomy and natural movement. Save screenshots from the landing, upload path,
 clip selection and editor in a new Desktop folder for the owner's portfolio.
 
+## Portfolio replacement revision — 2026-11-11
+
+Status: replacement delivered and locally verified. The owner rejected the prior Desktop screenshots and
+explicitly requests deleting and replacing them. This supersedes the earlier
+mobile/tablet/full-page portfolio acceptance: all replacement images are laptop
+viewport captures only. Keep YouTube excluded and never enter fullscreen.
+
+- Replace only the previous named capture set in the documented dated Desktop
+  portfolio folder, including its stale README/index. Prepare and inspect the
+  full replacement set first; preserve any unrelated files in that folder.
+- Capture the landing only at a sharp settled motion-graphic frame, with no
+  transition, blur, blank animation composition or partially loaded assets.
+- Emphasize AI analysis/preparation, caption styling, camera zoom/pan, filters
+  and the editor overview. Avoid media-resizing/property shots as portfolio leads.
+  Include clean upload intake and clip review for the complete product story.
+- Use current production UI with original high-resolution fictional media and
+  isolated fake/paid-off HTTP. Illustrative AI states must be disclosed in the
+  accompanying index; no paid/live run or claim of real AI quality is authorized.
+- Inspect every final PNG for readable controls, useful composition, ready media,
+  laptop dimensions and absence of private/YouTube/developer UI. Verify copied
+  hashes, replace the old known captures, and clean owned tabs/fixtures/scratch.
+  Leave the normal app/session, Voyagenda and pending CL-278/279 work untouched.
+
+Capture/UI navigation needs no API keys. Real AI still requires its configured
+provider/runtime, flags and approvals. No Git action or deployment is requested.
+
+Actual replacement evidence:
+
+- Replaced the known 21 old PNG captures (including every phone/tablet and motion
+  still) plus their two stale metadata files in the same dated Desktop folder.
+  Those 23 files went to the Windows Recycle Bin; no unrelated file was touched.
+  Ten inspected JPEG screenshots plus README/index were copied and every SHA-256
+  matched. The JPEG extension now matches the browser's actual encoding.
+- The current set is landing, upload, AI moment discovery, AI clip preparation,
+  suggested clips, editor overview, Glass captions, Vivid filters, original-video
+  Zoom and original-video Pan. No media-resizing/property screenshot, narrow
+  capture, full-page image or isolated blank composition is delivered.
+- The live landing was captured during settled identity frame 28. Nine images
+  are 1440×900; the landing browser's native image is 1436×898. No image was
+  enlarged, composited or altered. All are laptop views, with no YouTube visible.
+- Generated editor footage decodes at 1920×1080; discovery/review at 1280×720.
+  Waited for source readiness, all result thumbnails, saved state and source
+  canvases. Inspected every chosen state and rechecked final copied examples.
+  A pending third result thumbnail was caught and allowed to settle before capture.
+- Reusable authoring helpers now provide an explicit `film:capture --portfolio`
+  option, high-resolution original artwork, safe synthetic source encoding,
+  overlay-schema preflight and a held preparation-progress fixture. Earlier
+  ordinary film capture behavior and normal app/provider settings remain intact.
+- Root integration TypeScript, changed-source ESLint/Prettier, CLI syntax and
+  whitespace checks pass. Read-only validate: meets this replacement revision;
+  no actionable findings. No new production UI or processing behavior changed.
+- Two held fake analysis submissions were explicitly canceled/closed across the
+  capture passes; three fake edit saves styled the isolated editor. Zero
+  unexpected requests and zero plan/image/render/provider calls. No owner
+  session/media or Voyagenda change. AI-stage values are illustrative and are
+  identified as such in the delivered README/index, not performance evidence.
+- Owned fixture servers/processes, source media, helper scripts, staging files,
+  tabs and viewport overrides were cleaned up. Normal ClipBuilder remains
+  running. Pending CL-278/279 source work is preserved; nothing staged/committed
+  or pushed. Owner aesthetic/portfolio acceptance remains manual.
+
 ## Execution plan and boundaries
 
 - Reuse the existing Remotion player and motion language. Capture real current
@@ -115,7 +176,8 @@ cloud action or deployment. Personal visual/portfolio acceptance remains owner-o
   and unused queued/render PNGs are removed. New detail PNGs and the opening JPEG
   are promoted deliberately into the delivery hash manifest.
 - Portfolio folder: `C:\Users\minat\OneDrive\Desktop\ClipBuilder-Portfolio-2026-11-11`.
-  It contains 21 inspected PNGs, README and a dimensions/SHA-256 index (23 files).
+  Initial delivery, superseded by the replacement revision above: 21 PNGs,
+  README and a dimensions/SHA-256 index (23 files).
   Landing includes hero/full-page views; upload, Add clips/analysis/Your clips,
   editor Home/captions/layers/Zoom/Pan, narrow views and motion stills are included.
   All copies match their prepared hashes. The caption view was recaptured after
@@ -154,3 +216,14 @@ loop/lifecycle guards, Desktop copies and cleanup. Owner aesthetic judgment and
 physical-device/hosted release acceptance remain unverified. No MP4 export was
 requested or produced; the landing uses its existing live Remotion player.
 CL-273/274/275's earlier unstaged work remains intact and outside this verdict.
+
+## Owner local commit authorization — 2026-11-11
+
+The owner now authorizes the file-level plan, staging and local ticket-prefixed
+commits for the pending work. This supersedes earlier no-Git limits for this
+batch only. Whole-file allocation, final checks and receipts are recorded in the
+[commit plan](../operations/CL-278-283-FILE-COMMIT-PLAN.md). Final validation is
+clean: 184 focused fake/paid-off cases, applicable types, scoped lint/format,
+CLI syntax, dependency guards and whitespace checks. Prior visual evidence and
+owner-only aesthetic/editorial/real-provider acceptance remain distinct. No
+push, provider action, configuration change, Voyagenda work or deployment.

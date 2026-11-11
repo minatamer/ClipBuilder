@@ -18,7 +18,9 @@ const { installTestEnvironment } =
 installTestEnvironment();
 const { startMarketingFixtures } =
   await import("../../../test/owner-marketing-fixture.ts");
-const fixtures = await startMarketingFixtures();
+const fixtures = await startMarketingFixtures({
+  portfolio: process.argv.includes("--portfolio"),
+});
 process.once("SIGINT", () => {
   void fixtures.close();
 });

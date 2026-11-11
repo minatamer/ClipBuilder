@@ -1104,6 +1104,13 @@ corepack pnpm --filter @clipbuilder/frontend film:capture
 corepack pnpm --filter @clipbuilder/frontend film:studio
 ```
 
+For laptop portfolio screenshots, add `--portfolio` to `film:capture`. It prepares
+sharper generated source media, staged original-video Zoom/Pan and a separate
+held AI-preparation view. These are illustrative fake transports, never real AI
+or measured timings. Capture only laptop viewports, wait for ready thumbnails
+and saved edits, and take the live landing at a settled scene. Personal portfolio
+captures stay outside Git; never use a transitioning/blurred frame or fullscreen.
+
 The capture command now starts isolated upload-only authoring fixtures and prints
 editor, Moments and cleanup-control URLs. It installs the deterministic fake,
 paid-off environment before imports. Use Codex's in-app browser to capture them;
