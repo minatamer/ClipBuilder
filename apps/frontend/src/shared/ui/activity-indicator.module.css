@@ -1,0 +1,40 @@
+.indicator {
+  display: inline-block;
+  flex: 0 0 auto;
+  vertical-align: middle;
+  color: inherit;
+}
+.track {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  opacity: 0.18;
+}
+.orbit {
+  stroke: currentColor;
+  stroke-width: 2;
+  transform-origin: 12px 12px;
+  animation: orbit 1.4s linear infinite;
+}
+.core {
+  fill: currentColor;
+  opacity: 0.28;
+  animation: breathe 2.8s ease-in-out infinite;
+  transform-origin: 12px 12px;
+}
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes breathe {
+  50% {
+    opacity: 0.7;
+    transform: scale(0.65);
+  }
+}
+@media (forced-colors: active) {
+  .track,
+  .core {
+    opacity: 1;
+  }
+}

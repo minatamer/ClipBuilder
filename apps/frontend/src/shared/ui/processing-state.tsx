@@ -10,19 +10,30 @@ export function ProcessingState({
   progress,
   children,
   indicatorSize = "standard",
+  layout = "panel",
 }: {
   label: string;
-  className?: string;
+  className?: string | undefined;
   progress?: { fraction: number; valueText: string };
   children?: ReactNode;
   indicatorSize?: BrandedSpinnerSize;
+  layout?: "panel" | "compact";
 }) {
   return (
-    <div className={[styles.state, className].filter(Boolean).join(" ")}>
-      <BrandedSpinner size={indicatorSize} />
+    <div
+      className={[styles.state, className].filter(Boolean).join(" ")}
+      data-layout={layout}
+    >
+      <BrandedSpinner size={layout === "compact" ? "compact" : indicatorSize} />
       <p className={styles.title} role="status" aria-live="polite">
         {label}
       </p>
+      {layout === "compact" && !progress && (
+        <div className={styles.skeleton} aria-hidden="true">
+          <span />
+          <span />
+        </div>
+      )}
       {children}
       {progress && (
         <div className={styles.meter}>

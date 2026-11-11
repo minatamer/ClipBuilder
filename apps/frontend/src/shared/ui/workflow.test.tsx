@@ -8,6 +8,21 @@ import { ProcessingState } from "./processing-state";
 import { WorkflowFrame } from "./workflow-frame";
 
 describe("shared workflow primitives", () => {
+  it("keeps busy icon commands named, avoids duplicate icons and leaves disabling to the caller", () => {
+    const markup = renderToStaticMarkup(
+      <IconButton
+        icon={ArrowRight}
+        label="Finish current action"
+        busy
+        disabled={false}
+      />,
+    );
+    expect(markup).toContain('aria-busy="true"');
+    expect(markup).toContain('aria-label="Finish current action"');
+    expect(markup.match(/data-activity-indicator/g)).toHaveLength(1);
+    expect(markup.match(/<svg/g)).toHaveLength(1);
+    expect(markup).not.toContain('disabled=""');
+  });
   it("announces unknown work without a percentage and shows only supplied measured progress", () => {
     const unknown = renderToStaticMarkup(
       <ProcessingState label="Exporting clip" />,

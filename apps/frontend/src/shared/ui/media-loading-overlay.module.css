@@ -1,0 +1,57 @@
+.overlay {
+  container: media-loading / size;
+  box-sizing: border-box;
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  overflow: hidden;
+  color: var(--cb-ink);
+  background:
+    radial-gradient(ellipse at center, rgb(80 142 255 / 12%), transparent 80%),
+    var(--cb-canvas);
+  font-family: var(--cb-font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+}
+.indicator {
+  display: grid;
+  place-items: center;
+  width: min(4rem, 100%);
+}
+.overlay[data-failed] {
+  color: var(--cb-danger);
+}
+.overlay > span {
+  overflow-wrap: anywhere;
+}
+@container media-loading (max-height: 8rem) {
+  .indicator {
+    width: 2.5rem;
+  }
+}
+@container media-loading (max-height: 6rem) {
+  .overlay > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .indicator {
+    width: 2rem;
+  }
+}
+@media (forced-colors: active) {
+  .overlay {
+    color: CanvasText;
+    background: Canvas;
+  }
+}

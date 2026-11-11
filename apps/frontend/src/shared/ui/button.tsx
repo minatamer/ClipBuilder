@@ -2,10 +2,12 @@ import type { ButtonHTMLAttributes } from "react";
 import type { LucideIcon } from "lucide-react";
 
 import styles from "./workflow.module.css";
+import { ActivityIndicator } from "./activity-indicator";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "quiet";
   icon?: LucideIcon;
+  busy?: boolean;
 };
 
 export function Button({
@@ -14,17 +16,23 @@ export function Button({
   className,
   children,
   type = "button",
+  busy = false,
   ...props
 }: ButtonProps) {
   return (
     <button
       {...props}
+      aria-busy={busy || props["aria-busy"]}
       type={type}
       className={[styles.button, styles[variant], className]
         .filter(Boolean)
         .join(" ")}
     >
-      {Icon && <Icon size={18} aria-hidden="true" />}
+      {busy ? (
+        <ActivityIndicator size={18} />
+      ) : Icon ? (
+        <Icon size={18} aria-hidden="true" />
+      ) : null}
       {children}
     </button>
   );
@@ -34,6 +42,7 @@ export function IconButton({
   label,
   icon: Icon,
   className,
+  busy = false,
   ...props
 }: Omit<ButtonProps, "children" | "icon"> & {
   label: string;
@@ -42,12 +51,13 @@ export function IconButton({
   return (
     <Button
       {...props}
+      busy={busy}
       variant="quiet"
       className={[styles.iconButton, className].filter(Boolean).join(" ")}
       aria-label={label}
       title={label}
     >
-      <Icon size={20} aria-hidden="true" />
+      {!busy && <Icon size={20} aria-hidden="true" />}
     </Button>
   );
 }

@@ -1,4 +1,5 @@
 import styles from "./workflow.module.css";
+import { ActivityIndicator } from "./activity-indicator";
 
 export function Progress({
   label,
@@ -26,7 +27,10 @@ export function Progress({
   return (
     <div className={styles.progress} data-active={active}>
       <div className={styles.progressLabel}>
-        <span role="status">{label}</span>
+        <span role="status">
+          {active && value !== 1 && <ActivityIndicator />}
+          {label}
+        </span>
         {value !== undefined && (
           <span className={styles.progressPercentage} aria-hidden="true">
             {percentage}%

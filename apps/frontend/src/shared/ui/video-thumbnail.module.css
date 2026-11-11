@@ -14,3 +14,38 @@
   height: 100%;
   object-fit: cover;
 }
+.frame[data-thumbnail-state="loading"] {
+  color: var(--cb-blue-light);
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    rgb(80 142 255 / 18%),
+    transparent 80%
+  );
+}
+.frame[data-thumbnail-state="loading"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    rgb(160 200 255 / 10%),
+    transparent 80%
+  );
+  transform: translateX(-100%);
+  animation: reveal 2.4s ease-in-out infinite;
+}
+@keyframes reveal {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (forced-colors: active) {
+  .frame[data-thumbnail-state="loading"] {
+    color: CanvasText;
+    background: Canvas;
+  }
+  .frame[data-thumbnail-state="loading"]::before {
+    background: none;
+  }
+}

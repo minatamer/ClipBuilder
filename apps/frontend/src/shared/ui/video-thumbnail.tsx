@@ -1,5 +1,6 @@
+import { ActivityIndicator } from "./activity-indicator";
 import { forwardRef, useState, type VideoHTMLAttributes } from "react";
-import { Film, LoaderCircle } from "lucide-react";
+import { Film } from "lucide-react";
 import { useVideoThumbnail } from "../../features/media/use-video-thumbnail";
 import type { VideoThumbnailRequest } from "../../features/media/video-thumbnail";
 import styles from "./video-thumbnail.module.css";
@@ -40,7 +41,7 @@ export function VideoThumbnail({
         />
       )}
       {state === "loading" ? (
-        <LoaderCircle size={20} className="acquisition-spinner" />
+        <ActivityIndicator size={20} />
       ) : state === "unavailable" ? (
         <Film size={24} />
       ) : null}

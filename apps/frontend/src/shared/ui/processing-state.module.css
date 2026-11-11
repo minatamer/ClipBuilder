@@ -34,9 +34,101 @@
   width: min(100%, 20rem);
   text-align: left;
 }
+.state[data-layout="compact"] {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  grid-template-areas: "indicator title" "indicator content";
+  align-content: center;
+  justify-content: start;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  min-height: 6.75rem;
+  padding: 1.1rem 1.25rem;
+  border-color: var(--cb-border);
+  border-radius: var(--cb-radius-control);
+  text-align: left;
+  background:
+    radial-gradient(ellipse at 0 50%, rgb(80 142 255 / 16%), transparent 75%),
+    var(--cb-glass-sheen), var(--cb-surface);
+}
+.state[data-layout="compact"] > [data-branded-spinner] {
+  grid-area: indicator;
+  width: 3.25rem;
+}
+.state[data-layout="compact"] .title {
+  grid-area: title;
+  align-self: end;
+  padding: 0;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  text-align: left;
+  text-wrap: pretty;
+}
+.state[data-layout="compact"] > :not([data-branded-spinner]):not(.title) {
+  grid-column: 2;
+  min-width: 0;
+}
+.skeleton {
+  grid-area: content;
+  display: grid;
+  align-self: start;
+  gap: 0.45rem;
+  width: min(100%, 18rem);
+}
+.skeleton > span {
+  position: relative;
+  height: 0.35rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: rgb(140 182 245 / 14%);
+}
+.skeleton > span:last-child {
+  width: 62%;
+}
+.skeleton > span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(169 204 255 / 44%),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: shimmer 2.2s ease-in-out infinite;
+}
+.skeleton > span:last-child::after {
+  animation-delay: 0.2s;
+}
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (max-width: 25rem) {
+  .state[data-layout="compact"] {
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    gap: 0.5rem 0.75rem;
+    padding: 1rem;
+  }
+  .state[data-layout="compact"] > [data-branded-spinner] {
+    width: 2.75rem;
+  }
+}
 @media (forced-colors: active) {
-  .state {
+  .state,
+  .state[data-layout="compact"] {
     border-color: ButtonText;
     background: Canvas;
+  }
+  .skeleton > span {
+    background: Canvas;
+    border: 1px solid GrayText;
+  }
+  .skeleton > span::after {
+    background: Highlight;
   }
 }

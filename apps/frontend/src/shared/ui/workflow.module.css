@@ -162,6 +162,12 @@
   text-align: right;
   white-space: nowrap;
 }
+.progressLabel > [role="status"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
 .progressTrack {
   display: block;
   width: 100%;
