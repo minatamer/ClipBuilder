@@ -3,6 +3,8 @@
   "compilerOptions": {
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM"],
     "rootDir": ".",
     "types": ["node"]
   },

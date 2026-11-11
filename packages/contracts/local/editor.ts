@@ -39,6 +39,7 @@ export const OWNER_CAPTION_ANIMATIONS = [
 export const ownerCaptionStyleSchema = ownerTypographySchema
   .extend({
     animation: z.enum(OWNER_CAPTION_ANIMATIONS).optional(),
+    material: z.literal("glass").optional(),
     highlight: z.string().regex(/^#[a-fA-F0-9]{6}$/),
     box: normalizedBoxSchema,
   })
@@ -75,7 +76,28 @@ const captionBox = {
 export const OWNER_CAPTION_PRESETS: Record<
   OwnerCaptionStyle["preset"],
   OwnerCaptionStyle
-> = {
+> & { glass: OwnerCaptionStyle } = {
+  glass: {
+    preset: "clean",
+    material: "glass",
+    font: "Arial",
+    fontSize: 120,
+    fontWeight: 900,
+    color: "#ffffff",
+    highlight: "#7652d8",
+    animation: "single-word",
+    align: "center",
+    verticalAlign: "center",
+    outlineColor: "#10243b",
+    outlineWidth: 0,
+    backgroundColor: "#171717",
+    backgroundOpacity: 0,
+    box: {
+      ...captionBox,
+      y: OWNER_CAPTION_DEFAULT_CENTER_Y - 160 / 1920,
+      height: 320 / 1920,
+    },
+  },
   tiktok: {
     ...OWNER_SOCIAL_TEXT_PRESETS.tiktok,
     highlight: "#7652d8",
@@ -154,6 +176,7 @@ export const OWNER_CAPTION_PRESETS: Record<
     box: captionBox,
   },
 };
+export type OwnerCaptionPreset = keyof typeof OWNER_CAPTION_PRESETS;
 export const ownerContentEditSchema = z
   .object({
     captions: ownerCaptionStyleSchema.nullable(),

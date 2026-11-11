@@ -18,6 +18,7 @@ export function TypographyFields({
   characterOnly = false,
   mixed = [],
   feedback,
+  presetPicker,
 }: {
   value: OwnerTypography;
   onChange: (next: OwnerTypography, property?: keyof OwnerTypography) => void;
@@ -25,6 +26,7 @@ export function TypographyFields({
   characterOnly?: boolean;
   mixed?: readonly (keyof OwnerTypography)[];
   feedback?: ReactNode;
+  presetPicker?: ReactNode;
 }) {
   const background = ownerTextBackground(value);
   const id = useId();
@@ -44,9 +46,10 @@ export function TypographyFields({
       : undefined;
   return (
     <div className="typography-editor">
-      {!characterOnly && (
-        <TypographyPresetPicker value={value.preset} onChange={onPreset} />
-      )}
+      {!characterOnly &&
+        (presetPicker ?? (
+          <TypographyPresetPicker value={value.preset} onChange={onPreset} />
+        ))}
       <section className="editor-control-group" aria-label="Typography">
         <h3>Typography</h3>
         <div className="editor-fields typography-fields">

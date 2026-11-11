@@ -115,6 +115,7 @@ import {
   decodeOwnerHookSuggestion,
 } from "../../../../../packages/contracts/local/hook.ts";
 import { TypographyFields } from "./typography-fields.tsx";
+import { CaptionPresetPicker } from "./typography-preset-picker";
 import { TextInspector } from "./text-inspector.tsx";
 import {
   TextSelectionContext,
@@ -3168,6 +3169,14 @@ export function ClipEditor({
                       tabIndex={0}
                     >
                       <TypographyFields
+                        presetPicker={
+                          <CaptionPresetPicker
+                            value={caption}
+                            onChange={(preset) =>
+                              setCaption(ownerCaptionPreset(caption, preset))
+                            }
+                          />
+                        }
                         feedback={
                           <InlineFeedback
                             message={

@@ -2,6 +2,7 @@ import type { OwnerClip } from "../../../../../packages/contracts/local/clips.ts
 import {
   OWNER_CAPTION_PRESETS,
   type OwnerCaptionStyle,
+  type OwnerCaptionPreset,
   type OwnerEditDocument,
   type OwnerEditRequest,
 } from "../../../../../packages/contracts/local/editor.ts";
@@ -33,7 +34,7 @@ export function centeredOwnerBox(
 /** Typography changes keep the owner's spatial placement and alignment. */
 export function ownerCaptionPreset(
   current: OwnerCaptionStyle,
-  preset: OwnerCaptionStyle["preset"],
+  preset: OwnerCaptionPreset,
 ): OwnerCaptionStyle {
   const next = structuredClone(OWNER_CAPTION_PRESETS[preset]);
   const fitted = constrainOwnerBox(current.box, next);

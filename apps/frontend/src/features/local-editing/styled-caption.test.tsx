@@ -71,6 +71,69 @@ const render = (ms: number, value = style) =>
   renderToStaticMarkup(
     <OwnerStyledCaption caption={caption} ms={ms} style={value} />,
   );
+
+it("keeps glass to the active timed word, including silent gaps, without changing caption text", () => {
+  const before = JSON.stringify(caption);
+  const glass = OWNER_CAPTION_PRESETS.glass;
+  const first = render(300, glass);
+  expect(first.match(/data-word-id=/g)).toHaveLength(1);
+  expect(first).toContain('data-word-id="w_000001"');
+  expect(first).toContain("CORAL");
+  expect(first).not.toContain("REEFS");
+  expect(first).toContain("data-glass-word");
+  expect(first).toContain("font-size:120px");
+  expect(render(1200, glass)).not.toContain("data-glass-word");
+  expect(render(1500, glass)).toContain('data-word-id="w_000003"');
+  expect(JSON.stringify(caption)).toBe(before);
+});
+
+it("fits long glass words and keeps cached native frames deterministic", () => {
+  const long = "PNEUMONOULTRAMICROSCOPICSILICOVOLCANOCONIOSIS";
+  const value = {
+    ...caption,
+    text: long,
+    lines: [long],
+    wordIds: ["w_000001"],
+    wordCues: [{ wordId: "w_000001", text: long, startMs: 100, endMs: 2500 }],
+  };
+  const overlay: OwnerOverlay = {
+    version: 1,
+    frames: 90,
+    visuals: [],
+    captions: [value],
+    captionStyle: OWNER_CAPTION_PRESETS.glass,
+  };
+  const seen = new Map<string, string>();
+  for (let frame = 0; frame < 90; frame++) {
+    const state = ownerOverlayFrame(overlay, frame);
+    const html = renderToStaticMarkup(
+      <OwnerStyledCaption
+        caption={value}
+        ms={state.ms}
+        style={OWNER_CAPTION_PRESETS.glass}
+      />,
+    );
+    if (seen.has(state.key)) expect(html).toBe(seen.get(state.key));
+    seen.set(state.key, html);
+    if (html)
+      expect(Number(html.match(/font-size:(\d+)px/)?.[1])).toBeLessThan(120);
+  }
+});
+
+it("keeps the glass material when choosing Slide and leaves plain Slide unchanged", () => {
+  const glass = render(300, {
+    ...OWNER_CAPTION_PRESETS.glass,
+    animation: "slide",
+  });
+  expect(glass).toContain('data-sliding-highlight="true"');
+  expect(glass.match(/data-glass-word/g)).toHaveLength(4);
+  expect(glass).toContain("CORAL");
+  expect(glass).toContain("REEFS");
+  const plain = render(300, { ...style, animation: "slide" });
+  expect(plain).toContain('data-sliding-highlight="true"');
+  expect(plain).not.toContain("data-glass-word");
+  expect(plain).toContain("Coral");
+});
 it("preserves legacy rounded word boxes until explicit shared background color/opacity overrides them", () => {
   const legacy = render(300, {
     ...OWNER_CAPTION_PRESETS.boxed,

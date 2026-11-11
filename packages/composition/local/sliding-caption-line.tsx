@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import type { OwnerOverlay } from "../../contracts/local/clips.ts";
 import { slidingHighlight, type SlidingWordBox } from "./sliding-highlight.ts";
 
@@ -12,6 +13,7 @@ export function SlidingCaptionLine({
   color,
   wordPadding,
   fontKey,
+  renderWord,
 }: {
   tokens: { word: string; cue: Cue }[];
   cues: readonly Cue[];
@@ -19,6 +21,7 @@ export function SlidingCaptionLine({
   color: string;
   wordPadding: number;
   fontKey: string;
+  renderWord?: ((word: string) => ReactNode) | undefined;
 }) {
   const root = useRef<HTMLSpanElement>(null);
   const panel = useRef<HTMLSpanElement>(null);
@@ -86,7 +89,7 @@ export function SlidingCaptionLine({
               padding: `4px ${wordPadding}px`,
             }}
           >
-            {word}
+            {renderWord ? renderWord(word) : word}
           </span>
         </span>
       ))}

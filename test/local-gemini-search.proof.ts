@@ -128,7 +128,7 @@ it.each(["butterfly", "telescope"])(
           body: String(init?.body),
           ...(init?.signal ? { signal: init.signal } : {}),
         });
-        return new Response(response.body, {
+        return new Response(Uint8Array.from(response.body), {
           status: response.status,
           headers: { "content-type": "application/json" },
         });
@@ -236,7 +236,9 @@ it.each([
           body: String(init?.body),
           ...(init?.signal ? { signal: init.signal } : {}),
         });
-        return new Response(response.body, { status: response.status });
+        return new Response(Uint8Array.from(response.body), {
+          status: response.status,
+        });
       };
       const source = new WebPictureSource(
         geminiImageDiscovery(
@@ -286,7 +288,9 @@ it("aborts an in-flight protocol request without retry or image download", async
       body: String(init?.body),
       ...(init?.signal ? { signal: init.signal } : {}),
     });
-    return new Response(response.body, { status: response.status });
+    return new Response(Uint8Array.from(response.body), {
+      status: response.status,
+    });
   };
   const images = vi.fn();
   try {

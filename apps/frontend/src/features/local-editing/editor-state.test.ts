@@ -43,6 +43,26 @@ it("keeps caption placement when changing typography, fitting larger presets aro
   expect(ownerCaptionStyleSchema.safeParse(next).success).toBe(true);
 });
 
+it("selects glass without changing caption placement and removes only that material when another preset is chosen", () => {
+  const current = { ...OWNER_CAPTION_PRESETS.clean, align: "right" as const };
+  const glass = ownerCaptionPreset(current, "glass");
+  expect(glass.material).toBe("glass");
+  expect(glass.animation).toBe("single-word");
+  expect(glass.align).toBe("right");
+  expect(glass.box.y + glass.box.height / 2).toBeCloseTo(
+    current.box.y + current.box.height / 2,
+    12,
+  );
+  expect(ownerCaptionStyleSchema.safeParse(glass).success).toBe(true);
+  expect(
+    ownerCaptionStyleSchema.safeParse({ ...glass, material: "remote-shader" })
+      .success,
+  ).toBe(false);
+  const clean = ownerCaptionPreset(glass, "clean");
+  expect(clean.material).toBeUndefined();
+  expect(clean.align).toBe("right");
+});
+
 it("centers caption text boxes at Default positioning and portrait quarters within safe bounds", () => {
   for (const caption of Object.values(OWNER_CAPTION_PRESETS)) {
     expect(caption.box.y + caption.box.height / 2).toBeCloseTo(

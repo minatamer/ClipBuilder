@@ -12,6 +12,7 @@ import {
 import { ownerTextBackground } from "../../contracts/local/text-style.ts";
 import { SlidingCaptionLine } from "./sliding-caption-line.tsx";
 import type { OwnerSpeakerColor } from "../../contracts/local/caption-speakers.ts";
+import { OwnerGlassWord } from "./glass-word.tsx";
 
 type Caption = OwnerOverlay["captions"][number];
 
@@ -49,6 +50,27 @@ export function OwnerStyledCaption({
     tokens.map((token) => token.word).join(" ") !== caption.text
   )
     throw new Error("invalid_owner_caption");
+  const singleGlass =
+    style.material === "glass" && style.animation === "single-word";
+  const visibleTokens = singleGlass
+    ? tokens.filter(({ cue }) => cue.startMs <= ms && ms < cue.endMs)
+    : tokens;
+  const layoutLines = singleGlass
+    ? [visibleTokens.map(({ word }) => word.toUpperCase()).join(" ")]
+    : style.material === "glass"
+      ? caption.lines.map((line) => line.toUpperCase())
+      : caption.lines;
+  const renderWord = (word: string) =>
+    style.material === "glass" ? (
+      <OwnerGlassWord
+        text={word.toUpperCase()}
+        color={style.color}
+        outlineColor={style.outlineColor}
+        outlineWidth={style.outlineWidth}
+      />
+    ) : (
+      word
+    );
   const legacyBoxed =
     style.preset === "boxed" &&
     suppliedStyle.backgroundColor === undefined &&
@@ -62,19 +84,19 @@ export function OwnerStyledCaption({
     wordPadding = Math.min(
       8,
       width /
-        (Math.max(...caption.lines.map((line) => line.split(" ").length)) * 4),
+        (Math.max(...layoutLines.map((line) => line.split(" ").length)) * 4),
     ),
     fontSize = Math.max(
       1,
       Math.min(
         style.fontSize,
         Math.floor(
-          ((height - (block ? backgroundPadding : 0)) / caption.lines.length -
+          ((height - (block ? backgroundPadding : 0)) / layoutLines.length -
             8 -
             (block ? 0 : backgroundPadding)) /
             1.2,
         ),
-        ...caption.lines.map((line) =>
+        ...layoutLines.map((line) =>
           Math.floor(
             (width -
               backgroundPadding -
@@ -84,11 +106,11 @@ export function OwnerStyledCaption({
         ),
       ),
     );
-  const lines = caption.lines.map((line, lineIndex) => {
-    const tokenIndex = caption.lines
+  const lines = layoutLines.map((line, lineIndex) => {
+    const tokenIndex = layoutLines
       .slice(0, lineIndex)
       .reduce((sum, text) => sum + text.split(" ").length, 0);
-    const lineTokens = tokens.slice(
+    const lineTokens = visibleTokens.slice(
       tokenIndex,
       tokenIndex + line.split(" ").length,
     );
@@ -114,10 +136,12 @@ export function OwnerStyledCaption({
               ms={ms}
               color={style.highlight}
               wordPadding={wordPadding}
+              renderWord={renderWord}
               fontKey={JSON.stringify([
                 paint.fontFamily,
                 paint.fontWeight,
                 fontSize,
+                style.material,
               ])}
             />
           ) : (
@@ -178,7 +202,9 @@ export function OwnerStyledCaption({
                       transform: `scale(${highlighted ? 0.92 + onset * 0.08 : 1})`,
                     }}
                   />
-                  <span style={{ position: "relative" }}>{word}</span>
+                  <span style={{ position: "relative" }}>
+                    {renderWord(word)}
+                  </span>
                 </span>
               );
             })

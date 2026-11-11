@@ -23,6 +23,8 @@ import {
 import { type OwnerDraftSnapshot } from "../../../packages/contracts/local/drafts.ts";
 import { automaticOwnerEdit } from "../../../packages/contracts/local/edit-overlay.ts";
 import { resolveOwnerCapacity } from "../../../packages/contracts/local/capacity.ts";
+import { OWNER_CAPTION_PRESETS } from "../../../packages/contracts/local/editor.ts";
+import { withIndependentOwnerHook } from "../../../packages/contracts/local/hook-content.ts";
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
@@ -40,6 +42,38 @@ const sourceBytes = Buffer.from("synthetic owner source");
 const pictureBytes = Buffer.from("synthetic canonical JPEG");
 const rawBytes = Buffer.from("synthetic normalized clip");
 const outputBytes = Buffer.from("synthetic native output");
+
+it("preserves caption-only glass material and independent Hook styling through hashed draft save/reopen", async () => {
+  const original = await fixture(),
+    clip = original.clips[0]!;
+  clip.outputs = [];
+  clip.preview = { frames: 30, bytes: rawBytes.length };
+  clip.calls.render = 0;
+  clip.edit = withIndependentOwnerHook(
+    clip.base!,
+    automaticOwnerEdit(clip.base!, clip.id, clip.baseHash!),
+    clip.assets,
+    [],
+    { startFrame: 5, endFrame: 20 },
+  );
+  clip.edit.captions = structuredClone(OWNER_CAPTION_PRESETS.glass);
+  clip.edit.hookContent!.edits.captions = {
+    ...structuredClone(OWNER_CAPTION_PRESETS.glass),
+    color: "#93d9e8",
+    fontSize: 96,
+  };
+  const before = structuredClone(clip.edit);
+  const saved = await store.save(undefined, original, files);
+  store = new OwnerDraftStore(storage);
+  const restored = await store.load(saved.id, files);
+  expect(restored.clips[0]!.edit).toEqual(before);
+  expect(restored.clips[0]!.edit!.captions?.material).toBe("glass");
+  expect(restored.clips[0]!.edit!.hookContent!.edits.captions?.color).toBe(
+    "#93d9e8",
+  );
+  expect(restored.clips[0]!.base).toEqual(clip.base);
+  expect(restored.clips[0]!.calls).toEqual(clip.calls);
+});
 
 it("round-trips the two-hour local Gemini source with its existing bounded clip edits", async () => {
   const original = await fixture();
