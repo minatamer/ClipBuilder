@@ -1,4 +1,5 @@
 "use client";
+import { ActivityIndicator } from "../../shared/ui/activity-indicator";
 
 import {
   useLayoutEffect,
@@ -8,7 +9,7 @@ import {
   type KeyboardEvent,
   type CSSProperties,
 } from "react";
-import { LoaderCircle, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import type { AnalysisBundleV1, ClipCandidateV1 } from "@clipbuilder/contracts";
 
 import { candidateRange, timecode } from "./candidate.evidence";
@@ -92,10 +93,7 @@ function MomentThumbnail({ frame }: { frame: MomentFrame | undefined }) {
         <span className={styles.thumbnailStatus} role="status">
           {state === "loading" ? (
             <>
-              <LoaderCircle
-                className={styles.playerSpinner}
-                aria-hidden="true"
-              />
+              <ActivityIndicator size={24} />
               <span className={styles.screenReaderText}>
                 Loading preview frame
               </span>

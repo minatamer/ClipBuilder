@@ -61,11 +61,6 @@
   margin: 1rem 0 0;
   font-size: var(--cb-text-meta);
 }
-.sampleLoading {
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
 .limits strong {
   color: var(--cb-ink);
   font-weight: 600;
@@ -259,6 +254,7 @@
   isolation: isolate;
 }
 .playerLoading {
+  box-sizing: border-box;
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -266,22 +262,12 @@
   place-content: center;
   justify-items: center;
   gap: 0.5rem;
-  color: white;
-  font-size: var(--cb-text-small);
-  font-weight: 600;
-  text-shadow: 0 1px 4px rgb(0 0 0 / 75%);
+  padding: 0.75rem;
+  background: radial-gradient(circle, rgb(7 20 47 / 22%), transparent 75%);
   pointer-events: none;
 }
-.playerSpinner {
-  width: 2rem;
-  height: 2rem;
-  filter: drop-shadow(0 1px 4px rgb(0 0 0 / 75%));
-  animation: playerSpin 0.9s linear infinite;
-}
-@keyframes playerSpin {
-  to {
-    transform: rotate(360deg);
-  }
+.playerLoadingState {
+  max-width: 22rem;
 }
 .playerReveal {
   position: absolute;
@@ -760,9 +746,12 @@
   gap: 1rem;
   text-align: center;
 }
-.processing > svg {
+.processingSymbol {
+  display: grid;
+  place-items: center;
+  width: 5rem;
+  height: 5rem;
   color: var(--cb-brand);
-  margin-bottom: 1rem;
 }
 .processing h2,
 .empty h2 {

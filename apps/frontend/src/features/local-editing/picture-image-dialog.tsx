@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from "react";
 import { Maximize2, X } from "lucide-react";
 import { Button } from "../../shared/ui/button";
+import { ProcessingState } from "../../shared/ui/processing-state";
 import styles from "./picture-image-dialog.module.css";
 
 /** Inspect existing protected bytes without changing any editor draft. */
@@ -107,7 +108,11 @@ export function PictureImageDialog({
               />
             )}
             {status === "loading" && opened && (
-              <p role="status">Loading image…</p>
+              <ProcessingState
+                layout="compact"
+                className={styles.loading}
+                label="Loading image…"
+              />
             )}
             {status === "failed" && (
               <p role="alert">Couldn’t load this image. Close and try again.</p>

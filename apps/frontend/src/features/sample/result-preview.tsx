@@ -7,7 +7,7 @@ import type {
 } from "@clipbuilder/contracts";
 import type { ClippingSessionState } from "../session/session.types";
 import { Button } from "../../shared/ui/button";
-import { Progress } from "../../shared/ui/progress";
+import { ProcessingState } from "../../shared/ui/processing-state";
 import { ClipReview } from "./clip.review";
 import type { SampleApi } from "./sample.api";
 import styles from "./sample.module.css";
@@ -103,7 +103,7 @@ export function ResultPreview({
           </Button>
         </>
       ) : (
-        <Progress label="Loading your clip" />
+        <ProcessingState label="Loading your clip" layout="compact" />
       )}
     </section>
   );

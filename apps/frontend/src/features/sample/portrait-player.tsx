@@ -10,16 +10,9 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import {
-  ArrowLeft,
-  Film,
-  LoaderCircle,
-  Pause,
-  Play,
-  Volume2,
-  VolumeX,
-} from "lucide-react";
+import { ArrowLeft, Film, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { IconButton } from "../../shared/ui/button";
+import { ProcessingState } from "../../shared/ui/processing-state";
 import { timecode } from "./candidate.evidence";
 import { PlaybackControls } from "./playback-controls";
 import styles from "./sample.module.css";
@@ -162,9 +155,12 @@ export function PortraitPlayer({
       <PortraitPlaceholder>{children}</PortraitPlaceholder>
     ));
   const loadingIndicator = loading ? (
-    <div className={styles.playerLoading} role="status">
-      <LoaderCircle className={styles.playerSpinner} aria-hidden="true" />
-      <span>Loading video…</span>
+    <div className={styles.playerLoading}>
+      <ProcessingState
+        layout="compact"
+        className={styles.playerLoadingState}
+        label="Loading video…"
+      />
     </div>
   ) : null;
   return (

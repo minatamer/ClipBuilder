@@ -1,6 +1,7 @@
 import type { SafeError } from "@clipbuilder/contracts";
 import type { ClippingSessionState } from "../session/session.types";
 import { Button } from "../../shared/ui/button";
+import { ProcessingState } from "../../shared/ui/processing-state";
 import { failureMessage } from "./failure-message";
 import styles from "./sample.module.css";
 
@@ -73,7 +74,7 @@ export function WorkflowRecovery({
     case "cleanup-partial":
       return (
         <section className={styles.empty}>
-          <p role="status">Returning home...</p>
+          <ProcessingState layout="compact" label="Returning home…" />
         </section>
       );
     case "analysis-failed":

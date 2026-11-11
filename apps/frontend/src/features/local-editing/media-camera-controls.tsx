@@ -1,3 +1,4 @@
+import { MediaLoadingOverlay } from "../../shared/ui/media-loading-overlay";
 /* eslint-disable @next/next/no-img-element -- Admitted local media uses the same source-space picker as Camera. */
 import {
   useCallback,
@@ -62,6 +63,7 @@ function MediaCameraSource({
   onFailed: (failed: boolean) => void;
 }) {
   const media = useRef<HTMLVideoElement>(null);
+  const image = useRef<HTMLImageElement>(null);
   useInspectorPlayback(
     media,
     src,
@@ -94,38 +96,48 @@ function MediaCameraSource({
     height: "100%",
     objectFit: "fill" as const,
   };
-  return video ? (
-    <video
-      ref={media}
-      src={src}
-      aria-label="Media camera source"
-      muted
-      playsInline
-      preload="auto"
-      style={style}
-      onLoadedMetadata={settle}
-      onLoadedData={settle}
-      onSeeking={() => onReady(false)}
-      onSeeked={settle}
-      onError={() => {
-        onReady(false);
-        onFailed(true);
-      }}
-    />
-  ) : (
-    <img
-      src={src}
-      alt="Selected media source"
-      style={style}
-      onLoad={() => {
-        onFailed(false);
-        onReady(true);
-      }}
-      onError={() => {
-        onReady(false);
-        onFailed(true);
-      }}
-    />
+  return (
+    <>
+      {video ? (
+        <video
+          ref={media}
+          src={src}
+          aria-label="Media camera source"
+          muted
+          playsInline
+          preload="auto"
+          style={style}
+          onLoadedMetadata={settle}
+          onLoadedData={settle}
+          onSeeking={() => onReady(false)}
+          onSeeked={settle}
+          onError={() => {
+            onReady(false);
+            onFailed(true);
+          }}
+        />
+      ) : (
+        <img
+          ref={image}
+          src={src}
+          alt="Selected media source"
+          style={style}
+          onLoad={() => {
+            onFailed(false);
+            onReady(true);
+          }}
+          onError={() => {
+            onReady(false);
+            onFailed(true);
+          }}
+        />
+      )}
+      <MediaLoadingOverlay
+        key={src}
+        element={video ? media : image}
+        showFailure={false}
+      />
+    </>
   );
 }
 

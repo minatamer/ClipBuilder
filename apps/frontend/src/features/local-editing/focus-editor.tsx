@@ -1,3 +1,4 @@
+import { MediaLoadingOverlay } from "../../shared/ui/media-loading-overlay";
 import {
   useEffect,
   useContext,
@@ -452,6 +453,7 @@ export function FocusEditor({
                     top: `${(-content.y / content.height) * 100}%`,
                   }}
                 />
+                <MediaLoadingOverlay key={sourceUrl} element={media} />
                 <div
                   className="focus-crop"
                   aria-hidden="true"

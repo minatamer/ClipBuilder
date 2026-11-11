@@ -410,6 +410,7 @@ export function AudioInspector({
           <Button
             variant="secondary"
             icon={Upload}
+            busy={pending}
             disabled={
               pending ||
               assets.length >= OWNER_AUDIO_LIMITS.assets ||

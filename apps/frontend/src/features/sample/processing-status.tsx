@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Clapperboard } from "lucide-react";
+import { BrandedSpinner } from "../../shared/ui/branded-spinner";
 import type { OperationStatusV1 } from "@clipbuilder/contracts";
 import type { CloudUploadProgress } from "../source-analysis/cloud-upload";
 import { Progress } from "../../shared/ui/progress";
@@ -95,7 +96,13 @@ export function ProcessingStatus({
       : label;
   return (
     <section className={styles.processing} aria-label="Processing status">
-      <Clapperboard size={40} aria-hidden="true" />
+      <div className={styles.processingSymbol}>
+        {running ? (
+          <BrandedSpinner size="compact" />
+        ) : (
+          <Clapperboard size={40} aria-hidden="true" />
+        )}
+      </div>
       <Progress
         label={displayLabel}
         active={active}

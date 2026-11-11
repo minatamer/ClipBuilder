@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "../../shared/ui/button";
+import { MediaLoadingOverlay } from "../../shared/ui/media-loading-overlay";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import type { OwnerVisualEdit } from "../../../../../packages/contracts/local/assets.ts";
@@ -172,33 +173,44 @@ export function VideoSourceControls({
       aria-label="Video source"
     >
       <h3>Source video</h3>
-      <video
-        ref={video}
-        aria-label="B-roll source preview"
-        src={source}
-        controls
-        muted
-        playsInline
-        preload="metadata"
+      <div
         style={{
-          display: "block",
+          position: "relative",
           width: Math.min(640, (288 * asset.width) / asset.height),
           maxWidth: "100%",
-          height: "auto",
-          aspectRatio: `${asset.width} / ${asset.height}`,
           marginInline: "auto",
-          background: "#000",
+          aspectRatio: `${asset.width} / ${asset.height}`,
         }}
-        onLoadStart={() => {
-          setReady(false);
-          setMessage("");
-        }}
-        onLoadedData={() => setReady(true)}
-        onError={() => {
-          setReady(false);
-          setMessage("Source preview unavailable.");
-        }}
-      />
+      >
+        <video
+          ref={video}
+          aria-label="B-roll source preview"
+          src={source}
+          controls
+          muted
+          playsInline
+          preload="metadata"
+          style={{
+            display: "block",
+            width: Math.min(640, (288 * asset.width) / asset.height),
+            maxWidth: "100%",
+            height: "auto",
+            aspectRatio: `${asset.width} / ${asset.height}`,
+            marginInline: "auto",
+            background: "#000",
+          }}
+          onLoadStart={() => {
+            setReady(false);
+            setMessage("");
+          }}
+          onLoadedData={() => setReady(true)}
+          onError={() => {
+            setReady(false);
+            setMessage("Source preview unavailable.");
+          }}
+        />
+        <MediaLoadingOverlay key={source} element={video} showFailure={false} />
+      </div>
       <div className="editor-fields picture-timing">
         {(["start", "end"] as const).map((key) => (
           <div className="range-time" key={key}>

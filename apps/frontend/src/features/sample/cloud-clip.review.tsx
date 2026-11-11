@@ -17,6 +17,7 @@ import {
   reviewInterestNotes,
 } from "./fixed-review";
 import { Button } from "../../shared/ui/button";
+import { ProcessingState } from "../../shared/ui/processing-state";
 import styles from "./sample.module.css";
 import { PreviewPlaybackTrace } from "./preview-playback.diagnostics";
 import { reportBrowserDiagnostic } from "../diagnostics/browser.diagnostics";
@@ -290,12 +291,15 @@ export function CloudClipReview({
                 />
               }
             />
-          ) : (
-            <p role={failed ? "alert" : "status"}>
-              {failed
-                ? "Preview access is unavailable. No new processing was started."
-                : "Opening the prepared clip"}
+          ) : failed ? (
+            <p role="alert">
+              Preview access is unavailable. No new processing was started.
             </p>
+          ) : (
+            <ProcessingState
+              layout="compact"
+              label="Opening the prepared clip"
+            />
           )}
           {failed && (
             <Button

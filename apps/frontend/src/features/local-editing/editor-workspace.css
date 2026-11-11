@@ -85,6 +85,14 @@
   font-size: 0.8125rem;
   text-align: center;
 }
+.editor-preview-loading > [data-layout="panel"] {
+  --processing-height: 0;
+  gap: 1rem;
+  padding: 1rem 0.5rem;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
 .editor-preview {
   width: min(calc(100% - 1.5rem), calc((100cqh - 1.5rem) * 9 / 16));
   min-width: 0;

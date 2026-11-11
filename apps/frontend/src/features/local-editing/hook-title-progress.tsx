@@ -1,4 +1,4 @@
-import { LoaderCircle } from "lucide-react";
+import { ActivityIndicator } from "../../shared/ui/activity-indicator";
 import { Button } from "../../shared/ui/button";
 
 /** One title task stays reachable from Hook or the workspace toolbar. */
@@ -18,11 +18,7 @@ export function HookTitleProgress({
     >
       <div className="hook-title-progress-copy">
         <strong>
-          <LoaderCircle
-            size={16}
-            className="acquisition-spinner"
-            aria-hidden="true"
-          />
+          <ActivityIndicator size={16} />
           <span>Writing a title…</span>
         </strong>
         <p>Autosave waits for this title. Cancel to keep the current title.</p>

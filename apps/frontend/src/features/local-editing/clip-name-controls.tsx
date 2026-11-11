@@ -195,6 +195,7 @@ export function ClipNameControls({
               <Button
                 type="submit"
                 variant="primary"
+                busy={pending}
                 disabled={pending || disabled}
               >
                 {pending ? "Saving…" : "Save name"}

@@ -1,3 +1,4 @@
+import { ActivityIndicator } from "../../shared/ui/activity-indicator";
 import { EditorColorControl } from "./editor-color-control";
 import {
   EditorInspectorLayout,
@@ -36,7 +37,7 @@ import {
 import { readOwnerClips } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
 import { ProcessingState } from "../../shared/ui/processing-state";
-import { LoaderCircle, RotateCw, Sparkles, Upload } from "lucide-react";
+import { RotateCw, Sparkles, Upload } from "lucide-react";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { ControlPanel, ControlTabs } from "./control-tabs.tsx";
 import { EDITOR_SECTIONS, type EditorSetting } from "./editor-sections";
@@ -2399,8 +2400,10 @@ export function ClipEditor({
           <div className="editor-preview-canvas">
             {previewLoading && (
               <div className="editor-preview-loading" aria-hidden="true">
-                <LoaderCircle size={24} className="acquisition-spinner" />
-                <span>Loading preview</span>
+                <ProcessingState
+                  label="Loading preview"
+                  indicatorSize="compact"
+                />
               </div>
             )}
             {previewUnavailable ? (
@@ -3467,11 +3470,7 @@ export function ClipEditor({
                     title={dirty ? "Wait for your changes to save" : undefined}
                   >
                     {findingVisuals ? (
-                      <LoaderCircle
-                        size={18}
-                        className="acquisition-spinner"
-                        aria-hidden="true"
-                      />
+                      <ActivityIndicator size={18} />
                     ) : (
                       <Sparkles size={18} aria-hidden="true" />
                     )}
@@ -3506,11 +3505,7 @@ export function ClipEditor({
                       onClick={() => pictureInput.current?.click()}
                     >
                       {pending && !findingVisuals ? (
-                        <LoaderCircle
-                          size={18}
-                          className="acquisition-spinner"
-                          aria-hidden="true"
-                        />
+                        <ActivityIndicator size={18} />
                       ) : (
                         <Upload size={18} aria-hidden="true" />
                       )}
@@ -4035,6 +4030,7 @@ export function ClipEditor({
                       OWNER_CAPTION_GENERATION_ATTEMPTS
                   }
                   onClick={() => void generateCaptions()}
+                  busy={generating}
                 >
                   {generating ? "Generating…" : "Generate captions"}
                 </Button>

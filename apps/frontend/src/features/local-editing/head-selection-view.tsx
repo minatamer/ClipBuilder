@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
 import { Maximize2, X } from "lucide-react";
 import { Button } from "../../shared/ui/button";
+import { MediaLoadingOverlay } from "../../shared/ui/media-loading-overlay";
 import { ownerVideoFrameSampleTime } from "../../../../../packages/contracts/local/video-assets.ts";
 import type { ownerSourceContent } from "../../../../../packages/contracts/local/focus.ts";
 import type { HeadBox } from "../../../../../packages/composition/local/head-pixel-tracker.ts";
@@ -82,6 +83,7 @@ export function HeadSelectionView({
           top: rawSource ? 0 : `${(-content.y / content.height) * 100}%`,
         }}
       />
+      <MediaLoadingOverlay key={sourceUrl} element={media} />
       <button
         type="button"
         className="head-seed-surface"

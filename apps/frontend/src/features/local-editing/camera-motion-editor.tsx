@@ -1,3 +1,4 @@
+import { MediaLoadingOverlay } from "../../shared/ui/media-loading-overlay";
 import { useEffect, useRef, useState } from "react";
 import { Clock3, Play, Trash2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
@@ -405,6 +406,7 @@ export function CameraMotionEditor({
                   top: `${(-baseline.y / baseline.height) * 100}%`,
                 }}
               />
+              <MediaLoadingOverlay key={sourceUrl} element={media} />
               <CameraTargetSurface
                 label={`${label} target`}
                 disabled={disabled || capturingStart}

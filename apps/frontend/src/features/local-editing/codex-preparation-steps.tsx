@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Check, Circle, LoaderCircle, X } from "lucide-react";
+import { Check, Circle, X } from "lucide-react";
+import { ActivityIndicator } from "../../shared/ui/activity-indicator";
 import {
   codexProgressSchema,
   type CodexProgress,
@@ -105,17 +106,16 @@ export function CodexPreparationSteps({
         const Icon =
           step.state === "done"
             ? Check
-            : step.state === "running"
-              ? LoaderCircle
-              : step.state === "failed" || step.state === "canceled"
-                ? X
-                : Circle;
+            : step.state === "failed" || step.state === "canceled"
+              ? X
+              : Circle;
         return (
           <li key={step.id} data-state={step.state}>
-            <Icon
-              aria-hidden="true"
-              className={step.state === "running" ? styles.spinner : undefined}
-            />
+            {step.state === "running" ? (
+              <ActivityIndicator size={18} />
+            ) : (
+              <Icon aria-hidden="true" />
+            )}
             <span>
               {labels[step.id]}
               {step.id === "selection" && progress?.chunks

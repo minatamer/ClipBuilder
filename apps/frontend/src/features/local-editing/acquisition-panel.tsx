@@ -1,8 +1,10 @@
+import { ActivityIndicator } from "../../shared/ui/activity-indicator";
 import { Button } from "../../shared/ui/button";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { Progress } from "../../shared/ui/progress";
+import { ProcessingState } from "../../shared/ui/processing-state";
 import { useEffect, useId, useRef, useState } from "react";
-import { ArrowLeft, Link2, LoaderCircle } from "lucide-react";
+import { ArrowLeft, Link2 } from "lucide-react";
 import {
   ownerAcquisitionProgressSchema,
   ownerYoutubeOfferSchema,
@@ -519,11 +521,7 @@ export function OwnerAcquisitionPanel({
                   />
                   {initializing && (
                     <span className="youtube-startup-indicator" role="status">
-                      <LoaderCircle
-                        size={18}
-                        className="acquisition-spinner"
-                        aria-hidden="true"
-                      />
+                      <ActivityIndicator size={18} />
                       <span className="local-sr-only">Loading YouTube…</span>
                     </span>
                   )}
@@ -701,14 +699,11 @@ export function OwnerAcquisitionPanel({
                   </label>
                 )}
                 {pending === "resolve" || pending === "metadata" ? (
-                  <p className="acquisition-loading" role="status">
-                    <LoaderCircle
-                      size={18}
-                      className="acquisition-spinner"
-                      aria-hidden="true"
-                    />
-                    Loading resolutions…
-                  </p>
+                  <ProcessingState
+                    className="acquisition-loading"
+                    layout="compact"
+                    label="Loading resolutions…"
+                  />
                 ) : offer && !resolutions.length && !selectedSaved ? (
                   <p role="status">
                     {codex
@@ -776,11 +771,7 @@ export function OwnerAcquisitionPanel({
               >
                 {pending ? (
                   <>
-                    <LoaderCircle
-                      size={18}
-                      className="acquisition-spinner"
-                      aria-hidden="true"
-                    />
+                    <ActivityIndicator size={18} />
                     Checking…
                   </>
                 ) : (
@@ -811,11 +802,7 @@ export function OwnerAcquisitionPanel({
               >
                 {openingSaved ? (
                   <>
-                    <LoaderCircle
-                      size={18}
-                      className="acquisition-spinner"
-                      aria-hidden="true"
-                    />
+                    <ActivityIndicator size={18} />
                     Opening…
                   </>
                 ) : selectedSaved ? (

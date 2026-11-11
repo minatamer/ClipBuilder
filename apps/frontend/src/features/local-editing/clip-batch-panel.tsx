@@ -1,3 +1,4 @@
+import { ActivityIndicator } from "../../shared/ui/activity-indicator";
 import { OWNER_COLLECTION_PAGE_ITEMS as REQUEST_PAGE_ITEMS } from "../../../../../packages/contracts/local/collection-pages.ts";
 import { readOwnerClips } from "./collection-pages.ts";
 import { WorkspaceEditHistory } from "./edit-history";
@@ -14,6 +15,7 @@ import {
 } from "react";
 import { ClipEditor } from "./clip-editor.tsx";
 import { ClipRailPreview } from "./clip-rail-preview";
+import { BrandMark } from "../../shared/ui/brand-mark";
 import { ClipNameControls } from "./clip-name-controls";
 import {
   ownerClipDisplayName,
@@ -38,7 +40,7 @@ import type { OwnerRuntimeCapabilities } from "../../../../../packages/contracts
 import { HOSTED_DEMO_POLICY } from "../../../../../packages/contracts/local/hosted-editing.ts";
 import { DemoLimitToast } from "./demo-limit-toast.tsx";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
-import { LoaderCircle, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { pollClipConnection, type ClipConnection } from "./clip-connection.ts";
 import { CodexPreparationSteps } from "./codex-preparation-steps.tsx";
 
@@ -405,13 +407,7 @@ export function OwnerClipBatchPanel({
             role="status"
             aria-live="polite"
           >
-            {connection === "reconnecting" && (
-              <LoaderCircle
-                size={16}
-                className="acquisition-spinner"
-                aria-hidden="true"
-              />
-            )}
+            {connection === "reconnecting" && <ActivityIndicator size={16} />}
             {connection === "reconnecting"
               ? "Reconnecting…"
               : connection === "missing"
@@ -582,11 +578,18 @@ export function OwnerClipBatchPanel({
                         }
                       }}
                     >
-                      {isLocalClipEditable(clip) && (
+                      {isLocalClipEditable(clip) ? (
                         <ClipRailPreview
                           clip={clip}
                           workspaceId={workspace.id}
                         />
+                      ) : (
+                        <span
+                          className="clip-rail-preview clip-rail-pending"
+                          aria-hidden="true"
+                        >
+                          <BrandMark className="clip-rail-watermark" />
+                        </span>
                       )}
                       <span className="clip-state">{clipStageLabel(clip)}</span>
                     </Button>

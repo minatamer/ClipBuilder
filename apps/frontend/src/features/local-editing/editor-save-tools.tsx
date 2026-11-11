@@ -1,5 +1,6 @@
+import { ActivityIndicator } from "../../shared/ui/activity-indicator";
 import { createPortal } from "react-dom";
-import { Check, CircleAlert, LoaderCircle, Redo2, Undo2 } from "lucide-react";
+import { Check, CircleAlert, Redo2, Undo2 } from "lucide-react";
 import { Button, IconButton } from "../../shared/ui/button";
 import { useWorkspaceChrome } from "../../shared/ui/workspace";
 import type { AutosavePhase } from "./use-editor-autosave";
@@ -80,11 +81,7 @@ export function EditorSaveTools({
       >
         <span className="editor-save-symbol" aria-hidden="true">
           {state === "saving" ? (
-            <LoaderCircle
-              size={16}
-              className="acquisition-spinner"
-              aria-hidden="true"
-            />
+            <ActivityIndicator size={16} />
           ) : state === "saved" ? (
             <Check size={16} aria-hidden="true" />
           ) : (
