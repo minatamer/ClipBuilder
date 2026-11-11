@@ -9,6 +9,9 @@ export type FilmBeat =
   | "choose"
   | "build"
   | "review"
+  | "captions"
+  | "layers"
+  | "camera"
   | "result"
   | "close";
 export type FilmShot = { beat: FilmBeat; from: number; duration: number };
@@ -30,6 +33,9 @@ export const FILM_TIMELINES: Record<FilmVariant, readonly FilmShot[]> = {
     ["choose", 90],
     ["build", 105],
     ["review", 105],
+    ["captions", 120],
+    ["layers", 120],
+    ["camera", 120],
     ["result", 120],
     ["close", 60],
   ]),
@@ -55,9 +61,12 @@ export const FILM_CAPTURES = {
   analysis: "/product-film/analysis.png",
   candidates: "/product-film/candidates.png",
   selected: "/product-film/selected.png",
-  build: "/product-film/build.png",
   review: "/product-film/review.png",
-  render: "/product-film/render.png",
+  captions: "/product-film/captions.png",
+  layers: "/product-film/layers.png",
+  layersBack: "/product-film/layers-back.png",
+  zoom: "/product-film/zoom.png",
+  camera: "/product-film/camera.png",
   result: "/product-film/result.png",
 } as const;
 
@@ -85,6 +94,18 @@ export const FILM_COPY: Record<FilmBeat, { title: string; detail: string }> = {
   review: {
     title: "Make the\ncut yours.",
     detail: "Your layers. Your camera. Every edit saved.",
+  },
+  captions: {
+    title: "Every word.\nYour style.",
+    detail: "Captions that feel like you.",
+  },
+  layers: {
+    title: "Build a\nricher story.",
+    detail: "Pictures. Video. Your layer order.",
+  },
+  camera: {
+    title: "Direct\nthe attention.",
+    detail: "Zoom in. Pan across. Make it move.",
   },
   result: {
     title: "Your next\nstandout clip.",

@@ -76,6 +76,7 @@ export function FilmConversationPanel({
   portrait = false,
   immersion = 0,
   responsive = false,
+  frame = FILM_OPENING_FRAME,
 }: {
   rect: FilmRect;
   opacity?: number;
@@ -84,6 +85,7 @@ export function FilmConversationPanel({
   portrait?: boolean;
   immersion?: number;
   responsive?: boolean;
+  frame?: number;
 }) {
   return (
     <div
@@ -115,7 +117,7 @@ export function FilmConversationPanel({
         }}
       >
         <IllustratedConversation
-          frame={FILM_OPENING_FRAME}
+          frame={frame}
           portraitAmount={portraitAmount}
           showLabel={false}
         />

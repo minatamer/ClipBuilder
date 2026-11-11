@@ -36,7 +36,7 @@ export function filmNarrative(beat: FilmBeat, frame: number, height: number) {
         ? [50, 64]
         : beat === "choose"
           ? [30, 42]
-          : beat === "review"
+          : ["review", "captions", "layers", "camera"].includes(beat)
             ? [30, 44]
             : null;
   return {
@@ -76,7 +76,15 @@ export function filmNarrative(beat: FilmBeat, frame: number, height: number) {
   };
 }
 export const isScreenBeat = (beat: FilmBeat): beat is ScreenBeat =>
-  ["intake", "analysis", "choose", "review"].includes(beat);
+  [
+    "intake",
+    "analysis",
+    "choose",
+    "review",
+    "captions",
+    "layers",
+    "camera",
+  ].includes(beat);
 const editorSource = FILM_WORKSPACE.editor;
 const selectedSource = FILM_WORKSPACE.source;
 const uploadSource = { x: 690, y: 430, width: 60, height: 60 };
@@ -119,7 +127,6 @@ export function filmStage(
   const poseFor = (beat: ScreenBeat, f: number, duration: number) => {
     const tall = clamp((height - 1080) / 456);
     const settle = sceneProgress(f, beat === "choose" ? 42 : 58, 85);
-    const editorial = 1 - sceneProgress(f, 32, 60);
     const framing =
       beat === "intake"
         ? {
@@ -136,11 +143,11 @@ export function filmStage(
                 lens: 1.08,
               }
             : {
-                anchorX: 0.5 + 0.2 * editorial,
-                anchorY: 0.5 + 0.05 * editorial,
-                lens: 1.18,
-                focus: { x: 344, y: 482 },
-                focusWeight: editorial,
+                anchorX: 0.5,
+                anchorY: 0.5,
+                lens: 1,
+                focus: { x: 720, y: 480 },
+                focusWeight: 1,
               };
     return screenCamera(
       beat,
@@ -298,10 +305,18 @@ export function filmStage(
       };
       break;
     }
+    case "captions":
+    case "layers":
+    case "camera": {
+      transition = "editor-detail";
+      screenOpacity = 1;
+      break;
+    }
     case "result": {
-      transition =
-        previous.beat === "review" ? "editor-to-result" : "portrait-to-result";
-      const editor = previous.beat === "review";
+      transition = isScreenBeat(previous.beat)
+        ? "editor-to-result"
+        : "portrait-to-result";
+      const editor = isScreenBeat(previous.beat);
       screenOpacity = editor ? 1 - sceneProgress(local, 0, span * 0.7) : 0;
       portrait = {
         rect: moveRect(

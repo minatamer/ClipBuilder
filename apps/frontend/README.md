@@ -1,5 +1,29 @@
 # ClipBuilder frontend
 
+CL-275 adds Glass to caption Style presets: timed single-word uppercase display,
+translucent reflection bands, edge highlights and fine grain in the shared
+preview/export component. Existing presets, source text/word clocks, positioning,
+speaker behavior, Hook scope and authored-text styles remain. Autosave, Undo/Redo
+and saved drafts preserve the optional caption material. It needs no API key or
+model; real transcription retains its existing prerequisites and approvals.
+The opt-in generated material proof opens no browser:
+
+```text
+corepack pnpm local:proof test/local-glass-captions.proof.ts
+```
+
+It verifies shared SVG transparency/word gaps and FFmpeg compositing, not the
+full application HTML/native export path. Codex-browser checks cover actual fake
+edit transport, history/reload and six viewport sizes. Normal native MP4 parity
+and the owner's material-fidelity judgment remain separate acceptance checks.
+Do not substitute an external-browser proof under the owner's Codex-only rule.
+
+CL-274 refreshes both Moments tabs with compact grouped settings, numbered manual
+ranges and thumbnail review cards. Timestamp Capture/Jump, JSON import/export,
+manual/AI selection, result limits and local/hosted exclusions remain unchanged.
+Generated/no-key checks cover fresh fake results, cancellation/errors and laptop,
+tablet and phone layouts with muted media; they do not prove live AI quality.
+
 CL-273 replaces the bounded workflow/editor shell with a responsive workspace.
 Source and Moments keep their acquisition/selection guards; the editor opens
 Home with the combined layer timeline, a large preview, clip rail, canonical
@@ -1057,116 +1081,52 @@ read-only preview and render confirmation → result/download. The frontend will
 not expose an editor, chatbot, manual trim, caption or visual controls, an
 editable timeline, proposals, or undo/redo.
 
-## Product film authoring (CL-013)
+## Product film authoring (CL-276)
 
-The editable landing film lives in `src/features/product-film/` and previews
-at `http://localhost:3000/`. CL-095 replaces the old 50-second cut with a
-24-second, 1920x1080, 30fps story: conversation, upload, moments, selection,
-preparation, editing, download and close. CL-099 fills the actual responsive
-canvas with nearly full-width demo frames and large headlines. CL-102 refines
-that direction after playback review: one modest monotone push and a filtered,
-continuous cursor-follow replace the restless zoom changes. Cursor journeys
-have eased starts/stops and keep active controls/labels inside the source crop;
-analysis holds steady. CL-106 replaces the rejected full-scene reveal with
-content-led transitions on a persistent stage: the conversation enters the
-upload preview, analysis forms moment cards, the selected preview splits into
-source/portrait, and that portrait carries through the editor and final result.
-CL-118 clears the captured analysis component before card formation, keeping a
-clean workspace gradient behind the same cards/camera. The moment-list capture
-takes over only as the formed card overlays leave; the prior loader capture is
-excluded from that handoff. The later selection highlight keeps its own blend.
-The result widens into the conversation using one continuously reframed SVG.
-CL-107 removes the repeated title-above-frame layout. Application captures fill
-the canvas; copy occupies scene-specific quiet areas, shifts between sides and
-clears before cursor actions. Building and late actions play without headlines.
-The opening conversation blends into the background beside its typography;
-closing/opening share identical artwork/geometry and brand, changing only type.
-CL-121 removes the floating contextual card from the illustrated film portrait;
-the bottom captions and actual editor/composition features remain intact.
-Static soft crops remove captured navigation/headings. Caption details fit
-the visible portrait even during camera close-ups. The film adds no bottom
-progress track, scene
-mask or entrance rotation. `film-choreography.ts` owns seek-safe geometry;
-`film-identity.tsx` shares primitives with the responsive HTML/CSS poster.
-CL-108 makes that poster fit the surface before JavaScript or size observers
-run, using container-relative dimensions instead of a fixed 16:9 SVG wrapper.
-The live player mounts only after a positive surface measurement; its opening
-matches the CSS poster through the handoff and responsive resizes.
-CL-116 isolates the poster's internal title/brand stacking and places the live
-player in an explicit higher sibling layer. The poster stays available for
-first paint/loading but its opening words cannot paint over later live scenes.
-The actual-hero first-paint proof checks painted order as well as geometry,
-including desktop/phone intake; isolated composition checks alone do not cover
-the surrounding poster.
-The authoring JPEG and delivery hash remain unchanged. The eight-second Studio
-study remains.
-CL-096 removes the duplicate hero flow strip. Desktop film height follows
-viewport height with a column-width bound; stacked layouts use 4:3.
-CL-120 phone hero restores its ClipBuilder wordmark and fills at least one
-small viewport height, placing How it works below the initial fold. Short-phone
-spacing is compact; very short screens/enlarged hero text grow naturally and
-scroll, with wrapping instead of clipped copy. The film retains its 4:3 aspect.
-The ResizeObserver fits the canvas without distorting artwork. Loading/error states
-retain its dimensions. Playback stays silent
-without controls, pauses offscreen/when hidden, and resumes on return. Dynamic
-loading and asset failures retain the poster/recovery surface. This uses
-synthetic UI captures and original artwork, with no provider call.
+The editable landing film lives in `src/features/product-film/` and plays at
+`http://localhost:3000/`. Its new 36-second story retains the existing navy/blue
+cinematic typography, eased camera, content-led transitions and silent loop.
+Upload, Moments and the full-window editor use actual current-workspace captures.
+Dedicated editor passages show Glass captions, mixed picture/video layer order
+and Zoom/Pan. No YouTube UI appears in the film or portfolio captures.
+
+The same detailed original vector speakers supply the live film and fictional
+source stills. Conversation panels follow the composition frame; breathing,
+blinking, gaze, jaw, head and articulated-hand movement close on a twelve-second
+cycle. The previous fixed-frame speaker panel and unused queued/render captures
+are removed. The result uses the shared Glass caption component. This is
+illustrative media, not live AI quality or a processed customer recording.
 
 From the repository root:
 
 ```text
-corepack pnpm --filter @clipbuilder/frontend film:capture <absolute-existing-chromium-executable>
-corepack pnpm --filter @clipbuilder/frontend film:poster --browser-executable=<absolute-existing-chromium-executable>
+corepack pnpm --filter @clipbuilder/frontend film:capture
 corepack pnpm --filter @clipbuilder/frontend film:studio
 ```
 
-The capture command installs the shared fake/paid-off environment before imports
-and starts separate loopback fixtures compiled from the current workspace. It
-uses original fictional vector media and synthetic selection/edit data, then
-closes its browser, servers and scratch. It does not connect to the normal app,
-read environment files or owner media, call providers, download Chromium or
-trigger a paid flow. An existing Chromium executable and local native tools are
-required; the normal frontend/backend can stay running independently.
+The capture command now starts isolated upload-only authoring fixtures and prints
+editor, Moments and cleanup-control URLs. It installs the deterministic fake,
+paid-off environment before imports. Use Codex's in-app browser to capture them;
+never use an external/headless browser or fullscreen. The control host exposes
+`/counts` and `/close` for verification/cleanup. Source and B-roll bytes are
+generated locally with existing native tools; no owner media/session/configuration
+or provider is used. Studio remains on documented port 3002 with `--no-open`.
+Select ClipBuilderWalkthrough or the shorter ClipBuilderMotionTest.
 
-Ten 1440×1000 PNG captures and a cursor/state index are written to the ignored
-`public/generated/product-film/` directory. The poster command renders only an optional
-local 960×540 authoring JPEG at the shared opening frame; production loading
-uses the responsive code-native opening scene. Regenerate an authoring still
-after changing the opening. Its command requires an
-existing browser and cannot download one. It does not export an MP4. Studio runs
-at `http://localhost:3002` without opening an external browser. Select
-`ClipBuilderWalkthrough` or `ClipBuilderMotionTest`; both use the same scene
-source. All motion follows the Remotion frame clock. Camera paths live in
-`film-camera.ts`, pacing/capture references in `film-timeline.ts`, and original
-vector speakers in `illustrated-conversation.tsx`. The portrait illustration
-reuses the actual shared fixed caption/card components. No local AI model or
-provider video-generation implementation is involved.
+Capture the actual 1440x1000 workflow states, inspect ready images/video and
+measured action coordinates, and deliberately update the public delivery PNGs,
+`film-workspace.ts` targets and `scripts/delivery-assets.json` hashes. Keep raw
+capture indexes and portfolio exports outside Git. The legacy poster-render CLI
+is unnecessary for this workflow; the responsive code-native poster shares the
+new artwork, and the authoring JPEG is taken from a Codex composition screenshot.
+No browser executable, model download, MP4 export or API key is needed.
 
-This is a local animatic using synthetic UI and original artwork. With
-`FAKE_MODE=true` and no keys it can be authored and reviewed; it is not an
-actual processed or downloadable ClipBuilder result. Authoring playback itself
-does not contact the backend and can reuse this capture package in other modes.
-Actual AI/output acceptance still requires provider keys, live flags, applicable
-rights/data/spend/cloud approvals and the owner's manual paid test. The retained
-sample and private renderer pipeline are not used by this authoring project.
-
-The owner approved replacing the landing placeholder with this film and removing
-the temporary `/motion-preview` route. The shared preview-page wrapper and old
-placeholder styles were removed. Strict release verification still rejects the
-local capture folder; only the local-build gate permits it. Replace those local
-authoring assets with approved delivery assets at the film release checkpoint.
-The current CL-015 checkpoint promotes ten approved synthetic PNGs and the
-existing opening poster into hash-allowlisted `public/product-film/` delivery.
-That original checkpoint kept motion/layout unchanged. CL-095/096 now refine
-the timeline and responsive canvas while retaining those assets and hashes. The
-capture index and authoring
-folder stay excluded from strict cloud contexts. Future recaptures/posters need
-deliberate review and an updated delivery hash manifest before release. No MP4
-or audio export is added. Remotion 4.0.534 is pinned; its installed license permits
-individual use/evaluation. Studio currently warns that the repository's Zod
-4.6.6 differs from its optional Zod integration's 4.5.4 expectation. This film
-has no Zod schema integration; existing app contracts remain pinned and
-unchanged.
+The player retains its measured responsive canvas, lazy mount, foreground/
+intersection pause, silent playback, exact loop, CSS poster and recovery surface.
+Generated screenshots are not application or AI acceptance. Live AI still needs
+configured providers/runtime assets, enabled flags and applicable approvals;
+this authoring workflow cannot trigger it. Deployment and personal visual/
+portfolio acceptance remain separate. Remotion stays pinned at 4.0.534.
 
 ## Run locally
 

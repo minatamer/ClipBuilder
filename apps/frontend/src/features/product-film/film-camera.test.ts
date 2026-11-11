@@ -8,8 +8,8 @@ import {
 } from "./film-timeline";
 
 describe("contextual landing film", () => {
-  it("keeps the full story within 24 seconds with readable context for every beat", () => {
-    expect(filmDuration("walkthrough") / FILM_FORMAT.fps).toBe(24);
+  it("keeps the full story within 36 seconds with readable context for every beat", () => {
+    expect(filmDuration("walkthrough") / FILM_FORMAT.fps).toBe(36);
     expect(filmDuration("style") / FILM_FORMAT.fps).toBe(8);
     let end = 0;
     for (const shot of FILM_TIMELINES.walkthrough) {
@@ -22,7 +22,15 @@ describe("contextual landing film", () => {
   });
 
   it("covers every viewport and keeps the tracked cursor inside the crop", () => {
-    for (const beat of ["intake", "analysis", "choose", "review"] as const) {
+    for (const beat of [
+      "intake",
+      "analysis",
+      "choose",
+      "review",
+      "captions",
+      "layers",
+      "camera",
+    ] as const) {
       for (const height of [584, 696, 1056, 1160]) {
         const duration = beat === "review" ? 105 : 90;
         let previous = screenCamera(beat, 0, duration, 1776, height);
@@ -65,21 +73,21 @@ describe("contextual landing film", () => {
   it("follows the two useful selection actions with one steady lens and an uninterrupted mouse", () => {
     const pick = screenCamera("choose", 28, 90, 1776, 1056);
     const proceed = screenCamera("choose", 76, 90, 1776, 1056);
-    expect(pick.cursor).toMatchObject({ x: 1349, y: 325, ring: 1 });
-    expect(proceed.cursor).toMatchObject({ x: 1348, y: 876, ring: 1 });
+    expect(pick.cursor).toMatchObject({ x: 1336, y: 308, ring: 1 });
+    expect(proceed.cursor).toMatchObject({ x: 1348, y: 719, ring: 1 });
     expect(proceed.x).toBeLessThan(pick.x);
     expect(proceed.y).toBeLessThan(pick.y);
     expect(proceed.zoom - pick.zoom).toBeLessThan(0.12);
     const middle = screenCamera("choose", 54, 90, 1776, 1056);
-    expect(middle.cursor!.x).toBeGreaterThan(1348);
-    expect(middle.cursor!.x).toBeLessThan(1349);
-    expect(screenCamera("choose", 35, 90, 1776, 1056).cursor?.x).toBe(1349);
-    expect(screenCamera("choose", 36, 90, 1776, 1056).cursor?.x).toBe(1349);
-    let previousX = 1349;
+    expect(middle.cursor!.x).toBeGreaterThan(1336);
+    expect(middle.cursor!.x).toBeLessThan(1348);
+    expect(screenCamera("choose", 35, 90, 1776, 1056).cursor?.x).toBe(1336);
+    expect(screenCamera("choose", 36, 90, 1776, 1056).cursor?.x).toBe(1336);
+    let previousX = 1336;
     for (let frame = 36; frame < 90; frame++) {
       const cursor = screenCamera("choose", frame, 90, 1776, 1056).cursor!;
       expect(cursor.opacity).toBeGreaterThanOrEqual(0);
-      expect(cursor.x).toBeLessThanOrEqual(previousX);
+      expect(cursor.x).toBeGreaterThanOrEqual(previousX);
       previousX = cursor.x;
     }
   });

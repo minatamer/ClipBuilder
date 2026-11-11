@@ -1,10 +1,31 @@
 # ClipBuilder canonical ticket index
 
+## Landing film and portfolio — 2026-11-11
+
+[CL-276](CL-276-landing-film-and-portfolio-captures.md) owns the requested new
+current-workspace landing motion, stronger editor showcase, more detailed human
+animation and Desktop portfolio captures. Upload-only marketing/screenshots;
+YouTube is excluded. Implemented and locally validated: new 36-second film,
+current upload/Moments/editor captures, detailed clock-driven vector speakers,
+12 focused motion tests and desktop/phone/tablet Codex checks. Twenty-one PNGs
+plus index/checksums are copied to the dated ClipBuilder portfolio folder on
+Desktop. Owner aesthetic review remains separate. No paid runs, owner-session
+edits, deployment or Voyagenda work; never fullscreen agent previews.
+
 ## Full-window editor design exploration — 2026-11-10
 
-Overnight stop: completed work passed validation and whole-file local commits;
-owner manual review remains tomorrow. No further feature work tonight.
-Planned follow-ups, not implemented:
+Owner resumed all queued work on 2026-11-11. CL-274 is implemented/locally
+validated: both Moments tabs, six responsive sizes, precise timestamp round trip,
+fresh fake results, cancel/error/empty/limit guards and hosted-shaped exclusion
+checks pass. 46 focused tests, frontend/test types and 15 asset hashes pass.
+CL-275's Glass preset is implemented and locally validated: single-word timing,
+strict decoding, saved drafts, autosave/history and six responsive Codex sizes
+pass. Its shared SVG material passes a no-browser alpha/FFmpeg proof; full normal
+native MP4 export parity remains unverified. Owner material/visual acceptance
+remains separate. The normal app is running for review. CL-273's four remaining
+editor film captures now show the current toolbar. No paid runs, owner-media
+edits or Voyagenda changes; this resumed work remains unstaged/uncommitted.
+Follow-up packets:
 
 - [CL-274 — Moments and Your clips redesign](CL-274-moments-and-your-clips-redesign.md)
 - [CL-275 — Glass single-word caption style](CL-275-glass-one-word-caption-style.md)

@@ -6,6 +6,10 @@ must follow one dependency-ready packet under `docs/tickets/` at a time.
 
 ## Authority and documentation ownership
 
+- Owner browser preview preference (2026-11-11, CL-276): never enter fullscreen
+  during agent browser inspection, testing or screenshot capture. Keep previews
+  in the normal Codex window. Preserve user-operated product fullscreen controls.
+
 - Owner focus-style rule (2026-11-07, CL-258): standard application focus uses
   the shared neutral inset treatment, without blue outer outlines/halos. Cover
   landing, intake, editor, dialogs and recovery views; do not add per-control

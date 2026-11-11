@@ -169,7 +169,11 @@ function captureAt(beat: ScreenBeat, frame: number) {
         : FILM_CAPTURES.source;
   if (beat === "choose")
     return frame < 42 ? FILM_CAPTURES.candidates : FILM_CAPTURES.selected;
-  return beat === "review" ? FILM_CAPTURES.review : FILM_CAPTURES.analysis;
+  if (beat === "layers")
+    return frame < 62 ? FILM_CAPTURES.layersBack : FILM_CAPTURES.layers;
+  if (beat === "camera")
+    return frame < 60 ? FILM_CAPTURES.zoom : FILM_CAPTURES.camera;
+  return FILM_CAPTURES[beat];
 }
 
 function MomentCards({
@@ -240,7 +244,11 @@ function ScreenScene({ stage }: { stage: ReturnType<typeof filmStage> }) {
           : 0
       : beat === "choose" && frame >= 42
         ? 42
-        : 0;
+        : beat === "layers" && frame >= 62
+          ? 62
+          : beat === "camera" && frame >= 60
+            ? 60
+            : 0;
   const previousBeat = stage.previous.beat;
   // Analysis has already cleared as its cards form; never bring its loader back.
   const previousScreen =
@@ -381,6 +389,7 @@ function Portrait({
         opacity={opacity}
         portraitAmount={framing}
         portrait
+        frame={frame}
       >
         <div
           style={{
@@ -517,6 +526,7 @@ export function ProductFilm({
             }}
           >
             <FilmConversationPanel
+              frame={frame}
               rect={{
                 ...stage.conversation.rect,
                 x: stage.conversation.rect.x - stage.conversationClip.x,

@@ -5,8 +5,39 @@ import {
   filmNarrative,
 } from "./film-choreography";
 import { filmDuration, FILM_TIMELINES } from "./film-timeline";
+import { conversationPose } from "./conversation-speaker";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { FilmConversationPanel } from "./film-identity";
 
 describe("content-led film choreography", () => {
+  it("animates the actual conversation panel, with a deterministic smooth people loop", () => {
+    const panel = (frame: number) =>
+      renderToStaticMarkup(
+        createElement(FilmConversationPanel, {
+          rect: conversationRect(1080),
+          frame,
+        }),
+      );
+    expect(panel(25)).not.toBe(panel(50));
+    expect(panel(25)).toBe(panel(385));
+    for (const second of [false, true]) {
+      expect(conversationPose(0, second)).toEqual(
+        conversationPose(1080, second),
+      );
+      for (let frame = 0; frame < 360; frame++) {
+        const pose = conversationPose(frame, second),
+          next = conversationPose(frame + 1, second);
+        for (const [key, value] of Object.entries(pose)) {
+          expect(Number.isFinite(value)).toBe(true);
+          if (key !== "blink" && key !== "mouth")
+            expect(
+              Math.abs(next[key as keyof typeof next] - value),
+            ).toBeLessThan(1);
+        }
+      }
+    }
+  });
   it("integrates varied copy with full-canvas scenes and leaves action-only passages", () => {
     for (const height of [1080, 1440, 1536]) {
       for (const frame of [90, 195, 268, 460]) {
@@ -82,7 +113,12 @@ describe("content-led film choreography", () => {
   });
   it("changes only type through the repeated conversation scene and exact loop seam", () => {
     for (const height of [1080, 1440, 1536]) {
-      const end = filmStage("walkthrough", 719, height, 30);
+      const end = filmStage(
+        "walkthrough",
+        filmDuration("walkthrough") - 1,
+        height,
+        30,
+      );
       for (const frame of [0, 1, 6, 12, 24, 40, 59]) {
         const stage = filmStage("walkthrough", frame, height, 30);
         expect(stage.transition).toBe("type-only");
@@ -135,10 +171,7 @@ describe("content-led film choreography", () => {
       expect(editorEntry.screenOpacity).toBe(0);
       expect(editorEntry.conversation.rect.width).toBe(8);
     }
-    for (const [beforeFrame, afterFrame] of [
-      [434, 435],
-      [539, 540],
-    ] as const) {
+    for (const [beforeFrame, afterFrame] of [[434, 435]] as const) {
       const before = filmStage("walkthrough", beforeFrame, 1440, 30),
         after = filmStage("walkthrough", afterFrame, 1440, 30);
       for (const key of ["x", "y", "width", "height"] as const)
@@ -147,17 +180,19 @@ describe("content-led film choreography", () => {
           5,
         );
     }
-    const before = filmStage("walkthrough", 659, 1440, 30),
-      after = filmStage("walkthrough", 660, 1440, 30);
+    const before = filmStage("walkthrough", 1019, 1440, 30),
+      after = filmStage("walkthrough", 1020, 1440, 30);
     expect(after.conversation.rect).toEqual(before.portrait.rect);
     expect(after.conversationFraming).toBe(1);
-    expect(filmStage("walkthrough", 689, 1440, 30).conversationFraming).toBe(0);
+    expect(filmStage("walkthrough", 1049, 1440, 30).conversationFraming).toBe(
+      0,
+    );
     expect(
       new Set(
         FILM_TIMELINES.walkthrough.map(
           (shot) => filmStage("walkthrough", shot.from, 1440, 30).transition,
         ),
       ).size,
-    ).toBe(8);
+    ).toBe(9);
   });
 });

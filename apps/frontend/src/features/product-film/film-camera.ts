@@ -1,4 +1,11 @@
-export type ScreenBeat = "intake" | "analysis" | "choose" | "review";
+export type ScreenBeat =
+  | "intake"
+  | "analysis"
+  | "choose"
+  | "review"
+  | "captions"
+  | "layers"
+  | "camera";
 import { FILM_WORKSPACE } from "./film-workspace";
 export const FILM_CAPTURE_SIZE = { width: 1440, height: 1000 } as const;
 
@@ -34,7 +41,13 @@ function actionAt(beat: ScreenBeat, frame: number, duration: number) {
             { from: 0, click: 28, to: FILM_WORKSPACE.jump },
             { from: 36, click: duration - 14, to: FILM_WORKSPACE.process },
           ]
-        : [{ from: 32, click: 80, to: FILM_WORKSPACE.download }];
+        : beat === "review"
+          ? [{ from: 32, click: 80, to: FILM_WORKSPACE.captions }]
+          : beat === "captions"
+            ? [{ from: 20, click: 72, to: FILM_WORKSPACE.captionStyle }]
+            : beat === "layers"
+              ? [{ from: 20, click: 72, to: FILM_WORKSPACE.layer }]
+              : [{ from: 20, click: 85, to: FILM_WORKSPACE.cameraCrop }];
   let from: Point =
     beat === "intake"
       ? { x: 805, y: 430 }
@@ -83,7 +96,9 @@ export function screenCamera(
     const zoom =
       beat === "analysis"
         ? 1.04
-        : 1.1 + 0.12 * progress(sample, 0, duration - 1);
+        : ["review", "captions", "layers", "camera"].includes(beat)
+          ? 1 + 0.04 * progress(sample, 0, duration - 1)
+          : 1.1 + 0.12 * progress(sample, 0, duration - 1);
     const scale = cover * zoom * (framing?.lens ?? 1);
     const focusWeight = framing?.focusWeight ?? 0;
     const pointPose = (point: Point) => ({

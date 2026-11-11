@@ -4,6 +4,25 @@ Status: complete — implemented and locally validated, 2026-11-10. The
 inner-editor revision is included in the full CL-273 migration. Owner visual,
 live-provider quality and release acceptance remain distinct.
 
+## Resume follow-up — editor film toolbar captures, 2026-11-11
+
+During CL-275 final review the four retained editor film frames still showed the
+earlier left-side save pill/toolbar. Refresh only those fictional build/review/
+render/result states in Codex against the current source, with silent generated
+media and settled readiness. Keep the CL-274 Source/Moments captures and measured
+editor geometry. No external-browser capture CLI, processing/provider request,
+owner session edit or Voyagenda action. Record actual counters/hashes and gates
+below after capture; this follows the existing tour/landing migration scope.
+
+Completed in Codex: all four captures now show the current right-aligned saved
+state/actions, without the old left save pill. Generated queued/rendering/ready
+states use the same production frontend; no render request was made. Source and
+editor geometry remain unchanged. Each asset is 1440×1000, normalized with PNG
+edge padding only, and all 15 delivery hashes verify. The fixture reports zero
+edits/unexpected requests and zero plan/image/render calls. Its tab/servers are
+closed and temporary launcher removed. Normal ClipBuilder is left running for
+owner review; no saved session, provider, configuration or Voyagenda change.
+
 ## Overnight handoff — owner stopped work, 2026-11-10
 
 Feature work is stopped at the owner's request. Preserve the running normal app,

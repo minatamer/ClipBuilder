@@ -1,5 +1,60 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Current-workspace landing film — CL-276, 2026-11-11
+
+The landing film retains its navy/blue cinematic typography, eased camera and
+content-led transitions, with a new 36-second upload → moments → full-window
+editor story. Dedicated editor passages show caption styles including Glass,
+mixed picture/video layer ordering and Zoom/Pan. Marketing captures use the
+actual shared production UI with silent original fictional media and injected
+fake transport. YouTube is excluded from all film and portfolio captures;
+normal local acquisition capabilities remain unchanged.
+
+Detailed original vector speakers share one artwork source with captured source
+stills. Live conversation panels use the actual composition frame, with bounded
+periodic facial, eye, head, shoulder and articulated-hand movement. This is
+illustrative artwork, not real AI quality or a processed customer example.
+Authoring and manual UI checks need no keys; genuine AI processing keeps its
+existing provider/runtime, live flags and approvals. No provider video generation
+is involved. Preserve silent/offscreen playback, responsive poster/fallback and
+normal motion. Agent previews stay inside the normal Codex window, never fullscreen.
+
+## Glass single-word captions — CL-275, 2026-11-11
+
+Glass is an explicit caption Style choice, retaining all existing presets and
+authored-text styles. It selects the existing single-word clock, heavy uppercase
+display and a bounded optional caption-only glass material. Source text, word
+IDs, timing, Hook/body scope, speaker controls and manual placement remain
+unchanged. Each active word fits its box independently; silent word gaps remain
+empty. Other typography presets clear the material while retaining placement.
+
+The shared preview/export component uses fixed translucent reflection bands,
+light/dark edge highlights and seeded alpha-clipped grain. Footage shows through
+the letterforms; this does not sample, blur or physically refract the scene.
+No remote texture/font, extra renderer input, provider key or model is required.
+Autosave/history and protected draft serialization preserve the material. Real
+transcription retains its existing provider/local-runtime prerequisites and
+approvals. Generated Codex UI, strict contracts, draft round trips and a
+no-browser SVG/FFmpeg material proof are verified; full normal native MP4 export
+parity is explicitly unverified under the owner's Codex-only testing instruction.
+CL-275 records that remaining acceptance boundary and the actual evidence.
+
+## Moments creation and review — CL-274, 2026-11-11
+
+Add clips uses compact Analysis range, Manual clips and AI moments groups.
+Each manual range is one numbered card with its original endpoint Capture/Jump
+actions, duration/error slot and Remove action. Wide AI settings share one row;
+narrow panes stack them without removing options. Analysis range has one visible
+heading rather than a second competing label. Your clips uses numbered source
+stills from the shared bounded thumbnail service alongside title, range, duration,
+Jump and Remove. These are review cards, not another trim form.
+Keyboard tabs retain inputs and do not force a page scroll. Keep the shared main
+scrollport/sticky preview, card-owned proceed actions, contextual stable feedback,
+timestamp precision, import/export, empty/over-limit guards and hosted/local
+capabilities unchanged. Manual UI needs no API keys. Live analysis keeps its
+existing provider/runtime prerequisites, flags and approvals. Agent visual checks
+use silent generated media and mute playback; no owner's audio setting changes.
+
 ## Responsive editing workspace — CL-273, 2026-11-10
 
 The owner approved this direction and authorized the complete responsive AFK
