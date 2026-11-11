@@ -22,6 +22,11 @@ art/captures/targets/tests, authoring helpers, browser preference and shared
 README/source-of-truth/index documentation, including the narrow CL-273 capture
 handoff revision superseded by this film. Shared files are never split into hunks.
 
+Completed local commits: `cafb4ab` (CL-274, four whole files), `1e445e6` (CL-275,
+sixteen whole files) and `bdf95a6` (CL-276, thirty-six whole files). The worktree
+was clean after all three; no push. The requested saved-clip review setup is
+recorded in CL-275 and receives its own whole-file documentation receipt.
+
 Owner preview correction: never enter fullscreen during agent browser work.
 One Studio preview was expanded; it was immediately exited after the owner's
 correction and `document.fullscreenElement` verified false. Continue in the

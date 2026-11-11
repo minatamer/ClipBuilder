@@ -15,7 +15,20 @@ provider requests, exports or paid runs. Preserve original drafts/media and save
 a separate review copy if supported. Keep playback muted and the browser in its
 normal Codex window. This is an explicitly requested saved-clip edit, not fresh
 pipeline regression evidence. Actual draft identities/media stay outside Git.
-Status: pending setup after commits; record the observed result separately.
+Status: complete after the authorized commits. The normal file picker reopened
+the retained layered reference and its 41-second prepared clip. Glass is selected
+and acknowledged by autosave; the saved paged draft was read through its normal
+unpaging helper to verify the material, four visual layers (two video placements,
+two pictures), four existing effects and source frames 1920–3150 (1:04–1:45).
+Existing counters remain one plan, two pictures and one earlier render; no new
+processing or export was requested. The normal draft binding updates this chosen
+layered project, retaining the store's previous-record backup. Other projects,
+source/media and exports remain preserved; no separate Save-copy control was used.
+
+Codex is left in Captions / Style with Glass checked, paused at presentation
+frame 765 (25.5 seconds), playback muted and fullscreen false. A private review
+capture stays outside Git and outside the marketing portfolio. This owner-requested
+saved edit is separate from synthetic validation and native-export acceptance.
 
 ## Resumed investigation and material decision — 2026-11-11
 
