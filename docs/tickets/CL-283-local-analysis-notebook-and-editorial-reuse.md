@@ -136,3 +136,103 @@ clean: 184 focused fake/paid-off cases, applicable types, scoped lint/format,
 CLI syntax, dependency guards and whitespace checks. Prior visual evidence and
 owner-only aesthetic/editorial/real-provider acceptance remain distinct. No
 push, provider action, configuration change, Voyagenda work or deployment.
+
+## Owner editorial revision — 2026-11-12
+
+Status: completed and file-validated, 2026-11-12; owner auditions remain open.
+This is private transcript-based editorial work, not an
+application or provider-prompt change. The owner now rejects six of the previous
+eight alternatives and keeps exactly the two ranges in the latest screenshot.
+Preserve those endpoints unchanged. Re-read the complete retained transcript,
+using the approved passages to guide stronger selections about personal losses,
+setbacks, persistence and encouraging the listener through difficulty.
+
+Replace the canonical Downloads timestamp file with the revised selection;
+remove the rejected ranges from that file. Prefer complete openings, specific
+personal stakes and a clear motivational payoff over generic advice. A proposed
+stitch may skip an irrelevant middle only where the surrounding speech remains
+honest and coherent. Put its source segments consecutively in the import file
+and provide a separate private edit map with order, join words and reasons.
+Do not add unrecognized metadata to the strict application import format.
+
+Verify source binding, both unchanged keepers, word-clock boundaries, frame
+normalization, import compatibility/order, uniqueness and duration/count limits.
+Keep transcript text, editorial notes, source title/identity and real endpoints
+outside Git. Preserve the full notebook, source media, current app/session and
+exports; no UI mutation, stitching/export, ASR/provider run, configuration change,
+Voyagenda operation or Git mutation is authorized by this editorial request.
+This reuses real saved ASR output locally without API keys or new inference;
+transcript-based continuity does not prove a silent audio/video join.
+
+Verified: read the full retained 5,243-word transcript and inspected the actual
+word clocks at the new edges, favoring personal sacrifice, emotional responses
+to loss, recovery and encouragement. Matched the source's SHA-256 and saved
+original-clock identity. Replaced the canonical timestamp file atomically and
+read it back successfully: nine unique source-ordered segments, two unchanged
+owner picks, seven new segments and all six rejected exact ranges removed.
+Normal schema/import validation preserves every endpoint and row order; export
+through the normal 30fps cut conversion returns the same ranges. All segments
+are non-overlapping and within the per-segment duration and batch-count bounds.
+
+The companion private guide maps the nine segments into six finished clip ideas,
+including three adjacent two-part stitches with explicit omitted intervals,
+speech anchors and rationale, plus an optional extended ending. It calls for
+body-only exports with consistent style/audio and no repeated Hook/title on the
+second part. The approved ranges stay unchanged even when used in a stitch.
+The guide distinguishes semantic/ASR-clock checks from unperformed listening,
+rendering and final join approval. Both outputs remain only in OS Downloads;
+no transcript, source identity or real endpoints enter this packet.
+
+No application source, owner session, retained source/archive, existing export,
+ignored configuration or Voyagenda mutation. No browser playback, new ASR or
+ClipBuilder provider processing, export/stitch, cloud/deployment or Git action.
+Only the owning packet/index and the two requested local editorial outputs change.
+
+### Revised-range session preview handoff
+
+The owner explicitly authorizes replacing the current session's manual ranges
+with the revised nine-row timestamp import for source preview. Keep the normal
+source/workspace and existing prepared clips/exports; use the Codex browser only.
+Import/preview must not submit Use clips, Find moments or Process clips, because
+even manual selection submission may start local ASR. No new processing,
+provider request, configuration or Voyagenda operation. Verify all eighteen
+endpoints and import order, retain both keepers and leave the preview paused.
+Verified: the Codex workspace restored the matching current source and old range.
+The normal Import JSON action replaced it with all nine revised manual rows;
+all eighteen displayed endpoints match the file in order, including both unchanged
+owner picks. The old range is absent and prior result selection is cleared by
+the normal importer. Source decoding is ready and playback remains paused.
+Left Add clips / Manual clips open, with its Jump to actions available. No Use
+clips, Find moments, Process clips or playback action was submitted. The normal
+Codex panel shows the nine-row badge and revised first range; a private UI proof
+stays outside Git. These are unsent manual form ranges, not a claim that form
+edits became a durable saved analysis. Existing prepared clips/exports remain.
+Owner correction: the import did not update the owner's current view. The
+observed nine-row form was only the Codex-opened view, so the earlier current-
+session completion claim does not establish a handoff into the owner's view.
+The owner now requests file-only delivery and will import the revised JSON
+manually. Rechecked the canonical file: all nine ranges match the intended
+selection and pass the normal importer, with both approved endpoints unchanged.
+No further browser/session action or processing. Status: file delivery verified;
+owner import remains owner-operated. Import/manual preview need no API keys;
+new AI preparation retains its runtime, live flags and approval prerequisites.
+
+### Final owner-approved selection — 2026-11-12
+
+The owner supplies two screenshots confirming seven final ranges and says they
+will process them themselves. Update the canonical private JSON to exactly those
+seven unchanged endpoints/order, removing the discarded two-part alternative.
+Rewrite the private stitch guide to use the final numbering and source ranges:
+join parts 1 then 2, and parts 5 then 6; part 7 remains a standalone or optional
+longer ending after 5/6. Parts 3 and 4 stay separate. Explicitly supersede the
+earlier nine-row numbering so a later stitch cannot join the wrong exports.
+Persist this mapping in the private guide for later recall. No browser/session,
+processing, export/stitch, source/configuration or Voyagenda mutation. Status:
+completed and read-back verified. The JSON now contains exactly the seven final
+ranges in screenshot order, with all fourteen endpoints unchanged. Both outputs
+were published atomically and re-read; normal source-bound import, uniqueness,
+chronology, per-segment bounds and 30fps round trip pass. The private guide now
+supersedes all old numbering and preserves the final stitch plan for later
+retrieval. File/schema work uses saved real analysis with no API keys or new
+ClipBuilder provider call. Processing is owner-operated under existing gates;
+later exported audio/video stitching remains unperformed.
