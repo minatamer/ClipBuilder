@@ -24,6 +24,7 @@ import {
 import { ownerTextLayersSchema } from "./text-layers.ts";
 import { ownerCaptionSpeakersSchema } from "./caption-speakers.ts";
 import { ownerHookSchema } from "./hook.ts";
+import { ownerBlackBarPositionSchema } from "./black-bars.ts";
 export { OWNER_TEXT_FONTS as OWNER_CAPTION_FONTS } from "./text-style.ts";
 
 export const OWNER_CAPTION_ANIMATIONS = [
@@ -193,6 +194,8 @@ export const ownerContentEditSchema = z
     focus: ownerFocusSchema.optional(),
     cameraEffects: ownerCameraEffectsSchema.optional(),
     cameraTracks: ownerCameraTracksSchema.optional(),
+    blackBars: z.boolean().optional(),
+    blackBarPosition: ownerBlackBarPositionSchema.optional(),
     visuals: z
       .array(ownerVisualEditSchema)
       .max(OWNER_PICTURE_LIMITS.cuesPerClip),
@@ -275,6 +278,13 @@ export type OwnerEditDocument = z.infer<typeof ownerEditDocumentSchema>;
 export const ownerEditOperationSchema = z.discriminatedUnion("kind", [
   z
     .object({
+      kind: z.literal("black-bars"),
+      enabled: z.boolean(),
+      position: ownerBlackBarPositionSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
       kind: z.literal("visual-order"),
       ids: z.array(ownerIdSchema).max(OWNER_PICTURE_LIMITS.cuesPerClip),
     })
@@ -342,7 +352,7 @@ export const ownerEditRequestSchema = z
     operations: z
       .array(ownerEditOperationSchema)
       .min(1)
-      .max(2 * OWNER_PICTURE_LIMITS.cuesPerClip + 8),
+      .max(2 * OWNER_PICTURE_LIMITS.cuesPerClip + 9),
   })
   .strict();
 export type OwnerEditRequest = z.infer<typeof ownerEditRequestSchema>;

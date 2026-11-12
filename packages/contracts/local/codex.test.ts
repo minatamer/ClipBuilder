@@ -46,7 +46,7 @@ it("separates ASR-only discovery from selected-cut speaker assignment without ad
   ])
     expect(localCodexJobSchema.safeParse(invalid).success).toBe(false);
 });
-it("requests a search brief and bounded generated fallback in the same planning call", () => {
+it("requests optional searchable scenes without a card recipe and still decodes legacy saved plans", () => {
   const cue = {
     startFrame: 0,
     endFrame: 60,
@@ -58,21 +58,16 @@ it("requests a search brief and bounded generated fallback in the same planning 
       avoidTerms: [],
     },
   };
-  const illustration = {
-    layout: "concept",
-    heading: "Toy",
-    items: [{ label: "Play", icon: "box" }],
-  };
   expect(
     localCodexFocusSchema.shape.pictures.element.parse({
       ...cue,
       alternateBriefs: [],
-      illustration,
     }),
-  ).toEqual({ ...cue, alternateBriefs: [], illustration });
-  expect(localCodexFocusSchema.shape.pictures.element.shape).toHaveProperty(
+  ).toEqual({ ...cue, alternateBriefs: [] });
+  expect(localCodexFocusSchema.shape.pictures.element.shape).not.toHaveProperty(
     "illustration",
   );
+  expect(localCodexFocusSchema.shape.pictures.safeParse([]).success).toBe(true);
   expect(
     ownerClipPlanSchema.parse([
       {

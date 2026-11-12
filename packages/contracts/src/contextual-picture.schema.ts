@@ -6,8 +6,10 @@ import { boundedPlainTextSchema } from "./text.schema.js";
 import { transcriptWordSpanSchema } from "./transcript.schema.js";
 
 export const CONTEXTUAL_PICTURE_POLICY = {
-  minPictures: 2,
+  minPictures: 0,
   maxPictures: 3,
+  // Fresh automatic acquisition only; legacy/saved manifests still decode three.
+  maxAutomaticVisuals: 1,
   maxSubjectWords: 7,
   maxSupportingPhraseWords: 24,
   maxRasterBytes: 96 * 1024,
@@ -118,4 +120,7 @@ export type ContextualPicturePlan = z.infer<typeof contextualPicturePlanSchema>;
 export type ContextualPictureRequest = Pick<
   ContextualPicturePlan,
   "kind" | "brief"
-> & { alternateBriefs?: z.infer<typeof contextualPictureBriefSchema>[] };
+> & {
+  alternateBriefs?: z.infer<typeof contextualPictureBriefSchema>[];
+  purpose?: "b-roll";
+};

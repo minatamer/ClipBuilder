@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ownerBlackBarCameraWindow } from "./black-bars.ts";
 import { OWNER_FPS, OWNER_LIMITS, ownerIdSchema } from "./policy.ts";
 import { ownerHookFrames, type OwnerHook } from "./hook.ts";
 import {
@@ -103,11 +104,16 @@ export function ownerCameraEffectsFit(
 export function ownerCameraTargetCrop(
   focus: Pick<OwnerFocus, "source">,
   target: OwnerCameraEffect["target"],
+  squarePosition?: number,
 ): OwnerCameraRect {
   const content = ownerSourceContent(focus.source);
   const unit = Math.min(content.width / 18, content.height / 32) / target.zoom;
-  const width = 18 * unit,
-    height = 32 * unit;
+  const width = 18 * unit;
+  const { height, offsetY } = ownerBlackBarCameraWindow(
+    width,
+    32 * unit,
+    squarePosition,
+  );
   return {
     x: Math.max(
       content.x,
@@ -120,7 +126,7 @@ export function ownerCameraTargetCrop(
       content.y,
       Math.min(
         content.y + content.height - height,
-        content.y + target.centerY * content.height - height / 2,
+        content.y + target.centerY * content.height + offsetY - height / 2,
       ),
     ),
     width,
@@ -146,6 +152,7 @@ export function ownerCameraPanCrop(
   focus: Pick<OwnerFocus, "source">,
   target: OwnerCameraEffect["target"],
   start: OwnerCameraRect,
+  squarePosition?: number,
 ): OwnerCameraRect {
   const content = ownerSourceContent(focus.source);
   return {
@@ -161,7 +168,14 @@ export function ownerCameraPanCrop(
       content.y,
       Math.min(
         content.y + content.height - start.height,
-        content.y + target.centerY * content.height - start.height / 2,
+        content.y +
+          target.centerY * content.height +
+          ownerBlackBarCameraWindow(
+            start.width,
+            (start.width * 16) / 9,
+            squarePosition,
+          ).offsetY -
+          start.height / 2,
       ),
     ),
   };
@@ -174,6 +188,7 @@ export function ownerCameraCropAt(
   occurrence: "hook" | "body",
   occurrenceFrame: number,
   tracks: readonly OwnerCameraTrack[] = [],
+  squarePosition?: number,
 ): OwnerCameraRect {
   const baseline = ownerCameraFollowCrop(
     focus,
@@ -181,6 +196,7 @@ export function ownerCameraCropAt(
     sourceFrame,
     occurrence,
     occurrenceFrame,
+    squarePosition,
   );
   const sourceOffset = Math.round(sourceFrame - occurrenceFrame);
   // Arrival/legacy pulse clocks never release a position's zoom. A later camera
@@ -209,15 +225,16 @@ export function ownerCameraCropAt(
   const effect = zoomAt(occurrenceFrame);
   if (!effect) return baseline;
   const targetFor = (item: OwnerCameraEffect): OwnerCameraRect => {
-    if (item.kind !== "pan") return ownerCameraTargetCrop(focus, item.target);
+    if (item.kind !== "pan")
+      return ownerCameraTargetCrop(focus, item.target, squarePosition);
     const position = ownerFocusAt(focus, sourceOffset + item.startFrame);
     const previous = zoomAt(item.startFrame - 1);
     const start =
       previous &&
       ownerFocusAt(focus, sourceOffset + previous.startFrame) === position
         ? targetFor(previous)
-        : ownerFocusCrop(focus, position);
-    return ownerCameraPanCrop(focus, item.target, start);
+        : ownerFocusCrop(focus, position, squarePosition);
+    return ownerCameraPanCrop(focus, item.target, start, squarePosition);
   };
   const at = occurrenceFrame - effect.startFrame,
     target = targetFor(effect);
@@ -228,7 +245,7 @@ export function ownerCameraCropAt(
       previous &&
       ownerFocusAt(focus, sourceOffset + previous.startFrame) === position
         ? targetFor(previous)
-        : ownerFocusCrop(focus, position);
+        : ownerFocusCrop(focus, position, squarePosition);
     const duration =
       effect.returnFrames === 0 ? effect.zoomFrames - 1 : effect.zoomFrames;
     return blend(start, target, duration > 0 ? ease(at / duration) : 1);

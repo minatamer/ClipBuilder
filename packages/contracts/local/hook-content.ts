@@ -43,6 +43,8 @@ export function ownerContentEdits(
     focus,
     cameraEffects,
     cameraTracks,
+    blackBars,
+    blackBarPosition,
     visuals,
   } = document;
   return {
@@ -56,6 +58,8 @@ export function ownerContentEdits(
     focus,
     cameraEffects,
     cameraTracks,
+    blackBars,
+    blackBarPosition,
     visuals,
   };
 }

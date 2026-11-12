@@ -67,6 +67,7 @@ export const visualDiagnosticSchema = z
         "provenance",
         "digest_mismatch",
         "generation_failed",
+        "unsuitable_visual",
       ])
       .optional(),
     issues: z

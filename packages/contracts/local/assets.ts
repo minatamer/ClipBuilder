@@ -52,6 +52,7 @@ export const ownerVisualSchema = z
     box: normalizedBoxSchema,
     fit: z.enum(["contain", "cover"]),
     presentation: z.enum(["inset", "full-frame"]).optional(),
+    ignoreBlackBars: z.boolean().optional(),
     focal: z
       .object({
         x: z.number().finite().min(0).max(1),

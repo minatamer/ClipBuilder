@@ -2,6 +2,7 @@ import { z } from "zod";
 import { normalizedBoxSchema } from "@clipbuilder/contracts";
 import { OWNER_FPS, OWNER_LIMITS } from "./policy.ts";
 import { reconcileAutomaticFocusPeople } from "./focus-people.ts";
+import { ownerBlackBarCameraWindow } from "./black-bars.ts";
 
 export const OWNER_FOCUS_LIMITS = {
   people: 8,
@@ -124,18 +125,23 @@ export function ownerSourceContent(source: OwnerFocus["source"]) {
     y: Math.floor((1920 - height) / 4) * 2,
   };
 }
-/** One integer 9:16 viewport shared by CSS preview and native crop/scale. */
+/** One source-bounded viewport shared by preview and native crop/scale. */
 export function ownerFocusCrop(
   focus: Pick<OwnerFocus, "source">,
   shot: OwnerFocusShot,
+  squarePosition?: number,
 ) {
   const content = ownerSourceContent(focus.source);
   const unit = Math.max(
     1,
     Math.floor(Math.min(content.width / 18, content.height / 32) / shot.zoom),
   );
-  const width = Math.min(content.width, 18 * unit),
-    height = Math.min(content.height, 32 * unit);
+  const width = Math.min(content.width, 18 * unit);
+  const { height, offsetY } = ownerBlackBarCameraWindow(
+    width,
+    Math.min(content.height, 32 * unit),
+    squarePosition,
+  );
   const x = Math.max(
     content.x,
     Math.min(
@@ -148,8 +154,9 @@ export function ownerFocusCrop(
     content.y,
     Math.min(
       content.y + content.height - height,
-      Math.round((content.y + shot.centerY * content.height - height / 2) / 2) *
-        2,
+      Math.round(
+        (content.y + shot.centerY * content.height + offsetY - height / 2) / 2,
+      ) * 2,
     ),
   );
   return { x, y, width, height };

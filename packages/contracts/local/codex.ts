@@ -14,10 +14,9 @@ import {
 import { ownerWordsSchema } from "./selection.ts";
 import { ownerFocusPersonSchema, ownerFocusDecisionSchema } from "./focus.ts";
 import { ownerHookSchema } from "./hook.ts";
-import { ownerClipPlanSchema, OWNER_BATCH_POLICY } from "./clips.ts";
+import { ownerClipVisualPlanningSchema, OWNER_BATCH_POLICY } from "./clips.ts";
 import { ownerAuthoredTextPlanSchema } from "./text-layers.ts";
 import { codexProgressStepsSchema } from "./codex-progress.ts";
-import { ownerIllustrationSchema } from "./illustration.ts";
 
 export const LOCAL_CODEX_POLICY = {
   frames: 60,
@@ -182,11 +181,10 @@ export const localCodexFocusSchema = z
     hookSuggestion: ownerHookSchema.nullable(),
     pictures: z
       .array(
-        ownerClipPlanSchema.element
+        ownerClipVisualPlanningSchema.element
           .extend({
-            illustration: ownerIllustrationSchema,
             alternateBriefs:
-              ownerClipPlanSchema.element.shape.alternateBriefs.unwrap(),
+              ownerClipVisualPlanningSchema.element.shape.alternateBriefs.unwrap(),
           })
           .strict(),
       )

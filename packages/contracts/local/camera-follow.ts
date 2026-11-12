@@ -7,10 +7,12 @@ import {
 export { ownerHeadBoxSchema } from "./head-path.ts";
 import { OWNER_FPS, OWNER_LIMITS, ownerIdSchema } from "./policy.ts";
 import { steadyCameraCenter } from "./camera-follow-window.ts";
+import { ownerBlackBarCameraWindow } from "./black-bars.ts";
 import { ownerHookFrames, type OwnerHook } from "./hook.ts";
 import {
   ownerFocusAt,
   ownerFocusCrop,
+  ownerSourceContent,
   ownerPersonIdSchema,
   type OwnerFocus,
 } from "./focus.ts";
@@ -151,9 +153,10 @@ export function ownerCameraFollowCrop(
   sourceFrame: number,
   occurrence: "hook" | "body",
   occurrenceFrame: number,
+  squarePosition?: number,
 ) {
   const shot = ownerFocusAt(focus, sourceFrame),
-    baseline = ownerFocusCrop(focus, shot);
+    baseline = ownerFocusCrop(focus, shot, squarePosition);
   const track = tracks.find(
     (t) =>
       t.occurrence === occurrence &&
@@ -186,23 +189,35 @@ export function ownerCameraFollowCrop(
   const steady =
     track.followWindow === undefined
       ? undefined
-      : steadyCameraCenter(focus, chain, occurrenceFrame);
-  const target = ownerFocusCrop(focus, {
-    ...shot,
-    centerX: steady?.x ?? a.x + (b.x - a.x) * p,
-    centerY:
-      steady?.y ??
-      Math.max(
-        0,
-        Math.min(
-          1,
-          shot.centerY +
-            a.y +
-            (b.y - a.y) * p -
-            (first.seed.y + first.seed.height / 2),
+      : steadyCameraCenter(focus, chain, occurrenceFrame, squarePosition);
+  const target = ownerFocusCrop(
+    focus,
+    {
+      ...shot,
+      centerX: steady?.x ?? a.x + (b.x - a.x) * p,
+      centerY:
+        (steady
+          ? steady.y -
+            ownerBlackBarCameraWindow(
+              baseline.width,
+              (baseline.width * 16) / 9,
+              squarePosition,
+            ).offsetY /
+              ownerSourceContent(focus.source).height
+          : undefined) ??
+        Math.max(
+          0,
+          Math.min(
+            1,
+            shot.centerY +
+              a.y +
+              (b.y - a.y) * p -
+              (first.seed.y + first.seed.height / 2),
+          ),
         ),
-      ),
-  });
+    },
+    squarePosition,
+  );
   const edge = Math.max(
     0,
     Math.min(

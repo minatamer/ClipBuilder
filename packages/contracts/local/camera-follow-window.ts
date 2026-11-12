@@ -10,11 +10,13 @@ import type { OwnerCameraTrack } from "./camera-follow.ts";
 export function ownerFollowWindow(
   focus: OwnerFocus,
   track: Pick<OwnerCameraTrack, "seed" | "sourceStartFrame" | "followWindow">,
+  squarePosition?: number,
 ) {
   const content = ownerSourceContent(focus.source);
   const crop = ownerFocusCrop(
     focus,
     ownerFocusAt(focus, track.sourceStartFrame),
+    squarePosition,
   );
   const anchor = {
     x: (crop.x + crop.width / 2 - content.x) / content.width,
@@ -59,9 +61,10 @@ export function steadyCameraCenter(
   focus: OwnerFocus,
   chain: readonly OwnerCameraTrack[],
   at: number,
+  squarePosition?: number,
 ) {
   const first = chain[0]!;
-  const { anchor, radius } = ownerFollowWindow(focus, first);
+  const { anchor, radius } = ownerFollowWindow(focus, first, squarePosition);
   const head = {
     x: first.seed.x + first.seed.width / 2,
     y: first.seed.y + first.seed.height / 2,

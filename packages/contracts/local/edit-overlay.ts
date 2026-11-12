@@ -50,6 +50,12 @@ export function automaticOwnerEdit(
       : {}),
     ...(base.overlay.texts ? { texts: base.overlay.texts } : {}),
     ...(base.overlay.focus ? { focus: base.overlay.focus } : {}),
+    ...(base.overlay.blackBars !== undefined
+      ? { blackBars: base.overlay.blackBars }
+      : {}),
+    ...(base.overlay.blackBarPosition !== undefined
+      ? { blackBarPosition: base.overlay.blackBarPosition }
+      : {}),
     visuals: base.overlay.visuals.map((cue) =>
       ownerVisualEditSchema.parse({
         id: cue.id,
@@ -222,6 +228,10 @@ function compileContent(
     ...(edit?.focus ? { focus: edit.focus } : {}),
     ...(edit?.cameraEffects ? { cameraEffects: edit.cameraEffects } : {}),
     ...(edit?.cameraTracks ? { cameraTracks: edit.cameraTracks } : {}),
+    ...(edit?.blackBars !== undefined ? { blackBars: edit.blackBars } : {}),
+    ...(edit?.blackBarPosition !== undefined
+      ? { blackBarPosition: edit.blackBarPosition }
+      : {}),
     ...(audio || audioCues.length
       ? {
           audio: ownerAudioTrackSchema.parse({

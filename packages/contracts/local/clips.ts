@@ -3,6 +3,7 @@ import {
   ownerCameraEffectsFit,
 } from "./camera-motion.ts";
 import { z } from "zod";
+import { ownerBlackBarPositionSchema } from "./black-bars.ts";
 import { ownerVisualTrackingFits } from "./visual-tracking.ts";
 import {
   ownerVideoAssetSchema,
@@ -58,6 +59,7 @@ import {
 export const OWNER_BATCH_POLICY = {
   workers: 1,
   imageAttemptsPerClip: CONTEXTUAL_PICTURE_POLICY.maxPictures,
+  automaticVisualsPerClip: CONTEXTUAL_PICTURE_POLICY.maxAutomaticVisuals,
   imageSearchAlternatives: 2,
   overlayBytes: 2 * 1024 ** 3,
   clipReservationBytes: 384 * 1024 ** 2,
@@ -90,6 +92,8 @@ export const ownerOverlayContentSchema = z
     focus: ownerFocusSchema.optional(),
     cameraEffects: ownerCameraEffectsSchema.optional(),
     cameraTracks: ownerCameraTracksSchema.optional(),
+    blackBars: z.boolean().optional(),
+    blackBarPosition: ownerBlackBarPositionSchema.optional(),
     visuals: z.array(ownerVisualSchema).max(OWNER_PICTURE_LIMITS.cuesPerClip),
     videoAssets: z
       .array(ownerVideoAssetSchema)
@@ -276,6 +280,10 @@ export const ownerClipPlanSchema = z
         .max(CONTEXTUAL_PICTURE_POLICY.maxSupportingPhraseWords),
     }),
   )
+  .max(OWNER_BATCH_POLICY.imageAttemptsPerClip);
+/** Fresh planning omits the retired card recipe; saved plans remain readable. */
+export const ownerClipVisualPlanningSchema = z
+  .array(ownerClipPlanSchema.element.omit({ illustration: true }))
   .max(OWNER_BATCH_POLICY.imageAttemptsPerClip);
 export const ownerClipPreparationSchema = z
   .object({
