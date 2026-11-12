@@ -1,4 +1,4 @@
-import { ActivityIndicator } from "../../shared/ui/activity-indicator";
+import { ConnectionRecovery } from "../../shared/ui/connection-recovery";
 import { OWNER_COLLECTION_PAGE_ITEMS as REQUEST_PAGE_ITEMS } from "../../../../../packages/contracts/local/collection-pages.ts";
 import { readOwnerClips } from "./collection-pages.ts";
 import { WorkspaceEditHistory } from "./edit-history";
@@ -76,6 +76,7 @@ export function OwnerClipBatchPanel({
   onConnectionChange,
   onAddClips,
   initializing = false,
+  reconnectRequest = 0,
   framingTarget,
 }: {
   workspace: OwnerWorkspace;
@@ -94,6 +95,7 @@ export function OwnerClipBatchPanel({
   onConnectionChange?: ((state: ClipConnection) => void) | undefined;
   onAddClips?: (() => void) | undefined;
   initializing?: boolean;
+  reconnectRequest?: number;
   framingTarget?: HTMLElement | null;
 }) {
   const clipLimit =
@@ -207,6 +209,7 @@ export function OwnerClipBatchPanel({
     workspace.id,
     accept,
     connectionAttempt,
+    reconnectRequest,
     onRecovered,
     onActive,
     onConnectionChange,
@@ -403,37 +406,17 @@ export function OwnerClipBatchPanel({
       {!planningAvailable && (hasClips || selected.length > 0) && (
         <p role="status">AI unavailable. Prepared clips still work.</p>
       )}
-      {connection !== "connected" && (
+      {!initializing && connection !== "connected" && (
         <WorkflowActions target={actionTarget} label="Session connection">
-          <span
-            className="connection-status"
-            data-missing={connection === "missing" || undefined}
-            role="status"
-            aria-live="polite"
-          >
-            {connection === "reconnecting" && <ActivityIndicator size={16} />}
-            {connection === "reconnecting"
-              ? "Reconnecting…"
-              : connection === "missing"
-                ? "This session is no longer available."
-                : "Couldn’t reconnect."}
-          </span>
-          {connection !== "reconnecting" && (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setConnection("reconnecting");
-                setConnectionAttempt((value) => value + 1);
-              }}
-            >
-              Try again
-            </Button>
-          )}
-          {connection === "missing" && onStartOver && (
-            <Button variant="primary" onClick={onStartOver}>
-              Start new session
-            </Button>
-          )}
+          <ConnectionRecovery
+            layout="compact"
+            state={connection}
+            onReconnect={() => {
+              setConnection("reconnecting");
+              setConnectionAttempt((value) => value + 1);
+            }}
+            onNewSession={onStartOver}
+          />
         </WorkflowActions>
       )}
       {connection === "connected" &&

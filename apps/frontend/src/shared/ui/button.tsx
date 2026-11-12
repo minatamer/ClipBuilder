@@ -1,10 +1,11 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 import type { LucideIcon } from "lucide-react";
 
 import styles from "./workflow.module.css";
 import { ActivityIndicator } from "./activity-indicator";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  ref?: Ref<HTMLButtonElement>;
   variant?: "primary" | "secondary" | "quiet";
   icon?: LucideIcon;
   busy?: boolean;

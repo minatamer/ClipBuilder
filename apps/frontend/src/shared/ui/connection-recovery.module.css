@@ -1,0 +1,206 @@
+.recovery {
+  display: grid;
+  grid-template-columns: minmax(0, 16rem) minmax(0, 24rem);
+  align-items: center;
+  justify-content: center;
+  gap: clamp(2rem, 5vw, 4rem);
+  width: 100%;
+  min-width: 0;
+  min-height: min(30rem, 65dvh);
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+}
+.visual {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.2;
+  display: grid;
+  place-items: center;
+}
+.visual::before {
+  content: "";
+  position: absolute;
+  inset: -15%;
+  background: radial-gradient(ellipse, rgb(66 120 212 / 13%), transparent 68%);
+  pointer-events: none;
+}
+.window {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.3;
+  display: grid;
+  grid-template-columns: 14% 40% 1fr;
+  grid-template-rows: 15% 1fr;
+  gap: 6%;
+  padding: 0 5% 6%;
+  border: 1px solid var(--cb-border);
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, rgb(30 62 110 / 55%), rgb(9 25 53 / 80%));
+  box-shadow:
+    0 1rem 3rem rgb(0 0 0 / 15%),
+    inset 0 1px rgb(160 195 242 / 8%);
+  transform: perspective(600px) rotateY(9deg) rotateX(3deg);
+}
+.chrome {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.2rem;
+  align-items: center;
+  border-bottom: 1px solid rgb(120 159 216 / 15%);
+}
+.chrome i {
+  width: 0.25rem;
+  height: 0.25rem;
+  background: #5578aa;
+  border-radius: 50%;
+}
+.rail {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+}
+.rail span {
+  aspect-ratio: 0.7;
+  border: 1px solid rgb(110 150 212 / 28%);
+  background: rgb(41 77 129 / 26%);
+  border-radius: 0.2rem;
+}
+.canvas {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  aspect-ratio: 9 / 16;
+  border: 1px solid rgb(116 162 227 / 36%);
+  border-radius: 0.3rem;
+  background: radial-gradient(
+    ellipse at 50% 25%,
+    rgb(49 93 158 / 30%),
+    rgb(5 17 38 / 70%)
+  );
+}
+.canvas > :first-child {
+  width: 2.2rem;
+  height: 2.2rem;
+  opacity: 0.55;
+}
+.canvas > span:last-child {
+  position: absolute;
+  height: 2px;
+  bottom: 8%;
+  left: 12%;
+  right: 12%;
+  background: #6d97d2;
+  opacity: 0.4;
+}
+.inspector {
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+  padding-top: 0.25rem;
+}
+.inspector i {
+  width: 65%;
+  height: 0.25rem;
+  border-radius: 0.2rem;
+  background: #6d92c4;
+  opacity: 0.4;
+}
+.inspector span {
+  height: 1.1rem;
+  border: 1px solid rgb(110 150 212 / 20%);
+  border-radius: 0.2rem;
+  background: rgb(20 49 92 / 32%);
+}
+.signal {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  width: 3.2rem;
+  height: 3.2rem;
+  right: -5%;
+  bottom: 7%;
+  color: var(--cb-ink-soft);
+  border: 1px solid var(--cb-border);
+  border-radius: 1rem;
+  background: #102342;
+  box-shadow: 0 0.4rem 1.5rem rgb(0 0 0 / 25%);
+}
+.content {
+  min-width: 0;
+}
+.recovery .copy h2 {
+  margin: 0;
+  color: var(--cb-ink);
+  font-size: clamp(1.5rem, 2.5vw, 1.9rem);
+  font-weight: 680;
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.copy p {
+  margin: 1rem 0 0;
+  max-width: 36ch;
+  color: var(--cb-ink-soft);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+.actions button {
+  min-width: 8rem;
+}
+.recovery[data-layout="compact"] {
+  display: flex;
+  gap: 0.7rem;
+  min-height: 0;
+  padding: 0;
+  width: auto;
+}
+.recovery[data-layout="compact"] .content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.compactTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--cb-ink-soft);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.recovery[data-layout="compact"] .actions {
+  margin: 0;
+}
+.recovery[data-layout="compact"] .actions button {
+  min-width: 0;
+}
+@media (max-width: 620px) {
+  .recovery {
+    grid-template-columns: minmax(0, 24rem);
+    gap: 1.75rem;
+    padding: 1.75rem 1.1rem;
+    min-height: min(34rem, 75dvh);
+  }
+  .visual {
+    width: min(60%, 12rem);
+    justify-self: center;
+  }
+  .signal {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 0.8rem;
+  }
+  .canvas > :first-child {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+}

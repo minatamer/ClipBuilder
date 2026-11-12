@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ControlTabs } from "./control-tabs";
 import { ThumbnailVideo } from "../../shared/ui/video-thumbnail";
-import { CircleAlert, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
+import { ConnectionRecovery } from "../../shared/ui/connection-recovery";
 import { Workspace } from "../../shared/ui/workspace";
 import { WorkflowFrame } from "../../shared/ui/workflow-frame";
 import { Button } from "../../shared/ui/button";
@@ -66,6 +67,7 @@ export function LocalEditingExperience({
   );
   const [connectAttempt, setConnectAttempt] = useState(0);
   const [startupFailed, setStartupFailed] = useState(false);
+  const [recoveryRequested, setRecoveryRequested] = useState(false);
   const [sessionConnection, setSessionConnection] =
     useState<ClipConnection>("connected");
   const sessionConnected = sessionConnection === "connected";
@@ -100,6 +102,7 @@ export function LocalEditingExperience({
   );
   const setView = useCallback(
     (next: typeof view) => {
+      if (next !== "opening") setRecoveryRequested(false);
       sourcePlayRequests.cancel();
       setSourceMessage("");
       setActiveView(next);
@@ -172,12 +175,14 @@ export function LocalEditingExperience({
     void (async () => {
       try {
         const capabilitiesReady = fetch("/api/local/capabilities", {
+          cache: "no-store",
           signal: requestSignal,
         }).then(async (response) => {
           if (!response.ok) throw new Error("unavailable");
           return ownerRuntimeCapabilitiesSchema.parse(await response.json());
         });
         const workspaceReady = fetch("/api/local/workspace", {
+          cache: "no-store",
           signal: requestSignal,
         }).then(async (response) => {
           if (!response.ok) throw new Error("unavailable");
@@ -374,7 +379,20 @@ export function LocalEditingExperience({
   function retryStartup() {
     setBusy(true);
     setStartupFailed(false);
+    setRecoveryRequested(true);
+    setSessionConnection("reconnecting");
     setConnectAttempt((value) => value + 1);
+  }
+  function startNewSession() {
+    resetEditorTour(editorTourStorage());
+    setWorkspace(null);
+    setSelection([]);
+    setHasClips(false);
+    setUnapplied(false);
+    setClipWork(false);
+    setView("moments");
+    setSessionConnection("connected");
+    setRecoveryRequested(false);
   }
   const openingWorkspace = view === "opening";
   return (
@@ -404,7 +422,10 @@ export function LocalEditingExperience({
         headingRef={heading}
         title={
           openingWorkspace
-            ? "Opening workspace"
+            ? startupFailed ||
+              ["missing", "unavailable"].includes(sessionConnection)
+              ? "Reconnect workspace"
+              : "Opening workspace"
             : !workspace && demoStatus?.limited
               ? "Your free demo"
               : !workspace
@@ -438,11 +459,21 @@ export function LocalEditingExperience({
         >
           {openingWorkspace ? (
             startupFailed ||
-            ["missing", "unavailable"].includes(sessionConnection) ? (
-              <div className="workspace-opening-failure" role="status">
-                <CircleAlert size={28} aria-hidden="true" />
-                <p>Couldn’t open workspace.</p>
-              </div>
+            ["missing", "unavailable"].includes(sessionConnection) ||
+            recoveryRequested ? (
+              <ConnectionRecovery
+                state={
+                  startupFailed
+                    ? "unavailable"
+                    : sessionConnection === "missing"
+                      ? "missing"
+                      : sessionConnection === "unavailable"
+                        ? "unavailable"
+                        : "reconnecting"
+                }
+                onReconnect={retryStartup}
+                onNewSession={workspace ? startNewSession : undefined}
+              />
             ) : (
               <ProcessingState
                 className="workspace-opening"
@@ -584,14 +615,6 @@ export function LocalEditingExperience({
                 </div>
               </div>
             )
-          )}
-          {openingWorkspace && (
-            <div className="workspace-opening-actions">
-              {startupFailed && (
-                <Button onClick={retryStartup}>Try again</Button>
-              )}
-              <div className="workflow-action-slot" ref={setActionTarget} />
-            </div>
           )}
           {workspace && (
             <>
@@ -790,22 +813,14 @@ export function LocalEditingExperience({
                     setView("moments");
                   }}
                   initializing={openingWorkspace}
+                  reconnectRequest={connectAttempt}
                   showProcessing={view !== "editor"}
                   selectionReady={showMomentResults}
                   actionTarget={actionTarget}
                   framingTarget={framingTarget}
                   onRecovered={workspaceRecovered}
                   onConnectionChange={setSessionConnection}
-                  onStartOver={() => {
-                    resetEditorTour(editorTourStorage());
-                    setWorkspace(null);
-                    setSelection([]);
-                    setHasClips(false);
-                    setUnapplied(false);
-                    setClipWork(false);
-                    setView("moments");
-                    setSessionConnection("connected");
-                  }}
+                  onStartOver={startNewSession}
                 />
               )}
             </>

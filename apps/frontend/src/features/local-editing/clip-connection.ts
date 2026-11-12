@@ -57,14 +57,17 @@ export async function pollClipConnection(options: {
       const revision = options.revision();
       const response = await request(
         `/api/local/workspace/${options.workspaceId}/clips`,
-        { signal },
+        { signal, cache: "no-store" },
       );
       if (response.status === 401 || response.status === 410) {
         if (!options.signal.aborted) options.state("missing");
         return;
       }
       if (response.status === 404) {
-        const current = await request("/api/local/workspace", { signal });
+        const current = await request("/api/local/workspace", {
+          signal,
+          cache: "no-store",
+        });
         if (!current.ok) throw new Error("connection_unavailable");
         const workspace = ownerWorkspaceSchema
           .nullable()
