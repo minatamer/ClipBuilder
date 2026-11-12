@@ -17,6 +17,7 @@ async function main() {
   if (!file) throw new Error("owner_state_missing");
   const state = z
     .object({
+      local: z.boolean().default(false),
       root: z.string().min(1),
       workerToken: z.string().length(64),
       tools: z.object({
@@ -46,6 +47,7 @@ async function main() {
     })
     .parse(JSON.parse(await readFile(file, "utf8")));
   const worker = createOwnerWorker({
+    local: state.local,
     diagnostic: (line) => process.stderr.write(line + "\n"),
     root: state.root,
     token: state.workerToken,

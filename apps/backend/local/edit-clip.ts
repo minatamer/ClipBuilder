@@ -46,6 +46,11 @@ export function applyOwnerEdit(
   const priorHook = JSON.stringify(next.hook);
   for (const operation of request.operations) {
     switch (operation.kind) {
+      case "black-bars":
+        next.blackBars = operation.enabled;
+        if (operation.position !== undefined)
+          next.blackBarPosition = operation.position;
+        break;
       case "visual-order": {
         const ordered = operation.ids.map((id) =>
           next.visuals.find((cue) => cue.id === id),

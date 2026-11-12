@@ -7,19 +7,27 @@ import {
   ownerCutAudioFilter,
 } from "./export-profile.ts";
 
-it("preserves native portrait resolution and source cadence without a 1080p ceiling", () => {
+it("exports exact full-HD portrait from landscape, portrait and lower-resolution sources", () => {
   expect(
     ownerOutputProfile({ width: 2160, height: 3840, fps: 60 }, 60),
-  ).toEqual({ width: 2160, height: 3840, fps: 60, frames: 120 });
+  ).toEqual({ width: 1080, height: 1920, fps: 60, frames: 120 });
   expect(
     ownerOutputProfile({ width: 1080, height: 1920, fps: 24 }, 60),
   ).toEqual({ width: 1080, height: 1920, fps: 24, frames: 48 });
   expect(
     ownerOutputProfile({ width: 3840, height: 2160, fps: 30 }, 60),
-  ).toEqual({ width: 1216, height: 2160, fps: 30, frames: 60 });
+  ).toEqual({ width: 1080, height: 1920, fps: 30, frames: 60 });
   expect(ownerOutputProfile({ width: 1280, height: 720, fps: 30 }, 60)).toEqual(
-    { width: 406, height: 720, fps: 30, frames: 60 },
+    { width: 1080, height: 1920, fps: 30, frames: 60 },
   );
+  expect(
+    ownerOutputProfile({ width: 1920, height: 1080, fps: 24 }, 60),
+  ).toEqual({
+    width: 1080,
+    height: 1920,
+    fps: 24,
+    frames: 48,
+  });
   expect(
     ownerOutputProfile({ width: 1920, height: 1080, fps: 30000 / 1001 }, 60)
       .fps,
@@ -35,9 +43,7 @@ it("preserves native portrait resolution and source cadence without a 1080p ceil
   ).toThrow();
   for (const height of [2, 4, 6, 180, 720, 1080, 3840]) {
     const profile = ownerOutputProfile({ width: 2, height, fps: 30 }, 30);
-    expect(profile.width).toBeLessThan(profile.height);
-    expect(profile.width % 2).toBe(0);
-    expect(profile.height % 2).toBe(0);
+    expect(profile).toMatchObject({ width: 1080, height: 1920 });
   }
 });
 it("projects a 4K crop from original pixels and preserves the accepted field of view within chroma rounding", () => {

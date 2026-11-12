@@ -64,6 +64,7 @@ export function OwnerStyledCaption({
     style.material === "glass" ? (
       <OwnerGlassWord
         text={word.toUpperCase()}
+        fontSize={fontSize}
         color={style.color}
         outlineColor={style.outlineColor}
         outlineWidth={style.outlineWidth}
@@ -78,15 +79,20 @@ export function OwnerStyledCaption({
       word
     );
   const legacyBoxed =
+    style.material !== "glass" &&
     style.preset === "boxed" &&
     suppliedStyle.backgroundColor === undefined &&
     suppliedStyle.backgroundOpacity === undefined;
-  const block = style.preset === "solid-block";
+  const block = style.material !== "glass" && style.preset === "solid-block";
   const paint = ownerTypographyPaint(style);
   const width = style.box.width * 1080,
     height = style.box.height * 1920,
     backgroundPadding =
-      !legacyBoxed && ownerTextBackground(style).opacity ? 24 : 0,
+      style.material !== "glass" &&
+      !legacyBoxed &&
+      ownerTextBackground(style).opacity
+        ? 24
+        : 0,
     wordPadding = Math.min(
       8,
       width /
@@ -132,7 +138,9 @@ export function OwnerStyledCaption({
       >
         <span
           style={
-            legacyBoxed || block ? undefined : ownerTypographyBackground(style)
+            style.material === "glass" || legacyBoxed || block
+              ? undefined
+              : ownerTypographyBackground(style)
           }
         >
           {style.animation === "slide" ? (
@@ -140,7 +148,9 @@ export function OwnerStyledCaption({
               tokens={lineTokens}
               cues={caption.wordCues}
               ms={ms}
-              color={style.highlight}
+              color={
+                style.material === "glass" ? "transparent" : style.highlight
+              }
               wordPadding={wordPadding}
               renderWord={renderWord}
               fontKey={JSON.stringify([
@@ -199,6 +209,7 @@ export function OwnerStyledCaption({
                       borderRadius: 9,
                       backgroundColor: style.highlight,
                       opacity:
+                        style.material !== "glass" &&
                         highlighted &&
                         (style.animation === undefined ||
                           style.animation === "highlight" ||

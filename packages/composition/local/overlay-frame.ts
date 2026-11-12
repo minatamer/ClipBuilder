@@ -90,12 +90,14 @@ export function ownerOverlayFrame(
     ms,
     frame,
     captionStyle: overlay.captionStyle,
+    blackBars: overlay.blackBars,
     caption,
     colors,
     visuals,
     texts,
     key: JSON.stringify([
       inHook,
+      overlay.blackBars ?? false,
       captionIndex,
       caption?.wordIds,
       colors?.speakerId,
@@ -114,6 +116,7 @@ export function ownerOverlayFrame(
       highlights,
       visuals.map((cue) => [
         cue.id,
+        cue.ignoreBlackBars ?? false,
         ownerVisualMotion(cue, frame),
         ownerVisualTransform(
           cue,

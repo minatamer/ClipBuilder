@@ -1,4 +1,5 @@
 import { ownerProgressAcquisition } from "../../../packages/contracts/local/acquisition-profile.ts";
+import { ownerExportDeadlineMs } from "../../../packages/contracts/local/export-deadline.ts";
 import {
   ownerDiagnosticRecordSchema,
   describeOwnerDiagnosticError,
@@ -39,6 +40,7 @@ import type { CodexProgressStep } from "../../../packages/contracts/local/codex-
 import type { LocalSpeechTools } from "../../../scripts/local-speech-tools.ts";
 
 export function createOwnerWorker(options: {
+  local?: boolean;
   diagnostic?: (line: string) => void;
   root: string;
   token: string;
@@ -201,11 +203,13 @@ export function createOwnerWorker(options: {
           : AbortSignal.any([
               controller.signal,
               AbortSignal.timeout(
-                job.operation === "codex-input"
-                  ? job.kind !== "frames"
-                    ? LOCAL_CODEX_POLICY.speechTimeoutMs
-                    : LOCAL_CODEX_POLICY.frameTimeoutMs
-                  : 10 * 60_000,
+                job.operation === "clip"
+                  ? ownerExportDeadlineMs(options.local)
+                  : job.operation === "codex-input"
+                    ? job.kind !== "frames"
+                      ? LOCAL_CODEX_POLICY.speechTimeoutMs
+                      : LOCAL_CODEX_POLICY.frameTimeoutMs
+                    : 10 * 60_000,
               ),
             ]);
       signal.throwIfAborted();

@@ -17,7 +17,7 @@ export type OwnerOutputProfile = {
   frames: number;
 };
 
-/** Final output preserves upright source height/cadence; codec dimensions are even. */
+/** Full-HD portrait output; source crops stay in original pixels and native cadence. */
 export function ownerOutputProfile(
   source: Pick<OwnerSource, "width" | "height" | "fps">,
   logicalFrames: number,
@@ -36,10 +36,9 @@ export function ownerOutputProfile(
     !Number.isInteger(logicalFrames)
   )
     throw new Error("invalid_export_profile");
-  const height = Math.max(4, Math.ceil(source.height / 2) * 2);
   return {
-    width: Math.min(height - 2, Math.ceil((height * 9) / 32) * 2),
-    height,
+    width: 1080,
+    height: 1920,
     fps: source.fps,
     frames: Math.max(1, Math.round((logicalFrames * source.fps) / OWNER_FPS)),
   };

@@ -18,7 +18,7 @@ export function needsRefractiveScene(overlay: OwnerOverlay) {
   ].some((content) => {
     const style = content.captionStyle,
       opacity = style?.glassOpacity ?? OWNER_GLASS_OPACITY;
-    return style?.material === "glass" && opacity > 0 && opacity < 1;
+    return style?.material === "glass" && opacity > 0;
   });
 }
 

@@ -107,6 +107,9 @@ export async function renderOwnerClip(
       effects: job.overlay.cameraEffects ?? [],
       tracks: job.overlay.cameraTracks ?? [],
       occurrence: "body",
+      ...(job.overlay.blackBars
+        ? { squarePosition: job.overlay.blackBarPosition ?? 0.5 }
+        : {}),
     },
   );
   const bodyVideo = `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${focus}`;
@@ -119,7 +122,7 @@ export async function renderOwnerClip(
     ? Math.floor((hook.startFrame * profile.fps) / OWNER_FPS + 1e-9)
     : 0;
   const hookVideo = hook
-    ? `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${ownerNativeFocusFilter(hookContent.focus, metadata, bodyProfile, "hook", { effects: hookContent.cameraEffects ?? [], tracks: hookContent.cameraTracks ?? [], occurrence: "hook", hook, hookStartFrame })},trim=start_frame=${hookStartFrame}:end_frame=${hookStartFrame + hookProfile!.frames},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${hookProfile!.frames}`
+    ? `${ownerCutVideoFilter(videoStart, job.cut, bodyProfile)},${ownerNativeFocusFilter(hookContent.focus, metadata, bodyProfile, "hook", { effects: hookContent.cameraEffects ?? [], tracks: hookContent.cameraTracks ?? [], occurrence: "hook", hook, hookStartFrame, ...(hookContent.blackBars ? { squarePosition: hookContent.blackBarPosition ?? 0.5 } : {}) })},trim=start_frame=${hookStartFrame}:end_frame=${hookStartFrame + hookProfile!.frames},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${hookProfile!.frames}`
     : "";
   const bodyLook = ownerTimedVideoLookFilter(job.overlay, {
     fps: profile.fps,

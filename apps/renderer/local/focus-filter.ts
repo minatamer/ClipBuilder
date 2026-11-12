@@ -1,5 +1,6 @@
 import {
   ownerFocusSchema,
+  ownerFocusCrop,
   type OwnerFocus,
 } from "../../../packages/contracts/local/focus.ts";
 import { OWNER_FPS } from "../../../packages/contracts/local/policy.ts";
@@ -28,6 +29,7 @@ export function ownerNativeFocusFilter(
     occurrence: "hook" | "body";
     hook?: OwnerHook | undefined;
     hookStartFrame?: number;
+    squarePosition?: number;
   },
 ): string {
   if (!value)
@@ -60,16 +62,21 @@ export function ownerNativeFocusFilter(
         motion?.occurrence ?? "body",
         phaseFrame,
         motion?.tracks ?? [],
+        motion?.squarePosition,
       ),
     );
   };
-  const first = moving
-    ? cropAt(0)
-    : ownerOriginalFocusCrop(focus, focus.shots[0]!);
+  const first =
+    moving || motion?.squarePosition !== undefined
+      ? cropAt(0)
+      : ownerOriginalFocusCrop(focus, focus.shots[0]!);
   const commands = moving
     ? []
     : focus.shots.slice(1).map((shot) => {
-        const crop = ownerOriginalFocusCrop(focus, shot);
+        const crop = ownerOriginalCameraCrop(
+          focus,
+          ownerFocusCrop(focus, shot, motion?.squarePosition),
+        );
         return `${(shot.startFrame / OWNER_FPS).toFixed(6)} crop@${target} w ${crop.width}, crop@${target} h ${crop.height}, crop@${target} x ${crop.x}, crop@${target} y ${crop.y}`;
       });
   if (moving) {
@@ -92,5 +99,9 @@ export function ownerNativeFocusFilter(
   }
   // Keep the scaler input aspect stable when crop dimensions change. FFmpeg 5.1
   // can otherwise stop delivering frames to the downstream overlay at a zoom.
-  return `${commands.length ? `sendcmd=c='${commands.join(";")}',` : ""}crop@${target}=${first.width}:${first.height}:${first.x}:${first.y},setsar=1,scale=${profile.width}:${profile.height}:eval=frame,setsar=1`;
+  const windowHeight =
+    motion?.squarePosition === undefined
+      ? profile.height
+      : Math.ceil((profile.height * 1080) / 1920 / 2) * 2;
+  return `${commands.length ? `sendcmd=c='${commands.join(";")}',` : ""}crop@${target}=${first.width}:${first.height}:${first.x}:${first.y},setsar=1,scale=${profile.width}:${windowHeight}:eval=frame,setsar=1${motion?.squarePosition === undefined ? "" : `,pad=${profile.width}:${profile.height}:0:${Math.floor((profile.height - windowHeight) / 4) * 2}:black`}`;
 }

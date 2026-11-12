@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { OWNER_GLASS_OPACITY } from "../../contracts/local/editor.ts";
 
-// A fixed optical field: inward displacement magnifies the sampled backdrop.
+// A subtle optical field: inward displacement magnifies the sampled backdrop.
 // The map is code-owned, local and independent of video/content or wall time.
 const lensMap =
   "data:image/svg+xml," +
@@ -9,9 +9,10 @@ const lensMap =
     '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128"><defs><linearGradient id="r"><stop stop-color="#ff0000"/><stop offset="1" stop-color="#000000"/></linearGradient><linearGradient id="g" x2="0" y2="1"><stop stop-color="#00ff00"/><stop offset="1" stop-color="#000000"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#r)"/><rect width="100%" height="100%" fill="url(#g)" style="mix-blend-mode:screen"/></svg>',
   );
 
-/** The same glyph-clipped backdrop lens runs over the live and prepared scene. */
+/** Scene-driven glyph optics and neutral edge lighting; no painted environment. */
 export function OwnerGlassWord({
   text,
+  fontSize,
   color,
   outlineColor = "#10243b",
   outlineWidth = 0,
@@ -19,6 +20,7 @@ export function OwnerGlassWord({
   appearance = 1,
 }: {
   text: string;
+  fontSize: number;
   color: string;
   outlineColor?: string | undefined;
   outlineWidth?: number | undefined;
@@ -27,12 +29,12 @@ export function OwnerGlassWord({
 }) {
   const id = useId(),
     surface = `${id}-surface`,
-    edge = `${id}-edge`,
-    grain = `${id}-grain`,
+    bevel = `${id}-bevel`,
+    shadow = `${id}-shadow`,
     clip = `${id}-clip`,
-    lens = `${id}-lens`,
-    reflection = `${id}-reflection`,
-    shadow = `${id}-shadow`;
+    mask = `${id}-mask`,
+    lens = `${id}-lens`;
+  const scale = fontSize / 180;
   const glyph = {
     x: "50%",
     y: "50%",
@@ -60,9 +62,12 @@ export function OwnerGlassWord({
           position: "absolute",
           inset: 0,
           clipPath: `url(#${clip})`,
+          maskImage: `url(#${mask})`,
+          WebkitMaskImage: `url(#${mask})`,
+          maskMode: "alpha",
           backdropFilter: `url(#${lens})`,
           WebkitBackdropFilter: `url(#${lens})`,
-          opacity: Math.sin(Math.PI * opacity) * appearance,
+          opacity: opacity ** 0.25 * appearance,
         }}
       />
       <svg
@@ -74,13 +79,26 @@ export function OwnerGlassWord({
           width: "100%",
           height: "100%",
           overflow: "visible",
-          opacity: appearance * Math.min(1, opacity / OWNER_GLASS_OPACITY),
+          opacity: appearance,
         }}
       >
         <defs>
-          <clipPath id={clip}>
+          <clipPath id={clip} clipPathUnits="userSpaceOnUse">
             <text {...glyph}>{text}</text>
           </clipPath>
+          <mask
+            id={mask}
+            maskUnits="userSpaceOnUse"
+            x="0"
+            y="0"
+            width="100%"
+            height="100%"
+            style={{ maskType: "alpha" }}
+          >
+            <text {...glyph} fill="white">
+              {text}
+            </text>
+          </mask>
           <filter
             id={lens}
             x="-25%"
@@ -101,119 +119,125 @@ export function OwnerGlassWord({
             <feDisplacementMap
               in="SourceGraphic"
               in2="lens-map"
-              scale="48"
+              scale={10 * scale}
               xChannelSelector="R"
               yChannelSelector="G"
+              result="refracted-scene"
+            />
+            {/* Reverse luminance for a polished light-on-dark/dark-on-light
+                face, retaining scene chroma rather than painting blue clouds.
+                RGB = .98 - luminance + .35 * (channel - luminance). */}
+            <feColorMatrix
+              in="refracted-scene"
+              type="matrix"
+              values="0.06299 -0.96552 -0.09747 0 .98  -0.28701 -0.61552 -0.09747 0 .98  -0.28701 -0.96552 0.25253 0 .98  0 0 0 1 0"
             />
           </filter>
-          <linearGradient id={surface} x1="8%" y1="0%" x2="92%" y2="100%">
-            <stop stopColor="#536d7e" stopOpacity="0.8" />
-            <stop offset="0.16" stopColor="#d9edf4" stopOpacity="0.94" />
-            <stop offset="0.3" stopColor={color} stopOpacity="0.98" />
-            <stop offset="0.47" stopColor="#8ca4ad" stopOpacity="0.7" />
-            <stop offset="0.54" stopColor="#283e4c" stopOpacity="0.8" />
-            <stop offset="0.65" stopColor="#78b0cd" stopOpacity="0.75" />
-            <stop offset="0.8" stopColor="#f5fbff" stopOpacity="0.96" />
-            <stop offset="1" stopColor="#698e9f" stopOpacity="0.85" />
-          </linearGradient>
-          <linearGradient id={edge} x1="0%" y1="0%" x2="35%" y2="100%">
-            <stop stopColor="#ffffff" stopOpacity="0.98" />
-            <stop offset="0.36" stopColor="#d5f1ff" stopOpacity="0.65" />
-            <stop offset="0.55" stopColor="#122338" stopOpacity="0.85" />
-            <stop offset="1" stopColor="#f2faff" stopOpacity="0.8" />
+          <linearGradient id={surface} x1="0" y1="0" x2="0.28" y2="1">
+            <stop stopColor={color} stopOpacity="0.16" />
+            <stop offset="0.28" stopColor="white" stopOpacity="0.02" />
+            <stop offset="0.48" stopColor="black" stopOpacity="0.12" />
+            <stop offset="0.56" stopColor="white" stopOpacity="0.12" />
+            <stop offset="0.82" stopColor="white" stopOpacity="0.01" />
+            <stop offset="1" stopColor={color} stopOpacity="0.1" />
           </linearGradient>
           <filter
-            id={reflection}
-            x="-15%"
+            id={bevel}
+            x="-10%"
             y="-20%"
-            width="130%"
+            width="120%"
             height="140%"
             colorInterpolationFilters="sRGB"
           >
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.006 0.018"
-              numOctaves="2"
-              seed="23"
-              result="reflection-field"
+            <feGaussianBlur
+              in="SourceAlpha"
+              stdDeviation={1.3 * scale}
+              result="soft-glyph"
             />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="reflection-field"
-              scale="42"
-              xChannelSelector="R"
-              yChannelSelector="G"
+            <feSpecularLighting
+              in="soft-glyph"
+              surfaceScale={4 * scale}
+              specularConstant="1.1"
+              specularExponent="24"
+              lightingColor="#ffffff"
+              result="lit-edge"
+            >
+              <feDistantLight azimuth="235" elevation="48" />
+            </feSpecularLighting>
+            <feMorphology
+              in="SourceAlpha"
+              operator="erode"
+              radius={5 * scale}
+              result="inset-glyph"
             />
+            <feComposite
+              in="SourceAlpha"
+              in2="inset-glyph"
+              operator="out"
+              result="inner-rim"
+            />
+            <feComposite in="lit-edge" in2="inner-rim" operator="in" />
           </filter>
-          <filter id={shadow} x="-15%" y="-20%" width="130%" height="140%">
-            <feDropShadow
-              dx="1"
-              dy="3"
-              stdDeviation="1.2"
-              floodColor="#000000"
-              floodOpacity="0.65"
+          <filter id={shadow} x="-10%" y="-15%" width="120%" height="140%">
+            <feGaussianBlur
+              in="SourceAlpha"
+              stdDeviation={1.1 * scale}
+              result="blurred-glyph"
             />
-          </filter>
-          <filter
-            id={grain}
-            x="0"
-            y="0"
-            width="100%"
-            height="100%"
-            colorInterpolationFilters="sRGB"
-          >
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.65"
-              numOctaves="1"
-              seed="7"
+            <feOffset
+              in="blurred-glyph"
+              dx={1.5 * scale}
+              dy={3.5 * scale}
+              result="offset-glyph"
             />
-            <feColorMatrix type="saturate" values="0" />
-            <feComposite in2="SourceAlpha" operator="in" />
+            <feFlood floodColor="#000000" floodOpacity="0.85" />
+            <feComposite in2="offset-glyph" operator="in" />
+            <feComposite in2="SourceAlpha" operator="out" />
           </filter>
         </defs>
-        <text {...glyph} fill={color} opacity={opacity * opacity}>
-          {text}
-        </text>
         <text
           {...glyph}
-          fill="none"
-          stroke={outlineColor}
-          strokeOpacity="0.8"
-          strokeWidth={outlineWidth + 3.5}
-          strokeLinejoin="round"
-          transform="translate(0.8 1.2)"
+          fill="black"
+          opacity={opacity ** 0.5}
           filter={`url(#${shadow})`}
         >
           {text}
         </text>
-        <g clipPath={`url(#${clip})`} opacity={opacity}>
-          <rect
-            width="100%"
-            height="100%"
-            fill={`url(#${surface})`}
-            filter={`url(#${reflection})`}
-          />
+        <g clipPath={`url(#${clip})`}>
+          <text {...glyph} fill={`url(#${surface})`} opacity={opacity ** 0.25}>
+            {text}
+          </text>
+          <text
+            {...glyph}
+            fill="none"
+            stroke={outlineColor}
+            strokeOpacity={opacity ** 0.5}
+            strokeWidth={outlineWidth + 4.5 * scale}
+            strokeLinejoin="round"
+            transform={`translate(${1.2 * scale} ${1.5 * scale})`}
+          >
+            {text}
+          </text>
+          <text
+            {...glyph}
+            fill="none"
+            stroke="#f0fcff"
+            strokeOpacity={opacity ** 0.5}
+            strokeWidth={2 * scale}
+            strokeLinejoin="round"
+            transform={`translate(${-0.5 * scale} ${-0.6 * scale})`}
+          >
+            {text}
+          </text>
+          <text
+            {...glyph}
+            fill="white"
+            opacity={opacity ** 0.35}
+            filter={`url(#${bevel})`}
+          >
+            {text}
+          </text>
         </g>
-        <text
-          {...glyph}
-          fill={`url(#${surface})`}
-          stroke={`url(#${edge})`}
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-          paintOrder="stroke fill"
-          fillOpacity={opacity * 0.2}
-        >
-          {text}
-        </text>
-        <text
-          {...glyph}
-          fill="#ffffff"
-          opacity={0.035 * opacity}
-          filter={`url(#${grain})`}
-        >
-          {text}
-        </text>
       </svg>
     </span>
   );

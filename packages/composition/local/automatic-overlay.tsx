@@ -11,6 +11,8 @@ import { type CSSProperties, type ReactNode } from "react";
 import type { OwnerOverlayClock } from "../../contracts/local/visual-clock.ts";
 import { ownerVisualTransform } from "../../contracts/local/visual-effects.ts";
 import type { OwnerOverlayContent } from "../../contracts/local/clips.ts";
+import { OwnerSceneMattes } from "./scene-mattes.tsx";
+import { ownerVisualBlackBarClip } from "../../contracts/local/black-bars.ts";
 
 export type OwnerOverlayImageProps = {
   src: string;
@@ -47,8 +49,16 @@ export function OwnerAutomaticOverlay({
 }) {
   const width = 1080,
     height = 1920;
-  const { ms, frame, caption, colors, visuals, texts, captionStyle } =
-    ownerOverlayFrame(overlay, presentationFrame, clock);
+  const {
+    ms,
+    frame,
+    caption,
+    colors,
+    visuals,
+    texts,
+    captionStyle,
+    blackBars,
+  } = ownerOverlayFrame(overlay, presentationFrame, clock);
   return (
     <div
       style={{
@@ -61,6 +71,7 @@ export function OwnerAutomaticOverlay({
     >
       <OwnerCaptionFontFace />
       {background}
+      <OwnerSceneMattes enabled={blackBars} />
       {visuals.map((cue) => {
         const transform = ownerVisualTransform(
           cue,
@@ -90,37 +101,47 @@ export function OwnerAutomaticOverlay({
         return (
           <div
             key={cue.id}
-            data-visual-id={cue.id}
+            data-visual-window={cue.id}
             style={{
               position: "absolute",
-              left: full ? 0 : cue.box.x * width,
-              top: full ? 0 : cue.box.y * height,
-              width: full ? width : cue.box.width * width,
-              height: full ? height : cue.box.height * height,
-              overflow: "hidden",
-              borderRadius: full ? 0 : 20,
-              ...ownerVisualMotion(cue, frame),
+              inset: 0,
+              pointerEvents: "none",
+              clipPath: ownerVisualBlackBarClip(blackBars, cue.ignoreBlackBars),
             }}
           >
-            {cue.video ? (
-              renderVideo ? (
-                renderVideo(props, cue, frame)
+            <div
+              data-visual-id={cue.id}
+              style={{
+                position: "absolute",
+                left: full ? 0 : cue.box.x * width,
+                top: full ? 0 : cue.box.y * height,
+                width: full ? width : cue.box.width * width,
+                height: full ? height : cue.box.height * height,
+                overflow: "hidden",
+                borderRadius: full ? 0 : 20,
+                ...ownerVisualMotion(cue, frame),
+              }}
+            >
+              {cue.video ? (
+                renderVideo ? (
+                  renderVideo(props, cue, frame)
+                ) : (
+                  <video
+                    src={props.src}
+                    muted
+                    preload="auto"
+                    style={props.style}
+                    data-source-frame={Math.floor(
+                      frame - cue.startFrame + cue.video.offsetFrame + 1e-6,
+                    )}
+                  />
+                )
+              ) : renderImage ? (
+                renderImage(props)
               ) : (
-                <video
-                  src={props.src}
-                  muted
-                  preload="auto"
-                  style={props.style}
-                  data-source-frame={Math.floor(
-                    frame - cue.startFrame + cue.video.offsetFrame + 1e-6,
-                  )}
-                />
-              )
-            ) : renderImage ? (
-              renderImage(props)
-            ) : (
-              <img {...props} alt={props.alt} />
-            )}
+                <img {...props} alt={props.alt} />
+              )}
+            </div>
           </div>
         );
       })}

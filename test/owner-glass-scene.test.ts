@@ -15,6 +15,7 @@ import {
 import { rasterizeOwnerOverlay } from "../apps/renderer/local/rasterize-overlay.ts";
 import { renderOwnerClip } from "../apps/renderer/local/clip-render.ts";
 import { needsRefractiveScene } from "../apps/renderer/local/refractive-scene.ts";
+import { defaultOwnerFocus } from "../packages/contracts/local/focus.ts";
 
 // Only browser capture is injected. The prepared scene, mux, audio, profile,
 // frame validation, input ownership and scratch cleanup all run real FFmpeg.
@@ -117,8 +118,14 @@ it.each([24, 60, 30000 / 1001])(
             frames: 60,
             captions: [],
             visuals: [],
-            captionStyle: OWNER_CAPTION_PRESETS.glass,
+            captionStyle: {
+              ...OWNER_CAPTION_PRESETS.glass,
+              glassOpacity: fps === 24 ? 1 : 0.55,
+            },
             hook: { startFrame: 6, endFrame: 8 },
+            ...(fps === 24
+              ? { blackBars: true, focus: defaultOwnerFocus(metadata, 60) }
+              : {}),
           },
         },
         signal,
@@ -137,6 +144,24 @@ it.each([24, 60, 30000 / 1001])(
         8,
       );
       const output = join(directory, `${clipId}.r0.mp4`);
+      const actual = JSON.parse(
+        await runOwnedProcess(
+          tools.ffprobe,
+          [
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "json",
+            output,
+          ],
+          signal,
+        ),
+      ).streams[0];
+      expect(actual).toMatchObject({ width: 1080, height: 1920 });
       expect((await readFile(output)).length).toBeGreaterThan(1000);
       expect(
         (await readdir(directory)).some((name) => name.startsWith("overlay-")),
@@ -160,13 +185,16 @@ it("bounds physical sampling and admits only the private fixed scene route", () 
     captions: [],
     visuals: [],
   };
-  for (const glassOpacity of [0, 1])
+  for (const [glassOpacity, expected] of [
+    [0, false],
+    [1, true],
+  ] as const)
     expect(
       needsRefractiveScene({
         ...overlay,
         captionStyle: { ...OWNER_CAPTION_PRESETS.glass, glassOpacity },
       }),
-    ).toBe(false);
+    ).toBe(expected);
   expect(
     needsRefractiveScene({
       ...overlay,

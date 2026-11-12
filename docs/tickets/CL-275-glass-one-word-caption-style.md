@@ -6,6 +6,28 @@ owner material-fidelity acceptance is separate. No paid/provider runs or
 owner-media changes.
 Dependency: existing shared caption styles, word timing and preview/export paths.
 
+## Owner default-style confirmation — 2026-11-12
+
+The owner requests that TikTok remain the default for both captions and authored
+text, reporting an apparent change during Glass review. Audit confirms fresh
+caption preparation and explicit caption generation use
+`OWNER_CAPTION_PRESETS.tiktok`; Add text uses
+`OWNER_SOCIAL_TEXT_PRESETS.tiktok`. Glass is only an explicit
+style choice. The earlier owner-requested Glass review saved a selected style;
+that does not change fresh defaults. Preserve explicit saved selections instead
+of rewriting the owner's clips. Verify default selection in a separate no-key
+editor fixture; keep TikTok as the primary refreshed portfolio caption view and
+show Glass as an optional treatment. CL-276 owns the screenshot replacement.
+No provider call, source processing, configuration or Git mutation is authorized.
+
+Verified: the two focused fresh-clip/default-text tests pass under the fake,
+paid-off test composition. In the isolated current editor, fresh captions show
+TikTok checked; Add text also selects TikTok and undo removes the temporary new
+layer. Existing text retains its TikTok selection. No production default needed
+changing and no owner-saved Glass selection was rewritten. CL-276's refreshed
+portfolio leads with TikTok and shows Glass in a separately labelled optional
+style capture. This verifies API-free UI/default behavior, not live AI quality.
+
 ## Owner review setup — 2026-11-11
 
 After the authorized CL-274/275/276 commits, reopen the designated retained
