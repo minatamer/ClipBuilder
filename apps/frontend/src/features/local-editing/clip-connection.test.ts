@@ -1,5 +1,28 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { pollClipConnection, type ClipConnection } from "./clip-connection.ts";
+import {
+  pollClipConnection,
+  retainAcknowledgedClips,
+  type ClipConnection,
+} from "./clip-connection.ts";
+import { independentHookFixture } from "../../../../../test/owner-hook-fixture.ts";
+
+it("does not roll back acknowledged edits when a late read arrives, while retaining fresh lifecycle state", () => {
+  const acknowledged = independentHookFixture();
+  acknowledged.revision = 3;
+  const old = { ...structuredClone(acknowledged), revision: 2 };
+  const current = { clips: [acknowledged], active: false, workers: 1 as const };
+  expect(
+    retainAcknowledgedClips(current, { ...current, clips: [old] }).clips[0],
+  ).toBe(acknowledged);
+  const progressed = { ...acknowledged, state: "ready" as const };
+  expect(
+    retainAcknowledgedClips(current, { ...current, clips: [progressed] })
+      .clips[0],
+  ).toBe(progressed);
+  expect(
+    retainAcknowledgedClips(current, { ...current, clips: [] }).clips,
+  ).toEqual([]);
+});
 
 afterEach(() => vi.useRealTimers());
 const list = { clips: [], active: false, workers: 1 };

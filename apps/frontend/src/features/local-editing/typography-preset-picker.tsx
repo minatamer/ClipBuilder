@@ -61,7 +61,10 @@ export function CaptionPresetPicker({
             preview: (
               <span
                 className="typography-preset-sample"
-                style={{ fontFamily: "Arial", fontWeight: 900 }}
+                style={{
+                  fontFamily: OWNER_CAPTION_PRESETS.glass.font,
+                  fontWeight: 900,
+                }}
               >
                 <OwnerGlassWord text="Aa" color="#ffffff" />
               </span>

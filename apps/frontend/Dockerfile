@@ -6,7 +6,7 @@ RUN corepack pnpm fetch --ignore-scripts
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN corepack pnpm install --offline --frozen-lockfile
-RUN corepack pnpm --filter @clipbuilder/contracts build && corepack pnpm --filter @clipbuilder/composition build && corepack pnpm --filter @clipbuilder/frontend exec next build
+RUN node scripts/copy-caption-fonts.mjs && corepack pnpm --filter @clipbuilder/contracts build && corepack pnpm --filter @clipbuilder/composition build && corepack pnpm --filter @clipbuilder/frontend exec next build
 # Linux acceptance: no links to the source store, authoring captures, secrets or test UI.
 RUN node --experimental-strip-types apps/frontend/scripts/verify-release-artifact.ts
 RUN test -f apps/frontend/public/favicon.png && test -f apps/frontend/public/product-film/opening.jpg

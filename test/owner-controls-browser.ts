@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { build, stop } from "esbuild";
+import { copyCaptionFonts } from "../scripts/copy-caption-fonts.mjs";
 import { openBrowser } from "../apps/renderer/node_modules/@remotion/renderer/dist/index.js";
 
 // The pinned renderer exposes CDP at runtime but types only its own command subset.
@@ -211,6 +212,7 @@ export async function prepareLocalControlsFixture(
 ) {
   const ui = join(directory, "synthetic-ui");
   await mkdir(ui);
+  await copyCaptionFonts(ui);
   try {
     await build({
       stdin: {
@@ -239,6 +241,7 @@ export async function prepareLocalControlsFixture(
 export async function prepareLocalOverlayFixture(directory: string) {
   const overlay = join(directory, "synthetic-overlay");
   await mkdir(overlay);
+  await copyCaptionFonts(overlay);
   try {
     await build({
       entryPoints: [resolve("apps/renderer/local/overlay-page.tsx")],

@@ -72,6 +72,8 @@ weights/
 *.onnx
 
 # IDE and operating-system files
+/apps/frontend/public/fonts/league-spartan.woff2
+/apps/frontend/public/fonts/League-Spartan-OFL.txt
 /apps/renderer/editing-overlay/
 .DS_Store
 Thumbs.db

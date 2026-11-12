@@ -121,3 +121,63 @@ it("restores an incomplete Hook endpoint through Undo/Redo without undoing an un
   expect(redone.hookDraft).toEqual({ startFrame: 90, endFrame: null });
   expect(redone.draft.captions!.fontSize).toBe(70);
 });
+it("keeps an independently saved property through Undo and Redo after a safe rebase", () => {
+  const history = new WorkspaceEditHistory(),
+    clip = independentHookFixture();
+  const original = change(clip.edit!, 64),
+    local = change(original, 70);
+  history.record(clip.id, snapshot(original), snapshot(local));
+  const remote = structuredClone(original);
+  remote.revision++;
+  remote.captions!.fontWeight = 900;
+  history.reconcile(clip.id, original, remote, original.captions!);
+  const current = {
+    ...local,
+    revision: remote.revision,
+    captions: { ...local.captions!, fontWeight: 900 as const },
+  };
+  const undone = history.move(clip.id, snapshot(current), "undo")!;
+  expect(undone.draft.captions).toMatchObject({
+    fontSize: 64,
+    fontWeight: 900,
+  });
+  expect(history.move(clip.id, undone, "redo")!.draft.captions).toMatchObject({
+    fontSize: 70,
+    fontWeight: 900,
+  });
+});
+it("retains an incoming property when Undo returns to inherited typography after a clean update", () => {
+  const history = new WorkspaceEditHistory(),
+    clip = independentHookFixture(),
+    before = clip.edit!;
+  const base = {
+    ...structuredClone(before),
+    captions: { ...OWNER_CAPTION_PRESETS.tiktok, fontSize: 70 },
+  };
+  history.record(clip.id, snapshot(before), snapshot(base));
+  const remote = structuredClone(base);
+  remote.revision++;
+  remote.captions.fontWeight = 900;
+  history.reconcile(clip.id, base, remote, OWNER_CAPTION_PRESETS.tiktok);
+  const undone = history.move(clip.id, snapshot(remote), "undo")!;
+  expect(undone.draft.captions).toMatchObject({
+    fontSize: 64,
+    fontWeight: 900,
+    preset: "tiktok",
+  });
+});
+it("keeps unedited caption inheritance when only another section changes remotely", () => {
+  const history = new WorkspaceEditHistory(),
+    clip = independentHookFixture(),
+    before = clip.edit!;
+  const edited = structuredClone(before);
+  edited.videoLook = { preset: "warm", strength: 70 };
+  history.record(clip.id, snapshot(before), snapshot(edited));
+  const remote = structuredClone(edited);
+  remote.revision++;
+  remote.videoLook = { preset: "cool", strength: 70 };
+  history.reconcile(clip.id, edited, remote, OWNER_CAPTION_PRESETS.tiktok);
+  expect(
+    history.move(clip.id, snapshot(remote), "undo")!.draft.captions,
+  ).toBeNull();
+});

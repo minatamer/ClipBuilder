@@ -1,5 +1,15 @@
 # Fixed clip composition
 
+CL-286's Glass caption material shares a fixed glyph-clipped displacement lens,
+polished reflections and persisted opacity across preview and native overlays.
+Its League Spartan variable font is bundled once with its OFL license; build
+steps copy it into self-hosted frontend/raster assets. React deduplicates the
+fixed font-face resource. Measured advances protect large-word fitting without
+the generic estimate shrinking it prematurely. Other fonts remain available.
+The module remains browser-safe; it does not read files, install fonts or make
+provider calls. Full normal native MP4/Safari optical acceptance remains separate
+from generated Codex and injected native checks; see CL-286's evidence.
+
 Local Text layers with canonical spans share `OwnerStyledTextLayer` between
 scaled direct editing, preview and native overlays (CL-226). Allowlisted fonts,
 colors, size/weight, outline and highlight use bounded fitting and the same

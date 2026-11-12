@@ -41,7 +41,11 @@ import { HOSTED_DEMO_POLICY } from "../../../../../packages/contracts/local/host
 import { DemoLimitToast } from "./demo-limit-toast.tsx";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import { Trash2 } from "lucide-react";
-import { pollClipConnection, type ClipConnection } from "./clip-connection.ts";
+import {
+  pollClipConnection,
+  retainAcknowledgedClips,
+  type ClipConnection,
+} from "./clip-connection.ts";
 import { CodexPreparationSteps } from "./codex-preparation-steps.tsx";
 
 const RAIL_PAGE_ITEMS = 20;
@@ -162,7 +166,7 @@ export function OwnerClipBatchPanel({
   const endpoint = `/api/local/workspace/${workspace.id}/clips`;
   const accept = useCallback(
     (value: OwnerClipList) => {
-      setList(value);
+      setList((current) => retainAcknowledgedClips(current, value));
       setListReady(true);
       onActive(value.active);
     },
@@ -756,7 +760,7 @@ export function OwnerClipBatchPanel({
               )}
             {working(current) && (
               <ProcessingState
-                className="clip-preparing"
+                layout="workspace"
                 label={clipStageLabel(current)}
               >
                 {current.state === "preparing" &&

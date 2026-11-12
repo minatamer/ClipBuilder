@@ -1045,9 +1045,6 @@
     height: 100%;
     font-size: 0.7rem;
   }
-  .clip-preparing {
-    --processing-height: clamp(14rem, calc(100cqh - 1.5rem), 40rem);
-  }
   [hidden] {
     display: none !important;
   }

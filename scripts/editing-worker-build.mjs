@@ -1,4 +1,5 @@
 import { build } from "esbuild";
+import { copyCaptionFonts } from "./copy-caption-fonts.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 const repository = fileURLToPath(new URL("../", import.meta.url));
@@ -24,6 +25,9 @@ await build({
 await mkdir(new URL("../apps/renderer/editing-overlay", import.meta.url), {
   recursive: true,
 });
+await copyCaptionFonts(
+  fileURLToPath(new URL("../apps/renderer/editing-overlay", import.meta.url)),
+);
 await writeFile(
   new URL("../apps/renderer/editing-overlay/index.html", import.meta.url),
   '<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;width:1080px;height:1920px;background:transparent}</style></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>',

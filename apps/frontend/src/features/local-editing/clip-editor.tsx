@@ -11,6 +11,7 @@ import "./editor-controls.css";
 import { WorkspaceEditHistory } from "./edit-history";
 import { useEditorAutosave } from "./use-editor-autosave";
 import { EditorSaveTools } from "./editor-save-tools";
+import { EditorSaveConflict } from "./editor-save-conflict";
 import { EditorOverview } from "./editor-overview";
 import {
   CompactEditorPlayback,
@@ -127,7 +128,10 @@ import {
 } from "./text-selection.tsx";
 import { BoxFields, TextPositionFields } from "./position-fields.tsx";
 import { PositionPresets } from "./position-presets";
-import { OWNER_SOCIAL_TEXT_PRESETS } from "../../../../../packages/contracts/local/text-style.ts";
+import {
+  OWNER_SOCIAL_TEXT_PRESETS,
+  OWNER_FONT_SIZE,
+} from "../../../../../packages/contracts/local/text-style.ts";
 import {
   OWNER_TEXT_LIMITS,
   ownerLayerTextSchema,
@@ -142,6 +146,7 @@ import {
 } from "../../../../../packages/contracts/local/focus.ts";
 import {
   useEffect,
+  useLayoutEffect,
   useContext,
   useEffectEvent,
   useCallback,
@@ -194,6 +199,7 @@ import {
   OWNER_CAPTION_PRESETS,
   OWNER_CAPTION_DEFAULT_CENTER_Y,
   OWNER_CAPTION_ANIMATIONS,
+  OWNER_GLASS_OPACITY,
   ownerEditDocumentSchema,
   type OwnerCaptionStyle,
   type OwnerEditDocument,
@@ -835,6 +841,7 @@ export function ClipEditor({
     string | undefined
   >();
   const [forcedStale, setForcedStale] = useState(false);
+  const [reviewSaveConflict, setReviewSaveConflict] = useState(false);
   const [captionConfirm, setCaptionConfirm] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [findingVisuals, setFindingVisuals] = useState(false);
@@ -888,6 +895,30 @@ export function ClipEditor({
   const original =
     revisionChanged && !changed ? initialOwnerEdit(clip) : form.original;
   const masterDraft = revisionChanged && !changed ? original : form.draft;
+  const acceptCleanRevision = useEffectEvent(() => {
+    if (!revisionChanged || changed) return;
+    const current = currentForm.current;
+    if (
+      current.original.revision !== form.original.revision ||
+      currentHookDraft.current !== undefined ||
+      !sameOwnerEdit(current.original, current.draft)
+    )
+      return;
+    const accepted = initialOwnerEdit(clip);
+    history.reconcile(
+      clip.id,
+      current.original,
+      accepted,
+      clip.base?.overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean,
+    );
+    setCameraInspection((value) =>
+      value ? { ...value, original: accepted } : null,
+    );
+    setForm({ original: accepted, draft: structuredClone(accepted) }, false);
+  });
+  useLayoutEffect(() => {
+    acceptCleanRevision();
+  }, [clip.revision, revisionChanged, changed]);
   const currentTitle =
     !hookDraft &&
     masterDraft.hook &&
@@ -1151,8 +1182,9 @@ export function ClipEditor({
                                           draft.captions.fontSize,
                                         ) ||
                                           draft.captions.fontSize < 24 ||
-                                          draft.captions.fontSize > 120)
-                                      ? "Use a font size from 24 to 120."
+                                          draft.captions.fontSize >
+                                            OWNER_FONT_SIZE.max)
+                                      ? `Use a font size from ${OWNER_FONT_SIZE.min} to ${OWNER_FONT_SIZE.max}.`
                                       : "Keep layers inside the preview and check their size.";
     try {
       playbackOverlay =
@@ -1192,25 +1224,19 @@ export function ClipEditor({
       audioUploading ||
       gestureActive ||
       !previewLoaded,
-    onAcknowledged: (accepted, submitted) => {
-      diagnostics.action("apply");
+    onAcknowledged: (accepted, merged, kind, historyBase) => {
+      history.reconcile(
+        clip.id,
+        historyBase,
+        accepted,
+        rootBase.overlay.captionStyle ?? OWNER_CAPTION_PRESETS.clean,
+      );
+      if (kind === "save") diagnostics.action("apply");
+      setForcedStale(false);
       setCameraInspection((current) =>
         current ? { ...current, original: accepted } : null,
       );
-      setForm(
-        (current) => ({
-          original: accepted,
-          draft: sameOwnerEdit(current.draft, submitted)
-            ? structuredClone(accepted)
-            : {
-                ...current.draft,
-                revision: accepted.revision,
-                baseHash: accepted.baseHash,
-                fingerprint: accepted.fingerprint,
-              },
-        }),
-        false,
-      );
+      setForm({ original: accepted, draft: merged }, false);
     },
     onAccepted,
   });
@@ -1292,6 +1318,7 @@ export function ClipEditor({
   const editorDirty =
     dirty ||
     autosave.phase === "saving" ||
+    autosave.phase === "syncing" ||
     autosave.phase === "failed" ||
     autosave.phase === "conflict" ||
     trackingMode ||
@@ -1312,7 +1339,12 @@ export function ClipEditor({
   });
   useEffect(() => () => diagnostics.close(), [diagnostics]);
   useEffect(() => {
-    reportPending(pending || titleLoading || autosave.phase === "saving");
+    reportPending(
+      pending ||
+        titleLoading ||
+        autosave.phase === "saving" ||
+        autosave.phase === "syncing",
+    );
   }, [pending, titleLoading, autosave.phase]);
   useEffect(() => {
     if (trackingBusy) reportBusy(true);
@@ -1978,7 +2010,12 @@ export function ClipEditor({
     kind: "picture" | "video" | "reload" | "audio" | "youtube-audio",
     file?: File,
   ) {
-    if (request.current || autosave.phase === "saving") return;
+    if (
+      request.current ||
+      autosave.phase === "saving" ||
+      autosave.phase === "syncing"
+    )
+      return;
     if (kind === "reload") setCameraInspection(null);
     if (kind === "reload") {
       hookTitles.cancel();
@@ -2122,7 +2159,7 @@ export function ClipEditor({
       if (alive.current && !controller.signal.aborted)
         setMessage(
           failure instanceof Error && failure.message === "stale"
-            ? "This clip changed elsewhere. Reload it to continue."
+            ? ""
             : kind === "video"
               ? "Couldn’t add this video. Use MP4 or MOV under 64 MB and 2 minutes."
               : kind === "picture"
@@ -2374,14 +2411,26 @@ export function ClipEditor({
         onUndo={() => moveHistory("undo")}
         onRedo={() => moveHistory("redo")}
         onRetry={autosave.retry}
+        onResolve={() => setReviewSaveConflict(true)}
         onReload={
-          actionsVisible &&
-          (stale || previewUnavailable || autosave.phase === "conflict")
+          actionsVisible && previewUnavailable && !dirty && !stale
             ? () => void perform("reload")
             : undefined
         }
-        reloadDisabled={pending || autosave.phase === "saving"}
+        reloadDisabled={
+          pending || autosave.phase === "saving" || autosave.phase === "syncing"
+        }
       />
+      {reviewSaveConflict && autosave.conflict && (
+        <EditorSaveConflict
+          fields={autosave.conflict.fields}
+          canKeep={autosave.conflict.canKeep && !error && !hookDraft}
+          onClose={() => setReviewSaveConflict(false)}
+          onResolve={(keep) => {
+            if (autosave.resolve(keep)) setReviewSaveConflict(false);
+          }}
+        />
+      )}
       {previewLoading && (
         <span className="local-sr-only" role="status">
           Loading preview
@@ -3207,6 +3256,34 @@ export function ClipEditor({
                         }
                       />
                       <div className="editor-fields">
+                        {caption.material === "glass" && (
+                          <label>
+                            Glass opacity (
+                            {Math.round(
+                              (caption.glassOpacity ?? OWNER_GLASS_OPACITY) *
+                                100,
+                            )}
+                            %)
+                            <input
+                              aria-label="Glass opacity"
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={
+                                (caption.glassOpacity ?? OWNER_GLASS_OPACITY) *
+                                100
+                              }
+                              onChange={(event) =>
+                                setCaption({
+                                  ...caption,
+                                  glassOpacity:
+                                    Number(event.currentTarget.value) / 100,
+                                })
+                              }
+                            />
+                          </label>
+                        )}
                         <label>
                           Animation
                           <select
@@ -3988,19 +4065,14 @@ export function ClipEditor({
           </ControlPanel>
           {actionsVisible &&
             audioImport === null &&
-            (stale || messageFor("action")) && (
+            !stale &&
+            messageFor("action") && (
               <WorkflowActions
                 target={actionTarget}
                 label="Editor feedback"
                 feedback
               >
-                <InlineFeedback
-                  message={
-                    stale
-                      ? "Clip changed. Reload to continue."
-                      : messageFor("action")
-                  }
-                />
+                <InlineFeedback message={messageFor("action")} />
               </WorkflowActions>
             )}
           {actionsVisible && audioUploading && audioImport === null && (

@@ -117,8 +117,8 @@ it("associates caption-word validation with that word, preserving IDs and clocks
 });
 
 it.each([
-  { fontSize: NaN, message: "Use 24–120." },
-  { fontSize: 121, message: "Use 24–120." },
+  { fontSize: NaN, message: "Use 24–600." },
+  { fontSize: 601, message: "Use 24–600." },
   { outlineWidth: NaN, message: "Use 0–12." },
 ])(
   "places invalid typography feedback at its numeric control (%j)",

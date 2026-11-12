@@ -133,8 +133,13 @@ export async function startHookEditorFixture(
   let injectedFailures = 0;
   let titleSuggestions = 0;
   let editOutcome:
-    "ready" | "hold" | "fail-before" | "fail-after" | "rejected" | "conflict" =
-    "ready";
+    | "ready"
+    | "hold"
+    | "fail-before"
+    | "fail-after"
+    | "drop-ack"
+    | "rejected"
+    | "conflict" = "ready";
   const editRequests: string[] = [];
   const acknowledgedEdits = new Map<string, string>();
   const pendingEdits = new Set<() => void>();
@@ -603,7 +608,18 @@ export async function startHookEditorFixture(
         const prior = acknowledgedEdits.get(receipt);
         if (prior) {
           if (prior !== body) throw Error("synthetic_edit_identity_changed");
+          if (outcome === "drop-ack") {
+            res.writeHead(503).end("{}");
+            return;
+          }
           res.end(JSON.stringify(list()));
+          return;
+        }
+        if (
+          input.expectedRevision !== target.revision ||
+          input.baseHash !== target.baseHash
+        ) {
+          res.writeHead(409).end("{}");
           return;
         }
         const edit = applyOwnerEdit(target, input, {
@@ -617,7 +633,7 @@ export async function startHookEditorFixture(
         });
         edits++;
         acknowledgedEdits.set(receipt, body);
-        if (outcome === "fail-after") {
+        if (outcome === "fail-after" || outcome === "drop-ack") {
           res.writeHead(503).end("{}");
           return;
         }
@@ -843,7 +859,9 @@ export async function startHookEditorFixture(
                         ? "app.js"
                         : req.url === "/app.css"
                           ? "app.css"
-                          : null;
+                          : req.url === "/fonts/league-spartan.woff2"
+                            ? "fonts/league-spartan.woff2"
+                            : null;
       if (!file) {
         unexpected++;
         res.writeHead(404).end();
@@ -851,11 +869,13 @@ export async function startHookEditorFixture(
       }
       res
         .writeHead(200, {
-          "Content-Type": file.endsWith("js")
-            ? "text/javascript"
-            : file.endsWith("css")
-              ? "text/css"
-              : "text/html",
+          "Content-Type": file.endsWith("woff2")
+            ? "font/woff2"
+            : file.endsWith("js")
+              ? "text/javascript"
+              : file.endsWith("css")
+                ? "text/css"
+                : "text/html",
         })
         .end(await readFile(join(ui, file)));
     })().catch(() => res.writeHead(500).end());

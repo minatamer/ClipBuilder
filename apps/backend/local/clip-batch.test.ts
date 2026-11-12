@@ -17,9 +17,13 @@ import {
 import { type OwnerAnalysis } from "../../../packages/contracts/local/selection.ts";
 import { OWNER_BATCH_POLICY } from "../../../packages/contracts/local/clips.ts";
 import { PUBLIC_LIMITS } from "@clipbuilder/contracts";
+import { OWNER_CAPTION_PRESETS } from "../../../packages/contracts/local/editor.ts";
 import { OWNER_SOCIAL_TEXT_PRESETS } from "../../../packages/contracts/local/text-style.ts";
 import { compileOwnerOverlay } from "../../../packages/contracts/local/edit-overlay.ts";
-import { OWNER_AUDIO_LIMITS } from "../../../packages/contracts/local/audio.ts";
+import {
+  OWNER_AUDIO_LIMITS,
+  type OwnerAudioCue,
+} from "../../../packages/contracts/local/audio.ts";
 import { defaultOwnerFocus } from "../../../packages/contracts/local/focus.ts";
 import { ownerCameraFollowKey } from "../../../packages/contracts/local/camera-follow.ts";
 import { createLocalCodexAi } from "./codex-ai.ts";
@@ -30,6 +34,23 @@ import {
   HOSTED_MEMORY_BYTES,
   HOSTED_SCRATCH_VOLUME_BYTES,
 } from "./hosted-capacity.ts";
+
+function manualVisualSound(visual: {
+  id: string;
+  startFrame: number;
+}): OwnerAudioCue {
+  return {
+    id: randomUUID(),
+    visualId: visual.id,
+    source: { kind: "builtin", id: "pop" },
+    placement: "clip",
+    startFrame: visual.startFrame,
+    endFrame: visual.startFrame + 9,
+    offsetFrame: 0,
+    volume: 35,
+    loop: false,
+  };
+}
 
 let directory: string,
   files: WorkspaceFiles,
@@ -133,6 +154,41 @@ const request = () => ({
   momentIds: [...analysis.manual, ...analysis.suggestions.slice(0, 1)].map(
     (moment) => moment.id,
   ),
+});
+it("keeps large Glass typography and opacity through acknowledged edit, restore and export without replanning", async () => {
+  const input = request();
+  input.momentIds = input.momentIds.slice(0, 1);
+  await batch.submit(input, analysis);
+  await batch.drain();
+  const clip = batch.snapshot().clips[0]!;
+  const style = {
+    ...OWNER_CAPTION_PRESETS.glass,
+    fontSize: 240,
+    glassOpacity: 0.62,
+    box: { x: 0.05, y: 0.3, width: 0.9, height: 0.32 },
+  };
+  await batch.edit(clip.id, {
+    operationId: randomUUID(),
+    expectedRevision: clip.revision,
+    baseHash: clip.baseHash,
+    operations: [{ kind: "caption", style }],
+  });
+  const saved = JSON.parse(JSON.stringify(batch.snapshot().clips));
+  await batch.close();
+  batch = new OwnerClipBatch(workspace, files, ports);
+  batch.restore(saved);
+  expect(batch.snapshot().clips[0]!.edit!.captions).toEqual(style);
+  await batch.render(clip.id, {
+    operationId: randomUUID(),
+    expectedRevision: 1,
+  });
+  await batch.drain();
+  const job = ports.render.mock.calls[1]![0];
+  if (job.operation !== "clip") throw Error("expected_export");
+  expect(job.overlay.captionStyle).toEqual(style);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.image).toHaveBeenCalledTimes(1);
+  expect(ports.render).toHaveBeenCalledTimes(2);
 });
 it("retains an authored fit-original title above footage and pictures below across fresh planning/edit/restore", async () => {
   await batch.close();
@@ -683,7 +739,7 @@ it("stops queued Codex work on disk exhaustion while retaining completed clips f
   expect(result.active).toBe(false);
   expect(ports.plan).toHaveBeenCalledTimes(1);
 });
-it("adds recorded visual Pops when Find visuals starts from a silent clip and keeps them on replay/restore", async () => {
+it("keeps Find visuals silent through replay and restore without adding sound or processing calls", async () => {
   ports.plan.mockResolvedValueOnce([]);
   const planVisuals = vi.fn(fakeOwnerClipPreparation.plan);
   Object.assign(ports, { planVisuals });
@@ -702,20 +758,8 @@ it("adds recorded visual Pops when Find visuals starts from a silent clip and ke
   const found = (
     await batch.findVisuals(before.id, input, AbortSignal.timeout(2000))
   ).clips[0]!;
-  const visual = found.edit!.visuals[0]!;
-  expect(found.edit!.audio!.cues).toEqual([
-    expect.objectContaining({
-      visualId: visual.id,
-      source: { kind: "builtin", id: "pop" },
-      placement: "clip",
-      startFrame: visual.startFrame,
-      endFrame: Math.min(found.base!.overlay.frames, visual.startFrame + 9),
-      offsetFrame: 0,
-      volume: 35,
-      loop: false,
-    }),
-  ]);
-  expect(found.edit!.audio!.originalVolume).toBe(100);
+  expect(found.edit!.visuals).not.toHaveLength(0);
+  expect(found.edit!.audio).toBeUndefined();
   await batch.findVisuals(before.id, input, AbortSignal.timeout(2000));
   expect(batch.snapshot().clips[0]!.edit!.audio).toEqual(found.edit!.audio);
   const saved = structuredClone(batch.snapshot().clips);
@@ -728,16 +772,6 @@ it("adds recorded visual Pops when Find visuals starts from a silent clip and ke
   expect(ports.plan).toHaveBeenCalledTimes(1);
   expect(ports.image).toHaveBeenCalledTimes(1);
   expect(ports.render).toHaveBeenCalledTimes(nativeCalls);
-  const changed = structuredClone(found.edit!);
-  changed.visuals[0]!.startFrame = 10;
-  expect(
-    compileOwnerOverlay(found.base!, changed, found.assets).audio!.cues[0]!
-      .startFrame,
-  ).toBe(10);
-  changed.visuals = [];
-  expect(
-    compileOwnerOverlay(found.base!, changed, found.assets).audio!.cues,
-  ).toEqual([]);
 });
 it.each([false, true])(
   "preserves edited/manual audio when Find visuals succeeds (full capacity: %s)",
@@ -757,7 +791,10 @@ it.each([false, true])(
     );
     await batch.drain();
     const initial = batch.snapshot().clips[0]!;
-    const pop = { ...initial.edit!.audio!.cues[0]!, volume: 0 };
+    const pop = {
+      ...manualVisualSound(initial.edit!.visuals[0]!),
+      volume: 0,
+    };
     const manual = {
       ...pop,
       id: randomUUID(),
@@ -792,19 +829,10 @@ it.each([false, true])(
     expect(found.edit!.audio!.cues.slice(0, cues.length)).toEqual(
       before.edit!.audio!.cues,
     );
-    if (!full)
-      expect(found.edit!.audio!.cues[2]).toMatchObject({
-        visualId: found.edit!.visuals[1]!.id,
-        source: { kind: "builtin", id: "pop" },
-        startFrame: 180,
-        volume: 35,
-      });
-    expect(found.edit!.audio!.cues).toHaveLength(
-      full ? OWNER_AUDIO_LIMITS.cues : 3,
-    );
+    expect(found.edit!.audio!.cues).toHaveLength(cues.length);
   },
 );
-it("repairs existing visual Pops through the acknowledged audio edit with zero new processing calls", async () => {
+it("adds requested visual sounds only through an acknowledged manual edit with zero processing calls", async () => {
   await batch.submit(
     { ...request(), momentIds: [analysis.suggestions[0]!.id] },
     analysis,
@@ -833,7 +861,7 @@ it("repairs existing visual Pops through the acknowledged audio edit with zero n
           kind: "audio",
           audio: {
             originalVolume: 71,
-            cues: initial.base!.overlay.audio!.cues,
+            cues: initial.edit!.visuals.map(manualVisualSound),
           },
         },
       ],
@@ -1083,9 +1111,7 @@ it("caps only fresh planned pictures and gaps, then preserves a manually extende
     [0, 150],
     [210, 300],
   ]);
-  expect(
-    prepared.base!.overlay.audio!.cues.map((cue) => cue.startFrame),
-  ).toEqual([0, 210]);
+  expect(prepared.base!.overlay.audio).toBeUndefined();
   expect(ports.plan).toHaveBeenCalledTimes(1);
   expect(ports.image).toHaveBeenCalledTimes(2);
   const edited = await batch.edit(prepared.id, {
@@ -1198,15 +1224,24 @@ it.each(["clear", "crowded"])(
       expect(final.overlay.visuals[0]!.box).toEqual(manualBox);
   },
 );
-it("adds one editable recorded Pop per planned visual without additional planning and follows moved/deleted visual edits", async () => {
+it("leaves new visuals silent and preserves manually added accents through move/remove edits", async () => {
   await batch.submit(
     { ...request(), momentIds: [analysis.manual[0]!.id] },
     analysis,
   );
   await batch.drain();
-  const clip = batch.snapshot().clips[0]!,
-    visual = clip.base!.overlay.visuals[0]!;
-  const cues = clip.base!.overlay.audio!.cues;
+  const prepared = batch.snapshot().clips[0]!,
+    visual = prepared.base!.overlay.visuals[0]!;
+  expect(prepared.base!.overlay.audio).toBeUndefined();
+  const cues = [manualVisualSound(visual)];
+  const clip = (
+    await batch.edit(prepared.id, {
+      operationId: randomUUID(),
+      expectedRevision: prepared.revision,
+      baseHash: prepared.baseHash,
+      operations: [{ kind: "audio", audio: { originalVolume: 100, cues } }],
+    })
+  ).clips[0]!;
   expect(cues).toHaveLength(1);
   expect(cues[0]).toMatchObject({
     visualId: visual.id,

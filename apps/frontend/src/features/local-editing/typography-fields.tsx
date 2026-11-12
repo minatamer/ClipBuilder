@@ -4,6 +4,7 @@ import { TypographyPresetPicker } from "./typography-preset-picker";
 import { InlineFeedback } from "../../shared/ui/inline-feedback";
 import {
   OWNER_TEXT_FONTS,
+  OWNER_FONT_SIZE,
   ownerTextBackground,
   ownerTypographyWeight,
   ownerTypographyOutline,
@@ -33,9 +34,9 @@ export function TypographyFields({
   const sizeError =
     !mixed.includes("fontSize") &&
     (!Number.isInteger(value.fontSize) ||
-      value.fontSize < 24 ||
-      value.fontSize > 120)
-      ? "Use 24–120."
+      value.fontSize < OWNER_FONT_SIZE.min ||
+      value.fontSize > OWNER_FONT_SIZE.max)
+      ? `Use ${OWNER_FONT_SIZE.min}–${OWNER_FONT_SIZE.max}.`
       : undefined;
   const outlineError =
     !mixed.includes("outlineWidth") &&
@@ -58,8 +59,8 @@ export function TypographyFields({
             <input
               aria-label="Font size"
               type="number"
-              min="24"
-              max="120"
+              min={OWNER_FONT_SIZE.min}
+              max={OWNER_FONT_SIZE.max}
               step="1"
               placeholder={mixed.includes("fontSize") ? "Mixed" : undefined}
               aria-invalid={!!sizeError || undefined}

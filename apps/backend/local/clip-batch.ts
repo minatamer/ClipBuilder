@@ -60,10 +60,8 @@ import { ownerAgentValidation } from "./agent-view.ts";
 import { normalizeOwnerPicture } from "./personal-picture.ts";
 import {
   OWNER_AUDIO_LIMITS,
-  ownerAudioDuration,
   ownerAudioAssetSchema,
   resolveOwnerAudioCues,
-  type OwnerAudioCue,
 } from "../../../packages/contracts/local/audio.ts";
 import {
   type OwnerAnalysis,
@@ -178,29 +176,6 @@ type Work = { clip: OwnerClip } & (
 );
 const working = (clip: OwnerClip) =>
   ["queued", "preparing", "rendering", "canceling"].includes(clip.state);
-
-function visualStartSound(
-  visual: { id: string; startFrame: number },
-  frames: number,
-): OwnerAudioCue {
-  return {
-    id: randomUUID(),
-    visualId: visual.id,
-    source: { kind: "builtin", id: "pop" },
-    placement: "clip",
-    startFrame: visual.startFrame,
-    endFrame: Math.min(
-      frames,
-      visual.startFrame +
-        Math.round(
-          ownerAudioDuration({ kind: "builtin", id: "pop" }, []) * OWNER_FPS,
-        ),
-    ),
-    offsetFrame: 0,
-    volume: 35,
-    loop: false,
-  };
-}
 
 /** An ephemeral, workspace-owned ordered work list; one native/provider job globally. */
 export class OwnerClipBatch {
@@ -775,22 +750,13 @@ export class OwnerClipBatch {
             visuals,
             frames,
           );
-          const missing = created.filter(
-            ({ visual }) => !cues.some((cue) => cue.visualId === visual.id),
-          );
           const edit = ownerEditDocumentSchema.parse({
             ...prior,
             revision: clip.revision + 1,
             visuals,
-            audio: {
-              originalVolume: audio?.originalVolume ?? 100,
-              cues: [
-                ...cues,
-                ...missing
-                  .slice(0, Math.max(0, OWNER_AUDIO_LIMITS.cues - cues.length))
-                  .map(({ visual }) => visualStartSound(visual, frames)),
-              ],
-            },
+            ...(audio
+              ? { audio: { originalVolume: audio.originalVolume, cues } }
+              : {}),
           });
           const assets = [...clip.assets, ...created.map((item) => item.asset)];
           compileOwnerOverlay(
@@ -1571,15 +1537,6 @@ export class OwnerClipBatch {
           : {}),
         texts: preparation.texts ?? [],
         visuals,
-        ...(visuals.length
-          ? {
-              audio: {
-                originalVolume: 100,
-                assets: [],
-                cues: visuals.map((visual) => visualStartSound(visual, frames)),
-              },
-            }
-          : {}),
         ...(clip.framing === "fit"
           ? { framing: "fit" }
           : {

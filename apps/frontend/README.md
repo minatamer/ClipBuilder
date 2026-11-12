@@ -1,11 +1,16 @@
 # ClipBuilder frontend
 
-CL-275 adds Glass to caption Style presets: timed single-word uppercase display,
-translucent reflection bands, edge highlights and fine grain in the shared
-preview/export component. Existing presets, source text/word clocks, positioning,
+CL-286 updates CL-275's Glass preset with a bundled geometric League Spartan
+font, polished reflections, beveled edges, real glyph-clipped scene displacement
+and a dedicated persisted Glass opacity control. New presets use 180px type;
+shared typography supports 24–600px with safe fitting and measured bundled-font
+advances. Existing presets, source text/word clocks, positioning,
 speaker behavior, Hook scope and authored-text styles remain. Autosave, Undo/Redo
 and saved drafts preserve the optional caption material. It needs no API key or
 model; real transcription retains its existing prerequisites and approvals.
+Dev/build commands prepare the fixed font/license from the shared composition
+asset directory. Both local and hosted native bundles contain the identical
+self-hosted font; runtime uses no CDN and native capture waits for that face.
 The opt-in generated material proof opens no browser:
 
 ```text
@@ -37,8 +42,11 @@ Earlier footer/Apply layout notes below are historical and superseded here.
 
 Valid edits debounce for 650 ms, serialize through the existing protected edit
 endpoint and preserve later input. Export/navigation wait for acknowledgement.
-Invalid/incomplete edits stay local; failed saves require Retry and conflicts
-require deliberate Reload. History retains up to 50 edit states per clip within
+Invalid/incomplete edits stay local; exhausted saves offer Retry. CL-286 safely
+reconciles independent incoming edits and pending acknowledgements; genuine
+conflicts offer Review edits inside the navbar, preserving local input. History
+also retains independent incoming changes through Undo/Redo. No save reload or
+floating stale message is required. History retains up to 50 edit states per clip within
 8 MiB for the current workspace; acknowledged edits survive normal recovery,
 while Undo/Redo history is session memory. Native input Undo remains available
 while typing. Autosave/history/manual editing work with `FAKE_MODE=true` and no

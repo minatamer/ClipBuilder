@@ -1,5 +1,15 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Visual sounds are manual — CL-286, 2026-11-11
+
+Never automatically attach Pop or another sound accent to added pictures/videos.
+This covers fresh AI preparation, generated/fetched fallback, Find visuals and
+restoration. Users explicitly add audio through existing manual controls.
+Preserve authored audio and saved legacy cues, gain/mute, anchoring and mixing;
+do not silently rewrite old clips. This supersedes earlier automatic-Pop defaults
+in CL-141/142/166/178. Visual discovery alone does not change a silent clip's audio
+or create an audio edit; existing linked cues still follow their visuals.
+
 ## Local developer analysis notebook — CL-283, 2026-11-11
 
 The owner authorizes durable local copies of acknowledged source transcription
@@ -43,6 +53,10 @@ recovery share that treatment. Narrow editor-preview opening uses the same
 component's centered compact indicator within the existing preview canvas.
 Full-workflow panels keep their existing branded layout; button, thumbnail and
 navbar indicators retain their smaller contextual scale.
+CL-285 embeds editor processing directly into its existing workspace canvas,
+without another rounded card, edge shadow or border. The shared workspace layout
+fills the available area and scrolls safely in short windows; spinner, stage
+details, real timings, readiness and existing actions keep their behavior.
 
 Compact cues use ActivityIndicator, pending commands can use Button's busy
 presentation, and Progress preserves measured/indeterminate semantics with the
@@ -68,7 +82,7 @@ live flags and approvals. No source acquisition or provider behavior changes.
 ## Reliable manual autosave recovery — CL-277, 2026-11-11
 
 Save recovery belongs inside the workspace navbar immediately left of the save
-status. Retry save and deliberate Reload clip share one reserved slot; saved,
+status. Retry save and Review edits share one reserved slot; saved,
 saving, failure and correction keep stable header/preview geometry. Responsive
 toolbars retain normal touch targets and wrap as a complete tools row. Save
 failures never create floating controls over editor tabs.
@@ -86,8 +100,17 @@ input remains local and is saved in order after acknowledgement. Unused error
 bodies are canceled, and unmount cancels requests/backoff. Exhaustion retains
 the receipt for explicit Retry. Definitive rejection permits correction with a
 fresh operation; validation/auth/expiry/rate-limit responses are never
-automatically retried. Revision conflicts require deliberate Reload, never
-automatic overwrite.
+automatically retried. CL-286 supersedes the old revision-conflict Reload flow:
+recognize an applied pending receipt, read the latest validated snapshot after a
+definitive 409 and safely merge independent authored properties on the same
+source/base. Preserve newer typed input and merge incoming changes into Undo/
+Redo history. Late polls cannot roll acknowledged revisions backward. Limit
+automatic rebases to three; uncertain receipts retain their exact replay bytes.
+Same-field, delete/edit, competing-order or different-source conflicts retain
+local edits and offer a deliberate Review edits dialog in the navbar. The owner
+chooses saved changes or keeps compatible valid local changes; never silently
+overwrite. Preview repair remains a separate clean-draft action. No stale-save
+message floats over the editor tabs, and safe recovery requires no reload.
 
 This exception retries only non-metered manual edit transport. It never retries
 providers, analysis, generation or export, and needs no API keys in fake or live
@@ -126,16 +149,44 @@ IDs, timing, Hook/body scope, speaker controls and manual placement remain
 unchanged. Each active word fits its box independently; silent word gaps remain
 empty. Other typography presets clear the material while retaining placement.
 
-The shared preview/export component uses fixed translucent reflection bands,
-light/dark edge highlights and seeded alpha-clipped grain. Footage shows through
-the letterforms; this does not sample, blur or physically refract the scene.
-No remote texture/font, extra renderer input, provider key or model is required.
-Autosave/history and protected draft serialization preserve the material. Real
-transcription retains its existing provider/local-runtime prerequisites and
-approvals. Generated Codex UI, strict contracts, draft round trips and a
-no-browser SVG/FFmpeg material proof are verified; full normal native MP4 export
-parity is explicitly unverified under the owner's Codex-only testing instruction.
-CL-275 records that remaining acceptance boundary and the actual evidence.
+CL-286 replaces the initial transparency-only treatment with a fixed glyph-clipped
+scene-displacement lens, polished silver/blue reflection bands, smooth seeded
+reflection variation and beveled light/dark edges. It is an optical simulation,
+not a physically accurate ray tracer. The owner's later references guide the
+polished, mirror-like finish. New Glass presets use 180px geometric League Spartan
+uppercase type, with a bundled variable face and measured fitting advances;
+existing saved sizes stay intact. Shared typography supports bounded 24–600px
+sizes, retaining safe-box fitting and long-word constraints.
+
+Glass has a persisted caption-only opacity value (0–100%, default 55% for old
+material without that property and new presets): zero hides the entire material,
+one is opaque, intermediate values mix the refracted scene and reflected surface.
+No runtime remote texture/font, provider key or model is involved. One canonical
+OFL-licensed font/license is copied into self-hosted frontend and local/hosted
+native assets by the fixed build steps. React deduplicates its font-face resource;
+native capture requires it to load, preventing silent fallback. Exact font/license
+hashes remain in release-asset admission. Other styles and
+authored text retain their existing controls and behavior. Autosave/history,
+Hook/body scopes, speaker colors and protected draft serialization preserve it.
+
+Partial Glass exports prepare only the current job's bounded silent source
+scene with existing camera/look and native cadence, inside confined scratch.
+The same shared component samples that scene plus admitted B-roll/text. The
+private raster page accepts only its fixed authenticated loopback scene route;
+source identity, range/origin/cookie checks, resource bounds and cleanup remain.
+Physical samples retain native cadence; confirmed repeated B-roll frames are
+reused without waiting for an impossible second decoder callback. Opaque scene
+captures use quality-98 JPEG within the existing shared scratch budget and an
+explicit full-to-limited-range color conversion before final muxing. Non-Glass
+and fully clear/opaque Glass keep the efficient existing alpha-overlay path.
+
+Generated Codex preview/native-page optics, opacity boundaries, strict contracts,
+draft round trips, native 24/60/fractional Hook/body muxing with injected browser
+capture and no-browser material proof establish their stated boundaries. Full
+normal browser-driven MP4 export and Safari optical behavior remain unverified;
+SVG backdrop displacement is not interoperable across every browser. Real AI
+quality requires its existing runtime, flags and approvals; fake checks do not
+establish that quality. See CL-286 for actual evidence and remaining gates.
 
 ## Moments creation and review — CL-274, CL-279, 2026-11-11
 
@@ -1992,21 +2043,20 @@ admission, no Gemini fallback and non-fatal misses remain. No additional AI
 request, new quality rejection or automatic retry. Fake/synthetic verification
 proves mechanics; fresh real editorial quality remains owner review.
 
-## Automatic visual accent synchronization — CL-166, 2026-10-30
+## Existing visual accent synchronization — CL-166, revised CL-286
 
-An AI image's linked accent derives from its first actually visible frame, never
+An existing/manual image's linked accent derives from its first actually visible frame, never
 an independently authored sound timestamp. Each Hook/body appearance starts a
 fresh sound at offset zero, including a Hook that begins inside an image. Keep
 the sound within that occurrence. Moving/removing the image follows/removes its
 linked cue; volume/mute/removal stay editable. Deliberate timing, placement,
 offset or loop edits make it manual. Preserve independent manual layers/risers.
 
-CL-178 applies the same recorded Pop default to successful Find visuals results,
-including fetched images. Add one missing visual-start cue at 35% volume; reuse
-existing anchored cues with their edited source/volume/mute, and preserve manual
-audio and owner pictures. Replays/restores never duplicate sounds. If the audio
-cue capacity is full, preserve existing audio and usable visuals. A search miss
-or cancellation never changes the prior audio edit. No extra AI or render call.
+CL-286 removes the earlier CL-178 automatic Pop default from Find visuals.
+Reuse existing anchored cues with their edited source/volume/mute, preserving
+manual audio and owner pictures, but never add a missing cue automatically.
+Replays/restores do not create sounds. A search miss or cancellation never
+changes the prior audio edit. No extra AI or render call.
 
 CL-256 replaces per-image playback buffering with initial image/audio preparation
 and retained decoded image bytes. Known cues reuse those bytes; dynamic additions
@@ -2305,8 +2355,9 @@ Replace new picker choices with actual community-researched public recordings:
 Pop SFX, Bamboo Hit, Vine Boom and Sator suspense. The explicit request authorizes
 bounded anonymous curation downloads, superseding the original-synthesis-only
 catalogue decision. Retired IDs remain playable in saved clips but are absent
-from new selection. Pop/Sator now resolve to the real recordings. New planned
-visuals receive the recorded Pop once at their start; no end cue or extra AI call.
+from new selection. Pop/Sator now resolve to the real recordings. CL-286
+supersedes the earlier planned-visual default: recordings are manual choices;
+new visuals receive no automatic sound at either boundary.
 Preserve layering, independent volume, quality, limits and private owner assets.
 
 Selected audio has Preview in clip at its actual presentation window. Adding a
@@ -2328,8 +2379,8 @@ local caption exception; fake mode still uses fictional providers. Hosted stays
 Gemini and excludes Codex. Only the provider key in the owner's private local
 configuration may be updated under this request; preserve other settings.
 
-Automatically planned visuals receive one short original Snap at their start,
-with no sound at their end and no additional AI call. Audio layers may overlap;
+CL-286 removes this packet's historical automatic Snap/Pop default. Visuals add
+no sound until the user explicitly chooses it. Audio layers may overlap;
 original speech and every sound/music cue keep independent editable volume.
 Anchored accents follow visual timing/removal and can be detached for manual
 timing. Media → Audio additionally admits local-only YouTube sound URLs using
@@ -3330,7 +3381,7 @@ separate. This supersedes the owner-only four-suggestion ceiling; ten selected c
 one-transcription/one-selection budget remain. Report a shortfall if fewer
 grounded moments qualify, with no automatic retry or invented content.
 Caption customization adds fixed local fonts, independent animation and
-24–120px size alongside existing colors/geometry. Small adjustable source-video
+24–600px size (expanded by CL-286) alongside existing colors/geometry. Small adjustable source-video
 looks are local deterministic edits. See
 [CL-026](tickets/CL-026-expand-local-discovery-and-presentation-controls.md).
 These changes use the same real/provider-neutral workflow and fake simulations,

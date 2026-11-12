@@ -3,6 +3,7 @@ import type { OwnerOverlay } from "../../contracts/local/clips.ts";
 import { FixedCaption } from "../src/fixed-layers.tsx";
 import { ownerOverlayFrame } from "./overlay-frame.ts";
 import { OwnerStyledCaption } from "./styled-caption.tsx";
+import { OwnerCaptionFontFace } from "./caption-font.tsx";
 import { OwnerTextLayerView } from "./text-layer.tsx";
 import { ownerVisualMotion } from "./visual-motion.ts";
 import { OWNER_CAPTION_PRESETS } from "../../contracts/local/editor.ts";
@@ -27,11 +28,13 @@ export function OwnerAutomaticOverlay({
   renderImage,
   onImageError,
   renderVideo,
+  background,
 }: {
   overlay: OwnerOverlay;
   assets: Record<string, string>;
   frame: number;
   clock?: OwnerOverlayClock | undefined;
+  background?: ReactNode;
   renderImage?: ((props: OwnerOverlayImageProps) => ReactNode) | undefined;
   onImageError?: (() => void) | undefined;
   renderVideo?:
@@ -56,6 +59,8 @@ export function OwnerAutomaticOverlay({
         overflow: "hidden",
       }}
     >
+      <OwnerCaptionFontFace />
+      {background}
       {visuals.map((cue) => {
         const transform = ownerVisualTransform(
           cue,

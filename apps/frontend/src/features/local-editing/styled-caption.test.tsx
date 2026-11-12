@@ -81,10 +81,27 @@ it("keeps glass to the active timed word, including silent gaps, without changin
   expect(first).toContain("CORAL");
   expect(first).not.toContain("REEFS");
   expect(first).toContain("data-glass-word");
-  expect(first).toContain("font-size:120px");
+  expect(first).toContain("font-size:180px");
   expect(render(1200, glass)).not.toContain("data-glass-word");
   expect(render(1500, glass)).toContain('data-word-id="w_000003"');
   expect(JSON.stringify(caption)).toBe(before);
+});
+it("uses a fixed glyph-clipped optical lens and keeps old opacity defaults and fade sampling coherent", () => {
+  const legacy = { ...OWNER_CAPTION_PRESETS.glass };
+  delete legacy.glassOpacity;
+  expect(render(300, legacy)).toEqual(render(300, OWNER_CAPTION_PRESETS.glass));
+  const opaque = render(300, { ...legacy, glassOpacity: 1 });
+  expect(opaque).toContain("feDisplacementMap");
+  expect(opaque).toContain("clipPath");
+  const hidden = render(300, { ...legacy, glassOpacity: 0 });
+  expect(hidden).toContain("opacity:0");
+  expect(hidden).not.toEqual(opaque);
+  const fading = render(150, { ...legacy, animation: "fade" });
+  // An opacity on the outer caption would cut off its backdrop sampling.
+  expect(fading.slice(0, fading.indexOf("data-caption-line"))).not.toContain(
+    "opacity:0.416",
+  );
+  expect(fading).toContain("opacity:0.4166666666666667");
 });
 
 it("fits long glass words and keeps cached native frames deterministic", () => {
@@ -118,6 +135,15 @@ it("fits long glass words and keeps cached native frames deterministic", () => {
     if (html)
       expect(Number(html.match(/font-size:(\d+)px/)?.[1])).toBeLessThan(120);
   }
+});
+it("lets a larger geometric word fill its safe box instead of shrinking it with generic font estimates", () => {
+  const html = render(300, {
+    ...OWNER_CAPTION_PRESETS.glass,
+    fontSize: 240,
+    box: { x: 0.05, y: 0.3, width: 0.9, height: 0.32 },
+  });
+  expect(html).toContain("font-size:240px");
+  expect(html).toContain("font-family:League Spartan");
 });
 
 it("keeps the glass material when choosing Slide and leaves plain Slide unchanged", () => {

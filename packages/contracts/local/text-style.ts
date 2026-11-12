@@ -1,10 +1,14 @@
 import { z } from "zod";
 
+export const OWNER_FONT_SIZE = { min: 24, max: 600 } as const;
+export const OWNER_GEOMETRIC_FONT = "League Spartan";
+
 export const OWNER_TEXT_FONTS = [
   "Arial",
   "Verdana",
   "Georgia",
   "Courier New",
+  OWNER_GEOMETRIC_FONT,
 ] as const;
 export const OWNER_TEXT_PRESET_LABELS = {
   clean: "Clean",
@@ -30,7 +34,11 @@ export const ownerTypographySchema = z
       "solid-block",
       "translucent",
     ]),
-    fontSize: z.number().int().min(24).max(120),
+    fontSize: z
+      .number()
+      .int()
+      .min(OWNER_FONT_SIZE.min)
+      .max(OWNER_FONT_SIZE.max),
     font: z.enum(OWNER_TEXT_FONTS).optional(),
     fontWeight: z
       .union([

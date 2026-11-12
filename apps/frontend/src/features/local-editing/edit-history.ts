@@ -1,4 +1,8 @@
-import type { OwnerEditDocument } from "../../../../../packages/contracts/local/editor.ts";
+import type {
+  OwnerEditDocument,
+  OwnerCaptionStyle,
+} from "../../../../../packages/contracts/local/editor.ts";
+import { reconcileEditorEdit } from "./reconcile-editor-edit";
 import { sameOwnerEdit } from "./editor-state";
 import type { OwnerHookDraft } from "./hook-range-draft";
 
@@ -92,6 +96,45 @@ export class WorkspaceEditHistory {
       undo: history?.baseHash === value.baseHash && history.back.length > 0,
       redo: history?.baseHash === value.baseHash && history.forward.length > 0,
     };
+  }
+  /** Incoming changes must survive Undo; an acknowledgement is not an action. */
+  reconcile(
+    id: string,
+    base: OwnerEditDocument,
+    saved: OwnerEditDocument,
+    inheritedCaption: OwnerCaptionStyle,
+  ) {
+    const history = this.get(id, saved);
+    if (sameOwnerEdit(base, saved)) return;
+    // A historical null style means inherited typography, not an instruction to
+    // erase an incoming property when undoing an unrelated earlier action.
+    const captionChanged =
+      JSON.stringify(base.captions) !== JSON.stringify(saved.captions);
+    const explicitCaption = (edit: OwnerEditDocument) =>
+      captionChanged
+        ? {
+            ...edit,
+            captions: edit.captions ?? inheritedCaption,
+          }
+        : edit;
+    for (const entries of [history.back, history.forward]) {
+      for (let i = 0; i < entries.length; i++) {
+        const previous = entries[i]!;
+        const merged = reconcileEditorEdit(
+          explicitCaption(base),
+          explicitCaption(previous.value.draft),
+          explicitCaption(saved),
+          true,
+          inheritedCaption,
+        );
+        if (!merged.compatible) continue;
+        const entry = this.entry({ ...previous.value, draft: merged.draft });
+        entries[i] = entry;
+        this.bytes += entry.bytes - previous.bytes;
+      }
+    }
+    history.group = undefined;
+    this.trim();
   }
   move(id: string, current: EditorHistorySnapshot, direction: "undo" | "redo") {
     const history = this.get(id, current.draft);

@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "next build && node --experimental-strip-types scripts/verify-release-artifact.ts --local-build",
-    "dev": "next dev --hostname 127.0.0.1 --port 3000",
+    "build": "node ../../scripts/copy-caption-fonts.mjs && next build && node --experimental-strip-types scripts/verify-release-artifact.ts --local-build",
+    "dev": "node ../../scripts/copy-caption-fonts.mjs && next dev --hostname 127.0.0.1 --port 3000",
     "film:capture": "node scripts/capture-workspace-film.mjs",
     "film:poster": "node --experimental-strip-types scripts/render-product-film-poster.mjs",
     "film:studio": "remotion studio src/features/product-film/studio.tsx --no-open --port=3002",

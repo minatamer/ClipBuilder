@@ -15,6 +15,7 @@ export function EditorSaveTools({
   onUndo,
   onRedo,
   onRetry,
+  onResolve,
   onReload,
   reloadDisabled,
 }: {
@@ -27,6 +28,7 @@ export function EditorSaveTools({
   onUndo: () => void;
   onRedo: () => void;
   onRetry: () => void;
+  onResolve?: (() => void) | undefined;
   onReload?: (() => void) | undefined;
   reloadDisabled?: boolean;
 }) {
@@ -36,30 +38,40 @@ export function EditorSaveTools({
     ? phase
     : invalid
       ? "invalid"
-      : dirty || phase === "saving"
+      : dirty || phase === "saving" || phase === "syncing"
         ? "saving"
         : "saved";
   const label =
     phase === "conflict"
-      ? "Clip changed elsewhere"
+      ? "Save conflict"
       : phase === "failed"
         ? "Couldn’t save"
         : invalid
           ? "Check edits"
-          : state === "saving"
-            ? "Saving…"
-            : "Saved";
+          : phase === "syncing"
+            ? "Syncing…"
+            : state === "saving"
+              ? "Saving…"
+              : "Saved";
   const tools = (
     <div className="editor-save-tools" aria-label="Edit history and saving">
       <span className="editor-save-recovery">
-        {onReload ? (
+        {phase === "conflict" && onResolve ? (
+          <Button
+            variant="quiet"
+            className="editor-save-retry"
+            onClick={onResolve}
+          >
+            Review edits
+          </Button>
+        ) : onReload ? (
           <Button
             variant="quiet"
             className="editor-save-retry"
             disabled={reloadDisabled}
             onClick={onReload}
           >
-            Reload clip
+            Repair preview
           </Button>
         ) : phase === "failed" ? (
           <Button

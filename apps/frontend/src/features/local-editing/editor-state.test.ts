@@ -62,6 +62,30 @@ it("selects glass without changing caption placement and removes only that mater
   expect(clean.material).toBeUndefined();
   expect(clean.align).toBe("right");
 });
+it("admits larger caption typography and bounded persisted Glass opacity while fitting the safe frame", () => {
+  for (const fontSize of [121, 240, 600]) {
+    const style = { ...OWNER_CAPTION_PRESETS.glass, fontSize };
+    style.box = constrainOwnerBox(style.box, style);
+    for (const glassOpacity of [0, 0.35, 1])
+      expect(
+        ownerCaptionStyleSchema.safeParse({ ...style, glassOpacity }).success,
+      ).toBe(true);
+    expect(style.box.y + style.box.height).toBeLessThanOrEqual(0.950000001);
+  }
+  for (const glassOpacity of [-0.01, 1.01, NaN, Infinity])
+    expect(
+      ownerCaptionStyleSchema.safeParse({
+        ...OWNER_CAPTION_PRESETS.glass,
+        glassOpacity,
+      }).success,
+    ).toBe(false);
+  expect(
+    ownerCaptionStyleSchema.safeParse({
+      ...OWNER_CAPTION_PRESETS.glass,
+      fontSize: 601,
+    }).success,
+  ).toBe(false);
+});
 
 it("centers caption text boxes at Default positioning and portrait quarters within safe bounds", () => {
   for (const caption of Object.values(OWNER_CAPTION_PRESETS)) {

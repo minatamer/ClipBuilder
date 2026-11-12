@@ -17,7 +17,7 @@ export function ProcessingState({
   progress?: { fraction: number; valueText: string };
   children?: ReactNode;
   indicatorSize?: BrandedSpinnerSize;
-  layout?: "panel" | "compact";
+  layout?: "panel" | "compact" | "workspace";
 }) {
   return (
     <div

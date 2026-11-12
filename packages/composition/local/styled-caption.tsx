@@ -67,6 +67,12 @@ export function OwnerStyledCaption({
         color={style.color}
         outlineColor={style.outlineColor}
         outlineWidth={style.outlineWidth}
+        opacity={style.glassOpacity}
+        appearance={
+          style.animation === "fade"
+            ? Math.min(1, (ms - caption.startMs) / 120)
+            : 1
+        }
       />
     ) : (
       word
@@ -230,7 +236,7 @@ export function OwnerStyledCaption({
         overflow: "hidden",
         ...paint,
         opacity:
-          style.animation === "fade"
+          style.animation === "fade" && style.material !== "glass"
             ? Math.min(1, (ms - caption.startMs) / 120)
             : undefined,
         color: style.color,

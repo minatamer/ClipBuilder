@@ -1,10 +1,12 @@
 import type { CSSProperties } from "react";
 import {
   ownerTextBackground,
+  OWNER_GEOMETRIC_FONT,
   ownerTypographyWeight,
   ownerTypographyOutline,
   type OwnerTypography,
 } from "../../contracts/local/text-style.ts";
+import { GEOMETRIC_FONT_ADVANCES } from "./geometric-font-metrics.ts";
 
 export function ownerTypographyPaint(style: OwnerTypography): CSSProperties {
   const outline = ownerTypographyOutline(style);
@@ -44,6 +46,13 @@ export function ownerTextLineUnits(
   line: string,
   font: OwnerTypography["font"],
 ) {
+  if (font === OWNER_GEOMETRIC_FONT)
+    return (
+      Array.from(line).reduce(
+        (sum, char) => sum + (GEOMETRIC_FONT_ADVANCES[char] ?? 1.25),
+        0,
+      ) * 1.02
+    );
   if (font === "Courier New")
     return Array.from(line).reduce(
       (sum, char) => sum + ((char.codePointAt(0) ?? 0) > 127 ? 1.2 : 0.65),

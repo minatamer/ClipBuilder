@@ -1,0 +1,53 @@
+.dialog {
+  box-sizing: border-box;
+  width: min(30rem, calc(100vw - 1.5rem));
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
+  padding: 0;
+  border: 1px solid var(--cb-border);
+  border-radius: var(--cb-radius-panel);
+  background: var(--cb-glass-sheen), var(--cb-canvas);
+  color: var(--cb-ink);
+  font-family: var(--cb-font-sans);
+  box-shadow:
+    var(--cb-glass-edge-shadow),
+    0 2rem 6rem #01081799;
+}
+.dialog::backdrop {
+  background: #020918bd;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem 0;
+}
+.heading h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.body {
+  padding: 0.5rem 1rem 1rem;
+  font-size: var(--cb-text-small);
+}
+.body p {
+  margin: 0 0 0.75rem;
+  color: var(--cb-ink-soft);
+}
+.body p:last-child {
+  margin-bottom: 0;
+}
+.body ul {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--cb-border);
+  background: var(--cb-footer-fill);
+}

@@ -19,6 +19,7 @@ import { boundedPlainTextSchema } from "../src/text.schema.ts";
 import {
   ownerTypographySchema,
   OWNER_SOCIAL_TEXT_PRESETS,
+  OWNER_GEOMETRIC_FONT,
 } from "./text-style.ts";
 import { ownerTextLayersSchema } from "./text-layers.ts";
 import { ownerCaptionSpeakersSchema } from "./caption-speakers.ts";
@@ -35,11 +36,13 @@ export const OWNER_CAPTION_ANIMATIONS = [
   "fade",
   "none",
 ] as const;
+export const OWNER_GLASS_OPACITY = 0.55;
 
 export const ownerCaptionStyleSchema = ownerTypographySchema
   .extend({
     animation: z.enum(OWNER_CAPTION_ANIMATIONS).optional(),
     material: z.literal("glass").optional(),
+    glassOpacity: z.number().min(0).max(1).optional(),
     highlight: z.string().regex(/^#[a-fA-F0-9]{6}$/),
     box: normalizedBoxSchema,
   })
@@ -80,8 +83,9 @@ export const OWNER_CAPTION_PRESETS: Record<
   glass: {
     preset: "clean",
     material: "glass",
-    font: "Arial",
-    fontSize: 120,
+    glassOpacity: OWNER_GLASS_OPACITY,
+    font: OWNER_GEOMETRIC_FONT,
+    fontSize: 180,
     fontWeight: 900,
     color: "#ffffff",
     highlight: "#7652d8",
@@ -94,8 +98,8 @@ export const OWNER_CAPTION_PRESETS: Record<
     backgroundOpacity: 0,
     box: {
       ...captionBox,
-      y: OWNER_CAPTION_DEFAULT_CENTER_Y - 160 / 1920,
-      height: 320 / 1920,
+      y: OWNER_CAPTION_DEFAULT_CENTER_Y - 224 / 1920,
+      height: 448 / 1920,
     },
   },
   tiktok: {

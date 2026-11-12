@@ -1,4 +1,5 @@
 import { build } from "esbuild";
+import { copyCaptionFonts } from "./copy-caption-fonts.mjs";
 import { mkdir, lstat, realpath, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createRequire, isBuiltin } from "node:module";
@@ -37,6 +38,7 @@ await writeFile(
   resolve(output, "overlay/index.html"),
   `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data:; font-src 'self'; connect-src 'none'; media-src 'self'; object-src 'none'; base-uri 'none'"><style>html,body{margin:0;width:1080px;height:1920px;background:transparent}</style></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>`,
 );
+await copyCaptionFonts(resolve(output, "overlay"));
 for (const [entry, name] of [
   ["apps/backend/local/agent-cli.ts", "agent"],
   ["apps/renderer/local/entry.ts", "worker"],

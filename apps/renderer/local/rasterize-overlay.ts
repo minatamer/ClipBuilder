@@ -13,6 +13,7 @@ import { ownerOverlayFrame } from "../../../packages/composition/local/overlay-f
 import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 import type {} from "./overlay-protocol.ts";
 import type { OwnerOverlayClock } from "../../../packages/contracts/local/visual-clock.ts";
+import { preparedSceneLogicalFrame } from "./prepared-overlay-scene.ts";
 
 // Keep each shared PNG below Windows' per-file hardlink limit.
 const OVERLAY_LINKS_PER_FILE = 512;
@@ -35,6 +36,15 @@ export async function rasterizeOwnerOverlay(
     clock?: OwnerOverlayClock;
     budget?: { bytes: number };
     videos?: Record<string, { file: string; bytes: number }> | undefined;
+    scene?:
+      | {
+          file: string;
+          bytes: number;
+          fps: number;
+          frames: number;
+          startFrame: number;
+        }
+      | undefined;
   },
   signal: AbortSignal,
 ) {
@@ -43,6 +53,7 @@ export async function rasterizeOwnerOverlay(
   for (const [url, name, type] of [
     ["/", "index.html", "text/html"],
     ["/app.js", "app.js", "text/javascript"],
+    ["/fonts/league-spartan.woff2", "fonts/league-spartan.woff2", "font/woff2"],
   ] as const) {
     const file = join(options.bundle, name),
       info = await lstat(file);
@@ -75,7 +86,12 @@ export async function rasterizeOwnerOverlay(
       return;
     }
     const videoId = /^\/video\/([a-f0-9-]{36})\.mp4$/.exec(req.url ?? "")?.[1];
-    const video = videoId ? options.videos?.[videoId] : undefined;
+    const video =
+      req.url === "/scene.mp4"
+        ? options.scene
+        : videoId
+          ? options.videos?.[videoId]
+          : undefined;
     if (video && cookie) {
       const range = req.headers.range;
       const match = range ? /^bytes=(\d+)-(\d*)$/.exec(range) : null;
@@ -183,6 +199,16 @@ export async function rasterizeOwnerOverlay(
           ),
         },
         ...(options.clock ? { clock: options.clock } : {}),
+        ...(options.scene
+          ? {
+              scene: {
+                src: `http://127.0.0.1:${address.port}/scene.mp4`,
+                fps: options.scene.fps,
+                frames: options.scene.frames,
+                startFrame: options.scene.startFrame,
+              },
+            }
+          : {}),
       }),
     );
     const budget = options.budget ?? { bytes: 0 };
@@ -193,15 +219,19 @@ export async function rasterizeOwnerOverlay(
     for (
       let frame = 0;
       frame <
-      (options.clock?.frames ?? ownerPresentationFrames(options.overlay));
+      (options.scene?.frames ??
+        options.clock?.frames ??
+        ownerPresentationFrames(options.overlay));
       frame++
     ) {
       signal.throwIfAborted();
       const frameFile = join(
         options.frames,
-        `${String(frame).padStart(6, "0")}.png`,
+        `${String(frame).padStart(6, "0")}.${options.scene ? "jpg" : "png"}`,
       );
-      const key = ownerOverlayFrame(options.overlay, frame, options.clock).key,
+      const key = options.scene
+          ? `scene-${preparedSceneLogicalFrame(frame, options.scene)}`
+          : ownerOverlayFrame(options.overlay, frame, options.clock).key,
         cached = cache.get(key);
       if (cached) {
         if (cached.links < OVERLAY_LINKS_PER_FILE) {
@@ -220,12 +250,15 @@ export async function rasterizeOwnerOverlay(
       await page.evaluate(async (value) => {
         await globalThis.clipbuilderOwnerPaint(value);
       }, frame);
-      const captured = await page
-        ._client()
-        .send("Page.captureScreenshot", { format: "png", fromSurface: true });
-      const buffer = await normalizeOwnerOverlayPng(
-        Buffer.from(captured.value.data, "base64"),
-      );
+      const captured = await page._client().send("Page.captureScreenshot", {
+        format: options.scene ? "jpeg" : "png",
+        ...(options.scene ? { quality: 98 } : {}),
+        fromSurface: true,
+      });
+      const bytes = Buffer.from(captured.value.data, "base64");
+      const buffer = options.scene
+        ? bytes
+        : await normalizeOwnerOverlayPng(bytes);
       budget.bytes += buffer.length;
       if (budget.bytes > OWNER_BATCH_POLICY.overlayBytes)
         throw new Error("overlay_capacity");

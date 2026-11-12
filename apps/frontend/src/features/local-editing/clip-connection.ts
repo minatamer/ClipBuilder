@@ -8,6 +8,25 @@ import {
 export type ClipConnection =
   "connected" | "reconnecting" | "unavailable" | "missing";
 
+/** A late read cannot roll back an acknowledged edit of the same base. */
+export function retainAcknowledgedClips(
+  current: OwnerClipList,
+  incoming: OwnerClipList,
+): OwnerClipList {
+  const known = new Map(current.clips.map((clip) => [clip.id, clip]));
+  return {
+    ...incoming,
+    clips: incoming.clips.map((clip) => {
+      const prior = known.get(clip.id);
+      return prior &&
+        prior.baseHash === clip.baseHash &&
+        prior.revision > clip.revision
+        ? prior
+        : clip;
+    }),
+  };
+}
+
 /** Read-only reconnection never re-submits an analysis, image or render action. */
 export async function pollClipConnection(options: {
   workspaceId: string;

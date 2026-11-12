@@ -37,12 +37,15 @@ import { SOURCE_INPUT_OPTIONS } from "../src/media/inspection.ts";
 import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 import { prepareOwnerAudioMix } from "./audio-mix.ts";
 import { prepareOwnerVideoFiles } from "./video-frames.ts";
+import {
+  prepareRefractiveScene,
+  needsRefractiveScene,
+} from "./refractive-scene.ts";
 
 import { prepareOwnerClipPreview, type OwnerCutCache } from "./clip-preview.ts";
 export type { OwnerCutCache } from "./clip-preview.ts";
 
-/** A fixed transparent React overlay, then the admitted FFmpeg performs muxing.
- * Chromium sees only admitted normalized B-roll; the interview stays in FFmpeg. */
+/** Transparent art normally; Glass samples a confined prepared source scene. */
 export async function renderOwnerClip(
   options: {
     root: string;
@@ -245,6 +248,22 @@ export async function renderOwnerClip(
       ],
       signal,
     );
+    const budget = { bytes: 0 };
+    const refractive = needsRefractiveScene(job.overlay);
+    const scene = refractive
+      ? await prepareRefractiveScene(
+          {
+            original,
+            tools: options.tools,
+            graph: sourceGraph,
+            hook: !!hook,
+            profile,
+            scratch: frames,
+            budget,
+          },
+          signal,
+        )
+      : undefined;
     const raster = {
       bundle: options.bundle,
       chromium: options.chromium,
@@ -252,12 +271,22 @@ export async function renderOwnerClip(
       assets,
       videos,
       pixelRatio: Math.max(1, profile.width / 1080, profile.height / 1920),
-      budget: { bytes: 0 },
+      budget,
     };
     await rasterizeOwnerOverlay(
       {
         ...raster,
         frames: bodyFrames,
+        ...(scene
+          ? {
+              scene: {
+                ...scene,
+                fps: profile.fps,
+                frames: bodyProfile.frames,
+                startFrame: hookProfile?.frames ?? 0,
+              },
+            }
+          : {}),
         clock: {
           hook: false,
           presentationStartFrame:
@@ -274,6 +303,16 @@ export async function renderOwnerClip(
         {
           ...raster,
           frames: hookFrames,
+          ...(scene
+            ? {
+                scene: {
+                  ...scene,
+                  fps: profile.fps,
+                  frames: hookProfile!.frames,
+                  startFrame: 0,
+                },
+              }
+            : {}),
           clock: {
             hook: true,
             presentationStartFrame: 0,
@@ -299,7 +338,9 @@ export async function renderOwnerClip(
       ? `${artBranch(2, hookProfile!.frames, "hookArt")};${artBranch(3, bodyProfile.frames, "bodyArt")};anullsrc=r=48000:cl=mono,atrim=duration=${hookProfile!.frames / profile.fps}[hookArtClock];anullsrc=r=48000:cl=mono,atrim=duration=${bodyProfile.frames / profile.fps}[bodyArtClock];[hookArt][hookArtClock][bodyArt][bodyArtClock]concat=n=2:v=1:a=1[artSequence][artClock];[artClock]anullsink;[artSequence]fps=fps=${profile.fps}:start_time=0:round=near,tpad=stop_mode=clone:stop_duration=${1 / profile.fps},trim=end_frame=${profile.frames},scale=${profile.width}:${profile.height}[art]`
       : `${artBranch(1, bodyProfile.frames, "bodyArt")};[bodyArt]scale=${profile.width}:${profile.height}[art]`;
     signal.throwIfAborted();
-    const graph = `${sourceGraph};${artGraph};[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`;
+    const graph = scene
+      ? `${artGraph};[art]scale=in_range=pc:out_range=tv:out_color_matrix=bt709,format=yuv420p,setparams=range=tv:colorspace=bt709:color_primaries=bt709:color_trc=bt709,setsar=1[v]`
+      : `${sourceGraph};${artGraph};[source][art]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]`;
     const graphFile = join(frames, "camera.ffgraph");
     const movingCamera = !!(
       job.overlay.cameraEffects?.length ||
@@ -334,11 +375,11 @@ export async function renderOwnerClip(
           : []),
         ...[...(hook ? [hookFrames] : []), bodyFrames].flatMap((directory) => [
           "-framerate",
-          String(OWNER_FPS),
+          String(scene ? profile.fps : OWNER_FPS),
           "-threads",
           "2",
           "-i",
-          join(directory, "%06d.png"),
+          join(directory, scene ? "%06d.jpg" : "%06d.png"),
         ]),
         "-protocol_whitelist",
         "file,pipe",

@@ -31,8 +31,10 @@ export const ownerVideoAssetSchema = z
 export type OwnerVideoAsset = z.infer<typeof ownerVideoAssetSchema>;
 
 /** Sample inside a logical CFR frame, avoiding decoder boundary rounding. */
-export const ownerVideoFrameSampleTime = (frame: number) =>
-  (frame + 0.25) / OWNER_FPS;
+export const ownerVideoFrameSampleTime = (
+  frame: number,
+  fps: number = OWNER_FPS,
+) => (frame + 0.25) / fps;
 
 /** Exclusive cue ends release the decoder before another cue starts. */
 export function ownerVideoOverlapFits(
