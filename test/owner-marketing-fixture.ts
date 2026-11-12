@@ -25,6 +25,7 @@ export async function startMarketingFixtures({ portfolio = false } = {}) {
   let editor: Awaited<ReturnType<typeof startHookEditorFixture>> | undefined;
   let moments: typeof editor;
   let preparing: typeof editor;
+  let results: typeof editor;
   try {
     const sourceSvg = marketingConversationMarkup();
     const sourceArtwork = await sharp(Buffer.from(sourceSvg), { density: 144 })
@@ -138,11 +139,11 @@ export async function startMarketingFixtures({ portfolio = false } = {}) {
         clip.edit!.visuals = [
           {
             ...clip.edit!.visuals[0]!,
-            startFrame: portfolio ? 60 : 0,
+            startFrame: portfolio ? 90 : 0,
             endFrame: 120,
             box: { x: 0.08, y: 0.69, width: 0.5, height: 0.19 },
             effect: {
-              startFrame: portfolio ? 60 : 0,
+              startFrame: portfolio ? 90 : 0,
               endFrame: 120,
               zoom: 1.18,
               fromX: 0.4,
@@ -154,7 +155,7 @@ export async function startMarketingFixtures({ portfolio = false } = {}) {
           {
             id: randomUUID(),
             assetId: videoId,
-            startFrame: portfolio ? 60 : 0,
+            startFrame: portfolio ? 90 : 0,
             endFrame: 120,
             box: { x: 0.45, y: 0.76, width: 0.47, height: 0.18 },
             fit: "cover",
@@ -165,7 +166,7 @@ export async function startMarketingFixtures({ portfolio = false } = {}) {
               volume: 0,
             },
             effect: {
-              startFrame: portfolio ? 60 : 0,
+              startFrame: portfolio ? 90 : 0,
               endFrame: 120,
               zoom: 1.3,
               fromX: 0.3,
@@ -207,6 +208,17 @@ export async function startMarketingFixtures({ portfolio = false } = {}) {
       pictureArtwork,
     });
     if (portfolio) {
+      results = await startHookEditorFixture(undefined, {
+        hostedWorkflow: true,
+        workflowScreens: true,
+        momentsLayout: true,
+        manyMomentCount: 3,
+        durationFrames: 1800,
+        sourceSize: { width: 1280, height: 720 },
+        silentMedia: true,
+        sourceArtwork,
+        pictureArtwork,
+      });
       preparing = await startHookEditorFixture(undefined, {
         workflowScreens: true,
         silentMedia: true,
@@ -237,6 +249,7 @@ export async function startMarketingFixtures({ portfolio = false } = {}) {
         await currentMoments.close();
         await currentEditor.close();
         await preparing?.close();
+        await results?.close();
         await rm(scratch, { recursive: true, force: true });
         control.closeAllConnections();
         await new Promise<void>((done) => control.close(() => done()));
@@ -253,6 +266,7 @@ export async function startMarketingFixtures({ portfolio = false } = {}) {
             calls: currentEditor.clip.calls,
             analysis: currentMoments.momentCounts(),
             ...(preparing ? { preparing: preparing.counts() } : {}),
+            ...(results ? { results: results.counts() } : {}),
           }),
         );
         return;
@@ -270,6 +284,7 @@ export async function startMarketingFixtures({ portfolio = false } = {}) {
       editor: editor.url,
       moments: moments.url,
       ...(preparing ? { preparing: preparing.url } : {}),
+      ...(results ? { results: results.url } : {}),
       control: `http://localhost:${await listenOwner(control)}`,
       close,
     };
@@ -277,6 +292,7 @@ export async function startMarketingFixtures({ portfolio = false } = {}) {
     await moments?.close();
     await editor?.close();
     await preparing?.close();
+    await results?.close();
     await rm(scratch, { recursive: true, force: true });
     throw error;
   }

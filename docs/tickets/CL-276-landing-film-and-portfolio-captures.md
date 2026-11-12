@@ -5,6 +5,56 @@ acceptance remains separate. No paid/provider runs or owner-session edits.
 Dependencies: CL-273/274 workspace UI and CL-275 caption styling are implemented
 and locally validated. Preserve their existing unstaged work and owner review.
 
+## Current-editor screenshot refresh — 2026-11-12
+
+Complete and locally verified. The owner requests new screenshots replacing the existing Desktop
+ClipBuilder set, keeping the same subjects/composition where useful while showing
+the latest editor changes. Preserve TikTok caption/text defaults (CL-275); Glass
+remains optional. Reuse original fictional conversation artwork and isolated
+fake/no-key upload-only fixtures. Capture laptop views only, never fullscreen,
+YouTube, owner media or browser/developer controls. Landing must be sharp at a
+settled animation state. Refresh upload, both AI stages, clip results, overview,
+caption styles, filters and Zoom/Pan; include current black-bar reframing if it
+adds a clear editor feature view. No new live/provider processing or app export.
+
+Prepare and inspect the replacement set first, with real completed thumbnails
+and settled save/preview states. Verify generated-media disclosure, dimensions
+and file hashes in an updated README/index. Replace only the known capture set
+inside the existing ClipBuilder-Portfolio-2026-11-11 Desktop folder; preserve
+unrelated additions. Old named images/metadata may be recycled, never purge
+unrelated Desktop files. Clean temporary capture fixtures/tabs and keep normal
+ClipBuilder, its saved session, Voyagenda and all other pending work intact.
+
+Delivered thirteen current laptop captures: landing, upload, moment discovery,
+clip preparation, suggestions, editor overview, TikTok captions, filters, Zoom,
+Pan, optional Glass, TikTok text and adjustable black bars. Twelve are 1440 by
+900; the landing is 1436 by 898 at the live film's settled identity beat, frame
+28. All are unmodified native JPEG viewport captures. Actual current production
+components run through isolated fake/no-key transports with original fictional
+conversation artwork and silent generated media. The README/index explicitly
+disclose illustrative AI progress and fixture timings; these are not live AI
+results or measured processing performance.
+
+The capture fixture keeps both B-roll layers later in the clip so they do not
+obscure the camera demonstration, and provides a separate hosted-shaped results
+view to exclude local YouTube framing copy. Neither change affects product
+behavior. Scoped test TypeScript and fixture ESLint pass, along with the two
+CL-275 default-style tests. Every image was inspected; a pending rail thumbnail
+was recaptured after both videos reached readyState 4. Zoom/Pan targets and the
+main/source clocks were settled, save status acknowledged, and black-bar
+reframing shows the 35% position after direct keyboard adjustment.
+
+The twelve known old captures/metadata were sent to the Recycle Bin only after
+the complete replacement set was prepared. Thirteen images plus README and
+JSON index were copied into the same Desktop folder; all fifteen SHA-256 hashes
+match their prepared originals. There were no unrelated additions to touch.
+The final fixture counters show zero plan/image/render calls and zero unexpected
+requests; the earlier illustrative discovery request was explicitly cancelled.
+All temporary capture tabs, viewport overrides, fixture listeners and generated
+scratch were closed. Normal ClipBuilder and the owner's saved session were
+preserved. No paid/live run, application export, external browser, fullscreen,
+Voyagenda operation, configuration change or Git staging/commit/push.
+
 ## Authorized whole-file commits — 2026-11-11
 
 The owner now authorizes staging and local ticket-prefixed commits for all
