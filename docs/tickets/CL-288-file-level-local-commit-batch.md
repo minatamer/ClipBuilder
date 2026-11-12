@@ -143,3 +143,39 @@ The final verification checks four commits since `938ee18`, exactly 64 distinct
 allocated paths with no repeated file allocation, matching committed blobs and
 working bytes, whitespace and a clean index/worktree. This task performs no push,
 service restart, provider call, cloud/deployment or Voyagenda operation.
+
+## Additional owner-authorized batch — 2026-11-12
+
+After CL-294 and the fifteen-minute hosted deadline validation, the owner again
+requests multiple ticket-prefixed commits with whole-file staging. This later
+authorization lifts the prior Git hold for packaging only. Do not push, switch
+branches, rewrite history, restart services, rerun providers or touch Voyagenda.
+Earlier implementation records saying no Git mutation describe their own work,
+before this renewed explicit request.
+
+The index starts empty on main at `183065b`. Allocate every pending path once;
+the exact ordered file lists and cross-ticket ownership are in the
+[current batch plan](../operations/CL289_294_COMMIT_PLAN.md). Preserve shared
+files intact when several tickets contribute to them. Verify staged paths and
+normalized blobs against the reviewed snapshot before every commit; retained
+media, transcripts, source identities, private capture outputs and ignored
+configuration remain outside Git.
+
+Read-only packaging validation finds no actionable issue in the settled owning
+packets. The eight-case fake/no-key thumbnail/recovery group passes again and
+diff whitespace is clean. Prior scoped types, lint, native builds and actual
+owner-authorized Clip 6/4 export receipts remain in CL-294; earlier packets own
+their generated/native/browser evidence. No broad suite, new provider request
+or live AI acceptance is claimed. Hosted release and personal/creative quality
+remain owner-only. Stage/commit occurs after the read-only validation phase.
+
+The batch contains 113 distinct whole files across eleven commits, including
+the two packaging records. Ten commits are verified before this final ledger;
+the exact subjects, hashes and file lists are in the linked batch plan. Scoped
+Prettier/ESLint and whitespace pass; the added-text credential pattern check
+found zero matches. Completed paths and normalized blobs match their planned
+snapshot, with no file assigned twice. The final commit completes the authority,
+index and validation record. Final post-commit verification requires the full
+eleven-commit allocation, unchanged implementation blobs and clean worktree/index.
+No push, provider run, service restart, configuration, cloud/deployment or
+Voyagenda operation was performed during packaging.

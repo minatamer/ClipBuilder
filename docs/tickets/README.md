@@ -1,5 +1,129 @@
 # ClipBuilder canonical ticket index
 
+## Full-HD export and automatic visual bounds — 2026-11-12
+
+[CL-294](CL-294-full-hd-export-and-ai-visual-bounds.md) executes the owner's
+1080-by-1920 output target, then one automatic visual per clip in local/hosted
+processing, then local-only Find visuals UI/server access. CL-293's planning
+hold is lifted. Also owns export cancellation recovery, the triggered local
+twenty-minute deadline and automatic shared thumbnail/clip-rail recovery.
+Clip 6 and Clip 4 actual full-HD exports completed after thumbnail validation.
+Hosted clip exports use the approved fifteen-minute limit; local uses twenty.
+Existing serial export behavior remains. No deployment or Git mutation.
+
+## Automatic visual planning record — 2026-11-12
+
+[CL-293](CL-293-single-ai-visual-and-local-discovery.md) records at most one
+automatic generated/fetched visual per clip locally and deployed, plus local-only
+Find visuals UI and server access. The later owner instruction lifted its hold;
+CL-294 owns implementation/validation. This earlier packet also records the old
+downloaded export's measured 608-by-1080 resolution.
+
+## Long export diagnosis — 2026-11-12
+
+[CL-292](CL-292-export-latency-and-progress-diagnosis.md) records the owner's
+long-running export: the earlier attempt reached the ten-minute deadline; the
+second Glass attempt completed successfully in 6m 57.5s. The owner's conditional
+local increase was later triggered by CL-294's full-HD Clip 6 timeout: local
+clip exports now have twenty minutes. The subsequent CL-294 owner approval
+sets deployed clip exports to fifteen minutes; no deployment was performed.
+Read-only inspection only, with no agent retry, cancellation, restart or provider
+call. Performance/progress follow-up remains unimplemented.
+
+## Media layer polish, preview jump and bar override — 2026-11-12
+
+[CL-291](CL-291-media-layer-rows-preview-jump-and-bar-override.md) owns the revised
+mixed-media rows, exact Jump to in the main preview, and a per-picture/video
+Ignore black bars checkbox with saved-state and native composition parity.
+Implemented with 15 focused tests and generated Codex laptop/phone interaction
+checks. Manual controls work without keys; full browser-driven MP4 remains owner
+acceptance. No new real AI, owner clip edits or Git action.
+
+## Approved seven-clip visual refresh — 2026-11-12
+
+[CL-289](CL-289-emotive-visual-selection-and-optional-admission.md#approved-current-clip-visual-refresh--2026-11-12)
+records the owner's explicit allowance approval and seven completed Find visuals
+actions. Clip 1 received one new picture; clips 2–7 returned misses and retain
+their previous pictures. Exact preservation checks pass, with zero extra renders,
+no provider retries and no Git mutation. Further real refreshes require a new
+owner request.
+
+## Free square camera crop — 2026-11-12
+
+[CL-287](CL-287-editor-black-bar-framing.md#free-source-square-revision--2026-11-12)
+owns the requested square-only source crop, free in both axes without a parent
+portrait-frame constraint. Shared preview/native geometry, whole-square dragging,
+keyboard/history/reopen, 32 focused cases, generated native pixels and four
+Glass-scene mux cases passed without keys. The owner has revoked the pending
+staging/commit request.
+
+## TikTok defaults and current portfolio refresh — 2026-11-12
+
+[CL-275](CL-275-glass-one-word-caption-style.md#owner-default-style-confirmation--2026-11-12)
+confirms TikTok remains the fresh caption/text default; explicit saved Glass
+choices are preserved. [CL-276](CL-276-landing-film-and-portfolio-captures.md#current-editor-screenshot-refresh--2026-11-12)
+delivered thirteen refreshed laptop-only, upload-only UI screenshots in the same
+Desktop folder using original fictional media and no-key transports. All fifteen
+images/metadata files match their prepared hashes; old named files were recycled.
+Fake AI progress is disclosed separately from live processing quality.
+
+## Reframe within black bars — 2026-11-12
+
+[CL-287](CL-287-editor-black-bar-framing.md#original-video-reframing-revision--2026-11-12)
+owns the requested direct original-video positioning inside the fixed square
+window. Implemented: direct drag, fine adjustment, source-window guide, shared
+native geometry, persistence and history. Generated native pixel checks and
+Codex desktop/phone layout checks passed, preserving the centered default and
+independent overlay layers. Full normal application export remains owner-only.
+
+## Scene-driven Glass color — 2026-11-12
+
+[CL-286](CL-286-manual-sounds-caption-material-and-save-recovery.md#scene-driven-glass-color-revision--2026-11-12)
+owns the owner's latest correction: remove dominant fixed sky/cloud coloring so
+the footage drives the refracted letter face, retaining bevels and glyph-only
+geometry. Implemented with generated/no-key evidence, including actual Codex
+dark/light/warm/cool comparisons and full-strength native scene admission;
+other pending packets and
+the owner's seven prepared clips remain preserved.
+
+## Latest owner review queue — 2026-11-12
+
+[CL-289](CL-289-emotive-visual-selection-and-optional-admission.md),
+[CL-290](CL-290-workspace-connection-recovery-design.md) and
+[CL-286's reflective reference revision](CL-286-manual-sounds-caption-material-and-save-recovery.md)
+are implemented with scoped synthetic/no-key evidence. Recovery and final Glass
+screenshots are saved outside Git. CL-287's square-window framing is also ready
+for owner review. No task was dropped by later steering. Fresh real visual
+quality, full Glass application export and owner aesthetic approval remain
+distinct; no paid run or new Git action was performed.
+
+## Glass correction, editor framing and emotive visuals — 2026-11-12
+
+[CL-286's correction](CL-286-manual-sounds-caption-material-and-save-recovery.md#owner-glass-rejection-and-correction--2026-11-12)
+confines lighter refraction/finish to the letter shapes. [CL-287](CL-287-editor-black-bar-framing.md)
+implements Camera's illustrated square-window black bars, with shared geometry,
+persistence and history. [CL-289](CL-289-emotive-visual-selection-and-optional-admission.md)
+replaces mandatory explanatory filler with expressive optional B-roll, retires
+Codex's icon-card fallback and protects manual videos during Find visuals.
+Scoped synthetic/no-key checks are recorded per packet; owner fresh real quality,
+Glass application export and aesthetic acceptance remain distinct. No paid run,
+Voyagenda operation or new Git mutation.
+
+## Private editorial revision — 2026-11-12
+
+[CL-283](CL-283-local-analysis-notebook-and-editorial-reuse.md#owner-editorial-revision--2026-11-12)
+also owns the requested second editorial pass: retain the latest two owner picks,
+replace the rejected timestamp alternatives, and document source-order stitch
+pairs in a private edit map. After the owner's final review, the canonical file
+contains seven approved ranges with fourteen unchanged endpoints. The saved
+guide maps final parts 1/2 and 5/6, with part 7 an optional extended ending;
+discarded numbering is superseded. Joins await exported audio/video audition.
+Saved transcript reuse only, with no new provider
+processing or application change. A later import was observed in the Codex view,
+but the owner reports their current view did not update. The canonical nine-row
+JSON was revalidated for owner-operated import; no further browser action,
+processing or Voyagenda operation.
+
 ## Authorized whole-file commit batch — 2026-11-12
 
 [CL-288](CL-288-file-level-local-commit-batch.md) records the owner's authorization,

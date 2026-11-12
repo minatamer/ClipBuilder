@@ -1,5 +1,44 @@
 # ClipBuilder Demo — Product and Architecture Source of Truth
 
+## Full-HD export and automatic visual bounds — CL-294, 2026-11-12
+
+New explicit edited exports target 1080 by 1920 locally and in the shared hosted
+renderer, with original-source crop/fit and native cadence. Lower-resolution
+crops are resampled; this is not extra captured detail or AI super-resolution.
+Captions/graphics render at full-HD canvas resolution. Preserve old exports.
+
+Fresh automatic processing adds at most one visual per clip across generated
+and fetched imagery. Explicit local rediscovery replaces the previous AI set,
+including its Hook copy, only after a usable new visual is obtained. Keep manual
+media and its edits, independent Hook typography/audio and old assets/exports.
+Legacy saved multi-visual clips remain readable and are not rewritten on load.
+Find visuals is local-only: hosted UI omits the CTA and both hosted server
+boundaries reject it without provider work. Hosted initial automatic visuals
+and manual media controls remain available.
+
+Canceling an export retains Canceling until native work and scratch cleanup
+settle, then returns to the prepared editor with edits/preview/old outputs intact.
+Prepared canceled/interrupted exports also reopen as editable without inference
+or re-rendering. Initial preparation with no completed preview still requires
+explicit retry. Preserve serial heavy work. The conditional twenty-minute local
+deadline increase was not triggered by CL-292's successful second attempt.
+The later authorized Clip 6 full-HD acceptance hit that deadline, satisfying the
+condition: local clip exports now have twenty minutes, with one additional
+minute for RPC cleanup. The owner subsequently approved fifteen minutes for
+deployed clip exports, with the same one-minute RPC cleanup grace. The
+execution flag is set only by trusted process composition, never a job/client
+field or new environment setting. Other operation deadlines stay unchanged.
+
+Clip-rail previews and shared picture/video stills recover from transient media
+failures for their subscribed lifetime. Use one pending retry with exponential
+backoff capped at thirty seconds; suspend it while offline or hidden and resume
+on reconnect/visibility/focus. Bound stalled decode attempts to thirty seconds
+so one failed source cannot block every thumbnail. Keep a usable still while
+the composed rail preview reconnects, with one shared designed loading cue.
+Source changes/unmount release timers, listeners, decoders and object URLs;
+late callbacks cannot replace a newer source. This retries existing media reads
+only, never preparation, inference or export.
+
 ## Visual sounds are manual — CL-286, 2026-11-11
 
 Never automatically attach Pop or another sound accent to added pictures/videos.
@@ -140,6 +179,52 @@ existing provider/runtime, live flags and approvals. No provider video generatio
 is involved. Preserve silent/offscreen playback, responsive poster/fallback and
 normal motion. Agent previews stay inside the normal Codex window, never fullscreen.
 
+## Workspace connection recovery — CL-290, 2026-11-12
+
+Workspace connection recovery (CL-290) has one shared designed presentation:
+an opening/reopening failure owns its inline Reconnect action, never a duplicate
+bottom-right batch action. Existing editor disconnection stays compact in the
+toolbar. Temporary failure, genuine missing session and active reconnect remain
+distinct. Retry performs fresh read-only startup/list requests, preserves the
+active editor instance and never resubmits processing. Repeated failure restores
+lost retry-button focus without stealing focus the owner moved elsewhere.
+
+## Editor black bars — CL-287, 2026-11-12
+
+Camera's Original video target exposes Canvas framing: Full vertical (default)
+or Black bars · Square window. This manual shared local/hosted editor treatment
+keeps the 9:16 output and masks the scene to a centered 1080×1080 window in the
+1080×1920 canvas. Scene pictures/videos obey the bars by default; authored text
+and captions remain above them. Camera paths, timestamps, cadence and audio do
+not change. The optional authored boolean persists through the existing edit,
+history, draft and recovery mechanisms. Absent old values mean off. New Hook
+copies inherit body framing once, then keep independent occurrence edits.
+No API key or AI regeneration is needed. CL-287 records synthetic evidence and
+remaining owner/native application acceptance.
+
+CL-291 adds a per-placement Ignore black bars checkbox in Media's Image/Video
+presentation settings, default off for new and older edits. Checked media can
+paint over the bars without moving/resizing it. The setting persists with the
+normal cue edits, history, drafts/recovery and independent Hook/body copies;
+bars off ignores it without clearing it. Shared preview/native composition paints
+the original-video mattes first, then clips each non-exempt picture/video to the
+window in its existing paint order. Exempt media keeps that same layer order;
+captions/text remain above all media. No provider work is involved.
+
+With bars enabled, the source camera shows a single draggable square. Its edges
+are bounded directly by the original source image, with no parent portrait-frame
+restriction. Drag any point inside the square in either axis; arrows provide
+fine movement and Shift-arrows move farther. Zoom/Pan and tracking use the same
+square viewport, retaining the existing magnification and saved camera clocks.
+Full vertical retains its portrait geometry. This replaces the separate
+vertical-only slider/reposition mode. Captions, text and placed media stay fixed.
+The optional legacy 0–1 vertical offset remains readable and contributes to
+source-square geometry; new movement uses existing camera positions and their
+autosave/history/draft and independent Hook/body mechanisms. Preview and native
+encoding use the same source crop before centering it between fixed bars. Output
+height, cadence and audio remain unchanged. Local and hosted share this manual
+no-key feature; no AI regeneration or deployment is implied by implementation.
+
 ## Glass single-word captions — CL-275, 2026-11-11
 
 Glass is an explicit caption Style choice, retaining all existing presets and
@@ -149,9 +234,17 @@ IDs, timing, Hook/body scope, speaker controls and manual placement remain
 unchanged. Each active word fits its box independently; silent word gaps remain
 empty. Other typography presets clear the material while retaining placement.
 
-CL-286 replaces the initial transparency-only treatment with a fixed glyph-clipped
-scene-displacement lens, polished silver/blue reflection bands, smooth seeded
-reflection variation and beveled light/dark edges. It is an optical simulation,
+CL-286 uses a glyph-masked scene-displacement lens with scene-driven color,
+directional inner bevels, crisp rims and a small glyph-shaped shadow. The latest
+owner revision supersedes the painted sky/cloud environment: actual footage
+drives the letter face, retaining scene chroma with reversed luminance for a
+polished light-on-dark/dark-on-light response. Neutral low-opacity sheen retains
+sculpted highlights without a dominant fixed blue texture. The lens and finish
+stay inside glyph alpha; counters and the surrounding scene remain clear
+apart from that bounded shadow. Optical units scale with actual fitted type in
+the shared preview/native component. Glass suppresses generic caption background/
+highlight panels and hides those controls without erasing saved values for other
+styles. It is an optical simulation,
 not a physically accurate ray tracer. The owner's later references guide the
 polished, mirror-like finish. New Glass presets use 180px geometric League Spartan
 uppercase type, with a bundled variable face and measured fitting advances;
@@ -160,7 +253,9 @@ sizes, retaining safe-box fitting and long-word constraints.
 
 Glass has a persisted caption-only opacity value (0–100%, default 55% for old
 material without that property and new presets): zero hides the entire material,
-one is opaque, intermediate values mix the refracted scene and reflected surface.
+one applies the full scene-driven material, intermediate values use a perceptual
+material-strength response to mix it with the unchanged scene. Full strength
+still samples the scene; it never switches to a static fill.
 No runtime remote texture/font, provider key or model is involved. One canonical
 OFL-licensed font/license is copied into self-hosted frontend and local/hosted
 native assets by the fixed build steps. React deduplicates its font-face resource;
@@ -169,7 +264,7 @@ hashes remain in release-asset admission. Other styles and
 authored text retain their existing controls and behavior. Autosave/history,
 Hook/body scopes, speaker colors and protected draft serialization preserve it.
 
-Partial Glass exports prepare only the current job's bounded silent source
+Visible Glass exports prepare only the current job's bounded silent source
 scene with existing camera/look and native cadence, inside confined scratch.
 The same shared component samples that scene plus admitted B-roll/text. The
 private raster page accepts only its fixed authenticated loopback scene route;
@@ -178,7 +273,7 @@ Physical samples retain native cadence; confirmed repeated B-roll frames are
 reused without waiting for an impossible second decoder callback. Opaque scene
 captures use quality-98 JPEG within the existing shared scratch budget and an
 explicit full-to-limited-range color conversion before final muxing. Non-Glass
-and fully clear/opaque Glass keep the efficient existing alpha-overlay path.
+and fully clear Glass keep the efficient existing alpha-overlay path.
 
 Generated Codex preview/native-page optics, opacity boundaries, strict contracts,
 draft round trips, native 24/60/fractional Hook/body muxing with injected browser
@@ -308,6 +403,16 @@ excluded; their separate placement remains unchanged. Row selection opens the
 correct media inspector and retains repeat-click dismissal. Reordering preserves
 cue settings, the selected media and playback clock. Manual ordering needs no
 API keys and uses the shared local/hosted editor and renderer order contract.
+
+CL-291 refines these rows into one surface with quiet 44px drag handles,
+consistent thumbnails and an independent Jump to action. Jump pauses the main
+preview at the exact cue start in the active Hook/body occurrence, including
+when the item is already selected or its inspector is closed. It never edits
+media or starts processing; pending, unavailable and invalid states retain
+their guards. Full time ranges remain in the primary media timeline and row
+tooltip while compact stacks prioritize the start. Remove picture/video is one
+visible action above the selected media's sub-tabs, available from every sub-tab.
+It removes the placement, retaining uploaded assets and normal Undo behavior.
 
 Collection/navigation stays on the left and the active editing form stays with
 its sub-tabs in the right inspector. Caption Text follows the same rule as
@@ -1923,7 +2028,7 @@ pixel and output budgets, public HTTP(S) with no credentials, DNS pinned to publ
 addresses, redirect revalidation and cancellation. Use fixed content-free reason
 codes/counts on every search exit. Optional art failure never fails the clip.
 
-The Media/Pictures tab has an AI-icon Find visuals action for the active prepared
+The local Media/Pictures tab has an AI-icon Find visuals action for the active prepared
 clip. It uses the currently configured provider and existing timed words, without
 another transcription, speaker pass, video transfer or native preview rebuild.
 On success replace the previous AI picture set and preserve uploaded pictures,
@@ -1932,14 +2037,58 @@ Require clean applied edits and a current revision, deduplicate the operation,
 retain attempt/outcome through recovery, and bound explicit attempts to five per
 clip within existing asset capacity. No automatic retry or resume. Codex↔Gemini
 switches preserve completed provider-ai sessions; fake↔real mode changes retain
-their existing isolation. Hosted search/generation reserve their provider budget.
+their existing isolation. Hosted initial search/generation reserve their provider budget;
+hosted clients and server boundaries exclude this manual action (CL-294).
 
 Fake mode needs no keys and uses injected search/generation results. Real Codex
 requires installed CLI/ChatGPT sign-in/local prerequisites; real Gemini requires
 its key and existing live approvals. Owner tests Codex first; agent checks stay
 synthetic/fake/paid-off with no real search/provider/download/config/cloud/Git work.
 
+## Expressive optional B-roll — CL-289, 2026-11-12
+
+Automatic visual planning should make a spoken action, emotion or concrete
+situation vivid, using expressive real-life scenes and clear photographic or
+cinematic composition. Topic matching alone is insufficient. CL-294 limits fresh
+automatic art to one useful beat or none; time windows are scouting aids, not
+image quotas. Omit worksheets,
+spreadsheets, icon/heading cards, generic UI, diagrams and text-only filler.
+Generic fictional emotion/action depicts the spoken idea, never an inferred
+trait of the source speaker or evidence of a real event.
+
+This owner decision permits rejecting unsuitable OPTIONAL visual plans/assets,
+superseding CL-060 only for that admission. Preserve the usable clip, source,
+captions, plan/diagnostics, manual media and prior exports. A visual omission
+never demands a paid retry or rejects the whole returned plan. Existing safety,
+resource, origin/authentication, provenance and provider/spend bounds remain.
+
+Local Codex searches for a suitable public raster or omits it. The CL-170 icon
+card renderer is retired; it was not photographic image generation. Legacy
+illustration fields remain decodable without re-rendering that fallback. Hosted
+Gemini keeps its existing bounded search-first, single-generation fallback with
+subject/action/expression/setting/light direction. No extra paid judge/model,
+automatic retry, new stock-service key or provider fallback is introduced.
+
+Automatic web requests require bounded result-specific depiction/description
+evidence matching the planned subject/action. A result page's images need their
+own matching alt labels; generic OG cards cannot inherit page relevance. Known
+unsuitable metadata and near-flat grayscale rasters are omitted. These are
+limited editorial heuristics, not OCR, visual-semantic certification or a promise
+of aesthetic quality. Manual uploads and existing saved media bypass them.
+Commons retains its existing rights policy and metadata checks; no new license
+claim or exclusion is inferred. Find visuals retains uploaded pictures AND
+videos, including their authored settings, on miss/success and restore.
+
+Manual Glass/framing controls and fake/synthetic mechanics work without API keys.
+Real local visual planning/search requires the signed-in Codex CLI and existing
+live approvals; hosted generation requires the configured Gemini key and live/
+spend gates. CL-289's checks use fake/no-key transports only; fresh real quality
+remains owner-reviewed. No source/provider/paid test is implied by implementation.
+
 ## Usable visual plans and search-first fallback — CL-170, 2026-10-31
+
+Historical fallback/coverage direction below is superseded by CL-289. Local
+repair, private diagnostics, bounds and preservation requirements still apply.
 
 Local Codex must request a searchable generic image brief and a bounded,
 source-faithful fallback illustration in the same planning call. Application
@@ -2492,7 +2641,7 @@ The owner selects 2 CPUs / 8 GiB for the next hosted processing target and
 authorizes local execute/validate with fake AI, synthetic media and zero paid
 calls; no deployment or cloud change. Existing public 500 MiB / 20-minute
 source bounds already constrain the long upload. Preserve three demo clips,
-manual/AI duration bounds, native source height/cadence, CRF/preset/audio, twenty
+manual/AI duration bounds, native source cadence, CRF/preset/audio, twenty
 export revisions, completed output/history and local owner limits.
 
 Replace the historical 12 GiB scratch allowance with a 5 GiB admitted media
@@ -2899,9 +3048,13 @@ source resolution/detail.
 CL-070 corrects the use of a reduced portrait preview as final-render input:
 final edited exports must crop from the original source and encode once.
 Keep preview/AI proxies separate, original media and accepted edits intact.
-Use a source-height portrait canvas with even-pixel codec rounding; native 9:16
-portrait dimensions stay unchanged, and final output retains source frame rate
-while existing edit/overlay timestamps remain on their 30 fps logical clock.
+Owner revision (2026-11-12, CL-294): new final exports use exactly 1080 by 1920
+pixels locally and in the shared hosted editing renderer. This replaces the
+source-height output profile, which produced only 608 by 1080 from a landscape
+1080p source. Crop/fit/zoom still read original pixels, then resample into the
+full-HD portrait canvas; render captions and graphics at that canvas resolution.
+Final output retains source frame rate while existing edit/overlay timestamps
+remain on their 30 fps logical clock. Preserve lower-cost previews separately.
 Reframing/zoom still crops or enlarges source content; never promise extra detail
 or mathematically lossless edited MP4. Do not silently downgrade resolution to
 fit capacity limits. Existing exports remain immutable; new explicit exports
