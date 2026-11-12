@@ -1,6 +1,10 @@
 import type { ContextualPictureRequest } from "@clipbuilder/contracts";
 
 const aliases: Record<string, string[]> = {
+  person: ["person", "people", "adult", "man", "woman"],
+  adult: ["adult", "person", "man", "woman"],
+  frustrated: ["frustrated", "annoyed", "angry", "upset"],
+  angry: ["angry", "frustrated", "annoyed", "upset"],
   screenshot: ["screenshot", "gameplay", "ingame"],
   game: ["game", "videogame", "gameplay"],
   child: ["child", "children", "boy", "girl"],

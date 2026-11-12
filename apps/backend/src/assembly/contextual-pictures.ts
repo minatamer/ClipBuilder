@@ -111,6 +111,7 @@ export async function compileContextualPictures(
   }
   prepared.sort((a, b) => a.startMs - b.startMs);
   for (const candidate of prepared) {
+    if (pictures.length >= CONTEXTUAL_PICTURE_POLICY.maxAutomaticVisuals) break;
     try {
       signal.throwIfAborted();
       const { plan, words, anchor, startMs } = candidate;
@@ -164,7 +165,11 @@ export async function compileContextualPictures(
         throw new Error("invalid-picture-evidence");
       validated++;
       if (candidate.retimed || endMs !== candidate.endMs) retimed++;
-      const request = { kind: plan.kind, brief: plan.brief };
+      const request = {
+        kind: plan.kind,
+        brief: plan.brief,
+        purpose: "b-roll" as const,
+      };
       let asset: ContextualPictureAsset | null | undefined;
       const duplicate = (asset: ContextualPictureAsset) =>
         pictures.some(
@@ -254,11 +259,6 @@ export async function compileContextualPictures(
       0,
     ),
   });
-  if (pictures.length < CONTEXTUAL_PICTURE_POLICY.minPictures)
-    diagnostics.critique(
-      "assembly_pictures",
-      new Error("contextual_picture_target_unmet"),
-    );
   if (!pictures.length) {
     diagnostics.critique(
       "assembly_pictures",

@@ -8,6 +8,11 @@ import {
   type ContextualPictureRequest,
 } from "@clipbuilder/contracts";
 import { pictureRelevance } from "./picture-relevance.js";
+import {
+  automaticPictureBriefFits,
+  automaticPictureDescriptionFits,
+  automaticPictureRasterFits,
+} from "./automatic-picture-admission.js";
 import { boundedPictureBody, normalizePicture } from "./picture-raster.js";
 
 export interface ContextualPictureSource {
@@ -65,6 +70,8 @@ export class CommonsPictureSource implements ContextualPictureSource {
   async find(request: ContextualPictureRequest, signal: AbortSignal) {
     const brief = contextualPictureBriefSchema.safeParse(request.brief);
     if (!brief.success) return null;
+    signal.throwIfAborted();
+    if (!automaticPictureBriefFits(request)) return null;
     // Preserve the planned depiction; broader same-subject alternatives are
     // supplied by the bounded caller, while required concepts still rank results.
     const query = brief.data.searchQuery;
@@ -191,6 +198,14 @@ export class CommonsPictureSource implements ContextualPictureSource {
           height: info.height,
         });
         if (
+          request.purpose === "b-roll" &&
+          (!automaticPictureBriefFits(request) ||
+            !automaticPictureDescriptionFits(
+              `${page.data.title} ${metadata.ImageDescription?.value ?? ""} ${metadata.Categories?.value ?? ""}`,
+            ))
+        )
+          continue;
+        if (
           !score ||
           info.width < policy.minInputWidth ||
           info.height < policy.minInputHeight
@@ -252,6 +267,11 @@ export class CommonsPictureSource implements ContextualPictureSource {
             await boundedPictureBody(imageResponse, policy.maxDownloadBytes),
           );
           deadline.throwIfAborted();
+          if (
+            request.purpose === "b-roll" &&
+            !(await automaticPictureRasterFits(normalized.bytes, deadline))
+          )
+            continue;
           this.observed({ candidates: pages.length, downloads });
           return commonsPictureAssetSchema.parse({
             repository: "wikimedia-commons",

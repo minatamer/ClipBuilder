@@ -133,7 +133,7 @@ describe("grounded picture compilation", () => {
     ]);
     expect(result.pictures).toHaveLength(1);
     expect(result).not.toHaveProperty("pictureNotes");
-    expect(find).toHaveBeenCalledTimes(2);
+    expect(find).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(sink.mock.calls)).not.toContain(picture.brief.scene);
     expect(JSON.stringify(pictureNotes)).not.toContain("unavailable");
   });
@@ -226,53 +226,55 @@ describe("grounded picture compilation", () => {
       })),
     ).toEqual([
       { startMs: 2000, endMs: 4400, ids: words.slice(0, 4).map((w) => w.id) },
-      { startMs: 4400, endMs: 6400, ids: words.slice(4, 6).map((w) => w.id) },
     ]);
-    expect(find).toHaveBeenCalledTimes(2);
+    expect(find).toHaveBeenCalledTimes(1);
   });
-  it("generates for a repeated Commons image without treating unrelated generated assets as duplicate page IDs", async () => {
-    const nextWord = {
-      ...context.words[0]!,
-      id: "w_000002",
-      startMs: 7000,
-      endMs: 7500,
-    };
-    const expanded = { ...context, words: [...context.words, nextWord] };
-    const generated = {
-      repository: "google-gemini" as const,
-      model: GENERATED_PICTURE_MODEL,
-      policy: "contextual-generated-v1" as const,
-      width: asset.width,
-      height: asset.height,
-      dataUri: asset.dataUri,
-      sha256: "b".repeat(64),
-    };
-    const find = vi.fn(async () => asset),
-      generate = vi.fn(async () => generated),
-      reserve = vi.fn();
-    const { manifest: result } = await compileContextualPictures(
-      {
-        pictures: [
-          picture,
-          {
-            ...picture,
-            anchorWordId: nextWord.id,
-            subject: { startWordId: nextWord.id, endWordId: nextWord.id },
-          },
-        ],
-      },
-      expanded,
-      manifest,
-      { find },
-      new AbortController().signal,
-      new AnalysisDiagnostics(),
-      { source: { find: generate }, reserve },
-    );
-    expect(result.pictures).toHaveLength(2);
-    expect(find).toHaveBeenCalledTimes(2);
-    expect(generate).toHaveBeenCalledOnce();
-    expect(reserve).toHaveBeenCalledOnce();
-  });
+  it.each([false, true])(
+    "uses one shared slot for retrieval and generation (generated: %s)",
+    async (useGeneration) => {
+      const nextWord = {
+        ...context.words[0]!,
+        id: "w_000002",
+        startMs: 7000,
+        endMs: 7500,
+      };
+      const expanded = { ...context, words: [...context.words, nextWord] };
+      const generated = {
+        repository: "google-gemini" as const,
+        model: GENERATED_PICTURE_MODEL,
+        policy: "contextual-generated-v1" as const,
+        width: asset.width,
+        height: asset.height,
+        dataUri: asset.dataUri,
+        sha256: "b".repeat(64),
+      };
+      const find = vi.fn(async () => (useGeneration ? null : asset)),
+        generate = vi.fn(async () => generated),
+        reserve = vi.fn();
+      const { manifest: result } = await compileContextualPictures(
+        {
+          pictures: [
+            picture,
+            {
+              ...picture,
+              anchorWordId: nextWord.id,
+              subject: { startWordId: nextWord.id, endWordId: nextWord.id },
+            },
+          ],
+        },
+        expanded,
+        manifest,
+        { find },
+        new AbortController().signal,
+        new AnalysisDiagnostics(),
+        { source: { find: generate }, reserve },
+      );
+      expect(result.pictures).toHaveLength(1);
+      expect(find).toHaveBeenCalledTimes(1);
+      expect(generate).toHaveBeenCalledTimes(useGeneration ? 1 : 0);
+      expect(reserve).toHaveBeenCalledTimes(useGeneration ? 1 : 0);
+    },
+  );
   it("caps failed generation attempts at three even when more pictures are submitted", async () => {
     const find = vi.fn(async () => null),
       generate = vi.fn(async () => {
@@ -452,21 +454,19 @@ describe("grounded picture compilation", () => {
       })),
     ).toEqual([
       { startMs: 3400, endMs: 6200, anchorWordId: groups[0]!.words[0]!.id },
-      { startMs: 9300, endMs: 12500, anchorWordId: groups[1]!.words[0]!.id },
-      { startMs: 15500, endMs: 19000, anchorWordId: groups[2]!.words[0]!.id },
     ]);
     expect(result.pictures![0]!.subjectWordIds).toEqual(
       groups[0]!.words.slice(0, 7).map((word) => word.id),
     );
-    expect(find).toHaveBeenCalledTimes(3);
+    expect(find).toHaveBeenCalledTimes(1);
     expect(facts).toHaveBeenCalledWith(
       "assembly_pictures",
       expect.objectContaining({
         plannedPictures: 3,
-        validatedPictures: 3,
-        retimedPicturePlans: 3,
-        pictures: 3,
-        pictureSearches: 3,
+        validatedPictures: 1,
+        retimedPicturePlans: 1,
+        pictures: 1,
+        pictureSearches: 1,
       }),
     );
     expect(result.focus).toEqual(normalizedManifest.focus);
@@ -613,30 +613,31 @@ describe("grounded picture compilation", () => {
       new AbortController().signal,
       new AnalysisDiagnostics(),
     );
-    expect(find).toHaveBeenCalledTimes(3);
+    expect(find).toHaveBeenCalledTimes(1);
     expect(
       result.pictures?.map(({ startMs, endMs }) => ({
         startMs,
         endMs,
       })),
-    ).toEqual([
-      { startMs: 2000, endMs: 4000 },
-      { startMs: 4000, endMs: 6000 },
-      { startMs: 6000, endMs: 8500 },
-    ]);
+    ).toEqual([{ startMs: 2000, endMs: 4000 }]);
     expect(find.mock.calls[0]).toEqual([
-      { kind: "person", brief: plans[0]!.brief },
+      { kind: "person", purpose: "b-roll", brief: plans[0]!.brief },
       expect.any(AbortSignal),
     ]);
     expect(compositionManifestV3Schema.safeParse(result).success).toBe(true);
     // Earlier signed results may carry differently numbered sequences. They
     // cannot reintroduce a blank-gap requirement between readable pictures.
     const legacy = structuredClone(result);
+    legacy.pictures!.push({
+      ...legacy.pictures![0]!,
+      startMs: 4000,
+      endMs: 6000,
+    });
     legacy.pictures!.forEach((item, index) => {
       item.sequence = index + 1;
     });
     expect(compositionManifestV3Schema.safeParse(legacy).success).toBe(true);
-    const overlap = structuredClone(result);
+    const overlap = structuredClone(legacy);
     overlap.pictures![1]!.startMs--;
     expect(compositionManifestV3Schema.safeParse(overlap).success).toBe(false);
     const short = structuredClone(result);
@@ -694,7 +695,7 @@ describe("grounded picture compilation", () => {
       expect(find).toHaveBeenCalledOnce();
     },
   );
-  it("logs the proposed and retained counts and a nonfatal shortfall when retrieval returns only one picture", async () => {
+  it("logs proposed and retained counts without a quota failure when only one picture is useful", async () => {
     const words = [
       context.words[0]!,
       { ...context.words[0]!, id: "w_000002", startMs: 4000, endMs: 4300 },
@@ -732,19 +733,19 @@ describe("grounded picture compilation", () => {
     expect(result.pictures).toHaveLength(1);
     expect(result.focus).toEqual(manifest.focus);
     expect(result.captions).toEqual(manifest.captions);
-    expect(find).toHaveBeenCalledTimes(2);
+    expect(find).toHaveBeenCalledTimes(1);
     const events = lines.map((line) => JSON.parse(line));
     expect(events).toContainEqual(
       expect.objectContaining({
         assembly: expect.objectContaining({
           plannedPictures: 2,
-          validatedPictures: 2,
+          validatedPictures: 1,
           pictures: 1,
-          pictureSearches: 2,
+          pictureSearches: 1,
         }),
       }),
     );
-    expect(events).toContainEqual(
+    expect(events).not.toContainEqual(
       expect.objectContaining({
         validation: expect.objectContaining({
           reason: "contextual_picture_target_unmet",
@@ -776,7 +777,7 @@ describe("grounded picture compilation", () => {
       new AbortController().signal,
       new AnalysisDiagnostics(),
     );
-    expect(find).toHaveBeenCalledTimes(2);
+    expect(find).toHaveBeenCalledTimes(1);
     expect(result.pictures).toHaveLength(1);
     expect(result.focus).toEqual(manifest.focus);
     expect(result.captions).toEqual(manifest.captions);
@@ -793,7 +794,7 @@ describe("grounded picture compilation", () => {
       diagnostics,
     );
     expect(find).toHaveBeenCalledExactlyOnceWith(
-      { kind: "planet", brief: picture.brief },
+      { kind: "planet", purpose: "b-roll", brief: picture.brief },
       expect.any(AbortSignal),
     );
     expect(result.pictures?.[0]).toMatchObject({

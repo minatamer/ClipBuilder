@@ -292,6 +292,25 @@ it("treats a verified empty search as no candidates rather than a missing search
     "completed",
   );
 });
+it("keeps image-specific depiction evidence when citations repeat a JSON candidate", async () => {
+  const depicted = {
+    ...image,
+    depiction: "photograph",
+    description: "A butterfly resting on a flower",
+  };
+  const f = fixture(
+    completed([
+      call,
+      result,
+      model(JSON.stringify({ candidates: [depicted] }), [
+        { type: "url_citation", url: image.url },
+      ]),
+    ]),
+  );
+  expect(await f.discover(request, signal())).toEqual({
+    candidates: [depicted],
+  });
+});
 it("retrieves and decodes a small synthetic raster only after actual completed search evidence", async () => {
   const f = fixture(completed());
   const bytes = await sharp({

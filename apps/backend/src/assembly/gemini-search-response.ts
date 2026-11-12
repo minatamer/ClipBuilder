@@ -134,14 +134,14 @@ export function decodeGeminiSearch(value: unknown) {
     });
   const fromJson = parsedCandidates(jsonCandidates),
     fromCitations = parsedCandidates(citations);
-  const candidates = [
-    ...new Map(
-      [...fromJson, ...fromCitations].map((candidate) => [
-        candidate.url,
-        candidate,
-      ]),
-    ).values(),
-  ].slice(0, WEB_PICTURE_POLICY.candidates);
+  const uniqueCandidates = new Map<string, (typeof fromJson)[number]>();
+  for (const candidate of [...fromJson, ...fromCitations])
+    if (!uniqueCandidates.has(candidate.url))
+      uniqueCandidates.set(candidate.url, candidate);
+  const candidates = [...uniqueCandidates.values()].slice(
+    0,
+    WEB_PICTURE_POLICY.candidates,
+  );
   const diagnostic: SearchTrace = {
     api: "gemini-interactions",
     state,
