@@ -29,19 +29,22 @@
 }
 .row {
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
   position: relative;
   min-width: 0;
   border: 1px solid var(--cb-border);
-  border-radius: var(--cb-radius-control);
-  background: rgb(5 17 40 / 65%);
+  border-radius: 8px;
+  background: var(--cb-canvas);
   transition:
     background 150ms ease,
     border-color 150ms ease;
 }
 .row[data-selected] {
   border-color: var(--cb-brand);
-  background: rgb(31 67 124 / 45%);
+  box-shadow: inset 2px 0 0 var(--cb-brand);
+  background: rgb(31 67 124 / 18%);
 }
 .row[data-moving] {
   opacity: 0.6;
@@ -69,7 +72,9 @@
   min-width: 44px;
   padding: 0;
   border: 0;
-  border-radius: var(--cb-radius-control) 0 0 var(--cb-radius-control);
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
   color: var(--cb-ink-soft);
   cursor: grab;
   touch-action: none;
@@ -85,15 +90,16 @@
   gap: 0.5rem;
   min-width: 0;
   border: 0;
-  border-radius: 0 var(--cb-radius-control) var(--cb-radius-control) 0;
-  padding: 0.5rem 0.5rem 0.5rem 0;
+  border-radius: 4px;
+  box-shadow: none;
+  padding: 4px 0;
   background: transparent;
   text-align: left;
 }
 .row .item :global(.picture-thumb) {
-  flex: 0 0 42px;
-  width: 42px;
-  height: 34px;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
   margin: 0;
   border-radius: 5px;
   overflow: hidden;
@@ -109,7 +115,8 @@
 }
 .details > span {
   color: var(--cb-ink-soft);
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
   font-weight: 400;
   white-space: nowrap;
 }
@@ -119,8 +126,42 @@
   font-size: 0.625rem;
   font-weight: 500;
 }
-@container (max-width:16rem) {
+
+.row > .item[aria-pressed="true"] {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.row > .jump {
+  flex: 0 0 auto;
+  gap: 6px;
+  padding: 0 10px;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 4px;
+  box-shadow: none;
+  color: var(--cb-ink-soft);
+  background: transparent;
+  font-size: 12px;
+}
+.row > .jump:not(:disabled):hover {
+  color: var(--cb-ink);
+  background: var(--cb-brand-soft);
+}
+@container (max-width:24rem) {
+  .jump > svg,
   .position {
+    display: none;
+  }
+  .row > .jump {
+    padding: 0 4px;
+    width: 54px;
+    font-size: 11px;
+  }
+}
+@container (max-width:20rem) {
+  .rangeEnd {
     display: none;
   }
 }

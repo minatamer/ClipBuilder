@@ -75,6 +75,7 @@ export function FocusPreviewControls({
       {...props}
       tracking={
         <HeadMotionEditor
+          squarePosition={props.blackBarPosition}
           focus={props.focus}
           tracks={cameraTracks}
           effects={cameraEffects}
@@ -138,6 +139,7 @@ export function FocusPreviewControls({
       }
       motion={
         <CameraMotionEditor
+          squarePosition={props.blackBarPosition}
           navigationRequest={props.navigationRequest}
           focus={props.focus}
           positionIndex={props.positionRequest?.index}
@@ -161,6 +163,7 @@ export function FocusPreviewControls({
       frame={sourceFrame}
       pan={
         <CameraMotionEditor
+          squarePosition={props.blackBarPosition}
           mode="pan"
           navigationRequest={props.navigationRequest}
           focus={props.focus}

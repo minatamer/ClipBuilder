@@ -82,6 +82,16 @@ export function VisualPresentation({
           onChange({ ...cue, focal: { ...focal, y } }),
         )}
       </div>
+      <label className="visual-bar-option">
+        <input
+          type="checkbox"
+          checked={cue.ignoreBlackBars ?? false}
+          onChange={(event) =>
+            onChange({ ...cue, ignoreBlackBars: event.currentTarget.checked })
+          }
+        />
+        Ignore black bars
+      </label>
       <InlineFeedback id={feedbackId} message={validationMessage} />
     </>
   );

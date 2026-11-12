@@ -1,5 +1,172 @@
 # CL-286 — Manual visual sounds, caption controls and reliable autosave
 
+## Scene-driven Glass color revision — 2026-11-12
+
+Implemented with scoped synthetic verification. The owner accepts the closer
+sculpted finish but rejects its fixed
+silver/blue color: the supplied references change with the footage, including
+dark letters on a light scene. The last revision's fixed sky/cloud face masks
+most actual backdrop changes. Replace that dominant fixed environment with a
+glyph-confined, refracted scene response, preserving sculpted bevels, opacity,
+clear counters, clocks, fitting, saved edits and local/hosted shared rendering.
+Do not substitute a time-animated static texture or automatic random colors.
+
+Verify the same word at unchanged settings over generated changing dark/light
+and colored/detail scenes, at native and scaled sizes. Demonstrate substantial
+interior color/luminance changes and clear exterior/counters. Audit the full
+opacity endpoint's export scene admission, then rebuild/reload the idle owned
+worker for current-source parity. Synthetic/no-key tests and Codex only; no paid
+run, owner-clip modification, configuration, Git or Voyagenda action. Full normal
+browser-driven MP4/Safari optics and personal aesthetic approval remain separate.
+
+Confirmed cause: a fixed sky/cloud pattern painted at approximately 86% face
+opacity at the default 55% setting overwhelmed the scene lens. Removed that
+pattern and its cloud/noise filters. The glyph-masked lens now supplies the face
+from actual refracted footage: reversed scene luminance with retained chroma
+gives light-on-dark/dark-on-light contrast, while a low-opacity neutral sheen,
+directional inner bevel and bounded shadow retain depth. No timer, random color,
+pixel-reading loop, remote texture, provider or new dependency. Existing caption
+values, clocks, fitted font scaling, fades, speakers and other styles are intact.
+
+Visible Glass now always admits the existing bounded prepared-scene export path,
+including 100% material strength. Zero alone skips scene preparation. The existing
+physical-frame raster cache and scene resource/authentication/cleanup bounds are
+unchanged. A 24fps injected-capture native regression now explicitly uses 100%;
+the existing 60fps and fractional-cadence cases retain partial strength.
+
+Actual checks: 39 caption/native-scene cases and the silent SVG/FFmpeg alpha/word
+proof passed. Local TypeScript, scoped lint, formatting and whitespace passed.
+The transparent-only SVG proof no longer asserts painted blue/cloud face pixels:
+it cannot execute CSS backdrop sampling. Actual optics were checked in Codex on
+generated silent video, with the same word/settings at native and half scale,
+four settled source timestamps, muted playback and 0/55/100% material strength.
+Across 7,112 interior pixels at 55%, mean RGB changed from (170,175,179) on dark
+footage to (65,66,65) on light footage, (160,137,119) on warm footage and
+(116,136,147) on cool footage. Beyond an eight-pixel padded glyph mask, zero
+pixels exceeded RGB delta 20 against the unchanged background; the zero endpoint
+also changed zero pixels above that threshold. Four counter-center patches in
+GOOD changed zero pixels above delta 20 (maximum delta 5). These are bounded
+JPEG screenshot comparisons, not a mathematical all-pixel/export parity claim.
+
+The current native bundle was rebuilt, and only the verified idle backend/worker
+was refreshed via its existing watcher after checking rolling recovery. Final
+fresh health/start/config/capability reads returned 200; all seven clips remain
+and the frontend identity stayed unchanged. Temporary review tabs/listeners and
+generated scratch were closed/cleaned. Comparison screenshots remain outside Git.
+Read-only validation found no actionable issue in this narrow revision. Full
+normal application optical MP4 and Safari acceptance remain unverified under the
+Codex-only browser rule. No paid run, owner-clip edit, config/Git/Voyagenda action.
+
+## Approved reflective reference revision — 2026-11-12
+
+Active after CL-290; do not drop earlier tasks. The owner explicitly
+rejects the faint current material and supplies an image-generation reference
+as the correct target. Its letters are substantial polished glass/chrome with
+bright silver/blue sky/environment reflections, cloud-like highlights, crisp
+beveled rims and a small letter-shaped dark shadow. The current dark/tinted
+transparency is vastly different. Exact font provenance is not the main problem.
+
+Preserve the glyph-only alpha mask and clear counters. Add a convincing reflected
+environment independent of the immediate dark backdrop, rather than merely
+making the same flat fill more transparent. Compare visibly against the approved
+material at normal preview scale, including a dark scene and a word with counters.
+Keep opacity, clocks, size/fitting, selection, all other styles, and native shared
+composition. A bounded glyph shadow is allowed by this latest reference; a broad
+rectangular backdrop is not. Do not weaken acceptance to DOM-presence checks.
+Use original code-owned/licensed material assets, no unverified font/plugin leak.
+Generated silent Codex fixtures only; preserve owner clips and existing exports.
+Normal browser-driven export/Safari and personal visual acceptance remain owner
+checks. No paid run, external browser, configuration, Git or Voyagenda action.
+
+Engineering revision completed with generated checks, 2026-11-12; owner visual
+approval remains separate. Replaced the faint fill with an original code-owned
+reflected sky/environment, deterministic cloud detail, directional inner bevel
+lighting, crisp rims and a bounded glyph shadow. The reflection remains visible
+over a dark scene independently of its immediate backdrop; the existing subtle
+scene-displacement lens and glyph alpha mask remain. No new font download,
+remote texture, provider or runtime asset dependency. The existing licensed
+League Spartan face is retained; no exact third-party preset provenance is claimed.
+
+Opacity now has a perceptual material-strength response, preserving the stored
+0–100% control, clear zero and opaque one endpoints. Bevel, shadow and lens units
+scale with the actual fitted font size, not the nominal input or preview pixels.
+This fixes a visible thickness difference in same-size native/scaled comparisons.
+The preset swatch and actual captions use the same component/recipe.
+
+Actual final checks: 35 caption cases passed. The generated SVG/FFmpeg proof
+passed with added image assertions for a substantial bright reflective face,
+white highlights and blue reflections, retaining alpha gaps and word timing.
+Codex comparisons inspected DDTJR/LOSSES on dark scenes, GOOD on an independent
+grid/mask, and 0/55/100% endpoints at native and half scale. Zero opacity changed
+zero grid pixels above RGB delta 20. Two 10×10 counter-center patches changed
+zero pixels (maximum channel deltas 2 and 4). Beyond the eight-pixel padded mask,
+10 native and one scaled JPEG pixels exceeded delta 20; these sparse boundary/
+shadow/compression differences are not claimed as mathematical zero. No broad
+refracted panel was visible. Only a bounded letter shadow is allowed by the new
+reference, superseding the earlier zero-exterior treatment.
+
+The actual synthetic editor showed bright LOSSES over a generated dark-shirt
+scene at 55%. A 600px authored size fitted to 249px in that box, saved, and Undo
+restored 180px. No owner clip was corrected as evidence. Final material/editor
+screenshots remain outside Git. Local/frontend/test TypeScript, formatting and
+scoped ESLint passed. The normal native bundle was rebuilt and its owned worker
+reloaded after verifying idle state. Final fresh health/start/config/capability
+GETs returned 200, with all seven clips retained and no active processing; the
+frontend remained running. Temporary review tabs/listeners were closed.
+Full normal-application refractive MP4, Safari optics and the
+owner's final comparison against the approved image remain manual acceptance.
+
+## Owner Glass rejection and correction — 2026-11-12
+
+Owner revision: the owner still sees a rectangular refracted backdrop around
+the word. The required material is the letters themselves, with light/subtle
+refraction, not a glass panel behind text. Reproduce this on generated material
+in the actual shared editor before revising. Hard acceptance: pixels outside
+glyphs, between letters and inside letter counters remain unchanged; the lens
+and reflections stay within glyph alpha at native and scaled preview sizes.
+Retain opacity, sizing, word clocks/animations, selection and native parity.
+
+Research the origin/style against official creator/font sources; distinguish
+confirmed identity from visual similarity. Use existing licensed/open-source
+assets or original fixed code, not an unverified leaked font/plugin. Record
+primary sources and avoid claiming an exact font match without provenance.
+Keep saved owner edits intact; use generated/fake/no-key checks in Codex only.
+Full browser-driven export/Safari acceptance retain their stated boundaries.
+Complete this revision before CL-287 and the subsequent CL-289 visual-quality
+revision. Preserve the running owner processing/session and Voyagenda; reload
+an owned native worker only after verified idle readiness. No provider spend,
+ignored configuration, external browser, deployment or new Git mutation.
+
+Revision result: implemented and checked on generated silent material in Codex.
+The lens now has an explicit glyph alpha mask as well as a clip; every finish
+layer is clipped to the same glyph, including counters. Removed rectangular
+reflection paint, grain and external shadow, reduced displacement from 48 to 10,
+and lightened the silver finish. Glass ignores saved generic background/block/
+highlight panels and hides those background controls, preserving their saved
+values for other styles. The owner's actual style had background opacity zero;
+the generic panel path was an additional hardening finding, not its confirmed
+cause. Do not attribute the reported example to that setting.
+
+Primary research: [EasyEdit's creator tutorial](https://www.easyedit.pro/blog/glass-distortion-typography-tutorial-text-animation-in-after-effects)
+uses displacement through a text matte. [MARSNEV's LEMON MILK](https://marsnev.com/lemon-milk/)
+is visually similar geometric lettering, but exact reference identity/provenance
+was not verified. Keep the existing [OFL League Spartan](https://github.com/theleagueof/league-spartan)
+instead of downloading an unverified font/preset. The reference is a composited
+material, not an effect obtainable from a font alone. SVG alpha-mask behavior
+follows [MDN mask-image](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/mask-image).
+
+Actual revision checks: 35 caption component cases, including saved opaque
+backgrounds across four animations, and one generated SVG/FFmpeg glyph proof
+passed. Local and frontend TypeScript passed. In the Codex browser, independent
+grid/mask captures compared at native and half scale; the old material changed
+137 pixels more than eight pixels outside glyphs (RGB delta >20), corrected
+material changed zero. Lens-enabled versus tint-only changed 4,667 native and
+2,340 scaled scene pixels, confirming actual backdrop displacement. Letter
+counters stayed clear; 0/55/100% controls and the current editor were inspected.
+Synthetic screenshots remain outside Git. No provider calls or owner edits.
+Full browser-driven native export and Safari optics remain owner acceptance;
+the SVG proof does not claim an end-to-end refractive MP4 export.
+
 Status: implemented; focused execute/validate checks complete, 2026-11-12.
 Owner aesthetic/native end-to-end acceptance remains separate.
 Dependencies: shared editor/audio contracts, CL-275 Glass, CL-277 autosave and
@@ -249,4 +416,4 @@ export. Existing saved sizes/edits and historical export bytes are preserved;
 they are not silently rewritten as regression evidence. Safari optical and real
 AI quality acceptance remain unverified and are not required to use manual
 controls without keys. CL-287 separately records the requested black-bar option;
-it is queued/documented only.
+its later implementation and separate acceptance evidence are recorded there.

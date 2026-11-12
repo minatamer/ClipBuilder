@@ -38,7 +38,7 @@ import {
 import { readOwnerClips } from "./collection-pages.ts";
 import { Button } from "../../shared/ui/button";
 import { ProcessingState } from "../../shared/ui/processing-state";
-import { RotateCw, Sparkles, Upload } from "lucide-react";
+import { RotateCw, Sparkles, Trash2, Upload } from "lucide-react";
 import { WorkflowActions } from "./workflow-actions.tsx";
 import { ControlPanel, ControlTabs } from "./control-tabs.tsx";
 import { EDITOR_SECTIONS, type EditorSetting } from "./editor-sections";
@@ -166,6 +166,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { OwnerAutomaticOverlay } from "../../../../../packages/composition/local/automatic-overlay.tsx";
+import { SceneFramingPicker } from "./scene-framing-picker";
 import { usePreviewImages, previewOverlayImage } from "./preview-images.tsx";
 import { BrollVideo } from "./broll-video.tsx";
 import { VisualLayers } from "./visual-layer-order";
@@ -554,6 +555,11 @@ export function Review({
                   focus={content.focus}
                   effects={content.cameraEffects}
                   tracks={content.cameraTracks}
+                  squarePosition={
+                    content.blackBars
+                      ? (content.blackBarPosition ?? 0.5)
+                      : undefined
+                  }
                   onPreviewReady={onPreviewReady}
                   onPlaybackError={onPlaybackError}
                 />
@@ -1062,6 +1068,8 @@ export function ClipEditor({
         focus: "focus",
         cameraEffects: "focus",
         cameraTracks: "focus",
+        blackBars: "focus",
+        blackBarPosition: "focus",
         visuals: "pictures",
         audio: "pictures",
       };
@@ -2908,6 +2916,15 @@ export function ClipEditor({
                       </select>
                     </label>
                   </div>
+                  {!selectedCue && (
+                    <SceneFramingPicker
+                      enabled={draft.blackBars ?? false}
+                      onChange={(blackBars) => {
+                        if (!blackBars) setSelection("focus");
+                        update({ ...draft, blackBars });
+                      }}
+                    />
+                  )}
                   <InlineFeedback
                     message={
                       cameraErrorTarget &&
@@ -2968,6 +2985,11 @@ export function ClipEditor({
                 ) : (
                   <FocusPreviewControls
                     navigationRequest={cameraRequest}
+                    blackBarPosition={
+                      draft.blackBars
+                        ? (draft.blackBarPosition ?? 0.5)
+                        : undefined
+                    }
                     feedback={
                       error &&
                       errorSection === "focus" &&
@@ -3228,6 +3250,7 @@ export function ClipEditor({
                       tabIndex={0}
                     >
                       <TypographyFields
+                        backgroundControls={caption.material !== "glass"}
                         presetPicker={
                           <CaptionPresetPicker
                             value={caption}
@@ -3515,6 +3538,19 @@ export function ClipEditor({
                   disabled={pending || trackingMode || audioImport !== null}
                   workspaceId={workspaceId}
                   frameOffset={filterOffset}
+                  canJump={(cue) =>
+                    previewLoaded &&
+                    !playbackFailed &&
+                    !error &&
+                    Number.isInteger(cue.startFrame) &&
+                    cue.startFrame >= windowStart &&
+                    cue.startFrame < windowEnd &&
+                    cue.endFrame > cue.startFrame
+                  }
+                  onJump={(cue) => {
+                    setTimelineSelection(undefined);
+                    choosePicture(cue, true);
+                  }}
                   onChange={(visuals) => update({ ...draft, visuals })}
                   onSelect={(cue) => {
                     setTimelineSelection(undefined);
@@ -3524,7 +3560,7 @@ export function ClipEditor({
                 <div
                   className="picture-tools"
                   aria-label="AI visuals"
-                  hidden={mediaTab === "videos"}
+                  hidden={!visualDiscovery || mediaTab === "videos"}
                 >
                   <Button
                     variant="secondary"
@@ -3687,6 +3723,39 @@ export function ClipEditor({
                         }
                         disabled={pending}
                       >
+                        <div className="media-inspector-actions">
+                          <strong>
+                            {selectedCue.video ? "Video" : "Picture"}{" "}
+                            {draft.visuals.indexOf(selectedCue) + 1}
+                          </strong>
+                          <Button
+                            variant="quiet"
+                            icon={Trash2}
+                            onClick={() => {
+                              const visuals = draft.visuals.filter(
+                                (cue) => cue.id !== selectedCue.id,
+                              );
+                              const next =
+                                visuals.find(
+                                  (cue) =>
+                                    Boolean(cue.video) ===
+                                    Boolean(selectedCue.video),
+                                ) ?? visuals[0];
+                              update({
+                                ...draft,
+                                visuals,
+                              });
+                              setSelection(next?.id ?? "");
+                              if (next)
+                                setMediaTab(next.video ? "videos" : "pictures");
+                              setTimelineSelection(undefined);
+                            }}
+                          >
+                            {selectedCue.video
+                              ? "Remove video"
+                              : "Remove picture"}
+                          </Button>
+                        </div>
                         <ControlTabs
                           id={`${tabsId}-picture`}
                           label={
@@ -3818,26 +3887,6 @@ export function ClipEditor({
                               </select>
                             </label>
                           </div>
-                          <Button
-                            variant="quiet"
-                            onClick={() => {
-                              update({
-                                ...draft,
-                                visuals: draft.visuals.filter(
-                                  (cue) => cue.id !== selectedCue.id,
-                                ),
-                              });
-                              setSelection(
-                                draft.visuals.find(
-                                  (cue) => cue.id !== selectedCue.id,
-                                )?.id ?? "captions",
-                              );
-                            }}
-                          >
-                            {selectedCue.video
-                              ? "Remove video"
-                              : "Remove picture"}
-                          </Button>
                           {pictureIssueTab === "image" &&
                             !errorPath.some((part) =>
                               ["video", "focal", "presentation"].includes(

@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Play } from "lucide-react";
 import type { OwnerVisualEdit } from "../../../../../packages/contracts/local/assets.ts";
 import { Button, IconButton } from "../../shared/ui/button";
 import { MediaTimelineThumbnail } from "./media-timeline-thumbnail";
@@ -54,6 +54,8 @@ export function VisualLayers({
   frameOffset,
   onChange,
   onSelect,
+  onJump,
+  canJump,
 }: {
   cues: OwnerVisualEdit[];
   selected: string;
@@ -62,6 +64,8 @@ export function VisualLayers({
   frameOffset: number;
   onChange: (cues: OwnerVisualEdit[]) => void;
   onSelect: (cue: OwnerVisualEdit) => void;
+  onJump: (cue: OwnerVisualEdit) => void;
+  canJump: (cue: OwnerVisualEdit) => boolean;
 }) {
   const id = useId();
   const disclosure = useEditorInspectorDisclosure();
@@ -307,11 +311,16 @@ export function VisualLayers({
                       : undefined
                   }
                 />
-                <span className={styles.details}>
+                <span
+                  className={styles.details}
+                  title={`${focusTimestamp(cue.startFrame + frameOffset)}–${focusTimestamp(cue.endFrame + frameOffset)}`}
+                >
                   <strong>{label}</strong>
                   <span>
-                    {focusTimestamp(cue.startFrame + frameOffset)}–
-                    {focusTimestamp(cue.endFrame + frameOffset)}
+                    {focusTimestamp(cue.startFrame + frameOffset)}
+                    <span className={styles.rangeEnd}>
+                      –{focusTimestamp(cue.endFrame + frameOffset)}
+                    </span>
                   </span>
                 </span>
                 <span className={styles.position}>
@@ -321,6 +330,17 @@ export function VisualLayers({
                       ? "Back"
                       : position + 1}
                 </span>
+              </Button>
+              <Button
+                variant="quiet"
+                className={styles.jump}
+                icon={Play}
+                aria-label={`Jump to ${label} in preview`}
+                title={`Jump to ${focusTimestamp(cue.startFrame + frameOffset)} in preview`}
+                disabled={disabled || !!active || !canJump(cue)}
+                onClick={() => onJump(cue)}
+              >
+                <span>Jump to</span>
               </Button>
             </li>
           );

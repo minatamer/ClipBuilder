@@ -1,0 +1,39 @@
+.section {
+  width: 100%;
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 16px;
+}
+.section > h3 {
+  margin: 0;
+}
+.squareHandle {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cb-ink);
+  cursor: grab;
+  touch-action: none;
+}
+.squareHandle:active {
+  cursor: grabbing;
+}
+:global(.local-editing) .squareHandle[aria-pressed="true"] {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.squareHandle span {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--cb-focus);
+  border-radius: 0.3rem;
+  background: var(--cb-brand);
+  box-shadow: 0 0 0 2px var(--cb-brand-soft);
+  font-weight: 700;
+}

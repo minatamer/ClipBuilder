@@ -7,6 +7,7 @@ import {
   type OwnerFocus,
   type OwnerFocusShot,
 } from "../../../../../packages/contracts/local/focus.ts";
+import { ownerBlackBarCameraWindow } from "../../../../../packages/contracts/local/black-bars.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 
 export type FocusPosition = {
@@ -154,15 +155,22 @@ export function moveFocusPosition(
   index: number,
   centerX: number,
   centerY: number,
+  squarePosition?: number,
 ): OwnerFocus {
   const shot = previewFocusShot(focus.shots[index]!);
   const content = ownerSourceContent(focus.source);
-  const crop = ownerFocusCrop(focus, shot);
+  const crop = ownerFocusCrop(focus, shot, squarePosition);
+  const offsetY =
+    ownerBlackBarCameraWindow(crop.width, (crop.width * 16) / 9, squarePosition)
+      .offsetY / content.height;
   const clamp = (value: number, half: number) =>
     Math.max(half, Math.min(1 - half, value));
   return editFocusPosition(focus, index, {
     centerX: clamp(centerX, crop.width / content.width / 2),
-    centerY: clamp(centerY, crop.height / content.height / 2),
+    centerY: Math.max(
+      0,
+      Math.min(1, clamp(centerY, crop.height / content.height / 2) - offsetY),
+    ),
     zoom: shot.zoom,
   });
 }

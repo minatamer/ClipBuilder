@@ -18,13 +18,18 @@ import { cameraPreviewSourceFrame } from "./camera-preview-clock.ts";
 const NO_EFFECTS: readonly OwnerCameraEffect[] = [];
 const NO_TRACKS: readonly OwnerCameraTrack[] = [];
 
-const cameraTransform = (crop: {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}) =>
-  `matrix(${1080 / crop.width}, 0, 0, ${1920 / crop.height}, ${(-crop.x * 1080) / crop.width}, ${(-crop.y * 1920) / crop.height})`;
+const cameraTransform = (
+  crop: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  },
+  square: boolean,
+) => {
+  const height = square ? 1080 : 1920;
+  return `matrix(${1080 / crop.width}, 0, 0, ${height / crop.height}, ${(-crop.x * 1080) / crop.width}, ${(square ? 420 : 0) - (crop.y * height) / crop.height})`;
+};
 
 /** A camera cut belongs to the presented video frame, not the independent Player tick. */
 export function CameraPreviewVideo({
@@ -36,6 +41,7 @@ export function CameraPreviewVideo({
   focus,
   effects = NO_EFFECTS,
   tracks = NO_TRACKS,
+  squarePosition,
   volume,
   onPreviewReady,
   onPlaybackError,
@@ -48,6 +54,7 @@ export function CameraPreviewVideo({
   focus: OwnerFocus | undefined;
   effects: readonly OwnerCameraEffect[] | undefined;
   tracks: readonly OwnerCameraTrack[] | undefined;
+  squarePosition?: number | undefined;
   volume: number;
   onPreviewReady: () => void;
   onPlaybackError: () => void;
@@ -78,12 +85,16 @@ export function CameraPreviewVideo({
         kind,
         frame - start,
         tracks,
+        squarePosition,
       );
       // Keep the decoder's layout fixed. Camera motion changes only its
       // compositor transform, sampled from this exact decoded source frame.
-      node.style.setProperty("--camera-transform", cameraTransform(crop));
+      node.style.setProperty(
+        "--camera-transform",
+        cameraTransform(crop, squarePosition !== undefined),
+      );
     },
-    [focus, effects, tracks, kind, start, end, fps],
+    [focus, effects, tracks, kind, start, end, fps, squarePosition],
   );
   const onVideoFrame = useCallback<OnVideoFrame>(
     (frame, _now, metadata) => {
@@ -160,7 +171,15 @@ export function CameraPreviewVideo({
   const style = useMemo(() => {
     if (!focus)
       return { width: "100%", height: "100%", objectFit: "contain" as const };
-    const crop = ownerCameraCropAt(focus, effects, start, kind, 0, tracks);
+    const crop = ownerCameraCropAt(
+      focus,
+      effects,
+      start,
+      kind,
+      0,
+      tracks,
+      squarePosition,
+    );
     return {
       position: "absolute" as const,
       width: 1080,
@@ -169,10 +188,10 @@ export function CameraPreviewVideo({
       left: 0,
       top: 0,
       transformOrigin: "0 0",
-      transform: `var(--camera-transform, ${cameraTransform(crop)})`,
+      transform: `var(--camera-transform, ${cameraTransform(crop, squarePosition !== undefined)})`,
       willChange: "transform",
     };
-  }, [focus, effects, tracks, kind, start]);
+  }, [focus, effects, tracks, kind, start, squarePosition]);
 
   return (
     <Html5Video

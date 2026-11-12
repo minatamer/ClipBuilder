@@ -98,6 +98,7 @@ const clampBox = (box: HeadBox): HeadBox => {
   };
 };
 export function HeadMotionEditor({
+  squarePosition,
   focus,
   tracks,
   effects,
@@ -122,6 +123,7 @@ export function HeadMotionEditor({
   navigationRequest,
 }: {
   focus: OwnerFocus;
+  squarePosition?: number | undefined;
   tracks: OwnerCameraTrack[];
   effects: OwnerCameraEffect[];
   hook: OwnerHook | undefined;
@@ -512,7 +514,7 @@ export function HeadMotionEditor({
               tracking={busy}
               onChange={updateSeed}
               onConfirm={() => setDraft({ ...draft, marked: true })}
-              followWindow={ownerFollowWindow(focus, draft).box}
+              followWindow={ownerFollowWindow(focus, draft, squarePosition).box}
             />
           </FocusPreviewSlot>
           <div className="motion-editing-slot" ref={progressSlot}>

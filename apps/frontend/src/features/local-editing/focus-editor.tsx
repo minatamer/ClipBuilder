@@ -32,6 +32,7 @@ import {
   type OwnerFocusShot,
 } from "../../../../../packages/contracts/local/focus.ts";
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
+import framingStyles from "./scene-framing.module.css";
 import {
   captureFocusBoundary,
   addFocusPosition,
@@ -71,8 +72,10 @@ export function FocusEditor({
   feedback,
   notice,
   navigationRequest,
+  blackBarPosition,
 }: {
   focus: OwnerFocus;
+  blackBarPosition?: number | undefined;
   navigationRequest?:
     import("./editor-camera-request").EditorCameraRequest | undefined;
   automatic: OwnerFocus | undefined;
@@ -177,7 +180,7 @@ export function FocusEditor({
         : shot,
   );
   const content = ownerSourceContent(focus.source),
-    crop = ownerFocusCrop(focus, shownShot);
+    crop = ownerFocusCrop(focus, shownShot, blackBarPosition);
   const center = {
     x: (crop.x + crop.width / 2 - content.x) / content.width,
     y: (crop.y + crop.height / 2 - content.y) / content.height,
@@ -322,6 +325,7 @@ export function FocusEditor({
         active.index,
         (event.clientX - rect.left) / rect.width - active.offsetX,
         (event.clientY - rect.top) / rect.height - active.offsetY,
+        blackBarPosition,
       ),
     );
   }
@@ -492,6 +496,7 @@ export function FocusEditor({
                             ...shownShot,
                             ...ownerPersonCamera(p, sourceFrame),
                           },
+                      blackBarPosition,
                     );
                     return [
                       <button
@@ -515,7 +520,11 @@ export function FocusEditor({
                   })}
                 <button
                   type="button"
-                  className="focus-person-handle"
+                  className={
+                    blackBarPosition === undefined
+                      ? "focus-person-handle"
+                      : framingStyles.squareHandle
+                  }
                   aria-label={
                     person
                       ? timelineTab
@@ -529,8 +538,17 @@ export function FocusEditor({
                   }}
                   disabled={unused}
                   style={{
-                    left: `${center.x * 100}%`,
-                    top: `${center.y * 100}%`,
+                    ...(blackBarPosition === undefined
+                      ? {
+                          left: `${center.x * 100}%`,
+                          top: `${center.y * 100}%`,
+                        }
+                      : {
+                          left: `${((crop.x - content.x) / content.width) * 100}%`,
+                          top: `${((crop.y - content.y) / content.height) * 100}%`,
+                          width: `${(crop.width / content.width) * 100}%`,
+                          height: `${(crop.height / content.height) * 100}%`,
+                        }),
                   }}
                   onPointerDown={begin}
                   onPointerMove={move}
@@ -564,8 +582,9 @@ export function FocusEditor({
                       moveFocusPosition(
                         focus,
                         index,
-                        center.x + dx,
-                        center.y + dy,
+                        center.x + dx * (event.shiftKey ? 5 : 1),
+                        center.y + dy * (event.shiftKey ? 5 : 1),
+                        blackBarPosition,
                       ),
                     );
                   }}

@@ -66,7 +66,7 @@ export function CaptionPresetPicker({
                   fontWeight: 900,
                 }}
               >
-                <OwnerGlassWord text="Aa" color="#ffffff" />
+                <OwnerGlassWord text="Aa" fontSize={22.4} color="#ffffff" />
               </span>
             ),
           },

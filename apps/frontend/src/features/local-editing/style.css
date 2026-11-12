@@ -15,20 +15,12 @@
   &.local-opening {
     justify-content: center;
   }
-  .workspace-opening,
-  .workspace-opening-failure {
+  .workspace-opening {
     border: 0;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
     min-height: min(30rem, 65dvh);
-  }
-  .workspace-opening-failure {
-    display: grid;
-    align-content: center;
-    justify-items: center;
-    gap: 1rem;
-    color: var(--cb-ink-soft);
   }
   :where(h2, h3) {
     line-height: 1.3;
@@ -538,17 +530,6 @@
     padding-top: 1rem;
     border-top: 1px solid var(--cb-border);
   }
-  .workspace-opening-actions {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    width: 100%;
-  }
-  .workspace-opening-actions:not(:has(button, a[href], [role="status"])) {
-    display: none;
-  }
   .moment-workflow-actions .workflow-action-slot,
   .moment-workflow-actions .workflow-actions {
     justify-content: flex-end;
@@ -1038,12 +1019,6 @@
     .clip-rail-watermark {
       scale: 0.55;
     }
-  }
-  .clip-rail-placeholder {
-    display: grid;
-    place-items: center;
-    height: 100%;
-    font-size: 0.7rem;
   }
   [hidden] {
     display: none !important;
@@ -1675,6 +1650,34 @@
     border: 1px solid var(--cb-border);
     border-radius: 0.75rem;
     background: var(--cb-canvas);
+  }
+  .media-inspector-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .media-inspector-actions > strong {
+    font-size: 13px;
+    font-weight: 650;
+  }
+  .media-inspector-actions > button {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  .editor-properties label.visual-bar-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    margin-block: 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .visual-bar-option > input {
+    flex: 0 0 auto;
+    margin: 0;
   }
   .focus-person-handle {
     position: absolute;
@@ -2381,10 +2384,12 @@
   display: flex;
   gap: 0.4rem;
 }
-.workflow-action-slot:has(.head-motion-actions):not(:has(.connection-status))
+.workflow-action-slot:has(.head-motion-actions):not(
+    :has([data-connection-recovery])
+  )
   > .workflow-actions:not(:has(.head-motion-actions)),
 .workflow-session-actions:has(.head-motion-actions):not(
-    :has(.connection-status)
+    :has([data-connection-recovery])
   )
   > button {
   display: none;
@@ -2461,18 +2466,10 @@
   [data-inline-feedback][aria-hidden="true"] {
   display: none;
 }
-.connection-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--cb-border);
-  border-radius: 999px;
-  font-size: 0.875rem;
-}
-.workflow-action-slot:has(.connection-status)
-  > .workflow-actions:not(:has(.connection-status)),
-.workflow-session-actions:has(.connection-status) > button {
+
+.workflow-action-slot:has([data-connection-recovery])
+  > .workflow-actions:not(:has([data-connection-recovery])),
+.workflow-session-actions:has([data-connection-recovery]) > button {
   display: none;
 }
 .workflow-action-slot {
@@ -2497,23 +2494,19 @@
 .moment-section-feedback {
   max-width: 100%;
 }
-#sample-main:has(.connection-status[data-missing]) .session-controls {
+#sample-main:has([data-connection-recovery][data-missing]) .session-controls {
   display: none;
 }
 @media (max-width: 599px) {
-  #sample-main:has(.connection-status) .workflow-session-actions {
+  #sample-main:has([data-connection-recovery]) .workflow-session-actions {
     flex: 1;
     min-width: 0;
   }
-  #sample-main:has(.connection-status)
-    .workflow-actions:has(.connection-status) {
+  #sample-main:has([data-connection-recovery])
+    .workflow-actions:has([data-connection-recovery]) {
     flex-wrap: wrap;
     justify-content: flex-end;
     white-space: normal;
-  }
-  .connection-status {
-    padding: 0.4rem 0.5rem;
-    font-size: 0.75rem;
   }
 }
 @media (max-width: 599px) {

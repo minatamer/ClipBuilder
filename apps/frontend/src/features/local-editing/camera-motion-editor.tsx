@@ -1,4 +1,5 @@
 import { MediaLoadingOverlay } from "../../shared/ui/media-loading-overlay";
+import { ownerBlackBarCameraWindow } from "../../../../../packages/contracts/local/black-bars.ts";
 import { useEffect, useRef, useState } from "react";
 import { Clock3, Play, Trash2 } from "lucide-react";
 import { Button } from "../../shared/ui/button";
@@ -34,6 +35,7 @@ import type { OwnerCameraTrack } from "../../../../../packages/contracts/local/c
 const seconds = (frames: number) =>
   Number.isFinite(frames) ? Number((frames / OWNER_FPS).toFixed(3)) : "";
 export function CameraMotionEditor({
+  squarePosition,
   mode = "zoom",
   focus,
   effects,
@@ -53,6 +55,7 @@ export function CameraMotionEditor({
 }: {
   mode?: "zoom" | "pan";
   focus: OwnerFocus;
+  squarePosition?: number | undefined;
   effects: OwnerCameraEffect[];
   previewEffects?: readonly OwnerCameraEffect[] | undefined;
   tracks?: OwnerCameraTrack[];
@@ -100,7 +103,7 @@ export function CameraMotionEditor({
     : 0;
   const content = ownerSourceContent(focus.source);
   const baseline =
-    mode === "pan"
+    mode === "pan" || squarePosition !== undefined
       ? content
       : ownerFocusCrop(focus, ownerFocusAt(focus, sourceStart));
   const fallback = { centerX: 0.5, centerY: 0.5, zoom: 2 };
@@ -123,9 +126,11 @@ export function CameraMotionEditor({
             paintedEffect.occurrence,
             start,
             tracks,
+            squarePosition,
           ),
+          squarePosition,
         )
-      : ownerCameraTargetCrop(focus, target);
+      : ownerCameraTargetCrop(focus, target, squarePosition);
   const x = (crop.x + crop.width / 2 - baseline.x) / baseline.width,
     y = (crop.y + crop.height / 2 - baseline.y) / baseline.height;
   const arrival = effect ? offset + effect.startFrame + effect.zoomFrames : 0;
@@ -242,7 +247,12 @@ export function CameraMotionEditor({
             1,
             (baseline.y +
               Math.max(0, Math.min(1, py)) * baseline.height -
-              content.y) /
+              content.y -
+              ownerBlackBarCameraWindow(
+                crop.width,
+                (crop.width * 16) / 9,
+                squarePosition,
+              ).offsetY) /
               content.height,
           ),
         ),
@@ -284,6 +294,7 @@ export function CameraMotionEditor({
         next.occurrence,
         next.startFrame,
         tracks,
+        squarePosition,
       );
       const unit = ownerCameraTargetCrop(focus, {
         centerX: 0.5,

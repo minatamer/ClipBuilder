@@ -84,6 +84,8 @@ export function sameOwnerEdit(
   right: OwnerEditDocument,
 ): boolean {
   return (
+    (left.blackBars ?? false) === (right.blackBars ?? false) &&
+    (left.blackBarPosition ?? 0.5) === (right.blackBarPosition ?? 0.5) &&
     JSON.stringify(left.hookContent) === JSON.stringify(right.hookContent) &&
     JSON.stringify(left.hook) === JSON.stringify(right.hook) &&
     JSON.stringify(left.audio) === JSON.stringify(right.audio) &&
@@ -111,6 +113,18 @@ export function ownerEditOperations(
   clip: OwnerClip,
 ): OwnerEditRequest["operations"] {
   const operations: OwnerEditRequest["operations"] = [];
+  if (
+    (original.blackBars ?? false) !== (draft.blackBars ?? false) ||
+    (original.blackBarPosition ?? 0.5) !== (draft.blackBarPosition ?? 0.5)
+  )
+    operations.push({
+      kind: "black-bars",
+      enabled: draft.blackBars ?? false,
+      ...(draft.blackBarPosition !== undefined ||
+      original.blackBarPosition !== undefined
+        ? { position: draft.blackBarPosition ?? 0.5 }
+        : {}),
+    });
   if (
     JSON.stringify(original.hookContent) !== JSON.stringify(draft.hookContent)
   )

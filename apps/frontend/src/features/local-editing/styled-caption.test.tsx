@@ -104,6 +104,25 @@ it("uses a fixed glyph-clipped optical lens and keeps old opacity defaults and f
   expect(fading).toContain("opacity:0.4166666666666667");
 });
 
+it.each(["single-word", "pop", "highlight", "slide"] as const)(
+  "keeps saved caption backgrounds out of Glass with %s animation",
+  (animation) => {
+    const saved = {
+      ...OWNER_CAPTION_PRESETS.glass,
+      preset: "solid-block" as const,
+      backgroundColor: "#ff3355",
+      backgroundOpacity: 1,
+      animation,
+    };
+    const before = JSON.stringify(saved);
+    const html = render(300, saved);
+    expect(html).toContain("data-glass-word");
+    expect(html).not.toContain("background-color:#ff3355");
+    expect(html).not.toContain('data-caption-panel="true"');
+    expect(JSON.stringify(saved)).toBe(before);
+  },
+);
+
 it("fits long glass words and keeps cached native frames deterministic", () => {
   const long = "PNEUMONOULTRAMICROSCOPICSILICOVOLCANOCONIOSIS";
   const value = {

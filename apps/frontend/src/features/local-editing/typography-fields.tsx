@@ -17,6 +17,7 @@ export function TypographyFields({
   onChange,
   onPreset,
   characterOnly = false,
+  backgroundControls = true,
   mixed = [],
   feedback,
   presetPicker,
@@ -25,6 +26,7 @@ export function TypographyFields({
   onChange: (next: OwnerTypography, property?: keyof OwnerTypography) => void;
   onPreset: (preset: OwnerTypography["preset"]) => void;
   characterOnly?: boolean;
+  backgroundControls?: boolean;
   mixed?: readonly (keyof OwnerTypography)[];
   feedback?: ReactNode;
   presetPicker?: ReactNode;
@@ -247,7 +249,7 @@ export function TypographyFields({
               }
             />
           </label>
-          {!characterOnly && (
+          {!characterOnly && backgroundControls && (
             <label>
               Background color
               <EditorColorControl
@@ -261,7 +263,7 @@ export function TypographyFields({
               />
             </label>
           )}
-          {!characterOnly && (
+          {!characterOnly && backgroundControls && (
             <label>
               Background opacity ({Math.round(background.opacity * 100)}%)
               <input
