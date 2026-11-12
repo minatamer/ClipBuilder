@@ -1,5 +1,49 @@
 # ClipBuilder canonical ticket index
 
+## Authorized whole-file commit batch — 2026-11-12
+
+[CL-288](CL-288-file-level-local-commit-batch.md) records the owner's authorization,
+exact 64-file allocation and final local validation for CL-284–287. Four local
+commits keep the shared CL-285/286 files together; CL-287 remains a queued
+specification. No push, provider run, service/configuration change or Voyagenda
+operation is included.
+
+## Editor black-bar framing — 2026-11-11
+
+[CL-287](CL-287-editor-black-bar-framing.md) plans an editor-only Black bars option:
+retain 9:16 output and mask the scene above/below a centered square viewing area.
+Queued/documented only, with persistence, layer order and preview/export checks;
+not another pre-processing framing option. CL-286 remains the active packet.
+
+## Manual sounds, captions and autosave — 2026-11-11
+
+[CL-286](CL-286-manual-sounds-caption-material-and-save-recovery.md) owns the five
+requested fixes: no automatic visual Pop, larger typography, Glass opacity,
+scene refraction and safe autosave/conflict recovery inside the navbar.
+Implemented with focused fake/no-key, native/injected and Codex checks, including
+bundled geometric type, measured fitting and exact-hash release admission.
+Owner visual/full normal MP4 and Safari optical checks remain separate. Preserved
+CL-284/285 work and the current owner clip. CL-288 owns the later authorized local
+commits; no paid run or Voyagenda operation.
+
+## Flat editor processing canvas — 2026-11-11
+
+[CL-285](CL-285-flat-editor-processing-surface.md) owns removal of the nested
+rounded-card treatment from editor processing, keeping the shared spinner,
+stage details, timings and all existing controls. Implemented with 13 existing
+cases, types/lint/format and six-size silent fake Codex checks passing, including
+short-window keyboard scrolling and queued/ready transitions. Owner visual
+review remains open; current processing and CL-284 documentation are preserved.
+
+## Current-source Downloads housekeeping — 2026-11-11
+
+[CL-284](CL-284-current-source-downloads-cleanup.md) owns the authorized canonical
+eight-range timestamp save and cleanup of older ClipBuilder Downloads material.
+Completed: saved/validated all eight ranges, recycled 178 older files in thirty
+confirmed recoverable targets, and verified 24 protected file hashes. Current
+source, transcript/results and active recovery remain. No paid work or Voyagenda
+changes.
+
 ## Authorized local commit batch — 2026-11-11
 
 The owner authorized whole-file, ticket-prefixed local commits for pending
