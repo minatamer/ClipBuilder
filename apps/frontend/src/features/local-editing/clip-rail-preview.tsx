@@ -1,4 +1,10 @@
-import { useLayoutEffect, useRef, useState, type RefObject } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { Player, type PlayerRef } from "@remotion/player";
 import type {
   OwnerClip,
@@ -9,6 +15,10 @@ import { ownerPresentationFrames } from "../../../../../packages/contracts/local
 import { OWNER_FPS } from "../../../../../packages/contracts/local/policy.ts";
 import { VideoThumbnail } from "../../shared/ui/video-thumbnail";
 import { Review } from "./clip-editor";
+import {
+  createPreviewRecovery,
+  MEDIA_PREVIEW_ATTEMPT_MS,
+} from "../media/preview-recovery";
 
 const noop = () => {};
 
@@ -87,7 +97,7 @@ export function ClipRailPreview({
     >
       {visible && overlay && (
         <ClipRailSurface
-          key={`${clip.id}:${clip.revision}`}
+          key={`${workspaceId}:${clip.id}:${clip.revision}:${clip.preview?.bytes ?? 0}`}
           clip={clip}
           overlay={overlay}
           workspaceId={workspaceId}
@@ -110,16 +120,49 @@ function ClipRailSurface({
 }) {
   const [ready, setReady] = useState(false),
     [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const attemptId = useRef(0);
+  const recovery = useRef<ReturnType<typeof createPreviewRecovery> | null>(
+    null,
+  );
+  const failurePending = useRef(false);
+  const fail = useCallback(() => {
+    if (attempt !== attemptId.current) return;
+    setReady(false);
+    setFailed(true);
+    failurePending.current = true;
+    recovery.current?.fail();
+  }, [attempt]);
+  useLayoutEffect(() => {
+    const current = createPreviewRecovery(() => {
+      failurePending.current = false;
+      setReady(false);
+      setFailed(false);
+      attemptId.current++;
+      setAttempt(attemptId.current);
+    });
+    recovery.current = current;
+    if (failurePending.current) current.fail();
+    return () => {
+      current.dispose();
+      if (recovery.current === current) recovery.current = null;
+    };
+  }, []);
   useLayoutEffect(() => {
     const current = player.current;
-    const fail = () => setFailed(true);
     current?.addEventListener("error", fail);
     return () => current?.removeEventListener("error", fail);
-  }, [player, failed]);
+  }, [player, failed, attempt, fail]);
+  useLayoutEffect(() => {
+    if (ready || failed) return;
+    const timer = setTimeout(fail, MEDIA_PREVIEW_ATTEMPT_MS);
+    return () => clearTimeout(timer);
+  }, [ready, failed, attempt, fail]);
   return (
     <>
-      {!ready && !failed && (
+      {!ready && (
         <VideoThumbnail
+          recovering={failed}
           request={{
             source: `/api/local/workspace/${workspaceId}/clips/${clip.id}/source`,
             timeMs: 1000,
@@ -130,6 +173,7 @@ function ClipRailSurface({
       )}
       {!failed && (
         <Player
+          key={attempt}
           ref={player}
           component={Review}
           inputProps={{
@@ -146,8 +190,14 @@ function ClipRailSurface({
             onSelect: noop,
             onBox: noop,
             onGestureStart: noop,
-            onPlaybackError: () => setFailed(true),
-            onPreviewReady: () => setReady(true),
+            onPlaybackError: fail,
+            onPreviewReady: () => {
+              if (attempt !== attemptId.current || failurePending.current)
+                return;
+              failurePending.current = false;
+              recovery.current?.ready();
+              setReady(true);
+            },
             interactive: false,
             setting: "filters",
             silent: true,
@@ -163,9 +213,7 @@ function ClipRailSurface({
           clickToPlay={false}
           doubleClickToFullscreen={false}
           spaceKeyToPlayOrPause={false}
-          errorFallback={() => (
-            <span className="clip-rail-placeholder">Preview unavailable</span>
-          )}
+          errorFallback={() => <RailPreviewFailure onFailure={fail} />}
           style={{
             width: "100%",
             pointerEvents: "none",
@@ -173,9 +221,11 @@ function ClipRailSurface({
           }}
         />
       )}
-      {failed && (
-        <span className="clip-rail-placeholder">Preview unavailable</span>
-      )}
     </>
   );
+}
+
+function RailPreviewFailure({ onFailure }: { onFailure: () => void }) {
+  useLayoutEffect(onFailure, [onFailure]);
+  return null;
 }

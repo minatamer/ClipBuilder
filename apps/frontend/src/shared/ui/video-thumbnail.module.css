@@ -14,6 +14,33 @@
   height: 100%;
   object-fit: cover;
 }
+.recovery {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: var(--cb-ink-soft);
+}
+.pending {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--cb-blue-light);
+  background: var(--cb-canvas);
+  box-shadow: inset 0 0 0 1px var(--cb-border);
+  pointer-events: none;
+}
+.frame[data-thumbnail-state="retrying"] {
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    rgb(80 142 255 / 12%),
+    transparent 80%
+  );
+}
 .frame[data-thumbnail-state="loading"] {
   color: var(--cb-blue-light);
   background: radial-gradient(

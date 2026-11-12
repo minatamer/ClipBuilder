@@ -1,5 +1,9 @@
 import { CanvasSink, Input, MP4, UrlSource } from "mediabunny";
 import { thumbnailZoom } from "./thumbnail-framing";
+import {
+  createPreviewRecovery,
+  MEDIA_PREVIEW_ATTEMPT_MS,
+} from "./preview-recovery";
 
 export type VideoThumbnailRequest = {
   source: string;
@@ -10,7 +14,7 @@ export type VideoThumbnailRequest = {
   height?: number;
 };
 export type VideoThumbnailSnapshot = {
-  state: "loading" | "ready" | "unavailable";
+  state: "loading" | "ready" | "retrying" | "unavailable";
   url?: string;
 };
 export const EMPTY_VIDEO_THUMBNAIL: VideoThumbnailSnapshot = {
@@ -18,13 +22,7 @@ export const EMPTY_VIDEO_THUMBNAIL: VideoThumbnailSnapshot = {
 };
 const unavailable: VideoThumbnailSnapshot = { state: "unavailable" };
 
-type Entry = {
-  snapshot: VideoThumbnailSnapshot;
-  controller: AbortController;
-  listeners: Set<() => void>;
-};
-const entries = new Map<string, Entry>();
-let queue = Promise.resolve();
+const retrying: VideoThumbnailSnapshot = { state: "retrying" };
 
 export function videoThumbnailKey(request: VideoThumbnailRequest) {
   return JSON.stringify([
@@ -323,10 +321,7 @@ export async function decodeVideoThumbnail(
 export function videoThumbnailSnapshot(
   request: VideoThumbnailRequest | null,
 ): VideoThumbnailSnapshot {
-  return request
-    ? (entries.get(videoThumbnailKey(request))?.snapshot ??
-        EMPTY_VIDEO_THUMBNAIL)
-    : EMPTY_VIDEO_THUMBNAIL;
+  return thumbnails.snapshot(request);
 }
 
 /** Only subscribed surfaces retain stills; all surfaces share one serial queue. */
@@ -334,45 +329,127 @@ export function subscribeVideoThumbnail(
   request: VideoThumbnailRequest,
   listener: () => void,
 ) {
-  const key = videoThumbnailKey(request);
-  let entry = entries.get(key);
-  if (!entry) {
-    entry = {
-      snapshot: EMPTY_VIDEO_THUMBNAIL,
-      controller: new AbortController(),
-      listeners: new Set(),
-    };
-    entries.set(key, entry);
-    const created = entry;
-    queue = queue.then(async () => {
-      if (created.controller.signal.aborted) return;
-      const timer = setTimeout(() => created.controller.abort(), 30_000);
-      try {
-        const blob = await decodeVideoThumbnail(
-          request,
-          created.controller.signal,
+  return thumbnails.subscribe(request, listener);
+}
+
+export function invalidateVideoThumbnail(
+  request: VideoThumbnailRequest,
+  url: string,
+) {
+  thumbnails.invalidate(request, url);
+}
+
+/** One serial decoder queue, with failures recoverable for the subscription's lifetime. */
+export function createVideoThumbnailStore(decode = decodeVideoThumbnail) {
+  type Entry = {
+    snapshot: VideoThumbnailSnapshot;
+    controller: AbortController;
+    listeners: Set<() => void>;
+    recovery: ReturnType<typeof createPreviewRecovery>;
+    running: boolean;
+  };
+  const entries = new Map<string, Entry>();
+  let queue = Promise.resolve();
+  const notify = (entry: Entry) => {
+    for (const listener of entry.listeners) listener();
+  };
+  const enqueue = (entry: Entry, request: VideoThumbnailRequest) => {
+    if (entry.running || entry.controller.signal.aborted) return;
+    entry.running = true;
+    queue = queue
+      .catch(() => {})
+      .then(async () => {
+        if (entry.controller.signal.aborted) {
+          entry.running = false;
+          return;
+        }
+        if (entry.snapshot !== EMPTY_VIDEO_THUMBNAIL) {
+          entry.snapshot = EMPTY_VIDEO_THUMBNAIL;
+          notify(entry);
+        }
+        const attempt = new AbortController();
+        const signal = AbortSignal.any([
+          entry.controller.signal,
+          attempt.signal,
+        ]);
+        const timer = setTimeout(
+          () => attempt.abort(),
+          MEDIA_PREVIEW_ATTEMPT_MS,
         );
-        if (!created.controller.signal.aborted)
-          created.snapshot = { state: "ready", url: URL.createObjectURL(blob) };
-      } catch {
-        created.snapshot = unavailable;
-      } finally {
-        clearTimeout(timer);
-        for (const notify of created.listeners) notify();
+        let abort = () => {};
+        const canceled = new Promise<never>((_done, fail) => {
+          abort = () => fail(signal.reason ?? Error("thumbnail_cancelled"));
+          signal.addEventListener("abort", abort, { once: true });
+          if (signal.aborted) abort();
+        });
+        try {
+          const blob = await Promise.race([decode(request, signal), canceled]);
+          signal.throwIfAborted();
+          entry.snapshot = { state: "ready", url: URL.createObjectURL(blob) };
+          entry.recovery.ready();
+        } catch (error) {
+          if (entry.controller.signal.aborted) return;
+          const permanent =
+            error instanceof Error &&
+            ["thumbnail_request_invalid", "thumbnail_capacity"].includes(
+              error.message,
+            );
+          entry.snapshot = permanent ? unavailable : retrying;
+          if (!permanent) entry.recovery.fail();
+        } finally {
+          clearTimeout(timer);
+          signal.removeEventListener("abort", abort);
+          entry.running = false;
+          notify(entry);
+        }
+      });
+  };
+  return {
+    snapshot(request: VideoThumbnailRequest | null): VideoThumbnailSnapshot {
+      return request
+        ? (entries.get(videoThumbnailKey(request))?.snapshot ??
+            EMPTY_VIDEO_THUMBNAIL)
+        : EMPTY_VIDEO_THUMBNAIL;
+    },
+    subscribe(request: VideoThumbnailRequest, listener: () => void) {
+      const key = videoThumbnailKey(request);
+      let entry = entries.get(key);
+      if (!entry) {
+        const created: Entry = {
+          snapshot: EMPTY_VIDEO_THUMBNAIL,
+          controller: new AbortController(),
+          listeners: new Set(),
+          running: false,
+          recovery: createPreviewRecovery(() => enqueue(created, request)),
+        };
+        entries.set(key, created);
+        entry = created;
       }
-    });
-  }
-  const owned = entry;
-  const notify = () => listener();
-  owned.listeners.add(notify);
-  let released = false;
-  return () => {
-    if (released) return;
-    released = true;
-    owned.listeners.delete(notify);
-    if (owned.listeners.size) return;
-    owned.controller.abort();
-    if (owned.snapshot.url) URL.revokeObjectURL(owned.snapshot.url);
-    if (entries.get(key) === owned) entries.delete(key);
+      const owned = entry;
+      const subscription = () => listener();
+      owned.listeners.add(subscription);
+      if (!owned.running && owned.snapshot.state === "loading")
+        enqueue(owned, request);
+      let released = false;
+      return () => {
+        if (released) return;
+        released = true;
+        owned.listeners.delete(subscription);
+        if (owned.listeners.size) return;
+        owned.recovery.dispose();
+        owned.controller.abort();
+        if (owned.snapshot.url) URL.revokeObjectURL(owned.snapshot.url);
+        if (entries.get(key) === owned) entries.delete(key);
+      };
+    },
+    invalidate(request: VideoThumbnailRequest, url: string) {
+      const entry = entries.get(videoThumbnailKey(request));
+      if (!entry || entry.snapshot.url !== url) return;
+      URL.revokeObjectURL(url);
+      entry.snapshot = retrying;
+      entry.recovery.fail();
+      notify(entry);
+    },
   };
 }
+const thumbnails = createVideoThumbnailStore();

@@ -46,6 +46,7 @@ export async function startHookEditorFixture(
     previewAudio?: { id: string; bytes: Uint8Array; contentType: string };
     editorTour?: boolean;
     holdPreview?: boolean;
+    previewUnavailable?: boolean;
     workflowScreens?: boolean;
     sourceArtwork?: Uint8Array;
     pictureArtwork?: Uint8Array;
@@ -55,6 +56,8 @@ export async function startHookEditorFixture(
     youtubeAudio?: boolean;
     holdWorkspace?: boolean;
     holdClips?: boolean;
+    connectionOutcome?: "ready" | "unavailable" | "missing" | "hold";
+    workspaceFailures?: number;
     silentMedia?: boolean;
     hostedWorkflow?: boolean;
     preparationProgress?: CodexProgress["steps"];
@@ -128,6 +131,8 @@ export async function startHookEditorFixture(
     bytes = Buffer.alloc(0),
     edits = 0,
     unexpected = 0;
+  let connectionOutcome = options.connectionOutcome ?? "ready";
+  let workspaceFailures = options.workspaceFailures ?? 0;
   let renameAttempts = 0,
     renames = 0;
   let injectedFailures = 0;
@@ -256,13 +261,14 @@ export async function startHookEditorFixture(
     if (sibling.edit) sibling.edit.clipId = sibling.id;
   }
   let previewHeld = options.holdPreview ?? false;
+  let previewUnavailable = options.previewUnavailable ?? false;
   let tourWorkspace: typeof workspace | null = workspace;
   let tourResets = 0,
     tourOpens = 0;
   const pendingPreviews = new Set<() => void>();
   const entryHeld = {
     workspace: options.holdWorkspace ?? false,
-    clips: options.holdClips ?? false,
+    clips: (options.holdClips ?? false) || connectionOutcome === "hold",
   };
   const pendingEntry = {
     workspace: new Set<() => void>(),
@@ -308,6 +314,7 @@ export async function startHookEditorFixture(
   const server = createServer((req, res) => {
     void (async () => {
       res.setHeader("Content-Type", "application/json");
+      res.setHeader("Cache-Control", "no-store");
       if (
         options.editorTour &&
         req.method === "DELETE" &&
@@ -686,6 +693,11 @@ export async function startHookEditorFixture(
       }
       if (req.url === "/api/local/workspace") {
         entryReads.workspace++;
+        if (workspaceFailures > 0) {
+          workspaceFailures--;
+          res.writeHead(503).end("{}");
+          return;
+        }
         await waitForEntry("workspace", res);
         if (res.destroyed) return;
         res.end(
@@ -707,6 +719,10 @@ export async function startHookEditorFixture(
         entryReads.clips++;
         await waitForEntry("clips", res);
         if (res.destroyed) return;
+        if (connectionOutcome !== "ready") {
+          res.writeHead(connectionOutcome === "missing" ? 410 : 503).end("{}");
+          return;
+        }
         if (entryMissing) {
           res.writeHead(410, { "Cache-Control": "no-store" }).end();
           return;
@@ -790,6 +806,10 @@ export async function startHookEditorFixture(
       ) {
         if (req.url.includes("/clips/")) entryReads.clipSource++;
         else entryReads.source++;
+        if (previewUnavailable) {
+          res.writeHead(503, { "Cache-Control": "no-store" }).end();
+          return;
+        }
         if (previewHeld)
           await new Promise<void>((done) => {
             const finish = () => {
@@ -1097,11 +1117,22 @@ export async function startHookEditorFixture(
       releasePreview,
       releaseEntry,
       entryReads: () => ({ ...entryReads }),
+      setConnectionOutcome: (value: typeof connectionOutcome) => {
+        connectionOutcome = value;
+        if (value === "hold") entryHeld.clips = true;
+        else releaseEntry("clips");
+      },
+      setWorkspaceFailures: (value: number) => {
+        workspaceFailures = Math.max(0, Math.min(10, Math.floor(value)));
+      },
       setEntryMissing: (value: boolean) => {
         entryMissing = value;
       },
       holdPreview: () => {
         previewHeld = true;
+      },
+      setPreviewUnavailable: (value: boolean) => {
+        previewUnavailable = value;
       },
       tourSessionCounts: () => ({
         resets: tourResets,
