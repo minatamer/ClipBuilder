@@ -50,10 +50,7 @@ import {
   placeOwnerPlannedVisual,
   placeOwnerFitOriginalVisual,
 } from "../../../packages/contracts/local/visual-placement.ts";
-import {
-  hasPlannedVisualCoverage,
-  timePlannedVisuals,
-} from "./planned-visuals.ts";
+import { timePlannedVisuals } from "./planned-visuals.ts";
 import { applyOwnerEdit } from "./edit-clip.ts";
 import { OWNER_CAPTION_PRESETS } from "../../../packages/contracts/local/editor.ts";
 import { ownerAgentValidation } from "./agent-view.ts";
@@ -176,6 +173,22 @@ type Work = { clip: OwnerClip } & (
 );
 const working = (clip: OwnerClip) =>
   ["queued", "preparing", "rendering", "canceling"].includes(clip.state);
+
+/** Canceling an export never discards a completed preview or acknowledged edits. */
+function resumePreparedEditor(clip: OwnerClip) {
+  if (
+    !clip.base ||
+    !(clip.preview?.frames === clip.base.overlay.frames || clip.outputs.length)
+  )
+    return;
+  clip.state =
+    clip.outputs.at(-1)?.editRevision === clip.revision
+      ? "ready"
+      : clip.revision > 0
+        ? "validated-revision"
+        : "review-ready";
+  clip.error = null;
+}
 
 /** An ephemeral, workspace-owned ordered work list; one native/provider job globally. */
 export class OwnerClipBatch {
@@ -310,6 +323,7 @@ export class OwnerClipBatch {
         clip.state = "canceled";
         clip.error = "canceled";
       }
+      if (clip.state === "canceled") resumePreparedEditor(clip);
       delete clip.preparationStage;
     }
     for (const clip of restored) this.clips.set(clip.id, clip);
@@ -624,11 +638,11 @@ export class OwnerClipBatch {
       const remaining = OWNER_PICTURE_LIMITS.assetsPerClip - clip.assets.length;
       const prior =
         clip.edit ?? automaticOwnerEdit(clip.base, clip.id, clip.baseHash);
-      const retainedVisuals = prior.visuals.filter(
-        (visual) =>
-          clip.assets.find((asset) => asset.id === visual.assetId)?.origin ===
-          "owner-supplied",
-      );
+      const isOwnerVisual = (visual: (typeof prior.visuals)[number]) =>
+        !!visual.video ||
+        clip.assets.find((asset) => asset.id === visual.assetId)?.origin ===
+          "owner-supplied";
+      const retainedVisuals = prior.visuals.filter(isOwnerVisual);
       const available = Math.min(
         remaining,
         OWNER_PICTURE_LIMITS.cuesPerClip - retainedVisuals.length,
@@ -709,9 +723,7 @@ export class OwnerClipBatch {
               clip.base.overlay.framing,
             );
             const existing = (clip.edit?.visuals ?? []).filter(
-              (visual) =>
-                clip.assets.find((asset) => asset.id === visual.assetId)
-                  ?.origin !== "owner-supplied",
+              (visual) => !isOwnerVisual(visual),
             );
             stored.visual.id = existing[created.length]?.id ?? stored.visual.id;
             created.push(stored);
@@ -759,6 +771,41 @@ export class OwnerClipBatch {
               : {}),
           });
           const assets = [...clip.assets, ...created.map((item) => item.asset)];
+          if (edit.hookContent && edit.hook) {
+            const fresh = copyOwnerHookContent(
+              clip.base,
+              edit,
+              assets,
+              clip.audioAssets ?? [],
+              edit.hook,
+              undefined,
+              clip.videoAssets ?? [],
+            );
+            const content = edit.hookContent.edits;
+            const hookVisuals = [
+              ...content.visuals.filter(isOwnerVisual),
+              ...fresh.edits.visuals.filter((cue) => !isOwnerVisual(cue)),
+            ];
+            edit.hookContent = {
+              ...edit.hookContent,
+              edits: {
+                ...content,
+                visuals: hookVisuals,
+                ...(content.audio
+                  ? {
+                      audio: {
+                        ...content.audio,
+                        cues: resolveOwnerAudioCues(
+                          content.audio.cues,
+                          hookVisuals,
+                          frames,
+                        ),
+                      },
+                    }
+                  : {}),
+              },
+            };
+          }
           compileOwnerOverlay(
             clip.base,
             edit,
@@ -1238,8 +1285,10 @@ export class OwnerClipBatch {
           clip.state = "canceling";
           this.current.controller.abort();
         } else {
+          const queued = this.queue.find((work) => work.clip.id === clip.id);
           clip.state = "canceled";
           clip.error = "canceled";
+          if (queued?.kind === "export") resumePreparedEditor(clip);
           this.queue = this.queue.filter((work) => work.clip.id !== clip.id);
         }
       }
@@ -1383,8 +1432,6 @@ export class OwnerClipBatch {
         ),
         frames,
       );
-      if (!hasPlannedVisualCoverage(preparation.plan, frames))
-        this.diagnostics.critique("visual_validate", "visual_plan_shortfall");
       preparation.focus =
         clip.framing === "fit"
           ? undefined
@@ -1429,7 +1476,10 @@ export class OwnerClipBatch {
         );
       this.changed();
     }
-    const plan = preparation.plan;
+    const plan = preparation.plan.slice(
+      0,
+      OWNER_BATCH_POLICY.automaticVisualsPerClip,
+    );
     this.ports.resume?.({
       workspaceId: this.workspace.id,
       clipId: clip.id,
@@ -1499,8 +1549,7 @@ export class OwnerClipBatch {
       preparation.pictures.push({ index, visual });
       this.changed();
     }
-    if (!hasPlannedVisualCoverage(visuals, frames))
-      this.diagnostics.critique("image_validate", "visual_coverage_shortfall");
+
     const captionWords =
       this.ports.mode === "synthetic-ai" && !FAKE_CAPTIONS_ENABLED
         ? []
@@ -1703,7 +1752,11 @@ export class OwnerClipBatch {
           }
           this.queue = [];
         }
-        clip.state = controller.signal.aborted ? "canceled" : "failed";
+        clip.state = controller.signal.aborted
+          ? work.kind === "export"
+            ? "canceling"
+            : "canceled"
+          : "failed";
         clip.error = controller.signal.aborted
           ? "canceled"
           : capacityFailure === "disk_unavailable"
@@ -1726,6 +1779,8 @@ export class OwnerClipBatch {
           );
       } finally {
         delete clip.preparationStage;
+        if (controller.signal.aborted && work.kind === "export")
+          resumePreparedEditor(clip);
         this.current = undefined;
         this.changed();
       }

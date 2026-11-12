@@ -116,6 +116,7 @@ async function composeLocalWorkflow(
       : null;
   const root = join(runtime, "workspaces");
   const state = {
+    local: true,
     root,
     token: randomBytes(32).toString("hex"),
     workerToken: randomBytes(32).toString("hex"),
@@ -300,6 +301,7 @@ async function composeLocalWorkflow(
         aiProvider:
           config.providerMode === "live" ? config.aiProvider : undefined,
       }),
+      true,
     );
     host = createOwnerHost({
       root,

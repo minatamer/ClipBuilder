@@ -392,6 +392,68 @@ describe("owner worker progress polling with an injected transport", () => {
   );
 });
 
+it.each([undefined, false, true])(
+  "keeps clip export worker/RPC deadlines in trusted local composition (%s)",
+  async (local) => {
+    const root = await mkdtemp(join(tmpdir(), "clipbuilder-export-deadline-"));
+    const workspaceId = randomUUID();
+    await mkdir(join(root, workspaceId));
+    await writeFile(join(root, workspaceId, "source.mp4"), "synthetic");
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const execute = vi.fn(async (): Promise<OwnerMediaResult> => ({
+      operation: "clip",
+      frames: 30,
+      bytes: 20,
+      durationMs: 1000,
+    }));
+    const worker = createOwnerWorker({
+      root,
+      token: "synthetic-deadline",
+      local,
+      tools: { ffmpeg: "unused", ffprobe: "unused" },
+      execute,
+    });
+    try {
+      const port = await listenOwner(worker.server);
+      const request: OwnerMediaJob = {
+        operation: "clip",
+        workspaceId,
+        clipId: randomUUID(),
+        jobId: randomUUID(),
+        renderRevision: 0,
+        fingerprint: "a".repeat(64),
+        cut: { startFrame: 0, endFrame: 30 },
+        overlay: { version: 1, frames: 30, captions: [], visuals: [] },
+      };
+      await localWorkerPort(
+        port,
+        "synthetic-deadline",
+        undefined,
+        undefined,
+        undefined,
+        local,
+      )(request, new AbortController().signal);
+      const duration = (local ? 20 : 15) * 60_000;
+      expect(timeout.mock.calls.map(([ms]) => ms)).toEqual(
+        expect.arrayContaining([duration, duration + 60_000]),
+      );
+      const forged = await ownerRequest(port, "/media", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer synthetic-deadline",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...request, local: !local }),
+      });
+      expect(forged.status).toBe(400);
+      expect(execute).toHaveBeenCalledTimes(1);
+    } finally {
+      timeout.mockRestore();
+      await worker.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);
 it.each(["gemini", "codex"] as const)(
   "keeps source RPC deadlines isolated to trusted %s capacity",
   async (aiProvider) => {

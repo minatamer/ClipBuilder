@@ -60,7 +60,6 @@ import { normalizeCandidateSelection } from "../src/analysis/analysis.provider-s
 import { decodePlannedText, PLANNED_TEXT_POLICY } from "./planned-text.ts";
 import { hookTitlePlanner } from "./hook-title-planner.ts";
 import { retainSpeakerLabels } from "./speaker-word-labels.ts";
-import { renderCodexIllustration } from "./codex-visual.ts";
 import { normalizePicture } from "../src/assembly/picture-raster.ts";
 import { contextualPictureAssetSchema } from "@clipbuilder/contracts";
 import { WEB_PICTURE_POLICY } from "../src/assembly/web-pictures.ts";
@@ -452,15 +451,9 @@ export function createLocalCodexAi(options: {
             () =>
               options.infer(
                 {
-                  schema: jsonSchema(
-                    localCodexFocusSchema.extend({
-                      pictures: localCodexFocusSchema.shape.pictures.min(
-                        plannedVisualGuide(frames).minimumCount,
-                      ),
-                    }),
-                  ),
+                  schema: jsonSchema(localCodexFocusSchema),
                   images: artifact.frames.map((frame) => frame.jpeg),
-                  prompt: `${untrusted}\n${scenePolicy}\n${HOOK_SUGGESTION_POLICY}\n${PLANNED_TEXT_POLICY}\n${PLANNED_VISUAL_POLICY}\nPlan portrait camera framing and useful contextual illustrations from the ordered temporal images and timed transcript. Each image has chronological panels at its supplied sampleFrames: four panels use a 2-by-2 grid in reading order (top-left, top-right, bottom-left, bottom-right); legacy three-panel images run left-to-right, and legacy images without sampleFrames show one frame. Inspect mouth movement across the full opening sequence before choosing its speaking person. Smiling, listening and gesturing alone are not speech evidence. Opening-title display uses presentation-relative frames; all other times are clip-relative integer frames at 30 fps. ${FOCUS_PLANNING_POLICY} Boxes are relative to ONE panel, never the whole sheet. Word speakerId values come from local audio diarization. PICTURES: plan the visualCoverage minimum, at least one per started thirty-second portion, up to three useful contextual images. Each has startFrame/endFrame, evidenceWordIds and a generic brief (scene, searchQuery, requiredTerms, avoidTerms) and alternateBriefs with up to two alternative depictions/search phrases for the SAME precise script idea if the primary image cannot be found. Keep the primary scene meaning and every essential requiredTerm in all alternatives. Vary the angle or query specificity, never substitute a different subject or an unrelated metaphor. Use specific searchable subject/concept nouns rather than generic props; never duplicate a search. Choose the clearest explanatory beat from the timed words, use those evidenceWordIds and begin near the key spoken subject/action. The brief must explain what the viewer learns from the scene. Use literal scenes first; an analogy needs explicit support in the source. Relevant diagrams/illustrations are allowed without a fixed template. The app performs bounded public-image lookup. SEARCH FIRST, GENERATED FALLBACK SECOND: The app first searches for relevant real images using your brief and up to two distinct same-subject alternate briefs. Also supply an illustration fallback for EACH picture in this same response: layout concept/process/comparison, a short generic heading, and one to four items with short labels and icons person/globe/idea/computer/chart/clock/box/check/leaf. Choose the layout and symbols that explain the spoken idea; no unrelated filler. All labels and briefs must be generic public depictions, never transcript quotations or private details. The app uses the illustration only after image search cannot provide a usable image. Do not return image bytes, URLs, SVG/HTML, executable code, brands, source-speaker likenesses or invented facts. Use short generic searchable scene terms; no transcript quotations or private details in search terms. Return pictures/texts arrays, meeting visualCoverage; text remains optional.\n${JSON.stringify({ frames, fps: OWNER_FPS, visualCoverage: plannedVisualGuide(frames), source: { width: workspace.source.width, height: workspace.source.height }, images: artifact.frames.map((frame) => ({ frame: frame.frame, sampleFrames: frame.sampleFrames })), words: moment.cues })}`,
+                  prompt: `${untrusted}\n${scenePolicy}\n${HOOK_SUGGESTION_POLICY}\n${PLANNED_TEXT_POLICY}\n${PLANNED_VISUAL_POLICY}\nPlan portrait camera framing and expressive photographic/cinematic B-roll from the ordered temporal images and timed transcript. Each image has chronological panels at its supplied sampleFrames: four panels use a 2-by-2 grid in reading order (top-left, top-right, bottom-left, bottom-right); legacy three-panel images run left-to-right, and legacy images without sampleFrames show one frame. Inspect mouth movement across the full opening sequence before choosing its speaking person. Smiling, listening and gesturing alone are not speech evidence. Opening-title display uses presentation-relative frames; all other times are clip-relative integer frames at 30 fps. ${FOCUS_PLANNING_POLICY} Boxes are relative to ONE panel, never the whole sheet. Word speakerId values come from local audio diarization. PICTURES: plan zero or one compelling photographic/cinematic B-roll beat for the entire clip. No image count is required; return an empty array rather than filler. Each has startFrame/endFrame, evidenceWordIds and a generic brief (scene, searchQuery, requiredTerms, avoidTerms) and alternateBriefs with up to two alternative depictions/search phrases for the SAME precise script idea if the primary image cannot be found. Keep the primary scene meaning and every essential requiredTerm in all alternatives. Vary the angle or query specificity, never substitute a different subject or an unrelated metaphor. Use specific searchable subject/concept nouns rather than generic props; never duplicate a search. Choose the clearest explanatory beat from the timed words, use those evidenceWordIds and begin near the key spoken subject/action. The brief must explain what the viewer learns from the scene. Use literal scenes first; an analogy needs explicit support in the source. Automatic diagrams, worksheets and text cards are unsuitable. The app performs bounded public-image lookup. SEARCH OR OMIT: The app performs bounded public-image lookup. If a faithful expressive scene cannot be found, keep the speaker visible. Do not supply icon/heading illustration fallbacks. Do not return image bytes, URLs, SVG/HTML, executable code, brands, source-speaker likenesses or invented facts. Use short generic searchable scene terms; no transcript quotations or private details in search terms. Return pictures/texts arrays, without any minimum picture count; text remains optional.\n${JSON.stringify({ frames, fps: OWNER_FPS, visualCoverage: plannedVisualGuide(frames), source: { width: workspace.source.width, height: workspace.source.height }, images: artifact.frames.map((frame) => ({ frame: frame.frame, sampleFrames: frame.sampleFrames })), words: moment.cues })}`,
                 },
                 signal,
               ),
@@ -578,6 +571,7 @@ export function createLocalCodexAi(options: {
                 const raw = await options.pictures!.find(
                   {
                     kind: "object",
+                    purpose: "b-roll",
                     brief,
                     alternateBriefs: plannedVisualSearchBriefs(
                       current.cue,
@@ -638,35 +632,6 @@ export function createLocalCodexAi(options: {
                 outcome: lookupFailed ? "failed" : "miss",
                 requests,
               });
-            if (current.cue.illustration) {
-              const fallbackStarted = performance.now();
-              try {
-                const bytes = await renderCodexIllustration(
-                  current.cue.illustration,
-                );
-                signal.throwIfAborted();
-                diagnostics.visual({ stage: "fallback", outcome: "generated" });
-                diagnostics.trace({
-                  boundary: "visual",
-                  phase: "fallback",
-                  outcome: "succeeded",
-                  elapsedMs: Math.round(performance.now() - fallbackStarted),
-                  origin: "generated",
-                  outputBytes: bytes.length,
-                });
-                return { bytes, origin: "generated" as const };
-              } catch (error) {
-                diagnostics.trace({
-                  boundary: "visual",
-                  phase: "fallback",
-                  outcome: signal.aborted ? "canceled" : "failed",
-                  elapsedMs: Math.round(performance.now() - fallbackStarted),
-                  error: classifyExecutionFailure(error),
-                });
-                signal.throwIfAborted();
-                diagnostics.visual({ stage: "fallback", outcome: "failed" });
-              }
-            }
             signal.throwIfAborted();
             diagnostics.visual({ stage: "fallback", outcome: "omitted" });
             return null;

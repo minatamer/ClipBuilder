@@ -285,16 +285,16 @@ it.each([
       "5.3 seconds (159 frames)",
     );
     expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
-      "each AI-planned picture lasts at most 5 seconds",
+      "at most 5 seconds per planned image",
     );
     expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
-      "Leave at least 2 seconds",
+      "Plan at most 1 compelling visual for the entire clip",
     );
     expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
-      "different explanatory detail of the same passage",
+      "Never stretch relevance or add filler",
     );
     expect(f.transport.generate.mock.calls[0]![2].policy).toContain(
-      "No fixed palette",
+      "purposeful composition",
     );
     expect(f.pictures.find).not.toHaveBeenCalled();
     await f.ports.close(f.signal);
@@ -1074,7 +1074,7 @@ describe("dormant owner provider ports with synthetic transports", () => {
     expect(JSON.parse(task.prompt)).toEqual({
       frames: 9000,
       fps: 30,
-      visualCoverage: expect.objectContaining({ minimumCount: 3 }),
+      visualCoverage: expect.objectContaining({ maximumCount: 1 }),
       coordinateSpace: "upright-display",
       source: { width: 1920, height: 1080 },
       words,
@@ -1093,7 +1093,12 @@ describe("dormant owner provider ports with synthetic transports", () => {
     );
     expect(output).toEqual({ bytes: jpeg, origin: "generated" });
     expect(f.pictures.find).toHaveBeenCalledExactlyOnceWith(
-      { kind: "object", brief: cue.brief, alternateBriefs: [] },
+      {
+        kind: "object",
+        purpose: "b-roll",
+        brief: cue.brief,
+        alternateBriefs: [],
+      },
       f.signal,
     );
     await expect(

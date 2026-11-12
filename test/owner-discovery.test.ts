@@ -143,6 +143,27 @@ it("publishes only opaque discovery metadata after validating the stable process
   ).toEqual([]);
 });
 
+it("admits only a private boolean execution flag without publishing it, retaining legacy discovery", async () => {
+  const stateFile = join(runtime, "state.json");
+  const state = JSON.parse(await readFile(stateFile, "utf8"));
+  for (const local of [undefined, true, false]) {
+    await writeFile(stateFile, JSON.stringify({ ...state, local }));
+    await publishOwnerDiscovery(runtime, options());
+    expect(await discoverOwnerHost(options())).toEqual({
+      token: "a".repeat(64),
+      runtime,
+    });
+    expect(JSON.parse(await readFile(pointer(), "utf8"))).not.toHaveProperty(
+      "local",
+    );
+  }
+  for (const local of ["true", 1, null, {}]) {
+    await writeFile(stateFile, JSON.stringify({ ...state, local }));
+    await expect(discoverOwnerHost(options())).rejects.toThrow(
+      /^owner_host_unavailable$/,
+    );
+  }
+});
 it("admits prepared speech metadata without exposing it and rejects malformed speech state", async () => {
   const stateFile = join(runtime, "state.json");
   const state = JSON.parse(await readFile(stateFile, "utf8"));

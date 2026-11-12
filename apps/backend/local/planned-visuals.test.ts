@@ -2,7 +2,6 @@ import { expect, it } from "vitest";
 import {
   timePlannedVisuals,
   plannedVisualGuide,
-  hasPlannedVisualCoverage,
   plannedVisualSearchBriefs,
 } from "./planned-visuals.ts";
 import { ownerClipPlanSchema } from "../../../packages/contracts/local/clips.ts";
@@ -115,34 +114,28 @@ it("deduplicates normalized searches, matches whole multilingual terms and stays
     }),
   ).toEqual([bounded]);
 });
-it("requires a distinct image per started thirty-second portion within the existing image ceiling", () => {
-  expect(
-    [30, 900, 901, 1800].map(
-      (frames) => plannedVisualGuide(frames).minimumCount,
-    ),
-  ).toEqual([1, 1, 2, 2]);
-  expect(plannedVisualGuide(1800).windows).toEqual([
-    { startFrame: 0, endFrame: 900 },
-    { startFrame: 900, endFrame: 1800 },
-  ]);
-  expect(hasPlannedVisualCoverage([], 900)).toBe(false);
-  expect(hasPlannedVisualCoverage([picture(0, 150)], 900)).toBe(true);
-  expect(hasPlannedVisualCoverage([picture(0, 150)], 1800)).toBe(false);
-  expect(
-    hasPlannedVisualCoverage([picture(0, 150), picture(210, 360)], 1800),
-  ).toBe(false);
-  expect(
-    hasPlannedVisualCoverage([picture(0, 150), picture(900, 1050)], 1800),
-  ).toBe(true);
-  expect(plannedVisualGuide(9000).minimumCount).toBe(3);
-  expect(
-    hasPlannedVisualCoverage(
-      [picture(0, 150), picture(900, 1050), picture(1800, 1950)],
-      9000,
-    ),
-  ).toBe(false);
+it("scouts timing windows without imposing a minimum number of optional visuals", () => {
+  expect(plannedVisualGuide(1800)).toEqual({
+    maximumCount: 1,
+    windows: [
+      { startFrame: 0, endFrame: 900 },
+      { startFrame: 900, endFrame: 1800 },
+    ],
+  });
+  expect(timePlannedVisuals([], 1800)).toEqual([]);
+  const bland = picture(0, 150, "A trading spreadsheet worksheet");
+  const expressive = picture(
+    210,
+    360,
+    "A visibly frustrated adult clenching fists",
+  );
+  const result = timePlannedVisuals([bland, expressive], 900);
+  expect(result).toHaveLength(1);
+  expect(result[0]!.brief.scene).toBe(expressive.brief.scene);
+  expect(bland.brief.scene).toBe("A trading spreadsheet worksheet");
 });
-it("caps long related pictures at five seconds and gives each a two-second break within its relevance window", () => {
+
+it("keeps one automatic visual, caps its hold at five seconds and preserves raw legacy plans", () => {
   const plan = [
       picture(210, 630),
       picture(240, 780, "Synthetic ocean habitat"),
@@ -152,42 +145,35 @@ it("caps long related pictures at five seconds and gives each a two-second break
     result = timePlannedVisuals(plan, 900);
   expect(
     result.map(({ startFrame, endFrame }) => [startFrame, endFrame]),
-  ).toEqual([
-    [210, 360],
-    [420, 570],
-    [630, 780],
-  ]);
-  expect(result.map((cue) => cue.brief)).toEqual(plan.map((cue) => cue.brief));
+  ).toEqual([[210, 360]]);
+  expect(result[0]!.brief).toEqual(plan[0]!.brief);
   expect(result.every((cue) => cue.illustration?.heading === "Coral")).toBe(
     true,
   );
   expect(plan).toEqual(original);
-  expect(ownerClipPlanSchema.parse(result)).toEqual(result);
+  expect(ownerClipPlanSchema.parse(original)).toEqual(original);
 });
-it("preserves shorter cues and longer natural breaks, sorts clocks and bounds the final cue", () => {
+it("sorts and preserves a shorter chosen cue without acquiring later candidates", () => {
   const result = timePlannedVisuals(
     [picture(600, 1000), picture(15, 75), picture(270, 330)],
     660,
   );
   expect(
     result.map(({ startFrame, endFrame }) => [startFrame, endFrame]),
-  ).toEqual([
-    [15, 75],
-    [270, 330],
-    [600, 660],
-  ]);
+  ).toEqual([[15, 75]]);
+  expect(timePlannedVisuals([picture(600, 1000)], 660)[0]).toMatchObject({
+    startFrame: 600,
+    endFrame: 660,
+  });
 });
-it("skips optional windows that cannot fit the gap without extra work, retaining later useful pictures", () => {
+it("shares one automatic slot across overlapping and later proposals", () => {
   const result = timePlannedVisuals(
     [picture(0, 60), picture(30, 90), picture(150, 240)],
     300,
   );
   expect(
     result.map(({ startFrame, endFrame }) => [startFrame, endFrame]),
-  ).toEqual([
-    [0, 60],
-    [150, 240],
-  ]);
+  ).toEqual([[0, 60]]);
   expect(timePlannedVisuals([], 30)).toEqual([]);
 });
 it("retains tolerant physical clock conversion without re-expanding the AI cap", () => {

@@ -773,6 +773,94 @@ it("keeps Find visuals silent through replay and restore without adding sound or
   expect(ports.image).toHaveBeenCalledTimes(1);
   expect(ports.render).toHaveBeenCalledTimes(nativeCalls);
 });
+it("omits bland fresh plans without failing the clip or adding acquisition calls", async () => {
+  ports.plan.mockImplementation(async (input, signal) => {
+    const plan = await fakeOwnerClipPreparation.plan(input, signal);
+    return plan.map((cue) => ({
+      ...cue,
+      brief: {
+        ...cue.brief,
+        scene: "A spreadsheet worksheet explaining a loss",
+      },
+    }));
+  });
+  await batch.submit(
+    { ...request(), momentIds: [analysis.suggestions[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const clip = batch.snapshot().clips[0]!;
+  expect(clip.state).toBe("review-ready");
+  expect(clip.base!.overlay.visuals).toEqual([]);
+  expect(clip.base!.words).not.toHaveLength(0);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(ports.image).not.toHaveBeenCalled();
+});
+it("preserves uploaded video edits across Find visuals miss, success and saved restore", async () => {
+  ports.plan.mockResolvedValueOnce([]);
+  const planVisuals = vi.fn(fakeOwnerClipPreparation.plan);
+  Object.assign(ports, { planVisuals });
+  await batch.submit(
+    { ...request(), momentIds: [analysis.suggestions[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const saved = batch.snapshot().clips,
+    clip = saved[0]!,
+    assetId = randomUUID();
+  clip.videoAssets = [
+    {
+      id: assetId,
+      digest: "d".repeat(64),
+      bytes: 9,
+      width: 320,
+      height: 180,
+      frames: 300,
+      hasAudio: false,
+    },
+  ];
+  const manual = {
+    id: randomUUID(),
+    assetId,
+    startFrame: 0,
+    endFrame: 60,
+    box: { x: 0.1, y: 0.2, width: 0.4, height: 0.2 },
+    fit: "contain" as const,
+    video: { offsetFrame: 0, muted: true, volume: 0 },
+  };
+  clip.edit!.visuals.push(manual);
+  await batch.close();
+  batch = new OwnerClipBatch(workspace, files, ports);
+  batch.restore(saved);
+  const nativeCalls = ports.render.mock.calls.length;
+  ports.image.mockResolvedValueOnce(null);
+  const missed = (
+    await batch.findVisuals(
+      clip.id,
+      { operationId: randomUUID(), expectedRevision: clip.revision },
+      AbortSignal.timeout(2000),
+    )
+  ).clips[0]!;
+  expect(missed.edit!.visuals).toEqual([manual]);
+  const found = (
+    await batch.findVisuals(
+      clip.id,
+      { operationId: randomUUID(), expectedRevision: missed.revision },
+      AbortSignal.timeout(2000),
+    )
+  ).clips[0]!;
+  expect(found.edit!.visuals).toContainEqual(manual);
+  expect(found.edit!.visuals).toHaveLength(2);
+  const reopened = structuredClone(batch.snapshot().clips);
+  await batch.close();
+  batch = new OwnerClipBatch(workspace, files, ports);
+  batch.restore(reopened);
+  expect(batch.snapshot().clips[0]!.edit!.visuals).toContainEqual(manual);
+  expect(ports.plan).toHaveBeenCalledTimes(1);
+  expect(planVisuals).toHaveBeenCalledTimes(2);
+  expect(ports.image).toHaveBeenCalledTimes(2);
+  expect(ports.render).toHaveBeenCalledTimes(nativeCalls);
+});
 it.each([false, true])(
   "preserves edited/manual audio when Find visuals succeeds (full capacity: %s)",
   async (full) => {
@@ -961,6 +1049,44 @@ it("finds fresh visuals once, preserves nonvisual edits/export, and uses replace
   expect(second).toHaveBeenCalledTimes(1);
   expect(refreshed.clips[0]!.visualAttempts).toBe(2);
 });
+it("shares one fresh AI asset across body and Hook on rediscovery without changing Hook typography", async () => {
+  const planVisuals = vi.fn<OwnerClipPorts["plan"]>(async (...args) => {
+    const plan = await fakeOwnerClipPreparation.plan(...args);
+    return [plan[0]!, { ...plan[0]!, startFrame: 180, endFrame: 240 }];
+  });
+  Object.assign(ports, { planVisuals });
+  await batch.submit(
+    { ...request(), momentIds: [analysis.suggestions[0]!.id] },
+    analysis,
+  );
+  await batch.drain();
+  const initial = batch.snapshot().clips[0]!;
+  const applied = await batch.edit(initial.id, {
+    operationId: randomUUID(),
+    expectedRevision: initial.revision,
+    baseHash: initial.baseHash,
+    operations: [{ kind: "hook", hook: { startFrame: 0, endFrame: 60 } }],
+  });
+  const before = applied.clips[0]!;
+  const imagesBefore = ports.image.mock.calls.length;
+  const found = (
+    await batch.findVisuals(
+      before.id,
+      { operationId: randomUUID(), expectedRevision: before.revision },
+      AbortSignal.timeout(2000),
+    )
+  ).clips[0]!;
+  expect(ports.image).toHaveBeenCalledTimes(imagesBefore + 1);
+  expect(found.edit!.visuals).toHaveLength(1);
+  expect(found.edit!.hookContent!.edits.visuals).toHaveLength(1);
+  expect(found.edit!.hookContent!.edits.visuals[0]!.assetId).toBe(
+    found.edit!.visuals[0]!.assetId,
+  );
+  expect(found.edit!.hookContent!.edits.captions).toEqual(
+    before.edit!.hookContent!.edits.captions,
+  );
+  expect(found.assets).toEqual(expect.arrayContaining(before.assets));
+});
 it("keeps old visuals on a miss or cancellation, rejects stale requests and never retries interrupted saved work", async () => {
   const planVisuals = vi.fn<OwnerClipPorts["plan"]>(async () => []);
   Object.assign(ports, { planVisuals });
@@ -1082,7 +1208,7 @@ it("checkpoints selected-cut speaker words before planning and reuses them after
     ),
   ).toBe(true);
 });
-it("caps only fresh planned pictures and gaps, then preserves a manually extended visual on retry/export", async () => {
+it("acquires one fresh planned visual and preserves a manually extended visual on retry/export", async () => {
   const moment = analysis.suggestions[0]!;
   const cue = (startFrame: number, endFrame: number, scene: string) => ({
     startFrame,
@@ -1107,13 +1233,10 @@ it("caps only fresh planned pictures and gaps, then preserves a manually extende
       startFrame,
       endFrame,
     ]),
-  ).toEqual([
-    [0, 150],
-    [210, 300],
-  ]);
+  ).toEqual([[0, 150]]);
   expect(prepared.base!.overlay.audio).toBeUndefined();
   expect(ports.plan).toHaveBeenCalledTimes(1);
-  expect(ports.image).toHaveBeenCalledTimes(2);
+  expect(ports.image).toHaveBeenCalledTimes(1);
   const edited = await batch.edit(prepared.id, {
     operationId: randomUUID(),
     expectedRevision: prepared.revision,
@@ -1145,7 +1268,7 @@ it("caps only fresh planned pictures and gaps, then preserves a manually extende
   expect(ready.state).toBe("ready");
   expect(ready.edit!.visuals[0]!.endFrame).toBe(240);
   expect(ports.plan).toHaveBeenCalledTimes(1);
-  expect(ports.image).toHaveBeenCalledTimes(2);
+  expect(ports.image).toHaveBeenCalledTimes(1);
   const job = ports.render.mock.lastCall![0];
   if (job.operation !== "clip") throw new Error("expected_export");
   expect(job.overlay.visuals[0]!.endFrame).toBe(240);
@@ -2081,6 +2204,68 @@ it("isolates a queued cancellation, an in-flight failure and a successful siblin
     (await readFile(await files.file(workspace.id, "source.mp4"))).toString(),
   ).toBe("synthetic");
 });
+it.each([false, true])(
+  "returns canceled exports to the editor after cleanup (prior output: %s)",
+  async (priorOutput) => {
+    await batch.submit(
+      { ...request(), momentIds: [analysis.suggestions[0]!.id] },
+      analysis,
+    );
+    await batch.drain();
+    let clip = batch.snapshot().clips[0]!;
+    if (priorOutput) {
+      await batch.render(clip.id, {
+        operationId: randomUUID(),
+        expectedRevision: clip.revision,
+      });
+      await batch.drain();
+      clip = batch.snapshot().clips[0]!;
+    }
+    const before = structuredClone(clip);
+    const calls = {
+      plan: ports.plan.mock.calls.length,
+      image: ports.image.mock.calls.length,
+    };
+    const entered = gate(),
+      release = gate();
+    ports.render.mockImplementationOnce(async (_job, signal) => {
+      entered.release();
+      await release.wait;
+      signal.throwIfAborted();
+      throw Error("unexpected_render_completion");
+    });
+    await batch.render(clip.id, {
+      operationId: randomUUID(),
+      expectedRevision: clip.revision,
+    });
+    await entered.wait;
+    expect(batch.cancel(clip.id)).toMatchObject({
+      active: true,
+      clips: [{ state: "canceling" }],
+    });
+    release.release();
+    await batch.drain();
+    const after = batch.snapshot().clips[0]!;
+    expect(after.state).toBe(priorOutput ? "ready" : "review-ready");
+    expect(after.error).toBeNull();
+    expect(after.edit).toEqual(before.edit);
+    expect(after.base).toEqual(before.base);
+    expect(after.preview).toEqual(before.preview);
+    expect(after.outputs).toEqual(before.outputs);
+    expect(after.assets).toEqual(before.assets);
+    expect(ports.plan).toHaveBeenCalledTimes(calls.plan);
+    expect(ports.image).toHaveBeenCalledTimes(calls.image);
+    await batch.close();
+    batch = new OwnerClipBatch(workspace, files, ports);
+    batch.restore([{ ...after, state: "canceled", error: "canceled" }]);
+    expect(batch.snapshot().clips[0]).toMatchObject({
+      state: after.state,
+      error: null,
+      edit: before.edit,
+    });
+    expect(batch.active).toBe(false);
+  },
+);
 it("reports cancellation only after running work drains; cancel-all dispatches no queued siblings", async () => {
   const entered = gate(),
     release = gate();
@@ -2248,10 +2433,6 @@ it("retains a paid plan and completed images across a restored preparation retry
       { ...plan[0]!, startFrame: 120, endFrame: 180 },
     ];
   });
-  const image = ports.image.getMockImplementation()!;
-  ports.image
-    .mockImplementationOnce(image)
-    .mockRejectedValueOnce(new Error("synthetic_transport_failure"));
   ports.render.mockRejectedValueOnce(new Error("synthetic_preview_failure"));
   await batch.submit(
     { ...request(), momentIds: [analysis.suggestions[0]!.id] },
@@ -2260,7 +2441,7 @@ it("retains a paid plan and completed images across a restored preparation retry
   await batch.drain();
   const failed = batch.snapshot().clips[0]!;
   expect(failed.state).toBe("failed");
-  expect(failed.preparation?.pictures).toHaveLength(2);
+  expect(failed.preparation?.pictures).toHaveLength(1);
   await batch.close();
   batch = new OwnerClipBatch(workspace, files, ports);
   batch.restore([failed]);
@@ -2274,7 +2455,7 @@ it("retains a paid plan and completed images across a restored preparation retry
   expect(ready.assets[0]).toEqual(failed.assets[0]);
   expect(ready.base?.overlay.visuals).toHaveLength(1);
   expect(ports.plan).toHaveBeenCalledTimes(1);
-  expect(ports.image).toHaveBeenCalledTimes(2);
+  expect(ports.image).toHaveBeenCalledTimes(1);
   expect(ports.render).toHaveBeenCalledTimes(2);
 });
 

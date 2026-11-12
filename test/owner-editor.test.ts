@@ -64,6 +64,7 @@ const analysis = {
 const preparation = {
   mode: "synthetic-ai" as const,
   plan: vi.fn(fakeOwnerClipPreparation.plan),
+  planVisuals: vi.fn(fakeOwnerClipPreparation.plan),
   image: vi.fn(fakeOwnerClipPreparation.image),
 };
 beforeEach(async () => {
@@ -86,6 +87,7 @@ async function start(
   withAI = true,
   mode: "synthetic-ai" | "provider-ai" = "synthetic-ai",
   recoverSession = false,
+  hosted = false,
 ): Promise<Context> {
   const root = join(directory, `scratch-${contexts.length}`);
   await mkdir(root);
@@ -139,6 +141,7 @@ async function start(
     root,
     storageRoot,
     recoverSession,
+    hosted,
     ui: directory,
     token: "editor-test",
     port: 0,
@@ -269,7 +272,27 @@ async function output(
   expect(result.status).toBe(200);
   return result.body;
 }
-it("removes canceled clips over the protected API and recovery without changing siblings or files", async () => {
+it("denies Find visuals in the hosted core even when a planner exists", async () => {
+  const context = await start(true, "synthetic-ai", false, true);
+  const { workspace, list } = await prepare(context, false);
+  const cap = await ownerRequest(context.port, "/api/capabilities", {
+    headers: auth,
+  });
+  expect(JSON.parse(cap.body.toString())).toMatchObject({
+    visualDiscovery: false,
+  });
+  const before = preparation.plan.mock.calls.length;
+  const visualCalls = preparation.planVisuals.mock.calls.length;
+  const response = await post(
+    context,
+    `${endpoint(workspace.id)}/clips/${list.clips[0]!.id}/visuals`,
+    { operationId: randomUUID(), expectedRevision: 0 },
+  );
+  expect(response.status).toBe(404);
+  expect(preparation.planVisuals).toHaveBeenCalledTimes(visualCalls);
+  expect(preparation.plan).toHaveBeenCalledTimes(before);
+});
+it("returns a canceled export to its editor over protected HTTP and recovery without losing edits or outputs", async () => {
   const context = await start(true, "synthetic-ai", true);
   const { workspace, list } = await prepare(context);
   const target = list.clips[0]!;
@@ -316,18 +339,17 @@ it("removes canceled clips over the protected API and recovery without changing 
       .status,
   ).toBe(200);
   const canceled = await completed(context, workspace.id);
-  expect(canceled.clips[0]!.state).toBe("canceled");
+  expect(canceled.clips[0]!.state).toBe("ready");
+  expect(canceled.clips[0]!.edit).toEqual(target.edit);
+  expect(canceled.clips[0]!.outputs).toEqual(target.outputs);
   expect(
     (await post(context, path, { ...operation, expectedRevision: 99 })).status,
   ).toBe(400);
   const beforeCalls = context.media.mock.calls.length;
-  const expected = canceled.clips.slice(1);
+  const expected = canceled.clips;
   const removed = await post(context, path, operation);
-  expect(removed.status).toBe(200);
-  expect(
-    ownerClipListSchema.parse(JSON.parse(removed.body.toString())).clips,
-  ).toEqual(expected);
-  expect((await post(context, path, operation)).status).toBe(200);
+  expect(removed.status).toBe(400);
+  expect((await post(context, path, operation)).status).toBe(400);
   expect((await clips(context, workspace.id)).clips).toEqual(expected);
   expect(
     await readFile(join(context.root, workspace.id, `${target.id}.r0.mp4`)),

@@ -83,7 +83,14 @@ export async function startHostedEditingWorkflow(
   try {
     await writeFile(
       state,
-      JSON.stringify({ root, workerToken, tools, overlayBundle, chromium }),
+      JSON.stringify({
+        root,
+        workerToken,
+        tools,
+        overlayBundle,
+        chromium,
+        local: false,
+      }),
       { flag: "wx", mode: 0o600 },
     );
   } catch (error) {

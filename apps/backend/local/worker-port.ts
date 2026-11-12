@@ -3,6 +3,10 @@ import {
   resolveOwnerCapacity,
 } from "../../../packages/contracts/local/capacity.ts";
 import { ownerProgressAcquisition } from "../../../packages/contracts/local/acquisition-profile.ts";
+import {
+  ownerExportDeadlineMs,
+  OWNER_EXPORT_DEADLINE,
+} from "../../../packages/contracts/local/export-deadline.ts";
 import { ownerPresentationFrames } from "../../../packages/contracts/local/hook.ts";
 import { LOCAL_CODEX_POLICY } from "../../../packages/contracts/local/codex.ts";
 import {
@@ -54,6 +58,7 @@ export function localWorkerPort(
   transport: typeof fetch = nativeWorkerFetch,
   diagnostics = new LocalDiagnostics(),
   capacity: OwnerCapacity = resolveOwnerCapacity({}),
+  local = false,
 ) {
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error("invalid_port");
@@ -145,9 +150,12 @@ export function localWorkerPort(
               capacity.longSources && ownerProgressAcquisition(job.operation)
                 ? new AbortController().signal
                 : AbortSignal.timeout(
-                    job.operation === "codex-input" && job.kind !== "frames"
-                      ? LOCAL_CODEX_POLICY.speechTimeoutMs + 60_000
-                      : 11 * 60_000,
+                    job.operation === "clip"
+                      ? ownerExportDeadlineMs(local) +
+                          OWNER_EXPORT_DEADLINE.transportGraceMs
+                      : job.operation === "codex-input" && job.kind !== "frames"
+                        ? LOCAL_CODEX_POLICY.speechTimeoutMs + 60_000
+                        : 11 * 60_000,
                   ),
             redirect: "error",
           });

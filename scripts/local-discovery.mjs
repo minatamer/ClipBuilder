@@ -216,7 +216,7 @@ async function readRuntime(ctx, runtime) {
   shape(
     state,
     ["root", "token", "workerToken", "tools", "overlayBundle", "chromium"],
-    ["storageRoot", "desktopStorageRoot", "speech"],
+    ["storageRoot", "desktopStorageRoot", "speech", "local"],
   );
   // The native worker validates its startup capacity; discovery never returns it.
   shape(state.tools, ["ffmpeg", "ffprobe"], ["capacity"]);
@@ -247,6 +247,7 @@ async function readRuntime(ctx, runtime) {
     }
   }
   if (
+    (state.local !== undefined && typeof state.local !== "boolean") ||
     !TOKEN.test(state.token) ||
     !TOKEN.test(state.workerToken) ||
     state.token === state.workerToken ||

@@ -169,7 +169,7 @@ export function createOwnerHost(options: OwnerHostOptions) {
       analysis && clipPreparation && analysis.mode === clipPreparation.mode,
     ),
     captionGeneration: Boolean(providers?.captionTranscription),
-    visualDiscovery: Boolean(clipPreparation?.planVisuals),
+    visualDiscovery: !options.hosted && Boolean(clipPreparation?.planVisuals),
     ...(clipPreparation?.hookTitle ? { hookTitleSuggestions: true } : {}),
     ...(options.hosted
       ? { execution: "hosted", localMedia: false, cloud: true }
@@ -1178,6 +1178,10 @@ export function createOwnerHost(options: OwnerHostOptions) {
           route[3] &&
           route[4] === "visuals"
         ) {
+          if (options.hosted) {
+            res.writeHead(404).end();
+            return;
+          }
           if (!clipPreparation?.planVisuals) {
             res.writeHead(503).end();
             return;

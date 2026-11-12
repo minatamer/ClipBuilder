@@ -262,7 +262,7 @@ it("owns and aborts transcript-only visual planning on close and refuses another
   ).rejects.toThrow("codex_unavailable");
   expect(infer).toHaveBeenCalledTimes(1);
 });
-it("searches before generated fallback and keeps optional visual failures nonfatal", async () => {
+it("searches once and omits unavailable visuals without an icon-card fallback", async () => {
   const fixture = await retrievedPictureFixture();
   const pictures = {
     find: vi.fn().mockResolvedValueOnce(fixture.asset).mockResolvedValue(null),
@@ -314,8 +314,7 @@ it("searches before generated fallback and keeps optional visual failures nonfat
       request,
       new AbortController().signal,
     );
-    expect(generated?.origin).toBe("generated");
-    expect(generated?.bytes.subarray(1, 4).toString()).toBe("PNG");
+    expect(generated).toBeNull();
     expect(pictures.find).toHaveBeenCalledTimes(2);
     expect(infer).not.toHaveBeenCalled();
     const outcomes = lines
@@ -325,7 +324,7 @@ it("searches before generated fallback and keeps optional visual failures nonfat
     expect(outcomes).toEqual([
       ["search", "found"],
       ["search", "miss"],
-      ["fallback", "generated"],
+      ["fallback", "omitted"],
     ]);
   } finally {
     await ai.close!(new AbortController().signal);
@@ -634,7 +633,7 @@ it("deduplicates searches and discards a result returned after its overall deadl
     await ai.close?.(new AbortController().signal);
   }
 });
-it("keeps lookup optional and searches before rendering a retained illustration", async () => {
+it("keeps lookup optional and does not render legacy illustration plans on a miss", async () => {
   const pictures = {
     find: vi
       .fn()
@@ -680,8 +679,7 @@ it("keeps lookup optional and searches before rendering a retained illustration"
       },
       AbortSignal.timeout(2000),
     );
-    expect(legacy?.origin).toBe("generated");
-    expect(legacy?.bytes.subarray(1, 4).toString()).toBe("PNG");
+    expect(legacy).toBeNull();
     expect(pictures.find).toHaveBeenCalledTimes(3);
   } finally {
     await ai.close?.(AbortSignal.timeout(2000));
@@ -897,13 +895,11 @@ it.each(["audio", "invented", "visual-opening", "aliases"])(
     );
     const infer = vi.fn<CodexInference>(async (request) => {
       expect(request.prompt).toContain("local audio diarization");
+      expect(request.prompt).toContain("at most 5 seconds per planned image");
       expect(request.prompt).toContain(
-        "each AI-planned picture lasts at most 5 seconds",
+        "Plan at most 1 compelling visual for the entire clip",
       );
-      expect(request.prompt).toContain("Leave at least 2 seconds");
-      expect(request.prompt).toContain(
-        "different explanatory detail of the same passage",
-      );
+      expect(request.prompt).toContain("Never stretch relevance or add filler");
       expect(request.prompt).toContain(
         "Always display the title at the first presented frame",
       );
@@ -916,14 +912,10 @@ it.each(["audio", "invented", "visual-opening", "aliases"])(
       expect(request.prompt).toContain(
         "manual Motion feature tracks movement for the SAME person",
       );
-      expect(request.prompt).toContain("No fixed palette");
-      expect(request.prompt).toContain(
-        "MUST preserve the primary scene's meaning",
-      );
-      expect(JSON.stringify(request.schema)).toContain('"illustration"');
-      expect(request.prompt).toContain(
-        "SEARCH FIRST, GENERATED FALLBACK SECOND",
-      );
+      expect(request.prompt).toContain("purposeful composition");
+      expect(request.prompt).toContain("preserve the visible action/emotion");
+      expect(JSON.stringify(request.schema)).not.toContain('"illustration"');
+      expect(request.prompt).toContain("SEARCH OR OMIT");
       expect(request.prompt).not.toContain("speakerId must be null");
       expect(JSON.stringify(request.schema)).toContain('"texts"');
       expect(request.prompt).toContain(
